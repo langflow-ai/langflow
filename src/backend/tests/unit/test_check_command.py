@@ -1119,3 +1119,389 @@ class TestBackupOption:
             # Backup should contain original content
             backup_content = backup_path.read_text()
             assert backup_content == original_content
+
+
+class TestApplyComponentUpdate:
+    """Test cases for the apply_component_update function."""
+
+    @pytest.mark.asyncio
+    async def test_apply_component_update_preserves_user_values(self):
+        """Test that user-configured values are preserved after component update."""
+        from lfx.cli.check import apply_component_update
+
+        flow_data = {
+            "data": {
+                "nodes": [
+                    {
+                        "id": "test-node-1",
+                        "data": {
+                            "type": "ChatInput",
+                            "node": {
+                                "template": {
+                                    "input_value": {"value": "user_configured_value"},
+                                    "sender_name": {"value": "CustomName"},
+                                }
+                            },
+                        },
+                    }
+                ]
+            }
+        }
+        component = {"component_type": "ChatInput", "node_id": "test-node-1"}
+        all_types_dict = {
+            "ChatInput": {
+                "template": {
+                    "input_value": {"value": ""},
+                    "sender_name": {"value": "default"},
+                    "new_field": {"value": "new_default"},
+                }
+            }
+        }
+
+        result = await apply_component_update(flow_data, component, all_types_dict)
+
+        assert result is True
+        updated_node = flow_data["data"]["nodes"][0]["data"]["node"]
+        # User values should be preserved
+        assert updated_node["template"]["input_value"]["value"] == "user_configured_value"
+        assert updated_node["template"]["sender_name"]["value"] == "CustomName"
+        # New fields should have defaults
+        assert "new_field" in updated_node["template"]
+
+    @pytest.mark.asyncio
+    async def test_apply_component_update_returns_false_when_component_not_found(self):
+        """Test that apply_component_update returns False when component type not found."""
+        from lfx.cli.check import apply_component_update
+
+        flow_data = {
+            "data": {
+                "nodes": [
+                    {
+                        "id": "test-node-1",
+                        "data": {
+                            "type": "ChatInput",
+                            "node": {"template": {"input_value": {"value": "test"}}},
+                        },
+                    }
+                ]
+            }
+        }
+        component = {"component_type": "NonExistentComponent", "node_id": "test-node-1"}
+        all_types_dict = {}  # Empty - component not found
+
+        result = await apply_component_update(flow_data, component, all_types_dict)
+
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_apply_component_update_returns_false_when_node_not_found(self):
+        """Test that apply_component_update returns False when node ID not found."""
+        from lfx.cli.check import apply_component_update
+
+        flow_data = {"data": {"nodes": []}}  # No nodes
+        component = {"component_type": "ChatInput", "node_id": "nonexistent-node"}
+        all_types_dict = {"ChatInput": {"template": {}}}
+
+        result = await apply_component_update(flow_data, component, all_types_dict)
+
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_apply_component_update_flat_flow_format(self):
+        """Test apply_component_update with flat flow format (no 'data' wrapper)."""
+        from lfx.cli.check import apply_component_update
+
+        # Flat format - nodes directly in flow_data
+        flow_data = {
+            "nodes": [
+                {
+                    "id": "test-node-1",
+                    "data": {
+                        "type": "ChatInput",
+                        "node": {"template": {"input_value": {"value": "original"}}},
+                    },
+                }
+            ]
+        }
+        component = {"component_type": "ChatInput", "node_id": "test-node-1"}
+        all_types_dict = {"ChatInput": {"template": {"input_value": {"value": ""}, "new_field": {"value": "new"}}}}
+
+        result = await apply_component_update(flow_data, component, all_types_dict)
+
+        assert result is True
+        updated_node = flow_data["nodes"][0]["data"]["node"]
+        assert updated_node["template"]["input_value"]["value"] == "original"
+        assert "new_field" in updated_node["template"]
+
+
+class TestCheckComponentsBeforeRun:
+    """Test cases for the check_components_before_run function."""
+
+    @pytest.mark.asyncio
+    async def test_check_components_before_run_raises_on_outdated(self, tmp_path):
+        """Test that check_components_before_run raises ValueError when outdated components found."""
+        from lfx.cli.run import check_components_before_run
+
+        # Create a sample flow file
+        flow_file = tmp_path / "test_flow.json"
+        flow_data = {
+            "data": {
+                "nodes": [
+                    {
+                        "id": "node-1",
+                        "data": {
+                            "type": "ChatInput",
+                            "node": {
+                                "metadata": {"code_hash": "old_hash"},
+                                "template": {"code": {"value": "old code"}},
+                            },
+                        },
+                    }
+                ]
+            }
+        }
+        flow_file.write_text(json.dumps(flow_data))
+
+        def verbose_print(msg):
+            pass
+
+        with patch("lfx.cli.check.load_specific_components") as mock_load:
+            mock_load.return_value = {
+                "ChatInput": {
+                    "metadata": {"code_hash": "new_hash"},
+                    "template": {"code": {"value": "new code"}},
+                    "outputs": [],
+                }
+            }
+
+            with pytest.raises(ValueError, match=r"(?i)outdated"):
+                await check_components_before_run(flow_file, verbose_print)
+
+    @pytest.mark.asyncio
+    async def test_check_components_before_run_success_when_up_to_date(self, tmp_path):
+        """Test that check_components_before_run succeeds when components are up to date."""
+        from lfx.cli.run import check_components_before_run
+
+        # Create a sample flow file with module in metadata (required for load_specific_components)
+        flow_file = tmp_path / "test_flow.json"
+        flow_data = {
+            "data": {
+                "nodes": [
+                    {
+                        "id": "node-1",
+                        "data": {
+                            "type": "ChatInput",
+                            "node": {
+                                "metadata": {
+                                    "code_hash": "same_hash",
+                                    "module": "lfx.components.inputs.ChatInput",
+                                },
+                                "template": {"code": {"value": "same code"}},
+                            },
+                        },
+                    }
+                ]
+            }
+        }
+        flow_file.write_text(json.dumps(flow_data))
+
+        def verbose_print(msg):
+            pass
+
+        with patch("lfx.cli.check.load_specific_components") as mock_load:
+            mock_load.return_value = {
+                "ChatInput": {
+                    "metadata": {"code_hash": "same_hash"},
+                    "template": {"code": {"value": "same code"}},
+                    "outputs": [],
+                }
+            }
+
+            # Should not raise
+            await check_components_before_run(flow_file, verbose_print)
+
+    @pytest.mark.asyncio
+    async def test_check_components_before_run_raises_on_error(self, tmp_path):
+        """Test that check_components_before_run raises ValueError when check fails."""
+        from lfx.cli.run import check_components_before_run
+
+        # Non-existent file
+        flow_file = tmp_path / "nonexistent.json"
+
+        def verbose_print(msg):
+            pass
+
+        with pytest.raises(ValueError, match=r"(?i)component check failed|error"):
+            await check_components_before_run(flow_file, verbose_print)
+
+    @pytest.mark.asyncio
+    async def test_check_components_before_run_shows_breaking_change(self, tmp_path):
+        """Test that breaking changes are indicated in the error message."""
+        from lfx.cli.run import check_components_before_run
+
+        flow_file = tmp_path / "test_flow.json"
+        flow_data = {
+            "data": {
+                "nodes": [
+                    {
+                        "id": "node-1",
+                        "data": {
+                            "type": "ChatInput",
+                            "node": {
+                                "display_name": "Chat Input",
+                                "metadata": {"code_hash": "old_hash"},
+                                "template": {"code": {"value": "old code"}, "removed_field": {"value": "x"}},
+                                "outputs": [{"name": "message", "types": ["Message"]}],
+                            },
+                        },
+                    }
+                ]
+            }
+        }
+        flow_file.write_text(json.dumps(flow_data))
+
+        def verbose_print(msg):
+            pass
+
+        with patch("lfx.cli.check.load_specific_components") as mock_load:
+            mock_load.return_value = {
+                "ChatInput": {
+                    "metadata": {"code_hash": "new_hash"},
+                    "template": {"code": {"value": "new code"}},  # removed_field is gone
+                    "outputs": [{"name": "message", "types": ["Message"]}],
+                }
+            }
+
+            with pytest.raises(ValueError, match=r"\(breaking\)"):
+                await check_components_before_run(flow_file, verbose_print)
+
+
+class TestBreakingChangeOutputTypeNarrowing:
+    """Test cases for output type narrowing detection."""
+
+    def test_breaking_change_output_type_narrowed(self):
+        """Test that narrowing output types is detected as breaking."""
+        from lfx.cli.check import check_breaking_changes
+
+        current_node = {
+            "outputs": [{"name": "output", "types": ["Message", "Text"]}],
+            "template": {},
+        }
+        latest_component = {
+            "outputs": [{"name": "output", "types": ["Message"]}],  # Text removed
+            "template": {},
+        }
+
+        assert check_breaking_changes(current_node, latest_component) is True
+
+    def test_not_breaking_when_output_types_expanded(self):
+        """Test that expanding output types is not breaking."""
+        from lfx.cli.check import check_breaking_changes
+
+        current_node = {
+            "outputs": [{"name": "output", "types": ["Message"]}],
+            "template": {},
+        }
+        latest_component = {
+            "outputs": [{"name": "output", "types": ["Message", "Text"]}],  # Text added
+            "template": {},
+        }
+
+        assert check_breaking_changes(current_node, latest_component) is False
+
+    def test_not_breaking_when_output_types_same(self):
+        """Test that same output types is not breaking."""
+        from lfx.cli.check import check_breaking_changes
+
+        current_node = {
+            "outputs": [{"name": "output", "types": ["Message", "Text"]}],
+            "template": {},
+        }
+        latest_component = {
+            "outputs": [{"name": "output", "types": ["Message", "Text"]}],
+            "template": {},
+        }
+
+        assert check_breaking_changes(current_node, latest_component) is False
+
+
+class TestFlatFlowFormat:
+    """Test cases for flat flow format (no 'data' wrapper)."""
+
+    @pytest.mark.asyncio
+    async def test_check_flow_components_flat_format(self, tmp_path):
+        """Test check_flow_components with flat flow format."""
+        from lfx.cli.check import check_flow_components
+
+        # Create a flat format flow file
+        flow_file = tmp_path / "flat_flow.json"
+        flow_data = {
+            "nodes": [
+                {
+                    "id": "node-1",
+                    "data": {
+                        "type": "ChatInput",
+                        "node": {
+                            "metadata": {"code_hash": "old_hash"},
+                            "template": {"code": {"value": "old code"}},
+                        },
+                    },
+                }
+            ]
+        }
+        flow_file.write_text(json.dumps(flow_data))
+
+        with patch("lfx.cli.check.load_specific_components") as mock_load:
+            mock_load.return_value = {
+                "ChatInput": {
+                    "metadata": {"code_hash": "new_hash"},
+                    "template": {"code": {"value": "new code"}},
+                    "outputs": [],
+                }
+            }
+
+            result = await check_flow_components(str(flow_file))
+
+            assert "error" not in result
+            assert result["total_nodes"] == 1
+            assert result["outdated_count"] == 1
+
+    @pytest.mark.asyncio
+    async def test_check_flow_components_nested_format(self, tmp_path):
+        """Test check_flow_components with nested flow format (data wrapper)."""
+        from lfx.cli.check import check_flow_components
+
+        # Create a nested format flow file
+        flow_file = tmp_path / "nested_flow.json"
+        flow_data = {
+            "data": {
+                "nodes": [
+                    {
+                        "id": "node-1",
+                        "data": {
+                            "type": "ChatInput",
+                            "node": {
+                                "metadata": {"code_hash": "old_hash"},
+                                "template": {"code": {"value": "old code"}},
+                            },
+                        },
+                    }
+                ]
+            }
+        }
+        flow_file.write_text(json.dumps(flow_data))
+
+        with patch("lfx.cli.check.load_specific_components") as mock_load:
+            mock_load.return_value = {
+                "ChatInput": {
+                    "metadata": {"code_hash": "new_hash"},
+                    "template": {"code": {"value": "new code"}},
+                    "outputs": [],
+                }
+            }
+
+            result = await check_flow_components(str(flow_file))
+
+            assert "error" not in result
+            assert result["total_nodes"] == 1
+            assert result["outdated_count"] == 1
