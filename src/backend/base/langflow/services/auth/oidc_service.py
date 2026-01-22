@@ -280,27 +280,28 @@ class OIDCAuthService(AuthServiceBase):
                 status_code=status.HTTP_409_CONFLICT,
                 detail="User with this email or username already exists",
             ) from e
+
     async def authenticate_with_oidc(self, code: str, db: AsyncSession) -> User:
         """Complete OIDC authentication flow.
-        
+
         This method:
         1. Exchanges authorization code for tokens
         2. Validates the ID token
         3. Provisions/updates user (JIT)
-        
+
         Args:
             code: Authorization code from IdP callback
             db: Database session
-            
+
         Returns:
             Authenticated user object
-            
+
         Raises:
             HTTPException: If authentication fails at any step
         """
         # Exchange code for tokens
         token_response = await self.exchange_code_for_tokens(code)
-        
+
         # Extract ID token
         id_token = token_response.get("id_token")
         if not id_token:
@@ -308,15 +309,14 @@ class OIDCAuthService(AuthServiceBase):
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="No ID token in response from identity provider",
             )
-        
+
         # Validate ID token and extract claims
         claims = await self.validate_id_token(id_token)
-        
+
         # Get or create user from claims (JIT provisioning)
         user = await self.get_or_create_user_from_claims(claims, db)
-        
-        return user
 
+        return user
 
     # =========================================================================
     # AuthServiceBase Implementation (Required Methods)
