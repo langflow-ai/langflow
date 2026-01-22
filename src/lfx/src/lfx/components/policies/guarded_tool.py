@@ -73,7 +73,7 @@ class GuardedTool(Tool):
                 await toolguard.guard_toolcall(self.name, args=args, delegate=self._tool_invoker)
                 return await self._orig_tool.arun(tool_input=args, config=config, **kwargs)
             except PolicyViolationException as ex:
-                # print(f'exception: {ex.message}')
+                logger.info(f"exception: {ex.message}")
                 return {
                     "ok": False,
                     "error": {
@@ -99,6 +99,7 @@ class ToolInvoker(IToolInvoker):
     async def invoke(self, toolname: str, arguments: dict[str, Any], return_type: type[T]) -> T:
         tool = self._tools.get(toolname)
         if tool:
+            logger.info(f"invoking {toolname} internally")
             res = await tool.ainvoke(input=arguments)
 
             res_dict = res.structuredContent["result"] if isinstance(res, CallToolResult) else res["value"]
