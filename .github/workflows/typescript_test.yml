@@ -108,7 +108,7 @@ jobs:
             SUITES='["release"]'
             echo "Release build detected - setting suites to: $SUITES"
             # grep pattern for release is the @release tag - run all tests
-            TEST_GREP="--grep=\"@release\""
+            TEST_GREP='--grep="@release"'
           else
             # If input suites were not provided, determine based on changes
             if [[ "$SUITES" == "[]" ]]; then
@@ -156,7 +156,7 @@ jobs:
               if [ ${#TAGS[@]} -gt 0 ]; then
                 # Join tags with | for OR logic
                 REGEX_PATTERN=$(IFS='|'; echo "${TAGS[*]}")
-                TEST_GREP="--grep=\"${REGEX_PATTERN}\""
+                TEST_GREP='--grep="${REGEX_PATTERN}"'
               fi
             else
               # Process input suites to tags
@@ -198,7 +198,7 @@ jobs:
               if [ ${#TAGS[@]} -gt 0 ]; then
                 # Join tags with | for OR logic
                 REGEX_PATTERN=$(IFS='|'; echo "${TAGS[*]}")
-                TEST_GREP="--grep \"${REGEX_PATTERN}\""
+                TEST_GREP='--grep "${REGEX_PATTERN}"'
               fi
             fi
           fi
