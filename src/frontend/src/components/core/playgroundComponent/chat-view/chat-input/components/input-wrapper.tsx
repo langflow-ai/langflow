@@ -74,12 +74,12 @@ const InputWrapper = ({
       {/* Input container */}
       <div
         data-testid="input-wrapper"
-        className="flex w-full flex-col gap-2 rounded-md border border-input bg-background p-3 hover:border-muted-foreground focus-within:border-primary"
+        className="flex w-full flex-col gap-2 rounded-md border border-input bg-background p-4 hover:border-muted-foreground focus-within:border-primary"
         onClick={onClick}
         onMouseDown={onMouseDown}
       >
         {/* Text input area */}
-        <div className="w-full">
+        <div className="w-full pb-3">
           <TextAreaWrapper
             CHAT_INPUT_PLACEHOLDER={"Send a message"}
             isBuilding={isBuilding}
@@ -113,7 +113,7 @@ const InputWrapper = ({
         )}
 
         {/* Buttons row */}
-        <div className="flex items-center justify-between w-full">
+        <div className="flex items-center justify-between w-full pt-3">
           <div className="flex-shrink-0">
             <UploadFileButton
               isBuilding={isBuilding}
