@@ -127,8 +127,11 @@ For videos, see the **Twelve Labs** and **YouTube** <Icon name="Blocks" aria-hid
 
 ## Configure file storage
 
+:::tip
+**Google Drive** storage is available through the [**Read File**](/read-file) and [**Write file**](/write-file) components, but can't be configured as a storage backend through environment variables as **S3** can.
+:::
+
 Langflow supports two storage backends for file management.
-**Google Drive** storage is available through the **Read file** and **Write file** components, but can't be configured as a storage backend through environment variables as S3 can.
 
 * **Local storage**: Langflow's default storage backend. Files are stored locally in your [Langflow configuration directory](/memory). Set `LANGFLOW_STORAGE_TYPE=local` or leave it unset to use local storage.
 
