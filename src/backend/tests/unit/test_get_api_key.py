@@ -47,10 +47,12 @@ async def test_get_api_keys_decrypts_and_falls_back(monkeypatch):
     # Ensure get_settings_service returns a dummy settings (decrypt stub ignores it, but function expects it)
     monkeypatch.setattr(crud_module, "get_settings_service", lambda: object())
 
+    monkeypatch.setattr(crud_module.auth_utils, "get_fernet", lambda _settings_service: None)
+
     # Patch decrypt_api_key to:
     # - return 'sk-decrypted' for 'enc-1'
     # - raise InvalidToken for 'bad-enc' to trigger fallback
-    def fake_decrypt(val, *, settings_service=None):  # noqa: ARG001
+    def fake_decrypt(val, *, settings_service=None, fernet_obj=None):  # noqa: ARG001
         if val == "enc-1":
             return "sk-decrypted"
         if val == "bad-enc":
