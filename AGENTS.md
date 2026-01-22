@@ -196,5 +196,5 @@ Documentation uses Docusaurus and lives in `docs/`:
 ```bash
 cd docs
 yarn install
-yarn start        # Dev server on port 3001
+yarn start        # Dev server on port 3000 (prompts for 3001 if 3000 is in use)
 ```
