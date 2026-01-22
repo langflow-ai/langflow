@@ -312,6 +312,15 @@ wheels = [
 ]
 
 [[package]]
+name = "backports-tarfile"
+version = "1.2.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/86/72/cd9b395f25e290e633655a100af28cb253e4393396264a98bd5f5951d50f/backports_tarfile-1.2.0.tar.gz", hash = "sha256:d75e02c268746e1b8144c278978b6e98e85de6ad16f8e4b0844a154557eca991", size = 86406, upload-time = "2024-05-28T17:01:54.731Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b9/fa/123043af240e49752f1c4bd24da5053b6bd00cad78c2be53c0d1e8b975bc/backports.tarfile-1.2.0-py3-none-any.whl", hash = "sha256:77e284d754527b01fb1e6fa8a1afe577858ebe4e9dad8919e34c862cb399bc34", size = 30181, upload-time = "2024-05-28T17:01:53.112Z" },
+]
+
+[[package]]
 name = "bcrypt"
 version = "4.0.1"
 source = { registry = "https://pypi.org/simple" }
@@ -2031,6 +2040,18 @@ wheels = [
 ]
 
 [[package]]
+name = "jaraco-context"
+version = "6.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "backports-tarfile", marker = "python_full_version < '3.12'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/cb/9c/a788f5bb29c61e456b8ee52ce76dbdd32fd72cd73dd67bc95f42c7a8d13c/jaraco_context-6.1.0.tar.gz", hash = "sha256:129a341b0a85a7db7879e22acd66902fda67882db771754574338898b2d5d86f", size = 15850, upload-time = "2026-01-13T02:53:53.847Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8d/48/aa685dbf1024c7bd82bede569e3a85f82c32fd3d79ba5fea578f0159571a/jaraco_context-6.1.0-py3-none-any.whl", hash = "sha256:a43b5ed85815223d0d3cfdb6d7ca0d2bc8946f28f30b6f3216bda070f68badda", size = 7065, upload-time = "2026-01-13T02:53:53.031Z" },
+]
+
+[[package]]
 name = "jedi"
 version = "0.19.2"
 source = { registry = "https://pypi.org/simple" }
@@ -2407,6 +2428,7 @@ dependencies = [
     { name = "httpx", extra = ["http2"] },
     { name = "ibm-watsonx-ai", version = "1.3.42", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "ibm-watsonx-ai", version = "1.5.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "jaraco-context" },
     { name = "jq", marker = "sys_platform != 'win32'" },
     { name = "json-repair" },
     { name = "jsonquerylang" },
@@ -2547,6 +2569,7 @@ requires-dist = [
     { name = "gunicorn", specifier = ">=22.0.0,<23.0.0" },
     { name = "httpx", extras = ["http2"], specifier = ">=0.27,<1.0.0" },
     { name = "ibm-watsonx-ai", specifier = ">=1.3.1,<2.0.0" },
+    { name = "jaraco-context", specifier = ">=6.1.0" },
     { name = "jq", marker = "sys_platform != 'win32'", specifier = ">=1.7.0,<2.0.0" },
     { name = "json-repair", specifier = ">=0.30.3,<1.0.0" },
     { name = "jsonquerylang", specifier = ">=1.1.1,<2.0.0" },
