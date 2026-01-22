@@ -139,15 +139,27 @@ def main(argv=None):
 
     if args.nightly:
         if "dev" not in str(current_version):
-            err = "Cannot update nightly hash history for a non-dev version."
+            err = (
+                f"Cannot update nightly hash history for a non-dev version.\n"
+                f"Expected version format: X.Y.Z.devN (e.g., 0.3.0.dev13)\n"
+                f"Got: {current_version}\n"
+                f"This indicates the LFX package was not properly updated to a nightly version."
+            )
             raise ValueError(err)
         history_file = NIGHTLY_HISTORY_FILE
+        print(f"✓ Version check passed: {current_version} is a dev version")
         print("Updating nightly hash history...")
     else:
         if "dev" in str(current_version):
-            err = "Cannot update stable hash history for a dev version."
+            err = (
+                f"Cannot update stable hash history for a dev version.\n"
+                f"Expected version format: X.Y.Z (e.g., 0.3.0)\n"
+                f"Got: {current_version}\n"
+                f"This indicates the LFX package is a development version, not a stable release."
+            )
             raise ValueError(err)
         history_file = STABLE_HISTORY_FILE
+        print(f"✓ Version check passed: {current_version} is a stable version")
         print("Updating stable hash history...")
 
     modules_dict, components_count = _import_components()

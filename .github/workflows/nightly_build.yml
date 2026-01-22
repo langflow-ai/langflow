@@ -133,8 +133,9 @@ jobs:
 
           uv lock
           cd src/backend/base && uv lock && cd ../../..
+          cd src/lfx && uv lock && cd ../..
 
-          git add pyproject.toml src/backend/base/pyproject.toml src/lfx/pyproject.toml uv.lock src/backend/base/uv.lock
+          git add pyproject.toml src/backend/base/pyproject.toml src/lfx/pyproject.toml uv.lock src/backend/base/uv.lock src/lfx/uv.lock
           git commit -m "Update version and project name"
 
           echo "Tagging main with $MAIN_TAG"
@@ -207,6 +208,12 @@ jobs:
       
       - name: Install the project
         run: uv sync
+      
+      - name: Verify LFX version
+        run: |
+          echo "Checking installed LFX version..."
+          uv run python -c "from importlib.metadata import version; print(f'lfx-nightly version: {version(\"lfx-nightly\")}')" || \
+          uv run python -c "from importlib.metadata import version; print(f'lfx version: {version(\"lfx\")}')"
       
       - name: Build and validate nightly hash history
         run: |
