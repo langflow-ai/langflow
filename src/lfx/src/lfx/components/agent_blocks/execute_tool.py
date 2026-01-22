@@ -39,7 +39,7 @@ class ExecuteToolComponent(Component):
     """Executes tool calls and returns AI message + tool results.
 
     This component:
-    1. Takes an AI message containing tool_calls (from CallModel)
+    1. Takes a message containing tool_calls (from Agent Step)
     2. Finds matching tools from the provided tools list
     3. Executes all tools with their arguments
     4. Returns a DataFrame with the AI message and tool results
@@ -55,9 +55,9 @@ class ExecuteToolComponent(Component):
 
     inputs = [
         MessageInput(
-            name="ai_message",
-            display_name="AI Message",
-            info="The AI message containing tool_calls to execute (from CallModel).",
+            name="tool_calls_message",
+            display_name="Tool Calls",
+            info="Message containing tool_calls to execute (from Agent Step).",
             required=True,
         ),
         HandleInput(
@@ -93,10 +93,10 @@ class ExecuteToolComponent(Component):
     ]
 
     def _get_or_create_agent_message(self) -> Message:
-        """Get the existing AI message or create a new one for tool execution updates.
+        """Get the existing message or create a new one for tool execution updates.
 
         The event manager updates messages in the DB by ID. If we have a _parent_message
-        from AgentLoop, use that. Otherwise, if the incoming ai_message has an ID
+        from AgentLoop, use that. Otherwise, if the incoming tool_calls_message has an ID
         (from AgentStep's send_message), we should use it to update that message with
         tool execution content_blocks. This ensures all updates go to the same message in the UI.
         """
@@ -125,15 +125,15 @@ class ExecuteToolComponent(Component):
         # Check if incoming ai_message has an ID we should reuse
         existing_id = None
         existing_content_blocks = None
-        if self.ai_message is not None:
+        if self.tool_calls_message is not None:
             # Use getattr with None default - id may not exist on all message types
             try:
-                existing_id = getattr(self.ai_message, "id", None)
+                existing_id = getattr(self.tool_calls_message, "id", None)
             except (AttributeError, KeyError):
                 existing_id = None
             # Preserve existing content_blocks if any
             try:
-                existing_content_blocks = getattr(self.ai_message, "content_blocks", None)
+                existing_content_blocks = getattr(self.tool_calls_message, "content_blocks", None)
             except (AttributeError, KeyError):
                 existing_content_blocks = None
 
@@ -150,7 +150,7 @@ class ExecuteToolComponent(Component):
 
         # Create message with or without existing ID
         message = Message(
-            text=self.ai_message.text if self.ai_message else "",
+            text=self.tool_calls_message.text if self.tool_calls_message else "",
             sender=MESSAGE_SENDER_AI,
             sender_name="AI",
             properties={"icon": "Bot", "state": "partial"},
@@ -184,8 +184,8 @@ class ExecuteToolComponent(Component):
         when there's no vertex (standalone) or False when there is one (assume nested).
         """
         # Check flag from CallModel via ai_message
-        if self.ai_message is not None and hasattr(self.ai_message, "data"):
-            should_stream = self.ai_message.data.get("should_stream_events")
+        if self.tool_calls_message is not None and hasattr(self.tool_calls_message, "data"):
+            should_stream = self.tool_calls_message.data.get("should_stream_events")
             if should_stream is not None:
                 return should_stream
 
@@ -309,10 +309,10 @@ class ExecuteToolComponent(Component):
         # Get tool_calls from AI message
         raw_tool_calls = []
         ai_message_text = ""
-        if self.ai_message is not None:
-            if hasattr(self.ai_message, "data") and self.ai_message.data:
-                raw_tool_calls = self.ai_message.data.get("tool_calls", [])
-            ai_message_text = self.ai_message.text or ""
+        if self.tool_calls_message is not None:
+            if hasattr(self.tool_calls_message, "data") and self.tool_calls_message.data:
+                raw_tool_calls = self.tool_calls_message.data.get("tool_calls", [])
+            ai_message_text = self.tool_calls_message.text or ""
 
         if not raw_tool_calls:
             self.log("No tool calls found in AI message")
@@ -320,9 +320,9 @@ class ExecuteToolComponent(Component):
 
         # Get the message ID from incoming ai_message to pass through the loop
         ai_message_id = None
-        if self.ai_message is not None:
+        if self.tool_calls_message is not None:
             try:
-                ai_message_id = getattr(self.ai_message, "id", None)
+                ai_message_id = getattr(self.tool_calls_message, "id", None)
             except (AttributeError, KeyError):
                 ai_message_id = None
 
