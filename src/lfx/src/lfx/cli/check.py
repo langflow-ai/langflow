@@ -574,30 +574,45 @@ async def handle_updates(
         }
 
     applied_updates = 0
+    failed_updates = []
 
     if auto_update:
         # Apply safe updates automatically
         for component in safe_updates:
-            await apply_component_update(flow_data, component, all_types_dict)
-            applied_updates += 1
+            if await apply_component_update(flow_data, component, all_types_dict):
+                applied_updates += 1
+            else:
+                failed_updates.append(component)
 
         # Apply breaking changes if force is enabled
         if force:
             for component in breaking_updates:
-                await apply_component_update(flow_data, component, all_types_dict)
-                applied_updates += 1
+                if await apply_component_update(flow_data, component, all_types_dict):
+                    applied_updates += 1
+                else:
+                    failed_updates.append(component)
     else:
         # Interactive mode - prompt for each component individually
         # Pass output parameter so prompts can use stderr when output is stdout
         for component in safe_updates:
             if prompt_for_component_update(component, "safe", output=output):
-                await apply_component_update(flow_data, component, all_types_dict)
-                applied_updates += 1
+                if await apply_component_update(flow_data, component, all_types_dict):
+                    applied_updates += 1
+                else:
+                    failed_updates.append(component)
 
         for component in breaking_updates:
             if prompt_for_component_update(component, "breaking", output=output):
-                await apply_component_update(flow_data, component, all_types_dict)
-                applied_updates += 1
+                if await apply_component_update(flow_data, component, all_types_dict):
+                    applied_updates += 1
+                else:
+                    failed_updates.append(component)
+
+    # Log any failed updates
+    if failed_updates:
+        await logger.awarning(
+            f"Failed to apply {len(failed_updates)} update(s): {', '.join(c['component_type'] for c in failed_updates)}"
+        )
 
     # Save updated flow
     output_path = None
@@ -752,7 +767,12 @@ def prompt_for_component_update(component: dict, update_type: str, output: str |
     # Then use Python's built-in input() which reads from stdin (correct for user input)
     while True:
         interactive_console.print("? Update this component? [y/n] (n): ", end="")
-        response = input().strip().lower()
+        try:
+            response = input().strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            # Handle stdin closed or user interrupt - default to not updating
+            interactive_console.print()  # Print newline for clean output
+            return False
         if not response:  # Empty input means default
             response = "n"
         if response in ["y", "yes", "n", "no"]:
@@ -762,8 +782,12 @@ def prompt_for_component_update(component: dict, update_type: str, output: str |
     return response in ["y", "yes"]
 
 
-async def apply_component_update(flow_data: dict, component: dict, all_types_dict: dict) -> None:
-    """Apply a component update to the flow data."""
+async def apply_component_update(flow_data: dict, component: dict, all_types_dict: dict) -> bool:
+    """Apply a component update to the flow data.
+
+    Returns:
+        True if update was applied successfully, False otherwise.
+    """
     component_type = component["component_type"]
     node_id = component["node_id"]
 
@@ -776,7 +800,7 @@ async def apply_component_update(flow_data: dict, component: dict, all_types_dic
             found_component = find_component_in_types(component_type, all_types_dict)
             if not found_component:
                 await logger.awarning(f"Could not find latest component for {component_type}")
-                continue
+                return False
 
             # Store current user values before updating
             current_node_data = node["data"].get("node", {})
@@ -797,7 +821,11 @@ async def apply_component_update(flow_data: dict, component: dict, all_types_dic
                 if field_name in updated_template and isinstance(updated_template[field_name], dict):
                     updated_template[field_name]["value"] = user_value
 
-            break
+            return True
+
+    # Node not found
+    await logger.awarning(f"Could not find node {node_id} in flow data")
+    return False
 
 
 @partial(syncify, raise_sync_error=False)
