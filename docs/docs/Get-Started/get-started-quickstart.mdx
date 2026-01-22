@@ -62,8 +62,15 @@ Many components can be tools for agents, including [Model Context Protocol (MCP)
 
 3. In the **Agent** component, select your configured model from the **Language Model** dropdown.
 
-    If you want to use a different provider, configure it in the **Models** pane, and then select it from the **Agent** component's dropdown.
-    If your preferred provider or model isn't listed, set **Model Provider** to **Connect other models** in the **Language Model** dropdown, and then connect any [language model component](/components-models#additional-language-models).
+    <details>
+    <summary>Access more models and providers</summary
+    
+    There are two ways to access more models and providers:
+    
+    * Edit Langflow's global <Icon name="BrainCog" aria-hidden="true" /> **Models** configuration. These providers and models are part of Langflow's core functionality. Use the **Ollama** provider to connect to any model hosted on a local or remote Ollama instance.
+    * Use any [additional language model component](/components-models#additional-language-models), including your own custom components. In the **Agent** component, set the **Language Model** field to **Connect other models**, and then attach your preferred component.
+    
+    </details>
 
 4. To run the flow, click <Icon name="Play" aria-hidden="true"/> **Playground**.
 

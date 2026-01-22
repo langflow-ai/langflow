@@ -29,12 +29,15 @@ The following example uses a language model component in a chatbot flow similar 
 
 
     :::tip My preferred provider or model isn't listed
-    If you want to use a provider or model that isn't built-in to the **Language Model** core component, you can replace this component with any [additional language model](#additional-language-models).
+    If you want to use a provider or model that isn't built-in to Langflow's global <Icon name="BrainCog" aria-hidden="true" /> **Models**, you can replace the **Language Model** component with any [additional language model component](#additional-language-models).
 
     Browse <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) or <Icon name="Search" aria-hidden="true" /> **Search** for your preferred provider to find additional language models.
+
+    Alternatively, you can use Ollama to host your preferred model, and then configure your Ollama service in Langflow's global <Icon name="BrainCog" aria-hidden="true" /> **Models**.
+    Or, create your own custom component to support any provider and model of your choice, and then use your custom component in place of the **Language Model** core component. As a shortcut, use an existing language model component as the basis for your custom component.
     :::
 
-2. Add the **Language Model** core component to your flow, and then select your configured model from the **Language Model** dropdown.
+2. Add the **Language Model** core component to your flow, and then select your configured model from the **Language Model** field.
 
     The **Language Model** dropdown includes the following options at the bottom:
 
@@ -72,13 +75,8 @@ These components are required for direct chat interaction with an LLM.
     </details>
 
 10. Optional: Try a different model or provider to see how the response changes.
-For example, if you are using the **Language Model** core component, you could try an Anthropic model.
 
-    To switch models:
-    1. To open the **Model providers** pane, click <Icon name="BrainCog" aria-hidden="true" /> **Models** in the Langflow header.
-    2. Add the API key for another provider (if not already configured), and then select the model you want to try.
-    3. Return to your flow and select the new model from the **Language Model** component's dropdown.
-
+    If you enabled multiple models in Langflow's global <Icon name="BrainCog" aria-hidden="true" /> **Models**, select a different model in the **Language Model** field. Or, click <Icon name="BrainCog" aria-hidden="true" /> **Models** in the Langflow header to configure additional models and providers.
     Then, open the **Playground**, ask the same question as you did before, and then compare the content and format of the responses.
 
     This helps you understand how different models handle the same request so you can choose the best model for your use case.
@@ -150,8 +148,8 @@ import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 
 | Name | Type | Description |
 |------|------|-------------|
-| provider | String | Input parameter. The model provider to use. Models are configured globally in the **Models** pane. |
-| model_name | String | Input parameter. The name of the model to use. Options depend on the selected provider and are configured globally in the **Models** pane. |
+| provider | String | Input parameter. The model provider to use. Options depend on your global <Icon name="BrainCog" aria-hidden="true" /> **Models** configuration. |
+| model_name | String | Input parameter. The name of the model to use. Options depend on the selected provider and your global <Icon name="BrainCog" aria-hidden="true" /> **Models** configuration. |
 | input_value | String | Input parameter. The input text to send to the model. |
 | system_message | String | Input parameter. A system message that helps set the behavior of the assistant. |
 | stream | Boolean | Input parameter. Whether to stream the response. Default: `false`. |
