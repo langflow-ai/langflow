@@ -65,7 +65,7 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
     Therefore, installing `langflow-base` directly only installs the [core base dependencies](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/pyproject.toml).
 
     If you installed `langflow-base`, there are two ways to resolve dependency errors that result from this breaking change:
-    
+
     * If you need the full set of dependencies, you must install `langflow-base` with the `complete` extra:
 
         ```bash
@@ -150,7 +150,7 @@ If you installed version 1.7.0 before the fix was released, follow these steps t
 - Changes to read/write file components
 
     The **Save File** component was renamed to **Write File**, and it can now save to S3 and Google Drive.
-    The **File** component was renamed to **Read File**.
+    The **File** component was renamed to **Read File**, and it can now read from S3 and Google Drive.
     Both components support **Tool Mode**.
 
 - New integrations, bundles, and components:
