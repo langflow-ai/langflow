@@ -26,7 +26,7 @@ This component has two modes, depending on the type of server you want to access
 
 ### Connect to a non-Langflow MCP server {#mcp-stdio-mode}
 
-    <PartialMcpNodeTip />
+<PartialMcpNodeTip />
 
 1. Add an **MCP Tools** component to your flow.
 
@@ -124,7 +124,7 @@ To modify the **MCP Tools** component's environment variables with tweaks, do th
 The component's ID is displayed in the **Controls** pane, such as `MCPTools-Bzahc`.
 3. Send a POST request to the Langflow server's `/run` endpoint, and include tweaks to the **MCP Tools** component.
 
-    The following examples demonstrate a request structure, with the `env` object nested under `mcp_server` in the `tweaks` payload:
+    The following examples demonstrate a request structure with the `env` object nested under `mcp_server` in the `tweaks` payload:
 
     <Tabs groupId="language">
     <TabItem value="python" label="Python" default>
@@ -241,7 +241,7 @@ The component's ID is displayed in the **Controls** pane, such as `MCPTools-Bzah
 
 You can use [global variables](/configuration-global-variables) in MCP server header values to securely store and reference API keys, authentication tokens, and other sensitive values. This is particularly useful for deployment scenarios where you need to pass user-specific credentials at runtime.
 
-Enter a global variable name as the header value, and Langflow resolves the global variable name to its actual value before making the MCP server request. Langflow only passes the token value to your server: it does not validate tokens on behalf of your MCP server.
+Enter a global variable name as the header value, and Langflow resolves the global variable name to its actual value before making the MCP server request. Langflow only passes the token value to your server; it doesn't validate tokens on behalf of your MCP server.
 
 For example, to create a global variable named `TEST_BEARER_TOKEN` for MCP server bearer authentication, do the following:
 
@@ -256,19 +256,18 @@ For example, to create a global variable named `TEST_BEARER_TOKEN` for MCP serve
     * **Streamable HTTP/SSE URL**: Your MCP server's URL, such as `http://127.0.0.1:8000/mcp`.
     * **Headers**: In the key field, enter the literal string `Authorization`. For the key's value, enter `TEST_BEARER_TOKEN`, or the exact name of your global variable.
 8. Click **Create Server**.
-A successful connection displays the number of tools the server is exposing.
 
-With the server and global variable created, you can now connect to it with the **MCP Tools** component.
+   If the connection succeeds, Langflow shows the number of tools exposed by the server.
+
+   After creating the server and global variable, you can connect to the server with the **MCP Tools** component, as explained in the next steps.
 
 9. Add the **MCP Tools** component to a flow.
 10. In the **MCP Tools** component, select the **MCP Server** you created.
-The MCP server configuration already includes the headers you configured in step 7, so no further configuration is needed in the component. The global variable `TEST_BEARER_TOKEN` will be automatically resolved when the component makes requests to the MCP server.
+The MCP server configuration already includes the headers you configured earlier, so no further configuration is needed in the component. The global variable `TEST_BEARER_TOKEN` is automatically resolved when the component makes requests to the MCP server.
 
-    :::tip Optional: Override headers in the component
-    To override or add additional headers to the **MCP Tools** component, click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus), enable **Show** for the **Headers** parameter, and add header key values. Component headers take precedence over the headers configured in the MCP server settings.
-    :::
+11. Optional: To override headers or add additional headers to the **MCP Tools** component, click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus), enable **Show** for the **Headers** parameter, and then add header key values. Headers configured in the component take precedence over the headers configured in the MCP server settings.
 
-11. Test your flow to make sure the agent uses your server to respond to queries. Open the **Playground**, and then enter a prompt that uses a tool that you connected through the **MCP Tools** component.
+12. Test your flow to make sure the agent uses your server to respond to queries. Open the **Playground**, and then enter a prompt that uses a tool that you connected through the **MCP Tools** component.
 
     Langflow automatically resolves `TEST_BEARER_TOKEN` to its actual value before sending the request to the MCP server. When your MCP server receives the request, the `Authorization` header contains the resolved token value:
 
