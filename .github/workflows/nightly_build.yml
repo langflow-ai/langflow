@@ -220,13 +220,13 @@ jobs:
           git config --global user.name "Langflow Bot"
           
           echo "=== Checking for hash history changes ==="
-          # Check if there are changes to commit
-          if git diff --quiet src/lfx/src/lfx/_assets/nightly_hash_history.json; then
+          # Check if there are changes to commit (handles if it's a new file for first run)
+          git add src/lfx/src/lfx/_assets/nightly_hash_history.json
+          if git diff --cached --quiet src/lfx/src/lfx/_assets/nightly_hash_history.json; then
             echo "No changes to nightly hash history"
           else
             echo "Hash history changes detected, committing..."
             # Commit to the nightly tag itself so builds include the hash history
-            git add src/lfx/src/lfx/_assets/nightly_hash_history.json
             git commit -m "Update nightly hash history for ${{ needs.create-nightly-tag.outputs.main_tag }}"
             
             echo "=== Updating nightly tag ${{ needs.create-nightly-tag.outputs.main_tag }} ==="
