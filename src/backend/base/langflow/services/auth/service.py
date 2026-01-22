@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import json
 import random
 import warnings
 from collections.abc import Coroutine
@@ -455,7 +456,15 @@ class AuthService(AuthServiceBase):
             not verified as this is a utility function, not an authentication function.
         """
         try:
-            claims = jwt.decode(token, options={"verify_signature": False})
+            parts = token.split(".")
+            if len(parts) != 3:
+                raise InvalidTokenError("Invalid token format")
+            payload_b64 = parts[1]
+            pad_len = (-len(payload_b64)) % 4
+            if pad_len:
+                payload_b64 += "=" * pad_len
+            payload_bytes = base64.urlsafe_b64decode(payload_b64)
+            claims = json.loads(payload_bytes.decode("utf-8"))
             user_id = claims["sub"]
             return UUID(user_id)
         except (KeyError, InvalidTokenError, ValueError):
