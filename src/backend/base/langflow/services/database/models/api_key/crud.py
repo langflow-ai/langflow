@@ -24,6 +24,7 @@ async def get_api_keys(session: AsyncSession, user_id: UUID) -> list[ApiKeyRead]
     query: SelectOfScalar = select(ApiKey).where(ApiKey.user_id == user_id)
     api_key_objects = (await session.exec(query)).all()
 
+    fernet = auth_utils.get_fernet(settings_service)
     api_keys = []
     for api_key_obj in api_key_objects:
         data = api_key_obj.model_dump()
@@ -31,7 +32,7 @@ async def get_api_keys(session: AsyncSession, user_id: UUID) -> list[ApiKeyRead]
         api_key = data.get("api_key")
         if api_key:
             try:
-                actual_key = auth_utils.decrypt_api_key(api_key, settings_service=settings_service)
+                actual_key = auth_utils.decrypt_api_key(api_key, settings_service=settings_service, fernet_obj=fernet)
             except (ValueError, TypeError, InvalidToken, UnicodeDecodeError, AttributeError, binascii.Error):
                 # Fallback to stored value for legacy entries
                 actual_key = api_key
@@ -99,11 +100,16 @@ async def check_key(session: AsyncSession, api_key: str) -> User | None:
 
 async def _check_key_from_db(session: AsyncSession, api_key: str, settings_service) -> User | None:
     """Validate API key against the database."""
+    if not api_key or not api_key.startswith("sk-"):
+        return None
+
     query = select(ApiKey.id, ApiKey.api_key, ApiKey.user_id)
     rows = (await session.exec(query)).all()  # list of tuples (id, api_key, user_id)
 
     if not rows:
         return None
+
+    fernet = auth_utils.get_fernet(settings_service)
 
     for api_key_id, stored_value, user_id in rows:
         if stored_value is None:
@@ -113,7 +119,9 @@ async def _check_key_from_db(session: AsyncSession, api_key: str, settings_servi
             matched = True
         else:
             try:
-                candidate = auth_utils.decrypt_api_key(stored_value, settings_service=settings_service)
+                candidate = auth_utils.decrypt_api_key(
+                    stored_value, settings_service=settings_service, fernet_obj=fernet
+                )
             except (ValueError, TypeError, InvalidToken):
                 candidate = stored_value
             matched = candidate == api_key
