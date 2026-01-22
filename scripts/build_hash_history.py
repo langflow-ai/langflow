@@ -12,9 +12,13 @@ NIGHTLY_HISTORY_FILE = "src/lfx/src/lfx/_assets/nightly_hash_history.json"
 
 def get_lfx_version():
     """Get the installed lfx version."""
-    from importlib.metadata import version
+    from importlib.metadata import PackageNotFoundError, version
 
-    return version("lfx")
+    # Try lfx-nightly first (for nightly builds), then fall back to lfx
+    try:
+        return version("lfx-nightly")
+    except PackageNotFoundError:
+        return version("lfx")
 
 
 def load_hash_history(file_path: Path) -> dict:
