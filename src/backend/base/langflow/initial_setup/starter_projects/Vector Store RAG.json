@@ -2723,7 +2723,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "0.3.81"
+                    "version": "0.3.83"
                   },
                   {
                     "name": "pydantic",
@@ -3786,7 +3786,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "0.3.81"
+                    "version": "0.3.83"
                   },
                   {
                     "name": "lfx",
@@ -4599,7 +4599,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "0.3.81"
+                    "version": "0.3.83"
                   },
                   {
                     "name": "lfx",
