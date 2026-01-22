@@ -13,7 +13,7 @@ Use JWT to create credentials that automatically expire, enable stateless authen
 
 JWT authentication with the HS256 algorithm is enabled by default, but can be configured further with the `LANGFLOW_ALGORITHM` environment variable.
 
-<details closedn>
+<details closed>
 <summary>About the JWT structure and contents</summary>
 
 When a user logs in with their username and password at the `/api/v1/login` endpoint, Langflow validates the credentials and creates a JWT token containing the user's identity and expiration time. This token is then used for subsequent API requests instead of sending credentials with each request.
