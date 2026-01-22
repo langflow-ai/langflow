@@ -64,7 +64,7 @@ class TestExecuteToolParallel:
 
         # Test parallel execution
         comp_parallel = ExecuteToolComponent()
-        comp_parallel.ai_message = ai_message
+        comp_parallel.tool_calls_message = ai_message
         comp_parallel.tools = [tool1, tool2, tool3]
         comp_parallel.parallel = True
         comp_parallel.timeout = 0
@@ -80,7 +80,7 @@ class TestExecuteToolParallel:
 
         # Test sequential execution
         comp_sequential = ExecuteToolComponent()
-        comp_sequential.ai_message = ai_message
+        comp_sequential.tool_calls_message = ai_message
         comp_sequential.tools = [tool1, tool2, tool3]
         comp_sequential.parallel = False
         comp_sequential.timeout = 0
@@ -114,7 +114,7 @@ class TestExecuteToolParallel:
         )
 
         comp = ExecuteToolComponent()
-        comp.ai_message = ai_message
+        comp.tool_calls_message = ai_message
         comp.tools = [tool1, tool2]
         comp.parallel = True
         comp.timeout = 0
@@ -141,7 +141,7 @@ class TestExecuteToolParallel:
         )
 
         comp = ExecuteToolComponent()
-        comp.ai_message = ai_message
+        comp.tool_calls_message = ai_message
         comp.tools = [tool1]
         comp.parallel = True  # Even with parallel=True, single tool uses sequential
         comp.timeout = 0
@@ -170,7 +170,7 @@ class TestExecuteToolTimeout:
         )
 
         comp = ExecuteToolComponent()
-        comp.ai_message = ai_message
+        comp.tool_calls_message = ai_message
         comp.tools = [slow_tool]
         comp.parallel = False
         comp.timeout = 1  # 1 second timeout
@@ -203,7 +203,7 @@ class TestExecuteToolTimeout:
         )
 
         comp = ExecuteToolComponent()
-        comp.ai_message = ai_message
+        comp.tool_calls_message = ai_message
         comp.tools = [tool]
         comp.parallel = False
         comp.timeout = 0  # No timeout
@@ -236,7 +236,7 @@ class TestExecuteToolReliableEvents:
         )
 
         comp = ExecuteToolComponent()
-        comp.ai_message = ai_message
+        comp.tool_calls_message = ai_message
         comp.tools = [tool1, tool2]
         comp.parallel = True
         comp.timeout = 0
@@ -272,7 +272,7 @@ class TestExecuteToolReliableEvents:
         )
 
         comp = ExecuteToolComponent()
-        comp.ai_message = ai_message
+        comp.tool_calls_message = ai_message
         comp.tools = [tool1, tool2]
         comp.parallel = True
         comp.timeout = 0
@@ -332,7 +332,7 @@ class TestParallelExecutionEvents:
         comp = ExecuteToolComponent()
         comp._event_manager = event_manager
         comp._vertex = None
-        comp.ai_message = ai_message
+        comp.tool_calls_message = ai_message
         comp.tools = [tool1, tool2]
         comp.parallel = True
         comp.timeout = 0
@@ -401,7 +401,7 @@ class TestParallelExecutionEvents:
         comp = ExecuteToolComponent()
         comp._event_manager = event_manager
         comp._vertex = None
-        comp.ai_message = ai_message
+        comp.tool_calls_message = ai_message
         comp.tools = [tool1, tool2]
         comp.parallel = True
         comp.timeout = 0
@@ -446,7 +446,7 @@ class TestParallelExecutionEvents:
         comp = ExecuteToolComponent()
         comp._event_manager = event_manager
         comp._vertex = None
-        comp.ai_message = ai_message
+        comp.tool_calls_message = ai_message
         comp.tools = [tool1, tool2]
         comp.parallel = True
         comp.timeout = 0
@@ -498,7 +498,7 @@ class TestTimeoutEvents:
         comp = ExecuteToolComponent()
         comp._event_manager = event_manager
         comp._vertex = None
-        comp.ai_message = ai_message
+        comp.tool_calls_message = ai_message
         comp.tools = [slow_tool]
         comp.parallel = False
         comp.timeout = 1  # 1 second timeout
@@ -544,7 +544,7 @@ class TestTimeoutEvents:
         comp = ExecuteToolComponent()
         comp._event_manager = event_manager
         comp._vertex = None
-        comp.ai_message = ai_message
+        comp.tool_calls_message = ai_message
         comp.tools = [fast_tool, slow_tool]
         comp.parallel = True
         comp.timeout = 1  # 1 second timeout

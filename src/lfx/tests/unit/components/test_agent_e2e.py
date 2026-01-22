@@ -189,7 +189,7 @@ class TestAgentGraphE2EWithToolCalls:
 
         execute_tool = ExecuteToolComponent(_id="execute_tool")
         execute_tool.set(
-            ai_message=agent_step.get_tool_calls,
+            tool_calls_message=agent_step.get_tool_calls,
             tools=tools,
         )
 
@@ -273,7 +273,7 @@ class TestAgentGraphE2EMultipleIterations:
 
         execute_tool = ExecuteToolComponent(_id="execute_tool")
         execute_tool.set(
-            ai_message=agent_step.get_tool_calls,
+            tool_calls_message=agent_step.get_tool_calls,
             tools=tools,
         )
 
@@ -353,7 +353,7 @@ class TestMessageHistoryAccumulation:
 
         execute_tool = ExecuteToolComponent(_id="execute_tool")
         execute_tool.set(
-            ai_message=agent_step.get_tool_calls,
+            tool_calls_message=agent_step.get_tool_calls,
             tools=tools,
         )
 

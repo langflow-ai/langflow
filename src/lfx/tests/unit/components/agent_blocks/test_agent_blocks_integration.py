@@ -64,7 +64,7 @@ async def test_execute_tool_with_event_manager_integration():
         session_id=session_id,
     )
     ai_message.data["tool_calls"] = [{"name": "search", "args": {"query": "test query"}, "id": "call_123"}]
-    comp.ai_message = ai_message
+    comp.tool_calls_message = ai_message
 
     # Execute
     await comp.execute_tools()
@@ -126,7 +126,7 @@ async def test_execute_tool_sends_events_when_should_stream_events_true():
     ai_message.data["tool_calls"] = [{"name": "search", "args": {"query": "test"}, "id": "call_1"}]
     # CallModel sets this flag when connected to ChatOutput
     ai_message.data["should_stream_events"] = True
-    comp.ai_message = ai_message
+    comp.tool_calls_message = ai_message
 
     await comp.execute_tools()
 
@@ -181,7 +181,7 @@ async def test_execute_tool_skips_events_when_should_stream_events_false():
     ai_message.data["tool_calls"] = [{"name": "search", "args": {"query": "test"}, "id": "call_1"}]
     # CallModel sets this flag to False when NOT connected to ChatOutput (nested agent)
     ai_message.data["should_stream_events"] = False
-    comp.ai_message = ai_message
+    comp.tool_calls_message = ai_message
 
     await comp.execute_tools()
 
@@ -211,7 +211,7 @@ async def test_execute_tool_emits_tool_lifecycle_events():
         session_id=session_id,
     )
     ai_message.data["tool_calls"] = [{"name": "search", "args": {"query": "test"}, "id": "call_1"}]
-    comp.ai_message = ai_message
+    comp.tool_calls_message = ai_message
 
     await comp.execute_tools()
 

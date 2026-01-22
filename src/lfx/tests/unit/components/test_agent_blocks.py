@@ -81,7 +81,7 @@ class TestExecuteToolComponent:
         comp = ExecuteToolComponent()
         input_names = [i.name for i in comp.inputs]
 
-        assert "ai_message" in input_names
+        assert "tool_calls_message" in input_names
         assert "tools" in input_names
 
     def test_has_expected_outputs(self):
@@ -262,9 +262,9 @@ class TestAgentBlocksIntegration:
 
         # ExecuteTool should be able to receive it
         execute_tool = ExecuteToolComponent()
-        execute_tool.ai_message = ai_message
+        execute_tool.tool_calls_message = ai_message
         # Just verify it can be set without error
-        assert execute_tool.ai_message == ai_message
+        assert execute_tool.tool_calls_message == ai_message
 
     def test_while_loop_provides_dataframe_to_agent_step(self):
         """Test that WhileLoop outputs a DataFrame that AgentStep can process."""

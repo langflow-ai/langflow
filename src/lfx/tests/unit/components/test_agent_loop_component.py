@@ -1092,7 +1092,7 @@ class TestToolContentEventSequence:
 
         # Setup ExecuteToolComponent
         execute_tool = ExecuteToolComponent(_id="test_execute_tool")
-        execute_tool.ai_message = ai_message
+        execute_tool.tool_calls_message = ai_message
         execute_tool.tools = [MockTool()]
         execute_tool.timeout = 0
         execute_tool.parallel = False
@@ -1164,7 +1164,7 @@ class TestToolContentEventSequence:
             pass
 
         execute_tool = ExecuteToolComponent(_id="test_execute_tool")
-        execute_tool.ai_message = ai_message
+        execute_tool.tool_calls_message = ai_message
         execute_tool.tools = [MockSearchTool()]
         execute_tool.timeout = 0
         execute_tool.parallel = False
@@ -1274,7 +1274,7 @@ class TestToolContentEventSequence:
             pass
 
         execute_tool = ExecuteToolComponent(_id="test_execute_tool")
-        execute_tool.ai_message = ai_message
+        execute_tool.tool_calls_message = ai_message
         execute_tool.tools = [MockToolA(), MockToolB(), MockToolC()]
         execute_tool.timeout = 0
         execute_tool.parallel = True  # Parallel execution
