@@ -241,8 +241,11 @@ class AgentLoopComponent(Component):
         execute_tool = ExecuteToolComponent(_id=f"{component_id_prefix}_execute_tool")
 
         # Configure streaming on inner components
+        # Agent Step uses explicit stream_events field instead of hidden flag
+        agent_step.set(stream_events=execution_context.stream_to_playground)
+
+        # Pass parent message for message continuity across iterations
         for component in [while_loop, agent_step, execute_tool]:
-            component._stream_to_playground = execution_context.stream_to_playground  # noqa: SLF001
             if agent_message:
                 component._parent_message = agent_message  # noqa: SLF001
 
@@ -287,7 +290,7 @@ class AgentLoopComponent(Component):
 
     def _configure_execute_tool(self, execute_tool, agent_step):
         """Configure ExecuteTool with tools."""
-        config = {"ai_message": agent_step.get_tool_calls}
+        config = {"tool_calls_message": agent_step.get_tool_calls}
         if self.tools:
             config["tools"] = self.tools
         execute_tool.set(**config)

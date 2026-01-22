@@ -1,15 +1,15 @@
 """AgentStep component - the reasoning core of an agent loop.
 
-This is a primitive building block for creating agents. It takes a list of messages
-and optional tools, sends them to a language model, and returns the response message.
+A building block for creating agents. Takes messages and optional tools,
+sends them to a language model, and routes based on the response.
 
-The component has two outputs that act like a conditional router:
-- AI Message: Fires when the model is done (no tool calls)
-- Tool Calls: Fires when the model wants to call tools
+The component has two outputs:
+- Response: Fires when the model is done (no tool calls requested)
+- Tool Calls: Fires when the model wants to execute tools
 
 This enables visual agent loops:
 ChatInput → WhileLoop → AgentStep → [Tool Calls] → ExecuteTool → WhileLoop
-                              ↓ [AI Message - done]
+                              ↓ [Response - done]
                          ChatOutput
 """
 
@@ -18,7 +18,7 @@ from __future__ import annotations
 from time import perf_counter
 from typing import Any
 
-from langchain_core.messages import AIMessage, AIMessageChunk, BaseMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, AIMessageChunk, BaseMessage, SystemMessage
 
 from lfx.base.agents.message_utils import (
     convert_to_lc_messages,
@@ -41,21 +41,24 @@ from lfx.utils.constants import MESSAGE_SENDER_AI
 
 
 class AgentStepComponent(LCModelComponent):
-    """The reasoning core of an agent - sends messages to LLM and routes based on tool calls.
+    """The reasoning core of an agent - sends messages to LLM and routes based on response.
 
     This component is a building block for agent workflows. It:
-    1. Takes messages (conversation history) as input (DataFrame or Message)
+    1. Takes messages (conversation history) as input
     2. Optionally binds tools to the LLM for function calling
     3. Invokes the LLM and routes the response:
-       - If has tool_calls → outputs on "tool_calls" (continue loop)
-       - If no tool_calls → outputs on "ai_message" (done, exit loop)
+       - Response output: fires when the model is done (no tools requested)
+       - Tool Calls output: fires when the model wants to execute tools
 
-    Connect "tool_calls" to ExecuteTool for agent loops.
-    Connect "ai_message" to ChatOutput for final response.
+    The `stream_events` field controls whether messages are created and streamed.
+    When disabled, the component is a pure function with no storage side effects.
+
+    Connect Tool Calls output to Execute Tool for agent loops.
+    Connect Response output to Chat Output for the final response.
     """
 
     display_name = "Agent Step"
-    description = "The reasoning step of an agent. Routes to tool_calls or ai_message based on response."
+    description = "Sends messages to an LLM. Outputs to Response (done) or Tool Calls (continue loop)."
     icon = "brain"
     category = "agent_blocks"
 
@@ -77,18 +80,11 @@ class AgentStepComponent(LCModelComponent):
             advanced=True,
         ),
         HandleInput(
-            name="input_value",
-            display_name="Input",
-            info="Initial user input (Message or string). Used for the first call.",
-            input_types=["Message"],
-            required=False,
-        ),
-        HandleInput(
             name="messages",
-            display_name="Message History",
-            info="Conversation history as DataFrame. Used in loop iterations.",
+            display_name="Messages",
+            info="Conversation history as DataFrame.",
             input_types=["DataFrame"],
-            required=False,
+            required=True,
         ),
         MultilineInput(
             name="system_message",
@@ -119,11 +115,18 @@ class AgentStepComponent(LCModelComponent):
             range_spec=RangeSpec(min=0, max=1, step=0.01),
             advanced=True,
         ),
+        BoolInput(
+            name="stream_events",
+            display_name="Stream Events",
+            info="When enabled, streams messages and events. Disable for pure LLM calls.",
+            value=True,
+            advanced=True,
+        ),
     ]
 
     outputs = [
         Output(
-            display_name="AI Message",
+            display_name="Response",
             name="ai_message",
             method="get_ai_message",
             group_outputs=True,
@@ -187,17 +190,9 @@ class AgentStepComponent(LCModelComponent):
         if self.system_message:
             lc_messages.append(SystemMessage(content=self.system_message))
 
-        # Check if we have messages DataFrame (from loop iteration)
+        # Add conversation history from messages DataFrame
         if self.messages is not None and isinstance(self.messages, DataFrame) and not self.messages.empty:
             lc_messages.extend(self._convert_to_lc_messages(self.messages))
-        elif self.input_value is not None:
-            # First call - use input_value
-            if isinstance(self.input_value, Message):
-                lc_messages.append(HumanMessage(content=self.input_value.text or ""))
-            elif isinstance(self.input_value, str):
-                lc_messages.append(HumanMessage(content=self.input_value))
-            else:
-                lc_messages.append(HumanMessage(content=str(self.input_value)))
 
         return lc_messages
 
@@ -243,7 +238,7 @@ class AgentStepComponent(LCModelComponent):
 
         # Check if we have a parent message from AgentLoop
         parent_message: Message | None = getattr(self, "_parent_message", None)
-        should_stream = getattr(self, "_stream_to_playground", False)
+        should_stream = self.stream_events
 
         # Closure to capture tool_calls while streaming
         aggregated_chunk: AIMessage | None = None
@@ -446,9 +441,7 @@ class AgentStepComponent(LCModelComponent):
             return Message(text="")
 
         # Pass stream_events flag to ExecuteTool
-        # Check _stream_to_playground (set by AgentLoop) OR direct connection to ChatOutput
-        should_stream = getattr(self, "_stream_to_playground", False) or self.is_connected_to_chat_output()
-        result.data["should_stream_events"] = should_stream
+        result.data["should_stream_events"] = self.stream_events
 
         # Continue loop - stop the ai_message branch
         self.stop("ai_message")
