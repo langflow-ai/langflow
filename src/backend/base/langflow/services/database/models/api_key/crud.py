@@ -100,9 +100,6 @@ async def check_key(session: AsyncSession, api_key: str) -> User | None:
 
 async def _check_key_from_db(session: AsyncSession, api_key: str, settings_service) -> User | None:
     """Validate API key against the database."""
-    if not api_key or not api_key.startswith("sk-"):
-        return None
-
     query = select(ApiKey.id, ApiKey.api_key, ApiKey.user_id)
     rows = (await session.exec(query)).all()  # list of tuples (id, api_key, user_id)
 
