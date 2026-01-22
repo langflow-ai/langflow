@@ -74,7 +74,7 @@ const InputWrapper = ({
       {/* Input container */}
       <div
         data-testid="input-wrapper"
-        className="flex w-full flex-col gap-2 rounded-md border border-input bg-background p-4 hover:border-muted-foreground focus-within:border-primary"
+        className="flex w-full flex-col gap-2 rounded-md border border-input bg-background p-3 hover:border-muted-foreground focus-within:border-primary"
         onClick={onClick}
         onMouseDown={onMouseDown}
       >
