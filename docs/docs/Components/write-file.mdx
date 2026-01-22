@@ -20,7 +20,10 @@ To configure the **Write File** component and use it in a flow, do the following
 
     You can connect the same output to multiple **Write File** components if you want to create multiple files, save the data in different file formats, or save files to multiple locations.
 
-2. In **File Name**, enter a file name and an optional path.
+2. Click **Storage Location**, and then select **Local**, **AWS**, or **Google Drive**.
+    If required, enter your cloud provider's credentials.
+    For more information, see [Configure file storage](/concepts-file-management#configure-file-storage).
+3. In **File Name**, enter a file name and an optional path.
 
     The **File Name** parameter controls where the file is saved.
     It can contain a file name or an entire file path:
@@ -37,13 +40,13 @@ To configure the **Write File** component and use it in a flow, do the following
     Don't include an extension in the file name.
     If you do, the extension is treated as part of the file name; it has no impact on the **File Format** parameter.
 
-3. In the [component's header menu](/concepts-components#component-menus), click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls**, select the desired file format, and then click **Close**.
+4. Select the desired file format, and then click **Close**.
 
     The available **File Format** options depend on the input data type:
 
-    * `DataFrame` can be saved to CSV (default), Excel (requires `openpyxl` [custom dependency](/install-custom-dependencies)), JSON (fallback default), or Markdown.
+        * `DataFrame` can be saved to CSV (default), Excel (requires `openpyxl` [custom dependency](/install-custom-dependencies)), JSON (fallback default), or Markdown.
 
-    * `Data` can be saved to CSV, Excel (requires `openpyxl` [custom dependency](/install-custom-dependencies)), JSON (default), or Markdown.
+        * `Data` can be saved to CSV, Excel (requires `openpyxl` [custom dependency](/install-custom-dependencies)), JSON (default), or Markdown.
 
     * `Message` can be saved to TXT, JSON (default), or Markdown.
 
@@ -53,7 +56,7 @@ To configure the **Write File** component and use it in a flow, do the following
     To avoid unintended overwrites, use unique file names and paths.
     :::
 
-4. To test the **Write File** component, click <Icon name="Play" aria-hidden="true" /> **Run component**, and then click <Icon name="TextSearch" aria-hidden="true" /> **Inspect output** to get the filepath where the file was saved.
+5. To test the **Write File** component, click <Icon name="Play" aria-hidden="true" /> **Run component**, and then click <Icon name="TextSearch" aria-hidden="true" /> **Inspect output** to get the filepath where the file was saved.
 
     The component's literal output is a `Message` containing the original data type, the file name and extension, and the absolute filepath to the file based on the **File Name** parameter.
     For example:
