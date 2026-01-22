@@ -1,13 +1,11 @@
 """Tests for hash validator module."""
 
-import hashlib
+import pytest
 from unittest.mock import Mock, patch
 
-import orjson
 from lfx.custom.hash_validator import (
-    _extract_hashes_from_index,
-    _generate_full_hash,
-    _generate_short_hash,
+    _extract_hashes_from_history,
+    _generate_code_hash,
     is_code_hash_allowed,
 )
 
@@ -15,277 +13,219 @@ from lfx.custom.hash_validator import (
 class TestHashGeneration:
     """Tests for hash generation functions."""
 
-    def test_generate_full_hash(self):
-        """Test full hash generation."""
+    def test_generate_code_hash(self):
+        """Test code hash generation (12 char SHA256)."""
         code = "class TestComponent:\n    pass"
-        hash_result = _generate_full_hash(code)
+        hash_result = _generate_code_hash(code)
         assert isinstance(hash_result, str)
-        assert len(hash_result) == 64  # SHA256 hex digest is 64 chars
+        assert len(hash_result) == 12  # First 12 chars of SHA256
         # Verify it's deterministic
-        assert _generate_full_hash(code) == hash_result
+        assert _generate_code_hash(code) == hash_result
 
-    def test_generate_short_hash(self):
-        """Test short hash generation."""
-        code = "class TestComponent:\n    pass"
-        hash_result = _generate_short_hash(code)
-        assert isinstance(hash_result, str)
-        assert len(hash_result) == 12  # First 12 chars
-        # Verify it matches first 12 chars of full hash
-        full_hash = _generate_full_hash(code)
-        assert hash_result == full_hash[:12]
+    def test_generate_code_hash_empty_raises(self):
+        """Test that empty code raises ValueError."""
+        with pytest.raises(ValueError, match="Empty source code"):
+            _generate_code_hash("")
+
+    def test_generate_code_hash_non_string_raises(self):
+        """Test that non-string input raises TypeError."""
+        with pytest.raises(TypeError, match="Source code must be a string"):
+            _generate_code_hash(None)  # type: ignore
 
     def test_hash_different_code_different_hash(self):
         """Test that different code produces different hashes."""
         code1 = "class TestComponent1:\n    pass"
         code2 = "class TestComponent2:\n    pass"
-        hash1 = _generate_short_hash(code1)
-        hash2 = _generate_short_hash(code2)
+        hash1 = _generate_code_hash(code1)
+        hash2 = _generate_code_hash(code2)
         assert hash1 != hash2
 
     def test_hash_same_code_same_hash(self):
         """Test that same code produces same hash."""
         code = "class TestComponent:\n    pass"
-        hash1 = _generate_short_hash(code)
-        hash2 = _generate_short_hash(code)
+        hash1 = _generate_code_hash(code)
+        hash2 = _generate_code_hash(code)
         assert hash1 == hash2
 
 
-class TestExtractHashesFromIndex:
-    """Tests for extracting hashes from component index."""
+class TestExtractHashesFromHistory:
+    """Tests for extracting hashes from hash history."""
 
     def test_extract_hashes_simple(self):
-        """Test extracting hashes from a simple index."""
-        index = {
-            "entries": [
-                [
-                    "TestCategory",
-                    {
-                        "Component1": {
-                            "metadata": {"code_hash": "abc123def456"},
-                        },
-                        "Component2": {
-                            "metadata": {"code_hash": "def456ghi789"},
-                        },
-                    },
-                ]
-            ]
+        """Test extracting hashes from a simple history."""
+        history = {
+            "Component1": {
+                "versions": {
+                    "0.3.0": "abc123def456",
+                }
+            },
+            "Component2": {
+                "versions": {
+                    "0.3.0": "def456ghi789",
+                }
+            },
         }
-        hashes = _extract_hashes_from_index(index)
+        hashes = _extract_hashes_from_history(history)
         assert "abc123def456" in hashes
         assert "def456ghi789" in hashes
         assert len(hashes) == 2
 
-    def test_extract_hashes_multiple_categories(self):
-        """Test extracting hashes from multiple categories."""
-        index = {
-            "entries": [
-                ["Category1", {"Comp1": {"metadata": {"code_hash": "hash1"}}}],
-                ["Category2", {"Comp2": {"metadata": {"code_hash": "hash2"}}}],
-            ]
+    def test_extract_hashes_multiple_versions(self):
+        """Test extracting hashes from components with multiple versions."""
+        history = {
+            "Component1": {
+                "versions": {
+                    "0.1.0": "hash1_v1",
+                    "0.2.0": "hash1_v2",
+                    "0.3.0": "hash1_v3",
+                }
+            },
+            "Component2": {
+                "versions": {
+                    "0.3.0": "hash2_v1",
+                }
+            },
         }
-        hashes = _extract_hashes_from_index(index)
-        assert "hash1" in hashes
-        assert "hash2" in hashes
-        assert len(hashes) == 2
+        hashes = _extract_hashes_from_history(history)
+        assert "hash1_v1" in hashes
+        assert "hash1_v2" in hashes
+        assert "hash1_v3" in hashes
+        assert "hash2_v1" in hashes
+        assert len(hashes) == 4
 
-    def test_extract_hashes_missing_metadata(self):
-        """Test extracting hashes when metadata is missing."""
-        index = {
-            "entries": [
-                [
-                    "TestCategory",
-                    {
-                        "Component1": {"display_name": "Test"},  # No metadata
-                        "Component2": {"metadata": {"code_hash": "hash1"}},
-                    },
-                ]
-            ]
+    def test_extract_hashes_missing_versions_raises(self):
+        """Test that missing versions key raises ValueError."""
+        history = {
+            "Component1": {
+                "other_field": "value"  # No versions
+            },
         }
-        hashes = _extract_hashes_from_index(index)
-        assert "hash1" in hashes
-        assert len(hashes) == 1
+        try:
+            _extract_hashes_from_history(history)
+            assert False, "Should have raised ValueError"
+        except ValueError as e:
+            assert "Missing 'versions' key" in str(e)
+            assert "Component1" in str(e)
 
-    def test_extract_hashes_missing_code_hash(self):
-        """Test extracting hashes when code_hash is missing."""
-        index = {
-            "entries": [
-                [
-                    "TestCategory",
-                    {
-                        "Component1": {"metadata": {"other_field": "value"}},  # No code_hash
-                    },
-                ]
-            ]
+    def test_extract_hashes_empty_versions(self):
+        """Test extracting hashes when versions dict is empty (valid case)."""
+        history = {
+            "Component1": {
+                "versions": {}  # Empty versions - valid but no hashes
+            },
         }
-        hashes = _extract_hashes_from_index(index)
+        hashes = _extract_hashes_from_history(history)
         assert len(hashes) == 0
 
-    def test_extract_hashes_empty_index(self):
-        """Test extracting hashes from empty index."""
-        index = {"entries": []}
-        hashes = _extract_hashes_from_index(index)
+    def test_extract_hashes_empty_history(self):
+        """Test extracting hashes from empty history."""
+        history = {}
+        hashes = _extract_hashes_from_history(history)
         assert len(hashes) == 0
 
-    def test_extract_hashes_no_entries(self):
-        """Test extracting hashes when entries key is missing."""
-        index = {}
-        hashes = _extract_hashes_from_index(index)
+    def test_extract_hashes_none_history(self):
+        """Test extracting hashes when history is None."""
+        history = None
+        hashes = _extract_hashes_from_history(history)
         assert len(hashes) == 0
 
-    def test_extract_hashes_includes_hash_history(self):
-        """Test that hashes from hash_history are also extracted."""
-        index = {
-            "entries": [
-                [
-                    "TestCategory",
-                    {
-                        "Component1": {
-                            "metadata": {
-                                "code_hash": "current_hash",
-                                "hash_history": [
-                                    {"hash": "old_hash_1", "v_from": "1.0.0", "v_to": "1.1.0"},
-                                    {"hash": "old_hash_2", "v_from": "1.1.0", "v_to": "1.2.0"},
-                                ],
-                            },
-                        },
-                    },
-                ]
-            ]
+    def test_extract_hashes_no_duplicates(self):
+        """Test that duplicate hashes across versions are deduplicated."""
+        history = {
+            "Component1": {
+                "versions": {
+                    "0.1.0": "same_hash",
+                    "0.2.0": "same_hash",
+                    "0.3.0": "same_hash",
+                }
+            },
         }
-        hashes = _extract_hashes_from_index(index)
-        assert "current_hash" in hashes
-        assert "old_hash_1" in hashes
-        assert "old_hash_2" in hashes
-        assert len(hashes) == 3
-
-    def test_extract_hashes_hash_history_only_current(self):
-        """Test extraction when component has current hash but no history."""
-        index = {
-            "entries": [
-                [
-                    "TestCategory",
-                    {
-                        "Component1": {
-                            "metadata": {
-                                "code_hash": "current_hash",
-                                "hash_history": [],  # Empty history
-                            },
-                        },
-                    },
-                ]
-            ]
-        }
-        hashes = _extract_hashes_from_index(index)
-        assert "current_hash" in hashes
-        assert len(hashes) == 1
-
-    def test_extract_hashes_hash_history_no_duplicates(self):
-        """Test that duplicate hashes in history are deduplicated."""
-        index = {
-            "entries": [
-                [
-                    "TestCategory",
-                    {
-                        "Component1": {
-                            "metadata": {
-                                "code_hash": "same_hash",
-                                "hash_history": [
-                                    {"hash": "same_hash", "v_from": "1.0.0", "v_to": "1.1.0"},
-                                    {"hash": "same_hash", "v_from": "1.1.0", "v_to": "1.2.0"},
-                                ],
-                            },
-                        },
-                    },
-                ]
-            ]
-        }
-        hashes = _extract_hashes_from_index(index)
+        hashes = _extract_hashes_from_history(history)
         assert "same_hash" in hashes
         assert len(hashes) == 1  # Should be deduplicated
 
-    def test_extract_hashes_hash_history_multiple_components(self):
-        """Test extraction from multiple components with hash histories."""
-        index = {
-            "entries": [
-                [
-                    "Category1",
-                    {
-                        "Comp1": {
-                            "metadata": {
-                                "code_hash": "comp1_current",
-                                "hash_history": [{"hash": "comp1_old", "v_from": "1.0.0", "v_to": "1.1.0"}],
-                            },
-                        },
-                    },
-                ],
-                [
-                    "Category2",
-                    {
-                        "Comp2": {
-                            "metadata": {
-                                "code_hash": "comp2_current",
-                                "hash_history": [{"hash": "comp2_old", "v_from": "1.0.0", "v_to": "1.1.0"}],
-                            },
-                        },
-                    },
-                ],
-            ]
+    def test_extract_hashes_multiple_components_multiple_versions(self):
+        """Test extraction from multiple components with multiple versions."""
+        history = {
+            "Comp1": {
+                "versions": {
+                    "0.1.0": "comp1_v1",
+                    "0.2.0": "comp1_v2",
+                }
+            },
+            "Comp2": {
+                "versions": {
+                    "0.1.0": "comp2_v1",
+                    "0.2.0": "comp2_v2",
+                }
+            },
         }
-        hashes = _extract_hashes_from_index(index)
-        assert "comp1_current" in hashes
-        assert "comp1_old" in hashes
-        assert "comp2_current" in hashes
-        assert "comp2_old" in hashes
+        hashes = _extract_hashes_from_history(history)
+        assert "comp1_v1" in hashes
+        assert "comp1_v2" in hashes
+        assert "comp2_v1" in hashes
+        assert "comp2_v2" in hashes
         assert len(hashes) == 4
 
-    def test_extract_hashes_hash_history_malformed_entries(self):
-        """Test that malformed hash_history entries are skipped gracefully."""
-        index = {
-            "entries": [
-                [
-                    "TestCategory",
-                    {
-                        "Component1": {
-                            "metadata": {
-                                "code_hash": "current_hash",
-                                "hash_history": [
-                                    {"hash": "valid_hash", "v_from": "1.0.0", "v_to": "1.1.0"},
-                                    {"no_hash_key": "invalid"},  # Missing 'hash' key
-                                    "not_a_dict",  # Not a dict
-                                    {"hash": "", "v_from": "1.0.0", "v_to": "1.1.0"},  # Empty hash
-                                    {"hash": None, "v_from": "1.0.0", "v_to": "1.1.0"},  # None hash
-                                ],
-                            },
-                        },
-                    },
-                ]
-            ]
+    def test_extract_hashes_empty_hash_raises(self):
+        """Test that empty hash raises ValueError."""
+        history = {
+            "Component1": {
+                "versions": {
+                    "0.1.0": "valid_hash",
+                    "0.2.0": "",  # Empty hash
+                }
+            },
         }
-        hashes = _extract_hashes_from_index(index)
-        assert "current_hash" in hashes
-        assert "valid_hash" in hashes
-        assert len(hashes) == 2  # Only valid hashes
+        try:
+            _extract_hashes_from_history(history)
+            assert False, "Should have raised ValueError"
+        except ValueError as e:
+            assert "Empty hash" in str(e)
+            assert "Component1" in str(e)
+            assert "0.2.0" in str(e)
 
-    def test_extract_hashes_hash_history_not_a_list(self):
-        """Test that non-list hash_history is handled gracefully."""
-        index = {
-            "entries": [
-                [
-                    "TestCategory",
-                    {
-                        "Component1": {
-                            "metadata": {
-                                "code_hash": "current_hash",
-                                "hash_history": "not_a_list",  # Invalid type
-                            },
-                        },
-                    },
-                ]
-            ]
+    def test_extract_hashes_none_hash_raises(self):
+        """Test that None hash raises ValueError."""
+        history = {
+            "Component1": {
+                "versions": {
+                    "0.1.0": None,  # None hash
+                }
+            },
         }
-        hashes = _extract_hashes_from_index(index)
-        assert "current_hash" in hashes
-        assert len(hashes) == 1  # Should still get current hash
+        try:
+            _extract_hashes_from_history(history)
+            assert False, "Should have raised ValueError"
+        except ValueError as e:
+            assert "Invalid hash type" in str(e)
+            assert "Component1" in str(e)
+
+    def test_extract_hashes_component_not_dict_raises(self):
+        """Test that non-dict component data raises ValueError."""
+        history = {
+            "Component1": "not_a_dict",  # Not a dict
+        }
+        try:
+            _extract_hashes_from_history(history)
+            assert False, "Should have raised ValueError"
+        except ValueError as e:
+            assert "Invalid component data format" in str(e)
+            assert "Component1" in str(e)
+
+    def test_extract_hashes_versions_not_a_dict_raises(self):
+        """Test that non-dict versions raises ValueError."""
+        history = {
+            "Component1": {
+                "versions": "not_a_dict",  # Invalid type
+            },
+        }
+        try:
+            _extract_hashes_from_history(history)
+            assert False, "Should have raised ValueError"
+        except ValueError as e:
+            assert "Invalid versions format" in str(e)
+            assert "Component1" in str(e)
 
 
 class TestIsCodeHashAllowed:
@@ -299,8 +239,8 @@ class TestIsCodeHashAllowed:
         code = "class TestComponent:\n    pass"
         assert is_code_hash_allowed(code, mock_settings) is True
 
-    def test_blocked_when_hash_not_in_index(self):
-        """Test that code is blocked when hash not in index."""
+    def test_blocked_when_hash_not_in_history(self):
+        """Test that code is blocked when hash not in history."""
         mock_settings = Mock()
         mock_settings.settings.allow_custom_components = False
 
@@ -309,30 +249,39 @@ class TestIsCodeHashAllowed:
             code = "class TestComponent:\n    pass"
             assert is_code_hash_allowed(code, mock_settings) is False
 
-    def test_allowed_when_hash_in_index(self):
-        """Test that code is allowed when hash is in index."""
+    def test_allowed_when_hash_in_history(self):
+        """Test that code is allowed when hash is in history."""
         mock_settings = Mock()
         mock_settings.settings.allow_custom_components = False
 
         code = "class TestComponent:\n    pass"
-        code_hash = _generate_short_hash(code)
+        code_hash = _generate_code_hash(code)
 
         # Mock the hash loading to return set with our hash
         with patch("lfx.custom.hash_validator._get_cached_hashes", return_value={code_hash}):
             assert is_code_hash_allowed(code, mock_settings) is True
 
-    def test_allowed_when_no_settings_service(self):
-        """Test that code is allowed when settings service is None."""
+    def test_raises_when_no_settings_service(self):
+        """Test that an exception is raised when settings service is None."""
         code = "class TestComponent:\n    pass"
-        # Should default to allowing code when no settings service
-        assert is_code_hash_allowed(code, None) is True
+        # Should raise ValueError when no settings service (fail fast)
+        with patch("lfx.custom.hash_validator.get_settings_service", return_value=None):
+            try:
+                is_code_hash_allowed(code)
+                assert False, "Should have raised ValueError"
+            except ValueError as e:
+                assert "Settings service is not available" in str(e)
 
-    def test_allowed_when_settings_service_unavailable(self):
-        """Test that code is allowed when settings service can't be fetched."""
+    def test_raises_when_settings_service_unavailable(self):
+        """Test that an exception is raised when settings service can't be fetched."""
         code = "class TestComponent:\n    pass"
-        with patch("lfx.services.deps.get_settings_service", side_effect=Exception("Service unavailable")):
-            # Should default to allowing code when service unavailable
-            assert is_code_hash_allowed(code) is True
+        with patch("lfx.custom.hash_validator.get_settings_service", side_effect=Exception("Service unavailable")):
+            # Should raise exception when service unavailable (fail fast)
+            try:
+                is_code_hash_allowed(code)
+                assert False, "Should have raised Exception"
+            except Exception as e:
+                assert "Service unavailable" in str(e)
 
     def test_empty_code_allowed(self):
         """Test that empty code is allowed."""
@@ -342,51 +291,65 @@ class TestIsCodeHashAllowed:
         assert is_code_hash_allowed("   ", mock_settings) is True
         assert is_code_hash_allowed("\n\n\t  \n", mock_settings) is True
 
-    def test_hash_generation_error_allows_code(self):
-        """Test that hash generation errors allow code (fail open)."""
+    def test_hash_generation_error_raises(self):
+        """Test that hash generation errors raise exceptions (fail fast)."""
         mock_settings = Mock()
         mock_settings.settings.allow_custom_components = False
 
         # Mock hash generation to raise an error
-        with patch("lfx.custom.hash_validator._generate_short_hash", side_effect=Exception("Hash error")):
+        with patch("lfx.custom.hash_validator._generate_code_hash", side_effect=Exception("Hash error")):
             code = "class TestComponent:\n    pass"
-            # Should allow code when hash generation fails
-            assert is_code_hash_allowed(code, mock_settings) is True
+            # Should raise exception when hash generation fails (fail fast)
+            try:
+                is_code_hash_allowed(code, mock_settings)
+                assert False, "Should have raised Exception"
+            except Exception as e:
+                assert "Hash error" in str(e)
 
-    def test_index_loading_error_allows_code(self):
-        """Test that index loading errors allow code (fail open)."""
+    def test_history_loading_error_raises(self):
+        """Test that history loading errors raise exceptions (fail fast)."""
         mock_settings = Mock()
         mock_settings.settings.allow_custom_components = False
 
-        # Mock index loading to raise an error
-        with patch("lfx.custom.hash_validator._get_cached_hashes", side_effect=Exception("Index error")):
+        # Mock history loading to raise an error
+        with patch("lfx.custom.hash_validator._get_cached_hashes", side_effect=ValueError("History error")):
             code = "class TestComponent:\n    pass"
-            # Should allow code when index loading fails
-            assert is_code_hash_allowed(code, mock_settings) is True
+            # Should raise exception when history loading fails (fail fast)
+            try:
+                is_code_hash_allowed(code, mock_settings)
+                assert False, "Should have raised ValueError"
+            except ValueError as e:
+                assert "History error" in str(e)
 
-    def test_malformed_index_handled_gracefully(self):
-        """Test that malformed index is handled gracefully."""
+    def test_empty_history_raises(self):
+        """Test that empty hash history raises ValueError."""
+        from lfx.custom.hash_validator import _load_hash_history
+        
         mock_settings = Mock()
         mock_settings.settings.allow_custom_components = False
+        mock_settings.settings.allow_nightly_custom_components = False
 
-        # Mock index with malformed data
-        with patch("lfx.custom.hash_validator._get_cached_hashes", return_value=set()):
-            code = "class TestComponent:\n    pass"
-            # Should block when index is empty (malformed or no hashes)
-            assert is_code_hash_allowed(code, mock_settings) is False
+        # Mock Path.exists to return True but read_bytes to return empty history
+        with patch("pathlib.Path.exists", return_value=True), \
+             patch("pathlib.Path.read_bytes", return_value=b"{}"):
+            # Should raise ValueError when history is empty (critical error)
+            try:
+                _load_hash_history(mock_settings)
+                assert False, "Should have raised ValueError"
+            except ValueError as e:
+                assert "No hashes loaded" in str(e)
 
     def test_cache_behavior(self):
         """Test that cache works correctly with same settings."""
         code = "class TestComponent:\n    pass"
-        code_hash = _generate_short_hash(code)
+        code_hash = _generate_code_hash(code)
 
         mock_settings = Mock()
         mock_settings.settings.allow_custom_components = False
-        mock_settings.settings.components_index_path = None
 
         # Mock the internal cache mechanism by patching _get_cached_hashes
-        # to track how many times _load_component_index_hashes is called
-        with patch("lfx.custom.hash_validator._load_component_index_hashes") as mock_load:
+        # to track how many times _load_hash_history is called
+        with patch("lfx.custom.hash_validator._load_hash_history") as mock_load:
             mock_load.return_value = {code_hash}
 
             # First call should load
@@ -401,20 +364,18 @@ class TestIsCodeHashAllowed:
     def test_cache_invalidation_on_settings_change(self):
         """Test that cache is invalidated when settings change."""
         code = "class TestComponent:\n    pass"
-        code_hash = _generate_short_hash(code)
+        code_hash = _generate_code_hash(code)
 
-        # Create first settings with one path
+        # Create first settings
         mock_settings1 = Mock()
         mock_settings1.settings.allow_custom_components = False
-        mock_settings1.settings.components_index_path = "/path/to/index1.json"
 
-        # Create second settings with different path
+        # Create second settings (different object)
         mock_settings2 = Mock()
         mock_settings2.settings.allow_custom_components = False
-        mock_settings2.settings.components_index_path = "/path/to/index2.json"
 
-        # Mock _load_component_index_hashes to track calls
-        with patch("lfx.custom.hash_validator._load_component_index_hashes") as mock_load:
+        # Mock _load_hash_history to track calls
+        with patch("lfx.custom.hash_validator._load_hash_history") as mock_load:
             mock_load.return_value = {code_hash}
 
             # Call with first settings - should load
@@ -430,39 +391,29 @@ class TestIsCodeHashAllowed:
             assert mock_load.call_count == 2  # Reloaded due to different settings
 
 
-class TestIntegrationWithComponentIndex:
-    """Integration tests with actual component index structure."""
+class TestIntegrationWithHashHistory:
+    """Integration tests with actual hash history structure."""
 
-    def test_with_real_index_structure(self):
-        """Test with a structure similar to real component index."""
-        # Create a mock index file
-        index_data = {
-            "version": "1.0.0",
-            "metadata": {"num_components": 2},
-            "entries": [
-                [
-                    "TestCategory",
-                    {
-                        "Component1": {
-                            "display_name": "Component 1",
-                            "metadata": {"code_hash": "abc123def456"},
-                        },
-                        "Component2": {
-                            "display_name": "Component 2",
-                            "metadata": {"code_hash": "def456ghi789"},
-                        },
-                    },
-                ]
-            ],
+    def test_with_real_history_structure(self):
+        """Test with a structure similar to real hash history."""
+        # Create a mock history file
+        history_data = {
+            "Component1": {
+                "versions": {
+                    "0.3.0": "abc123def456",
+                }
+            },
+            "Component2": {
+                "versions": {
+                    "0.2.0": "old_hash_123",
+                    "0.3.0": "def456ghi789",
+                }
+            },
         }
 
-        # Calculate hash for integrity
-        tmp = dict(index_data)
-        payload = orjson.dumps(tmp, option=orjson.OPT_SORT_KEYS)
-        index_data["sha256"] = hashlib.sha256(payload).hexdigest()
-
         # Test extraction
-        hashes = _extract_hashes_from_index(index_data)
+        hashes = _extract_hashes_from_history(history_data)
         assert "abc123def456" in hashes
         assert "def456ghi789" in hashes
-        assert len(hashes) == 2
+        assert "old_hash_123" in hashes
+        assert len(hashes) == 3

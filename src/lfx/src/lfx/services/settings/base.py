@@ -170,11 +170,21 @@ class Settings(BaseSettings):
     to use a custom index.
     """
     allow_custom_components: bool = True
-    """If False, blocks all custom code execution unless the component hash matches an entry in the component index.
+    """If False, blocks all custom code execution unless the component hash matches an entry in the hash history.
 
-    When disabled (False), only components whose code hash matches an entry in the component index JSON
+    When disabled (False), only components whose code hash matches an entry in the hash history files
     will be allowed to be imported or executed. This provides a security mechanism to prevent
     execution of unauthorized custom code. Defaults to True to allow custom components.
+    """
+    allow_nightly_custom_components: bool = True
+    """If False, only hashes from stable_hash_history.json are considered valid when allow_custom_components is False.
+
+    When disabled (False), only components whose code hash matches an entry in the stable hash history
+    will be allowed. Nightly hash history will be ignored. This provides stricter security by only
+    allowing officially released component versions. Defaults to True to allow nightly components.
+    
+    Note: This setting only takes effect when allow_custom_components is False.
+    When allow_custom_components is True, all custom code is allowed regardless of this setting.
     """
     langchain_cache: str = "InMemoryCache"
     load_flows_path: str | None = None

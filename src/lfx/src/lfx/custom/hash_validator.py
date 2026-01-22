@@ -1,124 +1,172 @@
 """Hash validation for custom component code.
 
 This module provides functionality to validate custom component code against
-a component index by comparing code hashes. When allow_custom_components is False,
-only components whose hash matches an entry in the component index are allowed.
+hash history files by comparing code hashes. When allow_custom_components is False,
+only components whose hash matches an entry in the hash history are allowed.
 """
 
 import hashlib
+import threading
+import orjson
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
+from lfx.services.deps import get_settings_service
 
 if TYPE_CHECKING:
     from lfx.services.settings.service import SettingsService
 
 
-# Cache for component index hashes
+# Cache for component hashes from history files (thread-safe)
 _component_hash_cache: set[str] | None = None
-_cache_settings_key: tuple[str, int] | None = None
+_cache_settings_key: tuple[str, bool, int] | None = None
+_cache_lock = threading.Lock()
 
 
-def _generate_full_hash(source_code: str) -> str:
-    """Generate full SHA256 hash of source code.
+def _generate_code_hash(source_code: str) -> str:
+    """Generate a hash of the component source code.
 
-    Args:
-        source_code: The source code string to hash
-
-    Returns:
-        Full SHA256 hex digest (64 characters)
-    """
-    return hashlib.sha256(source_code.encode("utf-8")).hexdigest()
-
-
-def _generate_short_hash(source_code: str) -> str:
-    """Generate short hash (first 12 chars) of source code for comparison.
+    This uses the exact same method as _generate_code_hash in custom/utils.py
+    to ensure consistency with the build_hash_history.py script.
 
     Args:
         source_code: The source code string to hash
 
     Returns:
         First 12 characters of SHA256 hex digest
+
+    Raises:
+        TypeError: If source_code is not a string
+        ValueError: If source_code is empty
     """
-    return _generate_full_hash(source_code)[:12]
+    if not isinstance(source_code, str):
+        msg = "Source code must be a string"
+        raise TypeError(msg)
+
+    if not source_code:
+        msg = "Empty source code provided"
+        raise ValueError(msg)
+
+    # Generate SHA256 hash of the source code (first 12 chars for brevity)
+    return hashlib.sha256(source_code.encode("utf-8")).hexdigest()[:12]
 
 
-def _extract_hashes_from_index(index: dict) -> set[str]:
-    """Extract all code hashes from component index, including hash_history.
-
-    This function extracts both the current code_hash and all historical hashes
-    from the hash_history array. This ensures that older versions of core components
-    are still recognized as trusted when allow_custom_components is disabled.
+def _extract_hashes_from_history(history: dict) -> set[str]:
+    """Extract all code hashes from hash history file.
 
     Args:
-        index: Component index dictionary
+        history: Hash history dictionary mapping component names to version data
 
     Returns:
-        Set of code hashes (12-character prefixes) from both current and historical versions
+        Set of code hashes (12-character prefixes) from all component versions
+        
+    Raises:
+        ValueError: If history data is malformed or invalid
     """
     hashes: set[str] = set()
 
-    if not index or "entries" not in index:
+    if not history:
         return hashes
 
-    for _category_name, components_dict in index.get("entries", []):
-        if not isinstance(components_dict, dict):
-            continue
+    for component_name, component_data in history.items():
+        if not isinstance(component_data, dict):
+            msg = f"Invalid component data format for '{component_name}' - expected dict, got {type(component_data).__name__}"
+            logger.error(msg)
+            raise ValueError(msg)
 
-        for component_data in components_dict.values():
-            if not isinstance(component_data, dict):
-                continue
+        if "versions" not in component_data:
+            msg = f"Missing 'versions' key for component '{component_name}'"
+            logger.error(msg)
+            raise ValueError(msg)
 
-            metadata = component_data.get("metadata", {})
-            if isinstance(metadata, dict):
-                # Add current code hash
-                code_hash = metadata.get("code_hash")
-                if isinstance(code_hash, str) and code_hash:
-                    hashes.add(code_hash)
+        versions = component_data["versions"]
+        if not isinstance(versions, dict):
+            msg = f"Invalid versions format for component '{component_name}' - expected dict, got {type(versions).__name__}"
+            logger.error(msg)
+            raise ValueError(msg)
 
-                # Add historical hashes from hash_history
-                hash_history = metadata.get("hash_history", [])
-                if isinstance(hash_history, list):
-                    for entry in hash_history:
-                        if isinstance(entry, dict):
-                            hist_hash = entry.get("hash")
-                            if isinstance(hist_hash, str) and hist_hash:
-                                hashes.add(hist_hash)
+        for version, code_hash in versions.items():
+            if not isinstance(code_hash, str):
+                msg = f"Invalid hash type for component '{component_name}' version '{version}' - expected str, got {type(code_hash).__name__}"
+                logger.error(msg)
+                raise ValueError(msg)
+            if not code_hash:
+                msg = f"Empty hash for component '{component_name}' version '{version}'"
+                logger.error(msg)
+                raise ValueError(msg)
+            hashes.add(code_hash)
 
     return hashes
 
 
-def _load_component_index_hashes(settings_service: "SettingsService") -> set[str]:
-    """Load and cache component index hashes.
+def _load_hash_history(settings_service: "SettingsService") -> set[str]:
+    """Load and cache component hashes from hash history files.
+
+    Loads from stable_hash_history.json and optionally from nightly_hash_history.json
+    based on the allow_nightly_custom_components setting.
 
     Args:
         settings_service: Settings service instance
 
     Returns:
-        Set of allowed code hashes
+        Set of allowed code hashes from stable and optionally nightly history
     """
-    from lfx.interface.components import _read_component_index
+    # Determine the base path for hash history files
+    # They should be in src/lfx/src/lfx/_assets/
+    assets_path = Path(__file__).parent.parent / "_assets"
+    
+    stable_history_path = assets_path / "stable_hash_history.json"
+    nightly_history_path = assets_path / "nightly_hash_history.json"
 
-    # Try to load from custom path first, then built-in
-    custom_index_path = settings_service.settings.components_index_path
+    all_hashes: set[str] = set()
+    
+    if not stable_history_path.exists():
+        msg = f"Stable hash history file not found at {stable_history_path}"
+        logger.error(msg)
+        raise FileNotFoundError(msg)
+    
+    try:
+        stable_history = orjson.loads(stable_history_path.read_bytes())
+        stable_hashes = _extract_hashes_from_history(stable_history)
+        all_hashes.update(stable_hashes)
+        logger.debug(f"Loaded {len(stable_hashes)} hashes from stable hash history")
+    except Exception as e:
+        msg = f"Failed to load stable hash history at {stable_history_path}: {e}"
+        logger.error(msg)
+        raise ValueError(msg) from e
+    
+    if settings_service.settings.allow_nightly_custom_components:
+        if not nightly_history_path.exists():
+            msg = f"Nightly hash history file not found at {nightly_history_path} (allow_nightly_custom_components=True)"
+            logger.error(msg)
+            raise FileNotFoundError(msg)
+        
+        try:
+            nightly_history = orjson.loads(nightly_history_path.read_bytes())
+            nightly_hashes = _extract_hashes_from_history(nightly_history)
+            all_hashes.update(nightly_hashes)
+            logger.debug(f"Loaded {len(nightly_hashes)} hashes from nightly hash history")
+        except Exception as e:
+            msg = f"Failed to load nightly hash history at {nightly_history_path}: {e}"
+            logger.error(msg)
+            raise ValueError(msg) from e
+    else:
+        logger.debug("Nightly custom components are disabled, only using stable hash history")
 
-    index = _read_component_index(custom_index_path)
+    if not all_hashes:
+        msg = "No hashes loaded from hash history files"
+        logger.error(msg)
+        raise ValueError(msg)
 
-    if not index:
-        # Fallback to built-in index
-        index = _read_component_index(None)
-
-    if not index:
-        logger.warning(
-            "Component index not available for hash validation. Custom code blocking may not work correctly."
-        )
-        return set()
-
-    return _extract_hashes_from_index(index)
+    logger.debug(f"Total {len(all_hashes)} unique hashes loaded for validation")
+    return all_hashes
 
 
 def _get_cached_hashes(settings_service: "SettingsService") -> set[str]:
-    """Get cached component hashes, loading if necessary.
+    """Get cached component hashes from hash history, loading if necessary.
+    
+    Thread-safe cache access using a lock to prevent race conditions.
 
     Args:
         settings_service: Settings service instance
@@ -128,26 +176,31 @@ def _get_cached_hashes(settings_service: "SettingsService") -> set[str]:
     """
     global _component_hash_cache, _cache_settings_key  # noqa: PLW0603
 
-    # Create a cache key based on settings that affect the index
+    # Create a cache key based on settings that affect hash loading
     current_key = (
-        settings_service.settings.components_index_path or "builtin",
+        "hash_history",
+        settings_service.settings.allow_nightly_custom_components,
         id(settings_service.settings),
     )
 
-    # If settings changed, invalidate cache
-    if _cache_settings_key != current_key:
-        _component_hash_cache = None
-        _cache_settings_key = current_key
+    with _cache_lock:
+        # If settings changed, invalidate cache
+        if _cache_settings_key != current_key:
+            _component_hash_cache = None
+            _cache_settings_key = current_key
 
-    # Load if not cached
-    if _component_hash_cache is None:
-        _component_hash_cache = _load_component_index_hashes(settings_service)
+        # Load if not cached
+        if _component_hash_cache is None:
+            _component_hash_cache = _load_hash_history(settings_service)
 
-    return _component_hash_cache
+        return _component_hash_cache
 
 
 def is_code_hash_allowed(source_code: str, settings_service: "SettingsService | None" = None) -> bool:
-    """Check if source code hash is allowed based on component index.
+    """Check if source code hash is allowed based on hash history.
+    
+    CRITICAL: This function fails fast on any errors. Hash validation is a security-critical
+    operation and any failures indicate a serious problem that must be addressed immediately.
 
     Args:
         source_code: The source code to validate
@@ -155,6 +208,10 @@ def is_code_hash_allowed(source_code: str, settings_service: "SettingsService | 
 
     Returns:
         True if hash is allowed, False otherwise
+        
+    Raises:
+        ValueError: If hash generation or validation fails
+        FileNotFoundError: If hash history files are missing
     """
     # Edge case: empty or whitespace-only code
     if not source_code or not source_code.strip():
@@ -163,37 +220,27 @@ def is_code_hash_allowed(source_code: str, settings_service: "SettingsService | 
 
     # If no settings service provided, try to get it
     if settings_service is None:
-        try:
-            from lfx.services.deps import get_settings_service
+        settings_service = get_settings_service()
 
-            settings_service = get_settings_service()
-        except Exception:  # noqa: BLE001
-            # If we can't get settings service, default to allowing code
-            # (fail open for backward compatibility)
-            return True
-
-    # If still no settings service, allow code
+    # If still no settings service, fail fast
     if settings_service is None:
-        return True
+        msg = "Settings service is not available for hash validation"
+        logger.error(msg)
+        raise ValueError(msg)
 
     # Check if custom components are allowed
     if settings_service.settings.allow_custom_components:
         return True
 
-    try:
-        code_hash = _generate_short_hash(source_code)
-        allowed_hashes = _get_cached_hashes(settings_service)
+    code_hash = _generate_code_hash(source_code)
+    allowed_hashes = _get_cached_hashes(settings_service)
 
-        is_allowed = code_hash in allowed_hashes
+    is_allowed = code_hash in allowed_hashes
 
-        if not is_allowed:
-            logger.warning(
-                f"Custom code blocked: hash {code_hash} not found in component index. "
-                f"Index has {len(allowed_hashes)} allowed hashes. "
-                "Set LANGFLOW_ALLOW_CUSTOM_COMPONENTS=true to allow custom code."
-            )
-        return is_allowed  # noqa: TRY300
-    except Exception as exc:  # noqa: BLE001
-        # If hash generation fails, log and allow (fail open for safety)
-        logger.warning(f"Error validating code hash: {exc}. Allowing code execution.")
-        return True
+    if not is_allowed:
+        logger.warning(
+            f"Custom code blocked: hash {code_hash} not found in hash history. "
+            f"Hash history has {len(allowed_hashes)} allowed hashes. "
+            "Set LANGFLOW_ALLOW_CUSTOM_COMPONENTS=true to allow custom code."
+        )
+    return is_allowed
