@@ -94,6 +94,7 @@ dependencies = [
     "trustcall>=0.0.38,<1.0.0",
     "langchain-chroma>=0.1.4,<1.0.0",
     "jaraco-context>=6.1.0",
+    "wheel>=0.46.2,<1.0.0",
 ]
 
 [dependency-groups]

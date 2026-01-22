@@ -142,6 +142,7 @@ dependencies = [
     "astrapy>=2.1.0,<3.0.0",
     "aioboto3>=15.2.0,<16.0.0",
     "setuptools>=80.0.0,<81.0.0",
+    "wheel>=0.46.2,<1.0.0",
 ]
 
 

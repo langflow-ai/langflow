@@ -42,6 +42,7 @@ dependencies = [
     "filelock>=3.20.1,<4.0.0",
     "pypdf>=6.4.0,<7.0.0",
     "setuptools>=80.0.0,<81.0.0",
+    "wheel>=0.46.2,<1.0.0",
 ]
 
 [project.scripts]
