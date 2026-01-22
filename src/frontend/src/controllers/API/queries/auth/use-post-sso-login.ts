@@ -24,14 +24,11 @@ export const useSSOLogin = (options?) => {
     return res.data;
   }
 
-  const mutation: UseMutationResult<SSOLoginResponse, any, SSOLoginParams> = mutate(
-    ["useSSOLogin"],
-    ssoLoginFn,
-    {
+  const mutation: UseMutationResult<SSOLoginResponse, any, SSOLoginParams> =
+    mutate(["useSSOLogin"], ssoLoginFn, {
       retry: false,
       ...options,
-    }
-  );
+    });
 
   return mutation;
 };

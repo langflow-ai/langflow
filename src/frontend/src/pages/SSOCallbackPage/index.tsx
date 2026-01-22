@@ -34,7 +34,7 @@ export default function SSOCallbackPage(): JSX.Element {
 
         // Exchange the code for tokens
         const response = await api.get(
-          `${getURL("SSO_CALLBACK")}?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`
+          `${getURL("SSO_CALLBACK")}?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`,
         );
 
         const { access_token, refresh_token } = response.data;
@@ -64,7 +64,14 @@ export default function SSOCallbackPage(): JSX.Element {
     };
 
     handleCallback();
-  }, [searchParams, navigate, login, clearAuthSession, setErrorData, queryClient]);
+  }, [
+    searchParams,
+    navigate,
+    login,
+    clearAuthSession,
+    setErrorData,
+    queryClient,
+  ]);
 
   return (
     <div className="flex h-screen w-full flex-col items-center justify-center bg-muted">

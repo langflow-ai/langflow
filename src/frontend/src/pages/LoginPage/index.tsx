@@ -2,7 +2,11 @@ import * as Form from "@radix-ui/react-form";
 import { useQueryClient } from "@tanstack/react-query";
 import { useContext, useState } from "react";
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
-import { useLoginUser, useGetSSOConfig, useSSOLogin } from "@/controllers/API/queries/auth";
+import {
+  useLoginUser,
+  useGetSSOConfig,
+  useSSOLogin,
+} from "@/controllers/API/queries/auth";
 import { CustomLink } from "@/customization/components/custom-link";
 import { useSanitizeRedirectUrl } from "@/hooks/use-sanitize-redirect-url";
 import InputComponent from "../../components/core/parameterRenderComponent/components/inputComponent";
@@ -21,7 +25,9 @@ import type {
 export default function LoginPage(): JSX.Element {
   const [inputState, setInputState] =
     useState<loginInputStateType>(CONTROL_LOGIN_STATE);
-  const [loadingProviderId, setLoadingProviderId] = useState<string | null>(null);
+  const [loadingProviderId, setLoadingProviderId] = useState<string | null>(
+    null,
+  );
 
   const { password, username } = inputState;
 
@@ -66,19 +72,24 @@ export default function LoginPage(): JSX.Element {
 
   function handleSSOLogin(providerId: string) {
     setLoadingProviderId(providerId);
-    initiateSSOLogin({ providerId }, {
-      onSuccess: (data) => {
-        // Redirect to the IdP authorization URL
-        window.location.href = data.authorization_url;
+    initiateSSOLogin(
+      { providerId },
+      {
+        onSuccess: (data) => {
+          // Redirect to the IdP authorization URL
+          window.location.href = data.authorization_url;
+        },
+        onError: (error) => {
+          setLoadingProviderId(null);
+          setErrorData({
+            title: "SSO Login Error",
+            list: [
+              error?.response?.data?.detail || "Failed to initiate SSO login",
+            ],
+          });
+        },
       },
-      onError: (error) => {
-        setLoadingProviderId(null);
-        setErrorData({
-          title: "SSO Login Error",
-          list: [error?.response?.data?.detail || "Failed to initiate SSO login"],
-        });
-      },
-    });
+    );
   }
 
   return (
@@ -174,7 +185,9 @@ export default function LoginPage(): JSX.Element {
                     onClick={() => handleSSOLogin(provider.id)}
                     disabled={loadingProviderId !== null}
                   >
-                    {loadingProviderId === provider.id ? "Redirecting..." : `Sign in with ${provider.name}`}
+                    {loadingProviderId === provider.id
+                      ? "Redirecting..."
+                      : `Sign in with ${provider.name}`}
                   </Button>
                 ))}
               </div>

@@ -198,10 +198,7 @@ const router = createBrowserRouter(
               </ProtectedLoginRoute>
             }
           />
-          <Route
-            path="sso/callback"
-            element={<SSOCallbackPage />}
-          />
+          <Route path="sso/callback" element={<SSOCallbackPage />} />
           <Route
             path="login/admin"
             element={

@@ -25,7 +25,7 @@ export const useGetSSOConfig: useQueryFunctionType<
   async function getSSOConfigFn(): Promise<SSOConfigResponse> {
     try {
       const response = await api.get<SSOConfigResponse>(
-        `${getURL("SSO_CONFIG")}`
+        `${getURL("SSO_CONFIG")}`,
       );
       return response.data;
     } catch (error) {
@@ -40,7 +40,7 @@ export const useGetSSOConfig: useQueryFunctionType<
     {
       refetchOnWindowFocus: false,
       ...options,
-    }
+    },
   );
 
   return queryResult;
