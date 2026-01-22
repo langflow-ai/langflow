@@ -1,3 +1,5 @@
+import math
+
 import httpx
 
 from lfx.custom.custom_component.component import Component
@@ -207,6 +209,32 @@ class TavilySearchComponent(Component):
             self.status = data_results
             return data_results
 
+    def _replace_nan(self, obj):
+        """Recursively replace NaN values with None for JSON compatibility.
+
+        PostgreSQL JSON type does not support NaN values. This method
+        recursively traverses the data structure and replaces any NaN
+        values (float('nan'), math.nan) with None.
+
+        Args:
+            obj: The object to sanitize (dict, list, or primitive type)
+
+        Returns:
+            The sanitized object with NaN replaced by None
+        """
+        if isinstance(obj, dict):
+            return {k: self._replace_nan(v) for k, v in obj.items()}
+        if isinstance(obj, list):
+            return [self._replace_nan(v) for v in obj]
+        if isinstance(obj, float):
+            # Check for NaN (including math.nan which is a float)
+            if math.isnan(obj):
+                return None
+            return obj
+        return obj
+
     def fetch_content_dataframe(self) -> DataFrame:
         data = self.fetch_content()
-        return DataFrame(data)
+        # Sanitize data to replace NaN values with None
+        sanitized_data = [Data(text=item.text, data=self._replace_nan(item.data)) for item in data]
+        return DataFrame(sanitized_data)
