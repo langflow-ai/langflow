@@ -1,10 +1,7 @@
-import {
-  useIsFetching,
-  usePrefetchQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { nanoid } from "nanoid";
 import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import InputListComponent from "@/components/core/parameterRenderComponent/components/inputListComponent";
@@ -32,8 +29,9 @@ import { extractMcpServersFromJson } from "@/utils/mcpUtils";
 import { parseString } from "@/utils/stringManipulation";
 import { cn } from "@/utils/utils";
 
-//TODO IMPLEMENT FORM LOGIC
+const MCP_SETTINGS_PAGE = "/settings/mcp-servers";
 
+//TODO IMPLEMENT FORM LOGIC
 const objectToKeyPairRow = (
   obj?: Record<string, string>,
   oldData: KeyPairRow[] = [],
@@ -76,6 +74,9 @@ export default function AddMcpServerModal({
     mySetOpen !== undefined && myOpen !== undefined
       ? [myOpen, mySetOpen]
       : useState(false);
+
+  const location = useLocation();
+  const isOnMcpSettingsPage = location.pathname === MCP_SETTINGS_PAGE;
 
   const [type, setType] = useState(
     initialData ? (initialData.command ? "STDIO" : "HTTP") : "JSON",
@@ -308,11 +309,17 @@ export default function AddMcpServerModal({
               {initialData ? "Update MCP Server" : "Add MCP Server"}
             </div>
             <span className="text-mmd font-normal text-muted-foreground">
-              Save MCP Servers. Manage added servers in{" "}
-              <CustomLink className="underline" to="/settings/mcp-servers">
-                settings
-              </CustomLink>
-              .
+              {isOnMcpSettingsPage ? (
+                "Add and save MCP servers to use across your flows."
+              ) : (
+                <>
+                  Add and save MCP servers. Manage servers in{" "}
+                  <CustomLink className="underline" to={MCP_SETTINGS_PAGE}>
+                    settings
+                  </CustomLink>
+                  .
+                </>
+              )}
             </span>
           </div>
           <div className="flex h-full w-full flex-col gap-4 overflow-hidden">
