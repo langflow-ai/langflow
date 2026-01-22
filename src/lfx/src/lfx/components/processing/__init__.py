@@ -38,11 +38,11 @@ _dynamic_imports = {
 }
 
 __all__ = [
+    "CombineInputsComponent",
     "CombineTextComponent",
     "CreateListComponent",
     "DataFrameOperationsComponent",
     "DataOperationsComponent",
-    "CombineInputsComponent",
     "JSONCleaner",
     "MessageStoreComponent",
     "OutputParserComponent",
