@@ -269,11 +269,7 @@ The MCP server configuration already includes the headers you configured earlier
 
 12. Test your flow to make sure the agent uses your server to respond to queries. Open the **Playground**, and then enter a prompt that uses a tool that you connected through the **MCP Tools** component.
 
-    Langflow automatically resolves `TEST_BEARER_TOKEN` to its actual value before sending the request to the MCP server. When your MCP server receives the request, the `Authorization` header contains the resolved token value:
-
-    ```
-    Authorization: Bearer eyJhbG...
-    ```
+    Langflow automatically resolves `TEST_BEARER_TOKEN` to its actual value before sending the request to the MCP server. When your MCP server receives the request, the `Authorization` header contains the resolved token value.
 
 ## See also
 
