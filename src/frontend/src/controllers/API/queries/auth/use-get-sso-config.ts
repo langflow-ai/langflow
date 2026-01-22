@@ -5,6 +5,7 @@ import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
 export interface SSOProvider {
+  id: string;
   type: string;
   name: string;
   enabled: boolean;

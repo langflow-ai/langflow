@@ -21,12 +21,12 @@ router = APIRouter(tags=["SSO"], prefix="/sso")
 
 @router.get("/login")
 async def sso_login_redirect(
-    provider: str = Query(default="oidc", description="SSO provider type (oidc, saml, ldap)"),
+    provider_id: str = Query(..., description="SSO provider ID (e.g., 'google', 'w3id', 'azure')"),
 ) -> dict:
     """Initiate SSO login by redirecting to the identity provider.
 
     Args:
-        provider: SSO provider type (currently only 'oidc' is supported)
+        provider_id: Unique identifier of the SSO provider to use
 
     Returns:
         Redirect URL to the identity provider's authorization endpoint
@@ -42,13 +42,6 @@ async def sso_login_redirect(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="SSO is not enabled. Please enable it in the settings.",
-        )
-
-    # Only OIDC is supported in Phase 1
-    if provider.lower() != "oidc":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Provider '{provider}' is not supported. Currently only 'oidc' is available.",
         )
 
     # Load SSO configuration
@@ -72,21 +65,37 @@ async def sso_login_redirect(
             detail="Failed to load SSO configuration. Please check server logs.",
         ) from e
 
-    if not sso_config or not sso_config.oidc:
+    # Get the specific provider configuration
+    provider_config = sso_config.get_provider_by_id(provider_id)
+    
+    if not provider_config:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Provider '{provider_id}' not found or not enabled.",
+        )
+
+    # Currently only OIDC is supported
+    if provider_config.provider_type.value != "oidc":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Provider type '{provider_config.provider_type}' is not yet supported. Currently only 'oidc' is available.",
+        )
+
+    if not provider_config.oidc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="OIDC configuration not found or invalid.",
         )
 
-    oidc_config = sso_config.oidc
+    oidc_config = provider_config.oidc
 
     # Build authorization URL
-    # Format: {authorization_endpoint}?client_id={client_id}&redirect_uri={redirect_uri}&response_type=code&scope={scopes}&state={state}
-
     # Generate state parameter for CSRF protection (in production, this should be stored in session/cache)
     import secrets
 
     state = secrets.token_urlsafe(32)
+    # Include provider_id in state for callback routing
+    state_with_provider = f"{provider_id}:{state}"
 
     # Build query parameters
     params = {
@@ -94,7 +103,7 @@ async def sso_login_redirect(
         "redirect_uri": oidc_config.redirect_uri,
         "response_type": "code",
         "scope": " ".join(oidc_config.scopes),
-        "state": state,
+        "state": state_with_provider,
     }
 
     # Get authorization endpoint from discovery or use configured one
@@ -123,8 +132,9 @@ async def sso_login_redirect(
 
     return {
         "authorization_url": auth_url,
-        "state": state,
-        "provider": provider,
+        "state": state_with_provider,
+        "provider_id": provider_id,
+        "provider_name": oidc_config.provider_name,
     }
 
 
@@ -143,7 +153,7 @@ async def sso_callback(
 
     Args:
         code: Authorization code from the identity provider
-        state: State parameter for CSRF protection
+        state: State parameter for CSRF protection (format: provider_id:random_state)
         db: Database session
 
     Returns:
@@ -160,6 +170,16 @@ async def sso_callback(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="SSO is not enabled.",
+        )
+
+    # Extract provider_id from state parameter
+    try:
+        provider_id, _ = state.split(":", 1)
+    except ValueError:
+        logger.error(f"Invalid state parameter format: {state}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid state parameter.",
         )
 
     # TODO: Validate state parameter (requires session/cache storage)
@@ -186,7 +206,22 @@ async def sso_callback(
             detail="Failed to load SSO configuration.",
         ) from e
 
-    if not sso_config or not sso_config.oidc:
+    if not sso_config:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="SSO configuration not found.",
+        )
+
+    # Get the specific provider configuration
+    provider_config = sso_config.get_provider_by_id(provider_id)
+    
+    if not provider_config:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Provider '{provider_id}' not found or not enabled.",
+        )
+
+    if not provider_config.oidc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="OIDC configuration not found.",
@@ -195,7 +230,7 @@ async def sso_callback(
     # Initialize OIDC service
     from langflow.services.auth.oidc_service import OIDCAuthService
 
-    oidc_service = OIDCAuthService(settings_service, sso_config.oidc)
+    oidc_service = OIDCAuthService(settings_service, provider_config.oidc)
 
     try:
         # Authenticate user via OIDC (exchanges code for tokens, validates, and provisions user)
@@ -299,15 +334,25 @@ async def get_sso_config():
         try:
             sso_config = sso_service._load_from_file(auth_settings.SSO_CONFIG_FILE)
             if sso_config:
-                if sso_config.oidc:
-                    providers.append(
-                        {
-                            "type": "oidc",
-                            "name": sso_config.oidc.provider_name,
-                            "enabled": True,
-                        }
-                    )
-                # Future: Add SAML and LDAP providers here
+                # Get all enabled providers
+                for provider_config in sso_config.get_enabled_providers():
+                    provider_info = {
+                        "id": provider_config.id,
+                        "type": provider_config.provider_type.value,
+                        "enabled": provider_config.enabled,
+                    }
+                    
+                    # Add provider-specific display name
+                    if provider_config.oidc:
+                        provider_info["name"] = provider_config.oidc.provider_name
+                    elif provider_config.saml:
+                        provider_info["name"] = provider_config.saml.provider_name
+                    elif provider_config.ldap:
+                        provider_info["name"] = provider_config.ldap.provider_name
+                    else:
+                        provider_info["name"] = provider_config.id.title()
+                    
+                    providers.append(provider_info)
         except Exception as e:
             logger.error(f"Failed to load SSO config for status check: {e}")
 
@@ -315,3 +360,4 @@ async def get_sso_config():
         "enabled": True,
         "providers": providers,
     }
+

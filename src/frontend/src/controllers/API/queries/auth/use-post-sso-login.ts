@@ -6,18 +6,25 @@ import { UseRequestProcessor } from "../../services/request-processor";
 export interface SSOLoginResponse {
   authorization_url: string;
   state: string;
-  provider: string;
+  provider_id: string;
+  provider_name: string;
+}
+
+export interface SSOLoginParams {
+  providerId: string;
 }
 
 export const useSSOLogin = (options?) => {
   const { mutate } = UseRequestProcessor();
 
-  async function ssoLoginFn(): Promise<SSOLoginResponse> {
-    const res = await api.get<SSOLoginResponse>(`${getURL("SSO_LOGIN")}`);
+  async function ssoLoginFn(params: SSOLoginParams): Promise<SSOLoginResponse> {
+    const res = await api.get<SSOLoginResponse>(`${getURL("SSO_LOGIN")}`, {
+      params: { provider_id: params.providerId },
+    });
     return res.data;
   }
 
-  const mutation: UseMutationResult<SSOLoginResponse, any, void> = mutate(
+  const mutation: UseMutationResult<SSOLoginResponse, any, SSOLoginParams> = mutate(
     ["useSSOLogin"],
     ssoLoginFn,
     {

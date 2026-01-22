@@ -21,6 +21,7 @@ import type {
 export default function LoginPage(): JSX.Element {
   const [inputState, setInputState] =
     useState<loginInputStateType>(CONTROL_LOGIN_STATE);
+  const [loadingProviderId, setLoadingProviderId] = useState<string | null>(null);
 
   const { password, username } = inputState;
 
@@ -31,7 +32,7 @@ export default function LoginPage(): JSX.Element {
 
   // SSO configuration
   const { data: ssoConfig } = useGetSSOConfig();
-  const { mutate: initiateSSOLogin, isPending: isSSOLoading } = useSSOLogin();
+  const { mutate: initiateSSOLogin } = useSSOLogin();
 
   function handleInput({
     target: { name, value },
@@ -63,13 +64,15 @@ export default function LoginPage(): JSX.Element {
     });
   }
 
-  function handleSSOLogin() {
-    initiateSSOLogin(undefined, {
+  function handleSSOLogin(providerId: string) {
+    setLoadingProviderId(providerId);
+    initiateSSOLogin({ providerId }, {
       onSuccess: (data) => {
         // Redirect to the IdP authorization URL
         window.location.href = data.authorization_url;
       },
       onError: (error) => {
+        setLoadingProviderId(null);
         setErrorData({
           title: "SSO Login Error",
           list: [error?.response?.data?.detail || "Failed to initiate SSO login"],
@@ -161,16 +164,19 @@ export default function LoginPage(): JSX.Element {
                 <span className="px-4 text-sm text-muted-foreground">or</span>
                 <div className="flex-1 border-t border-border"></div>
               </div>
-              <div className="w-full">
-                <Button
-                  className="w-full"
-                  variant="outline"
-                  type="button"
-                  onClick={handleSSOLogin}
-                  disabled={isSSOLoading}
-                >
-                  {isSSOLoading ? "Redirecting..." : `Sign in with ${ssoConfig.providers[0].name}`}
-                </Button>
+              <div className="flex w-full flex-col gap-2">
+                {ssoConfig.providers.map((provider) => (
+                  <Button
+                    key={provider.id}
+                    className="w-full"
+                    variant="outline"
+                    type="button"
+                    onClick={() => handleSSOLogin(provider.id)}
+                    disabled={loadingProviderId !== null}
+                  >
+                    {loadingProviderId === provider.id ? "Redirecting..." : `Sign in with ${provider.name}`}
+                  </Button>
+                ))}
               </div>
             </>
           )}
