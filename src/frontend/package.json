@@ -2,6 +2,10 @@
   "name": "langflow",
   "version": "1.7.3",
   "private": true,
+  "overrides": {
+    "tar": "^7.5.4",
+    "glob": "^11.1.0"
+  },
   "dependencies": {
     "@chakra-ui/number-input": "^2.1.2",
     "@headlessui/react": "^2.0.4",
