@@ -1,6 +1,6 @@
 [project]
-name = "lfx"
-version = "0.2.2"
+name = "lfx-nightly"
+version = "0.2.2.dev0"
 description = "Langflow Executor - A lightweight CLI tool for executing and serving Langflow AI flows"
 readme = "README.md"
 authors = [
