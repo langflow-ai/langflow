@@ -388,11 +388,11 @@ describe("reactflowUtils edge validation", () => {
           },
         });
 
-        // Source handle includes loop_types as per NodeOutputParameter logic
+        // Source handles (right side) only use [selectedType], not loop_types
         const sourceHandle = createSourceHandle(
           "while-loop-1",
           "loop",
-          ["DataFrame", "DataFrame"], // [selectedType, ...loop_types]
+          ["DataFrame"], // Only selectedType, loop_types is for loop inputs (left side)
           "WhileLoopComponent",
         );
         const targetHandle = createTargetHandle(
@@ -478,7 +478,7 @@ describe("reactflowUtils edge validation", () => {
         expect(brokenEdges).toHaveLength(0);
       });
 
-      it("should handle loop_types correctly in handle reconstruction", () => {
+      it("should handle loop output source handle correctly (no loop_types)", () => {
         const loopNode = createMockNode("loop-1", {
           displayName: "LoopComponent",
           outputs: [
@@ -499,11 +499,11 @@ describe("reactflowUtils edge validation", () => {
           },
         });
 
-        // Handle with loop_types: [selectedType, ...loop_types]
+        // Source handles (right side) only use [selectedType], loop_types is for loop inputs
         const sourceHandle = createSourceHandle(
           "loop-1",
           "loop_output",
-          ["Message", "DataFrame", "Data"],
+          ["Message"], // Only selectedType, not [...loop_types]
           "LoopComponent",
         );
         const targetHandle = createTargetHandle("target-1", "input", "other", [
@@ -527,16 +527,16 @@ describe("reactflowUtils edge validation", () => {
         expect(brokenEdges).toHaveLength(0);
       });
 
-      it("should detect broken edge when loop_types change", () => {
+      it("should detect broken edge when selected type changes", () => {
         const loopNode = createMockNode("loop-1", {
           displayName: "LoopComponent",
           outputs: [
             {
               name: "loop_output",
-              types: ["Message"],
-              selected: "Message",
+              types: ["Message", "Data"],
+              selected: "Data", // Changed from "Message"
               allows_loop: true,
-              loop_types: ["Data"], // Changed from ["DataFrame", "Data"]
+              loop_types: ["DataFrame"],
             },
           ],
         });
@@ -548,11 +548,11 @@ describe("reactflowUtils edge validation", () => {
           },
         });
 
-        // Old handle with old loop_types
+        // Old handle with old selected type "Message"
         const sourceHandle = createSourceHandle(
           "loop-1",
           "loop_output",
-          ["Message", "DataFrame", "Data"], // Old loop_types
+          ["Message"], // Old selectedType
           "LoopComponent",
         );
         const targetHandle = createTargetHandle("target-1", "input", "other");
@@ -570,8 +570,7 @@ describe("reactflowUtils edge validation", () => {
           [edge],
         );
 
-        // Should detect as broken because loop_types changed
-        // May report multiple times for source and target handle issues
+        // Should detect as broken because selected type changed from Message to Data
         expect(brokenEdges.length).toBeGreaterThanOrEqual(1);
       });
     });
@@ -770,10 +769,65 @@ describe("reactflowUtils edge validation", () => {
           },
         });
 
+        // Source handles (right side) only use [selectedType], not loop_types
         const sourceHandle = createSourceHandle(
           "while-loop-1",
           "loop",
-          ["DataFrame", "DataFrame"],
+          ["DataFrame"], // Only selectedType
+          "WhileLoopComponent",
+        );
+        // Must include input_types to match reconstruction
+        const targetHandle = createTargetHandle(
+          "agent-step-1",
+          "messages",
+          "other",
+          ["DataFrame"],
+        );
+
+        const edge = createEdge(
+          "edge-1",
+          "while-loop-1",
+          "agent-step-1",
+          sourceHandle,
+          targetHandle,
+        );
+
+        const cleanedEdges = cleanEdges([whileLoopNode, agentStepNode], [edge]);
+
+        expect(cleanedEdges).toHaveLength(1);
+      });
+
+      it("BUG REPRO: edge removed when sourceHandle uses [selectedType] as NodeOutputParameter builds it", () => {
+        // This test reproduces the bug where WhileLoop -> AgentStep edge vanishes
+        // NodeOutputParameter builds the RIGHT handle (source) with just [selectedType]
+        // But cleanEdges expects [selectedType, ...loop_types]
+        const whileLoopNode = createMockNode("while-loop-1", {
+          displayName: "WhileLoopComponent",
+          outputs: [
+            {
+              name: "loop",
+              types: ["DataFrame"],
+              selected: "DataFrame",
+              allows_loop: true,
+              loop_types: ["DataFrame"],
+            },
+          ],
+        });
+
+        const agentStepNode = createMockNode("agent-step-1", {
+          displayName: "AgentStepComponent",
+          template: {
+            messages: { type: "other", input_types: ["DataFrame"] },
+          },
+        });
+
+        // This is how NodeOutputParameter ACTUALLY builds the right handle (source):
+        // output_types: [selectedType] - just ["DataFrame"], NOT ["DataFrame", "DataFrame"]
+        // See NodeOutputParameter lines 22-31
+        const sourceHandle = createSourceHandle(
+          "while-loop-1",
+          "loop",
+          ["DataFrame"], // This is what NodeOutputParameter actually creates!
           "WhileLoopComponent",
         );
         // Must include input_types to match reconstruction
