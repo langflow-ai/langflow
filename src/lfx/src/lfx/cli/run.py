@@ -60,6 +60,12 @@ async def check_components_before_run(script_path: Path, verbose_print) -> None:
 
     try:
         check_result = await check_flow_components(str(script_path))
+
+        # Check for errors from check_flow_components (returns error dict instead of raising)
+        if "error" in check_result:
+            msg = f"Component check failed: {check_result['error']}"
+            raise ValueError(msg)
+
         outdated_count = check_result.get("outdated_count", 0)
 
         if outdated_count > 0:
@@ -83,7 +89,9 @@ async def check_components_before_run(script_path: Path, verbose_print) -> None:
     except ValueError:
         # Re-raise ValueError to preserve the error message
         raise
-    except Exception as e:
+    except (OSError, ImportError, RuntimeError) as e:
+        # Handle expected errors from check_flow_components
+        # Let KeyboardInterrupt, SystemExit, etc. propagate naturally
         error_msg = f"Error checking components: {e}"
         raise ValueError(error_msg) from e
 
