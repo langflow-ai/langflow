@@ -79,19 +79,9 @@ export interface SidebarHeaderComponentProps {
   handleInputFocus: (event: React.FocusEvent<HTMLInputElement>) => void;
   handleInputBlur: (event: React.FocusEvent<HTMLInputElement>) => void;
   handleInputChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  filterType:
-    | {
-        source: string | undefined;
-        sourceHandle: string | undefined;
-        target: string | undefined;
-        targetHandle: string | undefined;
-        type: string;
-        color: string;
-      }
-    | undefined;
-  setFilterEdge: (edge: any[]) => void;
-  setFilterData: Dispatch<SetStateAction<APIDataType>>;
-  data: APIDataType;
+  filterName: string;
+  filterDescription: string;
+  resetFilters: () => void;
 }
 
 export interface UniqueInputsComponents {

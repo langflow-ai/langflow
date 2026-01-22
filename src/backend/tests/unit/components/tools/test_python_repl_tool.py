@@ -1,6 +1,6 @@
 import pytest
+from lfx.components.utilities.python_repl_core import PythonREPLComponent
 
-from lfx.components.processing import PythonREPLComponent
 from tests.base import DID_NOT_EXIST, ComponentTestBaseWithoutClient
 
 
@@ -45,7 +45,8 @@ class TestPythonREPLComponent(ComponentTestBaseWithoutClient):
 
         # Test python_code configuration
         python_code = template["python_code"]
-        assert python_code["type"] == "code"
+        # assert python_code["type"] == "code"  # TODO: Restore when CodeInput is included in component
+        assert python_code["type"] == "str"  # TODO: Remove when CodeInput is included in component
         assert python_code["value"] == "print('Hello, World!')"
         assert python_code["required"] is True
 

@@ -1,9 +1,11 @@
-import { test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+import { test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { zoomOut } from "../../utils/zoom-out";
+import { selectGptModel } from "../../utils/select-gpt-model";
 
 test(
   "should create a flow with decision",
@@ -32,9 +34,7 @@ test(
     await page.waitForSelector('[data-testid="input_outputChat Input"]', {
       timeout: 2000,
     });
-    await page.getByTestId("canvas_controls_dropdown").click();
     await zoomOut(page, 6);
-    await page.getByTestId("canvas_controls_dropdown").click();
     await page
       .getByTestId("input_outputChat Input")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
@@ -44,11 +44,11 @@ test(
     //---------------------------------- CREATE LIST
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("list");
-    await page.waitForSelector('[data-testid="helpersCreate List"]', {
+    await page.waitForSelector('[data-testid="processingCreate List"]', {
       timeout: 2000,
     });
     await page
-      .getByTestId("helpersCreate List")
+      .getByTestId("processingCreate List")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 200, y: 100 },
       });
@@ -74,7 +74,7 @@ test(
       .first()
       .fill("love you babe");
     await page
-      .getByTestId("helpersCreate List")
+      .getByTestId("processingCreate List")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 350, y: 100 },
       });
@@ -110,53 +110,56 @@ test(
     //---------------------------------- PASS
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("pass");
-    await page.waitForSelector('[data-testid="logicPass"]', {
+    await page.waitForSelector('[data-testid="flow_controlsPass"]', {
       timeout: 2000,
     });
     await page
-      .getByTestId("logicPass")
+      .getByTestId("flow_controlsPass")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 800, y: 100 },
       });
-    await page.waitForSelector('[data-testid="logicPass"]', {
+    await page.waitForSelector('[data-testid="flow_controlsPass"]', {
       timeout: 2000,
     });
     //---------------------------------- PASS
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("pass");
-    await page.waitForSelector('[data-testid="logicPass"]', {
+    await page.waitForSelector('[data-testid="flow_controlsPass"]', {
       timeout: 2000,
     });
     await page
-      .getByTestId("logicPass")
+      .getByTestId("flow_controlsPass")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 50, y: 200 },
       });
-    await page.waitForSelector('[data-testid="logicPass"]', {
+    await page.waitForSelector('[data-testid="flow_controlsPass"]', {
       timeout: 2000,
     });
     //---------------------------------- PASS
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("pass");
-    await page.waitForSelector('[data-testid="logicPass"]', {
+    await page.waitForSelector('[data-testid="flow_controlsPass"]', {
       timeout: 2000,
     });
     await page
-      .getByTestId("logicPass")
+      .getByTestId("flow_controlsPass")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 200, y: 300 },
       });
-    await page.waitForSelector('[data-testid="logicPass"]', {
+    await page.waitForSelector('[data-testid="flow_controlsPass"]', {
       timeout: 2000,
     });
     //---------------------------------- PROMPT
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("prompt");
-    await page.waitForSelector('[data-testid="processingPrompt Template"]', {
-      timeout: 2000,
-    });
+    await page.waitForSelector(
+      '[data-testid="models_and_agentsPrompt Template"]',
+      {
+        timeout: 2000,
+      },
+    );
     await page
-      .getByTestId("processingPrompt Template")
+      .getByTestId("models_and_agentsPrompt Template")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 350, y: 300 },
       });
@@ -176,11 +179,11 @@ test(
     //---------------------------------- CONDITIONAL ROUTER
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("if else");
-    await page.waitForSelector('[data-testid="logicIf-Else"]', {
+    await page.waitForSelector('[data-testid="flow_controlsIf-Else"]', {
       timeout: 2000,
     });
     await page
-      .getByTestId("logicIf-Else")
+      .getByTestId("flow_controlsIf-Else")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 650, y: 300 },
       });
@@ -213,10 +216,8 @@ test(
       timeout: 2000,
     });
     //----------------------------------
-    await page.getByTestId("canvas_controls_dropdown").click();
 
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await adjustScreenView(page);
 
     //---------------------------------- EDIT PROMPT
     await page.getByTestId("promptarea_prompt_template").first().click();
@@ -355,12 +356,9 @@ test(
     if (isApiKeyInputVisible) {
       await apiKeyInput.fill(process.env.OPENAI_API_KEY ?? "");
     }
-    await page.getByTestId("dropdown_str_model_name").click();
-    await page.getByTestId("gpt-4o-1-option").click();
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await selectGptModel(page);
 
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await adjustScreenView(page);
 
     await page.getByRole("button", { name: "Playground", exact: true }).click();
     await page.waitForSelector('[data-testid="input-chat-playground"]', {

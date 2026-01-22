@@ -1,6 +1,9 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { zoomOut } from "../../utils/zoom-out";
 
 test(
   "user must be able to save or delete a global variable",
@@ -26,15 +29,11 @@ test(
         await page.getByTestId("add-component-button-openai").last().click();
       });
 
-    await page.getByTestId("canvas_controls_dropdown").click();
-
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await adjustScreenView(page, { numberOfZoomOut: 2 });
 
     await initialGPTsetup(page, {
       skipAdjustScreenView: true,
       skipUpdateOldComponents: true,
-      skipAddNewApiKeys: true,
       skipSelectGptModel: true,
     });
 

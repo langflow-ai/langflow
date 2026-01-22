@@ -1,7 +1,22 @@
 // src/constants/constants.ts
 
-import custom from "../customization/config-constants";
+import {
+  BASE_URL_API as CUSTOM_BASE_URL_API,
+  BASE_URL_API_V2 as CUSTOM_BASE_URL_API_V2,
+} from "../customization/config-constants";
+import { customDefaultShortcuts } from "../customization/constants";
 import type { languageMap } from "../types/components";
+
+const getEnvVar = (key: string, defaultValue: unknown = undefined) => {
+  if (typeof process !== "undefined" && process.env) {
+    return process.env[key] ?? defaultValue;
+  }
+  try {
+    return new Function(`return import.meta.env?.${key}`)() ?? defaultValue;
+  } catch {
+    return defaultValue;
+  }
+};
 
 /**
  * invalid characters for flow name
@@ -156,6 +171,9 @@ export const CODE_DICT_DIALOG_SUBTITLE =
  */
 export const PROMPT_DIALOG_SUBTITLE =
   "Create your prompt. Prompts can help guide the behavior of a Language Model. Use curly brackets {} to introduce variables.";
+
+export const MUSTACHE_PROMPT_DIALOG_SUBTITLE =
+  "Create your prompt. Prompts can help guide the behavior of a Language Model. Use double curly brackets {{}} to introduce variables.";
 
 export const CHAT_CANNOT_OPEN_TITLE = "Chat Cannot Open";
 
@@ -557,7 +575,10 @@ export const NOUNS: string[] = [
  */
 export const USER_PROJECTS_HEADER = "My Collection";
 
+// This will be dynamically set based on the RUN_WITH_OPENRAG feature flag
+// The actual value is determined by the backend configuration
 export const DEFAULT_FOLDER = "Starter Project";
+export const OPENRAG_FOLDER = "OpenRAG";
 
 export const MAX_MCP_SERVER_NAME_LENGTH = 30;
 
@@ -576,9 +597,9 @@ export const ADMIN_HEADER_TITLE = "Admin Page";
 export const ADMIN_HEADER_DESCRIPTION =
   "Navigate through this section to efficiently oversee all application users. From here, you can seamlessly manage user accounts.";
 
-export const BASE_URL_API = custom.BASE_URL_API || "/api/v1/";
+export const BASE_URL_API = CUSTOM_BASE_URL_API || "/api/v1/";
 
-export const BASE_URL_API_V2 = custom.BASE_URL_API_V2 || "/api/v2/";
+export const BASE_URL_API_V2 = CUSTOM_BASE_URL_API_V2 || "/api/v2/";
 
 /**
  * URLs excluded from error retries.
@@ -655,6 +676,7 @@ export const LANGFLOW_SUPPORTED_TYPES = new Set([
   "float",
   "code",
   "prompt",
+  "mustache",
   "file",
   "int",
   "dict",
@@ -740,7 +762,7 @@ export const STATUS_INACTIVE = "Execution blocked";
 export const STATUS_BUILDING = "Building...";
 export const SAVED_HOVER = "Last saved: ";
 export const RUN_TIMESTAMP_PREFIX = "Last Run: ";
-export const STARTER_FOLDER_NAME = "Starter Projects";
+
 export const PRIORITY_SIDEBAR_ORDER = [
   "saved_components",
   "inputs",
@@ -798,143 +820,7 @@ export const IS_MAC =
   typeof navigator !== "undefined" &&
   navigator.userAgent.toUpperCase().includes("MAC");
 
-export const defaultShortcuts = [
-  {
-    display_name: "Controls",
-    name: "Advanced Settings",
-    shortcut: "mod+shift+a",
-  },
-  {
-    display_name: "Search Components on Sidebar",
-    name: "Search Components Sidebar",
-    shortcut: "/",
-  },
-  {
-    display_name: "Minimize",
-    name: "Minimize",
-    shortcut: "mod+.",
-  },
-  {
-    display_name: "Code",
-    name: "Code",
-    shortcut: "space",
-  },
-  {
-    display_name: "Copy",
-    name: "Copy",
-    shortcut: "mod+c",
-  },
-  {
-    display_name: "Duplicate",
-    name: "Duplicate",
-    shortcut: "mod+d",
-  },
-  {
-    display_name: "Component Share",
-    name: "Component Share",
-    shortcut: "mod+shift+s",
-  },
-  {
-    display_name: "Docs",
-    name: "Docs",
-    shortcut: "mod+shift+d",
-  },
-  {
-    display_name: "Changes Save",
-    name: "Changes Save",
-    shortcut: "mod+s",
-  },
-  {
-    display_name: "Save Component",
-    name: "Save Component",
-    shortcut: "mod+alt+s",
-  },
-  {
-    display_name: "Delete",
-    name: "Delete",
-    shortcut: "backspace",
-  },
-  {
-    display_name: "Open Playground",
-    name: "Open Playground",
-    shortcut: "mod+k",
-  },
-  {
-    display_name: "Undo",
-    name: "Undo",
-    shortcut: "mod+z",
-  },
-  {
-    display_name: "Redo",
-    name: "Redo",
-    shortcut: "mod+y",
-  },
-  {
-    display_name: "Redo (alternative)",
-    name: "Redo Alt",
-    shortcut: "mod+shift+z",
-  },
-  {
-    display_name: "Group",
-    name: "Group",
-    shortcut: "mod+g",
-  },
-  {
-    display_name: "Cut",
-    name: "Cut",
-    shortcut: "mod+x",
-  },
-  {
-    display_name: "Paste",
-    name: "Paste",
-    shortcut: "mod+v",
-  },
-  {
-    display_name: "API",
-    name: "API",
-    shortcut: "r",
-  },
-  {
-    display_name: "Download",
-    name: "Download",
-    shortcut: "mod+j",
-  },
-  {
-    display_name: "Update",
-    name: "Update",
-    shortcut: "mod+u",
-  },
-  {
-    display_name: "Freeze",
-    name: "Freeze Path",
-    shortcut: "mod+shift+f",
-  },
-  {
-    display_name: "Flow Share",
-    name: "Flow Share",
-    shortcut: "mod+shift+b",
-  },
-  {
-    display_name: "Play",
-    name: "Play",
-    shortcut: "p",
-  },
-  {
-    display_name: "Output Inspection",
-    name: "Output Inspection",
-    shortcut: "o",
-  },
-  {
-    display_name: "Tool Mode",
-    name: "Tool Mode",
-    shortcut: "mod+shift+m",
-  },
-  {
-    display_name: "Toggle Sidebar",
-    name: "Toggle Sidebar",
-    shortcut: "mod+b",
-  },
-];
+export const defaultShortcuts = customDefaultShortcuts;
 
 export const DEFAULT_TABLE_ALERT_MSG = `Oops! It seems there's no data to display right now. Please check back later.`;
 
@@ -984,8 +870,8 @@ export const LANGFLOW_REFRESH_TOKEN = "refresh_token_lf";
 
 export const LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS = 60 * 60 - 60 * 60 * 0.1;
 export const LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS_ENV =
-  Number(process.env?.ACCESS_TOKEN_EXPIRE_SECONDS ?? 60) -
-  Number(process.env?.ACCESS_TOKEN_EXPIRE_SECONDS ?? 60) * 0.1;
+  Number(getEnvVar("ACCESS_TOKEN_EXPIRE_SECONDS", 60)) -
+  Number(getEnvVar("ACCESS_TOKEN_EXPIRE_SECONDS", 60)) * 0.1;
 export const TEXT_FIELD_TYPES: string[] = ["str", "SecretStr"];
 export const NODE_WIDTH = 384;
 export const NODE_HEIGHT = NODE_WIDTH * 3;
@@ -1000,10 +886,9 @@ export const DRAG_EVENTS_CUSTOM_TYPESS = {
   "text/plain": "text/plain",
 };
 
-export const NOTE_NODE_MIN_WIDTH = 324;
-export const NOTE_NODE_MIN_HEIGHT = 324;
-export const NOTE_NODE_MAX_HEIGHT = 800;
-export const NOTE_NODE_MAX_WIDTH = 1000;
+export const NOTE_NODE_MIN_WIDTH = 260;
+export const NOTE_NODE_MIN_HEIGHT = 100;
+export const DEFAULT_NOTE_SIZE = 324;
 
 export const COLOR_OPTIONS = {
   amber: "hsl(var(--note-amber))",
@@ -1052,8 +937,8 @@ export const POLLING_MESSAGES = {
 export const BUILD_POLLING_INTERVAL = 25;
 
 export const IS_AUTO_LOGIN =
-  !process?.env?.LANGFLOW_AUTO_LOGIN ||
-  String(process?.env?.LANGFLOW_AUTO_LOGIN)?.toLowerCase() !== "false";
+  !getEnvVar("LANGFLOW_AUTO_LOGIN") ||
+  String(getEnvVar("LANGFLOW_AUTO_LOGIN"))?.toLowerCase() !== "false";
 
 export const AUTO_LOGIN_RETRY_DELAY = 2000;
 export const AUTO_LOGIN_MAX_RETRY_DELAY = 60000;
@@ -1108,3 +993,13 @@ export const DESKTOP_URL = "https://www.langflow.org/desktop";
 export const BUG_REPORT_URL = "https://github.com/langflow-ai/langflow/issues";
 
 export const UUID_PARSING_ERROR = "uuid_parsing";
+
+// Variable categories
+export const CATEGORY_GLOBAL = "Global";
+export const CATEGORY_LLM = "LLM";
+export const CATEGORY_SETTINGS = "Settings";
+export const VALID_CATEGORIES = [
+  CATEGORY_GLOBAL,
+  CATEGORY_LLM,
+  CATEGORY_SETTINGS,
+] as const;

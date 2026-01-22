@@ -30,4 +30,8 @@ export type UtilityStoreType = {
   setSerializationMaxItemsLength: (serializationMaxItemsLength: number) => void;
   webhookAuthEnable: boolean;
   setWebhookAuthEnable: (webhookAuthEnable: boolean) => void;
+  defaultFolderName: string;
+  setDefaultFolderName: (defaultFolderName: string) => void;
+  hideGettingStartedProgress: boolean;
+  setHideGettingStartedProgress: (hideGettingStartedProgress: boolean) => void;
 };

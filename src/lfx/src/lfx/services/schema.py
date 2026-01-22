@@ -18,3 +18,5 @@ class ServiceType(str, Enum):
     STORE_SERVICE = "store_service"
     JOB_QUEUE_SERVICE = "job_queue_service"
     SHARED_COMPONENT_CACHE_SERVICE = "shared_component_cache_service"
+    MCP_COMPOSER_SERVICE = "mcp_composer_service"
+    TRANSACTION_SERVICE = "transaction_service"

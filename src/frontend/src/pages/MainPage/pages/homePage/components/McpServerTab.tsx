@@ -1,344 +1,68 @@
-import { memo, type ReactNode, useCallback, useState } from "react";
+import { useState } from "react";
 import { useParams } from "react-router-dom";
-import { Light as SyntaxHighlighter } from "react-syntax-highlighter";
+
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
-import ShadTooltip from "@/components/common/shadTooltipComponent";
-import ToolsComponent from "@/components/core/parameterRenderComponent/components/ToolsComponent";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs-button";
-import { MAX_MCP_SERVER_NAME_LENGTH } from "@/constants/constants";
-import { createApiKey } from "@/controllers/API";
-import {
-  useGetFlowsMCP,
-  usePatchFlowsMCP,
-} from "@/controllers/API/queries/mcp";
-import { useGetInstalledMCP } from "@/controllers/API/queries/mcp/use-get-installed-mcp";
-import { usePatchInstallMCP } from "@/controllers/API/queries/mcp/use-patch-install-mcp";
 import { ENABLE_MCP_COMPOSER } from "@/customization/feature-flags";
 import { useCustomIsLocalConnection } from "@/customization/hooks/use-custom-is-local-connection";
 import useTheme from "@/customization/hooks/use-custom-theme";
-import { customGetMCPUrl } from "@/customization/utils/custom-mcp-url";
 import AuthModal from "@/modals/authModal";
-import useAlertStore from "@/stores/alertStore";
-import useAuthStore from "@/stores/authStore";
+
+import type { MCPTransport } from "@/controllers/API/queries/mcp/use-patch-install-mcp";
 import { useFolderStore } from "@/stores/foldersStore";
-import type { AuthSettingsType, MCPSettingsType } from "@/types/mcp";
-import { AUTH_METHODS } from "@/utils/mcpUtils";
-import { parseString } from "@/utils/stringManipulation";
 import { cn, getOS } from "@/utils/utils";
+import { useMcpServer } from "../hooks/useMcpServer";
 
-interface MemoizedApiKeyButtonProps {
-  apiKey: string;
-  isGeneratingApiKey: boolean;
-  generateApiKey: () => void;
-}
-
-const MemoizedApiKeyButton = memo(
-  ({
-    apiKey,
-    isGeneratingApiKey,
-    generateApiKey,
-  }: MemoizedApiKeyButtonProps) => (
-    <Button
-      unstyled
-      className="flex items-center gap-2 font-sans text-muted-foreground hover:text-foreground"
-      disabled={apiKey !== ""}
-      loading={isGeneratingApiKey}
-      onClick={generateApiKey}
-    >
-      <ForwardedIconComponent
-        name={"key"}
-        className="h-4 w-4"
-        aria-hidden="true"
-      />
-      <span>{apiKey === "" ? "Generate API key" : "API key generated"}</span>
-    </Button>
-  ),
-);
-MemoizedApiKeyButton.displayName = "MemoizedApiKeyButton";
-
-// Define interface for MemoizedCodeTag props
-interface MemoizedCodeTagProps {
-  children: ReactNode;
-  isCopied: boolean;
-  copyToClipboard: () => void;
-  isAuthApiKey: boolean | null;
-  apiKey: string;
-  isGeneratingApiKey: boolean;
-  generateApiKey: () => void;
-}
-
-// Memoized CodeTag to prevent re-renders when parent components re-render
-const MemoizedCodeTag = memo(
-  ({
-    children,
-    isCopied,
-    copyToClipboard,
-    isAuthApiKey,
-    apiKey,
-    isGeneratingApiKey,
-    generateApiKey,
-  }: MemoizedCodeTagProps) => (
-    <div className="relative bg-background text-[13px]">
-      <div className="absolute right-4 top-4 flex items-center gap-6">
-        {isAuthApiKey && (
-          <MemoizedApiKeyButton
-            apiKey={apiKey}
-            isGeneratingApiKey={isGeneratingApiKey}
-            generateApiKey={generateApiKey}
-          />
-        )}
-        <Button
-          unstyled
-          size="icon"
-          className={cn("h-4 w-4 text-muted-foreground hover:text-foreground")}
-          onClick={copyToClipboard}
-        >
-          <ForwardedIconComponent
-            name={isCopied ? "check" : "copy"}
-            className="h-4 w-4"
-            aria-hidden="true"
-          />
-        </Button>
-      </div>
-      <div className="overflow-x-auto p-4">
-        <span>{children}</span>
-      </div>
-    </div>
-  ),
-);
-MemoizedCodeTag.displayName = "MemoizedCodeTag";
-
-const autoInstallers = [
-  {
-    name: "cursor",
-    title: "Cursor",
-    icon: "Cursor",
-  },
-  {
-    name: "claude",
-    title: "Claude",
-    icon: "Claude",
-  },
-  {
-    name: "windsurf",
-    title: "Windsurf",
-    icon: "Windsurf",
-  },
-];
-
-const operatingSystemTabs = [
-  {
-    name: "macoslinux",
-    title: "macOS/Linux",
-    icon: "FaApple",
-  },
-  {
-    name: "windows",
-    title: "Windows",
-    icon: "FaWindows",
-  },
-  {
-    name: "wsl",
-    title: "WSL",
-    icon: "FaLinux",
-  },
-];
+import { operatingSystemTabs } from "../utils/mcpServerUtils";
+import { McpAuthSection } from "./McpAuthSection";
+import { McpAutoInstallContent } from "./McpAutoInstallContent";
+import { McpFlowsSection } from "./McpFlowsSection";
+import { McpJsonContent } from "./McpJsonContent";
 
 const McpServerTab = ({ folderName }: { folderName: string }) => {
   const isDarkMode = useTheme().dark;
   const { folderId } = useParams();
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
   const projectId = folderId ?? myCollectionId ?? "";
-  const [isCopied, setIsCopied] = useState(false);
-  const [apiKey, setApiKey] = useState<string>("");
-  const [isGeneratingApiKey, setIsGeneratingApiKey] = useState(false);
-  const [authModalOpen, setAuthModalOpen] = useState(false);
-  const setSuccessData = useAlertStore((state) => state.setSuccessData);
-  const setErrorData = useAlertStore((state) => state.setErrorData);
-
-  const { data: mcpProjectData } = useGetFlowsMCP({ projectId });
-  const { mutate: patchFlowsMCP } = usePatchFlowsMCP({ project_id: projectId });
-
-  // Extract tools and auth_settings from the response
-  const flowsMCP = mcpProjectData?.tools || [];
-  const currentAuthSettings = mcpProjectData?.auth_settings;
-
-  const { mutate: patchInstallMCP } = usePatchInstallMCP({
-    project_id: projectId,
-  });
-
-  const { data: installedMCP } = useGetInstalledMCP({ projectId });
-
   const [selectedPlatform, setSelectedPlatform] = useState(
     operatingSystemTabs.find((tab) => tab.name.includes(getOS() || "windows"))
       ?.name,
   );
-
-  const isAutoLogin = useAuthStore((state) => state.autoLogin);
-  const isAuthApiKey = ENABLE_MCP_COMPOSER
-    ? currentAuthSettings?.auth_type === "apikey"
-    : !isAutoLogin;
-
-  // Check if the current connection is local
   const isLocalConnection = useCustomIsLocalConnection();
-
-  const [selectedMode, setSelectedMode] = useState(
+  const [selectedMode, setSelectedMode] = useState<string>(
     isLocalConnection ? "Auto install" : "JSON",
   );
-
-  const handleOnNewValue = (value: any) => {
-    const flowsMCPData: MCPSettingsType[] = value.value.map((flow: any) => ({
-      id: flow.id,
-      action_name: flow.name,
-      action_description: flow.description,
-      mcp_enabled: flow.status,
-    }));
-
-    // Prepare the request with both settings and auth_settings
-    // If ENABLE_MCP_COMPOSER is false, always use "none" for auth_type
-    const finalAuthSettings = ENABLE_MCP_COMPOSER
-      ? currentAuthSettings
-      : { auth_type: "none" };
-
-    const requestData = {
-      settings: flowsMCPData,
-      auth_settings: finalAuthSettings,
-    };
-
-    patchFlowsMCP(requestData);
-  };
-
-  const handleAuthSave = (authSettings: AuthSettingsType) => {
-    // Update the current flows with the new auth settings
-    const flowsMCPData: MCPSettingsType[] =
-      flowsMCP?.map((flow) => ({
-        id: flow.id,
-        action_name: flow.action_name,
-        action_description: flow.action_description,
-        mcp_enabled: flow.mcp_enabled,
-      })) || [];
-
-    const requestData = {
-      settings: flowsMCPData,
-      auth_settings: authSettings,
-    };
-
-    patchFlowsMCP(requestData);
-  };
-
-  const flowsMCPData = flowsMCP?.map((flow) => ({
-    id: flow.id,
-    name: flow.action_name,
-    description: flow.action_description,
-    display_name: flow.name,
-    display_description: flow.description,
-    status: flow.mcp_enabled,
-    tags: [flow.name],
-  }));
-
-  const syntaxHighlighterStyle = {
-    "hljs-string": {
-      color: isDarkMode ? "hsla(158, 64%, 52%, 1)" : "#059669", // Accent Green
-    },
-    "hljs-attr": {
-      color: isDarkMode ? "hsla(329, 86%, 70%, 1)" : "#DB2777", // Accent Pink
-    },
-  };
-
-  const apiUrl = customGetMCPUrl(projectId);
-
-  // Generate auth headers based on the authentication type
-  const getAuthHeaders = () => {
-    // If MCP auth is disabled, use the previous API key behavior
-    if (!ENABLE_MCP_COMPOSER) {
-      if (isAutoLogin) return "";
-      return `
-        "--headers",
-        "x-api-key",
-        "${apiKey || "YOUR_API_KEY"}",`;
-    }
-
-    if (!currentAuthSettings || currentAuthSettings.auth_type === "none") {
-      return "";
-    }
-
-    if (currentAuthSettings.auth_type === "apikey") {
-      return `
-        "--headers",
-        "x-api-key",
-        "${apiKey || "YOUR_API_KEY"}",`;
-    }
-
-    return "";
-  };
-
-  const MCP_SERVER_JSON = `{
-  "mcpServers": {
-    "lf-${parseString(folderName ?? "project", [
-      "snake_case",
-      "no_blank",
-      "lowercase",
-    ]).slice(0, MAX_MCP_SERVER_NAME_LENGTH - 4)}": {
-      "command": "${
-        selectedPlatform === "windows"
-          ? "cmd"
-          : selectedPlatform === "wsl"
-            ? "wsl"
-            : "uvx"
-      }",
-      "args": [
-        ${
-          selectedPlatform === `windows`
-            ? `"/c",
-        "uvx",
-        `
-            : selectedPlatform === "wsl"
-              ? `"uvx",
-        `
-              : ""
-        }"mcp-proxy",${getAuthHeaders()}
-        "${apiUrl}"
-      ]
-    }
-  }
-}`;
-
-  const MCP_SERVER_TUTORIAL_LINK =
-    "https://docs.langflow.org/mcp-server#connect-clients-to-use-the-servers-actions";
-
-  const MCP_SERVER_DEPLOY_TUTORIAL_LINK =
-    "https://docs.langflow.org/mcp-server";
-
-  const copyToClipboard = useCallback(() => {
-    navigator.clipboard
-      .writeText(MCP_SERVER_JSON)
-      .then(() => {
-        setIsCopied(true);
-        setTimeout(() => {
-          setIsCopied(false);
-        }, 1000);
-      })
-      .catch((err) => console.error("Failed to copy text: ", err));
-  }, [MCP_SERVER_JSON]);
-
-  const generateApiKey = useCallback(() => {
-    setIsGeneratingApiKey(true);
-    createApiKey(`MCP Server ${folderName}`)
-      .then((res) => {
-        setApiKey(res["api_key"]);
-      })
-      .catch(() => {})
-      .finally(() => {
-        setIsGeneratingApiKey(false);
-      });
-  }, [folderName]);
-
-  const [loadingMCP, setLoadingMCP] = useState<string[]>([]);
-
-  // Check if authentication is configured (not "none")
-  const hasAuthentication =
-    currentAuthSettings?.auth_type && currentAuthSettings.auth_type !== "none";
+  const [selectedTransport, setSelectedTransport] =
+    useState<MCPTransport>("streamablehttp");
+  const {
+    flowsMCPData,
+    currentAuthSettings,
+    isOAuthProject,
+    composerUrlData,
+    installedClients,
+    installedMCPData,
+    apiKey,
+    isGeneratingApiKey,
+    generateApiKey,
+    isCopied,
+    copyToClipboard,
+    loadingMCP,
+    installClient,
+    authModalOpen,
+    setAuthModalOpen,
+    isLoading,
+    handleOnNewValue,
+    handleAuthSave,
+    mcpJson,
+    hasAuthentication,
+    isAuthApiKey,
+    hasOAuthError,
+  } = useMcpServer({
+    projectId,
+    folderName,
+    selectedPlatform,
+    selectedTransport,
+  });
 
   return (
     <div>
@@ -352,7 +76,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
             in our
             <a
               className="text-accent-pink-foreground"
-              href={MCP_SERVER_DEPLOY_TUTORIAL_LINK}
+              href="https://docs.langflow.org/mcp-server"
               target="_blank"
               rel="noreferrer"
             >
@@ -362,75 +86,24 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
           </div>
         </div>
       </div>
+
       <div className="flex flex-col justify-between gap-8 xl:flex-row">
-        <div className="w-full xl:w-2/5">
-          <div className="flex flex-row justify-between pt-1">
-            <ShadTooltip
-              content="Flows in this project can be exposed as callable MCP tools."
-              side="right"
-            >
-              <div className="flex items-center text-mmd font-medium hover:cursor-help">
-                Flows/Tools
-                <ForwardedIconComponent
-                  name="info"
-                  className="ml-1.5 h-4 w-4 text-muted-foreground"
-                  aria-hidden="true"
-                />
-              </div>
-            </ShadTooltip>
-          </div>
-          <div className="flex flex-row flex-wrap gap-2 pt-2">
-            <ToolsComponent
-              value={flowsMCPData}
-              title="MCP Server Tools"
-              description="Select tools to add to this server"
-              handleOnNewValue={handleOnNewValue}
-              id="mcp-server-tools"
-              button_description="Edit Tools"
-              editNode={false}
-              isAction
-              disabled={false}
-            />
-          </div>
-        </div>
+        <McpFlowsSection
+          flowsMCPData={flowsMCPData}
+          handleOnNewValue={handleOnNewValue}
+        />
+
         <div className="flex flex-1 flex-col gap-4 overflow-hidden">
           {ENABLE_MCP_COMPOSER && (
-            <div className="flex justify-between">
-              <span className="flex gap-2 items-center">
-                Auth:
-                {!hasAuthentication ? (
-                  <span className="text-accent-amber-foreground flex gap-2 text-mmd items-center">
-                    <ForwardedIconComponent
-                      name="AlertTriangle"
-                      className="h-4 w-4 shrink-0"
-                    />
-                    None (public)
-                  </span>
-                ) : (
-                  <span className="text-accent-emerald-foreground flex gap-2 text-mmd items-center">
-                    <ForwardedIconComponent
-                      name="Check"
-                      className="h-4 w-4 shrink-0"
-                    />
-                    {AUTH_METHODS[
-                      currentAuthSettings.auth_type as keyof typeof AUTH_METHODS
-                    ]?.label || currentAuthSettings.auth_type}
-                  </span>
-                )}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setAuthModalOpen(true)}
-              >
-                <ForwardedIconComponent
-                  name="Fingerprint"
-                  className="h-4 w-4 shrink-0"
-                />
-                {hasAuthentication ? "Edit Auth" : "Add Auth"}
-              </Button>
-            </div>
+            <McpAuthSection
+              hasAuthentication={hasAuthentication}
+              composerUrlData={composerUrlData}
+              isLoading={isLoading}
+              currentAuthSettings={currentAuthSettings}
+              setAuthModalOpen={setAuthModalOpen}
+            />
           )}
+
           <div className={cn("flex flex-col", !ENABLE_MCP_COMPOSER && "mt-2")}>
             <div className="flex flex-row justify-start border-b border-border">
               {[{ name: "Auto install" }, { name: "JSON" }].map((item) => (
@@ -449,170 +122,62 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
               ))}
             </div>
           </div>
-          {selectedMode === "JSON" && (
-            <>
-              <div className="flex flex-col gap-4">
-                <Tabs
-                  value={selectedPlatform}
-                  onValueChange={setSelectedPlatform}
-                >
-                  <TabsList>
-                    {operatingSystemTabs.map((tab) => (
-                      <TabsTrigger
-                        className="flex items-center gap-2"
-                        key={tab.name}
-                        value={tab.name}
-                      >
-                        <ForwardedIconComponent
-                          name={tab.icon}
-                          aria-hidden="true"
-                        />
-                        {tab.title}
-                      </TabsTrigger>
-                    ))}
-                  </TabsList>
-                </Tabs>
-                <div className="overflow-hidden rounded-lg border border-border">
-                  <SyntaxHighlighter
-                    style={syntaxHighlighterStyle}
-                    CodeTag={({ children }) => (
-                      <MemoizedCodeTag
-                        isCopied={isCopied}
-                        copyToClipboard={copyToClipboard}
-                        isAuthApiKey={isAuthApiKey}
-                        apiKey={apiKey}
-                        isGeneratingApiKey={isGeneratingApiKey}
-                        generateApiKey={generateApiKey}
-                      >
-                        {children}
-                      </MemoizedCodeTag>
-                    )}
-                    language="json"
-                  >
-                    {MCP_SERVER_JSON}
-                  </SyntaxHighlighter>
+
+          <div className="flex flex-col gap-4">
+            {hasOAuthError ? (
+              <div className="p-4 bg-accent-red-subtle border border-accent-red-border rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <ForwardedIconComponent
+                    name="AlertTriangle"
+                    className="h-4 w-4 text-accent-red-foreground"
+                  />
+                  <span className="font-medium text-accent-red-foreground">
+                    MCP Server Configuration Error
+                  </span>
                 </div>
+                <p className="text-mmd text-accent-red-foreground">
+                  {composerUrlData?.error_message}
+                </p>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Please fix the OAuth configuration in your project settings to
+                  generate the MCP server configuration.
+                </p>
               </div>
-              <div className="px-2 text-mmd text-muted-foreground">
-                Add this config to your client of choice. Need help? See the{" "}
-                <a
-                  href={MCP_SERVER_TUTORIAL_LINK}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-accent-pink-foreground"
-                >
-                  setup guide
-                </a>
-                .
-              </div>
-            </>
-          )}
-          {selectedMode === "Auto install" && (
-            <div className="flex flex-col gap-1">
-              {!isLocalConnection && (
-                <div className="mb-2 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-200">
-                  <div className="flex items-center gap-3">
-                    <ForwardedIconComponent
-                      name="AlertTriangle"
-                      className="h-4 w-4 shrink-0"
-                    />
-                    <span>
-                      One-click install is disabled because the Langflow server
-                      is not running on your local machine. Use the JSON tab to
-                      configure your client manually.
-                    </span>
-                  </div>
-                </div>
-              )}
-              {autoInstallers.map((installer) => (
-                <Button
-                  key={installer.name}
-                  variant="ghost"
-                  className="group flex items-center justify-between disabled:text-foreground disabled:opacity-50"
-                  disabled={
-                    loadingMCP.includes(installer.name) || !isLocalConnection
-                  }
-                  onClick={() => {
-                    setLoadingMCP([...loadingMCP, installer.name]);
-                    patchInstallMCP(
-                      {
-                        client: installer.name,
-                      },
-                      {
-                        onSuccess: () => {
-                          setSuccessData({
-                            title: `MCP Server installed successfully on ${installer.title}. You may need to restart your client to see the changes.`,
-                          });
-                          setLoadingMCP(
-                            loadingMCP.filter(
-                              (name) => name !== installer.name,
-                            ),
-                          );
-                        },
-                        onError: (e) => {
-                          setErrorData({
-                            title: `Failed to install MCP Server on ${installer.title}`,
-                            list: [e.message],
-                          });
-                          setLoadingMCP(
-                            loadingMCP.filter(
-                              (name) => name !== installer.name,
-                            ),
-                          );
-                        },
-                      },
-                    );
-                  }}
-                >
-                  <div className="flex items-center gap-4 text-sm font-medium">
-                    <ForwardedIconComponent
-                      name={installer.icon}
-                      className={cn("h-5 w-5")}
-                      aria-hidden="true"
-                    />
-                    {installer.title}
-                  </div>
-                  <div className="relative h-4 w-4">
-                    <ForwardedIconComponent
-                      name={
-                        installedMCP?.includes(installer.name)
-                          ? "Check"
-                          : loadingMCP.includes(installer.name)
-                            ? "Loader2"
-                            : "Plus"
-                      }
-                      className={cn(
-                        "h-4 w-4 absolute top-0 left-0 opacity-100",
-                        loadingMCP.includes(installer.name) && "animate-spin",
-                        installedMCP?.includes(installer.name) &&
-                          "group-hover:opacity-0",
-                      )}
-                    />
-                    {installedMCP?.includes(installer.name) && (
-                      <ForwardedIconComponent
-                        name={"RefreshCw"}
-                        className={cn(
-                          "h-4 w-4 absolute top-0 left-0 opacity-0 group-hover:opacity-100",
-                        )}
-                      />
-                    )}
-                  </div>
-                </Button>
-              ))}
-            </div>
-          )}
+            ) : selectedMode === "JSON" ? (
+              <McpJsonContent
+                selectedPlatform={selectedPlatform}
+                setSelectedPlatform={setSelectedPlatform}
+                selectedTransport={selectedTransport}
+                setSelectedTransport={setSelectedTransport}
+                isDarkMode={isDarkMode}
+                isCopied={isCopied}
+                copyToClipboard={copyToClipboard}
+                mcpJson={mcpJson}
+                isAuthApiKey={isAuthApiKey}
+                apiKey={apiKey}
+                isGeneratingApiKey={isGeneratingApiKey}
+                generateApiKey={generateApiKey}
+              />
+            ) : (
+              <McpAutoInstallContent
+                isLocalConnection={isLocalConnection}
+                installedMCPData={installedMCPData}
+                loadingMCP={loadingMCP}
+                installClient={installClient}
+                installedClients={installedClients}
+              />
+            )}
+          </div>
         </div>
       </div>
-      {ENABLE_MCP_COMPOSER && (
-        <AuthModal
-          open={authModalOpen}
-          setOpen={setAuthModalOpen}
-          authSettings={currentAuthSettings}
-          autoInstall={isLocalConnection}
-          onSave={handleAuthSave}
-          installedClients={installedMCP ?? []}
-        />
-      )}
+
+      <AuthModal
+        open={authModalOpen}
+        setOpen={setAuthModalOpen}
+        authSettings={currentAuthSettings}
+        autoInstall={false}
+        onSave={handleAuthSave}
+      />
     </div>
   );
 };

@@ -31,27 +31,31 @@ git remote set-url --push upstream no_push
 
 ## Set up Environment
 
-There are two options available to you: the 'easy' and recommended option is to use a Development Container ("[Dev Container](https://containers.dev/)"), or you can choose to use your own OS / environment.
+There are two options available to you: use your local environment with `make` commands (recommended for macOS and Linux), or use a Development Container ("[Dev Container](https://containers.dev/)") which is recommended for Windows users.
 
-### Option 1 (Preferred): Use a Dev Container
-
-Open this repository as a Dev Container per your IDEs instructions.
-
-#### Microsoft VS Code
-
-- See [Developing inside a Container](https://code.visualstudio.com/docs/devcontainers/containers)
-- You may also find it helpful to [share `git` credentials](https://code.visualstudio.com/remote/advancedcontainers/sharing-git-credentials) with the container
-
-### Option 2: Use Your Own Environment
+### Option 1 (Recommended): Use Your Local Environment
 
 Install Pre-Requisites:
 
-- **Operating System**: macOS or Linux; Windows users **_MUST_** develop under WSL.
+- **Operating System**: macOS or Linux; Windows users should use WSL or consider Option 2 (Dev Container).
 - **`git`**: The project uses the ubiquitous `git` tool for change control.
-- **`make`**: The project uses `make` to coordidinate packaging.
+- **`make`**: The project uses `make` to coordinate packaging.
 - **`uv`**: This project uses `uv` (`>=0.4`), a Python package and project manager from Astral. Install instructions at https://docs.astral.sh/uv/getting-started/installation/.
 - **`npm`**: The frontend files are built with Node.js (`v22.12 LTS`) and `npm` (`v10.9`). Install instructions at https://nodejs.org/en/download/package-manager.
   - Windows (WSL) users: ensure `npm` is installed within WSL environment; `which npm` should resolve to a Linux location, not a Windows location.
+
+### Option 2: Use a Dev Container (Recommended for Windows)
+
+Open this repository as a Dev Container per your IDEs instructions.
+
+A preconfigured `.devcontainer` is included in this repository and is auto-detected by supported IDEs.
+
+#### Microsoft VS Code
+
+To start the preconfigured `.devcontainer` with the VS Code Dev Containers extension, from the Command Palette, run the Dev Containers: Reopen in Container command.
+
+- See [Developing inside a Container](https://code.visualstudio.com/docs/devcontainers/containers)
+- You may also find it helpful to [share `git` credentials](https://code.visualstudio.com/remote/advancedcontainers/sharing-git-credentials) with the container
 
 ### Initial Environment Validation
 
@@ -118,6 +122,25 @@ The backend service runs as a FastAPI service on Python, and is responsible for 
 make backend
 ```
 
+> [!TIP]
+> **Component Development Mode**: By default, Langflow uses a prebuilt component index for fast startup (~10ms). If you're actively developing or modifying components, enable dynamic component loading with `LFX_DEV`:
+>
+> ```bash
+> # Load all components dynamically
+> LFX_DEV=1 make backend
+>
+> # Load only specific component modules (faster dev workflow)
+> LFX_DEV=mistral,openai,anthropic make backend
+> ```
+>
+> The list mode is particularly useful when working on specific integrations, as it significantly speeds up startup time by only loading the components you need.
+>
+> Without `LFX_DEV`, component changes require rebuilding the index:
+>
+> ```bash
+> uv run python scripts/build_component_index.py
+> ```
+
 You will get output similar to:
 
 ```
@@ -165,8 +188,8 @@ In the terminal, from the project root directory, run the following:
 
 ```bash
 cd docs
-yarn install
-yarn start
+npm install
+npm run start
 ```
 
 If the frontend service is running on port `3000` you might be prompted `Would you like to run the app on another port instead?`, in which case answer "yes". You will get output similar to:
@@ -181,9 +204,18 @@ Navigate to http://localhost:3001/ in a browser and view the documentation. Docu
 
 Components reside in folders under `src/backend/base/langflow`, and their unit tests under `src/backend/base/tests/unit/components`.
 
+> [!IMPORTANT]
+> **Component Development Mode**: When actively developing components, make sure to run the backend with `LFX_DEV=1` to enable live reloading:
+>
+> ```bash
+> LFX_DEV=1 make backend
+> ```
+>
+> This ensures your component changes are immediately reflected without needing to rebuild the component index.
+
 ### Adding a Component
 
-Add the component to the appropriate subdirectory, and add the component to the `__init__.py` file (alphabetical ordering on the `import` and the `__all__` list). Assuming the backend and frontend services are running, the backend service will restart as these files are changed. The new component will be visible after the backend is restarted, _*and*_ after you hit "refresh" in the browser.
+Add the component to the appropriate subdirectory, and add the component to the `__init__.py` file (alphabetical ordering on the `import` and the `__all__` list). Assuming the backend and frontend services are running **with `LFX_DEV=1`**, the backend service will restart as these files are changed. The new component will be visible after the backend is restarted, _*and*_ after you hit "refresh" in the browser.
 
 > [!TIP]
 > It is faster to copy-paste the component code from your editor into the UI _without_ saving in the source code in the editor, and once you are satisfied it is working you can save (restarting the backend) and refresh the browser to confirm it is present.
@@ -196,6 +228,16 @@ Modifying a component is much the same as adding a component: it is generally ea
 
 > [!NOTE]
 > If you have an old version of the component on the canvas when changes are saved and the backend service restarts, that component should show "Updates Available" when the canvas is reloaded (i.e. a browser refresh). [Issue 5179](https://github.com/langflow-ai/langflow/issues/5179) indicates this behavior is not consistent, at least in a development setting.
+
+### Component Index
+
+When you're done modifying components and ready to commit, the component index will be automatically updated by CI when you create a pull request. The GitHub Actions workflow will detect changes to components and rebuild the index, committing it to your PR branch if needed.
+
+If you want to manually rebuild the index locally for testing:
+
+```bash
+uv run python scripts/build_component_index.py
+```
 
 ## Building and Testing Changes
 

@@ -71,18 +71,20 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
     if settings_service.auth_settings.AUTO_LOGIN:
         await logger.adebug("AUTO_LOGIN is set to True. Creating default superuser.")
         username = DEFAULT_SUPERUSER
-        password = DEFAULT_SUPERUSER_PASSWORD
+        password = DEFAULT_SUPERUSER_PASSWORD.get_secret_value()
     else:
         # Remove the default superuser if it exists
         await teardown_superuser(settings_service, session)
-        username = settings_service.auth_settings.SUPERUSER
-        password = settings_service.auth_settings.SUPERUSER_PASSWORD
+        # If AUTO_LOGIN is disabled, attempt to use configured credentials
+        # or fall back to default credentials if none are provided.
+        username = settings_service.auth_settings.SUPERUSER or DEFAULT_SUPERUSER
+        password = (settings_service.auth_settings.SUPERUSER_PASSWORD or DEFAULT_SUPERUSER_PASSWORD).get_secret_value()
 
     if not username or not password:
         msg = "Username and password must be set"
         raise ValueError(msg)
 
-    is_default = (username == DEFAULT_SUPERUSER) and (password == DEFAULT_SUPERUSER_PASSWORD)
+    is_default = (username == DEFAULT_SUPERUSER) and (password == DEFAULT_SUPERUSER_PASSWORD.get_secret_value())
 
     try:
         user = await get_or_create_super_user(
@@ -95,6 +97,7 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
         msg = "Could not create superuser. Please create a superuser manually."
         raise RuntimeError(msg) from exc
     finally:
+        # Scrub credentials from in-memory settings after setup
         settings_service.auth_settings.reset_credentials()
 
 
@@ -116,12 +119,10 @@ async def teardown_superuser(settings_service, session: AsyncSession) -> None:
             # if it has logged in, it means the user is using it to login
             if user and user.is_superuser is True and not user.last_login_at:
                 await session.delete(user)
-                await session.commit()
                 await logger.adebug("Default superuser removed successfully.")
 
         except Exception as exc:
             logger.exception(exc)
-            await session.rollback()
             msg = "Could not remove default superuser."
             raise RuntimeError(msg) from exc
 
@@ -183,11 +184,9 @@ async def clean_transactions(settings_service: SettingsService, session: AsyncSe
         )
 
         await session.exec(delete_stmt)
-        await session.commit()
         logger.debug("Successfully cleaned up old transactions")
     except (sqlalchemy_exc.SQLAlchemyError, asyncio.TimeoutError) as exc:
         logger.error(f"Error cleaning up transactions: {exc!s}")
-        await session.rollback()
         # Don't re-raise since this is a cleanup task
 
 
@@ -212,11 +211,9 @@ async def clean_vertex_builds(settings_service: SettingsService, session: AsyncS
         )
 
         await session.exec(delete_stmt)
-        await session.commit()
         logger.debug("Successfully cleaned up old vertex builds")
     except (sqlalchemy_exc.SQLAlchemyError, asyncio.TimeoutError) as exc:
         logger.error(f"Error cleaning up vertex builds: {exc!s}")
-        await session.rollback()
         # Don't re-raise since this is a cleanup task
 
 
@@ -226,6 +223,7 @@ def register_all_service_factories() -> None:
     from lfx.services.manager import get_service_manager
 
     service_manager = get_service_manager()
+    from lfx.services.mcp_composer import factory as mcp_composer_factory
     from lfx.services.settings import factory as settings_factory
 
     from langflow.services.auth import factory as auth_factory
@@ -241,6 +239,7 @@ def register_all_service_factories() -> None:
     from langflow.services.task import factory as task_factory
     from langflow.services.telemetry import factory as telemetry_factory
     from langflow.services.tracing import factory as tracing_factory
+    from langflow.services.transaction import factory as transaction_factory
     from langflow.services.variable import factory as variable_factory
 
     # Register all factories
@@ -253,12 +252,14 @@ def register_all_service_factories() -> None:
     service_manager.register_factory(variable_factory.VariableServiceFactory())
     service_manager.register_factory(telemetry_factory.TelemetryServiceFactory())
     service_manager.register_factory(tracing_factory.TracingServiceFactory())
+    service_manager.register_factory(transaction_factory.TransactionServiceFactory())
     service_manager.register_factory(state_factory.StateServiceFactory())
     service_manager.register_factory(job_queue_factory.JobQueueServiceFactory())
     service_manager.register_factory(task_factory.TaskServiceFactory())
     service_manager.register_factory(store_factory.StoreServiceFactory())
     service_manager.register_factory(shared_component_cache_factory.SharedComponentCacheServiceFactory())
     service_manager.register_factory(auth_factory.AuthServiceFactory())
+    service_manager.register_factory(mcp_composer_factory.MCPComposerServiceFactory())
     service_manager.set_factory_registered()
 
 
@@ -284,5 +285,7 @@ async def initialize_services(*, fix_migration: bool = False) -> None:
         await get_db_service().assign_orphaned_flows_to_superuser()
     except sqlalchemy_exc.IntegrityError as exc:
         await logger.awarning(f"Error assigning orphaned flows to the superuser: {exc!s}")
-    await clean_transactions(settings_service, session)
-    await clean_vertex_builds(settings_service, session)
+
+    async with session_scope() as session:
+        await clean_transactions(settings_service, session)
+        await clean_vertex_builds(settings_service, session)

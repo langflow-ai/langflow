@@ -7,11 +7,10 @@ from langflow.services.database.models.variable.model import VariableUpdate
 from langflow.services.deps import get_settings_service
 from langflow.services.variable.constants import CREDENTIAL_TYPE
 from langflow.services.variable.service import DatabaseVariableService
+from lfx.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
-
-from lfx.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
 
 
 @pytest.fixture
@@ -240,4 +239,97 @@ async def test_create_variable(service, session: AsyncSession):
     assert result.default_fields == []
     assert result.type == CREDENTIAL_TYPE
     assert isinstance(result.created_at, datetime)
-    assert isinstance(result.updated_at, datetime)
+    assert result.updated_at is None  # Should be None on creation
+
+
+async def test_get_all_decrypted_variables(service, session: AsyncSession):
+    """Test get_all_decrypted_variables returns all variables with decrypted values."""
+    user_id = uuid4()
+
+    # Create multiple variables with different types
+    await service.create_variable(user_id, "API_KEY_1", "secret_value_1", type_=CREDENTIAL_TYPE, session=session)
+    await service.create_variable(user_id, "API_KEY_2", "secret_value_2", type_=CREDENTIAL_TYPE, session=session)
+    await service.create_variable(user_id, "GENERIC_VAR", "plain_value", type_="GENERIC", session=session)
+
+    # Get all decrypted variables
+    result = await service.get_all_decrypted_variables(user_id, session=session)
+
+    # Verify all variables are returned
+    assert len(result) == 3
+    assert "API_KEY_1" in result
+    assert "API_KEY_2" in result
+    assert "GENERIC_VAR" in result
+
+    # Verify values are decrypted
+    assert result["API_KEY_1"] == "secret_value_1"  # pragma: allowlist secret
+    assert result["API_KEY_2"] == "secret_value_2"  # pragma: allowlist secret
+    assert result["GENERIC_VAR"] == "plain_value"
+
+
+async def test_get_all_decrypted_variables__empty(service, session: AsyncSession):
+    """Test get_all_decrypted_variables returns empty dict when no variables exist."""
+    user_id = uuid4()
+
+    result = await service.get_all_decrypted_variables(user_id, session=session)
+
+    assert result == {}
+    assert isinstance(result, dict)
+
+
+async def test_get_all_decrypted_variables__decryption_failure(service, session: AsyncSession):
+    """Test get_all_decrypted_variables handles decryption failures gracefully."""
+    user_id = uuid4()
+
+    # Create a variable
+    await service.create_variable(user_id, "TEST_VAR", "test_value", session=session)
+
+    # Mock decryption to fail
+    with patch("langflow.services.auth.utils.decrypt_api_key") as mock_decrypt:
+        mock_decrypt.side_effect = Exception("Decryption failed")
+
+        result = await service.get_all_decrypted_variables(user_id, session=session)
+
+        # Should skip variables that fail decryption
+        assert "TEST_VAR" not in result
+        assert result == {}
+
+
+async def test_create_generic_variable_with_fernet_signature_fails(service, session: AsyncSession):
+    """Test that creating a GENERIC variable starting with gAAAAA fails."""
+    user_id = uuid4()
+
+    with pytest.raises(ValueError, match="cannot start with 'gAAAAA'"):
+        await service.create_variable(
+            user_id, "TEST_VAR", "gAAAAABthis-looks-like-encrypted-but-is-generic", type_="Generic", session=session
+        )
+
+
+async def test_update_generic_variable_with_fernet_signature_fails(service, session: AsyncSession):
+    """Test that updating a GENERIC variable to start with gAAAAA fails."""
+    user_id = uuid4()
+
+    # Create a normal generic variable
+    await service.create_variable(user_id, "TEST_VAR", "normal_value", type_="Generic", session=session)
+
+    # Try to update it to a value starting with gAAAAA
+    with pytest.raises(ValueError, match="cannot start with 'gAAAAA'"):
+        await service.update_variable(user_id, "TEST_VAR", "gAAAAABthis-looks-like-encrypted", session=session)
+
+
+async def test_create_credential_variable_with_fernet_signature_succeeds(service, session: AsyncSession):
+    """Test that CREDENTIAL variables can have values that look like Fernet tokens (they get encrypted anyway)."""
+    user_id = uuid4()
+
+    # This should succeed because CREDENTIAL types are encrypted
+    variable = await service.create_variable(
+        user_id,
+        "TEST_CRED",
+        "gAAAAABsome-value",  # This will be encrypted, so it's fine
+        type_="Credential",
+        session=session,
+    )
+
+    assert variable is not None
+    assert variable.name == "TEST_CRED"
+    # The value should be encrypted (different from input)
+    assert variable.value != "gAAAAABsome-value"

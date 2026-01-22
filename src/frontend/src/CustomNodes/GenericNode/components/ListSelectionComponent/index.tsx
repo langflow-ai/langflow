@@ -256,7 +256,7 @@ const ListSelectionComponent = ({
               onClick={onAddButtonClick}
             >
               <ForwardedIconComponent name="Plus" className="h-4 w-4" />
-              {addButtonText}
+              <span>{addButtonText}</span>
             </Button>
           )}
         </DialogFooter>

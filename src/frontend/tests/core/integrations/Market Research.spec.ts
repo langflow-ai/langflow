@@ -1,6 +1,6 @@
-import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { getAllResponseMessage } from "../../utils/get-all-response-message";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
@@ -29,22 +29,50 @@ withEventDeliveryModes(
 
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Market Research" }).click();
-    await page.getByTestId("canvas_controls_dropdown").click();
 
-    await page.waitForSelector('[data-testid="fit_view"]', {
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,
     });
-    await page.getByTestId("canvas_controls_dropdown").click();
 
     await initialGPTsetup(page);
-    await page
-      .getByTestId(/rf__node-TavilySearchComponent-[A-Za-z0-9]{5}/)
-      .getByTestId("popover-anchor-input-api_key")
-      .nth(0)
-      .fill(process.env.TAVILY_API_KEY ?? "");
+
+    // Fill Tavily API key - try multiple approaches for robustness
+    const tavilyApiKey = process.env.TAVILY_API_KEY ?? "";
+
+    // Approach 1: Direct fill like Instagram Copywriter (most reliable)
+    try {
+      await page
+        .getByTestId(/rf__node-TavilySearchComponent-[A-Za-z0-9]{5}/)
+        .getByTestId("popover-anchor-input-api_key")
+        .nth(0)
+        .fill(tavilyApiKey, { timeout: 10000 });
+    } catch {
+      // Approach 2: Try without the node prefix, by index
+      try {
+        const apiKeyInputs = page.getByTestId("popover-anchor-input-api_key");
+        const count = await apiKeyInputs.count();
+        for (let i = 0; i < count; i++) {
+          const input = apiKeyInputs.nth(i);
+          const placeholder = await input.getAttribute("placeholder");
+          if (
+            placeholder?.toLowerCase().includes("tavily") ||
+            i === count - 1
+          ) {
+            await input.fill(tavilyApiKey);
+            break;
+          }
+        }
+      } catch {
+        // Approach 3: Last resort - fill all api_key inputs with Tavily key
+        await page
+          .getByTestId("popover-anchor-input-api_key")
+          .last()
+          .fill(tavilyApiKey);
+      }
+    }
 
     await page
-      .getByTestId("handle-parser-shownode-data or dataframe-left")
+      .getByTestId("handle-parsercomponent-shownode-data or dataframe-left")
       .click();
 
     await page.getByTestId("tab_1_stringify").click();

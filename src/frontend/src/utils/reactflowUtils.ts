@@ -11,6 +11,7 @@
  * software for all.
  */
 
+// biome-ignore-all lint/suspicious/noExplicitAny: TODO We need to fix this. added suppression for 1.7.1 merge
 import {
   type Connection,
   type Edge,
@@ -27,6 +28,7 @@ import {
   getRightHandleId,
 } from "@/CustomNodes/utils/get-handle-id";
 import { INCOMPLETE_LOOP_ERROR_ALERT } from "@/constants/alerts_constants";
+import { customDownloadNodeJson } from "@/customization/utils/custom-download-json";
 import { customDownloadFlow } from "@/customization/utils/custom-reactFlowUtils";
 import useFlowStore from "@/stores/flowStore";
 import getFieldTitle from "../CustomNodes/utils/get-field-title";
@@ -61,6 +63,10 @@ import type {
   generateFlowType,
   updateEdgesHandleIdsType,
 } from "../types/utils/reactflowUtils";
+import {
+  cleanMcpConfig,
+  type MCPServerValue,
+} from "./helpers/clean-mcp-config";
 import { getLayoutedNodes } from "./layoutUtils";
 import { createRandomKey, toTitleCase } from "./utils";
 
@@ -75,6 +81,45 @@ export function checkWebhookInput(nodes: Node[]) {
 }
 
 export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
+  const brokenEdges: {
+    source: {
+      nodeDisplayName: string;
+      outputDisplayName?: string;
+    };
+    target: {
+      displayName: string;
+      field: string;
+    };
+  }[] = [];
+
+  function generateAlertObject(sourceNode, targetNode, edge) {
+    const targetHandleObject: targetHandleType = scapeJSONParse(
+      edge.targetHandle,
+    );
+    const sourceHandleObject: sourceHandleType = scapeJSONParse(
+      edge.sourceHandle,
+    );
+    const name = sourceHandleObject.name;
+    const output = sourceNode.data.node!.outputs?.find(
+      (output) => output.name === name,
+    );
+
+    return {
+      source: {
+        nodeDisplayName: sourceNode.data.node!.display_name,
+        outputDisplayName: output?.display_name,
+      },
+      target: {
+        displayName: targetNode.data.node!.display_name,
+        field:
+          targetNode.data.node!.template[targetHandleObject.fieldName]
+            ?.display_name ??
+          targetHandleObject.fieldName ??
+          targetHandleObject.name,
+      },
+    };
+  }
+
   let newEdges: EdgeType[] = cloneDeep(
     edges.map((edge) => ({ ...edge, selected: false, animated: false })),
   );
@@ -105,10 +150,15 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
         targetNode.type === "genericNode"
       ) {
         const dataType = targetNode.data.type;
+        const output = targetNode.data.node!.outputs?.find(
+          (output) => output.name === targetHandleObject.name,
+        );
+        const baseTypes = output?.types ?? [];
+        // Include loop_types for loop inputs (allows_loop=true)
         const outputTypes =
-          targetNode.data.node!.outputs?.find(
-            (output) => output.name === targetHandleObject.name,
-          )?.types ?? [];
+          output?.allows_loop && output?.loop_types
+            ? [output.selected ?? baseTypes[0], ...output.loop_types]
+            : baseTypes;
 
         id = {
           dataType: dataType ?? "",
@@ -127,11 +177,19 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
           id.proxy = targetNode.data.node!.template[field]?.proxy;
         }
       }
+      // Check if target is an loop input (allows_loop=true)
+      const targetOutput = targetNode.data.node!.outputs?.find(
+        (output) => output.name === targetHandleObject.name,
+      );
+      const isLoopInput = targetOutput?.allows_loop === true;
+
       if (
-        scapedJSONStringfy(id) !== targetHandle ||
-        (targetNode.data.node?.tool_mode && isToolMode)
+        (scapedJSONStringfy(id) !== targetHandle ||
+          (targetNode.data.node?.tool_mode && isToolMode)) &&
+        !isLoopInput
       ) {
         newEdges = newEdges.filter((e) => e.id !== edge.id);
+        brokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
       }
     }
     if (sourceHandle) {
@@ -163,18 +221,23 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
             dataType: sourceNode.data.type,
           };
 
-          if (scapedJSONStringfy(id) !== sourceHandle) {
+          // Skip edge cleanup for outputs with allows_loop=true
+          const hasAllowsLoop = output?.allows_loop === true;
+          if (scapedJSONStringfy(id) !== sourceHandle && !hasAllowsLoop) {
             newEdges = newEdges.filter((e) => e.id !== edge.id);
+            brokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
           }
         } else {
           newEdges = newEdges.filter((e) => e.id !== edge.id);
+          brokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
         }
       }
     }
 
     newEdges = filterHiddenFieldsEdges(edge, newEdges, targetNode);
   });
-  return newEdges;
+
+  return { edges: newEdges, brokenEdges };
 }
 
 export function clearHandlesFromAdvancedFields(
@@ -236,129 +299,6 @@ export function filterHiddenFieldsEdges(
   return newEdges;
 }
 
-export function detectBrokenEdgesEdges(nodes: AllNodeType[], edges: Edge[]) {
-  function generateAlertObject(sourceNode, targetNode, edge) {
-    const targetHandleObject: targetHandleType = scapeJSONParse(
-      edge.targetHandle,
-    );
-    const sourceHandleObject: sourceHandleType = scapeJSONParse(
-      edge.sourceHandle,
-    );
-    const name = sourceHandleObject.name;
-    const output = sourceNode.data.node!.outputs?.find(
-      (output) => output.name === name,
-    );
-
-    return {
-      source: {
-        nodeDisplayName: sourceNode.data.node!.display_name,
-        outputDisplayName: output?.display_name,
-      },
-      target: {
-        displayName: targetNode.data.node!.display_name,
-        field:
-          targetNode.data.node!.template[targetHandleObject.fieldName]
-            ?.display_name ??
-          targetHandleObject.fieldName ??
-          targetHandleObject.name,
-      },
-    };
-  }
-  let newEdges = cloneDeep(edges);
-  const BrokenEdges: {
-    source: {
-      nodeDisplayName: string;
-      outputDisplayName?: string;
-    };
-    target: {
-      displayName: string;
-      field: string;
-    };
-  }[] = [];
-  edges.forEach((edge) => {
-    // check if the source and target node still exists
-    const sourceNode = nodes.find((node) => node.id === edge.source);
-    const targetNode = nodes.find((node) => node.id === edge.target);
-    if (!sourceNode || !targetNode) {
-      newEdges = newEdges.filter((edg) => edg.id !== edge.id);
-      return;
-    }
-    // check if the source and target handle still exists
-    const sourceHandle = edge.sourceHandle; //right
-    const targetHandle = edge.targetHandle; //left
-    if (targetHandle) {
-      const targetHandleObject: targetHandleType = scapeJSONParse(targetHandle);
-      const field = targetHandleObject.fieldName;
-      let id: sourceHandleType | targetHandleType;
-
-      const templateFieldType = targetNode.data.node!.template[field]?.type;
-      const inputTypes = targetNode.data.node!.template[field]?.input_types;
-      const hasProxy = targetNode.data.node!.template[field]?.proxy;
-
-      if (
-        !field &&
-        targetHandleObject.name &&
-        targetNode.type === "genericNode"
-      ) {
-        const dataType = targetNode.data.type;
-        const outputTypes =
-          targetNode.data.node!.outputs?.find(
-            (output) => output.name === targetHandleObject.name,
-          )?.types ?? [];
-
-        id = {
-          dataType: dataType ?? "",
-          name: targetHandleObject.name,
-          id: targetNode.data.id,
-          output_types: outputTypes,
-        };
-      } else {
-        id = {
-          type: templateFieldType,
-          fieldName: field,
-          id: targetNode.data.id,
-          inputTypes: inputTypes,
-        };
-        if (hasProxy) {
-          id.proxy = targetNode.data.node!.template[field]?.proxy;
-        }
-      }
-      if (scapedJSONStringfy(id) !== targetHandle) {
-        newEdges = newEdges.filter((e) => e.id !== edge.id);
-        BrokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
-      }
-    }
-    if (sourceHandle) {
-      const parsedSourceHandle = scapeJSONParse(sourceHandle);
-      const name = parsedSourceHandle.name;
-      if (sourceNode.type == "genericNode") {
-        const output = sourceNode.data.node!.outputs?.find(
-          (output) => output.name === name,
-        );
-        if (output) {
-          const outputTypes =
-            output!.types.length === 1 ? output!.types : [output!.selected!];
-
-          const id: sourceHandleType = {
-            id: sourceNode.data.id,
-            name: name,
-            output_types: outputTypes,
-            dataType: sourceNode.data.type,
-          };
-          if (scapedJSONStringfy(id) !== sourceHandle) {
-            newEdges = newEdges.filter((e) => e.id !== edge.id);
-            BrokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
-          }
-        } else {
-          newEdges = newEdges.filter((e) => e.id !== edge.id);
-          BrokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
-        }
-      }
-    }
-  });
-  return BrokenEdges;
-}
-
 export function unselectAllNodesEdges(nodes: Node[], edges: Edge[]) {
   nodes.forEach((node: Node) => {
     node.selected = false;
@@ -410,11 +350,24 @@ export function isValidConnection(
     return null;
   };
 
+  // Check if target is an loop input (loop component)
+  const isLoopInput = !!targetHandleObject.output_types;
+
+  // For loop inputs, check if source types match any of the configured target output_types
+  // (which already includes original type + loop_types from the output configuration)
+  const loopInputTypeCheck =
+    isLoopInput &&
+    (sourceHandleObject.output_types.some((t) =>
+      targetHandleObject.output_types?.includes(t),
+    ) ||
+      targetHandleObject.output_types?.includes(sourceHandleObject.dataType));
   if (
     targetHandleObject.inputTypes?.some(
       (n) => n === sourceHandleObject.dataType,
     ) ||
+    loopInputTypeCheck ||
     (targetHandleObject.output_types &&
+      !loopInputTypeCheck &&
       (targetHandleObject.output_types?.some(
         (n) => n === sourceHandleObject.dataType,
       ) ||
@@ -475,8 +428,21 @@ export function removeApiKeys(flow: FlowType): FlowType {
   cleanFLow.data!.nodes.forEach((node) => {
     if (node.type !== "genericNode") return;
     for (const key in node.data.node!.template) {
-      if (node.data.node!.template[key].password) {
-        node.data.node!.template[key].value = "";
+      const field = node.data.node!.template[key];
+
+      // Remove password fields
+      if (field.password) {
+        field.value = "";
+      }
+
+      // Handle MCP server configurations
+      if (
+        key === "mcp_server" &&
+        field.value &&
+        typeof field.value === "object"
+      ) {
+        // Type assertion is safe here as we've verified it's an object with runtime checks
+        cleanMcpConfig(field.value as MCPServerValue);
       }
     }
   });
@@ -750,6 +716,21 @@ function hasLoop(
         const sourceHandleObject = scapeJSONParse(
           firstEdge?.sourceHandle ?? edge?.sourceHandle ?? "",
         );
+        const targetHandleObject: targetHandleType = scapeJSONParse(
+          e.targetHandle!,
+        );
+
+        // For loop inputs, compare by name and id instead of full stringified comparison
+        // This handles the case where loop inputs have additional loop_types in output_types
+        if (
+          targetHandleObject.output_types &&
+          sourceHandleObject.name === targetHandleObject.name &&
+          sourceHandleObject.id === targetHandleObject.id
+        ) {
+          return true;
+        }
+
+        // Fallback to original comparison for non-loop inputs
         const sourceHandleParsed = scapedJSONStringfy(sourceHandleObject);
         if (sourceHandleParsed === e.targetHandle) {
           return true;
@@ -1750,14 +1731,8 @@ export function createFlowComponent(
   return flowNode;
 }
 
-export function downloadNode(NodeFLow: FlowType) {
-  const element = document.createElement("a");
-  const file = new Blob([JSON.stringify(NodeFLow)], {
-    type: "application/json",
-  });
-  element.href = URL.createObjectURL(file);
-  element.download = `${NodeFLow?.name ?? "node"}.json`;
-  element.click();
+export async function downloadNode(NodeFLow: FlowType) {
+  await customDownloadNodeJson(NodeFLow);
 }
 
 export function updateComponentNameAndType(
@@ -1821,6 +1796,84 @@ export function templatesGenerator(data: APIObjectType) {
   }, {});
 }
 
+/**
+ * Determines if a field is a SecretStr field type
+ */
+function isSecretField(fieldData: any): boolean {
+  // Check if field type is specifically SecretStr
+  if (fieldData?.type === "SecretStr") {
+    return true;
+  }
+
+  // Also check for fields that have both password=true and load_from_db=true
+  // which are characteristics of SecretStrInput fields
+  if (fieldData?.password === true && fieldData?.load_from_db === true) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Extract only SecretStr type fields from components for global variables
+ */
+export function extractSecretFieldsFromComponents(data: APIObjectType) {
+  const fields = new Set<string>();
+
+  // Check if data exists
+  if (!data) {
+    console.warn(
+      "[Types] Data is undefined in extractSecretFieldsFromComponents",
+    );
+    return fields;
+  }
+
+  Object.keys(data).forEach((key) => {
+    // Check if data[key] exists
+    if (!data[key]) {
+      console.warn(
+        `[Types] data["${key}"] is undefined in extractSecretFieldsFromComponents`,
+      );
+      return;
+    }
+
+    Object.keys(data[key]).forEach((kind) => {
+      // Check if data[key][kind] exists
+      if (!data[key][kind]) {
+        console.warn(
+          `[Types] data["${key}"]["${kind}"] is undefined in extractSecretFieldsFromComponents`,
+        );
+        return;
+      }
+
+      // Skip legacy components
+      if (data[key][kind].legacy === true) {
+        return;
+      }
+
+      // Check if template exists
+      if (!data[key][kind].template) {
+        console.warn(
+          `[Types] data["${key}"]["${kind}"].template is undefined in extractSecretFieldsFromComponents`,
+        );
+        return;
+      }
+
+      Object.keys(data[key][kind].template).forEach((field) => {
+        const fieldData = data[key][kind].template[field];
+        if (
+          fieldData?.display_name &&
+          fieldData?.show &&
+          isSecretField(fieldData)
+        )
+          fields.add(fieldData.display_name!);
+      });
+    });
+  });
+
+  return fields;
+}
+
 export function extractFieldsFromComponenents(data: APIObjectType) {
   const fields = new Set<string>();
 
@@ -1847,7 +1900,6 @@ export function extractFieldsFromComponenents(data: APIObjectType) {
         );
         return;
       }
-
       // Check if template exists
       if (!data[key][kind].template) {
         console.warn(
@@ -2107,9 +2159,18 @@ export function checkHasToolMode(template: APITemplateType): boolean {
 
   const templateKeys = Object.keys(template);
 
-  // Check if the template has no additional fields
-  const hasNoAdditionalFields =
-    templateKeys.length === 2 &&
+  // System/metadata fields that are not actual input fields
+  const systemFields = ["code", "is_refresh", "tools_metadata"];
+
+  // Count only fields that are actual inputs (not internal, not system fields)
+  const inputFields = templateKeys.filter(
+    (key) => !key.startsWith("_") && !systemFields.includes(key),
+  );
+
+  // Check if the template has no input fields
+  // This means the component can support tool mode (it only has code and metadata)
+  const hasNoInputFields =
+    inputFields.length === 0 &&
     Boolean(template.code) &&
     Boolean(template._type);
 
@@ -2117,15 +2178,12 @@ export function checkHasToolMode(template: APITemplateType): boolean {
   const hasToolModeFields = Object.values(template).some((field) =>
     Boolean(field.tool_mode),
   );
-  // Check if the component is already in tool mode
-  // This occurs when the template has exactly 3 fields: _type, code, and tools_metadata
-  const isInToolMode =
-    templateKeys.length === 3 &&
-    Boolean(template.code) &&
-    Boolean(template._type) &&
-    Boolean(template.tools_metadata);
 
-  return hasNoAdditionalFields || hasToolModeFields || isInToolMode;
+  // Check if the component is already in tool mode
+  // This occurs when the template has tools_metadata field
+  const isInToolMode = Boolean(template.tools_metadata);
+
+  return hasNoInputFields || hasToolModeFields || isInToolMode;
 }
 
 export function buildPositionDictionary(nodes: AllNodeType[]) {

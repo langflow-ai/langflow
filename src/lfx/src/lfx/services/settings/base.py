@@ -17,7 +17,7 @@ from typing_extensions import override
 from lfx.constants import BASE_COMPONENTS_PATH
 from lfx.log.logger import logger
 from lfx.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
-from lfx.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
+from lfx.services.settings.constants import AGENTIC_VARIABLES, VARIABLES_TO_GET_FROM_ENVIRONMENT
 from lfx.utils.util_strings import is_valid_database_url
 
 
@@ -87,6 +87,10 @@ class Settings(BaseSettings):
     db_connect_timeout: int = 30
     """The number of seconds to wait before giving up on a lock to released or establishing a connection to the
     database."""
+    migration_lock_namespace: str | None = None
+    """Optional namespace identifier for PostgreSQL advisory lock during migrations.
+    If not provided, a hash of the database URL will be used. Useful when multiple Langflow
+    instances share the same database and need coordinated migration locking."""
 
     mcp_server_timeout: int = 20
     """The number of seconds to wait before giving up on a lock to released or establishing a connection to the
@@ -109,7 +113,7 @@ class Settings(BaseSettings):
     reap idle sessions."""
 
     # sqlite configuration
-    sqlite_pragmas: dict | None = {"synchronous": "NORMAL", "journal_mode": "WAL"}
+    sqlite_pragmas: dict | None = {"synchronous": "NORMAL", "journal_mode": "WAL", "busy_timeout": 30000}
     """SQLite pragmas to use when connecting to the database."""
 
     db_driver_connection_settings: dict | None = None
@@ -158,6 +162,13 @@ class Settings(BaseSettings):
     disable_track_apikey_usage: bool = False
     remove_api_keys: bool = False
     components_path: list[str] = []
+    components_index_path: str | None = None
+    """Path or URL to a prebuilt component index JSON file.
+
+    If None, uses the built-in index at lfx/_assets/component_index.json.
+    Set to a file path (e.g., '/path/to/index.json') or URL (e.g., 'https://example.com/index.json')
+    to use a custom index.
+    """
     langchain_cache: str = "InMemoryCache"
     load_flows_path: str | None = None
     bundle_urls: list[str] = []
@@ -180,6 +191,13 @@ class Settings(BaseSettings):
     like_webhook_url: str | None = "https://api.langflow.store/flows/trigger/64275852-ec00-45c1-984e-3bff814732da"
 
     storage_type: str = "local"
+    """Storage type for file storage. Defaults to 'local'. Supports 'local' and 's3'."""
+    object_storage_bucket_name: str | None = "langflow-bucket"
+    """Object storage bucket name for file storage. Defaults to 'langflow-bucket'."""
+    object_storage_prefix: str | None = "files"
+    """Object storage prefix for file storage. Defaults to 'files'."""
+    object_storage_tags: dict[str, str] | None = None
+    """Object storage tags for file storage."""
 
     celery_enabled: bool = False
 
@@ -200,6 +218,18 @@ class Settings(BaseSettings):
     backend_only: bool = False
     """If set to True, Langflow will not serve the frontend."""
 
+    # CORS Settings
+    cors_origins: list[str] | str = "*"
+    """Allowed origins for CORS. Can be a list of origins or '*' for all origins.
+    Default is '*' for backward compatibility. In production, specify exact origins."""
+    cors_allow_credentials: bool = True
+    """Whether to allow credentials in CORS requests.
+    Default is True for backward compatibility. In v2.0, this will be changed to False when using wildcard origins."""
+    cors_allow_methods: list[str] | str = "*"
+    """Allowed HTTP methods for CORS requests."""
+    cors_allow_headers: list[str] | str = "*"
+    """Allowed headers for CORS requests."""
+
     # Telemetry
     do_not_track: bool = False
     """If set to True, Langflow will not track telemetry."""
@@ -214,6 +244,10 @@ class Settings(BaseSettings):
     """The host on which Langflow will run."""
     port: int = 7860
     """The port on which Langflow will run."""
+    runtime_port: int | None = Field(default=None, exclude=True)
+    """TEMPORARY: The port detected at runtime after checking for conflicts.
+    This field is system-managed only and will be removed in future versions
+    when strict port enforcement is implemented (errors will be raised if port unavailable)."""
     workers: int = 1
     """The number of workers to run."""
     log_level: str = "critical"
@@ -222,6 +256,8 @@ class Settings(BaseSettings):
     """The path to log file for Langflow."""
     alembic_log_file: str = "alembic/alembic.log"
     """The path to log file for Alembic for SQLAlchemy."""
+    alembic_log_to_stdout: bool = False
+    """If set to True, the log file will be ignored and Alembic will log to stdout."""
     frontend_path: str | None = None
     """The path to the frontend directory containing build files. This is for development purposes only.."""
     open_browser: bool = False
@@ -263,6 +299,24 @@ class Settings(BaseSettings):
     mcp_server_enable_progress_notifications: bool = False
     """If set to False, Langflow will not send progress notifications in the MCP server."""
 
+    # Add projects to MCP servers automatically on creation
+    add_projects_to_mcp_servers: bool = True
+    """If set to True, newly created projects will be added to the user's MCP servers config automatically."""
+    # MCP Composer
+    mcp_composer_enabled: bool = True
+    """If set to False, Langflow will not start the MCP Composer service."""
+    mcp_composer_version: str = "==0.1.0.8.10"
+    """Version constraint for mcp-composer when using uvx. Uses PEP 440 syntax."""
+
+    # Agentic Experience
+    agentic_experience: bool = False
+    """If set to True, Langflow will start the agentic MCP server that provides tools for
+    flow/component operations, template search, and graph visualization."""
+
+    # Developer API
+    developer_api_enabled: bool = False
+    """If set to True, Langflow will enable developer API endpoints for advanced debugging and introspection."""
+
     # Public Flow Settings
     public_flow_cleanup_interval: int = Field(default=3600, gt=600)
     """The interval in seconds at which public temporary flows will be cleaned up.
@@ -283,6 +337,35 @@ class Settings(BaseSettings):
     this is intended to be used to skip all startup project logic."""
     update_starter_projects: bool = True
     """If set to True, Langflow will update starter projects."""
+
+    # SSRF Protection
+    ssrf_protection_enabled: bool = False
+    """If set to True, Langflow will enable SSRF (Server-Side Request Forgery) protection.
+    When enabled, blocks requests to private IP ranges, localhost, and cloud metadata endpoints.
+    When False (default), no URL validation is performed, allowing requests to any destination
+    including internal services, private networks, and cloud metadata endpoints.
+    Default is False for backward compatibility. In v2.0, this will be changed to True.
+
+    Note: When ssrf_protection_enabled is disabled, the ssrf_allowed_hosts setting is ignored and has no effect."""
+    ssrf_allowed_hosts: list[str] = []
+    """Comma-separated list of hosts/IPs/CIDR ranges to allow despite SSRF protection.
+    Examples: 'internal-api.company.local,192.168.1.0/24,10.0.0.5,*.dev.internal'
+    Supports exact hostnames, wildcard domains (*.example.com), exact IPs, and CIDR ranges.
+
+    Note: This setting only takes effect when ssrf_protection_enabled is True.
+    When protection is disabled, all hosts are allowed regardless of this setting."""
+
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def validate_cors_origins(cls, value):
+        """Convert comma-separated string to list if needed."""
+        if isinstance(value, str) and value != "*":
+            if "," in value:
+                # Convert comma-separated string to list
+                return [origin.strip() for origin in value.split(",")]
+            # Convert single origin to list for consistency
+            return [value]
+        return value
 
     @field_validator("use_noop_database", mode="before")
     @classmethod
@@ -313,12 +396,50 @@ class Settings(BaseSettings):
         logger.debug(f"Setting user agent to {value}")
         return value
 
+    @field_validator("mcp_composer_version", mode="before")
+    @classmethod
+    def validate_mcp_composer_version(cls, value):
+        """Ensure the version string has a version specifier prefix.
+
+        If a bare version like '0.1.0.7' is provided, prepend '~=' to allow patch updates.
+        Supports PEP 440 specifiers: ==, !=, <=, >=, <, >, ~=, ===
+        """
+        if not value:
+            return "==0.1.0.8.10"  # Default
+
+        # Check if it already has a version specifier
+        # Order matters: check longer specifiers first to avoid false matches
+        specifiers = ["===", "==", "!=", "<=", ">=", "~=", "<", ">"]
+        if any(value.startswith(spec) for spec in specifiers):
+            return value
+
+        # If it's a bare version number, add ~= prefix
+        # This regex matches version numbers like 0.1.0.7, 1.2.3, etc.
+        import re
+
+        if re.match(r"^\d+(\.\d+)*", value):
+            logger.debug(f"Adding ~= prefix to bare version '{value}' -> '~={value}'")
+            return f"~={value}"
+
+        # If we can't determine, return as-is and let uvx handle it
+        return value
+
     @field_validator("variables_to_get_from_environment", mode="before")
     @classmethod
     def set_variables_to_get_from_environment(cls, value):
+        import os
+
         if isinstance(value, str):
             value = value.split(",")
-        return list(set(VARIABLES_TO_GET_FROM_ENVIRONMENT + value))
+
+        result = list(set(VARIABLES_TO_GET_FROM_ENVIRONMENT + value))
+
+        # Add agentic variables if agentic_experience is enabled
+        # Check env var directly since we can't access instance attributes in validator
+        if os.getenv("LANGFLOW_AGENTIC_EXPERIENCE", "true").lower() == "true":
+            result.extend(AGENTIC_VARIABLES)
+
+        return list(set(result))
 
     @field_validator("log_file", mode="before")
     @classmethod
@@ -346,6 +467,8 @@ class Settings(BaseSettings):
 
         if isinstance(value, str):
             value = Path(value)
+        # Resolve to absolute path to handle relative paths correctly
+        value = value.resolve()
         if not value.exists():
             value.mkdir(parents=True, exist_ok=True)
 
@@ -358,12 +481,10 @@ class Settings(BaseSettings):
             msg = f"Invalid database_url provided: '{value}'"
             raise ValueError(msg)
 
-        logger.debug("No database_url provided, trying LANGFLOW_DATABASE_URL env variable")
         if langflow_database_url := os.getenv("LANGFLOW_DATABASE_URL"):
             value = langflow_database_url
-            logger.debug("Using LANGFLOW_DATABASE_URL env variable.")
+            logger.debug("Using LANGFLOW_DATABASE_URL env variable")
         else:
-            logger.debug("No database_url env variable, using sqlite database")
             # Originally, we used sqlite:///./langflow.db
             # so we need to migrate to the new format
             # if there is a database in that location
@@ -379,10 +500,14 @@ class Settings(BaseSettings):
 
             if info.data["save_db_in_config_dir"]:
                 database_dir = info.data["config_dir"]
-                logger.debug(f"Saving database to config_dir: {database_dir}")
             else:
-                database_dir = Path(__file__).parent.parent.parent.resolve()
-                logger.debug(f"Saving database to langflow directory: {database_dir}")
+                # Use langflow package path, not lfx, for backwards compatibility
+                try:
+                    import langflow
+
+                    database_dir = Path(langflow.__file__).parent.resolve()
+                except ImportError:
+                    database_dir = Path(__file__).parent.parent.parent.resolve()
 
             pre_db_file_name = "langflow-pre.db"
             db_file_name = "langflow.db"
@@ -405,7 +530,6 @@ class Settings(BaseSettings):
                     logger.debug(f"Creating new database at {new_pre_path}")
                     final_path = new_pre_path
             elif Path(new_path).exists():
-                logger.debug(f"Database already exists at {new_path}, using it")
                 final_path = new_path
             elif Path(f"./{db_file_name}").exists():
                 try:
@@ -449,15 +573,10 @@ class Settings(BaseSettings):
 
         if not value:
             value = [BASE_COMPONENTS_PATH]
-            logger.debug("Setting default components path to components_path")
-        else:
-            if isinstance(value, Path):
-                value = [str(value)]
-            elif isinstance(value, list):
-                value = [str(p) if isinstance(p, Path) else p for p in value]
-            logger.debug("Adding default components path to components_path")
-
-        logger.debug(f"Components path: {value}")
+        elif isinstance(value, Path):
+            value = [str(value)]
+        elif isinstance(value, list):
+            value = [str(p) if isinstance(p, Path) else p for p in value]
         return value
 
     model_config = SettingsConfigDict(validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_")
@@ -468,13 +587,10 @@ class Settings(BaseSettings):
         self.dev = dev
 
     def update_settings(self, **kwargs) -> None:
-        logger.debug("Updating settings")
         for key, value in kwargs.items():
             # value may contain sensitive information, so we don't want to log it
             if not hasattr(self, key):
-                logger.debug(f"Key {key} not found in settings")
                 continue
-            logger.debug(f"Updating {key}")
             if isinstance(getattr(self, key), list):
                 # value might be a '[something]' string
                 value_ = value
@@ -485,17 +601,22 @@ class Settings(BaseSettings):
                         item_ = str(item) if isinstance(item, Path) else item
                         if item_ not in getattr(self, key):
                             getattr(self, key).append(item_)
-                    logger.debug(f"Extended {key}")
                 else:
                     value_ = str(value_) if isinstance(value_, Path) else value_
                     if value_ not in getattr(self, key):
                         getattr(self, key).append(value_)
-                        logger.debug(f"Appended {key}")
-
             else:
                 setattr(self, key, value)
-                logger.debug(f"Updated {key}")
-            logger.debug(f"{key}: {getattr(self, key)}")
+
+    @property
+    def voice_mode_available(self) -> bool:
+        """Check if voice mode is available by testing webrtcvad import."""
+        try:
+            import webrtcvad  # noqa: F401
+        except ImportError:
+            return False
+        else:
+            return True
 
     @classmethod
     @override

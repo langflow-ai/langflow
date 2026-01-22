@@ -1,5 +1,8 @@
+from pydantic import SecretStr
+
 DEFAULT_SUPERUSER = "langflow"
-DEFAULT_SUPERUSER_PASSWORD = "langflow"
+DEFAULT_SUPERUSER_PASSWORD = SecretStr("langflow")
+
 VARIABLES_TO_GET_FROM_ENVIRONMENT = [
     "COMPOSIO_API_KEY",
     "OPENAI_API_KEY",
@@ -28,4 +31,15 @@ VARIABLES_TO_GET_FROM_ENVIRONMENT = [
     "AWS_SECRET_ACCESS_KEY",
     "NOVITA_API_KEY",
     "TAVILY_API_KEY",
+    "COMETAPI_KEY",
 ]
+
+# Agentic experience specific variables
+AGENTIC_VARIABLES = [
+    "FLOW_ID",
+    "COMPONENT_ID",
+    "FIELD_NAME",
+    "ASTRA_TOKEN",
+]
+
+DEFAULT_AGENTIC_VARIABLE_VALUE = ""

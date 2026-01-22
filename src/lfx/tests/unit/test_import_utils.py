@@ -6,7 +6,6 @@ Tests the core import_mod function used throughout the dynamic import system.
 from unittest.mock import patch
 
 import pytest
-
 from lfx.components._importing import import_mod
 
 
@@ -16,18 +15,18 @@ class TestImportAttr:
     def test_import_module_with_none_module_name(self):
         """Test importing a module when module_name is None."""
         # This should import the module directly using the attr_name
-        result = import_mod("agents", None, "lfx.components")
+        result = import_mod("models_and_agents", None, "lfx.components")
 
-        # Should return the agents module
+        # Should return the models_and_agents module
         assert result is not None
         assert hasattr(result, "__all__")
 
     def test_import_module_with_module_name(self):
         """Test importing a module when module_name is __module__."""
         # This should import the module directly using the attr_name
-        result = import_mod("agents", "__module__", "lfx.components")
+        result = import_mod("models_and_agents", "__module__", "lfx.components")
 
-        # Should return the agents module
+        # Should return the models_and_agents module
         assert result is not None
         assert hasattr(result, "__all__")
 
@@ -63,7 +62,7 @@ class TestImportAttr:
     def test_import_with_none_package(self):
         """Test behavior when package is None."""
         # This should raise TypeError because relative imports require a package
-        with pytest.raises(TypeError, match="package.*required"):
+        with pytest.raises(TypeError, match=r"package.*required"):
             import_mod("something", "some_module", None)
 
     def test_module_not_found_error_handling(self):
@@ -71,7 +70,7 @@ class TestImportAttr:
         with patch("lfx.components._importing.import_module") as mock_import_module:
             mock_import_module.side_effect = ModuleNotFoundError("No module named 'test.package.test_module'")
 
-            with pytest.raises(ImportError, match="module .* not found"):
+            with pytest.raises(ImportError, match=r"module .* not found"):
                 import_mod("TestComponent", "test_module", "test.package")
 
     def test_getattr_error_handling(self):
@@ -127,8 +126,8 @@ class TestImportAttr:
     def test_caching_independence(self):
         """Test that import_mod doesn't interfere with Python's module caching."""
         # Multiple calls should work consistently
-        result1 = import_mod("agents", "__module__", "lfx.components")
-        result2 = import_mod("agents", "__module__", "lfx.components")
+        result1 = import_mod("models_and_agents", "__module__", "lfx.components")
+        result2 = import_mod("models_and_agents", "__module__", "lfx.components")
 
         # Should return the same module object (Python's import caching)
         assert result1 is result2

@@ -14,6 +14,7 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from pydantic import BaseModel, ConfigDict, model_serializer, model_validator
 
 from lfx.log.logger import logger
+from lfx.schema.cross_module import CrossModuleModel
 from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
 from lfx.utils.image import create_image_content_dict
 
@@ -22,7 +23,7 @@ if TYPE_CHECKING:
     from lfx.schema.message import Message
 
 
-class Data(BaseModel):
+class Data(CrossModuleModel):
     """Represents a record with text and optional data.
 
     Attributes:
@@ -208,7 +209,7 @@ class Data(BaseModel):
         """
         if key in {"data", "text_key"} or key.startswith("_"):
             super().__setattr__(key, value)
-        elif key in self.model_fields:
+        elif key in type(self).model_fields:
             self.data[key] = value
             super().__setattr__(key, value)
         else:

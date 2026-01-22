@@ -1,8 +1,9 @@
 import Markdown from "react-markdown";
-import rehypeMathjax from "rehype-mathjax";
+import rehypeMathjax from "rehype-mathjax/browser";
 import rehypeRaw from "rehype-raw";
 import remarkGfm from "remark-gfm";
 import { EMPTY_OUTPUT_SEND_MESSAGE } from "@/constants/constants";
+import { extractLanguage, isCodeBlock } from "@/utils/codeBlockUtils";
 import { preprocessChatMessage } from "@/utils/markdownUtils";
 import { cn } from "@/utils/utils";
 import CodeTabsComponent from "../../../../../../components/core/codeTabsComponent";
@@ -29,7 +30,6 @@ export const MarkdownField = ({
     <div className="w-full items-baseline gap-2">
       <Markdown
         remarkPlugins={[remarkGfm as any]}
-        linkTarget="_blank"
         rehypePlugins={[rehypeMathjax, rehypeRaw]}
         className={cn(
           "markdown prose flex w-full max-w-full flex-col items-baseline text-sm font-normal word-break-break-word dark:prose-invert",
@@ -37,16 +37,26 @@ export const MarkdownField = ({
         )}
         components={{
           p({ node, ...props }) {
-            return <span className="w-fit max-w-full">{props.children}</span>;
+            return (
+              <p className="w-fit max-w-full my-1.5 last:mb-0 first:mt-0">
+                {props.children}
+              </p>
+            );
           },
           ol({ node, ...props }) {
             return <ol className="max-w-full">{props.children}</ol>;
           },
           ul({ node, ...props }) {
-            return <ul className="max-w-full">{props.children}</ul>;
+            return <ul className="max-w-full mb-2">{props.children}</ul>;
           },
           pre({ node, ...props }) {
             return <>{props.children}</>;
+          },
+          hr({ node, ...props }) {
+            return <hr className="w-full mt-3 mb-5 border-border" {...props} />;
+          },
+          h3({ node, ...props }) {
+            return <h3 className={cn("mt-4", props.className)} {...props} />;
           },
           table: ({ node, ...props }) => {
             return (
@@ -57,7 +67,7 @@ export const MarkdownField = ({
               </div>
             );
           },
-          code: ({ node, inline, className, children, ...props }) => {
+          code: ({ node, className, children, ...props }) => {
             let content = children as string;
             if (
               Array.isArray(children) &&
@@ -78,14 +88,16 @@ export const MarkdownField = ({
                 }
               }
 
-              const match = /language-(\w+)/.exec(className || "");
+              if (isCodeBlock(className, props, content)) {
+                return (
+                  <CodeTabsComponent
+                    language={extractLanguage(className)}
+                    code={String(content).replace(/\n$/, "")}
+                  />
+                );
+              }
 
-              return !inline ? (
-                <CodeTabsComponent
-                  language={(match && match[1]) || ""}
-                  code={String(content).replace(/\n$/, "")}
-                />
-              ) : (
+              return (
                 <code className={className} {...props}>
                   {content}
                 </code>

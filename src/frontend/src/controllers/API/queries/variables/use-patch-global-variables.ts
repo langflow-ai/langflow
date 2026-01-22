@@ -9,6 +9,7 @@ interface PatchGlobalVariablesParams {
   value?: string;
   id: string;
   default_fields?: string[];
+  category?: string;
 }
 
 export const usePatchGlobalVariables: useMutationFunctionType<
@@ -36,6 +37,7 @@ export const usePatchGlobalVariables: useMutationFunctionType<
       queryClient.refetchQueries({ queryKey: ["useGetGlobalVariables"] });
     },
     ...options,
+    retry: false,
   });
 
   return mutation;

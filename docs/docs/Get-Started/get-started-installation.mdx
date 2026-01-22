@@ -21,7 +21,7 @@ This option offers more control over the environment, dependencies, and versioni
 ## Install and run Langflow Desktop
 
 Langflow Desktop is a desktop version of Langflow that simplifies dependency management and upgrades.
-However, some features aren't available for Langflow Desktop, such as the **Shareable Playground**.
+However, some features aren't available for Langflow Desktop, such as the **Shareable Playground** and **Voice Mode**.
 
 <Tabs>
 <TabItem value="macos" label="macOS" default>
@@ -36,12 +36,17 @@ Langflow Desktop requires macOS 13 or later.
 </TabItem>
 <TabItem value="Windows" label="Windows">
 
+    :::warning
+    If you are upgrading Langflow Desktop on Windows, **don't** use the in-app update feature to upgrade to Langflow version 1.6.0.
+    For more information, see [Known issues for 1.6.0](/release-notes#windows-desktop-update-issue).
+    :::
+
 1. Navigate to [Langflow Desktop](https://www.langflow.org/desktop).
 2. Click **Download Langflow**, enter your contact information, and then click **Download**.
 3. Open the **File Explorer**, and then navigate to **Downloads**.
 4. Double-click the downloaded `.msi` file, and then use the install wizard to install Langflow Desktop.
 
-    :::important
+    :::tip
     Windows installations of Langflow Desktop require a C++ compiler that may not be present on your system. If you receive a `C++ Build Tools Required!` error, follow the on-screen prompt to install Microsoft C++ Build Tools, or [install Microsoft Visual Studio](https://visualstudio.microsoft.com/downloads/).
     :::
 
@@ -82,6 +87,8 @@ For more information, see [Deploy Langflow on Docker](/deployment-docker).
     - Sufficient infrastructure:
        - Minimum: Dual-core CPU and 2 GB RAM
        - Recommended: Multi-core CPU and at least 4 GB RAM
+    - Browser:
+       - Google Chrome is recommended but not required
 
 2. Create a virtual environment with [uv](https://docs.astral.sh/uv/pip/environments).
 
@@ -164,7 +171,7 @@ For more information, see [Deploy Langflow on Docker](/deployment-docker).
     uv pip install langflow
     ```
 
-    To install a specific version of the Langflow package by adding the required version to the command, such as `uv pip install langflow==1.4.22`.
+    To install a specific version of the Langflow package, add the required version to the command, such as `uv pip install langflow==1.4.22`.
 
     <details>
     <summary>Reinstall or upgrade Langflow</summary>

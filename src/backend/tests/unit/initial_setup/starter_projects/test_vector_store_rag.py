@@ -3,14 +3,14 @@ import operator
 from textwrap import dedent
 
 import pytest
-
 from lfx.components.data import FileComponent
+from lfx.components.datastax import AstraDBVectorStoreComponent
 from lfx.components.input_output import ChatInput, ChatOutput
+from lfx.components.models_and_agents import PromptComponent
 from lfx.components.openai.openai import OpenAIEmbeddingsComponent
 from lfx.components.openai.openai_chat_model import OpenAIModelComponent
-from lfx.components.processing import ParseDataComponent, PromptComponent
+from lfx.components.processing import ParseDataComponent
 from lfx.components.processing.split_text import SplitTextComponent
-from lfx.components.vectorstores import AstraDBVectorStoreComponent
 from lfx.graph.graph.base import Graph
 from lfx.graph.graph.constants import Finish
 from lfx.schema import Data

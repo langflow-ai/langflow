@@ -1,30 +1,33 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from typing import TYPE_CHECKING
-
-from lfx.log.logger import logger
+from typing import TYPE_CHECKING, Union
 
 from langflow.services.schema import ServiceType
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
-    from lfx.services.settings.service import SettingsService
     from sqlmodel.ext.asyncio.session import AsyncSession
 
     from langflow.services.cache.service import AsyncBaseCacheService, CacheService
     from langflow.services.chat.service import ChatService
     from langflow.services.database.service import DatabaseService
-    from langflow.services.job_queue.service import JobQueueService
     from langflow.services.session.service import SessionService
     from langflow.services.state.service import StateService
-    from langflow.services.storage.service import StorageService
     from langflow.services.store.service import StoreService
     from langflow.services.task.service import TaskService
-    from langflow.services.telemetry.service import TelemetryService
     from langflow.services.tracing.service import TracingService
     from langflow.services.variable.service import VariableService
+
+# These imports MUST be outside TYPE_CHECKING because FastAPI uses eval_str=True
+# to evaluate type annotations, and these types are used as return types for
+# dependency functions that FastAPI evaluates at module load time.
+from lfx.services.settings.service import SettingsService  # noqa: TC002
+
+from langflow.services.job_queue.service import JobQueueService  # noqa: TC001
+from langflow.services.storage.service import StorageService  # noqa: TC001
+from langflow.services.telemetry.service import TelemetryService  # noqa: TC001
 
 
 def get_service(service_type: ServiceType, default=None):
@@ -108,6 +111,17 @@ def get_variable_service() -> VariableService:
     return get_service(ServiceType.VARIABLE_SERVICE, VariableServiceFactory())
 
 
+def is_settings_service_initialized() -> bool:
+    """Check if the SettingsService is already initialized without triggering initialization.
+
+    Returns:
+        bool: True if the SettingsService is already initialized, False otherwise.
+    """
+    from lfx.services.manager import get_service_manager
+
+    return ServiceType.SETTINGS_SERVICE in get_service_manager().services
+
+
 def get_settings_service() -> SettingsService:
     """Retrieves the SettingsService instance.
 
@@ -137,14 +151,8 @@ def get_db_service() -> DatabaseService:
 
 
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
-    """Retrieves an async session from the database service.
-
-    Yields:
-        AsyncSession: An async session object.
-
-    """
-    async with session_scope() as session:
-        yield session
+    msg = "get_session is deprecated, use session_scope instead"
+    raise NotImplementedError(msg)
 
 
 @asynccontextmanager
@@ -162,18 +170,13 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
         Exception: If an error occurs during the session scope.
 
     """
-    db_service = get_db_service()
-    async with db_service.with_session() as session:
-        try:
-            yield session
-            await session.commit()
-        except Exception:
-            await logger.aexception("An error occurred during the session scope.")
-            await session.rollback()
-            raise
+    from lfx.services.deps import session_scope as lfx_session_scope
+
+    async with lfx_session_scope() as session:
+        yield session
 
 
-def get_cache_service() -> CacheService | AsyncBaseCacheService:
+def get_cache_service() -> Union[CacheService, AsyncBaseCacheService]:  # noqa: UP007
     """Retrieves the cache service from the service manager.
 
     Returns:

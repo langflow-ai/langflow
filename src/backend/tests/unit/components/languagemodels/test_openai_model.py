@@ -1,10 +1,10 @@
-import os
 from unittest.mock import MagicMock, patch
 
 import pytest
 from langchain_openai import ChatOpenAI
-
 from lfx.components.openai.openai_chat_model import OpenAIModelComponent
+
+from tests.api_keys import get_openai_api_key, has_api_key
 from tests.base import ComponentTestBaseWithoutClient
 
 
@@ -74,7 +74,7 @@ class TestOpenAIModelComponent(ComponentTestBaseWithoutClient):
         assert model == mock_instance
 
         # Verify that temperature and seed are not in the parameters
-        args, kwargs = mock_chat_openai.call_args
+        _args, kwargs = mock_chat_openai.call_args
         assert "temperature" not in kwargs
         assert "seed" not in kwargs
 
@@ -102,7 +102,7 @@ class TestOpenAIModelComponent(ComponentTestBaseWithoutClient):
         component.build_model()
 
         # When api_key is None, it should be passed as None to ChatOpenAI
-        args, kwargs = mock_chat_openai.call_args
+        _args, kwargs = mock_chat_openai.call_args
         assert kwargs["api_key"] is None
 
     @patch("lfx.components.openai.openai_chat_model.ChatOpenAI")
@@ -114,7 +114,7 @@ class TestOpenAIModelComponent(ComponentTestBaseWithoutClient):
         component.build_model()
 
         # When max_tokens is 0, it should be passed as None to ChatOpenAI
-        args, kwargs = mock_chat_openai.call_args
+        _args, kwargs = mock_chat_openai.call_args
         assert kwargs["max_tokens"] is None
 
     async def test_get_exception_message_bad_request_error(self, component_class, default_kwargs):
@@ -170,9 +170,13 @@ class TestOpenAIModelComponent(ComponentTestBaseWithoutClient):
         assert updated_config["temperature"]["show"] is True
         assert updated_config["seed"]["show"] is True
 
+    @pytest.mark.skipif(not has_api_key("OPENAI_API_KEY"), reason="OPENAI_API_KEY is not set or is empty")
     def test_build_model_integration(self):
         component = OpenAIModelComponent()
-        component.api_key = os.getenv("OPENAI_API_KEY")
+        try:
+            component.api_key = get_openai_api_key()
+        except ValueError:
+            component.api_key = None
         component.model_name = "gpt-4.1-nano"
         component.temperature = 0.2
         component.max_tokens = 1000
@@ -186,10 +190,10 @@ class TestOpenAIModelComponent(ComponentTestBaseWithoutClient):
         assert model.model_name == "gpt-4.1-nano"
         assert model.openai_api_base == "https://api.openai.com/v1"
 
-    @pytest.mark.skipif(os.getenv("OPENAI_API_KEY") is None, reason="OPENAI_API_KEY is not set")
+    @pytest.mark.skipif(not has_api_key("OPENAI_API_KEY"), reason="OPENAI_API_KEY is not set or is empty")
     def test_build_model_integration_reasoning(self):
         component = OpenAIModelComponent()
-        component.api_key = os.getenv("OPENAI_API_KEY")
+        component.api_key = get_openai_api_key()
         component.model_name = "o1"
         component.temperature = 0.2  # This should be ignored for reasoning models
         component.max_tokens = 1000

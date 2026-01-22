@@ -2,6 +2,36 @@ name: Nightly Build
 
 on:
   workflow_dispatch:
+    inputs:
+      runs_on:
+        description: "Runner to use for tests (use self-hosted for safe/release code)"
+        required: false
+        type: choice
+        options:
+          - ubuntu-latest
+          - self-hosted
+          - "[self-hosted, linux, ARM64, langflow-ai-arm64-40gb]"
+        default: ubuntu-latest
+      skip_frontend_tests:
+        description: "Skip frontend tests. Only do this for testing purposes."
+        required: false
+        type: boolean
+        default: false
+      skip_backend_tests:
+        description: "Skip backend tests. Only do this for testing purposes."
+        required: false
+        type: boolean
+        default: false
+      skip_slack:
+        description: "Skip slack message on failure. Only do this for testing purposes."
+        required: false
+        type: boolean
+        default: false
+      push_to_registry:
+        description: "Whether to push images to registries. Set to false for testing builds without publishing."
+        required: false
+        type: boolean
+        default: true
   schedule:
     # Run job at 00:00 UTC (4:00 PM PST / 5:00 PM PDT)
     - cron: "0 0 * * *"
@@ -11,6 +41,15 @@ env:
   PYTHON_VERSION: "3.13"
 
 jobs:
+  validate-inputs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate inputs
+        if: inputs.push_to_registry && (inputs.skip_frontend_tests || inputs.skip_backend_tests)
+        run: |
+          echo "Cannot skip tests while push_to_registry is true."
+          exit 1
+
   create-nightly-tag:
     if: github.repository == 'langflow-ai/langflow'
     runs-on: ubuntu-latest
@@ -26,7 +65,7 @@ jobs:
       lfx_tag: ${{ steps.generate_lfx_tag.outputs.lfx_tag }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           persist-credentials: true
       - name: "Setup Environment"
@@ -85,11 +124,10 @@ jobs:
           echo "Updating LFX project version to $LFX_TAG"
           uv run ./scripts/ci/update_lfx_version.py $LFX_TAG
           echo "Updating base project version to $BASE_TAG and updating main project version to $MAIN_TAG"
-          uv run ./scripts/ci/update_pyproject_combined.py main $MAIN_TAG $BASE_TAG $LFX_TAG
+          uv run --no-sync ./scripts/ci/update_pyproject_combined.py main $MAIN_TAG $BASE_TAG $LFX_TAG
 
           uv lock
           cd src/backend/base && uv lock && cd ../../..
-          cd src/lfx && uv lock && cd ../..
 
           git add pyproject.toml src/backend/base/pyproject.toml src/lfx/pyproject.toml uv.lock src/backend/base/uv.lock
           git commit -m "Update version and project name"
@@ -108,7 +146,7 @@ jobs:
           # TODO: notify on failure
 
       - name: Checkout main nightly tag
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ steps.generate_main_tag.outputs.main_tag }}
 
@@ -138,13 +176,14 @@ jobs:
           fi
 
   frontend-tests:
-    if: github.repository == 'langflow-ai/langflow'
+    if: github.repository == 'langflow-ai/langflow' && !inputs.skip_frontend_tests
     name: Run Frontend Tests
     needs: create-nightly-tag
     uses: ./.github/workflows/typescript_test.yml
     with:
       tests_folder: "tests"
       release: true
+      runs-on: ${{ (inputs['runs_on'] && startsWith(format('{0}', inputs['runs_on']), '[') && fromJSON(inputs['runs_on'])) || inputs['runs_on'] || github.event.inputs['runs_on'] || 'ubuntu-latest' }}
     secrets:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       STORE_API_KEY: ${{ secrets.STORE_API_KEY }}
@@ -152,12 +191,13 @@ jobs:
       TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
 
   backend-unit-tests:
-    if: github.repository == 'langflow-ai/langflow'
+    if: github.repository == 'langflow-ai/langflow' && !inputs.skip_backend_tests
     name: Run Backend Unit Tests
     needs: create-nightly-tag
     uses: ./.github/workflows/python_test.yml
     with:
       python-versions: '["3.10", "3.11", "3.12", "3.13"]'
+      runs-on: ${{ (inputs['runs_on'] && startsWith(format('{0}', inputs['runs_on']), '[') && fromJSON(inputs['runs_on'])) || inputs['runs_on'] || github.event.inputs['runs_on'] || 'ubuntu-latest' }}
     secrets:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -174,48 +214,101 @@ jobs:
   #     ref: ${{ needs.create-nightly-tag.outputs.tag }}
 
   release-nightly-build:
-    if: github.repository == 'langflow-ai/langflow'
+    if: github.repository == 'langflow-ai/langflow' && always() && needs.frontend-tests.result != 'failure' && needs.backend-unit-tests.result != 'failure'
     name: Run Nightly Langflow Build
-    needs: [frontend-tests, backend-unit-tests, create-nightly-tag]
+    needs: [create-nightly-tag, frontend-tests, backend-unit-tests]
     uses: ./.github/workflows/release_nightly.yml
     with:
       build_docker_base: true
       build_docker_main: true
+      build_docker_ep: true
       build_lfx: true
       nightly_tag_main: ${{ needs.create-nightly-tag.outputs.main_tag }}
       nightly_tag_base: ${{ needs.create-nightly-tag.outputs.base_tag }}
       nightly_tag_lfx: ${{ needs.create-nightly-tag.outputs.lfx_tag }}
+      # When triggered by schedule, inputs.push_to_registry is not set, so default to true
+      # When triggered manually, use the provided value (default is also true)
+      push_to_registry: ${{ github.event_name == 'schedule' || inputs.push_to_registry != false }}
     secrets: inherit
 
-  # slack-notification:
-  #   name: Send Slack Notification
-  #   needs: run-nightly-build
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Send success notification to Slack
-  #       if: success()
-  #       uses: slackapi/slack-github-action@v1.26.0
-  #       with:
-  #         payload: |
-  #           {
-  #             "channel": "#langflow-nightly-builds",
-  #             "username": "GitHub Actions",
-  #             "text": "Nightly Build Successful :white_check_mark:",
-  #             "icon_emoji": ":rocket:"
-  #           }
-  #       env:
-  #         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+  slack-notification:
+    name: Send Slack Notification
+    needs: [frontend-tests, backend-unit-tests, release-nightly-build]
+    if: ${{ github.repository == 'langflow-ai/langflow' && !inputs.skip_slack && always() && (needs.release-nightly-build.result == 'failure' || needs.frontend-tests.result == 'failure' || needs.backend-unit-tests.result == 'failure' || needs.release-nightly-build.result == 'success') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send failure notification to Slack
+        if: ${{ needs.release-nightly-build.result == 'failure' || needs.frontend-tests.result == 'failure' || needs.backend-unit-tests.result == 'failure' }}
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+          --data '{
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "❌ *Nightly Build Failed*"
+                }
+              },
+              {
+                "type": "section",
+                "fields": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Job:*\nrelease-nightly-build"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Status:*\n`${{ needs.release-nightly-build.result }}`"
+                  }
+                ]
+              },
+              {
+                "type": "context",
+                "elements": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "<https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View full logs on GitHub>"
+                  }
+                ]
+              }
+            ]
+          }' ${{ secrets.LANGFLOW_ENG_SLACK_WEBHOOK_URL }}
 
-  #     - name: Send failure notification to Slack
-  #       if: failure()
-  #       uses: slackapi/slack-github-action@v1.26.0
-  #       with:
-  #         payload: |
-  #           {
-  #             "channel": "#langflow-nightly-builds",
-  #             "username": "GitHub Actions",
-  #             "text": "Nightly Build Failed :x:",
-  #             "icon_emoji": ":warning:"
-  #           }
-  #       env:
-  #         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      - name: Send success notification to Slack
+        if: ${{ needs.release-nightly-build.result == 'success' }}
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+          --data '{
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "✅ *Nightly Build Successful*"
+                }
+              },
+              {
+                "type": "section",
+                "fields": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Job:*\nrelease-nightly-build"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Status:*\n`${{ needs.release-nightly-build.result }}`"
+                  }
+                ]
+              },
+              {
+                "type": "context",
+                "elements": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "<https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View full logs on GitHub>"
+                  }
+                ]
+              }
+            ]
+          }' ${{ secrets.LANGFLOW_ENG_SLACK_WEBHOOK_URL }}

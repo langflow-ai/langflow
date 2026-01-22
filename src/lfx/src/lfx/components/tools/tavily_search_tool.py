@@ -81,6 +81,7 @@ Note: Check 'Advanced' for all options.
     name = "TavilyAISearch"
     documentation = "https://docs.tavily.com/"
     legacy = True
+    replacement = ["tavily.TavilySearchComponent"]
 
     inputs = [
         SecretStrInput(

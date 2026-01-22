@@ -2,28 +2,41 @@ from .model_metadata import create_model_metadata
 
 ANTHROPIC_MODELS_DETAILED = [
     # Tool calling supported models
+    create_model_metadata(provider="Anthropic", name="claude-opus-4-5-20251101", icon="Anthropic", tool_calling=True),
+    create_model_metadata(provider="Anthropic", name="claude-haiku-4-5-20251001", icon="Anthropic", tool_calling=True),
+    create_model_metadata(provider="Anthropic", name="claude-sonnet-4-5-20250929", icon="Anthropic", tool_calling=True),
+    create_model_metadata(provider="Anthropic", name="claude-opus-4-1-20250805", icon="Anthropic", tool_calling=True),
     create_model_metadata(provider="Anthropic", name="claude-opus-4-20250514", icon="Anthropic", tool_calling=True),
     create_model_metadata(provider="Anthropic", name="claude-sonnet-4-20250514", icon="Anthropic", tool_calling=True),
-    create_model_metadata(provider="Anthropic", name="claude-3-7-sonnet-latest", icon="Anthropic", tool_calling=True),
-    create_model_metadata(provider="Anthropic", name="claude-3-5-sonnet-latest", icon="Anthropic", tool_calling=True),
-    create_model_metadata(provider="Anthropic", name="claude-3-5-haiku-latest", icon="Anthropic", tool_calling=True),
-    create_model_metadata(provider="Anthropic", name="claude-3-opus-latest", icon="Anthropic", tool_calling=True),
-    create_model_metadata(provider="Anthropic", name="claude-3-sonnet-20240229", icon="Anthropic", tool_calling=True),
-    # Tool calling unsupported models
-    create_model_metadata(provider="Anthropic", name="claude-2.1", icon="Anthropic", tool_calling=False),
-    create_model_metadata(provider="Anthropic", name="claude-2.0", icon="Anthropic", tool_calling=False),
+    create_model_metadata(provider="Anthropic", name="claude-3-5-haiku-20241022", icon="Anthropic", tool_calling=True),
+    create_model_metadata(provider="Anthropic", name="claude-3-haiku-20240307", icon="Anthropic", tool_calling=True),
     # Deprecated models
+    create_model_metadata(
+        provider="Anthropic", name="claude-3-7-sonnet-latest", icon="Anthropic", tool_calling=True, deprecated=True
+    ),
+    create_model_metadata(
+        provider="Anthropic", name="claude-3-5-sonnet-latest", icon="Anthropic", tool_calling=True, deprecated=True
+    ),
+    create_model_metadata(
+        provider="Anthropic", name="claude-3-5-haiku-latest", icon="Anthropic", tool_calling=True, deprecated=True
+    ),
+    create_model_metadata(
+        provider="Anthropic", name="claude-3-opus-latest", icon="Anthropic", tool_calling=True, deprecated=True
+    ),
+    create_model_metadata(
+        provider="Anthropic", name="claude-3-sonnet-20240229", icon="Anthropic", tool_calling=True, deprecated=True
+    ),
+    create_model_metadata(
+        provider="Anthropic", name="claude-2.1", icon="Anthropic", tool_calling=False, deprecated=True
+    ),
+    create_model_metadata(
+        provider="Anthropic", name="claude-2.0", icon="Anthropic", tool_calling=False, deprecated=True
+    ),
     create_model_metadata(
         provider="Anthropic", name="claude-3-5-sonnet-20240620", icon="Anthropic", tool_calling=True, deprecated=True
     ),
     create_model_metadata(
         provider="Anthropic", name="claude-3-5-sonnet-20241022", icon="Anthropic", tool_calling=True, deprecated=True
-    ),
-    create_model_metadata(
-        provider="Anthropic", name="claude-3-5-haiku-20241022", icon="Anthropic", tool_calling=True, deprecated=True
-    ),
-    create_model_metadata(
-        provider="Anthropic", name="claude-3-haiku-20240307", icon="Anthropic", tool_calling=True, deprecated=True
     ),
 ]
 

@@ -184,9 +184,11 @@ def remove_exception_in_production(_logger: Any, _method_name: str, event_dict: 
 
 def buffer_writer(_logger: Any, _method_name: str, event_dict: dict[str, Any]) -> dict[str, Any]:
     """Write to log buffer if enabled."""
-    if log_buffer.enabled():
-        # Create a JSON representation for the buffer
-        log_buffer.write(json.dumps(event_dict))
+    if log_buffer.enabled() and "serialized" in event_dict:
+        # Use the already-serialized version prepared by add_serialized()
+        # This avoids duplicate serialization and ensures consistency
+        serialized_bytes = event_dict["serialized"]
+        log_buffer.write(serialized_bytes.decode("utf-8"))
     return event_dict
 
 
@@ -209,6 +211,7 @@ def configure(
     log_format: str | None = None,
     log_rotation: str | None = None,
     cache: bool | None = None,
+    output_file=None,
 ) -> None:
     """Configure the logger."""
     # Early-exit only if structlog is configured AND current min level matches the requested one.
@@ -218,9 +221,11 @@ def configure(
     if os.getenv("LANGFLOW_LOG_LEVEL", "").upper() in VALID_LOG_LEVELS and log_level is None:
         log_level = os.getenv("LANGFLOW_LOG_LEVEL")
 
-    requested_min_level = LOG_LEVEL_MAP.get(
-        (log_level or os.getenv("LANGFLOW_LOG_LEVEL", "ERROR")).upper(), logging.ERROR
-    )
+    log_level_str = os.getenv("LANGFLOW_LOG_LEVEL", "ERROR")
+    if log_level is not None:
+        log_level_str = log_level
+
+    requested_min_level = LOG_LEVEL_MAP.get(log_level_str.upper(), logging.ERROR)
     if current_min_level == requested_min_level:
         return
 
@@ -243,20 +248,38 @@ def configure(
         structlog.contextvars.merge_contextvars,
         structlog.processors.add_log_level,
         structlog.processors.TimeStamper(fmt="iso"),
-        add_serialized,
-        remove_exception_in_production,
-        buffer_writer,
     ]
+
+    # Add callsite information only when LANGFLOW_DEV is set
+    if DEV:
+        processors.append(
+            structlog.processors.CallsiteParameterAdder(
+                parameters=[
+                    structlog.processors.CallsiteParameter.FILENAME,
+                    structlog.processors.CallsiteParameter.FUNC_NAME,
+                    structlog.processors.CallsiteParameter.LINENO,
+                ]
+            )
+        )
+
+    processors.extend(
+        [
+            add_serialized,
+            remove_exception_in_production,
+            buffer_writer,
+        ]
+    )
 
     # Configure output based on environment
     if log_env.lower() == "container" or log_env.lower() == "container_json":
         processors.append(structlog.processors.JSONRenderer())
     elif log_env.lower() == "container_csv":
-        processors.append(
-            structlog.processors.KeyValueRenderer(
-                key_order=["timestamp", "level", "module", "event"], drop_missing=True
-            )
-        )
+        # Include callsite fields in key order when DEV is enabled
+        key_order = ["timestamp", "level", "event"]
+        if DEV:
+            key_order += ["filename", "func_name", "lineno"]
+
+        processors.append(structlog.processors.KeyValueRenderer(key_order=key_order, drop_missing=True))
     else:
         # Use rich console for pretty printing based on environment variable
         log_stdout_pretty = os.getenv("LANGFLOW_PRETTY_LOGS", "true").lower() == "true"
@@ -277,11 +300,14 @@ def configure(
     wrapper_class.min_level = numeric_level
 
     # Configure structlog
+    # Default to stdout for backward compatibility, unless output_file is specified
+    log_output_file = output_file if output_file is not None else sys.stdout
+
     structlog.configure(
         processors=processors,
         wrapper_class=wrapper_class,
         context_class=dict,
-        logger_factory=structlog.PrintLoggerFactory(file=sys.stdout)
+        logger_factory=structlog.PrintLoggerFactory(file=log_output_file)
         if not log_file
         else structlog.stdlib.LoggerFactory(),
         cache_logger_on_first_use=cache if cache is not None else True,

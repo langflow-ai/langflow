@@ -3,6 +3,8 @@ title: Prompt Template
 slug: /components-prompts
 ---
 
+import PartialCurlyBraces from '@site/docs/_partial-escape-curly-braces.mdx';
+
 Use the **Prompt Template** core component to create a _prompt_ that supplies instructions and context to an LLM or agent, separate from other input like chat messages and file uploads.
 
 Prompts are structured input that use natural language, fixed values, and dynamic variables to provide baseline context for the LLM.
@@ -19,14 +21,14 @@ The **Prompt Template** component can also output variable instructions to other
 
 | Name     | Display Name   | Description                                                       |
 |----------|----------------|-------------------------------------------------------------------|
-| template | Template       | Input parameter. Create a prompt template with dynamic variables (`{VARIABLE_NAME}`). |
+| template | Template       | Input parameter. Create a prompt template with dynamic variables in curly braces, such as `{VARIABLE_NAME}`. <PartialCurlyBraces /> |
 | prompt   | Prompt Message | Output parameter. The built prompt message returned by the `build_prompt` method. |
 
 ## Define variables in prompts
 
 Variables in a **Prompt Template** component dynamically add fields to the **Prompt Template** component so that your flow can receive definitions for those values from other components, Langflow global variables, or fixed input.
 
-For example, with the [**Message History** component](/components-helpers#message-history), you can use a `{memory}` variable to pass chat history to the prompt.
+For example, with the [**Message History** component](/message-history), you can use a `{memory}` variable to pass chat history to the prompt.
 However, the **Agent** component includes built-in chat memory that is enabled by default.
 For more information, see [Memory management options](/memory).
 
@@ -53,6 +55,8 @@ The following steps demonstrate how to add variables to a **Prompt Template** co
     {user_question}
     ```
 
+    <PartialCurlyBraces />
+
 4. Click **Check & Save** to save the template.
 
     After adding the variables to the template, new fields are added to the **Prompt Template** component for each variable.
@@ -64,9 +68,9 @@ The following steps demonstrate how to add variables to a **Prompt Template** co
    * Enter fixed values directly into the fields.
 
 You can add as many variables as you like in your template.
-For example, you could add variables for `{references}` and `{instructions}`, and then feed that information in from other components, such as **Text Input**, **URL**, or **File** components.
+For example, you could add variables for `{references}` and `{instructions}`, and then feed that information in from other components, such as **Text Input**, **URL**, or **Read File** components.
 
 ## See also
 
 * [**LangChain Prompt Hub** component](/bundles-langchain#prompt-hub)
-* [**Processing** components](/components-processing)
+* [Processing components](/concepts-components)

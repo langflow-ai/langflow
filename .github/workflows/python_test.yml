@@ -24,6 +24,11 @@ on:
         required: false
         type: boolean
         default: false
+      runs-on:
+        description: "Runner to use for the tests"
+        required: false
+        type: string
+        default: "ubuntu-latest"
   workflow_dispatch:
     inputs:
       python-versions:
@@ -31,9 +36,18 @@ on:
         required: true
         type: string
         default: "['3.10', '3.11', '3.12', '3.13']"
+      runs-on:
+        description: "Runner to use for the tests"
+        required: false
+        type: choice
+        options:
+          - ubuntu-latest
+          - self-hosted
+          - "[self-hosted, linux, ARM64, langflow-ai-arm64-40gb]"
+        default: ubuntu-latest
 env:
   POETRY_VERSION: "1.8.2"
-  NODE_VERSION: "21"
+  NODE_VERSION: "22"
   PYTEST_RUN_PATH: "src/backend/tests"
   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
   ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -42,19 +56,19 @@ jobs:
   build:
 
     name: Unit Tests - Python ${{ matrix.python-version }} - Group ${{ matrix.group }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
     strategy:
       matrix:
         python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13"]' ) }}
         splitCount: [5]
         group: [1, 2, 3, 4, 5]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref || github.ref }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         id: setup-node
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -96,7 +110,7 @@ jobs:
           directory: ./
 
       - name: Upload coverage artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: matrix.python-version == '3.10'
         with:
           name: backend-coverage-report-group-${{ matrix.group }}
@@ -108,12 +122,12 @@ jobs:
 
   integration-tests:
     name: Integration Tests - Python ${{ matrix.python-version }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
     strategy:
       matrix:
         python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13"]' ) }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref || github.ref }}
       - name: "Setup Environment"
@@ -131,14 +145,15 @@ jobs:
           PYLEAK_LOG_LEVEL: debug # enable pyleak logging
           DO_NOT_TRACK: true # disable telemetry reporting
 
+
   lfx-tests:
     name: LFX Tests - Python ${{ matrix.python-version }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
     strategy:
       matrix:
         python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13"]' ) }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref || github.ref }}
       - name: "Setup Environment"
@@ -149,19 +164,40 @@ jobs:
           python-version: ${{ matrix.python-version }}
           prune-cache: false
       - name: Run lfx tests
-        run: make lfx_tests
+        run: uv run make lfx_tests
         env:
           DO_NOT_TRACK: true # disable telemetry reporting
 
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        if: matrix.python-version == '3.10'
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./src/lfx/coverage.xml
+          flags: lfx
+          name: lfx-coverage
+          fail_ci_if_error: false
+          directory: ./src/lfx/
+
+      - name: Upload coverage artifacts
+        uses: actions/upload-artifact@v6
+        if: matrix.python-version == '3.10'
+        with:
+          name: lfx-coverage-report
+          path: |
+            src/lfx/coverage.xml
+            src/lfx/htmlcov/
+          retention-days: 30
+
   test-cli:
     name: Test CLI - Python ${{ matrix.python-version }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
     strategy:
       matrix:
         python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13"]') }}
     steps:
       - name: Check out the code at a specific ref
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref || github.ref }}
       - name: "Setup Environment"

@@ -10,6 +10,7 @@ from lfx.schema.data import Data
 from lfx.schema.message import Message
 
 from .input_mixin import (
+    AIMixin,
     AuthMixin,
     BaseInputMixin,
     ConnectionMixin,
@@ -21,6 +22,7 @@ from .input_mixin import (
     LinkMixin,
     ListableInputMixin,
     MetadataTraceMixin,
+    ModelInputMixin,
     MultilineMixin,
     QueryMixin,
     RangeMixin,
@@ -118,8 +120,125 @@ class PromptInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeM
     field_type: SerializableFieldTypes = FieldTypes.PROMPT
 
 
+class MustachePromptInput(PromptInput):
+    field_type: SerializableFieldTypes = FieldTypes.MUSTACHE_PROMPT
+
+
 class CodeInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMixin):
     field_type: SerializableFieldTypes = FieldTypes.CODE
+
+
+class ModelInput(BaseInputMixin, ModelInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMixin):
+    """Represents a model input field with optional LanguageModel connection support.
+
+    By default:
+    - input_types=[] (no handle shown)
+    - external_options with "Connect other models" button
+    - refresh_button=True
+
+    When "Connect other models" is selected (value="connect_other_models"):
+    - input_types is set to ["LanguageModel"] to show the connection handle
+
+    Value format:
+    - Can be a list of dicts: [{'name': 'gpt-4o', 'provider': 'OpenAI', ...}]
+    - Can be a simple list of strings: ['gpt-4o', 'gpt-4o-mini'] (auto-converted)
+    - Can be a single string: 'gpt-4o' (auto-converted to list)
+    - Can be "connect_other_models" string to enable connection mode
+    """
+
+    field_type: SerializableFieldTypes = FieldTypes.MODEL
+    placeholder: str | None = "Setup Provider"
+    input_types: list[str] = Field(default_factory=list)  # Empty by default, no handle shown
+    refresh_button: bool | None = True
+    external_options: dict = Field(
+        default_factory=lambda: {
+            "fields": {
+                "data": {
+                    "node": {
+                        "name": "connect_other_models",
+                        "display_name": "Connect other models",
+                        "icon": "CornerDownLeft",
+                    }
+                }
+            },
+        }
+    )
+
+    @field_validator("value", mode="before")
+    @classmethod
+    def normalize_value(cls, v):
+        """Convert simple string or list of strings to list of dicts format.
+
+        Allows passing:
+        - 'gpt-4o' -> [{'name': 'gpt-4o', ...}]
+        - ['gpt-4o', 'claude-3'] -> [{'name': 'gpt-4o', ...}, {'name': 'claude-3', ...}]
+        - [{'name': 'gpt-4o'}] -> [{'name': 'gpt-4o'}] (unchanged)
+        - 'connect_other_models' -> 'connect_other_models' (special value, keep as string)
+        """
+        # Handle empty or None values
+        if v is None or v == "":
+            return v
+
+        # Special case: keep "connect_other_models" as a string to enable connection mode
+        if v == "connect_other_models":
+            return v
+
+        # If it's not a list or string, return as-is (could be a BaseLanguageModel)
+        if not isinstance(v, list | str):
+            return v
+
+        # If it's a list and already in dict format, return as-is
+        if isinstance(v, list) and all(isinstance(item, dict) for item in v):
+            return v
+
+        # If it's a string or list of strings, convert to dict format
+        if isinstance(v, str) or (isinstance(v, list) and all(isinstance(item, str) for item in v)):
+            # Avoid circular import by importing the module directly (not through package __init__)
+            try:
+                from lfx.base.models.unified_models import normalize_model_names_to_dicts
+
+                return normalize_model_names_to_dicts(v)
+            except Exception:  # noqa: BLE001
+                # Fallback if import or normalization fails
+                # This can happen during module initialization or in test environments
+                if isinstance(v, str):
+                    return [{"name": v}]
+                return [{"name": item} for item in v]
+
+        # Return as-is for all other cases
+        return v
+
+    @model_validator(mode="after")
+    def set_defaults(self):
+        """Handle connection mode and set defaults.
+
+        When value is "connect_other_models", set input_types to ["LanguageModel"]
+        to enable the connection handle. Otherwise, keep input_types empty.
+        """
+        # Check if we're in connection mode (user selected "Connect other models")
+        if self.value == "connect_other_models" and not self.input_types:
+            # Enable connection handle by setting input_types
+            # Use object.__setattr__ to avoid triggering validation recursion
+            object.__setattr__(self, "input_types", ["LanguageModel"])
+
+        # Set external_options if not explicitly provided
+        if self.external_options is None or len(self.external_options) == 0:
+            object.__setattr__(
+                self,
+                "external_options",
+                {
+                    "fields": {
+                        "data": {
+                            "node": {
+                                "name": "connect_other_models",
+                                "display_name": "Connect other models",
+                                "icon": "CornerDownLeft",
+                            }
+                        }
+                    },
+                },
+            )
+        return self
 
 
 # Applying mixins to a specific input type
@@ -190,24 +309,15 @@ class MessageInput(StrInput, InputTraceMixin):
         # If v is a instance of Message, then its fine
         if isinstance(v, dict):
             return Message(**v)
+        # Duck-typed Message check - works across module boundaries
         if isinstance(v, Message):
+            # If it's from a different module (e.g., langflow.schema.Message),
+            # convert it to ensure we have the right type
+            if type(v).__module__ != Message.__module__:
+                return Message(**v.model_dump())
             return v
-        # Check for Message-like objects by examining their fields
-        # This handles both langflow and lfx Message instances
-        if hasattr(v, "text") and hasattr(v, "model_dump") and callable(v.model_dump):
-            # Check if it has other Message-specific attributes
-            message_fields = {"text", "data", "sender", "session_id", "properties"}
-            obj_attrs = set(dir(v))
-            min_message_fields = 3
-            if len(message_fields.intersection(obj_attrs)) >= min_message_fields:
-                try:
-                    return Message(**v.model_dump())
-                except (TypeError, ValueError):
-                    # Fallback to text only if model_dump fails
-                    return Message(text=v.text)
         if isinstance(v, str | AsyncIterator | Iterator):
             return Message(text=v)
-        # For simplified implementation, we'll skip MessageBase handling
         msg = f"Invalid value type {type(v)}"
         raise ValueError(msg)
 
@@ -266,7 +376,7 @@ class MessageTextInput(StrInput, MetadataTraceMixin, InputTraceMixin, ToolModeMi
         return value
 
 
-class MultilineInput(MessageTextInput, MultilineMixin, InputTraceMixin, ToolModeMixin):
+class MultilineInput(MessageTextInput, AIMixin, MultilineMixin, InputTraceMixin, ToolModeMixin):
     """Represents a multiline input field.
 
     Attributes:
@@ -290,6 +400,7 @@ class MultilineSecretInput(MessageTextInput, MultilineMixin, InputTraceMixin):
     field_type: SerializableFieldTypes = FieldTypes.PASSWORD
     multiline: CoalesceBool = True
     password: CoalesceBool = Field(default=True)
+    track_in_telemetry: CoalesceBool = False  # Never track secret inputs
 
 
 class SecretStrInput(BaseInputMixin, DatabaseLoadMixin):
@@ -307,6 +418,7 @@ class SecretStrInput(BaseInputMixin, DatabaseLoadMixin):
     password: CoalesceBool = Field(default=True)
     input_types: list[str] = []
     load_from_db: CoalesceBool = True
+    track_in_telemetry: CoalesceBool = False  # Never track passwords
 
     @field_validator("value")
     @classmethod
@@ -361,6 +473,7 @@ class IntInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMixi
     """
 
     field_type: SerializableFieldTypes = FieldTypes.INTEGER
+    track_in_telemetry: CoalesceBool = True  # Safe numeric parameter
 
     @field_validator("value")
     @classmethod
@@ -396,6 +509,7 @@ class FloatInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMi
     """
 
     field_type: SerializableFieldTypes = FieldTypes.FLOAT
+    track_in_telemetry: CoalesceBool = True  # Safe numeric parameter
 
     @field_validator("value")
     @classmethod
@@ -433,6 +547,7 @@ class BoolInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin, ToolMode
 
     field_type: SerializableFieldTypes = FieldTypes.BOOLEAN
     value: CoalesceBool = False
+    track_in_telemetry: CoalesceBool = True  # Safe boolean flag
 
 
 class NestedDictInput(
@@ -493,9 +608,11 @@ class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeM
     options_metadata: list[dict[str, Any]] = Field(default_factory=list)
     combobox: CoalesceBool = False
     dialog_inputs: dict[str, Any] = Field(default_factory=dict)
+    external_options: dict[str, Any] = Field(default_factory=dict)
     toggle: bool = False
     toggle_disable: bool | None = None
     toggle_value: bool | None = None
+    track_in_telemetry: CoalesceBool = True  # Safe predefined choices
 
 
 class ConnectionInput(BaseInputMixin, ConnectionMixin, MetadataTraceMixin, ToolModeMixin):
@@ -507,6 +624,7 @@ class ConnectionInput(BaseInputMixin, ConnectionMixin, MetadataTraceMixin, ToolM
     """
 
     field_type: SerializableFieldTypes = FieldTypes.CONNECTION
+    track_in_telemetry: CoalesceBool = False  # Never track connection strings (may contain credentials)
 
 
 class AuthInput(BaseInputMixin, AuthMixin, MetadataTraceMixin):
@@ -521,6 +639,7 @@ class AuthInput(BaseInputMixin, AuthMixin, MetadataTraceMixin):
 
     field_type: SerializableFieldTypes = FieldTypes.AUTH
     show: bool = False
+    track_in_telemetry: CoalesceBool = False  # Never track auth credentials
 
 
 class QueryInput(MessageTextInput, QueryMixin):
@@ -566,6 +685,7 @@ class TabInput(BaseInputMixin, TabMixin, MetadataTraceMixin, ToolModeMixin):
 
     field_type: SerializableFieldTypes = FieldTypes.TAB
     options: list[str] = Field(default_factory=list)
+    track_in_telemetry: CoalesceBool = True  # Safe UI tab selection
 
     @model_validator(mode="after")
     @classmethod
@@ -616,7 +736,7 @@ class MultiselectInput(BaseInputMixin, ListableInputMixin, DropDownMixin, Metada
         return v
 
 
-class FileInput(BaseInputMixin, ListableInputMixin, FileMixin, MetadataTraceMixin):
+class FileInput(BaseInputMixin, ListableInputMixin, FileMixin, MetadataTraceMixin, ToolModeMixin):
     """Represents a file field.
 
     This class represents a file input and provides functionality for handling file values.
@@ -627,6 +747,7 @@ class FileInput(BaseInputMixin, ListableInputMixin, FileMixin, MetadataTraceMixi
     """
 
     field_type: SerializableFieldTypes = FieldTypes.FILE
+    track_in_telemetry: CoalesceBool = False  # Never track file paths (may contain PII)
 
 
 class McpInput(BaseInputMixin, MetadataTraceMixin):
@@ -641,6 +762,7 @@ class McpInput(BaseInputMixin, MetadataTraceMixin):
 
     field_type: SerializableFieldTypes = FieldTypes.MCP
     value: dict[str, Any] = Field(default_factory=dict)
+    track_in_telemetry: CoalesceBool = False  # Never track MCP config (may contain sensitive data)
 
 
 class LinkInput(BaseInputMixin, LinkMixin):
@@ -683,11 +805,13 @@ InputTypes: TypeAlias = (
     | HandleInput
     | IntInput
     | McpInput
+    | ModelInput
     | MultilineInput
     | MultilineSecretInput
     | NestedDictInput
     | ToolsInput
     | PromptInput
+    | MustachePromptInput
     | CodeInput
     | SecretStrInput
     | StrInput

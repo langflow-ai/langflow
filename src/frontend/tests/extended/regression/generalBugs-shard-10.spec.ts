@@ -1,7 +1,9 @@
-import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+import { expect, test } from "../../fixtures";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { initialGPTsetup } from "../../utils/initialGPTsetup";
 
 test(
   "freeze must work correctly",
@@ -27,10 +29,7 @@ test(
       timeout: 100000,
     });
 
-    await page.getByTestId("canvas_controls_dropdown").click();
-
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await adjustScreenView(page);
 
     await page.getByText("openai").last().click();
     await page.keyboard.press("Delete");
@@ -53,21 +52,35 @@ test(
 
     await page.getByText("Check & Save").click();
 
+    await initialGPTsetup(page);
+
     await page.getByTestId("button_run_chat output").click();
 
     await page.waitForSelector("text=built successfully");
 
     await page.getByTestId("playground-btn-flow-io").click();
 
+    // Wait for chat messages to be fully loaded/streamed
+    await page.waitForSelector('[data-testid="div-chat-message"]', {
+      timeout: 30000,
+    });
+    // Wait for streaming to complete
+    await page.waitForTimeout(1000);
+
     const textContents = await page
       .getByTestId("div-chat-message")
       .allTextContents();
 
-    const concatAllText = textContents.join(" ");
+    // Get the first response
+    const firstResponseText = textContents[textContents.length - 1];
+
+    // Ensure we captured a non-empty response
+    expect(firstResponseText.length).toBeGreaterThan(0);
 
     await page.getByText("Close").last().click();
 
-    await page.getByText("Prompt", { exact: true }).last().click();
+    // Freeze the Chat Output node (not Prompt) so the entire response is cached
+    await page.getByText("Chat Output", { exact: true }).last().click();
 
     await page.waitForSelector('[data-testid="more-options-modal"]', {
       timeout: 1000,
@@ -80,7 +93,10 @@ test(
 
     expect(page.locator(".border-ring-frozen")).toHaveCount(1);
 
+    // Now change the prompt (this should have no effect since Chat Output is frozen)
     await page.getByTestId("button_open_prompt_modal").click();
+
+    await page.waitForTimeout(500);
 
     await page.getByTestId("edit-prompt-sanitized").last().click();
 
@@ -90,18 +106,28 @@ test(
 
     await page.getByText("Check & Save").click();
 
+    await page.waitForTimeout(500);
+
     await page.getByTestId("button_run_chat output").click();
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
     await page.getByTestId("playground-btn-flow-io").click();
 
+    // Wait for chat messages to be fully loaded/streamed
+    await page.waitForSelector('[data-testid="div-chat-message"]', {
+      timeout: 30000,
+    });
+    // Wait for streaming to complete
+    await page.waitForTimeout(1000);
+
     const textContents2 = await page
       .getByTestId("div-chat-message")
       .allTextContents();
 
+    // The frozen node should return the same cached output
     textContents2.forEach((text) => {
-      expect(text).toBe(concatAllText);
+      expect(text).toBe(firstResponseText);
     });
   },
 );

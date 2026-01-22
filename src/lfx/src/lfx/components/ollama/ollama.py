@@ -1,4 +1,6 @@
 import asyncio
+import json
+from contextlib import suppress
 from typing import Any
 from urllib.parse import urljoin
 
@@ -6,13 +8,29 @@ import httpx
 from langchain_ollama import ChatOllama
 
 from lfx.base.models.model import LCModelComponent
-from lfx.base.models.ollama_constants import URL_LIST
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
-from lfx.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, MessageTextInput, SliderInput
+from lfx.helpers.base_model import build_model_from_schema
+from lfx.io import (
+    BoolInput,
+    DictInput,
+    DropdownInput,
+    FloatInput,
+    IntInput,
+    MessageTextInput,
+    Output,
+    SecretStrInput,
+    SliderInput,
+    TableInput,
+)
 from lfx.log.logger import logger
+from lfx.schema.data import Data
+from lfx.schema.dataframe import DataFrame
+from lfx.schema.table import EditMode
+from lfx.utils.util import transform_localhost_url
 
 HTTP_STATUS_OK = 200
+TABLE_ROW_PLACEHOLDER = {"name": "field", "description": "description of field", "type": "str", "multiple": "False"}
 
 
 class ChatOllamaComponent(LCModelComponent):
@@ -28,12 +46,52 @@ class ChatOllamaComponent(LCModelComponent):
     DESIRED_CAPABILITY = "completion"
     TOOL_CALLING_CAPABILITY = "tools"
 
+    # Define the table schema for the format input
+    TABLE_SCHEMA = [
+        {
+            "name": "name",
+            "display_name": "Name",
+            "type": "str",
+            "description": "Specify the name of the output field.",
+            "default": "field",
+            "edit_mode": EditMode.INLINE,
+        },
+        {
+            "name": "description",
+            "display_name": "Description",
+            "type": "str",
+            "description": "Describe the purpose of the output field.",
+            "default": "description of field",
+            "edit_mode": EditMode.POPOVER,
+        },
+        {
+            "name": "type",
+            "display_name": "Type",
+            "type": "str",
+            "edit_mode": EditMode.INLINE,
+            "description": ("Indicate the data type of the output field (e.g., str, int, float, bool, dict)."),
+            "options": ["str", "int", "float", "bool", "dict"],
+            "default": "str",
+        },
+        {
+            "name": "multiple",
+            "display_name": "As List",
+            "type": "boolean",
+            "description": "Set to True if this output field should be a list of the specified type.",
+            "edit_mode": EditMode.INLINE,
+            "options": ["True", "False"],
+            "default": "False",
+        },
+    ]
+    default_table_row = {row["name"]: row.get("default", None) for row in TABLE_SCHEMA}
+    default_table_row_schema = build_model_from_schema([default_table_row]).model_json_schema()
+
     inputs = [
         MessageTextInput(
             name="base_url",
-            display_name="Base URL",
-            info="Endpoint of the Ollama API.",
-            value="",
+            display_name="Ollama API URL",
+            info="Endpoint of the Ollama API. Defaults to http://localhost:11434.",
+            value="http://localhost:11434",
             real_time_refresh=True,
         ),
         DropdownInput(
@@ -43,6 +101,16 @@ class ChatOllamaComponent(LCModelComponent):
             info="Refer to https://ollama.com/library for more models.",
             refresh_button=True,
             real_time_refresh=True,
+            required=True,
+        ),
+        SecretStrInput(
+            name="api_key",
+            display_name="Ollama API Key",
+            info="Your Ollama API key.",
+            value=None,
+            required=False,
+            real_time_refresh=True,
+            advanced=True,
         ),
         SliderInput(
             name="temperature",
@@ -51,8 +119,13 @@ class ChatOllamaComponent(LCModelComponent):
             range_spec=RangeSpec(min=0, max=1, step=0.01),
             advanced=True,
         ),
-        MessageTextInput(
-            name="format", display_name="Format", info="Specify the format of the output (e.g., json).", advanced=True
+        TableInput(
+            name="format",
+            display_name="Format",
+            info="Specify the format of the output.",
+            table_schema=TABLE_SCHEMA,
+            value=default_table_row,
+            show=False,
         ),
         DictInput(name="metadata", display_name="Metadata", info="Metadata to add to the run trace.", advanced=True),
         DropdownInput(
@@ -112,7 +185,12 @@ class ChatOllamaComponent(LCModelComponent):
             name="top_k", display_name="Top K", info="Limits token selection to top K. (Default: 40)", advanced=True
         ),
         FloatInput(name="top_p", display_name="Top P", info="Works together with top-k. (Default: 0.9)", advanced=True),
-        BoolInput(name="verbose", display_name="Verbose", info="Whether to print out response text.", advanced=True),
+        BoolInput(
+            name="enable_verbose_output",
+            display_name="Ollama Verbose Output",
+            info="Whether to print out response text.",
+            advanced=True,
+        ),
         MessageTextInput(
             name="tags",
             display_name="Tags",
@@ -138,30 +216,64 @@ class ChatOllamaComponent(LCModelComponent):
         MessageTextInput(
             name="template", display_name="Template", info="Template to use for generating text.", advanced=True
         ),
+        BoolInput(
+            name="enable_structured_output",
+            display_name="Enable Structured Output",
+            info="Whether to enable structured output in the model.",
+            value=False,
+            advanced=False,
+            real_time_refresh=True,
+        ),
         *LCModelComponent.get_base_inputs(),
+    ]
+
+    outputs = [
+        Output(display_name="Text", name="text_output", method="text_response"),
+        Output(display_name="Language Model", name="model_output", method="build_model"),
+        Output(display_name="Data", name="data_output", method="build_data_output"),
+        Output(display_name="DataFrame", name="dataframe_output", method="build_dataframe_output"),
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         # Mapping mirostat settings to their corresponding values
         mirostat_options = {"Mirostat": 1, "Mirostat 2.0": 2}
 
-        # Default to 0 for 'Disabled'
-        mirostat_value = mirostat_options.get(self.mirostat, 0)
+        # Default to None for 'Disabled'
+        mirostat_value = mirostat_options.get(self.mirostat, None)
 
         # Set mirostat_eta and mirostat_tau to None if mirostat is disabled
-        if mirostat_value == 0:
+        if mirostat_value is None:
             mirostat_eta = None
             mirostat_tau = None
         else:
             mirostat_eta = self.mirostat_eta
             mirostat_tau = self.mirostat_tau
 
+        transformed_base_url = transform_localhost_url(self.base_url)
+
+        # Check if URL contains /v1 suffix (OpenAI-compatible mode)
+        if transformed_base_url and transformed_base_url.rstrip("/").endswith("/v1"):
+            # Strip /v1 suffix and log warning
+            transformed_base_url = transformed_base_url.rstrip("/").removesuffix("/v1")
+            logger.warning(
+                "Detected '/v1' suffix in base URL. The Ollama component uses the native Ollama API, "
+                "not the OpenAI-compatible API. The '/v1' suffix has been automatically removed. "
+                "If you want to use the OpenAI-compatible API, please use the OpenAI component instead. "
+                "Learn more at https://docs.ollama.com/openai#openai-compatibility"
+            )
+
+        try:
+            output_format = self._parse_format_field(self.format) if self.enable_structured_output else None
+        except Exception as e:
+            msg = f"Failed to parse the format field: {e}"
+            raise ValueError(msg) from e
+
         # Mapping system settings to their corresponding values
         llm_params = {
-            "base_url": self.base_url,
+            "base_url": transformed_base_url,
             "model": self.model_name,
             "mirostat": mirostat_value,
-            "format": self.format,
+            "format": output_format or None,
             "metadata": self.metadata,
             "tags": self.tags.split(",") if self.tags else None,
             "mirostat_eta": mirostat_eta,
@@ -178,9 +290,12 @@ class ChatOllamaComponent(LCModelComponent):
             "timeout": self.timeout or None,
             "top_k": self.top_k or None,
             "top_p": self.top_p or None,
-            "verbose": self.verbose,
+            "verbose": self.enable_verbose_output or False,
             "template": self.template,
         }
+        headers = self.headers
+        if headers is not None:
+            llm_params["client_kwargs"] = {"headers": headers}
 
         # Remove parameters with None values
         llm_params = {k: v for k, v in llm_params.items() if v is not None}
@@ -189,8 +304,8 @@ class ChatOllamaComponent(LCModelComponent):
             output = ChatOllama(**llm_params)
         except Exception as e:
             msg = (
-                "Unable to connect to the Ollama API. ",
-                "Please verify the base URL, ensure the relevant Ollama model is pulled, and try again.",
+                "Unable to connect to the Ollama API. "
+                "Please verify the base URL, ensure the relevant Ollama model is pulled, and try again."
             )
             raise ValueError(msg) from e
 
@@ -199,11 +314,23 @@ class ChatOllamaComponent(LCModelComponent):
     async def is_valid_ollama_url(self, url: str) -> bool:
         try:
             async with httpx.AsyncClient() as client:
-                return (await client.get(urljoin(url, "api/tags"))).status_code == HTTP_STATUS_OK
+                url = transform_localhost_url(url)
+                if not url:
+                    return False
+                # Strip /v1 suffix if present, as Ollama API endpoints are at root level
+                url = url.rstrip("/").removesuffix("/v1")
+                if not url.endswith("/"):
+                    url = url + "/"
+                return (
+                    await client.get(url=urljoin(url, "api/tags"), headers=self.headers)
+                ).status_code == HTTP_STATUS_OK
         except httpx.RequestError:
             return False
 
     async def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None):
+        if field_name == "enable_structured_output":  # bind enable_structured_output boolean to format show value
+            build_config["format"]["show"] = field_value
+
         if field_name == "mirostat":
             if field_value == "Disabled":
                 build_config["mirostat_eta"]["advanced"] = True
@@ -222,37 +349,18 @@ class ChatOllamaComponent(LCModelComponent):
                     build_config["mirostat_eta"]["value"] = 0.1
                     build_config["mirostat_tau"]["value"] = 5
 
-        if field_name in {"base_url", "model_name"}:
-            if build_config["base_url"].get("load_from_db", False):
-                base_url_value = await self.get_variables(build_config["base_url"].get("value", ""), "base_url")
-            else:
-                base_url_value = build_config["base_url"].get("value", "")
-
-            if not await self.is_valid_ollama_url(base_url_value):
-                # Check if any URL in the list is valid
-                valid_url = ""
-                check_urls = URL_LIST
-                if self.base_url:
-                    check_urls = [self.base_url, *URL_LIST]
-                for url in check_urls:
-                    if await self.is_valid_ollama_url(url):
-                        valid_url = url
-                        break
-                if valid_url != "":
-                    build_config["base_url"]["value"] = valid_url
-                else:
-                    msg = "No valid Ollama URL found."
-                    raise ValueError(msg)
         if field_name in {"model_name", "base_url", "tool_model_enabled"}:
-            if await self.is_valid_ollama_url(self.base_url):
+            # Use field_value if base_url is being updated, otherwise use self.base_url
+            base_url_to_check = field_value if field_name == "base_url" else self.base_url
+            # Fallback to self.base_url if field_value is None or empty
+            if not base_url_to_check and field_name == "base_url":
+                base_url_to_check = self.base_url
+            logger.warning(f"Fetching Ollama models from updated URL: {base_url_to_check}")
+
+            if base_url_to_check and await self.is_valid_ollama_url(base_url_to_check):
                 tool_model_enabled = build_config["tool_model_enabled"].get("value", False) or self.tool_model_enabled
                 build_config["model_name"]["options"] = await self.get_models(
-                    self.base_url, tool_model_enabled=tool_model_enabled
-                )
-            elif await self.is_valid_ollama_url(build_config["base_url"].get("value", "")):
-                tool_model_enabled = build_config["tool_model_enabled"].get("value", False) or self.tool_model_enabled
-                build_config["model_name"]["options"] = await self.get_models(
-                    build_config["base_url"].get("value", ""), tool_model_enabled=tool_model_enabled
+                    base_url_to_check, tool_model_enabled=tool_model_enabled
                 )
             else:
                 build_config["model_name"]["options"] = []
@@ -285,8 +393,11 @@ class ChatOllamaComponent(LCModelComponent):
                 names cannot be retrieved.
         """
         try:
-            # Normalize the base URL to avoid the repeated "/" at the end
-            base_url = base_url_value.rstrip("/") + "/"
+            # Strip /v1 suffix if present, as Ollama API endpoints are at root level
+            base_url = base_url_value.rstrip("/").removesuffix("/v1")
+            if not base_url.endswith("/"):
+                base_url = base_url + "/"
+            base_url = transform_localhost_url(base_url)
 
             # Ollama REST API to return models
             tags_url = urljoin(base_url, "api/tags")
@@ -295,8 +406,9 @@ class ChatOllamaComponent(LCModelComponent):
             show_url = urljoin(base_url, "api/show")
 
             async with httpx.AsyncClient() as client:
+                headers = self.headers
                 # Fetch available models
-                tags_response = await client.get(tags_url)
+                tags_response = await client.get(url=tags_url, headers=headers)
                 tags_response.raise_for_status()
                 models = tags_response.json()
                 if asyncio.iscoroutine(models):
@@ -310,11 +422,12 @@ class ChatOllamaComponent(LCModelComponent):
                     await logger.adebug(f"Checking model: {model_name}")
 
                     payload = {"model": model_name}
-                    show_response = await client.post(show_url, json=payload)
+                    show_response = await client.post(url=show_url, json=payload, headers=headers)
                     show_response.raise_for_status()
                     json_data = show_response.json()
                     if asyncio.iscoroutine(json_data):
                         json_data = await json_data
+
                     capabilities = json_data.get(self.JSON_CAPABILITIES_KEY, [])
                     await logger.adebug(f"Model: {model_name}, Capabilities: {capabilities}")
 
@@ -328,3 +441,113 @@ class ChatOllamaComponent(LCModelComponent):
             raise ValueError(msg) from e
 
         return model_ids
+
+    def _parse_format_field(self, format_value: Any) -> Any:
+        """Parse the format field to handle both string and dict inputs.
+
+        The format field can be:
+        - A simple string like "json" (backward compatibility)
+        - A JSON string from NestedDictInput that needs parsing
+        - A dict/JSON schema (already parsed)
+        - None or empty
+
+        Args:
+            format_value: The raw format value from the input field
+
+        Returns:
+            Parsed format value as string, dict, or None
+        """
+        if not format_value:
+            return None
+
+        schema = format_value
+        if isinstance(format_value, list):
+            schema = build_model_from_schema(format_value).model_json_schema()
+            if schema == self.default_table_row_schema:
+                return None  # the rows are generic placeholder rows
+        elif isinstance(format_value, str):  # parse as json if string
+            with suppress(json.JSONDecodeError):  # e.g., literal "json" is valid for format field
+                schema = json.loads(format_value)
+
+        return schema or None
+
+    async def _parse_json_response(self) -> Any:
+        """Parse the JSON response from the model.
+
+        This method gets the text response and attempts to parse it as JSON.
+        Works with models that have format='json' or a JSON schema set.
+
+        Returns:
+            Parsed JSON (dict, list, or primitive type)
+
+        Raises:
+            ValueError: If the response is not valid JSON
+        """
+        message = await self.text_response()
+        text = message.text if hasattr(message, "text") else str(message)
+
+        if not text:
+            msg = "No response from model"
+            raise ValueError(msg)
+
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError as e:
+            msg = f"Invalid JSON response. Ensure model supports JSON output. Error: {e}"
+            raise ValueError(msg) from e
+
+    async def build_data_output(self) -> Data:
+        """Build a Data output from the model's JSON response.
+
+        Returns:
+            Data: A Data object containing the parsed JSON response
+        """
+        parsed = await self._parse_json_response()
+
+        # If the response is already a dict, wrap it in Data
+        if isinstance(parsed, dict):
+            return Data(data=parsed)
+
+        # If it's a list, wrap in a results container
+        if isinstance(parsed, list):
+            if len(parsed) == 1:
+                return Data(data=parsed[0])
+            return Data(data={"results": parsed})
+
+        # For primitive types, wrap in a value container
+        return Data(data={"value": parsed})
+
+    async def build_dataframe_output(self) -> DataFrame:
+        """Build a DataFrame output from the model's JSON response.
+
+        Returns:
+            DataFrame: A DataFrame containing the parsed JSON response
+
+        Raises:
+            ValueError: If the response cannot be converted to a DataFrame
+        """
+        parsed = await self._parse_json_response()
+
+        # If it's a list of dicts, convert directly to DataFrame
+        if isinstance(parsed, list):
+            if not parsed:
+                return DataFrame()
+            # Ensure all items are dicts for proper DataFrame conversion
+            if all(isinstance(item, dict) for item in parsed):
+                return DataFrame(parsed)
+            msg = "List items must be dictionaries to convert to DataFrame"
+            raise ValueError(msg)
+
+        # If it's a single dict, wrap in a list to create a single-row DataFrame
+        if isinstance(parsed, dict):
+            return DataFrame([parsed])
+
+        # For primitive types, create a single-column DataFrame
+        return DataFrame([{"value": parsed}])
+
+    @property
+    def headers(self) -> dict[str, str] | None:
+        """Get the headers for the Ollama API."""
+        if self.api_key and self.api_key.strip():
+            return {"Authorization": f"Bearer {self.api_key}"}
+        return None

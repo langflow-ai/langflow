@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
@@ -59,7 +59,9 @@ test(
     await page.keyboard.type("prompt");
 
     // Verify disclosures open with new search
-    await expect(page.getByTestId("processingPrompt Template")).toBeVisible();
+    await expect(
+      page.getByTestId("models_and_agentsPrompt Template"),
+    ).toBeVisible();
 
     await page.keyboard.press("Tab");
     await page.keyboard.press("Tab");

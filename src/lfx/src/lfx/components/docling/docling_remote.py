@@ -12,6 +12,7 @@ from lfx.base.data import BaseFileComponent
 from lfx.inputs import IntInput, NestedDictInput, StrInput
 from lfx.inputs.inputs import FloatInput
 from lfx.schema import Data
+from lfx.utils.util import transform_localhost_url
 
 
 class DoclingRemoteComponent(BaseFileComponent):
@@ -38,6 +39,7 @@ class DoclingRemoteComponent(BaseFileComponent):
         "htm",
         "html",
         "jpeg",
+        "jpg",
         "json",
         "md",
         "pdf",
@@ -103,7 +105,9 @@ class DoclingRemoteComponent(BaseFileComponent):
     ]
 
     def process_files(self, file_list: list[BaseFileComponent.BaseFile]) -> list[BaseFileComponent.BaseFile]:
-        base_url = f"{self.api_url}/v1"
+        # Transform localhost URLs to container-accessible hosts when running in a container
+        transformed_url = transform_localhost_url(self.api_url)
+        base_url = f"{transformed_url}/v1"
 
         def _convert_document(client: httpx.Client, file_path: Path, options: dict[str, Any]) -> Data | None:
             encoded_doc = base64.b64encode(file_path.read_bytes()).decode()

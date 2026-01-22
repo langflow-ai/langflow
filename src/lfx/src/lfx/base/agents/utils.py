@@ -17,6 +17,7 @@ from pydantic import BaseModel
 
 from lfx.log.logger import logger
 from lfx.schema.data import Data
+from lfx.schema.message import Message
 from lfx.services.cache.base import CacheService
 from lfx.services.cache.utils import CacheMiss
 
@@ -39,16 +40,29 @@ class AgentSpec(BaseModel):
     hub_repo: str | None = None
 
 
-def data_to_messages(data: list[Data]) -> list[BaseMessage]:
+def data_to_messages(data: list[Data | Message]) -> list[BaseMessage]:
     """Convert a list of data to a list of messages.
 
     Args:
-        data (List[Data]): The data to convert.
+        data (List[Data | Message]): The data to convert.
 
     Returns:
-        List[Message]: The data as messages.
+        List[BaseMessage]: The data as messages, filtering out any with empty content.
     """
-    return [value.to_lc_message() for value in data]
+    messages = []
+    for value in data:
+        try:
+            lc_message = value.to_lc_message()
+            # Only add messages with non-empty content (prevents Anthropic API errors)
+            content = lc_message.content
+            if content and ((isinstance(content, str) and content.strip()) or (isinstance(content, list) and content)):
+                messages.append(lc_message)
+            else:
+                logger.warning("Skipping message with empty content in chat history")
+        except (ValueError, AttributeError) as e:
+            logger.warning(f"Failed to convert message to BaseMessage: {e}")
+            continue
+    return messages
 
 
 def validate_and_create_xml_agent(
@@ -203,3 +217,25 @@ def maybe_unflatten_dict(flat: dict[str, Any]) -> dict[str, Any]:
                 cur = cur.setdefault(part, {})
 
     return nested
+
+
+def get_chat_output_sender_name(self) -> str | None:
+    """Get sender_name from ChatOutput component."""
+    if not hasattr(self, "graph") or not self.graph:
+        return None
+
+    # Check if graph has vertices attribute (PlaceholderGraph doesn't)
+    if not hasattr(self.graph, "vertices"):
+        return None
+
+    for vertex in self.graph.vertices:
+        # Safely check if vertex has data attribute, correct type, and raw_params
+        if (
+            hasattr(vertex, "data")
+            and vertex.data.get("type") == "ChatOutput"
+            and hasattr(vertex, "raw_params")
+            and vertex.raw_params
+        ):
+            return vertex.raw_params.get("sender_name")
+
+    return None

@@ -1,9 +1,9 @@
 import pytest
 from anyio import Path
-
 from lfx.components.input_output import ChatInput, TextInputComponent
 from lfx.schema.message import Message
 from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_USER, MESSAGE_SENDER_USER
+
 from tests.base import ComponentTestBaseWithClient, ComponentTestBaseWithoutClient
 
 
@@ -22,9 +22,6 @@ class TestChatInput(ComponentTestBaseWithClient):
             "sender_name": MESSAGE_SENDER_NAME_USER,
             "session_id": "test_session_123",
             "files": [],
-            "background_color": "#f0f0f0",
-            "chat_icon": "👤",
-            "text_color": "#000000",
         }
 
     @pytest.fixture
@@ -47,9 +44,9 @@ class TestChatInput(ComponentTestBaseWithClient):
         assert message.session_id == default_kwargs["session_id"]
         assert message.files == default_kwargs["files"]
         assert message.properties.model_dump() == {
-            "background_color": default_kwargs["background_color"],
-            "text_color": default_kwargs["text_color"],
-            "icon": default_kwargs["chat_icon"],
+            "background_color": None,
+            "text_color": None,
+            "icon": None,
             "positive_feedback": None,
             "edited": False,
             "source": {"id": None, "display_name": None, "source": None},

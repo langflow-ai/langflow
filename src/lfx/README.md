@@ -26,6 +26,18 @@ uv run lfx serve my_flow.json
 
 ## Key Features
 
+### Pluggable Services
+
+lfx supports a pluggable service architecture that allows you to customize and extend its behavior. You can replace built-in services (storage, telemetry, tracing, etc.) with your own implementations or use Langflow's full-featured services.
+
+📖 **See [PLUGGABLE_SERVICES.md](./PLUGGABLE_SERVICES.md) for details** including:
+
+- Quick start guides for CLI users, library developers, and plugin authors
+- Service registration via config files, decorators, and entry points
+- Creating custom service implementations with dependency injection
+- Using full-featured Langflow services in lfx
+- Troubleshooting and migration guides
+
 ### Flattened Component Access
 
 lfx now supports simplified component imports for better developer experience:
@@ -159,6 +171,7 @@ Features:
 - Creates an agent with OpenAI GPT model
 - Provides web search tools via URLComponent
 - Connects ChatInput → Agent → ChatOutput
+- Uses async get_graph() function for proper async handling
 
 Usage:
     uv run lfx run simple_agent.py "How are you?"
@@ -172,27 +185,40 @@ from lfx import components as cp
 from lfx.graph import Graph
 from lfx.log.logger import LogConfig
 
-log_config = LogConfig(
-    log_level="INFO",
-    log_file=Path("langflow.log"),
-)
 
-# Showcase the new flattened component access - no need for deep imports!
-chat_input = cp.ChatInput()
-agent = cp.AgentComponent()
-url_component = cp.URLComponent()
-tools = url_component.to_toolkit()
+async def get_graph() -> Graph:
+    """Create and return the graph with async component initialization.
 
-agent.set(
-    model_name="gpt-4.1-mini",
-    agent_llm="OpenAI",
-    api_key=os.getenv("OPENAI_API_KEY"),
-    input_value=chat_input.message_response,
-    tools=tools,
-)
-chat_output = cp.ChatOutput().set(input_value=agent.message_response)
+    This function properly handles async component initialization without
+    blocking the module loading process. The script loader will detect this
+    async function and handle it appropriately.
 
-graph = Graph(chat_input, chat_output, log_config=log_config)
+    Returns:
+        Graph: The configured graph with ChatInput → Agent → ChatOutput flow
+    """
+    log_config = LogConfig(
+        log_level="INFO",
+        log_file=Path("langflow.log"),
+    )
+
+    # Showcase the new flattened component access - no need for deep imports!
+    chat_input = cp.ChatInput()
+    agent = cp.AgentComponent()
+
+    # Use URLComponent for web search capabilities
+    url_component = cp.URLComponent()
+    tools = await url_component.to_toolkit()
+
+    agent.set(
+        model_name="gpt-4.1-mini",
+        agent_llm="OpenAI",
+        api_key=os.getenv("OPENAI_API_KEY"),
+        input_value=chat_input.message_response,
+        tools=tools,
+    )
+    chat_output = cp.ChatOutput().set(input_value=agent.message_response)
+
+    return Graph(chat_input, chat_output, log_config=log_config)
 ```
 
 **Step 2: Install dependencies**
@@ -202,7 +228,10 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
 uv pip install lfx
 
 # Install additional dependencies required for the agent
-uv pip install langchain-community langchain beautifulsoup4 lxml langchain-openai
+uv pip install 'langchain-core>=0.3.0,<1.0.0' \
+               'langchain-openai>=0.3.0,<1.0.0' \
+               'langchain-community>=0.3.0,<1.0.0' \
+               beautifulsoup4 lxml
 ```
 
 **Step 3: Set up environment**

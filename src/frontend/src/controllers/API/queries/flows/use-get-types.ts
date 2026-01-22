@@ -1,3 +1,4 @@
+import { ENABLE_KNOWLEDGE_BASES } from "@/customization/feature-flags";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useTypesStore } from "@/stores/typesStore";
 import type {
@@ -30,6 +31,11 @@ export const useGetTypes: useQueryFunctionType<
         `${getURL("ALL")}?force_refresh=true`,
       );
       const data = response?.data;
+
+      if (!ENABLE_KNOWLEDGE_BASES) {
+        delete data.knowledge_bases;
+      }
+
       setTypes(data);
       return data;
     } catch (error) {

@@ -1,11 +1,10 @@
-import os
 from pathlib import Path
 from typing import Any
 
 import pytest
-
 from lfx.components.chroma import ChromaVectorStoreComponent
 from lfx.schema.data import Data
+
 from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
 
 
@@ -21,10 +20,12 @@ class TestChromaVectorStoreComponent(ComponentTestBaseWithoutClient):
         """Return the default kwargs for the component."""
         from lfx.components.openai.openai import OpenAIEmbeddingsComponent
 
-        if os.getenv("OPENAI_API_KEY") is None:
-            pytest.skip("OPENAI_API_KEY is not set")
+        from tests.api_keys import get_openai_api_key
 
-        api_key = os.getenv("OPENAI_API_KEY")
+        try:
+            api_key = get_openai_api_key()
+        except ValueError:
+            pytest.skip("OPENAI_API_KEY is not set")
 
         return {
             "embedding": OpenAIEmbeddingsComponent(openai_api_key=api_key).build_embeddings(),

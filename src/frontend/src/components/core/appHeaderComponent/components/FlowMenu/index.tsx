@@ -33,7 +33,6 @@ export const MenuBar = memo((): JSX.Element => {
   const saveFlow = useSaveFlow();
   const autoSaving = useFlowsManagerStore((state) => state.autoSaving);
   const {
-    isFlowLocked,
     currentFlowName,
     currentFlowId,
     currentFlowFolderId,
@@ -41,7 +40,6 @@ export const MenuBar = memo((): JSX.Element => {
     currentFlowGradient,
   } = useFlowStore(
     useShallow((state) => ({
-      isFlowLocked: state.currentFlow?.locked,
       currentFlowName: state.currentFlow?.name,
       currentFlowId: state.currentFlow?.id,
       currentFlowFolderId: state.currentFlow?.folder_id,
@@ -74,6 +72,7 @@ export const MenuBar = memo((): JSX.Element => {
   );
 
   const handleSave = () => {
+    if (!onFlowPage) return;
     saveFlow().then(() => {
       setSuccessData({ title: "Saved successfully" });
     });
@@ -142,10 +141,6 @@ export const MenuBar = memo((): JSX.Element => {
               >
                 {currentFlowName || "Untitled Flow"}
               </span>
-              {isFlowLocked && (
-                <IconComponent name="Lock" className="h-5 w-3.5" />
-              )}
-
               <IconComponent
                 name="pencil"
                 className={cn(

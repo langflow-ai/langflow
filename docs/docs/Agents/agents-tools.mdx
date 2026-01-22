@@ -5,17 +5,32 @@ slug: /agents-tools
 
 import Icon from "@site/src/components/icon";
 
-Configure tools connected to agents to extend their capabilities.
+By default, [Langflow agents](/agents) only include the functionality built-in to their base LLM.
 
-## Edit a tool's actions {#edit-a-tools-actions}
+You can attach tools to agents to provide access to additional, targeted functionality.
+For example, tools can be used to create domain-specific agents, such as a customer support agent that can access a company's knowledge base, a financial agent that can retrieve stock prices, or a math tutor agent that can use advanced math functions to solve complex equations.
 
-When you set any component to **Tool Mode** or **Tool** output, an agent can use the actions (functions) provided by that component.
-Available actions are listed in the tool component's **Actions** list.
+## Attach tools
+
+To attach a tool to an agent, you connect any component's **Tool** output to the **Agent** component's **Tools** input.
+
+Some components emit **Tool** output by default.
+For all other components, you must enable **Tool Mode** in the [component's header menu](/concepts-components#component-menus).
+Then, you can connect the tool to the agent.
+
+You can connect multiple tools to one agent, and each tool can have multiple actions (functions) that the agent can call.
+
+When you run your flow, the agent decides when to call on certain tools, if it determines that a tool can help it respond to the user's prompt.
+
+### Edit a tool's actions {#edit-a-tools-actions}
+
+When you attach components to an agent as tools, each tool can have multiple actions (functions) that the agent can call.
+Available actions are listed in each tool component's **Actions** list.
 
 You can change each action's labels, descriptions, and availability to help the agent understand how to use the tool and prevent it from using irrelevant or undesired actions.
 
 :::tip
-If an agent seems to be using a tool incorrectly, try editing the action metadata to clarify the tool's purpose and disable unnecessary actions.
+If an agent seems to be using a tool incorrectly, try editing the actions metadata to clarify the tool's purpose and disable unnecessary actions.
 
 You can also try using a **Prompt Template** component to pass additional instructions or examples to the agent.
 :::
@@ -25,26 +40,22 @@ To view and edit a tool's actions, click <Icon name="Settings2" aria-hidden="tru
 The following information is provided for each action:
 
 * **Enabled**: A checkbox that determines whether the action is available to the agent.
-If checked, the action is enabled.
-If unchecked, the action is disabled.
+If selected, the action is enabled.
+If not selected, the action is disabled.
 
 * **Name**: A human-readable string name for the action, such as `Fetch Content`. This cannot be changed.
 
 * **Description**: A human-readable description of the action's purpose, such as `Fetch content from web pages recursively`.
-
-    To edit this value, double-click the action's row to open the edit pane.
-    Changes are saved automatically when you click out of the field or close the dialog.
+To edit this value, double-click the action's row to open the edit pane.
+Changes are saved automatically when you click out of the field or close the dialog.
 
 * **Slug**: An encoded name for the action, usually the same as the name but in snake case, such as `fetch_content`.
+To edit this value, double-click the action's row to open the edit pane.
+Changes are saved automatically when you click out of the field or close the dialog.
 
-    To edit this value, double-click the action's row to open the edit pane.
-    Changes are saved automatically when you click out of the field or close the dialog.
-
-To edit the **Description** or **Slug**, double-click anywhere on the action's row to open the edit pane.
-Note that the **Name** field on the edit page maps to the **Slug** column.
-Changes are saved automatically when you click out of a field or close the dialog.
-
-Optionally, you can provide fixed values for an action's inputs. Typically you want to leave these blank so the agent can provide its own values. You might use a fixed value if you're trying to debug an agent's behavior or your use case requires a fixed input for an action.
+Some actions allow you to provide fixed values for their inputs.
+Typically, you want to leave these blank so the agent can provide its own values.
+However, you might use a fixed value if you're trying to debug an agent's behavior or your use case requires a fixed input for an action.
 
 ## Use an agent as a tool
 
@@ -58,7 +69,7 @@ To try this for yourself, add an additional agent to the **Simple Agent** templa
 4. In the second **Agent** component, change the model to `gpt-4.1`, and then enable **Tool Mode**.
 5. Click <Icon name="Settings2" aria-hidden="true"/> **Edit Tool Actions** to [edit the tool's actions](#edit-a-tools-actions).
 
-    For this example, change the action **Slug** to `Agent-gpt-41` and set the description to `Use the gpt-4.1 model for complex problem solving`.
+    For this example, change the action's slug to `Agent-gpt-41`, and set the description to `Use the gpt-4.1 model for complex problem solving`.
     This lets the primary agent know that this tool uses the `gpt-4.1` model, which could be helpful for tasks requiring a larger context window, such as large scrape and search tasks.
 
     As another example, you could attach several specialized models to a primary agent, such as agents that are trained on certain tasks or domains, and then the primary agent would call each specialized agent as needed to respond to queries.
@@ -73,7 +84,7 @@ To try this for yourself, add an additional agent to the **Simple Agent** templa
 
 An agent can use [custom components](/components-custom-components) as tools.
 
-1. To add a custom component to an agent flow, click **New Custom Component** in the **Components** menu.
+1. To add a custom component to an agent flow, click **New Custom Component** in the <Icon name="Component" aria-hidden="true" /> **Core components** or <Icon name="Blocks" aria-hidden="true" /> **Bundles** menus.
 
 2. Enter Python code into the **Code** pane to create the custom component.
 
@@ -187,7 +198,7 @@ inputs = [
 
 ## Use flows as tools
 
-An agent can use your other flows as tools with the [**Run Flow** component](/components-logic#run-flow).
+An agent can use your other flows as tools with the [**Run Flow** component](/run-flow).
 
 1. Add a **Run Flow** component to your flow.
 2. Select the flow you want the agent to use as a tool.
@@ -203,7 +214,6 @@ The connected flow returns an answer based on your question.
 
 ## See also
 
-* [**Agent** and **MCP Tools** components](/components-agents)
-* [Use Langflow agents](/agents)
+* [Agent components](/components-agents)
 * [Use Langflow as an MCP client](/mcp-client)
 * [Use Langflow as an MCP server](/mcp-server)

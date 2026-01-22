@@ -127,7 +127,7 @@ describe("MemoizedSidebarGroup (SidebarBundles)", () => {
     it("should apply correct CSS classes", () => {
       render(<MemoizedSidebarGroup {...defaultProps} />);
 
-      expect(screen.getByTestId("sidebar-group")).toHaveClass("p-3");
+      expect(screen.getByTestId("sidebar-group")).toHaveClass("p-3", "pr-2");
       expect(screen.getByTestId("sidebar-group-label")).toHaveClass(
         "cursor-default",
       );

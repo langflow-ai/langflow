@@ -23,7 +23,12 @@ const SIDEBAR_WIDTH = "19rem";
 const SIDEBAR_WIDTH_ICON = "4rem";
 const SEGMENTED_SIDEBAR_ICON_WIDTH = "40px";
 
-export type SidebarSection = "search" | "components" | "bundles" | "mcp";
+export type SidebarSection =
+  | "search"
+  | "components"
+  | "bundles"
+  | "mcp"
+  | "add_note";
 
 // Helper function to get cookie value
 function getCookie(name: string): string | null {
@@ -131,8 +136,9 @@ const SidebarProvider = React.forwardRef<
 
         _setOpen(value);
 
-        // This sets the cookie to keep the sidebar state.
-        document.cookie = `${SIDEBAR_COOKIE_NAME}=${open}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
+        // This sets the cookie to keep the sidebar state. Use the incoming value (or computed) instead of the stale `open` variable.
+        const nextOpen = typeof value === "function" ? value(open) : value;
+        document.cookie = `${SIDEBAR_COOKIE_NAME}=${nextOpen}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
       },
       [setOpenProp, open],
     );
@@ -466,7 +472,7 @@ const SidebarHeader = React.forwardRef<
     <div
       ref={ref}
       data-sidebar="header"
-      className={cn("flex flex-col gap-2 p-2", className)}
+      className={cn("flex flex-col gap-2 p-3 pb-1", className)}
       {...props}
     />
   );
@@ -551,8 +557,8 @@ const SidebarGroupLabel = React.memo(
         ref={ref}
         data-sidebar="group-label"
         className={cn(
-          "flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-semibold text-foreground/70 outline-none ring-ring transition-[margin,opa] duration-200 ease-linear focus-visible:ring-1 [&>svg]:size-4 [&>svg]:shrink-0",
-          "group-data-[collapsible=icon]:pointer-events-none group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0",
+          "flex shrink-0 items-center rounded-md text-xs font-semibold text-foreground/70 outline-none ring-ring transition-[margin,opa] duration-200 ease-linear focus-visible:ring-1 [&>svg]:size-4 [&>svg]:shrink-0",
+          "group-data-[collapsible=icon]:pointer-events-none group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0 px-2 pb-3",
           className,
         )}
         {...props}

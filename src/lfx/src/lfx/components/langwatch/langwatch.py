@@ -41,7 +41,7 @@ class LangWatchComponent(Component):
         ),
         SecretStrInput(
             name="api_key",
-            display_name="API Key",
+            display_name="LangWatch API Key",
             required=True,
             info="Enter your LangWatch API key.",
         ),

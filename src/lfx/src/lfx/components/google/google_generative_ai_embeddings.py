@@ -28,7 +28,7 @@ class GoogleGenerativeAIEmbeddingsComponent(Component):
     name = "Google Generative AI Embeddings"
 
     inputs = [
-        SecretStrInput(name="api_key", display_name="API Key", required=True),
+        SecretStrInput(name="api_key", display_name="Google Generative AI API Key", required=True),
         MessageTextInput(name="model_name", display_name="Model Name", value="models/text-embedding-004"),
     ]
 

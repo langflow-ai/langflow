@@ -51,4 +51,10 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   webhookAuthEnable: true,
   setWebhookAuthEnable: (webhookAuthEnable: boolean) =>
     set({ webhookAuthEnable }),
+  defaultFolderName: "Starter Project",
+  setDefaultFolderName: (defaultFolderName: string) =>
+    set({ defaultFolderName }),
+  hideGettingStartedProgress: false,
+  setHideGettingStartedProgress: (hideGettingStartedProgress: boolean) =>
+    set({ hideGettingStartedProgress }),
 }));

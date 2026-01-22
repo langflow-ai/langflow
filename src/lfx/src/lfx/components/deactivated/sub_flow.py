@@ -4,7 +4,7 @@ from lfx.base.flow_processing.utils import build_data_from_result_data
 from lfx.custom.custom_component.custom_component import CustomComponent
 from lfx.graph.graph.base import Graph
 from lfx.graph.vertex.base import Vertex
-from lfx.helpers.flow import get_flow_inputs
+from lfx.helpers import get_flow_inputs
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dotdict import dotdict

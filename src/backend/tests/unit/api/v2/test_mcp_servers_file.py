@@ -7,7 +7,8 @@ import pytest
 from fastapi import UploadFile
 
 # Module under test
-from langflow.api.v2.files import MCP_SERVERS_FILE, upload_user_file
+from langflow.api.v2.files import upload_user_file
+from langflow.api.v2.mcp import get_mcp_file
 
 if TYPE_CHECKING:
     from langflow.services.database.models.file.model import File as UserFile
@@ -18,8 +19,12 @@ class FakeStorageService:  # Minimal stub for storage interactions
         # key -> bytes
         self._store: dict[str, bytes] = {}
 
-    async def save_file(self, flow_id: str, file_name: str, data: bytes):
-        self._store[f"{flow_id}/{file_name}"] = data
+    async def save_file(self, flow_id: str, file_name: str, data: bytes, *, append: bool = False):
+        key = f"{flow_id}/{file_name}"
+        if append and key in self._store:
+            self._store[key] += data
+        else:
+            self._store[key] = data
 
     async def get_file_size(self, flow_id: str, file_name: str):
         return len(self._store.get(f"{flow_id}/{file_name}", b""))
@@ -105,7 +110,11 @@ def session():
 async def test_mcp_servers_upload_replace(session, storage_service, settings_service, current_user):
     """Uploading _mcp_servers.json twice should keep single DB record and no rename."""
     content1 = b'{"mcpServers": {}}'
-    file1 = UploadFile(filename=f"{MCP_SERVERS_FILE}.json", file=io.BytesIO(content1))
+
+    mcp_file_ext = await get_mcp_file(current_user, extension=True)
+    mcp_file = await get_mcp_file(current_user)
+
+    file1 = UploadFile(filename=mcp_file_ext, file=io.BytesIO(content1))
     file1.size = len(content1)
 
     # First upload
@@ -118,11 +127,11 @@ async def test_mcp_servers_upload_replace(session, storage_service, settings_ser
     )
 
     # DB should contain single entry named _mcp_servers
-    assert list(session._db.keys()) == [MCP_SERVERS_FILE]
+    assert list(session._db.keys()) == [mcp_file]
 
     # Upload again with different content
     content2 = b'{"mcpServers": {"everything": {}}}'
-    file2 = UploadFile(filename=f"{MCP_SERVERS_FILE}.json", file=io.BytesIO(content2))
+    file2 = UploadFile(filename=mcp_file_ext, file=io.BytesIO(content2))
     file2.size = len(content2)
 
     await upload_user_file(
@@ -134,11 +143,11 @@ async def test_mcp_servers_upload_replace(session, storage_service, settings_ser
     )
 
     # Still single record, same name
-    assert list(session._db.keys()) == [MCP_SERVERS_FILE]
+    assert list(session._db.keys()) == [mcp_file]
 
-    record = session._db[MCP_SERVERS_FILE]
+    record = session._db[mcp_file]
     # Storage path should match user_id/_mcp_servers.json
-    expected_path = f"{current_user.id}/{MCP_SERVERS_FILE}.json"
+    expected_path = f"{current_user.id}/{mcp_file}.json"
     assert record.path == expected_path
 
     # Storage should have updated content
@@ -149,7 +158,7 @@ async def test_mcp_servers_upload_replace(session, storage_service, settings_ser
     content3 = (
         b'{"mcpServers": {"everything": {"command": "npx", "args": ["-y", "@modelcontextprotocol/server-everything"]}}}'
     )
-    file3 = UploadFile(filename=f"{MCP_SERVERS_FILE}.json", file=io.BytesIO(content3))
+    file3 = UploadFile(filename=mcp_file_ext, file=io.BytesIO(content3))
     file3.size = len(content3)
 
     await upload_user_file(

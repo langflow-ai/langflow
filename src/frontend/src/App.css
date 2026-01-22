@@ -1,3 +1,4 @@
+@import "./style/custom-ace-overrides.css";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -226,6 +227,6 @@ code {
 
 /* Sidebar segmented layout utility */
 .sidebar-segmented {
-  max-width: calc(var(--sidebar-width) - var(--sidebar-width-icon));
+  max-width: calc(var(--sidebar-width) - (var(--sidebar-width-icon) + 0.1rem));
   width: var(--sidebar-width);
 }

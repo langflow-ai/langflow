@@ -1,26 +1,29 @@
-import os
 from datetime import datetime, timezone
 from typing import Any
 
 from astrapy import Collection, DataAPIClient, Database
-from astrapy.admin import parse_api_endpoint
 from langchain_core.tools import StructuredTool, Tool
 from pydantic import BaseModel, Field, create_model
 
+from lfx.base.datastax.astradb_base import AstraDBBaseComponent
 from lfx.base.langchain_utilities.model import LCToolComponent
-from lfx.io import BoolInput, DictInput, HandleInput, IntInput, SecretStrInput, StrInput, TableInput
+from lfx.io import BoolInput, DictInput, IntInput, StrInput, TableInput
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.table import EditMode
 
 
-class AstraDBToolComponent(LCToolComponent):
+class AstraDBToolComponent(AstraDBBaseComponent, LCToolComponent):
     display_name: str = "Astra DB Tool"
     description: str = "Tool to run hybrid vector and metadata search on DataStax Astra DB Collection"
-    documentation: str = "https://docs.langflow.org/components-bundle-components"
+    documentation: str = "https://docs.langflow.org/bundles-datastax"
     icon: str = "AstraDB"
+    legacy: bool = True
+    name = "AstraDBTool"
+    replacement = ["datastax.AstraDB"]
 
     inputs = [
+        *AstraDBBaseComponent.inputs,
         StrInput(
             name="tool_name",
             display_name="Tool Name",
@@ -31,33 +34,6 @@ class AstraDBToolComponent(LCToolComponent):
             name="tool_description",
             display_name="Tool Description",
             info="Describe the tool to LLM. Add any information that can help the LLM to use the tool.",
-            required=True,
-        ),
-        StrInput(
-            name="keyspace",
-            display_name="Keyspace Name",
-            info="The name of the keyspace within Astra where the collection is stored.",
-            value="default_keyspace",
-            advanced=True,
-        ),
-        StrInput(
-            name="collection_name",
-            display_name="Collection Name",
-            info="The name of the collection within Astra DB where the vectors will be stored.",
-            required=True,
-        ),
-        SecretStrInput(
-            name="token",
-            display_name="Astra DB Application Token",
-            info="Authentication token for accessing Astra DB.",
-            value="ASTRA_DB_APPLICATION_TOKEN",
-            required=True,
-        ),
-        SecretStrInput(
-            name="api_endpoint",
-            display_name="Database" if os.getenv("ASTRA_ENHANCED", "false").lower() == "true" else "API Endpoint",
-            info="API endpoint URL for the Astra DB service.",
-            value="ASTRA_DB_API_ENDPOINT",
             required=True,
         ),
         StrInput(
@@ -176,7 +152,6 @@ class AstraDBToolComponent(LCToolComponent):
             advanced=False,
             value=False,
         ),
-        HandleInput(name="embedding", display_name="Embedding Model", input_types=["Embeddings"]),
         StrInput(
             name="semantic_search_instruction",
             display_name="Semantic Search Instruction",
@@ -190,21 +165,6 @@ class AstraDBToolComponent(LCToolComponent):
     _cached_client: DataAPIClient | None = None
     _cached_db: Database | None = None
     _cached_collection: Collection | None = None
-
-    def _build_collection(self):
-        if self._cached_collection:
-            return self._cached_collection
-
-        try:
-            environment = parse_api_endpoint(self.api_endpoint).environment
-            cached_client = DataAPIClient(self.token, environment=environment)
-            cached_db = cached_client.get_database(self.api_endpoint, keyspace=self.keyspace)
-            self._cached_collection = cached_db.get_collection(self.collection_name)
-        except Exception as e:
-            msg = f"Error building collection: {e}"
-            raise ValueError(msg) from e
-        else:
-            return self._cached_collection
 
     def create_args_schema(self) -> dict[str, BaseModel]:
         """DEPRECATED: This method is deprecated. Please use create_args_schema_v2 instead.
@@ -371,7 +331,6 @@ class AstraDBToolComponent(LCToolComponent):
 
     def run_model(self, **args) -> Data | list[Data]:
         """Run the query to get the data from the Astra DB collection."""
-        collection = self._build_collection()
         sort = {}
 
         # Build filters using the new method
@@ -401,6 +360,11 @@ class AstraDBToolComponent(LCToolComponent):
             find_options["projection"] = projection
 
         try:
+            database = self.get_database_object(api_endpoint=self.get_api_endpoint())
+            collection = database.get_collection(
+                name=self.collection_name,
+                keyspace=self.get_keyspace(),
+            )
             results = collection.find(**find_options)
         except Exception as e:
             msg = f"Error on Astra DB Tool {self.tool_name} request: {e}"

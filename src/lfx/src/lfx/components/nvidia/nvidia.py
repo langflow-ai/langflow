@@ -1,8 +1,5 @@
 from typing import Any
 
-from requests.exceptions import ConnectionError  # noqa: A004
-from urllib3.exceptions import MaxRetryError, NameResolutionError
-
 from lfx.base.models.model import LCModelComponent
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
@@ -27,11 +24,8 @@ class NVIDIAModelComponent(LCModelComponent):
     except ImportError as e:
         msg = "Please install langchain-nvidia-ai-endpoints to use the NVIDIA model."
         raise ImportError(msg) from e
-    except (ConnectionError, MaxRetryError, NameResolutionError):
-        logger.warning(
-            "Failed to connect to NVIDIA API. Model list may be unavailable."
-            " Please check your internet connection and API credentials."
-        )
+    except Exception as e:  # noqa: BLE001
+        logger.warning(f"Failed to fetch NVIDIA models during initialization: {e}. Model list will be unavailable.")
         all_models = []
 
     inputs = [
@@ -48,7 +42,7 @@ class NVIDIAModelComponent(LCModelComponent):
             info="The name of the NVIDIA model to use.",
             advanced=False,
             value=None,
-            options=[model.id for model in all_models],
+            options=sorted(model.id for model in all_models),
             combobox=True,
             refresh_button=True,
         ),
@@ -108,8 +102,8 @@ class NVIDIAModelComponent(LCModelComponent):
         model = ChatNVIDIA(base_url=self.base_url, api_key=self.api_key)
         if tool_model_enabled:
             tool_models = [m for m in model.get_available_models() if m.supports_tools]
-            return [m.id for m in tool_models]
-        return [m.id for m in model.available_models]
+            return sorted(m.id for m in tool_models)
+        return sorted(m.id for m in model.available_models)
 
     def update_build_config(self, build_config: dotdict, _field_value: Any, field_name: str | None = None):
         if field_name in {"model_name", "tool_model_enabled", "base_url", "api_key"}:

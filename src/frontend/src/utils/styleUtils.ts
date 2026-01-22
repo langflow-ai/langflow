@@ -2,6 +2,7 @@ import { TwitterLogoIcon } from "@radix-ui/react-icons";
 import dynamicIconImports from "lucide-react/dynamicIconImports";
 import { lazy } from "react";
 import { FaApple, FaDiscord, FaGithub } from "react-icons/fa";
+import { ENABLE_KNOWLEDGE_BASES } from "@/customization/feature-flags";
 import { BotMessageSquareIcon } from "@/icons/BotMessageSquare";
 import { fontAwesomeIcons, isFontAwesomeIcon } from "@/icons/fontAwesomeIcons";
 import { GradientSave } from "@/icons/GradientSparkles";
@@ -152,6 +153,7 @@ export const nodeColorsName: { [char: string]: string } = {
   embeddings: "teal",
   documentloaders: "lime",
   vectorstores: "yellow",
+  VectorStore: "yellow",
   vectorsearch: "yellow",
   textsplitters: "fuchsia",
   toolkits: "red",
@@ -207,19 +209,34 @@ export const FILE_ICONS = {
 
 export const SIDEBAR_CATEGORIES = [
   { display_name: "Saved", name: "saved_components", icon: "GradientSave" },
-  { display_name: "Input / Output", name: "input_output", icon: "Cable" },
-  { display_name: "Agents", name: "agents", icon: "Bot" },
-  { display_name: "Models", name: "models", icon: "BrainCog" },
-  { display_name: "Data", name: "data", icon: "Database" },
+  { display_name: "Input & Output", name: "input_output", icon: "Cable" },
+  { display_name: "Data Sources", name: "data_source", icon: "Database" },
+  { display_name: "Models & Agents", name: "models_and_agents", icon: "Bot" },
   {
-    display_name: "Knowledge Bases",
-    name: "knowledge_bases",
-    icon: "Library",
+    display_name: "LLM Operations",
+    name: "llm_operations",
+    icon: "BrainCircuit",
   },
-  { display_name: "Vector Stores", name: "vectorstores", icon: "Layers" },
+  {
+    display_name: ENABLE_KNOWLEDGE_BASES ? "Files & Knowledge" : "Files",
+    name: "files_and_knowledge",
+    icon: "Layers",
+  },
   { display_name: "Processing", name: "processing", icon: "ListFilter" },
+  {
+    display_name: "Flow Control",
+    name: "flow_controls",
+    icon: "ArrowRightLeft",
+  },
+  { display_name: "Utilities", name: "utilities", icon: "Wand2" },
+  { display_name: "Prototypes", name: "prototypes", icon: "FlaskConical" },
+  { display_name: "Tools", name: "tools", icon: "Hammer" },
+  { display_name: "Agents", name: "agents", icon: "Bot" },
+  { display_name: "Data", name: "data", icon: "Database" },
   { display_name: "Logic", name: "logic", icon: "ArrowRightLeft" },
   { display_name: "Helpers", name: "helpers", icon: "Wand2" },
+  { display_name: "Models", name: "models", icon: "BrainCog" },
+  { display_name: "Vector Stores", name: "vectorstores", icon: "Layers" },
   { display_name: "Inputs", name: "inputs", icon: "Download" },
   { display_name: "Outputs", name: "outputs", icon: "Upload" },
   { display_name: "Prompts", name: "prompts", icon: "braces" },
@@ -227,16 +244,15 @@ export const SIDEBAR_CATEGORIES = [
   { display_name: "Loaders", name: "documentloaders", icon: "Paperclip" },
   { display_name: "Link Extractors", name: "link_extractors", icon: "Link2" },
   { display_name: "Output Parsers", name: "output_parsers", icon: "Compass" },
-  { display_name: "Prototypes", name: "prototypes", icon: "FlaskConical" },
   { display_name: "Retrievers", name: "retrievers", icon: "FileSearch" },
   { display_name: "Text Splitters", name: "textsplitters", icon: "Scissors" },
   { display_name: "Toolkits", name: "toolkits", icon: "Package2" },
-  { display_name: "Tools", name: "tools", icon: "Hammer" },
 ];
 
 export const SIDEBAR_BUNDLES = [
   { display_name: "AI/ML API", name: "aiml", icon: "AIML" },
   { display_name: "AgentQL", name: "agentql", icon: "AgentQL" },
+  { display_name: "ALTK", name: "altk", icon: "Zap" },
   {
     display_name: "Language Models",
     name: "languagemodels",
@@ -258,10 +274,12 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Cleanlab", name: "cleanlab", icon: "Cleanlab" },
   { display_name: "Cloudflare", name: "cloudflare", icon: "Cloudflare" },
   { display_name: "Cohere", name: "cohere", icon: "Cohere" },
+  { display_name: "CometAPI", name: "cometapi", icon: "CometAPI" },
   { display_name: "Composio", name: "composio", icon: "Composio" },
   { display_name: "Confluence", name: "confluence", icon: "Confluence" },
   { display_name: "Couchbase", name: "couchbase", icon: "Couchbase" },
   { display_name: "CrewAI", name: "crewai", icon: "CrewAI" },
+  { display_name: "CUGA", name: "cuga", icon: "Bot" },
   { display_name: "DataStax", name: "datastax", icon: "AstraDB" },
   { display_name: "DeepSeek", name: "deepseek", icon: "DeepSeek" },
   { display_name: "Docling", name: "docling", icon: "Docling" },
@@ -317,8 +335,10 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "TwelveLabs", name: "twelvelabs", icon: "TwelveLabs" },
   { display_name: "Unstructured", name: "unstructured", icon: "Unstructured" },
   { display_name: "Upstash", name: "upstash", icon: "Upstash" },
+  { display_name: "VLM Run", name: "vlmrun", icon: "VLMRun" },
   { display_name: "Vectara", name: "vectara", icon: "Vectara" },
   { display_name: "Vector Stores", name: "vectorstores", icon: "Layers" },
+  { display_name: "vLLM", name: "vllm", icon: "vLLM" },
   { display_name: "Weaviate", name: "weaviate", icon: "Weaviate" },
   { display_name: "Vertex AI", name: "vertexai", icon: "VertexAI" },
   { display_name: "Wikipedia", name: "wikipedia", icon: "Wikipedia" },
@@ -395,7 +415,7 @@ export const nodeIconToDisplayIconMap: Record<string, string> = {
   Googlemaps: "Googlemaps",
   Todoist: "Todoist",
   Zoom: "Zoom",
-  AIML: "AI/ML",
+  AIML: "AIML",
   AgentQL: "AgentQL",
   LanguageModels: "BrainCircuit",
   EmbeddingModels: "Binary",

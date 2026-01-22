@@ -6,7 +6,6 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from lfx.cli.script_loader import (
     _load_module_from_script,
     _validate_graph_instance,
@@ -170,10 +169,10 @@ class TestGraphValidation:
 class TestLoadGraphFromScript:
     """Test loading graph from script functionality."""
 
-    def test_load_graph_from_script_success(self, simple_chat_py):
+    async def test_load_graph_from_script_success(self, simple_chat_py):
         """Test successful graph loading from script with real Graph object."""
         # Use the existing test data file
-        graph = load_graph_from_script(simple_chat_py)
+        graph = await load_graph_from_script(simple_chat_py)
 
         # Verify it's a real Graph instance
         from lfx.graph import Graph
@@ -185,24 +184,78 @@ class TestLoadGraphFromScript:
         assert "ChatInput" in component_names
         assert "ChatOutput" in component_names
 
-    def test_load_graph_from_script_no_graph_variable(self):
+    async def test_load_graph_from_script_no_graph_variable(self):
         """Test error when script has no graph variable."""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
             f.write("other_var = 123\n")
             script_path = Path(f.name)
 
         try:
-            with pytest.raises(RuntimeError, match="No 'graph' variable found"):
-                load_graph_from_script(script_path)
+            with pytest.raises(RuntimeError, match="No 'graph' variable or 'get_graph\\(\\)' function found"):
+                await load_graph_from_script(script_path)
         finally:
             script_path.unlink()
 
-    def test_load_graph_from_script_import_error(self):
+    async def test_load_graph_from_script_import_error(self):
         """Test error handling for import errors."""
         script_path = Path("/non/existent/script.py")
 
         with pytest.raises(RuntimeError, match="Error executing script"):
-            load_graph_from_script(script_path)
+            await load_graph_from_script(script_path)
+
+    async def test_load_graph_from_script_with_async_get_graph(self):
+        """Test loading graph from script with async get_graph function."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
+            f.write("from lfx.components.input_output import ChatInput, ChatOutput\n")
+            f.write("from lfx.graph import Graph\n")
+            f.write("\n")
+            f.write("async def get_graph():\n")
+            f.write("    chat_input = ChatInput()\n")
+            f.write("    chat_output = ChatOutput().set(input_value=chat_input.message_response)\n")
+            f.write("    return Graph(chat_input, chat_output)\n")
+            script_path = Path(f.name)
+
+        try:
+            graph = await load_graph_from_script(script_path)
+
+            # Verify it's a real Graph instance
+            from lfx.graph import Graph
+
+            assert isinstance(graph, Graph)
+
+            # Verify it has the expected components
+            component_names = {v.custom_component.__class__.__name__ for v in graph.vertices}
+            assert "ChatInput" in component_names
+            assert "ChatOutput" in component_names
+        finally:
+            script_path.unlink()
+
+    async def test_load_graph_from_script_with_sync_get_graph(self):
+        """Test loading graph from script with sync get_graph function."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
+            f.write("from lfx.components.input_output import ChatInput, ChatOutput\n")
+            f.write("from lfx.graph import Graph\n")
+            f.write("\n")
+            f.write("def get_graph():\n")
+            f.write("    chat_input = ChatInput()\n")
+            f.write("    chat_output = ChatOutput().set(input_value=chat_input.message_response)\n")
+            f.write("    return Graph(chat_input, chat_output)\n")
+            script_path = Path(f.name)
+
+        try:
+            graph = await load_graph_from_script(script_path)
+
+            # Verify it's a real Graph instance
+            from lfx.graph import Graph
+
+            assert isinstance(graph, Graph)
+
+            # Verify it has the expected components
+            component_names = {v.custom_component.__class__.__name__ for v in graph.vertices}
+            assert "ChatInput" in component_names
+            assert "ChatOutput" in component_names
+        finally:
+            script_path.unlink()
 
 
 class TestResultExtraction:
@@ -505,10 +558,10 @@ class TestFindGraphVariable:
 class TestIntegrationWithRealFlows:
     """Integration tests using real flows and minimal mocking."""
 
-    def test_load_and_validate_real_script(self, simple_chat_py):
+    async def test_load_and_validate_real_script(self, simple_chat_py):
         """Test loading and validating a real script file."""
         # Load the real graph from the script
-        graph = load_graph_from_script(simple_chat_py)
+        graph = await load_graph_from_script(simple_chat_py)
 
         # Verify it's a real Graph
         from lfx.graph import Graph
@@ -523,7 +576,7 @@ class TestIntegrationWithRealFlows:
     async def test_execute_real_flow_with_results(self, simple_chat_py):
         """Test executing a real flow and extracting results."""
         # Load the real graph
-        graph = load_graph_from_script(simple_chat_py)
+        graph = await load_graph_from_script(simple_chat_py)
 
         # Execute the graph with real input
         from lfx.graph.schema import RunOutputs

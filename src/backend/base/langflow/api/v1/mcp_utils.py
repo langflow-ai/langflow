@@ -8,6 +8,7 @@ import base64
 from collections.abc import Awaitable, Callable
 from contextvars import ContextVar
 from functools import wraps
+from pathlib import Path
 from typing import Any, ParamSpec, TypeVar
 from urllib.parse import quote, unquote, urlparse
 from uuid import uuid4
@@ -15,6 +16,7 @@ from uuid import uuid4
 from lfx.base.mcp.constants import MAX_MCP_TOOL_NAME_LENGTH
 from lfx.base.mcp.util import get_flow_snake_case, get_unique_name, sanitize_mcp_name
 from lfx.log.logger import logger
+from lfx.utils.helpers import build_content_type_from_extension
 from mcp import types
 from sqlmodel import select
 
@@ -23,15 +25,21 @@ from langflow.api.v1.schemas import SimplifiedAPIRequest
 from langflow.helpers.flow import json_schema_from_flow
 from langflow.schema.message import Message
 from langflow.services.database.models import Flow
+from langflow.services.database.models.file.model import File as UserFile
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service, get_storage_service, session_scope
-from langflow.services.storage.utils import build_content_type_from_extension
 
 T = TypeVar("T")
 P = ParamSpec("P")
 
+MCP_SERVERS_FILE = "_mcp_servers"
+
 # Create context variables
 current_user_ctx: ContextVar[User] = ContextVar("current_user_ctx")
+# Carries per-request variables injected via HTTP headers (e.g., X-Langflow-Global-Var-*)
+current_request_variables_ctx: ContextVar[dict[str, str] | None] = ContextVar(
+    "current_request_variables_ctx", default=None
+)
 
 
 def handle_mcp_errors(func: Callable[P, Awaitable[T]]) -> Callable[P, Awaitable[T]]:
@@ -85,7 +93,12 @@ async def handle_list_resources(project_id=None):
         port = getattr(settings_service.settings, "port", 3000)
 
         base_url = f"http://{host}:{port}".rstrip("/")
-
+        try:
+            current_user = current_user_ctx.get()
+        except Exception as e:  # noqa: BLE001
+            msg = f"Error getting current user: {e!s}"
+            await logger.aexception(msg)
+            current_user = None
         async with session_scope() as session:
             # Build query based on whether project_id is provided
             flows_query = select(Flow).where(Flow.folder_id == project_id) if project_id else select(Flow)
@@ -100,7 +113,7 @@ async def handle_list_resources(project_id=None):
                             # URL encode the filename
                             safe_filename = quote(file_name)
                             resource = types.Resource(
-                                uri=f"{base_url}/api/v1/files/{flow.id}/{safe_filename}",
+                                uri=f"{base_url}/api/v1/files/download/{flow.id}/{safe_filename}",
                                 name=file_name,
                                 description=f"File in flow: {flow.name}",
                                 mimeType=build_content_type_from_extension(file_name),
@@ -110,6 +123,33 @@ async def handle_list_resources(project_id=None):
                         msg = f"Error listing files for flow {flow.id}: {e}"
                         await logger.adebug(msg)
                         continue
+            ####################################################
+            # When a user uploads a file inside a flow
+            # (e.g., via the File Read component),
+            # it hits /api/v2/files (POST),
+            # which saves files at the user-level.
+            # So the above query for flow files is not enough.
+            # So we list all user files for the current user.
+            # This is not good. We need to fix this for 1.8.0.
+            ###################################################
+            if current_user:
+                user_files_stmt = select(UserFile).where(UserFile.user_id == current_user.id)
+                user_files = (await session.exec(user_files_stmt)).all()
+                for user_file in user_files:
+                    stored_path = getattr(user_file, "path", "") or ""
+                    stored_filename = Path(stored_path).name if stored_path else user_file.name
+                    safe_filename = quote(stored_filename)
+                    if stored_filename.startswith(f"{MCP_SERVERS_FILE}_{current_user.id}"):
+                        # reserved file name for langflow MCP server config file(s)
+                        continue
+                    description = getattr(user_file, "provider", None) or "User file uploaded via File Manager"
+                    resource = types.Resource(
+                        uri=f"{base_url}/api/v1/files/download/{current_user.id}/{safe_filename}",
+                        name=stored_filename,
+                        description=description,
+                        mimeType=build_content_type_from_extension(stored_filename),
+                    )
+                    resources.append(resource)
     except Exception as e:
         msg = f"Error in listing resources: {e!s}"
         await logger.aexception(msg)
@@ -122,7 +162,7 @@ async def handle_read_resource(uri: str) -> bytes:
     try:
         # Parse the URI properly
         parsed_uri = urlparse(str(uri))
-        # Path will be like /api/v1/files/{flow_id}/{filename}
+        # Path will be like /api/v1/files/download/{namespace}/{filename}
         path_parts = parsed_uri.path.split("/")
         # Remove empty strings from split
         path_parts = [p for p in path_parts if p]
@@ -172,6 +212,9 @@ async def handle_call_tool(
         mcp_config.enable_progress_notifications = settings_service.settings.mcp_server_enable_progress_notifications
 
     current_user = current_user_ctx.get()
+    # Build execution context with request-level variables if present
+    request_variables = current_request_variables_ctx.get()
+    exec_context = {"request_variables": request_variables} if request_variables else None
 
     async def execute_tool(session):
         # Get flow id from name
@@ -228,6 +271,7 @@ async def handle_call_tool(
                         input_request=input_request,
                         stream=False,
                         api_key_user=current_user,
+                        context=exec_context,
                     )
                     # Process all outputs and messages, ensuring no duplicates
                     processed_texts = set()

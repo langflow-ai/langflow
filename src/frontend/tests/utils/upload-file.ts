@@ -1,6 +1,7 @@
-import { expect, type Page } from "@playwright/test";
+import { type Page } from "@playwright/test";
 import fs from "fs";
 import path from "path";
+import { expect } from "../fixtures";
 import { generateRandomFilename } from "./generate-filename";
 
 // Function to get the correct mimeType based on file extension
@@ -37,7 +38,7 @@ export async function uploadFile(page: Page, fileName: string) {
 
   await page.getByTestId("canvas_controls_dropdown").click();
   await page.getByTestId("fit_view").click();
-  await page.getByTestId("canvas_controls_dropdown").click();
+  await page.getByTestId("canvas_controls_dropdown").click({ force: true });
 
   const fileManagement = await page
     .getByTestId("button_open_file_management")

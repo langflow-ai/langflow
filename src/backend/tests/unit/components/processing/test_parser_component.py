@@ -1,8 +1,10 @@
-import pytest
+import re
 
+import pytest
 from lfx.components.processing.parser import ParserComponent
 from lfx.schema import Data, DataFrame
 from lfx.schema.message import Message
+
 from tests.base import ComponentTestBaseWithoutClient
 
 
@@ -115,7 +117,11 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
     def test_clean_data_with_stringify(self, component_class):
         # Arrange
         data_frame = DataFrame(
-            {"Name": ["John", "Jane\n", "\nBob"], "Age": [30, None, 25], "Notes": ["Good\n\nPerson", "", "Nice\n"]}
+            {
+                "Name": ["John", "Jane\n", "\nBob"],
+                "Age": [30, None, 25],
+                "Notes": ["Good\n\nPerson", "", "Nice\n"],
+            }
         )
         kwargs = {
             "input_data": data_frame,
@@ -156,7 +162,10 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
         component = component_class(**kwargs)
 
         # Act & Assert
-        with pytest.raises(ValueError, match="Unsupported input type: <class 'int'>. Expected DataFrame or Data."):
+        with pytest.raises(
+            ValueError,
+            match=re.escape("Unsupported input type: <class 'int'>. Expected DataFrame or Data."),
+        ):
             component.parse_combined_text()
 
     def test_none_input(self, component_class):
@@ -169,7 +178,10 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
         component = component_class(**kwargs)
 
         # Act & Assert
-        with pytest.raises(ValueError, match="Unsupported input type: <class 'NoneType'>. Expected DataFrame or Data."):
+        with pytest.raises(
+            ValueError,
+            match=re.escape("Unsupported input type: <class 'NoneType'>. Expected DataFrame or Data."),
+        ):
             component.parse_combined_text()
 
     def test_invalid_template(self, component_class):
@@ -210,3 +222,21 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
         assert isinstance(result, Message)
         expected = "John is 30 years old | Jane is 25 years old | Bob is 35 years old"
         assert result.text == expected
+
+    def test_empty_data_with_template(self, component_class):
+        # Arrange - Data with empty data dict but template expects keys
+        data = Data(text_key="text", data={}, default_value="")
+        kwargs = {
+            "input_data": data,
+            "pattern": "Text: {text}",
+            "sep": "\n",
+            "mode": "Parser",
+        }
+        component = component_class(**kwargs)
+
+        # Act
+        result = component.parse_combined_text()
+
+        # Assert - Should use default_value when key is missing
+        assert isinstance(result, Message)
+        assert result.text == "Text: "

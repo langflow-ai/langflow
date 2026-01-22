@@ -1,6 +1,6 @@
-import { expect, test } from "@playwright/test";
 import dotenv from "dotenv";
 import path from "path";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
@@ -20,15 +20,21 @@ test(
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Simple Agent" }).first().click();
 
-    await page.getByTestId("value-dropdown-dropdown_str_agent_llm").click();
-
+    await page.getByTestId("model_model").click();
     await page.waitForTimeout(200);
 
-    await page.getByText("Anthropic").last().click();
+    await page.locator('[role="option"]').first().click();
 
+    // Click the Controls button to open the modal
+    await page.getByTestId("edit-button-modal").click();
+
+    // Fill in the API Key in the modal
     await page
-      .getByTestId("popover-anchor-input-api_key")
+      .getByTestId("popover-anchor-input-api_key-edit")
       .fill(process.env.ANTHROPIC_API_KEY || "");
+
+    // Close the modal
+    await page.getByText("Close").last().click();
 
     await page.getByTestId("playground-btn-flow-io").click();
 

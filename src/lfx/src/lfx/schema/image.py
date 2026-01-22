@@ -7,6 +7,7 @@ from platformdirs import user_cache_dir
 from pydantic import BaseModel
 
 from lfx.services.deps import get_storage_service
+from lfx.utils.image import create_image_content_dict
 
 IMAGE_ENDPOINT = "/files/images/"
 
@@ -23,6 +24,9 @@ def is_image_file(file_path) -> bool:
 
 def get_file_paths(files: list[str | dict]):
     """Get file paths for a list of files."""
+    if not files:
+        return []
+
     storage_service = get_storage_service()
     if not storage_service:
         # Extract paths from dicts if present
@@ -31,7 +35,19 @@ def get_file_paths(files: list[str | dict]):
         cache_dir = Path(user_cache_dir("langflow"))
 
         for file in files:
-            file_path = file["path"] if isinstance(file, dict) and "path" in file else file
+            if not file:  # Skip empty/None files
+                continue
+
+            # Handle Image objects, dicts, and strings
+            if isinstance(file, dict) and "path" in file:
+                file_path = file["path"]
+            elif hasattr(file, "path") and file.path:
+                file_path = file.path
+            else:
+                file_path = file
+
+            if not file_path:  # Skip empty paths
+                continue
 
             # If it's a relative path like "flow_id/filename", resolve it to cache dir
             path = Path(file_path)
@@ -52,13 +68,25 @@ def get_file_paths(files: list[str | dict]):
         # Handle dict case
         if storage_service is None:
             continue
+
+        if not file:  # Skip empty/None files
+            continue
+
         if isinstance(file, dict) and "path" in file:
-            file_path = Path(file["path"])
+            file_path_str = file["path"]
         elif hasattr(file, "path") and file.path:
-            file_path = Path(file.path)
+            file_path_str = file.path
         else:
-            file_path = Path(file)
-        flow_id, file_name = str(file_path.parent), file_path.name
+            file_path_str = file
+
+        if not file_path_str:  # Skip empty paths
+            continue
+
+        flow_id, file_name = storage_service.parse_file_path(file_path_str)
+
+        if not file_name:  # Skip if no filename
+            continue
+
         file_paths.append(storage_service.build_full_path(flow_id=flow_id, file_name=file_name))
     return file_paths
 
@@ -69,22 +97,31 @@ async def get_files(
     convert_to_base64: bool = False,
 ):
     """Get files from storage service."""
+    if not file_paths:
+        return []
+
     storage_service = get_storage_service()
     if not storage_service:
         # For testing purposes, read files directly when no storage service
         file_objects: list[str | bytes] = []
         for file_path_str in file_paths:
+            if not file_path_str:  # Skip empty paths
+                continue
+
             file_path = Path(file_path_str)
             if file_path.exists():
                 # Use async read for compatibility
-
-                async with aiofiles.open(file_path, "rb") as f:
-                    file_content = await f.read()
-                if convert_to_base64:
-                    file_base64 = base64.b64encode(file_content).decode("utf-8")
-                    file_objects.append(file_base64)
-                else:
-                    file_objects.append(file_content)
+                try:
+                    async with aiofiles.open(file_path, "rb") as f:
+                        file_content = await f.read()
+                    if convert_to_base64:
+                        file_base64 = base64.b64encode(file_content).decode("utf-8")
+                        file_objects.append(file_base64)
+                    else:
+                        file_objects.append(file_content)
+                except Exception as e:
+                    msg = f"Error reading file {file_path}: {e}"
+                    raise FileNotFoundError(msg) from e
             else:
                 msg = f"File not found: {file_path}"
                 raise FileNotFoundError(msg)
@@ -92,16 +129,27 @@ async def get_files(
 
     file_objects: list[str | bytes] = []
     for file in file_paths:
-        file_path = Path(file)
-        flow_id, file_name = str(file_path.parent), file_path.name
+        if not file:  # Skip empty file paths
+            continue
+
+        flow_id, file_name = storage_service.parse_file_path(file)
+
+        if not file_name:  # Skip if no filename
+            continue
+
         if not storage_service:
             continue
-        file_object = await storage_service.get_file(flow_id=flow_id, file_name=file_name)
-        if convert_to_base64:
-            file_base64 = base64.b64encode(file_object).decode("utf-8")
-            file_objects.append(file_base64)
-        else:
-            file_objects.append(file_object)
+
+        try:
+            file_object = await storage_service.get_file(flow_id=flow_id, file_name=file_name)
+            if convert_to_base64:
+                file_base64 = base64.b64encode(file_object).decode("utf-8")
+                file_objects.append(file_base64)
+            else:
+                file_objects.append(file_object)
+        except Exception as e:
+            msg = f"Error getting file {file} from storage: {e}"
+            raise FileNotFoundError(msg) from e
     return file_objects
 
 
@@ -115,16 +163,30 @@ class Image(BaseModel):
         """Convert image to base64 string."""
         if self.path:
             files = get_files([self.path], convert_to_base64=True)
+            if not files:
+                msg = f"No files found or file could not be converted to base64: {self.path}"
+                raise ValueError(msg)
             return files[0]
         msg = "Image path is not set."
         raise ValueError(msg)
 
-    def to_content_dict(self):
-        """Convert image to content dictionary."""
-        return {
-            "type": "image_url",
-            "image_url": self.to_base64(),
-        }
+    def to_content_dict(self, flow_id: str | None = None):
+        """Convert image to content dictionary.
+
+        Args:
+            flow_id: Optional flow ID to prepend to the path if it doesn't contain one
+        """
+        if not self.path:
+            msg = "Image path is not set."
+            raise ValueError(msg)
+
+        # If the path doesn't contain a "/" and we have a flow_id, prepend it
+        image_path = self.path
+        if flow_id and "/" not in self.path:
+            image_path = f"{flow_id}/{self.path}"
+
+        # Use the utility function that properly handles the conversion
+        return create_image_content_dict(image_path, None, None)
 
     def get_url(self) -> str:
         """Get the URL for the image."""

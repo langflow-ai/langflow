@@ -5,12 +5,13 @@ from typing import TYPE_CHECKING, cast
 
 from langchain.agents import AgentExecutor, BaseMultiActionAgent, BaseSingleActionAgent
 from langchain.agents.agent import RunnableAgent
-from langchain_core.messages import HumanMessage
+from langchain.callbacks.base import BaseCallbackHandler
+from langchain_core.messages import BaseMessage, HumanMessage
 from langchain_core.runnables import Runnable
 
 from lfx.base.agents.callback import AgentAsyncHandler
 from lfx.base.agents.events import ExceptionWithMessageError, process_agent_events
-from lfx.base.agents.utils import data_to_messages
+from lfx.base.agents.utils import get_chat_output_sender_name
 from lfx.custom.custom_component.component import Component, _get_component_toolkit
 from lfx.field_typing import Tool
 from lfx.inputs.inputs import InputTypes, MultilineInput
@@ -19,14 +20,13 @@ from lfx.log.logger import logger
 from lfx.memory import delete_message
 from lfx.schema.content_block import ContentBlock
 from lfx.schema.data import Data
+from lfx.schema.log import OnTokenFunctionType
 from lfx.schema.message import Message
 from lfx.template.field.base import Output
 from lfx.utils.constants import MESSAGE_SENDER_AI
 
 if TYPE_CHECKING:
-    from langchain_core.messages import BaseMessage
-
-    from lfx.schema.log import SendMessageFunctionType
+    from lfx.schema.log import OnTokenFunctionType, SendMessageFunctionType
 
 
 DEFAULT_TOOLS_DESCRIPTION = "A helpful assistant with access to the following tools:"
@@ -71,9 +71,15 @@ class LCAgentComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Agent", name="agent", method="build_agent", hidden=True, tool_mode=False),
         Output(display_name="Response", name="response", method="message_response"),
+        Output(display_name="Agent", name="agent", method="build_agent", tool_mode=False),
     ]
+
+    # Get shared callbacks for tracing and save them to self.shared_callbacks
+    def _get_shared_callbacks(self) -> list[BaseCallbackHandler]:
+        if not hasattr(self, "shared_callbacks"):
+            self.shared_callbacks = self.get_langchain_callbacks()
+        return self.shared_callbacks
 
     @abstractmethod
     def build_agent(self) -> AgentExecutor:
@@ -119,6 +125,24 @@ class LCAgentComponent(Component):
         # might be overridden in subclasses
         return None
 
+    def _data_to_messages_skip_empty(self, data: list[Data]) -> list[BaseMessage]:
+        """Convert data to messages, filtering only empty text while preserving non-text content.
+
+        Note: added to fix issue with certain providers failing when given empty text as input.
+        """
+        messages = []
+        for value in data:
+            # Only skip if the message has a text attribute that is empty/whitespace
+            text = getattr(value, "text", None)
+            if isinstance(text, str) and not text.strip():
+                # Skip only messages with empty/whitespace-only text strings
+                continue
+
+            lc_message = value.to_lc_message()
+            messages.append(lc_message)
+
+        return messages
+
     async def run_agent(
         self,
         agent: Runnable | BaseSingleActionAgent | BaseMultiActionAgent | AgentExecutor,
@@ -137,28 +161,83 @@ class LCAgentComponent(Component):
                 verbose=verbose,
                 max_iterations=max_iterations,
             )
-        input_dict: dict[str, str | list[BaseMessage]] = {
-            "input": self.input_value.to_lc_message() if isinstance(self.input_value, Message) else self.input_value
-        }
-        if hasattr(self, "system_prompt"):
-            input_dict["system_prompt"] = self.system_prompt
+        # Convert input_value to proper format for agent
+        lc_message = None
+        if isinstance(self.input_value, Message):
+            lc_message = self.input_value.to_lc_message()
+            # Extract text content from the LangChain message for agent input
+            # Agents expect a string input, not a Message object
+            if hasattr(lc_message, "content"):
+                if isinstance(lc_message.content, str):
+                    input_dict: dict[str, str | list[BaseMessage] | BaseMessage] = {"input": lc_message.content}
+                elif isinstance(lc_message.content, list):
+                    # For multimodal content, extract text parts
+                    text_parts = [item.get("text", "") for item in lc_message.content if item.get("type") == "text"]
+                    input_dict = {"input": " ".join(text_parts) if text_parts else ""}
+                else:
+                    input_dict = {"input": str(lc_message.content)}
+            else:
+                input_dict = {"input": str(lc_message)}
+        else:
+            input_dict = {"input": self.input_value}
+
+        # Ensure input_dict is initialized
+        if "input" not in input_dict:
+            input_dict = {"input": self.input_value}
+
+        # Use enhanced prompt if available (set by IBM Granite handler), otherwise use original
+        system_prompt_to_use = getattr(self, "_effective_system_prompt", None) or self.system_prompt
+        if system_prompt_to_use and system_prompt_to_use.strip():
+            input_dict["system_prompt"] = system_prompt_to_use
+
         if hasattr(self, "chat_history") and self.chat_history:
             if isinstance(self.chat_history, Data):
-                input_dict["chat_history"] = data_to_messages(self.chat_history)
-            if all(isinstance(m, Message) for m in self.chat_history):
-                input_dict["chat_history"] = data_to_messages([m.to_data() for m in self.chat_history])
-        if hasattr(input_dict["input"], "content") and isinstance(input_dict["input"].content, list):
-            # ! Because the input has to be a string, we must pass the images in the chat_history
+                input_dict["chat_history"] = self._data_to_messages_skip_empty([self.chat_history])
+            elif all(hasattr(m, "to_data") and callable(m.to_data) and "text" in m.data for m in self.chat_history):
+                input_dict["chat_history"] = self._data_to_messages_skip_empty(self.chat_history)
+            elif all(isinstance(m, Message) for m in self.chat_history):
+                input_dict["chat_history"] = self._data_to_messages_skip_empty([m.to_data() for m in self.chat_history])
 
-            image_dicts = [item for item in input_dict["input"].content if item.get("type") == "image"]
-            input_dict["input"].content = [item for item in input_dict["input"].content if item.get("type") != "image"]
+        # Handle multimodal input (images + text)
+        # Note: Agent input must be a string, so we extract text and move images to chat_history
+        if lc_message is not None and hasattr(lc_message, "content") and isinstance(lc_message.content, list):
+            # Extract images and text from the text content items
+            # Support both "image" (legacy) and "image_url" (standard) types
+            image_dicts = [item for item in lc_message.content if item.get("type") in ("image", "image_url")]
+            text_content = [item for item in lc_message.content if item.get("type") not in ("image", "image_url")]
+
+            text_strings = [
+                item.get("text", "")
+                for item in text_content
+                if item.get("type") == "text" and item.get("text", "").strip()
+            ]
+
+            # Set input to concatenated text or empty string
+            input_dict["input"] = " ".join(text_strings) if text_strings else ""
+
+            # If input is still a list or empty, provide a default
+            if isinstance(input_dict["input"], list) or not input_dict["input"]:
+                input_dict["input"] = "Process the provided images."
 
             if "chat_history" not in input_dict:
                 input_dict["chat_history"] = []
+
             if isinstance(input_dict["chat_history"], list):
                 input_dict["chat_history"].extend(HumanMessage(content=[image_dict]) for image_dict in image_dicts)
             else:
                 input_dict["chat_history"] = [HumanMessage(content=[image_dict]) for image_dict in image_dicts]
+
+        # Final safety check: ensure input is never empty (prevents Anthropic API errors)
+        current_input = input_dict.get("input", "")
+        if isinstance(current_input, list):
+            current_input = " ".join(map(str, current_input))
+        elif not isinstance(current_input, str):
+            current_input = str(current_input)
+
+        if not current_input.strip():
+            input_dict["input"] = "Continue the conversation."
+        else:
+            input_dict["input"] = current_input
 
         if hasattr(self, "graph"):
             session_id = self.graph.session_id
@@ -167,27 +246,39 @@ class LCAgentComponent(Component):
         else:
             session_id = None
 
+        sender_name = get_chat_output_sender_name(self) or self.display_name or "AI"
         agent_message = Message(
             sender=MESSAGE_SENDER_AI,
-            sender_name=self.display_name or "Agent",
+            sender_name=sender_name,
             properties={"icon": "Bot", "state": "partial"},
             content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
             session_id=session_id or uuid.uuid4(),
         )
+
+        # Create token callback if event_manager is available
+        # This wraps the event_manager's on_token method to match OnTokenFunctionType Protocol
+        on_token_callback: OnTokenFunctionType | None = None
+        if self._event_manager:
+            on_token_callback = cast("OnTokenFunctionType", self._event_manager.on_token)
+
         try:
             result = await process_agent_events(
                 runnable.astream_events(
                     input_dict,
-                    config={"callbacks": [AgentAsyncHandler(self.log), *self.get_langchain_callbacks()]},
+                    # here we use the shared callbacks because the AgentExecutor uses the tools
+                    config={"callbacks": [AgentAsyncHandler(self.log), *self._get_shared_callbacks()]},
                     version="v2",
                 ),
                 agent_message,
                 cast("SendMessageFunctionType", self.send_message),
+                on_token_callback,
             )
         except ExceptionWithMessageError as e:
-            if hasattr(e, "agent_message") and hasattr(e.agent_message, "id"):
-                msg_id = e.agent_message.id
-                await delete_message(id_=msg_id)
+            # Only delete message from database if it has an ID (was stored)
+            if hasattr(e, "agent_message"):
+                msg_id = e.agent_message.get_id()
+                if msg_id:
+                    await delete_message(id_=msg_id)
             await self._send_message_event(e.agent_message, category="remove_message")
             logger.error(f"ExceptionWithMessageError: {e}")
             raise
@@ -254,15 +345,40 @@ class LCToolsAgentComponent(LCAgentComponent):
             tools_names = ", ".join([tool.name for tool in self.tools])
         return tools_names
 
-    def _get_tools(self) -> list[Tool]:
+    # Set shared callbacks for tracing
+    def set_tools_callbacks(self, tools_list: list[Tool], callbacks_list: list[BaseCallbackHandler]):
+        """Set shared callbacks for tracing to the tools.
+
+        If we do not pass down the same callbacks to each tool
+        used by the agent, then each tool will instantiate a new callback.
+        For some tracing services, this will cause
+        the callback handler to lose the id of its parent run (Agent)
+        and thus throw an error in the tracing service client.
+
+        Args:
+            tools_list: list of tools to set the callbacks for
+            callbacks_list: list of callbacks to set for the tools
+        Returns:
+            None
+        """
+        for tool in tools_list or []:
+            if hasattr(tool, "callbacks"):
+                tool.callbacks = callbacks_list
+
+    async def _get_tools(self) -> list[Tool]:
         component_toolkit = _get_component_toolkit()
         tools_names = self._build_tools_names()
         agent_description = self.get_tool_description()
         # TODO: Agent Description Depreciated Feature to be removed
         description = f"{agent_description}{tools_names}"
+
         tools = component_toolkit(component=self).get_tools(
-            tool_name=self.get_tool_name(), tool_description=description, callbacks=self.get_langchain_callbacks()
+            tool_name=self.get_tool_name(),
+            tool_description=description,
+            # here we do not use the shared callbacks as we are exposing the agent as a tool
+            callbacks=self.get_langchain_callbacks(),
         )
         if hasattr(self, "tools_metadata"):
             tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)
+
         return tools

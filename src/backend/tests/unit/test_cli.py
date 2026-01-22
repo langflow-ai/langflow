@@ -5,8 +5,7 @@ from unittest.mock import patch
 
 import pytest
 import typer
-from langflow.__main__ import _create_superuser, app
-
+from langflow.__main__ import _create_superuser, app, get_number_of_workers
 from lfx.services import deps
 
 
@@ -146,3 +145,18 @@ class TestSuperuserCommand:
                 await _create_superuser("newuser", "newpass", "invalid-token")
 
             assert exc_info.value.exit_code == 1
+
+
+def test_get_number_of_workers():
+    """Test that get_number_of_workers uses cpu_count on Linux."""
+    with (
+        patch("langflow.__main__.platform.system", return_value="Linux"),
+        patch("langflow.__main__.cpu_count", return_value=4),
+    ):
+        # Test default behavior (None)
+        workers = get_number_of_workers(None)
+        assert workers == (4 * 2) + 1  # 9 workers
+
+        # Test explicit value is respected
+        workers = get_number_of_workers(2)
+        assert workers == 2

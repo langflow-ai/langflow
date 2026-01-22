@@ -14,7 +14,7 @@ class FirecrawlExtractApi(Component):
     inputs = [
         SecretStrInput(
             name="api_key",
-            display_name="API Key",
+            display_name="Firecrawl API Key",
             required=True,
             password=True,
             info="The API key to use Firecrawl API.",

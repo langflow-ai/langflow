@@ -45,7 +45,7 @@ jobs:
       current_version: ${{ steps.check.outputs.current_version }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Environment
         uses: astral-sh/setup-uv@v6
@@ -95,7 +95,7 @@ jobs:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Environment
         uses: astral-sh/setup-uv@v6
@@ -126,7 +126,7 @@ jobs:
       version: ${{ steps.check-version.outputs.version }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Environment
         uses: astral-sh/setup-uv@v6
@@ -185,7 +185,7 @@ jobs:
           echo "LFX CLI test completed successfully"
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: lfx-dist
           path: src/lfx/dist/
@@ -209,10 +209,24 @@ jobs:
         variant: [production, alpine]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
+
+      - name: Docker System Info and Cleanup
+        run: |
+          echo "=== Docker System Usage Before Cleanup ==="
+          docker system df || true
+          docker buildx du || true
+
+          echo "=== Cleaning up Docker System ==="
+          docker system prune -af --volumes || true
+          docker buildx prune -af || true
+
+          echo "=== Docker System Usage After Cleanup ==="
+          docker system df || true
+          docker buildx du || true
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -247,7 +261,7 @@ jobs:
             org.opencontainers.image.version=${{ github.event.inputs.version }}
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: src/lfx/docker/Dockerfile${{ matrix.variant == 'alpine' && '.alpine' || '' }}
@@ -267,10 +281,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: lfx-dist
           path: dist/

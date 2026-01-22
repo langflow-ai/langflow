@@ -2,11 +2,12 @@ import asyncio
 import json
 import os
 import re
+import tempfile
 import warnings
 from contextlib import asynccontextmanager
 from http import HTTPStatus
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 from urllib.parse import urlencode
 
 import anyio
@@ -17,6 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi_pagination import add_pagination
+from filelock import FileLock
 from lfx.interface.utils import setup_llm_caching
 from lfx.log.logger import configure, logger
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
@@ -27,21 +29,36 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 from langflow.api import health_check_router, log_router, router
 from langflow.api.v1.mcp_projects import init_mcp_servers
 from langflow.initial_setup.setup import (
+    copy_profile_pictures,
     create_or_update_starter_projects,
-    initialize_super_user_if_needed,
+    initialize_auto_login_default_superuser,
     load_bundles_from_urls,
     load_flows_from_directory,
     sync_flows_from_fs,
 )
 from langflow.middleware import ContentSizeLimitMiddleware
-from langflow.services.deps import get_queue_service, get_settings_service, get_telemetry_service
+from langflow.services.deps import (
+    get_queue_service,
+    get_service,
+    get_settings_service,
+    get_telemetry_service,
+    session_scope,
+)
+from langflow.services.schema import ServiceType
 from langflow.services.utils import initialize_services, initialize_settings_service, teardown_services
+from langflow.utils.mcp_cleanup import cleanup_mcp_sessions
 
 if TYPE_CHECKING:
     from tempfile import TemporaryDirectory
 
+    from lfx.services.mcp_composer.service import MCPComposerService
+
 # Ignore Pydantic deprecation warnings from Langchain
 warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
+
+# Suppress ResourceWarning from anyio streams (SSE connections)
+warnings.filterwarnings("ignore", category=ResourceWarning, message=".*MemoryObjectReceiveStream.*")
+warnings.filterwarnings("ignore", category=ResourceWarning, message=".*MemoryObjectSendStream.*")
 
 _tasks: list[asyncio.Task] = []
 
@@ -113,6 +130,18 @@ async def load_bundles_with_error_handling():
         return [], []
 
 
+def warn_about_future_cors_changes(settings):
+    """Warn users about upcoming CORS security changes in version 1.7."""
+    # Check if using default (backward compatible) settings
+    using_defaults = settings.cors_origins == "*" and settings.cors_allow_credentials is True
+
+    if using_defaults:
+        logger.warning(
+            "CORS: Using permissive defaults (all origins + credentials). "
+            "Set LANGFLOW_CORS_ORIGINS for production. Stricter defaults in v2.0."
+        )
+
+
 def get_lifespan(*, fix_migration=False, version=None):
     initialize_settings_service()
     telemetry_service = get_telemetry_service()
@@ -131,6 +160,7 @@ def get_lifespan(*, fix_migration=False, version=None):
 
         temp_dirs: list[TemporaryDirectory] = []
         sync_flows_from_fs_task = None
+        mcp_init_task = None
 
         try:
             start_time = asyncio.get_event_loop().time()
@@ -145,8 +175,20 @@ def get_lifespan(*, fix_migration=False, version=None):
             await logger.adebug(f"LLM caching setup in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
             current_time = asyncio.get_event_loop().time()
+            await logger.adebug("Copying profile pictures")
+            await copy_profile_pictures()
+            await logger.adebug(f"Profile pictures copied in {asyncio.get_event_loop().time() - current_time:.2f}s")
+
+            if get_settings_service().auth_settings.AUTO_LOGIN:
+                current_time = asyncio.get_event_loop().time()
+                await logger.adebug("Initializing default super user")
+                await initialize_auto_login_default_superuser()
+                await logger.adebug(
+                    f"Default super user initialized in {asyncio.get_event_loop().time() - current_time:.2f}s"
+                )
+
             await logger.adebug("Initializing super user")
-            await initialize_super_user_if_needed()
+            await initialize_auto_login_default_superuser()
             await logger.adebug(f"Super user initialized in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
             current_time = asyncio.get_event_loop().time()
@@ -157,7 +199,7 @@ def get_lifespan(*, fix_migration=False, version=None):
 
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Caching types")
-            all_types_dict = await get_and_cache_all_types_dict(get_settings_service())
+            all_types_dict = await get_and_cache_all_types_dict(get_settings_service(), telemetry_service)
             await logger.adebug(f"Types cached in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
             # Use file-based lock to prevent multiple workers from creating duplicate starter projects concurrently.
@@ -166,9 +208,6 @@ def get_lifespan(*, fix_migration=False, version=None):
             # the initialization work.
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Creating/updating starter projects")
-            import tempfile
-
-            from filelock import FileLock
 
             lock_file = Path(tempfile.gettempdir()) / "langflow_starter_projects.lock"
             lock = FileLock(lock_file, timeout=1)
@@ -186,10 +225,48 @@ def get_lifespan(*, fix_migration=False, version=None):
                     f"Failed to acquire lock for starter projects: {e}. Starter projects may not be created or updated."
                 )
 
+            # Initialize agentic global variables early (before MCP server and flows)
+            if get_settings_service().settings.agentic_experience:
+                from langflow.api.utils.mcp.agentic_mcp import initialize_agentic_global_variables
+
+                current_time = asyncio.get_event_loop().time()
+                await logger.ainfo("Initializing agentic global variables...")
+                try:
+                    async with session_scope() as session:
+                        await initialize_agentic_global_variables(session)
+                    await logger.adebug(
+                        f"Agentic global variables initialized in {asyncio.get_event_loop().time() - current_time:.2f}s"
+                    )
+                except Exception as e:  # noqa: BLE001
+                    await logger.awarning(f"Failed to initialize agentic global variables: {e}")
+
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Starting telemetry service")
             telemetry_service.start()
             await logger.adebug(f"started telemetry service in {asyncio.get_event_loop().time() - current_time:.2f}s")
+
+            current_time = asyncio.get_event_loop().time()
+            await logger.adebug("Starting MCP Composer service")
+            mcp_composer_service = cast("MCPComposerService", get_service(ServiceType.MCP_COMPOSER_SERVICE))
+            await mcp_composer_service.start()
+            await logger.adebug(
+                f"started MCP Composer service in {asyncio.get_event_loop().time() - current_time:.2f}s"
+            )
+
+            # Auto-configure Agentic MCP server if enabled (after variables are initialized)
+            if get_settings_service().settings.agentic_experience:
+                from langflow.api.utils.mcp.agentic_mcp import auto_configure_agentic_mcp_server
+
+                current_time = asyncio.get_event_loop().time()
+                await logger.ainfo("Configuring Agentic MCP server...")
+                try:
+                    async with session_scope() as session:
+                        await auto_configure_agentic_mcp_server(session)
+                    await logger.adebug(
+                        f"Agentic MCP server configured in {asyncio.get_event_loop().time() - current_time:.2f}s"
+                    )
+                except Exception as e:  # noqa: BLE001
+                    await logger.awarning(f"Failed to configure agentic MCP server: {e}")
 
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Loading flows")
@@ -200,15 +277,41 @@ def get_lifespan(*, fix_migration=False, version=None):
                 queue_service.start()
             await logger.adebug(f"Flows loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
-            current_time = asyncio.get_event_loop().time()
-            await logger.adebug("Loading mcp servers for projects")
-            await init_mcp_servers()
-            await logger.adebug(f"mcp servers loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
-
             total_time = asyncio.get_event_loop().time() - start_time
             await logger.adebug(f"Total initialization time: {total_time:.2f}s")
-            yield
 
+            async def delayed_init_mcp_servers():
+                await asyncio.sleep(10.0)  # Increased delay to allow starter projects to be created
+                current_time = asyncio.get_event_loop().time()
+                await logger.adebug("Loading MCP servers for projects")
+                try:
+                    await init_mcp_servers()
+                    await logger.adebug(f"MCP servers loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
+                except Exception as e:  # noqa: BLE001
+                    await logger.awarning(f"First MCP server initialization attempt failed: {e}")
+                    await asyncio.sleep(5.0)  # Increased retry delay
+                    current_time = asyncio.get_event_loop().time()
+                    await logger.adebug("Retrying MCP servers initialization")
+                    try:
+                        await init_mcp_servers()
+                        await logger.adebug(
+                            f"MCP servers loaded on retry in {asyncio.get_event_loop().time() - current_time:.2f}s"
+                        )
+                    except Exception as e2:  # noqa: BLE001
+                        await logger.aexception(f"Failed to initialize MCP servers after retry: {e2}")
+
+            # Start the delayed initialization as a background task
+            # Allows the server to start first to avoid race conditions with MCP Server startup
+            mcp_init_task = asyncio.create_task(delayed_init_mcp_servers())
+
+            # v1 and project MCP server context managers
+            from langflow.api.v1.mcp import start_streamable_http_manager
+            from langflow.api.v1.mcp_projects import start_project_task_group
+
+            await start_streamable_http_manager()
+            await start_project_task_group()
+
+            yield
         except asyncio.CancelledError:
             await logger.adebug("Lifespan received cancellation signal")
         except Exception as exc:
@@ -218,6 +321,10 @@ def get_lifespan(*, fix_migration=False, version=None):
                 await log_exception_to_telemetry(exc, "lifespan")
             raise
         finally:
+            # CRITICAL: Cleanup MCP sessions FIRST, before any other shutdown logic.
+            # This ensures MCP subprocesses are killed even if shutdown is interrupted.
+            await cleanup_mcp_sessions()
+
             # Clean shutdown with progress indicator
             # Create shutdown progress (show verbose timing if log level is DEBUG)
             from langflow.__main__ import get_number_of_workers
@@ -238,21 +345,49 @@ def get_lifespan(*, fix_migration=False, version=None):
 
                 # Step 1: Cancelling Background Tasks
                 with shutdown_progress.step(1):
+                    from langflow.api.v1.mcp import stop_streamable_http_manager
+                    from langflow.api.v1.mcp_projects import stop_project_task_group
+
+                    # Shutdown MCP project servers
+                    try:
+                        await stop_project_task_group()
+                    except Exception as e:  # noqa: BLE001
+                        await logger.aerror(f"Failed to stop MCP Project servers: {e}")
+                    # Close MCP server streamable-http session manager .run() context manager
+                    try:
+                        await stop_streamable_http_manager()
+                    except Exception as e:  # noqa: BLE001
+                        await logger.aerror(f"Failed to stop MCP server streamable-http session manager: {e}")
+                    # Cancel background tasks
+                    tasks_to_cancel = []
                     if sync_flows_from_fs_task:
                         sync_flows_from_fs_task.cancel()
-                        await asyncio.wait([sync_flows_from_fs_task])
+                        tasks_to_cancel.append(sync_flows_from_fs_task)
+                    if mcp_init_task and not mcp_init_task.done():
+                        mcp_init_task.cancel()
+                        tasks_to_cancel.append(mcp_init_task)
+                    if tasks_to_cancel:
+                        # Wait for all tasks to complete, capturing exceptions
+                        results = await asyncio.gather(*tasks_to_cancel, return_exceptions=True)
+                        # Log any non-cancellation exceptions
+                        for result in results:
+                            if isinstance(result, Exception) and not isinstance(result, asyncio.CancelledError):
+                                await logger.aerror(f"Error during task cleanup: {result}", exc_info=result)
 
                 # Step 2: Cleaning Up Services
                 with shutdown_progress.step(2):
                     try:
-                        await asyncio.wait_for(teardown_services(), timeout=10)
+                        await asyncio.wait_for(teardown_services(), timeout=30)
                     except asyncio.TimeoutError:
-                        await logger.awarning("Teardown services timed out.")
+                        await logger.awarning("Teardown services timed out after 30s.")
 
                 # Step 3: Clearing Temporary Files
                 with shutdown_progress.step(3):
                     temp_dir_cleanups = [asyncio.to_thread(temp_dir.cleanup) for temp_dir in temp_dirs]
-                    await asyncio.gather(*temp_dir_cleanups)
+                    try:
+                        await asyncio.wait_for(asyncio.gather(*temp_dir_cleanups), timeout=10)
+                    except asyncio.TimeoutError:
+                        await logger.awarning("Temporary file cleanup timed out after 10s.")
 
                 # Step 4: Finalizing Shutdown
                 with shutdown_progress.step(4):
@@ -291,14 +426,24 @@ def create_app():
     )
 
     setup_sentry(app)
-    origins = ["*"]
 
+    settings = get_settings_service().settings
+
+    # Warn about future CORS changes
+    warn_about_future_cors_changes(settings)
+
+    # Configure CORS using settings (with backward compatible defaults)
+    origins = settings.cors_origins
+    if isinstance(origins, str) and origins != "*":
+        origins = [origins]
+
+    # Apply current CORS configuration (maintains backward compatibility)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=origins,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_credentials=settings.cors_allow_credentials,
+        allow_methods=settings.cors_allow_methods,
+        allow_headers=settings.cors_allow_headers,
     )
     app.add_middleware(JavaScriptMIMETypeMiddleware)
 
@@ -347,7 +492,6 @@ def create_app():
 
         return await call_next(request)
 
-    settings = get_settings_service().settings
     if prome_port_str := os.environ.get("LANGFLOW_PROMETHEUS_PORT"):
         # set here for create_app() entry point
         prome_port = int(prome_port_str)

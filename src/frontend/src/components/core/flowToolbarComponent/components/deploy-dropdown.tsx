@@ -1,4 +1,9 @@
-import { useState } from "react";
+import React, {
+  type Dispatch,
+  ReactNode,
+  type SetStateAction,
+  useState,
+} from "react";
 import { useHref } from "react-router-dom";
 import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltipComponent from "@/components/common/shadTooltipComponent";
@@ -23,7 +28,17 @@ import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { cn } from "@/utils/utils";
 
-export default function PublishDropdown() {
+type PublishDropdownProps = {
+  openApiModal: boolean;
+  setOpenApiModal: Dispatch<SetStateAction<boolean>>;
+  children?: ReactNode;
+};
+
+export default function PublishDropdown({
+  openApiModal,
+  setOpenApiModal,
+  children,
+}: PublishDropdownProps) {
   const location = useHref("/");
   const domain = window.location.origin + location;
   const [openEmbedModal, setOpenEmbedModal] = useState(false);
@@ -39,7 +54,6 @@ export default function PublishDropdown() {
   const isPublished = currentFlow?.access_type === "PUBLIC";
   const hasIO = useFlowStore((state) => state.hasIO);
   const isAuth = useAuthStore((state) => !!state.autoLogin);
-  const [openApiModal, setOpenApiModal] = useState(false);
   const [openExportModal, setOpenExportModal] = useState(false);
 
   const handlePublishedSwitch = async (checked: boolean) => {
@@ -203,7 +217,7 @@ export default function PublishDropdown() {
         </DropdownMenuContent>
       </DropdownMenu>
       <ApiModal open={openApiModal} setOpen={setOpenApiModal}>
-        <></>
+        <>{children}</>
       </ApiModal>
       <EmbedModal
         open={openEmbedModal}

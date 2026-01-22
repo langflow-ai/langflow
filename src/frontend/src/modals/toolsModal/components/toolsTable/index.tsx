@@ -6,14 +6,15 @@ import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-va
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarHeader,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Textarea } from "@/components/ui/textarea";
@@ -44,44 +45,82 @@ export default function ToolsTable({
   const [sidebarName, setSidebarName] = useState<string>("");
   const [sidebarDescription, setSidebarDescription] = useState<string>("");
 
+  const editedSelection = useRef<boolean>(false);
+  const applyingSelection = useRef<boolean>(false);
+  const previousRowsCount = useRef<number>(0);
+  const skipSelectionReapply = useRef<number>(0);
+  const [isGridReady, setIsGridReady] = useState(false);
+
   const { setOpen: setSidebarOpen } = useSidebar();
 
   const getRowId = useMemo(() => {
-    return (params: any) => params.data.display_name ?? params.data.name;
+    return (params: any) =>
+      params.data._uniqueId ||
+      `${params.data.name}_${params.data.display_name}`;
   }, []);
 
   useEffect(() => {
-    const initialData = cloneDeep(rows);
+    if (!open) {
+      setIsGridReady(false);
+      return;
+    }
+    previousRowsCount.current = rows.length;
+    const initialData = cloneDeep(rows).map((row, index) => ({
+      ...row,
+      _uniqueId: `${row.name}_${row.display_name}_${index}`,
+    }));
     setData(initialData);
     const filter = initialData.filter((row) => row.status === true);
     setSelectedRows(filter);
-  }, [rows, open]);
+    editedSelection.current = false;
+  }, [open]);
 
-  const applyInitialSelection = () => {
-    if (!agGrid.current?.api) return;
+  useEffect(() => {
+    if (!open || !selectedRows) return;
+    if (previousRowsCount.current === rows.length) return;
 
-    const initialData = cloneDeep(rows);
-    const filter = initialData.filter((row) => row.status === true);
+    previousRowsCount.current = rows.length;
+    const updatedData = cloneDeep(rows).map((row, index) => ({
+      ...row,
+      _uniqueId: `${row.name}_${row.display_name}_${index}`,
+    }));
 
+    // Increment skip counter to prevent re-applying selection
+    skipSelectionReapply.current++;
+
+    setData(updatedData);
+
+    const updatedSelection = updatedData.filter((row) =>
+      selectedRows.some((selected) => selected.name === row.name),
+    );
+    setSelectedRows(updatedSelection);
+  }, [rows]);
+
+  useEffect(() => {
+    if (!agGrid.current?.api || !selectedRows || !open || !isGridReady) return;
+
+    // Don't re-apply selection if we're just editing data fields (slug/description)
+    if (skipSelectionReapply.current > 0) {
+      skipSelectionReapply.current--;
+      return;
+    }
+
+    applyingSelection.current = true;
+    agGrid.current.api.setGridOption("suppressRowClickSelection", true);
+
+    const selectedIds = new Set(selectedRows.map((row) => row.name));
     agGrid.current.api.forEachNode((node) => {
-      if (
-        filter.some(
-          (row) =>
-            (row.display_name ?? row.name) ===
-            (node.data.display_name ?? node.data.name),
-        )
-      ) {
-        node.setSelected(true);
-      } else {
-        node.setSelected(false);
+      const shouldSelect = selectedIds.has(node.data.name);
+      if (node.isSelected() !== shouldSelect) {
+        node.setSelected(shouldSelect, false);
       }
     });
-  };
 
-  // Apply initial selection when data changes and grid is ready
-  useEffect(() => {
-    applyInitialSelection();
-  }, [rows, data]);
+    agGrid.current.api.setGridOption("suppressRowClickSelection", false);
+    setTimeout(() => {
+      applyingSelection.current = false;
+    }, 50);
+  }, [selectedRows, open, isGridReady]);
 
   useEffect(() => {
     if (!open) {
@@ -113,11 +152,7 @@ export default function ToolsTable({
                 ? ""
                 : row.display_description;
 
-          return selectedRows?.some(
-            (selected) =>
-              (selected.display_name ?? selected.name) ===
-              (row.display_name ?? row.name),
-          )
+          return selectedRows?.some((selected) => selected.name === row.name)
             ? {
                 ...row,
                 status: true,
@@ -194,10 +229,11 @@ export default function ToolsTable({
     },
   ];
   const handleSelectionChanged = (event) => {
-    if (open) {
-      const selectedData = event.api.getSelectedRows();
-      setSelectedRows(selectedData);
-    }
+    if (!open || applyingSelection.current) return;
+
+    const selectedData = event.api.getSelectedRows();
+    editedSelection.current = true;
+    setSelectedRows(selectedData);
   };
 
   const handleSidebarInputChange = (
@@ -206,21 +242,36 @@ export default function ToolsTable({
   ) => {
     if (!focusedRow) return;
 
-    const originalName = focusedRow.display_name;
+    const originalUniqueId = focusedRow._uniqueId;
+    const updatedRow = {
+      ...focusedRow,
+      [field]: value,
+      _uniqueId: originalUniqueId,
+    };
 
-    setFocusedRow((prev) => (prev ? { ...prev, [field]: value } : null));
+    setFocusedRow(updatedRow);
 
-    if (agGrid.current) {
-      const updatedRow = { ...focusedRow, [field]: value };
+    if (agGrid.current && originalUniqueId) {
+      // Increment skip counter to prevent re-applying selection
+      skipSelectionReapply.current++;
 
+      // Update only via applyTransaction
       agGrid.current.api.applyTransaction({
         update: [updatedRow],
       });
 
       const updatedData = data.map((row) =>
-        (row.display_name ?? row.name) === originalName ? updatedRow : row,
+        row._uniqueId === originalUniqueId ? updatedRow : row,
       );
       setData(updatedData);
+
+      // Update selectedRows to reflect the updated data
+      setSelectedRows(
+        (prevSelected) =>
+          prevSelected?.map((row) =>
+            row._uniqueId === originalUniqueId ? updatedRow : row,
+          ) || null,
+      );
     }
   };
 
@@ -250,6 +301,7 @@ export default function ToolsTable({
 
   const tableOptions = {
     block_hide: true,
+    hide_options: false,
   };
 
   const handleRowClicked = (event) => {
@@ -257,16 +309,19 @@ export default function ToolsTable({
     setSidebarOpen(true);
   };
 
-  const handleGridReady = () => {
-    // Apply initial selection when grid is ready
-    applyInitialSelection();
-  };
-
   const rowName = useMemo(() => {
     return parseString(focusedRow?.display_name || focusedRow?.name || "", [
       "space_case",
     ]);
   }, [focusedRow]);
+
+  const handleClose = () => {
+    setSidebarOpen(false);
+  };
+
+  const handleGridReady = () => {
+    setIsGridReady(true);
+  };
 
   return (
     <>
@@ -295,6 +350,8 @@ export default function ToolsTable({
             tableOptions={tableOptions}
             onRowClicked={handleRowClicked}
             getRowId={getRowId}
+            pagination={true}
+            paginationPageSize={50}
             onGridReady={handleGridReady}
           />
         </div>
@@ -303,16 +360,16 @@ export default function ToolsTable({
         side="right"
         className="flex h-full flex-col overflow-auto border-l border-border"
       >
-        <SidebarHeader className="flex-none px-4 py-4">
+        <SidebarContent className="flex flex-1 flex-col gap-2 overflow-y-auto p-0">
           {focusedRow &&
             (isAction || !focusedRow.readonly ? (
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-4 p-4">
                 <div className="flex flex-col gap-2">
                   <label
                     className="text-mmd font-medium"
                     htmlFor="sidebar-name-input"
                   >
-                    {isAction ? "Tool name" : "Name"}
+                    {isAction ? "Tool name" : "Slug"}
                   </label>
 
                   <Input
@@ -353,7 +410,10 @@ export default function ToolsTable({
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col gap-1" data-testid="sidebar_header">
+              <div
+                className="flex flex-col gap-1 p-4"
+                data-testid="sidebar_header"
+              >
                 <h3
                   className="text-base font-medium"
                   data-testid="sidebar_header_name"
@@ -368,19 +428,15 @@ export default function ToolsTable({
                 </p>
               </div>
             ))}
-        </SidebarHeader>
-        {!isAction && <Separator />}
-        <SidebarContent className="flex flex-1 flex-col gap-0 overflow-visible px-2">
+          {!isAction && actionArgs.length > 0 && <Separator />}
           {focusedRow && (
-            <div className="flex h-full flex-col gap-4">
+            <div className="flex h-full flex-col gap-4 p-2">
               <SidebarGroup className="flex-1">
-                <SidebarGroupContent className="h-full pb-4">
+                <SidebarGroupContent className="h-full">
                   <div className="flex h-full flex-col gap-4">
                     {actionArgs.length > 0 && (
                       <div className="flex flex-col gap-1.5">
-                        <h3 className="mt-2 text-base font-medium">
-                          Parameters
-                        </h3>
+                        <h3 className="text-base font-medium">Parameters</h3>
                         <p className="text-mmd text-muted-foreground">
                           Manage inputs for this tool
                         </p>
@@ -416,6 +472,18 @@ export default function ToolsTable({
             </div>
           )}
         </SidebarContent>
+        <SidebarFooter>
+          <div className="flex justify-end w-full p-2">
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleClose}
+              data-testid="btn_close_tools_modal"
+            >
+              Close
+            </Button>
+          </div>
+        </SidebarFooter>
       </Sidebar>
     </>
   );

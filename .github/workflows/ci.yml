@@ -3,6 +3,10 @@ name: CI
 on:
   workflow_call:
     inputs:
+      ref:
+        description: "(Optional) Ref to checkout"
+        required: false
+        type: string
       python-versions:
         description: "Python Versions"
         required: false
@@ -18,10 +22,20 @@ on:
         required: false
         type: boolean
         default: false
+      run-all-tests:
+        description: "Run all tests regardless of file changes (skips path filtering)"
+        required: false
+        type: boolean
+        default: false
+      runs-on:
+        description: "Runner to use for the tests"
+        required: false
+        type: string
+        default: "ubuntu-latest"
   workflow_dispatch:
     inputs:
-      branch:
-        description: "(Optional) Branch to checkout"
+      ref:
+        description: "(Optional) Ref to checkout"
         required: false
         type: string
       openai_api_key:
@@ -37,6 +51,15 @@ on:
         required: false
         type: string
         default: "['3.10']"
+      runs-on:
+        description: "Runner to use for the tests"
+        required: false
+        type: choice
+        options:
+          - ubuntu-latest
+          - self-hosted
+          - "[self-hosted, linux, ARM64, langflow-ai-arm64-40gb]"
+        default: ubuntu-latest
   pull_request:
     types: [opened, synchronize, labeled]
   merge_group:
@@ -51,6 +74,20 @@ env:
   TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
 
 jobs:
+  echo-inputs:
+    name: Echo Inputs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Echo inputs
+        run: |
+          echo "Inputs:"
+          echo "  ref: ${{ inputs.ref }}"
+          echo "  python-versions: ${{ inputs.python-versions }}"
+          echo "  frontend-tests-folder: ${{ inputs.frontend-tests-folder }}"
+          echo "  release: ${{ inputs.release }}"
+          echo "  run-all-tests: ${{ inputs.run-all-tests }}"
+          echo "  runs-on: ${{ inputs.runs-on }}"
+
   check-nightly-status:
     name: Check PyPI Version Update
     runs-on: ubuntu-latest
@@ -120,7 +157,7 @@ jobs:
     name: Should Run CI
     runs-on: ubuntu-latest
     outputs:
-      should-run-ci: ${{ (github.event.pull_request.draft == false) || (github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call' || github.event_name == 'merge_group') }}
+      should-run-ci: ${{ github.event.pull_request.draft == false || (github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call' || github.event_name == 'merge_group') }}
       should-run-tests: ${{ !contains(github.event.pull_request.labels.*.name, 'fast-track') || github.event_name == 'workflow_call' || github.event_name == 'workflow_dispatch' || github.event_name == 'merge_group' }}
     steps:
       #  Do anything just to make the job run
@@ -128,11 +165,12 @@ jobs:
       - run: echo "Labels -> ${{ join(github.event.pull_request.labels.*.name, ',') }}"
       - run: echo "IsDraft -> ${{ github.event.pull_request.draft }}"
       - run: echo "Event name -> ${{ github.event_name }}"
+      - run: echo "Should run ci -> ${{ (github.event.pull_request.draft == false) || (github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call' || github.event_name == 'merge_group') }}"
       - run: echo "Should run tests -> ${{ !contains(github.event.pull_request.labels.*.name, 'fast-track') || github.event_name == 'workflow_call' || github.event_name == 'workflow_dispatch' || github.event_name == 'merge_group' }}"
 
   path-filter:
     needs: set-ci-condition
-    if: ${{ needs.set-ci-condition.outputs.should-run-ci == 'true' }}
+    if: ${{ needs.set-ci-condition.outputs.should-run-ci == 'true' && !inputs.run-all-tests }}
     name: Filter Paths
     runs-on: ubuntu-latest
     outputs:
@@ -147,6 +185,7 @@ jobs:
       workspace: ${{ steps.filter.outputs.workspace }}
       api: ${{ steps.filter.outputs.api }}
       database: ${{ steps.filter.outputs.database }}
+      docker: ${{ steps.filter.outputs.docker }}
       docs-only: ${{
         steps.filter.outputs.docs == 'true' &&
         steps.filter.outputs.python != 'true' &&
@@ -158,27 +197,52 @@ jobs:
         steps.filter.outputs.components != 'true' &&
         steps.filter.outputs.workspace != 'true' &&
         steps.filter.outputs.api != 'true' &&
-        steps.filter.outputs.database != 'true'
+        steps.filter.outputs.database != 'true' &&
+        steps.filter.outputs.docker != 'true'
         }}
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.branch || github.ref }}
+          ref: ${{ inputs.ref || github.ref }}
       - name: Filter Paths
         id: filter
         uses: dorny/paths-filter@v3
         with:
           filters: ./.github/changes-filter.yaml
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Install deps for coverage check
+        run: |
+          python -m pip install --upgrade pip
+          pip install --disable-pip-version-check --no-cache-dir pyyaml
+      - name: Validate Filter Coverage
+        continue-on-error: true
+        shell: bash
+        run: |
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          BASE_REF="${{ github.event.pull_request.base.ref || 'main' }}"
+          # Ensure base commit is present locally
+          git fetch --no-tags --depth=1 origin "$BASE_REF" || true
+          git fetch --no-tags --depth=1 origin "$BASE_SHA" || true
+          git diff --name-only "${BASE_SHA:-origin/$BASE_REF}"...HEAD | python scripts/check_changes_filter.py
 
   test-backend:
     needs: [path-filter, set-ci-condition]
     name: Run Backend Tests
-    if: ${{ needs.path-filter.outputs.python == 'true' && needs.set-ci-condition.outputs.should-run-tests == 'true' }}
+    if: |
+      always() &&
+      !cancelled() &&
+      needs.set-ci-condition.outputs.should-run-tests == 'true' &&
+      (inputs.run-all-tests || needs.path-filter.outputs.python == 'true')
     uses: ./.github/workflows/python_test.yml
     with:
       python-versions: ${{ inputs.python-versions || '["3.10"]' }}
+      runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
+      ref: ${{ inputs.ref || github.ref }}
     secrets:
       OPENAI_API_KEY: "${{ secrets.OPENAI_API_KEY }}"
       ANTHROPIC_API_KEY: "${{ secrets.ANTHROPIC_API_KEY }}"
@@ -187,19 +251,31 @@ jobs:
   test-frontend-unit:
     needs: [path-filter, set-ci-condition]
     name: Run Frontend Unit Tests
-    if: ${{ needs.path-filter.outputs.frontend == 'true' && needs.set-ci-condition.outputs.should-run-tests == 'true' }}
+    if: |
+      always() &&
+      !cancelled() &&
+      needs.set-ci-condition.outputs.should-run-tests == 'true' &&
+      (inputs.run-all-tests || needs.path-filter.outputs.frontend == 'true')
     uses: ./.github/workflows/jest_test.yml
+    with:
+      ref: ${{ inputs.ref || github.ref }}
     secrets:
       CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
 
   test-frontend:
     needs: [path-filter, set-ci-condition]
     name: Run Frontend Tests
-    if: ${{ (needs.path-filter.outputs.frontend == 'true' || needs.path-filter.outputs.frontend-tests == 'true' || needs.path-filter.outputs.components-changes == 'true' || needs.path-filter.outputs.starter-projects-changes == 'true' || needs.path-filter.outputs.starter-projects == 'true' || needs.path-filter.outputs.components == 'true' || needs.path-filter.outputs.workspace == 'true' || needs.path-filter.outputs.api == 'true' || needs.path-filter.outputs.database == 'true') && needs.set-ci-condition.outputs.should-run-tests == 'true' }}
+    if: |
+      always() &&
+      !cancelled() &&
+      needs.set-ci-condition.outputs.should-run-tests == 'true' &&
+      (inputs.run-all-tests || needs.path-filter.outputs.frontend == 'true' || needs.path-filter.outputs.frontend-tests == 'true' || needs.path-filter.outputs.components-changes == 'true' || needs.path-filter.outputs.starter-projects-changes == 'true' || needs.path-filter.outputs.starter-projects == 'true' || needs.path-filter.outputs.components == 'true' || needs.path-filter.outputs.workspace == 'true' || needs.path-filter.outputs.api == 'true' || needs.path-filter.outputs.database == 'true')
     uses: ./.github/workflows/typescript_test.yml
     with:
       tests_folder: ${{ inputs.frontend-tests-folder }}
       release: ${{ inputs.release || false }}
+      runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
+      ref: ${{ inputs.ref || github.ref }}
     secrets:
       OPENAI_API_KEY: "${{ secrets.OPENAI_API_KEY }}"
       STORE_API_KEY: "${{ secrets.STORE_API_KEY }}"
@@ -208,29 +284,39 @@ jobs:
 
   lint-backend:
     needs: path-filter
-    if: ${{ needs.path-filter.outputs.python == 'true'}}
+    if: |
+      always() &&
+      !cancelled() &&
+      (inputs.run-all-tests || needs.path-filter.outputs.python == 'true')
     name: Lint Backend
     uses: ./.github/workflows/lint-py.yml
 
   test-docs-build:
     needs: path-filter
-    if: ${{ needs.path-filter.outputs.docs == 'true' }}
+    if: |
+      always() &&
+      !cancelled() &&
+      (inputs.run-all-tests || needs.path-filter.outputs.docs == 'true')
     name: Test Docs Build
     uses: ./.github/workflows/docs_test.yml
 
   test-templates:
     needs: [path-filter, set-ci-condition]
     name: Test Starter Templates
-    if: ${{ (needs.path-filter.outputs.python == 'true' || needs.path-filter.outputs.frontend == 'true') && needs.set-ci-condition.outputs.should-run-tests == 'true' }}
+    if: |
+      always() &&
+      !cancelled() &&
+      needs.set-ci-condition.outputs.should-run-tests == 'true' &&
+      (inputs.run-all-tests || needs.path-filter.outputs.python == 'true' || needs.path-filter.outputs.frontend == 'true')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.branch || github.ref }}
+          ref: ${{ inputs.ref || github.ref }}
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: 3.12
 
@@ -247,6 +333,15 @@ jobs:
         run: |
           uv run pytest src/backend/tests/unit/template/test_starter_projects.py -v -n auto
 
+  test-docker:
+    needs: [path-filter, set-ci-condition]
+    name: Test Docker Images
+    if: ${{ needs.path-filter.outputs.docker == 'true' && needs.set-ci-condition.outputs.should-run-tests == 'true' }}
+    uses: ./.github/workflows/docker_test.yml
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+
   # https://github.com/langchain-ai/langchain/blob/master/.github/workflows/check_diffs.yml
   ci_success:
     name: "CI Success"
@@ -258,12 +353,13 @@ jobs:
         lint-backend,
         test-docs-build,
         test-templates,
+        test-docker,
         set-ci-condition,
         path-filter,
-        check-nightly-status
+        check-nightly-status,
       ]
 
-    if: always()
+    if: ${{ always() }}
     runs-on: ubuntu-latest
     env:
       JOBS_JSON: ${{ toJSON(needs) }}
@@ -271,9 +367,9 @@ jobs:
       # Skip nightly build check if only docs files changed
       DOCS_ONLY: ${{ needs.path-filter.outputs.docs-only }}
       EXIT_CODE: ${{ (contains(needs.*.result, 'failure') ||
-                      contains(needs.*.result, 'cancelled') ||
-                      (needs.check-nightly-status.outputs.should-proceed != 'true' && github.event_name != 'workflow_dispatch' && needs.path-filter.outputs.docs-only != 'true'))
-                      && '1' || '0' }}
+        contains(needs.*.result, 'cancelled') ||
+        (needs.check-nightly-status.outputs.should-proceed != 'true' && github.event_name != 'workflow_dispatch' && needs.path-filter.outputs.docs-only != 'true'))
+        && '1' || '0' }}
     steps:
       - name: "CI Success"
         run: |
@@ -311,6 +407,8 @@ jobs:
                   "  - Documentation Build: Check documentation syntax and build process"
                 elif $job == "test-templates" then
                   "  - Template Tests: Check starter project templates"
+                elif $job == "test-docker" then
+                  "  - Docker Tests: Check Docker image builds and version verification"
                 elif $job == "path-filter" then
                   "  - Path Filter: File path filtering failed"
                 elif $job == "set-ci-condition" then

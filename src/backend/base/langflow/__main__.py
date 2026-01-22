@@ -17,7 +17,7 @@ import typer
 from dotenv import load_dotenv
 from fastapi import HTTPException
 from httpx import HTTPError
-from jose import JWTError
+from jwt import InvalidTokenError
 from lfx.log.logger import configure, logger
 from lfx.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
 from multiprocess import cpu_count
@@ -33,15 +33,16 @@ from langflow.cli.progress import create_langflow_progress
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.main import setup_app
 from langflow.services.auth.utils import check_key, get_current_user_by_jwt
-from langflow.services.deps import get_db_service, get_settings_service, session_scope
+from langflow.services.deps import get_db_service, get_settings_service, is_settings_service_initialized, session_scope
 from langflow.services.utils import initialize_services
 from langflow.utils.version import fetch_latest_version, get_version_info
 from langflow.utils.version import is_pre_release as langflow_is_pre_release
 
-# Initialize console with Windows-safe settings
-console = Console(legacy_windows=True, emoji=False) if platform.system() == "Windows" else Console()
-
 app = typer.Typer(no_args_is_help=True)
+console = Console()
+if platform.system() == "Windows":
+    console = Console(legacy_windows=True, emoji=False)  # Initialize console with Windows-safe settings
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())  # type: ignore[attr-defined]
 
 # Add LFX commands as a sub-app
 try:
@@ -158,7 +159,6 @@ def set_var_for_macos_issue() -> None:
         os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] = "YES"
         # https://stackoverflow.com/questions/75747888/uwsgi-segmentation-fault-with-flask-python-app-behind-nginx-after-running-for-2 # noqa: E501
         os.environ["no_proxy"] = "*"  # to avoid error with gunicorn
-        logger.debug("Set OBJC_DISABLE_INITIALIZE_FORK_SAFETY to YES to avoid error")
 
 
 def wait_for_server_ready(host, port, protocol) -> None:
@@ -268,17 +268,19 @@ def run(
 ) -> None:
     """Run Langflow."""
     if env_file:
+        if is_settings_service_initialized():
+            err = (
+                "Settings service is already initialized. This indicates potential race conditions "
+                "with settings initialization. Ensure the settings service is not created during "
+                "module loading."
+            )
+            # i.e. ensures the env file is loaded before the settings service is initialized
+            raise ValueError(err)
         load_dotenv(env_file, override=True)
 
-    # Set default log level if not provided
-    log_level_str = "info" if log_level is None else log_level.lower()
-
-    # Must set as env var for child process to pick up
-    env_log_level = os.environ.get("LANGFLOW_LOG_LEVEL")
-    if env_log_level is None:
-        os.environ["LANGFLOW_LOG_LEVEL"] = log_level_str
-    else:
-        os.environ["LANGFLOW_LOG_LEVEL"] = env_log_level.lower()
+    # Set and normalize log level, with precedence: cli > env > default
+    log_level = (log_level or os.environ.get("LANGFLOW_LOG_LEVEL") or "info").lower()
+    os.environ["LANGFLOW_LOG_LEVEL"] = log_level
 
     configure(log_level=log_level, log_file=log_file, log_rotation=log_rotation)
 
@@ -333,13 +335,16 @@ def run(
 
     # Step 2: Starting Core Services
     with progress.step(2):
-        app = setup_app(static_files_dir=static_files_dir, backend_only=backend_only)
+        app = setup_app(static_files_dir=static_files_dir, backend_only=bool(backend_only))
 
     # Step 3: Connecting Database (this happens inside setup_app via dependencies)
     with progress.step(3):
         # check if port is being used
         if is_port_in_use(port, host):
             port = get_free_port(port)
+
+        # Store the runtime-detected port in settings (temporary until strict port enforcement)
+        get_settings_service().settings.runtime_port = port
 
         protocol = "https" if ssl_cert_file_path and ssl_key_file_path else "http"
 
@@ -361,7 +366,7 @@ def run(
             # We _may_ be able to subprocess, but with window's spawn behavior, we'd have to move all
             # non-picklable code to the subprocess.
             progress.print_summary()
-            print_banner(host, port, protocol)
+            print_banner(str(host), int(port or 7860), protocol)
 
         # Blocking call, so must be outside of the progress step
         uvicorn.run(
@@ -384,7 +389,7 @@ def run(
                 "timeout": worker_timeout,
                 "certfile": ssl_cert_file_path,
                 "keyfile": ssl_key_file_path,
-                "log_level": log_level.lower(),
+                "log_level": log_level.lower() if log_level is not None else "info",
             }
             server = LangflowApplication(app, options)
 
@@ -396,7 +401,7 @@ def run(
 
         # Print summary and banner after server is ready
         progress.print_summary()
-        print_banner(host, port, protocol)
+        print_banner(str(host), int(port or 7860), protocol)
 
         # Handle browser opening
         if open_browser and not backend_only:
@@ -683,7 +688,7 @@ async def _create_superuser(username: str, password: str, auth_token: str | None
     if settings_service.auth_settings.AUTO_LOGIN:
         # Force default credentials for AUTO_LOGIN mode
         username = DEFAULT_SUPERUSER
-        password = DEFAULT_SUPERUSER_PASSWORD
+        password = DEFAULT_SUPERUSER_PASSWORD.get_secret_value()
     else:
         # Production mode - prompt for credentials if not provided
         if not username:
@@ -711,7 +716,7 @@ async def _create_superuser(username: str, password: str, auth_token: str | None
             raise typer.Exit(1)
 
         typer.echo(f"AUTO_LOGIN enabled. Creating default superuser '{username}'...")
-        typer.echo(f"Note: Default credentials are {DEFAULT_SUPERUSER}/{DEFAULT_SUPERUSER_PASSWORD}")
+        # Do not echo the default password to avoid exposing it in logs.
     # AUTO_LOGIN is false - production mode
     elif is_first_setup:
         typer.echo("No superusers found. Creating first superuser...")
@@ -731,7 +736,7 @@ async def _create_superuser(username: str, password: str, auth_token: str | None
                 user = None
                 try:
                     user = await get_current_user_by_jwt(auth_token, session)
-                except (JWTError, HTTPException):
+                except (InvalidTokenError, HTTPException):
                     # Try API key
                     api_key_result = await check_key(session, auth_token)
                     if api_key_result and hasattr(api_key_result, "is_superuser"):
@@ -882,12 +887,10 @@ def api_key(
             stmt = select(ApiKey).where(ApiKey.user_id == superuser.id)
             api_key = (await session.exec(stmt)).first()
             if api_key:
-                await delete_api_key(session, api_key.id)
+                await delete_api_key(session, api_key.id, superuser.id)
 
             api_key_create = ApiKeyCreate(name="CLI")
-            unmasked_api_key = await create_api_key(session, api_key_create, user_id=superuser.id)
-            await session.commit()
-            return unmasked_api_key
+            return await create_api_key(session, api_key_create, user_id=superuser.id)
 
     unmasked_api_key = asyncio.run(aapi_key())
     # Create a banner to display the API key and tell the user it won't be shown again

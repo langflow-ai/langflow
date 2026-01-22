@@ -47,19 +47,25 @@ Get started with Langflow by loading a template flow, running it, and then servi
 
     </details>
 
+:::tip
+If you encounter the error "An API key must be passed as query or header" when attempting to sign up, see [Troubleshooting](/troubleshoot#an-api-key-must-be-passed-as-query-or-header).
+:::
+
 ## Run the Simple Agent template flow
 
 1. In Langflow, click **New Flow**, and then select the **Simple Agent** template.
 
 ![Simple Agent template](/img/quickstart-simple-agent-flow.png)
 
-The **Simple Agent** template consists of an [**Agent** component](/agents) connected to [**Chat Input** and **Chat Output** components](/components-io), a [**Calculator** component](/components-helpers#calculator), and a [**URL** component](/components-data#url). When you run this flow, you submit a query to the agent through the **Chat Input** component, the agent uses the **Calculator** and **URL** tools to generate a response, and then returns the response through the **Chat Output** component.
+The **Simple Agent** template consists of an [**Agent** component](/agents) connected to [**Chat Input** and **Chat Output** components](/chat-input-and-output), a [**Calculator** component](/calculator), and a [**URL** component](/url). When you run this flow, you submit a query to the agent through the **Chat Input** component, the agent uses the **Calculator** and **URL** tools to generate a response, and then returns the response through the **Chat Output** component.
 
 Many components can be tools for agents, including [Model Context Protocol (MCP) servers](/mcp-server). The agent decides which tools to call based on the context of a given query.
 
-2. In the **Agent** component, enter your OpenAI API key directly or click the <Icon name="Globe" aria-hidden="true"/> **Globe** to create a [global variable](/configuration-global-variables).
+2. In the **Agent** component, enter your OpenAI API key directly or use a <Icon name="Globe" aria-hidden="true"/> [global variable](/configuration-global-variables).
 
-    This guide uses an OpenAI model for demonstration purposes. If you want to use a different provider, change the **Model Provider** and **Model Name** fields, and then provide credentials for your selected provider.
+    This example uses the **Agent** component's built-in OpenAI model.
+    If you want to use a different provider, edit the model provider, model name, and credentials accordingly.
+    If your preferred provider or model isn't listed, set **Model Provider** to **Connect other models**, and then connect any [language model component](/components-models#additional-language-models).
 
 3. To run the flow, click <Icon name="Play" aria-hidden="true"/> **Playground**.
 

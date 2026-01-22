@@ -1,11 +1,11 @@
-import { expect, test } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { zoomOut } from "../../utils/zoom-out";
 
 // Helper function to verify prompt variables
 async function verifyPromptVariables(
-  page,
+  page: Page,
   template: string,
   expectedVars: string[],
   isFirstTime = true,
@@ -60,12 +60,15 @@ test(
     await page.getByTestId("blank-flow").click();
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("prompt");
-    await page.waitForSelector('[data-testid="processingPrompt Template"]', {
-      timeout: 3000,
-    });
+    await page.waitForSelector(
+      '[data-testid="models_and_agentsPrompt Template"]',
+      {
+        timeout: 3000,
+      },
+    );
 
     await page
-      .locator('//*[@id="processingPrompt Template"]')
+      .locator('//*[@id="models_and_agentsPrompt Template"]')
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
@@ -145,12 +148,15 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("prompt");
 
-    await page.waitForSelector('[data-testid="processingPrompt Template"]', {
-      timeout: 3000,
-    });
+    await page.waitForSelector(
+      '[data-testid="models_and_agentsPrompt Template"]',
+      {
+        timeout: 3000,
+      },
+    );
 
     await page
-      .locator('//*[@id="processingPrompt Template"]')
+      .locator('//*[@id="models_and_agentsPrompt Template"]')
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
@@ -315,10 +321,7 @@ test(
     ).toBeTruthy();
 
     await page.getByText("Close").last().click();
-    await page.getByTestId("canvas_controls_dropdown").click();
-
-    await zoomOut(page, 2);
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await adjustScreenView(page, { numberOfZoomOut: 2 });
 
     await page.getByTestId("edit-button-modal").last().click();
 
@@ -352,5 +355,241 @@ test(
     if (value != "{prompt} example {prompt1}") {
       expect(false).toBeTruthy();
     }
+  },
+);
+
+test(
+  "PromptTemplateComponent - Double Brackets Variable Extraction",
+  { tag: ["@release", "@workspace"], timeout: 60000 },
+  async ({ page }) => {
+    await awaitBootstrapTest(page);
+
+    await page.waitForSelector('[data-testid="blank-flow"]', {
+      timeout: 30000,
+    });
+    await page.getByTestId("blank-flow").click();
+    await page.getByTestId("sidebar-search-input").click();
+    await page.getByTestId("sidebar-search-input").fill("prompt");
+
+    await page.waitForSelector(
+      '[data-testid="models_and_agentsPrompt Template"]',
+      {
+        timeout: 3000,
+      },
+    );
+
+    await page
+      .locator('//*[@id="models_and_agentsPrompt Template"]')
+      .dragTo(page.locator('//*[@id="react-flow-id"]'));
+    await page.mouse.up();
+    await page.mouse.down();
+    await adjustScreenView(page);
+
+    // Wait for the node to appear
+    await page.waitForSelector('[data-testid="div-generic-node"]', {
+      timeout: 5000,
+    });
+
+    // Click on the node to select it
+    await page.getByTestId("div-generic-node").click();
+
+    // Wait for and click the edit button
+    await page.waitForSelector('[data-testid="edit-button-modal"]', {
+      timeout: 5000,
+    });
+    await page.getByTestId("edit-button-modal").last().click();
+
+    // Wait for the modal to open and the toggle to be visible
+    await page.waitForSelector(
+      '[data-testid="toggle_bool_edit_use_double_brackets"]',
+      {
+        timeout: 5000,
+      },
+    );
+
+    // Enable the "Use Double Brackets" toggle in the modal
+    await page.getByTestId("toggle_bool_edit_use_double_brackets").click();
+
+    // Verify the toggle is now checked
+    expect(
+      await page
+        .getByTestId("toggle_bool_edit_use_double_brackets")
+        .isChecked(),
+    ).toBeTruthy();
+
+    // Close the modal
+    await page.getByText("Close").last().click();
+
+    // Now test double bracket variable extraction - click the mustache prompt button
+    await page.waitForSelector(
+      '[data-testid="button_open_mustache_prompt_modal"]',
+      {
+        timeout: 5000,
+      },
+    );
+    await page.getByTestId("button_open_mustache_prompt_modal").click();
+
+    // Wait for the prompt modal textarea (mustache modal uses different testid pattern)
+    const mustacheTextareaId = "modal-mustachepromptarea_mustache_template";
+    await page.waitForSelector(`[data-testid="${mustacheTextareaId}"]`, {
+      timeout: 5000,
+    });
+
+    await page.getByTestId(mustacheTextareaId).fill("Hello {{name}}!");
+
+    let value = await page.getByTestId(mustacheTextareaId).inputValue();
+
+    expect(value).toBe("Hello {{name}}!");
+
+    // Verify the variable badge shows "name"
+    await page.waitForSelector('//*[@id="badge0"]', { timeout: 5000 });
+    const valueBadgeOne = await page.locator('//*[@id="badge0"]').innerText();
+    expect(valueBadgeOne).toBe("name");
+
+    await page.getByTestId("genericModalBtnSave").click();
+
+    // Wait for modal to close and variable input to appear
+    await page.waitForSelector('[data-testid="textarea_str_name"]', {
+      timeout: 5000,
+    });
+
+    // Verify the input field for the variable was created
+    await page.getByTestId("textarea_str_name").click();
+    await page.getByTestId("textarea_str_name").fill("World");
+
+    value = await page.getByTestId("textarea_str_name").inputValue();
+    expect(value).toBe("World");
+  },
+);
+
+test(
+  "PromptTemplateComponent - Double Brackets Multiple Variables",
+  { tag: ["@release", "@workspace"], timeout: 60000 },
+  async ({ page }) => {
+    await awaitBootstrapTest(page);
+
+    await page.waitForSelector('[data-testid="blank-flow"]', {
+      timeout: 30000,
+    });
+    await page.getByTestId("blank-flow").click();
+    await page.getByTestId("sidebar-search-input").click();
+    await page.getByTestId("sidebar-search-input").fill("prompt");
+
+    await page.waitForSelector(
+      '[data-testid="models_and_agentsPrompt Template"]',
+      {
+        timeout: 3000,
+      },
+    );
+
+    await page
+      .locator('//*[@id="models_and_agentsPrompt Template"]')
+      .dragTo(page.locator('//*[@id="react-flow-id"]'));
+    await page.mouse.up();
+    await page.mouse.down();
+    await adjustScreenView(page);
+
+    // Wait for the node to appear
+    await page.waitForSelector('[data-testid="div-generic-node"]', {
+      timeout: 5000,
+    });
+
+    // Click on the node to select it
+    await page.getByTestId("div-generic-node").click();
+
+    // Wait for and click the edit button
+    await page.waitForSelector('[data-testid="edit-button-modal"]', {
+      timeout: 5000,
+    });
+    await page.getByTestId("edit-button-modal").last().click();
+
+    // Wait for the modal to open and the toggle to be visible
+    await page.waitForSelector(
+      '[data-testid="toggle_bool_edit_use_double_brackets"]',
+      {
+        timeout: 5000,
+      },
+    );
+
+    // Enable the "Use Double Brackets" toggle in the modal
+    await page.getByTestId("toggle_bool_edit_use_double_brackets").click();
+
+    // Verify the toggle is now checked
+    expect(
+      await page
+        .getByTestId("toggle_bool_edit_use_double_brackets")
+        .isChecked(),
+    ).toBeTruthy();
+
+    // Close the modal
+    await page.getByText("Close").last().click();
+
+    // Test multiple double bracket variables - click the mustache prompt button
+    await page.waitForSelector(
+      '[data-testid="button_open_mustache_prompt_modal"]',
+      {
+        timeout: 5000,
+      },
+    );
+    await page.getByTestId("button_open_mustache_prompt_modal").click();
+
+    // Wait for the prompt modal textarea (mustache modal uses different testid pattern)
+    const mustacheTextareaId = "modal-mustachepromptarea_mustache_template";
+    await page.waitForSelector(`[data-testid="${mustacheTextareaId}"]`, {
+      timeout: 5000,
+    });
+
+    await page
+      .getByTestId(mustacheTextareaId)
+      .fill("{{greeting}} {{name}}! You are {{age}} years old.");
+
+    const value = await page.getByTestId(mustacheTextareaId).inputValue();
+
+    expect(value).toBe("{{greeting}} {{name}}! You are {{age}} years old.");
+
+    // Verify all variable badges
+    await page.waitForSelector('//*[@id="badge0"]', { timeout: 5000 });
+    const badgeGreeting = await page.locator('//*[@id="badge0"]').innerText();
+    expect(badgeGreeting).toBe("greeting");
+
+    const badgeName = await page.locator('//*[@id="badge1"]').innerText();
+    expect(badgeName).toBe("name");
+
+    const badgeAge = await page.locator('//*[@id="badge2"]').innerText();
+    expect(badgeAge).toBe("age");
+
+    // Verify no extra badges
+    const extraBadge = await page
+      .locator('//*[@id="badge3"]')
+      .isVisible()
+      .catch(() => false);
+    expect(extraBadge).toBeFalsy();
+
+    await page.getByTestId("genericModalBtnSave").click();
+
+    // Wait for modal to close and verify input fields for all variables were created
+    await page.waitForSelector('[data-testid="textarea_str_greeting"]', {
+      timeout: 5000,
+    });
+    await page.waitForSelector('[data-testid="textarea_str_name"]', {
+      timeout: 5000,
+    });
+    await page.waitForSelector('[data-testid="textarea_str_age"]', {
+      timeout: 5000,
+    });
+
+    // Fill in the variable inputs and verify they work
+    await page.getByTestId("textarea_str_greeting").fill("Hello");
+    expect(await page.getByTestId("textarea_str_greeting").inputValue()).toBe(
+      "Hello",
+    );
+
+    await page.getByTestId("textarea_str_name").fill("Alice");
+    expect(await page.getByTestId("textarea_str_name").inputValue()).toBe(
+      "Alice",
+    );
+
+    await page.getByTestId("textarea_str_age").fill("25");
+    expect(await page.getByTestId("textarea_str_age").inputValue()).toBe("25");
   },
 );

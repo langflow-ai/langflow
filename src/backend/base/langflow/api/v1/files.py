@@ -6,18 +6,54 @@ from pathlib import Path
 from typing import Annotated
 from uuid import UUID
 
+import anyio
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from lfx.services.settings.service import SettingsService
+from lfx.utils.helpers import build_content_type_from_extension
 
-from langflow.api.utils import CurrentActiveUser, DbSession
+from langflow.api.utils import CurrentActiveUser, DbSession, ValidatedFileName
 from langflow.api.v1.schemas import UploadFileResponse
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_settings_service, get_storage_service
 from langflow.services.storage.service import StorageService
-from langflow.services.storage.utils import build_content_type_from_extension
 
 router = APIRouter(tags=["Files"], prefix="/files")
+
+
+def _get_allowed_profile_picture_folders(settings_service: SettingsService) -> set[str]:
+    """Return the set of allowed profile picture folders.
+
+    This enumerates subdirectories under the profile_pictures directory in both
+    the user's config_dir and the package's bundled assets. This makes the API
+    flexible (users may add new folders under config_dir/profile_pictures) while
+    still safe because we only ever serve files contained within the resolved
+    base directory and validate path containment below.
+
+    If no directories can be found (unexpected), fall back to the curated
+    defaults {"People", "Space"} shipped with Langflow.
+    """
+    allowed: set[str] = set()
+    try:
+        # Config-provided folders
+        config_dir = Path(settings_service.settings.config_dir)
+        cfg_base = config_dir / "profile_pictures"
+        if cfg_base.exists():
+            allowed.update({p.name for p in cfg_base.iterdir() if p.is_dir()})
+        # Package-provided folders
+        from langflow.initial_setup import setup
+
+        pkg_base = Path(setup.__file__).parent / "profile_pictures"
+        if pkg_base.exists():
+            allowed.update({p.name for p in pkg_base.iterdir() if p.is_dir()})
+    except Exception as _:
+        import logging
+
+        logger = logging.getLogger(__name__)
+        logger.exception("Exception occurred while getting allowed profile picture folders")
+
+    # Sensible defaults ensure tests and OOTB behavior
+    return allowed or {"People", "Space"}
 
 
 # Create dep that gets the flow_id from the request
@@ -30,10 +66,9 @@ async def get_flow(
 ):
     # AttributeError: 'SelectOfScalar' object has no attribute 'first'
     flow = await session.get(Flow, flow_id)
-    if not flow:
+    # Return 404 for both non-existent flows and unauthorized access to prevent information disclosure
+    if not flow or flow.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Flow not found")
-    if flow.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="You don't have access to this flow")
     return flow
 
 
@@ -42,7 +77,6 @@ async def upload_file(
     *,
     file: UploadFile,
     flow: Annotated[Flow, Depends(get_flow)],
-    current_user: CurrentActiveUser,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
     settings_service: Annotated[SettingsService, Depends(get_settings_service)],
 ) -> UploadFileResponse:
@@ -56,9 +90,7 @@ async def upload_file(
             status_code=413, detail=f"File size is larger than the maximum file size {max_file_size_upload}MB."
         )
 
-    if flow.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="You don't have access to this flow")
-
+    # Authorization handled by get_flow dependency
     try:
         file_content = await file.read()
         timestamp = datetime.now(tz=timezone.utc).astimezone().strftime("%Y-%m-%d_%H-%M-%S")
@@ -73,9 +105,12 @@ async def upload_file(
 
 @router.get("/download/{flow_id}/{file_name}")
 async def download_file(
-    file_name: str, flow_id: UUID, storage_service: Annotated[StorageService, Depends(get_storage_service)]
+    file_name: ValidatedFileName,
+    flow: Annotated[Flow, Depends(get_flow)],
+    storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
-    flow_id_str = str(flow_id)
+    # Authorization handled by get_flow dependency
+    flow_id_str = str(flow.id)
     extension = file_name.split(".")[-1]
 
     if not extension:
@@ -101,7 +136,11 @@ async def download_file(
 
 
 @router.get("/images/{flow_id}/{file_name}")
-async def download_image(file_name: str, flow_id: UUID):
+async def download_image(
+    file_name: ValidatedFileName,
+    flow_id: UUID,
+):
+    """Download image from storage for browser rendering."""
     storage_service = get_storage_service()
     extension = file_name.split(".")[-1]
     flow_id_str = str(flow_id)
@@ -129,41 +168,110 @@ async def download_image(file_name: str, flow_id: UUID):
 async def download_profile_picture(
     folder_name: str,
     file_name: str,
+    settings_service: Annotated[SettingsService, Depends(get_settings_service)],
 ):
+    """Download profile picture from local filesystem.
+
+    Profile pictures are first looked up in config_dir/profile_pictures/,
+    then fallback to the package's bundled profile_pictures directory.
+    """
     try:
-        storage_service = get_storage_service()
+        # SECURITY: Validate inputs to prevent path traversal attacks
+        # Reject any path components that contain directory traversal sequences
+        if ".." in folder_name or ".." in file_name:
+            raise HTTPException(
+                status_code=400, detail="Path traversal patterns ('..') are not allowed in folder or file names"
+            )
+
+        # Only allow specific folder names (dynamic from config + package)
+        allowed_folders = _get_allowed_profile_picture_folders(settings_service)
+        if folder_name not in allowed_folders:
+            raise HTTPException(status_code=400, detail=f"Folder must be one of: {', '.join(sorted(allowed_folders))}")
+
+        # Validate file name contains no path separators
+        if "/" in file_name or "\\" in file_name:
+            raise HTTPException(status_code=400, detail="File name cannot contain path separators ('/' or '\\')")
+
         extension = file_name.split(".")[-1]
-        config_dir = storage_service.settings_service.settings.config_dir
-        config_path = Path(config_dir)  # type: ignore[arg-type]
-        folder_path = config_path / "profile_pictures" / folder_name
+        config_dir = settings_service.settings.config_dir
+        config_path = Path(config_dir).resolve()  # type: ignore[arg-type]
+
+        # Construct the file path
+        file_path = (config_path / "profile_pictures" / folder_name / file_name).resolve()
+
+        # SECURITY: Verify the resolved path is still within the allowed directory
+        # This prevents path traversal even if symbolic links are involved
+        allowed_base = (config_path / "profile_pictures").resolve()
+        if not str(file_path).startswith(str(allowed_base)):
+            # Return 404 to prevent path traversal attempts from revealing system structure
+            raise HTTPException(status_code=404, detail="Profile picture not found")
+
+        # Fallback to package bundled profile pictures if not found in config_dir
+        if not file_path.exists():
+            from langflow.initial_setup import setup
+
+            package_base = Path(setup.__file__).parent / "profile_pictures"
+            package_path = (package_base / folder_name / file_name).resolve()
+
+            # SECURITY: Verify package path is also within allowed directory
+            allowed_package_base = package_base.resolve()
+            if not str(package_path).startswith(str(allowed_package_base)):
+                # Return 404 to prevent path traversal attempts from revealing system structure
+                raise HTTPException(status_code=404, detail="Profile picture not found")
+
+            if package_path.exists():
+                file_path = package_path
+            else:
+                raise HTTPException(status_code=404, detail=f"Profile picture {folder_name}/{file_name} not found")
+
         content_type = build_content_type_from_extension(extension)
-        file_content = await storage_service.get_file(flow_id=folder_path, file_name=file_name)  # type: ignore[arg-type]
+        # Read file directly from local filesystem using async file operations
+        file_content = await anyio.Path(file_path).read_bytes()
         return StreamingResponse(BytesIO(file_content), media_type=content_type)
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/profile_pictures/list")
-async def list_profile_pictures():
+async def list_profile_pictures(
+    settings_service: Annotated[SettingsService, Depends(get_settings_service)],
+):
+    """List profile pictures from local filesystem.
+
+    Profile pictures are first looked up in config_dir/profile_pictures/,
+    then fallback to the package's bundled profile_pictures directory.
+    """
     try:
-        storage_service = get_storage_service()
-        config_dir = storage_service.settings_service.settings.config_dir
+        config_dir = settings_service.settings.config_dir
         config_path = Path(config_dir)  # type: ignore[arg-type]
 
-        people_path = config_path / "profile_pictures/People"
-        space_path = config_path / "profile_pictures/Space"
+        # Build list for all allowed folders (dynamic)
+        allowed_folders = _get_allowed_profile_picture_folders(settings_service)
 
-        people = await storage_service.list_files(flow_id=people_path)  # type: ignore[arg-type]
-        space = await storage_service.list_files(flow_id=space_path)  # type: ignore[arg-type]
+        results: list[str] = []
+        cfg_base = config_path / "profile_pictures"
+        if cfg_base.exists():
+            for folder in sorted(allowed_folders):
+                p = cfg_base / folder
+                if p.exists():
+                    results += [f"{folder}/{f.name}" for f in p.iterdir() if f.is_file()]
 
+        # Fallback to package if config_dir produced no results
+        if not results:
+            from langflow.initial_setup import setup
+
+            package_base = Path(setup.__file__).parent / "profile_pictures"
+            for folder in sorted(allowed_folders):
+                p = package_base / folder
+                if p.exists():
+                    results += [f"{folder}/{f.name}" for f in p.iterdir() if f.is_file()]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
-    files = [f"People/{i}" for i in people]
-    files += [f"Space/{i}" for i in space]
-
-    return {"files": files}
+    return {"files": results}
 
 
 @router.get("/list/{flow_id}")
@@ -181,7 +289,7 @@ async def list_files(
 
 @router.delete("/delete/{flow_id}/{file_name}")
 async def delete_file(
-    file_name: str,
+    file_name: ValidatedFileName,
     flow: Annotated[Flow, Depends(get_flow)],
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):

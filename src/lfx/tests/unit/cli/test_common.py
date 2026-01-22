@@ -9,7 +9,6 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 import typer
-
 from lfx.cli.common import (
     create_verbose_printer,
     execute_graph_with_capture,
@@ -116,7 +115,7 @@ class TestApiKey:
 
     def test_get_api_key_success(self):
         """Test getting API key when it exists."""
-        with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-api-key"}):
+        with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-api-key"}):  # pragma: allowlist secret
             assert get_api_key() == "test-api-key"
 
     def test_get_api_key_not_set(self):
@@ -168,7 +167,8 @@ class TestFlowId:
 class TestLoadGraph:
     """Test graph loading functionality."""
 
-    def test_load_graph_from_path_success(self):
+    @pytest.mark.asyncio
+    async def test_load_graph_from_path_success(self):
         """Test successful graph loading from JSON."""
         mock_graph = MagicMock()
         mock_graph.nodes = [1, 2, 3]
@@ -177,21 +177,22 @@ class TestLoadGraph:
             verbose_print = Mock()
             path = Path("/test/flow.json")
 
-            result = load_graph_from_path(path, ".json", verbose_print, verbose=True)
+            result = await load_graph_from_path(path, ".json", verbose_print, verbose=True)
 
             assert result == mock_graph
             mock_load_flow.assert_called_once_with(path, disable_logs=False)
             verbose_print.assert_any_call(f"Analyzing JSON flow: {path}")
             verbose_print.assert_any_call("Loading JSON flow...")
 
-    def test_load_graph_from_path_failure(self):
+    @pytest.mark.asyncio
+    async def test_load_graph_from_path_failure(self):
         """Test graph loading failure."""
         with patch("lfx.cli.common.load_flow_from_json", side_effect=Exception("Load error")) as mock_load_flow:
             verbose_print = Mock()
             path = Path("/test/flow.json")
 
             with pytest.raises(typer.Exit) as exc_info:
-                load_graph_from_path(path, ".json", verbose_print, verbose=False)
+                await load_graph_from_path(path, ".json", verbose_print, verbose=False)
 
             assert exc_info.value.exit_code == 1
             mock_load_flow.assert_called_once_with(path, disable_logs=True)
@@ -234,7 +235,7 @@ class TestGraphExecution:
         mock_graph = MagicMock()
         mock_graph.async_start = mock_async_start
 
-        results, logs = await execute_graph_with_capture(mock_graph, "test input")
+        results, _ = await execute_graph_with_capture(mock_graph, "test input")
 
         assert len(results) == 1
         assert results[0].message.text == "Message text"

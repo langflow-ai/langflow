@@ -7,53 +7,91 @@ import Icon from "@site/src/components/icon";
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-This page provides information about Langflow logs, including logs for individual flows and the Langflow application itself.
+Langflow produces logs for individual flows and the Langflow application itself using the [structlog](https://www.structlog.org) library for logging.
 
-Langflow uses the `loguru` library for logging.
+The default, primary logfile is named `langflow.log`.
 
-The default logfile is named `langflow.log`.
-Langflow also produces logfiles for flows.
+Log files are stored in JSON format with structured metadata.
 
 ## Log storage
 
-The default logfile storage location depends on your operating system:
+Langflow logs are stored in the config directory specified in the `LANGFLOW_CONFIG_DIR` environment variable.
+The default config directory location depends on your operating system and installation method:
 
-- **macOS Desktop**:`/Users/<username>/.langflow/cache`
-- **Windows Desktop**:`C:\Users\<username>\AppData\Roaming\com.Langflow\cache`
-- **OSS macOS/Windows/Linux/WSL (`uv pip install`)**: `<path_to_venv>/lib/python3.12/site-packages/langflow/cache`
-- **OSS macOS/Windows/Linux/WSL (`git clone`)**: `<path_to_clone>/src/backend/base/langflow/cache`
+- **Langflow Desktop**:
 
-To customize log storage, see [Configure log options](#configure-log-options).
+    - **macOS**: `/Users/<username>/Library/Logs/com.LangflowDesktop`
+    - **Windows**: `C:\Users\<username>\AppData\Local\com.LangflowDesktop\logs`
 
-## Configure log options
+- **OSS Langflow**:
 
-Use [Langflow environment variables](/environment-variables) to configure logging options in your Langflow `.env` file, and then start Langflow with `uv run langflow run --env-file .env`.
+    - **macOS with `uv pip install`**: `/Users/<username>/Library/Caches/langflow`
+    - **Linux with `uv pip install`**: `/home/<username>/.cache/langflow`
+    - **Windows/WSL with `uv pip install`**: `C:\Users\<username>\AppData\Local\langflow\langflow\Cache`
+    - **macOS/Windows/Linux/WSL with `git clone`**: `<path_to_clone>/src/backend/base/langflow/`
 
-The following environment variables are available to configure logging:
+To customize log storage locations and behaviors, set the following [Langflow environment variables](/environment-variables) in your Langflow `.env` file, and then start Langflow with `uv run langflow run --env-file .env`:
 
-* `LANGFLOW_LOG_LEVEL`: Sets the log level as one of `DEBUG`, `ERROR` (default), `INFO`, `WARNING`, and `CRITICAL`. For example, `LANGFLOW_LOG_LEVEL=DEBUG`.
+| Variable | Format | Default | Description |
+|----------|--------|---------|-------------|
+| `LANGFLOW_CONFIG_DIR` | String | Varies | Set the Langflow configuration directory where files and logs are stored. Default path depends on your installation, as described in the preceding list. |
+| `LANGFLOW_LOG_LEVEL` | String | `ERROR` | Sets the log level as one of `DEBUG`, `ERROR`, `INFO`, `WARNING`, and `CRITICAL`. For example, `LANGFLOW_LOG_LEVEL=DEBUG`. |
+| `LANGFLOW_LOG_FILE` | String | Not set | Sets the log file storage location if you want to use a non-default location. For example, `LANGFLOW_LOG_FILE=path/to/logfile.log`. If not set, logs are written to stdout. |
+| `LANGFLOW_LOG_ENV` | String | `default` | This variable is the primary log format controller. `container`: JSON format for Docker/structured logging. `container_csv`: Key-value format for data analysis. `default` or unset: Uses `LANGFLOW_PRETTY_LOGS` to determine format. |
+| `LANGFLOW_PRETTY_LOGS` | Boolean | `True` | This variable controls log output format when `LANGFLOW_LOG_ENV=default` or unset. When `true`, uses structlog's [ConsoleRenderer](https://www.structlog.org/en/stable/console-output.html). When `false`, outputs logs in JSON format.  |
+| `LANGFLOW_LOG_FORMAT` | String | Not set | Switch between key-value format and console format. Set to `key_value` for key-value format or `console` to use structlog's [ConsoleRenderer](https://www.structlog.org/en/stable/console-output.html). This variable only works when `LANGFLOW_LOG_ENV=default` and `LANGFLOW_PRETTY_LOGS=true`. |
+| `LANGFLOW_LOG_ROTATION` | String | `1 day` | Controls when the log file is rotated, either based on time or file size. For time-based rotation, set to `1 day`, `12 hours`, or `1 week`. For size-based rotation, set to `10 MB` or `1 GB`. To disable rotation, set to `None`. If disabled, log files grow without limit. |
+| `LANGFLOW_ENABLE_LOG_RETRIEVAL` | Boolean | `False` | Enables retrieval of logs from your Langflow instance with [Logs endpoints](/api-logs). |
+| `LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE` | Integer | `10000` | Set the buffer size for log retrieval if `LANGFLOW_ENABLE_LOG_RETRIEVAL=True`. Must be greater than `0` for log retrieval to function. |
 
-* `LANGFLOW_LOG_FILE`: Sets the log file storage location if you want to use a non-default location.
-For example, `LANGFLOW_LOG_FILE=path/to/logfile.log`.
+## View logs in real-time
 
-* `LANGFLOW_LOG_ENV`: Controls log output and formatting.
+To monitor Langflow logs as they are generated, you can follow the log file:
 
-    * `LANGFLOW_LOG_ENV=container`: Outputs serialized JSON to stdout.
-    * `LANGFLOW_LOG_ENV=container_csv`: Outputs CSV-formatted plain text to stdout.
-    * `LANGFLOW_LOG_ENV=default` or unset: Outputs prettified output with [RichHandler](https://rich.readthedocs.io/en/stable/reference/logging.html).
+1. Change to your [Langflow config directory](#log-storage):
 
-* `LANGFLOW_LOG_ROTATION` controls when the log file is rotated, either based on time or file size. By default, logs are rotated every 1 day.
+    <Tabs groupId="cd-command">
+    <TabItem value="macOS" label="macOS" default>
 
-    * Time-based rotation: "1 day", "12 hours", "1 week"
-    * Size-based rotation: "10 MB", "1 GB"
-    * Disable rotation: "None" (log files will grow without limit)
+    ```bash
+    cd /Users/**USERNAME**/Library/Caches/langflow
+    ```
 
-A complete example `.env` file is available in the [Langflow repository](https://github.com/langflow-ai/langflow/blob/main/.env.example).
+    </TabItem>
+    <TabItem value="Windows" label="Windows">
+
+    ```cmd
+    cd C:\Users\**USERNAME**\AppData\Local\com.LangflowDesktop\logs
+    ```
+
+    </TabItem>
+    </Tabs>
+
+2. Tail the main log file:
+
+    <Tabs groupId="tail-command">
+    <TabItem value="macOS" label="macOS" default>
+
+    ```bash
+    tail -f langflow.log
+    ```
+
+    </TabItem>
+    <TabItem value="Windows" label="Windows">
+
+    ```cmd
+    Get-Content -Wait -Path langflow.log
+    ```
+
+    </TabItem>
+    </Tabs>
+
+    If you don't see new log entries, check that Langflow is running, and perform some actions to generate logs events. You can also check the terminal where you started Langflow to see if logs are being printed there.
 
 ## Flow and component logs
 
 After you run a flow, you can inspect the logs for the each component and flow run.
-For example, you can inspect `Message` objects ingested and generated by [**Input and Output** components](/components-io).
+For example, you can inspect `Message` objects ingested and generated by [Input and Output components](/chat-input-and-output).
 
 ### View flow logs
 
@@ -80,7 +118,7 @@ For example, the following `Message` data could be the output from a **Chat Inpu
 ```
 
 In the case of Input/Output components, the original input might not be structured as a `Message` object.
-For example, a **Language Model** component might pass a raw text response to a **Chat Output** component that is then transformed into a `Message` object.
+For example, a language model component can pass a raw text response to a **Chat Output** component that is then transformed into a `Message` object.
 
 You can find `.log` files for flows at your Langflow installation's log storage location.
 For filepaths, see [Log storage](#log-storage).
@@ -106,7 +144,7 @@ Follow the steps for your operating system.
 
 1. Open Terminal and run:
    ```bash
-   cd ~/Library/Logs/com.Langflow
+   cd ~/Library/Logs/com.LangflowDesktop
    ```
 
 2. To open the folder and view the log files, run the command:
@@ -115,27 +153,33 @@ Follow the steps for your operating system.
    ```
 
 3. Locate the `langflow.log` file.
+
 </TabItem>
 <TabItem value="windows" label="Windows">
 
 1. Open the Command Prompt (CMD), and then run the following command:
+
    ```cmd
-   cd %LOCALAPPDATA%\com.langflow\logs
+   cd %LOCALAPPDATA%\com.LangflowDesktop\cache
    ```
 
-2. To open the folder and view the log files, run the command:
+2. Open the folder and view the log files:
+
    ```cmd
    start .
    ```
 
 3. Locate the `langflow.log` file.
+
 </TabItem>
 </Tabs>
 
 You can use the log file to investigate the issue on your own, add context to a [GitHub Issue](/contributing-github-issues), or send it to [support](/luna-for-langflow) for debugging assistance.
 
 The log file is only created when Langflow Desktop runs. If you don't see a log file, try starting Langflow Desktop first, then check for the log file.
+
 ## See also
 
+* [Logs endpoints](/api-logs)
 * [Memory management options](/memory)
 * [Configure an external PostgreSQL database](/configuration-custom-database)

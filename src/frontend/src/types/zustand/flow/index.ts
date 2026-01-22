@@ -65,6 +65,8 @@ export type FlowStoreType = {
   dismissedNodes: string[];
   addDismissedNodes: (dismissedNodes: string[]) => void;
   removeDismissedNodes: (dismissedNodes: string[]) => void;
+  dismissedNodesLegacy: string[];
+  addDismissedNodesLegacy: (dismissedNodes: string[]) => void;
   //key x, y
   positionDictionary: { [key: number]: number };
   isPositionAvailable: (position: { x: number; y: number }) => boolean;
@@ -72,7 +74,7 @@ export type FlowStoreType = {
     [key: number]: number;
   }) => void;
   fitViewNode: (nodeId: string) => void;
-  autoSaveFlow: (() => void) | undefined;
+  autoSaveFlow: ((flow?: FlowType) => void) | undefined;
   componentsToUpdate: ComponentsToUpdateType[];
   setComponentsToUpdate: (
     update:
@@ -152,6 +154,10 @@ export type FlowStoreType = {
   cleanFlow: () => void;
   setFilterEdge: (newState) => void;
   getFilterEdge: any[];
+  setFilterComponent: (newState) => void;
+  getFilterComponent: string;
+  rightClickedNodeId: string | null;
+  setRightClickedNodeId: (nodeId: string | null) => void;
   onConnect: (connection: Connection) => void;
   unselectAll: () => void;
   playgroundPage: boolean;
@@ -289,4 +295,6 @@ export type FlowStoreType = {
   setHelperLineEnabled: (helperLineEnabled: boolean) => void;
   newChatOnPlayground: boolean;
   setNewChatOnPlayground: (newChat: boolean) => void;
+  stopNodeId: string | undefined;
+  setStopNodeId: (nodeId: string | undefined) => void;
 };

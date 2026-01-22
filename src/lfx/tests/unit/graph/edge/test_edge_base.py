@@ -1,7 +1,6 @@
 import re
 
 import pytest
-
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.graph.graph.base import Graph
 

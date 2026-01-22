@@ -11,10 +11,11 @@ from uuid import UUID
 
 from fastapi.encoders import jsonable_encoder
 from langchain_core.load import load
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
-from langchain_core.prompts.chat import BaseChatPromptTemplate, ChatPromptTemplate
-from langchain_core.prompts.prompt import PromptTemplate
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_serializer, field_validator
+
+if TYPE_CHECKING:
+    from langchain_core.prompts.chat import BaseChatPromptTemplate
 
 from lfx.base.prompts.utils import dict_values_to_string
 from lfx.log.logger import logger
@@ -26,12 +27,33 @@ from lfx.schema.properties import Properties, Source
 from lfx.schema.validators import timestamp_to_str, timestamp_to_str_validator
 from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI, MESSAGE_SENDER_NAME_USER, MESSAGE_SENDER_USER
 from lfx.utils.image import create_image_content_dict
+from lfx.utils.mustache_security import safe_mustache_render
 
 if TYPE_CHECKING:
     from lfx.schema.dataframe import DataFrame
 
 
 class Message(Data):
+    """Message schema for Langflow.
+
+    Message ID Semantics:
+    - Messages only have an ID after being stored in the database
+    - Messages that are skipped (via Component._should_skip_message) will NOT have an ID
+    - Always use get_id(), has_id(), or require_id() methods to safely access the ID
+    - Never access message.id directly without checking if it exists first
+
+    Safe ID Access Patterns:
+    - Use get_id() when ID may or may not exist (returns None if missing)
+    - Use has_id() to check if ID exists before operations that require it
+    - Use require_id() when ID is required (raises ValueError if missing)
+
+    Example:
+        message_id = message.get_id()  # Safe: returns None if no ID
+        if message.has_id():
+            # Safe to use message_id
+            do_something_with_id(message_id)
+    """
+
     model_config = ConfigDict(arbitrary_types_allowed=True)
     # Helper class to deal with image data
     text_key: str = "text"
@@ -40,6 +62,7 @@ class Message(Data):
     sender_name: str | None = None
     files: list[str | Image] | None = Field(default=[])
     session_id: str | UUID | None = Field(default="")
+    context_id: str | UUID | None = Field(default="")
     timestamp: Annotated[str, timestamp_to_str_validator] = Field(
         default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S %Z")
     )
@@ -108,7 +131,22 @@ class Message(Data):
     def model_post_init(self, /, _context: Any) -> None:
         new_files: list[Any] = []
         for file in self.files or []:
-            if is_image_file(file):
+            # Skip if already an Image instance
+            if isinstance(file, Image):
+                new_files.append(file)
+            # Get the path string if file is a dict or has path attribute
+            elif isinstance(file, dict) and "path" in file:
+                file_path = file["path"]
+                if file_path and is_image_file(file_path):
+                    new_files.append(Image(path=file_path))
+                else:
+                    new_files.append(file_path if file_path else file)
+            elif hasattr(file, "path") and file.path:
+                if is_image_file(file.path):
+                    new_files.append(Image(path=file.path))
+                else:
+                    new_files.append(file.path)
+            elif isinstance(file, str) and is_image_file(file):
                 new_files.append(Image(path=file))
             else:
                 new_files.append(file)
@@ -121,8 +159,12 @@ class Message(Data):
 
     def to_lc_message(
         self,
+        model_name: str | None = None,
     ) -> BaseMessage:
         """Converts the Data to a BaseMessage.
+
+        Args:
+            model_name: The model name to use for conversion. Optional.
 
         Returns:
             BaseMessage: The converted BaseMessage.
@@ -139,7 +181,8 @@ class Message(Data):
         if self.sender == MESSAGE_SENDER_USER or not self.sender:
             if self.files:
                 contents = [{"type": "text", "text": text}]
-                contents.extend(self.get_file_content_dicts())
+                file_contents = self.get_file_content_dicts(model_name)
+                contents.extend(file_contents)
                 human_message = HumanMessage(content=contents)
             else:
                 human_message = HumanMessage(content=text)
@@ -158,6 +201,9 @@ class Message(Data):
         elif lc_message.type == "system":
             sender = "System"
             sender_name = "System"
+        elif lc_message.type == "tool":
+            sender = "Tool"
+            sender_name = "Tool"
         else:
             sender = lc_message.type
             sender_name = lc_message.type
@@ -180,6 +226,7 @@ class Message(Data):
             sender_name=data.sender_name,
             files=data.files,
             session_id=data.session_id,
+            context_id=data.context_id,
             timestamp=data.timestamp,
             flow_id=data.flow_id,
             error=data.error,
@@ -193,15 +240,20 @@ class Message(Data):
         return value
 
     # Keep this async method for backwards compatibility
-    def get_file_content_dicts(self):
+    def get_file_content_dicts(self, model_name: str | None = None):
         content_dicts = []
-        files = get_file_paths(self.files)
+        try:
+            files = get_file_paths(self.files)
+        except Exception as e:  # noqa: BLE001
+            logger.error(f"Error getting file paths: {e}")
+            return content_dicts
 
         for file in files:
             if isinstance(file, Image):
-                content_dicts.append(file.to_content_dict())
+                # Pass the message's flow_id to the Image for proper path resolution
+                content_dicts.append(file.to_content_dict(flow_id=self.flow_id))
             else:
-                content_dicts.append(create_image_content_dict(file))
+                content_dicts.append(create_image_content_dict(file, None, model_name))
         return content_dicts
 
     def load_lc_prompt(self):
@@ -222,6 +274,8 @@ class Message(Data):
                     messages.append(SystemMessage(content=message.get("content")))
                 case _ if message.get("type") == "ai":
                     messages.append(AIMessage(content=message.get("content")))
+                case _ if message.get("type") == "tool":
+                    messages.append(ToolMessage(content=message.get("content")))
 
         self.prompt["kwargs"]["messages"] = messages
         return load(self.prompt)
@@ -234,24 +288,35 @@ class Message(Data):
         prompt_json = prompt.to_json()
         return cls(prompt=prompt_json)
 
-    def format_text(self):
-        prompt_template = PromptTemplate.from_template(self.template)
+    def format_text(self, template_format="f-string"):
+        if template_format == "mustache":
+            # Use our secure mustache renderer
+            variables_with_str_values = dict_values_to_string(self.variables)
+            formatted_prompt = safe_mustache_render(self.template, variables_with_str_values)
+            self.text = formatted_prompt
+            return formatted_prompt
+        # Use langchain's template for other formats
+        from langchain_core.prompts.prompt import PromptTemplate
+
+        prompt_template = PromptTemplate.from_template(self.template, template_format=template_format)
         variables_with_str_values = dict_values_to_string(self.variables)
         formatted_prompt = prompt_template.format(**variables_with_str_values)
         self.text = formatted_prompt
         return formatted_prompt
 
     @classmethod
-    async def from_template_and_variables(cls, template: str, **variables):
+    async def from_template_and_variables(cls, template: str, template_format: str = "f-string", **variables):
         # This method has to be async for backwards compatibility with versions
         # >1.0.15, <1.1
-        return cls.from_template(template, **variables)
+        return cls.from_template(template, template_format=template_format, **variables)
 
     # Define a sync version for backwards compatibility with versions >1.0.15, <1.1
     @classmethod
-    def from_template(cls, template: str, **variables):
+    def from_template(cls, template: str, template_format: str = "f-string", **variables):
+        from langchain_core.prompts.chat import ChatPromptTemplate
+
         instance = cls(template=template, variables=variables)
-        text = instance.format_text()
+        text = instance.format_text(template_format=template_format)
         message = HumanMessage(content=text)
         contents = []
         for value in variables.values():
@@ -270,7 +335,7 @@ class Message(Data):
     @classmethod
     async def create(cls, **kwargs):
         """If files are present, create the message in a separate thread as is_image_file is blocking."""
-        if "files" in kwargs:
+        if kwargs.get("files"):
             return await asyncio.to_thread(cls, **kwargs)
         return cls(**kwargs)
 
@@ -281,6 +346,50 @@ class Message(Data):
         from lfx.schema.dataframe import DataFrame  # Local import to avoid circular import
 
         return DataFrame(data=[self])
+
+    def get_id(self) -> str | UUID | None:
+        """Safely get the message ID.
+
+        Returns:
+            The message ID if it exists, None otherwise.
+
+        Note:
+            A message only has an ID if it has been stored in the database.
+            Messages that are skipped (via _should_skip_message) will not have an ID.
+        """
+        return getattr(self, "id", None)
+
+    def has_id(self) -> bool:
+        """Check if the message has an ID.
+
+        Returns:
+            True if the message has an ID, False otherwise.
+
+        Note:
+            A message only has an ID if it has been stored in the database.
+            Messages that are skipped (via _should_skip_message) will not have an ID.
+        """
+        message_id = getattr(self, "id", None)
+        return message_id is not None
+
+    def require_id(self) -> str | UUID:
+        """Get the message ID, raising an error if it doesn't exist.
+
+        Returns:
+            The message ID.
+
+        Raises:
+            ValueError: If the message does not have an ID.
+
+        Note:
+            Use this method when an ID is required for the operation.
+            For optional ID access, use get_id() instead.
+        """
+        message_id = getattr(self, "id", None)
+        if message_id is None:
+            msg = "Message does not have an ID. Messages only have IDs after being stored in the database."
+            raise ValueError(msg)
+        return message_id
 
 
 class DefaultModel(BaseModel):
@@ -312,6 +421,7 @@ class MessageResponse(DefaultModel):
     sender: str
     sender_name: str
     session_id: str
+    context_id: str | None = None
     text: str
     files: list[str] = []
     edit: bool
@@ -369,6 +479,7 @@ class MessageResponse(DefaultModel):
             sender_name=message.sender_name,
             text=message.text,
             session_id=message.session_id,
+            context_id=message.context_id,
             files=message.files or [],
             timestamp=message.timestamp,
             flow_id=flow_id,
@@ -419,6 +530,7 @@ class ErrorMessage(Message):
         self,
         exception: BaseException,
         session_id: str | None = None,
+        context_id: str | None = None,
         source: Source | None = None,
         trace_name: str | None = None,
         flow_id: UUID | str | None = None,
@@ -437,6 +549,7 @@ class ErrorMessage(Message):
 
         super().__init__(
             session_id=session_id,
+            context_id=context_id,
             sender=source.display_name if source else None,
             sender_name=source.display_name if source else None,
             text=plain_reason,

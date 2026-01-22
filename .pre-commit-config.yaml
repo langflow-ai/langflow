@@ -25,14 +25,44 @@ repos:
         language: system
         types_or: [python, pyi]
         args: [--config, pyproject.toml]
+      - id: validate-migrations
+        name: Validate Alembic Migrations (Expand-Contract)
+        entry: python src/backend/base/langflow/alembic/migration_validator.py
+        language: python
+        files: (alembic|migrations)/versions/.*\.py$
+        additional_dependencies: [sqlalchemy, alembic]
+        pass_filenames: true
+        always_run: false
+        verbose: true
+      - id: check-migration-phase
+        name: Check Migration Phase Documentation
+        entry: python -c "import sys, re; content = open(sys.argv[1]).read(); sys.exit(0 if re.search(r'Phase:\s*(EXPAND|MIGRATE|CONTRACT)', content) else 1)"
+        language: python
+        files: (alembic|migrations)/versions/.*\.py$
+        pass_filenames: true
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: ["--baseline", ".secrets.baseline"]
+        exclude: '(^docs/|^SECURITY\.md$|src/lfx/src/lfx/_assets/component_index\.json$)'
   - repo: local
     hooks:
       - id: local-biome-check
         name: biome check
-        entry: bash -c 'cd src/frontend && npx @biomejs/biome check --write --files-ignore-unknown=true --no-errors-on-unmatched --diagnostic-level=error'
+        entry: bash -c 'cd src/frontend && files=("${@#src/frontend/}") && npx @biomejs/biome check --write --files-ignore-unknown=true --diagnostic-level=error "${files[@]}"' --
         language: system
         types: [text]
-        files: "\\.(jsx?|tsx?|c(js|ts)|m(js|ts)|d\\.(ts|cts|mts)|jsonc?)$"
+        files: "^src/frontend/.*\\.(jsx?|tsx?|c(js|ts)|m(js|ts)|d\\.(ts|cts|mts)|jsonc?)$"
+        exclude: (^docs/|src/lfx/src/lfx/_assets/component_index\.json$)
+        pass_filenames: true
+      - id: biome-lint-no-any-staged
+        name: biome no-any check (staged only)
+        entry: bash -c 'cd src/frontend && npx @biomejs/biome lint --staged --diagnostic-level=error --no-errors-on-unmatched'
+        language: system
+        files: "^src/frontend/.*\\.(tsx?|ts)$"
+        exclude: (^docs/)
+        pass_filenames: false
       - id: validate-starter-projects
         name: Validate Starter Project Templates
         entry: uv run python src/backend/tests/unit/template/test_starter_projects.py
@@ -40,3 +70,9 @@ repos:
         files: ^src/backend/base/langflow/initial_setup/starter_projects/.*\.json$
         pass_filenames: false
         args: [--security-check]
+      - id: check-deprecated-imports
+        name: Check for deprecated langchain imports
+        entry: uv run python scripts/check_deprecated_imports.py
+        language: system
+        files: ^src/lfx/src/lfx/components/.*\.py$
+        pass_filenames: false

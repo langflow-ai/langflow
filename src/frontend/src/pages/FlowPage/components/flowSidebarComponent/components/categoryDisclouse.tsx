@@ -73,7 +73,7 @@ export const CategoryDisclosure = memo(function CategoryDisclosure({
               </span>
               <ForwardedIconComponent
                 name="ChevronRight"
-                className="-mr-1 h-4 w-4 text-muted-foreground transition-all group-aria-expanded/collapsible:rotate-90"
+                className="h-4 w-4 text-muted-foreground transition-all group-aria-expanded/collapsible:rotate-90"
               />
             </div>
           </SidebarMenuButton>

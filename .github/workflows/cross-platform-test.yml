@@ -33,7 +33,7 @@ jobs:
       main-artifact-name: ${{ steps.set-names.outputs.main-artifact-name }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Setup Environment
         uses: astral-sh/setup-uv@v6
         with:
@@ -56,12 +56,12 @@ jobs:
       - name: Build main package
         run: make build_langflow args="--wheel"
       - name: Upload base artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: adhoc-dist-base
           path: src/backend/base/dist
       - name: Upload main artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: adhoc-dist-main
           path: dist
@@ -92,11 +92,11 @@ jobs:
           # macOS AMD64
           - os: macos
             arch: amd64
-            runner: macos-13
+            runner: macos-latest-large
             python-version: "3.10"
           - os: macos
             arch: amd64
-            runner: macos-13
+            runner: macos-latest-large
             python-version: "3.12"
           # macOS ARM64 (Apple Silicon)
           - os: macos
@@ -134,7 +134,7 @@ jobs:
         shell: bash
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
           architecture: ${{ matrix.arch == 'amd64' && 'x64' || matrix.arch }}
@@ -145,24 +145,34 @@ jobs:
           enable-cache: false
           ignore-empty-workdir: true
 
+      - name: Install Protocol Buffers (macOS AMD64)
+        if: matrix.os == 'macos' && matrix.arch == 'amd64'
+        run: |
+          if ! command -v protoc &> /dev/null; then
+            brew install protobuf
+          else
+            echo "protoc already installed, skipping"
+          fi
+        shell: bash
+
       # Download artifacts for wheel installation
       - name: Download LFX package artifact
         if: steps.install-method.outputs.method == 'wheel' && inputs.lfx-artifact-name != ''
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ${{ inputs.lfx-artifact-name }}
           path: ./lfx-dist
 
       - name: Download base package artifact
         if: steps.install-method.outputs.method == 'wheel'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ${{ inputs.base-artifact-name || needs.build-if-needed.outputs.base-artifact-name || 'adhoc-dist-base' }}
           path: ./base-dist
 
       - name: Download main package artifact
         if: steps.install-method.outputs.method == 'wheel'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ${{ inputs.main-artifact-name || needs.build-if-needed.outputs.main-artifact-name || 'adhoc-dist-main' }}
           path: ./main-dist
@@ -194,7 +204,7 @@ jobs:
           find ./base-dist -name "*.whl" -type f
           WHEEL_FILE=$(find ./base-dist -name "*.whl" -type f | head -1)
           if [ -n "$WHEEL_FILE" ]; then
-            uv pip install --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
+            uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
           else
             echo "No wheel file found in ./base-dist/"
             exit 1
@@ -236,7 +246,7 @@ jobs:
           find ./base-dist -name "*.whl" -type f
           WHEEL_FILE=$(find ./base-dist -name "*.whl" -type f | head -1)
           if [ -n "$WHEEL_FILE" ]; then
-            uv pip install --python ./test-env/bin/python "$WHEEL_FILE"
+            uv pip install --prerelease=allow --python ./test-env/bin/python "$WHEEL_FILE"
           else
             echo "No wheel file found in ./base-dist/"
             exit 1
@@ -292,17 +302,16 @@ jobs:
         shell: bash
 
       # Test steps
-      - name: Test CLI help command (Windows)
+      - name: Test CLI help command
         if: matrix.os == 'windows'
         run: |
-          call test-env\Scripts\activate.bat
-          python -m langflow --help
+          uv run python -m langflow --help
         shell: cmd
 
       - name: Test CLI help command (Unix)
         if: matrix.os != 'windows'
         run: |
-          ./test-env/bin/python -m langflow --help
+          uv run python -m langflow --help
         shell: bash
 
       - name: Test server startup (Windows)
@@ -392,17 +401,17 @@ jobs:
             arch: amd64
             runner: ubuntu-latest
             python-version: "3.13"
+          - os: windows
+            arch: amd64
+            runner: windows-latest
+            python-version: "3.13"
           - os: macos
             arch: amd64
-            runner: macos-13
+            runner: macos-latest-large
             python-version: "3.13"
           - os: macos
             arch: arm64
             runner: macos-latest
-            python-version: "3.13"
-          - os: windows
-            arch: amd64
-            runner: windows-latest
             python-version: "3.13"
 
     steps:
@@ -422,7 +431,7 @@ jobs:
         shell: bash
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
           architecture: ${{ matrix.arch == 'amd64' && 'x64' || matrix.arch }}
@@ -433,24 +442,34 @@ jobs:
           enable-cache: false
           ignore-empty-workdir: true
 
+      - name: Install Protocol Buffers (macOS AMD64)
+        if: matrix.os == 'macos' && matrix.arch == 'amd64'
+        run: |
+          if ! command -v protoc &> /dev/null; then
+            brew install protobuf
+          else
+            echo "protoc already installed, skipping"
+          fi
+        shell: bash
+
       # Download artifacts for wheel installation
       - name: Download LFX package artifact
         if: steps.install-method.outputs.method == 'wheel' && inputs.lfx-artifact-name != ''
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ${{ inputs.lfx-artifact-name }}
           path: ./lfx-dist
 
       - name: Download base package artifact
         if: steps.install-method.outputs.method == 'wheel'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ${{ inputs.base-artifact-name || needs.build-if-needed.outputs.base-artifact-name || 'adhoc-dist-base' }}
           path: ./base-dist
 
       - name: Download main package artifact
         if: steps.install-method.outputs.method == 'wheel'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ${{ inputs.main-artifact-name || needs.build-if-needed.outputs.main-artifact-name || 'adhoc-dist-main' }}
           path: ./main-dist
@@ -482,7 +501,7 @@ jobs:
           find ./base-dist -name "*.whl" -type f
           WHEEL_FILE=$(find ./base-dist -name "*.whl" -type f | head -1)
           if [ -n "$WHEEL_FILE" ]; then
-            uv pip install --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
+            uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
           else
             echo "No wheel file found in ./base-dist/"
             exit 1
@@ -496,7 +515,7 @@ jobs:
           find ./main-dist -name "*.whl" -type f
           WHEEL_FILE=$(find ./main-dist -name "*.whl" -type f | head -1)
           if [ -n "$WHEEL_FILE" ]; then
-            uv pip install --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
+            uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
           else
             echo "No wheel file found in ./main-dist/"
             exit 1
@@ -524,7 +543,7 @@ jobs:
           find ./base-dist -name "*.whl" -type f
           WHEEL_FILE=$(find ./base-dist -name "*.whl" -type f | head -1)
           if [ -n "$WHEEL_FILE" ]; then
-            uv pip install --python ./test-env/bin/python "$WHEEL_FILE"
+            uv pip install --prerelease=allow --python ./test-env/bin/python "$WHEEL_FILE"
           else
             echo "No wheel file found in ./base-dist/"
             exit 1
@@ -583,14 +602,13 @@ jobs:
       - name: Test CLI help command (Windows)
         if: matrix.os == 'windows'
         run: |
-          call test-env\Scripts\activate.bat
-          python -m langflow --help
+          uv run python -m langflow --help
         shell: cmd
 
       - name: Test CLI help command (Unix)
         if: matrix.os != 'windows'
         run: |
-          ./test-env/bin/python -m langflow --help
+          uv run python -m langflow --help
         shell: bash
 
       - name: Test server startup (Windows)

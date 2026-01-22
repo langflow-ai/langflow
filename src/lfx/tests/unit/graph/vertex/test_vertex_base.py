@@ -6,9 +6,9 @@ which is responsible for processing and managing parameters in vertices.
 
 from unittest.mock import Mock
 
-import pandas as pd
 import pytest
-
+from ag_ui.core import StepFinishedEvent, StepStartedEvent
+from lfx.components.input_output import ChatInput
 from lfx.graph.edge.base import Edge
 from lfx.graph.vertex.base import ParameterHandler, Vertex
 from lfx.services.storage.service import StorageService
@@ -20,6 +20,7 @@ def mock_storage_service() -> Mock:
     """Create a mock storage service for testing."""
     storage = Mock(spec=StorageService)
     storage.build_full_path = Mock(return_value="/mocked/full/path")
+    storage.resolve_component_path = Mock(return_value="/mocked/full/path")
     return storage
 
 
@@ -251,8 +252,9 @@ def test_process_field_parameters_table_field(parameter_handler, mock_vertex):
     parameter_handler.template_dict = new_template
 
     params, _ = parameter_handler.process_field_parameters()
-    expected_df = pd.DataFrame(sample_data)
-    pd.testing.assert_frame_equal(params["table_field"], expected_df)
+
+    # The function returns the original list, not a DataFrame
+    assert params["table_field"] == sample_data
 
 
 def test_process_field_parameters_table_field_invalid(parameter_handler, mock_vertex):
@@ -263,3 +265,133 @@ def test_process_field_parameters_table_field_invalid(parameter_handler, mock_ve
 
     with pytest.raises(ValueError, match="Invalid value type"):
         parameter_handler.process_field_parameters()
+
+
+def test_vertex_before_callback_event():
+    """Test that Vertex.before_callback_event generates the correct StepStartedEvent payload."""
+    # Create a graph with a ChatInput component, which creates a vertex
+    from lfx.graph import Graph
+
+    chat_input = ChatInput(_id="test_vertex_id")
+    chat_output = ChatInput(_id="output_id")  # Need two components for Graph
+    graph = Graph(chat_input, chat_output, flow_id="test_flow")
+
+    # Get the vertex from the graph
+    vertex = graph.vertices[0]  # First vertex should be chat_input
+    assert vertex.id == "test_vertex_id"
+
+    # Call before_callback_event
+    event = vertex.before_callback_event()
+
+    # Assert the event is a StepStartedEvent
+    assert isinstance(event, StepStartedEvent)
+
+    # Assert the event has the correct step_name
+    assert event.step_name == vertex.display_name
+
+    # Assert the raw_event contains the langflow metrics
+    assert event.raw_event is not None
+    assert isinstance(event.raw_event, dict)
+    assert "langflow" in event.raw_event
+
+    # Assert the langflow metrics contain expected fields
+    langflow_metrics = event.raw_event["langflow"]
+    assert isinstance(langflow_metrics, dict)
+    assert "timestamp" in langflow_metrics
+    assert isinstance(langflow_metrics["timestamp"], float)
+    assert "component_id" in langflow_metrics
+    assert langflow_metrics["component_id"] == vertex.id
+    assert langflow_metrics["component_id"] == "test_vertex_id"
+
+
+def test_vertex_after_callback_event():
+    """Test that Vertex.after_callback_event generates the correct StepFinishedEvent payload."""
+    # Create a graph with a ChatInput component, which creates a vertex
+    from lfx.graph import Graph
+
+    chat_input = ChatInput(_id="test_vertex_id")
+    chat_output = ChatInput(_id="output_id")  # Need two components for Graph
+    graph = Graph(chat_input, chat_output, flow_id="test_flow")
+
+    # Get the vertex from the graph
+    vertex = graph.vertices[0]  # First vertex should be chat_input
+    assert vertex.id == "test_vertex_id"
+
+    # Call after_callback_event with a result
+    test_result = "test_result_value"
+    event = vertex.after_callback_event(result=test_result)
+
+    # Assert the event is a StepFinishedEvent
+    assert isinstance(event, StepFinishedEvent)
+
+    # Assert the event has the correct step_name
+    assert event.step_name == vertex.display_name
+
+    # Assert the raw_event contains the langflow metrics
+    assert event.raw_event is not None
+    assert isinstance(event.raw_event, dict)
+    assert "langflow" in event.raw_event
+
+    # Assert the langflow metrics contain expected fields
+    langflow_metrics = event.raw_event["langflow"]
+    assert isinstance(langflow_metrics, dict)
+    assert "timestamp" in langflow_metrics
+    assert isinstance(langflow_metrics["timestamp"], float)
+    assert "component_id" in langflow_metrics
+    assert langflow_metrics["component_id"] == vertex.id
+    assert langflow_metrics["component_id"] == "test_vertex_id"
+
+
+def test_vertex_raw_event_metrics():
+    """Test that Vertex.raw_event_metrics generates the correct metrics dictionary."""
+    # Create a graph with a ChatInput component, which creates a vertex
+    from lfx.graph import Graph
+
+    chat_input = ChatInput(_id="test_vertex_id")
+    chat_output = ChatInput(_id="output_id")  # Need two components for Graph
+    graph = Graph(chat_input, chat_output, flow_id="test_flow")
+
+    # Get the vertex from the graph
+    vertex = graph.vertices[0]  # First vertex should be chat_input
+    assert vertex.id == "test_vertex_id"
+
+    # Call raw_event_metrics with optional fields
+    metrics = vertex.raw_event_metrics({"custom_field": "custom_value"})
+
+    # Assert metrics is a dictionary
+    assert isinstance(metrics, dict)
+
+    # Assert timestamp is present and is a float
+    assert "timestamp" in metrics
+    assert isinstance(metrics["timestamp"], float)
+
+    # Assert custom field is present
+    assert "custom_field" in metrics
+    assert metrics["custom_field"] == "custom_value"
+
+
+def test_vertex_raw_event_metrics_no_optional_fields():
+    """Test that Vertex.raw_event_metrics works without optional fields."""
+    # Create a graph with a ChatInput component, which creates a vertex
+    from lfx.graph import Graph
+
+    chat_input = ChatInput(_id="test_vertex_id")
+    chat_output = ChatInput(_id="output_id")  # Need two components for Graph
+    graph = Graph(chat_input, chat_output, flow_id="test_flow")
+
+    # Get the vertex from the graph
+    vertex = graph.vertices[0]  # First vertex should be chat_input
+    assert vertex.id == "test_vertex_id"
+
+    # Call raw_event_metrics without optional fields (pass None)
+    metrics = vertex.raw_event_metrics(None)
+
+    # Assert metrics is a dictionary
+    assert isinstance(metrics, dict)
+
+    # Assert timestamp is present and is a float
+    assert "timestamp" in metrics
+    assert isinstance(metrics["timestamp"], float)
+
+    # The metrics should contain only timestamp when no optional fields are provided
+    assert len(metrics) == 1

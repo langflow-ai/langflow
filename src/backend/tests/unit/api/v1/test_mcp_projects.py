@@ -1,25 +1,55 @@
+import asyncio
+import json
+from contextlib import asynccontextmanager
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from fastapi import status
+from fastapi import HTTPException, status
 from httpx import AsyncClient
 from langflow.api.v1.mcp_projects import (
+    ProjectMCPServer,
+    _args_reference_urls,
     get_project_mcp_server,
     get_project_sse,
     init_mcp_servers,
     project_mcp_servers,
     project_sse_transports,
 )
-from langflow.services.auth.utils import get_password_hash
+from langflow.services.auth.utils import create_user_longterm_token, get_password_hash
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.folder import Folder
-from langflow.services.database.models.user import User
-from langflow.services.deps import session_scope
+from langflow.services.database.models.user.model import User
+from langflow.services.deps import get_settings_service
+from lfx.services.deps import session_scope
 from mcp.server.sse import SseServerTransport
+from sqlmodel import select
+
+from tests.unit.utils.mcp import project_session_manager_lifespan
 
 # Mark all tests in this module as asyncio
 pytestmark = pytest.mark.asyncio
+
+
+@pytest.mark.parametrize(
+    ("args", "urls", "expected"),
+    [
+        (None, ["https://langflow.local/sse"], False),
+        ([], ["https://langflow.local/sse"], False),
+        ([123, {"url": "foo"}], ["https://langflow.local/sse"], False),
+        (["https://langflow.local/sse", 42], ["https://langflow.local/sse"], True),
+        (["alpha", "beta"], [], False),
+    ],
+)
+def test_args_reference_urls_filters_strings_only(args, urls, expected):
+    assert _args_reference_urls(args, urls) is expected
+
+
+def test_args_reference_urls_matches_non_last_string_argument():
+    args = ["match-me", "other"]
+    urls = ["match-me"]
+    assert _args_reference_urls(args, urls) is True
 
 
 @pytest.fixture
@@ -62,6 +92,7 @@ class AsyncContextManagerMock:
         return (MagicMock(), MagicMock())
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
+        # No teardown required for this mock context manager in tests
         pass
 
 
@@ -75,6 +106,28 @@ def mock_sse_transport():
         transport_instance.handle_post_message = AsyncMock()
         mock.return_value = transport_instance
         yield transport_instance
+
+
+@pytest.fixture
+def mock_streamable_http_manager():
+    """Mock StreamableHTTPSessionManager used by ProjectMCPServer."""
+    with patch("langflow.api.v1.mcp_projects.StreamableHTTPSessionManager") as mock_class:
+        manager_instance = MagicMock()
+
+        # Mock the run() method to return an async context manager
+        async_cm = AsyncContextManagerMock()
+        manager_instance.run = MagicMock(return_value=async_cm)
+
+        async def _fake_handle_request(scope, receive, send):  # noqa: ARG001
+            await send({"type": "http.response.start", "status": 200, "headers": []})
+            await send({"type": "http.response.body", "body": b"", "more_body": False})
+
+        manager_instance.handle_request = AsyncMock(side_effect=_fake_handle_request)
+
+        # Make the class constructor return our mocked instance
+        mock_class.return_value = manager_instance
+
+        yield manager_instance
 
 
 @pytest.fixture(autouse=True)
@@ -108,7 +161,7 @@ async def other_test_user():
             is_superuser=False,
         )
         session.add(user)
-        await session.commit()
+        await session.flush()
         await session.refresh(user)
     yield user
     # Clean up
@@ -116,7 +169,6 @@ async def other_test_user():
         user = await session.get(User, user_id)
         if user:
             await session.delete(user)
-            await session.commit()
 
 
 @pytest.fixture
@@ -126,7 +178,7 @@ async def other_test_project(other_test_user):
     async with session_scope() as session:
         project = Folder(id=project_id, name="Other Test Project", user_id=other_test_user.id)
         session.add(project)
-        await session.commit()
+        await session.flush()
         await session.refresh(project)
     yield project
     # Clean up
@@ -134,13 +186,65 @@ async def other_test_project(other_test_user):
         project = await session.get(Folder, project_id)
         if project:
             await session.delete(project)
-            await session.commit()
+
+
+@pytest.fixture(autouse=True)
+def disable_mcp_composer_by_default():
+    """Auto-fixture to disable MCP Composer for all tests by default."""
+    with patch("langflow.api.v1.mcp_projects.get_settings_service") as mock_get_settings:
+        from langflow.services.deps import get_settings_service
+
+        real_service = get_settings_service()
+
+        # Create a mock that returns False for mcp_composer_enabled but delegates everything else
+        mock_service = MagicMock()
+        mock_service.settings = MagicMock()
+        mock_service.settings.mcp_composer_enabled = False
+
+        # Copy any other settings that might be needed
+        mock_service.auth_settings = real_service.auth_settings
+
+        mock_get_settings.return_value = mock_service
+        yield
+
+
+@pytest.fixture
+def enable_mcp_composer():
+    """Fixture to explicitly enable MCP Composer for specific tests."""
+    with patch("langflow.api.v1.mcp_projects.get_settings_service") as mock_get_settings:
+        from langflow.services.deps import get_settings_service
+
+        real_service = get_settings_service()
+
+        mock_service = MagicMock()
+        mock_service.settings = MagicMock()
+        mock_service.settings.mcp_composer_enabled = True
+
+        # Copy any other settings that might be needed
+        mock_service.auth_settings = real_service.auth_settings
+
+        mock_get_settings.return_value = mock_service
+        yield True
+
+
+async def test_handle_project_streamable_messages_success(
+    client: AsyncClient, user_test_project, mock_streamable_http_manager, logged_in_headers
+):
+    """Test successful handling of project messages over Streamable HTTP."""
+    response = await client.post(
+        f"api/v1/mcp/project/{user_test_project.id}/streamable",
+        headers=logged_in_headers,
+        json={"type": "test", "content": "message"},
+    )
+    assert response.status_code == status.HTTP_200_OK
+    # With StreamableHTTPSessionManager, it calls handle_request, not handle_post_message
+    mock_streamable_http_manager.handle_request.assert_called_once()
 
 
 async def test_handle_project_messages_success(
     client: AsyncClient, user_test_project, mock_sse_transport, logged_in_headers
 ):
-    """Test successful handling of project messages."""
+    """Test successful handling of project messages over SSE."""
     response = await client.post(
         f"api/v1/mcp/project/{user_test_project.id}",
         headers=logged_in_headers,
@@ -177,7 +281,7 @@ async def test_flow_for_update(active_user, user_test_project):
     async with session_scope() as session:
         flow = Flow(**flow_data)
         session.add(flow)
-        await session.commit()
+        await session.flush()
         await session.refresh(flow)
 
     yield flow
@@ -188,7 +292,6 @@ async def test_flow_for_update(active_user, user_test_project):
         flow = await session.get(Flow, flow_id)
         if flow:
             await session.delete(flow)
-            await session.commit()
 
 
 async def test_update_project_mcp_settings_success(
@@ -254,6 +357,7 @@ async def test_update_project_mcp_settings_other_user_project(
 ):
     """Test accessing a project belonging to another user."""
     # We're using the GET endpoint since it works correctly and tests the same security constraints
+    # This test disables MCP Composer to test JWT token-based access control
 
     # Try to access the other user's project using active_user's credentials
     response = await client.get(f"api/v1/mcp/project/{other_test_project.id}/sse", headers=logged_in_headers)
@@ -261,6 +365,21 @@ async def test_update_project_mcp_settings_other_user_project(
     # Verify the response
     assert response.status_code == 404
     assert response.json()["detail"] == "Project not found"
+
+
+async def test_update_project_mcp_settings_other_user_project_with_composer(
+    client: AsyncClient, other_test_project, logged_in_headers, enable_mcp_composer
+):
+    """Test accessing a project belonging to another user when MCP Composer is enabled."""
+    # When MCP Composer is enabled, JWT tokens are not accepted for MCP endpoints
+    assert enable_mcp_composer  # Fixture ensures MCP Composer is enabled
+
+    # Try to access the other user's project using active_user's JWT credentials
+    response = await client.get(f"api/v1/mcp/project/{other_test_project.id}/sse", headers=logged_in_headers)
+
+    # Verify the response - should get 401 because JWT tokens aren't accepted
+    assert response.status_code == 401
+    assert "API key required" in response.json()["detail"]
 
 
 async def test_update_project_mcp_settings_empty_settings(client: AsyncClient, user_test_project, logged_in_headers):
@@ -322,7 +441,6 @@ async def test_user_data_isolation_with_real_db(
 
         # Add flow to database
         session.add(second_flow)
-        await session.commit()
 
     try:
         # Test that first user can't see the project
@@ -342,7 +460,6 @@ async def test_user_data_isolation_with_real_db(
             second_flow = await session.get(Flow, second_flow_id)
             if second_flow:
                 await session.delete(second_flow)
-                await session.commit()
 
 
 @pytest.fixture
@@ -352,7 +469,7 @@ async def user_test_project(active_user):
     async with session_scope() as session:
         project = Folder(id=project_id, name="User Test Project", user_id=active_user.id)
         session.add(project)
-        await session.commit()
+        await session.flush()
         await session.refresh(project)
     yield project
     # Clean up
@@ -360,7 +477,6 @@ async def user_test_project(active_user):
         project = await session.get(Folder, project_id)
         if project:
             await session.delete(project)
-            await session.commit()
 
 
 @pytest.fixture
@@ -379,7 +495,7 @@ async def user_test_flow(active_user, user_test_project):
             user_id=active_user.id,
         )
         session.add(flow)
-        await session.commit()
+        await session.flush()
         await session.refresh(flow)
     yield flow
     # Clean up
@@ -387,7 +503,6 @@ async def user_test_flow(active_user, user_test_project):
         flow = await session.get(Flow, flow_id)
         if flow:
             await session.delete(flow)
-            await session.commit()
 
 
 async def test_user_can_update_own_flow_mcp_settings(
@@ -537,6 +652,7 @@ async def test_project_sse_creation(user_test_project):
     # Verify the server was created correctly
     assert project_id_str in project_mcp_servers
     assert mcp_server is project_mcp_servers[project_id_str]
+    assert isinstance(mcp_server, ProjectMCPServer)
     assert mcp_server.project_id == project_id
     assert mcp_server.server.name == f"langflow-mcp-project-{project_id}"
 
@@ -546,6 +662,114 @@ async def test_project_sse_creation(user_test_project):
 
     assert sse_transport2 is sse_transport
     assert mcp_server2 is mcp_server
+    # Yield control to the event loop to satisfy async usage in this test
+    await asyncio.sleep(0)
+
+
+async def test_project_session_manager_lifespan_handles_cleanup(user_test_project, monkeypatch):
+    """Session manager contexts should be cleaned up automatically via shared lifespan stack."""
+    project_mcp_servers.clear()
+    lifecycle_events: list[str] = []
+
+    @asynccontextmanager
+    async def fake_run():
+        lifecycle_events.append("enter")
+        try:
+            yield
+        finally:
+            lifecycle_events.append("exit")
+
+    monkeypatch.setattr(
+        "langflow.api.v1.mcp_projects.StreamableHTTPSessionManager.run",
+        lambda self: fake_run(),  # noqa: ARG005
+    )
+
+    async with project_session_manager_lifespan():
+        server = get_project_mcp_server(user_test_project.id)
+        await server.ensure_session_manager_running()
+        assert lifecycle_events == ["enter"]
+
+    assert lifecycle_events == ["enter", "exit"]
+
+
+def _prepare_install_test_env(monkeypatch, tmp_path, filename="cursor.json"):
+    config_path = tmp_path / filename
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+
+    monkeypatch.setattr("langflow.api.v1.mcp_projects.get_client_ip", lambda request: "127.0.0.1")  # noqa: ARG005
+
+    async def fake_get_config_path(client_name):  # noqa: ARG001
+        return config_path
+
+    monkeypatch.setattr("langflow.api.v1.mcp_projects.get_config_path", fake_get_config_path)
+    monkeypatch.setattr("langflow.api.v1.mcp_projects.platform.system", lambda: "Linux")
+    monkeypatch.setattr("langflow.api.v1.mcp_projects.should_use_mcp_composer", lambda project: False)  # noqa: ARG005
+
+    async def fake_streamable(project_id):
+        return f"https://langflow.local/api/v1/mcp/project/{project_id}/streamable"
+
+    async def fake_sse(project_id):
+        return f"https://langflow.local/api/v1/mcp/project/{project_id}/sse"
+
+    monkeypatch.setattr("langflow.api.v1.mcp_projects.get_project_streamable_http_url", fake_streamable)
+    monkeypatch.setattr("langflow.api.v1.mcp_projects.get_project_sse_url", fake_sse)
+
+    class DummyAuth:
+        AUTO_LOGIN = True
+        SUPERUSER = True
+
+    dummy_settings = SimpleNamespace(host="localhost", port=9999, mcp_composer_enabled=False)
+    dummy_service = SimpleNamespace(settings=dummy_settings, auth_settings=DummyAuth())
+    monkeypatch.setattr("langflow.api.v1.mcp_projects.get_settings_service", lambda: dummy_service)
+
+    return config_path
+
+
+async def test_install_mcp_config_defaults_to_sse_transport(
+    client: AsyncClient,
+    user_test_project,
+    logged_in_headers,
+    tmp_path,
+    monkeypatch,
+):
+    config_path = _prepare_install_test_env(monkeypatch, tmp_path, "cursor_sse.json")
+
+    response = await client.post(
+        f"/api/v1/mcp/project/{user_test_project.id}/install",
+        headers=logged_in_headers,
+        json={"client": "cursor"},
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    installed_config = json.loads(config_path.read_text())
+    server_name = "lf-user_test_project"
+    args = installed_config["mcpServers"][server_name]["args"]
+    assert "--transport" not in args
+    assert args[-1].endswith("/sse")
+
+
+async def test_install_mcp_config_streamable_transport(
+    client: AsyncClient,
+    user_test_project,
+    logged_in_headers,
+    tmp_path,
+    monkeypatch,
+):
+    config_path = _prepare_install_test_env(monkeypatch, tmp_path, "cursor_streamable.json")
+
+    response = await client.post(
+        f"/api/v1/mcp/project/{user_test_project.id}/install",
+        headers=logged_in_headers,
+        json={"client": "cursor", "transport": "streamablehttp"},
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    installed_config = json.loads(config_path.read_text())
+    server_name = "lf-user_test_project"
+    args = installed_config["mcpServers"][server_name]["args"]
+    assert "--transport" in args
+    assert "streamablehttp" in args
+    assert args[-1].endswith("/streamable")
 
 
 async def test_init_mcp_servers(user_test_project, other_test_project):
@@ -572,13 +796,15 @@ async def test_init_mcp_servers(user_test_project, other_test_project):
     # Verify the correct configuration
     assert isinstance(project_sse_transports[project1_id], SseServerTransport)
     assert isinstance(project_sse_transports[project2_id], SseServerTransport)
+    assert isinstance(project_mcp_servers[project1_id], ProjectMCPServer)
+    assert isinstance(project_mcp_servers[project2_id], ProjectMCPServer)
 
     assert project_mcp_servers[project1_id].project_id == user_test_project.id
     assert project_mcp_servers[project2_id].project_id == other_test_project.id
 
 
 async def test_init_mcp_servers_error_handling():
-    """Test that init_mcp_servers handles errors correctly and continues initialization."""
+    """Test that init_mcp_servers handles SSE errors correctly and continues initialization."""
     # Clear existing caches
     project_sse_transports.clear()
     project_mcp_servers.clear()
@@ -597,3 +823,157 @@ async def test_init_mcp_servers_error_handling():
     with patch("langflow.api.v1.mcp_projects.get_project_sse", side_effect=mock_get_project_sse):
         # This should not raise any exception, as the error should be caught
         await init_mcp_servers()
+
+
+async def test_init_mcp_servers_error_handling_streamable():
+    """Test that init_mcp_servers handles MCP server errors correctly and continues initialization."""
+    # Clear existing caches
+    project_mcp_servers.clear()
+
+    # Create a mock to simulate an error when initializing one project
+    original_get_project_mcp_server = get_project_mcp_server
+
+    def mock_get_project_mcp_server(project_id):
+        # Raise an exception for the first project only
+        if not project_mcp_servers:  # Only for the first project
+            msg = "Test error for project MCP server creation"
+            raise ValueError(msg)
+        return original_get_project_mcp_server(project_id)
+
+    # Apply the patch
+    with patch("langflow.api.v1.mcp_projects.get_project_mcp_server", side_effect=mock_get_project_mcp_server):
+        # This should not raise any exception, as the error should be caught
+        await init_mcp_servers()
+
+
+async def test_list_project_tools_with_mcp_enabled_filter(
+    client: AsyncClient, user_test_project, active_user, logged_in_headers
+):
+    """Test that the list_project_tools endpoint correctly filters by mcp_enabled parameter."""
+    # Create two flows: one with mcp_enabled=True and one with mcp_enabled=False
+    enabled_flow_id = uuid4()
+    disabled_flow_id = uuid4()
+
+    async with session_scope() as session:
+        # Create an MCP-enabled flow
+        enabled_flow = Flow(
+            id=enabled_flow_id,
+            name="Enabled Flow",
+            description="This flow is MCP enabled",
+            mcp_enabled=True,
+            action_name="enabled_action",
+            action_description="Enabled action description",
+            folder_id=user_test_project.id,
+            user_id=active_user.id,
+        )
+        # Create an MCP-disabled flow
+        disabled_flow = Flow(
+            id=disabled_flow_id,
+            name="Disabled Flow",
+            description="This flow is MCP disabled",
+            mcp_enabled=False,
+            action_name="disabled_action",
+            action_description="Disabled action description",
+            folder_id=user_test_project.id,
+            user_id=active_user.id,
+        )
+        session.add(enabled_flow)
+        session.add(disabled_flow)
+        await session.flush()
+
+    try:
+        # Test 1: With mcp_enabled=True (default), should only return enabled flows
+        response = await client.get(
+            f"/api/v1/mcp/project/{user_test_project.id}",
+            headers=logged_in_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "tools" in data
+        tools = data["tools"]
+        # Should only include the enabled flow
+        assert len(tools) == 1
+        assert tools[0]["name"] == "Enabled Flow"
+        assert tools[0]["action_name"] == "enabled_action"
+
+        # Test 2: With mcp_enabled=True explicitly, should only return enabled flows
+        response = await client.get(
+            f"/api/v1/mcp/project/{user_test_project.id}?mcp_enabled=true",
+            headers=logged_in_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        tools = data["tools"]
+        assert len(tools) == 1
+        assert tools[0]["name"] == "Enabled Flow"
+
+        # Test 3: With mcp_enabled=False, should return all flows
+        response = await client.get(
+            f"/api/v1/mcp/project/{user_test_project.id}?mcp_enabled=false",
+            headers=logged_in_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        tools = data["tools"]
+        # Should include both flows
+        assert len(tools) == 2
+        flow_names = {tool["name"] for tool in tools}
+        assert "Enabled Flow" in flow_names
+        assert "Disabled Flow" in flow_names
+
+    finally:
+        # Clean up flows
+        async with session_scope() as session:
+            enabled_flow = await session.get(Flow, enabled_flow_id)
+            if enabled_flow:
+                await session.delete(enabled_flow)
+            disabled_flow = await session.get(Flow, disabled_flow_id)
+            if disabled_flow:
+                await session.delete(disabled_flow)
+
+
+async def test_list_project_tools_response_structure(client: AsyncClient, user_test_project, logged_in_headers):
+    """Test that the list_project_tools endpoint returns the correct MCPProjectResponse structure."""
+    response = await client.get(
+        f"/api/v1/mcp/project/{user_test_project.id}",
+        headers=logged_in_headers,
+    )
+    assert response.status_code == 200
+    data = response.json()
+
+    # Verify response structure matches MCPProjectResponse
+    assert "tools" in data
+    assert "auth_settings" in data
+    assert isinstance(data["tools"], list)
+
+    # Verify tool structure
+    if len(data["tools"]) > 0:
+        tool = data["tools"][0]
+        assert "id" in tool
+        assert "name" in tool
+        assert "description" in tool
+        assert "action_name" in tool
+        assert "action_description" in tool
+        assert "mcp_enabled" in tool
+
+
+@pytest.mark.asyncio
+async def test_mcp_longterm_token_fails_without_superuser():
+    """When AUTO_LOGIN is false and no superuser exists, creating a long-term token should raise 400.
+
+    This simulates a clean DB with AUTO_LOGIN disabled and without provisioning a superuser.
+    """
+    settings_service = get_settings_service()
+    settings_service.auth_settings.AUTO_LOGIN = False
+
+    # Ensure no superuser exists in DB
+    async with session_scope() as session:
+        result = await session.exec(select(User).where(User.is_superuser == True))  # noqa: E712
+        users = result.all()
+        for user in users:
+            await session.delete(user)
+
+    # Now attempt to create long-term token -> expect HTTPException 400
+    async with session_scope() as session:
+        with pytest.raises(HTTPException, match="Auto login required to create a long-term token"):
+            await create_user_longterm_token(session)

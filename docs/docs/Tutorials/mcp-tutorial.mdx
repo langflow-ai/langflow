@@ -6,6 +6,7 @@ slug: /mcp-tutorial
 import Icon from "@site/src/components/icon";
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import McpIcon from '@site/static/logos/mcp-icon.svg';
 
 This tutorial shows you how to connect MCP servers to your applications using Langflow's [**MCP Tools** component](/mcp-client).
 
@@ -83,6 +84,10 @@ You need one **MCP Tools** component for each MCP server that you want your flow
 
 3. Click the **MCP Tools** component, and then click <Icon name="Plus" aria-hidden="true"/> **Add MCP Server**.
 
+    :::tip
+    To manage all of your MCP server connections, click <McpIcon /> **MCP servers** in the visual editor, or click your profile icon, select **Settings**, and then click **MCP Servers**.
+    :::
+
 4. In the **Add MCP Server** pane, provide the server startup command and arguments to connect the weather MCP server to your flow. For this tutorial, use either the **JSON** or **STDIO** option.
 
     Langflow runs the command to launch the server when the agent determines that it needs to use a tool provided by that server.
@@ -143,7 +148,7 @@ You need one **MCP Tools** component for each MCP server that you want your flow
 
 7. To test the weather MCP server, click <Icon name="Play" aria-hidden="true" /> **Playground**, and then ask the LLM `Is it safe to go hiking in the Adirondacks today?`
 
-    The  **Playground** shows you the agent's logic as it analyzes the request and select tools to use.
+    The **Playground** shows you the agent's logic as it analyzes the request and select tools to use.
 
     Ideally, the agent's response will be more specific than the previous response because of the additional context provided by the weather MCP server.
     For example:
@@ -157,7 +162,7 @@ You need one **MCP Tools** component for each MCP server that you want your flow
 
     This is a better response, but what makes this MCP server more valuable than just calling a weather API?
 
-    First, MCP servers are often customized for specific tasks, such as highly specialized actions or chained tools for complex, multi-step problem solving.
+    MCP servers are often customized for specific tasks, such as highly specialized actions or chained tools for complex, multi-step problem solving.
     Typically, you would have to write a custom script for a specific task, possibly including multiple API calls in a single script, and then you would have to either execute this script outside the context of the agent or provide it to your agent in some way.
 
     Instead, the MCP ensures that all MCP servers are added to agents in the same way, without having to know each server's specific endpoint structures or write custom integrations.

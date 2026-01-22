@@ -2,6 +2,7 @@ import type {
   ColDef,
   RowClickedEvent,
   SelectionChangedEvent,
+  ValueFormatterParams,
 } from "ag-grid-community";
 import { useRef, useState } from "react";
 
@@ -62,6 +63,14 @@ export default function GlobalVariablesPage() {
     },
     {
       field: "value",
+      valueFormatter: (params: ValueFormatterParams<GlobalVariable>) => {
+        const isCreditential = params.data?.type === "Credential";
+
+        if (isCreditential) {
+          return "*****";
+        }
+        return params.value ?? "";
+      },
     },
     {
       headerName: "Apply To Fields",
@@ -105,7 +114,10 @@ export default function GlobalVariablesPage() {
     <div className="flex h-full w-full flex-col justify-between gap-6">
       <div className="flex w-full items-start justify-between gap-6">
         <div className="flex w-full flex-col">
-          <h2 className="flex items-center text-lg font-semibold tracking-tight">
+          <h2
+            className="flex items-center text-lg font-semibold tracking-tight"
+            data-testid="settings_menu_header"
+          >
             Global Variables
             <ForwardedIconComponent
               name="Globe"

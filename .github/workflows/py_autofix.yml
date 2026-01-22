@@ -3,6 +3,8 @@ on:
   pull_request:
     paths:
       - "**/*.py"
+      - "src/lfx/src/lfx/components/**"
+      - "scripts/build_component_index.py"
 env:
   PYTHON_VERSION: "3.13"
 
@@ -10,9 +12,10 @@ env:
 jobs:
   lint:
     name: Run Ruff Check and Format
+    if: ${{ github.actor != 'github-actions[bot]' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: "Setup Environment"
         uses: astral-sh/setup-uv@v6
         with:
@@ -27,9 +30,10 @@ jobs:
 
   update-starter-projects:
     name: Update Starter Projects
+    if: ${{ github.actor != 'github-actions[bot]' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: "Setup Environment"
         uses: astral-sh/setup-uv@v6
         with:
@@ -45,6 +49,31 @@ jobs:
 
       - name: Run starter projects update
         run: uv run python scripts/ci/update_starter_projects.py
+
+      - uses: autofix-ci/action@635ffb0c9798bd160680f18fd73371e355b85f27
+
+
+  update-component-index:
+    name: Update Component Index
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: "Setup Environment"
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: ${{ env.PYTHON_VERSION }}
+          prune-cache: false
+
+      - name: "Install dependencies"
+        run: uv sync --dev --project .
+
+      - name: Build component index
+        env:
+          LFX_DEV: "1"
+        run: make build_component_index
 
       - uses: autofix-ci/action@635ffb0c9798bd160680f18fd73371e355b85f27
 

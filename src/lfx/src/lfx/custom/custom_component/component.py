@@ -36,6 +36,7 @@ from lfx.schema.data import Data
 from lfx.schema.log import Log
 from lfx.schema.message import ErrorMessage, Message
 from lfx.schema.properties import Source
+from lfx.serialization.serialization import serialize
 from lfx.template.field.base import UNDEFINED, Input, Output
 from lfx.template.frontend_node.custom_components import ComponentFrontendNode
 from lfx.utils.async_helpers import run_until_complete
@@ -93,6 +94,20 @@ class PlaceholderGraph(NamedTuple):
     context: dict
     flow_name: str | None
 
+    def get_vertex_neighbors(self, _vertex) -> dict:
+        """Returns an empty dictionary since PlaceholderGraph has no edges or neighbors.
+
+        This method exists for compatibility with real Graph objects, allowing components
+        to check graph connectivity even when running in isolation (e.g., in tests).
+
+        Args:
+            _vertex: The vertex to check neighbors for (ignored in placeholder context).
+
+        Returns:
+            An empty dictionary, indicating no neighbors exist.
+        """
+        return {}
+
 
 class Component(CustomComponent):
     inputs: list[InputTypes] = []
@@ -121,6 +136,7 @@ class Component(CustomComponent):
         self._components: list[Component] = []
         self._event_manager: EventManager | None = None
         self._state_model = None
+        self._telemetry_input_values: dict[str, Any] | None = None
 
         # Process input kwargs
         inputs = {}
@@ -154,7 +170,7 @@ class Component(CustomComponent):
             self.trace_type = "chain"
 
         # Setup inputs and outputs
-        self._reset_all_output_values()
+        self.reset_all_output_values()
         if self.inputs is not None:
             self.map_inputs(self.inputs)
         self.map_outputs()
@@ -330,7 +346,8 @@ class Component(CustomComponent):
     def set_event_manager(self, event_manager: EventManager | None = None) -> None:
         self._event_manager = event_manager
 
-    def _reset_all_output_values(self) -> None:
+    def reset_all_output_values(self) -> None:
+        """Reset all output values to UNDEFINED."""
         if isinstance(self._outputs_map, dict):
             for output in self._outputs_map.values():
                 output.value = UNDEFINED
@@ -527,6 +544,8 @@ class Component(CustomComponent):
             ValueError: If the input name is None.
 
         """
+        telemetry_values = {}
+
         for input_ in inputs:
             if input_.name is None:
                 msg = self.build_component_error_message("Input name cannot be None")
@@ -535,6 +554,28 @@ class Component(CustomComponent):
                 self._inputs[input_.name] = deepcopy(input_)
             except TypeError:
                 self._inputs[input_.name] = input_
+
+            # Build telemetry data during existing iteration (no performance impact)
+            if self._should_track_input(input_):
+                telemetry_values[input_.name] = serialize(input_.value)
+
+        # Cache for later O(1) retrieval
+        self._telemetry_input_values = telemetry_values if telemetry_values else None
+
+    def _should_track_input(self, input_obj: InputTypes) -> bool:
+        """Check if input should be tracked in telemetry."""
+        from lfx.inputs.input_mixin import SENSITIVE_FIELD_TYPES
+
+        # Respect opt-in flag (default: False for privacy)
+        if not getattr(input_obj, "track_in_telemetry", False):
+            return False
+        # Auto-exclude sensitive field types
+        return not (hasattr(input_obj, "field_type") and input_obj.field_type in SENSITIVE_FIELD_TYPES)
+
+    def get_telemetry_input_values(self) -> dict[str, Any] | None:
+        """Get cached telemetry input values. O(1) lookup, no iteration."""
+        # Return all values including descriptive strings and None
+        return self._telemetry_input_values if self._telemetry_input_values else None
 
     def validate(self, params: dict) -> None:
         """Validates the component parameters.
@@ -550,7 +591,10 @@ class Component(CustomComponent):
         self._validate_outputs()
 
     async def run_and_validate_update_outputs(self, frontend_node: dict, field_name: str, field_value: Any):
-        frontend_node = self.update_outputs(frontend_node, field_name, field_value)
+        if inspect.iscoroutinefunction(self.update_outputs):
+            frontend_node = await self.update_outputs(frontend_node, field_name, field_value)
+        else:
+            frontend_node = self.update_outputs(frontend_node, field_name, field_value)
         if field_name == "tool_mode" or frontend_node.get("tool_mode"):
             is_tool_mode = field_value or frontend_node.get("tool_mode")
             frontend_node["outputs"] = [self._build_tool_output()] if is_tool_mode else frontend_node["outputs"]
@@ -1311,7 +1355,7 @@ class Component(CustomComponent):
     def _get_fallback_input(self, **kwargs):
         return Input(**kwargs)
 
-    def to_toolkit(self) -> list[Tool]:
+    async def to_toolkit(self) -> list[Tool]:
         """Convert component to a list of tools.
 
         This is a template method that defines the skeleton of the toolkit creation
@@ -1325,7 +1369,11 @@ class Component(CustomComponent):
                 - tags: List of tags associated with the tool
         """
         # Get tools from subclass implementation
-        tools = self._get_tools()
+        # Handle both sync and async _get_tools methods
+        if asyncio.iscoroutinefunction(self._get_tools):
+            tools = await self._get_tools()
+        else:
+            tools = self._get_tools()
 
         if hasattr(self, TOOLS_METADATA_INPUT_NAME):
             tools = self._filter_tools_by_status(tools=tools, metadata=self.tools_metadata)
@@ -1334,7 +1382,7 @@ class Component(CustomComponent):
         # If no metadata exists yet, filter based on enabled_tools
         return self._filter_tools_by_status(tools=tools, metadata=None)
 
-    def _get_tools(self) -> list[Tool]:
+    async def _get_tools(self) -> list[Tool]:
         """Get the list of tools for this component.
 
         This method can be overridden by subclasses to provide custom tool implementations.
@@ -1421,6 +1469,7 @@ class Component(CustomComponent):
         tools = []
         try:
             # Handle both sync and async _get_tools methods
+            # TODO: this check can be remomved ince get tools is async
             if asyncio.iscoroutinefunction(self._get_tools):
                 tools = await self._get_tools()
             else:
@@ -1507,8 +1556,33 @@ class Component(CustomComponent):
 
         return has_chat_output(self.graph.get_vertex_neighbors(self._vertex))
 
+    def is_connected_to_chat_input(self) -> bool:
+        # Lazy import to avoid circular dependency
+        from lfx.graph.utils import has_chat_input
+
+        if self.graph is None:
+            return False
+        return has_chat_input(self.graph.get_vertex_neighbors(self._vertex))
+
     def _should_skip_message(self, message: Message) -> bool:
-        """Check if the message should be skipped based on vertex configuration and message type."""
+        """Check if the message should be skipped based on vertex configuration and message type.
+
+        When a message is skipped:
+        - It is NOT stored in the database
+        - It will NOT have an ID (message.get_id() will return None)
+        - It is still returned to the caller, but no events are sent to the frontend
+
+        Messages are skipped when:
+        - The component is not an input or output vertex
+        - The component is not connected to a Chat Output
+        - The message is not an ErrorMessage
+
+        This prevents intermediate components from cluttering the database with messages
+        that aren't meant to be displayed in the chat UI.
+
+        Returns:
+            bool: True if the message should be skipped, False otherwise
+        """
         return (
             self._vertex is not None
             and not (self._vertex.is_output or self._vertex.is_input)
@@ -1543,7 +1617,35 @@ class Component(CustomComponent):
         if not message.sender_name:
             message.sender_name = MESSAGE_SENDER_NAME_AI
 
-    async def send_message(self, message: Message, id_: str | None = None):
+    async def send_message(self, message: Message, id_: str | None = None, *, skip_db_update: bool = False):
+        """Send a message with optional database update control.
+
+        This is the central method for sending messages in Langflow. It handles:
+        - Message storage in the database (unless skipped)
+        - Event emission to the frontend
+        - Streaming support
+        - Error handling and cleanup
+
+        Message ID Rules:
+        - Messages only have an ID after being stored in the database
+        - If _should_skip_message() returns True, the message is not stored and will not have an ID
+        - Always use message.get_id() or message.has_id() to safely check for ID existence
+        - Never access message.id directly without checking if it exists first
+
+        Args:
+            message: The message to send
+            id_: Optional message ID (used for event emission, not database storage)
+            skip_db_update: If True, only update in-memory and send event, skip DB write.
+                           Useful during streaming to avoid excessive DB round-trips.
+                           Note: When skip_db_update=True, the message must already have an ID
+                           (i.e., it must have been stored previously).
+
+        Returns:
+            Message: The stored message (with ID if stored in database, without ID if skipped)
+
+        Raises:
+            ValueError: If skip_db_update=True but message doesn't have an ID
+        """
         if self._should_skip_message(message):
             return message
 
@@ -1553,26 +1655,56 @@ class Component(CustomComponent):
         # Ensure required fields for message storage are set
         self._ensure_message_required_fields(message)
 
-        stored_message = await self._store_message(message)
+        # If skip_db_update is True and message already has an ID, skip the DB write
+        # This path is used during agent streaming to avoid excessive DB round-trips
+        # When skip_db_update=True, we require the message to already have an ID
+        # because we're updating an existing message, not creating a new one
+        if skip_db_update:
+            if not message.has_id():
+                msg = (
+                    "skip_db_update=True requires the message to already have an ID. "
+                    "The message must have been stored in the database previously."
+                )
+                raise ValueError(msg)
 
-        self._stored_message_id = stored_message.id
-        try:
-            complete_message = ""
-            if (
-                self._should_stream_message(stored_message, message)
-                and message is not None
-                and isinstance(message.text, AsyncIterator | Iterator)
-            ):
-                complete_message = await self._stream_message(message.text, stored_message)
-                stored_message.text = complete_message
-                stored_message = await self._update_stored_message(stored_message)
-            else:
-                # Only send message event for non-streaming messages
-                await self._send_message_event(stored_message, id_=id_)
-        except Exception:
-            # remove the message from the database
-            await delete_message(stored_message.id)
-            raise
+            # Create a fresh Message instance for consistency with normal flow
+            stored_message = await Message.create(**message.model_dump())
+            self._stored_message_id = stored_message.get_id()
+            # Still send the event to update the client in real-time
+            # Note: If this fails, we don't need DB cleanup since we didn't write to DB
+            await self._send_message_event(stored_message, id_=id_)
+        else:
+            # Normal flow: store/update in database
+            stored_message = await self._store_message(message)
+
+            # After _store_message, the message should always have an ID
+            # but we use get_id() for safety
+            self._stored_message_id = stored_message.get_id()
+            try:
+                complete_message = ""
+                if (
+                    self._should_stream_message(stored_message, message)
+                    and message is not None
+                    and isinstance(message.text, AsyncIterator | Iterator)
+                ):
+                    complete_message = await self._stream_message(message.text, stored_message)
+                    stored_message.text = complete_message
+                    if complete_message:
+                        stored_message.properties.state = "complete"
+                    stored_message = await self._update_stored_message(stored_message)
+                    # Note: We intentionally do NOT send a message event here with state="complete"
+                    # The frontend already has all the content from streaming tokens
+                    # Only the database is updated with the complete state
+                else:
+                    # Only send message event for non-streaming messages
+                    await self._send_message_event(stored_message, id_=id_)
+            except Exception:
+                # remove the message from the database
+                # Only delete if the message has an ID
+                message_id = stored_message.get_id()
+                if message_id:
+                    await delete_message(id_=message_id)
+                raise
         self.status = stored_message
         return stored_message
 
@@ -1590,9 +1722,15 @@ class Component(CustomComponent):
 
     async def _send_message_event(self, message: Message, id_: str | None = None, category: str | None = None) -> None:
         if hasattr(self, "_event_manager") and self._event_manager:
-            data_dict = message.model_dump()["data"] if hasattr(message, "data") else message.model_dump()
-            if id_ and not data_dict.get("id"):
-                data_dict["id"] = id_
+            # Use full model_dump() to include all Message fields (content_blocks, properties, etc.)
+            data_dict = message.model_dump()
+
+            # The message ID is stored in message.data["id"], which ends up in data_dict["data"]["id"]
+            # But the frontend expects it at data_dict["id"], so we need to copy it to the top level
+            message_id = id_ or data_dict.get("data", {}).get("id") or getattr(message, "id", None)
+            if message_id and not data_dict.get("id"):
+                data_dict["id"] = message_id
+
             category = category or data_dict.get("category", None)
 
             def _send_event():
@@ -1617,7 +1755,7 @@ class Component(CustomComponent):
         return bool(
             hasattr(self, "_event_manager")
             and self._event_manager
-            and stored_message.id
+            and stored_message.has_id()
             and not isinstance(original_message.text, str)
         )
 
@@ -1644,14 +1782,20 @@ class Component(CustomComponent):
             msg = "The message must be an iterator or an async iterator."
             raise TypeError(msg)
 
+        # Get message ID safely - streaming requires an ID
+        message_id = message.get_id()
+        if not message_id:
+            msg = "Message must have an ID to stream. Messages only have IDs after being stored in the database."
+            raise ValueError(msg)
+
         if isinstance(iterator, AsyncIterator):
-            return await self._handle_async_iterator(iterator, message.id, message)
+            return await self._handle_async_iterator(iterator, message_id, message)
         try:
             complete_message = ""
             first_chunk = True
             for chunk in iterator:
                 complete_message = await self._process_chunk(
-                    chunk.content, complete_message, message.id, message, first_chunk=first_chunk
+                    chunk.content, complete_message, message_id, message, first_chunk=first_chunk
                 )
                 first_chunk = False
         except Exception as e:

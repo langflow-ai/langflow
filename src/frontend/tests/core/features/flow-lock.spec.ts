@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test.describe("Flow Lock Feature", () => {
@@ -12,19 +12,16 @@ test.describe("Flow Lock Feature", () => {
       await page.getByTestId("side_nav_options_all-templates").click();
       await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
-      // Wait for the flow to load
-      await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
-        timeout: 100000,
+      await page.waitForSelector('[data-testid="sidebar-search-input"]', {
+        timeout: 5000,
       });
 
       // Verify initially the flow is not locked (no lock icon should be visible)
-      const initialLockIcon = page.locator(
-        '[data-testid="menu_bar_display"] [data-testid="icon-Lock"]',
-      );
+      const initialLockIcon = page.getByTestId("icon-Lock");
       await expect(initialLockIcon).toHaveCount(0);
 
       // Open flow settings by clicking on the flow name
-      await page.getByTestId("menu_bar_display").click();
+      await page.getByTestId("flow_name").click();
 
       // Wait for the settings modal to open
       await page.waitForSelector('[data-testid="lock-flow-switch"]', {
@@ -63,7 +60,9 @@ test.describe("Flow Lock Feature", () => {
       if (await saveButton.isEnabled({ timeout: 3000 })) {
         await saveButton.click();
       }
-      await page.waitForTimeout(1000);
+      await expect(saveButton).toBeHidden({
+        timeout: 5000,
+      });
 
       // Wait for the modal to close by waiting for the popover to be detached
       await page.waitForSelector('[role="dialog"]', {
@@ -72,13 +71,11 @@ test.describe("Flow Lock Feature", () => {
       });
 
       // Verify lock icon now appears in the flow header
-      const lockIconInHeader = page
-        .locator('[data-testid="menu_bar_display"]')
-        .locator('[data-testid="icon-Lock"]');
+      const lockIconInHeader = page.getByTestId("icon-Lock");
       await expect(lockIconInHeader).toBeVisible();
 
       // Try to open settings again to unlock
-      await page.getByTestId("menu_bar_display").click();
+      await page.getByTestId("flow_name").click();
 
       // Wait for the settings modal to open again
       await page.waitForSelector('[data-testid="lock-flow-switch"]', {
@@ -107,14 +104,19 @@ test.describe("Flow Lock Feature", () => {
       await page.getByTestId("save-flow-settings").isEnabled({ timeout: 3000 });
       await page.getByTestId("save-flow-settings").click();
 
+      await expect(saveButton).toBeHidden({
+        timeout: 5000,
+      });
+
       // Wait for the modal to close by waiting for the popover to be detached
       await page.waitForSelector('[role="dialog"]', {
         state: "detached",
         timeout: 10000,
       });
 
-      // Verify lock icon is no longer visible in the flow header
-      await expect(lockIconInHeader).toHaveCount(0);
+      await expect(page.getByTestId("icon-Lock")).toBeHidden({
+        timeout: 5000,
+      });
     },
   );
 
@@ -128,29 +130,29 @@ test.describe("Flow Lock Feature", () => {
       await page.getByTestId("side_nav_options_all-templates").click();
       await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
-      // Wait for the flow to load
-      await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
-        timeout: 100000,
+      await page.waitForSelector('[data-testid="sidebar-search-input"]', {
+        timeout: 5000,
       });
 
       // Open flow settings
-      await page.getByTestId("menu_bar_display").click();
+      await page.getByTestId("flow_name").click();
       await page.waitForSelector('[data-testid="lock-flow-switch"]', {
         timeout: 30000,
       });
 
       // Initially should show unlock icon (flow is unlocked)
-      const unlockIcon = page.locator('[data-testid="icon-Unlock"]');
+      const dialog = page.locator('[role="dialog"]');
+      const unlockIcon = dialog.locator('[data-testid="icon-Unlock"]');
       await expect(unlockIcon).toBeVisible();
 
       // Lock the flow
-      const lockSwitch = page.getByTestId("lock-flow-switch");
+      const lockSwitch = dialog.getByTestId("lock-flow-switch");
       await lockSwitch.click();
 
       // Should now show lock icon
-      const lockIcon = page.locator('[data-testid="icon-Lock"]');
-      await expect(lockIcon).toBeVisible();
-      await expect(unlockIcon).toHaveCount(0);
+      const lockIcon = dialog.locator('[data-testid="icon-Lock"]');
+      await expect(lockIcon).toBeVisible({ timeout: 5000 });
+      await expect(unlockIcon).toBeHidden({ timeout: 5000 });
     },
   );
 });

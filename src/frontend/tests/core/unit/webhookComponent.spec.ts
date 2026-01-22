@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
@@ -19,12 +19,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("webhook");
 
-    await page.waitForSelector('[data-testid="dataWebhook"]', {
+    await page.waitForSelector('[data-testid="input_outputWebhook"]', {
       timeout: 3000,
     });
 
     await page
-      .getByTestId("dataWebhook")
+      .getByTestId("input_outputWebhook")
       .hover()
       .then(async () => {
         await page.getByTestId("add-component-button-webhook").click();
@@ -33,7 +33,7 @@ test(
     await adjustScreenView(page);
 
     await page
-      .getByTestId("data_webhook_draggable")
+      .getByTestId("input_output_webhook_draggable")
       .hover()
       .then(async () => {
         await page.waitForSelector("text=Webhook already added", {
@@ -92,12 +92,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("webhook");
 
-    await page.waitForSelector('[data-testid="dataWebhook"]', {
+    await page.waitForSelector('[data-testid="input_outputWebhook"]', {
       timeout: 3000,
     });
 
     await page
-      .getByTestId("dataWebhook")
+      .getByTestId("input_outputWebhook")
       .hover()
       .then(async () => {
         await page.getByTestId("add-component-button-webhook").click();
@@ -106,7 +106,7 @@ test(
     await adjustScreenView(page);
 
     await page
-      .getByTestId("data_webhook_draggable")
+      .getByTestId("input_output_webhook_draggable")
       .hover()
       .then(async () => {
         await page.waitForSelector("text=Webhook already added", {

@@ -11,6 +11,7 @@ class RegexExtractorComponent(Component):
     description = "Extract patterns from text using regular expressions."
     icon = "regex"
     legacy = True
+    replacement = ["processing.ParserComponent"]
 
     inputs = [
         MessageTextInput(
