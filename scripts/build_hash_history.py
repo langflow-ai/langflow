@@ -85,6 +85,45 @@ def update_history(history: dict, component_name: str, code_hash: str, current_v
     return history
 
 
+def validate_append_only(old_history: dict, new_history: dict) -> None:
+    """Validate that the new history only adds data, never removes it.
+    
+    Args:
+        old_history: The previous hash history
+        new_history: The updated hash history
+        
+    Raises:
+        ValueError: If components or versions were removed
+    """
+    # Check that no components were removed
+    old_components = set(old_history.keys())
+    new_components = set(new_history.keys())
+    removed_components = old_components - new_components
+    
+    if removed_components:
+        msg = (
+            f"ERROR: Components were removed: {removed_components}\n"
+            "Hash history must be append-only. Components cannot be deleted."
+        )
+        raise ValueError(msg)
+    
+    # Check that no version keys were removed from existing components
+    for component in old_components:
+        if component in new_history:
+            old_versions = set(old_history[component].get("versions", {}).keys())
+            new_versions = set(new_history[component].get("versions", {}).keys())
+            removed_versions = old_versions - new_versions
+            
+            if removed_versions:
+                msg = (
+                    f"ERROR: Versions removed from component '{component}': {removed_versions}\n"
+                    "Hash history must be append-only. Version keys cannot be deleted."
+                )
+                raise ValueError(msg)
+    
+    print("✓ Append-only validation passed - no components or versions were removed")
+
+
 def main(argv=None):
     """Main entry point for the script."""
     parser = argparse.ArgumentParser(description="Build and update component hash history.")
@@ -113,7 +152,8 @@ def main(argv=None):
         print("No components found. Exiting.")
         return
 
-    history = load_hash_history(Path(history_file))
+    old_history = load_hash_history(Path(history_file))
+    new_history = old_history.copy()
 
     for category_name, components_dict in modules_dict.items():
         for comp_name, comp_details in components_dict.items():
@@ -127,9 +167,12 @@ def main(argv=None):
                 print(f"Warning: Component {comp_name} in category {category_name} is missing code_hash. Skipping.")
                 continue
 
-            history = update_history(history, comp_name, code_hash, current_version)
+            new_history = update_history(new_history, comp_name, code_hash, current_version)
 
-    save_hash_history(Path(history_file), history)
+    # Validate append-only constraint before saving
+    validate_append_only(old_history, new_history)
+
+    save_hash_history(Path(history_file), new_history)
     print(f"Successfully updated {history_file}")
 
 
