@@ -70,7 +70,7 @@ class GuardedTool(Tool):
 
         with load_toolguards(self._tg_dir) as toolguard:
             try:
-                await toolguard.aguard_toolcall(self.name, args=args, delegate=self._tool_invoker)
+                await toolguard.guard_toolcall(self.name, args=args, delegate=self._tool_invoker)
                 return await self._orig_tool.arun(tool_input=args, config=config, **kwargs)
             except PolicyViolationException as ex:
                 # print(f'exception: {ex.message}')
@@ -96,10 +96,10 @@ class ToolInvoker(IToolInvoker):
     def __init__(self, tools: list[BaseTool]) -> None:
         self._tools = {tool.name: tool for tool in tools}
 
-    def invoke(self, toolname: str, arguments: dict[str, Any], return_type: type[T]) -> T:
+    async def invoke(self, toolname: str, arguments: dict[str, Any], return_type: type[T]) -> T:
         tool = self._tools.get(toolname)
         if tool:
-            res = tool.invoke(input=arguments)
+            res = await tool.ainvoke(input=arguments)
 
             res_dict = res.structuredContent["result"] if isinstance(res, CallToolResult) else res["value"]
             if isinstance(res_dict, BaseModel):
