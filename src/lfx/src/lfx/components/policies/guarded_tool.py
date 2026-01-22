@@ -54,7 +54,7 @@ class GuardedTool(Tool):
 
         with load_toolguards(self._tg_dir) as toolguard:
             try:
-                toolguard.validate_toolcall(self.name, args=args, delegate=self._tool_invoker)
+                toolguard.guard_toolcall(self.name, args=args, delegate=self._tool_invoker)
                 return self._orig_tool.run(tool_input=args, config=config, **kwargs)
             except PolicyViolationException as ex:
                 return f"Error: {ex.message}"
@@ -70,7 +70,7 @@ class GuardedTool(Tool):
 
         with load_toolguards(self._tg_dir) as toolguard:
             try:
-                await toolguard.avalidate_toolcall(self.name, args=args, delegate=self._tool_invoker)
+                await toolguard.aguard_toolcall(self.name, args=args, delegate=self._tool_invoker)
                 return await self._orig_tool.arun(tool_input=args, config=config, **kwargs)
             except PolicyViolationException as ex:
                 # print(f'exception: {ex.message}')
