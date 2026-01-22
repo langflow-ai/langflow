@@ -67,7 +67,7 @@ async def sso_login_redirect(
 
     # Get the specific provider configuration
     provider_config = sso_config.get_provider_by_id(provider_id)
-    
+
     if not provider_config:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -214,7 +214,7 @@ async def sso_callback(
 
     # Get the specific provider configuration
     provider_config = sso_config.get_provider_by_id(provider_id)
-    
+
     if not provider_config:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -341,7 +341,7 @@ async def get_sso_config():
                         "type": provider_config.provider_type.value,
                         "enabled": provider_config.enabled,
                     }
-                    
+
                     # Add provider-specific display name
                     if provider_config.oidc:
                         provider_info["name"] = provider_config.oidc.provider_name
@@ -351,7 +351,7 @@ async def get_sso_config():
                         provider_info["name"] = provider_config.ldap.provider_name
                     else:
                         provider_info["name"] = provider_config.id.title()
-                    
+
                     providers.append(provider_info)
         except Exception as e:
             logger.error(f"Failed to load SSO config for status check: {e}")
@@ -360,4 +360,3 @@ async def get_sso_config():
         "enabled": True,
         "providers": providers,
     }
-

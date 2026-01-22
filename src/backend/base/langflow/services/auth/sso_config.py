@@ -7,7 +7,6 @@ the configuration for different authentication providers (OIDC, SAML, LDAP).
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 import yaml
 from pydantic import BaseModel, Field, field_validator
@@ -100,7 +99,7 @@ class SSOProviderConfig(BaseModel):
     id: str = Field(..., description="Unique identifier for this provider (e.g., 'google', 'w3id', 'azure')")
     provider_type: AuthProvider = Field(..., description="Authentication provider type")
     enabled: bool = Field(default=True, description="Whether this provider is enabled")
-    
+
     # Provider-specific configuration (only one should be set based on provider_type)
     oidc: OIDCConfig | None = Field(default=None, description="OIDC configuration")
     saml: SAMLConfig | None = Field(default=None, description="SAML configuration")
@@ -129,12 +128,9 @@ class SSOConfig(BaseModel):
 
     enabled: bool = Field(default=True, description="Whether SSO is enabled globally")
     enforce_sso: bool = Field(default=False, description="Require SSO for all users (disable password login)")
-    
+
     # Multiple providers support
-    providers: list[SSOProviderConfig] = Field(
-        default_factory=list,
-        description="List of configured SSO providers"
-    )
+    providers: list[SSOProviderConfig] = Field(default_factory=list, description="List of configured SSO providers")
 
     def get_provider_by_id(self, provider_id: str) -> SSOProviderConfig | None:
         """Get a specific provider configuration by ID.
