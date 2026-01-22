@@ -340,7 +340,7 @@ class OIDCAuthService(AuthServiceBase):
         db: AsyncSession,
     ) -> User | UserRead:
         """Get user from JWT token (Langflow or OIDC ID token).
-        
+
         First tries to validate as a regular Langflow JWT token.
         If that fails, tries to validate as an OIDC ID token.
         """

@@ -5,11 +5,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from urllib.parse import urlencode
 
-from fastapi import APIRouter, HTTPException, Query, Response, status
+from fastapi import APIRouter, HTTPException, Query, status
 from lfx.log.logger import logger
 
 from langflow.api.utils import DbSession
-from langflow.api.v1.schemas import Token
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.services.auth.utils import create_user_tokens
 from langflow.services.deps import get_settings_service, get_variable_service
@@ -139,7 +138,7 @@ async def sso_callback(
 
     This endpoint receives the authorization code from the IdP, exchanges it for tokens,
     validates the ID token, and creates/updates the user in Langflow.
-    
+
     After successful authentication, redirects to the frontend with authentication cookies set.
 
     Args:
@@ -227,11 +226,11 @@ async def sso_callback(
 
         # Create redirect response and set cookies
         from starlette.responses import RedirectResponse
-        
+
         redirect_url = auth_settings.SSO_REDIRECT_URL
         logger.info(f"Redirecting to frontend: {redirect_url}")
         redirect_response = RedirectResponse(url=redirect_url, status_code=302)
-        
+
         # Set cookies on the redirect response
         redirect_response.set_cookie(
             "refresh_token_lf",
@@ -260,7 +259,7 @@ async def sso_callback(
             expires=None,  # Session cookie
             domain=auth_settings.COOKIE_DOMAIN,
         )
-        
+
         return redirect_response
 
     except HTTPException:
