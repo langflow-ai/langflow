@@ -1519,7 +1519,7 @@ wheels = [
 
 [[package]]
 name = "composio-client"
-version = "1.26.0"
+version = "1.27.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
@@ -1529,9 +1529,9 @@ dependencies = [
     { name = "sniffio" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/31/ea/e9abfe0a16b10358ea126fae9019808cde5d76fdf17b70cc1df48c7535b6/composio_client-1.26.0.tar.gz", hash = "sha256:8ab65d900025970760c522c8df4445a6a63aff9f78773682f7193928016fb0f7", size = 192874, upload-time = "2026-01-14T10:14:10.658Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/35/2d/5faddf107854a843137ee127946db3a738667948933e0903f1250e5e729a/composio_client-1.27.0.tar.gz", hash = "sha256:684d33a4e701f92d6d2cca1a66b638e509afb46263e9f13266673ee7c55efefe", size = 193444, upload-time = "2026-01-22T13:34:36.914Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/37/2b/ad19b251f0d2241da0227fce6aee5792a6bbf26c09ff1d43841b946e7557/composio_client-1.26.0-py3-none-any.whl", hash = "sha256:24b6b0ffba0b7a1c818da53a77b450bbddc26313f9c6abc1ef4472cfb348e450", size = 210074, upload-time = "2026-01-14T10:14:09.404Z" },
+    { url = "https://files.pythonhosted.org/packages/57/37/e121ef2986935d374e85ca74315a8bc7fd5208342cabbb6461a49be466a4/composio_client-1.27.0-py3-none-any.whl", hash = "sha256:45697bb0f8a29290271727d9c1a3233e859dc61c515e6669f59408843fa590f0", size = 210495, upload-time = "2026-01-22T13:34:35.311Z" },
 ]
 
 [[package]]
@@ -5948,7 +5948,7 @@ requires-dist = [
     { name = "scipy", specifier = ">=1.14.1,<1.16.2" },
     { name = "scrapegraph-py", specifier = ">=1.12.0,<2.0.0" },
     { name = "sentence-transformers", marker = "extra == 'local'", specifier = ">=2.3.1" },
-    { name = "setuptools", specifier = ">=79.0.0,<80.0.0" },
+    { name = "setuptools", specifier = ">=80.0.0,<81.0.0" },
     { name = "smolagents", specifier = ">=1.8.0,<2.0.0" },
     { name = "spider-client", specifier = "==0.1.24" },
     { name = "sqlalchemy", extras = ["aiosqlite"], specifier = ">=2.0.38,<3.0.0" },
@@ -6241,7 +6241,7 @@ requires-dist = [
     { name = "sentence-transformers", marker = "extra == 'all'", specifier = ">=2.0.0" },
     { name = "sentence-transformers", marker = "extra == 'local'", specifier = ">=2.0.0" },
     { name = "sentry-sdk", extras = ["fastapi", "loguru"], specifier = ">=2.5.1,<3.0.0" },
-    { name = "setuptools", specifier = ">=79.0.0,<80.0.0" },
+    { name = "setuptools", specifier = ">=80.0.0,<81.0.0" },
     { name = "spider-client", specifier = ">=0.0.27,<1.0.0" },
     { name = "sqlalchemy", extras = ["aiosqlite"], specifier = ">=2.0.38,<3.0.0" },
     { name = "sqlalchemy", extras = ["postgresql-psycopg"], marker = "extra == 'postgresql'", specifier = ">=2.0.38,<3.0.0" },
@@ -6535,7 +6535,7 @@ requires-dist = [
     { name = "pypdf", specifier = ">=6.4.0,<7.0.0" },
     { name = "python-dotenv", specifier = ">=1.0.0,<2.0.0" },
     { name = "rich", specifier = ">=13.0.0,<14.0.0" },
-    { name = "setuptools", specifier = ">=79.0.0,<80.0.0" },
+    { name = "setuptools", specifier = ">=80.0.0,<81.0.0" },
     { name = "structlog", specifier = ">=25.4.0,<26.0.0" },
     { name = "tomli", specifier = ">=2.2.1,<3.0.0" },
     { name = "typer", specifier = ">=0.16.0,<1.0.0" },
@@ -10636,15 +10636,13 @@ wheels = [
 
 [[package]]
 name = "pydocket"
-version = "0.16.6"
+version = "0.17.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cloudpickle" },
     { name = "exceptiongroup", marker = "python_full_version < '3.11'" },
     { name = "fakeredis", extra = ["lua"] },
     { name = "opentelemetry-api" },
-    { name = "opentelemetry-exporter-prometheus" },
-    { name = "opentelemetry-instrumentation" },
     { name = "prometheus-client" },
     { name = "py-key-value-aio", extra = ["memory", "redis"] },
     { name = "python-json-logger" },
@@ -10653,9 +10651,9 @@ dependencies = [
     { name = "typer" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/72/00/26befe5f58df7cd1aeda4a8d10bc7d1908ffd86b80fd995e57a2a7b3f7bd/pydocket-0.16.6.tar.gz", hash = "sha256:b96c96ad7692827214ed4ff25fcf941ec38371314db5dcc1ae792b3e9d3a0294", size = 299054, upload-time = "2026-01-09T22:09:15.405Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/56/46/d61842164f7f623c24927dd67b4e19e3b52b6b5127401ab959a0d8273fe4/pydocket-0.17.1.tar.gz", hash = "sha256:de5b39241f728c2c0abbcb419b0cd3a5eab3ed48e228c4c7add15b02e234a68c", size = 323972, upload-time = "2026-01-22T16:59:25.077Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/0a/3f/7483e5a6dc6326b6e0c640619b5c5bd1d6e3c20e54d58f5fb86267cef00e/pydocket-0.16.6-py3-none-any.whl", hash = "sha256:683d21e2e846aa5106274e7d59210331b242d7fb0dce5b08d3b82065663ed183", size = 67697, upload-time = "2026-01-09T22:09:13.436Z" },
+    { url = "https://files.pythonhosted.org/packages/dd/cc/019dbc2646dc638caead6349f7427a396257c97b7edbf60dedb52b5ed93d/pydocket-0.17.1-py3-none-any.whl", hash = "sha256:0902c08e7879a9ba8ebcdee2503541bf26dc203d94cab1c2e48d18567383f505", size = 87371, upload-time = "2026-01-22T16:59:23.915Z" },
 ]
 
 [[package]]
@@ -12873,11 +12871,11 @@ loguru = [
 
 [[package]]
 name = "setuptools"
-version = "79.0.1"
+version = "80.10.1"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/bb/71/b6365e6325b3290e14957b2c3a804a529968c77a049b2ed40c095f749707/setuptools-79.0.1.tar.gz", hash = "sha256:128ce7b8f33c3079fd1b067ecbb4051a66e8526e7b65f6cec075dfc650ddfa88", size = 1367909, upload-time = "2025-04-23T22:20:59.241Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/86/ff/f75651350db3cf2ef767371307eb163f3cc1ac03e16fdf3ac347607f7edb/setuptools-80.10.1.tar.gz", hash = "sha256:bf2e513eb8144c3298a3bd28ab1a5edb739131ec5c22e045ff93cd7f5319703a", size = 1229650, upload-time = "2026-01-21T09:42:03.061Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/0d/6d/b4752b044bf94cb802d88a888dc7d288baaf77d7910b7dedda74b5ceea0c/setuptools-79.0.1-py3-none-any.whl", hash = "sha256:e147c0549f27767ba362f9da434eab9c5dc0045d5304feb602a0af001089fc51", size = 1256281, upload-time = "2025-04-23T22:20:56.768Z" },
+    { url = "https://files.pythonhosted.org/packages/e0/76/f963c61683a39084aa575f98089253e1e852a4417cb8a3a8a422923a5246/setuptools-80.10.1-py3-none-any.whl", hash = "sha256:fc30c51cbcb8199a219c12cc9c281b5925a4978d212f84229c909636d9f6984e", size = 1099859, upload-time = "2026-01-21T09:42:00.688Z" },
 ]
 
 [[package]]
