@@ -305,13 +305,13 @@ jobs:
       - name: Test CLI help command
         if: matrix.os == 'windows'
         run: |
-          uv run python -m langflow --help
+          uv run --python ./test-env/Scripts/python.exe python -m langflow --help
         shell: cmd
 
       - name: Test CLI help command (Unix)
         if: matrix.os != 'windows'
         run: |
-          uv run python -m langflow --help
+          uv run --python ./test-env/bin/python python -m langflow --help
         shell: bash
 
       - name: Test server startup (Windows)
@@ -602,13 +602,13 @@ jobs:
       - name: Test CLI help command (Windows)
         if: matrix.os == 'windows'
         run: |
-          uv run python -m langflow --help
+          uv run --python ./test-env/Scripts/python.exe python -m langflow --help
         shell: cmd
 
       - name: Test CLI help command (Unix)
         if: matrix.os != 'windows'
         run: |
-          uv run python -m langflow --help
+          uv run --python ./test-env/bin/python python -m langflow --help
         shell: bash
 
       - name: Test server startup (Windows)
