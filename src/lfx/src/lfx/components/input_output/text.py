@@ -15,7 +15,7 @@ class TextInputComponent(TextComponent):
             name="input_value",
             display_name="Text",
             info="Text to be passed as input.",
-        ),
+        )
     ]
     outputs = [
         Output(display_name="Output Text", name="text", method="text_response"),
