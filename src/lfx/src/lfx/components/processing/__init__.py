@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from lfx.components.processing.create_list import CreateListComponent
     from lfx.components.processing.data_operations import DataOperationsComponent
     from lfx.components.processing.dataframe_operations import DataFrameOperationsComponent
+    from lfx.components.processing.dynamic_create_data import CombineInputsComponent
     from lfx.components.processing.json_cleaner import JSONCleaner
     from lfx.components.processing.operations import Operations
     from lfx.components.processing.output_parser import OutputParserComponent
@@ -27,6 +28,7 @@ _dynamic_imports = {
     "CreateListComponent": "create_list",
     "DataOperationsComponent": "data_operations",
     "DataFrameOperationsComponent": "dataframe_operations",
+    "CombineInputsComponent": "dynamic_create_data",
     "JSONCleaner": "json_cleaner",
     "Operations": "operations",
     "OutputParserComponent": "output_parser",
@@ -42,6 +44,7 @@ __all__ = [
     "CreateListComponent",
     "DataFrameOperationsComponent",
     "DataOperationsComponent",
+    "CombineInputsComponent",
     "JSONCleaner",
     "MessageStoreComponent",
     "Operations",
