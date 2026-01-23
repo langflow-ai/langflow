@@ -7,7 +7,6 @@ the configuration for different authentication providers (OIDC, SAML, LDAP).
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 import yaml
 from pydantic import BaseModel, Field, field_validator
@@ -95,41 +94,20 @@ class LDAPConfig(BaseModel):
     group_search_filter: str | None = Field(default=None, description="LDAP filter for group lookup")
 
 
-class SSOConfig(BaseModel):
-    """Complete SSO configuration container."""
+class SSOProviderConfig(BaseModel):
+    """Single SSO provider configuration."""
 
-    provider: AuthProvider = Field(..., description="Authentication provider type")
-    enabled: bool = Field(default=True, description="Whether SSO is enabled")
-    enforce_sso: bool = Field(default=False, description="Require SSO for all users (disable password login)")
+    id: str = Field(..., description="Unique identifier for this provider (e.g., 'google', 'w3id', 'azure')")
+    provider_type: AuthProvider = Field(..., description="Authentication provider type")
+    enabled: bool = Field(default=True, description="Whether this provider is enabled")
 
-    # Provider-specific configuration (only one should be set)
+    # Provider-specific configuration (only one should be set based on provider_type)
     oidc: OIDCConfig | None = Field(default=None, description="OIDC configuration")
     saml: SAMLConfig | None = Field(default=None, description="SAML configuration")
     ldap: LDAPConfig | None = Field(default=None, description="LDAP configuration")
 
-    @field_validator("oidc", "saml", "ldap")
-    @classmethod
-    def validate_provider_config(cls, v: Any, info) -> Any:
-        """Ensure provider-specific config matches the provider type."""
-        if v is None:
-            return v
-
-        # Get the provider field value
-        provider = info.data.get("provider")
-        field_name = info.field_name
-
-        # Validate that the config matches the provider
-        if provider == AuthProvider.OIDC and field_name != "oidc":
-            return None
-        if provider == AuthProvider.SAML and field_name != "saml":
-            return None
-        if provider == AuthProvider.LDAP and field_name != "ldap":
-            return None
-
-        return v
-
     def get_provider_config(self) -> OIDCConfig | SAMLConfig | LDAPConfig:
-        """Get the active provider configuration.
+        """Get the provider-specific configuration.
 
         Returns:
             Provider-specific configuration object
@@ -137,15 +115,47 @@ class SSOConfig(BaseModel):
         Raises:
             ValueError: If no provider configuration is set
         """
-        if self.provider == AuthProvider.OIDC and self.oidc:
+        if self.provider_type == AuthProvider.OIDC and self.oidc:
             return self.oidc
-        if self.provider == AuthProvider.SAML and self.saml:
+        if self.provider_type == AuthProvider.SAML and self.saml:
             return self.saml
-        if self.provider == AuthProvider.LDAP and self.ldap:
+        if self.provider_type == AuthProvider.LDAP and self.ldap:
             return self.ldap
 
-        msg = f"No configuration found for provider: {self.provider}"
+        msg = f"No configuration found for provider: {self.provider_type}"
         raise ValueError(msg)
+
+
+class SSOConfig(BaseModel):
+    """Complete SSO configuration container supporting multiple providers."""
+
+    enabled: bool = Field(default=True, description="Whether SSO is enabled globally")
+    enforce_sso: bool = Field(default=False, description="Require SSO for all users (disable password login)")
+
+    # Multiple providers support
+    providers: list[SSOProviderConfig] = Field(default_factory=list, description="List of configured SSO providers")
+
+    def get_provider_by_id(self, provider_id: str) -> SSOProviderConfig | None:
+        """Get a specific provider configuration by ID.
+
+        Args:
+            provider_id: Unique provider identifier
+
+        Returns:
+            Provider configuration or None if not found
+        """
+        for provider in self.providers:
+            if provider.id == provider_id and provider.enabled:
+                return provider
+        return None
+
+    def get_enabled_providers(self) -> list[SSOProviderConfig]:
+        """Get all enabled providers.
+
+        Returns:
+            List of enabled provider configurations
+        """
+        return [p for p in self.providers if p.enabled]
 
 
 class SSOConfigLoader:
@@ -185,70 +195,95 @@ class SSOConfigLoader:
             raise ValueError(msg) from e
 
     @staticmethod
-    def create_example_config(provider: AuthProvider, output_path: str | Path) -> None:
-        """Create an example configuration file for a provider.
+    def create_example_config(output_path: str | Path, multi_provider: bool = True) -> None:
+        """Create an example configuration file with multiple providers.
 
         Args:
-            provider: Authentication provider type
             output_path: Where to write the example config
+            multi_provider: If True, creates config with multiple providers; if False, single provider
         """
         path = Path(output_path)
 
-        if provider == AuthProvider.OIDC:
+        if multi_provider:
+            # Example with multiple OIDC providers
             example = {
-                "provider": "oidc",
                 "enabled": True,
                 "enforce_sso": False,
-                "oidc": {
-                    "provider_name": "IBM W3ID",
-                    "client_id": "your-client-id",
-                    "client_secret": "your-client-secret",
-                    "discovery_url": "https://w3id.sso.ibm.com/isam/oidc/endpoint/default/.well-known/openid-configuration",
-                    "redirect_uri": "https://langflow.example.com/api/v1/auth/callback",
-                    "scopes": ["openid", "email", "profile"],
-                    "email_claim": "email",
-                    "username_claim": "preferred_username",
-                    "user_id_claim": "sub",
-                },
-            }
-        elif provider == AuthProvider.SAML:
-            example = {
-                "provider": "saml",
-                "enabled": True,
-                "enforce_sso": False,
-                "saml": {
-                    "provider_name": "Okta",
-                    "entity_id": "http://www.okta.com/exk...",
-                    "sso_url": "https://example.okta.com/app/example/exk.../sso/saml",
-                    "x509_cert": "-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----",
-                    "sp_entity_id": "https://langflow.example.com",
-                    "acs_url": "https://langflow.example.com/api/v1/auth/saml/acs",
-                    "email_attribute": "email",
-                    "username_attribute": "username",
-                    "user_id_attribute": "nameID",
-                },
-            }
-        elif provider == AuthProvider.LDAP:
-            example = {
-                "provider": "ldap",
-                "enabled": True,
-                "enforce_sso": False,
-                "ldap": {
-                    "provider_name": "Active Directory",
-                    "server_uri": "ldaps://ad.example.com:636",
-                    "bind_dn": "CN=Service Account,OU=Users,DC=example,DC=com",
-                    "bind_password": "your-bind-password",
-                    "user_search_base": "OU=Users,DC=example,DC=com",
-                    "user_search_filter": "(sAMAccountName={username})",
-                    "email_attribute": "mail",
-                    "username_attribute": "sAMAccountName",
-                    "user_id_attribute": "objectGUID",
-                    "use_ssl": True,
-                },
+                "providers": [
+                    {
+                        "id": "google",
+                        "provider_type": "oidc",
+                        "enabled": True,
+                        "oidc": {
+                            "provider_name": "Google",
+                            "client_id": "your-google-client-id.apps.googleusercontent.com",
+                            "client_secret": "your-google-client-secret",
+                            "discovery_url": "https://accounts.google.com/.well-known/openid-configuration",
+                            "redirect_uri": "http://localhost:7860/api/v1/sso/callback",
+                            "scopes": ["openid", "email", "profile"],
+                            "email_claim": "email",
+                            "username_claim": "email",
+                            "user_id_claim": "sub",
+                        },
+                    },
+                    {
+                        "id": "w3id",
+                        "provider_type": "oidc",
+                        "enabled": True,
+                        "oidc": {
+                            "provider_name": "IBM W3ID",
+                            "client_id": "your-w3id-client-id",
+                            "client_secret": "your-w3id-client-secret",
+                            "discovery_url": "https://w3id.sso.ibm.com/isam/oidc/endpoint/default/.well-known/openid-configuration",
+                            "redirect_uri": "http://localhost:7860/api/v1/sso/callback",
+                            "scopes": ["openid", "email", "profile"],
+                            "email_claim": "email",
+                            "username_claim": "preferred_username",
+                            "user_id_claim": "sub",
+                        },
+                    },
+                    {
+                        "id": "azure",
+                        "provider_type": "oidc",
+                        "enabled": True,
+                        "oidc": {
+                            "provider_name": "Microsoft",
+                            "client_id": "your-azure-client-id",
+                            "client_secret": "your-azure-client-secret",
+                            "discovery_url": "https://login.microsoftonline.com/YOUR_TENANT_ID/v2.0/.well-known/openid-configuration",
+                            "redirect_uri": "http://localhost:7860/api/v1/sso/callback",
+                            "scopes": ["openid", "email", "profile"],
+                            "email_claim": "email",
+                            "username_claim": "preferred_username",
+                            "user_id_claim": "sub",
+                        },
+                    },
+                ],
             }
         else:
-            msg = f"Unknown provider: {provider}"
-            raise ValueError(msg)
+            # Single provider example (backward compatible)
+            example = {
+                "enabled": True,
+                "enforce_sso": False,
+                "providers": [
+                    {
+                        "id": "google",
+                        "provider_type": "oidc",
+                        "enabled": True,
+                        "oidc": {
+                            "provider_name": "Google",
+                            "client_id": "your-client-id.apps.googleusercontent.com",
+                            "client_secret": "your-client-secret",
+                            "discovery_url": "https://accounts.google.com/.well-known/openid-configuration",
+                            "redirect_uri": "http://localhost:7860/api/v1/sso/callback",
+                            "scopes": ["openid", "email", "profile"],
+                            "email_claim": "email",
+                            "username_claim": "email",
+                            "user_id_claim": "sub",
+                        },
+                    }
+                ],
+            }
 
         with path.open("w") as f:
             yaml.dump(example, f, default_flow_style=False, sort_keys=False)

@@ -1,0 +1,88 @@
+# Multi-Provider SSO Configuration Example
+# This file demonstrates how to configure multiple SSO providers (Google, IBM W3ID, Azure AD)
+
+enabled: true
+enforce_sso: false  # Set to true to disable password-based login
+
+providers:
+  # Google OAuth Configuration
+  - id: google
+    provider_type: oidc
+    enabled: true
+    oidc:
+      provider_name: "Google"
+      client_id: "your-google-client-id.apps.googleusercontent.com"
+      client_secret: "your-google-client-secret"
+      discovery_url: "https://accounts.google.com/.well-known/openid-configuration"
+      redirect_uri: "http://localhost:7860/api/v1/sso/callback"
+      scopes:
+        - openid
+        - email
+        - profile
+      email_claim: "email"
+      username_claim: "email"
+      user_id_claim: "sub"
+      issuer: "https://accounts.google.com"
+
+  # IBM W3ID Configuration
+  - id: w3id
+    provider_type: oidc
+    enabled: true
+    oidc:
+      provider_name: "IBM W3ID"
+      client_id: "your-w3id-client-id"
+      client_secret: "your-w3id-client-secret"
+      discovery_url: "https://w3id.sso.ibm.com/isam/oidc/endpoint/default/.well-known/openid-configuration"
+      redirect_uri: "http://localhost:7860/api/v1/sso/callback"
+      scopes:
+        - openid
+        - email
+        - profile
+      email_claim: "email"
+      username_claim: "preferred_username"
+      user_id_claim: "sub"
+
+  # Microsoft Azure AD / Entra ID Configuration
+  - id: azure
+    provider_type: oidc
+    enabled: true
+    oidc:
+      provider_name: "Microsoft"
+      client_id: "your-azure-client-id"
+      client_secret: "your-azure-client-secret"
+      # Replace YOUR_TENANT_ID with your Azure AD tenant ID
+      discovery_url: "https://login.microsoftonline.com/YOUR_TENANT_ID/v2.0/.well-known/openid-configuration"
+      redirect_uri: "http://localhost:7860/api/v1/sso/callback"
+      scopes:
+        - openid
+        - email
+        - profile
+      email_claim: "email"
+      username_claim: "preferred_username"
+      user_id_claim: "sub"
+
+  # Okta Configuration (Example - disabled by default)
+  - id: okta
+    provider_type: oidc
+    enabled: false
+    oidc:
+      provider_name: "Okta"
+      client_id: "your-okta-client-id"
+      client_secret: "your-okta-client-secret"
+      # Replace YOUR_OKTA_DOMAIN with your Okta domain
+      discovery_url: "https://YOUR_OKTA_DOMAIN/.well-known/openid-configuration"
+      redirect_uri: "http://localhost:7860/api/v1/sso/callback"
+      scopes:
+        - openid
+        - email
+        - profile
+      email_claim: "email"
+      username_claim: "preferred_username"
+      user_id_claim: "sub"
+
+# Notes:
+# 1. Each provider must have a unique 'id'
+# 2. Set 'enabled: false' to temporarily disable a provider without removing its configuration
+# 3. The 'redirect_uri' must match exactly what you configured in your IdP
+# 4. For production, use HTTPS URLs for redirect_uri
+# 5. Users will see all enabled providers as separate login buttons on the login page

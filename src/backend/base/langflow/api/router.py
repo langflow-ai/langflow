@@ -17,6 +17,7 @@ from langflow.api.v1 import (
     monitor_router,
     openai_responses_router,
     projects_router,
+    sso_router,
     starter_projects_router,
     store_router,
     users_router,
@@ -45,6 +46,7 @@ router_v1.include_router(flows_router)
 router_v1.include_router(users_router)
 router_v1.include_router(api_key_router)
 router_v1.include_router(login_router)
+router_v1.include_router(sso_router)
 router_v1.include_router(variables_router)
 router_v1.include_router(files_router)
 router_v1.include_router(monitor_router)

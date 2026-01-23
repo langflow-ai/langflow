@@ -128,6 +128,7 @@ class SSOConfigService:
             SSOConfig instance
         """
         from langflow.services.auth.factory import AuthProvider
+        from langflow.services.auth.sso_config import SSOProviderConfig
 
         # Build provider-specific config
         provider_config = None
@@ -149,14 +150,21 @@ class SSOConfigService:
                 issuer=db_config.issuer,
             )
 
-        # Create SSOConfig
-        return SSOConfig(
-            provider=AuthProvider(db_config.provider),
+        # Create SSOProviderConfig wrapper
+        provider = SSOProviderConfig(
+            id=db_config.provider_name.lower().replace(" ", "_"),  # Generate ID from provider name
+            provider_type=AuthProvider(db_config.provider),
             enabled=db_config.enabled,
-            enforce_sso=db_config.enforce_sso,
             oidc=provider_config if db_config.provider == "oidc" else None,
             saml=None,  # TODO: Add SAML conversion when implementing SAML
             ldap=None,  # TODO: Add LDAP conversion when implementing LDAP
+        )
+
+        # Create SSOConfig with providers list
+        return SSOConfig(
+            enabled=db_config.enabled,
+            enforce_sso=db_config.enforce_sso,
+            providers=[provider],
         )
 
     def reload_file_config(self) -> None:
