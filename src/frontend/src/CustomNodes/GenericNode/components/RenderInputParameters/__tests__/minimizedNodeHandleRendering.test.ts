@@ -1,18 +1,5 @@
-/**
- * Unit tests for minimized node handle rendering behavior
- *
- * These tests verify that when a node is minimized, only the primary input
- * handle is rendered to prevent connections from going to the wrong input.
- */
-
 describe("Minimized Node Handle Rendering", () => {
-  /**
-   * Logic extracted from NodeInputField component:
-   * When minimized (showNode is false), only render handle if:
-   * - isPrimaryInput is true AND displayHandle is true
-   * OR
-   * - showNode is true (node is expanded)
-   */
+
   const shouldRenderHandle = (
     showNode: boolean,
     displayHandle: boolean,
