@@ -12,13 +12,16 @@ from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
 
-from langflow.services.auth.sso_config import OIDCConfig, SSOConfig, SSOConfigLoader
+from langflow.services.auth.factory import AuthProvider
+from langflow.services.auth.sso_config import OIDCConfig, SSOConfig, SSOConfigLoader, SSOProviderConfig
 
 if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
 
     from langflow.services.database.models.sso_config.model import SSOConfig as DBSSOConfig
     from langflow.services.settings.service import SettingsService
+
+_DEFAULT_SCOPES_TUPLE = ("openid", "email", "profile")
 
 
 class SSOConfigService:
@@ -127,20 +130,18 @@ class SSOConfigService:
         Returns:
             SSOConfig instance
         """
-        from langflow.services.auth.factory import AuthProvider
-        from langflow.services.auth.sso_config import SSOProviderConfig
-
         # Build provider-specific config
         provider_config = None
 
-        if db_config.provider == "oidc":
+        is_oidc = db_config.provider == "oidc"
+        if is_oidc:
             provider_config = OIDCConfig(
                 provider_name=db_config.provider_name,
                 client_id=db_config.client_id or "",
                 client_secret=db_config.client_secret_encrypted or "",  # Will be decrypted by auth service
                 discovery_url=db_config.discovery_url or "",
                 redirect_uri=db_config.redirect_uri or "",
-                scopes=db_config.scopes.split() if db_config.scopes else ["openid", "email", "profile"],
+                scopes=db_config.scopes.split() if db_config.scopes else list(_DEFAULT_SCOPES_TUPLE),
                 email_claim=db_config.email_claim,
                 username_claim=db_config.username_claim,
                 user_id_claim=db_config.user_id_claim,
@@ -155,7 +156,7 @@ class SSOConfigService:
             id=db_config.provider_name.lower().replace(" ", "_"),  # Generate ID from provider name
             provider_type=AuthProvider(db_config.provider),
             enabled=db_config.enabled,
-            oidc=provider_config if db_config.provider == "oidc" else None,
+            oidc=provider_config if is_oidc else None,
             saml=None,  # TODO: Add SAML conversion when implementing SAML
             ldap=None,  # TODO: Add LDAP conversion when implementing LDAP
         )
