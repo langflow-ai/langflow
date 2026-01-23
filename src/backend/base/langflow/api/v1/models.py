@@ -197,7 +197,11 @@ async def get_enabled_providers(
     current_user: CurrentActiveUser,
     providers: Annotated[list[str] | None, Query()] = None,
 ):
-    """Get enabled providers for the current user."""
+    """Get enabled providers for the current user.
+
+    Only providers with valid API keys are marked as enabled. This prevents
+    providers from appearing enabled when they have invalid credentials.
+    """
     variable_service = get_variable_service()
     try:
         if not isinstance(variable_service, DatabaseVariableService):
@@ -205,14 +209,14 @@ async def get_enabled_providers(
                 status_code=500,
                 detail="Variable service is not an instance of DatabaseVariableService",
             )
-        # Get all credential variables for the user
+        # Get all variables to check which credential variables exist
         all_variables = await variable_service.get_all(user_id=current_user.id, session=session)
 
         # Get all credential variable names (regardless of default_fields)
         # This includes both env variables and explicitly created model provider credentials
-        credential_names = {var.name for var in all_variables if var.type == CREDENTIAL_TYPE}
+        credential_variable_names = {var.name for var in all_variables if var.type == CREDENTIAL_TYPE}
 
-        if not credential_names:
+        if not credential_variable_names:
             return {
                 "enabled_providers": [],
                 "provider_status": {},
@@ -221,14 +225,39 @@ async def get_enabled_providers(
         # Get the provider-variable mapping
         provider_variable_map = get_model_provider_variable_mapping()
 
-        enabled_providers = []
-        provider_status = {}
+        # Build credential_variables dict with objects that have encrypted values
+        # VariableRead sets value=None for CREDENTIAL_TYPE (via validator), but _validate_and_get_enabled_providers
+        # needs the encrypted value to decrypt and validate. So we create simple objects with the encrypted value.
+        credential_variables = {}
 
-        for provider, var_name in provider_variable_map.items():
-            is_enabled = var_name in credential_names
-            provider_status[provider] = is_enabled
-            if is_enabled:
-                enabled_providers.append(provider)
+        for var_name in credential_variable_names:
+            if var_name and var_name in provider_variable_map.values():
+                try:
+                    # Get the raw Variable object to access the encrypted value
+                    variable_obj = await variable_service.get_variable_object(
+                        user_id=current_user.id, name=var_name, session=session
+                    )
+                    if variable_obj and variable_obj.value:
+                        # Create a simple object with the encrypted value
+                        # _validate_and_get_enabled_providers only needs .value attribute
+                        class VarWithValue:
+                            def __init__(self, value):
+                                self.value = value
+
+                        credential_variables[var_name] = VarWithValue(variable_obj.value)
+                except (ValueError, Exception) as e:  # noqa: BLE001
+                    # Variable not found or error accessing it - skip
+                    logger.debug("Skipping variable %s due to error: %s", var_name, e)
+                    continue
+
+        # Use shared helper to validate and get enabled providers
+        from lfx.base.models.unified_models import _validate_and_get_enabled_providers
+
+        enabled_providers_set = _validate_and_get_enabled_providers(credential_variables, provider_variable_map)
+        enabled_providers = list(enabled_providers_set)
+
+        # Build provider_status dict for all providers
+        provider_status = {provider: provider in enabled_providers_set for provider in provider_variable_map}
 
         result = {
             "enabled_providers": enabled_providers,
