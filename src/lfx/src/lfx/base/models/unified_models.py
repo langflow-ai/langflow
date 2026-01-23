@@ -11,6 +11,7 @@ import contextlib
 
 from lfx.base.models.anthropic_constants import ANTHROPIC_MODELS_DETAILED
 from lfx.base.models.google_generative_ai_constants import (
+    GOOGLE_GENERATIVE_AI_EMBEDDING_MODELS_DETAILED,
     GOOGLE_GENERATIVE_AI_MODELS_DETAILED,
 )
 from lfx.base.models.ollama_constants import OLLAMA_EMBEDDING_MODELS_DETAILED, OLLAMA_MODELS_DETAILED
@@ -97,6 +98,7 @@ def get_models_detailed():
         OPENAI_MODELS_DETAILED,
         OPENAI_EMBEDDING_MODELS_DETAILED,
         GOOGLE_GENERATIVE_AI_MODELS_DETAILED,
+        GOOGLE_GENERATIVE_AI_EMBEDDING_MODELS_DETAILED,
         OLLAMA_MODELS_DETAILED,
         OLLAMA_EMBEDDING_MODELS_DETAILED,
         WATSONX_MODELS_DETAILED,
@@ -273,6 +275,46 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
     return run_until_complete(_get_variable())
 
 
+def _validate_and_get_enabled_providers(
+    credential_variables: dict[str, Any],
+    provider_variable_map: dict[str, str],
+) -> set[str]:
+    """Validate API keys and return set of enabled providers.
+
+    This helper function validates API keys for credential variables and returns
+    only providers with valid keys. Used by get_enabled_providers and model options functions.
+
+    Args:
+        credential_variables: Dictionary mapping variable names to VariableRead objects
+        provider_variable_map: Dictionary mapping provider names to variable names
+
+    Returns:
+        Set of provider names that have valid API keys
+    """
+    from langflow.services.auth import utils as auth_utils
+    from langflow.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    enabled = set()
+
+    for provider, var_name in provider_variable_map.items():
+        if var_name in credential_variables:
+            # Validate the API key before marking as enabled
+            credential_var = credential_variables[var_name]
+            try:
+                # Decrypt the API key value
+                api_key = auth_utils.decrypt_api_key(credential_var.value, settings_service=settings_service)
+                # Validate the key (this will raise ValueError if invalid)
+                if api_key and api_key.strip():
+                    validate_model_provider_key(var_name, api_key)
+                    enabled.add(provider)
+            except (ValueError, Exception) as e:  # noqa: BLE001
+                # Key validation failed or decryption failed - don't enable provider
+                logger.debug("Provider %s validation failed for variable %s: %s", provider, var_name, e)
+
+    return enabled
+
+
 def validate_model_provider_key(variable_name: str, api_key: str) -> None:
     """Validate a model provider API key by making a minimal test call.
 
@@ -423,7 +465,7 @@ def get_language_model_options(
             # If we can't get model status, continue without filtering
             pass
 
-    # Get enabled providers (those with credentials configured)
+    # Get enabled providers (those with credentials configured and validated)
     enabled_providers = set()
     if user_id:
         try:
@@ -433,6 +475,7 @@ def get_language_model_options(
                     variable_service = get_variable_service()
                     if variable_service is None:
                         return set()
+
                     from langflow.services.variable.constants import CREDENTIAL_TYPE
                     from langflow.services.variable.service import DatabaseVariableService
 
@@ -442,11 +485,11 @@ def get_language_model_options(
                         user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
                         session=session,
                     )
-                    credential_names = {var.name for var in all_vars if var.type == CREDENTIAL_TYPE}
+                    credential_vars = {var.name: var for var in all_vars if var.type == CREDENTIAL_TYPE}
                     provider_variable_map = get_model_provider_variable_mapping()
-                    return {
-                        provider for provider, var_name in provider_variable_map.items() if var_name in credential_names
-                    }
+
+                    # Use shared helper to validate and get enabled providers
+                    return _validate_and_get_enabled_providers(credential_vars, provider_variable_map)
 
             enabled_providers = run_until_complete(_get_enabled_providers())
         except Exception:  # noqa: BLE001, S110
@@ -609,7 +652,7 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
             # If we can't get model status, continue without filtering
             pass
 
-    # Get enabled providers (those with credentials configured)
+    # Get enabled providers (those with credentials configured and validated)
     enabled_providers = set()
     if user_id:
         try:
@@ -619,6 +662,7 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
                     variable_service = get_variable_service()
                     if variable_service is None:
                         return set()
+
                     from langflow.services.variable.constants import CREDENTIAL_TYPE
                     from langflow.services.variable.service import DatabaseVariableService
 
@@ -628,11 +672,11 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
                         user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
                         session=session,
                     )
-                    credential_names = {var.name for var in all_vars if var.type == CREDENTIAL_TYPE}
+                    credential_vars = {var.name: var for var in all_vars if var.type == CREDENTIAL_TYPE}
                     provider_variable_map = get_model_provider_variable_mapping()
-                    return {
-                        provider for provider, var_name in provider_variable_map.items() if var_name in credential_names
-                    }
+
+                    # Use shared helper to validate and get enabled providers
+                    return _validate_and_get_enabled_providers(credential_vars, provider_variable_map)
 
             enabled_providers = run_until_complete(_get_enabled_providers())
         except Exception:  # noqa: BLE001, S110
@@ -1058,7 +1102,7 @@ def update_model_options_in_build_config(
     # Only set default when: initial load (field_name is None) or model field is being set and is empty
     # Get the current model value to check if it's empty
     current_model_value = build_config.get("model", {}).get("value")
-    model_is_empty = not current_model_value or current_model_value == "" or current_model_value == []
+    model_is_empty = not current_model_value
     should_set_default = field_name is None or (field_name == "model" and model_is_empty)
     if should_set_default:
         options = cached.get("options", [])
