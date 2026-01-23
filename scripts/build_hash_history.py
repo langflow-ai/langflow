@@ -62,7 +62,10 @@ def update_history(history: dict, component_name: str, code_hash: str, current_v
     IMPORTANT: Note that the component_name acts as the unique identifier for the component, and must not be changed.
     """
     current_version_parsed = Version(current_version)
-    version_key = f"{current_version_parsed.major}.{current_version_parsed.minor}.{current_version_parsed.micro}"
+    # Use the string representation of the version as the key
+    # For dev versions (nightly), this includes the full version with dev suffix (e.g., "0.8.0.dev13")
+    # For stable versions, this is just major.minor.micro (e.g., "0.8.0")
+    version_key = str(current_version_parsed)
 
     if component_name not in history:
         print(f"Component {component_name} not found in history. Adding...")

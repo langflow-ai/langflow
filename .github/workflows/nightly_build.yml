@@ -209,6 +209,11 @@ jobs:
       - name: Install the project
         run: uv sync
       
+      - name: Force reinstall LFX to pick up version change
+        run: |
+          echo "Force reinstalling lfx-nightly to ensure version metadata is updated..."
+          uv pip install --reinstall --no-deps src/lfx
+      
       - name: Verify LFX version
         run: |
           echo "Checking installed LFX version..."
