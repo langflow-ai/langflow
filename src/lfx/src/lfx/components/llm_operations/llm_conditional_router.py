@@ -117,6 +117,7 @@ class SmartRouterComponent(Component):
             info="Include an Else output for cases that don't match any route.",
             value=False,
             advanced=True,
+            real_time_refresh=True,
         ),
         MultilineInput(
             name="custom_prompt",
