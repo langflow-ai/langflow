@@ -24,6 +24,7 @@ export type ChatMessageType = {
   edit?: boolean;
   icon?: string;
   category?: string;
+  duration?: number | null;
   properties?: PropertiesType;
   content_blocks?: ContentBlock[];
 };

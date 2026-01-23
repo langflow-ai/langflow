@@ -12,6 +12,7 @@ type Message = {
   edit: boolean;
   background_color: string;
   text_color: string;
+  duration?: number | null;
   category?: string;
   properties?: {
     state?: "partial" | "complete";

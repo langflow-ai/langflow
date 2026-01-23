@@ -108,11 +108,50 @@ export const BotMessage = memo(
 
     const thinkingActive = Boolean(isBuilding && lastMessage);
 
+    // Callback to save duration when it freezes
+    const handleDurationFreeze = (duration: number) => {
+      // Check if message is in sessionStorage (true playground mode)
+      const storageKey = flow_id;
+      const rawMessages = window.sessionStorage.getItem(storageKey || "");
+      const messages = rawMessages ? JSON.parse(rawMessages) : [];
+      const messageIndex = messages.findIndex((m: any) => m.id === chat.id);
+      const isInSessionStorage = messageIndex !== -1;
+      
+      if (isInSessionStorage && flow_id) {
+        // Message is in sessionStorage: save duration at message level
+        messages[messageIndex] = {
+          ...messages[messageIndex],
+          duration,
+        };
+        window.sessionStorage.setItem(storageKey, JSON.stringify(messages));
+      } else {
+        // Non-playground mode: save duration to backend database at message level
+        updateMessageMutation(
+          {
+            message: {
+              id: chat.id,
+              files: convertFiles(chat.files),
+              sender_name: chat.sender_name ?? "AI",
+              text: chat.message.toString(),
+              sender: "Machine",
+              flow_id,
+              session_id: chat.session ?? "",
+              duration,
+              properties: chat.properties as any,
+            },
+            refetch: false,
+          },
+        );
+      }
+    };
+
     // Use hook for message duration tracking
     const { displayTime } = useMessageDuration({
       chatId: chat.id,
       lastMessage,
       isBuilding,
+      savedDuration: chat.duration ?? undefined,
+      onDurationFreeze: handleDurationFreeze,
     });
 
     // Use shared hook for tool duration tracking

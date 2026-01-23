@@ -53,7 +53,7 @@ export const useChatHistory = (visibleSession: string | null) => {
         }
       }
     }
-  }, [queryData, queryClient, sessionCacheKey]);
+  }, [queryData, queryClient, sessionCacheKey, visibleSession, currentFlowId]);
 
   // Use session cache as the single source of truth
   // updateMessage and addUserMessage handle all updates (placeholders, streaming, etc.)
@@ -108,6 +108,7 @@ export const useChatHistory = (visibleSession: string | null) => {
           content_blocks: message.content_blocks,
           category: message.category,
           properties: message.properties,
+          duration: message.duration,
         };
       });
 

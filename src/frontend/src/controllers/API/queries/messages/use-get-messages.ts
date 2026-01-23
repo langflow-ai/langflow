@@ -30,6 +30,7 @@ export const useGetMessagesQuery: useQueryFunctionType<
 
   const getMessagesFn = async (id?: string, params = {}) => {
     const isPlaygroundPage = useFlowStore.getState().playgroundPage;
+    
     const config = {};
     if (id) {
       config["params"] = { flow_id: id };
@@ -44,11 +45,15 @@ export const useGetMessagesQuery: useQueryFunctionType<
       }
       config["params"] = { ...config["params"], ...processedParams };
     }
+    
     if (!isPlaygroundPage) {
       return await api.get<any>(`${getURL("MESSAGES")}`, config);
     } else {
+      const storageKey = id ?? "";
+      const storedData = window.sessionStorage.getItem(storageKey);
+      const parsedData = JSON.parse(storedData || "[]");
       return {
-        data: JSON.parse(window.sessionStorage.getItem(id ?? "") || "[]"),
+        data: parsedData,
       };
     }
   };
