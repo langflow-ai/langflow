@@ -44,7 +44,7 @@ def encrypt_auth_settings(auth_settings: dict[str, Any] | None) -> dict[str, Any
                     if result != field_to_encrypt:
                         logger.debug(f"Field {field} is already encrypted")
                         continue
-                    
+
                     # If decrypt returns the same value, it's plaintext and needs encryption
                     encrypted_value = auth_utils.encrypt_api_key(field_to_encrypt)
                     encrypted_settings[field] = encrypted_value
