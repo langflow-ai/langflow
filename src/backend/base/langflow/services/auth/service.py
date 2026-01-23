@@ -235,7 +235,7 @@ class AuthService(AuthServiceBase):
                     )
 
             # Validate token type - must be "access" for authentication
-            if user_id is None or token_type != "access":
+            if user_id is None or token_type != "access":  # noqa: S105
                 logger.warning(f"Invalid token payload. Expected 'access' token, got: {token_type}")
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,

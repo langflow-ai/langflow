@@ -201,14 +201,14 @@ class OIDCAuthService(AuthServiceBase):
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Token has expired",
                 )
-
-            return decoded
         except jwt.InvalidTokenError as e:
             logger.error(f"Token validation failed: {e}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=f"Invalid ID token: {e}",
             ) from e
+
+        return decoded
 
     # =========================================================================
     # JIT User Provisioning
@@ -271,6 +271,7 @@ class OIDCAuthService(AuthServiceBase):
             await db.commit()
             await db.refresh(new_user)
             logger.info(f"New SSO user provisioned: {username}")
+
             return new_user
         except IntegrityError as e:
             await db.rollback()

@@ -96,7 +96,8 @@ class SSOConfig(SQLModel, table=True):  # type: ignore[call-arg]
         """Validate that provider is one of the supported types."""
         allowed = {"oidc", "saml", "ldap", "jwt"}
         if v.lower() not in allowed:
-            raise ValueError(f"Provider must be one of: {', '.join(allowed)}")
+            msg = f"Provider must be one of: {', '.join(allowed)}"
+            raise ValueError(msg)
         return v.lower()
 
 

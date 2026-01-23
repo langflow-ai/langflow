@@ -42,7 +42,8 @@ class OIDCConfig(BaseModel):
     def validate_url(cls, v: str) -> str:
         """Validate that URLs are properly formatted."""
         if not v.startswith(("http://", "https://")):
-            raise ValueError("URL must start with http:// or https://")
+            msg = "URL must start with http:// or https://"
+            raise ValueError(msg)
         return v
 
 
@@ -120,7 +121,9 @@ class SSOProviderConfig(BaseModel):
             return self.saml
         if self.provider_type == AuthProvider.LDAP and self.ldap:
             return self.ldap
-        raise ValueError(f"No configuration found for provider: {self.provider_type}")
+
+        msg = f"No configuration found for provider: {self.provider_type}"
+        raise ValueError(msg)
 
 
 class SSOConfig(BaseModel):
@@ -175,18 +178,21 @@ class SSOConfigLoader:
         path = Path(config_path)
 
         if not path.exists():
-            raise FileNotFoundError(f"SSO config file not found: {config_path}")
+            msg = f"SSO config file not found: {config_path}"
+            raise FileNotFoundError(msg)
 
         with path.open("r") as f:
             config_data = yaml.safe_load(f)
 
         if not config_data:
-            raise ValueError(f"Empty or invalid YAML in config file: {config_path}")
+            msg = f"Empty or invalid YAML in config file: {config_path}"
+            raise ValueError(msg)
 
         try:
             return SSOConfig.model_validate(config_data)
         except Exception as e:
-            raise ValueError(f"Invalid SSO configuration: {e}") from e
+            msg = f"Invalid SSO configuration: {e}"
+            raise ValueError(msg) from e
 
     @staticmethod
     def create_example_config(output_path: str | Path, multi_provider: bool = True) -> None:
