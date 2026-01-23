@@ -147,8 +147,10 @@ jobs:
         run: |
           name=$(uv tree | grep 'langflow-base' | awk '{print $2}' | head -n 1)
           version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | head -n 1)
-          if [ "$name" != "langflow-base-nightly" ]; then
-            echo "Name $name does not match langflow-base-nightly. Exiting the workflow."
+          # Strip extras from package name (e.g., "langflow-base-nightly[complete]" -> "langflow-base-nightly")
+          name_without_extras=$(echo $name | sed 's/\[.*\]//')
+          if [ "$name_without_extras" != "langflow-base-nightly" ]; then
+            echo "Name $name_without_extras does not match langflow-base-nightly. Exiting the workflow."
             exit 1
           fi
           if [ "$version" != "${{ inputs.nightly_tag_base }}" ]; then
