@@ -1,5 +1,4 @@
 describe("Minimized Node Handle Rendering", () => {
-
   const shouldRenderHandle = (
     showNode: boolean,
     displayHandle: boolean,

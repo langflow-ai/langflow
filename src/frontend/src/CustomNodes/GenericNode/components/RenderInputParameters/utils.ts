@@ -51,7 +51,10 @@ export const findPrimaryInput = (
     const template = templates[templateField];
     if (!template) continue;
 
-    const hasHandle = computeDisplayHandle(template, isToolMode && !!template.tool_mode);
+    const hasHandle = computeDisplayHandle(
+      template,
+      isToolMode && !!template.tool_mode,
+    );
     handleMap.set(templateField, hasHandle);
 
     // First field with a handle becomes the primary input
