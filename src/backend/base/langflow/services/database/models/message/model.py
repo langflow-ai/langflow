@@ -122,7 +122,7 @@ class MessageBase(SQLModel):
             files=message.files or [],
             timestamp=timestamp,
             flow_id=flow_id,
-            duration=getattr(message, 'duration', None),
+            duration=getattr(message, "duration", None),
             properties=properties,
             category=message.category,
             content_blocks=content_blocks,
