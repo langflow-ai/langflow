@@ -41,6 +41,7 @@ function ConfirmationModal({
   index,
   onConfirm,
   open,
+  onOpenAutoFocus,
   onClose,
   onCancel,
   ...props
@@ -78,7 +79,12 @@ function ConfirmationModal({
   };
 
   return (
-    <BaseModal {...props} open={open} setOpen={setModalOpen}>
+    <BaseModal
+      {...props}
+      open={open}
+      setOpen={setModalOpen}
+      onOpenAutoFocus={onOpenAutoFocus}
+    >
       <BaseModal.Trigger>{triggerChild}</BaseModal.Trigger>
       <BaseModal.Header description={titleHeader ?? null}>
         <span className="pr-2">{title}</span>

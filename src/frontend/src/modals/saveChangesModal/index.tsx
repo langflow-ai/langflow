@@ -42,6 +42,14 @@ export function SaveChangesModal({
       onCancel={onProceed}
       loading={autoSave ? true : saving}
       size="x-small"
+      onOpenAutoFocus={(e) => {
+        e.preventDefault();
+        (
+          document.querySelector(
+            '[data-testid="replace-button"]',
+          ) as HTMLElement
+        )?.focus();
+      }}
     >
       <ConfirmationModal.Content>
         {autoSave ? (
