@@ -208,7 +208,7 @@ class OIDCAuthService(AuthServiceBase):
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=f"Invalid ID token: {e}",
             ) from e
-        
+
         return decoded
 
     # =========================================================================
@@ -322,7 +322,7 @@ class OIDCAuthService(AuthServiceBase):
 
         # Validate and decode ID token
         claims = await self.validate_id_token(token)
-        
+
         # Get or create user from claims (JIT provisioning)
         return await self.get_or_create_user_from_claims(claims, db)
 

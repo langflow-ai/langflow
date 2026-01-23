@@ -147,6 +147,7 @@ class SSOConfig(BaseModel):
         msg = f"No configuration found for provider: {self.provider}"
         raise ValueError(msg)
 
+
 class SSOConfigLoader:
     """Loader for SSO configuration from YAML files."""
 
