@@ -1176,7 +1176,7 @@
   },
   "SmartRouter": {
     "versions": {
-      "0.3.0": "9c6736e784f6"
+      "0.3.0": "0f6df635df7b"
     }
   },
   "LLMSelectorComponent": {
