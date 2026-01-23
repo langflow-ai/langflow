@@ -33,17 +33,23 @@ def encrypt_auth_settings(auth_settings: dict[str, Any] | None) -> dict[str, Any
             try:
                 field_to_encrypt = encrypted_settings[field]
                 # Only encrypt if the value is not already encrypted
-                # Try to decrypt first - if it fails, it's not encrypted
+                # Try to decrypt first - if it returns the same value, it's plaintext
                 try:
                     result = auth_utils.decrypt_api_key(field_to_encrypt)
                     if not result:
                         msg = f"Failed to decrypt field {field}"
                         raise ValueError(msg)
 
-                    # If decrypt succeeds, it's already encrypted
-                    logger.debug(f"Field {field} is already encrypted")
+                    # If decrypt returns a different value, it's already encrypted
+                    if result != field_to_encrypt:
+                        logger.debug(f"Field {field} is already encrypted")
+                        continue
+                    
+                    # If decrypt returns the same value, it's plaintext and needs encryption
+                    encrypted_value = auth_utils.encrypt_api_key(field_to_encrypt)
+                    encrypted_settings[field] = encrypted_value
                 except (ValueError, TypeError, KeyError, InvalidToken):
-                    # If decrypt fails, the value is plaintext and needs encryption
+                    # If decrypt fails with exception, try to encrypt
                     encrypted_value = auth_utils.encrypt_api_key(field_to_encrypt)
                     encrypted_settings[field] = encrypted_value
             except (ValueError, TypeError, KeyError) as e:
