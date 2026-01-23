@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import json
 import random
 import warnings
 from collections.abc import Coroutine
@@ -19,10 +20,7 @@ from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.services.auth.base import AuthServiceBase
 from langflow.services.database.models.api_key.crud import check_key
 from langflow.services.database.models.user.crud import (
-    get_user_by_id,
-    get_user_by_username,
-    update_user_last_login_at,
-)
+    get_user_by_id, get_user_by_username, update_user_last_login_at)
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import session_scope
 from langflow.services.schema import ServiceType
@@ -32,6 +30,8 @@ if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
 
     from langflow.services.database.models.api_key.model import ApiKey
+
+_ZERO_UUID = UUID(int=0)
 
 MINIMUM_KEY_LENGTH = 32
 AUTO_LOGIN_WARNING = "In v2.0, LANGFLOW_SKIP_AUTH_AUTO_LOGIN will be removed. Please update your authentication method."
@@ -405,7 +405,8 @@ class AuthService(AuthServiceBase):
         username = settings_service.auth_settings.SUPERUSER
         super_user = await get_user_by_username(db, username)
         if not super_user:
-            from langflow.services.database.models.user.crud import get_all_superusers
+            from langflow.services.database.models.user.crud import \
+                get_all_superusers
 
             superusers = await get_all_superusers(db)
             super_user = superusers[0] if superusers else None
@@ -455,11 +456,22 @@ class AuthService(AuthServiceBase):
             not verified as this is a utility function, not an authentication function.
         """
         try:
-            claims = jwt.decode(token, options={"verify_signature": False})
+            # Split JWT into parts and decode only the payload (middle part)
+            parts = token.split(".")
+            if len(parts) != 3:
+                return _ZERO_UUID
+
+            # Decode the payload (add padding if needed for base64)
+            payload = parts[1]
+            padding = 4 - (len(payload) % 4)
+            if padding != 4:
+                payload += "=" * padding
+
+            claims = json.loads(base64.urlsafe_b64decode(payload))
             user_id = claims["sub"]
             return UUID(user_id)
-        except (KeyError, InvalidTokenError, ValueError):
-            return UUID(int=0)
+        except (KeyError, ValueError, json.JSONDecodeError):
+            return _ZERO_UUID
 
     async def create_user_tokens(self, user_id: UUID, db: AsyncSession, *, update_last_login: bool = False) -> dict:
         settings_service = self.settings
