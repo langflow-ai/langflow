@@ -92,7 +92,15 @@ export default function FlowLogsModal({
 
   return (
     <>
-      <BaseModal open={open} setOpen={setOpen} size="x-large">
+      <BaseModal
+        open={open}
+        setOpen={setOpen}
+        size="x-large"
+        onOpenAutoFocus={(e) => {
+          e.preventDefault();
+          (document.querySelector(".ag-body-viewport") as HTMLElement)?.focus();
+        }}
+      >
         <BaseModal.Trigger asChild>{children}</BaseModal.Trigger>
         <BaseModal.Header description="Inspect component executions.">
           <div className="flex w-full justify-between">
