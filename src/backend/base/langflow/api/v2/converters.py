@@ -73,10 +73,8 @@ def parse_flat_inputs(inputs: dict[str, Any]) -> tuple[dict[str, dict[str, Any]]
     session_id: str | None = None
 
     for key, value in inputs.items():
-        if "." in key:
-            # Split component_id.param
-            component_id, param_name = key.split(".", 1)
-
+        component_id, sep, param_name = key.partition(".")
+        if sep:
             # Extract session_id if present (use first one found)
             if param_name == "session_id":
                 if session_id is None:
@@ -86,7 +84,6 @@ def parse_flat_inputs(inputs: dict[str, Any]) -> tuple[dict[str, dict[str, Any]]
                 if component_id not in tweaks:
                     tweaks[component_id] = {}
                 tweaks[component_id][param_name] = value
-        # No dot - treat as component-level dict (for backward compatibility)
         # No dot - treat as component-level dict (for backward compatibility)
         elif isinstance(value, dict):
             tweaks[key] = value
