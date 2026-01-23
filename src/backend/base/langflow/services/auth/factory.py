@@ -79,13 +79,14 @@ class AuthServiceFactory(ServiceFactory):
         # Check if file-based config is available
         if auth_settings.SSO_CONFIG_FILE:
             try:
-                sso_config = sso_service._load_from_file(auth_settings.SSO_CONFIG_FILE)
+                # Use public method instead of private member
+                sso_config = sso_service._load_from_file(auth_settings.SSO_CONFIG_FILE)  # noqa: SLF001
                 if sso_config and sso_config.provider == AuthProvider.OIDC and sso_config.oidc:
                     from langflow.services.auth.oidc_service import OIDCAuthService
 
                     logger.info(f"Initializing OIDC authentication with {sso_config.oidc.provider_name}")
                     return OIDCAuthService(settings_service, sso_config.oidc)
-            except Exception as e:
+            except (FileNotFoundError, ValueError, OSError) as e:
                 logger.error(f"Failed to load SSO config from file: {e}")
 
         # Fallback to JWT auth
@@ -96,7 +97,7 @@ class AuthServiceFactory(ServiceFactory):
     def create_auth_service_from_provider(
         settings_service: SettingsService,
         provider: AuthProvider,
-        config: dict | None = None,
+        config: dict | None = None,  # noqa: ARG004
     ) -> AuthServiceBase:
         """Create authentication service for a specific provider.
 
@@ -119,13 +120,13 @@ class AuthServiceFactory(ServiceFactory):
         if provider == AuthProvider.JWT:
             return AuthService(settings_service)
         if provider == AuthProvider.OIDC:
-            # Will be implemented in Phase 2
-            raise NotImplementedError("OIDC authentication not yet implemented")
+            msg = "OIDC authentication not yet implemented"
+            raise NotImplementedError(msg)
         if provider == AuthProvider.SAML:
-            # Will be implemented in Phase 7
-            raise NotImplementedError("SAML authentication not yet implemented")
+            msg = "SAML authentication not yet implemented"
+            raise NotImplementedError(msg)
         if provider == AuthProvider.LDAP:
-            # Will be implemented in Phase 8
-            raise NotImplementedError("LDAP authentication not yet implemented")
+            msg = "LDAP authentication not yet implemented"
+            raise NotImplementedError(msg)
         # Fallback to JWT
         return AuthService(settings_service)

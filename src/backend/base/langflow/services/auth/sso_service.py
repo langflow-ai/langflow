@@ -93,7 +93,7 @@ class SSOConfigService:
 
             # Convert database model to SSOConfig
             return self._db_config_to_sso_config(db_config)
-        except Exception as e:
+        except (ValueError, KeyError, AttributeError) as e:
             logger.error(f"Failed to load SSO config from database: {e}")
             return None
 
@@ -111,7 +111,7 @@ class SSOConfigService:
             try:
                 self._file_config = SSOConfigLoader.load_from_file(config_path)
                 self._file_config_loaded = True
-            except Exception as e:
+            except (FileNotFoundError, ValueError, OSError) as e:
                 logger.error(f"Failed to load SSO config from file {config_path}: {e}")
                 self._file_config = None
                 self._file_config_loaded = True

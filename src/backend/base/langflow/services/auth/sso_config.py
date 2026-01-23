@@ -43,7 +43,8 @@ class OIDCConfig(BaseModel):
     def validate_url(cls, v: str) -> str:
         """Validate that URLs are properly formatted."""
         if not v.startswith(("http://", "https://")):
-            raise ValueError("URL must start with http:// or https://")
+            msg = "URL must start with http:// or https://"
+            raise ValueError(msg)
         return v
 
 
@@ -142,8 +143,9 @@ class SSOConfig(BaseModel):
             return self.saml
         if self.provider == AuthProvider.LDAP and self.ldap:
             return self.ldap
-        raise ValueError(f"No configuration found for provider: {self.provider}")
 
+        msg = f"No configuration found for provider: {self.provider}"
+        raise ValueError(msg)
 
 class SSOConfigLoader:
     """Loader for SSO configuration from YAML files."""
@@ -165,18 +167,21 @@ class SSOConfigLoader:
         path = Path(config_path)
 
         if not path.exists():
-            raise FileNotFoundError(f"SSO config file not found: {config_path}")
+            msg = f"SSO config file not found: {config_path}"
+            raise FileNotFoundError(msg)
 
         with path.open("r") as f:
             config_data = yaml.safe_load(f)
 
         if not config_data:
-            raise ValueError(f"Empty or invalid YAML in config file: {config_path}")
+            msg = f"Empty or invalid YAML in config file: {config_path}"
+            raise ValueError(msg)
 
         try:
             return SSOConfig.model_validate(config_data)
         except Exception as e:
-            raise ValueError(f"Invalid SSO configuration: {e}") from e
+            msg = f"Invalid SSO configuration: {e}"
+            raise ValueError(msg) from e
 
     @staticmethod
     def create_example_config(provider: AuthProvider, output_path: str | Path) -> None:
@@ -241,7 +246,8 @@ class SSOConfigLoader:
                 },
             }
         else:
-            raise ValueError(f"Unknown provider: {provider}")
+            msg = f"Unknown provider: {provider}"
+            raise ValueError(msg)
 
         with path.open("w") as f:
             yaml.dump(example, f, default_flow_style=False, sort_keys=False)

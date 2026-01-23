@@ -7,13 +7,17 @@ import pytest
 from langflow.services.auth.factory import AuthProvider
 from langflow.services.auth.sso_config import OIDCConfig, SSOConfig, SSOConfigLoader
 
+# Test constants
+TEST_CLIENT_SECRET = "test-secret"
+TEST_SECRET = "secret"
+
 
 def test_oidc_config_validation():
     """Test OIDC configuration validation."""
     config = OIDCConfig(
         provider_name="IBM W3ID",
         client_id="test-client-id",
-        client_secret="test-secret",
+        client_secret=TEST_CLIENT_SECRET,
         discovery_url="https://w3id.sso.ibm.com/isam/oidc/endpoint/default/.well-known/openid-configuration",
         redirect_uri="https://langflow.example.com/api/v1/auth/callback",
     )
@@ -30,7 +34,7 @@ def test_oidc_config_invalid_url():
         OIDCConfig(
             provider_name="Test",
             client_id="test",
-            client_secret="secret",
+            client_secret=TEST_SECRET,
             discovery_url="invalid-url",
             redirect_uri="https://example.com/callback",
         )
@@ -92,7 +96,7 @@ def test_sso_config_get_provider_config():
         oidc=OIDCConfig(
             provider_name="Test",
             client_id="test",
-            client_secret="secret",
+            client_secret=TEST_SECRET,
             discovery_url="https://example.com/.well-known/openid-configuration",
             redirect_uri="https://langflow.example.com/callback",
         ),
