@@ -49,6 +49,10 @@ class AuthService(AuthServiceBase):
 
     def __init__(self, settings_service: SettingsService):
         self.settings_service = settings_service
+        # Cache for the last SECRET_KEY string and its Fernet instance to avoid
+        # reconstructing Fernet on every decrypt call when the key hasn't changed.
+        self._cached_secret_key: str | None = None
+        self._cached_fernet: Fernet | None = None
         self.set_ready()
 
     @property
@@ -547,8 +551,18 @@ class AuthService(AuthServiceBase):
 
     def _get_fernet(self) -> Fernet:
         secret_key: str = self.settings.auth_settings.SECRET_KEY.get_secret_value()
+        # Reuse cached Fernet if the SECRET_KEY string is unchanged.
+        cached = self._cached_fernet
+        if cached is not None and self._cached_secret_key == secret_key:
+            return cached
+
         valid_key = self._ensure_valid_key(secret_key)
-        return Fernet(valid_key)
+        fernet = Fernet(valid_key)
+
+        # Update cache
+        self._cached_secret_key = secret_key
+        self._cached_fernet = fernet
+        return fernet
 
     def encrypt_api_key(self, api_key: str) -> str:
         fernet = self._get_fernet()
@@ -578,8 +592,9 @@ class AuthService(AuthServiceBase):
             return encrypted_api_key
 
         fernet = self._get_fernet()
+        token_bytes = encrypted_api_key.encode()
         try:
-            return fernet.decrypt(encrypted_api_key.encode()).decode()
+            return fernet.decrypt(token_bytes).decode()
         except Exception as primary_exception:  # noqa: BLE001
             logger.debug(
                 "Decryption using UTF-8 encoded API key failed. Error: %s. "
