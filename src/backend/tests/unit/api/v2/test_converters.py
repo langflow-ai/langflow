@@ -86,7 +86,7 @@ class TestParseFlatInputs:
         tweaks, session_id = parse_flat_inputs(inputs)
 
         assert tweaks == {
-            "ChatInput-abc": {"input_value": "hello"},
+            "ChatInput-abc": {"input_value": "hello", "session_id": "session-123"},
             "LLM-xyz": {"temperature": 0.7},
         }
         assert session_id == "session-123"
@@ -100,7 +100,10 @@ class TestParseFlatInputs:
         tweaks, session_id = parse_flat_inputs(inputs)
 
         assert session_id == "session-first"
-        assert tweaks == {}
+        assert tweaks == {
+            "ChatInput-abc": {"session_id": "session-first"},
+            "ChatInput-xyz": {"session_id": "session-second"},
+        }
 
     def test_parse_flat_inputs_dict_values(self):
         """Test backward compatibility with dict values (no dot notation)."""
@@ -838,16 +841,18 @@ class TestCreateJobResponse:
     def test_create_job_response_structure(self):
         """Test job response structure and timestamp format."""
         job_id = "job-12345"
-        response = create_job_response(job_id)
+        flow_id = "flow-678"
+        response = create_job_response(job_id, flow_id)
 
         assert isinstance(response, WorkflowJobResponse)
         assert response.job_id == job_id
+        assert response.flow_id == flow_id
         assert response.status == JobStatus.QUEUED
         assert response.errors == []
         assert response.created_timestamp is not None
-        # Verify timestamp format
+        # Verify timestamp format (ISO format should contain 'T')
         assert isinstance(response.created_timestamp, str)
-        assert response.created_timestamp.isdigit()
+        assert "T" in response.created_timestamp
 
 
 class TestCreateErrorResponse:
