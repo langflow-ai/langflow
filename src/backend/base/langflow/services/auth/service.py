@@ -18,11 +18,7 @@ from sqlalchemy.exc import IntegrityError
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.services.auth.base import AuthServiceBase
 from langflow.services.database.models.api_key.crud import check_key
-from langflow.services.database.models.user.crud import (
-    get_user_by_id,
-    get_user_by_username,
-    update_user_last_login_at,
-)
+from langflow.services.database.models.user.crud import get_user_by_id, get_user_by_username, update_user_last_login_at
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import session_scope
 from langflow.services.schema import ServiceType
@@ -49,6 +45,9 @@ class AuthService(AuthServiceBase):
 
     def __init__(self, settings_service: SettingsService):
         self.settings_service = settings_service
+        # _cached_secret_entry holds a tuple of (secret_str, algorithm, secret_obj_id)
+        # secret_obj_id is used to detect when the underlying SECRET_KEY object changes
+        self._cached_secret_entry: tuple[str, str, int] | None = None
         self.set_ready()
 
     @property
@@ -354,14 +353,32 @@ class AuthService(AuthServiceBase):
 
     def create_token(self, data: dict, expires_delta: timedelta):
         settings_service = self.settings
-        to_encode = data.copy()
+        # Resolve auth settings and secret object once per call
+        auth_settings = settings_service.auth_settings
+        secret_obj = auth_settings.SECRET_KEY
+
+        # Try to reuse cached secret and algorithm when the underlying secret object is unchanged.
+        # This avoids repeatedly calling get_secret_value() which can be relatively expensive,
+        # while still picking up a new value if the SECRET_KEY object is replaced.
+        cached = self._cached_secret_entry
+        secret_obj_id = id(secret_obj)
+        if cached is None or cached[2] != secret_obj_id:
+            # Refresh cache
+            secret_value = secret_obj.get_secret_value()
+            algorithm = auth_settings.ALGORITHM
+            self._cached_secret_entry = (secret_value, algorithm, secret_obj_id)
+        else:
+            secret_value, algorithm, _ = cached
+
+        # Create payload without mutating the caller's dict
+        to_encode = dict(data)
         expire = datetime.now(timezone.utc) + expires_delta
         to_encode["exp"] = expire
 
         return jwt.encode(
             to_encode,
-            settings_service.auth_settings.SECRET_KEY.get_secret_value(),
-            algorithm=settings_service.auth_settings.ALGORITHM,
+            secret_value,
+            algorithm=algorithm,
         )
 
     async def create_super_user(
