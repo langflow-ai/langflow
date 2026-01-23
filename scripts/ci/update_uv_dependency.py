@@ -23,13 +23,13 @@ def update_uv_dep(base_version: str) -> None:
     pattern = re.compile(
         r'(dependencies\s*=\s*\[\s*\n\s*)("langflow-base(?:-nightly)?((?:\[[^\]]+\])?)(?:~=|==)[\d.]+(?:\.(?:post|dev|a|b|rc)\d+)*")'
     )
-    
+
     # Check if the pattern is found
     match = pattern.search(content)
     if not match:
         msg = f"{pattern} UV dependency not found in {pyproject_path}"
         raise ValueError(msg)
-    
+
     # Extract extras if present (e.g., "[complete]")
     extras = match.group(3) if match.group(3) else ""
     replacement = rf'\1"langflow-base-nightly{extras}=={base_version}"'
