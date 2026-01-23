@@ -8,6 +8,7 @@ configuration.
 from __future__ import annotations
 
 from enum import Enum
+from functools import cache
 from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
@@ -40,8 +41,7 @@ class AuthServiceFactory(ServiceFactory):
 
     def __init__(self):
         # Import here to avoid circular dependencies
-        from langflow.services.auth.service import AuthService
-
+        AuthService = _get_auth_service_class()
         super().__init__(AuthService)
 
     def create(self, settings_service: SettingsService) -> AuthServiceBase:
@@ -115,8 +115,7 @@ class AuthServiceFactory(ServiceFactory):
         Raises:
             NotImplementedError: If the provider is not yet implemented
         """
-        from langflow.services.auth.service import AuthService
-
+        AuthService = _get_auth_service_class()
         if provider == AuthProvider.JWT:
             return AuthService(settings_service)
         if provider == AuthProvider.OIDC:
@@ -130,3 +129,11 @@ class AuthServiceFactory(ServiceFactory):
             raise NotImplementedError(msg)
         # Fallback to JWT
         return AuthService(settings_service)
+
+
+@cache
+def _get_auth_service_class():
+    # Import here to avoid circular dependencies
+    from langflow.services.auth.service import AuthService
+
+    return AuthService
