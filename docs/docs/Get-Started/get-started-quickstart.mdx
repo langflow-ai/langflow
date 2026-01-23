@@ -58,18 +58,18 @@ The **Simple Agent** template consists of an [**Agent** component](/agents) conn
 
 Many components can be tools for agents, including [Model Context Protocol (MCP) servers](/mcp-server). The agent decides which tools to call based on the context of a given query.
 
-2. <PartialGlobalModelProviders />
-
+2. In the **Agent** component, click **Setup Provider** to select your language model provider.
+   <PartialGlobalModelProviders />
 3. In the **Agent** component, select your configured model from the **Language Model** dropdown.
 
     <details>
-    <summary>Access more models and providers</summary
-    
+    <summary>Access more models and providers</summary>
+
     There are two ways to access more models and providers:
-    
+
     * Edit Langflow's global <Icon name="BrainCog" aria-hidden="true" /> **Models** configuration. These providers and models are part of Langflow's core functionality. Use the **Ollama** provider to connect to any model hosted on a local or remote Ollama instance.
     * Use any [additional language model component](/components-models#additional-language-models), including your own custom components. In the **Agent** component, set the **Language Model** field to **Connect other models**, and then attach your preferred component.
-    
+
     </details>
 
 4. To run the flow, click <Icon name="Play" aria-hidden="true"/> **Playground**.
