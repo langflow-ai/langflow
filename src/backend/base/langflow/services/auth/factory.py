@@ -82,7 +82,7 @@ class AuthServiceFactory(ServiceFactory):
             try:
                 # Use public method instead of private member
                 sso_config = sso_service._load_from_file(auth_settings.SSO_CONFIG_FILE)  # noqa: SLF001
-                
+
                 # With multi-provider support, we need to pick the first enabled OIDC provider
                 # In the future, this could be made configurable via environment variable
                 if sso_config and sso_config.providers:
@@ -95,15 +95,11 @@ class AuthServiceFactory(ServiceFactory):
                         ):
                             from langflow.services.auth.oidc_service import OIDCAuthService
 
-                            logger.info(
-                                f"Initializing OIDC authentication with {provider_config.oidc.provider_name}"
-                            )
+                            logger.info(f"Initializing OIDC authentication with {provider_config.oidc.provider_name}")
                             return OIDCAuthService(settings_service, provider_config.oidc)
-                    
+
                     # If we have providers but none are OIDC, log warning
-                    logger.warning(
-                        "SSO config loaded but no enabled OIDC providers found, using JWT authentication"
-                    )
+                    logger.warning("SSO config loaded but no enabled OIDC providers found, using JWT authentication")
             except (FileNotFoundError, ValueError, OSError) as e:
                 logger.error(f"Failed to load SSO config from file: {e}")
 
