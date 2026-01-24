@@ -267,6 +267,112 @@ class TestClientIdMetadataDocuments:
             )
 
 
+class TestPreRegisteredCredentials:
+    """Tests for pre-registered client credentials support."""
+
+    @pytest.fixture
+    def storage_dir(self, tmp_path: Path) -> Path:
+        """Create a temporary directory for token storage."""
+        return tmp_path / "oauth"
+
+    @pytest.mark.asyncio
+    async def test_creates_provider_with_client_id(self, storage_dir: Path) -> None:
+        """Test that create_mcp_oauth_provider accepts client_id parameter."""
+        provider, redirect_uri, cleanup = await create_mcp_oauth_provider(
+            server_url="https://mcp.example.com",
+            storage_dir=storage_dir,
+            redirect_port=0,
+            client_id="my-pre-registered-client-id",
+        )
+
+        try:
+            assert provider is not None
+            assert redirect_uri.startswith(("http://localhost:", "http://127.0.0.1:"))
+            # Verify client info was stored
+            stored_client = await provider.context.storage.get_client_info()
+            assert stored_client is not None
+            assert stored_client.client_id == "my-pre-registered-client-id"
+            assert stored_client.token_endpoint_auth_method == "none"  # Public client
+        finally:
+            cleanup()
+
+    @pytest.mark.asyncio
+    async def test_creates_provider_with_client_id_and_secret(self, storage_dir: Path) -> None:
+        """Test that create_mcp_oauth_provider accepts client_id and client_secret."""
+        provider, redirect_uri, cleanup = await create_mcp_oauth_provider(
+            server_url="https://mcp.example.com",
+            storage_dir=storage_dir,
+            redirect_port=0,
+            client_id="my-confidential-client-id",
+            client_secret="my-client-secret",
+        )
+
+        try:
+            assert provider is not None
+            # Verify client info was stored with secret
+            stored_client = await provider.context.storage.get_client_info()
+            assert stored_client is not None
+            assert stored_client.client_id == "my-confidential-client-id"
+            assert stored_client.client_secret == "my-client-secret"
+            assert stored_client.token_endpoint_auth_method == "client_secret_post"
+        finally:
+            cleanup()
+
+    @pytest.mark.asyncio
+    async def test_client_id_none_by_default(self, storage_dir: Path) -> None:
+        """Test that no client info is pre-stored when client_id is not provided."""
+        provider, _, cleanup = await create_mcp_oauth_provider(
+            server_url="https://mcp.example.com",
+            storage_dir=storage_dir,
+            redirect_port=0,
+        )
+
+        try:
+            # No pre-registered client info should be stored
+            stored_client = await provider.context.storage.get_client_info()
+            assert stored_client is None
+        finally:
+            cleanup()
+
+    @pytest.mark.asyncio
+    async def test_client_id_takes_priority_over_metadata_url(self, storage_dir: Path) -> None:
+        """Test that client_id takes priority when both client_id and client_metadata_url are provided."""
+        provider, _, cleanup = await create_mcp_oauth_provider(
+            server_url="https://mcp.example.com",
+            storage_dir=storage_dir,
+            redirect_port=0,
+            client_id="my-pre-registered-client-id",
+            client_metadata_url="https://myapp.example.com/oauth/metadata.json",
+        )
+
+        try:
+            # client_id should be stored (takes priority)
+            stored_client = await provider.context.storage.get_client_info()
+            assert stored_client is not None
+            assert stored_client.client_id == "my-pre-registered-client-id"
+        finally:
+            cleanup()
+
+    @pytest.mark.asyncio
+    async def test_redirect_uri_included_in_stored_client_info(self, storage_dir: Path) -> None:
+        """Test that the redirect URI is included in stored client info."""
+        provider, redirect_uri, cleanup = await create_mcp_oauth_provider(
+            server_url="https://mcp.example.com",
+            storage_dir=storage_dir,
+            redirect_port=0,
+            client_id="my-client-id",
+        )
+
+        try:
+            stored_client = await provider.context.storage.get_client_info()
+            assert stored_client is not None
+            assert stored_client.redirect_uris is not None
+            assert len(stored_client.redirect_uris) == 1
+            assert str(stored_client.redirect_uris[0]) == redirect_uri
+        finally:
+            cleanup()
+
+
 class TestOAuthIntegration:
     """Integration tests for OAuth with MCP utilities."""
 
