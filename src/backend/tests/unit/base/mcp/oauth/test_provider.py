@@ -373,6 +373,92 @@ class TestPreRegisteredCredentials:
             cleanup()
 
 
+class TestCustomRedirectUri:
+    """Tests for custom redirect_uri support."""
+
+    @pytest.fixture
+    def storage_dir(self, tmp_path: Path) -> Path:
+        """Create a temporary directory for token storage."""
+        return tmp_path / "oauth"
+
+    @pytest.mark.asyncio
+    async def test_creates_provider_with_custom_redirect_uri(self, storage_dir: Path) -> None:
+        """Test that create_mcp_oauth_provider accepts custom redirect_uri."""
+        custom_uri = "http://localhost:9000/auth/idaas/callback"
+        provider, redirect_uri, cleanup = await create_mcp_oauth_provider(
+            server_url="https://mcp.example.com",
+            storage_dir=storage_dir,
+            redirect_uri=custom_uri,
+        )
+
+        try:
+            assert provider is not None
+            # The returned redirect_uri should match the custom one
+            assert redirect_uri == custom_uri
+        finally:
+            cleanup()
+
+    @pytest.mark.asyncio
+    async def test_custom_redirect_uri_used_in_client_info(self, storage_dir: Path) -> None:
+        """Test that custom redirect_uri is stored in client info."""
+        custom_uri = "http://localhost:9000/auth/callback"
+        provider, redirect_uri, cleanup = await create_mcp_oauth_provider(
+            server_url="https://mcp.example.com",
+            storage_dir=storage_dir,
+            redirect_uri=custom_uri,
+            client_id="my-client-id",
+        )
+
+        try:
+            stored_client = await provider.context.storage.get_client_info()
+            assert stored_client is not None
+            assert stored_client.redirect_uris is not None
+            assert len(stored_client.redirect_uris) == 1
+            assert str(stored_client.redirect_uris[0]) == custom_uri
+        finally:
+            cleanup()
+
+    @pytest.mark.asyncio
+    async def test_custom_redirect_uri_overrides_port_and_host(self, storage_dir: Path) -> None:
+        """Test that custom redirect_uri takes precedence over redirect_port and redirect_host."""
+        custom_uri = "http://myhost:8080/oauth/callback"
+        provider, redirect_uri, cleanup = await create_mcp_oauth_provider(
+            server_url="https://mcp.example.com",
+            storage_dir=storage_dir,
+            redirect_uri=custom_uri,
+            redirect_port=18085,  # Should be ignored
+            redirect_host="localhost",  # Should be ignored
+        )
+
+        try:
+            # The custom URI should be used, not the default port/host
+            assert redirect_uri == custom_uri
+            assert "myhost" in redirect_uri
+            assert ":8080" in redirect_uri
+        finally:
+            cleanup()
+
+    @pytest.mark.asyncio
+    async def test_invalid_redirect_uri_raises_error(self, storage_dir: Path) -> None:
+        """Test that invalid redirect_uri raises ValueError."""
+        with pytest.raises(ValueError, match="Invalid redirect_uri"):
+            await create_mcp_oauth_provider(
+                server_url="https://mcp.example.com",
+                storage_dir=storage_dir,
+                redirect_uri="not-a-valid-url",
+            )
+
+    @pytest.mark.asyncio
+    async def test_redirect_uri_without_scheme_raises_error(self, storage_dir: Path) -> None:
+        """Test that redirect_uri without scheme raises ValueError."""
+        with pytest.raises(ValueError, match="Invalid redirect_uri"):
+            await create_mcp_oauth_provider(
+                server_url="https://mcp.example.com",
+                storage_dir=storage_dir,
+                redirect_uri="localhost:9000/callback",
+            )
+
+
 class TestOAuthIntegration:
     """Integration tests for OAuth with MCP utilities."""
 

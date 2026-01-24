@@ -29,6 +29,7 @@ async def create_mcp_oauth_provider(
     use_file_storage: bool = True,
     redirect_port: int = 18085,
     redirect_host: str = "localhost",
+    redirect_uri: str | None = None,
     client_metadata_url: str | None = None,
     client_id: str | None = None,
     client_secret: str | None = None,
@@ -58,7 +59,13 @@ async def create_mcp_oauth_provider(
         timeout: OAuth flow timeout in seconds (default: 300).
         use_file_storage: Whether to use file-based storage (True) or in-memory (False).
         redirect_port: Port for OAuth callback server (default: 18085).
+            Ignored if redirect_uri is provided.
         redirect_host: Host for redirect_uri (default: "localhost").
+            Ignored if redirect_uri is provided.
+        redirect_uri: Custom OAuth redirect URI. Use this when the OAuth provider
+            requires a specific callback URL (e.g., "http://localhost:9000/auth/callback").
+            The callback server will listen on the host:port parsed from this URI.
+            If not provided, defaults to "http://{redirect_host}:{redirect_port}/callback".
         client_metadata_url: URL-based client ID for Client ID Metadata Documents (CIMD).
             When provided and the authorization server advertises
             `client_id_metadata_document_supported=true`, this URL will be used as
@@ -82,6 +89,7 @@ async def create_mcp_oauth_provider(
     Raises:
         ValueError: If client_metadata_url is provided but is not a valid HTTPS URL
             with a non-root pathname.
+        ValueError: If redirect_uri is provided but cannot be parsed.
 
     Example:
         >>> # Dynamic Client Registration (default):
@@ -94,6 +102,13 @@ async def create_mcp_oauth_provider(
         >>> provider, redirect_uri, cleanup = await create_mcp_oauth_provider(
         ...     server_url="https://mcp.example.com",
         ...     client_id="my-client-id-from-auth-server",
+        ... )
+
+        >>> # Custom redirect URI (for IBM, Okta, etc.):
+        >>> provider, redirect_uri, cleanup = await create_mcp_oauth_provider(
+        ...     server_url="https://mcp.example.com",
+        ...     client_id="my-client-id",
+        ...     redirect_uri="http://localhost:9000/auth/idaas/callback",
         ... )
 
         >>> # Client ID Metadata Documents (CIMD):
@@ -119,8 +134,23 @@ async def create_mcp_oauth_provider(
         storage = InMemoryTokenStorage()
 
     # Set up callback handler with configured port and host
-    callback_handler = OAuthCallbackHandler(port=redirect_port, host=redirect_host)
-    redirect_uri = await callback_handler.start()
+    # If redirect_uri is provided, parse it to extract host and port
+    effective_redirect_uri: str
+    if redirect_uri is not None:
+        parsed_redirect = urlparse(redirect_uri)
+        if not parsed_redirect.scheme or not parsed_redirect.netloc:
+            msg = f"Invalid redirect_uri: {redirect_uri}. Must be a valid URL."
+            raise ValueError(msg)
+        # Extract host and port from the redirect URI
+        callback_host = parsed_redirect.hostname or "localhost"
+        callback_port = parsed_redirect.port or (443 if parsed_redirect.scheme == "https" else 80)
+        callback_handler = OAuthCallbackHandler(port=callback_port, host=callback_host)
+        # Start the handler but use the exact redirect_uri provided
+        await callback_handler.start()
+        effective_redirect_uri = redirect_uri
+    else:
+        callback_handler = OAuthCallbackHandler(port=redirect_port, host=redirect_host)
+        effective_redirect_uri = await callback_handler.start()
 
     # If pre-registered client credentials are provided, store them
     # This takes priority over CIMD and dynamic registration
@@ -134,7 +164,7 @@ async def create_mcp_oauth_provider(
         pre_registered_client = OAuthClientInformationFull(
             client_id=client_id,
             client_secret=client_secret,
-            redirect_uris=[redirect_uri],
+            redirect_uris=[effective_redirect_uri],
             token_endpoint_auth_method=token_endpoint_auth_method,
         )
         await storage.set_client_info(pre_registered_client)
@@ -144,7 +174,7 @@ async def create_mcp_oauth_provider(
     public_client_auth_method = "none"
     client_metadata = OAuthClientMetadata(
         client_name=client_name,
-        redirect_uris=[redirect_uri],
+        redirect_uris=[effective_redirect_uri],
         grant_types=["authorization_code", "refresh_token"],
         response_types=["code"],
         token_endpoint_auth_method=public_client_auth_method,
@@ -172,7 +202,7 @@ async def create_mcp_oauth_provider(
         """Clean up OAuth resources."""
         callback_handler.shutdown()
 
-    return provider, redirect_uri, cleanup
+    return provider, effective_redirect_uri, cleanup
 
 
 async def get_oauth_token_for_server(
@@ -181,6 +211,7 @@ async def get_oauth_token_for_server(
     storage_dir: Path | None = None,
     timeout: float = 300.0,
     *,
+    redirect_uri: str | None = None,
     client_metadata_url: str | None = None,
     client_id: str | None = None,
     client_secret: str | None = None,
@@ -200,6 +231,8 @@ async def get_oauth_token_for_server(
         client_name: Client name for dynamic registration.
         storage_dir: Directory for token storage.
         timeout: OAuth flow timeout in seconds.
+        redirect_uri: Custom OAuth redirect URI. Use this when the OAuth provider
+            requires a specific callback URL.
         client_metadata_url: URL-based client ID for Client ID Metadata Documents (CIMD).
             When provided and the authorization server advertises
             `client_id_metadata_document_supported=true`, this URL will be used as
@@ -220,6 +253,7 @@ async def get_oauth_token_for_server(
         client_name=client_name,
         storage_dir=storage_dir,
         timeout=timeout,
+        redirect_uri=redirect_uri,
         client_metadata_url=client_metadata_url,
         client_id=client_id,
         client_secret=client_secret,
