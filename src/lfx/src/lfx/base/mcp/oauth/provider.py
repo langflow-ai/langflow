@@ -30,6 +30,8 @@ async def create_mcp_oauth_provider(
     redirect_port: int = 18085,
     redirect_host: str = "localhost",
     client_metadata_url: str | None = None,
+    client_id: str | None = None,
+    client_secret: str | None = None,
 ) -> tuple[OAuthClientProvider, str, Callable[[], None]]:
     """Create an OAuthClientProvider for an MCP server.
 
@@ -42,6 +44,11 @@ async def create_mcp_oauth_provider(
 
     The returned provider implements httpx.Auth, so it can be passed directly
     to httpx.AsyncClient as the `auth` parameter.
+
+    Client Registration Priority (per MCP spec):
+    1. Pre-registered credentials (if client_id is provided)
+    2. Client ID Metadata Documents (if client_metadata_url is provided and server supports it)
+    3. Dynamic Client Registration (fallback)
 
     Args:
         server_url: The MCP server URL to authenticate with.
@@ -59,6 +66,12 @@ async def create_mcp_oauth_provider(
             Must be a valid HTTPS URL with a non-root pathname (e.g.,
             "https://app.example.com/oauth/client-metadata.json").
             See: https://datatracker.ietf.org/doc/html/draft-ietf-oauth-client-id-metadata-document
+        client_id: Pre-registered OAuth client ID. Use this when the authorization
+            server doesn't support Dynamic Client Registration (e.g., Logto, Auth0).
+            Takes priority over client_metadata_url and dynamic registration.
+        client_secret: Pre-registered OAuth client secret. Required for confidential
+            clients. If not provided with client_id, the client is treated as a
+            public client (token_endpoint_auth_method="none").
 
     Returns:
         A tuple of (oauth_provider, redirect_uri, cleanup_function):
@@ -71,24 +84,26 @@ async def create_mcp_oauth_provider(
             with a non-root pathname.
 
     Example:
+        >>> # Dynamic Client Registration (default):
         >>> provider, redirect_uri, cleanup = await create_mcp_oauth_provider(
         ...     server_url="https://mcp.example.com",
         ...     client_name="my-app",
         ... )
-        >>> try:
-        ...     async with httpx.AsyncClient(auth=provider) as client:
-        ...         response = await client.get(server_url)
-        ... finally:
-        ...     cleanup()
 
-        # Using Client ID Metadata Documents (CIMD):
+        >>> # Pre-registered client (e.g., for Logto, Auth0):
+        >>> provider, redirect_uri, cleanup = await create_mcp_oauth_provider(
+        ...     server_url="https://mcp.example.com",
+        ...     client_id="my-client-id-from-auth-server",
+        ... )
+
+        >>> # Client ID Metadata Documents (CIMD):
         >>> provider, redirect_uri, cleanup = await create_mcp_oauth_provider(
         ...     server_url="https://mcp.example.com",
         ...     client_metadata_url="https://myapp.example.com/oauth/metadata.json",
         ... )
     """
     from mcp.client.auth import OAuthClientProvider
-    from mcp.shared.auth import OAuthClientMetadata
+    from mcp.shared.auth import OAuthClientInformationFull, OAuthClientMetadata
 
     # Generate storage key from server URL
     parsed = urlparse(server_url)
@@ -106,6 +121,23 @@ async def create_mcp_oauth_provider(
     # Set up callback handler with configured port and host
     callback_handler = OAuthCallbackHandler(port=redirect_port, host=redirect_host)
     redirect_uri = await callback_handler.start()
+
+    # If pre-registered client credentials are provided, store them
+    # This takes priority over CIMD and dynamic registration
+    if client_id is not None:
+        # Determine auth method based on whether client_secret is provided
+        if client_secret:
+            token_endpoint_auth_method = "client_secret_post"
+        else:
+            token_endpoint_auth_method = "none"
+
+        pre_registered_client = OAuthClientInformationFull(
+            client_id=client_id,
+            client_secret=client_secret,
+            redirect_uris=[redirect_uri],
+            token_endpoint_auth_method=token_endpoint_auth_method,
+        )
+        await storage.set_client_info(pre_registered_client)
 
     # Create client metadata for dynamic registration
     # Using "none" auth method for public clients (no client secret)
@@ -150,6 +182,8 @@ async def get_oauth_token_for_server(
     timeout: float = 300.0,
     *,
     client_metadata_url: str | None = None,
+    client_id: str | None = None,
+    client_secret: str | None = None,
 ) -> str | None:
     """Get an OAuth access token for an MCP server.
 
@@ -170,6 +204,9 @@ async def get_oauth_token_for_server(
             When provided and the authorization server advertises
             `client_id_metadata_document_supported=true`, this URL will be used as
             the client_id instead of performing dynamic client registration.
+        client_id: Pre-registered OAuth client ID. Use this when the authorization
+            server doesn't support Dynamic Client Registration (e.g., Logto, Auth0).
+        client_secret: Pre-registered OAuth client secret for confidential clients.
 
     Returns:
         The access token string if authentication succeeds, None otherwise.
@@ -184,6 +221,8 @@ async def get_oauth_token_for_server(
         storage_dir=storage_dir,
         timeout=timeout,
         client_metadata_url=client_metadata_url,
+        client_id=client_id,
+        client_secret=client_secret,
     )
 
     try:
