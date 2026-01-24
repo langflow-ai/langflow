@@ -29,6 +29,7 @@ async def create_mcp_oauth_provider(
     use_file_storage: bool = True,
     redirect_port: int = 18085,
     redirect_host: str = "localhost",
+    client_metadata_url: str | None = None,
 ) -> tuple[OAuthClientProvider, str, Callable[[], None]]:
     """Create an OAuthClientProvider for an MCP server.
 
@@ -51,12 +52,23 @@ async def create_mcp_oauth_provider(
         use_file_storage: Whether to use file-based storage (True) or in-memory (False).
         redirect_port: Port for OAuth callback server (default: 18085).
         redirect_host: Host for redirect_uri (default: "localhost").
+        client_metadata_url: URL-based client ID for Client ID Metadata Documents (CIMD).
+            When provided and the authorization server advertises
+            `client_id_metadata_document_supported=true`, this URL will be used as
+            the client_id instead of performing dynamic client registration.
+            Must be a valid HTTPS URL with a non-root pathname (e.g.,
+            "https://app.example.com/oauth/client-metadata.json").
+            See: https://datatracker.ietf.org/doc/html/draft-ietf-oauth-client-id-metadata-document
 
     Returns:
         A tuple of (oauth_provider, redirect_uri, cleanup_function):
         - oauth_provider: The configured OAuthClientProvider (implements httpx.Auth)
         - redirect_uri: The redirect URI configured for this OAuth flow
         - cleanup_function: Call this to clean up resources when done
+
+    Raises:
+        ValueError: If client_metadata_url is provided but is not a valid HTTPS URL
+            with a non-root pathname.
 
     Example:
         >>> provider, redirect_uri, cleanup = await create_mcp_oauth_provider(
@@ -68,6 +80,12 @@ async def create_mcp_oauth_provider(
         ...         response = await client.get(server_url)
         ... finally:
         ...     cleanup()
+
+        # Using Client ID Metadata Documents (CIMD):
+        >>> provider, redirect_uri, cleanup = await create_mcp_oauth_provider(
+        ...     server_url="https://mcp.example.com",
+        ...     client_metadata_url="https://myapp.example.com/oauth/metadata.json",
+        ... )
     """
     from mcp.client.auth import OAuthClientProvider
     from mcp.shared.auth import OAuthClientMetadata
@@ -115,6 +133,7 @@ async def create_mcp_oauth_provider(
         storage=storage,
         redirect_handler=redirect_handler,
         callback_handler=callback_fn,
+        client_metadata_url=client_metadata_url,
     )
 
     def cleanup() -> None:
@@ -129,6 +148,8 @@ async def get_oauth_token_for_server(
     client_name: str = "langflow",
     storage_dir: Path | None = None,
     timeout: float = 300.0,
+    *,
+    client_metadata_url: str | None = None,
 ) -> str | None:
     """Get an OAuth access token for an MCP server.
 
@@ -145,6 +166,10 @@ async def get_oauth_token_for_server(
         client_name: Client name for dynamic registration.
         storage_dir: Directory for token storage.
         timeout: OAuth flow timeout in seconds.
+        client_metadata_url: URL-based client ID for Client ID Metadata Documents (CIMD).
+            When provided and the authorization server advertises
+            `client_id_metadata_document_supported=true`, this URL will be used as
+            the client_id instead of performing dynamic client registration.
 
     Returns:
         The access token string if authentication succeeds, None otherwise.
@@ -158,6 +183,7 @@ async def get_oauth_token_for_server(
         client_name=client_name,
         storage_dir=storage_dir,
         timeout=timeout,
+        client_metadata_url=client_metadata_url,
     )
 
     try:
