@@ -6,7 +6,6 @@ from cryptography.fernet import InvalidToken
 from lfx.log.logger import logger
 
 from langflow.services.auth import utils as auth_utils
-from langflow.services.deps import get_settings_service
 
 # Fields that should be encrypted when stored
 SENSITIVE_FIELDS = [
@@ -27,7 +26,6 @@ def encrypt_auth_settings(auth_settings: dict[str, Any] | None) -> dict[str, Any
     if auth_settings is None:
         return None
 
-    settings_service = get_settings_service()
     encrypted_settings = auth_settings.copy()
 
     for field in SENSITIVE_FIELDS:
@@ -35,12 +33,24 @@ def encrypt_auth_settings(auth_settings: dict[str, Any] | None) -> dict[str, Any
             try:
                 field_to_encrypt = encrypted_settings[field]
                 # Only encrypt if the value is not already encrypted
-                # Check if it's already encrypted using is_encrypted helper
-                if is_encrypted(field_to_encrypt):
-                    logger.debug(f"Field {field} is already encrypted")
-                else:
-                    # Not encrypted, encrypt it
-                    encrypted_value = auth_utils.encrypt_api_key(field_to_encrypt, settings_service)
+                # Try to decrypt first - if it returns the same value, it's plaintext
+                try:
+                    result = auth_utils.decrypt_api_key(field_to_encrypt)
+                    if not result:
+                        msg = f"Failed to decrypt field {field}"
+                        raise ValueError(msg)
+
+                    # If decrypt returns a different value, it's already encrypted
+                    if result != field_to_encrypt:
+                        logger.debug(f"Field {field} is already encrypted")
+                        continue
+
+                    # If decrypt returns the same value, it's plaintext and needs encryption
+                    encrypted_value = auth_utils.encrypt_api_key(field_to_encrypt)
+                    encrypted_settings[field] = encrypted_value
+                except (ValueError, TypeError, KeyError, InvalidToken):
+                    # If decrypt fails with exception, try to encrypt
+                    encrypted_value = auth_utils.encrypt_api_key(field_to_encrypt)
                     encrypted_settings[field] = encrypted_value
             except (ValueError, TypeError, KeyError) as e:
                 logger.error(f"Failed to encrypt field {field}: {e}")
@@ -61,7 +71,6 @@ def decrypt_auth_settings(auth_settings: dict[str, Any] | None) -> dict[str, Any
     if auth_settings is None:
         return None
 
-    settings_service = get_settings_service()
     decrypted_settings = auth_settings.copy()
 
     for field in SENSITIVE_FIELDS:
@@ -69,7 +78,7 @@ def decrypt_auth_settings(auth_settings: dict[str, Any] | None) -> dict[str, Any
             try:
                 field_to_decrypt = decrypted_settings[field]
 
-                decrypted_value = auth_utils.decrypt_api_key(field_to_decrypt, settings_service)
+                decrypted_value = auth_utils.decrypt_api_key(field_to_decrypt)
                 if not decrypted_value:
                     msg = f"Failed to decrypt field {field}"
                     raise ValueError(msg)
@@ -91,7 +100,7 @@ def decrypt_auth_settings(auth_settings: dict[str, Any] | None) -> dict[str, Any
     return decrypted_settings
 
 
-def is_encrypted(value: str) -> bool:
+def is_encrypted(value: str) -> bool:  # pragma: allowlist secret
     """Check if a value appears to be encrypted.
 
     Args:
@@ -103,10 +112,9 @@ def is_encrypted(value: str) -> bool:
     if not value:
         return False
 
-    settings_service = get_settings_service()
     try:
         # Try to decrypt - if it succeeds and returns a different value, it's encrypted
-        decrypted = auth_utils.decrypt_api_key(value, settings_service)
+        decrypted = auth_utils.decrypt_api_key(value)
         # If decryption returns empty string, it's encrypted with wrong key
         if not decrypted:
             return True

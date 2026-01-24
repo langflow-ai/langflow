@@ -195,7 +195,7 @@ async def get_session(
     It does not raise an error if unauthenticated, allowing the frontend to gracefully
     handle the session state.
     """
-    from langflow.services.auth.utils import get_current_user_by_jwt, oauth2_login
+    from langflow.services.auth.utils import get_current_user_from_access_token, oauth2_login
 
     # Try to get the token from the request (cookie or Authorization header)
     try:
@@ -204,7 +204,7 @@ async def get_session(
             return SessionResponse(authenticated=False)
 
         # Validate the token and get user
-        user = await get_current_user_by_jwt(token, db)
+        user = await get_current_user_from_access_token(token, db)
         if not user or not user.is_active:
             return SessionResponse(authenticated=False)
 

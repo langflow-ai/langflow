@@ -1,0 +1,116 @@
+# Langflow SSO Configuration Example
+# 
+# This file demonstrates how to configure SSO for Langflow using a YAML file.
+# For production deployments, consider using database-based configuration instead.
+#
+# To use this file:
+# 1. Copy this file to sso-config.yaml
+# 2. Fill in your IdP details
+# 3. Set environment variables:
+#    export LANGFLOW_SSO_ENABLED=true
+#    export LANGFLOW_SSO_CONFIG_FILE=/path/to/sso-config.yaml
+# 4. Restart Langflow
+
+# ============================================================================
+# IBM W3ID Configuration Example
+# ============================================================================
+provider: oidc
+enabled: true
+enforce_sso: false  # Set to true to disable password-based login
+
+oidc:
+  provider_name: "IBM W3ID"
+  
+  # OAuth 2.0 Client Credentials
+  # Get these from your W3ID application registration
+  client_id: "your-w3id-client-id"
+  client_secret: "your-w3id-client-secret"
+  
+  # OIDC Discovery URL
+  # W3ID provides a discovery endpoint that auto-configures most settings
+  discovery_url: "https://w3id.sso.ibm.com/isam/oidc/endpoint/default/.well-known/openid-configuration"
+  
+  # Redirect URI
+  # This must match the redirect URI registered in your W3ID application
+  # Format: https://your-langflow-domain.com/api/v1/auth/callback
+  redirect_uri: "https://langflow.example.com/api/v1/auth/callback"
+  
+  # OAuth Scopes
+  # Request these scopes from the IdP
+  scopes:
+    - openid      # Required for OIDC
+    - email       # Get user email
+    - profile     # Get user profile info
+  
+  # Claim Mapping
+  # Map IdP claims to Langflow user fields
+  email_claim: "email"                    # JWT claim containing user email
+  username_claim: "preferred_username"    # JWT claim containing username
+  user_id_claim: "sub"                    # JWT claim containing unique user ID
+  
+  # Advanced Settings (Optional)
+  # These are auto-discovered from discovery_url if not specified
+  # token_endpoint: "https://w3id.sso.ibm.com/isam/oidc/endpoint/default/token"
+  # authorization_endpoint: "https://w3id.sso.ibm.com/isam/oidc/endpoint/default/authorize"
+  # jwks_uri: "https://w3id.sso.ibm.com/isam/oidc/endpoint/default/jwks"
+  # issuer: "https://w3id.sso.ibm.com/isam/oidc/endpoint/default"
+
+# ============================================================================
+# Other OIDC Provider Examples
+# ============================================================================
+
+# --- Okta ---
+# provider: oidc
+# enabled: true
+# oidc:
+#   provider_name: "Okta"
+#   client_id: "your-okta-client-id"
+#   client_secret: "your-okta-client-secret"
+#   discovery_url: "https://your-domain.okta.com/.well-known/openid-configuration"
+#   redirect_uri: "https://langflow.example.com/api/v1/auth/callback"
+#   scopes: ["openid", "email", "profile"]
+#   email_claim: "email"
+#   username_claim: "preferred_username"
+#   user_id_claim: "sub"
+
+# --- Azure AD (Microsoft Entra ID) ---
+# provider: oidc
+# enabled: true
+# oidc:
+#   provider_name: "Azure AD"
+#   client_id: "your-azure-client-id"
+#   client_secret: "your-azure-client-secret"
+#   discovery_url: "https://login.microsoftonline.com/your-tenant-id/v2.0/.well-known/openid-configuration"
+#   redirect_uri: "https://langflow.example.com/api/v1/auth/callback"
+#   scopes: ["openid", "email", "profile"]
+#   email_claim: "email"
+#   username_claim: "preferred_username"
+#   user_id_claim: "sub"
+
+# --- Google Workspace ---
+# provider: oidc
+# enabled: true
+# oidc:
+#   provider_name: "Google"
+#   client_id: "your-google-client-id.apps.googleusercontent.com"
+#   client_secret: "your-google-client-secret"
+#   discovery_url: "https://accounts.google.com/.well-known/openid-configuration"
+#   redirect_uri: "https://langflow.example.com/api/v1/auth/callback"
+#   scopes: ["openid", "email", "profile"]
+#   email_claim: "email"
+#   username_claim: "email"  # Google uses email as username
+#   user_id_claim: "sub"
+
+# --- Auth0 ---
+# provider: oidc
+# enabled: true
+# oidc:
+#   provider_name: "Auth0"
+#   client_id: "your-auth0-client-id"
+#   client_secret: "your-auth0-client-secret"
+#   discovery_url: "https://your-domain.auth0.com/.well-known/openid-configuration"
+#   redirect_uri: "https://langflow.example.com/api/v1/auth/callback"
+#   scopes: ["openid", "email", "profile"]
+#   email_claim: "email"
+#   username_claim: "nickname"
+#   user_id_claim: "sub"

@@ -32,6 +32,13 @@ class User(SQLModel, table=True):  # type: ignore[call-arg]
     create_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     last_login_at: datetime | None = Field(default=None, nullable=True)
+
+    # SSO fields - optional, only used when SSO is enabled
+    email: str | None = Field(default=None, nullable=True, index=True, unique=True)
+    sso_provider: str | None = Field(default=None, nullable=True, index=True)
+    sso_user_id: str | None = Field(default=None, nullable=True, index=True)
+    sso_last_login_at: datetime | None = Field(default=None, nullable=True)
+
     api_keys: list["ApiKey"] = Relationship(
         back_populates="user",
         sa_relationship_kwargs={"cascade": "delete"},
@@ -69,6 +76,10 @@ class UserRead(SQLModel):
     create_at: datetime = Field()
     updated_at: datetime = Field()
     last_login_at: datetime | None = Field(nullable=True)
+    email: str | None = Field(default=None)
+    sso_provider: str | None = Field(default=None)
+    sso_user_id: str | None = Field(default=None)
+    sso_last_login_at: datetime | None = Field(default=None, nullable=True)
     optins: dict[str, Any] | None = Field(default=None)
 
 
@@ -79,4 +90,8 @@ class UserUpdate(SQLModel):
     is_active: bool | None = None
     is_superuser: bool | None = None
     last_login_at: datetime | None = None
+    email: str | None = None
+    sso_provider: str | None = None
+    sso_user_id: str | None = None
+    sso_last_login_at: datetime | None = None
     optins: dict[str, Any] | None = None

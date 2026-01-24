@@ -94,6 +94,9 @@ async def patch_user(
     if update_password:
         if not user.is_superuser:
             raise HTTPException(status_code=400, detail="You can't change your password here")
+        # user_update.password is guaranteed to be truthy since update_password = bool(user_update.password)
+        if user_update.password is None:  # pragma: no cover - guaranteed by update_password check
+            raise HTTPException(status_code=400, detail="Password is required")
         user_update.password = get_password_hash(user_update.password)
 
     if user_db := await get_user_by_id(session, user_id):
@@ -116,6 +119,9 @@ async def reset_password(
 
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+
+    if user_update.password is None:
+        raise HTTPException(status_code=400, detail="Password is required for password reset")
 
     if verify_password(user_update.password, user.password):
         raise HTTPException(status_code=400, detail="You can't use your current password")

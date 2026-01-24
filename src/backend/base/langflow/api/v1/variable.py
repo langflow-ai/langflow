@@ -199,12 +199,7 @@ async def read_variables(
                     )
                     if variable_obj and variable_obj.value:
                         # Decrypt the API key value
-                        from langflow.services.deps import get_settings_service
-
-                        settings_service = get_settings_service()
-                        decrypted_value = auth_utils.decrypt_api_key(
-                            variable_obj.value, settings_service=settings_service
-                        )
+                        decrypted_value = auth_utils.decrypt_api_key(variable_obj.value)
                         if decrypted_value and decrypted_value.strip():
                             # Validate the key (this will raise ValueError if invalid)
                             await asyncio.to_thread(validate_model_provider_key, var_name, decrypted_value)
