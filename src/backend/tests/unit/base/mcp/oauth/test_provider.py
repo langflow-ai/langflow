@@ -191,6 +191,82 @@ class TestCreateMcpOAuthProvider:
             cleanup()
 
 
+class TestClientIdMetadataDocuments:
+    """Tests for Client ID Metadata Documents (CIMD) support."""
+
+    @pytest.fixture
+    def storage_dir(self, tmp_path: Path) -> Path:
+        """Create a temporary directory for token storage."""
+        return tmp_path / "oauth"
+
+    @pytest.mark.asyncio
+    async def test_creates_provider_with_client_metadata_url(self, storage_dir: Path) -> None:
+        """Test that create_mcp_oauth_provider accepts client_metadata_url parameter."""
+        provider, redirect_uri, cleanup = await create_mcp_oauth_provider(
+            server_url="https://mcp.example.com",
+            storage_dir=storage_dir,
+            redirect_port=0,
+            client_metadata_url="https://myapp.example.com/oauth/metadata.json",
+        )
+
+        try:
+            assert provider is not None
+            assert redirect_uri.startswith(("http://localhost:", "http://127.0.0.1:"))
+            # Verify client_metadata_url is passed to the provider
+            assert provider.context.client_metadata_url == "https://myapp.example.com/oauth/metadata.json"
+        finally:
+            cleanup()
+
+    @pytest.mark.asyncio
+    async def test_client_metadata_url_none_by_default(self, storage_dir: Path) -> None:
+        """Test that client_metadata_url is None by default."""
+        provider, _, cleanup = await create_mcp_oauth_provider(
+            server_url="https://mcp.example.com",
+            storage_dir=storage_dir,
+            redirect_port=0,
+        )
+
+        try:
+            assert provider.context.client_metadata_url is None
+        finally:
+            cleanup()
+
+    @pytest.mark.asyncio
+    async def test_invalid_client_metadata_url_raises_error(self, storage_dir: Path) -> None:
+        """Test that invalid client_metadata_url raises ValueError."""
+        # Non-HTTPS URL should be rejected
+        with pytest.raises(ValueError, match="must be a valid HTTPS URL"):
+            await create_mcp_oauth_provider(
+                server_url="https://mcp.example.com",
+                storage_dir=storage_dir,
+                redirect_port=0,
+                client_metadata_url="http://insecure.example.com/metadata.json",
+            )
+
+    @pytest.mark.asyncio
+    async def test_client_metadata_url_without_path_raises_error(self, storage_dir: Path) -> None:
+        """Test that client_metadata_url without path component raises ValueError."""
+        # URL without path should be rejected (root path only)
+        with pytest.raises(ValueError, match="must be a valid HTTPS URL"):
+            await create_mcp_oauth_provider(
+                server_url="https://mcp.example.com",
+                storage_dir=storage_dir,
+                redirect_port=0,
+                client_metadata_url="https://myapp.example.com",
+            )
+
+    @pytest.mark.asyncio
+    async def test_client_metadata_url_with_only_root_path_raises_error(self, storage_dir: Path) -> None:
+        """Test that client_metadata_url with only root path raises ValueError."""
+        with pytest.raises(ValueError, match="must be a valid HTTPS URL"):
+            await create_mcp_oauth_provider(
+                server_url="https://mcp.example.com",
+                storage_dir=storage_dir,
+                redirect_port=0,
+                client_metadata_url="https://myapp.example.com/",
+            )
+
+
 class TestOAuthIntegration:
     """Integration tests for OAuth with MCP utilities."""
 
