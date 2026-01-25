@@ -37,7 +37,17 @@ class WebhookEventManager:
         """Initialize the event manager with empty listeners."""
         self._listeners: dict[str, set[asyncio.Queue]] = defaultdict(set)
         self._vertex_start_times: dict[str, dict[str, float]] = defaultdict(dict)
-        self._lock = asyncio.Lock()
+        self._lock: asyncio.Lock | None = None
+
+    def _get_lock(self) -> asyncio.Lock:
+        """Get or create the asyncio lock lazily.
+
+        This ensures the lock is created in the context of a running event loop,
+        avoiding issues when the module is imported before an event loop exists.
+        """
+        if self._lock is None:
+            self._lock = asyncio.Lock()
+        return self._lock
 
     def record_build_start(self, flow_id: str, vertex_id: str) -> None:
         """Record when a vertex build starts for duration calculation."""
@@ -74,7 +84,7 @@ class WebhookEventManager:
             Queue that will receive events for this flow
         """
         queue: asyncio.Queue = asyncio.Queue(maxsize=SSE_QUEUE_MAX_SIZE)
-        async with self._lock:
+        async with self._get_lock():
             self._listeners[flow_id].add(queue)
             listener_count = len(self._listeners[flow_id])
 
@@ -88,7 +98,7 @@ class WebhookEventManager:
             flow_id: The flow ID to unsubscribe from
             queue: The queue to remove
         """
-        async with self._lock:
+        async with self._get_lock():
             if flow_id in self._listeners:
                 self._listeners[flow_id].discard(queue)
                 listener_count = len(self._listeners[flow_id])
@@ -108,7 +118,7 @@ class WebhookEventManager:
             event_type: Type of event (build_start, end_vertex, etc.)
             data: Event data (will be JSON serialized)
         """
-        async with self._lock:
+        async with self._get_lock():
             listeners = self._listeners.get(flow_id, set()).copy()
 
         if not listeners:
@@ -138,7 +148,7 @@ class WebhookEventManager:
 
         # Clean up dead queues
         if dead_queues:
-            async with self._lock:
+            async with self._get_lock():
                 if flow_id in self._listeners:
                     self._listeners[flow_id] -= dead_queues
                     if not self._listeners[flow_id]:
