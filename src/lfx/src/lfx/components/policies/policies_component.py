@@ -163,14 +163,14 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         logger.info("🔒️ToolGuard: Step 1 Done")
         return specs
 
-    async def _build_guards(self, specs: list[ToolGuardSpec]) -> ToolGuardsCodeGenerationResult:
+    async def _build_guard_code(self, specs: list[ToolGuardSpec]) -> ToolGuardsCodeGenerationResult:
         logger.info("🔒️ToolGuard: Starting step 2")
         out_dir = self.work_dir / STEP2
         if out_dir.exists():
             shutil.rmtree(out_dir)
         llm = LangchainModelWrapper(self.build_model())
         gen_result = await generate_guards_code(
-            tools=self.in_tools, tool_specs=specs, work_dir=out_dir, llm=llm, app_name=to_snake_case(self.project)
+            tools=self.in_tools, tool_specs=specs, work_dir=out_dir, llm=llm, app_name=_to_snake_case(self.project)
         )
         logger.info("🔒️ToolGuard: Step 2 Done")
         return gen_result
