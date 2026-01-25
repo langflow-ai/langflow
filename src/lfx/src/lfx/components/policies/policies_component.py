@@ -1,4 +1,5 @@
 import shutil
+import sys
 from pathlib import Path
 from typing import cast
 
@@ -115,7 +116,7 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
     @property
     def work_dir(self) -> Path:
         # logger.info("project=" + to_snake_case(self.project))
-        return TOOLGUARD_WORK_DIR / str(self.user_id) / to_snake_case(self.project)
+        return TOOLGUARD_WORK_DIR / str(self.user_id) / _to_snake_case(self.project)
 
     # def review_link(self):
     #     cur_dir = Path.cwd()
@@ -163,14 +164,14 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         logger.info("🔒️ToolGuard: Step 1 Done")
         return specs
 
-    async def _build_guards(self, specs: list[ToolGuardSpec]) -> ToolGuardsCodeGenerationResult:
+    async def _build_guard_code(self, specs: list[ToolGuardSpec]) -> ToolGuardsCodeGenerationResult:
         logger.info("🔒️ToolGuard: Starting step 2")
         out_dir = self.work_dir / STEP2
         if out_dir.exists():
             shutil.rmtree(out_dir)
         llm = LangchainModelWrapper(self.build_model())
         gen_result = await generate_guards_code(
-            tools=self.in_tools, tool_specs=specs, work_dir=out_dir, llm=llm, app_name=to_snake_case(self.project)
+            tools=self.in_tools, tool_specs=specs, work_dir=out_dir, llm=llm, app_name=_to_snake_case(self.project)
         )
         logger.info("🔒️ToolGuard: Step 2 Done")
         return gen_result
@@ -191,7 +192,10 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             if build_mode == BUILD_MODE_GENERATE:  # run buildtime steps
                 self.log("🔒️ToolGuard: execution (build) mode", name="info")
                 specs = await self._build_guard_specs()
-                await self._build_guards(specs)
+                res = await self._build_guard_code(specs)
+                # if there was an old version of the guards in Python cache, remove it.
+                _unload_module(res.domain.app_name)
+
                 # self.project = guards.out_dir
             else:  # build_mode == "use cache"
                 self.log("🔒️ToolGuard: run mode (cached code from path)", name="info")
@@ -203,7 +207,13 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         return self.in_tools
 
 
-def to_snake_case(human_name: str) -> str:
+# Removes the module from the Python cache
+def _unload_module(name: str):
+    if name in sys.modules:
+        del sys.modules[name]
+
+
+def _to_snake_case(human_name: str) -> str:
     return (
         human_name.lower()
         .replace(" ", "_")

@@ -48,20 +48,8 @@ class GuardedTool(Tool):
             return tool_input or {}  # TODO: ToolCall
 
     def run(self, tool_input: str | dict | ToolCall, config=None, **kwargs):
-        args = self.parse_input(tool_input)
-        # print(f"tool={self.name}, args={args}, config={config}, kwargs={kwargs}")
-        logger.info(f"running toolguard for {self.name} with arguments {args}")
-
-        with load_toolguards(self._tg_dir) as toolguard:
-            try:
-                toolguard.guard_toolcall(self.name, args=args, delegate=self._tool_invoker)
-                return self._orig_tool.run(tool_input=args, config=config, **kwargs)
-            except PolicyViolationException as ex:
-                return f"Error: {ex.message}"
-            except Exception:
-                logger.exception("Unhandled exception in GuardedTool.run()")
-                traceback.print_exc()
-                raise
+        msg = "GuardedTool.run() is not implemented. consider calling the async version arun()"
+        raise NotImplementedError(msg)
 
     async def arun(self, tool_input: str | dict | ToolCall, config=None, **kwargs):
         args = self.parse_input(tool_input)
