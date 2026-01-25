@@ -117,7 +117,9 @@ function handleError(eventOrError: Event): void {
   }
 }
 
-function hasWebhookComponent(flow: { data?: { nodes?: Array<{ id: string }> } } | null): boolean {
+function hasWebhookComponent(
+  flow: { data?: { nodes?: Array<{ id: string }> } } | null,
+): boolean {
   if (!flow?.data?.nodes) {
     return false;
   }
