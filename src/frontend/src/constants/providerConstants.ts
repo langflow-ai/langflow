@@ -43,10 +43,10 @@ export const PROVIDER_VARIABLE_MAPPING: Record<string, string> = {
 };
 
 /**
- * Providers that don't require an API key to activate.
- * These providers will show an "Activate" button instead of an API key input.
+ * Providers that don't require any configuration to activate.
+ * These providers will show an "Activate" button instead of configuration inputs.
  */
-export const NO_API_KEY_PROVIDERS: string[] = ["Ollama"];
+export const NO_API_KEY_PROVIDERS: string[] = [];
 
 export const VARIABLE_CATEGORY = {
   GLOBAL: "Global",
