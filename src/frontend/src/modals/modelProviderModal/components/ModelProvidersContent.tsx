@@ -173,15 +173,13 @@ const ModelProvidersContent = ({
     );
   };
 
-  // Some providers (e.g., Ollama) don't require API keys - they just need activation
-  const requiresApiKey = useMemo(() => {
+  // Check if provider requires any configuration (secrets or other required variables)
+  const requiresConfiguration = useMemo(() => {
     if (!selectedProvider) return true;
-    // Check if provider has any required secret variables
-    const hasRequiredSecrets = providerVariables.some(
-      (v) => v.required && v.is_secret,
-    );
+    // Check if provider has any required variables (secret or not)
+    const hasRequiredVariables = providerVariables.some((v) => v.required);
     return (
-      hasRequiredSecrets &&
+      hasRequiredVariables &&
       !NO_API_KEY_PROVIDERS.includes(selectedProvider.provider)
     );
   }, [selectedProvider, providerVariables]);
@@ -371,11 +369,11 @@ const ModelProvidersContent = ({
           <div className="flex flex-row gap-1 min-w-[300px]">
             <span className="text-[13px] font-semibold mr-auto">
               {selectedProvider?.provider || "Unknown Provider"}
-              {requiresApiKey && " Configuration"}
+              {requiresConfiguration && " Configuration"}
             </span>
           </div>
           <span className="text-[13px] text-muted-foreground pt-1 pb-2">
-            {requiresApiKey ? (
+            {requiresConfiguration ? (
               <>
                 Configure your{" "}
                 <span
@@ -398,7 +396,7 @@ const ModelProvidersContent = ({
               <>Activate {selectedProvider?.provider} to enable these models</>
             )}
           </span>
-          {requiresApiKey ? (
+          {requiresConfiguration ? (
             <div className="flex flex-col gap-3">
               {providerVariables.map((variable) => {
                 const isConfigured = isVariableConfigured(
