@@ -113,7 +113,7 @@ class PIIMaskingComponent(Component):
                 try:
                     pattern, label = line.split(":", 1)
                     masked_text = re.sub(pattern.strip(), template.format(entity=label.strip()), masked_text)
-                except Exception as e:
+                except (re.error, AttributeError, ValueError) as e:
                     self.log(f"Error applying custom pattern '{line}': {e}")
 
         self.status = masked_text
