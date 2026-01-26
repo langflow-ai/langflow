@@ -247,7 +247,7 @@ langsmith = ["langsmith>=0.3.42,<1.0.0"]
 arize = ["arize-phoenix-otel>=0.6.1"]
 
 # Individual document loaders
-pypdf = ["pypdf~=5.1.0"]
+pypdf = ["pypdf~=6.6.2"]
 docx = ["python-docx>=1.1.0"]
 pytube = ["pytube==15.0.0"]
 
