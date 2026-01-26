@@ -460,7 +460,10 @@ const ModelProvidersContent = ({
                         </Select>
                         {isConfigured && !hasNewValue && (
                           <span className="absolute right-2 top-1/2 -translate-y-1/2 text-green-500 pointer-events-none">
-                            <ForwardedIconComponent name="check" className="h-4 w-4" />
+                            <ForwardedIconComponent
+                              name="check"
+                              className="h-4 w-4"
+                            />
                           </span>
                         )}
                       </div>
@@ -475,11 +478,12 @@ const ModelProvidersContent = ({
                             : `Add ${variable.variable_name.toLowerCase()}`
                         }
                         defaultValue={
-                          isConfigured ? (variable.is_secret
-                              ? MASKED_VALUE
-                              : getConfiguredValue(variable.variable_key)) ||
-                                  ""
-                                : ""
+                          isConfigured
+                            ? (variable.is_secret
+                                ? MASKED_VALUE
+                                : getConfiguredValue(variable.variable_key)) ||
+                              ""
+                            : ""
                         }
                         value={variableValues[variable.variable_key] || ""}
                         type={
@@ -550,15 +554,15 @@ const ModelProvidersContent = ({
           )}
         </div>
 
-          <div className="flex flex-col px-4 pb-4 gap-3 transition-all duration-300 ease-in-out">
-            <ModelSelection
-              modelType={modelType}
-              availableModels={selectedProvider?.models || []}
-              onModelToggle={handleModelToggle}
-              providerName={selectedProvider?.provider}
-              isEnabledModel={selectedProvider?.is_enabled}
-            />
-          </div>
+        <div className="flex flex-col px-4 pb-4 gap-3 transition-all duration-300 ease-in-out">
+          <ModelSelection
+            modelType={modelType}
+            availableModels={selectedProvider?.models || []}
+            onModelToggle={handleModelToggle}
+            providerName={selectedProvider?.provider}
+            isEnabledModel={selectedProvider?.is_enabled}
+          />
+        </div>
       </div>
     </div>
   );
