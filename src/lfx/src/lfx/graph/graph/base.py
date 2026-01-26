@@ -15,6 +15,9 @@ from functools import partial
 from itertools import chain
 from typing import TYPE_CHECKING, Any, cast
 
+from ag_ui.core import RunFinishedEvent, RunStartedEvent
+
+from lfx.events.observability.lifecycle_events import observable
 from lfx.exceptions.component import ComponentBuildError
 from lfx.graph.edge.base import CycleEdge, Edge
 from lfx.graph.graph.constants import Finish, lazy_load_vertex_dict
@@ -728,6 +731,7 @@ class Graph:
                 raise ValueError(msg)
             vertex.update_raw_params(inputs, overwrite=True)
 
+    @observable
     async def _run(
         self,
         *,
@@ -1549,8 +1553,10 @@ class Graph:
                                 vertex.result.used_frozen_result = True
                         except Exception:  # noqa: BLE001
                             logger.debug("Error finalizing build", exc_info=True)
+                            vertex.built = False
                             should_build = True
                     except KeyError:
+                        vertex.built = False
                         should_build = True
 
             if should_build:
@@ -1783,9 +1789,13 @@ class Graph:
             lock: Async lock for synchronization
             has_webhook_component: Whether the graph has a webhook component
         """
+        from lfx.graph.utils import emit_vertex_build_event
+
         results = []
         completed_tasks = await asyncio.gather(*tasks, return_exceptions=True)
         vertices: list[Vertex] = []
+        # Store build results for SSE emission after calculating next_runnable_vertices
+        build_results: dict[str, VertexBuildResult] = {}
 
         for i, result in enumerate(completed_tasks):
             task_name = tasks[i].get_name()
@@ -1810,6 +1820,8 @@ class Graph:
                         data=result.result_dict,
                         artifacts=result.artifacts,
                     )
+                    # Store for SSE emission later
+                    build_results[result.vertex.id] = result
 
                 vertices.append(result.vertex)
             else:
@@ -1827,6 +1839,27 @@ class Graph:
         for v in vertices:
             next_runnable_vertices = await self.get_next_runnable_vertices(lock, vertex=v, cache=False)
             results.extend(next_runnable_vertices)
+
+            # Emit SSE event with complete data including next_vertices_ids
+            if self.flow_id is not None and v.id in build_results:
+                build_result = build_results[v.id]
+                # Get top level vertices for these next runnable vertices
+                top_level = self.get_top_level_vertices(next_runnable_vertices)
+                # Get inactivated vertices
+                inactivated = list(self.inactivated_vertices.union(self.conditionally_excluded_vertices))
+
+                await emit_vertex_build_event(
+                    flow_id=self.flow_id,
+                    vertex_id=v.id,
+                    valid=build_result.valid,
+                    params=build_result.params,
+                    data_dict=build_result.result_dict,
+                    artifacts_dict=build_result.artifacts,
+                    next_vertices_ids=next_runnable_vertices,
+                    top_level_vertices=top_level,
+                    inactivated_vertices=inactivated,
+                )
+
         return list(set(results))
 
     def topological_sort(self) -> list[Vertex]:
@@ -2307,3 +2340,22 @@ class Graph:
             predecessors = [i.id for i in self.get_predecessors(vertex)]
             result |= {vertex_id: {"successors": sucessors, "predecessors": predecessors}}
         return result
+
+    def raw_event_metrics(self, optional_fields: dict | None = None) -> dict:
+        if optional_fields is None:
+            optional_fields = {}
+        import time
+
+        return {"timestamp": time.time(), **optional_fields}
+
+    def before_callback_event(self, *args, **kwargs) -> RunStartedEvent:  # noqa: ARG002
+        metrics = {}
+        if hasattr(self, "raw_event_metrics"):
+            metrics = self.raw_event_metrics({"total_components": len(self.vertices)})
+        return RunStartedEvent(run_id=self._run_id, thread_id=self.flow_id, raw_event=metrics)
+
+    def after_callback_event(self, result: Any = None, *args, **kwargs) -> RunFinishedEvent:  # noqa: ARG002
+        metrics = {}
+        if hasattr(self, "raw_event_metrics"):
+            metrics = self.raw_event_metrics({"total_components": len(self.vertices)})
+        return RunFinishedEvent(run_id=self._run_id, thread_id=self.flow_id, result=None, raw_event=metrics)

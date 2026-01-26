@@ -71,6 +71,7 @@ DIRECT_TYPES = [
     "float",
     "Any",
     "prompt",
+    "mustache",
     "code",
     "NestedDict",
     "table",
