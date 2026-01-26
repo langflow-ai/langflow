@@ -23,7 +23,7 @@ on:
         type: boolean
         default: false
       skip_slack:
-        description: "Skip slack message on failure. Only do this for testing purposes."
+        description: "Skip slack message. Only do this for testing purposes."
         required: false
         type: boolean
         default: false
@@ -475,7 +475,7 @@ jobs:
           fi
 
       - name: Send success notification to Slack
-        if: ${{ needs.release-nightly-build.result == 'success' }}
+        if: ${{ !inputs.skip_slack && needs.release-nightly-build.result == 'success' }}
         run: |
           curl -X POST -H 'Content-type: application/json' \
           --data '{
