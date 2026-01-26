@@ -112,7 +112,7 @@ def get_model_provider_metadata():
                     "variable_name": "Base URL",
                     "variable_key": "OLLAMA_BASE_URL",
                     "description": "Ollama server URL (default: http://localhost:11434)",
-                    "required": False,
+                    "required": True,
                     "is_secret": False,
                     "is_list": False,
                     "options": [],
@@ -367,19 +367,19 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
 
 
 def _validate_and_get_enabled_providers(
-    credential_variables: dict[str, Any],
+    all_variables: dict[str, Any],
     provider_variable_map: dict[str, str],
 ) -> set[str]:
     """Validate API keys and return set of enabled providers.
 
-    This helper function validates API keys for credential variables and returns
+    This helper function validates API keys for variables and returns
     only providers with valid keys. Used by get_enabled_providers and model options functions.
 
     For providers requiring multiple variables (e.g., IBM WatsonX needs API key, project ID, and URL),
     all required variables must be present for the provider to be enabled.
 
     Args:
-        credential_variables: Dictionary mapping variable names to VariableRead objects
+        all_variables: Dictionary mapping variable names to VariableRead objects (all types, not just credentials)
         provider_variable_map: Dictionary mapping provider names to primary variable names
 
     Returns:
@@ -406,11 +406,11 @@ def _validate_and_get_enabled_providers(
         provider_vars_by_key = {var.get("variable_key"): var for var in provider_vars}
 
         for var_key in required_var_keys:
-            if var_key not in credential_variables:
+            if var_key not in all_variables:
                 all_required_present = False
                 break
 
-            credential_var = credential_variables[var_key]
+            variable = all_variables[var_key]
             var_meta = provider_vars_by_key.get(var_key) or {}
             is_secret = bool(var_meta.get("is_secret"))
 
@@ -418,7 +418,7 @@ def _validate_and_get_enabled_providers(
                 # Secret variables are stored encrypted; decrypt and validate.
                 try:
                     decrypted_value = auth_utils.decrypt_api_key(
-                        credential_var.value, settings_service=settings_service
+                        variable.value, settings_service=settings_service
                     )
                     if not decrypted_value or not decrypted_value.strip():
                         all_required_present = False
@@ -438,7 +438,7 @@ def _validate_and_get_enabled_providers(
                     break
             else:
                 # Non-secret variables are stored in plaintext; just ensure they are present and non-empty.
-                raw_value = credential_var.value
+                raw_value = variable.value
                 if raw_value is None or not str(raw_value).strip():
                     all_required_present = False
                     break
@@ -626,7 +626,6 @@ def get_language_model_options(
                     if variable_service is None:
                         return set()
 
-                    from langflow.services.variable.constants import CREDENTIAL_TYPE
                     from langflow.services.variable.service import DatabaseVariableService
 
                     if not isinstance(variable_service, DatabaseVariableService):
@@ -635,11 +634,12 @@ def get_language_model_options(
                         user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
                         session=session,
                     )
-                    credential_vars = {var.name: var for var in all_vars if var.type == CREDENTIAL_TYPE}
+                    # Pass all variables (not just credentials) so non-secret required keys are included
+                    all_vars_map = {var.name: var for var in all_vars}
                     provider_variable_map = get_model_provider_variable_mapping()
 
                     # Use shared helper to validate and get enabled providers
-                    return _validate_and_get_enabled_providers(credential_vars, provider_variable_map)
+                    return _validate_and_get_enabled_providers(all_vars_map, provider_variable_map)
 
             enabled_providers = run_until_complete(_get_enabled_providers())
         except Exception:  # noqa: BLE001, S110
@@ -813,7 +813,6 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
                     if variable_service is None:
                         return set()
 
-                    from langflow.services.variable.constants import CREDENTIAL_TYPE
                     from langflow.services.variable.service import DatabaseVariableService
 
                     if not isinstance(variable_service, DatabaseVariableService):
@@ -822,11 +821,12 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
                         user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
                         session=session,
                     )
-                    credential_vars = {var.name: var for var in all_vars if var.type == CREDENTIAL_TYPE}
+                    # Pass all variables (not just credentials) so non-secret required keys are included
+                    all_vars_map = {var.name: var for var in all_vars}
                     provider_variable_map = get_model_provider_variable_mapping()
 
                     # Use shared helper to validate and get enabled providers
-                    return _validate_and_get_enabled_providers(credential_vars, provider_variable_map)
+                    return _validate_and_get_enabled_providers(all_vars_map, provider_variable_map)
 
             enabled_providers = run_until_complete(_get_enabled_providers())
         except Exception:  # noqa: BLE001, S110
