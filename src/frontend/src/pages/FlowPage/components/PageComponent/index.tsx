@@ -162,8 +162,8 @@ export default function Page({
   const addComponent = useAddComponent();
 
   const zoomLevel = reactFlowInstance?.getZoom();
-  const shadowBoxWidth = DEFAULT_NOTE_SIZE * (zoomLevel || 1);
-  const shadowBoxHeight = DEFAULT_NOTE_SIZE * (zoomLevel || 1);
+  const shadowBoxWidth = NOTE_NODE_MIN_WIDTH * (zoomLevel || 1);
+  const shadowBoxHeight = NOTE_NODE_MIN_HEIGHT * (zoomLevel || 1);
   const shadowBoxBackgroundColor = COLOR_OPTIONS[Object.keys(COLOR_OPTIONS)[0]];
 
   const handleGroupNode = useCallback(() => {
@@ -657,8 +657,8 @@ export default function Page({
           id: newId,
           type: "noteNode",
           position: position || { x: 0, y: 0 },
-          width: DEFAULT_NOTE_SIZE,
-          height: DEFAULT_NOTE_SIZE,
+          width: NOTE_NODE_MIN_WIDTH,
+          height: NOTE_NODE_MIN_HEIGHT,
           data: {
             ...data,
             id: newId,
@@ -826,6 +826,7 @@ export default function Page({
               backgroundColor: `${shadowBoxBackgroundColor}`,
               opacity: 0.7,
               pointerEvents: "none",
+              borderRadius: "12px",
               // Prevent shadow-box from showing unexpectedly during initial renders
               display: "none",
             }}

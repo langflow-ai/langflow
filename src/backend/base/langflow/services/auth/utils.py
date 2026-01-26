@@ -10,6 +10,7 @@ import jwt
 from cryptography.fernet import Fernet
 from fastapi import Depends, HTTPException, Request, Security, WebSocketException, status
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
+from fastapi.security.utils import get_authorization_scheme_param
 from jwt import InvalidTokenError
 from lfx.log.logger import logger
 from lfx.services.deps import injectable_session_scope, session_scope
@@ -27,7 +28,33 @@ from langflow.services.deps import get_settings_service
 if TYPE_CHECKING:
     from langflow.services.database.models.api_key.model import ApiKey
 
-oauth2_login = OAuth2PasswordBearer(tokenUrl="api/v1/login", auto_error=False)
+
+class OAuth2PasswordBearerCookie(OAuth2PasswordBearer):
+    """Custom OAuth2 scheme that checks Authorization header first, then cookies.
+
+    This allows the application to work with HttpOnly cookies while supporting
+    explicit Authorization headers for backward compatibility and testing scenarios.
+    If an explicit Authorization header is provided, it takes precedence over cookies.
+    """
+
+    async def __call__(self, request: Request) -> str | None:
+        # First, check for explicit Authorization header (for backward compatibility and testing)
+        authorization = request.headers.get("Authorization")
+        scheme, param = get_authorization_scheme_param(authorization)
+        if scheme.lower() == "bearer" and param:
+            return param
+
+        # Fall back to cookie (for HttpOnly cookie support in browser-based clients)
+        token = request.cookies.get("access_token_lf")
+        if token:
+            return token
+
+        # If auto_error is True, this would raise an exception
+        # Since we set auto_error=False, return None
+        return None
+
+
+oauth2_login = OAuth2PasswordBearerCookie(tokenUrl="api/v1/login", auto_error=False)
 
 API_KEY_NAME = "x-api-key"
 
@@ -303,6 +330,46 @@ async def get_current_user_for_websocket(
 
     raise WebSocketException(
         code=status.WS_1008_POLICY_VIOLATION, reason="Missing or invalid credentials (cookie, token or API key)."
+    )
+
+
+async def get_current_user_for_sse(request: Request) -> User | UserRead:
+    """Authenticate user for SSE endpoints.
+
+    Similar to websocket authentication, accepts either:
+    - Cookie authentication (access_token_lf)
+    - API key authentication (x-api-key query param)
+
+    Args:
+        request: The FastAPI request object
+
+    Returns:
+        User or UserRead: The authenticated user
+
+    Raises:
+        HTTPException: If authentication fails
+    """
+    # Try cookie authentication first
+    token = request.cookies.get("access_token_lf")
+    if token:
+        try:
+            async with session_scope() as db:
+                user = await get_current_user_by_jwt(token, db)
+                if user:
+                    return user
+        except HTTPException:
+            pass
+
+    # Try API key authentication
+    api_key = request.query_params.get("x-api-key") or request.headers.get("x-api-key")
+    if api_key:
+        user_read = await ws_api_key_security(api_key)
+        if user_read:
+            return user_read
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Missing or invalid credentials (cookie or API key).",
     )
 
 
@@ -641,12 +708,7 @@ def decrypt_api_key(encrypted_api_key: str, settings_service: SettingsService):
     if isinstance(encrypted_api_key, str):
         try:
             return fernet.decrypt(encrypted_api_key.encode()).decode()
-        except Exception as primary_exception:  # noqa: BLE001
-            logger.debug(
-                "Decryption using UTF-8 encoded API key failed. Error: %s. "
-                "Retrying decryption using the raw string input.",
-                primary_exception,
-            )
+        except Exception:  # noqa: BLE001
             try:
                 return fernet.decrypt(encrypted_api_key).decode()
             except Exception as secondary_exception:  # noqa: BLE001
@@ -658,10 +720,8 @@ def decrypt_api_key(encrypted_api_key: str, settings_service: SettingsService):
                         secondary_exception,
                     )
                     return ""
+
                 # Assume the value is plain text and return it as-is
-                logger.debug(
-                    "Value does not appear to be encrypted (no Fernet token signature). Returning value as plain text."
-                )
                 return encrypted_api_key
 
     msg = "Unexpected variable type. Expected string"
