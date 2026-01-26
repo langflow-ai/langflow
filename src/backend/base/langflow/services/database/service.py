@@ -305,6 +305,7 @@ class DatabaseService(Service):
             "flow": models.Flow,
             "user": models.User,
             "apikey": models.ApiKey,
+            "job": models.Job,
             # Add other SQLModel classes here
         }
 
@@ -365,7 +366,7 @@ class DatabaseService(Service):
                 try:
                     self.init_alembic(alembic_cfg)
                 except Exception as exc:
-                    msg = "Error initializing alembic"
+                    msg = f"Error initializing alembic: {exc}"
                     logger.exception(msg)
                     raise RuntimeError(msg) from exc
             else:
@@ -463,7 +464,17 @@ class DatabaseService(Service):
 
         inspector = inspect(connection)
         table_names = inspector.get_table_names()
-        current_tables = ["flow", "user", "apikey", "folder", "message", "variable", "transaction", "vertex_build"]
+        current_tables = [
+            "flow",
+            "user",
+            "apikey",
+            "folder",
+            "message",
+            "variable",
+            "transaction",
+            "vertex_build",
+            "job",
+        ]
 
         if table_names and all(table in table_names for table in current_tables):
             logger.debug("Database and tables already exist")
