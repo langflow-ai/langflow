@@ -1,5 +1,6 @@
 from .model import LCModelComponent
 from .unified_models import (
+    apply_provider_variable_config_to_build_config,
     get_model_provider_metadata,
     get_model_provider_variable_mapping,
     get_model_providers,
@@ -11,6 +12,7 @@ from .unified_models import (
 
 __all__ = [
     "LCModelComponent",
+    "apply_provider_variable_config_to_build_config",
     "get_model_provider_metadata",
     "get_model_provider_variable_mapping",
     "get_model_providers",

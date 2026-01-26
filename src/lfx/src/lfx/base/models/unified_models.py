@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from functools import lru_cache
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
@@ -109,6 +110,79 @@ def get_provider_required_variable_keys(provider: str) -> list[str]:
     """Get all required variable keys for a provider."""
     variables = get_provider_all_variables(provider)
     return [v["variable_key"] for v in variables if v.get("required")]
+
+
+def apply_provider_variable_config_to_build_config(
+    build_config: dict,
+    provider: str,
+) -> dict:
+    """Apply provider variable metadata to component build config fields.
+
+    This function updates the build config fields based on the provider's variable metadata
+    stored in the `component_metadata` nested dict:
+    - Sets `required` based on `component_metadata.required`
+    - Sets `advanced` based on `component_metadata.advanced`
+    - Sets `info` based on `component_metadata.info`
+    - Sets `show` to True for fields that have a mapping_field for this provider
+
+    Args:
+        build_config: The component's build configuration dict
+        provider: The selected provider name (e.g., "OpenAI", "IBM WatsonX")
+
+    Returns:
+        Updated build_config dict
+    """
+    import os
+
+    provider_vars = get_provider_all_variables(provider)
+
+    # Build a lookup by component_metadata.mapping_field
+    vars_by_field = {}
+    for v in provider_vars:
+        component_meta = v.get("component_metadata", {})
+        mapping_field = component_meta.get("mapping_field")
+        if mapping_field:
+            vars_by_field[mapping_field] = v
+
+    for field_name, var_info in vars_by_field.items():
+        if field_name not in build_config:
+            continue
+
+        field_config = build_config[field_name]
+        component_meta = var_info.get("component_metadata", {})
+
+        # Apply required from component_metadata
+        required = component_meta.get("required", False)
+        field_config["required"] = required
+
+        # Apply advanced from component_metadata
+        advanced = component_meta.get("advanced", False)
+        field_config["advanced"] = advanced
+
+        # Apply info from component_metadata
+        info = component_meta.get("info")
+        if info:
+            field_config["info"] = info
+
+        # Show the field since it's relevant to this provider
+        field_config["show"] = True
+
+        # If no value is set, try to get from environment variable
+        env_var_key = var_info.get("variable_key")
+        if env_var_key:
+            current_value = field_config.get("value")
+            # Only set from env if field is empty/None
+            if not current_value or (isinstance(current_value, str) and not current_value.strip()):
+                env_value = os.environ.get(env_var_key)
+                if env_value and env_value.strip():
+                    field_config["value"] = env_value
+                    logger.debug(
+                        "Set field %s from environment variable %s",
+                        field_name,
+                        env_var_key,
+                    )
+
+    return build_config
 
 
 def get_model_providers() -> list[str]:
@@ -277,15 +351,22 @@ def _validate_and_get_enabled_providers(
     only providers with valid keys. Used by get_enabled_providers and model options functions.
 
     For providers requiring multiple variables (e.g., IBM WatsonX needs API key, project ID, and URL),
-    all required variables must be present for the provider to be enabled.
+    all variables marked as `required: True` must be present (from DB or environment variables)
+    for the provider to be considered enabled.
+
+    Variables are collected from:
+    1. Database variables (if available)
+    2. Environment variables (as fallback)
 
     Args:
-        all_variables: Dictionary mapping variable names to VariableRead objects (all types, not just credentials)
+        all_variables: Dictionary mapping variable names to Variable/VariableRead objects
         provider_variable_map: Dictionary mapping provider names to primary variable names
 
     Returns:
         Set of provider names that have valid API keys
     """
+    import os
+
     from langflow.services.auth import utils as auth_utils
     from langflow.services.deps import get_settings_service
 
@@ -293,71 +374,73 @@ def _validate_and_get_enabled_providers(
     enabled = set()
 
     for provider in provider_variable_map:
-        # Get all required variable keys for this provider
-        required_var_keys = get_provider_required_variable_keys(provider)
-
-        # Check if all required variables are present and collect their values
-        all_required_present = True
-        collected_values: dict[str, str] = {}
-
-        # Build a lookup of provider variable metadata by key so we can
-        # distinguish secret vs non-secret required variables.
+        # Get all variable keys for this provider
         provider_vars = get_provider_all_variables(provider)
-        provider_vars_by_key = {var.get("variable_key"): var for var in provider_vars}
 
-        for var_key in required_var_keys:
-            if var_key not in all_variables:
+        # Collect values from database or environment variables
+        collected_values: dict[str, str] = {}
+        all_required_present = True
+
+        for var_info in provider_vars:
+            var_key = var_info.get("variable_key")
+            if not var_key:
+                continue
+
+            is_secret = bool(var_info.get("is_secret"))
+            is_required = bool(var_info.get("required", False))
+            value = None
+
+            # First try to get from database variables
+            if var_key in all_variables:
+                variable = all_variables[var_key]
+                if is_secret:
+                    # Secret variables are stored encrypted; decrypt and validate.
+                    if variable.value is not None:
+                        try:
+                            decrypted_value = auth_utils.decrypt_api_key(
+                                variable.value, settings_service=settings_service
+                            )
+                            if decrypted_value and decrypted_value.strip():
+                                value = decrypted_value
+                        except Exception as e:  # noqa: BLE001
+                            logger.debug(
+                                "Failed to decrypt variable %s for provider %s: %s",
+                                var_key,
+                                provider,
+                                e,
+                            )
+                else:
+                    # Non-secret variables are stored in plaintext
+                    raw_value = variable.value
+                    if raw_value is not None and str(raw_value).strip():
+                        value = str(raw_value)
+
+            # Fall back to environment variable if not found in database
+            if value is None:
+                env_value = os.environ.get(var_key)
+                if env_value and env_value.strip():
+                    value = env_value
+                    logger.debug(
+                        "Using environment variable %s for provider %s",
+                        var_key,
+                        provider,
+                    )
+
+            if value:
+                collected_values[var_key] = value
+            elif is_required:
+                # Required variable is missing
                 all_required_present = False
-                break
 
-            variable = all_variables[var_key]
-            var_meta = provider_vars_by_key.get(var_key) or {}
-            is_secret = bool(var_meta.get("is_secret"))
-
-            if is_secret:
-                # Secret variables are stored encrypted; decrypt and validate.
-                # Note: VariableRead objects have value=None for CREDENTIAL types (security feature).
-                # We need the actual encrypted value to decrypt. If value is None, skip this provider.
-                if variable.value is None:
-                    logger.debug(
-                        "Variable %s for provider %s has None value (likely VariableRead with redacted credential)",
-                        var_key,
-                        provider,
-                    )
-                    all_required_present = False
-                    break
-                try:
-                    decrypted_value = auth_utils.decrypt_api_key(variable.value, settings_service=settings_service)
-                    if not decrypted_value or not decrypted_value.strip():
-                        all_required_present = False
-                        break
-                    collected_values[var_key] = decrypted_value
-                except Exception as e:  # noqa: BLE001
-                    logger.debug(
-                        "Failed to decrypt variable %s for provider %s: %s",
-                        var_key,
-                        provider,
-                        e,
-                    )
-                    all_required_present = False
-                    break
-            else:
-                # Non-secret variables are stored in plaintext; just ensure they are present and non-empty.
-                raw_value = variable.value
-                if raw_value is None or not str(raw_value).strip():
-                    all_required_present = False
-                    break
-                collected_values[var_key] = str(raw_value)
-
-        # Validate with all collected variable values
+        # Validate with collected variable values if all required variables are present
         if all_required_present and collected_values:
             try:
                 validate_model_provider_key(provider, collected_values)
                 enabled.add(provider)
             except (ValueError, Exception) as e:  # noqa: BLE001
                 logger.debug("Provider %s validation failed: %s", provider, e)
-        elif not required_var_keys:
-            # Provider has no required variables
+        elif not provider_vars:
+            # Provider has no variables defined
             enabled.add(provider)
 
     return enabled
@@ -1101,36 +1184,41 @@ def get_llm(
     # Add provider-specific parameters
     if provider == "IBM WatsonX":
         # For watsonx, url and project_id are required parameters
-        # Only add them if both are provided by the component
-        # If neither are provided, let ChatWatsonx handle it with its native error
-        # This allows components without WatsonX-specific fields to fail gracefully
+        # Fall back to environment variables when component values are empty
+        # This matches the behavior of other providers like OpenAI/Anthropic
 
         url_param = metadata.get("url_param", "url")
         project_id_param = metadata.get("project_id_param", "project_id")
 
-        has_url = watsonx_url is not None
-        has_project_id = watsonx_project_id is not None
+        # Get values with env var fallback (treat empty strings as missing)
+        watsonx_url_value = watsonx_url if watsonx_url else os.environ.get("WATSONX_URL")
+        watsonx_project_id_value = watsonx_project_id if watsonx_project_id else os.environ.get("WATSONX_PROJECT_ID")
+
+        has_url = bool(watsonx_url_value)
+        has_project_id = bool(watsonx_project_id_value)
 
         if has_url and has_project_id:
-            # Both provided - add them to kwargs
-            kwargs[url_param] = watsonx_url
-            kwargs[project_id_param] = watsonx_project_id
+            # Both provided (from component or env vars) - add them to kwargs
+            kwargs[url_param] = watsonx_url_value
+            kwargs[project_id_param] = watsonx_project_id_value
         elif has_url or has_project_id:
-            # Only one provided - this is a misconfiguration in the component
-            missing = "project ID" if has_url else "URL"
+            # Only one provided - this is a misconfiguration
+            missing = "project ID (WATSONX_PROJECT_ID)" if has_url else "URL (WATSONX_URL)"
             provided = "URL" if has_url else "project ID"
             msg = (
                 f"IBM WatsonX requires both a URL and project ID. "
                 f"You provided a watsonx {provided} but no {missing}. "
-                f"Please add a 'watsonx {missing.title()}' field to your component or use the Language Model component "
-                f"which fully supports IBM WatsonX configuration."
+                f"Please configure the missing value in the component or set the environment variable."
             )
             raise ValueError(msg)
         # else: neither provided - let ChatWatsonx handle it (will fail with its own error)
-    elif provider == "Ollama" and ollama_base_url:
-        # For Ollama, handle custom base_url
+    elif provider == "Ollama":
+        # For Ollama, handle custom base_url with env var fallback
         base_url_param = metadata.get("base_url_param", "base_url")
-        kwargs[base_url_param] = ollama_base_url
+        # Get value with env var fallback (treat empty strings as missing)
+        ollama_base_url_value = ollama_base_url if ollama_base_url else os.environ.get("OLLAMA_BASE_URL")
+        if ollama_base_url_value:
+            kwargs[base_url_param] = ollama_base_url_value
 
     try:
         return model_class(**kwargs)
