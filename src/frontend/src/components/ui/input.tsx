@@ -65,7 +65,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
             <ForwardedIconComponent
               name={endIcon}
               className={cn(
-                "pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 transform text-muted-foreground",
+                "pointer-events-none absolute shrink-0 right-3 top-1/2 h-4 w-4 -translate-y-1/2 transform text-muted-foreground",
                 endIconClassName,
               )}
             />

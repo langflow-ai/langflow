@@ -27,6 +27,7 @@ import { Provider } from "@/modals/modelProviderModal/components/types";
 import useAlertStore from "@/stores/alertStore";
 import { cn } from "@/utils/utils";
 import ModelSelection from "./ModelSelection";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
 
 // Masked value shown for configured secret fields
 const MASKED_VALUE = "••••••••";
@@ -359,7 +360,7 @@ const ModelProvidersContent = ({
 
       <div
         className={cn(
-          "flex flex-col gap-1 transition-all duration-300 ease-in-out overflow-hidden",
+          "flex flex-col gap-1 transition-all duration-300 ease-in-out overflow-y-auto",
           selectedProvider
             ? "w-2/3 opacity-100 translate-x-0"
             : "w-0 opacity-0 translate-x-full",
@@ -458,8 +459,8 @@ const ModelProvidersContent = ({
                           </SelectContent>
                         </Select>
                         {isConfigured && !hasNewValue && (
-                          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-green-500">
-                            ✓
+                          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-green-500 pointer-events-none">
+                            <ForwardedIconComponent name="check" className="h-4 w-4" />
                           </span>
                         )}
                       </div>
@@ -473,16 +474,14 @@ const ModelProvidersContent = ({
                               : `Add ${variable.variable_name.toLowerCase()}`
                             : `Add ${variable.variable_name.toLowerCase()}`
                         }
-                        value={
-                          hasNewValue
-                            ? variableValues[variable.variable_key]
-                            : isConfigured && variable.is_secret
+                        defaultValue={
+                          isConfigured ? (variable.is_secret
                               ? MASKED_VALUE
-                              : isConfigured
-                                ? getConfiguredValue(variable.variable_key) ||
+                              : getConfiguredValue(variable.variable_key)) ||
                                   ""
                                 : ""
                         }
+                        value={variableValues[variable.variable_key] || ""}
                         type={
                           variable.is_secret && hasNewValue
                             ? "password"
@@ -551,7 +550,6 @@ const ModelProvidersContent = ({
           )}
         </div>
 
-        <div className="overflow-x-hidden">
           <div className="flex flex-col px-4 pb-4 gap-3 transition-all duration-300 ease-in-out">
             <ModelSelection
               modelType={modelType}
@@ -561,7 +559,6 @@ const ModelProvidersContent = ({
               isEnabledModel={selectedProvider?.is_enabled}
             />
           </div>
-        </div>
       </div>
     </div>
   );
