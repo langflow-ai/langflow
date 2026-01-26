@@ -1,6 +1,6 @@
-import pytest
 from lfx.components.processing.pii_masking import PIIMaskingComponent
 from lfx.schema.message import Message
+
 
 class TestPIIMaskingComponent:
     def test_pii_masking_basic(self):
@@ -24,11 +24,7 @@ class TestPIIMaskingComponent:
     def test_pii_masking_all_types(self):
         component = PIIMaskingComponent()
         component.text_input = (
-            "Email: user@host.com. "
-            "Phone: +1 555-010-999. "
-            "CC: 1234-5678-9012-3456. "
-            "SSN: 999-00-1111. "
-            "IP: 192.168.1.1"
+            "Email: user@host.com. Phone: +1 555-010-999. CC: 1234-5678-9012-3456. SSN: 999-00-1111. IP: 192.168.1.1"
         )
         component.mask_emails = True
         component.mask_phones = True
@@ -74,6 +70,6 @@ class TestPIIMaskingComponent:
         component.text_input = "Email me at dev@langflow.org"
         component.mask_emails = True
         component.replacement_template = "REDACTED"
-        
+
         result = component.get_masked_text()
         assert result.text == "Email me at REDACTED"

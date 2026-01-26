@@ -1,5 +1,4 @@
 import re
-from typing import Any
 
 from lfx.custom import Component
 from lfx.inputs import BoolInput, MultilineInput
@@ -87,7 +86,7 @@ class PIIMaskingComponent(Component):
 
         # Apply predefined patterns in order from most specific to least specific
         # to avoid overlapping matches (e.g., phone matching part of an IP)
-        
+
         if self.mask_credit_cards:
             masked_text = re.sub(self.PII_PATTERNS["CREDIT_CARD"], template.format(entity="CREDIT_CARD"), masked_text)
 
@@ -99,7 +98,7 @@ class PIIMaskingComponent(Component):
 
         if self.mask_emails:
             masked_text = re.sub(self.PII_PATTERNS["EMAIL"], template.format(entity="EMAIL"), masked_text)
-        
+
         if self.mask_phones:
             # Refined phone regex to avoid matching IP parts by making separators more specific
             phone_pattern = r"\+?\d{1,4}?[-\s]?\(?\d{1,3}?\)?[-.\s]?\d{1,4}[-.\s]?\d{1,4}[-.\s]?\d{1,9}"

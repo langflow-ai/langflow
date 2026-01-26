@@ -16,8 +16,8 @@ if TYPE_CHECKING:
     from lfx.components.processing.output_parser import OutputParserComponent
     from lfx.components.processing.parse_data import ParseDataComponent
     from lfx.components.processing.parser import ParserComponent
-    from lfx.components.processing.regex import RegexExtractorComponent
     from lfx.components.processing.pii_masking import PIIMaskingComponent
+    from lfx.components.processing.regex import RegexExtractorComponent
     from lfx.components.processing.split_text import SplitTextComponent
     from lfx.components.processing.store_message import MessageStoreComponent
 
@@ -45,9 +45,9 @@ __all__ = [
     "JSONCleaner",
     "MessageStoreComponent",
     "OutputParserComponent",
+    "PIIMaskingComponent",
     "ParseDataComponent",
     "ParserComponent",
-    "PIIMaskingComponent",
     "RegexExtractorComponent",
     "SplitTextComponent",
     "TypeConverterComponent",
