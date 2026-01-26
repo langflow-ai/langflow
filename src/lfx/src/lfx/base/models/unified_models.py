@@ -408,9 +408,7 @@ def _validate_and_get_enabled_providers(
             # Get the credential variable and decrypt it
             credential_var = credential_variables[var_key]
             try:
-                decrypted_value = auth_utils.decrypt_api_key(
-                    credential_var.value, settings_service=settings_service
-                )
+                decrypted_value = auth_utils.decrypt_api_key(credential_var.value, settings_service=settings_service)
                 if not decrypted_value or not decrypted_value.strip():
                     all_required_present = False
                     break
