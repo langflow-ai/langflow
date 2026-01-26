@@ -9,6 +9,7 @@ from lfx.base.models.unified_models import (
     get_model_provider_metadata,
     get_model_provider_variable_mapping,
     get_model_providers,
+    get_provider_all_variables,
     get_unified_models_detailed,
 )
 from pydantic import BaseModel, field_validator
@@ -16,7 +17,7 @@ from pydantic import BaseModel, field_validator
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.deps import get_variable_service
-from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
+from langflow.services.variable.constants import GENERIC_TYPE
 from langflow.services.variable.service import DatabaseVariableService
 
 logger = logging.getLogger(__name__)
@@ -222,42 +223,45 @@ async def get_enabled_providers(
                 status_code=500,
                 detail="Variable service is not an instance of DatabaseVariableService",
             )
-        # Get all variables to check which credential variables exist
+        # Get all variables (VariableRead objects)
         all_variables = await variable_service.get_all(user_id=current_user.id, session=session)
 
-        # Get all credential variable names (regardless of default_fields)
-        # This includes both env variables and explicitly created model provider credentials
-        credential_variable_names = {var.name for var in all_variables if var.type == CREDENTIAL_TYPE}
+        # Build a set of all variable names we have
+        all_variable_names = {var.name for var in all_variables}
 
-        if not credential_variable_names:
-            return {
-                "enabled_providers": [],
-                "provider_status": {},
-            }
-
-        # Get the provider-variable mapping
+        # Get the provider-variable mapping (primary variables only - for provider list)
         provider_variable_map = get_model_provider_variable_mapping()
 
-        # Build credential_variables dict with objects that have encrypted values
-        # VariableRead sets value=None for CREDENTIAL_TYPE (via validator), but _validate_and_get_enabled_providers
-        # needs the encrypted value to decrypt and validate. So we create simple objects with the encrypted value.
-        credential_variables = {}
+        # Build a dict of ALL required variables for ALL providers
+        # This includes both secret and non-secret variables (e.g., WATSONX_PROJECT_ID, WATSONX_URL)
+        # We need to fetch raw Variable objects because VariableRead has value=None for credentials
 
-        for var_name in credential_variable_names:
-            if var_name and var_name in provider_variable_map.values():
+        class VarWithValue:
+            """Simple wrapper to pass variable values to _validate_and_get_enabled_providers."""
+
+            def __init__(self, value):
+                self.value = value
+
+        all_provider_variables = {}
+
+        for provider in provider_variable_map:
+            # Get ALL variables for this provider (not just the primary one)
+            provider_vars = get_provider_all_variables(provider)
+
+            for var_info in provider_vars:
+                var_name = var_info.get("variable_key")
+                if not var_name or var_name not in all_variable_names:
+                    # Variable not configured by user
+                    continue
+
                 try:
-                    # Get the raw Variable object to access the encrypted value
+                    # Get the raw Variable object to access the actual value
                     variable_obj = await variable_service.get_variable_object(
                         user_id=current_user.id, name=var_name, session=session
                     )
                     if variable_obj and variable_obj.value:
-                        # Create a simple object with the encrypted value
-                        # _validate_and_get_enabled_providers only needs .value attribute
-                        class VarWithValue:
-                            def __init__(self, value):
-                                self.value = value
-
-                        credential_variables[var_name] = VarWithValue(variable_obj.value)
+                        # For secrets, value is encrypted; for non-secrets, value is plaintext
+                        all_provider_variables[var_name] = VarWithValue(variable_obj.value)
                 except (ValueError, Exception) as e:  # noqa: BLE001
                     # Variable not found or error accessing it - skip
                     logger.debug("Skipping variable %s due to error: %s", var_name, e)
@@ -266,7 +270,7 @@ async def get_enabled_providers(
         # Use shared helper to validate and get enabled providers
         from lfx.base.models.unified_models import _validate_and_get_enabled_providers
 
-        enabled_providers_set = _validate_and_get_enabled_providers(credential_variables, provider_variable_map)
+        enabled_providers_set = _validate_and_get_enabled_providers(all_provider_variables, provider_variable_map)
         enabled_providers = list(enabled_providers_set)
 
         # Build provider_status dict for all providers
