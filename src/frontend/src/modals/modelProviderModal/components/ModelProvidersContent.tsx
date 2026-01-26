@@ -79,7 +79,8 @@ const ModelProvidersContent = ({
     }
 
     // Fallback to static mapping for backward compatibility
-    const staticVariableKey = PROVIDER_VARIABLE_MAPPING[selectedProvider.provider];
+    const staticVariableKey =
+      PROVIDER_VARIABLE_MAPPING[selectedProvider.provider];
     if (staticVariableKey) {
       return [
         {
@@ -118,8 +119,8 @@ const ModelProvidersContent = ({
   const debouncedConfigureProvider = useDebounce(() => {
     if (selectedProvider && isUserInputRef.current) {
       // Find the variable that was just changed and has a value
-      const variableToSave = providerVariables.find(
-        (v) => variableValues[v.variable_key]?.trim(),
+      const variableToSave = providerVariables.find((v) =>
+        variableValues[v.variable_key]?.trim(),
       );
       if (variableToSave) {
         handleSaveVariable(variableToSave);
@@ -172,7 +173,10 @@ const ModelProvidersContent = ({
     const hasRequiredSecrets = providerVariables.some(
       (v) => v.required && v.is_secret,
     );
-    return hasRequiredSecrets && !NO_API_KEY_PROVIDERS.includes(selectedProvider.provider);
+    return (
+      hasRequiredSecrets &&
+      !NO_API_KEY_PROVIDERS.includes(selectedProvider.provider)
+    );
   }, [selectedProvider, providerVariables]);
 
   // Activate providers that don't need API keys (e.g., Ollama)
@@ -194,7 +198,9 @@ const ModelProvidersContent = ({
       }
     }
 
-    const variableName = firstVariable?.variable_key || PROVIDER_VARIABLE_MAPPING[selectedProvider.provider];
+    const variableName =
+      firstVariable?.variable_key ||
+      PROVIDER_VARIABLE_MAPPING[selectedProvider.provider];
 
     // Check if provider was previously configured (variable exists)
     const existingVariable = globalVariables.find(
@@ -202,7 +208,8 @@ const ModelProvidersContent = ({
     );
 
     // Ollama default endpoint - used as placeholder to mark provider as active
-    const placeholderValue = firstVariable?.options?.[0] || "http://localhost:11434";
+    const placeholderValue =
+      firstVariable?.options?.[0] || "http://localhost:11434";
 
     const onSuccess = () => {
       setSuccessData({ title: `${selectedProvider.provider} Activated` });
@@ -386,10 +393,15 @@ const ModelProvidersContent = ({
             <div className="flex flex-col gap-3">
               {providerVariables.map((variable) => {
                 const isSaving = savingVariableKey === variable.variable_key;
-                const isConfigured = isVariableConfigured(variable.variable_key);
+                const isConfigured = isVariableConfigured(
+                  variable.variable_key,
+                );
 
                 return (
-                  <div key={variable.variable_key} className="flex flex-col gap-1">
+                  <div
+                    key={variable.variable_key}
+                    className="flex flex-col gap-1"
+                  >
                     <label className="text-[12px] font-medium text-muted-foreground">
                       {variable.variable_name}
                       {variable.required && (
