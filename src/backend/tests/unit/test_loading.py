@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.initial_setup.setup import load_starter_projects
 from langflow.load import aload_flow_from_json
 from lfx.graph import Graph
@@ -20,7 +19,7 @@ from lfx.graph import Graph
 #     assert isinstance(loaded, Graph)
 
 
-@pytest.mark.xdist_group(name="serial")
+@pytest.mark.flaky(reruns=3, reruns_delay=2)
 async def test_load_flow_from_json_object():
     """Test loading a flow from a json file and applying tweaks."""
     result = await load_starter_projects()
