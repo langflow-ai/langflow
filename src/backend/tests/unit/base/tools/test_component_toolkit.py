@@ -2,13 +2,14 @@ import sqlite3
 from pathlib import Path
 
 import pytest
-from lfx.base.tools.component_tool import ComponentToolkit
+from lfx.base.tools.component_tool import ComponentToolkit, send_message_noop
 from lfx.components.data_source.sql_executor import SQLComponent
 from lfx.components.input_output.chat_output import ChatOutput
 from lfx.components.langchain_utilities import ToolCallingAgentComponent
 from lfx.components.openai.openai_chat_model import OpenAIModelComponent
 from lfx.components.tools.calculator import CalculatorToolComponent
 from lfx.graph.graph.base import Graph
+from lfx.schema.message import Message
 from pydantic import BaseModel
 
 from tests.api_keys import get_openai_api_key
@@ -166,3 +167,30 @@ async def test_sql_component_to_toolkit(test_db):
     results = [result async for result in g.async_start()]
     assert len(results) > 0
     assert "Physics 101" in tool_calling_agent._outputs_map["response"].value.get_text()
+
+
+@pytest.mark.asyncio
+async def test_send_message_noop_accepts_skip_db_update():
+    """Test that send_message_noop accepts skip_db_update parameter.
+
+    This is a regression test for agent-to-agent communication failures where
+    the core engine passes skip_db_update to the fallback function.
+    See: LF-161 Agent communication failure
+    """
+    message = Message(text="test message", sender="User", sender_name="Test")
+
+    # Test calling with skip_db_update=True (as done in events.py during agent streaming)
+    result = await send_message_noop(message=message, skip_db_update=True)
+    assert result == message
+
+    # Test calling with skip_db_update=False (default)
+    result = await send_message_noop(message=message, skip_db_update=False)
+    assert result == message
+
+    # Test calling with id_ parameter as well
+    result = await send_message_noop(message=message, id_="test-id", skip_db_update=True)
+    assert result == message
+
+    # Test calling without skip_db_update (should use default)
+    result = await send_message_noop(message=message)
+    assert result == message
