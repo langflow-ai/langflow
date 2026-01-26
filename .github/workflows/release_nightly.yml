@@ -135,12 +135,24 @@ jobs:
           cache-dependency-glob: "uv.lock"
           python-version: ${{ env.PYTHON_VERSION }}
           prune-cache: false
+      
+      - name: Download LFX artifact
+        if: inputs.build_lfx
+        uses: actions/download-artifact@v7
+        with:
+          name: dist-nightly-lfx
+          path: lfx-dist
+      
       - name: Install the project
         run: uv sync
-
-      - name: Wait for PyPI Propagation
+      
+      - name: Force reinstall LFX from built wheel
         if: inputs.build_lfx
-        run: sleep 300 # wait for 5 minutes to ensure PyPI propagation of LFX
+        run: |
+          echo "Installing LFX from built wheel to test the actual distribution package..."
+          # While workspace resolution installs from source, we want to test the exact
+          # wheel that will be published to PyPI to catch any packaging issues
+          uv pip install --force-reinstall --no-deps lfx-dist/*.whl
 
       - name: Verify Nightly Name and Version
         id: verify
@@ -218,8 +230,33 @@ jobs:
           cache-dependency-glob: "uv.lock"
           python-version: ${{ env.PYTHON_VERSION }}
           prune-cache: false
+      
+      - name: Download LFX artifact
+        if: inputs.build_lfx
+        uses: actions/download-artifact@v7
+        with:
+          name: dist-nightly-lfx
+          path: lfx-dist
+      
+      - name: Download base artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: dist-nightly-base
+          path: base-dist
+      
       - name: Install the project
         run: uv sync
+      
+      - name: Force reinstall packages from built wheels
+        run: |
+          # While workspace resolution installs from source, we want to test the exact
+          # wheels that will be published to PyPI to catch any packaging issues
+          if [ "${{ inputs.build_lfx }}" == "true" ]; then
+            echo "Installing LFX from built wheel..."
+            uv pip install --force-reinstall --no-deps lfx-dist/*.whl
+          fi
+          echo "Installing langflow-base from built wheel..."
+          uv pip install --force-reinstall --no-deps base-dist/*.whl
 
       - name: Verify Nightly Name and Version
         id: verify
