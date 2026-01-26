@@ -111,7 +111,7 @@ export const BotMessage = memo(
     // Helper: Extract thinking duration from content_blocks
     const getThinkingDuration = useCallback((): number | undefined => {
       if (!chat.content_blocks) return undefined;
-      
+
       // Find first text content block with duration
       for (const block of chat.content_blocks) {
         for (const content of block.contents) {
@@ -124,58 +124,67 @@ export const BotMessage = memo(
     }, [chat.content_blocks]);
 
     // Callback: Save thinking duration to content_blocks when AI completes
-    const handleSaveThinkingDuration = useCallback((duration: number) => {
-      // Clone content_blocks or create new array
-      const updatedContentBlocks = chat.content_blocks ? [...chat.content_blocks] : [];
-      
-      // Find existing text content block or create new one
-      let thinkingBlockIndex = updatedContentBlocks.findIndex(block =>
-        block.contents.some(c => c.type === "text")
-      );
-      
-      if (thinkingBlockIndex === -1) {
-        // Create new thinking block at the beginning
-        updatedContentBlocks.unshift({
-          title: "Thinking",
-          contents: [{
-            type: "text",
-            text: "",
-            duration: duration
-          }],
-          allow_markdown: false,
-          component: "thinking"
-        });
-      } else {
-        // Update existing text content with duration
-        const block = { ...updatedContentBlocks[thinkingBlockIndex] };
-        const textContentIndex = block.contents.findIndex(c => c.type === "text");
-        
-        if (textContentIndex !== -1) {
-          block.contents = [...block.contents];
-          block.contents[textContentIndex] = {
-            ...block.contents[textContentIndex],
-            duration: duration
-          };
-          updatedContentBlocks[thinkingBlockIndex] = block;
+    const handleSaveThinkingDuration = useCallback(
+      (duration: number) => {
+        // Clone content_blocks or create new array
+        const updatedContentBlocks = chat.content_blocks
+          ? [...chat.content_blocks]
+          : [];
+
+        // Find existing text content block or create new one
+        let thinkingBlockIndex = updatedContentBlocks.findIndex((block) =>
+          block.contents.some((c) => c.type === "text"),
+        );
+
+        if (thinkingBlockIndex === -1) {
+          // Create new thinking block at the beginning
+          updatedContentBlocks.unshift({
+            title: "Thinking",
+            contents: [
+              {
+                type: "text",
+                text: "",
+                duration: duration,
+              },
+            ],
+            allow_markdown: false,
+            component: "thinking",
+          });
+        } else {
+          // Update existing text content with duration
+          const block = { ...updatedContentBlocks[thinkingBlockIndex] };
+          const textContentIndex = block.contents.findIndex(
+            (c) => c.type === "text",
+          );
+
+          if (textContentIndex !== -1) {
+            block.contents = [...block.contents];
+            block.contents[textContentIndex] = {
+              ...block.contents[textContentIndex],
+              duration: duration,
+            };
+            updatedContentBlocks[thinkingBlockIndex] = block;
+          }
         }
-      }
-      
-      // Save updated message with duration in content_blocks
-      updateMessageMutation({
-        message: {
-          id: chat.id,
-          files: convertFiles(chat.files),
-          sender_name: chat.sender_name ?? "AI",
-          text: chat.message.toString(),
-          sender: "Machine",
-          flow_id,
-          session_id: chat.session ?? "",
-          content_blocks: updatedContentBlocks,
-          properties: chat.properties as any,
-        },
-        refetch: false,
-      });
-    }, [chat, flow_id, updateMessageMutation]);
+
+        // Save updated message with duration in content_blocks
+        updateMessageMutation({
+          message: {
+            id: chat.id,
+            files: convertFiles(chat.files),
+            sender_name: chat.sender_name ?? "AI",
+            text: chat.message.toString(),
+            sender: "Machine",
+            flow_id,
+            session_id: chat.session ?? "",
+            content_blocks: updatedContentBlocks,
+            properties: chat.properties as any,
+          },
+          refetch: false,
+        });
+      },
+      [chat, flow_id, updateMessageMutation],
+    );
 
     // Load saved thinking duration from content_blocks
     const savedThinkingDuration = getThinkingDuration();
