@@ -27,7 +27,6 @@ class MessageBase(SQLModel):
     files: list[str] = Field(default_factory=list)
     error: bool = Field(default=False)
     edit: bool = Field(default=False)
-    duration: int | None = Field(default=None)
 
     properties: Properties = Field(default_factory=Properties)
     category: str = Field(default="message")
@@ -122,7 +121,6 @@ class MessageBase(SQLModel):
             files=message.files or [],
             timestamp=timestamp,
             flow_id=flow_id,
-            duration=getattr(message, "duration", None),
             properties=properties,
             category=message.category,
             content_blocks=content_blocks,
@@ -195,5 +193,5 @@ class MessageUpdate(SQLModel):
     files: list[str] | None = None
     edit: bool | None = None
     error: bool | None = None
-    duration: int | None = None
     properties: Properties | None = None
+    content_blocks: list[ContentBlock] | None = None

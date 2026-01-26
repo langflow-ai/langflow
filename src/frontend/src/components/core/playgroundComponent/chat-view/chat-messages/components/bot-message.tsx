@@ -1,4 +1,4 @@
-import { memo, useState } from "react";
+import { memo, useCallback, useState } from "react";
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import IconComponent, {
   ForwardedIconComponent,
@@ -108,48 +108,85 @@ export const BotMessage = memo(
 
     const thinkingActive = Boolean(isBuilding && lastMessage);
 
-    // Callback to save duration when it freezes
-    const handleDurationFreeze = (duration: number) => {
-      // Check if message is in sessionStorage (true playground mode)
-      const storageKey = flow_id;
-      const rawMessages = window.sessionStorage.getItem(storageKey || "");
-      const messages = rawMessages ? JSON.parse(rawMessages) : [];
-      const messageIndex = messages.findIndex((m: any) => m.id === chat.id);
-      const isInSessionStorage = messageIndex !== -1;
-
-      if (isInSessionStorage && flow_id) {
-        // Message is in sessionStorage: save duration at message level
-        messages[messageIndex] = {
-          ...messages[messageIndex],
-          duration,
-        };
-        window.sessionStorage.setItem(storageKey, JSON.stringify(messages));
-      } else {
-        // Non-playground mode: save duration to backend database at message level
-        updateMessageMutation({
-          message: {
-            id: chat.id,
-            files: convertFiles(chat.files),
-            sender_name: chat.sender_name ?? "AI",
-            text: chat.message.toString(),
-            sender: "Machine",
-            flow_id,
-            session_id: chat.session ?? "",
-            duration,
-            properties: chat.properties as any,
-          },
-          refetch: false,
-        });
+    // Helper: Extract thinking duration from content_blocks
+    const getThinkingDuration = useCallback((): number | undefined => {
+      if (!chat.content_blocks) return undefined;
+      
+      // Find first text content block with duration
+      for (const block of chat.content_blocks) {
+        for (const content of block.contents) {
+          if (content.type === "text" && content.duration) {
+            return content.duration;
+          }
+        }
       }
-    };
+      return undefined;
+    }, [chat.content_blocks]);
+
+    // Callback: Save thinking duration to content_blocks when AI completes
+    const handleSaveThinkingDuration = useCallback((duration: number) => {
+      // Clone content_blocks or create new array
+      const updatedContentBlocks = chat.content_blocks ? [...chat.content_blocks] : [];
+      
+      // Find existing text content block or create new one
+      let thinkingBlockIndex = updatedContentBlocks.findIndex(block =>
+        block.contents.some(c => c.type === "text")
+      );
+      
+      if (thinkingBlockIndex === -1) {
+        // Create new thinking block at the beginning
+        updatedContentBlocks.unshift({
+          title: "Thinking",
+          contents: [{
+            type: "text",
+            text: "",
+            duration: duration
+          }],
+          allow_markdown: false,
+          component: "thinking"
+        });
+      } else {
+        // Update existing text content with duration
+        const block = { ...updatedContentBlocks[thinkingBlockIndex] };
+        const textContentIndex = block.contents.findIndex(c => c.type === "text");
+        
+        if (textContentIndex !== -1) {
+          block.contents = [...block.contents];
+          block.contents[textContentIndex] = {
+            ...block.contents[textContentIndex],
+            duration: duration
+          };
+          updatedContentBlocks[thinkingBlockIndex] = block;
+        }
+      }
+      
+      // Save updated message with duration in content_blocks
+      updateMessageMutation({
+        message: {
+          id: chat.id,
+          files: convertFiles(chat.files),
+          sender_name: chat.sender_name ?? "AI",
+          text: chat.message.toString(),
+          sender: "Machine",
+          flow_id,
+          session_id: chat.session ?? "",
+          content_blocks: updatedContentBlocks,
+          properties: chat.properties as any,
+        },
+        refetch: false,
+      });
+    }, [chat, flow_id, updateMessageMutation]);
+
+    // Load saved thinking duration from content_blocks
+    const savedThinkingDuration = getThinkingDuration();
 
     // Use hook for message duration tracking
     const { displayTime } = useMessageDuration({
       chatId: chat.id,
       lastMessage,
       isBuilding,
-      savedDuration: chat.duration ?? undefined,
-      onDurationFreeze: handleDurationFreeze,
+      savedDuration: savedThinkingDuration,
+      onDurationFreeze: handleSaveThinkingDuration,
     });
 
     // Use shared hook for tool duration tracking
