@@ -92,6 +92,140 @@ def post_process_raw(raw, artifact_type: str):
     return raw
 
 
+def serialize_for_json(obj: Any) -> Any:
+    """Convert object to JSON-serializable format.
+
+    Args:
+        obj: Any object to serialize
+
+    Returns:
+        JSON-serializable representation of the object
+    """
+    if obj is None:
+        return None
+    if isinstance(obj, (str, int, float, bool)):
+        return obj
+    if isinstance(obj, dict):
+        return {k: serialize_for_json(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [serialize_for_json(item) for item in obj]
+    if hasattr(obj, "model_dump"):
+        return serialize_for_json(obj.model_dump())
+    if hasattr(obj, "dict"):
+        return serialize_for_json(obj.dict())
+    try:
+        return str(obj)
+    except (TypeError, ValueError):
+        return None
+
+
+async def emit_vertex_build_event(
+    *,
+    flow_id: str | UUID,
+    vertex_id: str,
+    valid: bool,
+    params: Any,
+    data_dict: dict | Any,
+    artifacts_dict: dict | None = None,
+    next_vertices_ids: list[str] | None = None,
+    top_level_vertices: list[str] | None = None,
+    inactivated_vertices: list[str] | None = None,
+) -> None:
+    """Emit end_vertex event for webhook real-time feedback.
+
+    This is a helper function to emit SSE events when vertices are built.
+    Errors are silently ignored as SSE emission is not critical.
+
+    Args:
+        flow_id: The flow ID
+        vertex_id: The vertex ID that was built
+        valid: Whether the build was successful
+        params: Build parameters or error message
+        data_dict: Build result data
+        artifacts_dict: Build artifacts
+        next_vertices_ids: IDs of vertices to run next (for UI animation)
+        top_level_vertices: Top level vertices
+        inactivated_vertices: Vertices that were inactivated
+    """
+    try:
+        from datetime import datetime, timezone
+
+        from langflow.services.event_manager import webhook_event_manager
+
+        flow_id_str = str(flow_id)
+        if not webhook_event_manager.has_listeners(flow_id_str):
+            return
+
+        duration = webhook_event_manager.get_build_duration(flow_id_str, vertex_id)
+
+        # Convert Pydantic model to dict if necessary
+        if hasattr(data_dict, "model_dump"):
+            data_as_dict = data_dict.model_dump()
+        elif isinstance(data_dict, dict):
+            data_as_dict = data_dict
+        else:
+            data_as_dict = {}
+
+        results = serialize_for_json(data_as_dict.get("results", {}))
+        outputs = serialize_for_json(data_as_dict.get("outputs", {}))
+        logs = serialize_for_json(data_as_dict.get("logs", {}))
+        messages = serialize_for_json(data_as_dict.get("messages", []))
+
+        vertex_data = {
+            "results": results,
+            "outputs": outputs,
+            "logs": logs,
+            "messages": messages,
+            "duration": duration,
+        }
+
+        serialized_artifacts = serialize_for_json(artifacts_dict) if artifacts_dict else {}
+
+        await webhook_event_manager.emit(
+            flow_id_str,
+            "end_vertex",
+            {
+                "build_data": {
+                    "id": vertex_id,
+                    "valid": valid,
+                    "params": str(params) if params else None,
+                    "data": vertex_data,
+                    "artifacts": serialized_artifacts,
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "messages": vertex_data.get("messages", []),
+                    "inactivated_vertices": inactivated_vertices or [],
+                    "next_vertices_ids": next_vertices_ids or [],
+                    "top_level_vertices": top_level_vertices or [],
+                }
+            },
+        )
+    except ImportError:
+        pass  # langflow not available (standalone lfx usage)
+    except Exception as exc:  # noqa: BLE001
+        logger.debug(f"SSE emission failed for vertex {vertex_id}: {exc}")
+
+
+async def emit_build_start_event(flow_id: str | UUID, vertex_id: str) -> None:
+    """Emit build_start event for webhook real-time feedback.
+
+    This is a helper function to emit SSE events when a vertex build starts.
+    Errors are silently ignored as SSE emission is not critical.
+    """
+    try:
+        from langflow.services.event_manager import webhook_event_manager
+
+        flow_id_str = str(flow_id)
+        if not webhook_event_manager.has_listeners(flow_id_str):
+            return
+
+        webhook_event_manager.record_build_start(flow_id_str, vertex_id)
+        await webhook_event_manager.emit(flow_id_str, "build_start", {"id": vertex_id})
+    except ImportError:
+        pass  # langflow not available (standalone lfx usage)
+    except Exception as exc:  # noqa: BLE001
+        logger.debug(f"SSE build_start emission failed for vertex {vertex_id}: {exc}")
+
+
 def _vertex_to_primitive_dict(target: Vertex) -> dict:
     """Cleans the parameters of the target vertex."""
     # Removes all keys that the values aren't python types like str, int, bool, etc.
@@ -236,6 +370,10 @@ async def log_vertex_build(
 
             async with db_service._with_session() as session:  # noqa: SLF001
                 await crud_log_vertex_build(session, vertex_build)
+
+            # Note: emit_vertex_build_event is NOT called here because it needs
+            # next_vertices_ids which are only available after graph.get_next_runnable_vertices()
+            # The event is emitted separately in graph._execute_tasks() with complete data.
 
         except ImportError:
             # Fallback for standalone lfx usage (without langflow)

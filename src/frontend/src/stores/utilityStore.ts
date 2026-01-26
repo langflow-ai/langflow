@@ -39,7 +39,7 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   setTags: (tags: Tag[]) => set({ tags }),
   featureFlags: {},
   setFeatureFlags: (featureFlags: Record<string, any>) => set({ featureFlags }),
-  webhookPollingInterval: 5000,
+  webhookPollingInterval: 0, // Disabled: SSE provides real-time updates
   setWebhookPollingInterval: (webhookPollingInterval: number) =>
     set({ webhookPollingInterval }),
   currentSessionId: "",
