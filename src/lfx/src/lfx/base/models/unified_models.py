@@ -62,27 +62,102 @@ def get_model_provider_metadata():
     return {
         "OpenAI": {
             "icon": "OpenAI",
-            "variable_name": "OPENAI_API_KEY",
+            "variables": [
+                {
+                    "variable_name": "API Key",
+                    "variable_key": "OPENAI_API_KEY",
+                    "description": "Your OpenAI API key",
+                    "required": True,
+                    "is_secret": True,
+                    "is_list": False,
+                    "options": [],
+                }
+            ],
             "api_docs_url": "https://platform.openai.com/docs/overview",
         },
         "Anthropic": {
             "icon": "Anthropic",
-            "variable_name": "ANTHROPIC_API_KEY",
+            "variables": [
+                {
+                    "variable_name": "API Key",
+                    "variable_key": "ANTHROPIC_API_KEY",
+                    "description": "Your Anthropic API key",
+                    "required": True,
+                    "is_secret": True,
+                    "is_list": False,
+                    "options": [],
+                }
+            ],
             "api_docs_url": "https://console.anthropic.com/docs",
         },
         "Google Generative AI": {
             "icon": "GoogleGenerativeAI",
-            "variable_name": "GOOGLE_API_KEY",
+            "variables": [
+                {
+                    "variable_name": "API Key",
+                    "variable_key": "GOOGLE_API_KEY",
+                    "description": "Your Google AI API key",
+                    "required": True,
+                    "is_secret": True,
+                    "is_list": False,
+                    "options": [],
+                }
+            ],
             "api_docs_url": "https://aistudio.google.com/app/apikey",
         },
         "Ollama": {
             "icon": "Ollama",
-            "variable_name": "OLLAMA_BASE_URL",
+            "variables": [
+                {
+                    "variable_name": "Base URL",
+                    "variable_key": "OLLAMA_BASE_URL",
+                    "description": "Ollama server URL (default: http://localhost:11434)",
+                    "required": False,
+                    "is_secret": False,
+                    "is_list": False,
+                    "options": [],
+                }
+            ],
             "api_docs_url": "https://ollama.com/",
         },
         "IBM WatsonX": {
             "icon": "IBM",
-            "variable_name": "WATSONX_APIKEY",
+            "variables": [
+                {
+                    "variable_name": "API Key",
+                    "variable_key": "WATSONX_APIKEY",
+                    "description": "IBM WatsonX API key for authentication",
+                    "required": True,
+                    "is_secret": True,
+                    "is_list": False,
+                    "options": [],
+                },
+                {
+                    "variable_name": "Project ID",
+                    "variable_key": "WATSONX_PROJECT_ID",
+                    "description": "The project ID associated with your WatsonX instance",
+                    "required": True,
+                    "is_secret": False,
+                    "is_list": False,
+                    "options": [],
+                },
+                {
+                    "variable_name": "URL",
+                    "variable_key": "WATSONX_URL",
+                    "description": "WatsonX API endpoint URL for your region",
+                    "required": True,
+                    "is_secret": False,
+                    "is_list": False,
+                    "options": [
+                        "https://us-south.ml.cloud.ibm.com",
+                        "https://eu-de.ml.cloud.ibm.com",
+                        "https://eu-gb.ml.cloud.ibm.com",
+                        "https://au-syd.ml.cloud.ibm.com",
+                        "https://jp-tok.ml.cloud.ibm.com",
+                        "https://ca-tor.ml.cloud.ibm.com",
+                    ],
+                },
+            ],
             "api_docs_url": "https://www.ibm.com/products/watsonx",
         },
     }
@@ -110,7 +185,29 @@ MODELS_DETAILED = get_models_detailed()
 
 @lru_cache(maxsize=1)
 def get_model_provider_variable_mapping() -> dict[str, str]:
-    return {provider: meta["variable_name"] for provider, meta in model_provider_metadata.items()}
+    """Return primary (first required secret) variable for each provider - backward compatible."""
+    result = {}
+    for provider, meta in model_provider_metadata.items():
+        for var in meta.get("variables", []):
+            if var.get("required") and var.get("is_secret"):
+                result[provider] = var["variable_key"]
+                break
+        # Fallback to first variable if no required secret found
+        if provider not in result and meta.get("variables"):
+            result[provider] = meta["variables"][0]["variable_key"]
+    return result
+
+
+def get_provider_all_variables(provider: str) -> list[dict]:
+    """Get all variables for a provider."""
+    meta = model_provider_metadata.get(provider, {})
+    return meta.get("variables", [])
+
+
+def get_provider_required_variable_keys(provider: str) -> list[str]:
+    """Get all required variable keys for a provider."""
+    variables = get_provider_all_variables(provider)
+    return [v["variable_key"] for v in variables if v.get("required")]
 
 
 def get_model_providers() -> list[str]:
@@ -247,14 +344,8 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
     if user_id is None or (isinstance(user_id, str) and user_id == "None"):
         return None
 
-    # Map provider to global variable name
-    provider_variable_map = {
-        "OpenAI": "OPENAI_API_KEY",
-        "Anthropic": "ANTHROPIC_API_KEY",
-        "Google Generative AI": "GOOGLE_API_KEY",
-        "IBM WatsonX": "WATSONX_APIKEY",
-    }
-
+    # Get primary variable (first required secret) from provider metadata
+    provider_variable_map = get_model_provider_variable_mapping()
     variable_name = provider_variable_map.get(provider)
     if not variable_name:
         return None
@@ -284,9 +375,12 @@ def _validate_and_get_enabled_providers(
     This helper function validates API keys for credential variables and returns
     only providers with valid keys. Used by get_enabled_providers and model options functions.
 
+    For providers requiring multiple variables (e.g., IBM WatsonX needs API key, project ID, and URL),
+    all required variables must be present for the provider to be enabled.
+
     Args:
         credential_variables: Dictionary mapping variable names to VariableRead objects
-        provider_variable_map: Dictionary mapping provider names to variable names
+        provider_variable_map: Dictionary mapping provider names to primary variable names
 
     Returns:
         Set of provider names that have valid API keys
@@ -297,22 +391,73 @@ def _validate_and_get_enabled_providers(
     settings_service = get_settings_service()
     enabled = set()
 
-    for provider, var_name in provider_variable_map.items():
-        if var_name in credential_variables:
-            # Validate the API key before marking as enabled
-            credential_var = credential_variables[var_name]
+    for provider in provider_variable_map:
+        # Get all required variable keys for this provider
+        required_var_keys = get_provider_required_variable_keys(provider)
+
+        # Check if all required variables are present
+        all_required_present = True
+        primary_var_key = None
+        primary_api_key = None
+
+        for var_key in required_var_keys:
+            if var_key not in credential_variables:
+                all_required_present = False
+                break
+
+            # Get the credential variable and decrypt it
+            credential_var = credential_variables[var_key]
             try:
-                # Decrypt the API key value
-                api_key = auth_utils.decrypt_api_key(credential_var.value, settings_service=settings_service)
-                # Validate the key (this will raise ValueError if invalid)
-                if api_key and api_key.strip():
-                    validate_model_provider_key(var_name, api_key)
-                    enabled.add(provider)
+                decrypted_value = auth_utils.decrypt_api_key(
+                    credential_var.value, settings_service=settings_service
+                )
+                if not decrypted_value or not decrypted_value.strip():
+                    all_required_present = False
+                    break
+
+                # Track the primary secret variable for validation
+                provider_vars = get_provider_all_variables(provider)
+                for var in provider_vars:
+                    if var.get("variable_key") == var_key and var.get("is_secret"):
+                        primary_var_key = var_key
+                        primary_api_key = decrypted_value
+                        break
+            except Exception as e:  # noqa: BLE001
+                logger.debug("Failed to decrypt variable %s for provider %s: %s", var_key, provider, e)
+                all_required_present = False
+                break
+
+        if not all_required_present:
+            continue
+
+        # Validate the primary API key if we have one
+        if primary_var_key and primary_api_key:
+            try:
+                validate_model_provider_key(primary_var_key, primary_api_key)
+                enabled.add(provider)
             except (ValueError, Exception) as e:  # noqa: BLE001
-                # Key validation failed or decryption failed - don't enable provider
-                logger.debug("Provider %s validation failed for variable %s: %s", provider, var_name, e)
+                logger.debug("Provider %s validation failed for variable %s: %s", provider, primary_var_key, e)
+        elif not required_var_keys:
+            # Provider has no required variables (like Ollama with optional base URL)
+            enabled.add(provider)
 
     return enabled
+
+
+def get_provider_from_variable_key(variable_key: str) -> str | None:
+    """Get provider name from a variable key.
+
+    Args:
+        variable_key: The variable key (e.g., "OPENAI_API_KEY", "WATSONX_APIKEY")
+
+    Returns:
+        The provider name or None if not found
+    """
+    for provider, meta in model_provider_metadata.items():
+        for var in meta.get("variables", []):
+            if var.get("variable_key") == variable_key:
+                return provider
+    return None
 
 
 def validate_model_provider_key(variable_name: str, api_key: str) -> None:
@@ -325,16 +470,8 @@ def validate_model_provider_key(variable_name: str, api_key: str) -> None:
     Raises:
         HTTPException: If the API key is invalid
     """
-    # Map variable names to providers
-    provider_map = {
-        "OPENAI_API_KEY": "OpenAI",
-        "ANTHROPIC_API_KEY": "Anthropic",
-        "GOOGLE_API_KEY": "Google Generative AI",
-        "WATSONX_APIKEY": "IBM WatsonX",
-        "OLLAMA_BASE_URL": "Ollama",
-    }
-
-    provider = provider_map.get(variable_name)
+    # Get provider from variable key using metadata
+    provider = get_provider_from_variable_key(variable_name)
     if not provider:
         return  # Not a model provider key we validate
 

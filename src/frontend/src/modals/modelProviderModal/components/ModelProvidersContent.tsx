@@ -3,10 +3,19 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   NO_API_KEY_PROVIDERS,
   PROVIDER_VARIABLE_MAPPING,
+  ProviderVariable,
   VARIABLE_CATEGORY,
 } from "@/constants/providerConstants";
+import { useGetProviderVariables } from "@/controllers/API/queries/models/use-get-provider-variables";
 import { useUpdateEnabledModels } from "@/controllers/API/queries/models/use-update-enabled-models";
 import {
   useGetGlobalVariables,
@@ -32,11 +41,18 @@ const ModelProvidersContent = ({
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(
     null,
   );
-  const [apiKey, setApiKey] = useState("");
+  // State for multiple variable values, keyed by variable_key
+  const [variableValues, setVariableValues] = useState<Record<string, string>>(
+    {},
+  );
   const [validationFailed, setValidationFailed] = useState(false);
-  // Track if API key change came from user typing (vs programmatic reset)
-  // Used to prevent auto-save from triggering when we clear the input after success
+  // Track if input change came from user typing (vs programmatic reset)
+  // Used to prevent auto-save from triggering when we clear inputs after success
   const isUserInputRef = useRef(false);
+  // Track which variable is currently being saved
+  const [savingVariableKey, setSavingVariableKey] = useState<string | null>(
+    null,
+  );
 
   const queryClient = useQueryClient();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
@@ -48,8 +64,38 @@ const ModelProvidersContent = ({
     usePatchGlobalVariables();
   const { data: globalVariables = [] } = useGetGlobalVariables();
   const { mutate: updateEnabledModels } = useUpdateEnabledModels();
+  const { data: providerVariablesMapping = {} } = useGetProviderVariables();
 
   const isPending = isCreating || isUpdating;
+
+  // Get variables for the selected provider from API or fallback to static mapping
+  const providerVariables = useMemo((): ProviderVariable[] => {
+    if (!selectedProvider) return [];
+
+    // Try to get from API data first
+    const apiVariables = providerVariablesMapping[selectedProvider.provider];
+    if (apiVariables && apiVariables.length > 0) {
+      return apiVariables;
+    }
+
+    // Fallback to static mapping for backward compatibility
+    const staticVariableKey = PROVIDER_VARIABLE_MAPPING[selectedProvider.provider];
+    if (staticVariableKey) {
+      return [
+        {
+          variable_name: "API Key",
+          variable_key: staticVariableKey,
+          description: `Your ${selectedProvider.provider} API key`,
+          required: true,
+          is_secret: true,
+          is_list: false,
+          options: [],
+        },
+      ];
+    }
+
+    return [];
+  }, [selectedProvider, providerVariablesMapping]);
 
   // Invalidate all provider-related caches after successful create/update
   // This ensures the UI reflects the latest state across all components
@@ -62,25 +108,33 @@ const ModelProvidersContent = ({
 
   // Reset form when provider changes
   useEffect(() => {
-    setApiKey("");
+    setVariableValues({});
     setValidationFailed(false);
+    setSavingVariableKey(null);
   }, [selectedProvider?.provider]);
 
-  // Auto-save API key after user stops typing for 800ms
+  // Auto-save variables after user stops typing for 800ms
   // The debounce prevents API calls on every keystroke
   const debouncedConfigureProvider = useDebounce(() => {
-    if (apiKey.trim() && selectedProvider && isUserInputRef.current) {
-      handleConfigureProvider();
+    if (selectedProvider && isUserInputRef.current) {
+      // Find the variable that was just changed and has a value
+      const variableToSave = providerVariables.find(
+        (v) => variableValues[v.variable_key]?.trim(),
+      );
+      if (variableToSave) {
+        handleSaveVariable(variableToSave);
+      }
       isUserInputRef.current = false;
     }
   }, 800);
 
-  // Trigger debounced save when apiKey changes from user input
+  // Trigger debounced save when variable values change from user input
   useEffect(() => {
-    if (apiKey.trim() && isUserInputRef.current) {
+    const hasValue = Object.values(variableValues).some((v) => v?.trim());
+    if (hasValue && isUserInputRef.current) {
       debouncedConfigureProvider();
     }
-  }, [apiKey, debouncedConfigureProvider]);
+  }, [variableValues, debouncedConfigureProvider, providerVariables]);
 
   // Update enabled models when toggled
   const handleModelToggle = (modelName: string, enabled: boolean) => {
@@ -114,23 +168,33 @@ const ModelProvidersContent = ({
   // Some providers (e.g., Ollama) don't require API keys - they just need activation
   const requiresApiKey = useMemo(() => {
     if (!selectedProvider) return true;
-    return !NO_API_KEY_PROVIDERS.includes(selectedProvider.provider);
-  }, [selectedProvider]);
+    // Check if provider has any required secret variables
+    const hasRequiredSecrets = providerVariables.some(
+      (v) => v.required && v.is_secret,
+    );
+    return hasRequiredSecrets && !NO_API_KEY_PROVIDERS.includes(selectedProvider.provider);
+  }, [selectedProvider, providerVariables]);
 
   // Activate providers that don't need API keys (e.g., Ollama)
   // Creates/updates a global variable with a placeholder URL to mark provider as enabled
   const handleActivateNoApiKeyProvider = () => {
     if (!selectedProvider) return;
 
-    // Map provider name to its corresponding global variable name
-    const variableName = PROVIDER_VARIABLE_MAPPING[selectedProvider.provider];
-    if (!variableName) {
-      setErrorData({
-        title: "Invalid Provider",
-        list: [`Provider "${selectedProvider.provider}" is not supported.`],
-      });
-      return;
+    // Get the first variable (usually the base URL for providers like Ollama)
+    const firstVariable = providerVariables[0];
+    if (!firstVariable) {
+      // Fallback to static mapping
+      const variableName = PROVIDER_VARIABLE_MAPPING[selectedProvider.provider];
+      if (!variableName) {
+        setErrorData({
+          title: "Invalid Provider",
+          list: [`Provider "${selectedProvider.provider}" is not supported.`],
+        });
+        return;
+      }
     }
+
+    const variableName = firstVariable?.variable_key || PROVIDER_VARIABLE_MAPPING[selectedProvider.provider];
 
     // Check if provider was previously configured (variable exists)
     const existingVariable = globalVariables.find(
@@ -138,7 +202,7 @@ const ModelProvidersContent = ({
     );
 
     // Ollama default endpoint - used as placeholder to mark provider as active
-    const placeholderValue = "http://localhost:11434";
+    const placeholderValue = firstVariable?.options?.[0] || "http://localhost:11434";
 
     const onSuccess = () => {
       setSuccessData({ title: `${selectedProvider.provider} Activated` });
@@ -178,39 +242,54 @@ const ModelProvidersContent = ({
     }
   };
 
-  // Save API key for providers that require authentication (e.g., OpenAI, Anthropic)
-  const handleConfigureProvider = () => {
-    if (!selectedProvider || !apiKey.trim()) return;
+  // Save a single variable for the selected provider
+  const handleSaveVariable = (variable: ProviderVariable) => {
+    if (!selectedProvider) return;
 
-    const variableName = PROVIDER_VARIABLE_MAPPING[selectedProvider.provider];
-    if (!variableName) {
-      setErrorData({
-        title: "Invalid Provider",
-        list: [`Provider "${selectedProvider.provider}" is not supported.`],
-      });
-      return;
-    }
+    const value = variableValues[variable.variable_key]?.trim();
+    if (!value) return;
 
-    // Check if provider was previously configured - determines update vs create
+    setSavingVariableKey(variable.variable_key);
+
+    // Check if variable was previously configured
     const existingVariable = globalVariables.find(
-      (v) => v.name === variableName,
+      (v) => v.name === variable.variable_key,
     );
 
     const onSuccess = () => {
-      setSuccessData({ title: `${selectedProvider.provider} API Key Saved` });
+      setSuccessData({
+        title: `${selectedProvider.provider} ${variable.variable_name} Saved`,
+      });
       invalidateProviderQueries();
-      setApiKey("");
-      setSelectedProvider((prev) =>
-        prev ? { ...prev, is_enabled: true } : null,
-      );
+      // Clear only this variable's value
+      setVariableValues((prev) => ({
+        ...prev,
+        [variable.variable_key]: "",
+      }));
+      setSavingVariableKey(null);
+      // Check if all required variables are now set
+      const allRequiredSet = providerVariables
+        .filter((v) => v.required)
+        .every((v) => {
+          const existingVar = globalVariables.find(
+            (gv) => gv.name === v.variable_key,
+          );
+          return existingVar || v.variable_key === variable.variable_key;
+        });
+      if (allRequiredSet) {
+        setSelectedProvider((prev) =>
+          prev ? { ...prev, is_enabled: true } : null,
+        );
+      }
     };
 
     const onError = (error: any) => {
       setValidationFailed(true);
+      setSavingVariableKey(null);
       setErrorData({
         title: existingVariable
-          ? "Error Updating API Key"
-          : "Error Saving API Key",
+          ? `Error Updating ${variable.variable_name}`
+          : `Error Saving ${variable.variable_name}`,
         list: [
           error?.response?.data?.detail ||
             "An unexpected error occurred. Please try again.",
@@ -218,23 +297,32 @@ const ModelProvidersContent = ({
       });
     };
 
+    const variableType = variable.is_secret
+      ? VARIABLE_CATEGORY.CREDENTIAL
+      : VARIABLE_CATEGORY.GLOBAL;
+
     if (existingVariable) {
       updateGlobalVariable(
-        { id: existingVariable.id, value: apiKey },
+        { id: existingVariable.id, value },
         { onSuccess, onError },
       );
     } else {
       createGlobalVariable(
         {
-          name: variableName,
-          value: apiKey,
-          type: VARIABLE_CATEGORY.CREDENTIAL,
+          name: variable.variable_key,
+          value,
+          type: variableType,
           category: VARIABLE_CATEGORY.GLOBAL,
           default_fields: [],
         },
         { onSuccess, onError },
       );
     }
+  };
+
+  // Helper to check if a variable is already configured
+  const isVariableConfigured = (variableKey: string): boolean => {
+    return globalVariables.some((v) => v.name === variableKey);
   };
 
   // Note: refreshAllModelInputs is now called in ModelProviderModal's handleClose
@@ -267,14 +355,13 @@ const ModelProvidersContent = ({
           <div className="flex flex-row gap-1 min-w-[300px]">
             <span className="text-[13px] font-semibold mr-auto">
               {selectedProvider?.provider || "Unknown Provider"}
-              {requiresApiKey && " API Key"}
-              {requiresApiKey && <span className="text-red-500 ml-1">*</span>}
+              {requiresApiKey && " Configuration"}
             </span>
           </div>
           <span className="text-[13px] text-muted-foreground pt-1 pb-2">
             {requiresApiKey ? (
               <>
-                Add your{" "}
+                Configure your{" "}
                 <span
                   className="underline cursor-pointer hover:text-primary"
                   onClick={() => {
@@ -287,7 +374,7 @@ const ModelProvidersContent = ({
                     }
                   }}
                 >
-                  {selectedProvider?.provider} API key
+                  {selectedProvider?.provider} credentials
                 </span>{" "}
                 to enable these models
               </>
@@ -296,34 +383,91 @@ const ModelProvidersContent = ({
             )}
           </span>
           {requiresApiKey ? (
-            <Input
-              placeholder="Add API key"
-              value={apiKey}
-              type="password"
-              onChange={(e) => {
-                isUserInputRef.current = true;
-                setValidationFailed(false);
-                setApiKey(e.target.value);
-              }}
-              // Show loading spinner while saving, X on error, checkmark when configured
-              endIcon={
-                isPending
-                  ? "LoaderCircle"
-                  : validationFailed
-                    ? "X"
-                    : selectedProvider?.is_enabled
-                      ? "Check"
-                      : undefined
-              }
-              endIconClassName={cn(
-                isPending && "animate-spin text-muted-foreground top-2.5",
-                validationFailed && "text-red-500",
-                !isPending &&
-                  !validationFailed &&
-                  selectedProvider?.is_enabled &&
-                  "text-green-500",
-              )}
-            />
+            <div className="flex flex-col gap-3">
+              {providerVariables.map((variable) => {
+                const isSaving = savingVariableKey === variable.variable_key;
+                const isConfigured = isVariableConfigured(variable.variable_key);
+
+                return (
+                  <div key={variable.variable_key} className="flex flex-col gap-1">
+                    <label className="text-[12px] font-medium text-muted-foreground">
+                      {variable.variable_name}
+                      {variable.required && (
+                        <span className="text-red-500 ml-1">*</span>
+                      )}
+                    </label>
+                    {variable.description && (
+                      <span className="text-[11px] text-muted-foreground/70 mb-1">
+                        {variable.description}
+                      </span>
+                    )}
+                    {variable.options && variable.options.length > 0 ? (
+                      // Render dropdown for variables with predefined options
+                      <Select
+                        value={variableValues[variable.variable_key] || ""}
+                        onValueChange={(value) => {
+                          isUserInputRef.current = true;
+                          setValidationFailed(false);
+                          setVariableValues((prev) => ({
+                            ...prev,
+                            [variable.variable_key]: value,
+                          }));
+                        }}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue
+                            placeholder={`Select ${variable.variable_name}`}
+                          />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {variable.options.map((option) => (
+                            <SelectItem key={option} value={option}>
+                              {option}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      // Render input for text/secret variables
+                      <Input
+                        placeholder={`Add ${variable.variable_name.toLowerCase()}`}
+                        value={variableValues[variable.variable_key] || ""}
+                        type={variable.is_secret ? "password" : "text"}
+                        onChange={(e) => {
+                          isUserInputRef.current = true;
+                          setValidationFailed(false);
+                          setVariableValues((prev) => ({
+                            ...prev,
+                            [variable.variable_key]: e.target.value,
+                          }));
+                        }}
+                        endIcon={
+                          isSaving
+                            ? "LoaderCircle"
+                            : validationFailed &&
+                                savingVariableKey === variable.variable_key
+                              ? "X"
+                              : isConfigured
+                                ? "Check"
+                                : undefined
+                        }
+                        endIconClassName={cn(
+                          isSaving &&
+                            "animate-spin text-muted-foreground top-2.5",
+                          validationFailed &&
+                            savingVariableKey === variable.variable_key &&
+                            "text-red-500",
+                          !isSaving &&
+                            !validationFailed &&
+                            isConfigured &&
+                            "text-green-500",
+                        )}
+                      />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           ) : (
             <Button
               onClick={handleActivateNoApiKeyProvider}

@@ -1,3 +1,29 @@
+/**
+ * Interface for provider variable configuration.
+ * Used by providers that may require multiple environment variables.
+ */
+export interface ProviderVariable {
+  /** Display name shown to user (e.g., "API Key", "Project ID") */
+  variable_name: string;
+  /** Environment variable key (e.g., "OPENAI_API_KEY", "WATSONX_PROJECT_ID") */
+  variable_key: string;
+  /** Help text describing the variable */
+  description: string;
+  /** Whether this variable is required */
+  required: boolean;
+  /** Whether to treat as credential (masked input) */
+  is_secret: boolean;
+  /** Whether it accepts multiple values */
+  is_list: boolean;
+  /** Predefined options for dropdown selection */
+  options: string[];
+}
+
+/**
+ * @deprecated Use the API endpoint /api/v1/models/provider-variable-mapping instead.
+ * This static mapping only contains the primary variable for each provider.
+ * For providers with multiple variables (like IBM WatsonX), use the API.
+ */
 export const PROVIDER_VARIABLE_MAPPING: Record<string, string> = {
   OpenAI: "OPENAI_API_KEY",
   Anthropic: "ANTHROPIC_API_KEY",

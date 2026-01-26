@@ -6,6 +6,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from lfx.base.models.unified_models import (
+    get_model_provider_metadata,
     get_model_provider_variable_mapping,
     get_model_providers,
     get_unified_models_detailed,
@@ -186,8 +187,20 @@ async def list_models(
 
 
 @router.get("/provider-variable-mapping", status_code=200)
-async def get_model_provider_mapping() -> dict[str, str]:
-    return get_model_provider_variable_mapping()
+async def get_model_provider_mapping() -> dict[str, list[dict]]:
+    """Return provider variables mapping with full variable info.
+
+    Each provider maps to a list of variable objects containing:
+    - variable_name: Display name shown to user
+    - variable_key: Environment variable key
+    - description: Help text for the variable
+    - required: Whether the variable is required
+    - is_secret: Whether to treat as credential
+    - is_list: Whether it accepts multiple values
+    - options: Predefined options for dropdowns
+    """
+    metadata = get_model_provider_metadata()
+    return {provider: meta.get("variables", []) for provider, meta in metadata.items()}
 
 
 @router.get("/enabled_providers", status_code=200)
