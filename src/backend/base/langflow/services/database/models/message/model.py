@@ -194,3 +194,4 @@ class MessageUpdate(SQLModel):
     edit: bool | None = None
     error: bool | None = None
     properties: Properties | None = None
+    content_blocks: list[ContentBlock] | None = None
