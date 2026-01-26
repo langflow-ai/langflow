@@ -253,7 +253,7 @@ async def generate_flow_events(
 
             if "stream or streaming set to True" in str(exc):
                 raise HTTPException(status_code=400, detail=str(exc)) from exc
-            await logger.aexception("Error checking build status")
+            await logger.aexception("Error checking build status: " + str(exc))
             raise HTTPException(status_code=500, detail=str(exc)) from exc
         return first_layer, vertices_to_run, graph
 
