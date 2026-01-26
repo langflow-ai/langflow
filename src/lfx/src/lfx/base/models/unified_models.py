@@ -14,6 +14,7 @@ from lfx.base.models.google_generative_ai_constants import (
     GOOGLE_GENERATIVE_AI_EMBEDDING_MODELS_DETAILED,
     GOOGLE_GENERATIVE_AI_MODELS_DETAILED,
 )
+from lfx.base.models.model_metadata import MODEL_PROVIDER_METADATA
 from lfx.base.models.ollama_constants import OLLAMA_EMBEDDING_MODELS_DETAILED, OLLAMA_MODELS_DETAILED
 from lfx.base.models.openai_constants import OPENAI_EMBEDDING_MODELS_DETAILED, OPENAI_MODELS_DETAILED
 from lfx.base.models.watsonx_constants import WATSONX_MODELS_DETAILED
@@ -59,108 +60,8 @@ def get_embedding_classes():
 
 @lru_cache(maxsize=1)
 def get_model_provider_metadata():
-    return {
-        "OpenAI": {
-            "icon": "OpenAI",
-            "variables": [
-                {
-                    "variable_name": "API Key",
-                    "variable_key": "OPENAI_API_KEY",
-                    "description": "Your OpenAI API key",
-                    "required": True,
-                    "is_secret": True,
-                    "is_list": False,
-                    "options": [],
-                }
-            ],
-            "api_docs_url": "https://platform.openai.com/docs/overview",
-        },
-        "Anthropic": {
-            "icon": "Anthropic",
-            "variables": [
-                {
-                    "variable_name": "API Key",
-                    "variable_key": "ANTHROPIC_API_KEY",
-                    "description": "Your Anthropic API key",
-                    "required": True,
-                    "is_secret": True,
-                    "is_list": False,
-                    "options": [],
-                }
-            ],
-            "api_docs_url": "https://console.anthropic.com/docs",
-        },
-        "Google Generative AI": {
-            "icon": "GoogleGenerativeAI",
-            "variables": [
-                {
-                    "variable_name": "API Key",
-                    "variable_key": "GOOGLE_API_KEY",
-                    "description": "Your Google AI API key",
-                    "required": True,
-                    "is_secret": True,
-                    "is_list": False,
-                    "options": [],
-                }
-            ],
-            "api_docs_url": "https://aistudio.google.com/app/apikey",
-        },
-        "Ollama": {
-            "icon": "Ollama",
-            "variables": [
-                {
-                    "variable_name": "Base URL",
-                    "variable_key": "OLLAMA_BASE_URL",
-                    "description": "Ollama server URL (default: http://localhost:11434)",
-                    "required": True,
-                    "is_secret": False,
-                    "is_list": False,
-                    "options": [],
-                }
-            ],
-            "api_docs_url": "https://ollama.com/",
-        },
-        "IBM WatsonX": {
-            "icon": "IBM",
-            "variables": [
-                {
-                    "variable_name": "API Key",
-                    "variable_key": "WATSONX_APIKEY",
-                    "description": "IBM WatsonX API key for authentication",
-                    "required": True,
-                    "is_secret": True,
-                    "is_list": False,
-                    "options": [],
-                },
-                {
-                    "variable_name": "Project ID",
-                    "variable_key": "WATSONX_PROJECT_ID",
-                    "description": "The project ID associated with your WatsonX instance",
-                    "required": True,
-                    "is_secret": False,
-                    "is_list": False,
-                    "options": [],
-                },
-                {
-                    "variable_name": "URL",
-                    "variable_key": "WATSONX_URL",
-                    "description": "WatsonX API endpoint URL for your region",
-                    "required": True,
-                    "is_secret": False,
-                    "is_list": False,
-                    "options": [
-                        "https://us-south.ml.cloud.ibm.com",
-                        "https://eu-de.ml.cloud.ibm.com",
-                        "https://eu-gb.ml.cloud.ibm.com",
-                        "https://au-syd.ml.cloud.ibm.com",
-                        "https://jp-tok.ml.cloud.ibm.com",
-                        "https://ca-tor.ml.cloud.ibm.com",
-                    ],
-                },
-            ],
-            "api_docs_url": "https://www.ibm.com/products/watsonx",
-        },
-    }
+    """Return the model provider metadata configuration."""
+    return MODEL_PROVIDER_METADATA
 
 
 model_provider_metadata = get_model_provider_metadata()
@@ -395,10 +296,9 @@ def _validate_and_get_enabled_providers(
         # Get all required variable keys for this provider
         required_var_keys = get_provider_required_variable_keys(provider)
 
-        # Check if all required variables are present
+        # Check if all required variables are present and collect their values
         all_required_present = True
-        primary_var_key = None
-        primary_api_key = None
+        collected_values: dict[str, str] = {}
 
         # Build a lookup of provider variable metadata by key so we can
         # distinguish secret vs non-secret required variables.
@@ -423,10 +323,7 @@ def _validate_and_get_enabled_providers(
                     if not decrypted_value or not decrypted_value.strip():
                         all_required_present = False
                         break
-
-                    # Track the primary secret variable for validation
-                    primary_var_key = var_key
-                    primary_api_key = decrypted_value
+                    collected_values[var_key] = decrypted_value
                 except Exception as e:  # noqa: BLE001
                     logger.debug(
                         "Failed to decrypt variable %s for provider %s: %s",
@@ -442,16 +339,17 @@ def _validate_and_get_enabled_providers(
                 if raw_value is None or not str(raw_value).strip():
                     all_required_present = False
                     break
+                collected_values[var_key] = str(raw_value)
 
-        # Validate the primary API key if we have one
-        if primary_var_key and primary_api_key:
+        # Validate with all collected variable values
+        if all_required_present and collected_values:
             try:
-                validate_model_provider_key(primary_var_key, primary_api_key)
+                validate_model_provider_key(provider, collected_values)
                 enabled.add(provider)
             except (ValueError, Exception) as e:  # noqa: BLE001
-                logger.debug("Provider %s validation failed for variable %s: %s", provider, primary_var_key, e)
+                logger.debug("Provider %s validation failed: %s", provider, e)
         elif not required_var_keys:
-            # Provider has no required variables (like Ollama with optional base URL)
+            # Provider has no required variables
             enabled.add(provider)
 
     return enabled
@@ -473,20 +371,19 @@ def get_provider_from_variable_key(variable_key: str) -> str | None:
     return None
 
 
-def validate_model_provider_key(variable_name: str, api_key: str) -> None:
-    """Validate a model provider API key by making a minimal test call.
+def validate_model_provider_key(provider: str, variables: dict[str, str]) -> None:
+    """Validate a model provider by making a minimal test call.
 
     Args:
-        variable_name: The variable name (e.g., OPENAI_API_KEY)
-        api_key: The API key to validate
+        provider: The provider name (e.g., "OpenAI", "IBM WatsonX")
+        variables: Dictionary mapping variable keys to their decrypted values
+                   (e.g., {"WATSONX_APIKEY": "...", "WATSONX_PROJECT_ID": "...", "WATSONX_URL": "..."})
 
     Raises:
-        HTTPException: If the API key is invalid
+        ValueError: If the credentials are invalid
     """
-    # Get provider from variable key using metadata
-    provider = get_provider_from_variable_key(variable_name)
-    if not provider:
-        return  # Not a model provider key we validate
+    if not provider or not variables:
+        return  # Nothing to validate
 
     # Get the first available model for this provider
     try:
@@ -498,32 +395,50 @@ def validate_model_provider_key(variable_name: str, api_key: str) -> None:
     except Exception:  # noqa: BLE001
         return  # Can't get models, skip validation
 
-    # Test the API key based on provider
+    # Test the credentials based on provider
     try:
         if provider == "OpenAI":
             from langchain_openai import ChatOpenAI  # type: ignore  # noqa: PGH003
 
+            api_key = variables.get("OPENAI_API_KEY")
+            if not api_key:
+                return
             llm = ChatOpenAI(api_key=api_key, model_name=first_model, max_tokens=1)
             llm.invoke("test")
+
         elif provider == "Anthropic":
             from langchain_anthropic import ChatAnthropic  # type: ignore  # noqa: PGH003
 
+            api_key = variables.get("ANTHROPIC_API_KEY")
+            if not api_key:
+                return
             llm = ChatAnthropic(anthropic_api_key=api_key, model=first_model, max_tokens=1)
             llm.invoke("test")
+
         elif provider == "Google Generative AI":
             from langchain_google_genai import ChatGoogleGenerativeAI  # type: ignore  # noqa: PGH003
 
+            api_key = variables.get("GOOGLE_API_KEY")
+            if not api_key:
+                return
             llm = ChatGoogleGenerativeAI(google_api_key=api_key, model=first_model, max_tokens=1)
             llm.invoke("test")
+
         elif provider == "IBM WatsonX":
             from langchain_ibm import ChatWatsonx
 
-            default_url = "https://us-south.ml.cloud.ibm.com"
+            api_key = variables.get("WATSONX_APIKEY")
+            project_id = variables.get("WATSONX_PROJECT_ID")
+            url = variables.get("WATSONX_URL", "https://us-south.ml.cloud.ibm.com")
+
+            if not api_key or not project_id:
+                return  # Need both API key and project ID to validate
+
             llm = ChatWatsonx(
                 apikey=api_key,
-                url=default_url,
+                url=url,
                 model_id=first_model,
-                project_id="dummy_project_for_validation",  # Dummy project_id for validation
+                project_id=project_id,
                 params={"max_new_tokens": 1},
             )
             llm.invoke("test")
@@ -532,10 +447,14 @@ def validate_model_provider_key(variable_name: str, api_key: str) -> None:
             # Ollama is local, just verify the URL is accessible
             import requests
 
-            response = requests.get(f"{api_key}/api/tags", timeout=5)
+            base_url = variables.get("OLLAMA_BASE_URL")
+            if not base_url:
+                return
+            response = requests.get(f"{base_url}/api/tags", timeout=5)
             if response.status_code != requests.codes.ok:
                 msg = "Invalid Ollama base URL"
                 raise ValueError(msg)
+
     except ValueError:
         # Re-raise ValueError (validation failed)
         raise
