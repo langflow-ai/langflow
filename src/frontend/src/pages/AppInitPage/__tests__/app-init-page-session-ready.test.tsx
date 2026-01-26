@@ -294,7 +294,9 @@ describe("AppInitPage - isReady Combined Logic", () => {
     const isSessionReady = false; // Session validation pending
 
     // Assert: Should not render
-    expect(useIsReady(isFetched, isExamplesFetched, isSessionReady)).toBe(false);
+    expect(useIsReady(isFetched, isExamplesFetched, isSessionReady)).toBe(
+      false,
+    );
   });
 });
 
