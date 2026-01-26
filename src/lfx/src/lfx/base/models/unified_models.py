@@ -14,7 +14,7 @@ from lfx.base.models.google_generative_ai_constants import (
     GOOGLE_GENERATIVE_AI_EMBEDDING_MODELS_DETAILED,
     GOOGLE_GENERATIVE_AI_MODELS_DETAILED,
 )
-from lfx.base.models.model_metadata import MODEL_PROVIDER_METADATA
+from lfx.base.models.model_metadata import MODEL_PROVIDER_METADATA, get_provider_param_mapping
 from lfx.base.models.ollama_constants import OLLAMA_EMBEDDING_MODELS_DETAILED, OLLAMA_MODELS_DETAILED
 from lfx.base.models.openai_constants import OPENAI_EMBEDDING_MODELS_DETAILED, OPENAI_MODELS_DETAILED
 from lfx.base.models.watsonx_constants import WATSONX_MODELS_DETAILED
@@ -564,21 +564,6 @@ def get_language_model_options(
             pass
 
     options = []
-    model_class_mapping = {
-        "OpenAI": "ChatOpenAI",
-        "Anthropic": "ChatAnthropic",
-        "Google Generative AI": "ChatGoogleGenerativeAIFixed",
-        "Ollama": "ChatOllama",
-        "IBM WatsonX": "ChatWatsonx",
-    }
-
-    api_key_param_mapping = {
-        "OpenAI": "api_key",
-        "Anthropic": "api_key",
-        "Google Generative AI": "google_api_key",
-        "Ollama": "base_url",
-        "IBM WatsonX": "apikey",
-    }
 
     # Track which providers have models
     providers_with_models = set()
@@ -613,6 +598,9 @@ def get_language_model_options(
             if model_name in disabled_models:
                 continue
 
+            # Get parameter mapping for this provider
+            param_mapping = get_provider_param_mapping(provider)
+
             # Build the option dict
             option = {
                 "name": model_name,
@@ -621,9 +609,9 @@ def get_language_model_options(
                 "provider": provider,
                 "metadata": {
                     "context_length": 128000,  # Default, can be overridden
-                    "model_class": model_class_mapping.get(provider, "ChatOpenAI"),
-                    "model_name_param": "model",
-                    "api_key_param": api_key_param_mapping.get(provider, "api_key"),
+                    "model_class": param_mapping.get("model_class", "ChatOpenAI"),
+                    "model_name_param": param_mapping.get("model_param", "model"),
+                    "api_key_param": param_mapping.get("api_key_param", "api_key"),
                 },
             }
 
@@ -633,15 +621,13 @@ def get_language_model_options(
                     option["metadata"]["reasoning_models"] = []
                 option["metadata"]["reasoning_models"].append(model_name)
 
-            # Add base_url_param for Ollama
-            if provider == "Ollama":
-                option["metadata"]["base_url_param"] = "base_url"
-
-            # Add extra params for WatsonX
-            if provider == "IBM WatsonX":
-                option["metadata"]["model_name_param"] = "model_id"
-                option["metadata"]["url_param"] = "url"
-                option["metadata"]["project_id_param"] = "project_id"
+            # Add provider-specific params from mapping
+            if "base_url_param" in param_mapping:
+                option["metadata"]["base_url_param"] = param_mapping["base_url_param"]
+            if "url_param" in param_mapping:
+                option["metadata"]["url_param"] = param_mapping["url_param"]
+            if "project_id_param" in param_mapping:
+                option["metadata"]["project_id_param"] = param_mapping["project_id_param"]
 
             options.append(option)
 
@@ -890,23 +876,6 @@ def normalize_model_names_to_dicts(model_names: list[str] | str) -> list[dict[st
         # If we can't get models, just create basic dicts
         return [{"name": name} for name in model_names]
 
-    # Model class mapping for runtime metadata
-    model_class_mapping = {
-        "OpenAI": "ChatOpenAI",
-        "Anthropic": "ChatAnthropic",
-        "Google Generative AI": "ChatGoogleGenerativeAIFixed",
-        "Ollama": "ChatOllama",
-        "IBM WatsonX": "ChatWatsonx",
-    }
-
-    api_key_param_mapping = {
-        "OpenAI": "api_key",
-        "Anthropic": "api_key",
-        "Google Generative AI": "google_api_key",
-        "Ollama": "base_url",
-        "IBM WatsonX": "apikey",
-    }
-
     # Build a lookup map of model_name -> full model data with runtime metadata
     model_lookup = {}
     for provider_data in all_models:
@@ -916,27 +885,28 @@ def normalize_model_names_to_dicts(model_names: list[str] | str) -> list[dict[st
             model_name = model_data.get("model_name")
             base_metadata = model_data.get("metadata", {})
 
+            # Get parameter mapping for this provider
+            param_mapping = get_provider_param_mapping(provider)
+
             # Build runtime metadata similar to get_language_model_options
             runtime_metadata = {
                 "context_length": 128000,  # Default
-                "model_class": model_class_mapping.get(provider, "ChatOpenAI"),
-                "model_name_param": "model",
-                "api_key_param": api_key_param_mapping.get(provider, "api_key"),
+                "model_class": param_mapping.get("model_class", "ChatOpenAI"),
+                "model_name_param": param_mapping.get("model_param", "model"),
+                "api_key_param": param_mapping.get("api_key_param", "api_key"),
             }
 
             # Add reasoning models list for OpenAI
             if provider == "OpenAI" and base_metadata.get("reasoning"):
                 runtime_metadata["reasoning_models"] = [model_name]
 
-            # Add base_url_param for Ollama
-            if provider == "Ollama":
-                runtime_metadata["base_url_param"] = "base_url"
-
-            # Add extra params for WatsonX
-            if provider == "IBM WatsonX":
-                runtime_metadata["model_name_param"] = "model_id"
-                runtime_metadata["url_param"] = "url"
-                runtime_metadata["project_id_param"] = "project_id"
+            # Add provider-specific params from mapping
+            if "base_url_param" in param_mapping:
+                runtime_metadata["base_url_param"] = param_mapping["base_url_param"]
+            if "url_param" in param_mapping:
+                runtime_metadata["url_param"] = param_mapping["url_param"]
+            if "project_id_param" in param_mapping:
+                runtime_metadata["project_id_param"] = param_mapping["project_id_param"]
 
             # Merge base metadata with runtime metadata
             full_metadata = {**base_metadata, **runtime_metadata}

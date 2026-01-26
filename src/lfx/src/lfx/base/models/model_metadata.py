@@ -64,6 +64,11 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
             }
         ],
         "api_docs_url": "https://platform.openai.com/docs/overview",
+        "mapping": {
+            "model_class": "ChatOpenAI",
+            "model_param": "model",
+            "api_key_param": "api_key",
+        },
     },
     "Anthropic": {
         "icon": "Anthropic",
@@ -79,6 +84,11 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
             }
         ],
         "api_docs_url": "https://console.anthropic.com/docs",
+        "mapping": {
+            "model_class": "ChatAnthropic",
+            "model_param": "model",
+            "api_key_param": "api_key",
+        },
     },
     "Google Generative AI": {
         "icon": "GoogleGenerativeAI",
@@ -94,6 +104,11 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
             }
         ],
         "api_docs_url": "https://aistudio.google.com/app/apikey",
+        "mapping": {
+            "model_class": "ChatGoogleGenerativeAIFixed",
+            "model_param": "model",
+            "api_key_param": "google_api_key",
+        },
     },
     "Ollama": {
         "icon": "Ollama",
@@ -109,6 +124,11 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
             }
         ],
         "api_docs_url": "https://ollama.com/",
+        "mapping": {
+            "model_class": "ChatOllama",
+            "model_param": "model",
+            "base_url_param": "base_url",
+        },
     },
     "IBM WatsonX": {
         "icon": "IBM",
@@ -149,5 +169,28 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
             },
         ],
         "api_docs_url": "https://www.ibm.com/products/watsonx",
+        "mapping": {
+            "model_class": "ChatWatsonx",
+            "model_param": "model_id",
+            "api_key_param": "apikey",
+            "url_param": "url",
+            "project_id_param": "project_id",
+        },
     },
 }
+
+
+def get_provider_param_mapping(provider: str) -> dict[str, str]:
+    """Get parameter mapping for a provider.
+
+    Returns dict with keys like: model_class, model_param, api_key_param, etc.
+
+    Args:
+        provider: The provider name (e.g., "OpenAI", "Anthropic", "IBM WatsonX")
+
+    Returns:
+        Dict containing parameter mappings for the provider.
+        Returns empty dict if provider is not found.
+    """
+    metadata = MODEL_PROVIDER_METADATA.get(provider, {})
+    return metadata.get("mapping", {})
