@@ -24,7 +24,7 @@ from __future__ import annotations
 import asyncio
 from copy import deepcopy
 from typing import Annotated
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
 from fastapi.responses import StreamingResponse
@@ -62,7 +62,7 @@ from langflow.processing.process import process_tweaks, run_graph_internal
 from langflow.services.auth.utils import api_key_security
 from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.database.models.user.model import UserRead
-from langflow.services.deps import get_task_service
+from langflow.services.deps import get_job_service, get_task_service
 
 # Configuration constants
 EXECUTION_TIMEOUT = 300  # 5 minutes default timeout for sync execution
@@ -371,10 +371,13 @@ async def execute_sync_workflow(
     terminal_node_ids = graph.get_terminal_nodes()
 
     # Execute graph - component errors are caught and returned in response body
+    job_service = get_job_service()
     try:
-        task_result, execution_session_id = await run_graph_internal(
+        task_result, execution_session_id = await job_service.with_status_updates(
+            job_id=UUID(job_id),
+            flow_id=UUID(flow_id_str),
+            run_graph_func=run_graph_internal,
             graph=graph,
-            flow_id=flow_id_str,
             session_id=session_id,
             inputs=None,
             outputs=terminal_node_ids,
@@ -444,10 +447,21 @@ async def execute_workflow_background(
 
         # Launch background task
         task_service = get_task_service()
-        await task_service.fire_and_forget_task(
-            run_graph_internal,
-            graph=graph,
+        job_service = get_job_service()
+
+        # Create job synchronously to ensure it exists before background task starts
+        # and so we can return a valid job status immediately
+        await job_service.create_job(
+            job_id=job_id,
             flow_id=flow_id_str,
+        )
+
+        await task_service.fire_and_forget_task(
+            job_service.with_status_updates,
+            job_id=UUID(job_id),
+            flow_id=UUID(flow_id_str),
+            run_graph_func=run_graph_internal,
+            graph=graph,
             session_id=session_id,
             inputs=None,
             outputs=terminal_node_ids,
@@ -473,35 +487,74 @@ async def execute_workflow_background(
 )
 async def get_workflow_status(
     api_key_user: Annotated[UserRead, Depends(api_key_security)],  # noqa: ARG001
-    job_id: Annotated[str, Query(description="Job ID to query")],  # noqa: ARG001
-) -> WorkflowJobResponse:
-    """Get workflow job status and results by job ID.
+    job_id: Annotated[UUID | None, Query(description="Job ID to query")] = None,
+) -> list[WorkflowJobResponse] | WorkflowJobResponse:
+    """Get workflow job status and results.
 
-    This endpoint allows clients to poll for the status of background workflow executions.
+    This endpoint allows clients to query job status either by:
+    - **flow_id**: Get all jobs for a specific flow (with pagination)
+    - **job_id**: Get a specific job by ID
+
+    At least one of flow_id or job_id must be provided.
 
     Args:
         api_key_user: Authenticated user from API key
-        job_id: The job ID returned from a background execution request
+        job_id: Optional job ID to query specific job
+        page: Page number for pagination (default: 1)
+        page_size: Number of results per page (default: 10, max: 100)
 
     Returns:
-        - WorkflowExecutionResponse: If job is complete or failed
-        - StreamingResponse: If job is still running (for streaming mode)
+        List of WorkflowJobResponse objects
 
     Raises:
         HTTPException:
+            - 400: Neither flow_id nor job_id provided
             - 403: Developer API disabled or unauthorized
-            - 404: Job ID not found
-            - 501: Not yet implemented
-
-    Note:
-        This endpoint is not yet implemented. It will be added in a future release
-        to support background and streaming execution modes.
+            - 404: Job not found
+            - 500: Internal server error
     """
-    # TODO: Implement job status tracking and retrieval
-    # - Store job metadata in database or cache
-    # - Track execution progress and status
-    # - Return appropriate response based on job state
-    raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Workflow status not yet available.")
+    # Validate that at least one filter is provided
+    if not job_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "error": "Missing required parameter",
+                "code": "MISSING_PARAMETER",
+                "message": "Job ID must be provided",
+            },
+        )
+
+    try:
+        job_service = get_job_service()
+
+        if job_id:
+            if not isinstance(job_id, UUID):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail={
+                        "error": "Invalid parameter type",
+                        "code": "INVALID_PARAMETER_TYPE",
+                        "message": "Job ID must be a UUID",
+                    },
+                )
+            job = await job_service.get_job_by_job_id(job_id=job_id)
+            return WorkflowJobResponse(
+                job_id=str(job.job_id),
+                flow_id=str(job.flow_id),
+                status=job.status,
+            )
+
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "error": "Internal server error",
+                "code": "INTERNAL_SERVER_ERROR",
+                "message": f"Failed to retrieve job status: {exc!s}",
+            },
+        ) from exc
 
 
 @router.post(
