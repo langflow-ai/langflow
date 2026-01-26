@@ -15,8 +15,9 @@ def update_base_dep(pyproject_path: str, new_version: str) -> None:
     filepath = BASE_DIR / pyproject_path
     content = filepath.read_text(encoding="utf-8")
 
-    # Updated pattern to handle PEP 440 version suffixes and both ~= and == version specifiers
-    pattern = re.compile(r'("langflow-base(?:~=|==)[\d.]+(?:\.(?:post|dev|a|b|rc)\d+)*")')
+    # Updated pattern to handle PEP 440 version suffixes, extras (e.g., [complete]),
+    # and both ~= and == version specifiers
+    pattern = re.compile(r'("langflow-base(?:\[[^\]]+\])?(?:~=|==)[\d.]+(?:\.(?:post|dev|a|b|rc)\d+)*")')
     replacement = f'"langflow-base-nightly=={new_version}"'
 
     # Check if the pattern is found
