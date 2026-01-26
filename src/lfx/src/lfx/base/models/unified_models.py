@@ -14,7 +14,7 @@ from lfx.base.models.google_generative_ai_constants import (
     GOOGLE_GENERATIVE_AI_EMBEDDING_MODELS_DETAILED,
     GOOGLE_GENERATIVE_AI_MODELS_DETAILED,
 )
-from lfx.base.models.model_metadata import create_model_metadata
+from lfx.base.models.model_metadata import MODEL_PROVIDER_METADATA, create_model_metadata, get_provider_param_mapping
 from lfx.base.models.model_utils import (
     get_ollama_embedding_models,
     get_ollama_llm_models,
@@ -67,108 +67,8 @@ def get_embedding_classes():
 
 @lru_cache(maxsize=1)
 def get_model_provider_metadata():
-    return {
-        "OpenAI": {
-            "icon": "OpenAI",
-            "variables": [
-                {
-                    "variable_name": "API Key",
-                    "variable_key": "OPENAI_API_KEY",
-                    "description": "Your OpenAI API key",
-                    "required": True,
-                    "is_secret": True,
-                    "is_list": False,
-                    "options": [],
-                }
-            ],
-            "api_docs_url": "https://platform.openai.com/docs/overview",
-        },
-        "Anthropic": {
-            "icon": "Anthropic",
-            "variables": [
-                {
-                    "variable_name": "API Key",
-                    "variable_key": "ANTHROPIC_API_KEY",
-                    "description": "Your Anthropic API key",
-                    "required": True,
-                    "is_secret": True,
-                    "is_list": False,
-                    "options": [],
-                }
-            ],
-            "api_docs_url": "https://console.anthropic.com/docs",
-        },
-        "Google Generative AI": {
-            "icon": "GoogleGenerativeAI",
-            "variables": [
-                {
-                    "variable_name": "API Key",
-                    "variable_key": "GOOGLE_API_KEY",
-                    "description": "Your Google AI API key",
-                    "required": True,
-                    "is_secret": True,
-                    "is_list": False,
-                    "options": [],
-                }
-            ],
-            "api_docs_url": "https://aistudio.google.com/app/apikey",
-        },
-        "Ollama": {
-            "icon": "Ollama",
-            "variables": [
-                {
-                    "variable_name": "Base URL",
-                    "variable_key": "OLLAMA_BASE_URL",
-                    "description": "Ollama server URL",
-                    "required": True,
-                    "is_secret": False,
-                    "is_list": False,
-                    "options": [],
-                }
-            ],
-            "api_docs_url": "https://ollama.com/",
-        },
-        "IBM WatsonX": {
-            "icon": "IBM",
-            "variables": [
-                {
-                    "variable_name": "API Key",
-                    "variable_key": "WATSONX_APIKEY",
-                    "description": "IBM WatsonX API key for authentication",
-                    "required": True,
-                    "is_secret": True,
-                    "is_list": False,
-                    "options": [],
-                },
-                {
-                    "variable_name": "Project ID",
-                    "variable_key": "WATSONX_PROJECT_ID",
-                    "description": "The project ID associated with your WatsonX instance",
-                    "required": True,
-                    "is_secret": False,
-                    "is_list": False,
-                    "options": [],
-                },
-                {
-                    "variable_name": "URL",
-                    "variable_key": "WATSONX_URL",
-                    "description": "WatsonX API endpoint URL for your region",
-                    "required": True,
-                    "is_secret": False,
-                    "is_list": False,
-                    "options": [
-                        "https://us-south.ml.cloud.ibm.com",
-                        "https://eu-de.ml.cloud.ibm.com",
-                        "https://eu-gb.ml.cloud.ibm.com",
-                        "https://au-syd.ml.cloud.ibm.com",
-                        "https://jp-tok.ml.cloud.ibm.com",
-                        "https://ca-tor.ml.cloud.ibm.com",
-                    ],
-                },
-            ],
-            "api_docs_url": "https://www.ibm.com/products/watsonx",
-        },
-    }
+    """Return the model provider metadata configuration."""
+    return MODEL_PROVIDER_METADATA
 
 
 model_provider_metadata = get_model_provider_metadata()
@@ -504,19 +404,19 @@ def get_live_models_for_provider(
 
 
 def _validate_and_get_enabled_providers(
-    credential_variables: dict[str, Any],
+    all_variables: dict[str, Any],
     provider_variable_map: dict[str, str],
 ) -> set[str]:
     """Validate API keys and return set of enabled providers.
 
-    This helper function validates API keys for credential variables and returns
+    This helper function validates API keys for variables and returns
     only providers with valid keys. Used by get_enabled_providers and model options functions.
 
     For providers requiring multiple variables (e.g., IBM WatsonX needs API key, project ID, and URL),
     all required variables must be present for the provider to be enabled.
 
     Args:
-        credential_variables: Dictionary mapping variable names to VariableRead objects
+        all_variables: Dictionary mapping variable names to VariableRead objects (all types, not just credentials)
         provider_variable_map: Dictionary mapping provider names to primary variable names
 
     Returns:
@@ -532,48 +432,58 @@ def _validate_and_get_enabled_providers(
         # Get all required variable keys for this provider
         required_var_keys = get_provider_required_variable_keys(provider)
 
-        # Check if all required variables are present
+        # Check if all required variables are present and collect their values
         all_required_present = True
-        primary_var_key = None
-        primary_api_key = None
+        collected_values: dict[str, str] = {}
+
+        # Build a lookup of provider variable metadata by key so we can
+        # distinguish secret vs non-secret required variables.
+        provider_vars = get_provider_all_variables(provider)
+        provider_vars_by_key = {var.get("variable_key"): var for var in provider_vars}
 
         for var_key in required_var_keys:
-            if var_key not in credential_variables:
+            if var_key not in all_variables:
                 all_required_present = False
                 break
 
-            # Get the credential variable and decrypt it
-            credential_var = credential_variables[var_key]
-            try:
-                decrypted_value = auth_utils.decrypt_api_key(credential_var.value, settings_service=settings_service)
-                if not decrypted_value or not decrypted_value.strip():
+            variable = all_variables[var_key]
+            var_meta = provider_vars_by_key.get(var_key) or {}
+            is_secret = bool(var_meta.get("is_secret"))
+
+            if is_secret:
+                # Secret variables are stored encrypted; decrypt and validate.
+                try:
+                    decrypted_value = auth_utils.decrypt_api_key(variable.value, settings_service=settings_service)
+                    if not decrypted_value or not decrypted_value.strip():
+                        all_required_present = False
+                        break
+                    collected_values[var_key] = decrypted_value
+                except Exception as e:  # noqa: BLE001
+                    logger.debug(
+                        "Failed to decrypt variable %s for provider %s: %s",
+                        var_key,
+                        provider,
+                        e,
+                    )
                     all_required_present = False
                     break
+            else:
+                # Non-secret variables are stored in plaintext; just ensure they are present and non-empty.
+                raw_value = variable.value
+                if raw_value is None or not str(raw_value).strip():
+                    all_required_present = False
+                    break
+                collected_values[var_key] = str(raw_value)
 
-                # Track the primary secret variable for validation
-                provider_vars = get_provider_all_variables(provider)
-                for var in provider_vars:
-                    if var.get("variable_key") == var_key and var.get("is_secret"):
-                        primary_var_key = var_key
-                        primary_api_key = decrypted_value
-                        break
-            except Exception as e:  # noqa: BLE001
-                logger.debug("Failed to decrypt variable %s for provider %s: %s", var_key, provider, e)
-                all_required_present = False
-                break
-
-        if not all_required_present:
-            continue
-
-        # Validate the primary API key if we have one
-        if primary_var_key and primary_api_key:
+        # Validate with all collected variable values
+        if all_required_present and collected_values:
             try:
-                validate_model_provider_key(primary_var_key, primary_api_key)
+                validate_model_provider_key(provider, collected_values)
                 enabled.add(provider)
             except (ValueError, Exception) as e:  # noqa: BLE001
-                logger.debug("Provider %s validation failed for variable %s: %s", provider, primary_var_key, e)
+                logger.debug("Provider %s validation failed: %s", provider, e)
         elif not required_var_keys:
-            # Provider has no required variables (like Ollama with optional base URL)
+            # Provider has no required variables
             enabled.add(provider)
 
     return enabled
@@ -595,20 +505,19 @@ def get_provider_from_variable_key(variable_key: str) -> str | None:
     return None
 
 
-def validate_model_provider_key(variable_name: str, api_key: str) -> None:
-    """Validate a model provider API key by making a minimal test call.
+def validate_model_provider_key(provider: str, variables: dict[str, str]) -> None:
+    """Validate a model provider by making a minimal test call.
 
     Args:
-        variable_name: The variable name (e.g., OPENAI_API_KEY)
-        api_key: The API key to validate
+        provider: The provider name (e.g., "OpenAI", "IBM WatsonX")
+        variables: Dictionary mapping variable keys to their decrypted values
+                   (e.g., {"WATSONX_APIKEY": "...", "WATSONX_PROJECT_ID": "...", "WATSONX_URL": "..."})
 
     Raises:
-        HTTPException: If the API key is invalid
+        ValueError: If the credentials are invalid
     """
-    # Get provider from variable key using metadata
-    provider = get_provider_from_variable_key(variable_name)
-    if not provider:
-        return  # Not a model provider key we validate
+    if not provider or not variables:
+        return  # Nothing to validate
 
     # Get the first available model for this provider
     try:
@@ -620,42 +529,65 @@ def validate_model_provider_key(variable_name: str, api_key: str) -> None:
     except Exception:  # noqa: BLE001
         return  # Can't get models, skip validation
 
-    # Test the API key based on provider
+    # Test the credentials based on provider
     try:
         if provider == "OpenAI":
             from langchain_openai import ChatOpenAI  # type: ignore  # noqa: PGH003
 
+            api_key = variables.get("OPENAI_API_KEY")
+            if not api_key:
+                return
             llm = ChatOpenAI(api_key=api_key, model_name=first_model, max_tokens=1)
             llm.invoke("test")
+
         elif provider == "Anthropic":
             from langchain_anthropic import ChatAnthropic  # type: ignore  # noqa: PGH003
 
+            api_key = variables.get("ANTHROPIC_API_KEY")
+            if not api_key:
+                return
             llm = ChatAnthropic(anthropic_api_key=api_key, model=first_model, max_tokens=1)
             llm.invoke("test")
+
         elif provider == "Google Generative AI":
             from langchain_google_genai import ChatGoogleGenerativeAI  # type: ignore  # noqa: PGH003
 
+            api_key = variables.get("GOOGLE_API_KEY")
+            if not api_key:
+                return
             llm = ChatGoogleGenerativeAI(google_api_key=api_key, model=first_model, max_tokens=1)
             llm.invoke("test")
+
         elif provider == "IBM WatsonX":
             from langchain_ibm import ChatWatsonx
 
-            default_url = "https://us-south.ml.cloud.ibm.com"
+            api_key = variables.get("WATSONX_APIKEY")
+            project_id = variables.get("WATSONX_PROJECT_ID")
+            url = variables.get("WATSONX_URL", "https://us-south.ml.cloud.ibm.com")
+
+            if not api_key or not project_id:
+                return  # Need both API key and project ID to validate
+
             llm = ChatWatsonx(
                 apikey=api_key,
-                url=default_url,
+                url=url,
                 model_id=first_model,
-                project_id="dummy_project_for_validation",  # Dummy project_id for validation
+                project_id=project_id,
                 params={"max_new_tokens": 1},
             )
             llm.invoke("test")
 
         elif provider == "Ollama":
+
+            # Ollama is local, just verify the URL is accessible
+            import requests
+
+            base_url = variables.get("OLLAMA_BASE_URL")
             # Validate Ollama URL using the async helper
-            is_valid = run_until_complete(is_valid_ollama_url(api_key))
+            is_valid = run_until_complete(is_valid_ollama_url(base_url))
             if not is_valid:
                 msg = "Invalid Ollama base URL - server not accessible"
-                raise ValueError(msg)
+
     except ValueError:
         # Re-raise ValueError (validation failed)
         raise
@@ -746,7 +678,6 @@ def get_language_model_options(
                     if variable_service is None:
                         return set()
 
-                    from langflow.services.variable.constants import CREDENTIAL_TYPE
                     from langflow.services.variable.service import DatabaseVariableService
 
                     if not isinstance(variable_service, DatabaseVariableService):
@@ -755,11 +686,12 @@ def get_language_model_options(
                         user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
                         session=session,
                     )
-                    credential_vars = {var.name: var for var in all_vars if var.type == CREDENTIAL_TYPE}
+                    # Pass all variables (not just credentials) so non-secret required keys are included
+                    all_vars_map = {var.name: var for var in all_vars}
                     provider_variable_map = get_model_provider_variable_mapping()
 
                     # Use shared helper to validate and get enabled providers
-                    return _validate_and_get_enabled_providers(credential_vars, provider_variable_map)
+                    return _validate_and_get_enabled_providers(all_vars_map, provider_variable_map)
 
             enabled_providers = run_until_complete(_get_enabled_providers())
         except Exception:  # noqa: BLE001, S110
@@ -792,21 +724,6 @@ def get_language_model_options(
                     })
 
     options = []
-    model_class_mapping = {
-        "OpenAI": "ChatOpenAI",
-        "Anthropic": "ChatAnthropic",
-        "Google Generative AI": "ChatGoogleGenerativeAIFixed",
-        "Ollama": "ChatOllama",
-        "IBM WatsonX": "ChatWatsonx",
-    }
-
-    api_key_param_mapping = {
-        "OpenAI": "api_key",
-        "Anthropic": "api_key",
-        "Google Generative AI": "google_api_key",
-        "Ollama": "base_url",
-        "IBM WatsonX": "apikey",
-    }
 
     # Track which providers have models
     providers_with_models = set()
@@ -841,6 +758,9 @@ def get_language_model_options(
             if model_name in disabled_models:
                 continue
 
+            # Get parameter mapping for this provider
+            param_mapping = get_provider_param_mapping(provider)
+
             # Build the option dict
             option = {
                 "name": model_name,
@@ -849,9 +769,9 @@ def get_language_model_options(
                 "provider": provider,
                 "metadata": {
                     "context_length": 128000,  # Default, can be overridden
-                    "model_class": model_class_mapping.get(provider, "ChatOpenAI"),
-                    "model_name_param": "model",
-                    "api_key_param": api_key_param_mapping.get(provider, "api_key"),
+                    "model_class": param_mapping.get("model_class", "ChatOpenAI"),
+                    "model_name_param": param_mapping.get("model_param", "model"),
+                    "api_key_param": param_mapping.get("api_key_param", "api_key"),
                 },
             }
 
@@ -861,15 +781,13 @@ def get_language_model_options(
                     option["metadata"]["reasoning_models"] = []
                 option["metadata"]["reasoning_models"].append(model_name)
 
-            # Add base_url_param for Ollama
-            if provider == "Ollama":
-                option["metadata"]["base_url_param"] = "base_url"
-
-            # Add extra params for WatsonX
-            if provider == "IBM WatsonX":
-                option["metadata"]["model_name_param"] = "model_id"
-                option["metadata"]["url_param"] = "url"
-                option["metadata"]["project_id_param"] = "project_id"
+            # Add provider-specific params from mapping
+            if "base_url_param" in param_mapping:
+                option["metadata"]["base_url_param"] = param_mapping["base_url_param"]
+            if "url_param" in param_mapping:
+                option["metadata"]["url_param"] = param_mapping["url_param"]
+            if "project_id_param" in param_mapping:
+                option["metadata"]["project_id_param"] = param_mapping["project_id_param"]
 
             options.append(option)
 
@@ -958,7 +876,6 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
                     if variable_service is None:
                         return set()
 
-                    from langflow.services.variable.constants import CREDENTIAL_TYPE
                     from langflow.services.variable.service import DatabaseVariableService
 
                     if not isinstance(variable_service, DatabaseVariableService):
@@ -967,11 +884,12 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
                         user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
                         session=session,
                     )
-                    credential_vars = {var.name: var for var in all_vars if var.type == CREDENTIAL_TYPE}
+                    # Pass all variables (not just credentials) so non-secret required keys are included
+                    all_vars_map = {var.name: var for var in all_vars}
                     provider_variable_map = get_model_provider_variable_mapping()
 
                     # Use shared helper to validate and get enabled providers
-                    return _validate_and_get_enabled_providers(credential_vars, provider_variable_map)
+                    return _validate_and_get_enabled_providers(all_vars_map, provider_variable_map)
 
             enabled_providers = run_until_complete(_get_enabled_providers())
         except Exception:  # noqa: BLE001, S110
@@ -1143,23 +1061,6 @@ def normalize_model_names_to_dicts(model_names: list[str] | str) -> list[dict[st
         # If we can't get models, just create basic dicts
         return [{"name": name} for name in model_names]
 
-    # Model class mapping for runtime metadata
-    model_class_mapping = {
-        "OpenAI": "ChatOpenAI",
-        "Anthropic": "ChatAnthropic",
-        "Google Generative AI": "ChatGoogleGenerativeAIFixed",
-        "Ollama": "ChatOllama",
-        "IBM WatsonX": "ChatWatsonx",
-    }
-
-    api_key_param_mapping = {
-        "OpenAI": "api_key",
-        "Anthropic": "api_key",
-        "Google Generative AI": "google_api_key",
-        "Ollama": "base_url",
-        "IBM WatsonX": "apikey",
-    }
-
     # Build a lookup map of model_name -> full model data with runtime metadata
     model_lookup = {}
     for provider_data in all_models:
@@ -1169,27 +1070,28 @@ def normalize_model_names_to_dicts(model_names: list[str] | str) -> list[dict[st
             model_name = model_data.get("model_name")
             base_metadata = model_data.get("metadata", {})
 
+            # Get parameter mapping for this provider
+            param_mapping = get_provider_param_mapping(provider)
+
             # Build runtime metadata similar to get_language_model_options
             runtime_metadata = {
                 "context_length": 128000,  # Default
-                "model_class": model_class_mapping.get(provider, "ChatOpenAI"),
-                "model_name_param": "model",
-                "api_key_param": api_key_param_mapping.get(provider, "api_key"),
+                "model_class": param_mapping.get("model_class", "ChatOpenAI"),
+                "model_name_param": param_mapping.get("model_param", "model"),
+                "api_key_param": param_mapping.get("api_key_param", "api_key"),
             }
 
             # Add reasoning models list for OpenAI
             if provider == "OpenAI" and base_metadata.get("reasoning"):
                 runtime_metadata["reasoning_models"] = [model_name]
 
-            # Add base_url_param for Ollama
-            if provider == "Ollama":
-                runtime_metadata["base_url_param"] = "base_url"
-
-            # Add extra params for WatsonX
-            if provider == "IBM WatsonX":
-                runtime_metadata["model_name_param"] = "model_id"
-                runtime_metadata["url_param"] = "url"
-                runtime_metadata["project_id_param"] = "project_id"
+            # Add provider-specific params from mapping
+            if "base_url_param" in param_mapping:
+                runtime_metadata["base_url_param"] = param_mapping["base_url_param"]
+            if "url_param" in param_mapping:
+                runtime_metadata["url_param"] = param_mapping["url_param"]
+            if "project_id_param" in param_mapping:
+                runtime_metadata["project_id_param"] = param_mapping["project_id_param"]
 
             # Merge base metadata with runtime metadata
             full_metadata = {**base_metadata, **runtime_metadata}
