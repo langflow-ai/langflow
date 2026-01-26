@@ -137,6 +137,8 @@ export type NodeInputFieldComponentType = {
   showNode: boolean;
   colorName?: string[];
   isToolMode?: boolean;
+  isPrimaryInput?: boolean;
+  displayHandle?: boolean;
 };
 
 export type IOJSONInputComponentType = {
