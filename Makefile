@@ -443,6 +443,7 @@ build_component_index: ## build the component index with dynamic loading
 	@make install_backend
 	@echo 'Building component index'
 	LFX_DEV=1 uv run python scripts/build_component_index.py
+	LFX_DEV=1 uv run python scripts/build_hash_history.py
 
 lfx_build: ## build the LFX package
 	@echo 'Building LFX package'
