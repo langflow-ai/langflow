@@ -1,7 +1,5 @@
 """Schema modules for lfx package."""
 
-# fmt: off
-# Keep commonly re-exported symbols first for backward compatibility tests
 __all__ = [
     "WORKFLOW_EXECUTION_RESPONSES",
     "WORKFLOW_STATUS_RESPONSES",
@@ -26,7 +24,6 @@ __all__ = [
     "WorkflowStreamEvent",
     "dotdict",
 ]
-# fmt: on
 
 
 def __getattr__(name: str):
