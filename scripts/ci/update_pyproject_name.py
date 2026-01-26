@@ -24,18 +24,10 @@ def update_pyproject_name(pyproject_path: str, new_project_name: str) -> None:
     # Update extra references in [complete] and [all] extras for nightly builds
     if new_project_name == "langflow-base-nightly":
         # Replace langflow-base[extra] with langflow-base-nightly[extra] in optional dependencies
-        content = re.sub(
-            r'"langflow-base\[([^\]]+)\]"',
-            r'"langflow-base-nightly[\1]"',
-            content
-        )
+        content = re.sub(r'"langflow-base\[([^\]]+)\]"', r'"langflow-base-nightly[\1]"', content)
     elif new_project_name == "langflow-nightly":
         # Replace langflow[extra] with langflow-nightly[extra] in optional dependencies
-        content = re.sub(
-            r'"langflow\[([^\]]+)\]"',
-            r'"langflow-nightly[\1]"',
-            content
-        )
+        content = re.sub(r'"langflow\[([^\]]+)\]"', r'"langflow-nightly[\1]"', content)
 
     filepath.write_text(content, encoding="utf-8")
 
