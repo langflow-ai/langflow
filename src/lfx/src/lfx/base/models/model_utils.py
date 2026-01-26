@@ -2,11 +2,20 @@ import asyncio
 from urllib.parse import urljoin
 
 import httpx
+import requests
 
+from lfx.base.models.watsonx_constants import (
+    WATSONX_DEFAULT_EMBEDDING_MODELS as WATSONX_EMBEDDING_METADATA,
+    WATSONX_DEFAULT_LLM_MODELS as WATSONX_LLM_METADATA,
+)
 from lfx.log.logger import logger
 from lfx.utils.util import transform_localhost_url
 
 HTTP_STATUS_OK = 200
+
+# Extract model names from metadata for fallback defaults
+WATSONX_DEFAULT_LLM_MODEL_NAMES = [m["name"] for m in WATSONX_LLM_METADATA]
+WATSONX_DEFAULT_EMBEDDING_MODEL_NAMES = [m["name"] for m in WATSONX_EMBEDDING_METADATA]
 
 
 def get_model_name(llm, display_name: str | None = "Custom"):
@@ -106,3 +115,119 @@ async def get_ollama_models(
         msg = "Could not get model names from Ollama."
         await logger.aexception(msg)
         raise ValueError(msg) from e
+
+
+# ============================================================================
+# Ollama Convenience Functions
+# ============================================================================
+
+
+async def get_ollama_llm_models(base_url: str) -> list[str]:
+    """Fetch Ollama models with completion (LLM) capability.
+
+    Args:
+        base_url: The base URL of the Ollama API (e.g., "http://localhost:11434").
+
+    Returns:
+        A sorted list of model names that support text completion/chat.
+
+    Raises:
+        ValueError: If there is an issue with the API request or response.
+    """
+    return await get_ollama_models(
+        base_url_value=base_url,
+        desired_capability="completion",
+        json_models_key="models",
+        json_name_key="name",
+        json_capabilities_key="capabilities",
+    )
+
+
+async def get_ollama_embedding_models(base_url: str) -> list[str]:
+    """Fetch Ollama models with embedding capability.
+
+    Args:
+        base_url: The base URL of the Ollama API (e.g., "http://localhost:11434").
+
+    Returns:
+        A sorted list of model names that support embeddings.
+
+    Raises:
+        ValueError: If there is an issue with the API request or response.
+    """
+    return await get_ollama_models(
+        base_url_value=base_url,
+        desired_capability="embedding",
+        json_models_key="models",
+        json_name_key="name",
+        json_capabilities_key="capabilities",
+    )
+
+
+# ============================================================================
+# WatsonX Model Fetching Functions
+# ============================================================================
+
+
+def get_watsonx_llm_models(
+    base_url: str,
+    default_models: list[str] | None = None,
+) -> list[str]:
+    """Fetch WatsonX LLM models with chat capability.
+
+    Args:
+        base_url: The WatsonX API endpoint URL (e.g., "https://us-south.ml.cloud.ibm.com").
+        default_models: Fallback models to return if API fetch fails.
+
+    Returns:
+        A sorted list of model IDs that support text chat.
+    """
+    if default_models is None:
+        default_models = WATSONX_DEFAULT_LLM_MODEL_NAMES
+
+    try:
+        endpoint = f"{base_url}/ml/v1/foundation_model_specs"
+        params = {
+            "version": "2024-09-16",
+            "filters": "function_text_chat,!lifecycle_withdrawn",
+        }
+        response = requests.get(endpoint, params=params, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        models = [model["model_id"] for model in data.get("resources", [])]
+        return sorted(models)
+    except Exception:  # noqa: BLE001
+        logger.exception("Error fetching WatsonX LLM models. Using default models.")
+        return default_models
+
+
+def get_watsonx_embedding_models(
+    base_url: str,
+    default_models: list[str] | None = None,
+) -> list[str]:
+    """Fetch WatsonX embedding models.
+
+    Args:
+        base_url: The WatsonX API endpoint URL (e.g., "https://us-south.ml.cloud.ibm.com").
+        default_models: Fallback models to return if API fetch fails.
+
+    Returns:
+        A sorted list of model IDs that support embeddings.
+    """
+    if default_models is None:
+        default_models = WATSONX_DEFAULT_EMBEDDING_MODEL_NAMES
+
+    try:
+        endpoint = f"{base_url}/ml/v1/foundation_model_specs"
+        params = {
+            "version": "2024-09-16",
+            "filters": "function_embedding,!lifecycle_withdrawn:and",
+        }
+        response = requests.get(endpoint, params=params, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        models = [model["model_id"] for model in data.get("resources", [])]
+        return sorted(models)
+    except Exception:  # noqa: BLE001
+        logger.exception("Error fetching WatsonX embedding models. Using default models.")
+        return default_models
