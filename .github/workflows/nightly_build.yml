@@ -354,7 +354,7 @@ jobs:
 
   merge-hash-history-to-main:
     name: Create PR to Merge Hash History to Main
-    needs: [build-hash-history, release-nightly-build]
+    needs: [create-nightly-tag, build-hash-history, release-nightly-build]
     # Run if auto_merge_hash_history is true (default) or not set (scheduled runs)
     # When triggered by schedule, inputs.auto_merge_hash_history is not set, so default to true
     if: github.repository == 'langflow-ai/langflow' && always() && needs.build-hash-history.result == 'success' && needs.release-nightly-build.result == 'success' && (github.event_name == 'schedule' || inputs.auto_merge_hash_history != false)

@@ -184,7 +184,9 @@ jobs:
           # TODO: Unsure why the whl is not built in src/backend/base/dist
           mkdir src/backend/base/dist
           mv dist/*.whl src/backend/base/dist/
-          uv pip install src/backend/base/dist/*.whl
+          # Install with [complete] extra to test all optional dependencies
+          WHEEL_FILE=$(ls src/backend/base/dist/*.whl)
+          uv pip install "${WHEEL_FILE}[complete]"
           uv run python -m langflow run --host localhost --port 7860 --backend-only &
           SERVER_PID=$!
           # Wait for the server to start
