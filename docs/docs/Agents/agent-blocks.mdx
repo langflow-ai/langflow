@@ -1,0 +1,31 @@
+---
+title: Agent blocks
+slug: /agents-blocks
+---
+
+An agent is fundamentally a while loop.
+The while loop accepts input and iterates over the agent's reasoning.
+The agent's reasoning sends messages to an LLM and examines the LLM's response to determine where to route the request.
+If the LLM's response includes `tool_calls`, the agent sends output to a tool-calling function, and the results are sent back to the while loop to be iterated over again.
+If the LLM's response does not include `tool_calls` and the agent determines the task is complete, the agent sends a "finished" message to output.
+
+```
+ChatInput → WhileLoop → AgentStep → [Tool Calls] → ExecuteTool → WhileLoop
+                              ↓ [AI Message - done]
+                         ChatOutput
+```
+
+Langflow's [**Agent** component](/components-agents) is composed of this same architecture, and is suitable for most tasks that require a reasoning loop that can choose from a list of registered functions.
+
+But what if you want to modify the agent's behavior? For example, how do you include a validation step in your tool outputs before execution?
+
+Use **Agent Blocks** to construct an agent in Langflow's visual builder.
+Agent Blocks are composable primitives that provide the building blocks for constructing each step of custom agent workflows.
+Assemble the blocks to create agents tailored to your exact requirements.
+For example, to add a validation step to your agent, insert an [**If-Else** component](/if-else) between **AgentStep**'s `tool_calls` output and **ExecuteTool** to validate tool names against an allowed list.
+
+This page includes a quickstart for building an agent with Agent Blocks.
+For the individual Agent Blocks components, see the Components reference pages.
+
+## Agent Blocks quickstart
+
