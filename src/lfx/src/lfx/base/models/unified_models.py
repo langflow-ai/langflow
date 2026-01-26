@@ -417,9 +417,7 @@ def _validate_and_get_enabled_providers(
             if is_secret:
                 # Secret variables are stored encrypted; decrypt and validate.
                 try:
-                    decrypted_value = auth_utils.decrypt_api_key(
-                        variable.value, settings_service=settings_service
-                    )
+                    decrypted_value = auth_utils.decrypt_api_key(variable.value, settings_service=settings_service)
                     if not decrypted_value or not decrypted_value.strip():
                         all_required_present = False
                         break
