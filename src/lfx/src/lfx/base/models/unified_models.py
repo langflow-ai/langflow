@@ -400,33 +400,48 @@ def _validate_and_get_enabled_providers(
         primary_var_key = None
         primary_api_key = None
 
+        # Build a lookup of provider variable metadata by key so we can
+        # distinguish secret vs non-secret required variables.
+        provider_vars = get_provider_all_variables(provider)
+        provider_vars_by_key = {var.get("variable_key"): var for var in provider_vars}
+
         for var_key in required_var_keys:
             if var_key not in credential_variables:
                 all_required_present = False
                 break
 
-            # Get the credential variable and decrypt it
             credential_var = credential_variables[var_key]
-            try:
-                decrypted_value = auth_utils.decrypt_api_key(credential_var.value, settings_service=settings_service)
-                if not decrypted_value or not decrypted_value.strip():
+            var_meta = provider_vars_by_key.get(var_key) or {}
+            is_secret = bool(var_meta.get("is_secret"))
+
+            if is_secret:
+                # Secret variables are stored encrypted; decrypt and validate.
+                try:
+                    decrypted_value = auth_utils.decrypt_api_key(
+                        credential_var.value, settings_service=settings_service
+                    )
+                    if not decrypted_value or not decrypted_value.strip():
+                        all_required_present = False
+                        break
+
+                    # Track the primary secret variable for validation
+                    primary_var_key = var_key
+                    primary_api_key = decrypted_value
+                except Exception as e:  # noqa: BLE001
+                    logger.debug(
+                        "Failed to decrypt variable %s for provider %s: %s",
+                        var_key,
+                        provider,
+                        e,
+                    )
                     all_required_present = False
                     break
-
-                # Track the primary secret variable for validation
-                provider_vars = get_provider_all_variables(provider)
-                for var in provider_vars:
-                    if var.get("variable_key") == var_key and var.get("is_secret"):
-                        primary_var_key = var_key
-                        primary_api_key = decrypted_value
-                        break
-            except Exception as e:  # noqa: BLE001
-                logger.debug("Failed to decrypt variable %s for provider %s: %s", var_key, provider, e)
-                all_required_present = False
-                break
-
-        if not all_required_present:
-            continue
+            else:
+                # Non-secret variables are stored in plaintext; just ensure they are present and non-empty.
+                raw_value = credential_var.value
+                if raw_value is None or not str(raw_value).strip():
+                    all_required_present = False
+                    break
 
         # Validate the primary API key if we have one
         if primary_var_key and primary_api_key:
