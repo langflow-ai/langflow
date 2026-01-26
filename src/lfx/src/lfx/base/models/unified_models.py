@@ -20,6 +20,7 @@ from lfx.base.models.model_utils import (
     get_ollama_llm_models,
     get_watsonx_embedding_models,
     get_watsonx_llm_models,
+    is_valid_ollama_url,
 )
 from lfx.base.models.ollama_constants import OLLAMA_EMBEDDING_MODELS_DETAILED, OLLAMA_MODELS_DETAILED
 from lfx.base.models.openai_constants import OPENAI_EMBEDDING_MODELS_DETAILED, OPENAI_MODELS_DETAILED
@@ -118,8 +119,8 @@ def get_model_provider_metadata():
                 {
                     "variable_name": "Base URL",
                     "variable_key": "OLLAMA_BASE_URL",
-                    "description": "Ollama server URL (default: http://localhost:11434)",
-                    "required": False,
+                    "description": "Ollama server URL",
+                    "required": True,
                     "is_secret": False,
                     "is_list": False,
                     "options": [],
@@ -650,12 +651,10 @@ def validate_model_provider_key(variable_name: str, api_key: str) -> None:
             llm.invoke("test")
 
         elif provider == "Ollama":
-            # Ollama is local, just verify the URL is accessible
-            import requests
-
-            response = requests.get(f"{api_key}/api/tags", timeout=5)
-            if response.status_code != requests.codes.ok:
-                msg = "Invalid Ollama base URL"
+            # Validate Ollama URL using the async helper
+            is_valid = run_until_complete(is_valid_ollama_url(api_key))
+            if not is_valid:
+                msg = "Invalid Ollama base URL - server not accessible"
                 raise ValueError(msg)
     except ValueError:
         # Re-raise ValueError (validation failed)
