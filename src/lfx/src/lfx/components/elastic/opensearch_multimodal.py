@@ -136,7 +136,7 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
                 },
             ],
             value=[],
-            input_types=["Data"],
+            input_types=["Data", "JSON"],
         ),
         StrInput(
             name="opensearch_url",

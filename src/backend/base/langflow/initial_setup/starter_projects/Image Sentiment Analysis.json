@@ -40,7 +40,7 @@
             "id": "StructuredOutput-e4qlS",
             "name": "structured_output",
             "output_types": [
-              "Data"
+              "JSON"
             ]
           },
           "targetHandle": {
@@ -56,7 +56,7 @@
         "id": "reactflow__edge-StructuredOutput-e4qlS{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-e4qlSœ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}-parser-IFSS9{œfieldNameœ:œinput_dataœ,œidœ:œparser-IFSS9œ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "StructuredOutput-e4qlS",
-        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-e4qlSœ, œnameœ: œstructured_outputœ, œoutput_typesœ: [œDataœ]}",
+        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-e4qlSœ, œnameœ: œstructured_outputœ, œoutput_typesœ: [œJSONœ]}",
         "target": "parser-IFSS9",
         "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-IFSS9œ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
@@ -1145,10 +1145,10 @@
                 "group_outputs": false,
                 "method": "build_structured_output",
                 "name": "structured_output",
-                "selected": "Data",
+                "selected": "JSON",
                 "tool_mode": true,
                 "types": [
-                  "Data"
+                  "JSON"
                 ],
                 "value": "__UNDEFINED__"
               },
@@ -1159,10 +1159,10 @@
                 "group_outputs": false,
                 "method": "build_structured_dataframe",
                 "name": "dataframe_output",
-                "selected": "DataFrame",
+                "selected": "Table",
                 "tool_mode": true,
                 "types": [
-                  "DataFrame"
+                  "Table"
                 ],
                 "value": "__UNDEFINED__"
               }

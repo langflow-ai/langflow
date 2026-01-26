@@ -9,6 +9,42 @@ from lfx.schema.schema import INPUT_FIELD_NAME
 if TYPE_CHECKING:
     from lfx.graph.vertex.base import Vertex
 
+# Type migrations for backward compatibility
+# Maps old type names to new type names
+TYPE_MIGRATIONS: dict[str, str] = {
+    "Data": "JSON",
+    "DataFrame": "Table",
+}
+
+
+def types_compatible(output_types: list[str], input_types: list[str]) -> bool:
+    """Check if output types are compatible with input types, considering type migrations.
+
+    Args:
+        output_types: List of output type names from source handle
+        input_types: List of input type names from target handle
+
+    Returns:
+        True if any output type matches any input type (directly or via migration)
+    """
+    for output_type in output_types:
+        # Get the migrated version of the output type
+        migrated_output = TYPE_MIGRATIONS.get(output_type, output_type)
+
+        for input_type in input_types:
+            # Get the migrated version of the input type
+            migrated_input = TYPE_MIGRATIONS.get(input_type, input_type)
+
+            # Check all possible combinations
+            if (
+                output_type == input_type  # Direct match
+                or migrated_output == input_type  # Migrated output matches input
+                or output_type == migrated_input  # Output matches migrated input
+                or migrated_output == migrated_input  # Both migrated match
+            ):
+                return True
+    return False
+
 
 class Edge:
     def __init__(self, source: Vertex, target: Vertex, edge: EdgeData):
@@ -82,7 +118,10 @@ class Edge:
 
     def _validate_handles(self, source, target) -> None:
         if self.target_handle.input_types is None:
-            self.valid_handles = self.target_handle.type in self.source_handle.output_types
+            # Backward compatibility: old flows may have Data/DataFrame types
+            self.valid_handles = types_compatible(
+                self.source_handle.output_types, [self.target_handle.type] if self.target_handle.type else []
+            )
         elif self.target_handle.type is None:
             # ! This is not a good solution
             # This is a loop edge
@@ -92,14 +131,14 @@ class Edge:
             # is in the target_handle.input_types
             self.valid_handles = bool(self.source_handle.output_types) and (
                 not self.target_handle.input_types
-                or any(output_type in self.target_handle.input_types for output_type in self.source_handle.output_types)
+                or types_compatible(self.source_handle.output_types, self.target_handle.input_types)
             )
 
         elif self.source_handle.output_types is not None:
-            self.valid_handles = (
-                any(output_type in self.target_handle.input_types for output_type in self.source_handle.output_types)
-                or self.target_handle.type in self.source_handle.output_types
-            )
+            # Backward compatibility: old flows may have Data/DataFrame types
+            self.valid_handles = types_compatible(
+                self.source_handle.output_types, self.target_handle.input_types
+            ) or types_compatible(self.source_handle.output_types, [self.target_handle.type] if self.target_handle.type else [])
 
         if not self.valid_handles:
             logger.debug(self.source_handle)
@@ -109,11 +148,16 @@ class Edge:
 
     def _legacy_validate_handles(self, source, target) -> None:
         if self.target_handle.input_types is None:
-            self.valid_handles = self.target_handle.type in self.source_handle.base_classes
+            # Backward compatibility: old flows may have Data/DataFrame types
+            self.valid_handles = types_compatible(
+                self.source_handle.base_classes, [self.target_handle.type] if self.target_handle.type else []
+            )
         else:
-            self.valid_handles = (
-                any(baseClass in self.target_handle.input_types for baseClass in self.source_handle.base_classes)
-                or self.target_handle.type in self.source_handle.base_classes
+            # Backward compatibility: old flows may have Data/DataFrame types
+            self.valid_handles = types_compatible(
+                self.source_handle.base_classes, self.target_handle.input_types
+            ) or types_compatible(
+                self.source_handle.base_classes, [self.target_handle.type] if self.target_handle.type else []
             )
         if not self.valid_handles:
             logger.debug(self.source_handle)
@@ -158,16 +202,17 @@ class Edge:
             # For loop inputs, use the configured input_types
             # (which already includes original type + loop_types from frontend)
             loop_input_types = list(self.target_handle.input_types)
+            # Backward compatibility: old flows may have Data/DataFrame types
             self.valid = any(
-                any(output_type in loop_input_types for output_type in output["types"]) for output in self.source_types
+                types_compatible(output["types"], loop_input_types) for output in self.source_types
             )
-            # Find the first matching type
+            # Find the first matching type (considering migrations)
             self.matched_type = next(
                 (
                     output_type
                     for output in self.source_types
                     for output_type in output["types"]
-                    if output_type in loop_input_types
+                    if types_compatible([output_type], loop_input_types)
                 ),
                 None,
             )
@@ -177,19 +222,18 @@ class Edge:
             # Both lists contain strings and sometimes a string contains the value we are
             # looking for e.g. comgin_out=["Chain"] and target_reqs=["LLMChain"]
             # so we need to check if any of the strings in source_types is in target_reqs
+            # Backward compatibility: old flows may have Data/DataFrame types
             self.valid = any(
-                any(output_type in target_req for output_type in output["types"])
+                types_compatible(output["types"], self.target_reqs)
                 for output in self.source_types
-                for target_req in self.target_reqs
             )
-            # Update the matched type to be the first found match
+            # Update the matched type to be the first found match (considering migrations)
             self.matched_type = next(
                 (
                     output_type
                     for output in self.source_types
                     for output_type in output["types"]
-                    for target_req in self.target_reqs
-                    if output_type in target_req
+                    if types_compatible([output_type], self.target_reqs)
                 ),
                 None,
             )
@@ -209,11 +253,12 @@ class Edge:
         # Both lists contain strings and sometimes a string contains the value we are
         # looking for e.g. comgin_out=["Chain"] and target_reqs=["LLMChain"]
         # so we need to check if any of the strings in source_types is in target_reqs
-        self.valid = any(output in target_req for output in self.source_types for target_req in self.target_reqs)
-        # Get what type of input the target node is expecting
+        # Use types_compatible for migration support
+        self.valid = types_compatible(self.source_types, self.target_reqs)
+        # Get what type of input the target node is expecting (considering migrations)
 
         self.matched_type = next(
-            (output for output in self.source_types if output in self.target_reqs),
+            (output for output in self.source_types if types_compatible([output], self.target_reqs)),
             None,
         )
         no_matched_type = self.matched_type is None

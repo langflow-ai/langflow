@@ -9,7 +9,7 @@
             "id": "KnowledgeRetrieval-kgwih",
             "name": "retrieve_data",
             "output_types": [
-              "DataFrame"
+              "Table"
             ]
           },
           "targetHandle": {
@@ -25,7 +25,7 @@
         },
         "id": "xy-edge__KnowledgeRetrieval-kgwih{œdataTypeœ:œKnowledgeRetrievalœ,œidœ:œKnowledgeRetrieval-kgwihœ,œnameœ:œretrieve_dataœ,œoutput_typesœ:[œDataFrameœ]}-ChatOutput-OG4M9{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-OG4M9œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "source": "KnowledgeRetrieval-kgwih",
-        "sourceHandle": "{œdataTypeœ: œKnowledgeRetrievalœ, œidœ: œKnowledgeRetrieval-kgwihœ, œnameœ: œretrieve_dataœ, œoutput_typesœ: [œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œKnowledgeRetrievalœ, œidœ: œKnowledgeRetrieval-kgwihœ, œnameœ: œretrieve_dataœ, œoutput_typesœ: [œTableœ]}",
         "target": "ChatOutput-OG4M9",
         "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-OG4M9œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       },
@@ -582,10 +582,10 @@
                 "group_outputs": false,
                 "method": "retrieve_data",
                 "name": "retrieve_data",
-                "selected": "DataFrame",
+                "selected": "Table",
                 "tool_mode": true,
                 "types": [
-                  "DataFrame"
+                  "Table"
                 ],
                 "value": "__UNDEFINED__"
               }

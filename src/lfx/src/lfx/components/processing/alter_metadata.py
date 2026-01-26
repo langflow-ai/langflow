@@ -32,7 +32,7 @@ class AlterMetadataComponent(Component):
             name="metadata",
             display_name="Metadata",
             info="Metadata to add to each object",
-            input_types=["Data"],
+            input_types=["Data", "JSON"],
             required=True,
         ),
         MessageTextInput(

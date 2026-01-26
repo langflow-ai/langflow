@@ -180,14 +180,15 @@
             "id": "YouTubeCommentsComponent-ZkD9X",
             "name": "comments",
             "output_types": [
-              "DataFrame"
+              "Table"
             ]
           },
           "targetHandle": {
             "fieldName": "df",
             "id": "BatchRunComponent-hJ8qJ",
             "inputTypes": [
-              "DataFrame"
+              "DataFrame",
+              "Table"
             ],
             "type": "other"
           }
@@ -195,9 +196,9 @@
         "id": "xy-edge__YouTubeCommentsComponent-ZkD9X{œdataTypeœ:œYouTubeCommentsComponentœ,œidœ:œYouTubeCommentsComponent-ZkD9Xœ,œnameœ:œcommentsœ,œoutput_typesœ:[œDataFrameœ]}-BatchRunComponent-hJ8qJ{œfieldNameœ:œdfœ,œidœ:œBatchRunComponent-hJ8qJœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "YouTubeCommentsComponent-ZkD9X",
-        "sourceHandle": "{œdataTypeœ: œYouTubeCommentsComponentœ, œidœ: œYouTubeCommentsComponent-ZkD9Xœ, œnameœ: œcommentsœ, œoutput_typesœ: [œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œYouTubeCommentsComponentœ, œidœ: œYouTubeCommentsComponent-ZkD9Xœ, œnameœ: œcommentsœ, œoutput_typesœ: [œTableœ]}",
         "target": "BatchRunComponent-hJ8qJ",
-        "targetHandle": "{œfieldNameœ: œdfœ, œidœ: œBatchRunComponent-hJ8qJœ, œinputTypesœ: [œDataFrameœ], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ: œdfœ, œidœ: œBatchRunComponent-hJ8qJœ, œinputTypesœ: [œDataFrameœ, œTableœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -260,10 +261,10 @@
                 "group_outputs": false,
                 "method": "get_video_comments",
                 "name": "comments",
-                "selected": "DataFrame",
+                "selected": "Table",
                 "tool_mode": true,
                 "types": [
-                  "DataFrame"
+                  "Table"
                 ],
                 "value": "__UNDEFINED__"
               }
@@ -934,7 +935,10 @@
                 "display_name": "Output Schema",
                 "dynamic": false,
                 "info": "Schema Validation: Define the structure and data types for structured output. No validation if no output schema.",
-                "input_types": [],
+                "input_types": [
+                  "DataFrame",
+                  "Table"
+                ],
                 "is_list": true,
                 "list_add_label": "Add More",
                 "name": "output_schema",
@@ -2409,10 +2413,10 @@
                 "group_outputs": false,
                 "method": "run_batch",
                 "name": "batch_results",
-                "selected": "DataFrame",
+                "selected": "Table",
                 "tool_mode": true,
                 "types": [
-                  "DataFrame"
+                  "Table"
                 ],
                 "value": "__UNDEFINED__"
               }
@@ -2490,7 +2494,8 @@
                 "dynamic": false,
                 "info": "The DataFrame whose column (specified by 'column_name') we'll treat as text messages.",
                 "input_types": [
-                  "DataFrame"
+                  "DataFrame",
+                  "Table"
                 ],
                 "list": false,
                 "list_add_label": "Add More",

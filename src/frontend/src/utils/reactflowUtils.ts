@@ -183,8 +183,10 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
       );
       const isLoopInput = targetOutput?.allows_loop === true;
 
+      // Backward compatibility: old flows may have Data/DataFrame types that need to match JSON/Table
+      const expectedTargetHandle = scapedJSONStringfy(id);
       if (
-        (scapedJSONStringfy(id) !== targetHandle ||
+        (!handlesMatch(expectedTargetHandle, targetHandle) ||
           (targetNode.data.node?.tool_mode && isToolMode)) &&
         !isLoopInput
       ) {
@@ -223,7 +225,9 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
 
           // Skip edge cleanup for outputs with allows_loop=true
           const hasAllowsLoop = output?.allows_loop === true;
-          if (scapedJSONStringfy(id) !== sourceHandle && !hasAllowsLoop) {
+          // Backward compatibility: old flows may have Data/DataFrame types that need to match JSON/Table
+          const expectedSourceHandle = scapedJSONStringfy(id);
+          if (!handlesMatch(expectedSourceHandle, sourceHandle) && !hasAllowsLoop) {
             newEdges = newEdges.filter((e) => e.id !== edge.id);
             brokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
           }
@@ -1053,6 +1057,200 @@ export function scapedJSONStringfy(json: object): string {
 export function scapeJSONParse(json: string): any {
   const parsed = json.replace(/œ/g, '"');
   return JSON.parse(parsed);
+}
+
+/**
+ * Map of old types to new types for migration compatibility.
+ * Allows edges saved with old types (Data/DataFrame) to work with new types (JSON/Table).
+ */
+const TYPE_MIGRATIONS: Record<string, string> = {
+  Data: "JSON",
+  DataFrame: "Table",
+};
+
+/**
+ * Check if two handles match, considering type migrations (Data→JSON, DataFrame→Table).
+ * This allows edges saved with old types to be compatible with new types.
+ */
+export function handlesMatch(
+  expectedHandle: string,
+  actualHandle: string,
+): boolean {
+  if (expectedHandle === actualHandle) {
+    return true;
+  }
+
+  try {
+    // Parse both handles to compare their components
+    const expected = scapeJSONParse(expectedHandle);
+    const actual = scapeJSONParse(actualHandle);
+
+    // Check all properties except output_types/inputTypes
+    if (expected.id !== actual.id || expected.name !== actual.name) {
+      return false;
+    }
+
+    // For source handles (have dataType)
+    if (expected.dataType !== undefined && expected.dataType !== actual.dataType) {
+      return false;
+    }
+
+    // For target handles (have fieldName)
+    if (expected.fieldName !== undefined && expected.fieldName !== actual.fieldName) {
+      return false;
+    }
+    if (expected.type !== undefined && expected.type !== actual.type) {
+      return false;
+    }
+
+    // Compare output_types with migration tolerance
+    const expectedTypes = expected.output_types || expected.inputTypes || [];
+    const actualTypes = actual.output_types || actual.inputTypes || [];
+
+    if (expectedTypes.length !== actualTypes.length) {
+      // Allow mismatch if one is migrated version of other
+      return typesMatchWithMigration(expectedTypes, actualTypes);
+    }
+
+    // Check if types match exactly or via migration
+    return typesMatchWithMigration(expectedTypes, actualTypes);
+  } catch {
+    // If parsing fails, fall back to direct comparison
+    return false;
+  }
+}
+
+/**
+ * Check if two type arrays match, considering type migrations.
+ */
+function typesMatchWithMigration(
+  expectedTypes: string[],
+  actualTypes: string[],
+): boolean {
+  if (expectedTypes.length === 0 && actualTypes.length === 0) {
+    return true;
+  }
+
+  // Check each expected type against actual types
+  for (const expectedType of expectedTypes) {
+    const migratedExpected = TYPE_MIGRATIONS[expectedType] || expectedType;
+    const found = actualTypes.some((actualType) => {
+      const migratedActual = TYPE_MIGRATIONS[actualType] || actualType;
+      return (
+        expectedType === actualType ||
+        migratedExpected === actualType ||
+        expectedType === migratedActual ||
+        migratedExpected === migratedActual
+      );
+    });
+    if (found) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Migrate TypeConverter nodes to sync outputs with output_type value.
+ * This fixes the bug where loading a template shows "Message Output" even when output_type is "JSON".
+ */
+export function migrateTypeConverterNodes(
+  nodes: AllNodeType[],
+  edges?: EdgeType[],
+): void {
+  // Track which nodes were migrated and their new output types
+  const migratedNodes = new Map<string, string[]>();
+
+  nodes.forEach((node) => {
+    // Only migrate TypeConverter components
+    if (node.data?.node?.display_name !== "Type Convert") {
+      return;
+    }
+
+    // Type guard: ensure this is a NodeDataType (not NoteDataType)
+    if (!("node" in node.data)) {
+      return;
+    }
+
+    const outputType = node.data.node?.template?.output_type?.value;
+    const currentOutputs = node.data.node?.outputs || [];
+
+    // Determine correct output based on output_type
+    let correctOutput: OutputFieldType;
+    let selectedOutput: string;
+    let outputTypes: string[];
+
+    if (outputType === "JSON" || outputType === "Data") {
+      outputTypes = ["JSON"];
+      correctOutput = {
+        types: outputTypes,
+        selected: "JSON",
+        name: "data_output",
+        display_name: "JSON Output",
+        method: "convert_to_data",
+      };
+      selectedOutput = "data_output";
+    } else if (outputType === "Table" || outputType === "DataFrame") {
+      outputTypes = ["Table"];
+      correctOutput = {
+        types: outputTypes,
+        selected: "Table",
+        name: "dataframe_output",
+        display_name: "Table Output",
+        method: "convert_to_dataframe",
+      };
+      selectedOutput = "dataframe_output";
+    } else {
+      // Default to Message
+      outputTypes = ["Message"];
+      correctOutput = {
+        types: outputTypes,
+        selected: "Message",
+        name: "message_output",
+        display_name: "Message Output",
+        method: "convert_to_message",
+      };
+      selectedOutput = "message_output";
+    }
+
+    // Check if migration is needed
+    const needsMigration =
+      currentOutputs.length !== 1 ||
+      currentOutputs[0]?.name !== correctOutput.name;
+
+    if (needsMigration) {
+      // Update outputs
+      node.data.node.outputs = [correctOutput];
+      (node.data as any).selected_output = selectedOutput;
+
+      // Track this migration for edge updates
+      migratedNodes.set(node.id, outputTypes);
+    }
+  });
+
+  // Update edges that connect to migrated nodes
+  if (edges && migratedNodes.size > 0) {
+    edges.forEach((edge) => {
+      // Check if source node was migrated
+      const sourceOutputTypes = migratedNodes.get(edge.source);
+      if (sourceOutputTypes && edge.sourceHandle) {
+        try {
+          const sourceHandle = scapeJSONParse(edge.sourceHandle);
+          // Update output_types in the handle
+          sourceHandle.output_types = sourceOutputTypes;
+          edge.sourceHandle = scapedJSONStringfy(sourceHandle);
+
+          // Also update in edge.data if it exists
+          if (edge.data?.sourceHandle) {
+            edge.data.sourceHandle.output_types = sourceOutputTypes;
+          }
+        } catch {
+          // Handle parse error silently
+        }
+      }
+    });
+  }
 }
 
 // this function receives an array of edges and return true if any of the handles are not a json string

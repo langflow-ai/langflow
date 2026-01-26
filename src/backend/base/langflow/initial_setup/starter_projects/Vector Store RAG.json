@@ -156,7 +156,7 @@
             "id": "SplitText-4s7Dt",
             "name": "dataframe",
             "output_types": [
-              "DataFrame"
+              "Table"
             ]
           },
           "targetHandle": {
@@ -172,7 +172,7 @@
         "id": "reactflow__edge-SplitText-4s7Dt{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-4s7Dtœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-AstraDB-TCSqR{œfieldNameœ:œingest_dataœ,œidœ:œAstraDB-TCSqRœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "SplitText-4s7Dt",
-        "sourceHandle": "{œdataTypeœ: œSplitTextœ, œidœ: œSplitText-4s7Dtœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œSplitTextœ, œidœ: œSplitText-4s7Dtœ, œnameœ: œdataframeœ, œoutput_typesœ: [œTableœ]}",
         "target": "AstraDB-TCSqR",
         "targetHandle": "{œfieldNameœ: œingest_dataœ, œidœ: œAstraDB-TCSqRœ, œinputTypesœ: [œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
       },
@@ -213,7 +213,7 @@
             "id": "AstraDB-BteL9",
             "name": "dataframe",
             "output_types": [
-              "DataFrame"
+              "Table"
             ]
           },
           "targetHandle": {
@@ -229,7 +229,7 @@
         "id": "reactflow__edge-AstraDB-BteL9{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-BteL9œ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-parser-oHf4E{œfieldNameœ:œinput_dataœ,œidœ:œparser-oHf4Eœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "AstraDB-BteL9",
-        "sourceHandle": "{œdataTypeœ: œAstraDBœ, œidœ: œAstraDB-BteL9œ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œAstraDBœ, œidœ: œAstraDB-BteL9œ, œnameœ: œdataframeœ, œoutput_typesœ: [œTableœ]}",
         "target": "parser-oHf4E",
         "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-oHf4Eœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
@@ -833,10 +833,10 @@
                 "group_outputs": false,
                 "method": "split_text",
                 "name": "dataframe",
-                "selected": "DataFrame",
+                "selected": "Table",
                 "tool_mode": true,
                 "types": [
-                  "DataFrame"
+                  "Table"
                 ],
                 "value": "__UNDEFINED__"
               }
@@ -3811,10 +3811,10 @@
                 "group_outputs": false,
                 "method": "search_documents",
                 "name": "search_results",
-                "selected": "Data",
+                "selected": "JSON",
                 "tool_mode": true,
                 "types": [
-                  "Data"
+                  "JSON"
                 ],
                 "value": "__UNDEFINED__"
               },
@@ -3825,10 +3825,10 @@
                 "group_outputs": false,
                 "method": "as_dataframe",
                 "name": "dataframe",
-                "selected": "DataFrame",
+                "selected": "Table",
                 "tool_mode": true,
                 "types": [
-                  "DataFrame"
+                  "Table"
                 ],
                 "value": "__UNDEFINED__"
               },
@@ -4624,10 +4624,10 @@
                 "group_outputs": false,
                 "method": "search_documents",
                 "name": "search_results",
-                "selected": "Data",
+                "selected": "JSON",
                 "tool_mode": true,
                 "types": [
-                  "Data"
+                  "JSON"
                 ],
                 "value": "__UNDEFINED__"
               },
@@ -4638,10 +4638,10 @@
                 "group_outputs": false,
                 "method": "as_dataframe",
                 "name": "dataframe",
-                "selected": "DataFrame",
+                "selected": "Table",
                 "tool_mode": true,
                 "types": [
-                  "DataFrame"
+                  "Table"
                 ],
                 "value": "__UNDEFINED__"
               },

@@ -32,7 +32,7 @@ class SelfQueryRetrieverComponent(Component):
             name="attribute_infos",
             display_name="Metadata Field Info",
             info="Metadata Field Info to be passed as input.",
-            input_types=["Data"],
+            input_types=["Data", "JSON"],
             is_list=True,
         ),
         MessageTextInput(

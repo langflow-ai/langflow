@@ -38,7 +38,7 @@
             "id": "StructuredOutput-il3eU",
             "name": "dataframe_output",
             "output_types": [
-              "DataFrame"
+              "Table"
             ]
           },
           "targetHandle": {
@@ -54,7 +54,7 @@
         "id": "xy-edge__StructuredOutput-il3eU{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-il3eUœ,œnameœ:œdataframe_outputœ,œoutput_typesœ:[œDataFrameœ]}-ParserComponent-FWDxd{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-FWDxdœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "StructuredOutput-il3eU",
-        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-il3eUœ, œnameœ: œdataframe_outputœ, œoutput_typesœ: [œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-il3eUœ, œnameœ: œdataframe_outputœ, œoutput_typesœ: [œTableœ]}",
         "target": "ParserComponent-FWDxd",
         "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-FWDxdœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
@@ -766,10 +766,10 @@
                 "group_outputs": false,
                 "method": "build_structured_output",
                 "name": "structured_output",
-                "selected": null,
+                "selected": "JSON",
                 "tool_mode": true,
                 "types": [
-                  "Data"
+                  "JSON"
                 ],
                 "value": "__UNDEFINED__"
               },
@@ -780,10 +780,10 @@
                 "group_outputs": false,
                 "method": "build_structured_dataframe",
                 "name": "dataframe_output",
-                "selected": "DataFrame",
+                "selected": "Table",
                 "tool_mode": true,
                 "types": [
-                  "DataFrame"
+                  "Table"
                 ],
                 "value": "__UNDEFINED__"
               }

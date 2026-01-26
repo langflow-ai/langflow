@@ -38,6 +38,7 @@ from .input_mixin import (
 class TableInput(BaseInputMixin, MetadataTraceMixin, TableMixin, ListableInputMixin, ToolModeMixin):
     field_type: SerializableFieldTypes = FieldTypes.TABLE
     is_list: bool = True
+    input_types: list[str] = ["DataFrame", "Table"]
 
     @field_validator("value")
     @classmethod
@@ -102,18 +103,34 @@ class ToolsInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin, ToolMod
     real_time_refresh: bool = True
 
 
-class DataInput(HandleInput, InputTraceMixin, ListableInputMixin, ToolModeMixin):
-    """Represents an Input that has a Handle that receives a Data object.
+class JSONInput(HandleInput, InputTraceMixin, ListableInputMixin, ToolModeMixin):
+    """Represents an Input that has a Handle that receives a JSON object.
+
+    This is the new standard input for Langflow data structures.
+    DataInput is maintained as an alias for backwards compatibility.
 
     Attributes:
-        input_types (list[str]): A list of input types supported by this data input.
+        input_types (list[str]): A list of input types supported by this JSON input.
     """
 
-    input_types: list[str] = ["Data"]
+    input_types: list[str] = ["Data", "JSON"]
+
+
+# DataInput is maintained for backwards compatibility - it is now an alias to JSONInput
+DataInput = JSONInput
 
 
 class DataFrameInput(HandleInput, InputTraceMixin, ListableInputMixin, ToolModeMixin):
-    input_types: list[str] = ["DataFrame"]
+    """Represents an Input that has a Handle that receives a Table (DataFrame) object.
+
+    Note: This accepts DataFrame and Table types. For visual table inputs in the UI,
+    use TableInput instead (which has field_type: FieldTypes.TABLE).
+
+    Attributes:
+        input_types (list[str]): A list of input types supported by this input.
+    """
+
+    input_types: list[str] = ["DataFrame", "Table"]
 
 
 class PromptInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMixin):
@@ -796,6 +813,7 @@ InputTypes: TypeAlias = (
     | QueryInput
     | DefaultPromptField
     | BoolInput
+    | JSONInput
     | DataInput
     | DictInput
     | DropdownInput

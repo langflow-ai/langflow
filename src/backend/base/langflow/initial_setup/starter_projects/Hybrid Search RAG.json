@@ -96,7 +96,7 @@
             "id": "StructuredOutput-MyXBb",
             "name": "dataframe_output",
             "output_types": [
-              "DataFrame"
+              "Table"
             ]
           },
           "targetHandle": {
@@ -112,7 +112,7 @@
         "id": "reactflow__edge-StructuredOutput-MyXBb{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-MyXBbœ,œnameœ:œdataframe_outputœ,œoutput_typesœ:[œDataFrameœ]}-ParserComponent-HTPnn{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-HTPnnœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "StructuredOutput-MyXBb",
-        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-MyXBbœ, œnameœ: œdataframe_outputœ, œoutput_typesœ: [œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-MyXBbœ, œnameœ: œdataframe_outputœ, œoutput_typesœ: [œTableœ]}",
         "target": "ParserComponent-HTPnn",
         "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-HTPnnœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
@@ -153,7 +153,7 @@
             "id": "AstraDB-u1JXb",
             "name": "dataframe",
             "output_types": [
-              "DataFrame"
+              "Table"
             ]
           },
           "targetHandle": {
@@ -169,7 +169,7 @@
         "id": "xy-edge__AstraDB-u1JXb{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-u1JXbœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-ParserComponent-NUETC{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-NUETCœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "AstraDB-u1JXb",
-        "sourceHandle": "{œdataTypeœ: œAstraDBœ, œidœ: œAstraDB-u1JXbœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œAstraDBœ, œidœ: œAstraDB-u1JXbœ, œnameœ: œdataframeœ, œoutput_typesœ: [œTableœ]}",
         "target": "ParserComponent-NUETC",
         "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-NUETCœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       }
@@ -1212,10 +1212,10 @@
                 "group_outputs": false,
                 "method": "search_documents",
                 "name": "search_results",
-                "selected": null,
+                "selected": "JSON",
                 "tool_mode": true,
                 "types": [
-                  "Data"
+                  "JSON"
                 ],
                 "value": "__UNDEFINED__"
               },
@@ -1226,10 +1226,10 @@
                 "group_outputs": false,
                 "method": "as_dataframe",
                 "name": "dataframe",
-                "selected": "DataFrame",
+                "selected": "Table",
                 "tool_mode": true,
                 "types": [
-                  "DataFrame"
+                  "Table"
                 ],
                 "value": "__UNDEFINED__"
               },
@@ -1241,7 +1241,7 @@
                 "hidden": false,
                 "method": "as_vector_store",
                 "name": "vectorstoreconnection",
-                "selected": null,
+                "selected": "VectorStore",
                 "tool_mode": true,
                 "types": [
                   "VectorStore"
@@ -2015,10 +2015,10 @@
                 "group_outputs": false,
                 "method": "build_structured_output",
                 "name": "structured_output",
-                "selected": null,
+                "selected": "JSON",
                 "tool_mode": true,
                 "types": [
-                  "Data"
+                  "JSON"
                 ],
                 "value": "__UNDEFINED__"
               },
@@ -2029,10 +2029,10 @@
                 "group_outputs": false,
                 "method": "build_structured_dataframe",
                 "name": "dataframe_output",
-                "selected": "DataFrame",
+                "selected": "Table",
                 "tool_mode": true,
                 "types": [
-                  "DataFrame"
+                  "Table"
                 ],
                 "value": "__UNDEFINED__"
               }

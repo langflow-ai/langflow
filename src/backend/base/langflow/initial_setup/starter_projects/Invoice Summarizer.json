@@ -1506,7 +1506,10 @@
                 "display_name": "Output Schema",
                 "dynamic": false,
                 "info": "Schema Validation: Define the structure and data types for structured output. No validation if no output schema.",
-                "input_types": [],
+                "input_types": [
+                  "DataFrame",
+                  "Table"
+                ],
                 "is_list": true,
                 "list_add_label": "Add More",
                 "name": "output_schema",

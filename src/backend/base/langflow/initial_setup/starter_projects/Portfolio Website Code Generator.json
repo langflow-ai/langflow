@@ -124,7 +124,7 @@
             "id": "StructuredOutput-wsAT3",
             "name": "dataframe_output",
             "output_types": [
-              "DataFrame"
+              "Table"
             ]
           },
           "targetHandle": {
@@ -140,7 +140,7 @@
         "id": "xy-edge__StructuredOutput-wsAT3{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-wsAT3œ,œnameœ:œdataframe_outputœ,œoutput_typesœ:[œDataFrameœ]}-parser-6caGE{œfieldNameœ:œinput_dataœ,œidœ:œparser-6caGEœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "StructuredOutput-wsAT3",
-        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-wsAT3œ, œnameœ: œdataframe_outputœ, œoutput_typesœ: [œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-wsAT3œ, œnameœ: œdataframe_outputœ, œoutput_typesœ: [œTableœ]}",
         "target": "parser-6caGE",
         "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-6caGEœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       }
@@ -2027,10 +2027,10 @@
                 "group_outputs": false,
                 "method": "build_structured_output",
                 "name": "structured_output",
-                "selected": null,
+                "selected": "JSON",
                 "tool_mode": true,
                 "types": [
-                  "Data"
+                  "JSON"
                 ],
                 "value": "__UNDEFINED__"
               },
@@ -2041,10 +2041,10 @@
                 "group_outputs": false,
                 "method": "build_structured_dataframe",
                 "name": "dataframe_output",
-                "selected": "DataFrame",
+                "selected": "Table",
                 "tool_mode": true,
                 "types": [
-                  "DataFrame"
+                  "Table"
                 ],
                 "value": "__UNDEFINED__"
               }

@@ -124,7 +124,7 @@
             "id": "StructuredOutput-zfjb9",
             "name": "dataframe_output",
             "output_types": [
-              "DataFrame"
+              "Table"
             ]
           },
           "targetHandle": {
@@ -140,7 +140,7 @@
         "id": "xy-edge__StructuredOutput-zfjb9{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-zfjb9œ,œnameœ:œdataframe_outputœ,œoutput_typesœ:[œDataFrameœ]}-ParserComponent-8lfAE{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-8lfAEœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "StructuredOutput-zfjb9",
-        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-zfjb9œ, œnameœ: œdataframe_outputœ, œoutput_typesœ: [œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-zfjb9œ, œnameœ: œdataframe_outputœ, œoutput_typesœ: [œTableœ]}",
         "target": "ParserComponent-8lfAE",
         "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-8lfAEœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       }
@@ -1490,7 +1490,10 @@
                 "display_name": "Output Schema",
                 "dynamic": false,
                 "info": "Schema Validation: Define the structure and data types for structured output. No validation if no output schema.",
-                "input_types": [],
+                "input_types": [
+                  "DataFrame",
+                  "Table"
+                ],
                 "is_list": true,
                 "list_add_label": "Add More",
                 "name": "output_schema",
@@ -1881,10 +1884,10 @@
                 "group_outputs": false,
                 "method": "build_structured_output",
                 "name": "structured_output",
-                "selected": null,
+                "selected": "JSON",
                 "tool_mode": true,
                 "types": [
-                  "Data"
+                  "JSON"
                 ],
                 "value": "__UNDEFINED__"
               },
@@ -1895,10 +1898,10 @@
                 "group_outputs": false,
                 "method": "build_structured_dataframe",
                 "name": "dataframe_output",
-                "selected": "DataFrame",
+                "selected": "Table",
                 "tool_mode": true,
                 "types": [
-                  "DataFrame"
+                  "Table"
                 ],
                 "value": "__UNDEFINED__"
               }

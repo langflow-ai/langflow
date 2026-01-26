@@ -90,14 +90,23 @@ def update_projects_components_with_latest_component_versions(project_data, all_
             }
             has_tool_outputs = any(output.get("types") == ["Tool"] for output in node_data.get("outputs", []))
             if "outputs" in latest_node and not has_tool_outputs and not is_tool_or_agent:
-                # Set selected output as the previous selected output
+                # Set selected output as the previous selected output with type migration support
+                type_migrations = {
+                    "Data": "JSON",
+                    "DataFrame": "Table",
+                }
                 for output in latest_node["outputs"]:
                     node_data_output = next(
                         (output_ for output_ in node_data["outputs"] if output_["name"] == output["name"]),
                         None,
                     )
                     if node_data_output:
-                        output["selected"] = node_data_output.get("selected")
+                        old_selected = node_data_output.get("selected")
+                        if old_selected:
+                            # Old flows may use Data/DataFrame; map to JSON/Table for backward compatibility
+                            migrated_selected = type_migrations.get(old_selected, old_selected)
+                            if migrated_selected in output.get("types", []):
+                                output["selected"] = migrated_selected
                 node_data["outputs"] = latest_node["outputs"]
 
             if node_data["template"]["_type"] != latest_template["_type"]:
@@ -424,13 +433,29 @@ def update_edges_with_latest_component_versions(project_data):
                     source_handle["name"] = output_data.get("name")
 
             # Determine the new output types based on the output data
+            # Always prefer "types" over "selected" to ensure we use the current type names (JSON/Table)
+            # rather than potentially stale "selected" values (Data/DataFrame)
             if output_data:
                 if len(output_data.get("types", [])) == 1:
                     new_output_types = output_data.get("types", [])
-                elif output_data.get("selected"):
-                    new_output_types = [output_data.get("selected")]
+                elif len(output_data.get("types", [])) > 1 and output_data.get("selected"):
+                    # Only use "selected" if there are multiple types available
+                    # and selected is present
+                    selected = output_data.get("selected")
+                    # Migrate old type names to new ones
+                    type_migrations = {
+                        "Data": "JSON",
+                        "DataFrame": "Table",
+                    }
+                    migrated_selected = type_migrations.get(selected, selected)
+                    # Verify the migrated selected is in the available types
+                    if migrated_selected in output_data.get("types", []):
+                        new_output_types = [migrated_selected]
+                    else:
+                        # Fallback to first type if selected is invalid
+                        new_output_types = output_data.get("types", [])
                 else:
-                    new_output_types = []
+                    new_output_types = output_data.get("types", [])
             else:
                 new_output_types = []
 

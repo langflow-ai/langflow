@@ -22,7 +22,7 @@ class LoopComponent(Component):
             name="data",
             display_name="Inputs",
             info="The initial DataFrame to iterate over.",
-            input_types=["DataFrame"],
+            input_types=["DataFrame", "Table"],
         ),
     ]
 
