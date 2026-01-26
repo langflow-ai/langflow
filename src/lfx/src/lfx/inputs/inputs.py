@@ -477,6 +477,8 @@ class IntInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMixi
     field_type: SerializableFieldTypes = FieldTypes.INTEGER
     track_in_telemetry: CoalesceBool = True  # Safe numeric parameter
 
+    value: int = 0
+
     @field_validator("value")
     @classmethod
     def validate_value(cls, v: Any, info):
