@@ -1,5 +1,6 @@
-import asyncio
+import os
 
+import pytest
 from langflow.initial_setup.setup import load_starter_projects
 from langflow.load import aload_flow_from_json
 from lfx.graph import Graph
@@ -20,25 +21,14 @@ from lfx.graph import Graph
 #     assert isinstance(loaded, Graph)
 
 
+@pytest.mark.skipif(
+    os.environ.get("CI") == "true",
+    reason="Flaky on CI due to SystemError: Resource temporarily unavailable",
+)
 async def test_load_flow_from_json_object():
     """Test loading a flow from a json file and applying tweaks."""
-    max_retries = 3
-    last_error: SystemError | None = None
-
-    for attempt in range(max_retries):
-        try:
-            result = await load_starter_projects()
-            project = result[0][1]
-            loaded = await aload_flow_from_json(project)
-        except SystemError as e:
-            last_error = e
-            if attempt < max_retries - 1:
-                await asyncio.sleep(1)  # Wait before retry
-            continue
-        else:
-            assert loaded is not None
-            assert isinstance(loaded, Graph)
-            return
-
-    if last_error:
-        raise last_error
+    result = await load_starter_projects()
+    project = result[0][1]
+    loaded = await aload_flow_from_json(project)
+    assert loaded is not None
+    assert isinstance(loaded, Graph)
