@@ -132,8 +132,9 @@ The following example is truncated to illustrate a series of `token` events as w
 | Header | Info | Example |
 |--------|------|---------|
 | Content-Type | Required. Specifies the JSON format. | "application/json" |
-| accept | Optional. Specifies the response format. | "application/json" |
-| x-api-key | Optional. Required only if authentication is enabled. | "sk-..." |
+| accept | Optional. Specifies the response format. Defaults to JSON if not specified. | "application/json" |
+| x-api-key | Required. Your Langflow API key for authentication. Can be passed as a header or query parameter. | "sk-..." |
+| `X-LANGFLOW-GLOBAL-VAR-*` | Optional. Pass global variables to the flow. Variable names are automatically converted to uppercase. These variables take precedence over OS environment variables and are only available during this specific request execution. | `"X-LANGFLOW-GLOBAL-VAR-API_KEY: sk-..."` |
 
 ### Run endpoint parameters
 
@@ -169,6 +170,34 @@ curl -X POST \
     }
   }'
 ```
+
+### Pass global variables in request headers {#pass-global-variables-in-headers}
+
+You can pass global variables to your flow using HTTP headers with the format `X-LANGFLOW-GLOBAL-VAR-{VARIABLE_NAME}`.
+
+Variables passed in headers take precedence over OS environment variables. If a variable is provided in both a header and an environment variable, the header value is used. Variables are only available during this specific request execution and aren't persisted.
+
+Variable names are automatically converted to uppercase. For example, `X-LANGFLOW-GLOBAL-VAR-api-key` becomes `API_KEY` in your flow.
+
+You don't need to create these variables in Langflow's Global Variables section first. Pass any variable name using this header format.
+
+```bash
+curl -X POST \
+  "$LANGFLOW_SERVER_URL/api/v1/run/$FLOW_ID" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
+  -H "X-LANGFLOW-GLOBAL-VAR-OPENAI_API_KEY: sk-..." \
+  -H "X-LANGFLOW-GLOBAL-VAR-USER_ID: user123" \
+  -H "X-LANGFLOW-GLOBAL-VAR-ENVIRONMENT: production" \
+  -d '{
+    "input_value": "Tell me about something interesting!",
+    "input_type": "chat",
+    "output_type": "chat"
+  }'
+```
+
+If your flow components reference variables that aren't provided in headers or your Langflow database, the flow fails by default. To avoid this, you can set `LANGFLOW_FALLBACK_TO_ENV_VAR=True` in your `.env` file, which allows the flow to use values from OS environment variables if they aren't otherwise specified.
+
 
 ## Webhook run flow
 
