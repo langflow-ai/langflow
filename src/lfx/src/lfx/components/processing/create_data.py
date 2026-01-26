@@ -75,7 +75,7 @@ class CreateDataComponent(Component):
                         display_name=f"Field {i}",
                         name=key,
                         info=f"Key for field {i}.",
-                        input_types=["Message", "Data"],
+                        input_types=["Message", "Data", "JSON"],
                     )
                     build_config[field.name] = field.to_dict()
 

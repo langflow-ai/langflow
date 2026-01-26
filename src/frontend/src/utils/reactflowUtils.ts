@@ -359,29 +359,42 @@ export function isValidConnection(
 
   // For loop inputs, check if source types match any of the configured target output_types
   // (which already includes original type + loop_types from the output configuration)
+  // Backward compatibility: old flows may have Data/DataFrame types that need to match JSON/Table
   const loopInputTypeCheck =
     isLoopInput &&
-    (sourceHandleObject.output_types.some((t) =>
-      targetHandleObject.output_types?.includes(t),
+    (typesAreCompatible(
+      sourceHandleObject.output_types,
+      targetHandleObject.output_types || [],
     ) ||
-      targetHandleObject.output_types?.includes(sourceHandleObject.dataType));
+      typeIsCompatibleWith(
+        sourceHandleObject.dataType,
+        targetHandleObject.output_types || [],
+      ));
   if (
-    targetHandleObject.inputTypes?.some(
-      (n) => n === sourceHandleObject.dataType,
+    typeIsCompatibleWith(
+      sourceHandleObject.dataType,
+      targetHandleObject.inputTypes || [],
     ) ||
     loopInputTypeCheck ||
     (targetHandleObject.output_types &&
       !loopInputTypeCheck &&
-      (targetHandleObject.output_types?.some(
-        (n) => n === sourceHandleObject.dataType,
+      (typeIsCompatibleWith(
+        sourceHandleObject.dataType,
+        targetHandleObject.output_types || [],
       ) ||
-        sourceHandleObject.output_types.some((t) =>
-          targetHandleObject.output_types?.some((n) => n === t),
+        typesAreCompatible(
+          sourceHandleObject.output_types,
+          targetHandleObject.output_types || [],
         ))) ||
-    sourceHandleObject.output_types.some(
-      (t) =>
-        targetHandleObject.inputTypes?.some((n) => n === t) ||
-        t === targetHandleObject.type,
+    typesAreCompatible(
+      sourceHandleObject.output_types,
+      targetHandleObject.inputTypes || [],
+    ) ||
+    typeIsCompatibleWith(sourceHandleObject.dataType, [
+      targetHandleObject.type,
+    ]) ||
+    sourceHandleObject.output_types.some((t) =>
+      typeIsCompatibleWith(t, [targetHandleObject.type]),
     )
   ) {
     const targetNode = nodesArray.find((node) => node.id === target!);
@@ -1067,6 +1080,43 @@ const TYPE_MIGRATIONS: Record<string, string> = {
   Data: "JSON",
   DataFrame: "Table",
 };
+
+/**
+ * Check if a single type is compatible with any type in a list, considering migrations.
+ * @param sourceType The type from the source output
+ * @param targetTypes The list of acceptable types from the target input
+ * @returns true if sourceType matches any targetType directly or via migration
+ */
+export function typeIsCompatibleWith(
+  sourceType: string,
+  targetTypes: string[],
+): boolean {
+  const migratedSource = TYPE_MIGRATIONS[sourceType] || sourceType;
+  return targetTypes.some((targetType) => {
+    const migratedTarget = TYPE_MIGRATIONS[targetType] || targetType;
+    return (
+      sourceType === targetType ||
+      migratedSource === targetType ||
+      sourceType === migratedTarget ||
+      migratedSource === migratedTarget
+    );
+  });
+}
+
+/**
+ * Check if any type from sourceTypes is compatible with any type in targetTypes.
+ * @param sourceTypes The types from the source output
+ * @param targetTypes The list of acceptable types from the target input
+ * @returns true if any sourceType matches any targetType directly or via migration
+ */
+export function typesAreCompatible(
+  sourceTypes: string[],
+  targetTypes: string[],
+): boolean {
+  return sourceTypes.some((sourceType) =>
+    typeIsCompatibleWith(sourceType, targetTypes),
+  );
+}
 
 /**
  * Check if two handles match, considering type migrations (Data→JSON, DataFrame→Table).

@@ -145,7 +145,7 @@ class KnowledgeIngestionComponent(Component):
                 "Table with all original columns (already chunked / processed). "
                 "Accepts Data or DataFrame. If Data is provided, it is converted to a DataFrame automatically."
             ),
-            input_types=["Data", "DataFrame"],
+            input_types=["Data", "JSON", "DataFrame", "Table"],
             required=True,
         ),
         TableInput(

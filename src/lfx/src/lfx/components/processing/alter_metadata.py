@@ -19,7 +19,7 @@ class AlterMetadataComponent(Component):
             display_name="Input",
             info="Object(s) to which Metadata should be added",
             required=False,
-            input_types=["Message", "Data"],
+            input_types=["Message", "Data", "JSON"],
             is_list=True,
         ),
         StrInput(

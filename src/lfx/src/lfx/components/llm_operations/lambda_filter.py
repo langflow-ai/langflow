@@ -51,7 +51,7 @@ class LambdaFilterComponent(Component):
             name="data",
             display_name="Data",
             info="The structured data or text messages to filter or transform using a lambda function.",
-            input_types=["Data", "DataFrame", "Message"],
+            input_types=["Data", "JSON", "DataFrame", "Table", "Message"],
             is_list=True,
             required=True,
         ),

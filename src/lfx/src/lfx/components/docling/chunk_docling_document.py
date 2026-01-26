@@ -22,7 +22,7 @@ class ChunkDoclingDocumentComponent(Component):
             name="data_inputs",
             display_name="Data or DataFrame",
             info="The data with documents to split in chunks.",
-            input_types=["Data", "DataFrame"],
+            input_types=["Data", "JSON", "DataFrame", "Table"],
             required=True,
         ),
         DropdownInput(

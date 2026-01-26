@@ -81,7 +81,7 @@ class LocalDBComponent(LCVectorStoreComponent):
         HandleInput(
             name="ingest_data",
             display_name="Ingest Data",
-            input_types=["Data", "DataFrame"],
+            input_types=["Data", "JSON", "DataFrame", "Table"],
             is_list=True,
             info="Data to store. It will be embedded and indexed for semantic search.",
             show=True,

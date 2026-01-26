@@ -17,7 +17,7 @@ class ParserComponent(Component):
         HandleInput(
             name="input_data",
             display_name="Data or DataFrame",
-            input_types=["DataFrame", "Data"],
+            input_types=["DataFrame", "Table", "Data", "JSON"],
             info="Accepts either a DataFrame or a Data object.",
             required=True,
         ),

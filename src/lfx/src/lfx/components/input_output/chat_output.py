@@ -32,7 +32,7 @@ class ChatOutput(ChatComponent):
             name="input_value",
             display_name="Inputs",
             info="Message to be passed as output.",
-            input_types=["Data", "DataFrame", "Message"],
+            input_types=["Data", "JSON", "DataFrame", "Table", "Message"],
             required=True,
         ),
         BoolInput(
