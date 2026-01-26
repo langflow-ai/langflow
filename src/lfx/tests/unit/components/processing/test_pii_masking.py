@@ -73,3 +73,50 @@ class TestPIIMaskingComponent:
 
         result = component.get_masked_text()
         assert result.text == "Email me at REDACTED"
+
+    def test_invalid_custom_pattern_continues_processing(self):
+        component = PIIMaskingComponent()
+        component.text_input = "Email: test@example.com"
+        component.mask_emails = True
+        component.mask_phones = False
+        component.mask_credit_cards = False
+        component.mask_ssn = False
+        component.mask_ip = False
+        # Invalid regex pattern - unclosed bracket
+        component.custom_patterns = r"[invalid:INVALID" + "\n" + r"\d{5}:ZIP"
+        component.replacement_template = "<{entity}>"
+
+        # Should not raise, invalid pattern is logged and skipped
+        result = component.get_masked_text()
+        assert "<EMAIL>" in result.text
+
+    def test_no_pii_in_input(self):
+        component = PIIMaskingComponent()
+        component.text_input = "Hello, this is plain text with no PII."
+        component.mask_emails = True
+        component.mask_phones = True
+        component.mask_credit_cards = True
+        component.mask_ssn = True
+        component.mask_ip = True
+        component.custom_patterns = ""
+        component.replacement_template = "<{entity}>"
+
+        result = component.get_masked_text()
+        assert result.text == "Hello, this is plain text with no PII."
+
+    def test_ip_masking_precision(self):
+        component = PIIMaskingComponent()
+        # 1.1.1.1 is valid, 999.999.999.999 is invalid
+        component.text_input = "Valid: 127.0.0.1, Invalid: 999.999.999.999"
+        component.mask_ip = True
+        component.mask_emails = False
+        component.mask_phones = False
+        component.mask_credit_cards = False
+        component.mask_ssn = False
+        component.replacement_template = "<{entity}>"
+
+        result = component.get_masked_text()
+        assert "<IP_ADDRESS>" in result.text
+        assert "127.0.0.1" not in result.text
+        assert "999.999.999.999" in result.text
+        assert result.text.count("<IP_ADDRESS>") == 1

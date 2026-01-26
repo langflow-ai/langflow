@@ -70,10 +70,10 @@ class PIIMaskingComponent(Component):
     # Predefined PII Regex Patterns
     PII_PATTERNS = {
         "EMAIL": r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}",
-        "PHONE": r"\+?\d{1,4}?[-.\s]?\(?\d{1,3}?\)?[-.\s]?\d{1,4}[-.\s]?\d{1,4}[-.\s]?\d{1,9}",
+        "PHONE": r"\+?\d{1,4}?[-\s]?\(?\d{1,3}?\)?[-.\s]?\d{1,4}[-.\s]?\d{1,4}[-.\s]?\d{1,9}",
         "CREDIT_CARD": r"\b(?:\d[ -]*?){13,16}\b",
         "SSN": r"\b\d{3}-\d{2}-\d{4}\b",
-        "IP_ADDRESS": r"\b(?:\d{1,3}\.){3}\d{1,3}\b",
+        "IP_ADDRESS": r"\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b",
     }
 
     def get_masked_text(self) -> Message:
@@ -100,9 +100,7 @@ class PIIMaskingComponent(Component):
             masked_text = re.sub(self.PII_PATTERNS["EMAIL"], template.format(entity="EMAIL"), masked_text)
 
         if self.mask_phones:
-            # Refined phone regex to avoid matching IP parts by making separators more specific
-            phone_pattern = r"\+?\d{1,4}?[-\s]?\(?\d{1,3}?\)?[-.\s]?\d{1,4}[-.\s]?\d{1,4}[-.\s]?\d{1,9}"
-            masked_text = re.sub(phone_pattern, template.format(entity="PHONE"), masked_text)
+            masked_text = re.sub(self.PII_PATTERNS["PHONE"], template.format(entity="PHONE"), masked_text)
 
         # Apply custom patterns
         custom_patterns_text = self.custom_patterns
