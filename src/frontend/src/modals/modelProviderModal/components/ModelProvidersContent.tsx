@@ -139,7 +139,9 @@ const ModelProvidersContent = ({
 
   // Check if there are any new values to save
   const hasNewValuesToSave = useMemo(() => {
-    return providerVariables.some((v) => variableValues[v.variable_key]?.trim());
+    return providerVariables.some((v) =>
+      variableValues[v.variable_key]?.trim(),
+    );
   }, [providerVariables, variableValues]);
 
   // Update enabled models when toggled
@@ -259,8 +261,8 @@ const ModelProvidersContent = ({
     if (!selectedProvider) return;
 
     // Get all variables that have new values to save
-    const variablesToSave = providerVariables.filter(
-      (v) => variableValues[v.variable_key]?.trim(),
+    const variablesToSave = providerVariables.filter((v) =>
+      variableValues[v.variable_key]?.trim(),
     );
 
     if (variablesToSave.length === 0) return;
@@ -399,8 +401,11 @@ const ModelProvidersContent = ({
           {requiresApiKey ? (
             <div className="flex flex-col gap-3">
               {providerVariables.map((variable) => {
-                const isConfigured = isVariableConfigured(variable.variable_key);
-                const hasNewValue = variableValues[variable.variable_key]?.trim();
+                const isConfigured = isVariableConfigured(
+                  variable.variable_key,
+                );
+                const hasNewValue =
+                  variableValues[variable.variable_key]?.trim();
 
                 return (
                   <div
@@ -476,17 +481,22 @@ const ModelProvidersContent = ({
                             : isConfigured && variable.is_secret
                               ? MASKED_VALUE
                               : isConfigured
-                                ? getConfiguredValue(variable.variable_key) || ""
+                                ? getConfiguredValue(variable.variable_key) ||
+                                  ""
                                 : ""
                         }
                         type={
-                          variable.is_secret && hasNewValue ? "password" : "text"
+                          variable.is_secret && hasNewValue
+                            ? "password"
+                            : "text"
                         }
                         onChange={(e) => {
                           setValidationFailed(false);
                           // Clear masked value on focus/type for secrets
                           const newValue =
-                            e.target.value === MASKED_VALUE ? "" : e.target.value;
+                            e.target.value === MASKED_VALUE
+                              ? ""
+                              : e.target.value;
                           setVariableValues((prev) => ({
                             ...prev,
                             [variable.variable_key]: newValue,
@@ -505,7 +515,9 @@ const ModelProvidersContent = ({
                             }));
                           }
                         }}
-                        endIcon={isConfigured && !hasNewValue ? "Check" : undefined}
+                        endIcon={
+                          isConfigured && !hasNewValue ? "Check" : undefined
+                        }
                         endIconClassName={cn(
                           isConfigured && !hasNewValue && "text-green-500",
                         )}
