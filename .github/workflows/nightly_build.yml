@@ -33,7 +33,7 @@ on:
         type: boolean
         default: true
       auto_merge_hash_history:
-        description: "Create PR to merge hash history back to main. Set to false for testing."
+        description: "Create PR to merge hash history back to main. Set to false when not running from main."
         required: false
         type: boolean
         default: true
@@ -357,7 +357,8 @@ jobs:
     needs: [create-nightly-tag, build-hash-history, release-nightly-build]
     # Run if auto_merge_hash_history is true (default) or not set (scheduled runs)
     # When triggered by schedule, inputs.auto_merge_hash_history is not set, so default to true
-    if: github.repository == 'langflow-ai/langflow' && always() && needs.build-hash-history.result == 'success' && needs.release-nightly-build.result == 'success' && (github.event_name == 'schedule' || inputs.auto_merge_hash_history != false)
+    # Only run when the base branch is 'main' to prevent PRs from feature branches
+    if: github.repository == 'langflow-ai/langflow' && github.ref == 'refs/heads/main' && always() && needs.build-hash-history.result == 'success' && needs.release-nightly-build.result == 'success' && (github.event_name == 'schedule' || inputs.auto_merge_hash_history != false)
     runs-on: ubuntu-latest
     permissions:
       contents: write

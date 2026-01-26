@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import asyncio
+import copy
 from pathlib import Path
 
 import orjson
@@ -172,7 +173,7 @@ def main(argv=None):
         return
 
     old_history = load_hash_history(Path(history_file))
-    new_history = old_history.copy()
+    new_history = copy.deepcopy(old_history)
 
     for category_name, components_dict in modules_dict.items():
         for comp_name, comp_details in components_dict.items():
