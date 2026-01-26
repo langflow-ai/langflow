@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -22,12 +22,14 @@ import {
   usePatchGlobalVariables,
   usePostGlobalVariables,
 } from "@/controllers/API/queries/variables";
-import { useDebounce } from "@/hooks/use-debounce";
 import ProviderList from "@/modals/modelProviderModal/components/ProviderList";
 import { Provider } from "@/modals/modelProviderModal/components/types";
 import useAlertStore from "@/stores/alertStore";
 import { cn } from "@/utils/utils";
 import ModelSelection from "./ModelSelection";
+
+// Masked value shown for configured secret fields
+const MASKED_VALUE = "••••••••";
 
 interface ModelProvidersContentProps {
   modelType: "llm" | "embeddings" | "all";
@@ -46,13 +48,8 @@ const ModelProvidersContent = ({
     {},
   );
   const [validationFailed, setValidationFailed] = useState(false);
-  // Track if input change came from user typing (vs programmatic reset)
-  // Used to prevent auto-save from triggering when we clear inputs after success
-  const isUserInputRef = useRef(false);
-  // Track which variable is currently being saved
-  const [savingVariableKey, setSavingVariableKey] = useState<string | null>(
-    null,
-  );
+  // Track if batch save is in progress
+  const [isSaving, setIsSaving] = useState(false);
 
   const queryClient = useQueryClient();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
@@ -66,7 +63,7 @@ const ModelProvidersContent = ({
   const { mutate: updateEnabledModels } = useUpdateEnabledModels();
   const { data: providerVariablesMapping = {} } = useGetProviderVariables();
 
-  const isPending = isCreating || isUpdating;
+  const isPending = isCreating || isUpdating || isSaving;
 
   // Get variables for the selected provider from API or fallback to static mapping
   const providerVariables = useMemo((): ProviderVariable[] => {
@@ -111,31 +108,39 @@ const ModelProvidersContent = ({
   useEffect(() => {
     setVariableValues({});
     setValidationFailed(false);
-    setSavingVariableKey(null);
+    setIsSaving(false);
   }, [selectedProvider?.provider]);
 
-  // Auto-save variables after user stops typing for 800ms
-  // The debounce prevents API calls on every keystroke
-  const debouncedConfigureProvider = useDebounce(() => {
-    if (selectedProvider && isUserInputRef.current) {
-      // Find the variable that was just changed and has a value
-      const variableToSave = providerVariables.find((v) =>
-        variableValues[v.variable_key]?.trim(),
-      );
-      if (variableToSave) {
-        handleSaveVariable(variableToSave);
-      }
-      isUserInputRef.current = false;
+  // Helper to get configured value for a variable from globalVariables
+  const getConfiguredValue = (variableKey: string): string | null => {
+    const variable = globalVariables.find((v) => v.name === variableKey);
+    // For credentials, value is redacted (null), so we return a marker
+    if (variable) {
+      return variable.value || MASKED_VALUE;
     }
-  }, 800);
+    return null;
+  };
 
-  // Trigger debounced save when variable values change from user input
-  useEffect(() => {
-    const hasValue = Object.values(variableValues).some((v) => v?.trim());
-    if (hasValue && isUserInputRef.current) {
-      debouncedConfigureProvider();
-    }
-  }, [variableValues, debouncedConfigureProvider, providerVariables]);
+  // Helper to check if a variable is already configured
+  const isVariableConfigured = (variableKey: string): boolean => {
+    return globalVariables.some((v) => v.name === variableKey);
+  };
+
+  // Check if all required variables are filled (either configured or have new input)
+  const allRequiredFilled = useMemo(() => {
+    return providerVariables
+      .filter((v) => v.required)
+      .every((v) => {
+        const hasNewValue = variableValues[v.variable_key]?.trim();
+        const isConfigured = isVariableConfigured(v.variable_key);
+        return hasNewValue || isConfigured;
+      });
+  }, [providerVariables, variableValues, globalVariables]);
+
+  // Check if there are any new values to save
+  const hasNewValuesToSave = useMemo(() => {
+    return providerVariables.some((v) => variableValues[v.variable_key]?.trim());
+  }, [providerVariables, variableValues]);
 
   // Update enabled models when toggled
   const handleModelToggle = (modelName: string, enabled: boolean) => {
@@ -249,87 +254,89 @@ const ModelProvidersContent = ({
     }
   };
 
-  // Save a single variable for the selected provider
-  const handleSaveVariable = (variable: ProviderVariable) => {
+  // Save all variables with new values for the selected provider (batch save)
+  const handleSaveAllVariables = async () => {
     if (!selectedProvider) return;
 
-    const value = variableValues[variable.variable_key]?.trim();
-    if (!value) return;
-
-    setSavingVariableKey(variable.variable_key);
-
-    // Check if variable was previously configured
-    const existingVariable = globalVariables.find(
-      (v) => v.name === variable.variable_key,
+    // Get all variables that have new values to save
+    const variablesToSave = providerVariables.filter(
+      (v) => variableValues[v.variable_key]?.trim(),
     );
 
-    const onSuccess = () => {
+    if (variablesToSave.length === 0) return;
+
+    setIsSaving(true);
+    setValidationFailed(false);
+
+    let successCount = 0;
+    let errorOccurred = false;
+
+    // Save each variable sequentially
+    for (const variable of variablesToSave) {
+      const value = variableValues[variable.variable_key].trim();
+      const existingVariable = globalVariables.find(
+        (v) => v.name === variable.variable_key,
+      );
+      const variableType = variable.is_secret
+        ? VARIABLE_CATEGORY.CREDENTIAL
+        : VARIABLE_CATEGORY.GLOBAL;
+
+      try {
+        await new Promise<void>((resolve, reject) => {
+          const onSuccess = () => {
+            successCount++;
+            resolve();
+          };
+          const onError = (error: any) => {
+            reject(error);
+          };
+
+          if (existingVariable) {
+            updateGlobalVariable(
+              { id: existingVariable.id, value },
+              { onSuccess, onError },
+            );
+          } else {
+            createGlobalVariable(
+              {
+                name: variable.variable_key,
+                value,
+                type: variableType,
+                category: VARIABLE_CATEGORY.GLOBAL,
+                default_fields: [],
+              },
+              { onSuccess, onError },
+            );
+          }
+        });
+      } catch (error: any) {
+        errorOccurred = true;
+        setValidationFailed(true);
+        setErrorData({
+          title: `Error Saving ${variable.variable_name}`,
+          list: [
+            error?.response?.data?.detail ||
+              "An unexpected error occurred. Please try again.",
+          ],
+        });
+        break; // Stop on first error
+      }
+    }
+
+    setIsSaving(false);
+
+    if (!errorOccurred && successCount > 0) {
       setSuccessData({
-        title: `${selectedProvider.provider} ${variable.variable_name} Saved`,
+        title: `${selectedProvider.provider} Configuration Saved`,
       });
       invalidateProviderQueries();
-      // Clear only this variable's value
-      setVariableValues((prev) => ({
-        ...prev,
-        [variable.variable_key]: "",
-      }));
-      setSavingVariableKey(null);
-      // Check if all required variables are now set
-      const allRequiredSet = providerVariables
-        .filter((v) => v.required)
-        .every((v) => {
-          const existingVar = globalVariables.find(
-            (gv) => gv.name === v.variable_key,
-          );
-          return existingVar || v.variable_key === variable.variable_key;
-        });
-      if (allRequiredSet) {
-        setSelectedProvider((prev) =>
-          prev ? { ...prev, is_enabled: true } : null,
-        );
-      }
-    };
-
-    const onError = (error: any) => {
-      setValidationFailed(true);
-      setSavingVariableKey(null);
-      setErrorData({
-        title: existingVariable
-          ? `Error Updating ${variable.variable_name}`
-          : `Error Saving ${variable.variable_name}`,
-        list: [
-          error?.response?.data?.detail ||
-            "An unexpected error occurred. Please try again.",
-        ],
-      });
-    };
-
-    const variableType = variable.is_secret
-      ? VARIABLE_CATEGORY.CREDENTIAL
-      : VARIABLE_CATEGORY.GLOBAL;
-
-    if (existingVariable) {
-      updateGlobalVariable(
-        { id: existingVariable.id, value },
-        { onSuccess, onError },
-      );
-    } else {
-      createGlobalVariable(
-        {
-          name: variable.variable_key,
-          value,
-          type: variableType,
-          category: VARIABLE_CATEGORY.GLOBAL,
-          default_fields: [],
-        },
-        { onSuccess, onError },
+      // Clear the input values (configured values will show from globalVariables)
+      setVariableValues({});
+      // Mark provider as enabled
+      setSelectedProvider((prev) =>
+        prev ? { ...prev, is_enabled: true } : null,
       );
     }
-  };
-
-  // Helper to check if a variable is already configured
-  const isVariableConfigured = (variableKey: string): boolean => {
-    return globalVariables.some((v) => v.name === variableKey);
   };
 
   // Note: refreshAllModelInputs is now called in ModelProviderModal's handleClose
@@ -392,10 +399,8 @@ const ModelProvidersContent = ({
           {requiresApiKey ? (
             <div className="flex flex-col gap-3">
               {providerVariables.map((variable) => {
-                const isSaving = savingVariableKey === variable.variable_key;
-                const isConfigured = isVariableConfigured(
-                  variable.variable_key,
-                );
+                const isConfigured = isVariableConfigured(variable.variable_key);
+                const hasNewValue = variableValues[variable.variable_key]?.trim();
 
                 return (
                   <div
@@ -415,70 +420,113 @@ const ModelProvidersContent = ({
                     )}
                     {variable.options && variable.options.length > 0 ? (
                       // Render dropdown for variables with predefined options
-                      <Select
-                        value={variableValues[variable.variable_key] || ""}
-                        onValueChange={(value) => {
-                          isUserInputRef.current = true;
-                          setValidationFailed(false);
-                          setVariableValues((prev) => ({
-                            ...prev,
-                            [variable.variable_key]: value,
-                          }));
-                        }}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue
-                            placeholder={`Select ${variable.variable_name}`}
-                          />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {variable.options.map((option) => (
-                            <SelectItem key={option} value={option}>
-                              {option}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <div className="relative">
+                        <Select
+                          value={
+                            variableValues[variable.variable_key] ||
+                            (isConfigured
+                              ? getConfiguredValue(variable.variable_key) || ""
+                              : "")
+                          }
+                          onValueChange={(value) => {
+                            setValidationFailed(false);
+                            setVariableValues((prev) => ({
+                              ...prev,
+                              [variable.variable_key]: value,
+                            }));
+                          }}
+                        >
+                          <SelectTrigger
+                            className={cn(
+                              "w-full",
+                              isConfigured && !hasNewValue && "pr-8",
+                            )}
+                          >
+                            <SelectValue
+                              placeholder={`Select ${variable.variable_name}`}
+                            />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {variable.options.map((option) => (
+                              <SelectItem key={option} value={option}>
+                                {option}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {isConfigured && !hasNewValue && (
+                          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-green-500">
+                            ✓
+                          </span>
+                        )}
+                      </div>
                     ) : (
                       // Render input for text/secret variables
                       <Input
-                        placeholder={`Add ${variable.variable_name.toLowerCase()}`}
-                        value={variableValues[variable.variable_key] || ""}
-                        type={variable.is_secret ? "password" : "text"}
+                        placeholder={
+                          isConfigured && !hasNewValue
+                            ? variable.is_secret
+                              ? MASKED_VALUE
+                              : `Add ${variable.variable_name.toLowerCase()}`
+                            : `Add ${variable.variable_name.toLowerCase()}`
+                        }
+                        value={
+                          hasNewValue
+                            ? variableValues[variable.variable_key]
+                            : isConfigured && variable.is_secret
+                              ? MASKED_VALUE
+                              : isConfigured
+                                ? getConfiguredValue(variable.variable_key) || ""
+                                : ""
+                        }
+                        type={
+                          variable.is_secret && hasNewValue ? "password" : "text"
+                        }
                         onChange={(e) => {
-                          isUserInputRef.current = true;
                           setValidationFailed(false);
+                          // Clear masked value on focus/type for secrets
+                          const newValue =
+                            e.target.value === MASKED_VALUE ? "" : e.target.value;
                           setVariableValues((prev) => ({
                             ...prev,
-                            [variable.variable_key]: e.target.value,
+                            [variable.variable_key]: newValue,
                           }));
                         }}
-                        endIcon={
-                          isSaving
-                            ? "LoaderCircle"
-                            : validationFailed &&
-                                savingVariableKey === variable.variable_key
-                              ? "X"
-                              : isConfigured
-                                ? "Check"
-                                : undefined
-                        }
-                        endIconClassName={cn(
-                          isSaving &&
-                            "animate-spin text-muted-foreground top-2.5",
-                          validationFailed &&
-                            savingVariableKey === variable.variable_key &&
-                            "text-red-500",
-                          !isSaving &&
-                            !validationFailed &&
+                        onFocus={() => {
+                          // Clear masked value when user focuses on a configured secret field
+                          if (
                             isConfigured &&
-                            "text-green-500",
+                            variable.is_secret &&
+                            !hasNewValue
+                          ) {
+                            setVariableValues((prev) => ({
+                              ...prev,
+                              [variable.variable_key]: "",
+                            }));
+                          }
+                        }}
+                        endIcon={isConfigured && !hasNewValue ? "Check" : undefined}
+                        endIconClassName={cn(
+                          isConfigured && !hasNewValue && "text-green-500",
                         )}
                       />
                     )}
                   </div>
                 );
               })}
+              {/* Save button - only enabled when all required are filled and there are new values */}
+              <Button
+                onClick={handleSaveAllVariables}
+                loading={isSaving}
+                disabled={!allRequiredFilled || !hasNewValuesToSave || isSaving}
+                className="mt-2"
+              >
+                {isSaving
+                  ? "Saving..."
+                  : validationFailed
+                    ? "Retry Save"
+                    : "Save Configuration"}
+              </Button>
             </div>
           ) : (
             <Button
