@@ -8,6 +8,7 @@ import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useRefreshModelInputs } from "@/hooks/use-refresh-model-inputs";
+import { useWebhookEvents } from "@/hooks/use-webhook-events";
 import { SaveChangesModal } from "@/modals/saveChangesModal";
 import useAlertStore from "@/stores/alertStore";
 import { useTypesStore } from "@/stores/typesStore";
@@ -54,6 +55,9 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
 
   const { mutateAsync: getFlow } = useGetFlow();
   const { refreshAllModelInputs } = useRefreshModelInputs();
+
+  // Connect to webhook events SSE for real-time feedback
+  useWebhookEvents();
 
   const handleSave = () => {
     let saving = true;

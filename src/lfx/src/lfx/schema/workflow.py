@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class JobStatus(str, Enum):
@@ -15,7 +16,7 @@ class JobStatus(str, Enum):
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
     FAILED = "failed"
-    ERROR = "error"
+    CANCELLED = "cancelled"
 
 
 class ErrorDetail(BaseModel):
@@ -45,6 +46,13 @@ class WorkflowExecutionRequest(BaseModel):
     inputs: dict[str, Any] | None = Field(
         None, description="Component-specific inputs in flat format: 'component_id.param_name': value"
     )
+
+    @model_validator(mode="after")
+    def validate_execution_mode(self) -> WorkflowExecutionRequest:
+        if self.background and self.stream:
+            err_msg = "Both 'background' and 'stream' cannot be True"
+            raise ValueError(err_msg)
+        return self
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -87,9 +95,9 @@ class WorkflowExecutionResponse(BaseModel):
     """Synchronous workflow execution response."""
 
     flow_id: str
-    job_id: str
+    job_id: str | None = None
     object: Literal["response"] = Field(default="response")
-    created_timestamp: str
+    created_timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     status: JobStatus
     errors: list[ErrorDetail] = []
     inputs: dict[str, Any] = {}
@@ -101,10 +109,22 @@ class WorkflowJobResponse(BaseModel):
     """Background job response."""
 
     job_id: str
+    flow_id: str
     object: Literal["job"] = Field(default="job")
-    created_timestamp: str
+    created_timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     status: JobStatus
+    links: dict[str, str] = Field(default_factory=dict)
     errors: list[ErrorDetail] = []
+
+    @model_validator(mode="after")
+    def build_links(self) -> WorkflowJobResponse:
+        """Automatically populate links for the client."""
+        if not self.links:
+            self.links = {
+                "status": f"/api/v2/workflows?job_id={self.job_id}",
+                "stop": "/api/v2/workflows/stop",
+            }
+        return self
 
 
 class WorkflowStreamEvent(BaseModel):

@@ -27,7 +27,7 @@ Test Strategy:
 
 import asyncio
 from unittest.mock import MagicMock, patch
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from httpx import AsyncClient
@@ -67,7 +67,7 @@ class TestWorkflowDeveloperAPIProtection:
 
         headers = {"x-api-key": created_api_key.api_key}
         response = await client.post(
-            "api/v2/workflow",
+            "api/v2/workflows",
             json=request_data,
             headers=headers,
         )
@@ -83,12 +83,12 @@ class TestWorkflowDeveloperAPIProtection:
         created_api_key,
         mock_settings_dev_api_disabled,  # noqa: ARG002
     ):
-        """Test POST workflow/stop endpoint is blocked when developer API is disabled."""
+        """Test POST workflows/stop endpoint is blocked when developer API is disabled."""
         request_data = {"job_id": "550e8400-e29b-41d4-a716-446655440001"}
 
         headers = {"x-api-key": created_api_key.api_key}
         response = await client.post(
-            "api/v2/workflow/stop",
+            "api/v2/workflows/stop",
             json=request_data,
             headers=headers,
         )
@@ -124,7 +124,7 @@ class TestWorkflowDeveloperAPIProtection:
 
         headers = {"x-api-key": created_api_key.api_key}
         response = await client.post(
-            "api/v2/workflow",
+            "api/v2/workflows",
             json=request_data,
             headers=headers,
         )
@@ -144,13 +144,12 @@ class TestWorkflowDeveloperAPIProtection:
         """Test GET workflow endpoint is allowed when developer API is enabled - job not found."""
         headers = {"x-api-key": created_api_key.api_key}
         response = await client.get(
-            "api/v2/workflow?job_id=550e8400-e29b-41d4-a716-446655440001",  # Non-existent job ID
+            "api/v2/workflows?job_id=550e8400-e29b-41d4-a716-446655440001",  # Non-existent job ID
             headers=headers,
         )
 
-        # Should return 501 because endpoint is not implemented yet, NOT 404 because endpoint is disabled
         assert response.status_code == 501
-        assert "Not implemented" in response.text
+        assert "Workflow status not yet available" in response.text
         assert "This endpoint is not available" not in response.text
 
     async def test_stop_workflow_allowed_when_dev_api_enabled_job_not_found(
@@ -166,7 +165,7 @@ class TestWorkflowDeveloperAPIProtection:
 
         headers = {"x-api-key": created_api_key.api_key}
         response = await client.post(
-            "api/v2/workflow/stop",
+            "api/v2/workflows/stop",
             json=request_data,
             headers=headers,
         )
@@ -185,7 +184,7 @@ class TestWorkflowDeveloperAPIProtection:
         """Test GET workflow endpoint is blocked when developer API is disabled."""
         headers = {"x-api-key": created_api_key.api_key}
         response = await client.get(
-            "api/v2/workflow?job_id=550e8400-e29b-41d4-a716-446655440001",
+            "api/v2/workflows?job_id=550e8400-e29b-41d4-a716-446655440001",
             headers=headers,
         )
 
@@ -220,7 +219,7 @@ class TestWorkflowDeveloperAPIProtection:
 
             headers = {"x-api-key": created_api_key.api_key}
             response = await client.post(
-                "api/v2/workflow",
+                "api/v2/workflows",
                 json=request_data,
                 headers=headers,
             )
@@ -255,12 +254,12 @@ class TestWorkflowDeveloperAPIProtection:
         # The endpoint should return 501 regardless of whether the job exists
         headers = {"x-api-key": created_api_key.api_key}
         response = await client.get(
-            "api/v2/workflow?job_id=550e8400-e29b-41d4-a716-446655440002",
+            "api/v2/workflows?job_id=550e8400-e29b-41d4-a716-446655440002",
             headers=headers,
         )
 
         assert response.status_code == 501
-        assert "Not implemented" in response.text
+        assert "Workflow status not yet available" in response.text
         assert "This endpoint is not available" not in response.text
 
     async def test_stop_workflow_allowed_when_dev_api_enabled_job_exists(
@@ -276,7 +275,7 @@ class TestWorkflowDeveloperAPIProtection:
 
         headers = {"x-api-key": created_api_key.api_key}
         response = await client.post(
-            "api/v2/workflow/stop",
+            "api/v2/workflows/stop",
             json=request_data,
             headers=headers,
         )
@@ -300,7 +299,7 @@ class TestWorkflowDeveloperAPIProtection:
         }
 
         response = await client.post(
-            "api/v2/workflow",
+            "api/v2/workflows",
             json=request_data,
         )
         # The API returns 403 Forbidden for missing API keys (not 401 Unauthorized)
@@ -334,13 +333,13 @@ class TestWorkflowErrorHandling:
         request_data = {"flow_id": flow_id, "background": False, "stream": False, "inputs": None}
 
         headers = {"x-api-key": created_api_key.api_key}
-        response = await client.post("api/v2/workflow", json=request_data, headers=headers)
+        response = await client.post("api/v2/workflows", json=request_data, headers=headers)
 
         assert response.status_code == 404
         result = response.json()
         assert result["detail"]["code"] == "FLOW_NOT_FOUND"
         assert result["detail"]["flow_id"] == flow_id
-        assert "does not exist" in result["detail"]["message"]
+        assert "Verify the flow_id" in result["detail"]["message"]
 
     async def test_database_error_returns_503(
         self,
@@ -357,7 +356,7 @@ class TestWorkflowErrorHandling:
             mock_get_flow.side_effect = OperationalError("statement", "params", "orig")
 
             headers = {"x-api-key": created_api_key.api_key}
-            response = await client.post("api/v2/workflow", json=request_data, headers=headers)
+            response = await client.post("api/v2/workflows", json=request_data, headers=headers)
 
             assert response.status_code == 503
             result = response.json()
@@ -391,14 +390,13 @@ class TestWorkflowErrorHandling:
             request_data = {"flow_id": str(flow_id), "background": False, "stream": False, "inputs": None}
 
             headers = {"x-api-key": created_api_key.api_key}
-            response = await client.post("api/v2/workflow", json=request_data, headers=headers)
+            response = await client.post("api/v2/workflows", json=request_data, headers=headers)
 
-            assert response.status_code == 500
+            assert response.status_code == 400
             result = response.json()
             assert result["detail"]["code"] == "INVALID_FLOW_DATA"
             assert "has no data" in result["detail"]["message"]
             assert result["detail"]["flow_id"] == str(flow_id)
-            assert "job_id" in result["detail"]
 
         finally:
             # Clean up
@@ -433,9 +431,9 @@ class TestWorkflowErrorHandling:
             request_data = {"flow_id": str(flow_id), "background": False, "stream": False, "inputs": None}
 
             headers = {"x-api-key": created_api_key.api_key}
-            response = await client.post("api/v2/workflow", json=request_data, headers=headers)
+            response = await client.post("api/v2/workflows", json=request_data, headers=headers)
 
-            assert response.status_code == 500
+            assert response.status_code == 400
             result = response.json()
             assert result["detail"]["code"] == "INVALID_FLOW_DATA"
             # The error message should indicate invalid flow data structure
@@ -486,9 +484,9 @@ class TestWorkflowErrorHandling:
                 patch("langflow.api.v2.workflow.EXECUTION_TIMEOUT", 0.5),  # 0.5 second timeout
             ):
                 headers = {"x-api-key": created_api_key.api_key}
-                response = await client.post("api/v2/workflow", json=request_data, headers=headers)
+                response = await client.post("api/v2/workflows", json=request_data, headers=headers)
 
-                assert response.status_code == 504
+                assert response.status_code == 408
                 result = response.json()
                 assert result["detail"]["code"] == "EXECUTION_TIMEOUT"
                 assert "exceeded" in result["detail"]["message"]
@@ -533,12 +531,17 @@ class TestWorkflowErrorHandling:
             }
 
             headers = {"x-api-key": created_api_key.api_key}
-            response = await client.post("api/v2/workflow", json=request_data, headers=headers)
+            response = await client.post("api/v2/workflows", json=request_data, headers=headers)
 
-            assert response.status_code == 501
+            # Now background mode is partially implemented and should NOT return 501
+            # It should return a WorkflowJobResponse (wrapped in WorkflowExecutionResponse or similar)
+            assert response.status_code == 200
             result = response.json()
-            assert result["detail"]["code"] == "NOT_IMPLEMENTED"
-            assert "Background execution not yet implemented" in result["detail"]["message"]
+            assert result["object"] == "job"
+            assert result["status"] == "queued"
+            assert result["flow_id"] == str(flow_id)
+            assert "links" in result
+            assert "status" in result["links"]
 
         finally:
             # Clean up
@@ -578,7 +581,7 @@ class TestWorkflowErrorHandling:
             }
 
             headers = {"x-api-key": created_api_key.api_key}
-            response = await client.post("api/v2/workflow", json=request_data, headers=headers)
+            response = await client.post("api/v2/workflows", json=request_data, headers=headers)
 
             assert response.status_code == 501
             result = response.json()
@@ -603,7 +606,7 @@ class TestWorkflowErrorHandling:
         request_data = {"flow_id": flow_id, "background": False, "stream": False, "inputs": None}
 
         headers = {"x-api-key": created_api_key.api_key}
-        response = await client.post("api/v2/workflow", json=request_data, headers=headers)
+        response = await client.post("api/v2/workflows", json=request_data, headers=headers)
 
         assert response.status_code == 404
         result = response.json()
@@ -651,9 +654,9 @@ class TestWorkflowErrorHandling:
                 mock_execute.side_effect = WorkflowValidationError("Test validation error")
 
                 headers = {"x-api-key": created_api_key.api_key}
-                response = await client.post("api/v2/workflow", json=request_data, headers=headers)
+                response = await client.post("api/v2/workflows", json=request_data, headers=headers)
 
-                assert response.status_code == 500
+                assert response.status_code == 400
                 result = response.json()
                 assert result["detail"]["code"] == "INVALID_FLOW_DATA"
                 assert "Test validation error" in result["detail"]["message"]
@@ -666,7 +669,7 @@ class TestWorkflowErrorHandling:
                     await session.delete(flow)
 
         # Test GET /workflow without API key
-        response = await client.get("api/v2/workflow?job_id=550e8400-e29b-41d4-a716-446655440001")
+        response = await client.get("api/v2/workflows?job_id=550e8400-e29b-41d4-a716-446655440001")
         assert response.status_code == 403
         assert "API key must be passed" in response.json()["detail"]
 
@@ -710,7 +713,7 @@ class TestWorkflowSyncExecution:
             request_data = {"flow_id": str(flow_id), "background": False, "stream": False, "inputs": None}
 
             headers = {"x-api-key": created_api_key.api_key}
-            response = await client.post("api/v2/workflow", json=request_data, headers=headers)
+            response = await client.post("api/v2/workflows", json=request_data, headers=headers)
 
             assert response.status_code == 200
             result = response.json()
@@ -763,7 +766,7 @@ class TestWorkflowSyncExecution:
                 mock_run.side_effect = Exception("Component execution failed: LLM API key not configured")
 
                 headers = {"x-api-key": created_api_key.api_key}
-                response = await client.post("api/v2/workflow", json=request_data, headers=headers)
+                response = await client.post("api/v2/workflows", json=request_data, headers=headers)
 
                 # Component errors should return 200 with error in body
                 assert response.status_code == 200
@@ -831,7 +834,7 @@ class TestWorkflowSyncExecution:
                 mock_run.return_value = ([mock_run_output], "session-456")
 
                 headers = {"x-api-key": created_api_key.api_key}
-                response = await client.post("api/v2/workflow", json=request_data, headers=headers)
+                response = await client.post("api/v2/workflows", json=request_data, headers=headers)
 
                 assert response.status_code == 200
                 result = response.json()
@@ -912,7 +915,7 @@ class TestWorkflowSyncExecution:
                 mock_run.return_value = ([mock_run_output], "session-789")
 
                 headers = {"x-api-key": created_api_key.api_key}
-                response = await client.post("api/v2/workflow", json=request_data, headers=headers)
+                response = await client.post("api/v2/workflows", json=request_data, headers=headers)
 
                 assert response.status_code == 200
                 result = response.json()
@@ -978,7 +981,7 @@ class TestWorkflowSyncExecution:
                 mock_run.return_value = ([mock_run_output], "session-101")
 
                 headers = {"x-api-key": created_api_key.api_key}
-                response = await client.post("api/v2/workflow", json=request_data, headers=headers)
+                response = await client.post("api/v2/workflows", json=request_data, headers=headers)
 
                 assert response.status_code == 200
                 result = response.json()
@@ -1038,7 +1041,7 @@ class TestWorkflowSyncExecution:
                 mock_run.return_value = ([mock_chat_output, mock_file_output], "session-202")
 
                 headers = {"x-api-key": created_api_key.api_key}
-                response = await client.post("api/v2/workflow", json=request_data, headers=headers)
+                response = await client.post("api/v2/workflows", json=request_data, headers=headers)
 
                 assert response.status_code == 200
                 result = response.json()
@@ -1079,7 +1082,7 @@ class TestWorkflowSyncExecution:
             request_data = {"flow_id": str(flow_id), "background": False, "stream": False, "inputs": None}
 
             headers = {"x-api-key": created_api_key.api_key}
-            response = await client.post("api/v2/workflow", json=request_data, headers=headers)
+            response = await client.post("api/v2/workflows", json=request_data, headers=headers)
 
             assert response.status_code == 200
             result = response.json()
@@ -1125,8 +1128,179 @@ class TestWorkflowSyncExecution:
 
         # Test POST /workflow/stop without API key
         response = await client.post(
-            "api/v2/workflow/stop",
+            "api/v2/workflows/stop",
             json={"job_id": "550e8400-e29b-41d4-a716-446655440001"},
         )
         assert response.status_code == 403
         assert "API key must be passed" in response.json()["detail"]
+
+
+class TestWorkflowBackgroundQueueing:
+    """Test background workflow execution and queueing behavior."""
+
+    @pytest.fixture
+    def mock_settings_dev_api_enabled(self):
+        """Mock settings with developer API enabled."""
+        with patch("langflow.api.v2.workflow.get_settings_service") as mock_get_settings_service:
+            mock_service = MagicMock()
+            mock_settings = MagicMock()
+            mock_settings.developer_api_enabled = True
+            mock_service.settings = mock_settings
+            mock_get_settings_service.return_value = mock_service
+            yield mock_settings
+
+    async def test_background_execution_flow(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        mock_settings_dev_api_enabled,  # noqa: ARG002
+    ):
+        """Test the full background job submission flow."""
+        flow_id = uuid4()
+
+        async with session_scope() as session:
+            flow = Flow(
+                id=flow_id,
+                name="Background Flow",
+                description="Flow for background testing",
+                data={"nodes": [], "edges": []},
+                user_id=created_api_key.user_id,
+            )
+            session.add(flow)
+            await session.flush()
+            await session.refresh(flow)
+
+        try:
+            request_data = {
+                "flow_id": str(flow_id),
+                "background": True,
+                "inputs": {"test.input": "data"},
+            }
+
+            headers = {"x-api-key": created_api_key.api_key}
+
+            # Mock uuid4 to return a predictable job_id
+            mock_job_id = "550e8400-e29b-41d4-a716-446655440001"
+            with (
+                patch("langflow.api.v2.workflow.get_task_service") as mock_get_task_service,
+                patch("langflow.api.v2.workflow.uuid4", return_value=UUID(mock_job_id)),
+            ):
+                mock_task_service = MagicMock()
+                # fire_and_forget_task is now awaited but its return value is not used for the job_id in response
+                # as it uses graph.run_id. However, we still need it to be an awaitable if it's awaited.
+                mock_task_service.fire_and_forget_task.return_value = asyncio.Future()
+                mock_task_service.fire_and_forget_task.return_value.set_result(mock_job_id)
+                mock_get_task_service.return_value = mock_task_service
+
+                response = await client.post("api/v2/workflows", json=request_data, headers=headers)
+
+                assert response.status_code == 200
+                result = response.json()
+
+                assert result["job_id"] == mock_job_id
+                assert result["flow_id"] == str(flow_id)
+                assert result["object"] == "job"
+                assert result["status"] == "queued"
+                assert "links" in result
+                assert "status" in result["links"]
+                assert mock_job_id in result["links"]["status"]
+
+        finally:
+            async with session_scope() as session:
+                flow = await session.get(Flow, flow_id)
+                if flow:
+                    await session.delete(flow)
+
+    async def test_background_execution_invalid_flow(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        mock_settings_dev_api_enabled,  # noqa: ARG002
+    ):
+        """Test background execution with a non-existent flow ID."""
+        request_data = {
+            "flow_id": str(uuid4()),
+            "background": True,
+        }
+        headers = {"x-api-key": created_api_key.api_key}
+        response = await client.post("api/v2/workflows", json=request_data, headers=headers)
+        assert response.status_code == 404
+        detail = response.json()["detail"]
+        message = detail["message"] if isinstance(detail, dict) else detail
+        assert "does not exist" in message.lower()
+
+    async def test_background_execution_queue_exception(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        mock_settings_dev_api_enabled,  # noqa: ARG002
+    ):
+        """Test handling of exceptions during task queueing."""
+        flow_id = uuid4()
+        async with session_scope() as session:
+            flow = Flow(
+                id=flow_id,
+                name="Fail Flow",
+                data={"nodes": [], "edges": []},
+                user_id=created_api_key.user_id,
+            )
+            session.add(flow)
+            await session.flush()
+
+        try:
+            request_data = {"flow_id": str(flow_id), "background": True}
+            headers = {"x-api-key": created_api_key.api_key}
+
+            with patch("langflow.api.v2.workflow.get_task_service") as mock_get_task_service:
+                mock_task_service = MagicMock()
+                mock_task_service.fire_and_forget_task.side_effect = Exception("Queueing failed")
+                mock_get_task_service.return_value = mock_task_service
+
+                response = await client.post("api/v2/workflows", json=request_data, headers=headers)
+                assert response.status_code == 500
+                detail = response.json()["detail"]
+                message = detail["message"] if isinstance(detail, dict) else detail
+                assert "Queueing failed" in message
+
+        finally:
+            async with session_scope() as session:
+                flow = await session.get(Flow, flow_id)
+                if flow:
+                    await session.delete(flow)
+
+    async def test_sync_execution_error_handling(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        mock_settings_dev_api_enabled,  # noqa: ARG002
+    ):
+        """Test error handling during synchronous execution."""
+        flow_id = uuid4()
+        async with session_scope() as session:
+            flow = Flow(
+                id=flow_id,
+                name="Error Flow",
+                data={"nodes": [], "edges": []},
+                user_id=created_api_key.user_id,
+            )
+            session.add(flow)
+            await session.flush()
+
+        try:
+            request_data = {"flow_id": str(flow_id), "background": False}
+            headers = {"x-api-key": created_api_key.api_key}
+
+            with patch("langflow.api.v2.workflow.run_graph_internal") as mock_run:
+                mock_run.side_effect = Exception("Internal execution engine failure")
+                response = await client.post("api/v2/workflows", json=request_data, headers=headers)
+
+                assert response.status_code == 200
+                result = response.json()
+                assert "errors" in result
+                assert "Internal execution engine failure" in str(result["errors"])
+
+        finally:
+            async with session_scope() as session:
+                flow = await session.get(Flow, flow_id)
+                if flow:
+                    await session.delete(flow)
