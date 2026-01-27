@@ -1010,7 +1010,7 @@ async def custom_component(
             status_code=HTTPStatus.FORBIDDEN,
             detail="Custom component code is not allowed. The component hash is not in the approved list.",
         )
-    
+
     component = Component(_code=raw_code.code)
 
     built_frontend_node, component_instance = build_custom_component_template(component, user_id=user.id)
@@ -1050,7 +1050,7 @@ async def custom_component_update(
                 status_code=HTTPStatus.FORBIDDEN,
                 detail="Custom component code is not allowed. The component hash is not in the approved list.",
             )
-        
+
         component = Component(_code=code_request.code)
         component_node, cc_instance = build_custom_component_template(
             component,

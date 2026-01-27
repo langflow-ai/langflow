@@ -1,8 +1,8 @@
 """Tests for hash validator module."""
 
-import pytest
 from unittest.mock import Mock, patch
 
+import pytest
 from lfx.custom.hash_validator import (
     _extract_hashes_from_history,
     _generate_code_hash,
@@ -324,14 +324,13 @@ class TestIsCodeHashAllowed:
     def test_empty_history_raises(self):
         """Test that empty hash history raises ValueError."""
         from lfx.custom.hash_validator import _load_hash_history
-        
+
         mock_settings = Mock()
         mock_settings.settings.allow_custom_components = False
         mock_settings.settings.allow_nightly_custom_components = False
 
         # Mock Path.exists to return True but read_bytes to return empty history
-        with patch("pathlib.Path.exists", return_value=True), \
-             patch("pathlib.Path.read_bytes", return_value=b"{}"):
+        with patch("pathlib.Path.exists", return_value=True), patch("pathlib.Path.read_bytes", return_value=b"{}"):
             # Should raise ValueError when history is empty (critical error)
             try:
                 _load_hash_history(mock_settings)

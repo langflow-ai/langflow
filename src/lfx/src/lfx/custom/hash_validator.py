@@ -7,9 +7,10 @@ only components whose hash matches an entry in the hash history are allowed.
 
 import hashlib
 import threading
-import orjson
 from pathlib import Path
 from typing import TYPE_CHECKING
+
+import orjson
 
 from lfx.log.logger import logger
 from lfx.services.deps import get_settings_service
@@ -60,7 +61,7 @@ def _extract_hashes_from_history(history: dict) -> set[str]:
 
     Returns:
         Set of code hashes (12-character prefixes) from all component versions
-        
+
     Raises:
         ValueError: If history data is malformed or invalid
     """
@@ -115,17 +116,17 @@ def _load_hash_history(settings_service: "SettingsService") -> set[str]:
     # Determine the base path for hash history files
     # They should be in src/lfx/src/lfx/_assets/
     assets_path = Path(__file__).parent.parent / "_assets"
-    
+
     stable_history_path = assets_path / "stable_hash_history.json"
     nightly_history_path = assets_path / "nightly_hash_history.json"
 
     all_hashes: set[str] = set()
-    
+
     if not stable_history_path.exists():
         msg = f"Stable hash history file not found at {stable_history_path}"
         logger.error(msg)
         raise FileNotFoundError(msg)
-    
+
     try:
         stable_history = orjson.loads(stable_history_path.read_bytes())
         stable_hashes = _extract_hashes_from_history(stable_history)
@@ -135,13 +136,15 @@ def _load_hash_history(settings_service: "SettingsService") -> set[str]:
         msg = f"Failed to load stable hash history at {stable_history_path}: {e}"
         logger.error(msg)
         raise ValueError(msg) from e
-    
+
     if settings_service.settings.allow_nightly_custom_components:
         if not nightly_history_path.exists():
-            msg = f"Nightly hash history file not found at {nightly_history_path} (allow_nightly_custom_components=True)"
+            msg = (
+                f"Nightly hash history file not found at {nightly_history_path} (allow_nightly_custom_components=True)"
+            )
             logger.error(msg)
             raise FileNotFoundError(msg)
-        
+
         try:
             nightly_history = orjson.loads(nightly_history_path.read_bytes())
             nightly_hashes = _extract_hashes_from_history(nightly_history)
@@ -165,7 +168,7 @@ def _load_hash_history(settings_service: "SettingsService") -> set[str]:
 
 def _get_cached_hashes(settings_service: "SettingsService") -> set[str]:
     """Get cached component hashes from hash history, loading if necessary.
-    
+
     Thread-safe cache access using a lock to prevent race conditions.
 
     Args:
@@ -198,7 +201,7 @@ def _get_cached_hashes(settings_service: "SettingsService") -> set[str]:
 
 def is_code_hash_allowed(source_code: str, settings_service: "SettingsService | None" = None) -> bool:
     """Check if source code hash is allowed based on hash history.
-    
+
     CRITICAL: This function fails fast on any errors. Hash validation is a security-critical
     operation and any failures indicate a serious problem that must be addressed immediately.
 
@@ -208,7 +211,7 @@ def is_code_hash_allowed(source_code: str, settings_service: "SettingsService | 
 
     Returns:
         True if hash is allowed, False otherwise
-        
+
     Raises:
         ValueError: If hash generation or validation fails
         FileNotFoundError: If hash history files are missing
