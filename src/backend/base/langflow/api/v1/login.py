@@ -30,7 +30,7 @@ class SessionResponse(BaseModel):
     store_api_key: str | None = None
 
 
-@router.post("/login", response_model=Token)
+@router.post("/login", response_model=Token, include_in_schema=False)
 async def login_to_get_access_token(
     response: Response,
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
@@ -98,7 +98,7 @@ async def login_to_get_access_token(
     )
 
 
-@router.get("/auto_login")
+@router.get("/auto_login", include_in_schema=False)
 async def auto_login(response: Response, db: DbSession):
     auth_settings = get_settings_service().auth_settings
 
@@ -146,7 +146,7 @@ async def auto_login(response: Response, db: DbSession):
     )
 
 
-@router.post("/refresh")
+@router.post("/refresh", include_in_schema=False)
 async def refresh_token(
     request: Request,
     response: Response,
@@ -217,7 +217,7 @@ async def get_session(
         return SessionResponse(authenticated=False)
 
 
-@router.post("/logout")
+@router.post("/logout", include_in_schema=False)
 async def logout(response: Response):
     auth_settings = get_settings_service().auth_settings
 

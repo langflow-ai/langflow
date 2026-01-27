@@ -14,7 +14,7 @@ from langflow.services.deps import get_settings_service
 router = APIRouter(tags=["APIKey"], prefix="/api_key")
 
 
-@router.get("/")
+@router.get("/", include_in_schema=False)
 async def get_api_keys_route(
     db: DbSession,
     current_user: CurrentActiveUser,
@@ -28,7 +28,7 @@ async def get_api_keys_route(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@router.post("/")
+@router.post("/", include_in_schema=False)
 async def create_api_key_route(
     req: ApiKeyCreate,
     current_user: CurrentActiveUser,
@@ -41,7 +41,7 @@ async def create_api_key_route(
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
-@router.delete("/{api_key_id}")
+@router.delete("/{api_key_id}", include_in_schema=False)
 async def delete_api_key_route(
     api_key_id: UUID,
     db: DbSession,
@@ -54,7 +54,7 @@ async def delete_api_key_route(
     return {"detail": "API Key deleted"}
 
 
-@router.post("/store")
+@router.post("/store", include_in_schema=False)
 async def save_store_api_key(
     api_key_request: ApiKeyCreateRequest,
     response: Response,

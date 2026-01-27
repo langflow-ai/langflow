@@ -1003,7 +1003,7 @@ async def get_version():
     return get_version_info()
 
 
-@router.post("/custom_component", status_code=HTTPStatus.OK)
+@router.post("/custom_component", status_code=HTTPStatus.OK, include_in_schema=False)
 async def custom_component(
     raw_code: CustomComponentRequest,
     user: CurrentActiveUser,
@@ -1025,7 +1025,7 @@ async def custom_component(
     return CustomComponentResponse(data=built_frontend_node, type=type_)
 
 
-@router.post("/custom_component/update", status_code=HTTPStatus.OK)
+@router.post("/custom_component/update", status_code=HTTPStatus.OK, include_in_schema=False)
 async def custom_component_update(
     code_request: UpdateCustomComponentRequest,
     user: CurrentActiveUser,
