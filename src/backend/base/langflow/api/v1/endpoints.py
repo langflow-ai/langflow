@@ -14,6 +14,7 @@ from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Re
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 from lfx.custom.custom_component.component import Component
+from lfx.custom.hash_validator import is_code_hash_allowed
 from lfx.custom.utils import (
     add_code_field_to_build_config,
     build_custom_component_template,
@@ -1003,6 +1004,13 @@ async def custom_component(
     raw_code: CustomComponentRequest,
     user: CurrentActiveUser,
 ) -> CustomComponentResponse:
+    # Validate hash before processing custom code
+    if not is_code_hash_allowed(raw_code.code):
+        raise HTTPException(
+            status_code=HTTPStatus.FORBIDDEN,
+            detail="Custom component code is not allowed. The component hash is not in the approved list.",
+        )
+    
     component = Component(_code=raw_code.code)
 
     built_frontend_node, component_instance = build_custom_component_template(component, user_id=user.id)
@@ -1036,6 +1044,13 @@ async def custom_component_update(
         SerializationError: If serialization of the updated component node fails.
     """
     try:
+        # Validate hash before processing custom code
+        if not is_code_hash_allowed(code_request.code):
+            raise HTTPException(
+                status_code=HTTPStatus.FORBIDDEN,
+                detail="Custom component code is not allowed. The component hash is not in the approved list.",
+            )
+        
         component = Component(_code=code_request.code)
         component_node, cc_instance = build_custom_component_template(
             component,

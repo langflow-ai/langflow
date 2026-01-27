@@ -112,7 +112,7 @@
                   },
                   {
                     "name": "scrapegraph_py",
-                    "version": "1.44.1"
+                    "version": "1.46.0"
                   }
                 ],
                 "total_dependencies": 2
