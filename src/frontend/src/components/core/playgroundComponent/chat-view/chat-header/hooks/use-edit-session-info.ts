@@ -3,17 +3,29 @@ import { useGetSessionsFromFlowQuery } from "@/controllers/API/queries/messages/
 import { useUpdateSessionName } from "@/controllers/API/queries/messages/use-rename-session";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 
-export const useEditSessionInfo = ({ flowId }: { flowId?: string }) => {
+export const useEditSessionInfo = ({
+  flowId,
+  dbSessions: providedDbSessions,
+}: {
+  flowId?: string;
+  dbSessions?: string[];
+}) => {
   const setSelectedSession = usePlaygroundStore(
     (state) => state.setSelectedSession,
   );
   const selectedSession = usePlaygroundStore((state) => state.selectedSession);
   const isPlayground = usePlaygroundStore((state) => state.isPlayground);
 
-  const { data: dbSessionsResponse } = useGetSessionsFromFlowQuery({
-    id: flowId,
-  });
-  const dbSessions = dbSessionsResponse?.sessions ?? [];
+  // Only fetch if dbSessions not provided (to avoid duplicate queries)
+  const { data: dbSessionsResponse } = useGetSessionsFromFlowQuery(
+    {
+      id: flowId,
+    },
+    {
+      enabled: providedDbSessions === undefined,
+    },
+  );
+  const dbSessions = providedDbSessions ?? dbSessionsResponse?.sessions ?? [];
 
   const { mutateAsync: updateSessionName } = useUpdateSessionName();
 

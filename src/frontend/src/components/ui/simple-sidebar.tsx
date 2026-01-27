@@ -141,6 +141,18 @@ const SimpleSidebarProvider = React.forwardRef<
       }
     }, [fullscreen, width, _wasDragged]);
 
+    // Reset width when opening (unless user dragged or it's fullscreen)
+    React.useEffect(() => {
+      if (open && !fullscreen && !_wasDragged) {
+        const defaultWidth =
+          typeof width === "string" ? parseInt(width.replace("px", "")) : width;
+        // Only reset if current width is significantly different (more than 50px)
+        if (Math.abs(_width - defaultWidth) > 50) {
+          _setWidth(defaultWidth);
+        }
+      }
+    }, [open, fullscreen, width, _wasDragged, _width]);
+
     // Track parent width using ResizeObserver
     React.useEffect(() => {
       const element = internalRef.current;

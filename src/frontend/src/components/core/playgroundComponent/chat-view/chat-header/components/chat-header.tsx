@@ -68,6 +68,7 @@ export function ChatHeader({
         onRename={handleEditStartLogged}
         onMessageLogs={onMessageLogs}
         onDelete={handleDeleteSessionInternal}
+        showDelete={currentSessionId !== currentFlowId}
         side="bottom"
         align="end"
         sideOffset={4}
