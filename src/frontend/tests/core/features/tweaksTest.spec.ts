@@ -68,12 +68,12 @@ test("check if tweaks are updating when someothing on the flow changes", async (
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("Chroma");
 
-  await page.waitForSelector('[data-testid="vectorstoresChroma DB"]', {
+  await page.waitForSelector('[data-testid="chromaChroma DB"]', {
     timeout: 1000,
   });
 
   await page
-    .getByTestId("vectorstoresChroma DB")
+    .getByTestId("chromaChroma DB")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
