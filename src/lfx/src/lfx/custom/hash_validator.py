@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 
 # Cache for component hashes from history files (thread-safe)
 _component_hash_cache: set[str] | None = None
-_cache_settings_key: tuple[str, bool, int] | None = None
+_cache_settings_key: tuple[str, bool, bool, int] | None = None
 _cache_lock = threading.Lock()
 
 
@@ -53,22 +53,26 @@ def _generate_code_hash(source_code: str) -> str:
     return hashlib.sha256(source_code.encode("utf-8")).hexdigest()[:12]
 
 
-def _extract_hashes_from_history(history: dict) -> set[str]:
-    """Extract all code hashes from hash history file.
+def _extract_hashes_from_history(history: dict, allow_code_execution: bool = True) -> tuple[set[str], set[str]]:
+    """Extract code hashes from hash history file, separating code-execution components.
 
     Args:
         history: Hash history dictionary mapping component names to version data
+        allow_code_execution: Whether to include components that execute code
 
     Returns:
-        Set of code hashes (12-character prefixes) from all component versions
-
+        Tuple of (allowed_hashes, code_execution_hashes):
+        - allowed_hashes: Set of hashes for components that should be allowed
+        - code_execution_hashes: Set of hashes for components marked with executes_code=true
+        
     Raises:
         ValueError: If history data is malformed or invalid
     """
-    hashes: set[str] = set()
+    allowed_hashes: set[str] = set()
+    code_execution_hashes: set[str] = set()
 
     if not history:
-        return hashes
+        return allowed_hashes, code_execution_hashes
 
     for component_name, component_data in history.items():
         if not isinstance(component_data, dict):
@@ -87,7 +91,25 @@ def _extract_hashes_from_history(history: dict) -> set[str]:
             logger.error(msg)
             raise ValueError(msg)
 
-        for version, code_hash in versions.items():
+        for version, version_data in versions.items():
+            # Support both old format (string hash) and new format (dict with hash and flags)
+            if isinstance(version_data, str):
+                # Old format: version -> hash (string)
+                code_hash = version_data
+                executes_code = False
+            elif isinstance(version_data, dict):
+                # New format: version -> {hash: "...", executes_code: true}
+                if "hash" not in version_data:
+                    msg = f"Missing 'hash' key for component '{component_name}' version '{version}'"
+                    logger.error(msg)
+                    raise ValueError(msg)
+                code_hash = version_data["hash"]
+                executes_code = version_data.get("executes_code", False)
+            else:
+                msg = f"Invalid version data type for component '{component_name}' version '{version}' - expected str or dict, got {type(version_data).__name__}"
+                logger.error(msg)
+                raise ValueError(msg)
+
             if not isinstance(code_hash, str):
                 msg = f"Invalid hash type for component '{component_name}' version '{version}' - expected str, got {type(code_hash).__name__}"
                 logger.error(msg)
@@ -96,16 +118,29 @@ def _extract_hashes_from_history(history: dict) -> set[str]:
                 msg = f"Empty hash for component '{component_name}' version '{version}'"
                 logger.error(msg)
                 raise ValueError(msg)
-            hashes.add(code_hash)
 
-    return hashes
+            # Track code execution components separately
+            if executes_code:
+                code_execution_hashes.add(code_hash)
+                if allow_code_execution:
+                    allowed_hashes.add(code_hash)
+                else:
+                    logger.debug(
+                        f"Excluding code-execution component '{component_name}' version '{version}' "
+                        f"(hash: {code_hash}) due to allow_code_execution_components=False"
+                    )
+            else:
+                allowed_hashes.add(code_hash)
+
+    return allowed_hashes, code_execution_hashes
 
 
 def _load_hash_history(settings_service: "SettingsService") -> set[str]:
     """Load and cache component hashes from hash history files.
 
     Loads from stable_hash_history.json and optionally from nightly_hash_history.json
-    based on the allow_nightly_custom_components setting.
+    based on the allow_nightly_custom_components setting. Respects the
+    allow_code_execution_components setting to filter out code-execution components.
 
     Args:
         settings_service: Settings service instance
@@ -121,17 +156,24 @@ def _load_hash_history(settings_service: "SettingsService") -> set[str]:
     nightly_history_path = assets_path / "nightly_hash_history.json"
 
     all_hashes: set[str] = set()
-
+    all_code_execution_hashes: set[str] = set()
+    
     if not stable_history_path.exists():
         msg = f"Stable hash history file not found at {stable_history_path}"
         logger.error(msg)
         raise FileNotFoundError(msg)
-
+    
+    allow_code_execution = settings_service.settings.allow_code_execution_components
+    
     try:
         stable_history = orjson.loads(stable_history_path.read_bytes())
-        stable_hashes = _extract_hashes_from_history(stable_history)
+        stable_hashes, stable_code_exec = _extract_hashes_from_history(stable_history, allow_code_execution)
         all_hashes.update(stable_hashes)
-        logger.debug(f"Loaded {len(stable_hashes)} hashes from stable hash history")
+        all_code_execution_hashes.update(stable_code_exec)
+        logger.debug(
+            f"Loaded {len(stable_hashes)} allowed hashes from stable hash history\n"
+            f"with ({len(stable_code_exec)} code-execution components)"
+        )
     except Exception as e:
         msg = f"Failed to load stable hash history at {stable_history_path}: {e}"
         logger.error(msg)
@@ -147,9 +189,13 @@ def _load_hash_history(settings_service: "SettingsService") -> set[str]:
 
         try:
             nightly_history = orjson.loads(nightly_history_path.read_bytes())
-            nightly_hashes = _extract_hashes_from_history(nightly_history)
+            nightly_hashes, nightly_code_exec = _extract_hashes_from_history(nightly_history, allow_code_execution)
             all_hashes.update(nightly_hashes)
-            logger.debug(f"Loaded {len(nightly_hashes)} hashes from nightly hash history")
+            all_code_execution_hashes.update(nightly_code_exec)
+            logger.debug(
+                f"Loaded {len(nightly_hashes)} allowed hashes from nightly hash history\n"
+                f"with ({len(nightly_code_exec)} code-execution components)"
+            )
         except Exception as e:
             msg = f"Failed to load nightly hash history at {nightly_history_path}: {e}"
             logger.error(msg)
@@ -157,10 +203,16 @@ def _load_hash_history(settings_service: "SettingsService") -> set[str]:
     else:
         logger.debug("Nightly custom components are disabled, only using stable hash history")
 
-    if not all_hashes:
+    if not all_hashes and not all_code_execution_hashes:
         msg = "No hashes loaded from hash history files"
         logger.error(msg)
         raise ValueError(msg)
+
+    if not allow_code_execution and all_code_execution_hashes:
+        logger.info(
+            f"Code execution components disabled: {len(all_code_execution_hashes)} components blocked. "
+            f"{len(all_hashes)} components allowed."
+        )
 
     logger.debug(f"Total {len(all_hashes)} unique hashes loaded for validation")
     return all_hashes
@@ -183,6 +235,7 @@ def _get_cached_hashes(settings_service: "SettingsService") -> set[str]:
     current_key = (
         "hash_history",
         settings_service.settings.allow_nightly_custom_components,
+        settings_service.settings.allow_code_execution_components,
         id(settings_service.settings),
     )
 
@@ -233,6 +286,13 @@ def is_code_hash_allowed(source_code: str, settings_service: "SettingsService | 
 
     # Check if custom components are allowed
     if settings_service.settings.allow_custom_components:
+        # Warn if code execution components setting is disabled but being ignored
+        if not settings_service.settings.allow_code_execution_components:
+            logger.warning(
+                "SECURITY WARNING: LANGFLOW_ALLOW_CODE_EXECUTION_COMPONENTS=false is being ignored "
+                "because LANGFLOW_ALLOW_CUSTOM_COMPONENTS=true. Code-execution components "
+                "are currently ALLOWED. "
+            )
         return True
 
     code_hash = _generate_code_hash(source_code)

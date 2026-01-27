@@ -522,6 +522,14 @@ def build_component_metadata(
     except Exception as exc:  # noqa: BLE001
         logger.debug(f"Error generating code hash for {custom_component.__class__.__name__}", exc_info=exc)
 
+    # Add executes_code flag to metadata if set to True
+    try:
+        executes_code = getattr(custom_component.__class__, "executes_code", False)
+        if executes_code:
+            frontend_node.metadata["executes_code"] = True
+    except Exception as exc:  # noqa: BLE001
+        logger.debug(f"Error reading executes_code flag for {custom_component.__class__.__name__}", exc_info=exc)
+
     # Analyze component dependencies
     try:
         dependency_info = analyze_component_dependencies(custom_component._code)

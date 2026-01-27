@@ -176,6 +176,17 @@ class Settings(BaseSettings):
     will be allowed to be imported or executed. This provides a security mechanism to prevent
     execution of unauthorized custom code. Defaults to True to allow custom components.
     """
+    allow_code_execution_components: bool = True
+    """If False, blocks components that execute arbitrary code even if they are in the hash history.
+
+    When disabled (False), components marked with "executes_code": true in the hash history
+    (such as Python REPL, Smart Transform) will be blocked. This provides an additional
+    security layer for environments that need to prevent all code execution.
+    
+    Note: This setting only takes effect when allow_custom_components is False.
+    When allow_custom_components is True, all custom code is allowed regardless of this setting.
+    Defaults to True to allow code execution components.
+    """
     allow_nightly_custom_components: bool = True
     """If False, only hashes from stable_hash_history.json are considered valid when allow_custom_components is False.
 

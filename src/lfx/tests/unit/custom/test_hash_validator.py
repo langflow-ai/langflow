@@ -52,7 +52,7 @@ class TestExtractHashesFromHistory:
     """Tests for extracting hashes from hash history."""
 
     def test_extract_hashes_simple(self):
-        """Test extracting hashes from a simple history."""
+        """Test extracting hashes from a simple history (old string format)."""
         history = {
             "Component1": {
                 "versions": {
@@ -65,10 +65,11 @@ class TestExtractHashesFromHistory:
                 }
             },
         }
-        hashes = _extract_hashes_from_history(history)
-        assert "abc123def456" in hashes
-        assert "def456ghi789" in hashes
-        assert len(hashes) == 2
+        allowed_hashes, code_exec_hashes = _extract_hashes_from_history(history)
+        assert "abc123def456" in allowed_hashes
+        assert "def456ghi789" in allowed_hashes
+        assert len(allowed_hashes) == 2
+        assert len(code_exec_hashes) == 0  # No code execution components
 
     def test_extract_hashes_multiple_versions(self):
         """Test extracting hashes from components with multiple versions."""
@@ -86,12 +87,13 @@ class TestExtractHashesFromHistory:
                 }
             },
         }
-        hashes = _extract_hashes_from_history(history)
-        assert "hash1_v1" in hashes
-        assert "hash1_v2" in hashes
-        assert "hash1_v3" in hashes
-        assert "hash2_v1" in hashes
-        assert len(hashes) == 4
+        allowed_hashes, code_exec_hashes = _extract_hashes_from_history(history)
+        assert "hash1_v1" in allowed_hashes
+        assert "hash1_v2" in allowed_hashes
+        assert "hash1_v3" in allowed_hashes
+        assert "hash2_v1" in allowed_hashes
+        assert len(allowed_hashes) == 4
+        assert len(code_exec_hashes) == 0
 
     def test_extract_hashes_missing_versions_raises(self):
         """Test that missing versions key raises ValueError."""
@@ -114,20 +116,23 @@ class TestExtractHashesFromHistory:
                 "versions": {}  # Empty versions - valid but no hashes
             },
         }
-        hashes = _extract_hashes_from_history(history)
-        assert len(hashes) == 0
+        allowed_hashes, code_exec_hashes = _extract_hashes_from_history(history)
+        assert len(allowed_hashes) == 0
+        assert len(code_exec_hashes) == 0
 
     def test_extract_hashes_empty_history(self):
         """Test extracting hashes from empty history."""
         history = {}
-        hashes = _extract_hashes_from_history(history)
-        assert len(hashes) == 0
+        allowed_hashes, code_exec_hashes = _extract_hashes_from_history(history)
+        assert len(allowed_hashes) == 0
+        assert len(code_exec_hashes) == 0
 
     def test_extract_hashes_none_history(self):
         """Test extracting hashes when history is None."""
         history = None
-        hashes = _extract_hashes_from_history(history)
-        assert len(hashes) == 0
+        allowed_hashes, code_exec_hashes = _extract_hashes_from_history(history)
+        assert len(allowed_hashes) == 0
+        assert len(code_exec_hashes) == 0
 
     def test_extract_hashes_no_duplicates(self):
         """Test that duplicate hashes across versions are deduplicated."""
@@ -140,9 +145,10 @@ class TestExtractHashesFromHistory:
                 }
             },
         }
-        hashes = _extract_hashes_from_history(history)
-        assert "same_hash" in hashes
-        assert len(hashes) == 1  # Should be deduplicated
+        allowed_hashes, code_exec_hashes = _extract_hashes_from_history(history)
+        assert "same_hash" in allowed_hashes
+        assert len(allowed_hashes) == 1  # Should be deduplicated
+        assert len(code_exec_hashes) == 0
 
     def test_extract_hashes_multiple_components_multiple_versions(self):
         """Test extraction from multiple components with multiple versions."""
@@ -160,12 +166,13 @@ class TestExtractHashesFromHistory:
                 }
             },
         }
-        hashes = _extract_hashes_from_history(history)
-        assert "comp1_v1" in hashes
-        assert "comp1_v2" in hashes
-        assert "comp2_v1" in hashes
-        assert "comp2_v2" in hashes
-        assert len(hashes) == 4
+        allowed_hashes, code_exec_hashes = _extract_hashes_from_history(history)
+        assert "comp1_v1" in allowed_hashes
+        assert "comp1_v2" in allowed_hashes
+        assert "comp2_v1" in allowed_hashes
+        assert "comp2_v2" in allowed_hashes
+        assert len(allowed_hashes) == 4
+        assert len(code_exec_hashes) == 0
 
     def test_extract_hashes_empty_hash_raises(self):
         """Test that empty hash raises ValueError."""
@@ -198,7 +205,7 @@ class TestExtractHashesFromHistory:
             _extract_hashes_from_history(history)
             assert False, "Should have raised ValueError"
         except ValueError as e:
-            assert "Invalid hash type" in str(e)
+            assert "Invalid version data type" in str(e)
             assert "Component1" in str(e)
 
     def test_extract_hashes_component_not_dict_raises(self):
@@ -226,6 +233,134 @@ class TestExtractHashesFromHistory:
         except ValueError as e:
             assert "Invalid versions format" in str(e)
             assert "Component1" in str(e)
+
+    def test_extract_hashes_new_dict_format(self):
+        """Test extracting hashes from new dict format with executes_code flag."""
+        history = {
+            "Component1": {
+                "versions": {
+                    "0.3.0": {"hash": "abc123def456", "executes_code": False},
+                }
+            },
+            "Component2": {
+                "versions": {
+                    "0.3.0": {"hash": "def456ghi789", "executes_code": True},
+                }
+            },
+        }
+        allowed_hashes, code_exec_hashes = _extract_hashes_from_history(history, allow_code_execution=True)
+        assert "abc123def456" in allowed_hashes
+        assert "def456ghi789" in allowed_hashes
+        assert len(allowed_hashes) == 2
+        assert "def456ghi789" in code_exec_hashes
+        assert len(code_exec_hashes) == 1
+
+    def test_extract_hashes_mixed_formats(self):
+        """Test extracting hashes from mixed old and new formats."""
+        history = {
+            "OldComponent": {
+                "versions": {
+                    "0.1.0": "old_hash_123",  # Old string format
+                }
+            },
+            "NewComponent": {
+                "versions": {
+                    "0.3.0": {"hash": "new_hash_456", "executes_code": False},  # New dict format
+                }
+            },
+            "CodeExecComponent": {
+                "versions": {
+                    "0.3.0": {"hash": "code_hash_789", "executes_code": True},  # Code execution
+                }
+            },
+        }
+        allowed_hashes, code_exec_hashes = _extract_hashes_from_history(history, allow_code_execution=True)
+        assert "old_hash_123" in allowed_hashes
+        assert "new_hash_456" in allowed_hashes
+        assert "code_hash_789" in allowed_hashes
+        assert len(allowed_hashes) == 3
+        assert "code_hash_789" in code_exec_hashes
+        assert len(code_exec_hashes) == 1
+
+    def test_extract_hashes_filter_code_execution(self):
+        """Test that code execution components are filtered when allow_code_execution=False."""
+        history = {
+            "NormalComponent": {
+                "versions": {
+                    "0.3.0": {"hash": "normal_hash", "executes_code": False},
+                }
+            },
+            "CodeExecComponent": {
+                "versions": {
+                    "0.3.0": {"hash": "code_hash", "executes_code": True},
+                }
+            },
+        }
+        allowed_hashes, code_exec_hashes = _extract_hashes_from_history(history, allow_code_execution=False)
+        assert "normal_hash" in allowed_hashes
+        assert "code_hash" not in allowed_hashes  # Should be filtered out
+        assert len(allowed_hashes) == 1
+        assert "code_hash" in code_exec_hashes  # Still tracked separately
+        assert len(code_exec_hashes) == 1
+
+    def test_extract_hashes_multiple_code_exec_components(self):
+        """Test handling multiple code execution components."""
+        history = {
+            "PythonREPL": {
+                "versions": {
+                    "0.3.0": {"hash": "repl_hash", "executes_code": True},
+                }
+            },
+            "LambdaFilter": {
+                "versions": {
+                    "0.3.0": {"hash": "lambda_hash", "executes_code": True},
+                }
+            },
+            "NormalComponent": {
+                "versions": {
+                    "0.3.0": {"hash": "normal_hash", "executes_code": False},
+                }
+            },
+        }
+        # With code execution allowed
+        allowed_hashes, code_exec_hashes = _extract_hashes_from_history(history, allow_code_execution=True)
+        assert len(allowed_hashes) == 3
+        assert len(code_exec_hashes) == 2
+        
+        # With code execution blocked
+        allowed_hashes, code_exec_hashes = _extract_hashes_from_history(history, allow_code_execution=False)
+        assert len(allowed_hashes) == 1  # Only normal component
+        assert "normal_hash" in allowed_hashes
+        assert len(code_exec_hashes) == 2  # Both code exec components tracked
+
+    def test_extract_hashes_dict_format_missing_hash_key(self):
+        """Test that dict format without 'hash' key raises ValueError."""
+        history = {
+            "Component1": {
+                "versions": {
+                    "0.3.0": {"executes_code": True},  # Missing 'hash' key
+                }
+            },
+        }
+        try:
+            _extract_hashes_from_history(history)
+            assert False, "Should have raised ValueError"
+        except ValueError as e:
+            assert "Missing 'hash' key" in str(e)
+            assert "Component1" in str(e)
+
+    def test_extract_hashes_dict_format_defaults_executes_code_false(self):
+        """Test that dict format without executes_code defaults to False."""
+        history = {
+            "Component1": {
+                "versions": {
+                    "0.3.0": {"hash": "test_hash"},  # No executes_code key
+                }
+            },
+        }
+        allowed_hashes, code_exec_hashes = _extract_hashes_from_history(history)
+        assert "test_hash" in allowed_hashes
+        assert len(code_exec_hashes) == 0  # Should default to False
 
 
 class TestIsCodeHashAllowed:
@@ -388,6 +523,39 @@ class TestIsCodeHashAllowed:
             # Call with different settings - should invalidate cache and reload
             assert is_code_hash_allowed(code, mock_settings2) is True
             assert mock_load.call_count == 2  # Reloaded due to different settings
+    def test_cache_invalidation_on_code_execution_setting_change(self):
+        """Test that cache is invalidated when allow_code_execution_components changes."""
+        code = "class TestComponent:\n    pass"
+        code_hash = _generate_code_hash(code)
+
+        # Create settings with code execution allowed
+        mock_settings1 = Mock()
+        mock_settings1.settings.allow_custom_components = False
+        mock_settings1.settings.allow_nightly_custom_components = False
+        mock_settings1.settings.allow_code_execution_components = True
+
+        # Create settings with code execution blocked
+        mock_settings2 = Mock()
+        mock_settings2.settings.allow_custom_components = False
+        mock_settings2.settings.allow_nightly_custom_components = False
+        mock_settings2.settings.allow_code_execution_components = False
+
+        # Mock _load_hash_history to track calls
+        with patch("lfx.custom.hash_validator._load_hash_history") as mock_load:
+            mock_load.return_value = {code_hash}
+
+            # Call with code execution allowed - should load
+            assert is_code_hash_allowed(code, mock_settings1) is True
+            assert mock_load.call_count == 1
+
+            # Call again with same settings - should use cache
+            assert is_code_hash_allowed(code, mock_settings1) is True
+            assert mock_load.call_count == 1  # Still 1, cache was used
+
+            # Call with code execution blocked - should invalidate cache and reload
+            assert is_code_hash_allowed(code, mock_settings2) is True
+            assert mock_load.call_count == 2  # Reloaded due to different setting
+
 
 
 class TestIntegrationWithHashHistory:
@@ -410,9 +578,10 @@ class TestIntegrationWithHashHistory:
             },
         }
 
-        # Test extraction
-        hashes = _extract_hashes_from_history(history_data)
-        assert "abc123def456" in hashes
-        assert "def456ghi789" in hashes
-        assert "old_hash_123" in hashes
-        assert len(hashes) == 3
+        # Test extraction - now returns tuple
+        allowed_hashes, code_exec_hashes = _extract_hashes_from_history(history_data)
+        assert "abc123def456" in allowed_hashes
+        assert "def456ghi789" in allowed_hashes
+        assert "old_hash_123" in allowed_hashes
+        assert len(allowed_hashes) == 3
+        assert len(code_exec_hashes) == 0  # No code execution components

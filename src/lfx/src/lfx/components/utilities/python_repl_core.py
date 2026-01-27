@@ -12,6 +12,7 @@ class PythonREPLComponent(Component):
     description = "Run Python code with optional imports. Use print() to see the output."
     documentation: str = "https://docs.langflow.org/python-interpreter"
     icon = "square-terminal"
+    executes_code = True  # Executes user-provided Python code
 
     inputs = [
         StrInput(
