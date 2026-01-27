@@ -64,7 +64,7 @@ def _extract_hashes_from_history(history: dict, allow_code_execution: bool = Tru
         Tuple of (allowed_hashes, code_execution_hashes):
         - allowed_hashes: Set of hashes for components that should be allowed
         - code_execution_hashes: Set of hashes for components marked with executes_code=true
-        
+
     Raises:
         ValueError: If history data is malformed or invalid
     """
@@ -157,14 +157,14 @@ def _load_hash_history(settings_service: "SettingsService") -> set[str]:
 
     all_hashes: set[str] = set()
     all_code_execution_hashes: set[str] = set()
-    
+
     if not stable_history_path.exists():
         msg = f"Stable hash history file not found at {stable_history_path}"
         logger.error(msg)
         raise FileNotFoundError(msg)
-    
+
     allow_code_execution = settings_service.settings.allow_code_execution_components
-    
+
     try:
         stable_history = orjson.loads(stable_history_path.read_bytes())
         stable_hashes, stable_code_exec = _extract_hashes_from_history(stable_history, allow_code_execution)

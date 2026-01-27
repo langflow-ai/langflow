@@ -63,7 +63,7 @@ def update_history(
     """Updates the hash history for a single component with the new simple schema.
 
     IMPORTANT: Note that the component_name acts as the unique identifier for the component, and must not be changed.
-    
+
     Args:
         history: The hash history dictionary to update
         component_name: Name of the component

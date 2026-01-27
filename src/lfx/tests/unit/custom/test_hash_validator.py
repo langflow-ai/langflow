@@ -326,7 +326,7 @@ class TestExtractHashesFromHistory:
         allowed_hashes, code_exec_hashes = _extract_hashes_from_history(history, allow_code_execution=True)
         assert len(allowed_hashes) == 3
         assert len(code_exec_hashes) == 2
-        
+
         # With code execution blocked
         allowed_hashes, code_exec_hashes = _extract_hashes_from_history(history, allow_code_execution=False)
         assert len(allowed_hashes) == 1  # Only normal component
@@ -523,6 +523,7 @@ class TestIsCodeHashAllowed:
             # Call with different settings - should invalidate cache and reload
             assert is_code_hash_allowed(code, mock_settings2) is True
             assert mock_load.call_count == 2  # Reloaded due to different settings
+
     def test_cache_invalidation_on_code_execution_setting_change(self):
         """Test that cache is invalidated when allow_code_execution_components changes."""
         code = "class TestComponent:\n    pass"
@@ -555,7 +556,6 @@ class TestIsCodeHashAllowed:
             # Call with code execution blocked - should invalidate cache and reload
             assert is_code_hash_allowed(code, mock_settings2) is True
             assert mock_load.call_count == 2  # Reloaded due to different setting
-
 
 
 class TestIntegrationWithHashHistory:
