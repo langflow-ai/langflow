@@ -456,7 +456,7 @@ module.exports = {
             {
               type: "link",
               label: "Workflows API specification (Beta)",
-              href: "/api/v2/workflows",
+              href: "/api/workflow",
             },
           ],
         },
