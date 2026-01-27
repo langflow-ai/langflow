@@ -14,6 +14,9 @@ class TestCurrentDateToolSchema:
         """Verify schema uses string type instead of enum for large option lists."""
         # Arrange
         component = CurrentDateComponent()
+        # Initialize component to load dynamic options via update_build_config
+        build_config = {inp.name: inp.model_dump() for inp in component.inputs}
+        build_config = component.update_build_config(build_config, "", None)
         toolkit = ComponentToolkit(component)
 
         # Act
@@ -21,8 +24,8 @@ class TestCurrentDateToolSchema:
         tool = tools[0]
         schema = tool.args_schema.model_json_schema()
 
-        # Assert
-        assert len(component.inputs[0].options) > MAX_OPTIONS_FOR_TOOL_ENUM
+        # Assert - verify options are loaded dynamically and exceed the limit
+        assert len(build_config["timezone"]["options"]) > MAX_OPTIONS_FOR_TOOL_ENUM
         assert "enum" not in json.dumps(schema)
         assert schema["properties"]["timezone"]["type"] == "string"
 
