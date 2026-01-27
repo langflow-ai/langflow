@@ -25,10 +25,10 @@ from lfx.utils.async_helpers import run_until_complete
 @lru_cache(maxsize=1)
 def get_model_classes():
     """Lazy load model classes to avoid importing optional dependencies at module level."""
-    from langchain_anthropic import ChatAnthropic
-    from langchain_ibm import ChatWatsonx
-    from langchain_ollama import ChatOllama
-    from langchain_openai import ChatOpenAI
+    from langchain_anthropic import ChatAnthropic  # type: ignore  # noqa: PGH003
+    from langchain_ibm import ChatWatsonx  # type: ignore  # noqa: PGH003
+    from langchain_ollama import ChatOllama  # type: ignore  # noqa: PGH003
+    from langchain_openai import ChatOpenAI  # type: ignore  # noqa: PGH003
 
     from lfx.base.models.google_generative_ai_model import ChatGoogleGenerativeAIFixed
 
@@ -44,10 +44,10 @@ def get_model_classes():
 @lru_cache(maxsize=1)
 def get_embedding_classes():
     """Lazy load embedding classes to avoid importing optional dependencies at module level."""
-    from langchain_google_genai import GoogleGenerativeAIEmbeddings
-    from langchain_ibm import WatsonxEmbeddings
-    from langchain_ollama import OllamaEmbeddings
-    from langchain_openai import OpenAIEmbeddings
+    from langchain_google_genai import GoogleGenerativeAIEmbeddings  # type: ignore  # noqa: PGH003
+    from langchain_ibm import WatsonxEmbeddings  # type: ignore  # noqa: PGH003
+    from langchain_ollama import OllamaEmbeddings  # type: ignore  # noqa: PGH003
+    from langchain_openai import OpenAIEmbeddings  # type: ignore  # noqa: PGH003
 
     return {
         "GoogleGenerativeAIEmbeddings": GoogleGenerativeAIEmbeddings,
@@ -351,17 +351,17 @@ def validate_model_provider_key(variable_name: str, api_key: str) -> None:
     # Test the API key based on provider
     try:
         if provider == "OpenAI":
-            from langchain_openai import ChatOpenAI
+            from langchain_openai import ChatOpenAI  # type: ignore  # noqa: PGH003
 
             llm = ChatOpenAI(api_key=api_key, model_name=first_model, max_tokens=1)
             llm.invoke("test")
         elif provider == "Anthropic":
-            from langchain_anthropic import ChatAnthropic
+            from langchain_anthropic import ChatAnthropic  # type: ignore  # noqa: PGH003
 
             llm = ChatAnthropic(anthropic_api_key=api_key, model=first_model, max_tokens=1)
             llm.invoke("test")
         elif provider == "Google Generative AI":
-            from langchain_google_genai import ChatGoogleGenerativeAI
+            from langchain_google_genai import ChatGoogleGenerativeAI  # type: ignore  # noqa: PGH003
 
             llm = ChatGoogleGenerativeAI(google_api_key=api_key, model=first_model, max_tokens=1)
             llm.invoke("test")
@@ -1044,6 +1044,8 @@ def update_model_options_in_build_config(
     - Cache is empty or expired
     - Model field is being refreshed (field_name == "model")
 
+    If the component specifies static options, those are preserved and not refreshed.
+
     Args:
         component: Component instance with cache, user_id, and log attributes
         build_config: The build configuration dict to update
@@ -1056,6 +1058,35 @@ def update_model_options_in_build_config(
         Updated build_config dict with model options and providers set
     """
     import time
+
+    # Check if component specified static options - if so, preserve them
+    # The cache key for static options detection
+    static_options_cache_key = f"{cache_key_prefix}_static_options_detected"
+
+    # On initial load, check if the component has static options
+    if field_name is None and static_options_cache_key not in component.cache:
+        # Check if the model field in build_config already has options set
+        existing_options = build_config.get("model", {}).get("options")
+        if existing_options:
+            # Component specified static options - mark them as static
+            component.cache[static_options_cache_key] = True
+        else:
+            component.cache[static_options_cache_key] = False
+
+    # If component has static options, skip the refresh logic entirely
+    if component.cache.get(static_options_cache_key, False):
+        # Static options - don't override them
+        # Just handle the visibility logic and return
+        if field_value == "connect_other_models":
+            # User explicitly selected "Connect other models", show the handle
+            if cache_key_prefix == "embedding_model_options":
+                build_config["model"]["input_types"] = ["Embeddings"]
+            else:
+                build_config["model"]["input_types"] = ["LanguageModel"]
+        else:
+            # Default case or model selection: hide the handle
+            build_config["model"]["input_types"] = []
+        return build_config
 
     # Cache key based on user_id
     cache_key = f"{cache_key_prefix}_{component.user_id}"
