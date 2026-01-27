@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import socket
 import webbrowser
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from threading import Thread
@@ -176,9 +177,28 @@ class OAuthCallbackHandler:
             def log_message(self, format: str, *args: object) -> None:  # noqa: A002
                 """Suppress default HTTP server logging."""
 
-        # Create server on specified port
-        # Bind to 127.0.0.1 for security (localhost only), but use self._host in the redirect_uri
-        self._server = HTTPServer(("127.0.0.1", self._port), CallbackRequestHandler)
+        # Create server with SO_REUSEADDR to allow reusing ports in TIME_WAIT state
+        # Try the specified port first, then fallback to dynamic port allocation (port 0)
+        last_error: OSError | None = None
+        for attempt_port in [self._port, 0]:
+            try:
+                self._server = HTTPServer(("127.0.0.1", attempt_port), CallbackRequestHandler)
+                # Enable SO_REUSEADDR to allow reusing the port quickly after server shutdown
+                self._server.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                break
+            except OSError as e:
+                last_error = e
+                if attempt_port == 0:
+                    # Even dynamic port failed, re-raise the error
+                    raise OSError(f"Failed to start OAuth callback server: {e}") from e
+                await logger.awarning(
+                    f"Port {attempt_port} in use, falling back to dynamic port allocation"
+                )
+
+        if self._server is None:
+            msg = f"Failed to start OAuth callback server: {last_error}"
+            raise OSError(msg)
+
         actual_port = self._server.server_address[1]
 
         # Run server in background thread to handle one request
