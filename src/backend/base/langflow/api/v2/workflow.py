@@ -39,7 +39,7 @@ from lfx.schema.workflow import (
     WorkflowStopRequest,
     WorkflowStopResponse,
 )
-from lfx.services.deps import get_settings_service
+from lfx.services.deps import get_settings_service, injectable_session_scope_readonly
 from pydantic_core import ValidationError as PydanticValidationError
 from sqlalchemy.exc import OperationalError
 
@@ -486,9 +486,10 @@ async def execute_workflow_background(
     description="Get status of workflow job by job ID",
 )
 async def get_workflow_status(
-    api_key_user: Annotated[UserRead, Depends(api_key_security)],  # noqa: ARG001
+    api_key_user: Annotated[UserRead, Depends(api_key_security)],
     job_id: Annotated[UUID | None, Query(description="Job ID to query")] = None,
-) -> list[WorkflowJobResponse] | WorkflowJobResponse:
+    session: Annotated[object, Depends(injectable_session_scope_readonly)] = None,
+) -> WorkflowExecutionResponse | WorkflowJobResponse:
     """Get workflow job status and results.
 
     This endpoint allows clients to query job status either by:
@@ -500,6 +501,7 @@ async def get_workflow_status(
     Args:
         api_key_user: Authenticated user from API key
         job_id: Optional job ID to query specific job
+        session: Database session for querying vertex builds
         page: Page number for pagination (default: 1)
         page_size: Number of results per page (default: 10, max: 100)
 
@@ -538,6 +540,23 @@ async def get_workflow_status(
                     },
                 )
             job = await job_service.get_job_by_job_id(job_id=job_id)
+
+            # If job is completed, reconstruct full workflow response from vertex_builds
+            if job.status == JobStatus.COMPLETED:
+                from langflow.api.v2.workflow_reconstruction import reconstruct_workflow_response_from_job_id
+
+                # Get the flow
+                flow = await get_flow_by_id_or_endpoint_name(str(job.flow_id), api_key_user.id)
+
+                # Reconstruct response from vertex_build table
+                return await reconstruct_workflow_response_from_job_id(
+                    session=session,
+                    flow=flow,
+                    job_id=str(job.job_id),
+                    user_id=str(api_key_user.id),
+                )
+
+            # If not completed, return job status only
             return WorkflowJobResponse(
                 job_id=str(job.job_id),
                 flow_id=str(job.flow_id),
