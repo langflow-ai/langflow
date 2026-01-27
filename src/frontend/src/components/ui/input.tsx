@@ -7,6 +7,7 @@ export interface InputProps
   icon?: string;
   inputClassName?: string;
   placeholder?: string;
+  placeholderClassName?: string;
   endIcon?: string;
   endIconClassName?: string;
 }
@@ -21,6 +22,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
       endIconClassName = "",
       type,
       placeholder,
+      placeholderClassName,
       ...props
     },
     ref,
@@ -29,7 +31,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
       <label
         className={cn(
           "relative block h-fit w-full text-sm",
-          icon ? className : "",
+          icon || className ? className : "",
         )}
       >
         {icon && (
@@ -56,6 +58,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
             "pointer-events-none absolute top-1/2 -translate-y-1/2 pl-px text-placeholder-foreground",
             icon ? "left-9" : "left-3",
             props.value && "hidden",
+            placeholderClassName,
           )}
         >
           {placeholder}

@@ -20,14 +20,16 @@ import ProviderList from "@/modals/modelProviderModal/components/ProviderList";
 import { Provider } from "@/modals/modelProviderModal/components/types";
 import useAlertStore from "@/stores/alertStore";
 import { cn } from "@/utils/utils";
+import DisconnectWarning from "./DisconnectWarning";
 import ModelSelection from "./ModelSelection";
 
 // API key placeholder examples by provider
 const API_KEY_PLACEHOLDERS: Record<string, string> = {
-  OpenAI: "sk-**************",
-  Anthropic: "sk-ant-**************",
-  "Google Generative AI": "AIza**************",
-  "IBM WatsonX": "**************",
+  OpenAI: "sk-****************************************************************",
+  Anthropic:
+    "sk-ant-****************************************************************",
+  "Google Generative AI": "AIza***********************************",
+  "IBM WatsonX": "********************************************",
 };
 
 interface ModelProvidersContentProps {
@@ -45,9 +47,11 @@ const ModelProvidersContent = ({
   const [apiKey, setApiKey] = useState("");
   const [validationFailed, setValidationFailed] = useState(false);
   const [showReplaceWarning, setShowReplaceWarning] = useState(false);
+  const [isInputFocused, setIsInputFocused] = useState(false);
   // Track if API key change came from user typing (vs programmatic reset)
   // Used to prevent auto-save from triggering when we clear the input after success
   const isUserInputRef = useRef(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const queryClient = useQueryClient();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
@@ -263,6 +267,8 @@ const ModelProvidersContent = ({
       setSuccessData({ title: `${selectedProvider.provider} API Key Saved` });
       invalidateProviderQueries();
       setApiKey("");
+      setIsInputFocused(false);
+      inputRef.current?.blur();
       setSelectedProvider((prev) =>
         prev ? { ...prev, is_enabled: true } : null,
       );
@@ -361,14 +367,23 @@ const ModelProvidersContent = ({
           {requiresApiKey ? (
             <>
               <Input
+                ref={inputRef}
                 placeholder={
-                  selectedProvider?.is_enabled
-                    ? API_KEY_PLACEHOLDERS[selectedProvider?.provider ?? ""] ||
+                  isInputFocused || !selectedProvider?.is_enabled
+                    ? "Enter API key"
+                    : API_KEY_PLACEHOLDERS[selectedProvider?.provider ?? ""] ||
                       "Enter API key"
-                    : "Enter API key"
                 }
+                placeholderClassName={cn(
+                  "text-primary group-focus-within:text-placeholder-foreground whitespace-nowrap overflow-hidden right-10",
+                  !selectedProvider?.is_enabled &&
+                    "text-placeholder-foreground",
+                )}
                 value={apiKey}
+                className="group"
                 type="password"
+                onFocus={() => setIsInputFocused(true)}
+                onBlur={() => setIsInputFocused(false)}
                 onChange={(e) => {
                   isUserInputRef.current = true;
                   setValidationFailed(false);
@@ -404,8 +419,7 @@ const ModelProvidersContent = ({
                 >
                   <Button
                     size="sm"
-                    variant="ghost"
-                    className="text-destructive"
+                    variant="destructive"
                     onClick={() => {
                       handleDisconnect();
                     }}
@@ -418,54 +432,52 @@ const ModelProvidersContent = ({
                   </Button>
                 </div>
               )}
-              <div
-                className={cn(
-                  "border border-border rounded-md border-destructive transition-all duration-300 ease-in-out origin-top",
-                  showReplaceWarning
-                    ? "opacity-100 max-h-40 scale-y-100 translate-y-0 mb-3 p-3"
-                    : "opacity-0 max-h-0 scale-y-0 -translate-y-2 overflow-hidden",
-                )}
-              >
-                <div className="text-destructive flex items-center gap-1 pb-3 text-sm">
-                  <ForwardedIconComponent
-                    name="Circle"
-                    className="text-destructive w-2 h-2 fill-destructive mr-1"
-                  />
-                  Warning
-                  <div className="flex gap-2 ml-auto">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setShowReplaceWarning(false)}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      size="sm"
-                      className="text-destructive"
-                      onClick={handleConfirmDisconnect}
-                      loading={isDeleting}
-                    >
-                      Confirm
-                    </Button>
-                  </div>
-                </div>
-                <p className="text-sm">
-                  Disconnecting an API key will disable all of the providers
-                  models being used in a flow.
-                </p>
-              </div>
+              <DisconnectWarning
+                show={showReplaceWarning}
+                message="Disconnecting an API key will disable all of the provider's models being used in a flow."
+                onCancel={() => setShowReplaceWarning(false)}
+                onConfirm={handleConfirmDisconnect}
+                isLoading={isDeleting}
+              />
             </>
           ) : (
-            <Button
-              onClick={handleActivateNoApiKeyProvider}
-              loading={isPending}
-              disabled={selectedProvider?.is_enabled}
-            >
-              {selectedProvider?.is_enabled
-                ? `${selectedProvider?.provider} Activated`
-                : `Activate ${selectedProvider?.provider}`}
-            </Button>
+            <>
+              <div
+                className={cn(
+                  "transition-all duration-300 ease-in-out",
+                  showReplaceWarning
+                    ? "opacity-0 max-h-0 overflow-hidden"
+                    : "opacity-100 max-h-20",
+                )}
+              >
+                <Button
+                  onClick={
+                    selectedProvider?.is_enabled
+                      ? handleDisconnect
+                      : handleActivateNoApiKeyProvider
+                  }
+                  loading={isPending && !showReplaceWarning}
+                  variant={
+                    selectedProvider?.is_enabled ? "destructive" : "default"
+                  }
+                  className={cn(
+                    "w-full",
+                    selectedProvider?.is_enabled && "text-primary",
+                  )}
+                >
+                  {selectedProvider?.is_enabled
+                    ? `Deactivate ${selectedProvider?.provider}`
+                    : `Activate ${selectedProvider?.provider}`}
+                </Button>
+              </div>
+              <DisconnectWarning
+                show={showReplaceWarning}
+                message={`Deactivating ${selectedProvider?.provider} will disable all of the provider's models being used in a flow.`}
+                onCancel={() => setShowReplaceWarning(false)}
+                onConfirm={handleConfirmDisconnect}
+                isLoading={isDeleting}
+              />
+            </>
           )}
         </div>
 
