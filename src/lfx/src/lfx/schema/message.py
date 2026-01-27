@@ -288,11 +288,16 @@ class Message(Data):
         prompt_json = prompt.to_json()
         return cls(prompt=prompt_json)
 
-    def format_text(self, template_format="f-string"):
+    def format_text(self, template_format="f-string", global_variables: dict[str, str] | None = None):
         if template_format == "mustache":
             # Use our secure mustache renderer
             variables_with_str_values = dict_values_to_string(self.variables)
-            formatted_prompt = safe_mustache_render(self.template, variables_with_str_values)
+            # Pass global variables for {{@var}} substitution
+            formatted_prompt = safe_mustache_render(
+                self.template,
+                variables_with_str_values,
+                global_variables=global_variables,
+            )
             self.text = formatted_prompt
             return formatted_prompt
         # Use langchain's template for other formats
@@ -305,18 +310,35 @@ class Message(Data):
         return formatted_prompt
 
     @classmethod
-    async def from_template_and_variables(cls, template: str, template_format: str = "f-string", **variables):
+    async def from_template_and_variables(
+        cls,
+        template: str,
+        template_format: str = "f-string",
+        global_variables: dict[str, str] | None = None,
+        **variables,
+    ):
         # This method has to be async for backwards compatibility with versions
         # >1.0.15, <1.1
-        return cls.from_template(template, template_format=template_format, **variables)
+        return cls.from_template(
+            template,
+            template_format=template_format,
+            global_variables=global_variables,
+            **variables,
+        )
 
     # Define a sync version for backwards compatibility with versions >1.0.15, <1.1
     @classmethod
-    def from_template(cls, template: str, template_format: str = "f-string", **variables):
+    def from_template(
+        cls,
+        template: str,
+        template_format: str = "f-string",
+        global_variables: dict[str, str] | None = None,
+        **variables,
+    ):
         from langchain_core.prompts.chat import ChatPromptTemplate
 
         instance = cls(template=template, variables=variables)
-        text = instance.format_text(template_format=template_format)
+        text = instance.format_text(template_format=template_format, global_variables=global_variables)
         message = HumanMessage(content=text)
         contents = []
         for value in variables.values():

@@ -504,6 +504,48 @@ class CustomComponent(BaseComponent):
         async with session_scope() as session:
             return await variable_service.list_variables(user_id=self.user_id, session=session)
 
+    async def get_all_global_variables(self) -> dict[str, str]:
+        """Returns all global variables for the current user with decrypted values.
+
+        This is useful for resolving global variable references in templates,
+        such as {{@variable_name}} in mustache prompts.
+
+        Raises:
+            ValueError: If the user id is not set and no request variables are found in context.
+
+        Returns:
+            dict[str, str]: Dictionary mapping variable names to their decrypted values.
+        """
+        result = {}
+
+        # First check graph context for request-level variable overrides
+        # This allows run_flow to work without user_id when variables are passed
+        if hasattr(self, "graph") and self.graph and hasattr(self.graph, "context"):
+            context = self.graph.context
+            if context and "request_variables" in context:
+                result.update(context["request_variables"])
+
+        # If we have a user_id, also get variables from the database
+        if hasattr(self, "_user_id") and self.user_id:
+            variable_service = get_variable_service()
+
+            if isinstance(self.user_id, str):
+                user_id = uuid.UUID(self.user_id)
+            elif isinstance(self.user_id, uuid.UUID):
+                user_id = self.user_id
+            else:
+                msg = f"Invalid user id: {self.user_id}"
+                raise TypeError(msg)
+
+            async with session_scope() as session:
+                db_variables = await variable_service.get_all_decrypted_variables(user_id=user_id, session=session)
+                # Database variables are used as fallback (context overrides take precedence)
+                for name, value in db_variables.items():
+                    if name not in result:
+                        result[name] = value
+
+        return result
+
     def index(self, value: int = 0):
         """Returns a function that returns the value at the given index in the iterable.
 

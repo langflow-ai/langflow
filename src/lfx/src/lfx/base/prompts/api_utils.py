@@ -8,6 +8,7 @@ from langchain_core.prompts.string import mustache_template_vars
 from lfx.inputs.inputs import DefaultPromptField
 from lfx.interface.utils import extract_input_variables_from_prompt
 from lfx.log.logger import logger
+from lfx.utils.mustache_security import extract_global_variable_names
 
 _INVALID_CHARACTERS = {
     " ",
@@ -124,6 +125,9 @@ def _check_input_variables(input_variables):
 
 
 def validate_prompt(prompt_template: str, *, silent_errors: bool = False, is_mustache: bool = False) -> list[str]:
+    # Extract global variable references ({{@var}}) - these don't create input fields
+    global_var_names = extract_global_variable_names(prompt_template) if is_mustache else []
+
     if is_mustache:
         # Extract only mustache variables
         try:
@@ -144,6 +148,11 @@ def validate_prompt(prompt_template: str, *, silent_errors: bool = False, is_mus
         # Only keep variables that are actually in mustache syntax (not in f-string syntax)
         # This handles cases where template has both {var} and {{var}}
         input_variables = [v for v in input_variables if v not in fstring_vars or f"{{{{{v}}}}}" in prompt_template]
+
+        # Filter out global variable references (variables starting with @)
+        # These are resolved at runtime from the user's global variables, not from input fields
+        # Note: mustache_template_vars will return "@varname" for {{@varname}}
+        input_variables = [v for v in input_variables if not v.startswith("@")]
     else:
         # Extract f-string variables
         input_variables = extract_input_variables_from_prompt(prompt_template)

@@ -9,7 +9,7 @@ from lfx.log.logger import logger
 from lfx.schema.dotdict import dotdict
 from lfx.schema.message import Message
 from lfx.template.utils import update_template_values
-from lfx.utils.mustache_security import validate_mustache_template
+from lfx.utils.mustache_security import extract_global_variable_names, validate_mustache_template
 
 
 class PromptComponent(Component):
@@ -94,7 +94,24 @@ class PromptComponent(Component):
     async def build_prompt(self) -> Message:
         use_double_brackets = self.use_double_brackets if hasattr(self, "use_double_brackets") else False
         template_format = "mustache" if use_double_brackets else "f-string"
-        prompt = await Message.from_template_and_variables(template_format=template_format, **self._attributes)
+
+        # Check if we need to fetch global variables for {{@var}} substitution
+        global_variables = None
+        if use_double_brackets:
+            template = self._attributes.get("template", "")
+            if template and extract_global_variable_names(template):
+                # Template contains global variable references, fetch them
+                try:
+                    global_variables = await self.get_all_global_variables()
+                except Exception as e:
+                    logger.warning(f"Failed to fetch global variables for prompt: {e}")
+                    global_variables = {}
+
+        prompt = await Message.from_template_and_variables(
+            template_format=template_format,
+            global_variables=global_variables,
+            **self._attributes,
+        )
         self.status = prompt.text
         return prompt
 

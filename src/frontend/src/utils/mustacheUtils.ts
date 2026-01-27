@@ -6,6 +6,13 @@
 // Regex pattern for simple variables only - same as backend
 const SIMPLE_VARIABLE_PATTERN = /\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}/g;
 
+// Regex pattern for global variable references (prefixed with @)
+// e.g., {{@my_global_var}}
+const GLOBAL_VARIABLE_PATTERN = /\{\{@([a-zA-Z_][a-zA-Z0-9_]*)\}\}/g;
+
+// Combined pattern that matches either simple variables or global variable references
+const COMBINED_VARIABLE_PATTERN = /\{\{(@)?([a-zA-Z_][a-zA-Z0-9_]*)\}\}/g;
+
 // Patterns for complex mustache syntax that we want to block
 const DANGEROUS_PATTERNS = [
   /\{\{\{/, // Triple braces (unescaped HTML in Mustache)
@@ -22,17 +29,19 @@ export interface MustacheValidationResult {
   isValid: boolean;
   error?: string;
   variables: string[];
+  globalVariables: string[];
 }
 
 /**
  * Validate that a mustache template only contains simple variable substitutions.
+ * Supports both regular variables ({{variable}}) and global variable references ({{@variable}}).
  * Returns validation result with extracted variables if valid.
  */
 export function validateMustacheTemplate(
   template: string,
 ): MustacheValidationResult {
   if (!template) {
-    return { isValid: true, variables: [] };
+    return { isValid: true, variables: [], globalVariables: [] };
   }
 
   // Check for dangerous patterns
@@ -41,8 +50,9 @@ export function validateMustacheTemplate(
       return {
         isValid: false,
         error:
-          "Complex mustache syntax is not allowed. Only simple variable substitution like {{variable}} is permitted.",
+          "Complex mustache syntax is not allowed. Only simple variable substitution like {{variable}} or global variable references like {{@variable}} are permitted.",
         variables: [],
+        globalVariables: [],
       };
     }
   }
@@ -63,6 +73,7 @@ export function validateMustacheTemplate(
         isValid: false,
         error: `Invalid template syntax. Check that all {{variables}} have matching closing braces.`,
         variables: [],
+        globalVariables: [],
       };
     }
 
@@ -72,19 +83,21 @@ export function validateMustacheTemplate(
 
   // Find all {{ }} patterns and validate them
   const allMustachePatterns = template.match(/\{\{[^}]*\}\}/g) || [];
-  const simpleVarPattern = /^\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}$/;
+  // Pattern that matches either simple variables or global variable references
+  const validVarPattern = /^\{\{@?([a-zA-Z_][a-zA-Z0-9_]*)\}\}$/;
 
   for (const pattern of allMustachePatterns) {
-    if (!simpleVarPattern.test(pattern)) {
+    if (!validVarPattern.test(pattern)) {
       return {
         isValid: false,
-        error: `Invalid mustache variable: ${pattern}. Only simple variable names like {{variable}} are allowed.`,
+        error: `Invalid mustache variable: ${pattern}. Only simple variable names like {{variable}} or global variable references like {{@variable}} are allowed.`,
         variables: [],
+        globalVariables: [],
       };
     }
   }
 
-  // Extract valid variables
+  // Extract valid regular variables (not starting with @)
   const variables: string[] = [];
   const regex = new RegExp(SIMPLE_VARIABLE_PATTERN.source, "g");
   let match: RegExpExecArray | null = regex.exec(template);
@@ -95,7 +108,18 @@ export function validateMustacheTemplate(
     match = regex.exec(template);
   }
 
-  return { isValid: true, variables };
+  // Extract global variable references
+  const globalVariables: string[] = [];
+  const globalRegex = new RegExp(GLOBAL_VARIABLE_PATTERN.source, "g");
+  let globalMatch: RegExpExecArray | null = globalRegex.exec(template);
+  while (globalMatch !== null) {
+    if (!globalVariables.includes(globalMatch[1])) {
+      globalVariables.push(globalMatch[1]);
+    }
+    globalMatch = globalRegex.exec(template);
+  }
+
+  return { isValid: true, variables, globalVariables };
 }
 
 /**
@@ -105,4 +129,13 @@ export function validateMustacheTemplate(
 export function extractMustacheVariables(template: string): string[] {
   const result = validateMustacheTemplate(template);
   return result.variables;
+}
+
+/**
+ * Extract global variable names from a mustache template.
+ * Only extracts valid {{@variable}} patterns.
+ */
+export function extractGlobalVariables(template: string): string[] {
+  const result = validateMustacheTemplate(template);
+  return result.globalVariables;
 }

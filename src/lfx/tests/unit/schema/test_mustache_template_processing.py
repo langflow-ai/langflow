@@ -3,11 +3,18 @@
 Note: Our mustache implementation only supports simple variable substitution
 for security reasons. Complex features like conditionals, loops, and sections
 are not supported.
+
+The implementation also supports global variable references using the {{@variable}}
+syntax, which are resolved at runtime from the user's global variables.
 """
 
 import pytest
 from lfx.schema.message import Message
-from lfx.utils.mustache_security import validate_mustache_template
+from lfx.utils.mustache_security import (
+    extract_global_variable_names,
+    safe_mustache_render,
+    validate_mustache_template,
+)
 
 
 class TestMustacheTemplateProcessing:
@@ -170,3 +177,162 @@ class TestMustacheTemplateProcessing:
         result = message.format_text()  # No template_format specified
 
         assert result == "Hello World!"
+
+
+class TestGlobalVariableReferences:
+    """Test global variable reference support in mustache templates ({{@variable}} syntax)."""
+
+    def test_extract_global_variable_names_basic(self):
+        """Test extracting global variable names from a template."""
+        template = "Hello {{@name}}!"
+        result = extract_global_variable_names(template)
+
+        assert result == ["name"]
+
+    def test_extract_global_variable_names_multiple(self):
+        """Test extracting multiple global variable names."""
+        template = "Hello {{@greeting}}, {{@name}}! Welcome to {{@company}}."
+        result = extract_global_variable_names(template)
+
+        assert sorted(result) == ["company", "greeting", "name"]
+
+    def test_extract_global_variable_names_mixed_with_regular(self):
+        """Test that only global variables (with @) are extracted."""
+        template = "Hello {{name}}, your API key is {{@api_key}}."
+        result = extract_global_variable_names(template)
+
+        # Should only extract the global variable reference
+        assert result == ["api_key"]
+
+    def test_extract_global_variable_names_empty_template(self):
+        """Test extracting global variables from empty template."""
+        result = extract_global_variable_names("")
+
+        assert result == []
+
+    def test_extract_global_variable_names_no_globals(self):
+        """Test extracting global variables when there are none."""
+        template = "Hello {{name}}, you are {{age}} years old."
+        result = extract_global_variable_names(template)
+
+        assert result == []
+
+    def test_validate_mustache_allows_global_variables(self):
+        """Test that global variable syntax is allowed."""
+        # Should not raise
+        validate_mustache_template("Hello {{@name}}!")
+        validate_mustache_template("{{@var1}} and {{@var2}}")
+        validate_mustache_template("Mix of {{regular}} and {{@global}}")
+
+    def test_safe_mustache_render_with_global_variables(self):
+        """Test rendering a template with global variables."""
+        template = "Hello {{@name}}!"
+        global_variables = {"name": "World"}
+
+        result = safe_mustache_render(template, {}, global_variables)
+
+        assert result == "Hello World!"
+
+    def test_safe_mustache_render_mixed_variables(self):
+        """Test rendering a template with both regular and global variables."""
+        template = "Hello {{user}}, your API key is {{@api_key}}."
+        variables = {"user": "Alice"}
+        global_variables = {"api_key": "sk-12345"}
+
+        result = safe_mustache_render(template, variables, global_variables)
+
+        assert result == "Hello Alice, your API key is sk-12345."
+
+    def test_safe_mustache_render_missing_global_variable(self):
+        """Test rendering when global variable is missing."""
+        template = "Hello {{@name}}!"
+        global_variables = {}
+
+        result = safe_mustache_render(template, {}, global_variables)
+
+        # Missing global variables should render as empty strings
+        assert result == "Hello !"
+
+    def test_safe_mustache_render_global_variables_none(self):
+        """Test rendering when global_variables is None."""
+        template = "Hello {{@name}}!"
+
+        result = safe_mustache_render(template, {}, None)
+
+        # Should render empty string for the global variable
+        assert result == "Hello !"
+
+    def test_format_text_with_global_variables(self):
+        """Test Message.format_text with global variables."""
+        message = Message(template="Hello {{@name}}!", variables={})
+        global_variables = {"name": "World"}
+
+        result = message.format_text(template_format="mustache", global_variables=global_variables)
+
+        assert result == "Hello World!"
+        assert message.text == "Hello World!"
+
+    def test_format_text_mixed_with_global_variables(self):
+        """Test Message.format_text with both regular and global variables."""
+        message = Message(template="Hello {{user}}, your key is {{@api_key}}.", variables={"user": "Bob"})
+        global_variables = {"api_key": "secret123"}
+
+        result = message.format_text(template_format="mustache", global_variables=global_variables)
+
+        assert result == "Hello Bob, your key is secret123."
+
+    async def test_from_template_and_variables_with_global_variables(self):
+        """Test from_template_and_variables with global variables."""
+        global_variables = {"api_key": "my-secret-key"}
+        message = await Message.from_template_and_variables(
+            template="API Key: {{@api_key}}", template_format="mustache", global_variables=global_variables
+        )
+
+        assert isinstance(message, Message)
+        assert message.text == "API Key: my-secret-key"
+
+    async def test_from_template_and_variables_mixed(self):
+        """Test from_template_and_variables with both regular and global variables."""
+        global_variables = {"api_key": "sk-12345"}
+        message = await Message.from_template_and_variables(
+            template="Hello {{user}}, your key is {{@api_key}}.",
+            template_format="mustache",
+            global_variables=global_variables,
+            user="Alice",
+        )
+
+        assert isinstance(message, Message)
+        assert message.text == "Hello Alice, your key is sk-12345."
+
+    def test_global_variable_duplicate_names(self):
+        """Test that duplicate global variable references are handled correctly."""
+        template = "Key 1: {{@api_key}}, Key 2: {{@api_key}}"
+        result = extract_global_variable_names(template)
+
+        # Should only appear once
+        assert result == ["api_key"]
+
+    def test_global_variable_with_underscores(self):
+        """Test global variables with underscores in names."""
+        template = "{{@my_long_variable_name}}"
+        result = extract_global_variable_names(template)
+
+        assert result == ["my_long_variable_name"]
+
+    def test_global_variable_with_numbers(self):
+        """Test global variables with numbers in names."""
+        template = "{{@var1}} and {{@var_2}}"
+        result = extract_global_variable_names(template)
+
+        assert sorted(result) == ["var1", "var_2"]
+
+    def test_safe_mustache_render_global_overrides_regular(self):
+        """Test that global and regular variables are kept separate."""
+        template = "Regular: {{name}}, Global: {{@name}}"
+        variables = {"name": "regular_value"}
+        global_variables = {"name": "global_value"}
+
+        result = safe_mustache_render(template, variables, global_variables)
+
+        # Both should resolve to their respective values
+        assert result == "Regular: regular_value, Global: global_value"

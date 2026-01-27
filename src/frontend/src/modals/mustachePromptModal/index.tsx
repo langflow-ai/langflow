@@ -1,6 +1,7 @@
 import type React from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { usePostValidatePrompt } from "@/controllers/API/queries/nodes/use-post-validate-prompt";
+import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import IconComponent from "../../components/common/genericIconComponent";
 import SanitizedHTMLWrapper from "../../components/common/sanitizedHTMLWrapper";
 import ShadTooltip from "../../components/common/shadTooltipComponent";
@@ -27,6 +28,8 @@ import varHighlightHTML from "../promptModal/utils/var-highlight-html";
 
 // Simple regex to extract mustache variables - only matches valid {{variable_name}} patterns
 const SIMPLE_VARIABLE_PATTERN = /\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}/g;
+// Pattern for global variable references - matches {{@variable_name}} patterns
+const GLOBAL_VARIABLE_PATTERN = /\{\{@([a-zA-Z_][a-zA-Z0-9_]*)\}\}/g;
 
 // Type for non-standard caretPositionFromPoint API (not supported in Safari)
 interface CaretPosition {
@@ -51,6 +54,9 @@ export default function MustachePromptModal({
   const [inputValue, setInputValue] = useState(value);
   const [isEdit, setIsEdit] = useState(true);
   const [wordsHighlight, setWordsHighlight] = useState<Set<string>>(new Set());
+  const [globalVarsHighlight, setGlobalVarsHighlight] = useState<Set<string>>(
+    new Set(),
+  );
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setNoticeData = useAlertStore((state) => state.setNoticeData);
@@ -62,22 +68,70 @@ export default function MustachePromptModal({
   const previewRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // Fetch global variables
+  const { data: globalVariables } = useGetGlobalVariables();
+
+  // Filter to only show Generic variables (not credentials) for prompt insertion
+  const genericGlobalVariables = useMemo(() => {
+    return (
+      globalVariables?.filter((variable) => variable.type === "Generic") ?? []
+    );
+  }, [globalVariables]);
+
   function checkVariables(valueToCheck: string): void {
-    // Extract only valid mustache variables {{variable_name}}
+    // Extract only valid mustache variables {{variable_name}} (excluding global vars with @)
     const matches: string[] = [];
     const regex = new RegExp(SIMPLE_VARIABLE_PATTERN.source, "g");
     let match: RegExpExecArray | null = regex.exec(valueToCheck);
 
     while (match !== null) {
       const varName = match[1];
-      if (!matches.includes(varName)) {
+      // Exclude global variable references (those starting with @)
+      if (!matches.includes(varName) && !varName.startsWith("@")) {
         matches.push(varName);
       }
       match = regex.exec(valueToCheck);
     }
 
     setWordsHighlight(new Set(matches.map((v) => `{{${v}}}`)));
+
+    // Extract global variable references {{@variable_name}}
+    const globalMatches: string[] = [];
+    const globalRegex = new RegExp(GLOBAL_VARIABLE_PATTERN.source, "g");
+    let globalMatch: RegExpExecArray | null = globalRegex.exec(valueToCheck);
+
+    while (globalMatch !== null) {
+      const varName = globalMatch[1];
+      if (!globalMatches.includes(varName)) {
+        globalMatches.push(varName);
+      }
+      globalMatch = globalRegex.exec(valueToCheck);
+    }
+
+    setGlobalVarsHighlight(new Set(globalMatches.map((v) => `{{@${v}}}`)));
   }
+
+  // Insert global variable at cursor position
+  const insertGlobalVariable = (variableName: string) => {
+    if (!textareaRef.current || readonly) return;
+
+    const textarea = textareaRef.current;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = inputValue || "";
+    const insertion = `{{@${variableName}}}`;
+
+    const newValue = text.substring(0, start) + insertion + text.substring(end);
+    setInputValue(newValue);
+    checkVariables(newValue);
+
+    // Set cursor position after the inserted text
+    setTimeout(() => {
+      textarea.focus();
+      const newPosition = start + insertion.length;
+      textarea.setSelectionRange(newPosition, newPosition);
+    }, 0);
+  };
 
   useEffect(() => {
     if (inputValue && inputValue !== "") {
@@ -88,6 +142,11 @@ export default function MustachePromptModal({
   const coloredContent = (typeof inputValue === "string" ? inputValue : "")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
+    // First highlight global variables with a different color (green/teal)
+    .replace(/\{\{@([a-zA-Z_][a-zA-Z0-9_]*)\}\}/g, (match) => {
+      return `<span class="font-semibold text-teal-600 dark:text-teal-400">${match}</span>`;
+    })
+    // Then highlight regular prompt variables
     .replace(/\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}/g, (match) => {
       return varHighlightHTML({ name: match, addCurlyBraces: false });
     })
@@ -221,36 +280,86 @@ export default function MustachePromptModal({
         </div>
       </BaseModal.Header>
       <BaseModal.Content overflowHidden>
-        <div className={classNames("flex h-full w-full rounded-lg border")}>
-          {isEdit && !readonly ? (
-            <Textarea
-              id={"modal-" + id}
-              data-testid={"modal-" + id}
-              ref={textareaRef}
-              className="form-input h-full w-full resize-none rounded-lg border-0 custom-scroll focus-visible:ring-1"
-              value={inputValue}
-              onBlur={() => {
-                setScrollPosition(textareaRef.current?.scrollTop || 0);
-                setIsEdit(false);
-              }}
-              autoFocus
-              onChange={(event) => {
-                setInputValue(event.target.value);
-                checkVariables(event.target.value);
-              }}
-              placeholder={EDIT_TEXT_PLACEHOLDER}
-              onKeyDown={(e) => {
-                handleKeyDown(e, inputValue, "");
-              }}
-            />
-          ) : (
-            <SanitizedHTMLWrapper
-              ref={previewRef}
-              className={getClassByNumberLength() + " bg-muted"}
-              onClick={handlePreviewClick}
-              content={coloredContent}
-              suppressWarning={true}
-            />
+        <div className="flex h-full w-full gap-4">
+          {/* Main editor area */}
+          <div
+            className={classNames("flex flex-1 rounded-lg border", {
+              "w-full": genericGlobalVariables.length === 0,
+              "w-3/4": genericGlobalVariables.length > 0,
+            })}
+          >
+            {isEdit && !readonly ? (
+              <Textarea
+                id={"modal-" + id}
+                data-testid={"modal-" + id}
+                ref={textareaRef}
+                className="form-input h-full w-full resize-none rounded-lg border-0 custom-scroll focus-visible:ring-1"
+                value={inputValue}
+                onBlur={() => {
+                  setScrollPosition(textareaRef.current?.scrollTop || 0);
+                  setIsEdit(false);
+                }}
+                autoFocus
+                onChange={(event) => {
+                  setInputValue(event.target.value);
+                  checkVariables(event.target.value);
+                }}
+                placeholder={EDIT_TEXT_PLACEHOLDER}
+                onKeyDown={(e) => {
+                  handleKeyDown(e, inputValue, "");
+                }}
+              />
+            ) : (
+              <SanitizedHTMLWrapper
+                ref={previewRef}
+                className={getClassByNumberLength() + " bg-muted"}
+                onClick={handlePreviewClick}
+                content={coloredContent}
+                suppressWarning={true}
+              />
+            )}
+          </div>
+
+          {/* Global Variables Panel */}
+          {genericGlobalVariables.length > 0 && (
+            <div className="flex w-1/4 min-w-[200px] flex-col rounded-lg border bg-muted/30">
+              <div className="flex items-center gap-2 border-b px-3 py-2">
+                <IconComponent
+                  name="Globe"
+                  className="h-4 w-4 text-teal-600 dark:text-teal-400"
+                />
+                <span className="text-sm font-semibold">Global Variables</span>
+              </div>
+              <div className="flex-1 overflow-y-auto p-2 custom-scroll">
+                <div className="space-y-1">
+                  {genericGlobalVariables.map((variable) => (
+                    <button
+                      key={variable.id}
+                      type="button"
+                      onClick={() => {
+                        setIsEdit(true);
+                        setTimeout(() => insertGlobalVariable(variable.name), 0);
+                      }}
+                      disabled={readonly}
+                      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <IconComponent
+                        name="Plus"
+                        className="h-3 w-3 text-muted-foreground"
+                      />
+                      <span className="truncate font-mono text-xs">
+                        {variable.name}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="border-t px-3 py-2">
+                <p className="text-xs text-muted-foreground">
+                  Click to insert <code className="text-teal-600 dark:text-teal-400">{`{{@var}}`}</code> at cursor
+                </p>
+              </div>
+            </div>
           )}
         </div>
       </BaseModal.Content>
@@ -293,11 +402,48 @@ export default function MustachePromptModal({
                       </Badge>
                     </ShadTooltip>
                   ))}
+
+                  {/* Show global variables used in the template */}
+                  {globalVarsHighlight.size > 0 && (
+                    <>
+                      <IconComponent
+                        name="Globe"
+                        className="ml-2 flex h-4 w-4 text-teal-600 dark:text-teal-400"
+                      />
+                      <span className="text-md font-semibold text-teal-600 dark:text-teal-400">
+                        Global:
+                      </span>
+                      {Array.from(globalVarsHighlight).map((word, index) => (
+                        <ShadTooltip
+                          key={`global-${index}`}
+                          content={word.replace(/[{}@]/g, "")}
+                          asChild={false}
+                        >
+                          <Badge
+                            key={`global-${index}`}
+                            variant="secondary"
+                            size="md"
+                            className="max-w-[40vw] cursor-default truncate border-teal-600/30 bg-teal-50 p-1 text-sm text-teal-700 dark:border-teal-400/30 dark:bg-teal-950 dark:text-teal-300"
+                          >
+                            <div className="relative bottom-[1px]">
+                              <span id={"global-badge" + index.toString()}>
+                                {word.replace(/[{}@]/g, "").length > 59
+                                  ? word.replace(/[{}@]/g, "").slice(0, 56) +
+                                    "..."
+                                  : word.replace(/[{}@]/g, "")}
+                              </span>
+                            </div>
+                          </Badge>
+                        </ShadTooltip>
+                      ))}
+                    </>
+                  )}
                 </div>
               </div>
               <span className="mt-2 text-xs text-muted-foreground">
-                Prompt variables can be created with any chosen name inside
-                double curly brackets, e.g. {"{{variable_name}}"}
+                Use <code>{`{{variable}}`}</code> for input fields, or{" "}
+                <code className="text-teal-600 dark:text-teal-400">{`{{@global_var}}`}</code>{" "}
+                to reference global variables
               </span>
             </div>
           </div>
