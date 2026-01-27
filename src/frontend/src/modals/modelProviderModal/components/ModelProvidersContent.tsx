@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -7,7 +7,10 @@ import {
   PROVIDER_VARIABLE_MAPPING,
   VARIABLE_CATEGORY,
 } from "@/constants/providerConstants";
-import { useUpdateEnabledModels } from "@/controllers/API/queries/models/use-update-enabled-models";
+import {
+  ModelStatusUpdate,
+  useUpdateEnabledModels,
+} from "@/controllers/API/queries/models/use-update-enabled-models";
 import {
   useGetGlobalVariables,
   usePatchGlobalVariables,
@@ -17,6 +20,7 @@ import { useDebounce } from "@/hooks/use-debounce";
 import ProviderList from "@/modals/modelProviderModal/components/ProviderList";
 import { Provider } from "@/modals/modelProviderModal/components/types";
 import useAlertStore from "@/stores/alertStore";
+import { ResponseErrorDetailAPI } from "@/types/api";
 import { cn } from "@/utils/utils";
 import ModelSelection from "./ModelSelection";
 
@@ -34,6 +38,9 @@ const ModelProvidersContent = ({
   );
   const [apiKey, setApiKey] = useState("");
   const [validationFailed, setValidationFailed] = useState(false);
+  const [pendingUpdates, setPendingUpdates] = useState<
+    Map<string, ModelStatusUpdate>
+  >(new Map());
   // Track if API key change came from user typing (vs programmatic reset)
   // Used to prevent auto-save from triggering when we clear the input after success
   const isUserInputRef = useRef(false);
@@ -82,27 +89,59 @@ const ModelProvidersContent = ({
     }
   }, [apiKey, debouncedConfigureProvider]);
 
-  // Update enabled models when toggled
-  const handleModelToggle = (modelName: string, enabled: boolean) => {
-    if (!selectedProvider?.provider) return;
+  // Flush pending model updates to the server in a single batch
+  const flushPendingUpdates = useCallback(() => {
+    if (pendingUpdates.size === 0) return;
 
+    const updates = Array.from(pendingUpdates.values());
     updateEnabledModels(
-      {
-        updates: [
-          {
-            provider: selectedProvider.provider,
-            model_id: modelName,
-            enabled,
-          },
-        ],
-      },
+      { updates },
       {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: ["useGetEnabledModels"] });
         },
       },
     );
+    setPendingUpdates(new Map());
+  }, [pendingUpdates, updateEnabledModels, queryClient]);
+
+  // Accumulate model toggle changes locally for batching
+  const handleModelToggle = (modelName: string, enabled: boolean) => {
+    if (!selectedProvider?.provider) return;
+
+    setPendingUpdates((prev) => {
+      const next = new Map(prev);
+      const key = `${selectedProvider.provider}:${modelName}`;
+      next.set(key, {
+        provider: selectedProvider.provider,
+        model_id: modelName,
+        enabled,
+      });
+      return next;
+    });
   };
+
+  // Flush pending updates when provider changes
+  const prevProviderRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (
+      prevProviderRef.current !== null &&
+      prevProviderRef.current !== selectedProvider?.provider
+    ) {
+      flushPendingUpdates();
+    }
+    prevProviderRef.current = selectedProvider?.provider ?? null;
+  }, [selectedProvider?.provider, flushPendingUpdates]);
+
+  // Flush pending updates on unmount (modal close)
+  useEffect(() => {
+    return () => {
+      if (pendingUpdates.size > 0) {
+        const updates = Array.from(pendingUpdates.values());
+        updateEnabledModels({ updates });
+      }
+    };
+  }, [pendingUpdates, updateEnabledModels]);
 
   // Toggle provider selection - clicking same provider deselects it
   const handleProviderSelect = (provider: Provider) => {
@@ -148,7 +187,7 @@ const ModelProvidersContent = ({
       );
     };
 
-    const onError = (error: any) => {
+    const onError = (error: ResponseErrorDetailAPI) => {
       setErrorData({
         title: "Error Activating Provider",
         list: [
@@ -205,7 +244,7 @@ const ModelProvidersContent = ({
       );
     };
 
-    const onError = (error: any) => {
+    const onError = (error: ResponseErrorDetailAPI) => {
       setValidationFailed(true);
       setErrorData({
         title: existingVariable
@@ -345,6 +384,7 @@ const ModelProvidersContent = ({
               onModelToggle={handleModelToggle}
               providerName={selectedProvider?.provider}
               isEnabledModel={selectedProvider?.is_enabled}
+              pendingUpdates={pendingUpdates}
             />
           </div>
         </div>

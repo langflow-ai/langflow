@@ -1,6 +1,7 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Switch } from "@/components/ui/switch";
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
+import { ModelStatusUpdate } from "@/controllers/API/queries/models/use-update-enabled-models";
 
 import { Model } from "@/modals/modelProviderModal/components/types";
 import { cn } from "@/utils/utils";
@@ -11,6 +12,7 @@ export interface ModelProviderSelectionProps {
   modelType: "llm" | "embeddings" | "all";
   providerName?: string;
   isEnabledModel?: boolean;
+  pendingUpdates?: Map<string, ModelStatusUpdate>;
 }
 
 interface ModelRowProps {
@@ -61,10 +63,16 @@ const ModelSelection = ({
   onModelToggle,
   providerName,
   isEnabledModel,
+  pendingUpdates,
 }: ModelProviderSelectionProps) => {
   const { data: enabledModelsData } = useGetEnabledModels();
 
   const isModelEnabled = (modelName: string): boolean => {
+    // Check pending updates first for optimistic UI
+    const key = `${providerName}:${modelName}`;
+    if (pendingUpdates?.has(key)) {
+      return pendingUpdates.get(key)!.enabled;
+    }
     if (!providerName || !enabledModelsData?.enabled_models) return false;
     return enabledModelsData.enabled_models[providerName]?.[modelName] ?? false;
   };
