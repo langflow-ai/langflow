@@ -556,11 +556,16 @@ async def get_workflow_status(
                     user_id=str(api_key_user.id),
                 )
 
-            # If not completed, return job status only
-            return WorkflowJobResponse(
-                job_id=str(job.job_id),
+            # If not completed, return WorkflowExecutionResponse with empty outputs
+            # This ensures consistent response type (always WorkflowExecutionResponse) for SDK generation
+            return WorkflowExecutionResponse(
                 flow_id=str(job.flow_id),
+                job_id=str(job.job_id),
                 status=job.status,
+                outputs={},
+                errors=[],
+                inputs={},
+                metadata={},
             )
 
     except HTTPException:
