@@ -2,7 +2,6 @@ from lfx.base.models.model import LCModelComponent
 from lfx.base.models.unified_models import (
     get_language_model_options,
     get_llm,
-    model_provider_metadata,
     update_model_options_in_build_config,
 )
 from lfx.base.models.watsonx_constants import IBM_WATSONX_URLS

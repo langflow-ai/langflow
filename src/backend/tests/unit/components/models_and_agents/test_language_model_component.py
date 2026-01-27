@@ -88,7 +88,7 @@ class TestLanguageModelComponent(ComponentTestBaseWithoutClient):
         # Update default_kwargs to include max_tokens_field_name in metadata
         default_kwargs["model"][0]["metadata"]["max_tokens_field_name"] = "max_tokens"
         default_kwargs["max_tokens"] = 500
-        
+
         component = component_class(**default_kwargs)
         component.api_key = "sk-test-key"
         component.temperature = 0.5
