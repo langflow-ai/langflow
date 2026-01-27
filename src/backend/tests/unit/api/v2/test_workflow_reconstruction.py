@@ -32,13 +32,13 @@ class TestWorkflowReconstruction:
 
         # Mock vertex_builds
         mock_vb1 = MagicMock(spec=VertexBuildTable)
-        mock_vb1.vertex_id = "node1"
+        mock_vb1.id = "node1"
         mock_vb1.data = {"outputs": {"result": "output1"}}
         mock_vb1.artifacts = {}
         mock_vb1.timestamp = datetime.now(timezone.utc)
 
         mock_vb2 = MagicMock(spec=VertexBuildTable)
-        mock_vb2.vertex_id = "node2"
+        mock_vb2.id = "node2"
         mock_vb2.data = {"outputs": {"result": "output2"}}
         mock_vb2.artifacts = {}
         mock_vb2.timestamp = datetime.now(timezone.utc)
@@ -118,7 +118,7 @@ class TestWorkflowReconstruction:
         mock_vertex_builds = []
         for node_id in ["node1", "node2", "node3"]:
             mock_vb = MagicMock(spec=VertexBuildTable)
-            mock_vb.vertex_id = node_id
+            mock_vb.id = node_id
             mock_vb.data = {"outputs": {"result": f"output_{node_id}"}}
             mock_vb.artifacts = {}
             mock_vb.timestamp = datetime.now(timezone.utc)

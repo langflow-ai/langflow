@@ -59,7 +59,7 @@ async def reconstruct_workflow_response_from_job_id(
     terminal_node_ids = graph.get_terminal_nodes()
 
     # Filter to terminal vertices with data
-    terminal_vertex_builds = [vb for vb in vertex_builds if vb.vertex_id in terminal_node_ids and vb.data]
+    terminal_vertex_builds = [vb for vb in vertex_builds if vb.id in terminal_node_ids and vb.data]
     if not terminal_vertex_builds:
         msg = f"No terminal vertex builds found for job_id {job_id}"
         raise ValueError(msg)
