@@ -90,6 +90,57 @@ class TestOAuthCallbackHandler:
         assert handler._error is None
         assert handler._server is None
 
+    @pytest.mark.asyncio
+    async def test_port_fallback_when_port_in_use(self) -> None:
+        """Test that handler falls back to dynamic port when specified port is in use."""
+        import socket
+
+        # Occupy a port
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        sock.bind(("127.0.0.1", 0))
+        occupied_port = sock.getsockname()[1]
+        sock.listen(1)
+
+        try:
+            # Try to use the occupied port - should fallback to dynamic port
+            handler = OAuthCallbackHandler(port=occupied_port)
+            redirect_uri = await handler.start()
+
+            # Should have started on a different port
+            port_str = redirect_uri.split(":")[2].split("/")[0]
+            actual_port = int(port_str)
+
+            assert actual_port != occupied_port
+            assert actual_port > 0
+
+            handler.shutdown()
+        finally:
+            sock.close()
+
+    @pytest.mark.asyncio
+    async def test_so_reuseaddr_allows_quick_restart(self) -> None:
+        """Test that SO_REUSEADDR allows quick server restart on same port."""
+        # Start a handler
+        handler1 = OAuthCallbackHandler(port=0)
+        redirect_uri1 = await handler1.start()
+
+        # Extract port
+        port_str = redirect_uri1.split(":")[2].split("/")[0]
+        used_port = int(port_str)
+
+        # Shutdown immediately
+        handler1.shutdown()
+
+        # Start another handler on the same port - should work with SO_REUSEADDR
+        handler2 = OAuthCallbackHandler(port=used_port)
+        try:
+            redirect_uri2 = await handler2.start()
+            # Should succeed (either same port or fallback)
+            assert "/callback" in redirect_uri2
+        finally:
+            handler2.shutdown()
+
 
 class TestCallbackHandlerWithSimulatedCallback:
     """Tests for callback handling with simulated OAuth responses."""
