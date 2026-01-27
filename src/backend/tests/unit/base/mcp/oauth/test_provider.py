@@ -8,7 +8,7 @@ This test suite validates the OAuth provider factory functionality including:
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from lfx.base.mcp.oauth.provider import create_mcp_oauth_provider
@@ -530,3 +530,118 @@ class TestOAuthIntegration:
                     assert call_kwargs.get("oauth_auth") is provider
         finally:
             cleanup()
+
+
+class TestOAuthAuthWrapper:
+    """Tests for OAuthAuthWrapper 401 handling."""
+
+    @pytest.fixture
+    def storage_dir(self, tmp_path: Path) -> Path:
+        """Create a temporary storage directory."""
+        return tmp_path / "oauth"
+
+    @pytest.mark.asyncio
+    async def test_wrapper_clears_tokens_on_401(self, storage_dir: Path) -> None:
+        """Test that OAuthAuthWrapper clears cached tokens on 401 response."""
+        from lfx.base.mcp.oauth.provider import OAuthAuthWrapper
+        from lfx.base.mcp.oauth.storage import FileTokenStorage
+        from mcp.shared.auth import OAuthToken
+
+        # Create storage with tokens
+        storage = FileTokenStorage(storage_dir, "test_server")
+        test_token = OAuthToken(
+            access_token="test_access_token",
+            token_type="Bearer",
+        )
+        await storage.set_tokens(test_token)
+
+        # Verify tokens are stored
+        stored = await storage.get_tokens()
+        assert stored is not None
+        assert stored.access_token == "test_access_token"
+
+        # Create a mock provider
+        mock_provider = MagicMock()
+        mock_provider.async_auth_flow = MagicMock()
+
+        # Create wrapper
+        wrapper = OAuthAuthWrapper(mock_provider, storage)
+
+        # Simulate 401 response handling
+        mock_response = MagicMock()
+        mock_response.status_code = 401
+        mock_response.text = '{"error": "invalid_token"}'
+
+        await wrapper._clear_tokens_on_401(mock_response)
+
+        # Verify tokens were cleared
+        stored_after = await storage.get_tokens()
+        assert stored_after is None
+
+    @pytest.mark.asyncio
+    async def test_wrapper_delegates_to_underlying_provider(self, storage_dir: Path) -> None:
+        """Test that OAuthAuthWrapper delegates attribute access to underlying provider."""
+        provider, _, cleanup = await create_mcp_oauth_provider(
+            server_url="https://mcp.example.com",
+            storage_dir=storage_dir,
+            redirect_port=0,
+        )
+
+        try:
+            # Should be able to access underlying provider's attributes
+            assert hasattr(provider, "context")
+            assert hasattr(provider, "_provider")
+        finally:
+            cleanup()
+
+    @pytest.mark.asyncio
+    async def test_wrapper_is_httpx_auth(self, storage_dir: Path) -> None:
+        """Test that OAuthAuthWrapper implements httpx.Auth."""
+        import httpx
+
+        provider, _, cleanup = await create_mcp_oauth_provider(
+            server_url="https://mcp.example.com",
+            storage_dir=storage_dir,
+            redirect_port=0,
+        )
+
+        try:
+            assert isinstance(provider, httpx.Auth)
+        finally:
+            cleanup()
+
+    @pytest.mark.asyncio
+    async def test_wrapper_clears_in_memory_storage_on_401(self) -> None:
+        """Test that OAuthAuthWrapper clears in-memory storage on 401."""
+        from lfx.base.mcp.oauth.provider import OAuthAuthWrapper
+        from lfx.base.mcp.oauth.storage import InMemoryTokenStorage
+        from mcp.shared.auth import OAuthToken
+
+        # Create in-memory storage with tokens
+        storage = InMemoryTokenStorage()
+        test_token = OAuthToken(
+            access_token="test_access_token",
+            token_type="Bearer",
+        )
+        await storage.set_tokens(test_token)
+
+        # Verify tokens are stored
+        stored = await storage.get_tokens()
+        assert stored is not None
+
+        # Create a mock provider
+        mock_provider = MagicMock()
+
+        # Create wrapper
+        wrapper = OAuthAuthWrapper(mock_provider, storage)
+
+        # Simulate 401 response handling
+        mock_response = MagicMock()
+        mock_response.status_code = 401
+        mock_response.text = '{"error": "invalid_token"}'
+
+        await wrapper._clear_tokens_on_401(mock_response)
+
+        # Verify tokens were cleared
+        stored_after = await storage.get_tokens()
+        assert stored_after is None
