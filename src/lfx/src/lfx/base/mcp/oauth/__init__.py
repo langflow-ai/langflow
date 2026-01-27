@@ -10,12 +10,13 @@ Only three components are implemented here:
 """
 
 from lfx.base.mcp.oauth.handlers import OAuthCallbackHandler
-from lfx.base.mcp.oauth.provider import create_mcp_oauth_provider
+from lfx.base.mcp.oauth.provider import OAuthAuthWrapper, create_mcp_oauth_provider
 from lfx.base.mcp.oauth.storage import FileTokenStorage, InMemoryTokenStorage
 
 __all__ = [
     "FileTokenStorage",
     "InMemoryTokenStorage",
+    "OAuthAuthWrapper",
     "OAuthCallbackHandler",
     "create_mcp_oauth_provider",
 ]
