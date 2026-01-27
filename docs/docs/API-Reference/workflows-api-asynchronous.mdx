@@ -5,6 +5,7 @@ slug: /workflow-api-asynchronous
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import PartialAPISetup from '@site/docs/_partial-api-setup.mdx';
 
 :::warning Beta Feature
 The Workflow API is currently in **Beta**.
@@ -13,64 +14,9 @@ The API endpoints and response formats may change in future releases.
 
 The Asynchronous Workflow API provides programmatic access to execute Langflow workflows asynchronously using background jobs or streaming execution modes. This API is part of the Langflow v2 API and offers enhanced workflow execution capabilities compared to the v1 `/run` endpoint.
 
-For synchronous execution (receiving complete results immediately), see [Synchronous Workflow API endpoints](/workflow-api-synchronous).
+For synchronous execution (receiving complete results immediately), see [Synchronous Workflow API endpoints](/workflows-api-synchronous).
 
-## Prerequisites
-
-Before using the Asynchronous Workflow API, you need:
-
-* [Install and start Langflow](/get-started-installation) with the developer API enabled
-    The Workflow API endpoints require the `developer_api_enabled` setting to be enabled. If this setting is disabled, these endpoints will return a 404 Not Found error.
-
-    To enable the developer API endpoint, do the following:
-    1. In the Langflow `.env` file, set the environment variable to `true`:
-       ```
-       LANGFLOW_DEVELOPER_API_ENABLED=true
-       ```
-    2. Start your Langflow server with the `.env` file enabled:
-       ```
-       uv run langflow run --env-file .env
-       ```
-
-    For more information about configuring environment variables, see [Environment variables](/environment-variables).
-* [Create a Langflow API key](/api-keys-and-authentication)
-* [Create a flow](/concepts-flows) that you want to execute
-* [Get the flow ID](/concepts-publish#api-access) or endpoint name of the flow you want to execute
-
-### Set environment variables
-
-All code examples in this documentation assume you have set the following environment variables:
-
-**Python:**
-```python
-import os
-
-LANGFLOW_SERVER_URL = os.getenv("LANGFLOW_SERVER_URL")
-LANGFLOW_API_KEY = os.getenv("LANGFLOW_API_KEY")
-```
-
-**TypeScript/JavaScript:**
-```typescript
-const LANGFLOW_SERVER_URL = process.env.LANGFLOW_SERVER_URL;
-const LANGFLOW_API_KEY = process.env.LANGFLOW_API_KEY;
-```
-
-Set these environment variables before running the examples, or replace the variable references in the code examples with your actual Langflow server URL and API key.
-
-The default `LANGFLOW_SERVER_URL` for a local Langflow deployment is `http://localhost:7860`.
-For remote deployments, the domain is set by your hosting service, such as `https://UUID.ngrok.app`.
-
-### Authentication and headers
-
-All Workflow API requests require authentication using a Langflow API key. The API key is passed in the `x-api-key` header.
-
-For more information, see [Create a Langflow API key](/api-keys-and-authentication).
-
-| Header | Description | Example |
-|--------|-------------|---------|
-| `Content-Type` | Specifies the JSON format. | `application/json` |
-| `x-api-key` | Your Langflow API key. | `sk-...` |
-| `accept` | Optional. Specifies the response format. | `application/json` or `text/event-stream` |
+<PartialAPISetup />
 
 ## Execute workflow endpoint (asynchronous)
 
