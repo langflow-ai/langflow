@@ -629,6 +629,8 @@ async def edit_file_name(
         # Update the file name
         file.name = name
         session.add(file)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error editing file: {e}") from e
 
