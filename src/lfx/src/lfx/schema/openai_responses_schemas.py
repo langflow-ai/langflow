@@ -56,6 +56,7 @@ class OpenAIResponsesStreamChunk(BaseModel):
     model: str
     delta: dict
     status: Literal["completed", "in_progress", "failed"] | None = None
+    finish_reason: Literal["stop", "length", "error", "tool_calls"] | None = None
 
 
 class OpenAIErrorResponse(BaseModel):
@@ -72,3 +73,33 @@ def create_openai_error(message: str, type_: str = "invalid_request_error", code
         error_data["code"] = code
 
     return {"error": error_data}
+
+
+def create_openai_error_chunk(
+    response_id: str,
+    created_timestamp: int,
+    model: str,
+    error_message: str,
+) -> OpenAIResponsesStreamChunk:
+    """Create an OpenAI-compatible error chunk for streaming responses.
+    
+    This formats errors as content chunks with finish_reason="error" so that
+    the OpenAI SDK can properly parse and surface them to clients.
+    
+    Args:
+        response_id: The response ID
+        created_timestamp: Unix timestamp when the response was created
+        model: The model/flow ID
+        error_message: The error message to include in the content
+        
+    Returns:
+        OpenAIResponsesStreamChunk with error content and finish_reason="error"
+    """
+    return OpenAIResponsesStreamChunk(
+        id=response_id,
+        created=created_timestamp,
+        model=model,
+        delta={"content": f"Error: {error_message}"},
+        status="failed",
+        finish_reason="error",
+    )

@@ -21,6 +21,8 @@ __all__ = [
     "WorkflowStopRequest",
     "WorkflowStopResponse",
     "WorkflowStreamEvent",
+    "create_openai_error",
+    "create_openai_error_chunk",
     "dotdict",
 ]
 
@@ -71,6 +73,14 @@ def __getattr__(name: str):
         from .openai_responses_schemas import OpenAIErrorResponse
 
         return OpenAIErrorResponse
+    if name == "create_openai_error":
+        from .openai_responses_schemas import create_openai_error
+
+        return create_openai_error
+    if name == "create_openai_error_chunk":
+        from .openai_responses_schemas import create_openai_error_chunk
+
+        return create_openai_error_chunk
     if name == "WorkflowExecutionRequest":
         from .workflow import WorkflowExecutionRequest
 
