@@ -83,10 +83,9 @@
     },
     {
     "name": "Python Debugger: Python File",
-    "type": "debugpy",
+    "type": "python",
     "request": "launch",
     "program": "${file}",
-    "justMyCode": false,
     "console": "integratedTerminal"
 }
   ]
