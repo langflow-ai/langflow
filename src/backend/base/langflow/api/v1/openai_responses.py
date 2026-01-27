@@ -166,8 +166,12 @@ async def run_flow_for_openai_responses(
                                         token_data,
                                     )
                                 if event_type == "error":
-                                    error_message = data.get("error", "Unknown error")
-                                    await logger.adebug(f"[OpenAIResponses][stream] error event: {error_message}")
+                                    # Error message is in 'text' field, not 'error' field
+                                    # The 'error' field is a boolean flag
+                                    error_message = data.get("text") or data.get("error", "Unknown error")
+                                    # Ensure error_message is a string
+                                    if not isinstance(error_message, str):
+                                        error_message = str(error_message)
                                     # Send error as content chunk with finish_reason="error"
                                     # This ensures OpenAI SDK can parse and surface the error
                                     error_chunk = create_openai_error_chunk(
