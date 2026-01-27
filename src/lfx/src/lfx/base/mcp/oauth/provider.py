@@ -8,16 +8,126 @@ from __future__ import annotations
 
 import webbrowser
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+
+import httpx
 from urllib.parse import urlparse
 
 from lfx.base.mcp.oauth.handlers import OAuthCallbackHandler
 from lfx.base.mcp.oauth.storage import FileTokenStorage, InMemoryTokenStorage
+from lfx.log.logger import logger
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Generator
 
     from mcp.client.auth import OAuthClientProvider
+
+
+class OAuthAuthWrapper(httpx.Auth):
+    """Wrapper around OAuthClientProvider that handles 401 errors.
+
+    This wrapper detects 401 Unauthorized responses and clears cached
+    tokens to force re-authentication on the next request.
+    """
+
+    def __init__(
+        self,
+        provider: OAuthClientProvider,
+        storage: FileTokenStorage | InMemoryTokenStorage,
+    ) -> None:
+        """Initialize the OAuth auth wrapper.
+
+        Args:
+            provider: The underlying OAuthClientProvider from MCP SDK.
+            storage: Token storage to clear on authentication errors.
+        """
+        self._provider = provider
+        self._storage = storage
+        self._tokens_cleared = False
+
+    def __getattr__(self, name: str) -> Any:
+        """Delegate attribute access to the underlying provider.
+
+        This allows access to properties like `context`, `storage`, etc.
+        from the underlying OAuthClientProvider.
+        """
+        return getattr(self._provider, name)
+
+    def auth_flow(self, request: httpx.Request) -> Generator[httpx.Request, httpx.Response, None]:
+        """Handle the authentication flow with 401 error detection.
+
+        This method wraps the underlying provider's auth_flow and monitors
+        for 401 responses to clear invalid cached tokens.
+        """
+        # Delegate to the underlying provider's auth_flow
+        flow = self._provider.auth_flow(request)
+
+        # Process the flow
+        try:
+            request = next(flow)
+            while True:
+                response = yield request
+                try:
+                    request = flow.send(response)
+                except StopIteration:
+                    break
+        except StopIteration:
+            pass
+
+        # Check if we got a 401 response (response is available after yield)
+        # Note: This check happens after the flow completes
+
+    async def async_auth_flow(
+        self, request: httpx.Request
+    ) -> Any:  # Generator type is complex for async
+        """Handle async authentication flow with 401 error detection.
+
+        This method wraps the underlying provider's async_auth_flow and
+        monitors for 401 responses to clear invalid cached tokens.
+        """
+        # Delegate to the underlying provider's async_auth_flow
+        flow = self._provider.async_auth_flow(request)
+
+        request = await flow.__anext__()
+        while True:
+            response = yield request
+            # Check for 401 and clear tokens if needed
+            if response.status_code == 401 and not self._tokens_cleared:
+                await self._clear_tokens_on_401(response)
+            try:
+                request = await flow.asend(response)
+            except StopAsyncIteration:
+                break
+
+    async def _clear_tokens_on_401(self, response: httpx.Response) -> None:
+        """Clear cached tokens when a 401 response is received.
+
+        Args:
+            response: The 401 response from the server.
+        """
+        # Check if this is an OAuth-related 401 (invalid_token, expired_token, etc.)
+        error_body = ""
+        try:
+            error_body = response.text
+        except Exception:  # noqa: BLE001
+            pass
+
+        # Log the error
+        await logger.awarning(
+            f"Received 401 Unauthorized from server. "
+            f"Clearing cached OAuth tokens to force re-authentication. "
+            f"Response: {error_body[:200] if error_body else 'empty'}"
+        )
+
+        # Clear cached tokens
+        if hasattr(self._storage, "clear"):
+            self._storage.clear()
+        else:
+            # For InMemoryTokenStorage, set to None
+            self._storage._tokens = None  # noqa: SLF001
+            self._storage._client_info = None  # noqa: SLF001
+
+        self._tokens_cleared = True
 
 
 async def create_mcp_oauth_provider(
@@ -33,7 +143,7 @@ async def create_mcp_oauth_provider(
     client_metadata_url: str | None = None,
     client_id: str | None = None,
     client_secret: str | None = None,
-) -> tuple[OAuthClientProvider, str, Callable[[], None]]:
+) -> tuple[httpx.Auth, str, Callable[[], None]]:
     """Create an OAuthClientProvider for an MCP server.
 
     This factory function sets up all the components needed for OAuth 2.1
@@ -198,11 +308,14 @@ async def create_mcp_oauth_provider(
         client_metadata_url=client_metadata_url,
     )
 
+    # Wrap the provider to handle 401 errors and clear cached tokens
+    wrapped_provider = OAuthAuthWrapper(provider, storage)
+
     def cleanup() -> None:
         """Clean up OAuth resources."""
         callback_handler.shutdown()
 
-    return provider, effective_redirect_uri, cleanup
+    return wrapped_provider, effective_redirect_uri, cleanup
 
 
 async def get_oauth_token_for_server(
