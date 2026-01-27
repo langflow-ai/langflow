@@ -1,7 +1,7 @@
 import shutil
 import sys
 from pathlib import Path
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 from toolguard.buildtime import (
     ToolGuardsCodeGenerationResult,
@@ -23,6 +23,10 @@ from lfx.field_typing import LanguageModel, Tool
 from lfx.io import BoolInput, HandleInput, ModelInput, Output, SecretStrInput, StrInput, TabInput
 from lfx.log.logger import logger
 
+if TYPE_CHECKING:
+    from lfx.inputs.inputs import InputTypes
+
+
 TOOLGUARD_WORK_DIR = Path("tmp_toolguard")
 STEP1 = "Step_1"
 STEP2 = "Step_2"
@@ -39,64 +43,64 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
     name = "policies"
     beta = True
 
-    inputs = [
-        BoolInput(
-            name="activate_policies",
-            display_name="Activate",
-            info="If `true` - invokes ToolGuard code prior to tool execution. If `false`, skip policy validation.",
-            value=True,
-        ),
-        TabInput(
-            name="build_mode",
-            display_name="Policies Build Mode",
-            options=[BUILD_MODE_GENERATE, BUILD_MODE_CACHE],
-            info="Indicates whether to invoke buildtime (Generate), or use a cached code (Use Cache)",
-            value=BUILD_MODE_GENERATE,
-            real_time_refresh=True,
-            tool_mode=True,
-        ),
-        StrInput(
-            name="policies",
-            display_name="Policies",
-            info="Enter one or more clear, well-defined and self-contained business policies, Using the '+' button.",
-            is_list=True,
-            tool_mode=True,
-            placeholder="Add business policy...",
-            list_add_label="Add Policy",
-            input_types=[],
-        ),
-        StrInput(
-            name="project",
-            display_name="ToolGuard Project",
-            info="Automatically generated ToolGuards code",
-            # show_if={"enable_tool_guard": True},
-            value="my_project",
-            # advanced=True,
-        ),
-        ModelInput(
-            name="model",
-            display_name="Language Model",
-            info="Select your model provider",
-            options=BUILDTIME_MODELS,
-            required=True,
-        ),
-        SecretStrInput(
-            name="api_key",
-            display_name="API Key",
-            info="Model Provider API key",
-            required=False,
-            show=True,
-            advanced=True,
-        ),
-        HandleInput(
-            name="in_tools",
-            display_name="Tools",
-            input_types=["Tool"],
-            is_list=True,
-            required=False,
-            info="These are the tools that the agent can use to help with tasks.",
-        ),
-    ]
+    inputs = cast(
+        "list[InputTypes]",
+        [
+            BoolInput(
+                name="activate_policies",
+                display_name="Active",
+                info="If `true` - invokes ToolGuard code prior to tool execution. If `false`, skip policy validation.",
+                value=True,
+            ),
+            TabInput(
+                name="build_mode",
+                display_name="Policies Build Mode",
+                options=[BUILD_MODE_GENERATE, BUILD_MODE_CACHE],
+                info="Indicates whether to invoke buildtime (Generate), or use a cached code (Use Cache)",
+                value=BUILD_MODE_GENERATE,
+                real_time_refresh=True,
+                tool_mode=True,
+            ),
+            StrInput(
+                name="policies",
+                display_name="Policies",
+                info="One or more clear, well-defined and self-contained business policies",
+                is_list=True,
+                tool_mode=True,
+                placeholder="Add business policy...",
+                list_add_label="Add Policy",
+                input_types=[],
+            ),
+            StrInput(
+                name="project",
+                display_name="ToolGuard Project",
+                info="Automatically generated ToolGuards code",
+                value="my_project",
+            ),
+            ModelInput(
+                name="model",
+                display_name="Language Model",
+                info="Select your model provider",
+                options=BUILDTIME_MODELS,
+                required=True,
+            ),
+            SecretStrInput(
+                name="api_key",
+                display_name="API Key",
+                info="Model Provider API key",
+                required=False,
+                advanced=True,
+            ),
+            HandleInput(
+                name="in_tools",
+                display_name="Tools",
+                input_types=["Tool"],
+                is_list=True,
+                required=False,
+                info="These are the tools that the agent can use to help with tasks.",
+            ),
+        ],
+    )
     outputs = [
         Output(
             display_name="Guarded Tools",
@@ -105,33 +109,17 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             method="build_guards",
             group_outputs=True,
         ),
-        # Output(
-        #     display_name="Review",
-        #     name="review",
-        #     method="review_link",
-        #     group_outputs=True,
-        # ),
     ]
 
     @property
     def work_dir(self) -> Path:
-        # logger.info("project=" + to_snake_case(self.project))
         return TOOLGUARD_WORK_DIR / str(self.user_id) / _to_snake_case(self.project)
-
-    # def review_link(self):
-    #     cur_dir = Path.cwd()
-    #     link = f"http://127.0.0.1:8080/?folder={cur_dir /self.work_dir}"
-    #     # logger.info(f"<a href=\"{link}\">Open</a>")
-    #     # self.log(f"<a href=\"{link}\">Open</a>")
-    #     self.log(link)
-    #     return link
 
     def build_model(self) -> LanguageModel:
         llm_model = get_llm(
             model=self.model,
             user_id=self.user_id,
             api_key=self.api_key,
-            # temperature=self.temperature,
             stream=False,
         )
         if llm_model is None:
@@ -196,11 +184,8 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
                 # if there was an old version of the guards in Python cache, remove it.
                 _unload_module(res.domain.app_name)
 
-                # self.project = guards.out_dir
             else:  # build_mode == "use cache"
                 self.log("🔒️ToolGuard: run mode (cached code from path)", name="info")
-                # make sure self.project contains the path to pre-built guards
-                # assert self.project, "🔒️ToolGuard: guard path should be a valid code path!"
             code_dir = self.work_dir / STEP2
             return cast("list[Tool]", [GuardedTool(tool, self.in_tools, code_dir) for tool in self.in_tools])
 
