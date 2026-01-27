@@ -17,6 +17,7 @@ maintainers = [
 ]
 
 dependencies = [
+    "agentics-py>=0.2.2a1",
     "lfx~=0.3.0",
     "fastapi>=0.115.2,<1.0.0",
     "httpx[http2]>=0.27,<1.0.0",
