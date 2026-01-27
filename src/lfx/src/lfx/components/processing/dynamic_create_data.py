@@ -13,7 +13,7 @@ from lfx.schema.data import Data
 from lfx.schema.table import EditMode
 
 
-class CombineInputsComponent(Component):
+class DynamicCreateDataComponent(Component):
     display_name: str = "Combine Inputs"
     description: str = "Define custom inputs and combine them into a single output."
     name: str = "CombineInputs"
