@@ -82,16 +82,16 @@ def create_openai_error_chunk(
     error_message: str,
 ) -> OpenAIResponsesStreamChunk:
     """Create an OpenAI-compatible error chunk for streaming responses.
-    
+
     This formats errors as content chunks with finish_reason="error" so that
     the OpenAI SDK can properly parse and surface them to clients.
-    
+
     Args:
         response_id: The response ID
         created_timestamp: Unix timestamp when the response was created
         model: The model/flow ID
         error_message: The error message to include in the content
-        
+
     Returns:
         OpenAIResponsesStreamChunk with error content and finish_reason="error"
     """
