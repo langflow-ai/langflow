@@ -29,6 +29,10 @@ from lfx.field_typing import Tool
 from lfx.inputs.inputs import BoolInput, MessageTextInput
 from lfx.io import HandleInput, MessageTextInput, Output, SecretStrInput
 
+if TYPE_CHECKING:
+    from lfx.inputs.inputs import InputTypes
+
+
 TOOLGUARD_WORK_DIR = Path("tmp_toolguard")
 STEP1 = "Step_1"
 STEP2 = "Step_2"
@@ -142,12 +146,6 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             method="build_guards",
             group_outputs=True,
         ),
-        # Output(
-        #     display_name="Review",
-        #     name="review",
-        #     method="review_link",
-        #     group_outputs=True,
-        # ),
     ]
 
     async def _build_guard_specs(self) ->List[ToolGuardSpec]:
