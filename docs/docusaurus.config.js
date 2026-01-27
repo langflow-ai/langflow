@@ -155,7 +155,7 @@ const config = {
           },
           {
             id: "workflow",
-            spec: "openapi/openapi-workflow.json",
+            spec: "openapi/langflow-workflows-openapi.json",
             route: "/api/workflow",
           },
         ],

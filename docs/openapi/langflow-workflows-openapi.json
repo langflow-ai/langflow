@@ -1,44 +1,25 @@
 {
-  "openapi": "3.0.0",
+  "openapi": "3.0.3",
   "info": {
-    "title": "Langflow V2 Workflow API",
-    "version": "2.0.0",
-    "description": "Client SDK for Langflow V2 Workflow API - Execute workflows with enhanced error handling and structured responses",
-    "contact": {
-      "name": "Langflow Team",
-      "email": "support@langflow.org",
-      "url": "https://langflow.org"
-    },
-    "license": {
-      "name": "MIT",
-      "url": "https://opensource.org/licenses/MIT"
-    }
+    "title": "Langflow Workflow API",
+    "description": "Filtered API for Langflow workflow operations",
+    "version": "1.8.0"
   },
-  "servers": [
-    {
-      "url": "http://localhost:7860",
-      "description": "Local development server"
-    },
-    {
-      "url": "https://api.langflow.org",
-      "description": "Production server"
-    }
-  ],
   "paths": {
-    "/api/v2/workflow": {
+    "/api/v2/workflows": {
       "post": {
         "tags": [
           "Workflow"
         ],
         "summary": "Execute Workflow",
         "description": "Execute a workflow with support for sync, stream, and background modes",
-        "operationId": "execute_workflow_api_v2_workflow_post",
+        "operationId": "execute_workflow_api_v2_workflows_post",
         "security": [
           {
-            "API key query": []
+            "APIkeyquery": []
           },
           {
-            "API key header": []
+            "APIkeyheader": []
           }
         ],
         "requestBody": {
@@ -59,10 +40,123 @@
                 "schema": {
                   "oneOf": [
                     {
-                      "$ref": "#/components/schemas/WorkflowExecutionResponse"
+                      "description": "Synchronous workflow execution response.",
+                      "properties": {
+                        "flow_id": {
+                          "title": "Flow Id",
+                          "type": "string"
+                        },
+                        "job_id": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "title": "Job Id"
+                        },
+                        "object": {
+                          "enum": [
+                            "response"
+                          ],
+                          "default": "response",
+                          "title": "Object",
+                          "type": "string"
+                        },
+                        "created_timestamp": {
+                          "title": "Created Timestamp",
+                          "type": "string"
+                        },
+                        "status": {
+                          "$ref": "#/components/schemas/JobStatus"
+                        },
+                        "errors": {
+                          "default": [],
+                          "items": {
+                            "$ref": "#/components/schemas/ErrorDetail"
+                          },
+                          "title": "Errors",
+                          "type": "array"
+                        },
+                        "inputs": {
+                          "additionalProperties": true,
+                          "default": {},
+                          "title": "Inputs",
+                          "type": "object"
+                        },
+                        "outputs": {
+                          "additionalProperties": {
+                            "$ref": "#/components/schemas/ComponentOutput"
+                          },
+                          "default": {},
+                          "title": "Outputs",
+                          "type": "object"
+                        },
+                        "metadata": {
+                          "additionalProperties": true,
+                          "default": {},
+                          "title": "Metadata",
+                          "type": "object"
+                        }
+                      },
+                      "required": [
+                        "flow_id",
+                        "status"
+                      ],
+                      "title": "WorkflowExecutionResponse",
+                      "type": "object"
                     },
                     {
-                      "$ref": "#/components/schemas/WorkflowJobResponse"
+                      "description": "Background job response.",
+                      "properties": {
+                        "job_id": {
+                          "title": "Job Id",
+                          "type": "string"
+                        },
+                        "flow_id": {
+                          "title": "Flow Id",
+                          "type": "string"
+                        },
+                        "object": {
+                          "enum": [
+                            "job"
+                          ],
+                          "default": "job",
+                          "title": "Object",
+                          "type": "string"
+                        },
+                        "created_timestamp": {
+                          "title": "Created Timestamp",
+                          "type": "string"
+                        },
+                        "status": {
+                          "$ref": "#/components/schemas/JobStatus"
+                        },
+                        "links": {
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "title": "Links",
+                          "type": "object"
+                        },
+                        "errors": {
+                          "default": [],
+                          "items": {
+                            "$ref": "#/components/schemas/ErrorDetail"
+                          },
+                          "title": "Errors",
+                          "type": "array"
+                        }
+                      },
+                      "required": [
+                        "job_id",
+                        "flow_id",
+                        "status"
+                      ],
+                      "title": "WorkflowJobResponse",
+                      "type": "object"
                     }
                   ],
                   "discriminator": {
@@ -73,12 +167,6 @@
                     }
                   }
                 }
-              },
-              "text/event-stream": {
-                "schema": {
-                  "$ref": "#/components/schemas/WorkflowStreamEvent"
-                },
-                "description": "Server-sent events for streaming execution"
               }
             }
           },
@@ -100,22 +188,30 @@
         ],
         "summary": "Get Workflow Status",
         "description": "Get status of workflow job by job ID",
-        "operationId": "get_workflow_status_api_v2_workflow_get",
+        "operationId": "get_workflow_status_api_v2_workflows_get",
         "security": [
           {
-            "API key query": []
+            "APIkeyquery": []
           },
           {
-            "API key header": []
+            "APIkeyheader": []
           }
         ],
         "parameters": [
           {
             "name": "job_id",
             "in": "query",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": "string",
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
               "description": "Job ID to query",
               "title": "Job Id"
             },
@@ -128,14 +224,74 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/WorkflowExecutionResponse"
+                  "description": "Synchronous workflow execution response.",
+                  "properties": {
+                    "flow_id": {
+                      "title": "Flow Id",
+                      "type": "string"
+                    },
+                    "job_id": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "title": "Job Id"
+                    },
+                    "object": {
+                      "enum": [
+                        "response"
+                      ],
+                      "default": "response",
+                      "title": "Object",
+                      "type": "string"
+                    },
+                    "created_timestamp": {
+                      "title": "Created Timestamp",
+                      "type": "string"
+                    },
+                    "status": {
+                      "$ref": "#/components/schemas/JobStatus"
+                    },
+                    "errors": {
+                      "default": [],
+                      "items": {
+                        "$ref": "#/components/schemas/ErrorDetail"
+                      },
+                      "title": "Errors",
+                      "type": "array"
+                    },
+                    "inputs": {
+                      "additionalProperties": true,
+                      "default": {},
+                      "title": "Inputs",
+                      "type": "object"
+                    },
+                    "outputs": {
+                      "additionalProperties": {
+                        "$ref": "#/components/schemas/ComponentOutput"
+                      },
+                      "default": {},
+                      "title": "Outputs",
+                      "type": "object"
+                    },
+                    "metadata": {
+                      "additionalProperties": true,
+                      "default": {},
+                      "title": "Metadata",
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "flow_id",
+                    "status"
+                  ],
+                  "title": "WorkflowExecutionResponse",
+                  "type": "object"
                 }
-              },
-              "text/event-stream": {
-                "schema": {
-                  "$ref": "#/components/schemas/WorkflowStreamEvent"
-                },
-                "description": "Server-sent events for streaming status"
               }
             }
           },
@@ -152,14 +308,14 @@
         }
       }
     },
-    "/api/v2/workflow/stop": {
+    "/api/v2/workflows/stop": {
       "post": {
         "tags": [
           "Workflow"
         ],
         "summary": "Stop Workflow",
         "description": "Stop a running workflow execution",
-        "operationId": "stop_workflow_api_v2_workflow_stop_post",
+        "operationId": "stop_workflow_api_v2_workflows_stop_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -194,10 +350,10 @@
         },
         "security": [
           {
-            "API key query": []
+            "APIkeyquery": []
           },
           {
-            "API key header": []
+            "APIkeyheader": []
           }
         ]
       }
@@ -288,36 +444,18 @@
         ],
         "title": "WorkflowExecutionRequest",
         "description": "Request schema for workflow execution.",
-        "examples": [
-          {
-            "background": false,
-            "flow_id": "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
-            "inputs": {
-              "ChatInput-abc.input_value": "Hello, how can you help me today?",
-              "ChatInput-abc.session_id": "session-123",
-              "LLM-xyz.max_tokens": 100,
-              "LLM-xyz.temperature": 0.7,
-              "OpenSearch-def.opensearch_url": "https://opensearch:9200"
-            },
-            "stream": false
+        "example": {
+          "background": false,
+          "flow_id": "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
+          "inputs": {
+            "ChatInput-abc.input_value": "Hello, how can you help me today?",
+            "ChatInput-abc.session_id": "session-123",
+            "LLM-xyz.max_tokens": 100,
+            "LLM-xyz.temperature": 0.7,
+            "OpenSearch-def.opensearch_url": "https://opensearch:9200"
           },
-          {
-            "background": true,
-            "flow_id": "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
-            "inputs": {
-              "ChatInput-abc.input_value": "Process this in the background"
-            },
-            "stream": false
-          },
-          {
-            "background": false,
-            "flow_id": "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
-            "inputs": {
-              "ChatInput-abc.input_value": "Stream this conversation"
-            },
-            "stream": true
-          }
-        ]
+          "stream": false
+        }
       },
       "WorkflowStopRequest": {
         "properties": {
@@ -458,143 +596,15 @@
           "in_progress",
           "completed",
           "failed",
-          "error"
+          "cancelled",
+          "timed_out"
         ],
         "title": "JobStatus",
         "type": "string"
-      },
-      "WorkflowExecutionResponse": {
-        "description": "Synchronous workflow execution response.",
-        "properties": {
-          "flow_id": {
-            "title": "Flow Id",
-            "type": "string"
-          },
-          "job_id": {
-            "title": "Job Id",
-            "type": "string"
-          },
-          "object": {
-            "const": "response",
-            "default": "response",
-            "title": "Object",
-            "type": "string"
-          },
-          "created_timestamp": {
-            "title": "Created Timestamp",
-            "type": "string"
-          },
-          "status": {
-            "$ref": "#/components/schemas/JobStatus"
-          },
-          "errors": {
-            "default": [],
-            "items": {
-              "$ref": "#/components/schemas/ErrorDetail"
-            },
-            "title": "Errors",
-            "type": "array"
-          },
-          "inputs": {
-            "additionalProperties": true,
-            "default": {},
-            "title": "Inputs",
-            "type": "object"
-          },
-          "outputs": {
-            "additionalProperties": {
-              "$ref": "#/components/schemas/ComponentOutput"
-            },
-            "default": {},
-            "title": "Outputs",
-            "type": "object"
-          },
-          "metadata": {
-            "additionalProperties": true,
-            "default": {},
-            "title": "Metadata",
-            "type": "object"
-          }
-        },
-        "required": [
-          "flow_id",
-          "job_id",
-          "created_timestamp",
-          "status"
-        ],
-        "title": "WorkflowExecutionResponse",
-        "type": "object"
-      },
-      "WorkflowJobResponse": {
-        "description": "Background job response.",
-        "properties": {
-          "job_id": {
-            "title": "Job Id",
-            "type": "string"
-          },
-          "object": {
-            "const": "job",
-            "default": "job",
-            "title": "Object",
-            "type": "string"
-          },
-          "created_timestamp": {
-            "title": "Created Timestamp",
-            "type": "string"
-          },
-          "status": {
-            "$ref": "#/components/schemas/JobStatus"
-          },
-          "errors": {
-            "default": [],
-            "items": {
-              "$ref": "#/components/schemas/ErrorDetail"
-            },
-            "title": "Errors",
-            "type": "array"
-          }
-        },
-        "required": [
-          "job_id",
-          "created_timestamp",
-          "status"
-        ],
-        "title": "WorkflowJobResponse",
-        "type": "object"
-      },
-      "WorkflowStreamEvent": {
-        "description": "Streaming event response.",
-        "properties": {
-          "type": {
-            "title": "Type",
-            "type": "string"
-          },
-          "run_id": {
-            "title": "Run Id",
-            "type": "string"
-          },
-          "timestamp": {
-            "title": "Timestamp",
-            "type": "integer"
-          },
-          "raw_event": {
-            "additionalProperties": true,
-            "title": "Raw Event",
-            "type": "object"
-          }
-        },
-        "required": [
-          "type",
-          "run_id",
-          "timestamp",
-          "raw_event"
-        ],
-        "title": "WorkflowStreamEvent",
-        "type": "object"
       }
     },
     "securitySchemes": {
-      "OAuth2PasswordBearer": {
+      "OAuth2PasswordBearerCookie": {
         "type": "oauth2",
         "flows": {
           "password": {
@@ -603,23 +613,16 @@
           }
         }
       },
-      "API key query": {
+      "APIkeyquery": {
         "type": "apiKey",
         "in": "query",
         "name": "x-api-key"
       },
-      "API key header": {
+      "APIkeyheader": {
         "type": "apiKey",
         "in": "header",
         "name": "x-api-key"
       }
     }
-  },
-  "security": [],
-  "tags": [
-    {
-      "name": "Workflow",
-      "description": "V2 Workflow execution endpoints with enhanced error handling and timeout protection"
-    }
-  ]
+  }
 }
