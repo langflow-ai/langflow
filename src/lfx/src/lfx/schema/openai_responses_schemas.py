@@ -99,7 +99,7 @@ def create_openai_error_chunk(
         id=response_id,
         created=created_timestamp,
         model=model,
-        delta={"content": f"Error: {error_message}"},
+        delta={"content": error_message},
         status="failed",
         finish_reason="error",
     )
