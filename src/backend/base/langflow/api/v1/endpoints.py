@@ -1008,7 +1008,7 @@ async def custom_component(
     if not is_code_hash_allowed(raw_code.code):
         raise HTTPException(
             status_code=HTTPStatus.FORBIDDEN,
-            detail="Custom component code is not allowed. The component hash is not in the approved list.",
+            detail="Custom component code is not allowed.",
         )
 
     component = Component(_code=raw_code.code)
@@ -1048,7 +1048,7 @@ async def custom_component_update(
         if not is_code_hash_allowed(code_request.code):
             raise HTTPException(
                 status_code=HTTPStatus.FORBIDDEN,
-                detail="Custom component code is not allowed. The component hash is not in the approved list.",
+                detail="Custom component code is not allowed.",
             )
 
         component = Component(_code=code_request.code)

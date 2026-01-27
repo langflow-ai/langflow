@@ -139,7 +139,7 @@ def _load_hash_history(settings_service: "SettingsService") -> set[str]:
     """Load and cache component hashes from hash history files.
 
     Loads from stable_hash_history.json and optionally from nightly_hash_history.json
-    based on the allow_nightly_custom_components setting. Respects the
+    based on the allow_nightly_core_components setting. Respects the
     allow_code_execution_components setting to filter out code-execution components.
 
     Args:
@@ -179,10 +179,10 @@ def _load_hash_history(settings_service: "SettingsService") -> set[str]:
         logger.error(msg)
         raise ValueError(msg) from e
 
-    if settings_service.settings.allow_nightly_custom_components:
+    if settings_service.settings.allow_nightly_core_components:
         if not nightly_history_path.exists():
             msg = (
-                f"Nightly hash history file not found at {nightly_history_path} (allow_nightly_custom_components=True)"
+                f"Nightly hash history file not found at {nightly_history_path} (allow_nightly_core_components=True)"
             )
             logger.error(msg)
             raise FileNotFoundError(msg)
@@ -234,7 +234,7 @@ def _get_cached_hashes(settings_service: "SettingsService") -> set[str]:
     # Create a cache key based on settings that affect hash loading
     current_key = (
         "hash_history",
-        settings_service.settings.allow_nightly_custom_components,
+        settings_service.settings.allow_nightly_core_components,
         settings_service.settings.allow_code_execution_components,
         id(settings_service.settings),
     )

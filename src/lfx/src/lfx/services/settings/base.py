@@ -187,12 +187,14 @@ class Settings(BaseSettings):
     When allow_custom_components is True, all custom code is allowed regardless of this setting.
     Defaults to True to allow code execution components.
     """
-    allow_nightly_custom_components: bool = True
-    """If False, only hashes from stable_hash_history.json are considered valid when allow_custom_components is False.
-
-    When disabled (False), only components whose code hash matches an entry in the stable hash history
-    will be allowed. Nightly hash history will be ignored. This provides stricter security by only
-    allowing officially released component versions. Defaults to True to allow nightly components.
+    allow_nightly_core_components: bool = True
+    """When disabled (False), only core components whose code hash matches an entry in the stable hash history
+    will be allowed. Nightly hash history (containing experimental/unreleased core components) will be ignored.
+    This provides stricter security by only allowing officially released core component versions.
+    
+    Note: This setting only affects built-in/core components, not user-submitted custom code.
+    When allow_custom_components is True, all custom code is allowed regardless of this setting.
+    Defaults to True to allow nightly core components.
     
     Note: This setting only takes effect when allow_custom_components is False.
     When allow_custom_components is True, all custom code is allowed regardless of this setting.

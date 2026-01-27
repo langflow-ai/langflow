@@ -462,7 +462,7 @@ class TestIsCodeHashAllowed:
 
         mock_settings = Mock()
         mock_settings.settings.allow_custom_components = False
-        mock_settings.settings.allow_nightly_custom_components = False
+        mock_settings.settings.allow_nightly_core_components = False
 
         # Mock Path.exists to return True but read_bytes to return empty history
         with patch("pathlib.Path.exists", return_value=True), patch("pathlib.Path.read_bytes", return_value=b"{}"):
@@ -532,13 +532,13 @@ class TestIsCodeHashAllowed:
         # Create settings with code execution allowed
         mock_settings1 = Mock()
         mock_settings1.settings.allow_custom_components = False
-        mock_settings1.settings.allow_nightly_custom_components = False
+        mock_settings1.settings.allow_nightly_core_components = False
         mock_settings1.settings.allow_code_execution_components = True
 
         # Create settings with code execution blocked
         mock_settings2 = Mock()
         mock_settings2.settings.allow_custom_components = False
-        mock_settings2.settings.allow_nightly_custom_components = False
+        mock_settings2.settings.allow_nightly_core_components = False
         mock_settings2.settings.allow_code_execution_components = False
 
         # Mock _load_hash_history to track calls
