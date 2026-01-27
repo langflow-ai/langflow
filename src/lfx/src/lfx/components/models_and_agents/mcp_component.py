@@ -15,7 +15,7 @@ from lfx.base.mcp.util import (
 )
 from lfx.custom.custom_component.component_with_cache import ComponentWithCache
 from lfx.inputs.inputs import InputTypes  # noqa: TC001
-from lfx.io import BoolInput, DictInput, DropdownInput, McpInput, MessageTextInput, Output
+from lfx.io import BoolInput, DictInput, DropdownInput, McpInput, MessageTextInput, Output, SecretStrInput
 from lfx.io.schema import flatten_schema, schema_to_langflow_inputs
 from lfx.log.logger import logger
 from lfx.schema.dataframe import DataFrame
@@ -88,6 +88,10 @@ class MCPToolsComponent(ComponentWithCache):
         "use_cache",
         "verify_ssl",
         "use_oauth",
+        "oauth_client_id",
+        "oauth_client_secret",
+        "oauth_redirect_uri",
+        "oauth_client_metadata_url",
         "headers",
     ]
 
@@ -134,6 +138,55 @@ class MCPToolsComponent(ComponentWithCache):
             ),
             value=False,
             advanced=True,
+            real_time_refresh=True,
+        ),
+        MessageTextInput(
+            name="oauth_client_id",
+            display_name="OAuth Client ID",
+            info=(
+                "Pre-registered OAuth client ID. Use this when the authorization server "
+                "doesn't support Dynamic Client Registration (e.g., Logto, Auth0). "
+                "Leave empty to use dynamic registration."
+            ),
+            value="",
+            advanced=True,
+            show=False,
+        ),
+        SecretStrInput(
+            name="oauth_client_secret",
+            display_name="OAuth Client Secret",
+            info=(
+                "Pre-registered OAuth client secret for confidential clients. "
+                "If not provided with client ID, the client is treated as a public client."
+            ),
+            value="",
+            advanced=True,
+            show=False,
+        ),
+        MessageTextInput(
+            name="oauth_redirect_uri",
+            display_name="OAuth Redirect URI",
+            info=(
+                "Custom OAuth redirect URI. Use this when the OAuth provider requires a specific "
+                "callback URL (e.g., 'http://localhost:9000/auth/callback'). "
+                "Leave empty to use the default redirect URI."
+            ),
+            value="",
+            advanced=True,
+            show=False,
+        ),
+        MessageTextInput(
+            name="oauth_client_metadata_url",
+            display_name="OAuth Client Metadata URL",
+            info=(
+                "URL-based client ID for Client ID Metadata Documents (CIMD). "
+                "Must be a valid HTTPS URL with a non-root pathname "
+                "(e.g., 'https://app.example.com/oauth/client-metadata.json'). "
+                "Used when the server supports CIMD instead of dynamic registration."
+            ),
+            value="",
+            advanced=True,
+            show=False,
         ),
         DictInput(
             name="headers",
@@ -315,9 +368,19 @@ class MCPToolsComponent(ComponentWithCache):
                 try:
                     from lfx.base.mcp.oauth import create_mcp_oauth_provider
 
+                    # Get optional OAuth configuration from component inputs
+                    oauth_client_id = getattr(self, "oauth_client_id", None) or None
+                    oauth_client_secret = getattr(self, "oauth_client_secret", None) or None
+                    oauth_redirect_uri = getattr(self, "oauth_redirect_uri", None) or None
+                    oauth_client_metadata_url = getattr(self, "oauth_client_metadata_url", None) or None
+
                     oauth_auth, _, oauth_cleanup = await create_mcp_oauth_provider(
                         server_url=server_config["url"],
                         client_name="langflow",
+                        client_id=oauth_client_id,
+                        client_secret=oauth_client_secret,
+                        redirect_uri=oauth_redirect_uri,
+                        client_metadata_url=oauth_client_metadata_url,
                     )
                 except Exception as e:
                     msg = f"Failed to create OAuth provider: {e!s}"
@@ -540,6 +603,18 @@ class MCPToolsComponent(ComponentWithCache):
                     build_config["tool"]["placeholder"] = "Loading tools..."
             elif field_name == "tools_metadata":
                 self._not_load_actions = False
+            elif field_name == "use_oauth":
+                # Toggle visibility of OAuth configuration fields based on use_oauth value
+                oauth_enabled = bool(field_value)
+                oauth_fields = [
+                    "oauth_client_id",
+                    "oauth_client_secret",
+                    "oauth_redirect_uri",
+                    "oauth_client_metadata_url",
+                ]
+                for oauth_field in oauth_fields:
+                    if oauth_field in build_config:
+                        build_config[oauth_field]["show"] = oauth_enabled
 
         except Exception as e:
             msg = f"Error in update_build_config: {e!s}"
