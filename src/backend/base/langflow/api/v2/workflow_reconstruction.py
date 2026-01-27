@@ -65,10 +65,7 @@ async def reconstruct_workflow_response_from_job_id(
         raise ValueError(msg)
 
     # Convert vertex_build data to RunOutputs format
-    run_outputs_list = [
-        RunOutputs(inputs={}, outputs=[ResultData(**vb.data)])
-        for vb in terminal_vertex_builds
-    ]
+    run_outputs_list = [RunOutputs(inputs={}, outputs=[ResultData(**vb.data)]) for vb in terminal_vertex_builds]
 
     # Create RunResponse and convert to WorkflowExecutionResponse
     run_response = RunResponse(outputs=run_outputs_list, session_id=None)
