@@ -446,22 +446,17 @@ module.exports = {
         },
         {
           type: "category",
-          label: "Developer API",
+          label: "Developer API (Beta)",
           items: [
             {
               type: "doc",
               id: "API-Reference/workflow-api-synchronous",
-              label: "Synchronous Workflow API endpoints",
-            },
-            {
-              type: "doc",
-              id: "API-Reference/workflow-api-asynchronous",
-              label: "Asynchronous Workflow API endpoints",
+              label: "Synchronous Workflows API (Beta)",
             },
             {
               type: "link",
-              label: "Workflow API specification",
-              href: "/api/workflow",
+              label: "Workflows API specification (Beta)",
+              href: "/api/v2/workflows",
             },
           ],
         },

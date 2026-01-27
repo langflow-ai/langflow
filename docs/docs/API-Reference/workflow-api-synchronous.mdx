@@ -1,23 +1,21 @@
 ---
-title: Synchronous Workflow API endpoints
-slug: /workflow-api-synchronous
+title: Synchronous Workflows API
+slug: /workflows-api-synchronous
 ---
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
 :::warning Beta Feature
-The Workflow API is currently in **Beta**.
+The Workflows API is currently in **Beta**.
 The API endpoints and response formats may change in future releases.
 :::
 
-The Synchronous Workflow API provides programmatic access to execute Langflow workflows synchronously, receiving complete results immediately upon completion. This API is part of the Langflow v2 API and offers enhanced workflow execution capabilities compared to the v1 `/run` endpoint.
-
-For asynchronous execution modes (background jobs and streaming), see [Asynchronous Workflow API endpoints](/workflow-api-asynchronous).
+The Synchronous Workflows API provides programmatic access to execute Langflow workflows synchronously, receiving complete results immediately upon completion. This API is part of the Langflow v2 API and offers enhanced workflow execution capabilities compared to the v1 `/run` endpoint.
 
 ## Prerequisites
 
-Before using the Synchronous Workflow API, you need:
+Before using the Synchronous Workflows API, you need:
 
 * [Install and start Langflow](/get-started-installation) with the developer API enabled
 * [Create a Langflow flow](/concepts-flows) that you want to execute
@@ -25,7 +23,7 @@ Before using the Synchronous Workflow API, you need:
 * [Get the flow ID](/concepts-publish#api-access) or endpoint name of the flow you want to execute
 * Enable the Langflow Developer API
 
-    The Workflow API endpoints require the `developer_api_enabled` setting to be enabled. If this setting is disabled, these endpoints will return a 404 Not Found error.
+    The Workflows API endpoints require the `developer_api_enabled` setting to be enabled. If this setting is disabled, these endpoints will return a 404 Not Found error.
 
     To enable the developer API endpoint, do the following:
     1. In the Langflow `.env` file, set the environment variable to `true`:
@@ -61,7 +59,7 @@ Replace `YOUR_SERVER_URL` and `YOUR_API_KEY` with your actual Langflow server UR
 
 ## Authentication and headers
 
-All Workflow API requests require authentication using a Langflow API key. The API key is passed in the `x-api-key` header.
+All Workflows API requests require authentication using a Langflow API key. The API key is passed in the `x-api-key` header.
 
 ### Required headers
 
@@ -77,9 +75,9 @@ By default, local deployments serve the Langflow API at `http://localhost:7860/a
 
 Remotely hosted Langflow deployments are available at the domain set by the hosting service, such as `https://UUID.ngrok.app/api`.
 
-## Execute workflow endpoint (synchronous)
+## Execute workflows endpoint (synchronous)
 
-**Endpoint:** `POST /api/v2/workflow`
+**Endpoint:** `POST /api/v2/workflows`
 
 **Description:** Execute a workflow synchronously and receive complete results immediately upon completion. Set `background=false` and `stream=false`.
 
@@ -93,7 +91,7 @@ Execute a workflow synchronously and receive complete results immediately:
 ```python
 import requests
 
-url = f"{LANGFLOW_SERVER_URL}/api/v2/workflow"
+url = f"{LANGFLOW_SERVER_URL}/api/v2/workflows"
 headers = {
     "Content-Type": "application/json",
     "x-api-key": LANGFLOW_API_KEY
@@ -120,7 +118,7 @@ print(response.json())
 ```typescript
 import axios from 'axios';
 
-const url = `${LANGFLOW_SERVER_URL}/api/v2/workflow`;
+const url = `${LANGFLOW_SERVER_URL}/api/v2/workflows`;
 
 const payload = {
   flow_id: "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
@@ -155,7 +153,7 @@ runWorkflow();
 
 ```bash
 curl -X POST \
-  "$LANGFLOW_SERVER_URL/api/v2/workflow" \
+  "$LANGFLOW_SERVER_URL/api/v2/workflows" \
   -H "Content-Type: application/json" \
   -H "x-api-key: $LANGFLOW_API_KEY" \
   -d '{
@@ -224,10 +222,10 @@ The response includes an `outputs` field containing component-level results. Eac
 
 ## Component identifiers and input structure
 
-The Workflow API uses component identifiers with dot notation to specify inputs for individual components in your workflow. This allows you to pass values to specific components and override component parameters.
+The Workflows API uses component identifiers with dot notation to specify inputs for individual components in your workflow. This allows you to pass values to specific components and override component parameters.
 
 Component identifiers use the format `{component_id}.{parameter_name}`.
-When making requests to the Workflow API, include component identifiers in the `inputs` object.
+When making requests to the Workflows API, include component identifiers in the `inputs` object.
 For example, this demonstrates targeting multiple components and their parameters in a single request.
 
 ```json

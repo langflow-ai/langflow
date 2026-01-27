@@ -79,7 +79,7 @@ Remotely hosted Langflow deployments are available at the domain set by the host
 
 ## Execute workflow endpoint (asynchronous)
 
-**Endpoint:** `POST /api/v2/workflow`
+**Endpoint:** `POST /api/v2/workflows`
 
 **Description:** Execute a workflow asynchronously using background jobs or streaming execution modes.
 
@@ -97,7 +97,7 @@ For long-running workflows, use `background=true` to get a `job_id` immediately,
 ```python
 import requests
 
-url = f"{LANGFLOW_SERVER_URL}/api/v2/workflow"
+url = f"{LANGFLOW_SERVER_URL}/api/v2/workflows"
 headers = {
     "Content-Type": "application/json",
     "x-api-key": LANGFLOW_API_KEY
@@ -124,7 +124,7 @@ print(response.json())  # Returns job_id immediately
 ```typescript
 import axios from 'axios';
 
-const url = `${LANGFLOW_SERVER_URL}/api/v2/workflow`;
+const url = `${LANGFLOW_SERVER_URL}/api/v2/workflows`;
 
 const payload = {
   flow_id: "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
@@ -159,7 +159,7 @@ runWorkflow();
 
 ```bash
 curl -X POST \
-  "$LANGFLOW_SERVER_URL/api/v2/workflow" \
+  "$LANGFLOW_SERVER_URL/api/v2/workflows" \
   -H "Content-Type: application/json" \
   -H "x-api-key: $LANGFLOW_API_KEY" \
   -d '{
@@ -200,7 +200,7 @@ Receive server-sent events in real-time using the AG-UI protocol. Set `stream=tr
 ```python
 import requests
 
-url = f"{LANGFLOW_SERVER_URL}/api/v2/workflow"
+url = f"{LANGFLOW_SERVER_URL}/api/v2/workflows"
 headers = {
     "Content-Type": "application/json",
     "Accept": "text/event-stream",
@@ -231,7 +231,7 @@ for line in response.iter_lines():
 ```typescript
 import axios from 'axios';
 
-const url = `${LANGFLOW_SERVER_URL}/api/v2/workflow`;
+const url = `${LANGFLOW_SERVER_URL}/api/v2/workflows`;
 
 const payload = {
   flow_id: "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
@@ -271,7 +271,7 @@ runWorkflow();
 
 ```bash
 curl -N -X POST \
-  "$LANGFLOW_SERVER_URL/api/v2/workflow" \
+  "$LANGFLOW_SERVER_URL/api/v2/workflows" \
   -H "Content-Type: application/json" \
   -H "Accept: text/event-stream" \
   -H "x-api-key: $LANGFLOW_API_KEY" \
@@ -335,7 +335,7 @@ If a streaming connection is interrupted, you can reconnect using the GET endpoi
 
 ## Get workflow status endpoint
 
-**Endpoint:** `GET /api/v2/workflow`
+**Endpoint:** `GET /api/v2/workflows`
 
 **Description:** Retrieve the status and results of a workflow execution by job ID. Can also be used to reconnect to a streaming execution after disconnection.
 
@@ -347,7 +347,7 @@ If a streaming connection is interrupted, you can reconnect using the GET endpoi
 ```python
 import requests
 
-url = f"{LANGFLOW_SERVER_URL}/api/v2/workflow"
+url = f"{LANGFLOW_SERVER_URL}/api/v2/workflows"
 params = {
     "job_id": "job_id_1234567890"
 }
@@ -367,7 +367,7 @@ print(response.json())
 import axios from 'axios';
 
 const jobId = 'job_id_1234567890';
-const url = `${LANGFLOW_SERVER_URL}/api/v2/workflow`;
+const url = `${LANGFLOW_SERVER_URL}/api/v2/workflows`;
 
 const getWorkflowStatus = async () => {
   try {
@@ -394,7 +394,7 @@ getWorkflowStatus();
 
 ```bash
 curl -X GET \
-  "$LANGFLOW_SERVER_URL/api/v2/workflow?job_id=job_id_1234567890" \
+  "$LANGFLOW_SERVER_URL/api/v2/workflows?job_id=job_id_1234567890" \
   -H "accept: application/json" \
   -H "x-api-key: $LANGFLOW_API_KEY"
 ```
@@ -461,7 +461,7 @@ To reconnect to a streaming execution after disconnection, use the GET endpoint 
 ```python
 import requests
 
-url = f"{LANGFLOW_SERVER_URL}/api/v2/workflow"
+url = f"{LANGFLOW_SERVER_URL}/api/v2/workflows"
 params = {
     "job_id": "job_id_1234567890",
     "stream": True,
@@ -487,7 +487,7 @@ for line in response.iter_lines():
 import axios from 'axios';
 
 const jobId = 'job_id_1234567890';
-const url = `${LANGFLOW_SERVER_URL}/api/v2/workflow`;
+const url = `${LANGFLOW_SERVER_URL}/api/v2/workflows`;
 
 const reconnectToStream = async () => {
   try {
@@ -520,7 +520,7 @@ reconnectToStream();
 
 ```bash
 curl -N -X GET \
-  "$LANGFLOW_SERVER_URL/api/v2/workflow?job_id=job_id_1234567890&stream=true&sequence_id=42" \
+  "$LANGFLOW_SERVER_URL/api/v2/workflows?job_id=job_id_1234567890&stream=true&sequence_id=42" \
   -H "Accept: text/event-stream" \
   -H "x-api-key: $LANGFLOW_API_KEY"
 ```
@@ -532,7 +532,7 @@ This will return all events generated so far and continue streaming new events a
 
 ## Stop workflow endpoint
 
-**Endpoint:** `POST /api/v2/workflow/stop`
+**Endpoint:** `POST /api/v2/workflows/stop`
 
 **Description:** Stop a running workflow execution by job ID.
 
@@ -544,7 +544,7 @@ This will return all events generated so far and continue streaming new events a
 ```python
 import requests
 
-url = f"{LANGFLOW_SERVER_URL}/api/v2/workflow/stop"
+url = f"{LANGFLOW_SERVER_URL}/api/v2/workflows/stop"
 headers = {
     "Content-Type": "application/json",
     "x-api-key": LANGFLOW_API_KEY
@@ -564,7 +564,7 @@ print(response.json())
 ```typescript
 import axios from 'axios';
 
-const url = `${LANGFLOW_SERVER_URL}/api/v2/workflow/stop`;
+const url = `${LANGFLOW_SERVER_URL}/api/v2/workflows/stop`;
 
 const payload = {
   job_id: "job_id_1234567890",
@@ -593,7 +593,7 @@ stopWorkflow();
 
 ```bash
 curl -X POST \
-  "$LANGFLOW_SERVER_URL/api/v2/workflow/stop" \
+  "$LANGFLOW_SERVER_URL/api/v2/workflows/stop" \
   -H "Content-Type: application/json" \
   -H "x-api-key: $LANGFLOW_API_KEY" \
   -d '{
