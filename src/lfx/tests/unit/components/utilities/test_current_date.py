@@ -14,9 +14,10 @@ class TestCurrentDateToolSchema:
         """Verify schema uses string type instead of enum for large option lists."""
         # Arrange
         component = CurrentDateComponent()
-        # Initialize component to load dynamic options via update_build_config
-        build_config = {inp.name: inp.model_dump() for inp in component.inputs}
-        build_config = component.update_build_config(build_config, "", None)
+        # Populate options via update_build_config
+        build_config = {"timezone": {"options": []}}
+        component.update_build_config(build_config, "", "timezone")
+        component.inputs[0].options = build_config["timezone"]["options"]
         toolkit = ComponentToolkit(component)
 
         # Act
