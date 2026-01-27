@@ -1,0 +1,43 @@
+---
+title: WhileLoop
+slug: /agent-blocks-while-loop
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+The **WhileLoop** component provides loop control for iterative agent execution. It manages the agent's reasoning loop, continuing iteration until the agent determines the task is complete.
+
+**WhileLoop** is the control structure that wraps the agent's reasoning loop:
+
+```
+ChatInput → WhileLoop → AgentStep → [Tool Calls] → ExecuteTool → WhileLoop
+                              ↓ [AI Message - done]
+                         ChatOutput
+```
+
+**WhileLoop** stops iterating when:
+
+- **AgentStep** outputs an `ai_message` (final answer) instead of `tool_calls`
+- Maximum iterations are reached
+- An explicit stop condition is met
+
+## WhileLoop parameters
+
+<PartialParams />
+
+| Name | Display Name | Type | Description |
+|------|--------------|------|-------------|
+| input_value | Input | Message | Input parameter. Initial input or input from previous iteration. |
+| max_iterations | Max Iterations | Integer | Input parameter. Maximum number of iterations allowed. Default: `15`. |
+| iteration | Iteration | Integer | Output parameter. Current iteration count. |
+| output | Output | Message | Output parameter. Output from the current iteration (routes to AgentStep). |
+| done | Done | Message | Output parameter. Final result when loop completes. |
+
+## See also
+
+* [Agent Blocks](/agents-blocks)
+* [AgentStep](/agent-blocks-agent-step)
+* [ExecuteTool](/agent-blocks-execute-tool)
+* [AgentLoop](/agent-blocks-agent-loop)
+* [Loop component](/loop)

@@ -1,0 +1,33 @@
+---
+title: ThinkTool
+slug: /agent-blocks-think-tool
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+The **ThinkTool** component provides think tool support for step-by-step reasoning. It enables agents to perform explicit reasoning steps before taking action, improving the quality of tool selection and parameter generation.
+
+**ThinkTool** is typically used as a tool that agents can call during reasoning:
+
+```
+AgentStep → [Think Tool Call] → ThinkTool → [Reasoning Output] → AgentStep
+```
+
+## ThinkTool parameters
+
+<PartialParams />
+
+| Name | Display Name | Type | Description |
+|------|--------------|------|-------------|
+| reasoning_prompt | Reasoning Prompt | String | Input parameter. The prompt for the reasoning step. |
+| reasoning_model | Reasoning Model | LanguageModel | Input parameter. Optional LLM for reasoning (uses AgentStep's LLM if not provided). |
+| reasoning_output | Reasoning Output | String | Output parameter. The structured reasoning output. |
+| toolset | Toolset | Tool | Output parameter. Tool interface for AgentStep (when Tool Mode is enabled). |
+
+## See also
+
+* [Agent Blocks](/agents-blocks)
+* [AgentStep](/agent-blocks-agent-step)
+* [ExecuteTool](/agent-blocks-execute-tool)
+* [Configure tools for agents](/agents-tools)

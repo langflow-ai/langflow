@@ -1,0 +1,32 @@
+---
+title: AgentLoop
+slug: /agent-blocks-agent-loop
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+The **AgentLoop** component is a pre-composed component that encapsulates the complete agent loop. It combines **WhileLoop**, **AgentStep**, and **ExecuteTool** into a single, ready-to-use component.
+
+**AgentLoop** provides a simplified way to create agent workflows without manually assembling individual agent blocks, including built-in loop control, LLM reasoning with tool calling, automatic tool execution, and session memory management.
+
+## AgentLoop parameters
+
+<PartialParams />
+
+| Name | Display Name | Type | Description |
+|------|--------------|------|-------------|
+| llm | Language Model | LanguageModel | Input parameter. The language model for reasoning. |
+| tools | Tools | Tool[] | Input parameter. List of tools available to the agent. |
+| system_prompt | System Prompt | String | Input parameter. System prompt to guide agent behavior. |
+| input_value | Input | Message | Input parameter. Input message from ChatInput. |
+| max_iterations | Max Iterations | Integer | Input parameter. Maximum number of iterations. Default: `15`. |
+| response | Response | Message | Output parameter. Final response from the agent. |
+
+## See also
+
+* [Agent Blocks](/agents-blocks)
+* [AgentStep](/agent-blocks-agent-step)
+* [ExecuteTool](/agent-blocks-execute-tool)
+* [WhileLoop](/agent-blocks-while-loop)
+* [Agent component](/components-agents)

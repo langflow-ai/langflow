@@ -1,0 +1,28 @@
+---
+title: ExecuteTool
+slug: /agent-blocks-execute-tool
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+The **ExecuteTool** component executes tool calls from **AgentStep** with support for parallel execution and proper error handling.
+
+## ExecuteTool parameters
+
+<PartialParams />
+
+| Name | Display Name | Type | Description |
+|------|--------------|------|-------------|
+| tool_calls | Tool Calls | ToolCall[] | Input parameter. Tool calls to execute from AgentStep. |
+| parallel_execution | Parallel Execution | Boolean | Input parameter. Enable parallel execution of multiple tools. Default: `true`. |
+| error_handling | Error Handling | Dropdown | Input parameter. Error handling strategy: `raise`, `return_error`, or `skip`. Default: `return_error`. |
+| results | Tool Results | Message[] | Output parameter. Results from tool execution, formatted for the agent loop. |
+
+## See also
+
+* [Agent Blocks](/agents-blocks)
+* [AgentStep](/agent-blocks-agent-step)
+* [WhileLoop](/agent-blocks-while-loop)
+* [AgentLoop](/agent-blocks-agent-loop)
+* [Agent component](/components-agents)
