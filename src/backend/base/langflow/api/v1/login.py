@@ -184,7 +184,7 @@ async def refresh_token(
     )
 
 
-@router.get("/session")
+@router.get("/session", include_in_schema=False)
 async def get_session(
     request: Request,
     db: DbSession,
