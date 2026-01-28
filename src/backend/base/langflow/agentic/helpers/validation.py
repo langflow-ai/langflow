@@ -20,7 +20,7 @@ def _safe_extract_class_name(code: str) -> str | None:
     """Extract class name with fallback to regex for broken code."""
     try:
         return extract_class_name(code)
-    except (ValueError, SyntaxError):
+    except (ValueError, SyntaxError, TypeError):
         return _extract_class_name_regex(code)
 
 

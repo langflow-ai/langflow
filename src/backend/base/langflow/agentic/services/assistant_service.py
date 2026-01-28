@@ -109,7 +109,13 @@ async def execute_flow_with_validation(
         current_input = VALIDATION_RETRY_TEMPLATE.format(error=validation.error, code=code)
         logger.info("Retrying with error context...")
 
-    return result
+    # Safety return: the while loop always returns via internal checks above
+    return {
+        **result,
+        "validated": False,
+        "validation_error": validation.error,
+        "validation_attempts": attempt,
+    }
 
 
 async def execute_flow_with_validation_streaming(

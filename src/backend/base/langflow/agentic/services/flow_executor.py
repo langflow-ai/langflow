@@ -8,10 +8,11 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import HTTPException
-from lfx.base.models.unified_models import get_provider_config
 from lfx.events.event_manager import EventManager, create_default_event_manager
 from lfx.log.logger import logger
 from lfx.run.base import run_flow
+
+from langflow.agentic.services.flow_preparation import load_and_prepare_flow
 
 # Base path for flow JSON files
 FLOWS_BASE_PATH = Path(__file__).parent.parent / "flows"
@@ -35,68 +36,6 @@ class FlowExecutionResult:
     @property
     def has_result(self) -> bool:
         return bool(self.result)
-
-
-def inject_model_into_flow(
-    flow_data: dict,
-    provider: str,
-    model_name: str,
-    api_key_var: str | None = None,
-) -> dict:
-    """Inject model configuration into the flow's Agent component.
-
-    Args:
-        flow_data: The flow JSON as a dict
-        provider: The provider name (e.g., "OpenAI", "Anthropic")
-        model_name: The model name (e.g., "gpt-4o", "claude-sonnet-4-5-20250929")
-        api_key_var: Optional API key variable name. If not provided, uses provider's default.
-
-    Returns:
-        Modified flow data with the model configuration injected
-
-    Raises:
-        ValueError: If provider is unknown
-    """
-    # Get provider config from unified models
-    provider_config = get_provider_config(provider)
-
-    # Use provided api_key_var or default from config
-    api_key_var = api_key_var or provider_config["variable_name"]
-
-    metadata = {
-        "api_key_param": provider_config["api_key_param"],
-        "context_length": 128000,
-        "model_class": provider_config["model_class"],
-        "model_name_param": provider_config["model_name_param"],
-    }
-
-    # Add extra params from provider config (url_param, project_id_param, base_url_param)
-    for extra_param in ("url_param", "project_id_param", "base_url_param"):
-        if extra_param in provider_config:
-            metadata[extra_param] = provider_config[extra_param]
-
-    model_value = [
-        {
-            "category": provider,
-            "icon": provider_config["icon"],
-            "metadata": metadata,
-            "name": model_name,
-            "provider": provider,
-        }
-    ]
-
-    # Inject into all Agent nodes
-    for node in flow_data.get("data", {}).get("nodes", []):
-        node_data = node.get("data", {})
-        if node_data.get("type") == "Agent":
-            template = node_data.get("node", {}).get("template", {})
-            if "model" in template:
-                template["model"]["value"] = model_value
-            # Note: Do NOT set api_key here. The Agent component will automatically
-            # look up the API key from the user's global variables using get_api_key_for_provider()
-            # when the api_key field is empty/falsy.
-
-    return flow_data
 
 
 async def execute_flow_file(
@@ -136,12 +75,7 @@ async def execute_flow_file(
         raise HTTPException(status_code=404, detail=f"Flow file '{flow_filename}' not found")
 
     try:
-        flow_data = json.loads(flow_path.read_text())
-
-        if provider and model_name:
-            flow_data = inject_model_into_flow(flow_data, provider, model_name, api_key_var)
-
-        flow_json = json.dumps(flow_data)
+        flow_json = load_and_prepare_flow(flow_path, provider, model_name, api_key_var)
         result = await run_flow(
             flow_json=flow_json,
             input_value=input_value,
@@ -151,26 +85,13 @@ async def execute_flow_file(
             user_id=user_id,
             session_id=session_id,
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Flow execution error: {e}")
-        raise HTTPException(status_code=500, detail=f"Error executing flow: {e}") from e
+        raise HTTPException(status_code=500, detail="An error occurred while executing the flow.") from e
 
     return result
-
-
-def _load_and_prepare_flow(
-    flow_path: Path,
-    provider: str | None,
-    model_name: str | None,
-    api_key_var: str | None,
-) -> str:
-    """Load flow file and prepare JSON with model injection."""
-    flow_data = json.loads(flow_path.read_text())
-
-    if provider and model_name:
-        flow_data = inject_model_into_flow(flow_data, provider, model_name, api_key_var)
-
-    return json.dumps(flow_data)
 
 
 def _parse_event_data(event_data: bytes) -> tuple[str | None, dict[str, Any]]:
@@ -256,10 +177,10 @@ async def execute_flow_file_streaming(
         raise HTTPException(status_code=404, detail=f"Flow file '{flow_filename}' not found")
 
     try:
-        flow_json = _load_and_prepare_flow(flow_path, provider, model_name, api_key_var)
+        flow_json = load_and_prepare_flow(flow_path, provider, model_name, api_key_var)
     except (json.JSONDecodeError, OSError, ValueError) as e:
         logger.error(f"Flow preparation error: {e}")
-        raise HTTPException(status_code=500, detail=f"Error preparing flow: {e}") from e
+        raise HTTPException(status_code=500, detail="An error occurred while preparing the flow.") from e
 
     event_queue: asyncio.Queue[tuple[str, bytes, float] | None] = asyncio.Queue(maxsize=STREAMING_QUEUE_MAX_SIZE)
     event_manager = create_default_event_manager(event_queue)
@@ -291,7 +212,7 @@ async def execute_flow_file_streaming(
 
     if execution_result.has_error:
         raise HTTPException(
-            status_code=500, detail=f"Error executing flow: {execution_result.error}"
+            status_code=500, detail="An error occurred while executing the flow."
         ) from execution_result.error
 
     yield ("end", execution_result.result if execution_result.has_result else {})

@@ -15,12 +15,14 @@ from langflow.agentic.services.flow_executor import (
     STREAMING_EVENT_TIMEOUT_SECONDS,
     STREAMING_QUEUE_MAX_SIZE,
     FlowExecutionResult,
-    _load_and_prepare_flow,
     _parse_event_data,
     execute_flow_file,
     execute_flow_file_streaming,
     extract_response_text,
+)
+from langflow.agentic.services.flow_preparation import (
     inject_model_into_flow,
+    load_and_prepare_flow,
 )
 
 
@@ -76,7 +78,7 @@ class TestInjectModelIntoFlow:
             }
         }
 
-        with patch("langflow.agentic.services.flow_executor.get_provider_config") as mock_config:
+        with patch("langflow.agentic.services.flow_preparation.get_provider_config") as mock_config:
             mock_config.return_value = {
                 "variable_name": "OPENAI_API_KEY",
                 "api_key_param": "api_key",
@@ -109,7 +111,7 @@ class TestInjectModelIntoFlow:
             }
         }
 
-        with patch("langflow.agentic.services.flow_executor.get_provider_config") as mock_config:
+        with patch("langflow.agentic.services.flow_preparation.get_provider_config") as mock_config:
             mock_config.return_value = {
                 "variable_name": "TEST_KEY",
                 "api_key_param": "api_key",
@@ -127,7 +129,7 @@ class TestInjectModelIntoFlow:
         """Should use provided api_key_var instead of default."""
         flow_data = {"data": {"nodes": []}}
 
-        with patch("langflow.agentic.services.flow_executor.get_provider_config") as mock_config:
+        with patch("langflow.agentic.services.flow_preparation.get_provider_config") as mock_config:
             mock_config.return_value = {
                 "variable_name": "DEFAULT_KEY",
                 "api_key_param": "api_key",
@@ -242,22 +244,21 @@ class TestExecuteFlowFile:
 
     @pytest.mark.asyncio
     async def test_should_execute_flow_with_model_injection(self):
-        """Should execute flow with model injection when provider and model specified."""
+        """Should execute flow with model preparation when provider and model specified."""
         mock_flow_data = {"data": {"nodes": []}}
         mock_result = {"result": "success"}
 
         with (
             patch.object(Path, "exists", return_value=True),
-            patch.object(Path, "read_text", return_value=json.dumps(mock_flow_data)),
+            patch(
+                "langflow.agentic.services.flow_executor.load_and_prepare_flow",
+                return_value=json.dumps(mock_flow_data),
+            ) as mock_prepare,
             patch(
                 "langflow.agentic.services.flow_executor.run_flow",
                 new_callable=AsyncMock,
                 return_value=mock_result,
             ),
-            patch(
-                "langflow.agentic.services.flow_executor.inject_model_into_flow",
-                return_value=mock_flow_data,
-            ) as mock_inject,
         ):
             result = await execute_flow_file(
                 "test.json",
@@ -266,7 +267,7 @@ class TestExecuteFlowFile:
                 model_name="gpt-4",
             )
 
-        mock_inject.assert_called_once()
+        mock_prepare.assert_called_once()
         assert result == mock_result
 
     @pytest.mark.asyncio
@@ -276,7 +277,10 @@ class TestExecuteFlowFile:
 
         with (
             patch.object(Path, "exists", return_value=True),
-            patch.object(Path, "read_text", return_value=json.dumps(mock_flow_data)),
+            patch(
+                "langflow.agentic.services.flow_executor.load_and_prepare_flow",
+                return_value=json.dumps(mock_flow_data),
+            ),
             patch(
                 "langflow.agentic.services.flow_executor.run_flow",
                 new_callable=AsyncMock,
@@ -290,7 +294,7 @@ class TestExecuteFlowFile:
 
 
 class TestLoadAndPrepareFlow:
-    """Tests for _load_and_prepare_flow function."""
+    """Tests for load_and_prepare_flow function."""
 
     def test_should_load_and_return_json_string(self):
         """Should load flow file and return JSON string."""
@@ -298,7 +302,7 @@ class TestLoadAndPrepareFlow:
         mock_path = MagicMock()
         mock_path.read_text.return_value = json.dumps(mock_flow_data)
 
-        result = _load_and_prepare_flow(mock_path, None, None, None)
+        result = load_and_prepare_flow(mock_path, None, None, None)
 
         assert isinstance(result, str)
         parsed = json.loads(result)
@@ -311,14 +315,14 @@ class TestLoadAndPrepareFlow:
         mock_path.read_text.return_value = json.dumps(mock_flow_data)
 
         with patch(
-            "langflow.agentic.services.flow_executor.inject_model_into_flow",
+            "langflow.agentic.services.flow_preparation.inject_model_into_flow",
             return_value={"data": {"nodes": [], "injected": True}},
         ) as mock_inject:
-            result = _load_and_prepare_flow(mock_path, "OpenAI", "gpt-4", None)
+            result = load_and_prepare_flow(mock_path, "OpenAI", "gpt-4", None)
 
         mock_inject.assert_called_once()
         parsed = json.loads(result)
-        assert parsed.get("injected") is True
+        assert parsed["data"].get("injected") is True
 
 
 class TestExecuteFlowFileStreaming:
@@ -350,7 +354,10 @@ class TestExecuteFlowFileStreaming:
         # A simpler approach is to mock at a higher level
         with (
             patch.object(Path, "exists", return_value=True),
-            patch.object(Path, "read_text", return_value=json.dumps(mock_flow_data)),
+            patch(
+                "langflow.agentic.services.flow_executor.load_and_prepare_flow",
+                return_value=json.dumps(mock_flow_data),
+            ),
             patch(
                 "langflow.agentic.services.flow_executor.run_flow",
                 new_callable=AsyncMock,

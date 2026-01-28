@@ -21,7 +21,8 @@ def extract_friendly_error(error_msg: str) -> str:
         if any(pattern in error_lower or pattern in error_msg for pattern in patterns):
             return friendly_message
 
-    if "model" in error_lower and ("not found" in error_lower or "does not exist" in error_lower):
+    model_missing_terms = ("not found", "does not exist", "not available")
+    if "model" in error_lower and any(term in error_lower for term in model_missing_terms):
         return "Model not available. Please select a different model."
 
     if "content" in error_lower and any(term in error_lower for term in ["filter", "policy", "safety"]):

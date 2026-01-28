@@ -5,6 +5,8 @@ All business logic is delegated to service modules.
 """
 
 import uuid
+from dataclasses import dataclass
+from uuid import UUID
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
@@ -13,6 +15,7 @@ from lfx.base.models.unified_models import (
     get_unified_models_detailed,
 )
 from lfx.log.logger import logger
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from langflow.agentic.api.schemas import AssistantRequest
 from langflow.agentic.services.assistant_service import (
@@ -30,10 +33,93 @@ from langflow.agentic.services.provider_service import (
 )
 from langflow.api.utils.core import CurrentActiveUser, DbSession
 from langflow.services.deps import get_variable_service
-from langflow.services.variable.constants import CREDENTIAL_TYPE
-from langflow.services.variable.service import DatabaseVariableService
 
 router = APIRouter(prefix="/agentic", tags=["Agentic"])
+
+
+@dataclass(frozen=True)
+class _AssistantContext:
+    """Resolved provider, model, and execution context for assistant endpoints."""
+
+    provider: str
+    model_name: str
+    api_key_name: str
+    session_id: str
+    global_vars: dict[str, str]
+    max_retries: int
+
+
+async def _resolve_assistant_context(
+    request: AssistantRequest,
+    user_id: UUID,
+    session: AsyncSession,
+) -> _AssistantContext:
+    """Resolve provider, model, API key, and build execution context.
+
+    Raises:
+        HTTPException: If provider is not configured or API key is missing.
+    """
+    provider_variable_map = get_model_provider_variable_mapping()
+    enabled_providers, _ = await get_enabled_providers_for_user(user_id, session)
+
+    if not enabled_providers:
+        raise HTTPException(
+            status_code=400,
+            detail="No model provider is configured. Please configure at least one model provider in Settings.",
+        )
+
+    provider = request.provider
+    if not provider:
+        for preferred in PREFERRED_PROVIDERS:
+            if preferred in enabled_providers:
+                provider = preferred
+                break
+        if not provider:
+            provider = enabled_providers[0]
+
+    if provider not in enabled_providers:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Provider '{provider}' is not configured. Available providers: {enabled_providers}",
+        )
+
+    api_key_name = provider_variable_map.get(provider)
+    if not api_key_name:
+        raise HTTPException(status_code=400, detail=f"Unknown provider: {provider}")
+
+    model_name = request.model_name or DEFAULT_MODELS.get(provider) or ""
+
+    variable_service = get_variable_service()
+    api_key = await check_api_key(variable_service, user_id, api_key_name, session)
+
+    if not api_key:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"{api_key_name} is required for the Langflow Assistant with {provider}. "
+                "Please configure it in Settings > Model Providers."
+            ),
+        )
+
+    global_vars: dict[str, str] = {
+        "USER_ID": str(user_id),
+        "FLOW_ID": request.flow_id,
+        api_key_name: api_key,
+        "MODEL_NAME": model_name,
+        "PROVIDER": provider,
+    }
+
+    session_id = request.session_id or str(uuid.uuid4())
+    max_retries = request.max_retries if request.max_retries is not None else MAX_VALIDATION_RETRIES
+
+    return _AssistantContext(
+        provider=provider,
+        model_name=model_name,
+        api_key_name=api_key_name,
+        session_id=session_id,
+        global_vars=global_vars,
+        max_retries=max_retries,
+    )
 
 
 @router.post("/execute/{flow_name}")
@@ -86,18 +172,7 @@ async def check_assistant_config(
     Returns available providers with their configured status and available models.
     """
     user_id = current_user.id
-    variable_service = get_variable_service()
-
-    enabled_providers: list[str] = []
-    if isinstance(variable_service, DatabaseVariableService):
-        all_variables = await variable_service.get_all(user_id=user_id, session=session)
-        credential_names = {var.name for var in all_variables if var.type == CREDENTIAL_TYPE}
-
-        if credential_names:
-            provider_variable_map = get_model_provider_variable_mapping()
-            for provider, var_name in provider_variable_map.items():
-                if var_name in credential_names:
-                    enabled_providers.append(provider)
+    enabled_providers, _ = await get_enabled_providers_for_user(user_id, session)
 
     all_providers = []
 
@@ -177,83 +252,21 @@ async def assist(
     current_user: CurrentActiveUser,
     session: DbSession,
 ) -> dict:
-    """Chat with the Langflow Assistant.
+    """Chat with the Langflow Assistant."""
+    ctx = await _resolve_assistant_context(request, current_user.id, session)
 
-    This endpoint executes the LangflowAssistant.json flow to help users with
-    Langflow-related questions, guidance, and component creation.
-    """
-    variable_service = get_variable_service()
-    user_id = current_user.id
+    logger.info(f"Executing {LANGFLOW_ASSISTANT_FLOW} with {ctx.provider}/{ctx.model_name}")
 
-    provider_variable_map = get_model_provider_variable_mapping()
-    enabled_providers, _ = await get_enabled_providers_for_user(user_id, session)
-
-    if not enabled_providers:
-        raise HTTPException(
-            status_code=400,
-            detail="No model provider is configured. Please configure at least one model provider in Settings.",
-        )
-
-    provider = request.provider
-    if not provider:
-        for preferred in PREFERRED_PROVIDERS:
-            if preferred in enabled_providers:
-                provider = preferred
-                break
-        if not provider:
-            provider = enabled_providers[0]
-
-    if provider not in enabled_providers:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Provider '{provider}' is not configured. Available providers: {enabled_providers}",
-        )
-
-    api_key_name = provider_variable_map.get(provider)
-    if not api_key_name:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Unknown provider: {provider}",
-        )
-
-    model_name = request.model_name or DEFAULT_MODELS.get(provider) or ""
-
-    api_key = await check_api_key(variable_service, user_id, api_key_name, session)
-
-    if not api_key:
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                f"{api_key_name} is required for the Langflow Assistant with {provider}. "
-                "Please configure it in Settings > Model Providers."
-            ),
-        )
-
-    global_vars: dict[str, str] = {
-        "USER_ID": str(user_id),
-        "FLOW_ID": request.flow_id,
-        api_key_name: api_key,
-        "MODEL_NAME": model_name,
-        "PROVIDER": provider,
-    }
-
-    # Use session_id from request if provided, otherwise generate new one
-    session_id = request.session_id or str(uuid.uuid4())
-
-    input_preview = request.input_value[:50] if request.input_value else "None"
-    logger.info(f"Executing {LANGFLOW_ASSISTANT_FLOW} with {provider}/{model_name}, input: {input_preview}...")
-
-    max_retries = request.max_retries if request.max_retries is not None else MAX_VALIDATION_RETRIES
     return await execute_flow_with_validation(
         flow_filename=LANGFLOW_ASSISTANT_FLOW,
         input_value=request.input_value or "",
-        global_variables=global_vars,
-        max_retries=max_retries,
-        user_id=str(user_id),
-        session_id=session_id,
-        provider=provider,
-        model_name=model_name,
-        api_key_var=api_key_name,
+        global_variables=ctx.global_vars,
+        max_retries=ctx.max_retries,
+        user_id=str(current_user.id),
+        session_id=ctx.session_id,
+        provider=ctx.provider,
+        model_name=ctx.model_name,
+        api_key_var=ctx.api_key_name,
     )
 
 
@@ -263,82 +276,20 @@ async def assist_stream(
     current_user: CurrentActiveUser,
     session: DbSession,
 ) -> StreamingResponse:
-    """Chat with the Langflow Assistant with streaming progress updates.
-
-    Returns Server-Sent Events (SSE) with progress updates during generation
-    and validation.
-    """
-    variable_service = get_variable_service()
-    user_id = current_user.id
-
-    provider_variable_map = get_model_provider_variable_mapping()
-    enabled_providers, _ = await get_enabled_providers_for_user(user_id, session)
-
-    if not enabled_providers:
-        raise HTTPException(
-            status_code=400,
-            detail="No model provider is configured. Please configure at least one model provider in Settings.",
-        )
-
-    provider = request.provider
-    if not provider:
-        for preferred in PREFERRED_PROVIDERS:
-            if preferred in enabled_providers:
-                provider = preferred
-                break
-        if not provider:
-            provider = enabled_providers[0]
-
-    if provider not in enabled_providers:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Provider '{provider}' is not configured. Available providers: {enabled_providers}",
-        )
-
-    api_key_name = provider_variable_map.get(provider)
-    if not api_key_name:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Unknown provider: {provider}",
-        )
-
-    model_name = request.model_name or DEFAULT_MODELS.get(provider) or ""
-
-    api_key = await check_api_key(variable_service, user_id, api_key_name, session)
-
-    if not api_key:
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                f"{api_key_name} is required for the Langflow Assistant with {provider}. "
-                "Please configure it in Settings > Model Providers."
-            ),
-        )
-
-    global_vars: dict[str, str] = {
-        "USER_ID": str(user_id),
-        "FLOW_ID": request.flow_id,
-        api_key_name: api_key,
-        "MODEL_NAME": model_name,
-        "PROVIDER": provider,
-    }
-
-    # Use session_id from request if provided, otherwise generate new one
-    session_id = request.session_id or str(uuid.uuid4())
-
-    max_retries = request.max_retries if request.max_retries is not None else MAX_VALIDATION_RETRIES
+    """Chat with the Langflow Assistant with streaming progress updates."""
+    ctx = await _resolve_assistant_context(request, current_user.id, session)
 
     return StreamingResponse(
         execute_flow_with_validation_streaming(
             flow_filename=LANGFLOW_ASSISTANT_FLOW,
             input_value=request.input_value or "",
-            global_variables=global_vars,
-            max_retries=max_retries,
-            user_id=str(user_id),
-            session_id=session_id,
-            provider=provider,
-            model_name=model_name,
-            api_key_var=api_key_name,
+            global_variables=ctx.global_vars,
+            max_retries=ctx.max_retries,
+            user_id=str(current_user.id),
+            session_id=ctx.session_id,
+            provider=ctx.provider,
+            model_name=ctx.model_name,
+            api_key_var=ctx.api_key_name,
         ),
         media_type="text/event-stream",
         headers={
