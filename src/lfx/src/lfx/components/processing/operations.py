@@ -681,7 +681,7 @@ class Operations(Component):
         if operation_name == "Path Selection":
             frontend_node["outputs"].append(Output(display_name="Data", name="data_output", method="get_data"))
             return frontend_node
-        
+
         # Then check if it's a Data operation by checking OPERATION_FIELDS
         # This ensures all Data operations get the correct output
         if operation_name in OPERATION_FIELDS and "data_input" in OPERATION_FIELDS.get(operation_name, []):
