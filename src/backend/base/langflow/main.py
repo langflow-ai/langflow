@@ -578,7 +578,7 @@ def setup_static_files(app: FastAPI, static_files_dir: Path) -> None:
                 status_code=404,
                 content=detail if isinstance(detail, dict) else {"detail": detail},
             )
-        
+
         path = anyio.Path(static_files_dir) / "index.html"
 
         if not await path.exists():
