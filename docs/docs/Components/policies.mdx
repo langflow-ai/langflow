@@ -19,15 +19,15 @@ The component operates in two modes:
 
 ## Input Parameters
 
-| Parameter Name | Type | Description |
-|----------------|------|-------------|
-| `activate_policies` | `BoolInput` | If `true`, invokes ToolGuard code prior to tool execution. If `false`, skips policy validation. Default: `true` |
-| `build_mode` | `TabInput` | Indicates whether to invoke buildtime (Generate) or use cached code (Use Cache). Options: "Generate", "Use Cache". Default: "Generate" |
-| `policies` | `StrInput` (list) | One or more clear, well-defined and self-contained business policies. Accepts multiple policy strings. |
-| `project` | `StrInput` | Name for the ToolGuard project. Used to organize automatically generated ToolGuards code. Default: "my_project" |
-| `model` | `ModelInput` | Language model provider selection for policy processing. Required field. Options defined in `BUILDTIME_MODELS`. |
-| `api_key` | `SecretStrInput` | API key for the selected model provider. Optional, advanced setting. |
-| `in_tools` | `HandleInput` (list) | List of tools that the agent can use. These tools will be wrapped with policy guards. Input type: "Tool". Optional. |
+| Parameter Name | Type | Description | Required In Mode |
+|----------------|------|-------------|------------------|
+| `activate_policies` | `BoolInput` | If `true`, invokes ToolGuard code prior to tool execution. If `false`, skips policy validation. | Both |
+| `build_mode` | `TabInput` | Indicates whether to invoke buildtime (Generate) or use cached code (Use Cache). | Both |
+| `project` | `StrInput` | Name for the ToolGuard project. Used to organize automatically generated ToolGuards code. Default: "my_project" | Both |
+| `in_tools` | `HandleInput` (list) | List of tools that the agent can use. These tools will be wrapped with policy guards. | Both |
+| `policies` | `StrInput` (list) | One or more clear, well-defined and self-contained business policies. Accepts multiple policy strings. | Generate |
+| `model` | `ModelInput` | Language model provider selection for policy processing.| Generate |
+| `api_key` | `SecretStrInput` | API key for the selected model provider. | Generate |
 
 ## Output
 
