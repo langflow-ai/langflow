@@ -457,7 +457,9 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert call_kwargs["max_tokens"] is None
 
     @patch("lfx.components.models_and_agents.agent.get_llm")
-    async def test_agent_max_tokens_with_provider_specific_field_name(self, mock_get_llm, component_class, default_kwargs):
+    async def test_agent_max_tokens_with_provider_specific_field_name(
+        self, mock_get_llm, component_class, default_kwargs
+    ):
         """Test that agent component passes max_tokens which will be handled by provider-specific field names."""
         from unittest.mock import MagicMock
 
