@@ -1773,5 +1773,20 @@
     "versions": {
       "0.3.0": "ec825c33caf6"
     }
+  },
+  "PraisonAI Agent": {
+    "versions": {
+      "0.3.0": "5fd71e75a880"
+    }
+  },
+  "PraisonAI Agents": {
+    "versions": {
+      "0.3.0": "574385b98f1a"
+    }
+  },
+  "PraisonAI Task": {
+    "versions": {
+      "0.3.0": "953fbd9cf364"
+    }
   }
 }
