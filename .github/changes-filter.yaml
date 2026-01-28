@@ -2,15 +2,18 @@
 python:
   - "src/backend/**"
   - "src/backend/**.py"
+  - "src/lfx/**"
   - "pyproject.toml"
   - "uv.lock"
   - "src/backend/base/pyproject.toml"
   - "src/backend/base/uv.lock"
+  - "src/lfx/pyproject.toml"
   - "**/python_test.yml"
   - ".github/workflows/ci.yml"
   - "src/lfx/src/lfx/_assets/component_index.json"
 components-changes:
   - "src/backend/base/langflow/components/**"
+  - "src/lfx/src/lfx/components/**"
   - "src/lfx/src/lfx/_assets/component_index.json"
 starter-projects-changes:
   - "src/backend/base/langflow/initial_setup/**"
@@ -30,6 +33,7 @@ docker:
   - "pyproject.toml"
   - "src/backend/**"
   - "src/frontend/**"
+  - "src/lfx/**"
   - ".dockerignore"
   - ".github/workflows/docker_test.yml"
 
@@ -69,10 +73,15 @@ components:
   - "src/backend/base/langflow/components/**"
   - "src/backend/base/langflow/initial_setup/**"
   - "src/backend/base/langflow/serialization/**"
+  - "src/lfx/src/lfx/components/**"
+  - "src/lfx/src/lfx/custom/**"
+  - "src/lfx/src/lfx/schema/**"
+  - "src/lfx/src/lfx/graph/**"
   - "src/lfx/src/lfx/_assets/component_index.json"
 
 workspace:
   - "src/backend/base/langflow/inputs/**"
+  - "src/lfx/src/lfx/inputs/**"
   - "src/frontend/src/components/core/parameterRenderComponent/**"
   - "src/frontend/src/CustomNodes/**"
   - "src/frontend/src/modals/**"
