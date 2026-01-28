@@ -4,9 +4,12 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
+from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, model_validator
+
+from lfx.schema.validators import null_check_validator, uuid_validator
 
 
 class JobStatus(str, Enum):
@@ -17,6 +20,14 @@ class JobStatus(str, Enum):
     COMPLETED = "completed"
     FAILED = "failed"
     CANCELLED = "cancelled"
+    TIMED_OUT = "timed_out"
+
+
+JobId = Annotated[
+    str | UUID,
+    BeforeValidator(lambda v: null_check_validator(v, message="job_id is required")),
+    BeforeValidator(lambda v: uuid_validator(v, message="Invalid job_id, must be a UUID")),
+]
 
 
 class ErrorDetail(BaseModel):
@@ -95,7 +106,7 @@ class WorkflowExecutionResponse(BaseModel):
     """Synchronous workflow execution response."""
 
     flow_id: str
-    job_id: str | None = None
+    job_id: JobId | None = None
     object: Literal["response"] = Field(default="response")
     created_timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     status: JobStatus
@@ -108,7 +119,7 @@ class WorkflowExecutionResponse(BaseModel):
 class WorkflowJobResponse(BaseModel):
     """Background job response."""
 
-    job_id: str
+    job_id: JobId
     flow_id: str
     object: Literal["job"] = Field(default="job")
     created_timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
@@ -121,7 +132,7 @@ class WorkflowJobResponse(BaseModel):
         """Automatically populate links for the client."""
         if not self.links:
             self.links = {
-                "status": f"/api/v2/workflows?job_id={self.job_id}",
+                "status": f"/api/v2/workflows?job_id={self.job_id!s}",
                 "stop": "/api/v2/workflows/stop",
             }
         return self
@@ -139,16 +150,14 @@ class WorkflowStreamEvent(BaseModel):
 class WorkflowStopRequest(BaseModel):
     """Request schema for stopping workflow."""
 
-    job_id: str
-    force: bool = Field(default=False, description="Force stop the workflow")
+    job_id: JobId
 
 
 class WorkflowStopResponse(BaseModel):
     """Response schema for stopping workflow."""
 
-    job_id: str
-    status: Literal["stopped", "stopping", "not_found", "error"]
-    message: str
+    job_id: JobId
+    message: str | None = None
 
 
 # OpenAPI response definitions

@@ -24,7 +24,7 @@ from __future__ import annotations
 import asyncio
 from copy import deepcopy
 from typing import Annotated
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
 from fastapi.responses import StreamingResponse
@@ -32,6 +32,7 @@ from lfx.graph.graph.base import Graph
 from lfx.schema.workflow import (
     WORKFLOW_EXECUTION_RESPONSES,
     WORKFLOW_STATUS_RESPONSES,
+    JobId,
     JobStatus,
     WorkflowExecutionRequest,
     WorkflowExecutionResponse,
@@ -39,7 +40,7 @@ from lfx.schema.workflow import (
     WorkflowStopRequest,
     WorkflowStopResponse,
 )
-from lfx.services.deps import get_settings_service
+from lfx.services.deps import get_settings_service, injectable_session_scope_readonly
 from pydantic_core import ValidationError as PydanticValidationError
 from sqlalchemy.exc import OperationalError
 
@@ -62,7 +63,7 @@ from langflow.processing.process import process_tweaks, run_graph_internal
 from langflow.services.auth.utils import api_key_security
 from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.database.models.user.model import UserRead
-from langflow.services.deps import get_task_service
+from langflow.services.deps import get_job_service, get_task_service
 
 # Configuration constants
 EXECUTION_TIMEOUT = 300  # 5 minutes default timeout for sync execution
@@ -141,7 +142,7 @@ async def execute_workflow(
             - 503: Database unavailable
             - 504: Execution timeout exceeded
     """
-    job_id = str(uuid4())
+    job_id = uuid4()
 
     try:
         # Validate flow exists and user has permission
@@ -204,8 +205,8 @@ async def execute_workflow(
                 "error": "Execution timeout",
                 "code": "EXECUTION_TIMEOUT",
                 "message": f"Workflow execution exceeded {EXECUTION_TIMEOUT} seconds",
-                "job_id": job_id,
-                "flow_id": workflow_request.flow_id,
+                "job_id": str(job_id),
+                "flow_id": str(workflow_request.flow_id),
                 "timeout_seconds": EXECUTION_TIMEOUT,
             },
         ) from None
@@ -254,7 +255,7 @@ async def execute_workflow(
 async def execute_sync_workflow_with_timeout(
     workflow_request: WorkflowExecutionRequest,
     flow: FlowRead,
-    job_id: str,
+    job_id: UUID,
     api_key_user: UserRead,
     background_tasks: BackgroundTasks,
     http_request: Request,
@@ -289,14 +290,13 @@ async def execute_sync_workflow_with_timeout(
             timeout=EXECUTION_TIMEOUT,
         )
     except asyncio.TimeoutError as e:
-        msg = f"Execution exceeded {EXECUTION_TIMEOUT} seconds"
-        raise WorkflowTimeoutError(msg) from e
+        raise WorkflowTimeoutError from e
 
 
 async def execute_sync_workflow(
     workflow_request: WorkflowExecutionRequest,
     flow: FlowRead,
-    job_id: str,
+    job_id: UUID,
     api_key_user: UserRead,
     background_tasks: BackgroundTasks,  # noqa: ARG001
     http_request: Request,
@@ -371,10 +371,14 @@ async def execute_sync_workflow(
     terminal_node_ids = graph.get_terminal_nodes()
 
     # Execute graph - component errors are caught and returned in response body
+    job_service = get_job_service()
+    await job_service.create_job(job_id=job_id, flow_id=flow_id_str)
     try:
-        task_result, execution_session_id = await run_graph_internal(
+        task_result, execution_session_id = await job_service.with_status_updates(
+            job_id=job_id,
+            flow_id=UUID(flow_id_str),
+            run_graph_func=run_graph_internal,
             graph=graph,
-            flow_id=flow_id_str,
             session_id=session_id,
             inputs=None,
             outputs=terminal_node_ids,
@@ -383,12 +387,11 @@ async def execute_sync_workflow(
 
         # Build RunResponse
         run_response = RunResponse(outputs=task_result, session_id=execution_session_id)
-
         # Convert to WorkflowExecutionResponse
         return run_response_to_workflow_response(
             run_response=run_response,
             flow_id=workflow_request.flow_id,
-            job_id=job_id,
+            job_id=str(job_id),
             workflow_request=workflow_request,
             graph=graph,
         )
@@ -397,6 +400,10 @@ async def execute_sync_workflow(
         # Re-raise CancelledError to allow timeout mechanism to work properly
         # This ensures asyncio.wait_for() can properly cancel and raise TimeoutError
         raise
+    except asyncio.TimeoutError as e:
+        # Re-raise TimeoutError to allow timeout mechanism to work properly
+        # This ensures asyncio.wait_for() can properly cancel and raise TimeoutError
+        raise WorkflowTimeoutError from e
     except Exception as exc:  # noqa: BLE001
         # Component execution errors - return in response body with HTTP 200
         # This allows partial results and detailed error information per component
@@ -436,7 +443,7 @@ async def execute_workflow_background(
         graph = Graph.from_payload(
             graph_data, flow_id=flow_id_str, user_id=user_id, flow_name=flow.name, context=context
         )
-        job_id = str(uuid4())
+        job_id = uuid4()
         graph.set_run_id(job_id)
 
         # Get terminal nodes
@@ -444,17 +451,28 @@ async def execute_workflow_background(
 
         # Launch background task
         task_service = get_task_service()
-        await task_service.fire_and_forget_task(
-            run_graph_internal,
-            graph=graph,
+        job_service = get_job_service()
+
+        # Create job synchronously to ensure it exists before background task starts
+        # and so we can return a valid job status immediately
+        await job_service.create_job(
+            job_id=job_id,
             flow_id=flow_id_str,
+        )
+
+        await task_service.fire_and_forget_task(
+            job_service.with_status_updates,
+            job_id=job_id,
+            flow_id=UUID(flow_id_str),
+            run_graph_func=run_graph_internal,
+            graph=graph,
             session_id=session_id,
             inputs=None,
             outputs=terminal_node_ids,
             stream=False,
         )
         status = JobStatus.QUEUED
-        return WorkflowJobResponse(job_id=graph.run_id, flow_id=workflow_request.flow_id, status=status)
+        return WorkflowJobResponse(job_id=str(job_id), flow_id=workflow_request.flow_id, status=status)
 
     except (WorkflowResourceError, WorkflowServiceUnavailableError, WorkflowQueueFullError):
         # Re-raise infrastructure/resource errors to be handled by the endpoint
@@ -472,36 +490,131 @@ async def execute_workflow_background(
     description="Get status of workflow job by job ID",
 )
 async def get_workflow_status(
-    api_key_user: Annotated[UserRead, Depends(api_key_security)],  # noqa: ARG001
-    job_id: Annotated[str, Query(description="Job ID to query")],  # noqa: ARG001
-) -> WorkflowJobResponse:
-    """Get workflow job status and results by job ID.
+    api_key_user: Annotated[UserRead, Depends(api_key_security)],
+    job_id: Annotated[JobId | None, Query(description="Job ID to query")] = None,
+    session: Annotated[object, Depends(injectable_session_scope_readonly)] = None,
+) -> WorkflowExecutionResponse | WorkflowJobResponse:
+    """Get workflow job status and results.
 
-    This endpoint allows clients to poll for the status of background workflow executions.
+    At least one of flow_id or job_id must be provided.
 
     Args:
         api_key_user: Authenticated user from API key
-        job_id: The job ID returned from a background execution request
+        job_id: Optional job ID to query specific job
+        session: Database session for querying vertex builds
 
     Returns:
-        - WorkflowExecutionResponse: If job is complete or failed
-        - StreamingResponse: If job is still running (for streaming mode)
+        WorkflowExecutionResponse or reconstructed results
 
     Raises:
         HTTPException:
+            - 400: Job ID not provided
             - 403: Developer API disabled or unauthorized
-            - 404: Job ID not found
-            - 501: Not yet implemented
-
-    Note:
-        This endpoint is not yet implemented. It will be added in a future release
-        to support background and streaming execution modes.
+            - 404: Job not found
+            - 408: Execution timeout
+            - 500: Internal server error or Job failure
     """
-    # TODO: Implement job status tracking and retrieval
-    # - Store job metadata in database or cache
-    # - Track execution progress and status
-    # - Return appropriate response based on job state
-    raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Workflow status not yet available.")
+    if not job_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "error": "Missing required parameter",
+                "code": "MISSING_PARAMETER",
+                "message": "Job ID must be provided",
+            },
+        )
+
+    job_service = get_job_service()
+    try:
+        job = await job_service.get_job_by_job_id(job_id=job_id)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "error": "Internal server error",
+                "code": "INTERNAL_SERVER_ERROR",
+                "message": f"Failed to retrieve job from database: {exc!s}",
+            },
+        ) from exc
+
+    if not job:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "error": "Job resource not found",
+                "code": "JOB_NOT_FOUND",
+                "message": f"Job {job_id} not found",
+                "job_id": str(job_id),
+            },
+        )
+
+    # Store context for exception handling scope
+    flow_id = job.flow_id
+
+    try:
+        # If job is completed, reconstruct full workflow response from vertex_builds
+        if job.status == JobStatus.COMPLETED:
+            from langflow.api.v2.workflow_reconstruction import reconstruct_workflow_response_from_job_id
+
+            # Get the flow
+            flow = await get_flow_by_id_or_endpoint_name(str(flow_id), api_key_user.id)
+
+            # Reconstruct response from vertex_build table
+            return await reconstruct_workflow_response_from_job_id(
+                session=session,
+                flow=flow,
+                job_id=str(job_id),
+                user_id=str(api_key_user.id),
+            )
+
+        if job.status == JobStatus.FAILED:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail={
+                    "error": "Job failed",
+                    "code": "JOB_FAILED",
+                    "message": f"Job {job_id} has failed execution.",
+                    "job_id": str(job_id),
+                },
+            )
+
+        if job.status == JobStatus.TIMED_OUT:
+            raise WorkflowTimeoutError
+
+        # Default response for active statuses (QUEUED, IN_PROGRESS, etc.)
+        return WorkflowExecutionResponse(
+            flow_id=str(flow_id),
+            job_id=str(job_id),
+            status=job.status,
+            outputs={},
+            errors=[],
+            inputs={},
+            metadata={},
+        )
+
+    except HTTPException:
+        raise
+    except WorkflowTimeoutError as err:
+        raise HTTPException(
+            status_code=status.HTTP_408_REQUEST_TIMEOUT,
+            detail={
+                "error": "Execution timeout",
+                "code": "EXECUTION_TIMEOUT",
+                "message": f"Workflow execution exceeded {EXECUTION_TIMEOUT} seconds",
+                "job_id": str(job_id),
+                "flow_id": str(flow_id),
+                "timeout_seconds": EXECUTION_TIMEOUT,
+            },
+        ) from err
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "error": "Internal server error",
+                "code": "INTERNAL_SERVER_ERROR",
+                "message": f"Failed to process job status: {exc!s}",
+            },
+        ) from exc
 
 
 @router.post(
@@ -510,7 +623,7 @@ async def get_workflow_status(
     description="Stop a running workflow execution",
 )
 async def stop_workflow(
-    request: WorkflowStopRequest,  # noqa: ARG001
+    request: WorkflowStopRequest,
     api_key_user: Annotated[UserRead, Depends(api_key_security)],  # noqa: ARG001
 ) -> WorkflowStopResponse:
     """Stop a running workflow execution by job_id.
@@ -528,20 +641,58 @@ async def stop_workflow(
         HTTPException:
             - 403: Developer API disabled or unauthorized
             - 404: Job ID not found
-            - 409: Job already completed or cannot be stopped
-            - 501: Not yet implemented
-
-    Note:
-        This endpoint is not yet implemented. It will be added in a future release
-        to support graceful cancellation of background and streaming executions.
-
-        Planned behavior:
-        - force=False: Graceful shutdown (complete current component)
-        - force=True: Immediate termination
+            - 500: Internal server error
     """
-    # TODO: Implement workflow cancellation
-    # - Locate running job by job_id
-    # - Send cancellation signal to execution engine
-    # - Handle graceful vs forced termination
-    # - Update job status and return response
-    raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented /stop yet")
+    job_id = request.job_id
+    job_service = get_job_service()
+    task_service = get_task_service()
+
+    try:
+        # 1. Fetch Job
+        job = await job_service.get_job_by_job_id(job_id)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "error": "Internal server error",
+                "code": "INTERNAL_SERVER_ERROR",
+                "message": f"Failed to retrieve job status: {exc!s}",
+            },
+        ) from exc
+
+    if not job:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "error": "Job not found",
+                "code": "JOB_NOT_FOUND",
+                "message": f"Job {job_id} not found",
+                "job_id": str(job_id),
+            },
+        )
+
+    if job.status == JobStatus.CANCELLED:
+        return WorkflowStopResponse(
+            job_id=str(job_id), message=f"Job {job_id} is already cancelled or finished executing."
+        )
+
+    try:
+        revoked = await task_service.revoke_task(job_id)
+        await job_service.update_job_status(job_id, JobStatus.CANCELLED)
+
+        message = (
+            f"Job {job_id} cancelled successfully."
+            if revoked
+            else f"Job {job_id} is already cancelled or finished executing."
+        )
+        return WorkflowStopResponse(job_id=str(job_id), message=message)
+
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "error": "Internal server error",
+                "code": "INTERNAL_SERVER_ERROR",
+                "message": f"Failed to stop job: {job_id} - {exc!s}",
+            },
+        ) from exc

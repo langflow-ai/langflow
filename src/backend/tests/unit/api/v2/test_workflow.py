@@ -26,13 +26,15 @@ Test Strategy:
 """
 
 import asyncio
-from unittest.mock import MagicMock, patch
+from datetime import datetime, timezone
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
 
 import pytest
 from httpx import AsyncClient
 from langflow.exceptions.api import WorkflowValidationError
 from langflow.services.database.models.flow.model import Flow
+from lfx.schema.workflow import JobStatus
 from lfx.services.deps import session_scope
 from sqlalchemy.exc import OperationalError
 
@@ -148,8 +150,10 @@ class TestWorkflowDeveloperAPIProtection:
             headers=headers,
         )
 
-        assert response.status_code == 501
-        assert "Workflow status not yet available" in response.text
+        assert response.status_code == 404
+        result = response.json()
+        assert result["detail"]["code"] == "JOB_NOT_FOUND"
+        assert "550e8400-e29b-41d4-a716-446655440001" in result["detail"]["job_id"]
         assert "This endpoint is not available" not in response.text
 
     async def test_stop_workflow_allowed_when_dev_api_enabled_job_not_found(
@@ -170,9 +174,11 @@ class TestWorkflowDeveloperAPIProtection:
             headers=headers,
         )
 
-        # Should return 501 because endpoint is not implemented yet, NOT 404 because endpoint is disabled
-        assert response.status_code == 501
-        assert "Not implemented" in response.text
+        # Should return 404 because job doesn't exist, NOT because endpoint is disabled
+        assert response.status_code == 404
+        result = response.json()
+        assert result["detail"]["code"] == "JOB_NOT_FOUND"
+        assert "550e8400-e29b-41d4-a716-446655440001" in result["detail"]["job_id"]
         assert "This endpoint is not available" not in response.text
 
     async def test_get_workflow_blocked_when_dev_api_disabled(
@@ -258,8 +264,9 @@ class TestWorkflowDeveloperAPIProtection:
             headers=headers,
         )
 
-        assert response.status_code == 501
-        assert "Workflow status not yet available" in response.text
+        assert response.status_code == 404
+        result = response.json()
+        assert result["detail"]["code"] == "JOB_NOT_FOUND"
         assert "This endpoint is not available" not in response.text
 
     async def test_stop_workflow_allowed_when_dev_api_enabled_job_exists(
@@ -280,8 +287,9 @@ class TestWorkflowDeveloperAPIProtection:
             headers=headers,
         )
 
-        assert response.status_code == 501
-        assert "Not implemented" in response.text
+        assert response.status_code == 404
+        result = response.json()
+        assert result["detail"]["code"] == "JOB_NOT_FOUND"
         assert "This endpoint is not available" not in response.text
 
     async def test_all_endpoints_require_api_key_authentication(
@@ -1304,3 +1312,233 @@ class TestWorkflowBackgroundQueueing:
                 flow = await session.get(Flow, flow_id)
                 if flow:
                     await session.delete(flow)
+
+
+class TestWorkflowStatus:
+    """Test workflow status retrieval endpoints."""
+
+    @pytest.fixture
+    def mock_settings_dev_api_enabled(self):
+        """Mock settings with developer API enabled."""
+        with patch("langflow.api.v2.workflow.get_settings_service") as mock_get_settings_service:
+            mock_service = MagicMock()
+            mock_settings = MagicMock()
+            mock_settings.developer_api_enabled = True
+            mock_service.settings = mock_settings
+            mock_get_settings_service.return_value = mock_service
+            yield mock_settings
+
+    async def test_get_status_queued(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        mock_settings_dev_api_enabled,  # noqa: ARG002
+    ):
+        """Test GET /workflow returns 200 for a queued job."""
+        job_id = uuid4()
+        flow_id = uuid4()
+
+        mock_job = MagicMock()
+        mock_job.job_id = job_id
+        mock_job.flow_id = flow_id
+        mock_job.status = JobStatus.QUEUED
+        mock_job.created_timestamp = datetime.now(timezone.utc)
+
+        with patch("langflow.api.v2.workflow.get_job_service") as mock_get_job_service:
+            mock_service = MagicMock()
+            mock_service.get_job_by_job_id = AsyncMock(return_value=mock_job)
+            mock_get_job_service.return_value = mock_service
+
+            headers = {"x-api-key": created_api_key.api_key}
+            response = await client.get(f"api/v2/workflows?job_id={job_id}", headers=headers)
+
+            assert response.status_code == 200
+            result = response.json()
+            assert result["job_id"] == str(job_id)
+            assert result["status"] == "queued"
+            assert result["flow_id"] == str(flow_id)
+
+    async def test_get_status_not_found(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        mock_settings_dev_api_enabled,  # noqa: ARG002
+    ):
+        """Test GET /workflow returns 404 for a non-existent job."""
+        job_id = uuid4()
+
+        with patch("langflow.api.v2.workflow.get_job_service") as mock_get_job_service:
+            mock_service = MagicMock()
+            mock_service.get_job_by_job_id = AsyncMock(return_value=None)
+            mock_get_job_service.return_value = mock_service
+
+            headers = {"x-api-key": created_api_key.api_key}
+            response = await client.get(f"api/v2/workflows?job_id={job_id}", headers=headers)
+
+            assert response.status_code == 404
+            result = response.json()
+            assert result["detail"]["code"] == "JOB_NOT_FOUND"
+
+    async def test_get_status_failed(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        mock_settings_dev_api_enabled,  # noqa: ARG002
+    ):
+        """Test GET /workflow returns 500 for a failed job."""
+        job_id = uuid4()
+
+        mock_job = MagicMock()
+        mock_job.job_id = job_id
+        mock_job.status = JobStatus.FAILED
+
+        with patch("langflow.api.v2.workflow.get_job_service") as mock_get_job_service:
+            mock_service = MagicMock()
+            mock_service.get_job_by_job_id = AsyncMock(return_value=mock_job)
+            mock_get_job_service.return_value = mock_service
+
+            headers = {"x-api-key": created_api_key.api_key}
+            response = await client.get(f"api/v2/workflows?job_id={job_id}", headers=headers)
+
+            assert response.status_code == 500
+            result = response.json()
+            assert result["detail"]["code"] == "JOB_FAILED"
+            assert result["detail"]["job_id"] == str(job_id)
+
+    async def test_get_status_completed_reconstruction(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        mock_settings_dev_api_enabled,  # noqa: ARG002
+    ):
+        """Test GET /workflow returns reconstructed response for a completed job."""
+        job_id = uuid4()
+
+        flow_id = uuid4()
+        mock_job = MagicMock()
+        mock_job.job_id = job_id
+        mock_job.flow_id = flow_id
+        mock_job.status = JobStatus.COMPLETED
+
+        with (
+            patch("langflow.api.v2.workflow.get_job_service") as mock_get_job_service,
+            patch("langflow.api.v2.workflow.get_flow_by_id_or_endpoint_name") as mock_get_flow,
+            patch(
+                "langflow.api.v2.workflow_reconstruction.reconstruct_workflow_response_from_job_id"
+            ) as mock_reconstruct,
+        ):
+            mock_service = MagicMock()
+            mock_service.get_job_by_job_id = AsyncMock(return_value=mock_job)
+            mock_get_job_service.return_value = mock_service
+
+            mock_flow = MagicMock()
+            mock_flow.id = flow_id
+            mock_get_flow.return_value = mock_flow
+
+            mock_reconstruct.return_value = {"flow_id": str(flow_id), "status": "completed", "outputs": {}}
+
+            headers = {"x-api-key": created_api_key.api_key}
+            response = await client.get(f"api/v2/workflows?job_id={job_id}", headers=headers)
+
+            assert response.status_code == 200
+            result = response.json()
+            assert result["status"] == "completed"
+            mock_reconstruct.assert_called_once()
+
+
+class TestWorkflowStop:
+    """Test workflow stop endpoints."""
+
+    @pytest.fixture
+    def mock_settings_dev_api_enabled(self):
+        """Mock settings with developer API enabled."""
+        with patch("langflow.api.v2.workflow.get_settings_service") as mock_get_settings_service:
+            mock_service = MagicMock()
+            mock_settings = MagicMock()
+            mock_settings.developer_api_enabled = True
+            mock_service.settings = mock_settings
+            mock_get_settings_service.return_value = mock_service
+            yield mock_settings
+
+    async def test_stop_workflow_success(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        mock_settings_dev_api_enabled,  # noqa: ARG002
+    ):
+        """Test POST /workflow/stop cancels a running job."""
+        job_id = str(uuid4())
+
+        mock_job = MagicMock()
+        mock_job.job_id = job_id
+        mock_job.status = JobStatus.IN_PROGRESS
+
+        with (
+            patch("langflow.api.v2.workflow.get_job_service") as mock_get_job_service,
+            patch("langflow.api.v2.workflow.get_task_service") as mock_get_task_service,
+        ):
+            mock_job_service = MagicMock()
+            mock_job_service.get_job_by_job_id = AsyncMock(return_value=mock_job)
+            mock_job_service.update_job_status = AsyncMock()
+            mock_get_job_service.return_value = mock_job_service
+
+            mock_task_service = MagicMock()
+            mock_task_service.revoke_task = AsyncMock(return_value=True)
+            mock_get_task_service.return_value = mock_task_service
+
+            headers = {"x-api-key": created_api_key.api_key}
+            response = await client.post("api/v2/workflows/stop", json={"job_id": job_id}, headers=headers)
+
+            assert response.status_code == 200
+            result = response.json()
+            assert result["job_id"] == job_id
+            assert "cancelled successfully" in result["message"]
+            mock_task_service.revoke_task.assert_called_once()
+            mock_job_service.update_job_status.assert_called_once_with(UUID(job_id), JobStatus.CANCELLED)
+
+    async def test_stop_workflow_not_found(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        mock_settings_dev_api_enabled,  # noqa: ARG002
+    ):
+        """Test POST /workflow/stop returns 404 for non-existent job."""
+        job_id = str(uuid4())
+
+        with patch("langflow.api.v2.workflow.get_job_service") as mock_get_job_service:
+            mock_service = MagicMock()
+            mock_service.get_job_by_job_id = AsyncMock(return_value=None)
+            mock_get_job_service.return_value = mock_service
+
+            headers = {"x-api-key": created_api_key.api_key}
+            response = await client.post("api/v2/workflows/stop", json={"job_id": job_id}, headers=headers)
+
+            assert response.status_code == 404
+            result = response.json()
+            assert result["detail"]["code"] == "JOB_NOT_FOUND"
+
+    async def test_stop_workflow_already_cancelled(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        mock_settings_dev_api_enabled,  # noqa: ARG002
+    ):
+        """Test POST /workflow/stop handles already cancelled jobs."""
+        job_id = str(uuid4())
+
+        mock_job = MagicMock()
+        mock_job.job_id = job_id
+        mock_job.status = JobStatus.CANCELLED
+
+        with patch("langflow.api.v2.workflow.get_job_service") as mock_get_job_service:
+            mock_service = MagicMock()
+            mock_service.get_job_by_job_id = AsyncMock(return_value=mock_job)
+            mock_get_job_service.return_value = mock_service
+
+            headers = {"x-api-key": created_api_key.api_key}
+            response = await client.post("api/v2/workflows/stop", json={"job_id": job_id}, headers=headers)
+
+            assert response.status_code == 200
+            result = response.json()
+            assert result["job_id"] == job_id
+            assert "already cancelled" in result["message"]

@@ -28,6 +28,7 @@ from typing import TYPE_CHECKING, Any
 from lfx.schema.workflow import (
     ComponentOutput,
     ErrorDetail,
+    JobId,
     JobStatus,
     WorkflowExecutionRequest,
     WorkflowExecutionResponse,
@@ -497,7 +498,7 @@ def create_job_response(job_id: str, flow_id: str) -> WorkflowJobResponse:
 
 def create_error_response(
     flow_id: str,
-    job_id: str | None,
+    job_id: JobId,
     workflow_request: WorkflowExecutionRequest,
     error: Exception,
 ) -> WorkflowExecutionResponse:
