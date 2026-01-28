@@ -62,6 +62,20 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
                 tool_mode=True,
             ),
             StrInput(
+                name="project",
+                display_name="ToolGuard Project",
+                info="Automatically generated ToolGuards code",
+                value="my_project",
+            ),
+            HandleInput(
+                name="in_tools",
+                display_name="Tools",
+                input_types=["Tool"],
+                is_list=True,
+                required=False,
+                info="These are the tools that the agent can use to help with tasks.",
+            ),
+            StrInput(
                 name="policies",
                 display_name="Policies",
                 info="One or more clear, well-defined and self-contained business policies",
@@ -70,12 +84,6 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
                 placeholder="Add business policy...",
                 list_add_label="Add Policy",
                 input_types=[],
-            ),
-            StrInput(
-                name="project",
-                display_name="ToolGuard Project",
-                info="Automatically generated ToolGuards code",
-                value="my_project",
             ),
             ModelInput(
                 name="model",
@@ -90,14 +98,6 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
                 info="Model Provider API key",
                 required=False,
                 advanced=True,
-            ),
-            HandleInput(
-                name="in_tools",
-                display_name="Tools",
-                input_types=["Tool"],
-                is_list=True,
-                required=False,
-                info="These are the tools that the agent can use to help with tasks.",
             ),
         ],
     )
