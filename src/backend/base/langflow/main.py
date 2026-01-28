@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import platform
 import re
 import tempfile
 import warnings
@@ -63,6 +64,10 @@ warnings.filterwarnings("ignore", category=ResourceWarning, message=".*MemoryObj
 _tasks: list[asyncio.Task] = []
 
 MAX_PORT = 65535
+
+# Set Windows-specific event loop policy when running the app directly
+if platform.system() == "Windows":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())  # type: ignore[attr-defined]
 
 
 async def log_exception_to_telemetry(exc: Exception, context: str) -> None:
