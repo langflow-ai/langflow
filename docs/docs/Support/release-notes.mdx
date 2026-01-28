@@ -91,6 +91,11 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
     You can now use [global variables](/configuration-global-variables) in MCP server header values to securely store and reference sensitive values. For more information, see [Use global variables in MCP server headers](/mcp-client#use-global-variables-in-mcp-server-headers).
 
+- New unified **Operations** component
+
+    A new unified [**Operations** component](/operations) consolidates Text Operations, Data Operations, and DataFrame Operations into a single component.
+    For more information, see the [**Operations** component](/operations).
+
 ## 1.7.x
 
 :::warning Version yanked
@@ -159,15 +164,15 @@ If you installed version 1.7.0 before the fix was released, follow these steps t
 
 - New integrations, bundles, and components:
 
-  New filter operator for **DataFrame Operations** component
+  New filter operator for **Operations** component
 
-    The [**DataFrame Operations** component](/dataframe-operations) now includes a `not contains` filter operator.
+    The [**Operations** component](/operations) now includes a `not contains` filter operator.
     Use it to clean data by extracting only records that _don't_ contain specific values.
     For example, you can filter out invalid email addresses that don't contain `@`.
 
-  New JSON operations for **Data Operations** component
+  New JSON operations for **Operations** component
 
-    The [**Data Operations** component](/data-operations) now includes two operations for advanced JSON data manipulation.
+    The [**Operations** component](/operations) now includes two operations for advanced JSON data manipulation.
     The **Path Selection** operation extracts values from nested JSON structures, and the **JQ Expression** operation uses the [`jq`](https://jqlang.org/) query language to perform advanced JSON filtering, projections, and transformations.
 
   New [**Smart Router** component](/smart-router)

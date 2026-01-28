@@ -33,7 +33,7 @@ The following example uses the **If-Else** component to check incoming chat mess
     * **Text Input**: Connect the **Text Input** port to a **Chat Input** component or another `Message` input.
 
         If your input isn't in `Message` format, you can use another component to transform it, such as the [**Type Convert** component](/type-convert) or [**Parser** component](/parser).
-        If your input isn't appropriate for `Message` format, consider using another component for conditional routing, such as the [**Data Operations** component](/data-operations).
+        If your input isn't appropriate for `Message` format, consider using another component for conditional routing, such as the [**Operations** component](/operations).
 
     * **Match Text**: Enter `.*(urgent|warning|caution).*` so the component looks for these values in incoming input. The regex match is case sensitive, so if you need to look for all permutations of `warning`, enter `warning|Warning|WARNING`.
 
