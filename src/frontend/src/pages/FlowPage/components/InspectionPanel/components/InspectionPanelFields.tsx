@@ -105,21 +105,22 @@ export default function InspectionPanelFields({
   return (
     <div className="p-1 pb-3">
       {/* Render basic fields */}
-      {basicFields.map(renderField)}
+      <div className="">
+      {basicFields.map(renderField)}</div>
 
       {/* Render advanced fields disclosure */}
       {advancedFields.length > 0 && (
         <Disclosure
           open={showAdvanced}
           onOpenChange={setShowAdvanced}
-          className="mt-2"
+          className="mt-4"
         >
-          <div className="px-3">
           <DisclosureTrigger>
             <div
               className={cn(
-                "flex w-full items-center justify-between px-4 py-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground",
-                "cursor-pointer rounded-md hover:bg-muted/50"
+                "flex w-full items-center justify-between px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground",
+                "cursor-pointer rounded-md hover:bg-muted/50",
+                showAdvanced && "bg-muted/50 text-foreground"
               )}
             >
               <span>Advanced</span>
@@ -130,7 +131,7 @@ export default function InspectionPanelFields({
                 )}
               />
             </div>
-          </DisclosureTrigger></div>
+          </DisclosureTrigger>
 
           <DisclosureContent>
             <div className="mt-1">

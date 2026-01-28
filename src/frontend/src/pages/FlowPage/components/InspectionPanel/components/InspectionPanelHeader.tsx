@@ -25,6 +25,7 @@ export default function InspectionPanelHeader({
 }: InspectionPanelHeaderProps) {
   const [openCodeModal, setOpenCodeModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
+  const [isHoveringContent, setIsHoveringContent] = useState(false);
   const { handleNodeClass } = useHandleNodeClass(data.id);
   const { handleOnNewValue } = useHandleOnNewValue({
     node: data.node!,
@@ -85,7 +86,12 @@ export default function InspectionPanelHeader({
   });
 
   return (
-    <div className="flex flex-col gap-2 pt-3 pb-1 px-4" ref={containerRef}>
+    <div
+      className="flex flex-col gap-2 pt-3 pb-1 px-4"
+      ref={containerRef}
+      onMouseEnter={() => setIsHoveringContent(true)}
+      onMouseLeave={() => setIsHoveringContent(false)}
+    >
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 overflow-hidden">
           <NodeIcon
@@ -100,14 +106,17 @@ export default function InspectionPanelHeader({
           <ShadTooltip content="Edit" side="top">
             <Button
               onClick={toggleEditMode}
-              className={cn(editMode ? "bg-accent" : "", "!text-muted-foreground")}
+              className={cn(
+                editMode ? "bg-accent" : "",
+                "!text-muted-foreground transition-opacity duration-150",
+                (isHoveringContent || editMode) ? "opacity-100" : "opacity-0"
+              )}
               size="node-toolbar"
               variant="ghost"
-
               datatest-id="edit-button-modal"
             >
               <IconComponent name="PencilLine" className="h-4 w-4" />
-              </Button>
+            </Button>
           </ShadTooltip>
           {hasDocs && (
               <ToolbarButton
@@ -130,13 +139,6 @@ export default function InspectionPanelHeader({
                 )}
                 dataTestId="code-button-modal"
               />
-          )}
-          {onClose && (
-            <ShadTooltip content="Close" side="top">
-              <Button variant="ghost" size="node-toolbar" className="text-muted-foreground" onClick={onClose}>
-                <IconComponent name="X" className="h-4 w-4" />
-              </Button>
-            </ShadTooltip>
           )}
         </div>
       </div>
