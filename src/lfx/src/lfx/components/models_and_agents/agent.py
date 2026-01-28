@@ -83,6 +83,12 @@ class AgentComponent(ToolCallingAgentComponent):
             advanced=True,
             show=True,
         ),
+        IntInput(
+            name="max_tokens",
+            display_name="Max Tokens",
+            info="Maximum number of tokens to generate. Field name varies by provider.",
+            advanced=True,
+        ),
         MultilineInput(
             name="format_instructions",
             display_name="Output Format Instructions",
@@ -167,6 +173,7 @@ class AgentComponent(ToolCallingAgentComponent):
             model=self.model,
             user_id=self.user_id,
             api_key=self.api_key,
+            max_tokens=getattr(self, "max_tokens", None),
         )
         if llm_model is None:
             msg = "No language model selected. Please choose a model to proceed."

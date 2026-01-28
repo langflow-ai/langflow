@@ -1,5 +1,6 @@
 import os
 from typing import Any
+from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
@@ -285,6 +286,18 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert hasattr(component, "n_messages")
         assert component.n_messages == 100
 
+    async def test_max_tokens_input_field_present(self, component_class, default_kwargs):
+        """Test that max_tokens input field is present in the agent component."""
+        component = await self.component_setup(component_class, default_kwargs)
+
+        input_names = [inp.name for inp in component.inputs if hasattr(inp, "name")]
+
+        # Verify max_tokens field exists
+        assert "max_tokens" in input_names, "max_tokens input field should be present"
+
+        # Verify the component has the attribute
+        assert hasattr(component, "max_tokens"), "Component should have max_tokens attribute"
+
     @pytest.mark.skip(reason="Test marked as skipped, agent dual output removed")
     async def test_agent_has_correct_outputs(self, component_class, default_kwargs):
         """Test that Agent component has the correct output configuration."""
@@ -396,6 +409,79 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
                 # Verify we got text, not a message object
                 assert "additional_kwargs" not in extracted_text
                 assert "response_metadata" not in extracted_text
+
+    @patch("lfx.components.models_and_agents.agent.get_llm")
+    async def test_agent_passes_max_tokens_to_get_llm(self, mock_get_llm, component_class, default_kwargs):
+        """Test that agent component passes max_tokens parameter to get_llm function."""
+        from unittest.mock import MagicMock
+
+        # Setup mock
+        mock_llm = MagicMock()
+        mock_get_llm.return_value = mock_llm
+
+        # Set max_tokens in default_kwargs
+        default_kwargs["max_tokens"] = 500
+
+        component = await self.component_setup(component_class, default_kwargs)
+
+        # Call get_agent_requirements which internally calls get_llm
+        await component.get_agent_requirements()
+
+        # Verify get_llm was called with max_tokens
+        mock_get_llm.assert_called_once()
+        call_kwargs = mock_get_llm.call_args[1]
+
+        assert "max_tokens" in call_kwargs, "max_tokens should be passed to get_llm"
+        assert call_kwargs["max_tokens"] == 500
+
+    @patch("lfx.components.models_and_agents.agent.get_llm")
+    async def test_agent_passes_none_max_tokens_when_not_set(self, mock_get_llm, component_class, default_kwargs):
+        """Test that agent component passes None for max_tokens when not set."""
+        from unittest.mock import MagicMock
+
+        # Setup mock
+        mock_llm = MagicMock()
+        mock_get_llm.return_value = mock_llm
+
+        # Don't set max_tokens in default_kwargs
+        component = await self.component_setup(component_class, default_kwargs)
+
+        # Call get_agent_requirements which internally calls get_llm
+        await component.get_agent_requirements()
+
+        # Verify get_llm was called with max_tokens=None
+        mock_get_llm.assert_called_once()
+        call_kwargs = mock_get_llm.call_args[1]
+
+        assert "max_tokens" in call_kwargs, "max_tokens should be passed to get_llm even when None"
+        assert call_kwargs["max_tokens"] is None
+
+    @patch("lfx.components.models_and_agents.agent.get_llm")
+    async def test_agent_max_tokens_with_provider_specific_field_name(self, mock_get_llm, component_class, default_kwargs):
+        """Test that agent component passes max_tokens which will be handled by provider-specific field names."""
+        from unittest.mock import MagicMock
+
+        # Setup mock
+        mock_llm = MagicMock()
+        mock_get_llm.return_value = mock_llm
+
+        # Set max_tokens and update model metadata to use provider-specific field name
+        default_kwargs["max_tokens"] = 1000
+        default_kwargs["model"][0]["metadata"]["max_tokens_field_name"] = "max_output_tokens"
+
+        component = await self.component_setup(component_class, default_kwargs)
+
+        # Call get_agent_requirements which internally calls get_llm
+        await component.get_agent_requirements()
+
+        # Verify get_llm was called with max_tokens
+        mock_get_llm.assert_called_once()
+        call_kwargs = mock_get_llm.call_args[1]
+
+        assert "max_tokens" in call_kwargs, "max_tokens should be passed to get_llm"
+        assert call_kwargs["max_tokens"] == 1000
+        # Note: The provider-specific field name mapping happens inside get_llm,
+        # so we just verify max_tokens is passed correctly
 
 
 class TestAgentComponentWithClient(ComponentTestBaseWithClient):
