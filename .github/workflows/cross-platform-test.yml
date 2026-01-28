@@ -220,9 +220,7 @@ jobs:
           cp "$MAIN_FILE" ./local-packages/
 
           uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "$BASE_FILE"
-          uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe \
-            --find-links ./local-packages \
-            "$MAIN_FILE"
+          uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe --no-deps "$MAIN_FILE"
         shell: bash
 
       - name: Install LFX package from wheel (Unix)
@@ -263,7 +261,7 @@ jobs:
           cp "$MAIN_FILE" ./local-packages/
 
           uv pip install --prerelease=allow --python ./test-env/bin/python "$BASE_FILE"
-          uv pip install --prerelease=allow --python ./test-env/bin/python --find-links ./local-packages "$MAIN_FILE"
+          uv pip install --prerelease=allow --python ./test-env/bin/python --no-deps "$MAIN_FILE"
         shell: bash
 
       # PyPI installation steps
@@ -514,7 +512,7 @@ jobs:
           fi
 
           uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "$BASE_FILE"
-          uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "$MAIN_FILE"
+          uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe --no-deps "$MAIN_FILE"
         shell: bash
 
       - name: Install LFX package from wheel (Unix)
@@ -551,7 +549,7 @@ jobs:
           fi
 
           uv pip install --prerelease=allow --python ./test-env/bin/python.exe "$BASE_FILE"
-          uv pip install --prerelease=allow --python ./test-env/bin/python.exe "$MAIN_FILE"
+          uv pip install --prerelease=allow --python ./test-env/bin/python --no-deps "$MAIN_FILE"
         shell: bash
 
       # PyPI installation steps
