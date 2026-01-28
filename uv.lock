@@ -5597,6 +5597,7 @@ name = "langflow"
 version = "1.8.0"
 source = { editable = "." }
 dependencies = [
+    { name = "langchain-huggingface" },
     { name = "langflow-base", extra = ["complete"] },
 ]
 
@@ -5690,6 +5691,7 @@ requires-dist = [
     { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
     { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2.10" },
     { name = "langchain-docling", marker = "extra == 'docling'", specifier = ">=1.1.0" },
+    { name = "langchain-huggingface", specifier = ">=0.3.1" },
     { name = "langflow-base", extras = ["complete"], editable = "src/backend/base" },
     { name = "llama-cpp-python", marker = "extra == 'local'", specifier = "~=0.2.0" },
     { name = "nv-ingest-api", marker = "python_full_version >= '3.12' and extra == 'nv-ingest'", specifier = "==25.6.2,<26.0.0" },

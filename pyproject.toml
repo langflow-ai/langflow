@@ -17,6 +17,7 @@ maintainers = [
 ]
 # Define your main dependencies here
 dependencies = [
+    "langchain-huggingface>=0.3.1",
     "langflow-base[complete]~=0.8.0",
 ]
 
