@@ -8,7 +8,9 @@ import { TEXT_FIELD_TYPES } from "@/constants/constants";
 import CustomConnectionComponent from "@/customization/components/custom-connectionComponent";
 import CustomInputFileComponent from "@/customization/components/custom-input-file";
 import CustomLinkComponent from "@/customization/components/custom-linkComponent";
+import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
 import type { APIClassType, InputFieldType } from "@/types/api";
+import AccordionPromptComponent from "./components/accordionPromptComponent";
 import DictComponent from "./components/dictComponent";
 import { EmptyParameterComponent } from "./components/emptyParameterComponent";
 import FloatComponent from "./components/floatComponent";
@@ -183,7 +185,14 @@ export function ParameterRenderComponent({
           />
         );
       case "prompt":
-        return (
+        return ENABLE_INSPECTION_PANEL ? (
+          <AccordionPromptComponent
+            {...baseInputProps}
+            readonly={!!nodeClass.flow}
+            field_name={name}
+            id={`promptarea_${id}`}
+          />
+        ) : (
           <PromptAreaComponent
             {...baseInputProps}
             readonly={!!nodeClass.flow}
