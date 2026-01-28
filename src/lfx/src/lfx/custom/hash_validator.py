@@ -181,9 +181,7 @@ def _load_hash_history(settings_service: "SettingsService") -> set[str]:
 
     if settings_service.settings.allow_nightly_core_components:
         if not nightly_history_path.exists():
-            msg = (
-                f"Nightly hash history file not found at {nightly_history_path} (allow_nightly_core_components=True)"
-            )
+            msg = f"Nightly hash history file not found at {nightly_history_path} (allow_nightly_core_components=True)"
             logger.error(msg)
             raise FileNotFoundError(msg)
 

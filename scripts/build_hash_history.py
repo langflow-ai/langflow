@@ -118,9 +118,7 @@ def update_history(
 
             if old_hash != code_hash:
                 if debug:
-                    print(
-                        f"  [DEBUG] Updating hash for {component_name} v{version_key}: {old_hash} → {code_hash}"
-                    )
+                    print(f"  [DEBUG] Updating hash for {component_name} v{version_key}: {old_hash} → {code_hash}")
 
         history[component_name]["versions"][version_key] = version_data
 

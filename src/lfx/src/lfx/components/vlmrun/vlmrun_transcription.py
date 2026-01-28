@@ -1,6 +1,8 @@
 from pathlib import Path
 from urllib.parse import urlparse
 
+from loguru import logger
+
 from lfx.custom.custom_component.component import Component
 from lfx.io import (
     DropdownInput,
@@ -11,7 +13,6 @@ from lfx.io import (
     SecretStrInput,
 )
 from lfx.schema.data import Data
-from loguru import logger
 
 
 class VLMRunTranscription(Component):
