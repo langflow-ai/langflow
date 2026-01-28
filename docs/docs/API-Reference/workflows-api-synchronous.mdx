@@ -1,0 +1,209 @@
+---
+title: Synchronous workflows API (Beta)
+slug: /workflows-api-synchronous
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import PartialAPISetup from '@site/docs/_partial-api-setup.mdx';
+
+:::warning Beta Feature
+The Workflows API is currently in **Beta**.
+The API endpoints and response formats may change in future releases.
+:::
+
+The Synchronous Workflows API provides programmatic access to execute Langflow workflows synchronously, receiving complete results immediately upon completion. This API is part of the Langflow v2 API and offers enhanced workflow execution capabilities compared to the v1 `/run` endpoint.
+
+<PartialAPISetup />
+
+## Execute workflows endpoint (synchronous)
+
+**Endpoint:** `POST /api/v2/workflows`
+
+**Description:** Execute a workflow synchronously and receive complete results immediately upon completion. Set `background=false` and `stream=false`.
+
+### Example request
+
+Execute a workflow synchronously and receive complete results immediately:
+
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+```python
+import requests
+
+url = f"{LANGFLOW_SERVER_URL}/api/v2/workflows"
+headers = {
+    "Content-Type": "application/json",
+    "x-api-key": LANGFLOW_API_KEY
+}
+
+payload = {
+    "flow_id": "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
+    "background": False,
+    "stream": False,
+    "inputs": {
+        "ChatInput-abc.input_type": "chat",
+        "ChatInput-abc.input_value": "what is 2+2",
+        "ChatInput-abc.session_id": "session-123"
+    }
+}
+
+response = requests.post(url, json=payload, headers=headers)
+print(response.json())
+```
+
+</TabItem>
+<TabItem value="TypeScript" label="TypeScript">
+
+```typescript
+import axios from 'axios';
+
+const url = `${LANGFLOW_SERVER_URL}/api/v2/workflows`;
+
+const payload = {
+  flow_id: "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
+  background: false,
+  stream: false,
+  inputs: {
+    "ChatInput-abc.input_type": "chat",
+    "ChatInput-abc.input_value": "what is 2+2",
+    "ChatInput-abc.session_id": "session-123"
+  }
+};
+
+const runWorkflow = async () => {
+  try {
+    const response = await axios.post(url, payload, {
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': LANGFLOW_API_KEY
+      }
+    });
+    console.log(response.data);
+  } catch (error) {
+    console.error('Error triggering workflow:', error);
+  }
+};
+
+runWorkflow();
+```
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+```bash
+curl -X POST \
+  "$LANGFLOW_SERVER_URL/api/v2/workflows" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
+  -d '{
+    "flow_id": "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
+    "background": false,
+    "stream": false,
+    "inputs": {
+      "ChatInput-abc.input_type": "chat",
+      "ChatInput-abc.input_value": "what is 2+2",
+      "ChatInput-abc.session_id": "session-123"
+    }
+  }'
+```
+
+</TabItem>
+</Tabs>
+
+### Request body
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `flow_id` | `string` | Yes | - | The ID or endpoint name of the flow to execute. |
+| `flow_version` | `string` | No | - | Optional version hash to pin to a specific flow version. |
+| `background` | `boolean` | No | `false` | Must be `false` for synchronous execution. |
+| `stream` | `boolean` | No | `false` | Must be `false` for synchronous execution. |
+| `inputs` | `object` | No | `{}` | Inputs for the workflow execution. Uses component identifiers with dot notation (e.g., `ChatInput-abc.input_value`). See [Component identifiers and input structure](#component-identifiers-and-input-structure) for detailed information. |
+
+### Example response
+
+```json
+{
+  "flow_id": "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
+  "job_id": "job_id_1234567890",
+  "object": "response",
+  "created_at": 1741476542,
+  "status": "completed",
+  "errors": [],
+  "inputs": {
+    "ChatInput-abc.input_type": "chat",
+    "ChatInput-abc.input_value": "what is 2+2",
+    "ChatInput-abc.session_id": "session-123"
+  },
+  "outputs": {
+    "ChatOutput-xyz": {
+      "type": "message",
+      "component_id": "ChatOutput-xyz",
+      "status": "completed",
+      "content": "2 + 2 equals 4."
+    }
+  },
+  "metadata": {}
+}
+```
+
+### Response body
+
+The response includes an `outputs` field containing component-level results. Each output has a `type` field indicating the type of content:
+
+| Type | Description | Example |
+|------|-------------|---------|
+| `message` | Text message content. | Chat responses, summaries |
+| `image` | Image URL or data. | Generated images, processed images |
+| `sql` | SQL query results. | Database query outputs |
+| `data` | Structured data. | JSON objects, arrays |
+| `file` | File reference. | Generated documents, reports |
+
+## Component identifiers and input structure
+
+The Workflows API uses component identifiers with dot notation to specify inputs for individual components in your workflow. This allows you to pass values to specific components and override component parameters.
+
+Component identifiers use the format `{component_id}.{parameter_name}`.
+When making requests to the Workflows API, include component identifiers in the `inputs` object.
+For example, this demonstrates targeting multiple components and their parameters in a single request.
+
+```json
+{
+  "flow_id": "your-flow-id",
+  "inputs": {
+    "ChatInput-abc.input_type": "chat",
+    "ChatInput-abc.input_value": "what is 2+2",
+    "ChatInput-abc.session_id": "session-123",
+    "OpenSearchComponent-xyz.opensearch_url": "https://opensearch:9200",
+    "LLMComponent-123.temperature": 0.7,
+    "LLMComponent-123.max_tokens": 100
+  }
+}
+```
+
+To find the component ID in the Langflow UI, open your flow in Langflow, click the component, and then click **Controls**. The component ID is at the top of the **Controls** pane.
+
+You can override any component's parameters.
+
+## Error handling
+
+The API uses standard HTTP status codes to indicate success or failure:
+
+| Status Code | Description |
+|-------------|-------------|
+| `200 OK` | Request successful. |
+| `400 Bad Request` | Invalid request parameters. |
+| `401 Unauthorized` | Invalid or missing API key. |
+| `404 Not Found` | Flow not found or developer API disabled. |
+| `500 Internal Server Error` | Server error during execution. |
+| `501 Not Implemented` | Endpoint not yet implemented. |
+
+### Error response format
+
+```json
+{
+  "detail": "Error message describing what went wrong"
+}
+```

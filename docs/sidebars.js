@@ -445,6 +445,27 @@ module.exports = {
           label: "Flow trigger endpoints",
         },
         {
+          type: "category",
+          label: "Developer API (Beta)",
+          items: [
+            {
+              type: "doc",
+              id: "API-Reference/workflows-api-synchronous",
+              label: "Synchronous workflows API (Beta)",
+            },
+            {
+              type: "doc",
+              id: "API-Reference/workflows-api-asynchronous",
+              label: "Asynchronous workflows API (Beta)",
+            },
+            {
+              type: "link",
+              label: "Workflows API specification (Beta)",
+              href: "/api/workflow",
+            },
+          ],
+        },
+        {
           type: "doc",
           id: "API-Reference/api-openai-responses",
           label: "OpenAI Responses endpoints",
