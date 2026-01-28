@@ -305,14 +305,12 @@ def _build_metadata_for_non_output(
 def _process_terminal_vertex(
     vertex: Any,
     output_data_map: dict[str, Any],
-    display_name_counts: dict[str, int],
 ) -> tuple[str, ComponentOutput]:
     """Process a single terminal vertex and return (output_key, component_output).
 
     Args:
         vertex: The vertex to process
         output_data_map: Map of component_id to output data
-        display_name_counts: Count of each display_name for duplicate detection
 
     Returns:
         Tuple of (output_key, ComponentOutput)
@@ -367,17 +365,8 @@ def _process_terminal_vertex(
             if isinstance(result_metadata, dict):
                 metadata.update(result_metadata)
 
-    # Determine output key: use display_name if unique, otherwise use id
-    display_name = vertex.display_name or vertex.id
-    if display_name_counts.get(display_name, 0) > 1:
-        # Duplicate display_name detected, use id instead
-        output_key = vertex.id
-        # Store the display_name in metadata for reference
-        if vertex.display_name and vertex.display_name != vertex.id:
-            metadata["display_name"] = vertex.display_name
-    else:
-        # Unique display_name, use it as key
-        output_key = display_name
+    # Determine output key: use vertex id but TODO: add alias handling when avialable
+    output_key = vertex.id
 
     # Build ComponentOutput
     component_output = ComponentOutput(
@@ -451,17 +440,13 @@ def run_response_to_workflow_response(
                     if component_id:
                         output_data_map[component_id] = result_data
 
-    # First pass: collect all terminal vertices and check for duplicate display_names
+    # Collect all terminal vertices
     terminal_vertices = [graph.get_vertex(vertex_id) for vertex_id in terminal_node_ids]
-    display_name_counts: dict[str, int] = {}
-    for vertex in terminal_vertices:
-        display_name = vertex.display_name or vertex.id
-        display_name_counts[display_name] = display_name_counts.get(display_name, 0) + 1
 
     # Process each terminal vertex
     outputs: dict[str, ComponentOutput] = {}
     for vertex in terminal_vertices:
-        output_key, component_output = _process_terminal_vertex(vertex, output_data_map, display_name_counts)
+        output_key, component_output = _process_terminal_vertex(vertex, output_data_map)
         outputs[output_key] = component_output
 
     return WorkflowExecutionResponse(

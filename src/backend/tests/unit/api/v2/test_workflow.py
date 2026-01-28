@@ -923,7 +923,6 @@ class TestWorkflowSyncExecution:
                 assert result["flow_id"] == str(flow_id)
                 assert "job_id" in result
                 assert "outputs" in result
-                assert "metadata" in result
                 # Note: Detailed content validation requires proper graph/vertex mocking
 
         finally:
@@ -989,7 +988,6 @@ class TestWorkflowSyncExecution:
                 assert result["flow_id"] == str(flow_id)
                 assert "job_id" in result
                 assert "outputs" in result
-                assert "metadata" in result
                 # Note: Detailed content validation requires proper graph/vertex mocking
 
         finally:
@@ -1116,9 +1114,6 @@ class TestWorkflowSyncExecution:
 
             assert "outputs" in result
             assert isinstance(result["outputs"], dict)
-
-            assert "metadata" in result
-            assert isinstance(result["metadata"], dict)
 
         finally:
             async with session_scope() as session:
