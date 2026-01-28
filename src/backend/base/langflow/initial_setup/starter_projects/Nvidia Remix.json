@@ -811,7 +811,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "0.3.81"
+                    "version": "0.3.83"
                   }
                 ],
                 "total_dependencies": 3
@@ -1683,7 +1683,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "0.3.81"
+                    "version": "0.3.83"
                   }
                 ],
                 "total_dependencies": 2
@@ -2403,7 +2403,7 @@
                 "dependencies": [
                   {
                     "name": "langchain_core",
-                    "version": "0.3.81"
+                    "version": "0.3.83"
                   },
                   {
                     "name": "lfx",
