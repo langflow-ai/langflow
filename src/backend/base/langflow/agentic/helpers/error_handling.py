@@ -4,7 +4,7 @@ MAX_ERROR_MESSAGE_LENGTH = 150
 MIN_MEANINGFUL_PART_LENGTH = 10
 
 ERROR_PATTERNS: list[tuple[list[str], str]] = [
-    (["rate_limit", "429"], "Rate limit exceeded. Please wait a moment and try again."),
+    (["rate_limit", "rate limit", "429"], "Rate limit exceeded. Please wait a moment and try again."),
     (["authentication", "api_key", "unauthorized", "401"], "Authentication failed. Check your API key."),
     (["quota", "billing", "insufficient"], "API quota exceeded. Please check your account billing."),
     (["timeout", "timed out"], "Request timed out. Please try again."),

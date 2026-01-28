@@ -143,6 +143,27 @@ class TestValidationRetryTemplate:
         assert "fix" in result.lower() or "correct" in result.lower()
 
 
+def _mock_streaming_result(result):
+    """Create an async generator that yields a single end event with the given result."""
+
+    async def _gen(*_args, **_kwargs):
+        yield ("end", result)
+
+    return _gen
+
+
+def _mock_streaming_sequence(results):
+    """Create an async generator factory that yields different results on each call."""
+    call_count = 0
+
+    async def _gen(*_args, **_kwargs):
+        nonlocal call_count
+        call_count += 1
+        yield ("end", results[min(call_count - 1, len(results) - 1)])
+
+    return _gen
+
+
 class TestStreamingValidationFlow:
     """Tests for execute_flow_with_validation_streaming function."""
 
@@ -152,9 +173,8 @@ class TestStreamingValidationFlow:
         mock_flow_result = {"result": f"Here is your component:\n\n```python\n{VALID_COMPONENT_CODE}\n```"}
 
         with patch(
-            "langflow.agentic.services.assistant_service.execute_flow_file",
-            new_callable=AsyncMock,
-            return_value=mock_flow_result,
+            "langflow.agentic.services.assistant_service.execute_flow_file_streaming",
+            side_effect=_mock_streaming_result(mock_flow_result),
         ):
             events = [
                 event
@@ -195,19 +215,9 @@ class TestStreamingValidationFlow:
         invalid_response = {"result": f"```python\n{INVALID_COMPONENT_CODE}\n```"}
         valid_response = {"result": f"```python\n{VALID_COMPONENT_CODE}\n```"}
 
-        # First call returns invalid, second returns valid
-        call_count = 0
-
-        async def mock_execute_flow(*_args, **_kwargs):
-            nonlocal call_count
-            call_count += 1
-            if call_count == 1:
-                return invalid_response
-            return valid_response
-
         with patch(
-            "langflow.agentic.services.assistant_service.execute_flow_file",
-            side_effect=mock_execute_flow,
+            "langflow.agentic.services.assistant_service.execute_flow_file_streaming",
+            side_effect=_mock_streaming_sequence([invalid_response, valid_response]),
         ):
             events = [
                 event
@@ -242,9 +252,8 @@ class TestStreamingValidationFlow:
         invalid_response = {"result": f"```python\n{INVALID_COMPONENT_CODE}\n```"}
 
         with patch(
-            "langflow.agentic.services.assistant_service.execute_flow_file",
-            new_callable=AsyncMock,
-            return_value=invalid_response,
+            "langflow.agentic.services.assistant_service.execute_flow_file_streaming",
+            side_effect=_mock_streaming_result(invalid_response),
         ):
             events = [
                 event
@@ -275,9 +284,8 @@ class TestStreamingValidationFlow:
         text_only_response = {"result": "Langflow is a visual flow builder for LLM applications."}
 
         with patch(
-            "langflow.agentic.services.assistant_service.execute_flow_file",
-            new_callable=AsyncMock,
-            return_value=text_only_response,
+            "langflow.agentic.services.assistant_service.execute_flow_file_streaming",
+            side_effect=_mock_streaming_result(text_only_response),
         ):
             events = [
                 event
@@ -309,9 +317,13 @@ class TestStreamingValidationFlow:
         """When flow execution fails, should return SSE error event."""
         from fastapi import HTTPException
 
+        async def mock_streaming_error(*_args, **_kwargs):
+            raise HTTPException(status_code=429, detail="Rate limit exceeded")
+            yield  # makes this an async generator
+
         with patch(
-            "langflow.agentic.services.assistant_service.execute_flow_file",
-            side_effect=HTTPException(status_code=429, detail="Rate limit exceeded"),
+            "langflow.agentic.services.assistant_service.execute_flow_file_streaming",
+            side_effect=mock_streaming_error,
         ):
             events = [
                 event
@@ -341,16 +353,20 @@ class TestValidationRetryBehavior:
         valid_response = {"result": f"```python\n{VALID_COMPONENT_CODE}\n```"}
 
         captured_inputs = []
+        call_count = 0
 
-        async def mock_execute_flow(_flow_filename, input_value, _global_variables, **_kwargs):
-            captured_inputs.append(input_value)
-            if len(captured_inputs) == 1:
-                return invalid_response
-            return valid_response
+        async def mock_streaming(*_args, **_kwargs):
+            nonlocal call_count
+            call_count += 1
+            captured_inputs.append(_kwargs.get("input_value"))
+            if call_count == 1:
+                yield ("end", invalid_response)
+            else:
+                yield ("end", valid_response)
 
         with patch(
-            "langflow.agentic.services.assistant_service.execute_flow_file",
-            side_effect=mock_execute_flow,
+            "langflow.agentic.services.assistant_service.execute_flow_file_streaming",
+            side_effect=mock_streaming,
         ):
             # Consume the generator to trigger the mock calls
             _ = [
@@ -473,9 +489,8 @@ This component will process your input."""
         }
 
         with patch(
-            "langflow.agentic.services.assistant_service.execute_flow_file",
-            new_callable=AsyncMock,
-            return_value=response_with_text,
+            "langflow.agentic.services.assistant_service.execute_flow_file_streaming",
+            side_effect=_mock_streaming_result(response_with_text),
         ):
             events = [
                 event
@@ -509,9 +524,8 @@ This component will process your input."""
         }
 
         with patch(
-            "langflow.agentic.services.assistant_service.execute_flow_file",
-            new_callable=AsyncMock,
-            return_value=response_with_unclosed,
+            "langflow.agentic.services.assistant_service.execute_flow_file_streaming",
+            side_effect=_mock_streaming_result(response_with_unclosed),
         ):
             events = [
                 event
@@ -536,9 +550,8 @@ This component will process your input."""
         mock_flow_result = {"result": f"```python\n{VALID_COMPONENT_CODE}\n```"}
 
         with patch(
-            "langflow.agentic.services.assistant_service.execute_flow_file",
-            new_callable=AsyncMock,
-            return_value=mock_flow_result,
+            "langflow.agentic.services.assistant_service.execute_flow_file_streaming",
+            side_effect=_mock_streaming_result(mock_flow_result),
         ):
             events = [
                 event
@@ -565,9 +578,8 @@ This component will process your input."""
         invalid_response = {"result": f"```python\n{INVALID_COMPONENT_CODE}\n```"}
 
         with patch(
-            "langflow.agentic.services.assistant_service.execute_flow_file",
-            new_callable=AsyncMock,
-            return_value=invalid_response,
+            "langflow.agentic.services.assistant_service.execute_flow_file_streaming",
+            side_effect=_mock_streaming_result(invalid_response),
         ):
             events = [
                 event
@@ -610,9 +622,8 @@ Here's the implementation:
         }
 
         with patch(
-            "langflow.agentic.services.assistant_service.execute_flow_file",
-            new_callable=AsyncMock,
-            return_value=response_with_apology,
+            "langflow.agentic.services.assistant_service.execute_flow_file_streaming",
+            side_effect=_mock_streaming_result(response_with_apology),
         ):
             events = [
                 event
@@ -657,9 +668,8 @@ Here's the implementation:
         }
 
         with patch(
-            "langflow.agentic.services.assistant_service.execute_flow_file",
-            new_callable=AsyncMock,
-            return_value=cutoff_response,
+            "langflow.agentic.services.assistant_service.execute_flow_file_streaming",
+            side_effect=_mock_streaming_result(cutoff_response),
         ):
             events = [
                 event
@@ -699,18 +709,11 @@ Here's the implementation:
         }
         valid_response = {"result": f"```python\n{VALID_COMPONENT_CODE}\n```"}
 
-        call_count = 0
-
-        async def mock_execute_flow(*_args, **_kwargs):
-            nonlocal call_count
-            call_count += 1
-            if call_count <= 2:  # First 2 calls return cutoff
-                return cutoff_response
-            return valid_response  # Third call returns valid
-
         with patch(
-            "langflow.agentic.services.assistant_service.execute_flow_file",
-            side_effect=mock_execute_flow,
+            "langflow.agentic.services.assistant_service.execute_flow_file_streaming",
+            side_effect=_mock_streaming_sequence(
+                [cutoff_response, cutoff_response, valid_response]
+            ),
         ):
             events = [
                 event
