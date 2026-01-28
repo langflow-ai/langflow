@@ -274,7 +274,7 @@ async def test_flow_created_is_retrievable_in_folder(client: AsyncClient, logged
     assert flow_id in flow_ids_in_folder, f"Flow {flow_id} should be retrievable in folder {folder_id}"
 
 
-async def test_upsert_flow_with_nonexistent_folder_id_on_create(client: AsyncClient, logged_in_headers, active_user):
+async def test_upsert_flow_with_nonexistent_folder_id_on_create(client: AsyncClient, logged_in_headers):
     """Test that PUT (upsert) with non-existent folder_id creates flow with default folder."""
     specified_id = str(uuid.uuid4())
     non_existent_folder_id = str(uuid.uuid4())
