@@ -122,7 +122,7 @@ The following Processing components are in legacy status:
 <details>
 <summary>Alter Metadata</summary>
 
-Replace this legacy component with the [**Data Operations** component](/data-operations).
+Replace this legacy component with the [**Operations** component](/operations).
 
 This component modifies metadata of input objects. It can add new metadata, update existing metadata, and remove specified metadata fields. The component works with both `Message` and `Data` objects, and can also create a new `Data` object from user-provided text.
 
@@ -141,7 +141,7 @@ It accepts the following parameters:
 <details>
 <summary>Combine Data</summary>
 
-Replace this legacy component with the [**Data Operations** component](/data-operations) or the [**Loop** component](/loop).
+Replace this legacy component with the [**Operations** component](/operations) or the [**Loop** component](/loop).
 
 This component combines multiple data sources into a single unified `Data` object.
 
@@ -156,7 +156,7 @@ The merging process uses the addition operator to combine data objects.
 <details>
 <summary>Combine Text</summary>
 
-Replace this legacy component with the [**Data Operations** component](/data-operations).
+Replace this legacy component with the [**Operations** component](/operations).
 
 This component concatenates two text inputs into a single text chunk using a specified delimiter, outputting a `Message` object with the combined text.
 
@@ -178,10 +178,18 @@ It accepts the following parameters:
 
 </details>
 
+
+<details>
+<summary>Data Operations, DataFrame Operations, and Text Operations</summary>
+
+Replace these legacy components with the [**Operations** component](/operations), which provides a unified interface for Text, Data, and DataFrame operations.
+
+</details>
+
 <details>
 <summary>Data to DataFrame/Data to Message</summary>
 
-Replace these legacy components with newer Processing components, such as the [**Data Operations** component](/data-operations) and [**Type Convert** component](/type-convert).
+Replace these legacy components with newer Processing components, such as the [**Operations** component](/operations) and [**Type Convert** component](/type-convert).
 
 These components converted one or more `Data` objects into a `DataFrame` or `Message` object.
 
@@ -193,7 +201,7 @@ Fields from the `.data` attribute become columns, and the `.text` field (if pres
 <details>
 <summary>Extract Key</summary>
 
-Replace this legacy component with the [**Data Operations** component](/data-operations).
+Replace this legacy component with the [**Operations** component](/operations).
 
 This component extracts a specific key from a `Data` object and returns the value associated with that key.
 
@@ -202,7 +210,7 @@ This component extracts a specific key from a `Data` object and returns the valu
 <details>
 <summary>Filter Data</summary>
 
-Replace this legacy component with the [**Data Operations** component](/data-operations).
+Replace this legacy component with the [**Operations** component](/operations).
 
 This component filters a `Data` object based on a list of keys (`filter_criteria`), returning a new `Data` object (`filtered_data`) that contains only the key-value pairs that match the filter criteria.
 
@@ -211,7 +219,7 @@ This component filters a `Data` object based on a list of keys (`filter_criteria
 <details>
 <summary>Filter Values</summary>
 
-Replace this legacy component with the [**Data Operations** component](/data-operations).
+Replace this legacy component with the [**Operations** component](/operations).
 
 The Filter values component filters a list of data items based on a specified key, filter value, and comparison operator.
 
@@ -258,7 +266,7 @@ This component converts `Message` objects to `Data` objects.
 <details>
 <summary>Parse DataFrame</summary>
 
-Replace this legacy component with the [**DataFrame Operations** component](/dataframe-operations) or [**Parser** component](/parser).
+Replace this legacy component with the [**Operations** component](/operations) or [**Parser** component](/parser).
 
 This component converts `DataFrame` objects into plain text using templates.
 
@@ -294,7 +302,7 @@ This component extracts patterns in text using regular expressions. It can be us
 <details>
 <summary>Select Data</summary>
 
-Replace this legacy component with the [**Data Operations** component](/data-operations).
+Replace this legacy component with the [**Operations** component](/operations).
 
 This component selects a single `Data` object from a list.
 
@@ -311,7 +319,7 @@ It accepts the following parameters:
 <details>
 <summary>Update Data</summary>
 
-Replace this legacy component with the [**Data Operations** component](/data-operations).
+Replace this legacy component with the [**Operations** component](/operations).
 
 This component dynamically updates or appends data with specified fields.
 
