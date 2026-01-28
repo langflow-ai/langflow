@@ -117,6 +117,7 @@ class SmartRouterComponent(Component):
             info="Include an Else output for cases that don't match any route.",
             value=False,
             advanced=True,
+            real_time_refresh=True,
         ),
         MultilineInput(
             name="custom_prompt",
@@ -145,7 +146,7 @@ class SmartRouterComponent(Component):
 
     def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:
         """Create a dynamic output for each category in the categories table."""
-        if field_name in {"routes", "enable_else_output"}:
+        if field_name in {"routes", "enable_else_output", "model"}:
             frontend_node["outputs"] = []
 
             # Get the routes data - either from field_value (if routes field) or from component state
