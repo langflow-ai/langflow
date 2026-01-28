@@ -51,10 +51,10 @@ jobs:
           - arch: amd64
             runner: [Langflow-runner]
           - arch: arm64
-            runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
+            runner:
+              [self-hosted, linux, ARM64, langflow-ai-arm64-40gb-ephemeral]
     runs-on: ${{ matrix.runner }}
     steps:
-
       - name: Check out the code
         uses: actions/checkout@v6
         with:
@@ -145,10 +145,10 @@ jobs:
           - arch: amd64
             runner: [Langflow-runner]
           - arch: arm64
-            runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
+            runner:
+              [self-hosted, linux, ARM64, langflow-ai-arm64-40gb-ephemeral]
     runs-on: ${{ matrix.runner }}
     steps:
-
       - name: Check out the code
         uses: actions/checkout@v6
         with:
@@ -238,10 +238,10 @@ jobs:
           - arch: amd64
             runner: [Langflow-runner]
           - arch: arm64
-            runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
+            runner:
+              [self-hosted, linux, ARM64, langflow-ai-arm64-40gb-ephemeral]
     runs-on: ${{ matrix.runner }}
     steps:
-
       - name: Check out the code
         uses: actions/checkout@v6
         with:
