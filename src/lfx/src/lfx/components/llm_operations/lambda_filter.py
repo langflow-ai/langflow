@@ -45,6 +45,7 @@ class LambdaFilterComponent(Component):
     documentation: str = "https://docs.langflow.org/smart-transform"
     icon = "square-function"
     name = "Smart Transform"
+    executes_code = True  # Executes LLM-generated lambda functions via eval()
 
     inputs = [
         DataInput(

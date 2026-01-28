@@ -25,6 +25,7 @@ export interface ConfigResponse {
   voice_mode_available: boolean;
   default_folder_name: string;
   hide_getting_started_progress: boolean;
+  allow_custom_components: boolean;
 }
 
 export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (

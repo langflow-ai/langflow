@@ -67,6 +67,12 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                 del component["metadata"]["hash_history"]
             all_types_dict_flat[key] = component
 
+    # Create a mapping for legacy component names to handle mismatches
+    legacy_name_mapping = {
+        "Prompt": "Prompt Template",
+        "URL": "URLComponent",
+    }
+
     node_changes_log = defaultdict(list)
     project_data_copy = deepcopy(project_data)
 
@@ -74,8 +80,11 @@ def update_projects_components_with_latest_component_versions(project_data, all_
         node_data = node.get("data").get("node")
         node_type = node.get("data").get("type")
 
-        if node_type in all_types_dict_flat:
-            latest_node = all_types_dict_flat.get(node_type)
+        # Try to find the component, checking legacy names if needed
+        lookup_key = legacy_name_mapping.get(node_type, node_type)
+
+        if lookup_key in all_types_dict_flat:
+            latest_node = all_types_dict_flat.get(lookup_key)
             latest_template = latest_node.get("template")
             node_data["template"]["code"] = latest_template["code"]
             # skip components that are having dynamic values that need to be persisted for templates
