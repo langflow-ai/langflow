@@ -8,6 +8,7 @@ interface DisconnectWarningProps {
   onCancel: () => void;
   onConfirm: () => void;
   isLoading: boolean;
+  className?: string;
 }
 
 const DisconnectWarning = ({
@@ -16,22 +17,27 @@ const DisconnectWarning = ({
   onCancel,
   onConfirm,
   isLoading,
+  className,
 }: DisconnectWarningProps) => (
   <div
     className={cn(
-      "border border-border rounded-md border-destructive transition-all duration-300 ease-in-out origin-top",
-      show
-        ? "opacity-100 max-h-40 scale-y-100 translate-y-0 p-3"
-        : "opacity-0 max-h-0 scale-y-0 -translate-y-2 overflow-hidden",
+      "border border-border border-destructive transition-all duration-300 ease-in-out ",
+      show ? "opacity-100 p-4" : "opacity-0 pointer-events-none",
+      className,
     )}
   >
-    <div className="text-destructive flex items-center gap-1 pb-3 text-sm">
-      <ForwardedIconComponent
-        name="Circle"
-        className="text-destructive w-2 h-2 fill-destructive mr-1"
-      />
-      Warning
-      <div className="flex gap-2 ml-auto">
+    <div className="flex flex-col h-full">
+      <div className="text-destructive flex items-center gap-1 pb-3 text-sm">
+        <ForwardedIconComponent
+          name="Circle"
+          className="text-destructive w-2 h-2 fill-destructive mr-1"
+        />
+        Warning
+      </div>
+
+      <p className="flex flex-col text-sm pb-4">{message}</p>
+
+      <div className="flex gap-2 justify-end ">
         <Button size="sm" variant="ghost" onClick={onCancel}>
           Cancel
         </Button>
@@ -46,7 +52,6 @@ const DisconnectWarning = ({
         </Button>
       </div>
     </div>
-    <p className="text-sm">{message}</p>
   </div>
 );
 
