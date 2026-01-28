@@ -68,9 +68,9 @@ def update_projects_components_with_latest_component_versions(project_data, all_
             all_types_dict_flat[key] = component
 
     # Create a mapping for legacy component names to handle mismatches
-    # e.g., "Prompt" -> "Prompt Template"
     legacy_name_mapping = {
         "Prompt": "Prompt Template",
+        "URL": "URLComponent",
     }
 
     node_changes_log = defaultdict(list)
