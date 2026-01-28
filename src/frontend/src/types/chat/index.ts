@@ -44,6 +44,7 @@ export type PropertiesType = {
   allow_markdown?: boolean;
   state?: string;
   positive_feedback?: boolean | null;
+  build_duration?: number | null;
 };
 
 export type ChatOutputType = {

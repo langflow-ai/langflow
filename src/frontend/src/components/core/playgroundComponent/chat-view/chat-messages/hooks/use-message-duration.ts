@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 
 interface UseMessageDurationProps {
-  chatId: string;
   lastMessage: boolean;
   isBuilding: boolean;
+  buildStartTime: number | null;
+  buildDuration: number | null;
 }
 
 interface UseMessageDurationResult {
@@ -11,104 +12,62 @@ interface UseMessageDurationResult {
 }
 
 /**
- * Hook to track message duration (thinking time) for a single message.
- * Starts when message becomes active (lastMessage && isBuilding),
- * freezes when message becomes inactive or building stops.
+ * Tracks flow execution time for the last bot message only.
+ *
+ * Guards on `lastMessage` prevent older messages from reacting to
+ * global build state, so each message keeps its own frozen duration.
  */
 export function useMessageDuration({
-  chatId,
   lastMessage,
   isBuilding,
+  buildStartTime,
+  buildDuration,
 }: UseMessageDurationProps): UseMessageDurationResult {
   const [elapsedTime, setElapsedTime] = useState(0);
-  const frozenDurationRef = useRef<number | null>(null);
-  const messageStartTimeRef = useRef<number | null>(null);
-  const chatIdRef = useRef(chatId);
+  const frozenRef = useRef<number | null>(null);
+  const buildStartRef = useRef<number | null>(null);
 
-  // Consolidated effect: handle reset, start, stop, and freeze logic
   useEffect(() => {
-    // Reset when chat.id changes
-    if (chatIdRef.current !== chatId) {
-      frozenDurationRef.current = null;
-      messageStartTimeRef.current = null;
-      setElapsedTime(0);
-      chatIdRef.current = chatId;
-    }
+    if (!lastMessage || !buildStartTime) return;
+    if (buildStartTime === buildStartRef.current) return;
 
-    const isActive = lastMessage && isBuilding;
-    const hasStartTime = messageStartTimeRef.current !== null;
-    const isFrozen = frozenDurationRef.current !== null;
+    buildStartRef.current = buildStartTime;
+    frozenRef.current = null;
+    setElapsedTime(Date.now() - buildStartTime);
+  }, [buildStartTime, lastMessage]);
 
-    // Start timer when message becomes active
-    if (isActive && !hasStartTime && !isFrozen) {
-      messageStartTimeRef.current = Date.now();
-      setElapsedTime(0);
-    }
-
-    // Freeze when message becomes inactive (no longer last message) or building stops
-    if (hasStartTime && !isFrozen) {
-      if (!isActive) {
-        // Message is no longer active (either not last message or not building)
-        const finalDuration = Date.now() - messageStartTimeRef.current!;
-        if (finalDuration > 0) {
-          frozenDurationRef.current = finalDuration;
-          setElapsedTime(finalDuration);
-        }
-      } else if (!isBuilding && lastMessage) {
-        // Building stopped but this is still the last message
-        const finalDuration = Date.now() - messageStartTimeRef.current!;
-        if (finalDuration > 0) {
-          frozenDurationRef.current = finalDuration;
-          setElapsedTime(finalDuration);
-        }
-      }
-    }
-  }, [chatId, lastMessage, isBuilding]);
-
-  // Live timer: only update when actively building
+  // Snap to exact backend duration once available
   useEffect(() => {
-    const isActive = lastMessage && isBuilding;
+    if (!lastMessage || isBuilding) return;
+    if (!buildStartRef.current || frozenRef.current !== null) return;
+    if (buildDuration == null) return;
 
-    // Immediately stop timer if not active or already frozen
+    frozenRef.current = buildDuration;
+    setElapsedTime(buildDuration);
+  }, [isBuilding, buildDuration, lastMessage]);
+
+  useEffect(() => {
     if (
-      !isActive ||
-      !messageStartTimeRef.current ||
-      frozenDurationRef.current !== null
+      !lastMessage ||
+      !isBuilding ||
+      !buildStartRef.current ||
+      frozenRef.current !== null
     ) {
-      // If we have a start time but are no longer active, freeze immediately
-      if (
-        messageStartTimeRef.current &&
-        !isActive &&
-        frozenDurationRef.current === null
-      ) {
-        const finalDuration = Date.now() - messageStartTimeRef.current;
-        if (finalDuration > 0) {
-          frozenDurationRef.current = finalDuration;
-          setElapsedTime(finalDuration);
-        }
-      }
       return;
     }
 
-    const interval = setInterval(() => {
-      // Double-check we're still active before updating
-      if (
-        lastMessage &&
-        isBuilding &&
-        messageStartTimeRef.current &&
-        frozenDurationRef.current === null
-      ) {
-        setElapsedTime(Date.now() - messageStartTimeRef.current);
-      }
-    }, 100);
+    const tick = () => {
+      if (!buildStartRef.current || frozenRef.current !== null) return;
+      setElapsedTime(Date.now() - buildStartRef.current);
+    };
 
+    tick();
+    const interval = setInterval(tick, 100);
     return () => clearInterval(interval);
-  }, [lastMessage, isBuilding]);
+  }, [lastMessage, isBuilding, buildStartTime]);
 
   const displayTime =
-    frozenDurationRef.current !== null
-      ? frozenDurationRef.current
-      : elapsedTime;
+    frozenRef.current !== null ? frozenRef.current : elapsedTime;
 
   return { displayTime };
 }

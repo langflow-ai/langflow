@@ -44,13 +44,11 @@ export function ChatSidebar({
   };
 
   return (
-    <div className="flex flex-col pb-4 gap-4">
+    <div className="flex flex-col pb-4 gap-2">
       <div className="flex flex-col">
-        <div className="flex items-center justify-between  py-2 px-4">
-          <div className="flex items-center  gap-2">
-            <div className="text-xs font-semibold leading-4 text-muted-foreground">
-              Sessions
-            </div>
+        <div className="flex h-4 items-center justify-between">
+          <div className="px-2 text-xs font-semibold leading-4 text-muted-foreground">
+            Sessions
           </div>
           <ShadTooltip styleClasses="z-50" content="New Chat">
             <Button

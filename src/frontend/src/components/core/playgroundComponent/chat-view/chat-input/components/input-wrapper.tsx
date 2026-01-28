@@ -79,7 +79,7 @@ const InputWrapper = ({
         onMouseDown={onMouseDown}
       >
         {/* Text input area */}
-        <div className="w-full">
+        <div className="w-full pb-3">
           <TextAreaWrapper
             CHAT_INPUT_PLACEHOLDER={"Send a message"}
             isBuilding={isBuilding}
@@ -113,7 +113,7 @@ const InputWrapper = ({
         )}
 
         {/* Buttons row */}
-        <div className="flex items-center justify-between w-full">
+        <div className="flex items-center justify-between w-full pt-3">
           <div className="flex-shrink-0">
             <UploadFileButton
               isBuilding={isBuilding}
