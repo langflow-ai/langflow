@@ -400,3 +400,97 @@ async def test_security_credential_value_never_exposed_in_variables_endpoint(
         if variable.get("type") == CREDENTIAL_TYPE:
             # CRITICAL: Value must be None (redacted), never the original value
             assert variable["value"] is None
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_provider_variable_mapping_returns_full_variable_info(client: AsyncClient, logged_in_headers):
+    """Test that provider-variable-mapping endpoint returns full variable info for each provider."""
+    response = await client.get("api/v1/models/provider-variable-mapping", headers=logged_in_headers)
+    result = response.json()
+
+    assert response.status_code == status.HTTP_200_OK
+    assert isinstance(result, dict)
+
+    # Check that known providers exist
+    assert "OpenAI" in result
+    assert "Anthropic" in result
+    assert "Google Generative AI" in result
+    assert "Ollama" in result
+    assert "IBM WatsonX" in result
+
+    # Check structure of variables for OpenAI (single variable provider)
+    openai_vars = result["OpenAI"]
+    assert isinstance(openai_vars, list)
+    assert len(openai_vars) >= 1
+
+    # Check each variable has required fields
+    for var in openai_vars:
+        assert "variable_name" in var
+        assert "variable_key" in var
+        assert "description" in var
+        assert "required" in var
+        assert "is_secret" in var
+        assert "is_list" in var
+        assert "options" in var
+
+    # Check OpenAI primary variable
+    openai_api_key_var = openai_vars[0]
+    assert openai_api_key_var["variable_key"] == "OPENAI_API_KEY"
+    assert openai_api_key_var["required"] is True
+    assert openai_api_key_var["is_secret"] is True
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_provider_variable_mapping_multi_variable_provider(client: AsyncClient, logged_in_headers):
+    """Test that IBM WatsonX returns multiple required variables."""
+    response = await client.get("api/v1/models/provider-variable-mapping", headers=logged_in_headers)
+    result = response.json()
+
+    assert response.status_code == status.HTTP_200_OK
+
+    # Check IBM WatsonX has multiple variables
+    watsonx_vars = result.get("IBM WatsonX", [])
+    assert len(watsonx_vars) >= 3  # API Key, Project ID, URL
+
+    # Find each variable
+    var_keys = {v["variable_key"] for v in watsonx_vars}
+    assert "WATSONX_APIKEY" in var_keys
+    assert "WATSONX_PROJECT_ID" in var_keys
+    assert "WATSONX_URL" in var_keys
+
+    # Check API Key is secret
+    api_key_var = next((v for v in watsonx_vars if v["variable_key"] == "WATSONX_APIKEY"), None)
+    assert api_key_var is not None
+    assert api_key_var["is_secret"] is True
+    assert api_key_var["required"] is True
+
+    # Check Project ID is not secret
+    project_id_var = next((v for v in watsonx_vars if v["variable_key"] == "WATSONX_PROJECT_ID"), None)
+    assert project_id_var is not None
+    assert project_id_var["is_secret"] is False
+    assert project_id_var["required"] is True
+
+    # Check URL has options
+    url_var = next((v for v in watsonx_vars if v["variable_key"] == "WATSONX_URL"), None)
+    assert url_var is not None
+    assert url_var["is_secret"] is False
+    assert url_var["required"] is True
+    assert len(url_var["options"]) > 0  # Should have regional endpoint options
+    assert "https://us-south.ml.cloud.ibm.com" in url_var["options"]
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_backward_compatible_variable_mapping(client: AsyncClient, logged_in_headers):
+    """Test that get_model_provider_variable_mapping() still returns primary variable (backward compat)."""
+    from lfx.base.models.unified_models import get_model_provider_variable_mapping
+
+    mapping = get_model_provider_variable_mapping()
+
+    # Should return dict of provider -> primary variable key
+    assert isinstance(mapping, dict)
+    assert mapping.get("OpenAI") == "OPENAI_API_KEY"
+    assert mapping.get("Anthropic") == "ANTHROPIC_API_KEY"
+    assert mapping.get("Google Generative AI") == "GOOGLE_API_KEY"
+    assert mapping.get("Ollama") == "OLLAMA_BASE_URL"
+    # IBM WatsonX should return primary secret (API key)
+    assert mapping.get("IBM WatsonX") == "WATSONX_APIKEY"

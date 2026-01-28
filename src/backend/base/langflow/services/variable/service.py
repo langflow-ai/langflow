@@ -32,13 +32,25 @@ class DatabaseVariableService(VariableService, Service):
 
         # Import the provider mapping to set default_fields for known providers
         try:
-            from lfx.base.models.unified_models import get_model_provider_variable_mapping
+            from lfx.base.models.unified_models import (
+                get_model_provider_metadata,
+                get_model_provider_variable_mapping,
+            )
 
             provider_mapping = get_model_provider_variable_mapping()
-            # Reverse the mapping to go from variable name to provider
-            var_to_provider = {var_name: provider for provider, var_name in provider_mapping.items()}
+            # Build var_to_provider from all variables in metadata (not just primary)
+            var_to_provider = {}
+            var_to_info = {}  # Maps variable_key to its full info (including is_secret)
+            metadata = get_model_provider_metadata()
+            for provider, meta in metadata.items():
+                for var in meta.get("variables", []):
+                    var_key = var.get("variable_key")
+                    if var_key:
+                        var_to_provider[var_key] = provider
+                        var_to_info[var_key] = var
         except Exception:  # noqa: BLE001
             var_to_provider = {}
+            var_to_info = {}
 
         for var_name in self.settings_service.settings.variables_to_get_from_environment:
             # Check if session is still usable before processing each variable
@@ -54,8 +66,11 @@ class DatabaseVariableService(VariableService, Service):
 
                 # Skip placeholder/test values like "dummy" for API key variables only
                 # This prevents test environments from overwriting user-configured model provider keys
-                is_api_key_variable = var_name in var_to_provider
-                if is_api_key_variable and value.lower() == "dummy":
+                is_provider_variable = var_name in var_to_provider
+                var_info = var_to_info.get(var_name, {})
+                is_secret_variable = var_info.get("is_secret", False)
+
+                if is_provider_variable and is_secret_variable and value.lower() == "dummy":
                     await logger.adebug(
                         f"Skipping API key variable {var_name} with placeholder value 'dummy' "
                         "to preserve user configuration"
@@ -66,24 +81,32 @@ class DatabaseVariableService(VariableService, Service):
                 # Set default_fields if this is a known provider variable
                 default_fields = []
                 try:
-                    if is_api_key_variable:
+                    if is_provider_variable:
                         provider_name = var_to_provider[var_name]
-                        # Validate the API key before setting default_fields
-                        # This prevents invalid keys from enabling providers during migration
-                        try:
-                            from lfx.base.models.unified_models import validate_model_provider_key
+                        # Get the variable type from metadata
+                        var_display_name = var_info.get("variable_name", "api_key")
 
-                            validate_model_provider_key(var_name, value)
-                            # Only set default_fields if validation passes
-                            default_fields = [provider_name, "api_key"]
-                            await logger.adebug(f"Validated {var_name} - provider will be enabled")
-                        except (ValueError, Exception) as validation_error:  # noqa: BLE001
-                            # Validation failed - don't set default_fields
-                            # This prevents the provider from appearing as "Enabled"
-                            default_fields = []
-                            await logger.adebug(
-                                f"Skipping default_fields for {var_name} - validation failed: {validation_error!s}"
-                            )
+                        # Validate secret variables (API keys) before setting default_fields
+                        # This prevents invalid keys from enabling providers during migration
+                        if is_secret_variable:
+                            try:
+                                from lfx.base.models.unified_models import validate_model_provider_key
+
+                                validate_model_provider_key(var_name, value)
+                                # Only set default_fields if validation passes
+                                default_fields = [provider_name, var_display_name]
+                                await logger.adebug(f"Validated {var_name} - provider will be enabled")
+                            except (ValueError, Exception) as validation_error:  # noqa: BLE001
+                                # Validation failed - don't set default_fields
+                                # This prevents the provider from appearing as "Enabled"
+                                default_fields = []
+                                await logger.adebug(
+                                    f"Skipping default_fields for {var_name} - validation failed: {validation_error!s}"
+                                )
+                        else:
+                            # Non-secret variables (like project_id, url) don't need validation
+                            default_fields = [provider_name, var_display_name]
+                            await logger.adebug(f"Set default_fields for non-secret variable {var_name}")
                     existing = (await session.exec(query)).first()
                 except Exception as e:  # noqa: BLE001
                     await logger.aexception(f"Error querying {var_name} variable: {e!s}")
