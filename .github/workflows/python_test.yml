@@ -68,7 +68,7 @@ jobs:
           ref: ${{ inputs.ref || github.ref }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         id: setup-node
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -110,7 +110,7 @@ jobs:
           directory: ./
 
       - name: Upload coverage artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: matrix.python-version == '3.10'
         with:
           name: backend-coverage-report-group-${{ matrix.group }}
@@ -180,7 +180,7 @@ jobs:
           directory: ./src/lfx/
 
       - name: Upload coverage artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: matrix.python-version == '3.10'
         with:
           name: lfx-coverage-report

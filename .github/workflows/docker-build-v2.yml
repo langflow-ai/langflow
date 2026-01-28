@@ -590,6 +590,18 @@ jobs:
         uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref }}
+
+      - name: Get version
+        id: version
+        run: |
+          if [[ "${{ inputs.release_type }}" == "base" ]]; then
+            version=$(uv tree 2>/dev/null | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//' | head -n 1)
+          else
+            version=$(uv tree 2>/dev/null | grep '^langflow' | grep -v '^langflow-base' | cut -d' ' -f2 | sed 's/^v//')
+          fi
+          echo "Using version: $version"
+          echo version=$version >> $GITHUB_OUTPUT
+
       - name: Set tags
         id: tags
         run: |
