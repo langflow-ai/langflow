@@ -429,7 +429,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
 
         # Verify get_llm was called with max_tokens
         mock_get_llm.assert_called_once()
-        call_kwargs = mock_get_llm.call_args[1]
+        call_kwargs = mock_get_llm.call_args.kwargs
 
         assert "max_tokens" in call_kwargs, "max_tokens should be passed to get_llm"
         assert call_kwargs["max_tokens"] == 500
@@ -443,16 +443,22 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         mock_llm = MagicMock()
         mock_get_llm.return_value = mock_llm
 
-        # Don't set max_tokens in default_kwargs
+        # Don't set max_tokens in default_kwargs - ensure it's not present
+        if "max_tokens" in default_kwargs:
+            del default_kwargs["max_tokens"]
+
         component = await self.component_setup(component_class, default_kwargs)
 
         # Call get_agent_requirements which internally calls get_llm
         await component.get_agent_requirements()
 
-        # Verify get_llm was called with max_tokens=None
+        # Verify get_llm was called
         mock_get_llm.assert_called_once()
-        call_kwargs = mock_get_llm.call_args[1]
+        
+        # Access kwargs using the .kwargs attribute (more reliable than indexing)
+        call_kwargs = mock_get_llm.call_args.kwargs
 
+        # max_tokens should be passed as None when not set
         assert "max_tokens" in call_kwargs, "max_tokens should be passed to get_llm even when None"
         assert call_kwargs["max_tokens"] is None
 
@@ -478,7 +484,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
 
         # Verify get_llm was called with max_tokens
         mock_get_llm.assert_called_once()
-        call_kwargs = mock_get_llm.call_args[1]
+        call_kwargs = mock_get_llm.call_args.kwargs
 
         assert "max_tokens" in call_kwargs, "max_tokens should be passed to get_llm"
         assert call_kwargs["max_tokens"] == 1000
