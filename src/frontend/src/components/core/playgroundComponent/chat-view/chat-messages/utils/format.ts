@@ -39,7 +39,11 @@ export function formatTime(ms: number, showMsOnly: boolean = false): string {
  * formatSeconds(1234) // "1.2s"
  */
 export function formatSeconds(ms: number): string {
-  return `${(ms / 1000).toFixed(1)}s`;
+  if (ms < 1000) {
+    return `${Math.ceil(ms)}ms`;
+  }
+  const seconds = Math.ceil((ms / 1000) * 10) / 10;
+  return `${seconds.toFixed(1)}s`;
 }
 
 /**

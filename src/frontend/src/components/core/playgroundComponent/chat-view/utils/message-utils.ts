@@ -1,6 +1,9 @@
 import { queryClient } from "@/contexts";
 import type { Message } from "@/types/messages";
 
+const MESSAGES_QUERY_KEY = "useGetMessagesQuery";
+const BOT_SENDER = "Machine";
+
 // Helper to find flow_id and session_id from existing message with same ID
 const findMessageContext = (
   messageId: string | null,
@@ -13,7 +16,7 @@ const findMessageContext = (
 
   for (const query of queries) {
     const queryKey = query.queryKey;
-    if (Array.isArray(queryKey) && queryKey[0] === "useGetMessagesQuery") {
+    if (Array.isArray(queryKey) && queryKey[0] === MESSAGES_QUERY_KEY) {
       const messages = query.state.data as Message[] | undefined;
       if (Array.isArray(messages)) {
         const found = messages.find((msg) => msg.id === messageId);
@@ -55,7 +58,7 @@ export const updateMessage = (updatedMessage: Message) => {
   }
 
   const cacheKey = [
-    "useGetMessagesQuery",
+    MESSAGES_QUERY_KEY,
     { id: flowId, session_id: sessionId },
   ];
 
@@ -145,7 +148,7 @@ export const updateMessage = (updatedMessage: Message) => {
 
 export const addUserMessage = (updatedMessage: Message) => {
   const cacheKey = [
-    "useGetMessagesQuery",
+    MESSAGES_QUERY_KEY,
     { id: updatedMessage.flow_id, session_id: updatedMessage.session_id },
   ];
 
@@ -166,7 +169,7 @@ export const addUserMessage = (updatedMessage: Message) => {
 export const updateMessages = (updatedMessages: Message[]) => {
   queryClient.setQueryData(
     [
-      "useGetMessagesQuery",
+      MESSAGES_QUERY_KEY,
       {
         id: updatedMessages[0].flow_id,
         session_id: updatedMessages[0].session_id,
@@ -187,7 +190,7 @@ export const removeMessages = (
     return;
   }
   queryClient.setQueryData(
-    ["useGetMessagesQuery", { id: flowId, session_id: sessionId }],
+    [MESSAGES_QUERY_KEY, { id: flowId, session_id: sessionId }],
     (old: Message[] = []) => {
       return old.filter(
         (message) => !removedMessages.some((m) => m === message.id),
@@ -196,19 +199,58 @@ export const removeMessages = (
   );
 };
 
+export const findLastBotMessage = (): {
+  message: Message;
+  queryKey: unknown[];
+} | null => {
+  const cache = queryClient.getQueryCache();
+  const queries = cache.getAll();
+
+  for (const query of queries) {
+    const queryKey = query.queryKey;
+    if (!Array.isArray(queryKey) || queryKey[0] !== MESSAGES_QUERY_KEY) {
+      continue;
+    }
+    const messages = query.state.data as Message[] | undefined;
+    if (!Array.isArray(messages)) continue;
+
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const msg = messages[i];
+      if (msg.sender === BOT_SENDER && msg.id) {
+        return { message: msg, queryKey };
+      }
+    }
+  }
+  return null;
+};
+
+export const updateMessageProperties = (
+  messageId: string,
+  queryKey: unknown[],
+  properties: Record<string, unknown>,
+) => {
+  queryClient.setQueryData(queryKey, (old: Message[] = []) =>
+    old.map((msg) =>
+      msg.id === messageId
+        ? { ...msg, properties: { ...msg.properties, ...properties } }
+        : msg,
+    ),
+  );
+};
+
 export const clearSessionMessages = (sessionId: string, flowId: string) => {
   const isDefaultSession = sessionId === flowId;
 
   // Clear session-specific cache immediately
   queryClient.setQueryData(
-    ["useGetMessagesQuery", { id: flowId, session_id: sessionId }],
+    [MESSAGES_QUERY_KEY, { id: flowId, session_id: sessionId }],
     () => [],
   );
 
   // For default session, also clear messages with null session_id (legacy)
   if (isDefaultSession) {
     // Get all messages from the main query cache and filter out default session messages
-    const mainQueryKey = ["useGetMessagesQuery", { id: flowId }];
+    const mainQueryKey = [MESSAGES_QUERY_KEY, { id: flowId }];
     const mainCache = queryClient.getQueryData<{ rows?: { data?: Message[] } }>(
       mainQueryKey,
     );
@@ -236,7 +278,7 @@ export const clearSessionMessages = (sessionId: string, flowId: string) => {
   // Remove queries instead of invalidating to prevent refetch that brings messages back
   // The cache is already cleared above, so we just need to remove the query entries
   queryClient.removeQueries({
-    queryKey: ["useGetMessagesQuery", { id: flowId, session_id: sessionId }],
+    queryKey: [MESSAGES_QUERY_KEY, { id: flowId, session_id: sessionId }],
   });
 
   // For the main query, we keep it but with filtered data (already updated above)

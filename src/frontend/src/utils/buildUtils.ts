@@ -2,6 +2,12 @@ import type { Edge, Node } from "@xyflow/react";
 import type { AxiosError } from "axios";
 import { flushSync } from "react-dom";
 import { handleMessageEvent } from "@/components/core/playgroundComponent/chat-view/utils/message-event-handler";
+import {
+  findLastBotMessage,
+  updateMessageProperties,
+} from "@/components/core/playgroundComponent/chat-view/utils/message-utils";
+import { api } from "@/controllers/API/api";
+import { getURL } from "@/controllers/API/helpers/constants";
 import { MISSED_ERROR_ALERT } from "@/constants/alerts_constants";
 import {
   BUILD_POLLING_INTERVAL,
@@ -555,6 +561,11 @@ async function onEvent(
       }
       return true;
     }
+    case "build_start": {
+      // Backend signals that vertex execution is starting — set the timer origin
+      useFlowStore.getState().setBuildStartTime(Date.now());
+      return true;
+    }
     case "add_message":
     case "token":
     case "remove_message": {
@@ -566,6 +577,31 @@ async function onEvent(
     }
     case "end": {
       const allNodesValid = buildResults.every((result) => result);
+      if (data?.build_duration != null) {
+        const durationMs = data.build_duration * 1000;
+        useFlowStore.getState().setBuildDuration(durationMs);
+
+        const found = findLastBotMessage();
+        if (found) {
+          updateMessageProperties(found.message.id!, found.queryKey, {
+            build_duration: durationMs,
+          });
+          api
+            .put(`${getURL("MESSAGES")}/${found.message.id}`, {
+              ...found.message,
+              properties: {
+                ...found.message.properties,
+                build_duration: durationMs,
+              },
+            })
+            .catch((err: unknown) => {
+              console.warn("Failed to persist build_duration", {
+                messageId: found.message.id,
+                error: err instanceof Error ? err.message : String(err),
+              });
+            });
+        }
+      }
       onBuildComplete && onBuildComplete(allNodesValid);
       useFlowStore.getState().setIsBuilding(false);
       return true;

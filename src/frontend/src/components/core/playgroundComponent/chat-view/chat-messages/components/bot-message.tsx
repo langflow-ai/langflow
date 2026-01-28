@@ -28,6 +28,8 @@ export const BotMessage = memo(
     const setErrorData = useAlertStore((state) => state.setErrorData);
     const [editMessage, setEditMessage] = useState(false);
     const isBuilding = useFlowStore((state) => state.isBuilding);
+    const buildStartTime = useFlowStore((state) => state.buildStartTime);
+    const buildDuration = useFlowStore((state) => state.buildDuration);
     const flow_id = useFlowsManagerStore((state) => state.currentFlowId);
 
     const isAudioMessage = chat.category === "audio";
@@ -108,12 +110,21 @@ export const BotMessage = memo(
 
     const thinkingActive = Boolean(isBuilding && lastMessage);
 
-    // Use hook for message duration tracking
-    const { displayTime } = useMessageDuration({
-      chatId: chat.id,
+    const { displayTime: liveDisplayTime } = useMessageDuration({
       lastMessage,
       isBuilding,
+      buildStartTime,
+      buildDuration,
     });
+
+    // Prefer live timer during build; fall back to persisted value after page refresh
+    const persistedDuration = chat.properties?.build_duration;
+    const displayTime =
+      liveDisplayTime > 0
+        ? liveDisplayTime
+        : typeof persistedDuration === "number"
+          ? persistedDuration
+          : 0;
 
     // Use shared hook for tool duration tracking
     const { totalToolDuration } = useToolDurations(
@@ -131,7 +142,9 @@ export const BotMessage = memo(
     // The total tool duration green ms ALWAYS shows the sum of backend tool durations when tools exist
     // It will be 0 until backend provides durations, then show the sum
     // For messages without tools, it shows the same as displayTime
-    const greenMsTime = messageHasTools ? totalToolDuration : displayTime;
+    const greenMsTime = messageHasTools
+      ? totalToolDuration
+      : displayTime;
 
     return (
       <>
@@ -155,16 +168,18 @@ export const BotMessage = memo(
                   )}
                 />
                 <span className="w-full flex justify-between">
-                  {thinkingActive ? (
+                  {thinkingActive && displayTime > 0 ? (
                     <>
-                      <span>Thinking for {formatSeconds(displayTime)}</span>
+                      <span>
+                        Thinking for {formatSeconds(displayTime)}
+                      </span>
                       {messageHasTools && (
                         <span className="text-emerald-500">
                           {formatTime(greenMsTime, true)}
                         </span>
                       )}
                     </>
-                  ) : (
+                  ) : !thinkingActive && displayTime > 0 ? (
                     <>
                       <span className="text-muted-foreground">
                         Thought for {formatSeconds(displayTime)}
@@ -175,7 +190,7 @@ export const BotMessage = memo(
                         </span>
                       )}
                     </>
-                  )}
+                  ) : null}
                 </span>
               </div>
 
@@ -197,7 +212,9 @@ export const BotMessage = memo(
               )}
 
               <div className="flex w-full items-start gap-3">
-                {(thinkingActive || displayTime > 0 || chatMessage !== "") && (
+                {(thinkingActive ||
+                  displayTime > 0 ||
+                  chatMessage !== "") && (
                   <div
                     className="relative hidden h-6 w-6 flex-shrink-0 items-center justify-center overflow-hidden rounded bg-white text-2xl @[45rem]/chat-panel:!flex border-0"
                     style={
