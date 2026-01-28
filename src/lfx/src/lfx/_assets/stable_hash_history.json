@@ -66,7 +66,7 @@
   },
   "AmazonBedrockConverseModel": {
     "versions": {
-      "0.3.0": "54c335f8699f"
+      "0.3.0": "a7442bb44851"
     }
   },
   "AmazonBedrockEmbeddings": {
@@ -611,7 +611,7 @@
   },
   "URLComponent": {
     "versions": {
-      "0.3.0": "f773f55e3820"
+      "0.3.0": "8caf1fd1e0cd"
     }
   },
   "UnifiedWebSearch": {
@@ -1710,7 +1710,7 @@
   },
   "VLMRunTranscription": {
     "versions": {
-      "0.3.0": "c91e2349a3df"
+      "0.3.0": "3cebea003b94"
     }
   },
   "Weaviate": {

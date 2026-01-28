@@ -56,6 +56,9 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/lfx"]
 
+[tool.hatch.build.targets.sdist]
+include = ["src/lfx"]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]

@@ -58,7 +58,12 @@ def _import_components() -> tuple[dict, int]:
 
 
 def update_history(
-    history: dict, component_name: str, code_hash: str, current_version: str, executes_code: bool = False
+    history: dict,
+    component_name: str,
+    code_hash: str,
+    current_version: str,
+    executes_code: bool = False,
+    debug: bool = False,
 ) -> dict:
     """Updates the hash history for a single component with the new simple schema.
 
@@ -70,6 +75,7 @@ def update_history(
         code_hash: Hash of the component code
         current_version: Current version string
         executes_code: Whether the component executes arbitrary code (default: False)
+        debug: Whether to print debug information (default: False)
     """
     current_version_parsed = Version(current_version)
     # Use the string representation of the version as the key
@@ -103,6 +109,19 @@ def update_history(
                     f"version {current_version}."
                 )
                 raise ValueError(msg)
+
+        # Check if we're updating an existing version's hash
+        if version_key in history[component_name]["versions"]:
+            old_hash_data = history[component_name]["versions"][version_key]
+            # Extract hash from either string or dict format
+            old_hash = old_hash_data if isinstance(old_hash_data, str) else old_hash_data.get("hash")
+
+            if old_hash != code_hash:
+                if debug:
+                    print(
+                        f"  [DEBUG] Updating hash for {component_name} v{version_key}: {old_hash} → {code_hash}"
+                    )
+
         history[component_name]["versions"][version_key] = version_data
 
     return history
@@ -151,6 +170,7 @@ def main(argv=None):
     """Main entry point for the script."""
     parser = argparse.ArgumentParser(description="Build and update component hash history.")
     parser.add_argument("--nightly", action="store_true", help="Update the nightly hash history.")
+    parser.add_argument("--debug", action="store_true", help="Print debug information about hash updates.")
     args = parser.parse_args(argv)
 
     current_version = get_lfx_version()
@@ -181,6 +201,9 @@ def main(argv=None):
         print(f"✓ Version check passed: {current_version} is a stable version")
         print("Updating stable hash history...")
 
+    if args.debug:
+        print("[DEBUG] Debug mode enabled - will show hash updates")
+
     modules_dict, components_count = _import_components()
     print(f"Found {components_count} components.")
     if not components_count:
@@ -207,7 +230,9 @@ def main(argv=None):
             if executes_code:
                 print(f"  → Component {comp_name} marked as executes_code=True")
 
-            new_history = update_history(new_history, comp_name, code_hash, current_version, executes_code)
+            new_history = update_history(
+                new_history, comp_name, code_hash, current_version, executes_code, debug=args.debug
+            )
 
     # Validate append-only constraint before saving
     validate_append_only(old_history, new_history)
