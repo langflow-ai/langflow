@@ -1,6 +1,7 @@
 """Provider configuration service."""
 
 import os
+from functools import lru_cache
 from uuid import UUID
 
 from lfx.base.models.unified_models import get_model_provider_variable_mapping
@@ -84,6 +85,7 @@ def get_default_provider(enabled_providers: list[str]) -> str | None:
     return enabled_providers[0] if enabled_providers else None
 
 
+@lru_cache(maxsize=128)
 def get_default_model(provider: str) -> str | None:
     """Get the default model for a provider."""
     return DEFAULT_MODELS.get(provider)
