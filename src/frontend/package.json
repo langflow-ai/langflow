@@ -5,6 +5,11 @@
   "engines": {
     "node": ">=20.19.0"
   },
+  "overrides": {
+    "tar": "^7.5.7",
+    "glob": "^11.1.0",
+    "test-exclude": "^7.0.0"
+  },
   "dependencies": {
     "@chakra-ui/number-input": "^2.1.2",
     "@chakra-ui/system": "^2.6.2",
@@ -63,7 +68,7 @@
     "openseadragon": "^4.1.1",
     "p-debounce": "^4.0.0",
     "pako": "^2.1.0",
-    "playwright": "^1.56.0",
+    "playwright": "^1.57.0",
     "pretty-ms": "^9.1.0",
     "react": "^19.2.1",
     "react-ace": "^14.0.1",
@@ -135,8 +140,8 @@
   "devDependencies": {
     "@biomejs/biome": "2.1.1",
     "@jest/types": "^30.0.1",
-    "@modelcontextprotocol/server-everything": "^2025.12.18",
-    "@playwright/test": "^1.56.0",
+    "@modelcontextprotocol/server-everything": "^2026.1.14",
+    "@playwright/test": "^1.57.0",
     "@storybook/addon-docs": "^10.1.0",
     "@storybook/addon-links": "^10.1.0",
     "@storybook/react": "^10.1.0",
@@ -167,6 +172,6 @@
     "ts-jest": "^29.4.0",
     "typescript": "^5.4.5",
     "ua-parser-js": "^1.0.38",
-    "vite": "^7.3.0"
+    "vite": "^7.3.1"
   }
 }
