@@ -353,6 +353,12 @@ const config = {
         xxs: "11px",
         mmd: "13px",
       },
+      height: {
+        4.5: "18px",
+      },
+      width: {
+        4.5: "18px",
+      },
     },
   },
 

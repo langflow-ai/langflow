@@ -38,6 +38,7 @@ import {
 import HandleRenderComponent from "../handleRenderComponent";
 import OutputComponent from "../OutputComponent";
 import OutputModal from "../outputModal";
+import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
 
 const _EyeIcon = memo(
   ({ hidden, className }: { hidden: boolean; className: string }) => (
@@ -305,7 +306,9 @@ function NodeOutputField({
           colors={colors}
           setFilterEdge={setFilterEdge}
           showNode={showNode}
-          testIdComplement={`${data?.type?.toLowerCase()}-${showNode ? "shownode" : "noshownode"}`}
+          testIdComplement={`${data?.type?.toLowerCase()}-${
+            showNode ? "shownode" : "noshownode"
+          }`}
           colorName={loopInputColorName}
         />
       );
@@ -335,7 +338,9 @@ function NodeOutputField({
         colors={colors}
         setFilterEdge={setFilterEdge}
         showNode={showNode}
-        testIdComplement={`${data?.type?.toLowerCase()}-${showNode ? "shownode" : "noshownode"}`}
+        testIdComplement={`${data?.type?.toLowerCase()}-${
+          showNode ? "shownode" : "noshownode"
+        }`}
         colorName={
           data.node?.outputs?.[index].allows_loop
             ? loopInputColorName

@@ -32,6 +32,7 @@ import NodeUpdateComponent from "./components/NodeUpdateComponent";
 import { NodeIcon } from "./components/nodeIcon";
 import RenderInputParameters from "./components/RenderInputParameters";
 import { useBuildStatus } from "./hooks/use-get-build-status";
+import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
 
 const MemoizedRenderInputParameters = memo(RenderInputParameters);
 const MemoizedNodeIcon = memo(NodeIcon);
@@ -522,10 +523,7 @@ function GenericNode({
 
         <div
           data-testid={`${data.id}-main-node`}
-          className={cn(
-            "grid text-wrap leading-5",
-            showNode ? "border-b" : "relative",
-          )}
+          className={cn("grid text-wrap leading-5", showNode ? "" : "relative")}
         >
           <div
             data-testid={"div-generic-node"}
@@ -601,20 +599,22 @@ function GenericNode({
               getValidationStatus={getValidationStatus}
             />
           </div>
-          {showNode && (hasDescription || editNameDescription) && (
-            <div className="px-4 pb-3">
-              <MemoizedNodeDescription
-                description={data.node?.description}
-                charLimit={1000}
-                mdClassName={"dark:prose-invert"}
-                nodeId={data.id}
-                selected={selected}
-                editNameDescription={editNameDescription}
-                setEditNameDescription={set}
-                setHasChangedNodeDescription={setHasChangedNodeDescription}
-              />
-            </div>
-          )}
+          {showNode &&
+            !ENABLE_INSPECTION_PANEL &&
+            (hasDescription || editNameDescription) && (
+              <div className="px-4 pb-3">
+                <MemoizedNodeDescription
+                  description={data.node?.description}
+                  charLimit={1000}
+                  mdClassName={"dark:prose-invert"}
+                  nodeId={data.id}
+                  selected={selected}
+                  editNameDescription={editNameDescription}
+                  setEditNameDescription={set}
+                  setHasChangedNodeDescription={setHasChangedNodeDescription}
+                />
+              </div>
+            )}
         </div>
         {showNode && (
           <div className="nopan nodelete nodrag noflow relative cursor-auto">
