@@ -6,6 +6,7 @@ import getFieldTitle from "@/CustomNodes/utils/get-field-title";
 import { scapedJSONStringfy } from "@/utils/reactflowUtils";
 import NodeInputField from "../NodeInputField";
 import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
+import { findPrimaryInput } from "./utils";
 
 const RenderInputParameters = ({
   data,
@@ -106,6 +107,14 @@ const RenderInputParameters = ({
     return keyMap;
   }, [templateFields, data.id, data.node?.template]);
 
+  const { displayHandleMap, primaryInputFieldName } = useMemo(() => {
+    return findPrimaryInput(
+      shownTemplateFields,
+      data.node?.template ?? {},
+      isToolMode,
+    );
+  }, [shownTemplateFields, data.node?.template, isToolMode]);
+
   const renderInputParameter = shownTemplateFields.map(
     (templateField: string, idx: number) => {
       const template = data.node?.template[templateField];
@@ -139,6 +148,8 @@ const RenderInputParameters = ({
           showNode={showNode}
           colorName={memoizedColor.colorsName}
           isToolMode={isToolMode && template.tool_mode}
+          isPrimaryInput={templateField === primaryInputFieldName}
+          displayHandle={displayHandleMap.get(templateField) ?? false}
         />
       );
     },

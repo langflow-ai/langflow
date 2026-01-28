@@ -22,8 +22,6 @@ import {
   DEFAULT_TOOLSET_PLACEHOLDER,
   FLEX_VIEW_TYPES,
   ICON_STROKE_WIDTH,
-  IS_AUTO_LOGIN,
-  LANGFLOW_SUPPORTED_TYPES,
 } from "../../../../constants/constants";
 import useFlowStore from "../../../../stores/flowStore";
 import { useTypesStore } from "../../../../stores/typesStore";
@@ -49,6 +47,8 @@ export default function NodeInputField({
   showNode,
   colorName,
   isToolMode = false,
+  isPrimaryInput = false,
+  displayHandle = false,
 }: NodeInputFieldComponentType): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -77,10 +77,6 @@ export default function NodeInputField({
     name,
   });
 
-  const hasRefreshButton = useMemo(() => {
-    return data.node?.template[name]?.refresh_button;
-  }, [data.node?.template, name]);
-
   const nodeInformationMetadata: NodeInfoType = useMemo(() => {
     return {
       flowId: currentFlowId ?? "",
@@ -105,21 +101,6 @@ export default function NodeInputField({
     }
   }, [optionalHandle]);
 
-  // For ModelInput (type === "model"), only show handle if input_types is not empty
-  const isModelInput = type === "model";
-  const hasInputTypes =
-    optionalHandle &&
-    Array.isArray(optionalHandle) &&
-    optionalHandle.length > 0;
-
-  // Allow refresh buttons and connection handles to coexist for ModelInput
-  const displayHandle =
-    (!LANGFLOW_SUPPORTED_TYPES.has(type ?? "") ||
-      (optionalHandle && optionalHandle.length > 0)) &&
-    !isToolMode &&
-    (!hasRefreshButton || isModelInput) &&
-    (!isModelInput || hasInputTypes); // Hide handle for ModelInput when input_types is empty
-
   const isFlexView = FLEX_VIEW_TYPES.includes(type ?? "");
 
   const Handle = (
@@ -142,7 +123,7 @@ export default function NodeInputField({
   );
 
   return !showNode ? (
-    displayHandle ? (
+    displayHandle && isPrimaryInput ? (
       Handle
     ) : (
       <></>

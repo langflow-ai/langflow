@@ -13,6 +13,7 @@ export const URLs = {
   USERS: "users",
   LOGOUT: `logout`,
   LOGIN: `login`,
+  SESSION: `session`,
   AUTOLOGIN: "auto_login",
   REFRESH: "refresh",
   BUILD: `build`,
