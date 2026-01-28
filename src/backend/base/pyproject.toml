@@ -350,7 +350,7 @@ mlx = [
 ]
 
 # MCP
-fastmcp = ["fastmcp==2.13.0"]
+fastmcp = ["fastmcp>=2.14.0"]
 
 # AWS extras
 aioboto3 = ["aioboto3>=15.2.0,<16.0.0"]
