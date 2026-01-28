@@ -40,13 +40,17 @@ export default function ThinkingMessage({
   return (
     <div className="w-full py-2 word-break-break-word">
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <ForwardedIconComponent
-          name="Brain"
-          className={`h-4 w-4 ${isThinking ? "text-primary animate-pulse" : "text-muted-foreground"}`}
-        />
+        {!isThinking && (
+          <ForwardedIconComponent
+            name="Check"
+            className="h-4 w-4 text-emerald-400"
+          />
+        )}
         <p className="m-0 w-full flex justify-between">
-          <span>{isThinking ? "Thinking for" : "Thought for"}</span>
-          <span>{formatTime(displayTime)}</span>
+          <span>{isThinking ? "Running..." : "Finished in"}</span>
+          <span>
+            {formatTime(displayTime)}
+          </span>
         </p>
       </div>
     </div>

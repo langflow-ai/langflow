@@ -209,32 +209,29 @@ describe("ThinkingMessage Component", () => {
   it("renders thinking state correctly", () => {
     render(<ThinkingMessage isThinking={true} duration={null} />);
 
-    expect(screen.getByTestId("icon-Brain")).toBeInTheDocument();
-    expect(screen.getByText(/Thinking for/)).toBeInTheDocument();
+    expect(screen.queryByTestId("icon-Check")).not.toBeInTheDocument();
+    expect(screen.getByText(/Running\.\.\./)).toBeInTheDocument();
   });
 
   it("renders thought state with duration", () => {
     render(<ThinkingMessage isThinking={false} duration={5000} />);
 
-    expect(screen.getByTestId("icon-Brain")).toBeInTheDocument();
-    expect(screen.getByText(/Thought for/)).toBeInTheDocument();
+    expect(screen.getByTestId("icon-Check")).toBeInTheDocument();
+    expect(screen.getByText(/Finished in/)).toBeInTheDocument();
     expect(screen.getByText(/5.0s/)).toBeInTheDocument();
   });
 
-  it("applies pulse animation when thinking", () => {
+  it("does not show icon when thinking", () => {
     render(<ThinkingMessage isThinking={true} duration={null} />);
 
-    const icon = screen.getByTestId("icon-Brain");
-    expect(icon.className).toContain("animate-pulse");
-    expect(icon.className).toContain("text-primary");
+    expect(screen.queryByTestId("icon-Check")).not.toBeInTheDocument();
   });
 
-  it("applies muted color when not thinking", () => {
+  it("applies green color to check icon when not thinking", () => {
     render(<ThinkingMessage isThinking={false} duration={3000} />);
 
-    const icon = screen.getByTestId("icon-Brain");
-    expect(icon.className).toContain("text-muted-foreground");
-    expect(icon.className).not.toContain("animate-pulse");
+    const icon = screen.getByTestId("icon-Check");
+    expect(icon.className).toContain("text-green-500");
   });
 
   it("formats time in minutes when duration exceeds 60 seconds", () => {
@@ -246,7 +243,7 @@ describe("ThinkingMessage Component", () => {
   it("shows 0s when duration is null and not thinking", () => {
     render(<ThinkingMessage isThinking={false} duration={null} />);
 
-    expect(screen.getByText(/Thought for/)).toBeInTheDocument();
+    expect(screen.getByText(/Finished in/)).toBeInTheDocument();
     expect(screen.getByText(/0.0s/)).toBeInTheDocument();
   });
 });
