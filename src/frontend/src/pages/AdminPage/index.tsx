@@ -40,7 +40,6 @@ import { AuthContext } from "../../contexts/authContext";
 import ConfirmationModal from "../../modals/confirmationModal";
 import UserManagementModal from "../../modals/userManagementModal";
 import useAlertStore from "../../stores/alertStore";
-import type { Users } from "../../types/api";
 import type { UserInputType } from "../../types/components";
 
 export default function AdminPage() {
@@ -113,15 +112,21 @@ export default function AdminPage() {
 
   function handleFilterUsers(input: string) {
     setInputValue(input);
-
-    if (input === "") {
-      setFilterUserList(userList.current);
-    } else {
-      const filteredList = userList.current.filter((user: Users) =>
-        user.username.toLowerCase().includes(input.toLowerCase()),
-      );
-      setFilterUserList(filteredList);
-    }
+    mutateGetUsers(
+      {
+        skip: size * (index - 1),
+        limit: size,
+        username: input,
+      },
+      {
+        onSuccess: (users) => {
+          setTotalRowsCount(users["total_count"]);
+          userList.current = users["users"];
+          setFilterUserList(users["users"]);
+        },
+        onError: () => {},
+      },
+    );
   }
 
   function handleDeleteUser(user) {
