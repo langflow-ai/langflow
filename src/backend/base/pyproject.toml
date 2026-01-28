@@ -25,7 +25,7 @@ dependencies = [
     "gunicorn>=22.0.0,<23.0.0",
     "langchain~=0.3.27",
     "langchain-community>=0.3.28,<1.0.0",
-    "langchain-core>=0.3.45,<1.0.0",
+    "langchain-core>=0.3.81,<1.0.0",
     "langchainhub~=0.1.15",
     "loguru>=0.7.1,<1.0.0",
     "structlog>=25.4.0,<26.0.0",
@@ -67,9 +67,9 @@ dependencies = [
     "prometheus-client>=0.20.0,<1.0.0",
     "aiofiles>=24.1.0,<25.0.0",
     "pip>=25.3,<26.0.0",
-    "setuptools>=78.1.1,<79.0.0",
+    "setuptools>=80.0.0,<81.0.0",
     "nanoid>=2.0.0,<3.0.0",
-    "filelock>=3.15.4,<4.0.0",
+    "filelock>=3.20.1,<4.0.0",
     "grandalf>=0.8.0,<1.0.0",
     "spider-client>=0.0.27,<1.0.0",
     "diskcache>=5.6.3,<6.0.0",
@@ -77,7 +77,7 @@ dependencies = [
     "assemblyai>=0.33.0,<1.0.0",
     "fastapi-pagination>=0.13.1,<1.0.0",
     "defusedxml>=0.7.1,<1.0.0",
-    "pypdf~=5.1.0",
+    "pypdf>=6.4.0,<7.0.0",
     "validators>=0.34.0,<1.0.0",
     "networkx>=3.4.2,<4.0.0",
     "json-repair>=0.30.3,<1.0.0",
@@ -93,6 +93,8 @@ dependencies = [
     "langchain-ibm>=0.3.8,<1.0.0",
     "trustcall>=0.0.38,<1.0.0",
     "langchain-chroma>=0.1.4,<1.0.0",
+    "jaraco-context>=6.1.0",
+    "wheel>=0.46.2,<1.0.0",
 ]
 
 [dependency-groups]
@@ -245,7 +247,7 @@ langsmith = ["langsmith>=0.3.42,<1.0.0"]
 arize = ["arize-phoenix-otel>=0.6.1"]
 
 # Individual document loaders
-pypdf = ["pypdf~=5.1.0"]
+pypdf = ["pypdf~=6.6.2"]
 docx = ["python-docx>=1.1.0"]
 pytube = ["pytube==15.0.0"]
 
@@ -348,7 +350,7 @@ mlx = [
 ]
 
 # MCP
-fastmcp = ["fastmcp==2.13.0"]
+fastmcp = ["fastmcp>=2.14.0"]
 
 # AWS extras
 aioboto3 = ["aioboto3>=15.2.0,<16.0.0"]
