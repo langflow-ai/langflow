@@ -105,8 +105,7 @@ export default function InspectionPanelFields({
   return (
     <div className="p-1 pb-3">
       {/* Render basic fields */}
-      <div className="">
-      {basicFields.map(renderField)}</div>
+      <div className="">{basicFields.map(renderField)}</div>
 
       {/* Render advanced fields disclosure */}
       {advancedFields.length > 0 && (
@@ -120,23 +119,21 @@ export default function InspectionPanelFields({
               className={cn(
                 "flex w-full items-center justify-between px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground",
                 "cursor-pointer rounded-md hover:bg-muted/50",
-                showAdvanced && "bg-muted/50 text-foreground"
+                showAdvanced && "bg-muted/50 text-foreground",
               )}
             >
               <span>Advanced</span>
               <ChevronRight
                 className={cn(
                   "h-4 w-4 transition-transform duration-200",
-                  showAdvanced && "rotate-90"
+                  showAdvanced && "rotate-90",
                 )}
               />
             </div>
           </DisclosureTrigger>
 
           <DisclosureContent>
-            <div className="mt-1">
-              {advancedFields.map(renderField)}
-            </div>
+            <div className="mt-1">{advancedFields.map(renderField)}</div>
           </DisclosureContent>
         </Disclosure>
       )}

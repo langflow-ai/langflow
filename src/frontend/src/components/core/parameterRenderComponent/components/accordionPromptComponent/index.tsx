@@ -41,38 +41,43 @@ export default function AccordionPromptComponent({
     return text
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
-      .replace(regexHighlight, (match, codeFence, openRun, varName, closeRun) => {
-        if (codeFence) return match;
+      .replace(
+        regexHighlight,
+        (match, codeFence, openRun, varName, closeRun) => {
+          if (codeFence) return match;
 
-        const lenOpen = openRun?.length ?? 0;
-        const lenClose = closeRun?.length ?? 0;
-        const isVariable = lenOpen === lenClose && lenOpen % 2 === 1;
+          const lenOpen = openRun?.length ?? 0;
+          const lenClose = closeRun?.length ?? 0;
+          const isVariable = lenOpen === lenClose && lenOpen % 2 === 1;
 
-        if (!isVariable) return match;
+          if (!isVariable) return match;
 
-        const outerCount = Math.floor(lenOpen / 2);
-        const outerLeft = "{".repeat(outerCount);
-        const outerRight = "}".repeat(outerCount);
+          const outerCount = Math.floor(lenOpen / 2);
+          const outerLeft = "{".repeat(outerCount);
+          const outerRight = "}".repeat(outerCount);
 
-        return (
-          `${outerLeft}` +
-          `<span class="chat-message-highlight">{${varName}}</span>` +
-          `${outerRight}`
-        );
-      });
+          return (
+            `${outerLeft}` +
+            `<span class="chat-message-highlight">{${varName}}</span>` +
+            `${outerRight}`
+          );
+        },
+      );
   };
 
   const getCursorOffset = () => {
     const selection = window.getSelection();
-    if (!selection || !contentEditableRef.current || selection.rangeCount === 0) return null;
+    if (!selection || !contentEditableRef.current || selection.rangeCount === 0)
+      return null;
 
     const range = selection.getRangeAt(0);
-    if (!contentEditableRef.current.contains(range.commonAncestorContainer)) return null;
+    if (!contentEditableRef.current.contains(range.commonAncestorContainer))
+      return null;
 
-    const marker = document.createTextNode('\uFEFF');
+    const marker = document.createTextNode("\uFEFF");
     range.insertNode(marker);
     const text = contentEditableRef.current.innerText;
-    const index = text.indexOf('\uFEFF');
+    const index = text.indexOf("\uFEFF");
     marker.parentNode?.removeChild(marker);
 
     return index !== -1 ? index : null;
@@ -89,7 +94,8 @@ export default function AccordionPromptComponent({
   // Scroll the cursor into view
   const scrollToCursor = () => {
     const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0 || !contentEditableRef.current) return;
+    if (!selection || selection.rangeCount === 0 || !contentEditableRef.current)
+      return;
 
     const range = selection.getRangeAt(0);
     const rect = range.getBoundingClientRect();
@@ -97,7 +103,8 @@ export default function AccordionPromptComponent({
 
     // Check if cursor is below the visible area
     if (rect.bottom > containerRect.bottom) {
-      contentEditableRef.current.scrollTop += rect.bottom - containerRect.bottom + 10;
+      contentEditableRef.current.scrollTop +=
+        rect.bottom - containerRect.bottom + 10;
     }
     // Check if cursor is above the visible area
     else if (rect.top < containerRect.top) {
@@ -105,7 +112,9 @@ export default function AccordionPromptComponent({
     }
 
     // Update scrollable state
-    const hasScroll = contentEditableRef.current.scrollHeight > contentEditableRef.current.clientHeight;
+    const hasScroll =
+      contentEditableRef.current.scrollHeight >
+      contentEditableRef.current.clientHeight;
     setIsScrollable(hasScroll);
   };
 
@@ -144,7 +153,7 @@ export default function AccordionPromptComponent({
         }
 
         currentOffset += nodeLength;
-      } else if (node.nodeName === 'BR') {
+      } else if (node.nodeName === "BR") {
         // BR represents a newline character
         currentOffset += 1;
 
@@ -157,7 +166,10 @@ export default function AccordionPromptComponent({
               if (nextSibling.nodeType === Node.TEXT_NODE) {
                 setCursorAt(nextSibling, 0);
               } else {
-                setCursorAt(parent, Array.from(parent.childNodes).indexOf(node as ChildNode) + 1);
+                setCursorAt(
+                  parent,
+                  Array.from(parent.childNodes).indexOf(node as ChildNode) + 1,
+                );
               }
             } else {
               // BR is the last child, place cursor at end of parent
@@ -211,7 +223,8 @@ export default function AccordionPromptComponent({
       // Small delay to ensure the DOM is ready after disclosure animation
       requestAnimationFrame(() => {
         if (contentEditableRef.current) {
-          contentEditableRef.current.innerHTML = getHighlightedHTML(internalValue);
+          contentEditableRef.current.innerHTML =
+            getHighlightedHTML(internalValue);
         }
       });
     }
@@ -225,17 +238,19 @@ export default function AccordionPromptComponent({
     }
 
     // Only validate if value has changed and is not empty
-    if (internalValue &&
+    if (
+      internalValue &&
       internalValue !== "" &&
       internalValue !== lastValidatedValueRef.current &&
-      nodeClass) {
+      nodeClass
+    ) {
       validateTimeoutRef.current = setTimeout(() => {
         lastValidatedValueRef.current = internalValue;
         postValidatePrompt(
           {
             name: field_name || "",
             template: internalValue,
-            frontend_node: nodeClass
+            frontend_node: nodeClass,
           },
           {
             onSuccess: (apiReturn) => {
@@ -247,7 +262,7 @@ export default function AccordionPromptComponent({
               }
             },
             onError: (error) => {
-              console.error('[AccordionPrompt] Validation error:', error);
+              console.error("[AccordionPrompt] Validation error:", error);
             },
           },
         );
@@ -315,11 +330,11 @@ export default function AccordionPromptComponent({
       range.deleteContents();
 
       // Insert a BR element for the line break
-      const br = document.createElement('br');
+      const br = document.createElement("br");
       range.insertNode(br);
 
       // Create an empty text node after the BR for cursor positioning
-      const textNode = document.createTextNode('\u200B'); // Zero-width space
+      const textNode = document.createTextNode("\u200B"); // Zero-width space
       br.after(textNode);
 
       // Move cursor after the zero-width space
@@ -330,7 +345,7 @@ export default function AccordionPromptComponent({
       selection.addRange(range);
 
       // Trigger input event logic manually
-      const event = new Event('input', { bubbles: true });
+      const event = new Event("input", { bubbles: true });
       contentEditableRef.current.dispatchEvent(event);
 
       // Scroll cursor into view
@@ -362,7 +377,6 @@ export default function AccordionPromptComponent({
 
     // Update DOM with highlighting
     contentEditableRef.current.innerHTML = getHighlightedHTML(newValue);
-
   };
 
   return (
@@ -390,7 +404,7 @@ export default function AccordionPromptComponent({
                 name="ChevronRight"
                 className={cn(
                   "h-4 w-4 text-muted-foreground transition-transform duration-200",
-                  isOpen && "rotate-90"
+                  isOpen && "rotate-90",
                 )}
               />
             </div>
@@ -412,23 +426,26 @@ export default function AccordionPromptComponent({
                 "focus:border-primary hover:border-muted-foreground",
                 disabled && "cursor-not-allowed opacity-50",
                 readonly && "cursor-default",
-                !internalValue && "text-muted-foreground"
+                !internalValue && "text-muted-foreground",
               )}
-              data-placeholder={getPlaceholder(disabled, "Type your prompt here...")}
+              data-placeholder={getPlaceholder(
+                disabled,
+                "Type your prompt here...",
+              )}
             />
             {!disabled && (
-              <div className={cn(
-                "absolute top-1 z-10 flex items-center gap-1",
-                isScrollable ? "right-3" : "right-1"
-              )}>
+              <div
+                className={cn(
+                  "absolute top-1 z-10 flex items-center gap-1",
+                  isScrollable ? "right-3" : "right-1",
+                )}
+              >
                 <PromptModal
                   id={id}
                   field_name={field_name}
                   readonly={readonly}
                   value={value}
-                  setValue={(newValue) =>
-                    handleOnNewValue({ value: newValue })
-                  }
+                  setValue={(newValue) => handleOnNewValue({ value: newValue })}
                   nodeClass={nodeClass}
                   setNodeClass={handleNodeClass}
                 >

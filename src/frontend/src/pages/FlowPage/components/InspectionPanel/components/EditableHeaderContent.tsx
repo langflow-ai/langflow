@@ -78,8 +78,9 @@ export default function EditableHeaderContent({
         nameInputRef.current?.focus();
         // Auto-size description textarea
         if (descriptionRef.current) {
-          descriptionRef.current.style.height = 'auto';
-          descriptionRef.current.style.height = descriptionRef.current.scrollHeight + 'px';
+          descriptionRef.current.style.height = "auto";
+          descriptionRef.current.style.height =
+            descriptionRef.current.scrollHeight + "px";
         }
       }, 0);
     }
@@ -126,10 +127,10 @@ export default function EditableHeaderContent({
   ) => {
     setLocalDescription(e.target.value);
     hasChangedRef.current = true;
-    
+
     // Auto-grow textarea
-    e.target.style.height = 'auto';
-    e.target.style.height = e.target.scrollHeight + 'px';
+    e.target.style.height = "auto";
+    e.target.style.height = e.target.scrollHeight + "px";
   };
 
   const handleNameKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {

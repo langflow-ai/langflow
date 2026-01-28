@@ -79,11 +79,12 @@ export default function InspectionPanelHeader({
     setEditMode((prev) => !prev);
   }, []);
 
-  const { containerRef, nameElement, descriptionElement } = EditableHeaderContent({
-    data,
-    editMode,
-    setEditMode,
-  });
+  const { containerRef, nameElement, descriptionElement } =
+    EditableHeaderContent({
+      data,
+      editMode,
+      setEditMode,
+    });
 
   return (
     <div
@@ -99,8 +100,7 @@ export default function InspectionPanelHeader({
             icon={data.node?.icon}
             isGroup={!!data.node?.flow}
           />
-          <div className="truncate">
-          {nameElement}</div>
+          <div className="truncate">{nameElement}</div>
         </div>
         <div className="flex items-center gap-1">
           <ShadTooltip content="Edit" side="top">
@@ -109,7 +109,7 @@ export default function InspectionPanelHeader({
               className={cn(
                 editMode ? "bg-accent" : "",
                 "!text-muted-foreground transition-opacity duration-150",
-                (isHoveringContent || editMode) ? "opacity-100" : "opacity-0"
+                isHoveringContent || editMode ? "opacity-100" : "opacity-0",
               )}
               size="node-toolbar"
               variant="ghost"
@@ -119,26 +119,29 @@ export default function InspectionPanelHeader({
             </Button>
           </ShadTooltip>
           {hasDocs && (
-              <ToolbarButton
-                icon="FileText"
-                onClick={openDocs}
-                shortcut={shortcuts.find((s) =>
-                  s.name.toLowerCase().startsWith("docs"),
-                )}
-                className="!text-muted-foreground"
-                dataTestId="docs-button-modal"
-              />
+            <ToolbarButton
+              icon="FileText"
+              onClick={openDocs}
+              shortcut={shortcuts.find((s) =>
+                s.name.toLowerCase().startsWith("docs"),
+              )}
+              className="!text-muted-foreground"
+              dataTestId="docs-button-modal"
+            />
           )}
           {hasCode && (
-              <ToolbarButton
-                className={cn(isCustomComponent ? "animate-pulse-pink" : "", "!text-muted-foreground")}
-                icon="Code"
-                onClick={handleOpenCode}
-                shortcut={shortcuts.find((s) =>
-                  s.name.toLowerCase().startsWith("code"),
-                )}
-                dataTestId="code-button-modal"
-              />
+            <ToolbarButton
+              className={cn(
+                isCustomComponent ? "animate-pulse-pink" : "",
+                "!text-muted-foreground",
+              )}
+              icon="Code"
+              onClick={handleOpenCode}
+              shortcut={shortcuts.find((s) =>
+                s.name.toLowerCase().startsWith("code"),
+              )}
+              dataTestId="code-button-modal"
+            />
           )}
         </div>
       </div>

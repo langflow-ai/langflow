@@ -81,7 +81,9 @@ export function getCustomParameterTitle({
       <span
         data-testid={`title-${title.toLocaleLowerCase()}`}
         className={cn(
-          inspectionPanel ? "text-xs font-medium" : "text-sm text-secondary-foreground",
+          inspectionPanel
+            ? "text-xs font-medium"
+            : "text-sm text-secondary-foreground",
         )}
       >
         {title}
