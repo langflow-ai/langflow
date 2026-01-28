@@ -621,7 +621,7 @@
   },
   "Astra Assistant Agent": {
     "versions": {
-      "0.3.0": "60d7174c63a1"
+      "0.3.0": "4716d3b7c350"
     }
   },
   "AstraDBChatMemory": {
@@ -961,7 +961,7 @@
   },
   "TextInput": {
     "versions": {
-      "0.3.0": "3d80f125b734"
+      "0.3.0": "518f16485886"
     }
   },
   "TextOutput": {
@@ -1176,7 +1176,7 @@
   },
   "SmartRouter": {
     "versions": {
-      "0.3.0": "9c6736e784f6"
+      "0.3.0": "2b49dc46dae8"
     }
   },
   "LLMSelectorComponent": {
@@ -1226,12 +1226,12 @@
   },
   "Agent": {
     "versions": {
-      "0.3.0": "bdc309bc2d2a"
+      "0.3.0": "b60d28d2784f"
     }
   },
   "EmbeddingModel": {
     "versions": {
-      "0.3.0": "277f5f28215b"
+      "0.3.0": "3e0b64afc9a2"
     }
   },
   "LanguageModelComponent": {
@@ -1651,7 +1651,7 @@
   },
   "CurrentDate": {
     "versions": {
-      "0.3.0": "8311e820e80c"
+      "0.3.0": "4a93d7b489e6"
     }
   },
   "IDGenerator": {

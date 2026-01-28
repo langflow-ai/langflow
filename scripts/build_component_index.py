@@ -176,10 +176,9 @@ def main():
     # Create directory if it doesn't exist
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Always minify to reduce file size and git history bloat (from 83k to ~5k lines)
-    # The index is auto-generated and can be inspected with `jq` if needed
-    print(f"\nWriting minified index to {output_path}")
-    json_bytes = orjson.dumps(index, option=orjson.OPT_SORT_KEYS)
+    # Pretty-print for readable git diffs and resolvable merge conflicts
+    print(f"\nWriting formatted index to {output_path}")
+    json_bytes = orjson.dumps(index, option=orjson.OPT_SORT_KEYS | orjson.OPT_INDENT_2)
     output_path.write_text(json_bytes.decode("utf-8"), encoding="utf-8")
 
     print("\nIndex successfully written!")
