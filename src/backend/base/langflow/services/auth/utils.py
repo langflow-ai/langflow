@@ -686,7 +686,7 @@ def encrypt_api_key(api_key: str, settings_service: SettingsService):
     return encrypted_key.decode()
 
 
-def decrypt_api_key(encrypted_api_key: str, settings_service: SettingsService):
+def decrypt_api_key(encrypted_api_key: str, settings_service: SettingsService, fernet_obj: Fernet | None = None) -> str:
     """Decrypt the provided encrypted API key using Fernet decryption.
 
     This function supports both encrypted and plain text values. It first attempts
@@ -699,12 +699,16 @@ def decrypt_api_key(encrypted_api_key: str, settings_service: SettingsService):
     Args:
         encrypted_api_key (str): The encrypted API key or plain text value.
         settings_service (SettingsService): Service providing authentication settings.
+        fernet_obj (Fernet | None): Optional pre-initialized Fernet object.
 
     Returns:
         str: The decrypted API key, the original value if plain text, or empty string
              if it's encrypted with a different key.
     """
-    fernet = get_fernet(settings_service)
+    fernet = fernet_obj
+    if fernet is None:
+        fernet = get_fernet(settings_service)
+
     if isinstance(encrypted_api_key, str):
         try:
             return fernet.decrypt(encrypted_api_key.encode()).decode()
