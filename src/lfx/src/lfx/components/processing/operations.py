@@ -640,7 +640,9 @@ class Operations(Component):
 
     def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:
         """Create dynamic outputs based on selected operation."""
-        if field_name not in ("input_type", "operation"):
+        # Always update outputs when input_type or operation changes
+        # Also update when operation-related fields change (for Path Selection, etc.)
+        if field_name not in ("input_type", "operation", "mapped_json_display", "selected_key"):
             return frontend_node
 
         frontend_node["outputs"] = []
@@ -657,6 +659,11 @@ class Operations(Component):
             operation_name = self._extract_operation_name(field_value)
             # Get input_type from the node template
             input_type = frontend_node.get("template", {}).get("input_type", {}).get("value", "Text")
+        else:
+            # For other fields (mapped_json_display, selected_key), get current values from template
+            operation_value = frontend_node.get("template", {}).get("operation", {}).get("value", [])
+            operation_name = self._extract_operation_name(operation_value)
+            input_type = frontend_node.get("template", {}).get("input_type", {}).get("value", "Text")
 
         # If no operation selected, show default output based on input type
         if not operation_name:
@@ -668,6 +675,17 @@ class Operations(Component):
                 frontend_node["outputs"].append(
                     Output(display_name="DataFrame", name="dataframe", method="get_dataframe")
                 )
+            return frontend_node
+
+        # First, explicitly check for Path Selection to ensure it always gets output
+        if operation_name == "Path Selection":
+            frontend_node["outputs"].append(Output(display_name="Data", name="data_output", method="get_data"))
+            return frontend_node
+        
+        # Then check if it's a Data operation by checking OPERATION_FIELDS
+        # This ensures all Data operations get the correct output
+        if operation_name in OPERATION_FIELDS and "data_input" in OPERATION_FIELDS.get(operation_name, []):
+            frontend_node["outputs"].append(Output(display_name="Data", name="data_output", method="get_data"))
             return frontend_node
 
         # Text operations outputs
@@ -688,12 +706,19 @@ class Operations(Component):
             "Text Clean",
         ):
             frontend_node["outputs"].append(Output(display_name="Message", name="message", method="get_message"))
-        # Data operations outputs
-        elif operation_name in OPERATION_FIELDS and "data_input" in OPERATION_FIELDS.get(operation_name, []):
-            frontend_node["outputs"].append(Output(display_name="Data", name="data_output", method="get_data"))
         # DataFrame operations outputs
         elif operation_name in OPERATION_FIELDS and "df_input" in OPERATION_FIELDS.get(operation_name, []):
             frontend_node["outputs"].append(Output(display_name="DataFrame", name="dataframe", method="get_dataframe"))
+        # Final fallback: use input_type to determine output
+        elif not frontend_node["outputs"]:
+            if input_type == "Text":
+                frontend_node["outputs"].append(Output(display_name="Message", name="message", method="get_message"))
+            elif input_type == "Data":
+                frontend_node["outputs"].append(Output(display_name="Data", name="data_output", method="get_data"))
+            elif input_type == "DataFrame":
+                frontend_node["outputs"].append(
+                    Output(display_name="DataFrame", name="dataframe", method="get_dataframe")
+                )
 
         return frontend_node
 
