@@ -66,7 +66,7 @@
   },
   "AmazonBedrockConverseModel": {
     "versions": {
-      "0.3.0": "a7442bb44851"
+      "0.3.0": "66b9519f4f62"
     }
   },
   "AmazonBedrockEmbeddings": {
@@ -1179,7 +1179,7 @@
   },
   "SmartRouter": {
     "versions": {
-      "0.3.0": "9c6736e784f6"
+      "0.3.0": "2b49dc46dae8"
     }
   },
   "LLMSelectorComponent": {
@@ -1710,7 +1710,7 @@
   },
   "VLMRunTranscription": {
     "versions": {
-      "0.3.0": "3cebea003b94"
+      "0.3.0": "37232d071b96"
     }
   },
   "Weaviate": {
