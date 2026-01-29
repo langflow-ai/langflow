@@ -19,6 +19,7 @@ from langflow.api.v1 import (
     projects_router,
     starter_projects_router,
     store_router,
+    traces_router,
     users_router,
     validate_router,
     variables_router,
@@ -48,6 +49,7 @@ router_v1.include_router(login_router)
 router_v1.include_router(variables_router)
 router_v1.include_router(files_router)
 router_v1.include_router(monitor_router)
+router_v1.include_router(traces_router)
 router_v1.include_router(folders_router)
 router_v1.include_router(projects_router)
 router_v1.include_router(starter_projects_router)
