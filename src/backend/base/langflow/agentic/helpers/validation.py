@@ -1,6 +1,7 @@
 """Component code validation."""
 
 import re
+from functools import lru_cache
 
 from lfx.custom.validate import create_class, extract_class_name
 
@@ -16,6 +17,7 @@ def _extract_class_name_regex(code: str) -> str | None:
     return match.group(1) if match else None
 
 
+@lru_cache(maxsize=1024)
 def _safe_extract_class_name(code: str) -> str | None:
     """Extract class name with fallback to regex for broken code."""
     try:
@@ -38,7 +40,7 @@ def validate_component_code(code: str) -> ValidationResult:
             raise ValueError(msg)
 
         # create_class returns the class (not an instance)
-        component_class = create_class(code, class_name)
+        component_class = _cached_create_class(code, class_name)
 
         # Instantiate the class to trigger __init__ validation
         # This catches errors like overlapping input/output names
@@ -57,3 +59,8 @@ def validate_component_code(code: str) -> ValidationResult:
         KeyError,
     ) as e:
         return ValidationResult(is_valid=False, code=code, error=f"{type(e).__name__}: {e}", class_name=class_name)
+
+
+@lru_cache(maxsize=256)
+def _cached_create_class(code: str, class_name: str):
+    return create_class(code, class_name)
