@@ -15,7 +15,10 @@ export default function DictComponent({
   id = "",
   name = "",
   showParameter = true,
-}: InputProps<object | object[] | string, { name: string }>): JSX.Element | null {
+}: InputProps<
+  object | object[] | string,
+  { name: string }
+>): JSX.Element | null {
   useEffect(() => {
     if (disabled || value === null) {
       handleOnNewValue({ value: {} }, { skipSnapshot: true });
