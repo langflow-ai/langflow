@@ -280,7 +280,6 @@ src/frontend/temp
 *.mcp.json
 
 news-aggregated.json
-CLAUDE.md
 .claude
 
 member_servers.json
