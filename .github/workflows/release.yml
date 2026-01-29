@@ -511,7 +511,7 @@ jobs:
         run: sleep 300 # wait for 5 minutes to ensure PyPI propagation
       - name: Build project for pre-release distribution
         if: ${{ inputs.pre_release }}
-        run: make build pre=true args="--no-sources --wheel"
+        run: make build pre=true args="--wheel"
       - name: Build project for distribution
         if: ${{ !inputs.pre_release }}
         run: make build main=true args="--no-sources --wheel"
