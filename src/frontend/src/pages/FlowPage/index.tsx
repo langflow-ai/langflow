@@ -204,7 +204,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
       <SimpleSidebarProvider
         width="400px"
         minWidth={0.22}
-        maxWidth={0.8}
+        maxWidth={0.6}
         open={isSlidingContainerOpen}
         onOpenChange={(open) => {
           setSlidingContainerOpen(open);
