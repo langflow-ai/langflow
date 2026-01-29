@@ -125,6 +125,7 @@ export default function CodeAreaModal({
               const merged = cloneDeep(data);
               if (nodeClass?.template && merged?.template) {
                 for (const fieldName of Object.keys(merged.template)) {
+                  if (fieldName === "code") continue;
                   const existing = nodeClass.template[fieldName];
                   if (existing && Object.hasOwn(existing, "value")) {
                     // Preserve the user's current value for this parameter
