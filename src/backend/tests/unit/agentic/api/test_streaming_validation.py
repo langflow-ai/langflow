@@ -711,9 +711,7 @@ Here's the implementation:
 
         with patch(
             "langflow.agentic.services.assistant_service.execute_flow_file_streaming",
-            side_effect=_mock_streaming_sequence(
-                [cutoff_response, cutoff_response, valid_response]
-            ),
+            side_effect=_mock_streaming_sequence([cutoff_response, cutoff_response, valid_response]),
         ):
             events = [
                 event
