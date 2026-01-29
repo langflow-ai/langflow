@@ -328,7 +328,7 @@ ifdef main
 	make build_langflow args="$(args)"
 endif
 
-ifdef main-pre
+ifdef pre
 	make install_frontendci
 	make build_frontend
 	make build_langflow args="$(args)"

@@ -507,9 +507,9 @@ jobs:
           # Verify the change
           echo "Updated dependency:"
           grep "langflow-base" pyproject.toml
-      - name: Build project for distribution
+      - name: Build project for pre-release distribution
         if: ${{ inputs.pre_release }}
-        run: make build main-pre=true args="--no-sources --wheel"
+        run: make build pre=true args="--no-sources --wheel"
       - name: Wait for PyPI Propagation
         if: ${{ !inputs.pre_release }}
         run: sleep 300 # wait for 5 minutes to ensure PyPI propagation
