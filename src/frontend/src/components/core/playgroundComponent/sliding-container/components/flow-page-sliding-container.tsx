@@ -59,7 +59,6 @@ export function FlowPageSlidingContainerContent({
 
   const handleClose = () => {
     setOpen(false);
-    setIsFullscreen(false);
   };
 
   const handleEnterFullscreen = () => {

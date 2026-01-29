@@ -141,18 +141,6 @@ const SimpleSidebarProvider = React.forwardRef<
       }
     }, [fullscreen, width, _wasDragged]);
 
-    // Reset width when opening (unless user dragged or it's fullscreen)
-    React.useEffect(() => {
-      if (open && !fullscreen && !_wasDragged) {
-        const defaultWidth =
-          typeof width === "string" ? parseInt(width.replace("px", "")) : width;
-        // Only reset if current width is significantly different (more than 50px)
-        if (Math.abs(_width - defaultWidth) > 50) {
-          _setWidth(defaultWidth);
-        }
-      }
-    }, [open, fullscreen, width, _wasDragged, _width]);
-
     // Track parent width using ResizeObserver
     React.useEffect(() => {
       const element = internalRef.current;
@@ -361,6 +349,7 @@ const SimpleSidebar = React.forwardRef<
   ) => {
     const { open, isResizing, fullscreen } = useSimpleSidebar();
 
+
     // Memoized animation values
     const spacerWidth = React.useMemo(() => {
       if (!open) return 0;
@@ -371,25 +360,10 @@ const SimpleSidebar = React.forwardRef<
       return fullscreen ? "100%" : "var(--simple-sidebar-width)";
     }, [fullscreen]);
 
-    const sidebarLeft = React.useMemo(() => {
-      if (!open && !fullscreen && side === "left") {
-        return "calc(var(--simple-sidebar-width) * -1)";
-      }
-      if (open && (fullscreen || side === "left")) {
-        return 0;
-      }
-      return "auto";
-    }, [open, fullscreen, side]);
-
-    const sidebarRight = React.useMemo(() => {
-      if (!open && !fullscreen && side === "right") {
-        return "calc(var(--simple-sidebar-width) * -1)";
-      }
-      if (open && (fullscreen || side === "right")) {
-        return 0;
-      }
-      return "auto";
-    }, [open, fullscreen, side]);
+    const xPosition = React.useMemo(() => {
+      if (open) return "0%";
+      return side === "left" ? "-100%" : "100%";
+    }, [open, side]);
 
     const transitionDuration = React.useMemo(() => {
       return isResizing && !fullscreen ? 0 : 0.3;
@@ -418,15 +392,18 @@ const SimpleSidebar = React.forwardRef<
           className={cn("absolute inset-y-0 z-50 flex h-full", className)}
           animate={{
             width: sidebarWidth,
-            left: sidebarLeft,
-            right: sidebarRight,
+            x: xPosition,
             opacity: open ? 1 : 0,
           }}
           transition={{
             duration: transitionDuration,
             ease: "easeInOut",
           }}
-          style={props.style}
+          style={{
+            ...props.style,
+            left: side === "left" ? 0 : "auto",
+            right: side === "right" ? 0 : "auto",
+          }}
         >
           <div
             data-simple-sidebar="sidebar"
