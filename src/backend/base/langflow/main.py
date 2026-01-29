@@ -4,9 +4,11 @@ import os
 import re
 import tempfile
 import warnings
+from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from http import HTTPStatus
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING, cast
 from urllib.parse import urlencode
 
@@ -21,10 +23,12 @@ from fastapi_pagination import add_pagination
 from filelock import FileLock
 from lfx.interface.utils import setup_llm_caching
 from lfx.log.logger import configure, logger
+from lfx.services.settings.base import Settings
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from pydantic import PydanticDeprecatedSince20
 from pydantic_core import PydanticSerializationError
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
+from starlette.types import Lifespan
 
 from langflow.api import health_check_router, log_router, router
 from langflow.api.v1.mcp_projects import init_mcp_servers
@@ -49,8 +53,6 @@ from langflow.services.utils import initialize_services, initialize_settings_ser
 from langflow.utils.mcp_cleanup import cleanup_mcp_sessions
 
 if TYPE_CHECKING:
-    from tempfile import TemporaryDirectory
-
     from lfx.services.mcp_composer.service import MCPComposerService
 
 # Ignore Pydantic deprecation warnings from Langchain
@@ -59,8 +61,6 @@ warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
 # Suppress ResourceWarning from anyio streams (SSE connections)
 warnings.filterwarnings("ignore", category=ResourceWarning, message=".*MemoryObjectReceiveStream.*")
 warnings.filterwarnings("ignore", category=ResourceWarning, message=".*MemoryObjectSendStream.*")
-
-_tasks: list[asyncio.Task] = []
 
 MAX_PORT = 65535
 
@@ -81,7 +81,7 @@ class RequestCancelledMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         sentinel = object()
 
-        async def cancel_handler():
+        async def cancel_handler() -> object:
             while True:
                 if await request.is_disconnected():
                     return sentinel
@@ -122,7 +122,7 @@ class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
         return response
 
 
-async def load_bundles_with_error_handling():
+async def load_bundles_with_error_handling() -> tuple[list[TemporaryDirectory[str]], list[str]]:
     try:
         return await load_bundles_from_urls()
     except (httpx.TimeoutException, httpx.HTTPError, httpx.RequestError) as exc:
@@ -130,7 +130,7 @@ async def load_bundles_with_error_handling():
         return [], []
 
 
-def warn_about_future_cors_changes(settings):
+def warn_about_future_cors_changes(settings: Settings) -> None:
     """Warn users about upcoming CORS security changes in version 1.7."""
     # Check if using default (backward compatible) settings
     using_defaults = settings.cors_origins == "*" and settings.cors_allow_credentials is True
@@ -142,12 +142,12 @@ def warn_about_future_cors_changes(settings):
         )
 
 
-def get_lifespan(*, fix_migration=False, version=None):
+def get_lifespan(*, fix_migration: bool = False, version: str | None = None) -> Lifespan:
     initialize_settings_service()
     telemetry_service = get_telemetry_service()
 
     @asynccontextmanager
-    async def lifespan(_app: FastAPI):
+    async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         from lfx.interface.components import get_and_cache_all_types_dict
 
         configure()
@@ -158,7 +158,7 @@ def get_lifespan(*, fix_migration=False, version=None):
         else:
             await logger.adebug("Starting Langflow...")
 
-        temp_dirs: list[TemporaryDirectory] = []
+        temp_dirs: list[TemporaryDirectory[str]] = []
         sync_flows_from_fs_task = None
         mcp_init_task = None
 
@@ -280,7 +280,7 @@ def get_lifespan(*, fix_migration=False, version=None):
             total_time = asyncio.get_event_loop().time() - start_time
             await logger.adebug(f"Total initialization time: {total_time:.2f}s")
 
-            async def delayed_init_mcp_servers():
+            async def delayed_init_mcp_servers() -> None:
                 await asyncio.sleep(10.0)  # Increased delay to allow starter projects to be created
                 current_time = asyncio.get_event_loop().time()
                 await logger.adebug("Loading MCP servers for projects")
@@ -409,7 +409,7 @@ def get_lifespan(*, fix_migration=False, version=None):
     return lifespan
 
 
-def create_app():
+def create_app() -> FastAPI:
     """Create the FastAPI app and include the router."""
     from langflow.utils.version import get_version_info
 
@@ -448,7 +448,7 @@ def create_app():
     app.add_middleware(JavaScriptMIMETypeMiddleware)
 
     @app.middleware("http")
-    async def check_boundary(request: Request, call_next):
+    async def check_boundary(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
         if "/api/v1/files/upload" in request.url.path:
             content_type = request.headers.get("Content-Type")
 
@@ -483,7 +483,9 @@ def create_app():
         return await call_next(request)
 
     @app.middleware("http")
-    async def flatten_query_string_lists(request: Request, call_next):
+    async def flatten_query_string_lists(
+        request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
         flattened: list[tuple[str, str]] = []
         for key, value in request.query_params.multi_items():
             flattened.extend((key, entry) for entry in value.split(","))
@@ -518,7 +520,7 @@ def create_app():
     app.include_router(log_router)
 
     @app.exception_handler(Exception)
-    async def exception_handler(_request: Request, exc: Exception):
+    async def exception_handler(_request: Request, exc: Exception) -> Response:
         if isinstance(exc, HTTPException):
             await logger.aerror(f"HTTPException: {exc}", exc_info=exc)
             return JSONResponse(
@@ -569,7 +571,7 @@ def setup_static_files(app: FastAPI, static_files_dir: Path) -> None:
     )
 
     @app.exception_handler(404)
-    async def custom_404_handler(_request, _exc):
+    async def custom_404_handler(_request: Request, _exc: Exception) -> Response:
         path = anyio.Path(static_files_dir) / "index.html"
 
         if not await path.exists():
@@ -578,7 +580,7 @@ def setup_static_files(app: FastAPI, static_files_dir: Path) -> None:
         return FileResponse(path)
 
 
-def get_static_files_dir():
+def get_static_files_dir() -> Path:
     """Get the static files directory relative to Langflow's main.py file."""
     frontend_path = Path(__file__).parent
     return frontend_path / "frontend"

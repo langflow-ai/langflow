@@ -5,7 +5,7 @@ import sys
 import typer
 
 
-def main():
+def main() -> None:
     """Launches langflow with appropriate environment setup.
 
     On macOS, sets required environment variables and replaces current process.
@@ -20,7 +20,7 @@ def main():
         langflow_main()
 
 
-def _launch_with_exec():
+def _launch_with_exec() -> None:
     """Launch langflow by replacing current process with properly configured environment.
 
     This approach is necessary because Objective-C libraries are preloaded by the Python

@@ -1276,8 +1276,8 @@ async def get_or_create_default_folder(session: AsyncSession, user_id: UUID) -> 
     return FolderRead.model_validate(folder_obj, from_attributes=True)
 
 
-async def sync_flows_from_fs():
-    flow_mtimes = {}
+async def sync_flows_from_fs() -> None:
+    flow_mtimes: dict[UUID, int] = {}
     fs_flows_polling_interval = get_settings_service().settings.fs_flows_polling_interval / 1000
     storage_service = get_storage_service()
     try:
