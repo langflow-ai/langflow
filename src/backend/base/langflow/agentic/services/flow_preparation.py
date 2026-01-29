@@ -39,9 +39,12 @@ def inject_model_into_flow(
     }
 
     # Add extra params from provider config (url_param, project_id_param, base_url_param)
-    for extra_param in ("url_param", "project_id_param", "base_url_param"):
-        if extra_param in provider_config:
-            metadata[extra_param] = provider_config[extra_param]
+    if "url_param" in provider_config:
+        metadata["url_param"] = provider_config["url_param"]
+    if "project_id_param" in provider_config:
+        metadata["project_id_param"] = provider_config["project_id_param"]
+    if "base_url_param" in provider_config:
+        metadata["base_url_param"] = provider_config["base_url_param"]
 
     model_value = [
         {
@@ -54,12 +57,18 @@ def inject_model_into_flow(
     ]
 
     # Inject into all Agent nodes
-    for node in flow_data.get("data", {}).get("nodes", []):
-        node_data = node.get("data", {})
-        if node_data.get("type") == "Agent":
-            template = node_data.get("node", {}).get("template", {})
-            if "model" in template:
-                template["model"]["value"] = model_value
+    data = flow_data.get("data")
+    if data is not None:
+        nodes = data.get("nodes")
+        if nodes is not None:
+            for node in nodes:
+                node_data = node.get("data")
+                if node_data is not None and node_data.get("type") == "Agent":
+                    node_inner = node_data.get("node")
+                    if node_inner is not None:
+                        template = node_inner.get("template")
+                        if template is not None and "model" in template:
+                            template["model"]["value"] = model_value
             # Note: Do NOT set api_key here. The Agent component will automatically
             # look up the API key from the user's global variables using get_api_key_for_provider()
             # when the api_key field is empty/falsy.
