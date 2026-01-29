@@ -521,7 +521,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
             # Mock other required methods
             component.get_memory_data = AsyncMock(return_value=[])
             component._get_shared_callbacks = list
-            component.set_tools_callbacks = lambda *args: None
+            component.set_tools_callbacks = lambda *_: None
 
             await component.get_agent_requirements()
 
