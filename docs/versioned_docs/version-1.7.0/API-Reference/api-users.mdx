@@ -1,0 +1,263 @@
+---
+title: Users endpoints
+slug: /api-users
+---
+
+Use the `/users` endpoint to manage user accounts in Langflow.
+
+## Add user
+
+Create a new user account with a given username and password.
+
+Requires authentication as a superuser if the Langflow server has authentication enabled.
+
+```bash
+curl -X POST \
+  "$LANGFLOW_URL/api/v1/users/" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
+  -d '{
+    "username": "newuser2",
+    "password": "securepassword123"
+  }'
+```
+
+The request returns an object describing the new user.
+The user's UUID is stored in `user_id` in the Langflow database, and returned as `id` in the `/users` API response.
+This `user_id` key is specifically for Langflow user management.
+
+<details>
+<summary>Result</summary>
+
+```json
+{
+  "id": "10c1c6a2-ab8a-4748-8700-0e4832fd5ce8",
+  "username": "newuser2",
+  "profile_image": null,
+  "store_api_key": null,
+  "is_active": false,
+  "is_superuser": false,
+  "create_at": "2025-05-29T16:02:20.132436",
+  "updated_at": "2025-05-29T16:02:20.132442",
+  "last_login_at": null,
+  "optins": {
+    "github_starred": false,
+    "dialog_dismissed": false,
+    "discord_clicked": false
+  }
+}
+```
+
+</details>
+
+## Get current user
+
+Retrieve information about the authenticated user.
+
+```bash
+curl -X GET \
+  "$LANGFLOW_URL/api/v1/users/whoami" \
+  -H "accept: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY"
+```
+
+<details>
+<summary>Result</summary>
+
+```json
+{
+  "id": "07e5b864-e367-4f52-b647-a48035ae7e5e",
+  "username": "langflow",
+  "profile_image": null,
+  "store_api_key": null,
+  "is_active": true,
+  "is_superuser": true,
+  "create_at": "2025-05-08T17:59:07.855965",
+  "updated_at": "2025-05-29T15:06:56.157860",
+  "last_login_at": "2025-05-29T15:06:56.157016",
+}
+```
+
+</details>
+
+## List all users
+
+Get a paginated list of all users in the system.
+
+Requires authentication as a superuser if the Langflow server has authentication enabled.
+
+```bash
+curl -X GET \
+  "$LANGFLOW_URL/api/v1/users/?skip=0&limit=10" \
+  -H "accept: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY"
+```
+
+<details>
+<summary>Result</summary>
+
+```json
+{
+  "total_count": 3,
+  "users": [
+    {
+      "id": "07e5b864-e367-4f52-b647-a48035ae7e5e",
+      "username": "langflow",
+      "profile_image": null,
+      "store_api_key": null,
+      "is_active": true,
+      "is_superuser": true,
+      "create_at": "2025-05-08T17:59:07.855965",
+      "updated_at": "2025-05-29T15:06:56.157860",
+      "last_login_at": "2025-05-29T15:06:56.157016",
+      "optins": {
+        "github_starred": false,
+        "dialog_dismissed": true,
+        "discord_clicked": false,
+        "mcp_dialog_dismissed": true
+      }
+    },
+    {
+      "id": "c48a1f68-cc7e-491a-a507-a1a627708470",
+      "username": "newuser",
+      "profile_image": null,
+      "store_api_key": null,
+      "is_active": false,
+      "is_superuser": false,
+      "create_at": "2025-05-29T16:00:33.483386",
+      "updated_at": "2025-05-29T16:00:33.483392",
+      "last_login_at": null,
+      "optins": {
+        "github_starred": false,
+        "dialog_dismissed": false,
+        "discord_clicked": false
+      }
+    },
+    {
+      "id": "10c1c6a2-ab8a-4748-8700-0e4832fd5ce8",
+      "username": "newuser2",
+      "profile_image": null,
+      "store_api_key": null,
+      "is_active": false,
+      "is_superuser": false,
+      "create_at": "2025-05-29T16:02:20.132436",
+      "updated_at": "2025-05-29T16:02:20.132442",
+      "last_login_at": null,
+      "optins": {
+        "github_starred": false,
+        "dialog_dismissed": false,
+        "discord_clicked": false
+      }
+    }
+  ]
+}
+```
+
+</details>
+
+## Update user
+
+Modify an existing user's information with a PATCH request.
+
+Requires authentication as a superuser if the Langflow server has authentication enabled.
+
+This example activates the specified user's account and makes them a superuser:
+
+```bash
+curl -X PATCH \
+  "$LANGFLOW_URL/api/v1/users/10c1c6a2-ab8a-4748-8700-0e4832fd5ce8" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
+  -d '{
+    "is_active": true,
+    "is_superuser": true
+  }'
+```
+
+<details>
+<summary>Result</summary>
+
+```json
+{
+  "id": "10c1c6a2-ab8a-4748-8700-0e4832fd5ce8",
+  "username": "newuser2",
+  "profile_image": null,
+  "store_api_key": null,
+  "is_active": true,
+  "is_superuser": true,
+  "create_at": "2025-05-29T16:02:20.132436",
+  "updated_at": "2025-05-29T16:19:03.514527Z",
+  "last_login_at": null,
+  "optins": {
+    "github_starred": false,
+    "dialog_dismissed": false,
+    "discord_clicked": false
+  }
+}
+```
+
+</details>
+
+## Reset password
+
+Change the specified user's password to a new secure value.
+
+Requires authentication as the target user.
+
+```bash
+curl -X PATCH \
+  "$LANGFLOW_URL/api/v1/users/10c1c6a2-ab8a-4748-8700-0e4832fd5ce8/reset-password" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
+  -d '{
+    "password": "newsecurepassword123"
+  }'
+```
+
+<details>
+<summary>Result</summary>
+
+```json
+{
+  "id": "10c1c6a2-ab8a-4748-8700-0e4832fd5ce8",
+  "username": "langflow",
+  "profile_image": null,
+  "store_api_key": null,
+  "is_active": true,
+  "is_superuser": true,
+  "create_at": "2025-05-08T17:59:07.855965",
+  "updated_at": "2025-05-29T15:06:56.157860",
+  "last_login_at": "2025-05-29T15:06:56.157016",
+  "optins": {
+    "github_starred": false,
+    "dialog_dismissed": true,
+    "discord_clicked": false
+  }
+}
+```
+
+</details>
+
+## Delete user
+
+Remove a user account from the system.
+
+Requires authentication as a superuser if the Langflow server has authentication enabled.
+
+```bash
+curl -X DELETE \
+  "$LANGFLOW_URL/api/v1/users/10c1c6a2-ab8a-4748-8700-0e4832fd5ce8" \
+  -H "accept: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY"
+```
+
+<details>
+<summary>Result</summary>
+
+```json
+{
+  "detail": "User deleted"
+}
+```
+
+</details>

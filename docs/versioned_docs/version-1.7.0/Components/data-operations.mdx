@@ -1,0 +1,163 @@
+---
+title: Data Operations
+slug: /data-operations
+---
+
+import Icon from "@site/src/components/icon";
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialCurlyBraces from '@site/docs/_partial-escape-curly-braces.mdx';
+
+The **Data Operations** component performs operations on [`Data`](/data-types#data) objects, including extracting, filtering, and editing keys and values in the `Data`.
+For all options, see [Available data operations](#available-data-operations).
+The output is a new `Data` object containing the modified data after running the selected operation.
+
+## Use the Data Operations component in a flow
+
+The following example demonstrates how to use a **Data Operations** component in a flow using data from a webhook payload:
+
+1. Create a flow with a **Webhook** component and a **Data Operations** component, and then connect the **Webhook** component's output to the **Data Operations** component's **Data** input.
+
+    All operations in the **Data Operations** component require at least one `Data` input from another component.
+    If the preceding component doesn't produce `Data` output, you can use another component, such as the [**Type Convert** component](/type-convert), to reformat the data before passing it to the **Data Operations** component.
+    Alternatively, you could consider using a component that is designed to process the original data type, such as the [**Parser** component](/parser) or [**DataFrame Operations** component](/dataframe-operations).
+
+2. In the **Operations** field, select the operation you want to perform on the incoming `Data`.
+For this example, select the **Select Keys** operation.
+
+    :::tip
+    You can select only one operation.
+    If you need to perform multiple operations on the data, you can chain multiple **Data Operations** components together to execute each operation in sequence.
+    For more complex multi-step operations, consider using a component like the [**Smart Transform** component](/smart-transform).
+    :::
+
+3. Under **Select Keys**, add keys for `name`, `username`, and `email`.
+Click <Icon name="Plus" aria-hidden="true" /> **Add more** to add a field for each key.
+
+    For this example, assume that the webhook will receive consistent payloads that always contain `name`, `username`, and `email` keys.
+    The **Select Keys** operation extracts the value of these keys from each incoming payload.
+
+4. Optional: If you want to view the output in the **Playground**, connect the **Data Operations** component's output to a **Chat Output** component.
+
+    ![A flow with Webhook, Data Operations, and Chat Output components](/img/component-data-operations-select-key.png)
+
+5. To test the flow, send the following request to your flow's webhook endpoint.
+For more information about the webhook endpoint, see [Trigger flows with webhooks](/webhook).
+
+    ```bash
+    curl -X POST "http://$LANGFLOW_SERVER_URL/api/v1/webhook/$FLOW_ID" \
+    -H "Content-Type: application/json" \
+    -H "x-api-key: $LANGFLOW_API_KEY" \
+    -d '{
+      "id": 1,
+      "name": "Leanne Graham",
+      "username": "Bret",
+      "email": "Sincere@april.biz",
+      "address": {
+        "street": "Main Street",
+        "suite": "Apt. 556",
+        "city": "Springfield",
+        "zipcode": "92998-3874",
+        "geo": {
+          "lat": "-37.3159",
+          "lng": "81.1496"
+        }
+      },
+      "phone": "1-770-736-8031 x56442",
+      "website": "hildegard.org",
+      "company": {
+        "name": "Acme-Corp",
+        "catchPhrase": "Multi-layered client-server neural-net",
+        "bs": "harness real-time e-markets"
+      }
+    }'
+    ```
+
+6. To view the `Data` resulting from the **Select Keys** operation, do one of the following:
+
+   * If you attached a **Chat Output** component, open the **Playground** to see the result as a chat message.
+   * Click <Icon name="TextSearch" aria-hidden="true" /> **Inspect output** on the **Data Operations** component.
+
+## Data Operations parameters
+
+Many parameters are conditional based on the selected **Operation** (`operation`).
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data | Data | Input parameter. The `Data` object to operate on. |
+| operation | Operation | Input parameter. The operation to perform on the data. See [Available data operations](#available-data-operations) |
+| select_keys_input | Select Keys | Input parameter. A list of keys to select from the data. |
+| filter_key | Filter Key | Input parameter. The key to filter by. |
+| operator | Comparison Operator | Input parameter. The operator to apply for comparing values. |
+| filter_values | Filter Values | Input parameter. A list of values to filter by. |
+| append_update_data | Append or Update | Input parameter. The data to append or update the existing data with. |
+| remove_keys_input | Remove Keys | Input parameter. A list of keys to remove from the data. |
+| rename_keys_input | Rename Keys | Input parameter. A list of keys to rename in the data. |
+| mapped_json_display | JSON to Map | Input parameter. JSON structure to explore for path selection. Only applies to the **Path Selection** operation. For more information, see [Path Selection operation examples](#path-selection-operation-examples). |
+| selected_key | Select Path | Input parameter. The JSON path expression to extract values. Only applies to the **Path Selection** operation. For more information, see [Path Selection operation examples](#path-selection-operation-examples). |
+| query | JQ Expression | Input parameter. The [`jq`](https://jqlang.org/manual/) expression for advanced JSON filtering and transformation. Only applies to the **JQ Expression** operation. For more information, see [JQ Expression operation examples](#jq-expression-operation-examples). |
+
+#### Available data operations
+
+Options for the `operations` input parameter are as follows.
+All operations act on an incoming `Data` object.
+
+| Name | Required Inputs | Process |
+|-----------|----------------|-------------|
+| Select Keys | `select_keys_input` | Selects specific keys from the data. |
+| Literal Eval | None | Evaluates string values as Python literals. |
+| Combine | None | Combines multiple data objects into one. |
+| Filter Values | `filter_key`, `filter_values`, `operator` | Filters data based on key-value pair. |
+| Append or Update | `append_update_data` | Adds or updates key-value pairs. |
+| Remove Keys | `remove_keys_input` | Removes specified keys from the data. |
+| Rename Keys | `rename_keys_input` | Renames keys in the data. |
+| Path Selection | `mapped_json_display`, `selected_key` | Extracts values from nested JSON structures using path expressions. |
+| JQ Expression | `query` | Performs advanced JSON queries using [`jq`](https://jqlang.org/manual/) syntax for filtering, projections, and transformations. |
+
+## Path Selection operation examples
+
+Use the Path Selection operation to extract values from nested JSON structures with dot notation paths.
+
+1. In the **Operations** dropdown, select **Path Selection**.
+2. In the **JSON to Map** field, enter your JSON structure.
+
+    This example uses the following JSON structure.
+    ```json
+    {
+      "user": {
+        "profile": {
+          "name": "John Doe",
+          "email": "john@example.com"
+        },
+        "settings": {
+          "theme": "dark"
+        }
+      }
+    }
+    ```
+    The **Select Path** dropdown auto-populates with available paths.
+3. In the **Select Paths** dropdown, select the path.
+    You can select paths such as `.user.profile.name` to extract "John Doe", or select `.user.settings.theme` to extract "dark".
+
+## JQ Expression operation example {#jq-expression-operation-examples}
+
+Use the **JQ Expressions** operation to use the [jq](https://jqlang.org/) query language to perform more advanced JSON filtering.
+1. In the **Operations** dropdown, select **JQ Expression**.
+2. In the **JQ Expression** field, enter a `jq` filter to query against the **Data Operations** component's Data input.
+
+    For this example JSON structure, enter expressions like `.user.profile.name` to extract "John Doe", `.user.profile | {name, email}` to project fields to a new object, or `.user.profile | tostring` to convert the field to a string.
+    ```json
+    {
+      "user": {
+        "profile": {
+          "name": "John Doe",
+          "email": "john@example.com"
+        },
+        "settings": {
+          "theme": "dark"
+        }
+      }
+    }
+    ```
+
