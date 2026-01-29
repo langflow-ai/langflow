@@ -18,7 +18,7 @@ from lfx.template.field.base import Output
 class LoopComponent(Component):
     display_name = "Loop"
     description = (
-        "Iterates over a list of Data or Message objects, outputting one item at a time and "
+        "Iterates over a list of Data or Message objects, processing one item at a time and "
         "aggregating results from loop inputs. Message objects are automatically converted to "
         "Data objects for consistent processing."
     )
