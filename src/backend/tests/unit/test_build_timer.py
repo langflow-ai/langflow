@@ -472,6 +472,7 @@ class TestVertexExecutionTimeAttribute:
 
     def test_api_handler_uses_vertex_execution_time_when_available(self):
         """Test the API handler logic for using vertex._execution_time."""
+
         # Simulate what the API handler does
         class MockVertex:
             _execution_time: float | None = None
