@@ -28,6 +28,8 @@ export const BotMessage = memo(
     const setErrorData = useAlertStore((state) => state.setErrorData);
     const [editMessage, setEditMessage] = useState(false);
     const isBuilding = useFlowStore((state) => state.isBuilding);
+    const buildStartTime = useFlowStore((state) => state.buildStartTime);
+    const buildDuration = useFlowStore((state) => state.buildDuration);
     const flow_id = useFlowsManagerStore((state) => state.currentFlowId);
 
     const isAudioMessage = chat.category === "audio";
@@ -108,12 +110,21 @@ export const BotMessage = memo(
 
     const thinkingActive = Boolean(isBuilding && lastMessage);
 
-    // Use hook for message duration tracking
-    const { displayTime } = useMessageDuration({
-      chatId: chat.id,
+    const { displayTime: liveDisplayTime } = useMessageDuration({
       lastMessage,
       isBuilding,
+      buildStartTime,
+      buildDuration,
     });
+
+    // Prefer live timer during build; fall back to persisted value after page refresh
+    const persistedDuration = chat.properties?.build_duration;
+    const displayTime =
+      liveDisplayTime > 0
+        ? liveDisplayTime
+        : typeof persistedDuration === "number"
+          ? persistedDuration
+          : 0;
 
     // Use shared hook for tool duration tracking
     const { totalToolDuration } = useToolDurations(
@@ -143,31 +154,28 @@ export const BotMessage = memo(
             )}
           >
             {/* Content: thinking (paragraph) -> steps dropdown -> answer with bot avatar */}
-            <div className="flex w-full flex-col gap-2">
+            <div className="flex w-full flex-col gap-4">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <ForwardedIconComponent
-                  name="Brain"
-                  className={cn(
-                    "h-4 w-4",
-                    thinkingActive
-                      ? "text-primary animate-pulse"
-                      : "text-muted-foreground",
-                  )}
-                />
+                {!thinkingActive && displayTime > 0 && (
+                  <ForwardedIconComponent
+                    name="Check"
+                    className="h-4 w-4 text-emerald-400"
+                  />
+                )}
                 <span className="w-full flex justify-between">
-                  {thinkingActive ? (
+                  {thinkingActive && displayTime > 0 ? (
                     <>
-                      <span>Thinking for {formatSeconds(displayTime)}</span>
+                      <span>Running... {formatSeconds(displayTime)}</span>
                       {messageHasTools && (
                         <span className="text-emerald-500">
                           {formatTime(greenMsTime, true)}
                         </span>
                       )}
                     </>
-                  ) : (
+                  ) : !thinkingActive && displayTime > 0 ? (
                     <>
                       <span className="text-muted-foreground">
-                        Thought for {formatSeconds(displayTime)}
+                        Finished in {formatSeconds(displayTime)}
                       </span>
                       {messageHasTools && greenMsTime > 0 && (
                         <span className="text-emerald-500">
@@ -175,7 +183,7 @@ export const BotMessage = memo(
                         </span>
                       )}
                     </>
-                  )}
+                  ) : null}
                 </span>
               </div>
 
