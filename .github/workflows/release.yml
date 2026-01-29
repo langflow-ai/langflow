@@ -496,8 +496,8 @@ jobs:
           MAJOR_MINOR=$(echo "$CURRENT_CONSTRAINT" | sed -E 's/.*[~>=<]+([0-9]+\.[0-9]+).*/\1/')
           NEXT_MAJOR=$((${MAJOR_MINOR%.*} + 1))
 
-          # Create new constraint: >=BASE_VERSION,<NEXT_MAJOR.dev0
-          NEW_CONSTRAINT="\"langflow-base>=$BASE_VERSION,<$NEXT_MAJOR.dev0\""
+          # Create new constraint: >=BASE_VERSION,<NEXT_MAJOR.rc0
+          NEW_CONSTRAINT="\"langflow-base>=$BASE_VERSION,<$NEXT_MAJOR.rc0\""
 
           echo "New constraint: $NEW_CONSTRAINT"
 
@@ -507,9 +507,14 @@ jobs:
           # Verify the change
           echo "Updated dependency:"
           grep "langflow-base" pyproject.toml
+      - name: Build project for distribution
+        if: ${{ inputs.pre_release }}
+        run: make build main-pre=true args="--no-sources --wheel"
       - name: Wait for PyPI Propagation
+        if: ${{ !inputs.pre_release }}
         run: sleep 300 # wait for 5 minutes to ensure PyPI propagation
       - name: Build project for distribution
+        if: ${{ !inputs.pre_release }}
         run: make build main=true args="--no-sources --wheel"
       - name: Verify built version
         run: |

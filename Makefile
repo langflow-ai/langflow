@@ -328,6 +328,12 @@ ifdef main
 	make build_langflow args="$(args)"
 endif
 
+ifdef main-pre
+	make install_frontendci
+	make build_frontend
+	make build_langflow args="$(args)"
+endif
+
 build_langflow_base:
 	cd src/backend/base && uv build $(args)
 
