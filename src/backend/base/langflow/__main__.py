@@ -10,6 +10,8 @@ import warnings
 from contextlib import suppress
 from ipaddress import ip_address
 from pathlib import Path
+from types import FrameType
+from typing import Any
 
 import click
 import httpx
@@ -32,7 +34,10 @@ from sqlmodel import select
 from langflow.cli.progress import create_langflow_progress
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.main import setup_app
-from langflow.services.auth.utils import check_key, get_current_user_by_jwt
+from langflow.services.auth.utils import get_current_user_by_jwt
+from langflow.services.database.models.api_key import UnmaskedApiKeyRead
+from langflow.services.database.models.api_key.crud import check_key
+from langflow.services.database.utils import TableResults
 from langflow.services.deps import get_db_service, get_settings_service, is_settings_service_initialized, session_scope
 from langflow.services.utils import initialize_services
 from langflow.utils.version import fetch_latest_version, get_version_info
@@ -62,8 +67,8 @@ except ImportError:
 class ProcessManager:
     """Manages the lifecycle of the backend process."""
 
-    def __init__(self):
-        self.webapp_process = None
+    def __init__(self) -> None:
+        self.webapp_process: Process | None = None
         self.shutdown_in_progress = False
         if platform.system() == "Windows":
             self._farewell_emoji = ":)"  # ASCII smiley
@@ -71,7 +76,7 @@ class ProcessManager:
             self._farewell_emoji = "👋"  # Unicode wave
 
     # params are required for signal handlers, even if they are not used
-    def handle_sigterm(self, _signum: int, _frame) -> None:
+    def handle_sigterm(self, _signum: int, _frame: FrameType | None) -> None:
         """Handle SIGTERM signal gracefully."""
         if self.shutdown_in_progress:
             return  # Already shutting down, ignore
@@ -79,14 +84,14 @@ class ProcessManager:
         self.shutdown()
 
     # params are required for signal handlers, even if they are not used
-    def handle_sigint(self, _signum: int, _frame) -> None:
+    def handle_sigint(self, _signum: int, _frame: FrameType | None) -> None:
         """Handle SIGINT signal gracefully."""
         if self.shutdown_in_progress:
             return  # Already shutting down, ignore
         self.shutdown_in_progress = True
         self.shutdown()
 
-    def shutdown(self):
+    def shutdown(self) -> None:
         """Gracefully shutdown the webapp process."""
         if self.webapp_process and self.webapp_process.is_alive():
             # Just terminate the process - the actual shutdown progress is handled
@@ -124,14 +129,14 @@ signal.signal(signal.SIGTERM, process_manager.handle_sigterm)
 signal.signal(signal.SIGINT, process_manager.handle_sigint)
 
 
-def get_number_of_workers(workers=None):
+def get_number_of_workers(workers: int | None = None) -> int:
     if workers == -1 or workers is None:
         workers = (cpu_count() * 2) + 1
     logger.debug(f"Number of workers: {workers}")
     return workers
 
 
-def display_results(results) -> None:
+def display_results(results: list[TableResults]) -> None:
     """Display the results of the migration."""
     for table_results in results:
         table = Table(title=f"Migration {table_results.table_name}")
@@ -161,7 +166,7 @@ def set_var_for_macos_issue() -> None:
         os.environ["no_proxy"] = "*"  # to avoid error with gunicorn
 
 
-def wait_for_server_ready(host, port, protocol) -> None:
+def wait_for_server_ready(host: str, port: int, protocol: str) -> None:
     """Wait for the server to become ready by polling the health endpoint."""
     # Use localhost for health check when host is 0.0.0.0 (bind to all interfaces)
     health_check_host = "localhost" if host == "0.0.0.0" else host  # noqa: S104
@@ -302,8 +307,8 @@ def run(
                 setattr(settings_service.auth_settings, new_key, value)
 
         frame = inspect.currentframe()
-        valid_args: list = []
-        values: dict = {}
+        valid_args: list[str] = []
+        values: dict[str, Any] = {}
         if frame is not None:
             arguments, _, _, values = inspect.getargvalues(frame)
             valid_args = [arg for arg in arguments if values[arg] is not None]
@@ -416,28 +421,28 @@ def run(
             process_manager.shutdown()
 
 
-def is_port_in_use(port, host="localhost"):
+def is_port_in_use(port: int, host: str = "localhost") -> bool:
     """Check if a port is in use.
 
     Args:
-        port (int): The port number to check.
-        host (str): The host to check the port on. Defaults to 'localhost'.
+        port: The port number to check.
+        host: The host to check the port on. Defaults to 'localhost'.
 
     Returns:
-        bool: True if the port is in use, False otherwise.
+        True if the port is in use, False otherwise.
     """
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         return s.connect_ex((host, port)) == 0
 
 
-def get_free_port(port):
+def get_free_port(port: int) -> int:
     """Given a used port, find a free port.
 
     Args:
-        port (int): The port number to check.
+        port: The port number to check.
 
     Returns:
-        int: A free port number.
+        A free port number.
     """
     while is_port_in_use(port):
         port += 1
@@ -545,7 +550,7 @@ def build_version_notice(current_version: str, package_name: str) -> str:
     return ""
 
 
-def generate_pip_command(package_names, is_pre_release) -> str:
+def generate_pip_command(package_names: list[str], *, is_pre_release: bool) -> str:
     """Generate the pip install command based on the packages and whether it's a pre-release."""
     base_command = "pip install"
     if is_pre_release:
@@ -580,7 +585,7 @@ def print_banner(host: str, port: int, protocol: str) -> None:
     package_names.append(package_name)
 
     # Generate pip command based on the collected data
-    pip_command = generate_pip_command(package_names, is_pre_release)
+    pip_command = generate_pip_command(package_names, is_pre_release=is_pre_release)
 
     # Add pip install command to notices if any package needs an update
     if notices:
@@ -674,7 +679,7 @@ def superuser(
     asyncio.run(_create_superuser(username, password, auth_token))
 
 
-async def _create_superuser(username: str, password: str, auth_token: str | None):
+async def _create_superuser(username: str, password: str, auth_token: str | None) -> None:
     """Create a superuser."""
     await initialize_services()
 
@@ -862,7 +867,7 @@ def api_key(
     """
     configure(log_level=log_level)
 
-    async def aapi_key():
+    async def aapi_key() -> UnmaskedApiKeyRead | None:
         await initialize_services()
         settings_service = get_settings_service()
         auth_settings = settings_service.auth_settings
@@ -898,7 +903,7 @@ def api_key(
         api_key_banner(unmasked_api_key)
 
 
-def show_version(*, value: bool):
+def show_version(*, value: bool) -> None:
     if value:
         default = "DEV"
         raw_info = get_version_info()
@@ -922,7 +927,7 @@ def version_option(
     pass
 
 
-def api_key_banner(unmasked_api_key) -> None:
+def api_key_banner(unmasked_api_key: UnmaskedApiKeyRead) -> None:
     is_mac = platform.system() == "Darwin"
     import pyperclip
 

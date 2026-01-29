@@ -1423,7 +1423,7 @@ async def register_project_with_composer(project: Folder):
         await logger.awarning(f"Failed to register project {project.id} with MCP Composer: {e}")
 
 
-async def init_mcp_servers():
+async def init_mcp_servers() -> None:
     """Initialize MCP servers for all projects."""
     try:
         settings_service = get_settings_service()

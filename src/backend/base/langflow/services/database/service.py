@@ -420,12 +420,12 @@ class DatabaseService(Service):
                 time.sleep(3)
                 command.upgrade(alembic_cfg, "head")
 
-    async def run_migrations_test(self):
+    async def run_migrations_test(self) -> list[TableResults]:
         # This method is used for testing purposes only
         # We will check that all models are in the database
         # and that the database is up to date with all columns
         # get all models that are subclasses of SQLModel
-        sql_models = [
+        sql_models: list[type[SQLModel]] = [
             model for model in models.__dict__.values() if isinstance(model, type) and issubclass(model, SQLModel)
         ]
         # Use engine.begin() for proper async connection management with NullPool
