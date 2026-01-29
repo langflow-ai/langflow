@@ -19,7 +19,6 @@ export function formatTime(ms: number, showMsOnly: boolean = false): string {
   if (showMsOnly) {
     return `${Math.round(ms)}ms`;
   }
-  if (ms < 1000) return `${Math.round(ms)}ms`;
   const seconds = ms / 1000;
   if (seconds < 60) return `${seconds.toFixed(1)}s`;
   const minutes = Math.floor(seconds / 60);
@@ -39,9 +38,6 @@ export function formatTime(ms: number, showMsOnly: boolean = false): string {
  * formatSeconds(1234) // "1.2s"
  */
 export function formatSeconds(ms: number): string {
-  if (ms < 1000) {
-    return `${Math.ceil(ms)}ms`;
-  }
   const seconds = Math.ceil((ms / 1000) * 10) / 10;
   return `${seconds.toFixed(1)}s`;
 }

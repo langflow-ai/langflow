@@ -154,7 +154,7 @@ export const BotMessage = memo(
             )}
           >
             {/* Content: thinking (paragraph) -> steps dropdown -> answer with bot avatar */}
-            <div className="flex w-full flex-col gap-2">
+            <div className="flex w-full flex-col gap-4">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 {!thinkingActive && displayTime > 0 && (
                   <ForwardedIconComponent
