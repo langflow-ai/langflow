@@ -8,7 +8,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from lfx.log.logger import logger
-from lfx.schema.openai_responses_schemas import create_openai_error
+from lfx.schema.openai_responses_schemas import create_openai_error, create_openai_error_chunk
 
 from langflow.api.utils import extract_global_variables_from_headers
 from langflow.api.v1.endpoints import consume_and_yield, run_flow_generator, simple_run_flow
@@ -166,13 +166,24 @@ async def run_flow_for_openai_responses(
                                         token_data,
                                     )
                                 if event_type == "error":
-                                    error_message = data.get("error", "Unknown error")
-                                    await logger.adebug(f"[OpenAIResponses][stream] error event: {error_message}")
-                                    error_response = create_openai_error(
-                                        message=error_message,
-                                        type_="processing_error",
+                                    # Error message is in 'text' field, not 'error' field
+                                    # The 'error' field is a boolean flag
+                                    error_message = data.get("text") or data.get("error", "Unknown error")
+                                    # Ensure error_message is a string
+                                    if not isinstance(error_message, str):
+                                        error_message = str(error_message)
+                                    # Send error as content chunk with finish_reason="error"
+                                    # This ensures OpenAI SDK can parse and surface the error
+                                    error_chunk = create_openai_error_chunk(
+                                        response_id=response_id,
+                                        created_timestamp=created_timestamp,
+                                        model=request.model,
+                                        error_message=error_message,
                                     )
-                                    yield f"data: {json.dumps(error_response)}\n\n"
+                                    yield f"data: {error_chunk.model_dump_json()}\n\n"
+                                    yield "data: [DONE]\n\n"
+                                    # Exit early after error
+                                    return
 
                                 if event_type == "add_message":
                                     sender_name = data.get("sender_name", "")
@@ -377,6 +388,7 @@ async def run_flow_for_openai_responses(
                     model=request.model,
                     delta={},
                     status="completed",
+                    finish_reason="stop",
                 )
                 yield f"data: {final_chunk.model_dump_json()}\n\n"
                 yield "data: [DONE]\n\n"
@@ -388,11 +400,15 @@ async def run_flow_for_openai_responses(
 
             except Exception as e:  # noqa: BLE001
                 logger.error(f"Error in stream generator: {e}")
-                error_response = create_openai_error(
-                    message=str(e),
-                    type_="processing_error",
+                # Send error as content chunk with finish_reason="error"
+                error_chunk = create_openai_error_chunk(
+                    response_id=response_id,
+                    created_timestamp=created_timestamp,
+                    model=request.model,
+                    error_message=str(e),
                 )
-                yield f"data: {error_response}\n\n"
+                yield f"data: {error_chunk.model_dump_json()}\n\n"
+                yield "data: [DONE]\n\n"
             finally:
                 if not main_task.done():
                     main_task.cancel()

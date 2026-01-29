@@ -380,7 +380,7 @@ async def run_flow_generator(
         )
         event_manager.on_end(data={"result": result.model_dump()})
         await client_consumed_queue.get()
-    except (ValueError, InvalidChatInputError, SerializationError) as e:
+    except Exception as e:  # Catch ALL exceptions to ensure errors are propagated in streaming
         await logger.aerror(f"Error running flow: {e}")
         event_manager.on_error(data={"error": str(e)})
     finally:
