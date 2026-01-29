@@ -158,7 +158,7 @@ const SideBarFoldersButtonsComponent = ({
                   console.error(err);
                   setErrorData({
                     title: `Error on uploading your project, try dragging it into an existing project.`,
-                    list: [err["response"]["data"]["message"]],
+                    list: [err["response"]["data"]["detail"]],
                   });
                 },
               },
