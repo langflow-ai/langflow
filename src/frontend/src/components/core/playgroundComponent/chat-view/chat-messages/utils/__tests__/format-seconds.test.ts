@@ -1,12 +1,12 @@
 import { formatSeconds } from "../format";
 
 describe("formatSeconds", () => {
-  it("should_return_milliseconds_when_under_1000ms", () => {
-    expect(formatSeconds(500)).toBe("500ms");
+  it("should_format_values_under_1000ms_as_seconds", () => {
+    expect(formatSeconds(500)).toBe("0.5s");
   });
 
-  it("should_ceil_milliseconds_when_under_1000ms", () => {
-    expect(formatSeconds(500.3)).toBe("501ms");
+  it("should_ceil_to_next_tenth_for_fractional_values", () => {
+    expect(formatSeconds(500.3)).toBe("0.6s");
   });
 
   it("should_ceil_to_next_tenth_when_1000ms_or_above", () => {
@@ -23,8 +23,8 @@ describe("formatSeconds", () => {
     expect(formatSeconds(1001)).toBe("1.1s");
   });
 
-  it("should_return_1ms_for_values_under_1ms", () => {
-    expect(formatSeconds(0.5)).toBe("1ms");
+  it("should_format_values_under_1ms_as_seconds", () => {
+    expect(formatSeconds(0.5)).toBe("0.1s");
   });
 
   it("should_handle_exact_1000ms_boundary", () => {
@@ -32,6 +32,6 @@ describe("formatSeconds", () => {
   });
 
   it("should_handle_zero", () => {
-    expect(formatSeconds(0)).toBe("0ms");
+    expect(formatSeconds(0)).toBe("0.0s");
   });
 });

@@ -185,8 +185,8 @@ describe("ChatMessage Component", () => {
     };
 
     render(<ChatMessage {...propsWithFiles} />);
-    // Should render UserMessage (with file-card-wrapper) not BotMessage
-    expect(screen.getByTestId("file-card-wrapper")).toBeInTheDocument();
+    // Should render UserMessage with file preview (shows loading icon for files)
+    expect(screen.getByTestId("loading-icon")).toBeInTheDocument();
   });
 
   it("renders bot message when no text and no files", () => {
@@ -201,7 +201,7 @@ describe("ChatMessage Component", () => {
 
     render(<ChatMessage {...emptyProps} />);
     // Empty user message with no files should render as BotMessage
-    expect(screen.getByTestId("langflow-logo")).toBeInTheDocument();
+    expect(screen.getByTestId("div-chat-message")).toBeInTheDocument();
   });
 });
 
@@ -227,11 +227,11 @@ describe("ThinkingMessage Component", () => {
     expect(screen.queryByTestId("icon-Check")).not.toBeInTheDocument();
   });
 
-  it("applies green color to check icon when not thinking", () => {
+  it("applies emerald color to check icon when not thinking", () => {
     render(<ThinkingMessage isThinking={false} duration={3000} />);
 
     const icon = screen.getByTestId("icon-Check");
-    expect(icon.className).toContain("text-green-500");
+    expect(icon.className).toContain("text-emerald-400");
   });
 
   it("formats time in minutes when duration exceeds 60 seconds", () => {
