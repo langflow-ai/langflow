@@ -44,8 +44,6 @@ export default function EditableHeaderContent({
     const finalName =
       trimmedName !== "" ? trimmedName : (data.node?.display_name ?? data.type);
 
-    console.log("💾 Saving:", { finalName, description: localDescription });
-
     setNode(data.id, (old) => ({
       ...old,
       data: {
@@ -95,12 +93,8 @@ export default function EditableHeaderContent({
 
       // Check if click is outside the container
       if (containerRef.current && !containerRef.current.contains(target)) {
-        console.log("🖱️ Click outside detected");
         if (hasChangedRef.current) {
-          console.log("📝 Has changes, saving...");
           handleSave();
-        } else {
-          console.log("⚠️ No changes to save");
         }
         setEditMode(false);
       }
