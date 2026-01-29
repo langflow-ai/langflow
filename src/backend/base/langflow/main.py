@@ -415,11 +415,25 @@ def create_app():
 
     __version__ = get_version_info()["version"]
     configure()
+
+    # server api documentation switch based on settings
+    api_document_enabled = get_settings_service().settings.server_api_document_enabled
+    openapi_url = "/openapi.json"
+    docs_url = "/docs"
+    redoc_url = "/redoc"
+    if not api_document_enabled:
+        openapi_url = None
+        docs_url = None
+        redoc_url = None
+
     lifespan = get_lifespan(version=__version__)
     app = FastAPI(
         title="Langflow",
         version=__version__,
         lifespan=lifespan,
+        openapi_url=openapi_url,
+        docs_url=docs_url,
+        redoc_url=redoc_url,
     )
     app.add_middleware(
         ContentSizeLimitMiddleware,

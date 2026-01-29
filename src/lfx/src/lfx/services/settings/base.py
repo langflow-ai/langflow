@@ -337,6 +337,8 @@ class Settings(BaseSettings):
     this is intended to be used to skip all startup project logic."""
     update_starter_projects: bool = True
     """If set to True, Langflow will update starter projects."""
+    server_api_document_enabled: bool = True
+    """If set to False, Langflow will not enable the API documentation."""
 
     # SSRF Protection
     ssrf_protection_enabled: bool = False
