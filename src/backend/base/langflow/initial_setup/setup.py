@@ -74,7 +74,7 @@ def update_projects_components_with_latest_component_versions(project_data, all_
     }
 
     node_changes_log = defaultdict(list)
-    project_data_copy = deepcopy(project_data)
+    project_data_copy = json.loads(json.dumps(project_data))
 
     for node in project_data_copy.get("nodes", []):
         node_data = node.get("data").get("node")
@@ -97,14 +97,12 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                 "LanguageModelComponent",
                 "TypeConverterComponent",
             }
+            node_outputs_by_name = {o.get("name"): o for o in node_data.get("outputs", [])}
             has_tool_outputs = any(output.get("types") == ["Tool"] for output in node_data.get("outputs", []))
             if "outputs" in latest_node and not has_tool_outputs and not is_tool_or_agent:
                 # Set selected output as the previous selected output
                 for output in latest_node["outputs"]:
-                    node_data_output = next(
-                        (output_ for output_ in node_data["outputs"] if output_["name"] == output["name"]),
-                        None,
-                    )
+                    node_data_output = node_outputs_by_name.get(output["name"])
                     if node_data_output:
                         output["selected"] = node_data_output.get("selected")
                 node_data["outputs"] = latest_node["outputs"]
@@ -528,10 +526,10 @@ def log_node_changes(node_changes_log) -> None:
     # let's create one log per node
     formatted_messages = []
     for node_name, changes in node_changes_log.items():
-        message = f"\nNode: {node_name} was updated with the following changes:"
+        parts = [f"\nNode: {node_name} was updated with the following changes:"]
         for change in changes:
-            message += f"\n- {change['attr']}: {change['old_value']} -> {change['new_value']}"
-        formatted_messages.append(message)
+            parts.append(f"\n- {change['attr']}: {change['old_value']} -> {change['new_value']}")
+        formatted_messages.append("".join(parts))
     if formatted_messages:
         logger.debug("\n".join(formatted_messages))
 
