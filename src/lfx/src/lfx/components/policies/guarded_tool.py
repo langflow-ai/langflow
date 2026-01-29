@@ -53,8 +53,7 @@ class GuardedTool(Tool):
 
     async def arun(self, tool_input: str | dict | ToolCall, config=None, **kwargs):
         args = self.parse_input(tool_input)
-        # print(f"tool={self.name}, args={args}, config={config}, kwargs={kwargs}")
-        logger.info(f"running toolguard for {self.name} with arguments {args}")
+        logger.info(f"running toolguard for {self.name}")
 
         with load_toolguards(self._tg_dir) as toolguard:
             try:

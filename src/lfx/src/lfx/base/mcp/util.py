@@ -1681,7 +1681,7 @@ async def update_tools(
                 func=create_tool_func(tool.name, args_schema, client),
                 coroutine=create_tool_coroutine(tool.name, args_schema, client),
                 tags=[tool.name],
-                metadata={"server_name": server_name, "output_schema": tool.outputSchema},
+                metadata={"server_name": server_name, "output_schema": getattr(tool, "outputSchema", None)},
             )
 
             tool_list.append(tool_obj)

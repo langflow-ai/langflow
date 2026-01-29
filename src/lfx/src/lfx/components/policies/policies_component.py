@@ -158,8 +158,9 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         if out_dir.exists():
             shutil.rmtree(out_dir)
         llm = LangchainModelWrapper(self.build_model())
+        app_name = _to_snake_case(self.project)
         gen_result = await generate_guards_code(
-            tools=self.in_tools, tool_specs=specs, work_dir=out_dir, llm=llm, app_name=_to_snake_case(self.project)
+            tools=self.in_tools, tool_specs=specs, work_dir=out_dir, llm=llm, app_name=app_name
         )
         logger.info("🔒️ToolGuard: Step 2 Done")
         return gen_result
