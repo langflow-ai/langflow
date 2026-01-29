@@ -21,7 +21,7 @@ The component operates in two modes:
 
 | Parameter Name | Type | Description | Required In Mode |
 |----------------|------|-------------|------------------|
-| `activate_policies` | `bool` | If `true`, invokes ToolGuard code prior to tool execution. If `false`, skips policy validation. | Both |
+| `active` | `bool` | If `true`, invokes ToolGuard code prior to tool execution. If `false`, skips policy validation. | Both |
 | `build_mode` | `Generate` or `Use Cache` | Indicates whether to invoke buildtime (Generate) or use cached code (Use Cache). | Both |
 | `project` | `str` | Name for the ToolGuard project. Used to organize automatically generated ToolGuards code. Default: "my_project" | Both |
 | `in_tools` | `List[Tool]` | List of tools that the agent can use. These tools will be wrapped with policy guards. | Both |
@@ -37,7 +37,7 @@ The component operates in two modes:
 
 ## Usage Notes
 
-- The component requires at least one policy to be defined when `activate_policies` is `true`
+- The component requires at least one policy to be defined when `active` is `true`
 - Generated guard code is stored in a working directory structure: `tmp_toolguard/{user_id}/{project_name}/`
 - The component performs a two-step process:
   1. **Step 1**: Generate guard specifications from policies

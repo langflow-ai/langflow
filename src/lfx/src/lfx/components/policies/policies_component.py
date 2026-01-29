@@ -1,5 +1,4 @@
 import shutil
-import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
@@ -9,6 +8,7 @@ from toolguard.buildtime import (
     generate_guard_specs,
     generate_guards_code,
 )
+from toolguard.runtime import load_toolguards
 
 from lfx.base.models import LCModelComponent
 from lfx.base.models.unified_models import (
@@ -19,6 +19,7 @@ from lfx.base.models.unified_models import (
 from lfx.components.policies.guarded_tool import GuardedTool
 from lfx.components.policies.llm_wrapper import LangchainModelWrapper
 from lfx.components.policies.models import BUILDTIME_MODELS
+from lfx.components.policies.module_utils import unload_module
 from lfx.field_typing import LanguageModel, Tool
 from lfx.io import BoolInput, HandleInput, ModelInput, Output, SecretStrInput, StrInput, TabInput
 from lfx.log.logger import logger
@@ -47,7 +48,7 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         "list[InputTypes]",
         [
             BoolInput(
-                name="activate_policies",
+                name="active",
                 display_name="Active",
                 info="If `true` - invokes ToolGuard code prior to tool execution. If `false`, skip policy validation.",
                 value=True,
@@ -138,7 +139,7 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             field_value=field_value,
         )
 
-    async def _build_guard_specs(self) -> list[ToolGuardSpec]:
+    async def _generate_guard_specs(self) -> list[ToolGuardSpec]:
         logger.info("🔒️ToolGuard: Starting step 1")
         logger.info(f"model = {self.model}")
         llm = LangchainModelWrapper(self.build_model())
@@ -152,7 +153,7 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         logger.info("🔒️ToolGuard: Step 1 Done")
         return specs
 
-    async def _build_guard_code(self, specs: list[ToolGuardSpec]) -> ToolGuardsCodeGenerationResult:
+    async def _generate_guard_code(self, specs: list[ToolGuardSpec]) -> ToolGuardsCodeGenerationResult:
         logger.info("🔒️ToolGuard: Starting step 2")
         out_dir = self.work_dir / STEP2
         if out_dir.exists():
@@ -165,38 +166,73 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         logger.info("🔒️ToolGuard: Step 2 Done")
         return gen_result
 
-    async def build_guards(self) -> list[Tool]:
-        if not self.policies:
-            msg = "🔒️ToolGuard: policies cannot be empty!"
+    async def generate(self):
+        # Validate required inputs
+        validations = [
+            (not self.project, "project cannot be empty!"),
+            (not any(self.policies), "policies cannot be empty!"),
+            (not self.in_tools, "in_tools cannot be empty!"),
+            (not self.model or not self.api_key, "model or api_key cannot be empty!"),
+        ]
+
+        for condition, error_msg in validations:
+            if condition:
+                msg = f"🔒️ToolGuard: {error_msg}"
+                raise ValueError(msg)
+
+        self.log(
+            f"🔒️ToolGuard: Start generating. Please review the generated guard code at {self.work_dir}", name="info"
+        )
+
+        specs = await self._generate_guard_specs()
+        res = await self._generate_guard_code(specs)
+
+        # if there was a previous version of the guard, remove it from python cache
+        unload_module(res.domain.app_name)
+
+    def _verify_cached_guards(self, code_dir: Path) -> None:
+        # Validate cache exists before attempting to load
+        if not code_dir.exists():
+            msg = (
+                f"🔒️ToolGuard: Cache directory not found at '{code_dir}'. "
+                f"Please run in 'Generate' mode first to create the guard code, "
+                f"or verify the project name is correct."
+            )
             raise ValueError(msg)
 
+        try:
+            load_toolguards(code_dir)
+        except FileNotFoundError as exc:
+            msg = (
+                f"🔒️ToolGuard: Required guard code files missing in '{code_dir}'. "
+                f"Please run in 'Generate' mode to create the guard code."
+            )
+            raise ValueError(msg) from exc
+        except Exception as exc:
+            msg = (
+                f"🔒️ToolGuard: Failed to load guard code from '{code_dir}'. "
+                f"The cached code may be invalid or corrupted. "
+                f"Try running in 'Generate' mode to rebuild the guard code. "
+                f"Error: {exc!s}"
+            )
+            raise ValueError(msg) from exc
+
+    async def build_guards(self) -> list[Tool]:
         self.log("🔒️ToolGuard: starting building toolguards...", name="info")
-        self.log(f"🔒️ToolGuard: policies document: {self.policies}", name="info")
-        self.log(f"🔒️ToolGuard: input tools: {self.in_tools}", name="info")
-
-        self.log("🔒️ToolGuard: please review the generated guard code at ...", name="info")
-
-        if self.activate_policies:
+        # self.log(f"🔒️ToolGuard: policies document: {self.policies}", name="info")
+        # self.log(f"🔒️ToolGuard: input tools: {self.in_tools}", name="info")
+        if self.active:
             build_mode = getattr(self, "build_mode", BUILD_MODE_GENERATE)
-            if build_mode == BUILD_MODE_GENERATE:  # run buildtime steps
-                self.log("🔒️ToolGuard: execution (build) mode", name="info")
-                specs = await self._build_guard_specs()
-                res = await self._build_guard_code(specs)
-                # if there was an old version of the guards in Python cache, remove it.
-                _unload_module(res.domain.app_name)
-
+            if build_mode == BUILD_MODE_GENERATE:
+                await self.generate()
             else:  # build_mode == "use cache"
                 self.log("🔒️ToolGuard: run mode (cached code from path)", name="info")
+
             code_dir = self.work_dir / STEP2
+            self._verify_cached_guards(code_dir)
             return cast("list[Tool]", [GuardedTool(tool, self.in_tools, code_dir) for tool in self.in_tools])
 
         return self.in_tools
-
-
-# Removes the module from the Python cache
-def _unload_module(name: str):
-    if name in sys.modules:
-        del sys.modules[name]
 
 
 def _to_snake_case(human_name: str) -> str:
