@@ -36,6 +36,7 @@ export const URLs = {
   MODEL_PROVIDERS: `models/providers`,
   RUN: `run`,
   RUN_SESSION: `run/session`,
+  AGENTIC_PROMPT: `agentic/prompt`,
   REGISTRATION: `registration`,
 } as const;
 
@@ -43,7 +44,7 @@ export const URLs = {
 
 export function getURL(
   key: keyof typeof URLs,
-  params: any = {},
+  params: Object = {},
   v2: boolean = false,
 ) {
   let url = URLs[key];
