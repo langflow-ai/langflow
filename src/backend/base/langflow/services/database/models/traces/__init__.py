@@ -1,3 +1,3 @@
 from .model import SpanTable, TraceTable
 
-__all__ = ["TraceTable", "SpanTable"]
+__all__ = ["SpanTable", "TraceTable"]

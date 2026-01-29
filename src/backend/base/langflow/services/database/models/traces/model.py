@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Optional
+from typing import Any, Optional
 from uuid import UUID, uuid4
 
 from pydantic import field_serializer, field_validator

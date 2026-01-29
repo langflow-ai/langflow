@@ -178,18 +178,20 @@ class NativeTracer(BaseTracer):
             output_data["logs"] = [log if isinstance(log, dict) else log.model_dump() for log in logs]
 
         # Store completed span for batch write
-        self.completed_spans.append({
-            "id": trace_id,
-            "name": span_info["name"],
-            "span_type": self._map_trace_type(span_info["trace_type"]),
-            "inputs": span_info["inputs"],
-            "outputs": serialize(output_data) if output_data else None,
-            "start_time": start_time,
-            "end_time": end_time,
-            "latency_ms": latency_ms,
-            "status": SpanStatus.ERROR if error else SpanStatus.SUCCESS,
-            "error": str(error) if error else None,
-        })
+        self.completed_spans.append(
+            {
+                "id": trace_id,
+                "name": span_info["name"],
+                "span_type": self._map_trace_type(span_info["trace_type"]),
+                "inputs": span_info["inputs"],
+                "outputs": serialize(output_data) if output_data else None,
+                "start_time": start_time,
+                "end_time": end_time,
+                "latency_ms": latency_ms,
+                "status": SpanStatus.ERROR if error else SpanStatus.SUCCESS,
+                "error": str(error) if error else None,
+            }
+        )
 
         # Clear current component ID
         self._current_component_id = None
@@ -269,7 +271,7 @@ class NativeTracer(BaseTracer):
                 session.add(trace)
 
                 # Create span records
-                from uuid import uuid5, NAMESPACE_DNS
+                from uuid import NAMESPACE_DNS, uuid5
 
                 for span_data in self.completed_spans:
                     # Parse span_id to UUID (use uuid5 for deterministic conversion)
@@ -407,23 +409,25 @@ class NativeTracer(BaseTracer):
         actual_latency = int((end_time - start_time).total_seconds() * 1000)
 
         # Store completed span for batch write
-        self.completed_spans.append({
-            "id": span_info["id"],
-            "name": span_info["name"],
-            "span_type": self._map_trace_type(span_info["span_type"]),
-            "inputs": span_info["inputs"],
-            "outputs": serialize(outputs) if outputs else None,
-            "start_time": start_time,
-            "end_time": end_time,
-            "latency_ms": latency_ms or actual_latency,
-            "status": SpanStatus.ERROR if error else SpanStatus.SUCCESS,
-            "error": error,
-            "model_name": span_info.get("model_name"),
-            "prompt_tokens": prompt_tokens,
-            "completion_tokens": completion_tokens,
-            "total_tokens": total_tokens,
-            "parent_span_id": span_info.get("parent_span_id"),
-        })
+        self.completed_spans.append(
+            {
+                "id": span_info["id"],
+                "name": span_info["name"],
+                "span_type": self._map_trace_type(span_info["span_type"]),
+                "inputs": span_info["inputs"],
+                "outputs": serialize(outputs) if outputs else None,
+                "start_time": start_time,
+                "end_time": end_time,
+                "latency_ms": latency_ms or actual_latency,
+                "status": SpanStatus.ERROR if error else SpanStatus.SUCCESS,
+                "error": error,
+                "model_name": span_info.get("model_name"),
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "total_tokens": total_tokens,
+                "parent_span_id": span_info.get("parent_span_id"),
+            }
+        )
 
     async def _ensure_tables_exist(self) -> None:
         """Ensure trace and span tables exist in the database."""
@@ -433,7 +437,6 @@ class NativeTracer(BaseTracer):
             db_service = get_db_service()
 
             # Use run_sync to create tables if they don't exist
-            from langflow.services.database.models.traces.model import SpanTable, TraceTable
             from sqlmodel import SQLModel
 
             async with db_service.engine.begin() as conn:

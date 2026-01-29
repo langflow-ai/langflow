@@ -62,16 +62,18 @@ async def get_traces(
             # Convert to response format
             trace_list = []
             for trace in traces:
-                trace_list.append({
-                    "id": str(trace.id),
-                    "name": trace.name,
-                    "status": trace.status.value if trace.status else "success",
-                    "startTime": trace.start_time.isoformat() if trace.start_time else "",
-                    "totalLatencyMs": trace.total_latency_ms,
-                    "totalTokens": trace.total_tokens,
-                    "totalCost": trace.total_cost,
-                    "flowId": str(trace.flow_id),
-                })
+                trace_list.append(
+                    {
+                        "id": str(trace.id),
+                        "name": trace.name,
+                        "status": trace.status.value if trace.status else "success",
+                        "startTime": trace.start_time.isoformat() if trace.start_time else "",
+                        "totalLatencyMs": trace.total_latency_ms,
+                        "totalTokens": trace.total_tokens,
+                        "totalCost": trace.total_cost,
+                        "flowId": str(trace.flow_id),
+                    }
+                )
 
             return {"traces": trace_list, "total": len(trace_list)}
     except Exception as e:

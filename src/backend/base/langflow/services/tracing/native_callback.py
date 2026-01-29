@@ -82,9 +82,9 @@ class NativeCallbackHandler(BaseCallbackHandler):
         span_id = self._get_span_id(run_id)
         serialized = serialized or {}
         name = serialized.get("name") or (serialized.get("id", ["LLM"])[-1] if serialized.get("id") else "LLM")
-        model_name = kwargs.get("invocation_params", {}).get("model_name") or kwargs.get(
-            "invocation_params", {}
-        ).get("model")
+        model_name = kwargs.get("invocation_params", {}).get("model_name") or kwargs.get("invocation_params", {}).get(
+            "model"
+        )
 
         self.tracer.add_langchain_span(
             span_id=span_id,
@@ -109,10 +109,12 @@ class NativeCallbackHandler(BaseCallbackHandler):
         """Called when chat model starts running."""
         span_id = self._get_span_id(run_id)
         serialized = serialized or {}
-        name = serialized.get("name") or (serialized.get("id", ["ChatModel"])[-1] if serialized.get("id") else "ChatModel")
-        model_name = kwargs.get("invocation_params", {}).get("model_name") or kwargs.get(
-            "invocation_params", {}
-        ).get("model")
+        name = serialized.get("name") or (
+            serialized.get("id", ["ChatModel"])[-1] if serialized.get("id") else "ChatModel"
+        )
+        model_name = kwargs.get("invocation_params", {}).get("model_name") or kwargs.get("invocation_params", {}).get(
+            "model"
+        )
 
         # Convert messages to serializable format
         formatted_messages = []
@@ -151,7 +153,10 @@ class NativeCallbackHandler(BaseCallbackHandler):
         generations = getattr(response, "generations", []) or []
         outputs = {
             "generations": [
-                [{"text": getattr(gen, "text", ""), "generation_info": getattr(gen, "generation_info", None)} for gen in gen_list]
+                [
+                    {"text": getattr(gen, "text", ""), "generation_info": getattr(gen, "generation_info", None)}
+                    for gen in gen_list
+                ]
                 for gen_list in generations
             ]
         }
@@ -323,7 +328,6 @@ class NativeCallbackHandler(BaseCallbackHandler):
     ) -> None:
         """Called when agent takes an action."""
         # Agent actions are typically followed by tool calls, so we don't create separate spans
-        pass
 
     def on_agent_finish(
         self,
@@ -335,7 +339,6 @@ class NativeCallbackHandler(BaseCallbackHandler):
     ) -> None:
         """Called when agent finishes."""
         # Agent finish is handled by chain end
-        pass
 
     # Retriever callbacks
     def on_retriever_start(
@@ -352,7 +355,9 @@ class NativeCallbackHandler(BaseCallbackHandler):
         """Called when retriever starts running."""
         span_id = self._get_span_id(run_id)
         serialized = serialized or {}
-        name = serialized.get("name") or (serialized.get("id", ["Retriever"])[-1] if serialized.get("id") else "Retriever")
+        name = serialized.get("name") or (
+            serialized.get("id", ["Retriever"])[-1] if serialized.get("id") else "Retriever"
+        )
 
         self.tracer.add_langchain_span(
             span_id=span_id,
