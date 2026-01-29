@@ -2,6 +2,7 @@ import { getBaseUrl } from "@/customization/utils/urls";
 import { BASE_URL_API_V2 } from "../../../constants/constants";
 
 export const URLs = {
+  TRACES: `traces`,
   TRANSACTIONS: `monitor/transactions`,
   API_KEY: `api_key`,
   FILES: `files`,
