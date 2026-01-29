@@ -390,6 +390,20 @@ class ComposioBaseComponent(Component):
         raise_error_if_astra_cloud_disable_component(disable_component_in_astra_cloud_msg)
         result = self.execute_action()
 
+        # Handle empty data response - return DataFrame showing empty result
+        if result == {} or result is None:
+            return DataFrame([{"result": "data:{}"}])
+
+        # Unwrap nested 'data' key if present and contains actual data
+        if isinstance(result, dict) and "data" in result:
+            inner_data = result["data"]
+            # If inner data is a list, use it directly for proper DataFrame rows
+            if isinstance(inner_data, list):
+                result = inner_data
+            # If inner data is empty dict, show it explicitly
+            elif inner_data == {}:
+                return DataFrame([{"result": "data:{}"}])
+
         if isinstance(result, dict):
             result = [result]
         # Build DataFrame and avoid exposing a 'data' attribute via column access,
