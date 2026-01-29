@@ -37,13 +37,16 @@ export const URLs = {
   RUN: `run`,
   RUN_SESSION: `run/session`,
   REGISTRATION: `registration`,
+  AGENTIC_ASSIST: `agentic/assist`,
+  AGENTIC_ASSIST_STREAM: `agentic/assist/stream`,
+  AGENTIC_CHECK_CONFIG: `agentic/check-config`,
 } as const;
 
 // IMPORTANT: FOLDERS endpoint now points to 'projects' for backward compatibility
 
 export function getURL(
   key: keyof typeof URLs,
-  params: any = {},
+  params: Record<string, string | number> = {},
   v2: boolean = false,
 ) {
   let url = URLs[key];

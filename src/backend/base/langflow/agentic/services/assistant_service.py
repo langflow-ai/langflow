@@ -1,12 +1,13 @@
 """Assistant service with validation and retry logic."""
 
 import asyncio
+import re
 from collections.abc import AsyncGenerator
 
 from fastapi import HTTPException
 from lfx.log.logger import logger
 
-from langflow.agentic.helpers.code_extraction import extract_python_code
+from langflow.agentic.helpers.code_extraction import extract_component_code
 from langflow.agentic.helpers.error_handling import extract_friendly_error
 from langflow.agentic.helpers.sse import (
     format_complete_event,
@@ -24,6 +25,22 @@ from langflow.agentic.services.flow_executor import (
 MAX_VALIDATION_RETRIES = 3
 VALIDATION_UI_DELAY_SECONDS = 0.3
 LANGFLOW_ASSISTANT_FLOW = "LangflowAssistant.json"
+
+# Patterns that indicate user wants to generate a component
+COMPONENT_GENERATION_PATTERNS = [
+    r"\b(generate|create|make|build|write)\b.{0,30}\b(component|custom component)\b",
+    r"\b(component|custom component)\b.{0,30}\b(that|which|to|for|with)\b",
+    r"\bcreate\s+(a|an|the)\s+\w+\s+component\b",
+    r"\bgenerate\s+(a|an|the)\s+\w+\s+component\b",
+    r"\bbuild\s+(a|an|the)\s+\w+\s+component\b",
+    r"\bmake\s+(a|an|the)\s+\w+\s+component\b",
+]
+
+
+def _looks_like_component_request(text: str) -> bool:
+    """Check if user input looks like a request to generate a component."""
+    text_lower = text.lower()
+    return any(re.search(pattern, text_lower) for pattern in COMPONENT_GENERATION_PATTERNS)
 
 VALIDATION_RETRY_TEMPLATE = """The previous component code has an error. Please fix it.
 
@@ -76,7 +93,7 @@ async def execute_flow_with_validation(
         )
 
         response_text = extract_response_text(result)
-        code = extract_python_code(response_text)
+        code = extract_component_code(response_text)
 
         if not code:
             logger.debug("No Python code found in response, returning as-is")
@@ -133,28 +150,32 @@ async def execute_flow_with_validation_streaming(
     """Execute flow with validation, yielding SSE progress and token events.
 
     SSE Event Flow:
-        1. generating (attempt X/Y) - LLM is generating response
-        1a. token events - Real-time token streaming from LLM
-        2. generation_complete - LLM finished generating
-        3. extracting_code - Extracting Python code from response (if any)
-        4. validating - Validating component code with create_class()
-        5a. validated - Validation succeeded → complete event
-        5b. validation_failed - Validation failed
-        6. retrying - About to retry with error context → back to step 1
+        For component generation (detected from user input):
+            1. generating_component - Show reasoning UI (no token streaming)
+            2. extracting_code, validating, etc.
 
-    Note: Steps 3-6 only occur if the response contains Python code.
-    For Q&A responses without code, only steps 1-2 are shown.
+        For Q&A:
+            1. generating - LLM is generating response
+            1a. token events - Real-time token streaming
+            2. complete - Done
+
+    Note: Component generation is detected by analyzing the user's input.
     """
     current_input = input_value
-    total_attempts = max_retries + 1
 
-    for attempt in range(1, total_attempts + 1):
-        # Step 1: Generating
+    # Detect if this looks like a component generation request
+    is_component_request = _looks_like_component_request(input_value)
+
+    # First attempt (attempt=0) doesn't count as retry
+    # Retries are attempt 1, 2, 3... up to max_retries
+    for attempt in range(0, max_retries + 1):  # 0 = first try, 1..max_retries = retries
+        # Step 1: Generating (different step name based on intent)
+        step_name = "generating_component" if is_component_request else "generating"
         yield format_progress_event(
-            "generating",
-            attempt,
-            total_attempts,
-            message=f"Generating response (attempt {attempt}/{total_attempts})...",
+            step_name,
+            attempt,  # 0 for first try, 1+ for retries
+            max_retries,  # max retries (not counting first try)
+            message=f"Generating response...",
         )
 
         result = None
@@ -172,8 +193,9 @@ async def execute_flow_with_validation_streaming(
                 api_key_var=api_key_var,
             ):
                 if event_type == "token":
-                    # Yield token events for real-time streaming
-                    yield format_token_event(event_data)
+                    # Only stream tokens for Q&A, not for component generation
+                    if not is_component_request:
+                        yield format_token_event(event_data)
                 elif event_type == "end":
                     # Flow completed, store result
                     result = event_data
@@ -197,32 +219,33 @@ async def execute_flow_with_validation_streaming(
         yield format_progress_event(
             "generation_complete",
             attempt,
-            total_attempts,
+            max_retries,
             message="Response ready",
         )
 
-        # Step 3: Extracting code
+        # Check if response contains code before showing extraction step
+        response_text = extract_response_text(result)
+        code = extract_component_code(response_text)
+
+        if not code:
+            # No code found, return as plain text response (Q&A mode)
+            yield format_complete_event(result)
+            return
+
+        # Step 3: Extracting code (only shown when code is found)
         yield format_progress_event(
             "extracting_code",
             attempt,
-            total_attempts,
+            max_retries,
             message="Extracting Python code from response...",
         )
         await asyncio.sleep(VALIDATION_UI_DELAY_SECONDS)
-
-        response_text = extract_response_text(result)
-        code = extract_python_code(response_text)
-
-        if not code:
-            # No code found, return as plain text response
-            yield format_complete_event(result)
-            return
 
         # Step 4: Validating
         yield format_progress_event(
             "validating",
             attempt,
-            total_attempts,
+            max_retries,
             message="Validating component code...",
         )
         await asyncio.sleep(VALIDATION_UI_DELAY_SECONDS)
@@ -235,7 +258,7 @@ async def execute_flow_with_validation_streaming(
             yield format_progress_event(
                 "validated",
                 attempt,
-                total_attempts,
+                max_retries,
                 message=f"Component '{validation.class_name}' validated successfully!",
             )
             await asyncio.sleep(VALIDATION_UI_DELAY_SECONDS)
@@ -256,7 +279,7 @@ async def execute_flow_with_validation_streaming(
         yield format_progress_event(
             "validation_failed",
             attempt,
-            total_attempts,
+            max_retries,
             message="Validation failed",
             error=validation.error,
             class_name=validation.class_name,
@@ -264,7 +287,7 @@ async def execute_flow_with_validation_streaming(
         )
         await asyncio.sleep(VALIDATION_UI_DELAY_SECONDS)
 
-        if attempt >= total_attempts:
+        if attempt >= max_retries:
             # Max attempts reached, return with error
             yield format_complete_event(
                 {
@@ -281,8 +304,8 @@ async def execute_flow_with_validation_streaming(
         yield format_progress_event(
             "retrying",
             attempt,
-            total_attempts,
-            message=f"Retrying with error context (attempt {attempt + 1}/{total_attempts})...",
+            max_retries,
+            message=f"Retrying with error context (attempt {attempt + 1}/{max_retries})...",
             error=validation.error,
         )
         await asyncio.sleep(VALIDATION_UI_DELAY_SECONDS)

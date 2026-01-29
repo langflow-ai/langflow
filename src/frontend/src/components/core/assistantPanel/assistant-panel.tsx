@@ -1,18 +1,56 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
+import {
+  postAssistStream,
+  type AgenticStepType,
+} from "@/controllers/API/queries/agentic";
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
+import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
+import { useAddComponent } from "@/hooks/use-add-component";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import type { APIClassType } from "@/types/api";
 import { cn } from "@/utils/utils";
-import type { AssistantMessage, AssistantModel, AssistantPanelProps } from "./assistant-panel.types";
+import type {
+  AssistantMessage,
+  AssistantModel,
+  AssistantPanelProps,
+} from "./assistant-panel.types";
 import { AssistantEmptyState } from "./components/assistant-empty-state";
 import { AssistantHeader } from "./components/assistant-header";
 import { AssistantInput } from "./components/assistant-input";
 import { AssistantMessageItem } from "./components/assistant-message";
 import { AssistantNoModelsState } from "./components/assistant-no-models-state";
 
+interface AssistantInputWithScrollProps {
+  onSend: (content: string, model: AssistantModel | null) => void;
+  disabled: boolean;
+}
+
+function AssistantInputWithScroll({
+  onSend,
+  disabled,
+}: AssistantInputWithScrollProps) {
+  const { scrollToBottom } = useStickToBottomContext();
+
+  const handleSend = (content: string, model: AssistantModel | null) => {
+    scrollToBottom({ animation: "smooth", duration: 300 });
+    onSend(content, model);
+  };
+
+  return <AssistantInput onSend={handleSend} disabled={disabled} />;
+}
+
 export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
   const [messages, setMessages] = useState<AssistantMessage[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
   const { data: providersData = [] } = useGetModelProviders({});
   const { data: enabledModelsData } = useGetEnabledModels();
+  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  const addComponent = useAddComponent();
+  const { mutateAsync: validateComponent } = usePostValidateComponentCode();
 
   // Check if there are any enabled models available
   const hasEnabledModels = useMemo(() => {
@@ -29,22 +67,172 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
     });
   }, [providersData, enabledModelsData]);
 
-  const handleSend = (content: string, _model: AssistantModel | null) => {
-    const userMessage: AssistantMessage = {
-      id: crypto.randomUUID(),
-      role: "user",
-      content,
-      timestamp: new Date(),
-    };
-    setMessages((prev) => [...prev, userMessage]);
-  };
+  const handleSend = useCallback(
+    async (content: string, model: AssistantModel | null) => {
+      if (isProcessing) return;
+
+      // Add user message
+      const userMessage: AssistantMessage = {
+        id: crypto.randomUUID(),
+        role: "user",
+        content,
+        timestamp: new Date(),
+        status: "complete",
+      };
+
+      // Add assistant message placeholder
+      const assistantMessageId = crypto.randomUUID();
+      const assistantMessage: AssistantMessage = {
+        id: assistantMessageId,
+        role: "assistant",
+        content: "",
+        timestamp: new Date(),
+        status: "streaming",
+      };
+
+      setMessages((prev) => [...prev, userMessage, assistantMessage]);
+      setIsProcessing(true);
+
+      // Create abort controller for cancellation
+      abortControllerRef.current = new AbortController();
+
+      const completedSteps: AgenticStepType[] = [];
+
+      try {
+        await postAssistStream(
+          {
+            flow_id: currentFlowId || "",
+            input_value: content,
+            provider: model?.provider,
+            model_name: model?.name,
+          },
+          {
+            onProgress: (event) => {
+              // Track completed steps
+              if (event.step !== completedSteps[completedSteps.length - 1]) {
+                if (completedSteps.length > 0) {
+                  completedSteps.push(completedSteps[completedSteps.length - 1]);
+                }
+              }
+
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === assistantMessageId
+                    ? {
+                        ...msg,
+                        progress: {
+                          step: event.step,
+                          attempt: event.attempt,
+                          maxAttempts: event.max_attempts,
+                        },
+                        completedSteps: [...completedSteps],
+                      }
+                    : msg,
+                ),
+              );
+            },
+            onToken: (event) => {
+              // Append token chunk to message content for real-time streaming
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === assistantMessageId
+                    ? {
+                        ...msg,
+                        content: msg.content + event.chunk,
+                      }
+                    : msg,
+                ),
+              );
+            },
+            onComplete: (event) => {
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === assistantMessageId
+                    ? {
+                        ...msg,
+                        status: "complete",
+                        content: event.data.result || "",
+                        result: {
+                          content: event.data.result || "",
+                          validated: event.data.validated,
+                          className: event.data.class_name,
+                          componentCode: event.data.component_code,
+                          validationAttempts: event.data.validation_attempts,
+                          validationError: event.data.validation_error,
+                        },
+                      }
+                    : msg,
+                ),
+              );
+              setIsProcessing(false);
+            },
+            onError: (event) => {
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === assistantMessageId
+                    ? {
+                        ...msg,
+                        status: "error",
+                        error: event.message,
+                      }
+                    : msg,
+                ),
+              );
+              setIsProcessing(false);
+            },
+          },
+          abortControllerRef.current.signal,
+        );
+      } catch (error) {
+        if ((error as Error).name !== "AbortError") {
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === assistantMessageId
+                ? {
+                    ...msg,
+                    status: "error",
+                    error: "Failed to connect to assistant",
+                  }
+                : msg,
+            ),
+          );
+        }
+        setIsProcessing(false);
+      }
+    },
+    [isProcessing, currentFlowId],
+  );
+
+  const handleApprove = useCallback(
+    async (messageId: string) => {
+      const message = messages.find((m) => m.id === messageId);
+      if (!message?.result?.componentCode) return;
+
+      try {
+        const response = await validateComponent({
+          code: message.result.componentCode,
+          frontend_node: {} as APIClassType,
+        });
+
+        if (response.data) {
+          addComponent(response.data, response.type || "CustomComponent");
+        }
+      } catch {
+        // Error is already visible to user via component validation UI
+      }
+    },
+    [messages, validateComponent, addComponent],
+  );
 
   const handleSuggestionClick = (suggestion: string) => {
     handleSend(suggestion, null);
   };
 
   const handleClearHistory = () => {
+    // Cancel any ongoing request
+    abortControllerRef.current?.abort();
     setMessages([]);
+    setIsProcessing(false);
   };
 
   const hasMessages = messages.length > 0;
@@ -77,25 +265,46 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
       </div>
       {/* Content */}
       <div className="relative z-10 flex h-full flex-col">
-        <AssistantHeader onClose={onClose} onClearHistory={handleClearHistory} />
-        <div className="flex flex-1 flex-col overflow-hidden">
-          {!hasEnabledModels ? (
-            <AssistantNoModelsState />
-          ) : hasMessages ? (
-            <div className="flex-1 overflow-y-auto px-4 py-6">
-              {messages.map((msg) => (
-                <AssistantMessageItem key={msg.id} message={msg} />
-              ))}
+        <AssistantHeader onClose={onClose} onClearHistory={handleClearHistory} disabled={isProcessing} />
+        {!hasEnabledModels ? (
+          <>
+            <div className="flex flex-1 flex-col overflow-hidden">
+              <AssistantNoModelsState />
             </div>
-          ) : (
-            <AssistantEmptyState onSuggestionClick={handleSuggestionClick} />
-          )}
-        </div>
-        <AssistantInput
-          onSend={handleSend}
-          disabled={!hasEnabledModels}
-          placeholder={!hasEnabledModels ? "Configure Model Providers..." : undefined}
-        />
+            <AssistantInput
+              onSend={handleSend}
+              disabled={true}
+              placeholder="Configure Model Providers..."
+            />
+          </>
+        ) : hasMessages ? (
+          <StickToBottom
+            className="flex flex-1 flex-col overflow-hidden"
+            resize="smooth"
+            initial="instant"
+          >
+            <StickToBottom.Content className="flex-1 px-4 py-6">
+              {messages.map((msg) => (
+                <AssistantMessageItem
+                  key={msg.id}
+                  message={msg}
+                  onApprove={handleApprove}
+                />
+              ))}
+            </StickToBottom.Content>
+            <AssistantInputWithScroll
+              onSend={handleSend}
+              disabled={isProcessing}
+            />
+          </StickToBottom>
+        ) : (
+          <>
+            <div className="flex flex-1 flex-col overflow-hidden">
+              <AssistantEmptyState onSuggestionClick={handleSuggestionClick} />
+            </div>
+            <AssistantInput onSend={handleSend} disabled={false} />
+          </>
+        )}
       </div>
     </div>
   );

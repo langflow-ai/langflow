@@ -11,23 +11,26 @@ import { ASSISTANT_TITLE } from "../assistant-panel.constants";
 interface AssistantHeaderProps {
   onClose: () => void;
   onClearHistory: () => void;
+  disabled?: boolean;
 }
 
 export function AssistantHeader({
   onClose,
   onClearHistory,
+  disabled = false,
 }: AssistantHeaderProps) {
   return (
     <div className="flex h-12 items-center justify-between px-4">
       <h2 className="text-sm font-medium text-foreground">{ASSISTANT_TITLE}</h2>
       <div className="flex items-center gap-1">
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
+          <DropdownMenuTrigger asChild disabled={disabled}>
             <Button
               variant="ghost"
               size="icon"
               className="h-8 w-8"
               title="Options"
+              disabled={disabled}
             >
               <ForwardedIconComponent
                 name="MoreVertical"
