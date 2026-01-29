@@ -3,6 +3,7 @@
 from collections import deque
 from typing import TYPE_CHECKING
 
+from lfx.log.logger import logger
 from lfx.schema.data import Data
 
 if TYPE_CHECKING:
@@ -244,6 +245,11 @@ async def execute_loop_body(
             # Use set() with the target parameter as a keyword argument
             if hasattr(start_vertex, "custom_component") and start_vertex.custom_component:
                 start_vertex.custom_component.set(**{target_param: item})
+            else:
+                logger.warning(
+                    f"Cannot inject loop item into vertex '{start_vertex_id}': "
+                    "vertex has no custom_component. Loop iteration may produce incorrect results."
+                )
 
         # Execute subgraph and collect results
         # Pass event_manager so UI receives events from subgraph execution
