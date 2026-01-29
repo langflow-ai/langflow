@@ -11,6 +11,7 @@ import { track } from "@/customization/utils/analytics";
 import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
 import { LangflowButtonRedirectTarget } from "@/customization/utils/urls";
 import { useUtilityStore } from "@/stores/utilityStore";
+import { isFlowStartInMode } from "@/utils/reactflowUtils";
 import { swatchColors } from "@/utils/styleUtils";
 import LangflowLogoColor from "../../assets/LangflowLogoColor.svg?react";
 import IconComponent from "../../components/common/genericIconComponent";
@@ -60,8 +61,18 @@ export default function IOModal({
       flowName: state.currentFlow?.name,
     })),
   );
-  const filteredInputs = inputs.filter((input) => input.type !== "ChatInput");
-  const chatInput = inputs.find((input) => input.type === "ChatInput");
+  const filteredInputs = inputs.filter((input) => {
+    if (input.type === "ChatInput") return false;
+    const node = nodes.find((n) => n.id === input.id);
+    return !(node && isFlowStartInMode(node, "Chat"));
+  });
+
+  const chatInput = inputs.find((input) => {
+    if (input.type === "ChatInput") return true;
+    const node = nodes.find((n) => n.id === input.id);
+    return node && isFlowStartInMode(node, "Chat");
+  });
+
   const filteredOutputs = outputs.filter(
     (output) => output.type !== "ChatOutput",
   );

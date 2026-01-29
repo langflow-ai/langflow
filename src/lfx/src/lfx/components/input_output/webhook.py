@@ -10,6 +10,7 @@ class WebhookComponent(Component):
     documentation: str = "https://docs.langflow.org/component-webhook"
     name = "Webhook"
     icon = "webhook"
+    legacy = True
 
     inputs = [
         MultilineInput(

@@ -23,6 +23,7 @@ class ChatInput(ChatComponent):
     icon = "MessagesSquare"
     name = "ChatInput"
     minimized = True
+    legacy = True
 
     inputs = [
         MultilineInput(

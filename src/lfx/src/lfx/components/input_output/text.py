@@ -11,6 +11,7 @@ class TextInputComponent(TextComponent):
     documentation: str = "https://docs.langflow.org/text-input-and-output"
     icon = "type"
     name = "TextInput"
+    legacy = True
 
     inputs = [
         MultilineInput(
