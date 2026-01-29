@@ -149,7 +149,7 @@
                 "dependencies": [
                   {
                     "name": "apify_client",
-                    "version": "1.12.2"
+                    "version": "2.4.0"
                   },
                   {
                     "name": "langchain_community",
@@ -157,7 +157,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "0.3.81"
+                    "version": "0.3.83"
                   },
                   {
                     "name": "pydantic",
@@ -380,7 +380,7 @@
                 "dependencies": [
                   {
                     "name": "apify_client",
-                    "version": "1.12.2"
+                    "version": "2.4.0"
                   },
                   {
                     "name": "langchain_community",
@@ -388,7 +388,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "0.3.81"
+                    "version": "0.3.83"
                   },
                   {
                     "name": "pydantic",
@@ -1296,7 +1296,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "0.3.81"
+                    "version": "0.3.83"
                   }
                 ],
                 "total_dependencies": 3

@@ -70,21 +70,31 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # RUNTIME
 # Setup user, utilities and copy the virtual environment only
 ################################
-FROM python:3.12.3-slim AS runtime
+FROM python:3.12.12-slim-trixie AS runtime
+
 
 RUN apt-get update \
     && apt-get upgrade -y \
-    && apt-get install -y curl git libpq5 gnupg \
-    && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
-    && apt-get install -y nodejs \
+    && apt-get install --no-install-recommends -y curl git libpq5 gnupg xz-utils \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* \
-    && useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data
+    && rm -rf /var/lib/apt/lists/*
+RUN ARCH=$(dpkg --print-architecture) \
+    && if [ "$ARCH" = "amd64" ]; then NODE_ARCH="x64"; \
+       elif [ "$ARCH" = "arm64" ]; then NODE_ARCH="arm64"; \
+       else NODE_ARCH="$ARCH"; fi \
+    && NODE_VERSION=$(curl -fsSL https://nodejs.org/dist/latest-v22.x/ \
+                    | grep -oP "node-v\K[0-9]+\.[0-9]+\.[0-9]+(?=-linux-${NODE_ARCH}\.tar\.xz)" \
+                    | head -1) \
+    && curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${NODE_ARCH}.tar.xz" \
+    | tar -xJ -C /usr/local --strip-components=1 \
+    && npm install -g npm@latest \
+    && npm cache clean --force
+RUN useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data
 
 COPY --from=builder --chown=1000 /app/.venv /app/.venv
-
-# Place executables in the environment at the front of the path
 ENV PATH="/app/.venv/bin:$PATH"
+RUN /app/.venv/bin/pip install --upgrade playwright \
+    && /app/.venv/bin/playwright install
 
 LABEL org.opencontainers.image.title=langflow
 LABEL org.opencontainers.image.authors=['Langflow']

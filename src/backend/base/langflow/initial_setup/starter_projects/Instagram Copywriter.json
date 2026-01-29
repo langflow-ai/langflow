@@ -2117,7 +2117,7 @@
             "last_updated": "2025-12-11T21:41:48.407Z",
             "legacy": false,
             "metadata": {
-              "code_hash": "ad0729b10bbf",
+              "code_hash": "bdc309bc2d2a",
               "dependencies": {
                 "dependencies": [
                   {
@@ -2130,7 +2130,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "0.3.81"
+                    "version": "0.3.83"
                   }
                 ],
                 "total_dependencies": 3
