@@ -122,13 +122,7 @@ export default function NodeInputField({
     />
   );
 
-  return !showNode ? (
-    displayHandle && isPrimaryInput ? (
-      Handle
-    ) : (
-      <></>
-    )
-  ) : (
+  return (
     <div
       ref={ref}
       className={cn(
@@ -138,9 +132,11 @@ export default function NodeInputField({
         (name === "code" && type === "code") || (name.includes("code") && proxy)
           ? "hidden"
           : "",
+        // Hide the entire field if showNode is false (but still render it for hooks to execute)
+        !showNode && "hidden",
       )}
     >
-      {displayHandle && Handle}
+      {displayHandle && showNode && Handle}
       <div
         className={cn(
           "flex w-full flex-col gap-2",
@@ -210,7 +206,7 @@ export default function NodeInputField({
           />
         </div>
 
-        {(!ENABLE_INSPECTION_PANEL || !optionalHandle) &&
+        {(!ENABLE_INSPECTION_PANEL || !optionalHandle || !showNode) &&
           data.node?.template[name] !== undefined && (
             <CustomParameterComponent
               handleOnNewValue={handleOnNewValue}
