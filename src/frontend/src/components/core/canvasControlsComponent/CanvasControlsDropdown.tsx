@@ -95,7 +95,7 @@ const CanvasControlsDropdown = () => {
             <IconComponent
               name={isOpen ? "ChevronDown" : "ChevronUp"}
               aria-hidden="true"
-              className="text-muted-foreground group-hover:text-primary !h-5 !w-5"
+              className="text-muted-foreground !h-5 !w-5"
             />
           </div>
         </Button>
