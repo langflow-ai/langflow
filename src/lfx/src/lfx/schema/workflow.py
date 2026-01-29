@@ -31,7 +31,6 @@ class ComponentOutput(BaseModel):
     """Component output schema."""
 
     type: str = Field(..., description="Type of the component output (e.g., 'message', 'data', 'tool', 'text')")
-    component_id: str
     status: JobStatus
     content: Any | None = None
     metadata: dict[str, Any] | None = None
@@ -102,7 +101,6 @@ class WorkflowExecutionResponse(BaseModel):
     errors: list[ErrorDetail] = []
     inputs: dict[str, Any] = {}
     outputs: dict[str, ComponentOutput] = {}
-    metadata: dict[str, Any] = {}
 
 
 class WorkflowJobResponse(BaseModel):
