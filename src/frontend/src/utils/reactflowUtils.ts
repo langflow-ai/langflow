@@ -30,6 +30,7 @@ import {
 import { INCOMPLETE_LOOP_ERROR_ALERT } from "@/constants/alerts_constants";
 import { customDownloadNodeJson } from "@/customization/utils/custom-download-json";
 import { customDownloadFlow } from "@/customization/utils/custom-reactFlowUtils";
+import { useCoercionStore, COERCIBLE_TYPES } from "@/stores/coercionStore";
 import useFlowStore from "@/stores/flowStore";
 import getFieldTitle from "../CustomNodes/utils/get-field-title";
 import {
@@ -353,6 +354,20 @@ export function isValidConnection(
   // Check if target is an loop input (loop component)
   const isLoopInput = !!targetHandleObject.output_types;
 
+  // AUTO-COERCION CHECK: Allow connection if auto-coercion is enabled
+  // and both source and target types are coercible (Data, Message, DataFrame)
+  const coercionSettings = useCoercionStore.getState().coercionSettings;
+  const sourceTypes = sourceHandleObject.output_types || [];
+  const targetTypes = targetHandleObject.inputTypes || [];
+  const sourceHasCoercible = sourceTypes.some((t) =>
+    COERCIBLE_TYPES.includes(t),
+  );
+  const targetHasCoercible = targetTypes.some((t) =>
+    COERCIBLE_TYPES.includes(t),
+  );
+  const isCoercionAllowed =
+    coercionSettings.enabled && sourceHasCoercible && targetHasCoercible;
+
   // For loop inputs, check if source types match any of the configured target output_types
   // (which already includes original type + loop_types from the output configuration)
   const loopInputTypeCheck =
@@ -362,6 +377,7 @@ export function isValidConnection(
     ) ||
       targetHandleObject.output_types?.includes(sourceHandleObject.dataType));
   if (
+    isCoercionAllowed ||
     targetHandleObject.inputTypes?.some(
       (n) => n === sourceHandleObject.dataType,
     ) ||

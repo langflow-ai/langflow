@@ -1,9 +1,14 @@
 import { type Connection, Handle, Position } from "@xyflow/react";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
+import { useCoercionStore } from "@/stores/coercionStore";
 import { useDarkStore } from "@/stores/darkStore";
 import useFlowStore from "@/stores/flowStore";
-import { nodeColorsName } from "@/utils/styleUtils";
+import {
+  nodeColorsName,
+  COERCION_UNIFIED_COLOR_NAME,
+  hasCoercibleColor,
+} from "@/utils/styleUtils";
 import ShadTooltip from "../../../../components/common/shadTooltipComponent";
 import {
   isValidConnection,
@@ -209,6 +214,11 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
 
   const dark = useDarkStore((state) => state.dark);
 
+  // Subscribe to coercion settings for reactive color updates
+  const autoCoercionEnabled = useCoercionStore(
+    (state) => state.coercionSettings.enabled,
+  );
+
   const myId = useMemo(
     () => scapedJSONStringfy(proxy ? { ...id, proxy } : id),
     [id, proxy],
@@ -274,7 +284,16 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
       (edge) => edge.target === nodeId && edge.targetHandle === myId,
     );
     const outputType = connectedEdge?.data?.sourceHandle?.output_types?.[0];
-    const connectedColor = (outputType && nodeColorsName[outputType]) || "gray";
+
+    // AUTO-COERCION: Check if coercion is enabled and colors are for coercible types
+    // colorName contains color names (red, indigo, pink), not type names (Data, Message, DataFrame)
+    const typesAreCoercible = colorName ? hasCoercibleColor(colorName) : false;
+    const useCoercionColor = autoCoercionEnabled && typesAreCoercible;
+
+    // When coercion is enabled, use unified violet color for coercible types
+    const connectedColor = useCoercionColor
+      ? COERCION_UNIFIED_COLOR_NAME
+      : (outputType && nodeColorsName[outputType]) || "gray";
 
     const isNullHandle =
       filterPresent && !(openHandle || ownDraggingHandle || ownFilterHandle);
@@ -287,9 +306,11 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
 
     const handleColorName = connectedEdge
       ? connectedColor
-      : uniqueColorCount > 1
-        ? "secondary-foreground"
-        : "datatype-" + firstUniqueColor;
+      : useCoercionColor
+        ? "datatype-" + COERCION_UNIFIED_COLOR_NAME
+        : uniqueColorCount > 1
+          ? "secondary-foreground"
+          : "datatype-" + firstUniqueColor;
 
     const handleColor = isNullHandle
       ? dark
@@ -297,15 +318,19 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
         : "hsl(var(--accent-gray-foreground)"
       : connectedEdge
         ? "hsl(var(--datatype-" + connectedColor + "))"
-        : uniqueColorCount > 1
-          ? "hsl(var(--secondary-foreground))"
-          : "hsl(var(--datatype-" + firstUniqueColor + "))";
+        : useCoercionColor
+          ? "hsl(var(--datatype-" + COERCION_UNIFIED_COLOR_NAME + "))"
+          : uniqueColorCount > 1
+            ? "hsl(var(--secondary-foreground))"
+            : "hsl(var(--datatype-" + firstUniqueColor + "))";
 
     const accentForegroundColorName = connectedEdge
       ? "hsl(var(--datatype-" + connectedColor + "-foreground))"
-      : uniqueColorCount > 1
-        ? "hsl(var(--input))"
-        : "hsl(var(--datatype-" + firstUniqueColor + "-foreground))";
+      : useCoercionColor
+        ? "hsl(var(--datatype-" + COERCION_UNIFIED_COLOR_NAME + "-foreground))"
+        : uniqueColorCount > 1
+          ? "hsl(var(--input))"
+          : "hsl(var(--datatype-" + firstUniqueColor + "-foreground))";
 
     const currentFilter = left
       ? {
@@ -347,6 +372,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
     colorName,
     tooltipTitle,
     edges,
+    autoCoercionEnabled,
   ]);
 
   const handleMouseDown = useCallback(

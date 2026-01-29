@@ -7,6 +7,7 @@ import {
   POLLING_MESSAGES,
 } from "@/constants/constants";
 import { performStreamingRequest } from "@/controllers/API/api";
+import { useCoercionStore } from "@/stores/coercionStore";
 import {
   customBuildUrl,
   customCancelBuildUrl,
@@ -257,6 +258,15 @@ export async function buildFlowVertices({
   inputs["client_request_time"] = Date.now();
   if (Object.keys(inputs).length > 0) {
     postData["inputs"] = inputs;
+  }
+
+  // Add coercion settings if enabled
+  const coercionSettings = useCoercionStore.getState().coercionSettings;
+  if (coercionSettings.enabled) {
+    postData["coercion_settings"] = {
+      enabled: coercionSettings.enabled,
+      auto_parse: coercionSettings.autoParse,
+    };
   }
 
   try {
