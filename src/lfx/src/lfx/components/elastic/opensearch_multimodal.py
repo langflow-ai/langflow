@@ -517,6 +517,11 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         This allows adding new embedding models without recreating the entire index.
         Also ensures the embedding_model tracking field exists.
 
+        Note: Some OpenSearch versions/configurations have issues with dynamically adding
+        knn_vector mappings (NullPointerException). This method checks if the field
+        already exists before attempting to add it, and gracefully skips if the field
+        is already properly configured.
+
         Args:
             client: OpenSearch client instance
             index_name: Target index name
@@ -527,7 +532,24 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
             ef_construction: Construction parameter
             m: HNSW parameter
         """
-        logger.info(f"[OpenSearchMultimodal] Ensuring embedding field mapping for {field_name}")
+        # First, check if the field already exists and is properly mapped
+        properties = self._get_index_properties(client)
+        if self._is_knn_vector_field(properties, field_name):
+            # Field already exists as knn_vector - verify dimensions match
+            existing_dim = self._get_field_dimension(properties, field_name)
+            if existing_dim is not None and existing_dim != dim:
+                logger.warning(
+                    f"Field '{field_name}' exists with dimension {existing_dim}, "
+                    f"but current embedding has dimension {dim}. Using existing mapping."
+                )
+            else:
+                logger.info(
+                    f"[OpenSearchMultimodal] Field '{field_name}' already exists"
+                    f"as knn_vector with matching dimensions - skipping mapping update"
+                )
+            return
+
+        # Field doesn't exist, try to add the mapping
         try:
             mapping = {
                 "properties": {
@@ -547,17 +569,27 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
                 }
             }
             client.indices.put_mapping(index=index_name, body=mapping)
-            logger.info(f"[OpenSearchMultimodal] Added/updated embedding field mapping: {field_name}")
+            logger.info(f"Added/updated embedding field mapping: {field_name}")
         except Exception as e:
-            logger.error(f"[OpenSearchMultimodal] Could not add embedding field mapping for {field_name}: {e}")
+            # Check if this is the known OpenSearch k-NN NullPointerException issue
+            error_str = str(e).lower()
+            if "null" in error_str or "nullpointerexception" in error_str:
+                logger.warning(
+                    f"[OpenSearchMultimodal] Could not add embedding field mapping for {field_name}"
+                    f"due to OpenSearch k-NN plugin issue: {e}. "
+                    f"This is a known issue with some OpenSearch versions. "
+                    f"[OpenSearchMultimodal] Skipping mapping update. "
+                    f"Please ensure the index has the correct mapping for KNN search to work."
+                )
+                # Skip and continue - ingestion will proceed, but KNN search may fail if mapping doesn't exist
+                return
+            logger.warning(f"[OpenSearchMultimodal] Could not add embedding field mapping for {field_name}: {e}")
             raise
 
+        # Verify the field was added correctly
         properties = self._get_index_properties(client)
         if not self._is_knn_vector_field(properties, field_name):
-            msg = (
-                f"[OpenSearchMultimodal] Field '{field_name}' is not mapped as knn_vector. "
-                f"Current mapping: {properties.get(field_name)}"
-            )
+            msg = f"Field '{field_name}' is not mapped as knn_vector. Current mapping: {properties.get(field_name)}"
             logger.error(msg)
             raise ValueError(msg)
 
