@@ -20,7 +20,8 @@ export default function IntComponent({
   editNode = false,
   id = "",
   readonly,
-}: InputProps<number, IntComponentType>): JSX.Element {
+  showParameter = true,
+}: InputProps<number, IntComponentType>): JSX.Element | null {
   const min = -Infinity;
   // Clear component state
   useEffect(() => {
@@ -82,6 +83,10 @@ export default function IntComponent({
   const decrementStepperClassName =
     " hover:rounded-br-[5px] hover:bg-muted group-decrement";
   const inputRef = useRef(null);
+
+  if (!showParameter) {
+    return null;
+  }
 
   return (
     <div className="w-full">

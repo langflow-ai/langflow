@@ -56,7 +56,8 @@ export default function ModelInputComponent({
   nodeClass,
   handleNodeClass,
   externalOptions,
-}: BaseInputProps<any> & ModelInputComponentType): JSX.Element {
+  showParameter = true,
+}: BaseInputProps<any> & ModelInputComponentType): JSX.Element | null {
   const { setErrorData } = useAlertStore();
   const refButton = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
@@ -543,6 +544,10 @@ export default function ModelInputComponent({
       </Command>
     </PopoverContentWithoutPortal>
   );
+
+  if (!showParameter) {
+    return null;
+  }
 
   // Loading state
   if (!options || options.length === 0 || refreshOptions) {

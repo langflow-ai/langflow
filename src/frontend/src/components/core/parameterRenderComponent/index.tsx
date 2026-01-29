@@ -35,6 +35,7 @@ export function ParameterRenderComponent({
   templateData,
   templateValue,
   editNode,
+  showParameter,
   handleNodeClass,
   nodeClass,
   disabled,
@@ -50,6 +51,7 @@ export function ParameterRenderComponent({
   templateData: Partial<InputFieldType>;
   templateValue: any;
   editNode: boolean;
+  showParameter: boolean;
   handleNodeClass: (value: any, code?: string, type?: string) => void;
   nodeClass: APIClassType;
   disabled: boolean;
@@ -81,6 +83,7 @@ export function ParameterRenderComponent({
       isToolMode,
       nodeInformationMetadata,
       hasRefreshButton: templateData.refresh_button,
+      showParameter,
     };
 
     if (TEXT_FIELD_TYPES.includes(templateData.type ?? "")) {

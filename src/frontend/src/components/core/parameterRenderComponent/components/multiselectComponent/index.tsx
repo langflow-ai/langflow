@@ -27,7 +27,8 @@ export default function MultiselectComponent({
   combobox,
   editNode = false,
   id = "",
-}: InputProps<string[], MultiselectComponentType>): JSX.Element {
+  showParameter = true,
+}: InputProps<string[], MultiselectComponentType>): JSX.Element | null {
   const [open, setOpen] = useState(false);
   const treatedValue = typeof value === "string" ? [value] : value;
 
@@ -191,6 +192,10 @@ export default function MultiselectComponent({
       </CommandGroup>
     </CommandList>
   );
+
+  if (!showParameter) {
+    return null;
+  }
 
   if (Object.keys(options).length === 0 && !combobox) {
     return (
