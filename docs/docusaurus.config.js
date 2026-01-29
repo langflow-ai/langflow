@@ -446,6 +446,19 @@ const config = {
             'data-namespace': 'header',
             'data-platform-title': 'Langflow'
           },
+          {
+            position: "right",
+            href: "https://langflow.help/",
+            className: "header-help-link",
+            target: "_blank",
+            rel: null,
+            'data-event': 'UI Interaction',
+            'data-action': 'clicked',
+            'data-channel': 'docs',
+            'data-element-id': 'help-center',
+            'data-namespace': 'header',
+            'data-platform-title': 'Langflow'
+          },
         ],
       },
       colorMode: {
