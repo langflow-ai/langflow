@@ -33,6 +33,7 @@ const UploadFileButton = ({
           ref={fileInputRef}
           style={{ display: "none" }}
           onChange={handleFileChange}
+          accept=".png,.jpg,.jpeg,image/png,image/jpeg"
         />
         <Button
           disabled={isBuilding}
