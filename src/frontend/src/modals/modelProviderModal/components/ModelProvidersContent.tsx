@@ -300,39 +300,39 @@ const ModelProvidersContent = ({ modelType }: ModelProvidersContentProps) => {
             <>
               <div
                 className={cn(
-                  "flex flex-col gap-0 transition-all duration-300 ease-in-out relative",
+                  "flex flex-col gap-3 transition-all duration-300 ease-in-out relative",
                   showReplaceWarning
                     ? "opacity-0 pointer-events-none"
                     : "opacity-100",
                 )}
               >
-                <div className="flex flex-row gap-1 min-w-[300px]">
-                  <span className="text-[13px] font-semibold mr-auto">
+                <div className="flex flex-col gap-1">
+                  <span className="text-sm font-semibold">
                     {selectedProvider?.provider || "Unknown Provider"}
                     {requiresApiKey && " API Key"}
                     {requiresApiKey && (
                       <span className="text-red-500 ml-1">*</span>
                     )}
                   </span>
+                  <span className="text-sm text-muted-foreground">
+                    Add your{" "}
+                    <span
+                      className="underline cursor-pointer hover:text-primary"
+                      onClick={() => {
+                        if (selectedProvider?.api_docs_url) {
+                          window.open(
+                            selectedProvider.api_docs_url,
+                            "_blank",
+                            "noopener,noreferrer",
+                          );
+                        }
+                      }}
+                    >
+                      {selectedProvider?.provider} API key
+                    </span>{" "}
+                    to enable these models
+                  </span>
                 </div>
-                <span className="text-[13px] text-muted-foreground pt-1 pb-2">
-                  Add your{" "}
-                  <span
-                    className="underline cursor-pointer hover:text-primary"
-                    onClick={() => {
-                      if (selectedProvider?.api_docs_url) {
-                        window.open(
-                          selectedProvider.api_docs_url,
-                          "_blank",
-                          "noopener,noreferrer",
-                        );
-                      }
-                    }}
-                  >
-                    {selectedProvider?.provider} API key
-                  </span>{" "}
-                  to enable these models
-                </span>
                 <Input
                   ref={inputRef}
                   placeholder={"Enter API key"}
@@ -379,7 +379,7 @@ const ModelProvidersContent = ({ modelType }: ModelProvidersContentProps) => {
                       "text-green-500",
                   )}
                 />
-                <div className="justify-end flex gap-2 pt-3">
+                <div className="flex gap-2 justify-end">
                   {selectedProvider?.is_enabled && (
                     <Button
                       size="sm"
@@ -405,27 +405,27 @@ const ModelProvidersContent = ({ modelType }: ModelProvidersContentProps) => {
                 onCancel={() => setShowReplaceWarning(false)}
                 onConfirm={handleConfirmDisconnect}
                 isLoading={isDeleting}
-                className="absolute top-0 left-0"
+                className="absolute inset-0 m-4"
               />
             </>
           ) : (
             <>
               <div
                 className={cn(
-                  "flex flex-col gap-0 transition-all duration-300 ease-in-out relative",
+                  "flex flex-col gap-3 transition-all duration-300 ease-in-out relative",
                   showReplaceWarning
                     ? "opacity-0 pointer-events-none"
                     : "opacity-100",
                 )}
               >
-                <div className="flex flex-row gap-1 min-w-[300px]">
-                  <span className="text-[13px] font-semibold mr-auto">
+                <div className="flex flex-col gap-1">
+                  <span className="text-sm font-semibold">
                     {selectedProvider?.provider || "Unknown Provider"}
                   </span>
+                  <span className="text-sm text-muted-foreground">
+                    Activate {selectedProvider?.provider} to enable these models
+                  </span>
                 </div>
-                <span className="text-[13px] text-muted-foreground pt-1 pb-2">
-                  Activate {selectedProvider?.provider} to enable these models
-                </span>
                 <Input
                   disabled
                   value={"No key required"}
@@ -447,7 +447,7 @@ const ModelProvidersContent = ({ modelType }: ModelProvidersContentProps) => {
                       "text-green-500",
                   )}
                 />
-                <div className="justify-end flex gap-2 pt-3">
+                <div className="flex gap-2 justify-end">
                   {selectedProvider?.is_enabled && (
                     <Button
                       size="sm"
@@ -474,7 +474,7 @@ const ModelProvidersContent = ({ modelType }: ModelProvidersContentProps) => {
                 onCancel={() => setShowReplaceWarning(false)}
                 onConfirm={handleConfirmDisconnect}
                 isLoading={isDeleting}
-                className="absolute top-0 left-0"
+                className="absolute inset-0 m-4"
               />
             </>
           )}

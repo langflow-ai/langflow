@@ -21,13 +21,13 @@ const DisconnectWarning = ({
 }: DisconnectWarningProps) => (
   <div
     className={cn(
-      "border border-border border-destructive transition-all duration-300 ease-in-out ",
+      "border border-border border-destructive rounded-md transition-all h-fit duration-300 ease-in-out",
       show ? "opacity-100 p-4" : "opacity-0 pointer-events-none",
       className,
     )}
   >
-    <div className="flex flex-col h-full">
-      <div className="text-destructive flex items-center gap-1 pb-3 text-sm">
+    <div className="flex flex-col gap-2">
+      <div className="text-destructive flex items-center gap-1 text-sm">
         <ForwardedIconComponent
           name="Circle"
           className="text-destructive w-2 h-2 fill-destructive mr-1"
@@ -35,7 +35,7 @@ const DisconnectWarning = ({
         Warning
       </div>
 
-      <p className="flex flex-col text-sm pb-4">{message}</p>
+      <p className="flex flex-col text-sm ">{message}</p>
 
       <div className="flex gap-2 justify-end ">
         <Button size="sm" variant="ghost" onClick={onCancel}>
