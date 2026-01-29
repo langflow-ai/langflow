@@ -20,8 +20,6 @@ import {
   ICON_STROKE_WIDTH,
 } from "@/constants/constants";
 import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
-import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
-import useFetchDataOnMount from "@/CustomNodes/hooks/use-fetch-data-on-mount";
 import useHandleOnNewValue from "@/CustomNodes/hooks/use-handle-new-value";
 import NodeInputInfo from "@/CustomNodes/GenericNode/components/NodeInputInfo";
 
@@ -53,13 +51,6 @@ export default function InspectionPanelField({
     currentFlowName: state.currentFlow?.name,
   }));
 
-  const myData = useTypesStore((state) => state.data);
-  const postTemplateValue = usePostTemplateValue({
-    node: data.node!,
-    nodeId: data.id,
-    parameterId: name,
-  });
-
   const { handleNodeClass } = useHandleNodeClass(data.id);
 
   const { handleOnNewValue } = useHandleOnNewValue({
@@ -77,14 +68,6 @@ export default function InspectionPanelField({
       variableName: name,
     };
   }, [data?.node?.id, shouldDisplayApiKey, name]);
-
-  useFetchDataOnMount(
-    data.node!,
-    data.id,
-    handleNodeClass,
-    name,
-    postTemplateValue,
-  );
 
   const template = data.node?.template[name];
   const type = template?.type;
