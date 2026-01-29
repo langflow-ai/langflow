@@ -12,7 +12,6 @@ from sqlmodel import col, select
 from langflow.services.auth.utils import create_super_user, verify_password
 from langflow.services.cache.base import ExternalAsyncBaseCacheService
 from langflow.services.cache.factory import CacheServiceFactory
-from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
 from langflow.services.database.utils import initialize_database
 from langflow.services.schema import ServiceType
@@ -174,15 +173,14 @@ async def clean_transactions(settings_service: SettingsService, session: AsyncSe
         session: The database session to use for the deletion
     """
     try:
-        # Delete transactions using bulk delete
-        delete_stmt = delete(TransactionTable).where(
-            col(TransactionTable.id).in_(
-                select(TransactionTable.id)
-                .order_by(col(TransactionTable.timestamp).desc())
-                .offset(settings_service.settings.max_transactions_to_keep)
-            )
+        subquery = (
+            select(VertexBuildTable.id)
+            .order_by(col(VertexBuildTable.timestamp).desc())
+            .limit(settings_service.settings.max_vertex_builds_to_keep)
+            .subquery()
         )
 
+        delete_stmt = delete(VertexBuildTable).where(col(VertexBuildTable.id).in_(subquery))
         await session.exec(delete_stmt)
         logger.debug("Successfully cleaned up old transactions")
     except (sqlalchemy_exc.SQLAlchemyError, asyncio.TimeoutError) as exc:
@@ -201,14 +199,14 @@ async def clean_vertex_builds(settings_service: SettingsService, session: AsyncS
         session: The database session to use for the deletion
     """
     try:
-        # Delete vertex builds using bulk delete
-        delete_stmt = delete(VertexBuildTable).where(
-            col(VertexBuildTable.id).in_(
-                select(VertexBuildTable.id)
-                .order_by(col(VertexBuildTable.timestamp).desc())
-                .offset(settings_service.settings.max_vertex_builds_to_keep)
-            )
+        subquery = (
+            select(VertexBuildTable.id)
+            .order_by(col(VertexBuildTable.timestamp).desc())
+            .limit(settings_service.settings.max_vertex_builds_to_keep)
+            .subquery()
         )
+
+        delete_stmt = delete(VertexBuildTable).where(col(VertexBuildTable.id).in_(subquery))
 
         await session.exec(delete_stmt)
         logger.debug("Successfully cleaned up old vertex builds")
