@@ -454,7 +454,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
 
         # Verify get_llm was called
         mock_get_llm.assert_called_once()
-        
+
         # Access kwargs using the .kwargs attribute (more reliable than indexing)
         call_kwargs = mock_get_llm.call_args.kwargs
 
