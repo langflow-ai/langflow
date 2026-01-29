@@ -47,7 +47,7 @@ export default function SessionView({
     messageQueryParams,
     {
       enabled: !playgroundPage, // Only fetch if not in playground page
-    }
+    },
   );
 
   // Update messages store when data is fetched
