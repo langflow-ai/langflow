@@ -349,7 +349,6 @@ const SimpleSidebar = React.forwardRef<
   ) => {
     const { open, isResizing, fullscreen } = useSimpleSidebar();
 
-
     // Memoized animation values
     const spacerWidth = React.useMemo(() => {
       if (!open) return 0;
