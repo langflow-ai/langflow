@@ -48,9 +48,7 @@ export default function ThinkingMessage({
         )}
         <p className="m-0 w-full flex justify-between">
           <span>{isThinking ? "Running..." : "Finished in"}</span>
-          <span>
-            {formatTime(displayTime)}
-          </span>
+          <span>{formatTime(displayTime)}</span>
         </p>
       </div>
     </div>

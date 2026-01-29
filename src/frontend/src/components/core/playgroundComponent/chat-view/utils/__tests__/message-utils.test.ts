@@ -1,9 +1,6 @@
 import { queryClient } from "@/contexts";
 import type { Message } from "@/types/messages";
-import {
-  findLastBotMessage,
-  updateMessageProperties,
-} from "../message-utils";
+import { findLastBotMessage, updateMessageProperties } from "../message-utils";
 
 const QUERY_KEY = ["useGetMessagesQuery", { id: "flow-1", session_id: "s1" }];
 
@@ -52,7 +49,10 @@ describe("findLastBotMessage", () => {
   });
 
   it("should_skip_bot_messages_without_id", () => {
-    const msgNoId = buildMessage({ id: null as unknown as string, sender: "Machine" });
+    const msgNoId = buildMessage({
+      id: null as unknown as string,
+      sender: "Machine",
+    });
     const msgWithId = buildMessage({ id: "m2", sender: "Machine" });
 
     queryClient.setQueryData(QUERY_KEY, [msgNoId, msgWithId]);

@@ -57,10 +57,7 @@ export const updateMessage = (updatedMessage: Message) => {
     return;
   }
 
-  const cacheKey = [
-    MESSAGES_QUERY_KEY,
-    { id: flowId, session_id: sessionId },
-  ];
+  const cacheKey = [MESSAGES_QUERY_KEY, { id: flowId, session_id: sessionId }];
 
   // Ensure the query exists in cache first
   queryClient.ensureQueryData({

@@ -59,8 +59,7 @@ export const Messages = ({
                 key={`${chat.id}-${index}`}
                 chat={chat}
                 lastMessage={
-                  !showThinkingPlaceholder &&
-                  chatHistory.length - 1 === index
+                  !showThinkingPlaceholder && chatHistory.length - 1 === index
                 }
                 updateChat={updateChat ?? (() => {})}
                 closeChat={closeChat}

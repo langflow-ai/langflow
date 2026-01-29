@@ -142,9 +142,7 @@ export const BotMessage = memo(
     // The total tool duration green ms ALWAYS shows the sum of backend tool durations when tools exist
     // It will be 0 until backend provides durations, then show the sum
     // For messages without tools, it shows the same as displayTime
-    const greenMsTime = messageHasTools
-      ? totalToolDuration
-      : displayTime;
+    const greenMsTime = messageHasTools ? totalToolDuration : displayTime;
 
     return (
       <>
@@ -167,9 +165,7 @@ export const BotMessage = memo(
                 <span className="w-full flex justify-between">
                   {thinkingActive && displayTime > 0 ? (
                     <>
-                      <span>
-                        Running... {formatSeconds(displayTime)}
-                      </span>
+                      <span>Running... {formatSeconds(displayTime)}</span>
                       {messageHasTools && (
                         <span className="text-emerald-500">
                           {formatTime(greenMsTime, true)}
@@ -209,9 +205,7 @@ export const BotMessage = memo(
               )}
 
               <div className="flex w-full items-start gap-3">
-                {(thinkingActive ||
-                  displayTime > 0 ||
-                  chatMessage !== "") && (
+                {(thinkingActive || displayTime > 0 || chatMessage !== "") && (
                   <div
                     className="relative hidden h-6 w-6 flex-shrink-0 items-center justify-center overflow-hidden rounded bg-white text-2xl @[45rem]/chat-panel:!flex border-0"
                     style={
