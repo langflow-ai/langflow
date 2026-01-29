@@ -1,5 +1,6 @@
-import type { Dispatch, SetStateAction } from "react";
+import FlowHistoryComponent from "@/components/core/flowToolbarComponent/components/flow-history-component";
 import useFlowStore from "@/stores/flowStore";
+import type { Dispatch, SetStateAction } from "react";
 import PublishDropdown from "./deploy-dropdown";
 import PlaygroundButton from "./playground-button";
 
@@ -26,6 +27,7 @@ const FlowToolbarOptions = ({
           setOpen={setOpen}
           canvasOpen
         />
+        <FlowHistoryComponent />
       </div>
       <PublishDropdown
         openApiModal={openApiModal}

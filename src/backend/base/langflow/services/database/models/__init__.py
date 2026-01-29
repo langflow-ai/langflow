@@ -1,6 +1,7 @@
 from .api_key import ApiKey
 from .file import File
 from .flow import Flow
+from .flow_history import FlowHistory
 from .folder import Folder
 from .message import MessageTable
 from .transactions import TransactionTable
@@ -11,6 +12,7 @@ __all__ = [
     "ApiKey",
     "File",
     "Flow",
+    "FlowHistory",
     "Folder",
     "MessageTable",
     "TransactionTable",
