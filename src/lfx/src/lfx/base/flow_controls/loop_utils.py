@@ -1,6 +1,5 @@
 """Utility functions for loop component execution."""
 
-import copy
 from collections import deque
 from typing import TYPE_CHECKING
 
@@ -227,14 +226,12 @@ async def execute_loop_body(
     if not loop_body_vertex_ids:
         return []
 
-    # Create base subgraph (once)
-    base_subgraph = graph.create_subgraph(loop_body_vertex_ids)
-
     aggregated_results = []
 
     for item in data_list:
-        # Deep copy for this iteration
-        iteration_subgraph = copy.deepcopy(base_subgraph)
+        # Create fresh subgraph for each iteration. This gives clean vertex/edge state
+        # while sharing context between iterations (intentional for loop state).
+        iteration_subgraph = graph.create_subgraph(loop_body_vertex_ids)
         iteration_subgraph.prepare()
 
         # Inject current item as input to the first vertex in loop body
