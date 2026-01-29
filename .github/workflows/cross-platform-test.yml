@@ -206,7 +206,7 @@ jobs:
           find ./base-dist -name "*.whl" -type f
           BASE_FILE=$(find ./base-dist -name "*.whl" -type f | head -1)
 
-          find ./main-dist -name "*.whl" -type f
+          find ./main-dist -name "langflow-*.whl" -type f
           MAIN_FILE=$(find ./main-dist -name "langflow-*.whl" -type f | head -1)
 
           if [ -z "$BASE_FILE" ] || [ -z "$MAIN_FILE" ]; then
@@ -216,8 +216,11 @@ jobs:
             exit 1
           fi
 
+          mkdir -p ./local-packages
+          cp "$BASE_FILE" ./local-packages/
+
           uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "$BASE_FILE"
-          uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe --no-deps "$MAIN_FILE"
+          uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe --find-links ./local-packages --index-strategy unsafe-best-match "$MAIN_FILE"
         shell: bash
 
       - name: Install LFX package from wheel (Unix)
@@ -243,7 +246,7 @@ jobs:
           find ./base-dist -name "*.whl" -type f
           BASE_FILE=$(find ./base-dist -name "*.whl" -type f | head -1)
 
-          find ./main-dist -name "*.whl" -type f
+          find ./main-dist -name "langflow-*.whl" -type f
           MAIN_FILE=$(find ./main-dist -name "langflow-*.whl" -type f | head -1)
 
           if [ -z "$BASE_FILE" ] || [ -z "$MAIN_FILE" ]; then
@@ -253,8 +256,11 @@ jobs:
             exit 1
           fi
 
+          mkdir -p ./local-packages
+          cp "$BASE_FILE" ./local-packages/
+
           uv pip install --prerelease=allow --python ./test-env/bin/python "$BASE_FILE"
-          uv pip install --prerelease=allow --python ./test-env/bin/python --no-deps "$MAIN_FILE"
+          uv pip install --prerelease=allow --python ./test-env/bin/python --find-links ./local-packages --index-strategy unsafe-best-match "$MAIN_FILE"
         shell: bash
 
       # PyPI installation steps
@@ -493,7 +499,7 @@ jobs:
           find ./base-dist -name "*.whl" -type f
           BASE_FILE=$(find ./base-dist -name "*.whl" -type f | head -1)
 
-          find ./main-dist -name "*.whl" -type f
+          find ./main-dist -name "langflow-*.whl" -type f
           MAIN_FILE=$(find ./main-dist -name "langflow-*.whl" -type f | head -1)
 
           if [ -z "$BASE_FILE" ] || [ -z "$MAIN_FILE" ]; then
@@ -503,8 +509,11 @@ jobs:
             exit 1
           fi
 
+          mkdir -p ./local-packages
+          cp "$BASE_FILE" ./local-packages/
+
           uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "$BASE_FILE"
-          uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe --no-deps "$MAIN_FILE"
+          uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe --find-links ./local-packages --index-strategy unsafe-best-match "$MAIN_FILE"
         shell: bash
 
       - name: Install LFX package from wheel (Unix)
@@ -530,7 +539,7 @@ jobs:
           find ./base-dist -name "*.whl" -type f
           BASE_FILE=$(find ./base-dist -name "*.whl" -type f | head -1)
 
-          find ./main-dist -name "*.whl" -type f
+          find ./main-dist -name "langflow-*.whl" -type f
           MAIN_FILE=$(find ./main-dist -name "langflow-*.whl" -type f | head -1)
 
           if [ -z "$BASE_FILE" ] || [ -z "$MAIN_FILE" ]; then
@@ -540,8 +549,11 @@ jobs:
             exit 1
           fi
 
+          mkdir -p ./local-packages
+          cp "$BASE_FILE" ./local-packages/
+
           uv pip install --prerelease=allow --python ./test-env/bin/python "$BASE_FILE"
-          uv pip install --prerelease=allow --python ./test-env/bin/python --no-deps "$MAIN_FILE"
+          uv pip install --prerelease=allow --python ./test-env/bin/python --find-links ./local-packages --index-strategy unsafe-best-match "$MAIN_FILE"
         shell: bash
 
       # PyPI installation steps
