@@ -216,11 +216,8 @@ jobs:
             exit 1
           fi
 
-          mkdir -p ./local-packages
-          cp "$BASE_FILE" ./local-packages/
-
           uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "$BASE_FILE"
-          uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe --find-links ./local-packages --index-strategy unsafe-best-match "$MAIN_FILE"
+          uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "$MAIN_FILE"
         shell: bash
 
       - name: Install LFX package from wheel (Unix)
@@ -256,11 +253,8 @@ jobs:
             exit 1
           fi
 
-          mkdir -p ./local-packages
-          cp "$BASE_FILE" ./local-packages/
-
           uv pip install --prerelease=allow --python ./test-env/bin/python "$BASE_FILE"
-          uv pip install --prerelease=allow --python ./test-env/bin/python --find-links ./local-packages --index-strategy unsafe-best-match "$MAIN_FILE"
+          uv pip install --prerelease=allow --python ./test-env/bin/python "$MAIN_FILE"
         shell: bash
 
       # PyPI installation steps
@@ -509,12 +503,8 @@ jobs:
             exit 1
           fi
 
-          mkdir -p ./local-packages
-          cp "$BASE_FILE" ./local-packages/
-
           uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "$BASE_FILE"
-          uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe --find-links ./local-packages --index-strategy unsafe-best-match "$MAIN_FILE"
-        shell: bash
+          uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "$MAIN_FILE"
 
       - name: Install LFX package from wheel (Unix)
         if: steps.install-method.outputs.method == 'wheel' && matrix.os != 'windows' && inputs.lfx-artifact-name != ''
@@ -549,11 +539,8 @@ jobs:
             exit 1
           fi
 
-          mkdir -p ./local-packages
-          cp "$BASE_FILE" ./local-packages/
-
           uv pip install --prerelease=allow --python ./test-env/bin/python "$BASE_FILE"
-          uv pip install --prerelease=allow --python ./test-env/bin/python --find-links ./local-packages --index-strategy unsafe-best-match "$MAIN_FILE"
+          uv pip install --prerelease=allow --python ./test-env/bin/python "$MAIN_FILE"
         shell: bash
 
       # PyPI installation steps
