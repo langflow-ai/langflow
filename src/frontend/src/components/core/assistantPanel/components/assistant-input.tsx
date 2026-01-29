@@ -9,9 +9,14 @@ import { ModelSelector } from "./model-selector";
 interface AssistantInputProps {
   onSend: (message: string, model: AssistantModel | null) => void;
   disabled?: boolean;
+  placeholder?: string;
 }
 
-export function AssistantInput({ onSend, disabled = false }: AssistantInputProps) {
+export function AssistantInput({
+  onSend,
+  disabled = false,
+  placeholder,
+}: AssistantInputProps) {
   const [message, setMessage] = useState("");
   const [selectedModel, setSelectedModel] = useState<AssistantModel | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -40,7 +45,7 @@ export function AssistantInput({ onSend, disabled = false }: AssistantInputProps
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={ASSISTANT_PLACEHOLDER}
+          placeholder={placeholder ?? ASSISTANT_PLACEHOLDER}
           disabled={disabled}
           className="min-h-[60px] resize-none border-0 bg-transparent px-4 pt-3 text-sm focus-visible:ring-0"
           rows={2}

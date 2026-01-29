@@ -1,13 +1,33 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
+import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
 import { cn } from "@/utils/utils";
 import type { AssistantMessage, AssistantModel, AssistantPanelProps } from "./assistant-panel.types";
 import { AssistantEmptyState } from "./components/assistant-empty-state";
 import { AssistantHeader } from "./components/assistant-header";
 import { AssistantInput } from "./components/assistant-input";
 import { AssistantMessageItem } from "./components/assistant-message";
+import { AssistantNoModelsState } from "./components/assistant-no-models-state";
 
 export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
   const [messages, setMessages] = useState<AssistantMessage[]>([]);
+  const { data: providersData = [] } = useGetModelProviders({});
+  const { data: enabledModelsData } = useGetEnabledModels();
+
+  // Check if there are any enabled models available
+  const hasEnabledModels = useMemo(() => {
+    const enabledModels = enabledModelsData?.enabled_models || {};
+
+    return providersData.some((provider) => {
+      if (!provider.is_enabled) return false;
+      const providerEnabledModels = enabledModels[provider.provider] || {};
+      return provider.models.some(
+        (model) =>
+          providerEnabledModels[model.model_name] === true &&
+          !model.model_name.includes("embedding"),
+      );
+    });
+  }, [providersData, enabledModelsData]);
 
   const handleSend = (content: string, _model: AssistantModel | null) => {
     const userMessage: AssistantMessage = {
@@ -59,7 +79,9 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
       <div className="relative z-10 flex h-full flex-col">
         <AssistantHeader onClose={onClose} onClearHistory={handleClearHistory} />
         <div className="flex flex-1 flex-col overflow-hidden">
-          {hasMessages ? (
+          {!hasEnabledModels ? (
+            <AssistantNoModelsState />
+          ) : hasMessages ? (
             <div className="flex-1 overflow-y-auto px-4 py-6">
               {messages.map((msg) => (
                 <AssistantMessageItem key={msg.id} message={msg} />
@@ -69,7 +91,11 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
             <AssistantEmptyState onSuggestionClick={handleSuggestionClick} />
           )}
         </div>
-        <AssistantInput onSend={handleSend} />
+        <AssistantInput
+          onSend={handleSend}
+          disabled={!hasEnabledModels}
+          placeholder={!hasEnabledModels ? "Configure Model Providers..." : undefined}
+        />
       </div>
     </div>
   );
