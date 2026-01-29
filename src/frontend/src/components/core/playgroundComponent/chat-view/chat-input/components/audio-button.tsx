@@ -48,7 +48,7 @@ const AudioButton = ({
             "h-7 w-7 px-0 flex items-center justify-center transition-all duration-200",
             isDisabled && "cursor-not-allowed opacity-50",
             isRecording &&
-              "text-destructive hover:text-destructive animate-pulse",
+              "text-destructive hover:text-destructive animate-pulse duration-1000",
             !isRecording &&
               !isDisabled &&
               "text-muted-foreground hover:text-primary",
