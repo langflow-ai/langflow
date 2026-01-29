@@ -57,11 +57,13 @@ def validate_code(code):
 
     # Check hash validation first if blocking is enabled
     if not _check_and_block_if_not_allowed(code, "component validation"):
-        component_name = "Unknown"
-        try:
-            component_name = extract_class_name(code)
-        except Exception:  # noqa: BLE001
-            pass
+        # Try to get display_name first, fall back to class name
+        component_name = extract_display_name(code)
+        if not component_name:
+            try:
+                component_name = extract_class_name(code)
+            except Exception:  # noqa: BLE001
+                component_name = "Unknown"
         errors["function"]["errors"].append(f"Custom Component '{component_name}' is not allowed")
         return errors
 
@@ -188,7 +190,9 @@ def eval_function(function_string: str):
 def execute_function(code, function_name, *args, **kwargs):
     # Check hash validation before processing
     if not _check_and_block_if_not_allowed(code, f"function execution: function '{function_name}'"):
-        raise ValueError(f"Custom Component '{function_name}' is not allowed")
+        # Try to get display_name, fall back to function_name
+        display_name = extract_display_name(code) or function_name
+        raise ValueError(f"Custom Component '{display_name}' is not allowed")
 
     add_type_ignores()
 
@@ -230,7 +234,9 @@ def execute_function(code, function_name, *args, **kwargs):
 def create_function(code, function_name):
     # Check hash validation before processing
     if not _check_and_block_if_not_allowed(code, f"function creation: function '{function_name}'"):
-        raise ValueError(f"Custom Component '{function_name}' is not allowed")
+        # Try to get display_name, fall back to function_name
+        display_name = extract_display_name(code) or function_name
+        raise ValueError(f"Custom Component '{display_name}' is not allowed")
 
     if not hasattr(ast, "TypeIgnore"):
 
@@ -317,7 +323,9 @@ def create_class(code, class_name):
 
     # Validate hash before adding DEFAULT_IMPORT_STRING
     if not _check_and_block_if_not_allowed(code, f"component creation: class '{class_name}'"):
-        raise ValueError(f"Custom Component '{class_name}' is not allowed")
+        # Try to get display_name, fall back to class_name
+        display_name = extract_display_name(code) or class_name
+        raise ValueError(f"Custom Component '{display_name}' is not allowed")
 
     code = DEFAULT_IMPORT_STRING + "\n" + code
     try:
@@ -549,6 +557,47 @@ def extract_function_name(code):
             return node.name
     msg = "No function definition found in the code string"
     raise ValueError(msg)
+
+
+def extract_display_name(code: str) -> str | None:
+    """Extract the display_name attribute from the Component class.
+
+    Args:
+        code (str): The source code to parse
+
+    Returns:
+        str | None: The display_name if found, None otherwise
+    """
+    try:
+        module = ast.parse(code)
+        for node in module.body:
+            if not isinstance(node, ast.ClassDef):
+                continue
+
+            # Check if this is a Component subclass
+            is_component = False
+            for base in node.bases:
+                if isinstance(base, ast.Name) and any(pattern in base.id for pattern in ["Component", "LC"]):
+                    is_component = True
+                    break
+
+            if not is_component:
+                continue
+
+            # Look for display_name attribute in the class body
+            for item in node.body:
+                if isinstance(item, ast.AnnAssign) and isinstance(item.target, ast.Name):
+                    if item.target.id == "display_name" and isinstance(item.value, ast.Constant):
+                        return item.value.value
+                elif isinstance(item, ast.Assign):
+                    for target in item.targets:
+                        if isinstance(target, ast.Name) and target.id == "display_name":
+                            if isinstance(item.value, ast.Constant):
+                                return item.value.value
+
+        return None
+    except (SyntaxError, AttributeError):
+        return None
 
 
 def extract_class_name(code: str) -> str:

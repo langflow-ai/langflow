@@ -3,7 +3,122 @@
 from unittest.mock import Mock, patch
 
 import pytest
-from lfx.custom.hash_validator import _generate_short_hash
+from lfx.custom.validate import create_class, create_function, extract_display_name
+
+
+class TestExtractDisplayName:
+    """Unit tests for extract_display_name function."""
+
+    def test_extract_display_name_simple(self):
+        """Test extracting display_name from a simple component."""
+        code = """
+from lfx.custom import Component
+
+class TestComponent(Component):
+    display_name = "Test Component"
+"""
+        result = extract_display_name(code)
+        assert result == "Test Component"
+
+    def test_extract_display_name_with_other_attributes(self):
+        """Test extracting display_name when other attributes are present."""
+        code = """
+from lfx.custom import Component
+
+class MyComponent(Component):
+    description = "A test component"
+    display_name = "My Custom Component"
+    icon = "icon.svg"
+"""
+        result = extract_display_name(code)
+        assert result == "My Custom Component"
+
+    def test_extract_display_name_no_display_name(self):
+        """Test that None is returned when display_name is not present."""
+        code = """
+from lfx.custom import Component
+
+class TestComponent(Component):
+    description = "A test component"
+"""
+        result = extract_display_name(code)
+        assert result is None
+
+    def test_extract_display_name_not_a_component(self):
+        """Test that None is returned for non-Component classes."""
+        code = """
+class RegularClass:
+    display_name = "Not a Component"
+"""
+        result = extract_display_name(code)
+        assert result is None
+
+    def test_extract_display_name_multiple_classes(self):
+        """Test extracting display_name from first Component subclass."""
+        code = """
+from lfx.custom import Component
+
+class FirstComponent(Component):
+    display_name = "First Component"
+
+class SecondComponent(Component):
+    display_name = "Second Component"
+"""
+        result = extract_display_name(code)
+        assert result == "First Component"
+
+    def test_extract_display_name_with_docstring(self):
+        """Test extracting display_name when class has docstring."""
+        code = '''
+from lfx.custom import Component
+
+class TestComponent(Component):
+    """This is a test component."""
+    display_name = "Test Component"
+    
+    def build(self):
+        pass
+'''
+        result = extract_display_name(code)
+        assert result == "Test Component"
+
+    def test_extract_display_name_invalid_syntax(self):
+        """Test that None is returned for invalid Python syntax."""
+        code = "this is not valid python code {"
+        result = extract_display_name(code)
+        assert result is None
+
+    def test_extract_display_name_empty_string(self):
+        """Test that None is returned for empty string."""
+        code = ""
+        result = extract_display_name(code)
+        assert result is None
+
+    def test_extract_display_name_with_f_string(self):
+        """Test extracting display_name when it's an f-string (should return None)."""
+        code = """
+from lfx.custom import Component
+
+class TestComponent(Component):
+    display_name = f"Dynamic {name}"
+"""
+        result = extract_display_name(code)
+        assert result is None
+
+    def test_extract_display_name_nested_in_body(self):
+        """Test extracting display_name from class body assignments."""
+        code = """
+from lfx.custom import Component
+
+class TestComponent(Component):
+    def __init__(self):
+        self.display_name = "Should Not Extract This"
+    
+    display_name = "Correct Display Name"
+"""
+        result = extract_display_name(code)
+        assert result == "Correct Display Name"
+
 from lfx.custom.validate import create_class, create_function
 
 
@@ -30,8 +145,6 @@ from lfx.custom import Component
 class TestComponent(Component):
     display_name = "Test"
 """
-        code_hash = _generate_short_hash(code)
-
         # Mock settings to disable allowing (enable blocking)
         mock_settings = Mock()
         mock_settings.settings.allow_custom_components = False
@@ -39,7 +152,7 @@ class TestComponent(Component):
         # Mock hash lookup to return empty set (hash not found)
         with patch("lfx.custom.validate._check_and_block_if_not_allowed") as mock_check:
             mock_check.return_value = False
-            with pytest.raises(ValueError, match="Custom Component 'TestComponent' is not allowed"):
+            with pytest.raises(ValueError, match="Custom Component 'Test' is not allowed"):
                 create_class(code, "TestComponent")
 
     def test_create_class_allowed_when_hash_in_index(self):
@@ -118,7 +231,7 @@ class TestComponent(Component):
         # Mock hash lookup to return False (hash not found)
         with patch("lfx.custom.validate._check_and_block_if_not_allowed") as mock_check:
             mock_check.return_value = False
-            with pytest.raises(ValueError, match="Custom Component 'TestComponent' is not allowed"):
+            with pytest.raises(ValueError, match="Custom Component 'Test' is not allowed"):
                 create_class(code, "TestComponent")
 
         # Enable allowing (disable blocking) via env var
