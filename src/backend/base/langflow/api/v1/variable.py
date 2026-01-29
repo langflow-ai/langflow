@@ -14,7 +14,6 @@ from langflow.api.v1.models import (
     get_model_names_for_provider,
     get_provider_from_variable_name,
 )
-from langflow.services.auth import utils as auth_utils
 from langflow.services.database.models.variable.model import VariableCreate, VariableRead, VariableUpdate
 from langflow.services.deps import get_variable_service
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
