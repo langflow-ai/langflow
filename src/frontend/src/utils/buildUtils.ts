@@ -1,6 +1,13 @@
 import type { Edge, Node } from "@xyflow/react";
 import type { AxiosError } from "axios";
 import { flushSync } from "react-dom";
+import { handleMessageEvent } from "@/components/core/playgroundComponent/chat-view/utils/message-event-handler";
+import {
+  findLastBotMessage,
+  updateMessageProperties,
+} from "@/components/core/playgroundComponent/chat-view/utils/message-utils";
+import { api } from "@/controllers/API/api";
+import { getURL } from "@/controllers/API/helpers/constants";
 import { MISSED_ERROR_ALERT } from "@/constants/alerts_constants";
 import {
   BUILD_POLLING_INTERVAL,
@@ -14,7 +21,6 @@ import {
 } from "@/customization/utils/custom-buildUtils";
 import { customPollBuildEvents } from "@/customization/utils/custom-poll-build-events";
 import { getFetchCredentials } from "@/customization/utils/get-fetch-credentials";
-import { useMessagesStore } from "@/stores/messagesStore";
 import { BuildStatus, EventDeliveryType } from "../constants/enums";
 import { getVerticesOrder, postBuildVertex } from "../controllers/API";
 import useAlertStore from "../stores/alertStore";
@@ -555,37 +561,57 @@ async function onEvent(
       }
       return true;
     }
-    case "add_message": {
-      // Add a message to the messages store.
-      useMessagesStore.getState().addMessage(data);
+    case "build_start": {
+      // Backend signals that vertex execution is starting — set the timer origin
+      useFlowStore.getState().setBuildStartTime(Date.now());
       return true;
     }
-    case "token": {
-      // Use flushSync with a timeout to avoid React batching issues.
-      setTimeout(() => {
-        flushSync(() => {
-          useMessagesStore.getState().updateMessageText(data.id, data.chunk);
-        });
-      }, 10);
-      return true;
-    }
+    case "add_message":
+    case "token":
     case "remove_message": {
-      useMessagesStore.getState().removeMessage(data);
-      return true;
+      // Handle message events through chat-view utilities
+      const handled = handleMessageEvent(type, data);
+      if (handled) return true;
+      // If not handled (shouldn't happen for these cases), fall through
+      break;
     }
     case "end": {
       const allNodesValid = buildResults.every((result) => result);
+      if (data?.build_duration != null) {
+        const durationMs = data.build_duration * 1000;
+        useFlowStore.getState().setBuildDuration(durationMs);
+
+        const found = findLastBotMessage();
+        if (found) {
+          updateMessageProperties(found.message.id!, found.queryKey, {
+            build_duration: durationMs,
+          });
+          api
+            .put(`${getURL("MESSAGES")}/${found.message.id}`, {
+              ...found.message,
+              properties: {
+                ...found.message.properties,
+                build_duration: durationMs,
+              },
+            })
+            .catch((err: unknown) => {
+              console.warn("Failed to persist build_duration", {
+                messageId: found.message.id,
+                error: err instanceof Error ? err.message : String(err),
+              });
+            });
+        }
+      }
       onBuildComplete && onBuildComplete(allNodesValid);
       useFlowStore.getState().setIsBuilding(false);
       return true;
     }
     case "error": {
-      if (data?.category === "error") {
-        useMessagesStore.getState().addMessage(data);
-        // Use a falsy check to correctly determine if the source ID is missing.
-        if (!data?.properties?.source?.id) {
-          onBuildError && onBuildError("Error Building Flow", [data.text]);
-        }
+      // Handle error message through chat-view utilities
+      handleMessageEvent(type, data);
+      // Use a falsy check to correctly determine if the source ID is missing.
+      if (data?.category === "error" && !data?.properties?.source?.id) {
+        onBuildError && onBuildError("Error Building Flow", [data.text]);
       }
       buildResults.push(false);
       return true;

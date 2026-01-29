@@ -79,8 +79,8 @@ export function SessionSelector({
         isVisible ? "bg-accent font-semibold" : "font-normal",
       )}
     >
-      <div className="flex items-center justify-between overflow-hidden p-2 align-middle w-52">
-        <div className="flex w/full min-w-0 items-center">
+      <div className="flex h-8 items-center justify-between overflow-hidden w-52">
+        <div className="flex w/full min-w-0 items-center px-2">
           {isEditing ? (
             <div
               onClick={(e) => e.stopPropagation()}
@@ -111,6 +111,7 @@ export function SessionSelector({
           onRename={handleEditClick}
           onMessageLogs={() => inspectSession?.(session)}
           onDelete={() => deleteSession(session)}
+          showDelete={session !== currentFlowId}
           side="bottom"
           align="end"
           sideOffset={4}

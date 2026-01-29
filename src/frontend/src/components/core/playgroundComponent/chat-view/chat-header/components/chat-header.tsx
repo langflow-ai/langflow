@@ -1,7 +1,10 @@
 import React, { useMemo } from "react";
 import { AnimatedConditional } from "@/components/ui/animated-close";
+import { useDeleteSession } from "@/controllers/API/queries/messages/use-delete-sessions";
 import { useIsMobile } from "@/hooks/use-mobile";
+import useAlertStore from "@/stores/alertStore";
 import { cn } from "@/utils/utils";
+import { clearSessionMessages } from "../../utils/message-utils";
 import { useEditSessionInfo } from "../hooks/use-edit-session-info";
 import { useRenameSession } from "../hooks/use-rename-session";
 import { useSessionMoreMenuHandlers } from "../hooks/use-session-more-menu-handlers";
@@ -51,10 +54,57 @@ export function ChatHeader({
   const isMobile = useIsMobile();
   // Keep session actions (including logs) available in fullscreen
   const isSessionDropdownVisible = true;
+  const isDefaultSession = currentSessionId === currentFlowId;
+  const deleteSessionMutation = useDeleteSession({});
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+
   const handleDeleteSessionInternal = () => {
-    if (!currentSessionId) return;
-    handleDelete(currentSessionId);
-    onDeleteSession?.(currentSessionId);
+    if (!currentSessionId || isDefaultSession || !currentFlowId) return;
+
+    deleteSessionMutation.mutate(
+      { sessionId: currentSessionId },
+      {
+        onSuccess: () => {
+          // Clear messages from React Query cache
+          clearSessionMessages(currentSessionId, currentFlowId);
+          // Call the delete handler to update session list and selected session
+          handleDelete(currentSessionId);
+          // Call the parent callback
+          onDeleteSession?.(currentSessionId);
+          setSuccessData({
+            title: "Session deleted successfully.",
+          });
+        },
+        onError: () => {
+          setErrorData({
+            title: "Error deleting session.",
+          });
+        },
+      },
+    );
+  };
+
+  const handleClearChat = () => {
+    if (!currentSessionId || !isDefaultSession || !currentFlowId) return;
+
+    deleteSessionMutation.mutate(
+      { sessionId: currentSessionId },
+      {
+        onSuccess: () => {
+          // Clear messages from React Query cache
+          clearSessionMessages(currentSessionId, currentFlowId);
+          setSuccessData({
+            title: "Chat cleared successfully.",
+          });
+        },
+        onError: () => {
+          setErrorData({
+            title: "Error clearing chat.",
+          });
+        },
+      },
+    );
   };
 
   const { onMessageLogs } = useSessionMoreMenuHandlers({
@@ -67,7 +117,10 @@ export function ChatHeader({
       <SessionMoreMenu
         onRename={handleEditStartLogged}
         onMessageLogs={onMessageLogs}
+        onClearChat={handleClearChat}
         onDelete={handleDeleteSessionInternal}
+        showClearChat={isDefaultSession}
+        showDelete={!isDefaultSession}
         side="bottom"
         align="end"
         sideOffset={4}
@@ -121,7 +174,7 @@ export function ChatHeader({
           />
         </div>
       )}
-      <div className="relative flex items-center flex-1 justify-end min-h-xxs w-32">
+      <div className="relative flex items-center flex-1 justify-end min-h-xxs">
         <AnimatedConditional isOpen={!isFullscreen}>
           <ChatHeaderActions
             isFullscreen={false}

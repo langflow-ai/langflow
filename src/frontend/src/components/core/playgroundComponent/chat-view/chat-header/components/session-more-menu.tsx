@@ -13,7 +13,10 @@ export interface SessionMoreMenuProps {
   onRename: () => void;
   onMessageLogs?: () => void;
   onDelete: () => void;
+  onClearChat?: () => void;
   showMessageLogs?: boolean;
+  showDelete?: boolean;
+  showClearChat?: boolean;
   // Positioning props
   side?: "top" | "right" | "bottom" | "left";
   align?: "start" | "center" | "end";
@@ -31,7 +34,10 @@ export function SessionMoreMenu({
   onRename,
   onMessageLogs,
   onDelete,
+  onClearChat,
   showMessageLogs = true,
+  showDelete = true,
+  showClearChat = false,
   side = "bottom",
   align = "end",
   sideOffset = DEFAULT_SIDE_OFFSET,
@@ -52,6 +58,9 @@ export function SessionMoreMenu({
         break;
       case "messageLogs":
         onMessageLogs?.();
+        break;
+      case "clearChat":
+        onClearChat?.();
         break;
       case "delete":
         onDelete();
@@ -113,12 +122,25 @@ export function SessionMoreMenu({
               </div>
             </SelectItem>
           )}
-          <SelectItem value="delete" className="session-more-menu-item">
-            <div className="flex items-center text-status-red hover:text-status-red">
-              <ForwardedIconComponent name="Trash2" className="mr-2 h-4 w-4" />
-              Delete
-            </div>
-          </SelectItem>
+          {showClearChat && (
+            <SelectItem value="clearChat" className="session-more-menu-item">
+              <div className="flex items-center text-status-red hover:text-status-red">
+                <ForwardedIconComponent name="X" className="mr-2 h-4 w-4" />
+                Clear chat
+              </div>
+            </SelectItem>
+          )}
+          {showDelete && (
+            <SelectItem value="delete" className="session-more-menu-item">
+              <div className="flex items-center text-status-red hover:text-status-red">
+                <ForwardedIconComponent
+                  name="Trash2"
+                  className="mr-2 h-4 w-4"
+                />
+                Delete
+              </div>
+            </SelectItem>
+          )}
         </SelectContent>
       </Select>
     </div>

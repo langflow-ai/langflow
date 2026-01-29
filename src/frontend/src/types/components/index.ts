@@ -642,13 +642,15 @@ export type codeAreaModalPropsType = {
 export type chatMessagePropsType = {
   chat: ChatMessageType;
   lastMessage: boolean;
-  updateChat: (
+  updateChat?: (
     chat: ChatMessageType,
     message: string,
     stream_url?: string,
   ) => void;
   closeChat?: () => void;
   playgroundPage?: boolean;
+  isThinking?: boolean;
+  thinkingDuration?: number | null;
 };
 
 export type genericModalPropsType = {
