@@ -219,7 +219,7 @@ async def test_delete_variable__exception(client: AsyncClient, logged_in_headers
 
     response = await client.delete(f"api/v1/variables/{wrong_id}", headers=logged_in_headers)
 
-    assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
 @pytest.mark.usefixtures("active_user")

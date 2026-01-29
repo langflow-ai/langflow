@@ -569,7 +569,10 @@ def setup_static_files(app: FastAPI, static_files_dir: Path) -> None:
     )
 
     @app.exception_handler(404)
-    async def custom_404_handler(_request, _exc):
+    async def custom_404_handler(request: Request, exc):
+        if request.url.path.startswith("/api/"):
+            raise exc
+
         path = anyio.Path(static_files_dir) / "index.html"
 
         if not await path.exists():

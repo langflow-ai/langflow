@@ -348,6 +348,9 @@ async def delete_variable(
             user_id=current_user.id, variable_id=variable_id, session=session
         )
 
+        if not variable_to_delete:
+            raise HTTPException(status_code=404, detail="Variable not found")
+
         # Check if this variable is a model provider credential
         provider = get_provider_from_variable_name(variable_to_delete.name)
 
@@ -358,5 +361,11 @@ async def delete_variable(
         if provider and isinstance(variable_service, DatabaseVariableService):
             await _cleanup_provider_models(variable_service, current_user.id, provider, session)
 
+    except NoResultFound as e:
+        raise HTTPException(status_code=404, detail="Variable not found") from e
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail="Variable not found") from e
     except Exception as e:
+        if isinstance(e, HTTPException):
+            raise
         raise HTTPException(status_code=500, detail=str(e)) from e
