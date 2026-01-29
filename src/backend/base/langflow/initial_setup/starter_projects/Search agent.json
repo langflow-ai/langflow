@@ -112,7 +112,7 @@
                   },
                   {
                     "name": "scrapegraph_py",
-                    "version": "1.44.0"
+                    "version": "1.46.0"
                   }
                 ],
                 "total_dependencies": 2
@@ -948,7 +948,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "0.3.81"
+                    "version": "0.3.83"
                   }
                 ],
                 "total_dependencies": 3
