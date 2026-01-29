@@ -316,19 +316,18 @@ build_and_install: ## build the project and install it
 
 build: setup_env ## build the frontend static files and package the project
 ifdef base
+	@echo 'base'
 	make install_frontendci
 	make build_frontend
 	make build_langflow_base args="$(args)"
-endif
-
-ifdef main
+else ifdef main
+	@echo 'main'
 	make install_frontendci
 	make build_frontend
 	make build_langflow_base args="$(args)"
 	make build_langflow args="$(args)"
-endif
-
-ifdef pre
+else ifdef pre
+	@echo 'pre'
 	make install_frontendci
 	make build_frontend
 	make build_langflow args="$(args)"
