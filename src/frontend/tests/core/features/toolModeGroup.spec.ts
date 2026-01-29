@@ -21,7 +21,7 @@ test.describe("group node test", () => {
         .getByTestId("title-OpenAI")
         .click({ modifiers: ["ControlOrMeta"] });
       await page
-        .getByTestId("title-Prompt")
+        .getByTestId("title-Prompt Template")
         .click({ modifiers: ["ControlOrMeta"] });
 
       await page.getByRole("button", { name: "Group" }).click();

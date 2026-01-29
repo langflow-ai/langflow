@@ -79,7 +79,7 @@ User: {user_input}
 AI:
   `;
 
-    await page.getByTestId("title-Prompt").last().click();
+    await page.getByTestId("title-Prompt Template").last().click();
     await page.getByTestId("button_open_prompt_modal").nth(0).click();
 
     await page.getByTestId("modal-promptarea_prompt_template").fill(prompt);
