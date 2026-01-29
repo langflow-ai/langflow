@@ -29,7 +29,7 @@ class HealthResponse(BaseModel):
 # it means uvicorn's /health serves first before the langflow instance is up
 # therefore it's not a reliable health check for a langflow instance
 # we keep this for backward compatibility
-@health_check_router.get("/health")
+@health_check_router.get("/health", include_in_schema=False)
 async def health():
     return {"status": "ok"}
 

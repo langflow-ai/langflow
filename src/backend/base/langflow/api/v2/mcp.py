@@ -22,7 +22,7 @@ from langflow.services.deps import get_settings_service, get_shared_component_ca
 from langflow.services.settings.service import SettingsService
 from langflow.services.storage.service import StorageService
 
-router = APIRouter(tags=["MCP"], prefix="/mcp")
+router = APIRouter(tags=["MCP"], prefix="/mcp", include_in_schema=False)
 
 
 async def upload_server_config(
