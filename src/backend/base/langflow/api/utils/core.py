@@ -150,7 +150,7 @@ def format_elapsed_time(elapsed_time: float) -> str:
     """Format elapsed time to a human-readable format coming from perf_counter().
 
     - Less than 1 second: returns milliseconds
-    - Less than 1 minute: returns seconds rounded to 2 decimals
+    - Less than 1 minute: returns seconds rounded to 1 decimal
     - 1 minute or more: returns minutes and seconds
     """
     delta = timedelta(seconds=elapsed_time)
@@ -159,12 +159,12 @@ def format_elapsed_time(elapsed_time: float) -> str:
         return f"{milliseconds} ms"
 
     if delta < timedelta(minutes=1):
-        seconds = round(elapsed_time, 2)
+        seconds = round(elapsed_time, 1)
         unit = "second" if seconds == 1 else "seconds"
         return f"{seconds} {unit}"
 
     minutes = delta // timedelta(minutes=1)
-    seconds = round((delta - timedelta(minutes=minutes)).total_seconds(), 2)
+    seconds = round((delta - timedelta(minutes=minutes)).total_seconds(), 1)
     minutes_unit = "minute" if minutes == 1 else "minutes"
     seconds_unit = "second" if seconds == 1 else "seconds"
     return f"{minutes} {minutes_unit}, {seconds} {seconds_unit}"

@@ -103,7 +103,7 @@ export const UserMessage = memo(
         <div className="w-full py-4 word-break-break-word">
           <div
             className={cn(
-              "group relative flex w-full gap-4 rounded-md p-2",
+              "group relative flex w-full gap-4 rounded-md p-2 bg-muted @[45rem]/chat-panel:bg-transparent @[45rem]/chat-panel:p-2",
               editMessage ? "" : "hover:bg-muted",
             )}
           >
@@ -159,9 +159,9 @@ export const UserMessage = memo(
                       )}
                     </>
                   )}
-                  {chat.files && (
-                    <div className="my-2 flex w-full items-center gap-2 overflow-auto !m-0">
-                      {chat.files?.map((file, index) => (
+                  {chat.files && chat.files.length > 0 && (
+                    <div className="mt-2 flex w-full items-center gap-4 overflow-auto">
+                      {chat.files.map((file, index) => (
                         <FilePreviewDisplay
                           key={index}
                           file={file}

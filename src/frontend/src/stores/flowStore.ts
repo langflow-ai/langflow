@@ -113,6 +113,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   nodes: [],
   edges: [],
   isBuilding: false,
+  buildStartTime: null,
+  buildDuration: null,
   stopBuilding: () => {
     get().buildController.abort();
     get().updateEdgesRunningByNodes(
@@ -248,7 +250,21 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
   },
   setIsBuilding: (isBuilding) => {
-    set({ isBuilding });
+    const current = get();
+    set({
+      isBuilding,
+      // Reset buildStartTime and buildDuration when a new build begins
+      buildStartTime:
+        isBuilding && !current.isBuilding ? null : current.buildStartTime,
+      buildDuration:
+        isBuilding && !current.isBuilding ? null : current.buildDuration,
+    });
+  },
+  setBuildStartTime: (time) => {
+    set({ buildStartTime: time });
+  },
+  setBuildDuration: (duration) => {
+    set({ buildDuration: duration });
   },
   setFlowState: (flowState) => {
     const newFlowState =

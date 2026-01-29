@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import Markdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax/browser";
 import remarkGfm from "remark-gfm";
-import type { ContentType } from "@/types/chat";
+import type { ContentType, JSONValue } from "@/types/chat";
 import { extractLanguage, isCodeBlock } from "@/utils/codeBlockUtils";
 import ForwardedIconComponent from "../../common/genericIconComponent";
 import SimplifiedCodeTabComponent from "../codeTabsComponent";
@@ -127,7 +127,7 @@ export default function ContentDisplay({
       break;
 
     case "tool_use": {
-      const formatToolOutput = (output: unknown) => {
+      const formatToolOutput = (output: JSONValue) => {
         if (output === null || output === undefined) return "";
 
         // If it's a string, render as markdown
