@@ -1236,7 +1236,7 @@
   },
   "LanguageModelComponent": {
     "versions": {
-      "0.3.0": "0fe0030cc0b3"
+      "0.3.0": "b751ec63eb74"
     }
   },
   "MCPTools": {
@@ -1251,7 +1251,7 @@
   },
   "Prompt Template": {
     "versions": {
-      "0.3.0": "595f7c9c8463"
+      "0.3.0": "5b3e6730923e"
     }
   },
   "MongoDBAtlasVector": {
