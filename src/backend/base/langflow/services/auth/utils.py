@@ -3,6 +3,7 @@ import random
 import warnings
 from collections.abc import Coroutine
 from datetime import datetime, timedelta, timezone
+from functools import lru_cache
 from typing import TYPE_CHECKING, Annotated, Final
 from uuid import UUID
 
@@ -675,8 +676,7 @@ def ensure_valid_key(s: str) -> bytes:
 
 def get_fernet(settings_service: SettingsService):
     secret_key: str = settings_service.auth_settings.SECRET_KEY.get_secret_value()
-    valid_key = ensure_valid_key(secret_key)
-    return Fernet(valid_key)
+    return _fernet_from_secret(secret_key)
 
 
 def encrypt_api_key(api_key: str, settings_service: SettingsService):
@@ -808,3 +808,9 @@ async def get_current_active_user_mcp(current_user: Annotated[User, Depends(get_
     if not current_user.is_active:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive user")
     return current_user
+
+
+@lru_cache(maxsize=32)
+def _fernet_from_secret(secret_key: str) -> Fernet:
+    valid_key = ensure_valid_key(secret_key)
+    return Fernet(valid_key)
