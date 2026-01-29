@@ -1,0 +1,18 @@
+import Icon from "@site/src/components/icon";
+
+To edit Langflow's global model provider configuration, do the following:
+
+1. Click <Icon name="BrainCog" aria-hidden="true" /> **Models** in the Langflow header.
+2. In the **Model providers** pane, select a provider.
+3. In the **API Key** field, add your provider's API key.
+
+    The key must have permission to call the models you want to use in your flow, and your account must have sufficient credits for the actions you want to perform.
+    
+    You can only add one key for each provider. Make sure the key has access to _all_ models that you want to use in Langflow.
+4. Enable the specific models that you want to use in Langflow.
+The available models depends on the provider and your API key's permissions.
+Models that generate text are listed under **LLM Models**.
+Models that generate embeddings are listed under **Embedding Models**.
+
+After you enable a model in Langflow's global model configuration, you can use that model in any model-driven component in your flows.
+

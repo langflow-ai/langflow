@@ -6,6 +6,7 @@ slug: /components-models
 import Icon from "@site/src/components/icon";
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import PartialGlobalModelProviders from '@site/docs/_partial-global-model-providers.mdx';
 
 Language model components in Langflow generate text using a specified Large Language Model (LLM).
 These components accept inputs like chat messages, files, and instructions in order to generate a text response.
@@ -24,16 +25,25 @@ One of the most common use cases of language model components is to chat with LL
 
 The following example uses a language model component in a chatbot flow similar to the **Basic Prompting** template.
 
-1. Add the **Language Model** core component to your flow, and then enter your OpenAI API key.
+1. <PartialGlobalModelProviders />
 
-    This example uses the **Language Model** core component's default OpenAI model.
-    If you want to use a different provider or model, edit the **Model Provider**, **Model Name**, and **API Key** fields accordingly.
 
     :::tip My preferred provider or model isn't listed
-    If you want to use a provider or model that isn't built-in to the **Language Model** core component, you can replace this component with any [additional language model](#additional-language-models).
+    If you want to use a provider or model that isn't built-in to Langflow's global <Icon name="BrainCog" aria-hidden="true" /> **Models**, you can replace the **Language Model** component with any [additional language model component](#additional-language-models).
 
     Browse <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) or <Icon name="Search" aria-hidden="true" /> **Search** for your preferred provider to find additional language models.
+
+    Alternatively, you can use Ollama to host your preferred model, and then configure your Ollama service in Langflow's global <Icon name="BrainCog" aria-hidden="true" /> **Models**.
+    Or, create your own custom component to support any provider and model of your choice, and then use your custom component in place of the **Language Model** core component. As a shortcut, use an existing language model component as the basis for your custom component.
     :::
+
+2. Add the **Language Model** core component to your flow, and then select your model from the **Language Model** field.
+
+    The **Language Model** dropdown includes the following options at the bottom:
+
+    * **Connect other models**: Connect a custom language model component to use models that aren't available in the global model providers list.
+    * **Manage Model Providers**: Opens the **Model providers** pane where you can configure API keys and enable or disable models.
+    * **Refresh List**: Refreshes the current list of available models.
 
 3. In the [component's header menu](/concepts-components#component-menus), click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls**, enable the **System Message** parameter, and then click **Close**.
 
@@ -65,8 +75,8 @@ These components are required for direct chat interaction with an LLM.
     </details>
 
 10. Optional: Try a different model or provider to see how the response changes.
-For example, if you are using the **Language Model** core component, you could try an Anthropic model.
 
+    If you enabled multiple models in Langflow's global <Icon name="BrainCog" aria-hidden="true" /> **Models**, select a different model in the **Language Model** field. Or, click <Icon name="BrainCog" aria-hidden="true" /> **Models** in the Langflow header to configure additional models and providers.
     Then, open the **Playground**, ask the same question as you did before, and then compare the content and format of the responses.
 
     This helps you understand how different models handle the same request so you can choose the best model for your use case.
@@ -111,17 +121,16 @@ If you don't want to use the **Agent** component's built-in LLMs, you can use a 
     Components in bundles may not have `language model` in the name.
     For example, Azure OpenAI LLMs are provided through the [**Azure OpenAI** component](/bundles-azure#azure-openai).
 
-2. Configure the language model component as needed to connect to your preferred model.
+2. Select your preferred model from the **Language Model** dropdown. The model must be configured globally in the **Models** pane.
 
 3. Change the language model component's output type from **Model Response** to **Language Model**.
 The output port changes to a `LanguageModel` port.
 This is required to connect the language model component to the **Agent** component.
 For more information, see [Language Model output types](#language-model-output-types).
 
-4. Add an **Agent** component to the flow, and then set **Model Provider** to **Connect other models**.
+4. Add an **Agent** component to the flow, and then set **Model Provider** to **Connect other models** in the **Language Model** dropdown.
 
     The **Model Provider** field changes to a **Language Model** (`LanguageModel`) input.
-
 5. Connect the language model component's output to the **Agent** component's **Language Model** input.
 The **Agent** component now inherits the language model settings from the connected language model component instead of using any of the built-in models.
 
@@ -139,9 +148,8 @@ import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 
 | Name | Type | Description |
 |------|------|-------------|
-| provider | String | Input parameter. The model provider to use. |
-| model_name | String | Input parameter. The name of the model to use. Options depend on the selected provider. |
-| api_key | SecretString | Input parameter. The API Key for authentication with the selected provider. |
+| provider | String | Input parameter. The model provider to use. Options depend on your global <Icon name="BrainCog" aria-hidden="true" /> **Models** configuration. |
+| model_name | String | Input parameter. The name of the model to use. Options depend on the selected provider and your global <Icon name="BrainCog" aria-hidden="true" /> **Models** configuration. |
 | input_value | String | Input parameter. The input text to send to the model. |
 | system_message | String | Input parameter. A system message that helps set the behavior of the assistant. |
 | stream | Boolean | Input parameter. Whether to stream the response. Default: `false`. |
