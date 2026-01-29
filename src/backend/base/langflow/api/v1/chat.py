@@ -366,7 +366,12 @@ async def build_vertex(
                 artifacts=artifacts,
             )
 
-        timedelta = time.perf_counter() - start_time
+        # Use vertex's execution time if available (excludes dependency wait time)
+        # Otherwise fall back to total elapsed time
+        if hasattr(vertex, "_execution_time") and vertex._execution_time is not None:
+            timedelta = vertex._execution_time
+        else:
+            timedelta = time.perf_counter() - start_time
 
         duration = format_elapsed_time(timedelta)
         result_data_response.duration = duration

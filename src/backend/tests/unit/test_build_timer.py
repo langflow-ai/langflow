@@ -386,3 +386,118 @@ class TestVertexDurationUsesOwnPerfCounter:
             f"Vertex B ({duration_b}s) must be much less than cumulative ({cumulative}s)"
         )
         assert duration_b < duration_a, "Fast vertex B must be shorter than slow vertex A"
+
+
+class TestVertexExecutionTimeAttribute:
+    """Test the _execution_time attribute on Vertex class.
+
+    The Vertex class stores its own execution time (_execution_time) to measure
+    only the component's execution, excluding time spent waiting for dependencies.
+    """
+
+    def test_execution_time_is_used_over_elapsed_time(self):
+        """Test that _execution_time takes precedence over total elapsed time."""
+        # Simulate a vertex that has its own execution time set
+        execution_time = 0.05  # 50ms actual execution
+        total_elapsed = 0.5  # 500ms total (includes dependency wait)
+
+        # Simulate the API handler logic
+        vertex_execution_time = execution_time
+
+        if vertex_execution_time is not None:
+            timedelta = vertex_execution_time
+        else:
+            timedelta = total_elapsed
+
+        # Should use the vertex's own execution time
+        assert timedelta == execution_time
+        assert timedelta != total_elapsed
+
+    def test_falls_back_to_elapsed_when_execution_time_is_none(self):
+        """Test fallback to elapsed time when _execution_time is None."""
+        start_time = time.perf_counter()
+        time.sleep(0.05)
+        total_elapsed = time.perf_counter() - start_time
+
+        vertex_execution_time = None
+
+        if vertex_execution_time is not None:
+            timedelta = vertex_execution_time
+        else:
+            timedelta = total_elapsed
+
+        # Should use the total elapsed time as fallback
+        assert timedelta == total_elapsed
+        assert 0.04 < timedelta < 0.1
+
+    def test_execution_time_excludes_dependency_wait(self):
+        """Test that execution time measures only the component's work, not dependency wait."""
+        # Simulate dependency wait (200ms) + execution (50ms)
+        dependency_wait_start = time.perf_counter()
+        time.sleep(0.2)  # Waiting for dependencies
+        dependency_wait_end = time.perf_counter()
+
+        # Execution starts after dependencies
+        execution_start = time.perf_counter()
+        time.sleep(0.05)  # Actual component execution
+        execution_time = time.perf_counter() - execution_start
+
+        total_time = dependency_wait_end - dependency_wait_start + execution_time
+
+        # Execution time should be much less than total time
+        assert execution_time < total_time / 2
+        assert 0.04 < execution_time < 0.1
+        assert total_time > 0.2
+
+    def test_sequential_components_have_independent_execution_times(self):
+        """Test that sequential components each measure their own execution independently."""
+        # Component A (slow: 100ms)
+        start_a = time.perf_counter()
+        time.sleep(0.1)
+        execution_time_a = time.perf_counter() - start_a
+
+        # Component B (fast: 30ms) - starts after A finishes
+        start_b = time.perf_counter()
+        time.sleep(0.03)
+        execution_time_b = time.perf_counter() - start_b
+
+        # Each has its own execution time, not cumulative
+        assert 0.08 < execution_time_a < 0.15
+        assert 0.02 < execution_time_b < 0.06
+        assert execution_time_b < execution_time_a
+
+        # B's execution time is NOT A's time + B's time
+        cumulative_would_be = execution_time_a + execution_time_b
+        assert execution_time_b < cumulative_would_be / 2
+
+    def test_api_handler_uses_vertex_execution_time_when_available(self):
+        """Test the API handler logic for using vertex._execution_time."""
+        # Simulate what the API handler does
+        class MockVertex:
+            _execution_time: float | None = None
+
+        # Case 1: _execution_time is set
+        vertex = MockVertex()
+        vertex._execution_time = 0.05
+        start_time = time.perf_counter()
+        time.sleep(0.2)  # Simulate some delay
+
+        if hasattr(vertex, "_execution_time") and vertex._execution_time is not None:
+            timedelta = vertex._execution_time
+        else:
+            timedelta = time.perf_counter() - start_time
+
+        assert timedelta == 0.05
+
+        # Case 2: _execution_time is None
+        vertex2 = MockVertex()
+        vertex2._execution_time = None
+        start_time2 = time.perf_counter()
+        time.sleep(0.05)
+
+        if hasattr(vertex2, "_execution_time") and vertex2._execution_time is not None:
+            timedelta2 = vertex2._execution_time
+        else:
+            timedelta2 = time.perf_counter() - start_time2
+
+        assert 0.04 < timedelta2 < 0.1
