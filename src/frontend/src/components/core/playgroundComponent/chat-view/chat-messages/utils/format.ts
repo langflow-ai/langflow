@@ -31,11 +31,12 @@ export function formatTime(ms: number, showMsOnly: boolean = false): string {
  * Used for displaying "Thinking for X.Xs" or "Thought for X.Xs".
  *
  * @param ms - Duration in milliseconds
- * @returns Formatted seconds string (e.g., "2.5s")
+ * @returns Formatted seconds string (e.g., "2.5s", "0.5s")
  *
  * @example
  * formatSeconds(2500) // "2.5s"
- * formatSeconds(1234) // "1.2s"
+ * formatSeconds(500) // "0.5s"
+ * formatSeconds(1234) // "1.3s"
  */
 export function formatSeconds(ms: number): string {
   const seconds = Math.ceil((ms / 1000) * 10) / 10;
