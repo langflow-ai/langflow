@@ -988,10 +988,14 @@ def get_llm(
     if temperature is not None:
         kwargs["temperature"] = temperature
 
-    # Add max_tokens with provider-specific field name
-    if max_tokens is not None:
-        max_tokens_param = metadata.get("max_tokens_field_name", "max_tokens")
-        kwargs[max_tokens_param] = max_tokens
+    # Add max_tokens with provider-specific field name (only when a valid integer)
+    if max_tokens is not None and max_tokens != "":
+        try:
+            max_tokens_int = int(max_tokens)
+            max_tokens_param = metadata.get("max_tokens_field_name", "max_tokens")
+            kwargs[max_tokens_param] = max_tokens_int
+        except (TypeError, ValueError):
+            pass  # Skip invalid max_tokens (e.g. empty string from form input)
 
     # Add provider-specific parameters
     if provider == "IBM WatsonX":
