@@ -451,7 +451,7 @@ jobs:
 
   build-main:
     name: Build Langflow Main
-    needs: [build-base, determine-main-version]
+    needs: [build-base, determine-base-version, determine-main-version]
     if: ${{ inputs.release_package_main && needs.determine-main-version.outputs.skipped == 'false' }}
     runs-on: ubuntu-latest
     steps:
@@ -474,7 +474,7 @@ jobs:
         if: ${{ inputs.pre_release }}
         run: |
           VERSION="${{ needs.determine-main-version.outputs.version }}"
-          echo "Setting pre-release version to: $VERSION"
+          echo "Setting main pre-release version to: $VERSION"
 
           # Update version in main pyproject.toml
           sed -i.bak "s/^version = .*/version = \"$VERSION\"/" pyproject.toml
@@ -482,6 +482,31 @@ jobs:
           # Verify the change
           echo "Updated pyproject.toml version:"
           grep "^version" pyproject.toml
+      - name: Update langflow-base dependency for pre-release
+        if: ${{ inputs.pre_release }}
+        run: |
+          BASE_VERSION="${{ needs.determine-base-version.outputs.version }}"
+          echo "Base version for pre-release: $BASE_VERSION"
+
+          # Extract current langflow-base constraint from pyproject.toml
+          CURRENT_CONSTRAINT=$(grep -E '^\s*"langflow-base' pyproject.toml | head -1)
+          echo "Current constraint: $CURRENT_CONSTRAINT"
+
+          # Extract the major.minor version (e.g., "0.8" from "~=0.8.0")
+          MAJOR_MINOR=$(echo "$CURRENT_CONSTRAINT" | sed -E 's/.*[~>=<]+([0-9]+\.[0-9]+).*/\1/')
+          NEXT_MAJOR=$((${MAJOR_MINOR%.*} + 1))
+
+          # Create new constraint: >=BASE_VERSION,<NEXT_MAJOR.dev0
+          NEW_CONSTRAINT="\"langflow-base>=$BASE_VERSION,<$NEXT_MAJOR.dev0\""
+
+          echo "New constraint: $NEW_CONSTRAINT"
+
+          # Replace the constraint
+          sed -i.bak "s|\"langflow-base[^\"]*\"|$NEW_CONSTRAINT|" pyproject.toml
+
+          # Verify the change
+          echo "Updated dependency:"
+          grep "langflow-base" pyproject.toml
       - name: Wait for PyPI Propagation
         run: sleep 300 # wait for 5 minutes to ensure PyPI propagation
       - name: Build project for distribution
