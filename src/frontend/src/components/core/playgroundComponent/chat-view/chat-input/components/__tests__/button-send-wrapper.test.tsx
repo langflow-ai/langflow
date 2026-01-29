@@ -48,7 +48,7 @@ jest.mock("@/shared/components/caseComponent", () => ({
 
 describe("ButtonSendWrapper", () => {
   const mockFile = new File(["test"], "test.txt", { type: "text/plain" });
-  
+
   const createMockFilePreview = (loading: boolean): FilePreviewType => ({
     loading,
     file: mockFile,
