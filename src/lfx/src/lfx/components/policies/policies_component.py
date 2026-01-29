@@ -14,6 +14,7 @@ from toolguard.buildtime import (
     generate_guard_specs,
     generate_guards_code,
 )
+from toolguard.runtime import load_toolguards
 
 from lfx.base.models import LCModelComponent
 from lfx.components.policies.wrapped_tool import LangchainModelWrapper, WrappedTool
@@ -161,7 +162,7 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         logger.info("🔒️ToolGuard: Step 1 Done")
         return specs
 
-    async def _build_guard_code(self, specs: list[ToolGuardSpec]) -> ToolGuardsCodeGenerationResult:
+    async def _generate_guard_code(self, specs: list[ToolGuardSpec]) -> ToolGuardsCodeGenerationResult:
         logger.info("🔒️ToolGuard: Starting step 2")
         out_dir = self.work_dir / STEP2
         if out_dir.exists():
@@ -174,9 +175,38 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         logger.info("🔒️ToolGuard: Step 2 Done")
         return gen_result
 
-    async def build_guards(self) -> list[Tool]:
-        if not self.policies:
-            msg = "🔒️ToolGuard: policies cannot be empty!"
+    async def generate(self):
+        # Validate required inputs
+        validations = [
+            (not self.project, "project cannot be empty!"),
+            (not any(self.policies), "policies cannot be empty!"),
+            (not self.in_tools, "in_tools cannot be empty!"),
+            (not self.model or not self.api_key, "model or api_key cannot be empty!"),
+        ]
+
+        for condition, error_msg in validations:
+            if condition:
+                msg = f"🔒️ToolGuard: {error_msg}"
+                raise ValueError(msg)
+
+        self.log(
+            f"🔒️ToolGuard: Start generating. Please review the generated guard code at {self.work_dir}", name="info"
+        )
+
+        specs = await self._generate_guard_specs()
+        res = await self._generate_guard_code(specs)
+
+        # if there was a previous version of the guard, remove it from python cache
+        unload_module(res.domain.app_name)
+
+    def _verify_cached_guards(self, code_dir: Path) -> None:
+        # Validate cache exists before attempting to load
+        if not code_dir.exists():
+            msg = (
+                f"🔒️ToolGuard: Cache directory not found at '{code_dir}'. "
+                f"Please run in 'Generate' mode first to create the guard code, "
+                f"or verify the project name is correct."
+            )
             raise ValueError(msg)
 
         if self.enabled:
