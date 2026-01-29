@@ -1,9 +1,8 @@
 import { NodeResizer } from "@xyflow/react";
 import { debounce } from "lodash";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef } from "react";
 import {
   COLOR_OPTIONS,
-  DEFAULT_NOTE_SIZE,
   NOTE_NODE_MIN_HEIGHT,
   NOTE_NODE_MIN_WIDTH,
 } from "@/constants/constants";
@@ -70,7 +69,6 @@ function NoteNode({
   selected?: boolean;
 }) {
   const nodeRef = useRef<HTMLDivElement>(null);
-  const [isResizing, setIsResizing] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useAlternate(false);
 
   const currentFlow = useFlowStore((state) => state.currentFlow);
@@ -103,8 +101,8 @@ function NoteNode({
     () => currentFlow?.data?.nodes.find((node) => node.id === data.id),
     [currentFlow, data.id],
   );
-  const nodeWidth = nodeData?.width ?? DEFAULT_NOTE_SIZE;
-  const nodeHeight = nodeData?.height ?? DEFAULT_NOTE_SIZE;
+  const nodeWidth = nodeData?.measured?.width ?? NOTE_NODE_MIN_WIDTH;
+  const nodeHeight = nodeData?.measured?.height ?? NOTE_NODE_MIN_HEIGHT;
 
   // Debounced resize handler to avoid excessive state updates during drag
   const debouncedResize = useMemo(
@@ -112,7 +110,7 @@ function NoteNode({
       debounce((width: number, height: number) => {
         setNode(data.id, (node) => ({ ...node, width, height }));
       }, 5),
-    [setNode, data.id],
+    [data.id, setNode],
   );
 
   // Only render toolbar when note is selected
@@ -149,13 +147,11 @@ function NoteNode({
         minWidth={NOTE_NODE_MIN_WIDTH}
         minHeight={NOTE_NODE_MIN_HEIGHT}
         onResize={(_, { width, height }) => debouncedResize(width, height)}
-        isVisible={selected}
-        lineClassName="!border !border-muted-foreground"
-        onResizeStart={() => setIsResizing(true)}
         onResizeEnd={() => {
-          setIsResizing(false);
           debouncedResize.flush();
         }}
+        isVisible={selected}
+        lineClassName="!border !border-muted-foreground"
       />
 
       <div
@@ -169,7 +165,7 @@ function NoteNode({
         className={cn(
           "relative flex h-full w-full flex-col gap-3 rounded-xl p-3",
           "duration-200 ease-in-out",
-          !isResizing && "transition-transform",
+          "transition-transform",
           hasVisibleBg && `border ${!selected && "-z-50 shadow-sm"}`,
         )}
       >
@@ -181,15 +177,16 @@ function NoteNode({
             height: "100%",
             display: "flex",
             overflow: "hidden",
+            maxHeight: "100%",
           }}
           className={cn(
             "flex-1 duration-200 ease-in-out",
-            !isResizing && "transition-[width,height]",
+            "transition-[width,height]",
           )}
         >
           <NodeDescription
             inputClassName={cn(
-              "border-0 ring-0 focus:ring-0 resize-none shadow-none rounded-sm h-full min-w-full",
+              "border-0 ring-0 focus:ring-0 resize-none shadow-none rounded-sm h-full min-w-full max-h-full overflow-auto pr-4 sticky-note-scroll",
               hasCustomColor
                 ? getTextColorClass()
                 : COLOR_OPTIONS[bgColorKey] === null
@@ -202,7 +199,7 @@ function NoteNode({
                 : COLOR_OPTIONS[bgColorKey] === null
                   ? "dark:prose-invert"
                   : "dark:!text-background",
-              "min-w-full",
+              "min-w-full max-h-full overflow-auto pr-4 sticky-note-scroll",
             )}
             style={{ backgroundColor: resolvedBgColor }}
             charLimit={CHAR_LIMIT}

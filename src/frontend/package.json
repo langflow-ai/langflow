@@ -1,9 +1,14 @@
 {
   "name": "langflow",
-  "version": "1.7.2",
+  "version": "1.8.0",
   "private": true,
   "engines": {
     "node": ">=20.19.0"
+  },
+  "overrides": {
+    "tar": "^7.5.7",
+    "glob": "^11.1.0",
+    "test-exclude": "^7.0.0"
   },
   "dependencies": {
     "@chakra-ui/number-input": "^2.1.2",
@@ -14,6 +19,7 @@
     "@hookform/resolvers": "^3.6.0",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-checkbox": "^1.3.3",
+    "@radix-ui/react-context-menu": "^2.2.16",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-dropdown-menu": "^2.1.16",
     "@radix-ui/react-form": "^0.1.8",
@@ -53,7 +59,7 @@
     "file-saver": "^2.0.5",
     "framer-motion": "^11.2.10",
     "fuse.js": "^7.0.0",
-    "lodash": "^4.17.21",
+    "lodash": "^4.17.23",
     "lucide-react": "^0.503.0",
     "moment": "^2.30.1",
     "moment-timezone": "^0.5.48",
@@ -62,7 +68,7 @@
     "openseadragon": "^4.1.1",
     "p-debounce": "^4.0.0",
     "pako": "^2.1.0",
-    "playwright": "^1.56.0",
+    "playwright": "^1.57.0",
     "pretty-ms": "^9.1.0",
     "react": "^19.2.1",
     "react-ace": "^14.0.1",
@@ -134,8 +140,8 @@
   "devDependencies": {
     "@biomejs/biome": "2.1.1",
     "@jest/types": "^30.0.1",
-    "@modelcontextprotocol/server-everything": "^2025.12.18",
-    "@playwright/test": "^1.56.0",
+    "@modelcontextprotocol/server-everything": "^2026.1.14",
+    "@playwright/test": "^1.57.0",
     "@storybook/addon-docs": "^10.1.0",
     "@storybook/addon-links": "^10.1.0",
     "@storybook/react": "^10.1.0",
@@ -166,6 +172,6 @@
     "ts-jest": "^29.4.0",
     "typescript": "^5.4.5",
     "ua-parser-js": "^1.0.38",
-    "vite": "^7.3.0"
+    "vite": "^7.3.1"
   }
 }

@@ -13,8 +13,6 @@ import nanoid
 import pandas as pd
 import yaml
 from langchain_core.tools import StructuredTool
-from pydantic import BaseModel, ValidationError
-
 from lfx.base.tools.constants import (
     TOOL_OUTPUT_DISPLAY_NAME,
     TOOL_OUTPUT_NAME,
@@ -41,6 +39,7 @@ from lfx.template.field.base import UNDEFINED, Input, Output
 from lfx.template.frontend_node.custom_components import ComponentFrontendNode
 from lfx.utils.async_helpers import run_until_complete
 from lfx.utils.util import find_closest_match
+from pydantic import BaseModel, ValidationError
 
 from .custom_component import CustomComponent
 
@@ -1671,6 +1670,7 @@ class Component(CustomComponent):
                     "The message must have been stored in the database previously."
                 )
                 raise ValueError(msg)
+
             # Create a fresh Message instance for consistency with normal flow
             stored_message = await Message.create(**message.model_dump())
             self._stored_message_id = stored_message.get_id()
@@ -1728,11 +1728,13 @@ class Component(CustomComponent):
         if hasattr(self, "_event_manager") and self._event_manager:
             # Use full model_dump() to include all Message fields (content_blocks, properties, etc.)
             data_dict = message.model_dump()
+
             # The message ID is stored in message.data["id"], which ends up in data_dict["data"]["id"]
             # But the frontend expects it at data_dict["id"], so we need to copy it to the top level
             message_id = id_ or data_dict.get("data", {}).get("id") or getattr(message, "id", None)
             if message_id and not data_dict.get("id"):
                 data_dict["id"] = message_id
+
             category = category or data_dict.get("category", None)
 
             def _send_event():
