@@ -5,6 +5,7 @@ import langflowAssistantIcon from "@/assets/langflow_assistant.svg";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import FlowLogsModal from "@/modals/flowLogsModal";
+import useAssistantManagerStore from "@/stores/assistantManagerStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
 import CanvasControlsDropdown from "./CanvasControlsDropdown";
@@ -16,6 +17,16 @@ const CanvasControls = ({ children }: { children?: ReactNode }) => {
   );
   const undo = useFlowsManagerStore((state) => state.undo);
   const redo = useFlowsManagerStore((state) => state.redo);
+  const setAssistantSidebarOpen = useAssistantManagerStore(
+    (state) => state.setAssistantSidebarOpen,
+  );
+  const assistantSidebarOpen = useAssistantManagerStore(
+    (state) => state.assistantSidebarOpen,
+  );
+
+  const handleAssistantClick = () => {
+    setAssistantSidebarOpen(!assistantSidebarOpen);
+  };
 
   useEffect(() => {
     reactFlowStoreApi.setState({
@@ -38,8 +49,9 @@ const CanvasControls = ({ children }: { children?: ReactNode }) => {
         <Button
           unstyled
           size="icon"
-          className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-md"
+          className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-md hover:bg-muted"
           title="Langflow Assistant"
+          onClick={handleAssistantClick}
         >
           <img
             src={langflowAssistantIcon}

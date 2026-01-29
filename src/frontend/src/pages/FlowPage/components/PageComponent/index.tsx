@@ -21,6 +21,7 @@ import { useHotkeys } from "react-hotkeys-hook";
 import { useShallow } from "zustand/react/shallow";
 import { DefaultEdge } from "@/CustomEdges";
 import NoteNode from "@/CustomNodes/NoteNode";
+import { AssistantPanel } from "@/components/core/assistantPanel";
 import FlowToolbar from "@/components/core/flowToolbarComponent";
 import {
   COLOR_OPTIONS,
@@ -45,6 +46,7 @@ import {
 } from "../../../../constants/alerts_constants";
 import ExportModal from "../../../../modals/exportModal";
 import useAlertStore from "../../../../stores/alertStore";
+import useAssistantManagerStore from "../../../../stores/assistantManagerStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useShortcutsStore } from "../../../../stores/shortcuts";
@@ -143,6 +145,13 @@ export default function Page({
 
   const isLocked = useFlowStore(
     useShallow((state) => state.currentFlow?.locked),
+  );
+
+  const assistantSidebarOpen = useAssistantManagerStore(
+    (state) => state.assistantSidebarOpen,
+  );
+  const setAssistantSidebarOpen = useAssistantManagerStore(
+    (state) => state.setAssistantSidebarOpen,
   );
 
   const position = useRef({ x: 0, y: 0 });
@@ -745,6 +754,10 @@ export default function Page({
 
   return (
     <div className="h-full w-full bg-canvas" ref={reactFlowWrapper}>
+      <AssistantPanel
+        isOpen={assistantSidebarOpen}
+        onClose={() => setAssistantSidebarOpen(false)}
+      />
       {showCanvas ? (
         <>
           <div id="react-flow-id" className="h-full w-full bg-canvas relative">
