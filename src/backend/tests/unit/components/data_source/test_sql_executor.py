@@ -101,3 +101,62 @@ class TestSQLComponent(ComponentTestBaseWithoutClient):
         assert "name" in result.columns
         assert result.iloc[0]["id"] == 1
         assert result.iloc[0]["name"] == "name_test"
+
+    async def test_successful_query_with_parameters_build_config(
+        self, component_class: type[SQLComponent], default_kwargs
+    ):
+        """Test a successful SQL query with parameters."""
+        component = component_class()
+        build_config = {**default_kwargs}
+        test_query = "SELECT * FROM test WHERE id = :id"
+        build_config["query"] = test_query
+        build_config = await component.update_build_config(build_config, "", "query")
+        assert build_config["query"] == test_query
+        assert build_config["id"] is not None
+
+    async def test_successful_query_with_parameters_build_config_fallback(
+        self, component_class: type[SQLComponent], default_kwargs
+    ):
+        """Test a successful SQL query with parameters."""
+        component = component_class()
+        build_config = {**default_kwargs}
+        test_query = "SELECT * FROM test WHERE id = :id"
+        test_query_fallback = "SELECT * FROM test WHERE id = :id_fallback"
+        build_config["query"] = test_query
+        build_config["query_fallback"] = test_query_fallback
+        build_config = await component.update_build_config(build_config, "", "query")
+        build_config = await component.update_build_config(build_config, "", "query_fallback")
+        assert build_config["query"] == test_query
+        assert build_config["query_fallback"] == test_query_fallback
+        assert build_config["id"] is not None
+        assert build_config["id_fallback"] is not None
+
+    async def test_successful_query_with_parameters_execution(
+        self, component_class: type[SQLComponent], default_kwargs
+    ):
+        """Test a successful SQL query with a dynamic parameter."""
+        build_config = {**default_kwargs}
+        test_query = "SELECT * FROM test WHERE name = :param_name"
+        build_config["query"] = test_query
+        build_config["param_name"] = Message(text="name_test")
+        component = component_class(**build_config)
+        result = component.run_sql_query()
+        assert len(result) == 1
+        assert result.iloc[0]["id"] == 1
+        assert result.iloc[0]["name"] == "name_test"
+
+    async def test_successful_query_with_parameters_execution_fallback(
+        self, component_class: type[SQLComponent], default_kwargs
+    ):
+        """Test a successful SQL query with a dynamic parameter."""
+        build_config = {**default_kwargs}
+        test_query = "SELECT * FROM invalid_table WHERE name = :param_name"
+        test_query_fallback = "SELECT * FROM test WHERE name = :param_name"
+        build_config["query"] = test_query
+        build_config["query_fallback"] = test_query_fallback
+        build_config["param_name"] = Message(text="name_test")
+        component = component_class(**build_config)
+        result = component.run_sql_query()
+        assert len(result) == 1
+        assert result.iloc[0]["id"] == 1
+        assert result.iloc[0]["name"] == "name_test"
