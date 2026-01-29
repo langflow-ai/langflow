@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { ModelStatusUpdate } from "@/controllers/API/queries/models/use-update-enabled-models";
 import ModelSelection from "../components/ModelSelection";
 import { Model } from "../components/types";
 
@@ -171,6 +172,92 @@ describe("ModelSelection", () => {
       expect(
         screen.queryByTestId("embeddings-models-section"),
       ).not.toBeInTheDocument();
+    });
+  });
+
+  describe("Optimistic UI with pendingUpdates", () => {
+    it("should show pending enabled state when pendingUpdates has enabled=true", () => {
+      const pendingUpdates = new Map<string, ModelStatusUpdate>();
+      pendingUpdates.set("OpenAI:gpt-3.5-turbo", {
+        provider: "OpenAI",
+        model_id: "gpt-3.5-turbo",
+        enabled: true,
+      });
+
+      render(
+        <ModelSelection {...defaultProps} pendingUpdates={pendingUpdates} />,
+      );
+
+      // gpt-3.5-turbo is false in server state but true in pending
+      const toggle = screen.getByTestId("llm-toggle-gpt-3.5-turbo");
+      expect(toggle).toHaveAttribute("data-state", "checked");
+    });
+
+    it("should show pending disabled state when pendingUpdates has enabled=false", () => {
+      const pendingUpdates = new Map<string, ModelStatusUpdate>();
+      pendingUpdates.set("OpenAI:gpt-4", {
+        provider: "OpenAI",
+        model_id: "gpt-4",
+        enabled: false,
+      });
+
+      render(
+        <ModelSelection {...defaultProps} pendingUpdates={pendingUpdates} />,
+      );
+
+      // gpt-4 is true in server state but false in pending
+      const toggle = screen.getByTestId("llm-toggle-gpt-4");
+      expect(toggle).toHaveAttribute("data-state", "unchecked");
+    });
+
+    it("should use server state when model is not in pendingUpdates", () => {
+      const pendingUpdates = new Map<string, ModelStatusUpdate>();
+      // Only gpt-3.5-turbo is in pending, gpt-4 should use server state
+
+      render(
+        <ModelSelection {...defaultProps} pendingUpdates={pendingUpdates} />,
+      );
+
+      // gpt-4 is true in server state (mockEnabledModels)
+      const gpt4Toggle = screen.getByTestId("llm-toggle-gpt-4");
+      expect(gpt4Toggle).toHaveAttribute("data-state", "checked");
+
+      // gpt-3.5-turbo is false in server state
+      const gpt35Toggle = screen.getByTestId("llm-toggle-gpt-3.5-turbo");
+      expect(gpt35Toggle).toHaveAttribute("data-state", "unchecked");
+    });
+
+    it("should prioritize pendingUpdates over server state", () => {
+      const pendingUpdates = new Map<string, ModelStatusUpdate>();
+      // Override both models with opposite values
+      pendingUpdates.set("OpenAI:gpt-4", {
+        provider: "OpenAI",
+        model_id: "gpt-4",
+        enabled: false, // server has true
+      });
+      pendingUpdates.set("OpenAI:gpt-3.5-turbo", {
+        provider: "OpenAI",
+        model_id: "gpt-3.5-turbo",
+        enabled: true, // server has false
+      });
+
+      render(
+        <ModelSelection {...defaultProps} pendingUpdates={pendingUpdates} />,
+      );
+
+      const gpt4Toggle = screen.getByTestId("llm-toggle-gpt-4");
+      expect(gpt4Toggle).toHaveAttribute("data-state", "unchecked");
+
+      const gpt35Toggle = screen.getByTestId("llm-toggle-gpt-3.5-turbo");
+      expect(gpt35Toggle).toHaveAttribute("data-state", "checked");
+    });
+
+    it("should work without pendingUpdates prop (undefined)", () => {
+      render(<ModelSelection {...defaultProps} pendingUpdates={undefined} />);
+
+      // Should fall back to server state
+      const gpt4Toggle = screen.getByTestId("llm-toggle-gpt-4");
+      expect(gpt4Toggle).toHaveAttribute("data-state", "checked");
     });
   });
 });
