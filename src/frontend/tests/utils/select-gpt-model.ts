@@ -1,6 +1,11 @@
 import type { Page } from "@playwright/test";
+import { expect } from "../fixtures";
 
 export const selectGptModel = async (page: Page) => {
+  const node = page.locator(".react-flow__node", { has: page.getByTestId("title-language model") });
+  await node.click();
+  await expect(page.getByTestId("model_model")).toBeVisible({timeout: 3000});
+
   const gptModelDropdownCount = await page.getByTestId("model_model").count();
 
   for (let i = 0; i < gptModelDropdownCount; i++) {
