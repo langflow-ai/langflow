@@ -886,8 +886,8 @@ export const DRAG_EVENTS_CUSTOM_TYPESS = {
   "text/plain": "text/plain",
 };
 
-export const NOTE_NODE_MIN_WIDTH = 260;
-export const NOTE_NODE_MIN_HEIGHT = 100;
+export const NOTE_NODE_MIN_WIDTH = 280;
+export const NOTE_NODE_MIN_HEIGHT = 140;
 export const DEFAULT_NOTE_SIZE = 324;
 
 export const COLOR_OPTIONS = {
