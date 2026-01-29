@@ -174,7 +174,7 @@ export function ChatHeader({
           />
         </div>
       )}
-      <div className="relative flex items-center flex-1 justify-end min-h-xxs w-32">
+      <div className="relative flex items-center flex-1 justify-end min-h-xxs">
         <AnimatedConditional isOpen={!isFullscreen}>
           <ChatHeaderActions
             isFullscreen={false}
