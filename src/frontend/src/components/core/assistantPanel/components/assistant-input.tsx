@@ -10,13 +10,17 @@ const ASSISTANT_MODEL_STORAGE_KEY = "langflow-assistant-selected-model";
 
 interface AssistantInputProps {
   onSend: (message: string, model: AssistantModel | null) => void;
+  onStop?: () => void;
   disabled?: boolean;
+  isProcessing?: boolean;
   placeholder?: string;
 }
 
 export function AssistantInput({
   onSend,
+  onStop,
   disabled = false,
+  isProcessing = false,
   placeholder,
 }: AssistantInputProps) {
   const [message, setMessage] = useState("");
@@ -75,15 +79,26 @@ export function AssistantInput({
               onModelChange={setSelectedModel}
             />
           </div>
-          <Button
-            size="icon"
-            className="h-8 w-8 rounded-lg"
-            onClick={handleSend}
-            disabled={!canSend}
-            title="Send message"
-          >
-            <ForwardedIconComponent name="ArrowUp" className="h-4 w-4" />
-          </Button>
+          {isProcessing ? (
+            <button
+              type="button"
+              onClick={onStop}
+              title="Stop generation"
+              className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted-foreground/15 text-muted-foreground transition-colors hover:bg-muted-foreground/25"
+            >
+              <ForwardedIconComponent name="Square" className="h-3 w-3 fill-current" />
+            </button>
+          ) : (
+            <Button
+              size="icon"
+              className="h-8 w-8 rounded-lg"
+              onClick={handleSend}
+              disabled={!canSend}
+              title="Send message"
+            >
+              <ForwardedIconComponent name="ArrowUp" className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </div>
     </div>

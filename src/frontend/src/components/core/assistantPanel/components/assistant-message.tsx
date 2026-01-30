@@ -8,11 +8,7 @@ import { BASE_URL_API } from "@/customization/config-constants";
 import { extractLanguage, isCodeBlock } from "@/utils/codeBlockUtils";
 import { cn } from "@/utils/utils";
 import type { AssistantMessage } from "../assistant-panel.types";
-import {
-  getRandomCancelledMessage,
-  getRandomComponentCreatedMessage,
-  getRandomThinkingMessage,
-} from "../helpers/messages";
+import { getRandomThinkingMessage } from "../helpers/messages";
 import { AssistantComponentResult } from "./assistant-component-result";
 import { AssistantLoadingState } from "./assistant-loading-state";
 import { AssistantValidationFailed } from "./assistant-validation-failed";
@@ -20,7 +16,6 @@ import { AssistantValidationFailed } from "./assistant-validation-failed";
 interface AssistantMessageItemProps {
   message: AssistantMessage;
   onApprove?: (messageId: string) => void;
-  onCancel?: (messageId: string) => void;
 }
 
 function ThinkingIndicator({ message }: { message: string }) {
@@ -45,7 +40,6 @@ function ThinkingIndicator({ message }: { message: string }) {
 export function AssistantMessageItem({
   message,
   onApprove,
-  onCancel,
 }: AssistantMessageItemProps) {
   const { userData } = useContext(AuthContext);
   const isUser = message.role === "user";
@@ -55,9 +49,7 @@ export function AssistantMessageItem({
   const [validationAnimationComplete, setValidationAnimationComplete] = useState(false);
 
   // Generate randomized messages once per message
-  const componentCreatedMessage = useMemo(() => getRandomComponentCreatedMessage(), []);
   const thinkingMessage = useMemo(() => getRandomThinkingMessage(), []);
-  const cancelledMessage = useMemo(() => getRandomCancelledMessage(), []);
 
   // Steps that indicate component generation mode (not just Q&A)
   const componentGenerationSteps = [
@@ -95,7 +87,6 @@ export function AssistantMessageItem({
           progress={message.progress}
           completedSteps={message.completedSteps || []}
           onValidationComplete={() => setValidationAnimationComplete(true)}
-          onCancel={onCancel ? () => onCancel(message.id) : undefined}
         />
       );
     }
@@ -107,10 +98,10 @@ export function AssistantMessageItem({
       );
     }
 
-    // Show cancelled message
+    // Show cancelled state
     if (message.status === "cancelled") {
       return (
-        <p className="text-sm font-normal text-muted-foreground">{cancelledMessage}</p>
+        <span className="text-sm text-muted-foreground/60 italic">Cancelled</span>
       );
     }
 
@@ -127,15 +118,10 @@ export function AssistantMessageItem({
     // Show successful component result (only after validation animation completes, or if no animation was needed)
     if (hasValidatedResult && message.result && canShowResult) {
       return (
-        <>
-          <p className="mb-4 text-sm font-normal leading-[22.75px] text-muted-foreground">
-            {componentCreatedMessage}
-          </p>
-          <AssistantComponentResult
-            result={message.result}
-            onApprove={() => onApprove?.(message.id)}
-          />
-        </>
+        <AssistantComponentResult
+          result={message.result}
+          onApprove={() => onApprove?.(message.id)}
+        />
       );
     }
 
@@ -166,7 +152,7 @@ export function AssistantMessageItem({
             if (isCodeBlock(className, props, content)) {
               return (
                 <SimplifiedCodeTabComponent
-                  language={extractLanguage(className)}
+                  language={extractLanguage(className, content)}
                   code={content.replace(/\n$/, "")}
                   maxHeight={isStreaming ? "200px" : undefined}
                 />

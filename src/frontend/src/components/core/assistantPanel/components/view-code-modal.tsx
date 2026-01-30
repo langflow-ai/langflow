@@ -1,12 +1,14 @@
 import "ace-builds/src-noconflict/ace";
 import "ace-builds/src-noconflict/ext-language_tools";
 import "ace-builds/src-noconflict/mode-python";
-import "ace-builds/src-noconflict/theme-one_dark";
+import "ace-builds/src-noconflict/theme-github";
+import "ace-builds/src-noconflict/theme-twilight";
 import AceEditor from "react-ace";
 import { Copy, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog-with-no-close";
 import BaseModal from "@/modals/baseModal";
+import { useDarkStore } from "@/stores/darkStore";
 import { useState } from "react";
 
 const EDIT_CODE_SUBTITLE =
@@ -25,6 +27,7 @@ export function EditCodeModal({
   onOpenChange,
   onSave,
 }: EditCodeModalProps) {
+  const dark = useDarkStore((state) => state.dark);
   const [editedCode, setEditedCode] = useState(code);
 
   const handleCopy = async () => {
@@ -57,7 +60,7 @@ export function EditCodeModal({
               value={editedCode}
               onChange={setEditedCode}
               mode="python"
-              theme="one_dark"
+              theme={dark ? "twilight" : "github"}
               setOptions={{ fontFamily: "monospace" }}
               height="100%"
               highlightActiveLine={false}
@@ -93,6 +96,8 @@ export function ViewCodeModal({
   open,
   onOpenChange,
 }: ViewCodeModalProps) {
+  const dark = useDarkStore((state) => state.dark);
+
   const handleCopy = async () => {
     await navigator.clipboard.writeText(code);
   };
@@ -131,7 +136,7 @@ export function ViewCodeModal({
             readOnly
             value={code}
             mode="python"
-            theme="one_dark"
+            theme={dark ? "twilight" : "github"}
             setOptions={{ fontFamily: "monospace" }}
             width="100%"
             height="100%"
@@ -140,7 +145,7 @@ export function ViewCodeModal({
             fontSize={14}
             showGutter={false}
             name="ViewCodeEditor"
-            style={{ backgroundColor: "#1E1E1E", fontSize: 12 }}
+            style={{ fontSize: 12 }}
           />
         </div>
 

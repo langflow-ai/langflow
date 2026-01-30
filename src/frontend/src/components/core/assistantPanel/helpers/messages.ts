@@ -15,18 +15,6 @@ const REASONING_HEADER_MESSAGES = [
   "Creating...",
 ];
 
-// Success message when component is created
-const COMPONENT_CREATED_MESSAGES = [
-  "I've created the component you asked for.",
-  "Your component is ready to use.",
-  "Here's the component you requested.",
-  "Component successfully generated for you.",
-  "I've built the component as requested.",
-  "Your custom component has been created.",
-  "The component you asked for is complete.",
-  "Done! Here's your new component.",
-];
-
 // Reasoning step messages
 const ANALYZING_MESSAGES = [
   "Analyzing component requirements...",
@@ -106,18 +94,6 @@ const RETRYING_MESSAGES = [
   "Applying fixes and trying again...",
 ];
 
-// Cancelled message when user stops generation
-const CANCELLED_MESSAGES = [
-  "Generation cancelled.",
-  "Cancelled by user.",
-  "Generation stopped.",
-  "Request cancelled.",
-  "Stopped by user.",
-  "Generation aborted.",
-  "Cancelled.",
-  "Stopped.",
-];
-
 function getRandomMessage(messages: string[]): string {
   const index = Math.floor(Math.random() * messages.length);
   return messages[index];
@@ -154,18 +130,10 @@ export function getRandomValidationMessages(): ValidationMessages {
   };
 }
 
-export function getRandomComponentCreatedMessage(): string {
-  return getRandomMessage(COMPONENT_CREATED_MESSAGES);
-}
-
 export function getRandomReasoningHeader(): string {
   return getRandomMessage(REASONING_HEADER_MESSAGES);
 }
 
 export function getRandomThinkingMessage(): string {
   return getRandomMessage(REASONING_HEADER_MESSAGES);
-}
-
-export function getRandomCancelledMessage(): string {
-  return getRandomMessage(CANCELLED_MESSAGES);
 }

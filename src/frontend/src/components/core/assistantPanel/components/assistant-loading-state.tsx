@@ -1,5 +1,5 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
-import { Loader2, Square } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import type { AgenticProgressState } from "@/controllers/API/queries/agentic";
 import {
   getRandomReasoningHeader,
@@ -11,7 +11,6 @@ interface AssistantLoadingStateProps {
   progress: AgenticProgressState;
   completedSteps: string[];
   onValidationComplete?: () => void;
-  onCancel?: () => void;
 }
 
 const TYPING_SPEED = 30;
@@ -26,7 +25,6 @@ function TypingCursor() {
 function AssistantLoadingStateComponent({
   progress,
   onValidationComplete,
-  onCancel,
 }: AssistantLoadingStateProps) {
   const [lines, setLines] = useState<string[]>([]);
   const [typingText, setTypingText] = useState("");
@@ -178,21 +176,11 @@ function AssistantLoadingStateComponent({
   return (
     <div className="rounded-lg border border-border bg-background">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-border bg-muted/50 px-4 py-3">
+      <div className="flex items-center border-b border-border bg-muted/50 px-4 py-3">
         <div className="flex items-center gap-2 text-sm font-medium text-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
           <span>{reasoningHeader}</span>
         </div>
-        {onCancel && (
-          <button
-            type="button"
-            onClick={onCancel}
-            className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground/60 transition-colors hover:bg-muted hover:text-muted-foreground"
-            title="Stop generation"
-          >
-            <Square className="h-3 w-3 fill-current" />
-          </button>
-        )}
       </div>
 
       {/* Messages */}

@@ -24,12 +24,16 @@ import { AssistantNoModelsState } from "./components/assistant-no-models-state";
 
 interface AssistantInputWithScrollProps {
   onSend: (content: string, model: AssistantModel | null) => void;
+  onStop: () => void;
   disabled: boolean;
+  isProcessing: boolean;
 }
 
 function AssistantInputWithScroll({
   onSend,
+  onStop,
   disabled,
+  isProcessing,
 }: AssistantInputWithScrollProps) {
   const { scrollToBottom } = useStickToBottomContext();
 
@@ -38,7 +42,14 @@ function AssistantInputWithScroll({
     onSend(content, model);
   };
 
-  return <AssistantInput onSend={handleSend} disabled={disabled} />;
+  return (
+    <AssistantInput
+      onSend={handleSend}
+      onStop={onStop}
+      disabled={disabled}
+      isProcessing={isProcessing}
+    />
+  );
 }
 
 export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
@@ -238,27 +249,24 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
     [messages, validateComponent, addComponent],
   );
 
-  const handleCancel = useCallback(
-    (messageId: string) => {
-      // Abort the request
-      abortControllerRef.current?.abort();
+  const handleStopGeneration = useCallback(() => {
+    // Abort the request
+    abortControllerRef.current?.abort();
 
-      // Update the message status to cancelled
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === messageId
-            ? {
-                ...msg,
-                status: "cancelled",
-                progress: undefined,
-              }
-            : msg,
-        ),
-      );
-      setIsProcessing(false);
-    },
-    [],
-  );
+    // Find the streaming message and mark it as cancelled
+    setMessages((prev) =>
+      prev.map((msg) =>
+        msg.status === "streaming"
+          ? {
+              ...msg,
+              status: "cancelled",
+              progress: undefined,
+            }
+          : msg,
+      ),
+    );
+    setIsProcessing(false);
+  }, []);
 
   const handleSuggestionClick = (suggestion: string) => {
     handleSend(suggestion, null);
@@ -325,13 +333,14 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
                   key={msg.id}
                   message={msg}
                   onApprove={handleApprove}
-                  onCancel={handleCancel}
                 />
               ))}
             </StickToBottom.Content>
             <AssistantInputWithScroll
               onSend={handleSend}
+              onStop={handleStopGeneration}
               disabled={isProcessing}
+              isProcessing={isProcessing}
             />
           </StickToBottom>
         ) : (
@@ -339,7 +348,12 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
             <div className="flex flex-1 flex-col overflow-hidden">
               <AssistantEmptyState onSuggestionClick={handleSuggestionClick} />
             </div>
-            <AssistantInput onSend={handleSend} disabled={false} />
+            <AssistantInput
+              onSend={handleSend}
+              onStop={handleStopGeneration}
+              disabled={false}
+              isProcessing={isProcessing}
+            />
           </>
         )}
       </div>

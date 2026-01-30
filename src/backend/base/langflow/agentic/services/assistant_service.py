@@ -1,8 +1,9 @@
 """Assistant service with validation and retry logic."""
 
 import asyncio
-import re
+import json
 from collections.abc import AsyncGenerator, Callable, Coroutine
+from dataclasses import dataclass
 from typing import Any
 
 from fastapi import HTTPException
@@ -27,22 +28,66 @@ from langflow.agentic.services.flow_executor import (
 MAX_VALIDATION_RETRIES = 3
 VALIDATION_UI_DELAY_SECONDS = 0.3
 LANGFLOW_ASSISTANT_FLOW = "LangflowAssistant.json"
-
-# Patterns that indicate user wants to generate a component
-COMPONENT_GENERATION_PATTERNS = [
-    r"\b(generate|create|make|build|write)\b.{0,30}\b(component|custom component)\b",
-    r"\b(component|custom component)\b.{0,30}\b(that|which|to|for|with)\b",
-    r"\bcreate\s+(a|an|the)\s+\w+\s+component\b",
-    r"\bgenerate\s+(a|an|the)\s+\w+\s+component\b",
-    r"\bbuild\s+(a|an|the)\s+\w+\s+component\b",
-    r"\bmake\s+(a|an|the)\s+\w+\s+component\b",
-]
+TRANSLATION_FLOW = "TranslationFlow.json"
 
 
-def _looks_like_component_request(text: str) -> bool:
-    """Check if user input looks like a request to generate a component."""
-    text_lower = text.lower()
-    return any(re.search(pattern, text_lower) for pattern in COMPONENT_GENERATION_PATTERNS)
+@dataclass
+class IntentResult:
+    """Result from intent classification flow."""
+
+    translation: str
+    intent: str  # "generate_component" or "question"
+
+
+async def _classify_intent(
+    text: str,
+    global_variables: dict[str, str],
+    user_id: str | None = None,
+    session_id: str | None = None,
+    provider: str | None = None,
+    model_name: str | None = None,
+    api_key_var: str | None = None,
+) -> IntentResult:
+    """Translate text to English and classify user intent using the TranslationFlow.
+
+    The flow returns JSON with translation and intent classification.
+    Returns original text with "question" intent if classification fails.
+    """
+    if not text:
+        return IntentResult(translation=text, intent="question")
+
+    try:
+        logger.debug("Classifying intent and translating text")
+        result = await execute_flow_file(
+            flow_filename=TRANSLATION_FLOW,
+            input_value=text,
+            global_variables=global_variables,
+            verbose=False,
+            user_id=user_id,
+            session_id=session_id,
+            provider=provider,
+            model_name=model_name,
+            api_key_var=api_key_var,
+        )
+
+        response_text = extract_response_text(result)
+        if response_text:
+            # Parse JSON response from the flow
+            try:
+                parsed = json.loads(response_text)
+                translation = parsed.get("translation", text)
+                intent = parsed.get("intent", "question")
+                logger.debug(f"Intent: {intent}, Translation: '{translation[:50]}'")
+                return IntentResult(translation=translation, intent=intent)
+            except json.JSONDecodeError:
+                # If response is not JSON, treat it as plain translation (backward compat)
+                logger.warning("Intent flow returned non-JSON, treating as question")
+                return IntentResult(translation=response_text, intent="question")
+
+        return IntentResult(translation=text, intent="question")
+    except Exception as e:  # noqa: BLE001
+        logger.warning(f"Intent classification failed, defaulting to question: {e}")
+        return IntentResult(translation=text, intent="question")
 
 VALIDATION_RETRY_TEMPLATE = """The previous component code has an error. Please fix it.
 
@@ -166,8 +211,21 @@ async def execute_flow_with_validation_streaming(
     """
     current_input = input_value
 
-    # Detect if this looks like a component generation request
-    is_component_request = _looks_like_component_request(input_value)
+    # Classify intent using LLM (handles multi-language support)
+    # This translates the input and determines if user wants to generate a component or ask a question
+    intent_result = await _classify_intent(
+        text=input_value,
+        global_variables=global_variables,
+        user_id=user_id,
+        session_id=session_id,
+        provider=provider,
+        model_name=model_name,
+        api_key_var=api_key_var,
+    )
+
+    # Check if this is a component generation request based on LLM classification
+    is_component_request = intent_result.intent == "generate_component"
+    logger.info(f"Intent classification: {intent_result.intent} (is_component_request={is_component_request})")
 
     # Create cancel event for propagating cancellation to flow executor
     cancel_event = asyncio.Event()
@@ -267,12 +325,18 @@ async def execute_flow_with_validation_streaming(
                 message="Response ready",
             )
 
-            # Check if response contains code before showing extraction step
+            # For Q&A responses, return immediately without code extraction/validation
+            if not is_component_request:
+                yield format_complete_event(result)
+                return
+
+            # Only extract and validate code for component generation requests
             response_text = extract_response_text(result)
             code = extract_component_code(response_text)
 
             if not code:
-                # No code found, return as plain text response (Q&A mode)
+                # No code found even though user asked for component generation
+                # Return as plain text response
                 yield format_complete_event(result)
                 return
 
