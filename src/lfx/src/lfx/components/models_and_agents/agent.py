@@ -171,11 +171,14 @@ class AgentComponent(ToolCallingAgentComponent):
         """Get the agent requirements for the agent."""
         from langchain_core.tools import StructuredTool
 
+        max_tokens_val = getattr(self, "max_tokens", None)
+        if max_tokens_val == "":
+            max_tokens_val = None
         llm_model = get_llm(
             model=self.model,
             user_id=self.user_id,
             api_key=self.api_key,
-            max_tokens=getattr(self, "max_tokens", None),
+            max_tokens=max_tokens_val,
         )
         if llm_model is None:
             msg = "No language model selected. Please choose a model to proceed."
