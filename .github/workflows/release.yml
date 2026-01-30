@@ -347,13 +347,11 @@ jobs:
           python-version: "3.12"
           prune-cache: false
       - name: Download LFX artifact
-        if: ${{ inputs.release_lfx }}
         uses: actions/download-artifact@v7
         with:
           name: dist-lfx
           path: ./lfx-dist
       - name: Install LFX from local wheel
-        if: ${{ inputs.release_lfx }}
         run: |
           WHEEL_FILE=$(find ./lfx-dist -name "*.whl" -type f | head -1)
           if [ -n "$WHEEL_FILE" ]; then
@@ -380,7 +378,7 @@ jobs:
           echo "Updated pyproject.toml version:"
           grep "^version" pyproject.toml
       - name: Update lfx dependency for pre-release
-        if: ${{ inputs.pre_release && inputs.release_lfx }}
+        if: ${{ inputs.pre_release }}
         run: |
           LFX_VERSION="${{ needs.determine-lfx-version.outputs.version }}"
           echo "Updating lfx dependency to allow pre-release version: $LFX_VERSION"
@@ -478,7 +476,6 @@ jobs:
           python-version: "3.12"
           prune-cache: false
       - name: Download LFX artifact
-        if: ${{ inputs.release_lfx }}
         uses: actions/download-artifact@v7
         with:
           name: dist-lfx
@@ -489,7 +486,6 @@ jobs:
           name: dist-base
           path: ./base-dist
       - name: Install LFX from local wheel
-        if: ${{ inputs.release_lfx }}
         run: |
           WHEEL_FILE=$(find ./lfx-dist -name "*.whl" -type f | head -1)
           if [ -n "$WHEEL_FILE" ]; then
