@@ -564,6 +564,46 @@ jobs:
           fi
         shell: bash
 
+      - name: Force reinstall local wheels to prevent downgrades (Windows)
+        if: steps.install-method.outputs.method == 'wheel' && matrix.os == 'windows'
+        run: |
+          # Reinstall LFX if it was provided
+          if [ -n "${{ inputs.lfx-artifact-name }}" ]; then
+            LFX_WHEEL=$(find ./lfx-dist -name "*.whl" -type f | head -1)
+            if [ -n "$LFX_WHEEL" ]; then
+              echo "Force reinstalling LFX: $LFX_WHEEL"
+              uv pip install --force-reinstall --no-deps --prerelease=allow --python ./test-env/Scripts/python.exe "$LFX_WHEEL"
+            fi
+          fi
+
+          # Reinstall base
+          BASE_WHEEL=$(find ./base-dist -name "*.whl" -type f | head -1)
+          if [ -n "$BASE_WHEEL" ]; then
+            echo "Force reinstalling langflow-base: $BASE_WHEEL"
+            uv pip install --force-reinstall --no-deps --prerelease=allow --python ./test-env/Scripts/python.exe "$BASE_WHEEL"
+          fi
+        shell: bash
+
+      - name: Force reinstall local wheels to prevent downgrades (Unix)
+        if: steps.install-method.outputs.method == 'wheel' && matrix.os != 'windows'
+        run: |
+          # Reinstall LFX if it was provided
+          if [ -n "${{ inputs.lfx-artifact-name }}" ]; then
+            LFX_WHEEL=$(find ./lfx-dist -name "*.whl" -type f | head -1)
+            if [ -n "$LFX_WHEEL" ]; then
+              echo "Force reinstalling LFX: $LFX_WHEEL"
+              uv pip install --force-reinstall --no-deps --prerelease=allow --python ./test-env/bin/python "$LFX_WHEEL"
+            fi
+          fi
+
+          # Reinstall base
+          BASE_WHEEL=$(find ./base-dist -name "*.whl" -type f | head -1)
+          if [ -n "$BASE_WHEEL" ]; then
+            echo "Force reinstalling langflow-base: $BASE_WHEEL"
+            uv pip install --force-reinstall --no-deps --prerelease=allow --python ./test-env/bin/python "$BASE_WHEEL"
+          fi
+        shell: bash
+
       # PyPI installation steps
       - name: Install langflow from PyPI (Windows)
         if: steps.install-method.outputs.method == 'pypi' && matrix.os == 'windows'
