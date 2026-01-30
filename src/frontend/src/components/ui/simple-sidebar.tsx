@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { PanelLeftOpen, PanelRightOpen } from "lucide-react";
 import * as React from "react";
 import { useHotkeys } from "react-hotkeys-hook";
@@ -402,11 +402,13 @@ const SimpleSidebar = React.forwardRef<
             ...props.style,
             left: side === "left" ? 0 : "auto",
             right: side === "right" ? 0 : "auto",
+            pointerEvents: open ? "auto" : "none",
           }}
         >
           <div
             data-simple-sidebar="sidebar"
             className="flex h-full w-full flex-col bg-background relative"
+            style={{ visibility: open ? "visible" : "hidden" }}
           >
             {children}
             {resizable && open && !fullscreen && (
