@@ -277,10 +277,23 @@ jobs:
             git tag -f ${{ needs.create-nightly-tag.outputs.main_tag }}
             git push -f origin ${{ needs.create-nightly-tag.outputs.main_tag }}
             
-            echo "=== Pushing to nightly-hash-history-updates branch ==="
-            # Also push to the branch for PR creation
-            git push origin HEAD:refs/heads/nightly-hash-history-updates --force
-            echo "Updated nightly tag and branch with hash history changes"
+            echo "=== Creating clean branch from main with only hash history changes ==="
+            # Fetch latest main
+            git fetch origin main
+            
+            # Create a new branch from main
+            git checkout -B nightly-hash-history-updates origin/main
+            
+            # Copy ONLY the hash history file from the nightly tag
+            git checkout ${{ needs.create-nightly-tag.outputs.main_tag }} -- src/lfx/src/lfx/_assets/nightly_hash_history.json
+            
+            # Commit only this file
+            git add src/lfx/src/lfx/_assets/nightly_hash_history.json
+            git commit -m "Update nightly hash history for ${{ needs.create-nightly-tag.outputs.main_tag }}"
+            
+            # Force push the clean branch
+            git push origin nightly-hash-history-updates --force
+            echo "Updated nightly tag and created clean branch with only hash history changes"
           fi
 
   frontend-tests:
