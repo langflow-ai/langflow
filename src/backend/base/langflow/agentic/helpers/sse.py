@@ -4,6 +4,12 @@ import json
 
 from langflow.agentic.api.schemas import StepType
 
+_TOKEN_JSON = json.dumps("token")
+
+_PREFIX = 'data: {"event": ' + _TOKEN_JSON + ', "chunk": '
+
+_SUFFIX = "}\n\n"
+
 
 def format_progress_event(
     step: StepType,
@@ -55,4 +61,4 @@ def format_error_event(message: str) -> str:
 
 def format_token_event(chunk: str) -> str:
     """Format SSE token event for streaming LLM output."""
-    return f"data: {json.dumps({'event': 'token', 'chunk': chunk})}\n\n"
+    return _PREFIX + json.dumps(chunk) + _SUFFIX
