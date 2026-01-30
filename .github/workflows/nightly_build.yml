@@ -379,23 +379,16 @@ jobs:
 
   merge-hash-history-to-main:
     name: Create PR to Merge Hash History to Main
-    needs: [create-nightly-tag, build-hash-history]
+    needs: [create-nightly-tag, build-hash-history, release-nightly-build]
+    # Run if auto_merge_hash_history is true (default) or not set (scheduled runs)
+    # When triggered by schedule, inputs.auto_merge_hash_history is not set, so default to true
+    # Only run when the base branch is 'main' to prevent PRs from feature branches
+    if: github.repository == 'langflow-ai/langflow' && github.ref == 'refs/heads/main' && always() && needs.build-hash-history.result == 'success' && needs.release-nightly-build.result == 'success' && (github.event_name == 'schedule' || inputs.auto_merge_hash_history != false)
     runs-on: ubuntu-latest
     permissions:
       contents: write
       pull-requests: write
     steps:
-      - name: Debug condition values
-        run: |
-          echo "=== Debugging merge job condition ==="
-          echo "github.repository: ${{ github.repository }}"
-          echo "github.ref: ${{ github.ref }}"
-          echo "inputs.test_merge_pr: ${{ inputs.test_merge_pr }}"
-          echo "inputs.auto_merge_hash_history: ${{ inputs.auto_merge_hash_history }}"
-          echo "github.event_name: ${{ github.event_name }}"
-          echo "needs.build-hash-history.result: ${{ needs.build-hash-history.result }}"
-          echo "needs.create-nightly-tag.result: ${{ needs.create-nightly-tag.result }}"
-      
       - name: Checkout main branch
         uses: actions/checkout@v6
         with:
@@ -536,7 +529,7 @@ jobs:
           fi
 
       - name: Send success notification to Slack
-        if: ${{ !inputs.skip_slack }}
+        if: ${{ !inputs.skip_slack && needs.release-nightly-build.result == 'success' }}
         run: |
           curl -X POST -H 'Content-type: application/json' \
           --data '{
@@ -557,7 +550,7 @@ jobs:
                   },
                   {
                     "type": "mrkdwn",
-                    "text": "*Status:*\n``"
+                    "text": "*Status:*\n`${{ needs.release-nightly-build.result }}`"
                   }
                 ]
               },
