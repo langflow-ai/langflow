@@ -144,12 +144,11 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
       // For ModelInput types, default to ["LanguageModel"] when input_types is empty
       // This matches the behavior in RenderInputParameters
       const isModelType = templateFieldType === "model";
-      const inputTypes =
-        rawInputTypes && rawInputTypes.length > 0
-          ? rawInputTypes
-          : isModelType
-            ? ["LanguageModel"]
-            : rawInputTypes;
+      const inputTypes = rawInputTypes?.length
+        ? rawInputTypes
+        : isModelType
+          ? ["LanguageModel"]
+          : rawInputTypes;
       const hasProxy = targetNode.data.node!.template[field]?.proxy;
       const isToolMode = targetNode.data.node!.template[field]?.tool_mode;
 
