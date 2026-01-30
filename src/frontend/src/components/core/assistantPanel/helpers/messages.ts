@@ -106,6 +106,18 @@ const RETRYING_MESSAGES = [
   "Applying fixes and trying again...",
 ];
 
+// Cancelled message when user stops generation
+const CANCELLED_MESSAGES = [
+  "Generation cancelled.",
+  "Cancelled by user.",
+  "Generation stopped.",
+  "Request cancelled.",
+  "Stopped by user.",
+  "Generation aborted.",
+  "Cancelled.",
+  "Stopped.",
+];
+
 function getRandomMessage(messages: string[]): string {
   const index = Math.floor(Math.random() * messages.length);
   return messages[index];
@@ -152,4 +164,8 @@ export function getRandomReasoningHeader(): string {
 
 export function getRandomThinkingMessage(): string {
   return getRandomMessage(REASONING_HEADER_MESSAGES);
+}
+
+export function getRandomCancelledMessage(): string {
+  return getRandomMessage(CANCELLED_MESSAGES);
 }

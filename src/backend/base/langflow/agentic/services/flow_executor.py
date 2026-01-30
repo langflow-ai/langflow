@@ -2,7 +2,7 @@
 
 import asyncio
 import json
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Callable, Coroutine
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -147,12 +147,15 @@ async def execute_flow_file_streaming(
     provider: str | None = None,
     model_name: str | None = None,
     api_key_var: str | None = None,
+    is_disconnected: Callable[[], Coroutine[Any, Any, bool]] | None = None,
+    cancel_event: asyncio.Event | None = None,
 ) -> AsyncGenerator[tuple[str, Any], None]:
     """Execute a flow from a JSON file with token streaming.
 
     Yields events as they occur:
     - ("token", chunk): Token chunk from LLM streaming
     - ("end", result): Final result when flow completes
+    - ("cancelled", {}): Flow was cancelled
 
     Args:
         flow_filename: Name of the flow file (e.g., "MyFlow.json")
@@ -164,6 +167,8 @@ async def execute_flow_file_streaming(
         provider: Model provider to inject into Agent nodes
         model_name: Model name to inject into Agent nodes
         api_key_var: API key variable name to inject into Agent nodes
+        is_disconnected: Async function to check if client disconnected
+        cancel_event: Event to signal cancellation from outside
 
     Yields:
         tuple[str, Any]: Event type and data pairs
@@ -200,15 +205,32 @@ async def execute_flow_file_streaming(
         )
     )
 
+    cancelled = False
     try:
-        async for event_type, chunk in _consume_streaming_events(event_queue):
+        async for event_type, chunk in _consume_streaming_events(event_queue, is_disconnected, cancel_event):
             if event_type == "token":
                 yield ("token", chunk)
             elif event_type == "end":
                 break
+            elif event_type == "cancelled":
+                cancelled = True
+                break
+    except GeneratorExit:
+        # Generator was closed externally (client disconnected)
+        logger.info("Generator closed externally, cancelling flow")
+        cancelled = True
     finally:
         if not flow_task.done():
-            await flow_task
+            # Always cancel the flow task when generator exits
+            flow_task.cancel()
+            try:
+                await flow_task
+            except asyncio.CancelledError:
+                logger.info("Flow task cancelled")
+
+    if cancelled:
+        yield ("cancelled", {})
+        return
 
     if execution_result.has_error:
         raise HTTPException(
@@ -220,14 +242,41 @@ async def execute_flow_file_streaming(
 
 async def _consume_streaming_events(
     event_queue: asyncio.Queue[tuple[str, bytes, float] | None],
+    is_disconnected: Callable[[], Coroutine[Any, Any, bool]] | None = None,
+    cancel_event: asyncio.Event | None = None,
 ) -> AsyncGenerator[tuple[str, str], None]:
     """Consume events from queue and yield parsed token events."""
+    # Use shorter timeout when checking for cancellation
+    check_interval = 0.5  # Check every 500ms
+
     while True:
+        # Check cancel event first
+        if cancel_event is not None and cancel_event.is_set():
+            logger.info("Cancel event set, stopping event consumption")
+            yield ("cancelled", "")
+            return
+
         try:
-            event = await asyncio.wait_for(event_queue.get(), timeout=STREAMING_EVENT_TIMEOUT_SECONDS)
+            # Use shorter timeout to allow checking for disconnection
+            event = await asyncio.wait_for(event_queue.get(), timeout=check_interval)
         except asyncio.TimeoutError:
-            logger.warning("Event queue timeout - flow may be stuck")
-            break
+            # Check cancel event
+            if cancel_event is not None and cancel_event.is_set():
+                logger.info("Cancel event set, stopping event consumption")
+                yield ("cancelled", "")
+                return
+
+            # Check if client disconnected during wait
+            if is_disconnected is not None:
+                try:
+                    disconnected = await is_disconnected()
+                    if disconnected:
+                        logger.info("Client disconnected, stopping event consumption")
+                        yield ("cancelled", "")
+                        return
+                except Exception:  # noqa: BLE001
+                    pass
+            continue
 
         if event is None:
             break

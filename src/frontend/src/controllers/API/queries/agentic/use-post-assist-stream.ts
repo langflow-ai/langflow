@@ -1,6 +1,7 @@
 import { getURL } from "../../helpers/constants";
 import type {
   AgenticAssistRequest,
+  AgenticCancelledEvent,
   AgenticCompleteEvent,
   AgenticErrorEvent,
   AgenticProgressEvent,
@@ -13,6 +14,7 @@ interface StreamCallbacks {
   onToken?: (event: AgenticTokenEvent) => void;
   onComplete?: (event: AgenticCompleteEvent) => void;
   onError?: (event: AgenticErrorEvent) => void;
+  onCancelled?: (event: AgenticCancelledEvent) => void;
 }
 
 function parseSSEEvent(data: string): AgenticSSEEvent | null {
@@ -51,6 +53,9 @@ function processSSELine(
       return { done: true };
     case "error":
       callbacks.onError?.(event);
+      return { done: true };
+    case "cancelled":
+      callbacks.onCancelled?.(event);
       return { done: true };
   }
 

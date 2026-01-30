@@ -8,7 +8,8 @@ export type AssistantMessageStatus =
   | "pending"
   | "streaming"
   | "complete"
-  | "error";
+  | "error"
+  | "cancelled";
 
 export interface AssistantMessage {
   id: string;

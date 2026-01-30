@@ -9,6 +9,7 @@ import { extractLanguage, isCodeBlock } from "@/utils/codeBlockUtils";
 import { cn } from "@/utils/utils";
 import type { AssistantMessage } from "../assistant-panel.types";
 import {
+  getRandomCancelledMessage,
   getRandomComponentCreatedMessage,
   getRandomThinkingMessage,
 } from "../helpers/messages";
@@ -19,6 +20,7 @@ import { AssistantValidationFailed } from "./assistant-validation-failed";
 interface AssistantMessageItemProps {
   message: AssistantMessage;
   onApprove?: (messageId: string) => void;
+  onCancel?: (messageId: string) => void;
 }
 
 function ThinkingIndicator({ message }: { message: string }) {
@@ -43,6 +45,7 @@ function ThinkingIndicator({ message }: { message: string }) {
 export function AssistantMessageItem({
   message,
   onApprove,
+  onCancel,
 }: AssistantMessageItemProps) {
   const { userData } = useContext(AuthContext);
   const isUser = message.role === "user";
@@ -54,6 +57,7 @@ export function AssistantMessageItem({
   // Generate randomized messages once per message
   const componentCreatedMessage = useMemo(() => getRandomComponentCreatedMessage(), []);
   const thinkingMessage = useMemo(() => getRandomThinkingMessage(), []);
+  const cancelledMessage = useMemo(() => getRandomCancelledMessage(), []);
 
   // Steps that indicate component generation mode (not just Q&A)
   const componentGenerationSteps = [
@@ -91,6 +95,7 @@ export function AssistantMessageItem({
           progress={message.progress}
           completedSteps={message.completedSteps || []}
           onValidationComplete={() => setValidationAnimationComplete(true)}
+          onCancel={onCancel ? () => onCancel(message.id) : undefined}
         />
       );
     }
@@ -99,6 +104,13 @@ export function AssistantMessageItem({
     if (message.status === "error" && message.error) {
       return (
         <p className="text-sm font-normal text-destructive">{message.error}</p>
+      );
+    }
+
+    // Show cancelled message
+    if (message.status === "cancelled") {
+      return (
+        <p className="text-sm font-normal text-muted-foreground">{cancelledMessage}</p>
       );
     }
 

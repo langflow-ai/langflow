@@ -180,6 +180,20 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
               );
               setIsProcessing(false);
             },
+            onCancelled: () => {
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === assistantMessageId
+                    ? {
+                        ...msg,
+                        status: "cancelled",
+                        progress: undefined,
+                      }
+                    : msg,
+                ),
+              );
+              setIsProcessing(false);
+            },
           },
           abortControllerRef.current.signal,
         );
@@ -222,6 +236,28 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
       }
     },
     [messages, validateComponent, addComponent],
+  );
+
+  const handleCancel = useCallback(
+    (messageId: string) => {
+      // Abort the request
+      abortControllerRef.current?.abort();
+
+      // Update the message status to cancelled
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === messageId
+            ? {
+                ...msg,
+                status: "cancelled",
+                progress: undefined,
+              }
+            : msg,
+        ),
+      );
+      setIsProcessing(false);
+    },
+    [],
   );
 
   const handleSuggestionClick = (suggestion: string) => {
@@ -289,6 +325,7 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
                   key={msg.id}
                   message={msg}
                   onApprove={handleApprove}
+                  onCancel={handleCancel}
                 />
               ))}
             </StickToBottom.Content>

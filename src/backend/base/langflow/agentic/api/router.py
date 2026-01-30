@@ -8,7 +8,7 @@ import uuid
 from dataclasses import dataclass
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from lfx.base.models.unified_models import (
     get_model_provider_variable_mapping,
@@ -273,6 +273,7 @@ async def assist(
 @router.post("/assist/stream")
 async def assist_stream(
     request: AssistantRequest,
+    http_request: Request,
     current_user: CurrentActiveUser,
     session: DbSession,
 ) -> StreamingResponse:
@@ -290,6 +291,7 @@ async def assist_stream(
             provider=ctx.provider,
             model_name=ctx.model_name,
             api_key_var=ctx.api_key_name,
+            is_disconnected=http_request.is_disconnected,
         ),
         media_type="text/event-stream",
         headers={

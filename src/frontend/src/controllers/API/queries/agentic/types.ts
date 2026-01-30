@@ -39,11 +39,17 @@ export interface AgenticErrorEvent {
   message: string;
 }
 
+export interface AgenticCancelledEvent {
+  event: "cancelled";
+  message: string;
+}
+
 export type AgenticSSEEvent =
   | AgenticProgressEvent
   | AgenticTokenEvent
   | AgenticCompleteEvent
-  | AgenticErrorEvent;
+  | AgenticErrorEvent
+  | AgenticCancelledEvent;
 
 export interface AgenticAssistRequest {
   flow_id: string;

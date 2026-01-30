@@ -1,6 +1,7 @@
 export { postAssistStream } from "./use-post-assist-stream";
 export type {
   AgenticAssistRequest,
+  AgenticCancelledEvent,
   AgenticCompleteData,
   AgenticCompleteEvent,
   AgenticErrorEvent,
