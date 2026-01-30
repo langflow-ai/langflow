@@ -319,12 +319,12 @@ ifeq ($(base), true)
 	make install_frontendci
 	make build_frontend
 	make build_langflow_base args="$(args)"
-ifeq ($(main), true)
+else ifeq ($(main), true)
 	make install_frontendci
 	make build_frontend
 	make build_langflow_base args="$(args)"
 	make build_langflow args="$(args)"
-ifeq ($(pre), true)
+else ifeq ($(pre), true)
 	@echo 'pre'
 	make install_frontendci
 	make build_frontend
