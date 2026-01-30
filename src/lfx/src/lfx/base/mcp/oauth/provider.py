@@ -2,16 +2,21 @@
 
 This module provides a factory function to create an OAuthClientProvider
 configured for use with Langflow and MCP servers.
+
+For deployed environments, use `is_deployed_mode()` to detect if the server
+is running in a deployment (non-localhost) environment, and use
+`create_token_auth()` with pre-obtained tokens from the OAuth API endpoints.
 """
 
 from __future__ import annotations
 
+import os
 import webbrowser
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
+from urllib.parse import urlparse
 
 import httpx
-from urllib.parse import urlparse
 
 from lfx.base.mcp.oauth.handlers import OAuthCallbackHandler
 from lfx.base.mcp.oauth.storage import FileTokenStorage, InMemoryTokenStorage
@@ -21,6 +26,178 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Generator
 
     from mcp.client.auth import OAuthClientProvider
+
+
+class OAuthRequiredError(Exception):
+    """Raised when OAuth authentication is required in deployed mode.
+
+    This error is raised when the MCP component detects that OAuth is needed
+    but no cached tokens are available. The frontend should handle this by
+    initiating the OAuth flow via the /api/v1/mcp/oauth/initiate endpoint.
+
+    Attributes:
+        message: Human-readable error message.
+        server_url: The MCP server URL requiring authentication.
+        initiate_endpoint: The API endpoint to start the OAuth flow.
+        client_id: Pre-registered OAuth client ID (optional).
+        client_secret: Pre-registered OAuth client secret (optional).
+        redirect_uri: Custom redirect URI (optional).
+        scopes: OAuth scopes to request (optional).
+    """
+
+    def __init__(
+        self,
+        message: str,
+        server_url: str,
+        initiate_endpoint: str = "/api/v1/mcp/oauth/initiate",
+        client_id: str | None = None,
+        client_secret: str | None = None,
+        redirect_uri: str | None = None,
+        scopes: list[str] | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.message = message
+        self.server_url = server_url
+        self.initiate_endpoint = initiate_endpoint
+        self.client_id = client_id
+        self.client_secret = client_secret
+        self.redirect_uri = redirect_uri
+        self.scopes = scopes
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert error to dict for API responses."""
+        result = {
+            "error": "oauth_required",
+            "message": self.message,
+            "server_url": self.server_url,
+            "initiate_endpoint": self.initiate_endpoint,
+        }
+        # Include optional fields if provided
+        if self.client_id:
+            result["client_id"] = self.client_id
+        if self.client_secret:
+            result["client_secret"] = self.client_secret
+        if self.redirect_uri:
+            result["redirect_uri"] = self.redirect_uri
+        if self.scopes:
+            result["scopes"] = self.scopes
+        return result
+
+
+def is_deployed_mode() -> bool:
+    """Detect if Langflow is running in a deployed environment.
+
+    A deployed environment is one where users access Langflow through
+    a network (not localhost), meaning the local browser-based OAuth
+    callback flow won't work.
+
+    Detection methods:
+    1. Explicit environment variable: LANGFLOW_DEPLOYED=true
+    2. Running in Docker container (/.dockerenv exists)
+    3. Host setting is not localhost/127.0.0.1
+
+    Returns:
+        True if running in deployed mode, False for local development.
+    """
+    # Check explicit environment variable
+    if os.getenv("LANGFLOW_DEPLOYED", "").lower() == "true":
+        return True
+
+    # Check for Docker container
+    if Path("/.dockerenv").exists():
+        return True
+
+    # Check if running in Kubernetes (common env var)
+    if os.getenv("KUBERNETES_SERVICE_HOST"):
+        return True
+
+    # Check host setting from Langflow settings
+    try:
+        from lfx.services.deps import get_settings_service
+
+        settings = get_settings_service().settings
+        host = getattr(settings, "host", "localhost")
+
+        # Consider deployed if host is not localhost
+        # Note: 0.0.0.0 means "all interfaces" but is commonly used in containers
+        if host not in ("localhost", "127.0.0.1", "0.0.0.0"):  # noqa: S104
+            return True
+    except Exception:  # noqa: BLE001, S110
+        # If we can't get settings, assume local mode
+        pass
+
+    return False
+
+
+class TokenAuth(httpx.Auth):
+    """Simple token-based authentication for pre-obtained OAuth tokens.
+
+    This is used in deployed mode where tokens are obtained via the
+    OAuth API endpoints and cached. It adds the Bearer token to requests.
+    """
+
+    def __init__(self, access_token: str, token_type: str = "Bearer") -> None:  # noqa: S107
+        """Initialize token auth.
+
+        Args:
+            access_token: The OAuth access token.
+            token_type: The token type (default: "Bearer").
+        """
+        self._access_token = access_token
+        self._token_type = token_type
+
+    def auth_flow(self, request: httpx.Request) -> Generator[httpx.Request, httpx.Response, None]:
+        """Add authorization header to the request."""
+        request.headers["Authorization"] = f"{self._token_type} {self._access_token}"
+        yield request
+
+
+def create_token_auth(tokens: dict[str, Any]) -> httpx.Auth:
+    """Create an httpx.Auth instance from pre-obtained tokens.
+
+    Use this in deployed mode with tokens obtained from the OAuth API
+    endpoints or from the OAuth state manager cache.
+
+    Args:
+        tokens: A dict containing at least 'access_token' and optionally
+            'token_type' (defaults to 'Bearer').
+
+    Returns:
+        An httpx.Auth instance that adds the Bearer token to requests.
+
+    Raises:
+        ValueError: If tokens dict doesn't contain access_token.
+
+    Example:
+        >>> tokens = await state_manager.get_tokens(user_id, server_key)
+        >>> if tokens:
+        ...     auth = create_token_auth(tokens)
+        ...     async with httpx.AsyncClient(auth=auth) as client:
+        ...         response = await client.get(server_url)
+    """
+    access_token = tokens.get("access_token")
+    if not access_token:
+        msg = "tokens dict must contain 'access_token'"
+        raise ValueError(msg)
+
+    token_type = tokens.get("token_type", "Bearer")
+    return TokenAuth(access_token, token_type)
+
+
+def get_server_key(server_url: str) -> str:
+    """Generate a cache-safe key from a server URL.
+
+    This is the same key format used by the OAuth state manager
+    for storing tokens.
+
+    Args:
+        server_url: The MCP server URL.
+
+    Returns:
+        A safe string key for cache storage.
+    """
+    parsed = urlparse(server_url)
+    return f"{parsed.netloc}{parsed.path}".replace("/", "_").replace(":", "_")
 
 
 class OAuthAuthWrapper(httpx.Auth):
@@ -77,9 +254,7 @@ class OAuthAuthWrapper(httpx.Auth):
         # Check if we got a 401 response (response is available after yield)
         # Note: This check happens after the flow completes
 
-    async def async_auth_flow(
-        self, request: httpx.Request
-    ) -> Any:  # Generator type is complex for async
+    async def async_auth_flow(self, request: httpx.Request) -> Any:  # Generator type is complex for async
         """Handle async authentication flow with 401 error detection.
 
         This method wraps the underlying provider's async_auth_flow and
@@ -263,14 +438,8 @@ async def create_mcp_oauth_provider(
         effective_redirect_uri = await callback_handler.start()
 
     # If pre-registered client credentials are provided, store them
-    # This takes priority over CIMD and dynamic registration
     if client_id is not None:
-        # Determine auth method based on whether client_secret is provided
-        if client_secret:
-            token_endpoint_auth_method = "client_secret_post"
-        else:
-            token_endpoint_auth_method = "none"
-
+        token_endpoint_auth_method = "client_secret_post" if client_secret else "none"
         pre_registered_client = OAuthClientInformationFull(
             client_id=client_id,
             client_secret=client_secret,
@@ -279,15 +448,13 @@ async def create_mcp_oauth_provider(
         )
         await storage.set_client_info(pre_registered_client)
 
-    # Create client metadata for dynamic registration
-    # Using "none" auth method for public clients (no client secret)
-    public_client_auth_method = "none"
+    # Create client metadata for dynamic registration (public client)
     client_metadata = OAuthClientMetadata(
         client_name=client_name,
         redirect_uris=[effective_redirect_uri],
         grant_types=["authorization_code", "refresh_token"],
         response_types=["code"],
-        token_endpoint_auth_method=public_client_auth_method,
+        token_endpoint_auth_method="none",
     )
 
     # Redirect handler opens browser
@@ -357,10 +524,6 @@ async def get_oauth_token_for_server(
     Returns:
         The access token string if authentication succeeds, None otherwise.
     """
-    import httpx
-
-    from lfx.log.logger import logger
-
     provider, _, cleanup = await create_mcp_oauth_provider(
         server_url=server_url,
         client_name=client_name,
