@@ -5,6 +5,10 @@ export const lazyIconsMapping = {
     import("@/icons/AgentQL").then((mod) => ({ default: mod.AgentQLIcon })),
   Agiled: () =>
     import("@/icons/Agiled").then((mod) => ({ default: mod.AgiledIcon })),
+  Agentics: () =>
+    import("@/icons/Agentics").then((mod) => ({
+      default: mod.AgenticsIcon,
+    })),
   Airbyte: () =>
     import("@/icons/Airbyte").then((mod) => ({ default: mod.AirbyteIcon })),
   Anthropic: () =>
@@ -484,4 +488,5 @@ export const lazyIconsMapping = {
     import("@/icons/Youtube").then((mod) => ({ default: mod.YoutubeIcon })),
   ZepMemory: () =>
     import("@/icons/ZepMemory").then((mod) => ({ default: mod.ZepMemoryIcon })),
+
 };

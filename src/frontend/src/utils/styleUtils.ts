@@ -253,6 +253,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "AI/ML API", name: "aiml", icon: "AIML" },
   { display_name: "AgentQL", name: "agentql", icon: "AgentQL" },
   { display_name: "ALTK", name: "altk", icon: "Zap" },
+  { display_name: "Agentics", name: "agentics", icon: "Agentics" },
   {
     display_name: "Language Models",
     name: "languagemodels",
@@ -436,7 +437,7 @@ export const nodeIconToDisplayIconMap: Record<string, string> = {
   ChatOllamaModel: "Ollama",
   ChatOpenAI: "OpenAI",
   ChatVertexAI: "VertexAI",
-  ChevronsUpDownIcon: "ChevronsUpDown",
+  ChevronsUpDownIcon: "ChevronsUpD pown",
   ClearMessageHistory: "FileClock",
   CohereEmbeddings: "Cohere",
   Discord: "FaDiscord",
@@ -491,6 +492,7 @@ export const nodeIconToDisplayIconMap: Record<string, string> = {
   WolframAlphaAPI: "Wolfram",
   WolframAlphaAPIWrapper: "Wolfram",
   WolframAlphaQueryRun: "Wolfram",
+  Agentics: "Agentics",
 
   //Node Icons
   model_specs: "FileSliders",

@@ -1,10 +1,10 @@
 import type React from "react";
 import { forwardRef } from "react";
-import SvgAgentQL from "./AgentQL";
+import SvgAgentics from "./Agentics";
 
-export const AgentQLIcon = forwardRef<
-  SVGSVGElement,
+  export const AgenticsIcon = forwardRef<
+    SVGSVGElement,
   React.PropsWithChildren<{}>
 >((props, ref) => {
-  return <SvgAgentQL ref={ref} {...props} />;
+  return <SvgAgentics ref={ref} {...props} />;
 });
