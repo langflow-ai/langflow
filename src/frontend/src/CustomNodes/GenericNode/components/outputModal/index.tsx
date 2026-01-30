@@ -33,14 +33,11 @@ export default function OutputModal({
     if (!results) return "";
 
     let content = results.message ?? results;
-    if (content?.raw) {
-      content = content.raw;
-    }
+    content = content?.raw ?? content;
 
-    if (typeof content === "string") {
-      return content;
-    }
-    return JSON.stringify(content, null, 2);
+    return typeof content === "string"
+      ? content
+      : JSON.stringify(content, null, 2);
   };
 
   const handleCopy = () => {
@@ -79,11 +76,15 @@ export default function OutputModal({
           onClick={handleCopy}
           data-testid="copy-output-button"
         >
-          {isCopied ? (
+          <ForwardedIconComponent
+            name={isCopied ? "Check" : "Copy"}
+            className="h-4 w-4"
+          />
+          {/* {isCopied ? (
             <ForwardedIconComponent name="Check" className="h-4 w-4" />
           ) : (
             <ForwardedIconComponent name="Copy" className="h-4 w-4" />
-          )}
+          )} */}
         </Button>
       </BaseModal.Header>
       <BaseModal.Content>
