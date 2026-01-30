@@ -37,6 +37,7 @@ from langflow.services.database.models.flow.model import (
 from langflow.services.database.models.flow.utils import get_webhook_component_in_flow
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder
+from langflow.services.database.models.folder.utils import get_default_folder_id
 from langflow.services.deps import get_settings_service, get_storage_service
 from langflow.services.storage.service import StorageService
 from langflow.utils.compression import compress_response
@@ -261,13 +262,18 @@ async def _new_flow(
 
         db_flow.updated_at = datetime.now(timezone.utc)
 
-        if db_flow.folder_id is None:
-            # Make sure flows always have a folder
-            default_folder = (
-                await session.exec(select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME, Folder.user_id == user_id))
+        # Validate folder_id exists, or fall back to default folder
+        if db_flow.folder_id is not None:
+            folder_exists = (
+                await session.exec(select(Folder).where(Folder.id == db_flow.folder_id, Folder.user_id == user_id))
             ).first()
-            if default_folder:
-                db_flow.folder_id = default_folder.id
+            if not folder_exists:
+                # Folder doesn't exist or doesn't belong to user, use default
+                db_flow.folder_id = None
+
+        if db_flow.folder_id is None:
+            # Make sure flows always have a folder (auto-create default folder if needed)
+            db_flow.folder_id = await get_default_folder_id(session, user_id)
 
         session.add(db_flow)
 
@@ -488,10 +494,20 @@ async def update_flow(
         db_flow.webhook = webhook_component is not None
         db_flow.updated_at = datetime.now(timezone.utc)
 
+        # Validate folder_id exists, or fall back to default folder
+        if db_flow.folder_id is not None:
+            folder_exists = (
+                await session.exec(
+                    select(Folder).where(Folder.id == db_flow.folder_id, Folder.user_id == current_user.id)
+                )
+            ).first()
+            if not folder_exists:
+                # Folder doesn't exist or doesn't belong to user, use default
+                db_flow.folder_id = None
+
         if db_flow.folder_id is None:
-            default_folder = (await session.exec(select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME))).first()
-            if default_folder:
-                db_flow.folder_id = default_folder.id
+            # Make sure flows always have a folder (auto-create default folder if needed)
+            db_flow.folder_id = await get_default_folder_id(session, current_user.id)
 
         session.add(db_flow)
         await session.flush()
