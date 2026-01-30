@@ -233,12 +233,21 @@ jobs:
       - name: Determine version
         id: version
         run: |
-          cd src/lfx
-          version=$(uv tree | grep 'lfx' | head -n 1 | awk '{print $2}' | sed 's/^v//')
-          last_released_version=$(curl -s "https://pypi.org/pypi/lfx/json" | jq -r '.releases | keys | .[]' | sort -V | tail -n 1)
+          version=$(uv tree | grep 'lfx' | awk '{print $3}' | sed 's/^v//' | head -n 2 | xargs)
+          echo "LFX version from pyproject.toml: $version"
+
+          if [ ${{inputs.pre_release}} == "true" ]; then
+            last_released_version=$(curl -s "https://pypi.org/pypi/lfx/json" | jq -r '.releases | keys | .[]' | grep -E '(a|b|rc|dev|alpha|beta)' | sort -V | tail -n 1)
+            version="$(uv run ./scripts/ci/langflow_pre_release_tag.py "$version" "$last_released_version")"
+            echo "Latest LFX pre-release version: $last_released_version"
+            echo "LFX pre-release version to be released: $version"
+          else
+            last_released_version=$(curl -s "https://pypi.org/pypi/lfx/json" | jq -r '.releases | keys | .[]' | grep -vE '(a|b|rc|dev|alpha|beta)' | sort -V | tail -n 1)
+            echo "Latest LFX release version: $last_released_version"
+          fi
 
           if [ "$version" = "$last_released_version" ]; then
-            echo "Version $version is already released. Skipping release."
+            echo "LFX pypi version $version is already released. Skipping release."
             echo skipped=true >> $GITHUB_OUTPUT
             exit 1
           else
