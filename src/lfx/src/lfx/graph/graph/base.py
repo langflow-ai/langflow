@@ -1429,6 +1429,11 @@ class Graph:
         if not vertex_id:
             msg = "No vertex to run"
             raise ValueError(msg)
+
+        # Emit build_start event before building vertex
+        if event_manager is not None:
+            event_manager.on_build_start(data={"id": vertex_id})
+
         chat_service = get_chat_service()
 
         # Provide fallback cache functions if chat service is unavailable

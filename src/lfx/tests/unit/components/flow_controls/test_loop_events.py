@@ -18,13 +18,14 @@ class TestLoopComponentBasics:
     """Basic tests for LoopComponent."""
 
     @pytest.mark.asyncio
-    async def test_done_output_accepts_event_manager(self):
-        """Test that done_output accepts event_manager parameter."""
+    async def test_done_output_uses_event_manager(self):
+        """Test that done_output uses self._event_manager."""
         loop = LoopComponent(_id="test_loop")
         loop.set(data=DataFrame([]))
+        loop._event_manager = None
 
-        # Should not raise when event_manager is passed
-        result = await loop.done_output(event_manager=None)
+        # Should not raise and should work with empty data
+        result = await loop.done_output()
         assert isinstance(result, DataFrame)
 
     def test_loop_validates_data_input_types(self):
@@ -177,7 +178,7 @@ class TestLoopComponentEventManagerPropagation:
 
     @pytest.mark.asyncio
     async def test_done_output_passes_event_manager(self):
-        """Test that done_output properly passes event_manager to execute_loop_body."""
+        """Test that done_output properly passes self._event_manager to execute_loop_body."""
         mock_event_manager = MagicMock()
 
         # Create loop component
@@ -185,6 +186,7 @@ class TestLoopComponentEventManagerPropagation:
         data_list = [Data(text="item1")]
         loop.set(data=DataFrame(data_list))
         loop._id = "test_loop"
+        loop._event_manager = mock_event_manager  # Set event manager on component
 
         # Mock execute_loop_body to return expected data
         mock_execute = AsyncMock(return_value=[Data(text="result")])
@@ -204,7 +206,7 @@ class TestLoopComponentEventManagerPropagation:
             patch.object(loop, "initialize_data", mock_initialize_data),
             patch.object(type(loop), "ctx", new_callable=PropertyMock, return_value=mock_ctx),
         ):
-            result = await loop.done_output(event_manager=mock_event_manager)
+            result = await loop.done_output()
 
             # Verify execute_loop_body was called with the event_manager
             mock_execute.assert_called_once()
@@ -361,7 +363,7 @@ class TestRawParamsInjection:
             mock_subgraph.get_vertex = MagicMock(return_value=mock_start_vertex)
 
             # Mock async_start to yield valid results
-            async def mock_async_start(_event_manager=None):
+            async def mock_async_start(**_kwargs):
                 yield MagicMock(valid=True, result_dict=MagicMock(outputs={}))
 
             mock_subgraph.async_start = mock_async_start
