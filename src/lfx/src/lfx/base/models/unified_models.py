@@ -278,39 +278,45 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
 def _validate_and_get_enabled_providers(
     credential_variables: dict[str, Any],
     provider_variable_map: dict[str, str],
+    *,
+    skip_validation: bool = True,
 ) -> set[str]:
-    """Validate API keys and return set of enabled providers.
+    """Return set of enabled providers based on credential existence.
 
-    This helper function validates API keys for credential variables and returns
-    only providers with valid keys. Used by get_enabled_providers and model options functions.
+    This helper function checks which providers have credentials stored.
+    API key validation is performed when credentials are saved, not on every read,
+    to avoid latency from external API calls.
 
     Args:
         credential_variables: Dictionary mapping variable names to VariableRead objects
         provider_variable_map: Dictionary mapping provider names to variable names
+        skip_validation: If True (default), skip API validation and just check existence.
+                        If False, validate each API key (slower, makes external calls).
 
     Returns:
-        Set of provider names that have valid API keys
+        Set of provider names that have credentials stored
     """
-    from langflow.services.auth import utils as auth_utils
-    from langflow.services.deps import get_settings_service
-
-    settings_service = get_settings_service()
     enabled = set()
 
     for provider, var_name in provider_variable_map.items():
         if var_name in credential_variables:
-            # Validate the API key before marking as enabled
-            credential_var = credential_variables[var_name]
-            try:
-                # Decrypt the API key value
-                api_key = auth_utils.decrypt_api_key(credential_var.value, settings_service=settings_service)
-                # Validate the key (this will raise ValueError if invalid)
-                if api_key and api_key.strip():
-                    validate_model_provider_key(var_name, api_key)
-                    enabled.add(provider)
-            except (ValueError, Exception) as e:  # noqa: BLE001
-                # Key validation failed or decryption failed - don't enable provider
-                logger.debug("Provider %s validation failed for variable %s: %s", provider, var_name, e)
+            if skip_validation:
+                # Just check existence - validation was done on save
+                enabled.add(provider)
+            else:
+                # Legacy path: validate the API key (slow - makes external calls)
+                from langflow.services.auth import utils as auth_utils
+                from langflow.services.deps import get_settings_service
+
+                credential_var = credential_variables[var_name]
+                try:
+                    settings_service = get_settings_service()
+                    api_key = auth_utils.decrypt_api_key(credential_var.value, settings_service=settings_service)
+                    if api_key and api_key.strip():
+                        validate_model_provider_key(var_name, api_key)
+                        enabled.add(provider)
+                except (ValueError, Exception) as e:  # noqa: BLE001
+                    logger.debug("Provider %s validation failed for variable %s: %s", provider, var_name, e)
 
     return enabled
 

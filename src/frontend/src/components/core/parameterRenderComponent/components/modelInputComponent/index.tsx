@@ -82,8 +82,12 @@ export default function ModelInputComponent({
       ? "llm"
       : "embeddings";
 
-  const { data: providersData = [] } = useGetModelProviders({});
-  const { data: enabledModelsData } = useGetEnabledModels();
+  const { data: providersData = [], isLoading: isLoadingProviders } =
+    useGetModelProviders({});
+  const { data: enabledModelsData, isLoading: isLoadingEnabledModels } =
+    useGetEnabledModels();
+
+  const isLoading = isLoadingProviders || isLoadingEnabledModels;
 
   // Determines if we should show the model selector or the "Setup Provider" button
   const hasEnabledProviders = useMemo(() => {
@@ -202,34 +206,6 @@ export default function ModelInputComponent({
     },
     [flatOptions, handleOnNewValue],
   );
-
-  /**
-   * Triggers a refresh of available model options from the backend.
-   * Shows loading state for 2 seconds to provide visual feedback.
-   */
-  const handleRefreshButtonPress = useCallback(async () => {
-    setRefreshOptions(true);
-    setOpen(false);
-
-    // mutateTemplate triggers a backend call to refresh the template options
-    await mutateTemplate(
-      value,
-      nodeId!,
-      nodeClass!,
-      handleNodeClass!,
-      postTemplateValue,
-      setErrorData,
-    );
-    // Brief delay before hiding loading state for better UX
-    setTimeout(() => setRefreshOptions(false), 2000);
-  }, [
-    value,
-    nodeId,
-    nodeClass,
-    handleNodeClass,
-    postTemplateValue,
-    setErrorData,
-  ]);
 
   const handleManageProvidersDialogClose = useCallback(() => {
     setOpenManageProvidersDialog(false);
@@ -365,6 +341,7 @@ export default function ModelInputComponent({
     !hasEnabledProviders ? (
       <Button
         variant="default"
+        loading={isLoading}
         size="sm"
         className="w-full"
         onClick={() => setOpenManageProvidersDialog(true)}
@@ -492,13 +469,6 @@ export default function ModelInputComponent({
 
   const renderManageProvidersButton = () => (
     <div className="bottom-0 bg-background">
-      {/* {renderFooterButton(
-        "Refresh List",
-        "RefreshCw",
-        handleRefreshButtonPress,
-        "external-option-button",
-      )} */}
-
       {renderFooterButton(
         "Manage Model Providers",
         "Settings",
