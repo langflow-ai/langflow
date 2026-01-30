@@ -56,6 +56,16 @@ test("chat_io_teste", { tag: ["@release", "@workspace"] }, async ({ page }) => {
   await page.getByTestId("input-chat-playground").click();
   await page.getByTestId("input-chat-playground").fill("teste");
   await page.getByTestId("button-send").first().click();
+
+  // Wait for the chat message to appear
+  await page.waitForSelector('[data-testid="div-chat-message"]', {
+    timeout: 10000,
+    state: "visible",
+  });
+
+  // Wait a bit for the content to be rendered
+  await page.waitForTimeout(1000);
+
   const chat_input = await page.getByTestId("div-chat-message").textContent();
 
   expect(chat_input).toBe("teste");
