@@ -404,11 +404,7 @@ class TestRunFlowInternalLogic:
 
         # Add edge from comp1 to comp2 to make comp1 not a terminal node
         # We need to manually add the edge since Graph(start, end) just adds vertices
-        graph.add_component_edge(
-            source_id="v1",
-            output_input_tuple=("text", "input_value"),
-            target_id="v2"
-        )
+        graph.add_component_edge(source_id="v1", output_input_tuple=("text", "input_value"), target_id="v2")
 
         # Add comp3
         # Use a fresh ID for comp3 to avoid any potential conflict, though v3 should be fine.
@@ -477,13 +473,10 @@ class TestRunFlowInternalLogic:
             component._user_id = str(active_user.id)
             component.flow_name_selected = flow_name
             component.flow_id_selected = flow_id
-            component.cache_flow = False # Disable cache to ensure fresh graph load
+            component.cache_flow = False  # Disable cache to ensure fresh graph load
 
             # Set up tweaks for both components
-            tweaks = {
-                "input_node_1~input_value": "tweaked_value_1",
-                "input_node_2~input_value": "tweaked_value_2"
-            }
+            tweaks = {"input_node_1~input_value": "tweaked_value_1", "input_node_2~input_value": "tweaked_value_2"}
             component.flow_tweak_data = tweaks
             component._attributes = {"flow_tweak_data": tweaks}
 

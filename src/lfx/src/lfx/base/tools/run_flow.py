@@ -298,7 +298,7 @@ class RunFlowBaseComponent(Component):
         *,
         user_id: str | None = None,
         output_type: str,
-        ):
+    ):
         if self._last_run_outputs is not None:
             return self._last_run_outputs
         self._last_run_outputs = await self._run_flow_with_cached_graph(
@@ -323,7 +323,7 @@ class RunFlowBaseComponent(Component):
         run_outputs = await self._get_cached_run_outputs(
             user_id=self.user_id,
             output_type="any",
-            )
+        )
         if not run_outputs:
             return None
 
@@ -401,21 +401,17 @@ class RunFlowBaseComponent(Component):
         Returns:
             The updated frontend node.
         """
-        if (
-            (field_name == "flow_name_selected" and field_value)
-            or (field_name == "tool_mode" and not field_value)
-            ): # display selected flow's outputs when selected or tool_mode is turned off
+        if (field_name == "flow_name_selected" and field_value) or (
+            field_name == "tool_mode" and not field_value
+        ):  # display selected flow's outputs when selected or tool_mode is turned off
             selected_flow = frontend_node.get("template", {}).get("flow_name_selected", {})
             selected_flow_meta = selected_flow.get("selected_metadata", {})
-            if flow_name := (
-                field_value if field_name == "flow_name_selected"
-                else selected_flow.get("value")
-                ):
+            if flow_name := (field_value if field_name == "flow_name_selected" else selected_flow.get("value")):
                 graph = await self.get_graph(
                     flow_name_selected=flow_name,
                     flow_id_selected=selected_flow_meta.get("id"),
                     updated_at=selected_flow_meta.get("updated_at"),
-                    )
+                )
                 outputs = self._format_flow_outputs(graph)  # generate Output objects from the flow's output nodes
                 self._sync_flow_outputs(outputs)
                 frontend_node["outputs"] = [output.model_dump() for output in outputs]
@@ -501,13 +497,13 @@ class RunFlowBaseComponent(Component):
         *,
         user_id: str | None = None,
         output_type: str = "any",  # "any" is used to return all outputs
-        ):
+    ):
         try:
             graph = await self.get_graph(
                 flow_name_selected=self.flow_name_selected,
                 flow_id_selected=self.flow_id_selected,
                 updated_at=self._cached_flow_updated_at,
-                ) # may or may not want to create a deepcopy of the graph here
+            )  # may or may not want to create a deepcopy of the graph here
 
             if tweaks := self._build_flow_tweak_data():
                 graph = self._process_tweaks_on_graph(graph, tweaks)
@@ -522,7 +518,7 @@ class RunFlowBaseComponent(Component):
                 graph=graph,
             )
 
-        except Exception: # noqa: BLE001
+        except Exception:  # noqa: BLE001
             msg = f"Error running flow: {self.flow_name_selected}"
             raise RuntimeError(msg) from None
 
@@ -678,7 +674,7 @@ class RunFlowBaseComponent(Component):
                     params["input_value"].get_text()
                     if isinstance(params["input_value"], Data)
                     else params["input_value"]
-                    ),
+                ),
             }
             if params.get("type"):
                 payload["type"] = params["type"]
@@ -688,7 +684,7 @@ class RunFlowBaseComponent(Component):
     def _build_inputs(
         self,
         tweaks: dict[str, dict[str, Any]] | None = None,
-        ) -> list[dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         extracted_inputs = tweaks or self._extract_ioputs_from_keyed_values(self._attributes)
         return self._build_inputs_from_ioputs(extracted_inputs)
 
@@ -698,7 +694,7 @@ class RunFlowBaseComponent(Component):
         Mutates the component's attributes by updating it with the flow_tweak_data.
         """
         # 1. Start with base attributes
-        combined_values = self._attributes # allow mutation for now to avoid overhead of creating a copy
+        combined_values = self._attributes  # allow mutation for now to avoid overhead of creating a copy
         # 2. Get tool-provided tweaks
         tool_tweaks = combined_values.get("flow_tweak_data", {})
         if hasattr(tool_tweaks, "model_dump"):

@@ -28,7 +28,7 @@ class RunFlowComponent(RunFlowBaseComponent):
         field_name: str | None = None,
     ):
         missing_keys = [key for key in self.default_keys if key not in build_config]
-        for key in missing_keys: # TODO: create a defaults dict to avoid hardcoding the defaults here
+        for key in missing_keys:  # TODO: create a defaults dict to avoid hardcoding the defaults here
             if key == "flow_name_selected":
                 build_config[key] = {"options": [], "options_metadata": [], "value": None}
             elif key == "flow_id_selected":

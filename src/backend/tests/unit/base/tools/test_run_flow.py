@@ -499,9 +499,7 @@ class TestRunFlowBaseComponentInputOutputHandling:
         data_obj = MagicMock(spec=Data)
         data_obj.get_text.return_value = "extracted_text"
 
-        ioputs = {
-            "vertex1": {"input_value": data_obj}
-        }
+        ioputs = {"vertex1": {"input_value": data_obj}}
 
         inputs = component._build_inputs_from_ioputs(ioputs)
 
@@ -591,8 +589,6 @@ class TestRunFlowBaseComponentInputOutputHandling:
         assert updated[2]["input_types"] == []  # Should be added as empty list
 
 
-
-
 class TestRunFlowBaseComponentOutputMethods:
     """Test output methods."""
 
@@ -662,6 +658,7 @@ class TestRunFlowBaseComponentToolGeneration:
                 assert len(fields) == 1
                 assert fields[0]["name"] == "input1"
 
+
 class TestRunFlowBaseComponentTweakData:
     """Test tweak data building methods."""
 
@@ -674,9 +671,9 @@ class TestRunFlowBaseComponentTweakData:
             "vertex1~param1": "value1",
             "vertex1~param2": "value2",
             "flow_tweak_data": {
-                "vertex1~param1": "new_value1", # Should override
-                "vertex2~param3": "value3", # Should be added
-            }
+                "vertex1~param1": "new_value1",  # Should override
+                "vertex2~param3": "value3",  # Should be added
+            },
         }
 
         tweak_data = component._build_flow_tweak_data()
@@ -696,14 +693,7 @@ class TestRunFlowBaseComponentUpdateOutputs:
         """Test update_outputs when flow_name_selected is changed."""
         component = RunFlowBaseComponent()
         frontend_node = {
-            "template": {
-                "flow_name_selected": {
-                    "selected_metadata": {
-                        "id": "flow_id",
-                        "updated_at": "timestamp"
-                    }
-                }
-            }
+            "template": {"flow_name_selected": {"selected_metadata": {"id": "flow_id", "updated_at": "timestamp"}}}
         }
         mock_graph = MagicMock(spec=Graph)
         mock_output = MagicMock(spec=Output)
@@ -732,10 +722,7 @@ class TestRunFlowBaseComponentUpdateOutputs:
             "template": {
                 "flow_name_selected": {
                     "value": "test_flow",
-                    "selected_metadata": {
-                        "id": "flow_id",
-                        "updated_at": "timestamp"
-                    }
+                    "selected_metadata": {"id": "flow_id", "updated_at": "timestamp"},
                 }
             }
         }
