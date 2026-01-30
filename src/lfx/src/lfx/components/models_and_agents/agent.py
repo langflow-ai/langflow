@@ -22,6 +22,7 @@ from lfx.components.helpers import CurrentDateComponent
 from lfx.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
 from lfx.custom.custom_component.component import get_component_toolkit
 from lfx.helpers.base_model import build_model_from_schema
+from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import BoolInput, ModelInput
 from lfx.io import IntInput, MessageTextInput, MultilineInput, Output, SecretStrInput, TableInput
 from lfx.log.logger import logger
@@ -88,6 +89,7 @@ class AgentComponent(ToolCallingAgentComponent):
             display_name="Max Tokens",
             info="Maximum number of tokens to generate. Field name varies by provider.",
             advanced=True,
+            range_spec=RangeSpec(min=1, max=128000, step=1, step_type="int"),
         ),
         MultilineInput(
             name="format_instructions",

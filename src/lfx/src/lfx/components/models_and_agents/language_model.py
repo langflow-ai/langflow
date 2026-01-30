@@ -94,6 +94,7 @@ class LanguageModelComponent(LCModelComponent):
             display_name="Max Tokens",
             info="Maximum number of tokens to generate. Field name varies by provider.",
             advanced=True,
+            range_spec=RangeSpec(min=1, max=128000, step=1, step_type="int"),
         ),
     ]
 
