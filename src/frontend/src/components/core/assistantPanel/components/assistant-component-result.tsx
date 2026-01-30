@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Check, FileText } from "lucide-react";
 import type { AgenticResult } from "@/controllers/API/queries/agentic";
+import { ViewCodeModal } from "./view-code-modal";
 
 const APPROVED_DISPLAY_DURATION_MS = 3000;
 
@@ -14,6 +15,7 @@ export function AssistantComponentResult({
   onApprove,
 }: AssistantComponentResultProps) {
   const [showApproved, setShowApproved] = useState(false);
+  const [isViewCodeOpen, setIsViewCodeOpen] = useState(false);
   const componentName = result.className || "Custom Component";
 
   useEffect(() => {
@@ -68,7 +70,22 @@ export function AssistantComponentResult({
             Approve
           </button>
         )}
+        <button
+          type="button"
+          className="h-8 rounded-[10px] bg-zinc-700 px-4 text-sm font-medium text-white transition-colors hover:bg-zinc-600"
+          onClick={() => setIsViewCodeOpen(true)}
+        >
+          View Code
+        </button>
       </div>
+
+      {result.componentCode && (
+        <ViewCodeModal
+          code={result.componentCode}
+          open={isViewCodeOpen}
+          onOpenChange={setIsViewCodeOpen}
+        />
+      )}
     </div>
   );
 }
