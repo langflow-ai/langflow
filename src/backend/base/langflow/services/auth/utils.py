@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+from functools import lru_cache
 from typing import TYPE_CHECKING, Annotated, Final
 
 from cryptography.fernet import Fernet
@@ -259,21 +260,7 @@ def get_fernet(settings_service: SettingsService):
         Fernet instance for encryption/decryption
     """
     secret_key: str = settings_service.auth_settings.SECRET_KEY.get_secret_value()
-
-    # Ensure the key is valid for Fernet (32 url-safe base64-encoded bytes)
-    if len(secret_key) < 32:  # noqa: PLR2004
-        # Pad the key to 32 bytes
-        secret_key = secret_key + "=" * (32 - len(secret_key))
-
-    # Ensure it's properly base64 encoded
-    try:
-        base64.urlsafe_b64decode(secret_key)
-        key = secret_key.encode()
-    except Exception:  # noqa: BLE001
-        # If not valid base64, encode it
-        key = base64.urlsafe_b64encode(secret_key.encode()[:32])
-
-    return Fernet(key)
+    return _create_fernet(secret_key)
 
 
 def encrypt_api_key(api_key: str, settings_service: SettingsService | None = None) -> str:
@@ -318,3 +305,31 @@ async def get_current_user_mcp(
 
 async def get_current_active_user_mcp(user: User = Depends(get_current_user_mcp)) -> User:
     return await _auth_service().get_current_active_user_mcp(user)
+
+
+@lru_cache(maxsize=128)
+def _create_fernet(secret_key: str):
+    """Create a Fernet instance from a secret key.
+
+    This function is cached to avoid repeated key processing.
+
+    Args:
+        secret_key: The secret key string
+
+    Returns:
+        Fernet instance for encryption/decryption
+    """
+    # Ensure the key is valid for Fernet (32 url-safe base64-encoded bytes)
+    if len(secret_key) < 32:  # noqa: PLR2004
+        # Pad the key to 32 bytes
+        secret_key = secret_key + "=" * (32 - len(secret_key))
+
+    # Ensure it's properly base64 encoded
+    try:
+        base64.urlsafe_b64decode(secret_key)
+        key = secret_key.encode()
+    except Exception:  # noqa: BLE001
+        # If not valid base64, encode it
+        key = base64.urlsafe_b64encode(secret_key.encode()[:32])
+
+    return Fernet(key)
