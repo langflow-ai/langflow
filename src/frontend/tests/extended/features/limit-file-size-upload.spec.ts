@@ -55,7 +55,7 @@ test(
 
     // Locate the file input element (it might be hidden)
     const fileInput = page.locator('input[type="file"]').first();
-    
+
     // Set the file on the input
     await fileInput.setInputFiles(filePath);
 

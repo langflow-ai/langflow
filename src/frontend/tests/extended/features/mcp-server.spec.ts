@@ -1083,13 +1083,10 @@ test(
 
     // Try to wait for tools to load, skip if server is unavailable
     const dropdownVisible = await page
-      .waitForSelector(
-        '[data-testid="dropdown_str_tool"]:not([disabled])',
-        {
-          timeout: 30000,
-          state: "visible",
-        },
-      )
+      .waitForSelector('[data-testid="dropdown_str_tool"]:not([disabled])', {
+        timeout: 30000,
+        state: "visible",
+      })
       .catch(() => null);
 
     // Skip test if the external MCP server is not responding
