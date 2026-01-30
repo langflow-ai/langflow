@@ -107,9 +107,9 @@ jobs:
           fi
 
           echo "✅ Release dependencies validated successfully."
+
   determine-base-version:
     name: Determine Base Version
-    if: ${{ inputs.release_package_base || inputs.build_docker_base }}
     needs: [validate-tag, validate-dependencies]
     runs-on: ubuntu-latest
     outputs:
@@ -159,7 +159,6 @@ jobs:
 
   determine-main-version:
     name: Determine Main Version
-    if: ${{ inputs.release_package_main || inputs.build_docker_main }}
     needs: [validate-tag, validate-dependencies]
     runs-on: ubuntu-latest
     outputs:
@@ -209,7 +208,6 @@ jobs:
 
   determine-lfx-version:
     name: Determine LFX Version
-    if: ${{ inputs.release_lfx }}
     needs: [validate-tag, validate-dependencies]
     runs-on: ubuntu-latest
     outputs:
@@ -257,310 +255,9 @@ jobs:
         run: |
           exit 0
 
-  # Automatically ensure lfx is published before building langflow-base
-  # This job checks if the required lfx version exists on PyPI and publishes it if not
-  ensure-lfx-published:
-    name: Ensure LFX Dependency is Published
-    needs: [ci]
-    if: ${{ inputs.release_package_base }}
-    runs-on: ubuntu-latest
-    outputs:
-      lfx-version: ${{ steps.check-lfx.outputs.lfx_version }}
-      lfx-published: ${{ steps.check-lfx.outputs.already_published }}
-      lfx-published-now: ${{ steps.publish-lfx.outputs.published }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ inputs.release_tag }}
-
-      - name: Setup Environment
-        uses: astral-sh/setup-uv@v6
-        with:
-          enable-cache: false
-          cache-dependency-glob: "uv.lock"
-          python-version: "3.13"
-          prune-cache: false
-
-      - name: Check LFX version requirement
-        id: check-lfx
-        run: |
-          # Get the lfx version required by langflow-base from pyproject.toml
-          cd src/backend/base
-          LFX_REQUIREMENT=$(grep -E "^\s*\"lfx" pyproject.toml | head -1 | sed 's/.*lfx[~>=<]*//' | sed 's/[",].*//')
-          echo "LFX requirement from langflow-base: $LFX_REQUIREMENT"
-
-          # Get the actual lfx version from source
-          cd ../../lfx
-          LFX_SOURCE_VERSION=$(grep -E "^version\s*=" pyproject.toml | head -1 | sed 's/.*"\(.*\)".*/\1/')
-          echo "LFX source version: $LFX_SOURCE_VERSION"
-          echo "lfx_version=$LFX_SOURCE_VERSION" >> $GITHUB_OUTPUT
-
-          # Check if this version exists on PyPI
-          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://pypi.org/pypi/lfx/$LFX_SOURCE_VERSION/json")
-
-          if [ "$HTTP_STATUS" = "200" ]; then
-            echo "✅ LFX version $LFX_SOURCE_VERSION already exists on PyPI"
-            echo "already_published=true" >> $GITHUB_OUTPUT
-          else
-            echo "⚠️ LFX version $LFX_SOURCE_VERSION NOT found on PyPI (HTTP: $HTTP_STATUS)"
-            echo "Will build and publish LFX first..."
-            echo "already_published=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Install LFX dependencies
-        if: steps.check-lfx.outputs.already_published == 'false'
-        run: uv sync --dev --package lfx
-
-      - name: Build LFX
-        if: steps.check-lfx.outputs.already_published == 'false'
-        run: |
-          cd src/lfx
-          rm -rf dist/
-          uv build --wheel --out-dir dist
-          echo "Built LFX wheel:"
-          ls -la dist/
-
-      - name: Test LFX CLI
-        if: steps.check-lfx.outputs.already_published == 'false'
-        run: |
-          cd src/lfx
-          uv pip install dist/*.whl --force-reinstall
-          uv run lfx --help
-          echo "✅ LFX CLI test passed"
-
-      - name: Publish LFX to PyPI
-        id: publish-lfx
-        if: steps.check-lfx.outputs.already_published == 'false' && !inputs.dry_run
-        env:
-          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
-        run: |
-          cd src/lfx
-          echo "Publishing LFX ${{ steps.check-lfx.outputs.lfx_version }} to PyPI..."
-          uv publish dist/*.whl
-          echo "published=true" >> $GITHUB_OUTPUT
-          echo "✅ LFX published successfully"
-
-      - name: Wait for PyPI propagation
-        if: steps.publish-lfx.outputs.published == 'true'
-        run: |
-          echo "Waiting 60 seconds for PyPI propagation..."
-          sleep 60
-
-          # Verify the package is available
-          LFX_VERSION="${{ steps.check-lfx.outputs.lfx_version }}"
-          for i in {1..5}; do
-            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://pypi.org/pypi/lfx/$LFX_VERSION/json")
-            if [ "$HTTP_STATUS" = "200" ]; then
-              echo "✅ LFX $LFX_VERSION is now available on PyPI"
-              exit 0
-            fi
-            echo "Attempt $i: LFX not yet available (HTTP: $HTTP_STATUS), waiting 30s..."
-            sleep 30
-          done
-          echo "❌ LFX $LFX_VERSION still not available on PyPI after waiting"
-          exit 1
-
-      - name: Skip publishing (dry run)
-        if: steps.check-lfx.outputs.already_published == 'false' && inputs.dry_run
-        run: |
-          echo "⚠️ DRY RUN: Would have published LFX ${{ steps.check-lfx.outputs.lfx_version }} to PyPI"
-          echo "In actual release, this step will publish the package"
-
-  build-base:
-    name: Build Langflow Base
-    needs: [ensure-lfx-published, determine-base-version]
-    if: ${{ inputs.release_package_base && needs.determine-base-version.outputs.skipped == 'false' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ inputs.release_tag }}
-      - name: Setup Environment
-        uses: astral-sh/setup-uv@v6
-        with:
-          enable-cache: true
-          cache-dependency-glob: "uv.lock"
-          python-version: "3.12"
-          prune-cache: false
-      - name: Install the project
-        run: uv sync
-      - name: Check for dependency incompatibility
-        run: uv pip check
-      - name: Set version for pre-release
-        if: ${{ inputs.pre_release }}
-        run: |
-          VERSION="${{ needs.determine-base-version.outputs.version }}"
-          echo "Setting pre-release version to: $VERSION"
-          cd src/backend/base
-
-          # Update version in pyproject.toml
-          sed -i.bak "s/^version = .*/version = \"$VERSION\"/" pyproject.toml
-
-          # Verify the change
-          echo "Updated pyproject.toml version:"
-          grep "^version" pyproject.toml
-      - name: Build project for distribution
-        run: make build base=true args="--wheel"
-      - name: Verify built version
-        run: |
-          EXPECTED_VERSION="${{ needs.determine-base-version.outputs.version }}"
-          WHEEL_FILE=$(ls dist/*.whl 2>/dev/null || ls src/backend/base/dist/*.whl)
-          echo "Built wheel: $WHEEL_FILE"
-
-          NORMALIZED_VERSION=$(echo "$EXPECTED_VERSION" | sed 's/\.rc/rc/g; s/\.a/a/g; s/\.b/b/g; s/\.dev/dev/g')
-          echo "Expected version: $EXPECTED_VERSION"
-          echo "Normalized for wheel: $NORMALIZED_VERSION"
-
-          if [[ ! "$WHEEL_FILE" =~ $NORMALIZED_VERSION ]]; then
-            echo "❌ Error: Wheel version doesn't match expected version"
-            echo "Expected: $EXPECTED_VERSION (normalized: $NORMALIZED_VERSION)"
-            echo "Wheel file: $WHEEL_FILE"
-            exit 1
-          fi
-          echo "✅ Version verified: $EXPECTED_VERSION"
-      - name: Test CLI
-        run: |
-          # TODO: Unsure why the whl is not built in src/backend/base/dist
-          mkdir src/backend/base/dist
-          mv dist/*.whl src/backend/base/dist
-          uv pip install src/backend/base/dist/*.whl
-          uv run python -m langflow run --host localhost --port 7860 --backend-only &
-          SERVER_PID=$!
-          # Wait for the server to start
-          timeout 120 bash -c 'until curl -f http://localhost:7860/api/v1/auto_login; do sleep 2; done' || (echo "Server did not start in time" && kill $SERVER_PID && exit 1)
-          # Terminate the server
-          kill $SERVER_PID || (echo "Failed to terminate the server" && exit 1)
-          sleep 20 # give the server some time to terminate
-          # Check if the server is still running
-          if kill -0 $SERVER_PID 2>/dev/null; then
-            echo "Failed to terminate the server"
-            exit 0
-          else
-            echo "Server terminated successfully"
-          fi
-
-      # PyPI publishing moved to after cross-platform testing
-
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v6
-        with:
-          name: dist-base
-          path: src/backend/base/dist
-
-  build-main:
-    name: Build Langflow Main
-    needs: [build-base, determine-base-version, determine-main-version]
-    if: ${{ inputs.release_package_main && needs.determine-main-version.outputs.skipped == 'false' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ inputs.release_tag }}
-      - name: Setup Environment
-        uses: astral-sh/setup-uv@v6
-        with:
-          enable-cache: true
-          cache-dependency-glob: "uv.lock"
-          python-version: "3.12"
-          prune-cache: false
-      - name: Install the project
-        run: uv sync
-      - name: Check for dependency incompatibility
-        run: uv pip check
-      - name: Set version for pre-release
-        if: ${{ inputs.pre_release }}
-        run: |
-          VERSION="${{ needs.determine-main-version.outputs.version }}"
-          echo "Setting main pre-release version to: $VERSION"
-
-          # Update version in main pyproject.toml
-          sed -i.bak "s/^version = .*/version = \"$VERSION\"/" pyproject.toml
-
-          # Verify the change
-          echo "Updated pyproject.toml version:"
-          grep "^version" pyproject.toml
-      - name: Update langflow-base dependency for pre-release
-        if: ${{ inputs.pre_release }}
-        run: |
-          BASE_VERSION="${{ needs.determine-base-version.outputs.version }}"
-          echo "Base version for pre-release: $BASE_VERSION"
-
-          # Extract current langflow-base constraint from pyproject.toml
-          CURRENT_CONSTRAINT=$(grep -E '^\s*"langflow-base' pyproject.toml | head -1)
-          echo "Current constraint: $CURRENT_CONSTRAINT"
-
-          # Extract the major.minor version (e.g., "0.8" from "~=0.8.0")
-          MAJOR_MINOR=$(echo "$CURRENT_CONSTRAINT" | sed -E 's/.*[~>=<]+([0-9]+\.[0-9]+).*/\1/')
-          NEXT_MAJOR=$((${MAJOR_MINOR%.*} + 1))
-
-          # Create new constraint: >=BASE_VERSION,<NEXT_MAJOR.rc0
-          NEW_CONSTRAINT="\"langflow-base>=$BASE_VERSION,<$NEXT_MAJOR.rc0\""
-
-          echo "New constraint: $NEW_CONSTRAINT"
-
-          # Replace the constraint
-          sed -i.bak "s|\"langflow-base[^\"]*\"|$NEW_CONSTRAINT|" pyproject.toml
-
-          # Verify the change
-          echo "Updated dependency:"
-          grep "langflow-base" pyproject.toml
-      - name: Wait for PyPI Propagation
-        run: sleep 300 # wait for 5 minutes to ensure PyPI propagation
-      - name: Build project for pre-release distribution
-        if: ${{ inputs.pre_release }}
-        run: make build pre=true args="--no-sources --wheel"
-      - name: Build project for distribution
-        if: ${{ !inputs.pre_release }}
-        run: make build main=true args="--no-sources --wheel"
-      - name: Verify built version
-        run: |
-          EXPECTED_VERSION="${{ needs.determine-main-version.outputs.version }}"
-          WHEEL_FILE=$(ls dist/*.whl)
-          echo "Built wheel: $WHEEL_FILE"
-
-          NORMALIZED_VERSION=$(echo "$EXPECTED_VERSION" | sed 's/\.rc/rc/g; s/\.a/a/g; s/\.b/b/g; s/\.dev/dev/g')
-          echo "Expected version: $EXPECTED_VERSION"
-          echo "Normalized for wheel: $NORMALIZED_VERSION"
-
-          if [[ ! "$WHEEL_FILE" =~ $NORMALIZED_VERSION ]]; then
-            echo "❌ Error: Wheel version doesn't match expected version"
-            echo "Expected: $EXPECTED_VERSION (normalized: $NORMALIZED_VERSION)"
-            echo "Wheel file: $WHEEL_FILE"
-            exit 1
-          fi
-          echo "✅ Version verified: $EXPECTED_VERSION"
-      - name: Test CLI
-        run: |
-          uv pip install dist/*.whl
-          uv run python -m langflow run --host localhost --port 7860 --backend-only &
-          SERVER_PID=$!
-          # Wait for the server to start
-          timeout 120 bash -c 'until curl -f http://localhost:7860/health_check; do sleep 2; done' || (echo "Server did not start in time" && kill $SERVER_PID && exit 1)
-          # Terminate the server
-          kill $SERVER_PID || (echo "Failed to terminate the server" && exit 1)
-          sleep 20 # give the server some time to terminate
-          # Check if the server is still running
-          if kill -0 $SERVER_PID 2>/dev/null; then
-            echo "Failed to terminate the server"
-            exit 0
-          else
-            echo "Server terminated successfully"
-          fi
-
-      # PyPI publishing moved to after cross-platform testing
-
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v6
-        with:
-          name: dist-main
-          path: dist
-
   build-lfx:
     name: Build LFX
-    needs: [build-base, determine-lfx-version]
+    needs: [determine-lfx-version]
     if: ${{ inputs.release_lfx && needs.determine-lfx-version.outputs.skipped == 'false' }}
     runs-on: ubuntu-latest
     steps:
@@ -623,18 +320,287 @@ jobs:
           name: dist-lfx
           path: src/lfx/dist
 
+  build-base:
+    name: Build Langflow Base
+    needs: [build-lfx, determine-base-version, determine-lfx-version]
+    if: ${{ inputs.release_package_base && needs.determine-base-version.outputs.skipped == 'false' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.release_tag }}
+      - name: Setup Environment
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: "3.12"
+          prune-cache: false
+      - name: Download LFX artifact
+        if: ${{ inputs.release_lfx }}
+        uses: actions/download-artifact@v7
+        with:
+          name: dist-lfx
+          path: ./lfx-dist
+      - name: Install LFX from local wheel
+        if: ${{ inputs.release_lfx }}
+        run: |
+          WHEEL_FILE=$(find ./lfx-dist -name "*.whl" -type f | head -1)
+          if [ -n "$WHEEL_FILE" ]; then
+            echo "Installing LFX from local wheel: $WHEEL_FILE"
+            uv pip install --prerelease=allow "$WHEEL_FILE"
+          else
+            echo "No LFX wheel file found, will use PyPI version"
+          fi
+      - name: Install the project
+        run: uv sync
+      - name: Check for dependency incompatibility
+        run: uv pip check
+      - name: Set version for pre-release
+        if: ${{ inputs.pre_release }}
+        run: |
+          VERSION="${{ needs.determine-base-version.outputs.version }}"
+          echo "Setting pre-release version to: $VERSION"
+          cd src/backend/base
+
+          # Update version in pyproject.toml
+          sed -i.bak "s/^version = .*/version = \"$VERSION\"/" pyproject.toml
+
+          # Verify the change
+          echo "Updated pyproject.toml version:"
+          grep "^version" pyproject.toml
+      - name: Update lfx dependency for pre-release
+        if: ${{ inputs.pre_release && inputs.release_lfx }}
+        run: |
+          LFX_VERSION="${{ needs.determine-lfx-version.outputs.version }}"
+          echo "Updating lfx dependency to allow pre-release version: $LFX_VERSION"
+          cd src/backend/base
+
+          # Extract current lfx constraint from pyproject.toml
+          CURRENT_CONSTRAINT=$(grep -E '^\s*"lfx' pyproject.toml | head -1)
+          echo "Current constraint: $CURRENT_CONSTRAINT"
+
+          # Extract the major.minor version (e.g., "0.3" from "~=0.3.0")
+          MAJOR_MINOR=$(echo "$CURRENT_CONSTRAINT" | sed -E 's/.*[~>=<]+([0-9]+\.[0-9]+).*/\1/')
+          NEXT_MAJOR=$((${MAJOR_MINOR%.*} + 1))
+
+          # Create new constraint: >=LFX_VERSION,<NEXT_MAJOR.dev0
+          NEW_CONSTRAINT="\"lfx>=$LFX_VERSION,<$NEXT_MAJOR.dev0\""
+
+          echo "New constraint: $NEW_CONSTRAINT"
+
+          # Replace the constraint
+          sed -i.bak "s|\"lfx[^\"]*\"|$NEW_CONSTRAINT|" pyproject.toml
+
+          # Verify the change
+          echo "Updated lfx dependency:"
+          grep "lfx" pyproject.toml
+      - name: Build project for distribution
+        run: make build base=true args="--wheel"
+      - name: Verify built version
+        run: |
+          EXPECTED_VERSION="${{ needs.determine-base-version.outputs.version }}"
+          WHEEL_FILE=$(ls dist/*.whl 2>/dev/null || ls src/backend/base/dist/*.whl)
+          echo "Built wheel: $WHEEL_FILE"
+
+          NORMALIZED_VERSION=$(echo "$EXPECTED_VERSION" | sed 's/\.rc/rc/g; s/\.a/a/g; s/\.b/b/g; s/\.dev/dev/g')
+          echo "Expected version: $EXPECTED_VERSION"
+          echo "Normalized for wheel: $NORMALIZED_VERSION"
+
+          if [[ ! "$WHEEL_FILE" =~ $NORMALIZED_VERSION ]]; then
+            echo "❌ Error: Wheel version doesn't match expected version"
+            echo "Expected: $EXPECTED_VERSION (normalized: $NORMALIZED_VERSION)"
+            echo "Wheel file: $WHEEL_FILE"
+            exit 1
+          fi
+          echo "✅ Version verified: $EXPECTED_VERSION"
+      - name: Test CLI
+        run: |
+          # TODO: Unsure why the whl is not built in src/backend/base/dist
+          mkdir src/backend/base/dist
+          mv dist/*.whl src/backend/base/dist
+          uv pip install src/backend/base/dist/*.whl
+          uv run python -m langflow run --host localhost --port 7860 --backend-only &
+          SERVER_PID=$!
+          # Wait for the server to start
+          timeout 120 bash -c 'until curl -f http://localhost:7860/api/v1/auto_login; do sleep 2; done' || (echo "Server did not start in time" && kill $SERVER_PID && exit 1)
+          # Terminate the server
+          kill $SERVER_PID || (echo "Failed to terminate the server" && exit 1)
+          sleep 20 # give the server some time to terminate
+          # Check if the server is still running
+          if kill -0 $SERVER_PID 2>/dev/null; then
+            echo "Failed to terminate the server"
+            exit 0
+          else
+            echo "Server terminated successfully"
+          fi
+
+      # PyPI publishing moved to after cross-platform testing
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: dist-base
+          path: src/backend/base/dist
+
+  build-main:
+    name: Build Langflow Main
+    needs:
+      [
+        build-base,
+        build-lfx,
+        determine-base-version,
+        determine-main-version,
+        determine-lfx-version,
+      ]
+    if: ${{ inputs.release_package_main && needs.determine-main-version.outputs.skipped == 'false' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.release_tag }}
+      - name: Setup Environment
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: "3.12"
+          prune-cache: false
+      - name: Download LFX artifact
+        if: ${{ inputs.release_lfx }}
+        uses: actions/download-artifact@v7
+        with:
+          name: dist-lfx
+          path: ./lfx-dist
+      - name: Download base artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: dist-base
+          path: ./base-dist
+      - name: Install LFX from local wheel
+        if: ${{ inputs.release_lfx }}
+        run: |
+          WHEEL_FILE=$(find ./lfx-dist -name "*.whl" -type f | head -1)
+          if [ -n "$WHEEL_FILE" ]; then
+            echo "Installing LFX from local wheel: $WHEEL_FILE"
+            uv pip install --prerelease=allow "$WHEEL_FILE"
+          else
+            echo "No LFX wheel file found, will use PyPI version"
+          fi
+      - name: Install base from local wheel
+        run: |
+          WHEEL_FILE=$(find ./base-dist -name "*.whl" -type f | head -1)
+          if [ -n "$WHEEL_FILE" ]; then
+            echo "Installing langflow-base from local wheel: $WHEEL_FILE"
+            uv pip install --prerelease=allow "$WHEEL_FILE"
+          else
+            echo "Error: No langflow-base wheel file found"
+            exit 1
+          fi
+      - name: Install the project
+        run: uv sync
+      - name: Check for dependency incompatibility
+        run: uv pip check
+      - name: Set version for pre-release
+        if: ${{ inputs.pre_release }}
+        run: |
+          VERSION="${{ needs.determine-main-version.outputs.version }}"
+          echo "Setting main pre-release version to: $VERSION"
+
+          # Update version in main pyproject.toml
+          sed -i.bak "s/^version = .*/version = \"$VERSION\"/" pyproject.toml
+
+          # Verify the change
+          echo "Updated pyproject.toml version:"
+          grep "^version" pyproject.toml
+      - name: Update langflow-base dependency for pre-release
+        if: ${{ inputs.pre_release }}
+        run: |
+          BASE_VERSION="${{ needs.determine-base-version.outputs.version }}"
+          echo "Base version for pre-release: $BASE_VERSION"
+
+          # Extract current langflow-base constraint from pyproject.toml
+          CURRENT_CONSTRAINT=$(grep -E '^\s*"langflow-base' pyproject.toml | head -1)
+          echo "Current constraint: $CURRENT_CONSTRAINT"
+
+          # Extract the major.minor version (e.g., "0.8" from "~=0.8.0")
+          MAJOR_MINOR=$(echo "$CURRENT_CONSTRAINT" | sed -E 's/.*[~>=<]+([0-9]+\.[0-9]+).*/\1/')
+          NEXT_MAJOR=$((${MAJOR_MINOR%.*} + 1))
+
+          # Create new constraint: >=BASE_VERSION,<NEXT_MAJOR.dev0
+          NEW_CONSTRAINT="\"langflow-base>=$BASE_VERSION,<$NEXT_MAJOR.dev0\""
+
+          echo "New constraint: $NEW_CONSTRAINT"
+
+          # Replace the constraint
+          sed -i.bak "s|\"langflow-base[^\"]*\"|$NEW_CONSTRAINT|" pyproject.toml
+
+          # Verify the change
+          echo "Updated dependency:"
+          grep "langflow-base" pyproject.toml
+      - name: Build project for pre-release distribution
+        if: ${{ inputs.pre_release }}
+        run: make build pre=true args="--no-sources --wheel"
+      - name: Build project for distribution
+        if: ${{ !inputs.pre_release }}
+        run: make build main=true args="--no-sources --wheel"
+      - name: Verify built version
+        run: |
+          EXPECTED_VERSION="${{ needs.determine-main-version.outputs.version }}"
+          WHEEL_FILE=$(ls dist/*.whl)
+          echo "Built wheel: $WHEEL_FILE"
+
+          NORMALIZED_VERSION=$(echo "$EXPECTED_VERSION" | sed 's/\.rc/rc/g; s/\.a/a/g; s/\.b/b/g; s/\.dev/dev/g')
+          echo "Expected version: $EXPECTED_VERSION"
+          echo "Normalized for wheel: $NORMALIZED_VERSION"
+
+          if [[ ! "$WHEEL_FILE" =~ $NORMALIZED_VERSION ]]; then
+            echo "❌ Error: Wheel version doesn't match expected version"
+            echo "Expected: $EXPECTED_VERSION (normalized: $NORMALIZED_VERSION)"
+            echo "Wheel file: $WHEEL_FILE"
+            exit 1
+          fi
+          echo "✅ Version verified: $EXPECTED_VERSION"
+      - name: Test CLI
+        run: |
+          uv pip install dist/*.whl
+          uv run python -m langflow run --host localhost --port 7860 --backend-only &
+          SERVER_PID=$!
+          # Wait for the server to start
+          timeout 120 bash -c 'until curl -f http://localhost:7860/health_check; do sleep 2; done' || (echo "Server did not start in time" && kill $SERVER_PID && exit 1)
+          # Terminate the server
+          kill $SERVER_PID || (echo "Failed to terminate the server" && exit 1)
+          sleep 20 # give the server some time to terminate
+          # Check if the server is still running
+          if kill -0 $SERVER_PID 2>/dev/null; then
+            echo "Failed to terminate the server"
+            exit 0
+          else
+            echo "Server terminated successfully"
+          fi
+
+      # PyPI publishing moved to after cross-platform testing
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: dist-main
+          path: dist
+
   test-cross-platform:
     name: Test Cross-Platform Installation
-    needs: [build-base, build-main]
+    needs: [build-base, build-main, build-lfx]
     if: |
       always() &&
       !cancelled() &&
-      (needs.build-base.result == 'success' || needs.build-main.result == 'success')
+      (needs.build-base.result == 'success' || needs.build-main.result == 'success' || needs.build-lfx.result == 'success')
     uses: ./.github/workflows/cross-platform-test.yml
     with:
       base-artifact-name: "dist-base"
       main-artifact-name: "dist-main"
-      lfx-artifact-name: "${{ inputs.release_lfx && 'dist-lfx' || '' }}"
+      lfx-artifact-name: "dist-lfx"
 
   publish-base:
     name: Publish Langflow Base to PyPI
@@ -704,31 +670,6 @@ jobs:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         run: |
           cd src/lfx && uv publish dist/*.whl
-
-  # test-lfx-cross-platform:
-  #   name: Test LFX Cross-Platform Installation
-  #   if: ${{ inputs.release_lfx }}
-  #   needs: [build-lfx]
-  #   runs-on: ${{ matrix.os }}
-  #   strategy:
-  #     matrix:
-  #       os: [ubuntu-latest, windows-latest, macos-latest]
-  #       python-version: ["3.10", "3.11", "3.12", "3.13"]
-  #   steps:
-  #     - name: Download LFX artifact
-  #       uses: actions/download-artifact@v7
-  #       with:
-  #         name: dist-lfx
-  #         path: dist-lfx
-  #     - name: Setup Environment
-  #       uses: astral-sh/setup-uv@v6
-  #       with:
-  #         enable-cache: false
-  #         python-version: ${{ matrix.python-version }}
-  #     - name: Test LFX installation
-  #       run: |
-  #         uv pip install dist-lfx/*.whl
-  #         uv run lfx --help
 
   call_docker_build_base:
     name: Call Docker Build Workflow for Langflow Base
