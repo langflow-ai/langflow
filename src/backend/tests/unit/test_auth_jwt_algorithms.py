@@ -318,7 +318,7 @@ class TestTokenVerification:
             mock_user.is_active = True
 
             mock_db = AsyncMock()
-            
+
             # Create async function that returns mock_user
             async def mock_get_user_by_id(*args, **kwargs):
                 return mock_user
@@ -350,7 +350,7 @@ class TestTokenVerification:
             mock_user.is_active = True
 
             mock_db = AsyncMock()
-            
+
             # Create async function that returns mock_user
             async def mock_get_user_by_id(*args, **kwargs):
                 return mock_user
@@ -382,7 +382,7 @@ class TestTokenVerification:
             mock_user.is_active = True
 
             mock_db = AsyncMock()
-            
+
             # Create async function that returns mock_user
             async def mock_get_user_by_id(*args, **kwargs):
                 return mock_user
@@ -451,7 +451,7 @@ class TestAuthenticationFailures:
 
         mock_settings_service = MagicMock()
         mock_settings_service.auth_settings = mock_auth_settings
-        
+
         mock_auth_service = AuthService(mock_settings_service)
 
         mock_db = AsyncMock()
@@ -583,14 +583,18 @@ class TestAuthenticationFailures:
                     await get_current_user_from_access_token(token, mock_db)
 
                 assert exc_info.value.status_code == 401
-                assert "invalid" in exc_info.value.detail.lower() or "expected access token" in exc_info.value.detail.lower()
+                assert (
+                    "invalid" in exc_info.value.detail.lower()
+                    or "expected access token" in exc_info.value.detail.lower()
+                )
 
     @pytest.mark.asyncio
     async def test_user_not_found_raises_401(self):
         """Token for non-existent user should raise 401."""
+        from uuid import uuid4
+
         from langflow.services.auth.service import AuthService
         from langflow.services.auth.utils import create_token, get_current_user_from_access_token
-        from uuid import uuid4
 
         with tempfile.TemporaryDirectory() as tmpdir:
             mock_settings_service = self._create_mock_settings_service("HS256", tmpdir)
@@ -599,7 +603,7 @@ class TestAuthenticationFailures:
 
             # Use a valid UUID format
             user_id = str(uuid4())
-            
+
             # Create async function that returns None
             async def mock_get_user_by_id(*args, **kwargs):
                 return None
@@ -622,9 +626,10 @@ class TestAuthenticationFailures:
     @pytest.mark.asyncio
     async def test_inactive_user_raises_401(self):
         """Token for inactive user should raise 401."""
+        from uuid import uuid4
+
         from langflow.services.auth.service import AuthService
         from langflow.services.auth.utils import create_token, get_current_user_from_access_token
-        from uuid import uuid4
 
         with tempfile.TemporaryDirectory() as tmpdir:
             mock_settings_service = self._create_mock_settings_service("HS256", tmpdir)
@@ -638,7 +643,7 @@ class TestAuthenticationFailures:
             mock_user.is_active = False
 
             mock_db = AsyncMock()
-            
+
             # Create async function that returns mock_user
             async def mock_get_user_by_id(*args, **kwargs):
                 return mock_user
@@ -687,7 +692,7 @@ class TestRefreshTokenVerification:
             mock_user.is_active = True
 
             mock_db = AsyncMock()
-            
+
             # Create async function that returns mock_user
             async def mock_get_user_by_id(*args, **kwargs):
                 return mock_user
@@ -868,7 +873,7 @@ class TestEdgeCases:
             mock_user.is_active = True
 
             mock_db = AsyncMock()
-            
+
             # Create async function that returns mock_user
             async def mock_get_user_by_id(*args, **kwargs):
                 return mock_user

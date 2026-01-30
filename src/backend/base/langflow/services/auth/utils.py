@@ -8,7 +8,7 @@ from fastapi import Depends, HTTPException, Request, Security, WebSocket, status
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
 from fastapi.security.utils import get_authorization_scheme_param
 from lfx.log.logger import logger
-from lfx.services.deps import injectable_session_scope,session_scope
+from lfx.services.deps import injectable_session_scope
 
 from langflow.services.auth.service import (
     AUTO_LOGIN_ERROR as SERVICE_AUTO_LOGIN_ERROR,
@@ -251,20 +251,20 @@ async def authenticate_user(username: str, password: str, db: AsyncSession) -> U
 
 def get_fernet(settings_service: SettingsService):
     """Get a Fernet instance for encryption/decryption.
-    
+
     Args:
         settings_service: Settings service to get the secret key
-        
+
     Returns:
         Fernet instance for encryption/decryption
     """
     secret_key: str = settings_service.auth_settings.SECRET_KEY.get_secret_value()
-    
+
     # Ensure the key is valid for Fernet (32 url-safe base64-encoded bytes)
     if len(secret_key) < 32:  # noqa: PLR2004
         # Pad the key to 32 bytes
         secret_key = secret_key + "=" * (32 - len(secret_key))
-    
+
     # Ensure it's properly base64 encoded
     try:
         base64.urlsafe_b64decode(secret_key)
@@ -272,17 +272,17 @@ def get_fernet(settings_service: SettingsService):
     except Exception:  # noqa: BLE001
         # If not valid base64, encode it
         key = base64.urlsafe_b64encode(secret_key.encode()[:32])
-    
+
     return Fernet(key)
 
 
 def encrypt_api_key(api_key: str, settings_service: SettingsService | None = None) -> str:
     """Encrypt an API key.
-    
+
     Args:
         api_key: The API key to encrypt
         settings_service: Settings service (unused, kept for backward compatibility)
-        
+
     Returns:
         Encrypted API key string
     """
@@ -292,15 +292,15 @@ def encrypt_api_key(api_key: str, settings_service: SettingsService | None = Non
 def decrypt_api_key(
     encrypted_api_key: str,
     settings_service: SettingsService | None = None,
-    fernet_obj = None,
+    fernet_obj=None,
 ) -> str:
     """Decrypt an encrypted API key.
-    
+
     Args:
         encrypted_api_key: The encrypted API key string
         settings_service: Settings service (unused, kept for backward compatibility)
         fernet_obj: Fernet object (unused, kept for backward compatibility)
-        
+
     Returns:
         Decrypted API key string
     """
