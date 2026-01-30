@@ -526,28 +526,26 @@ class MyCustomComponent(Component):
         return "test"
 """
                                 }
-                            }
-                        }
-                    }
+                            },
+                        },
+                    },
                 }
             ]
-        }
+        },
     }
-    
+
     file_content = json.dumps({"flows": [flow_data]})
-    
+
     # Mock the validation to return that the component is blocked
     with patch("langflow.api.utils.flow_validation.validate_code") as mock_validate:
-        mock_validate.return_value = {
-            "function": {"errors": ["Custom Component 'My Custom Component' is not allowed"]}
-        }
-        
+        mock_validate.return_value = {"function": {"errors": ["Custom Component 'My Custom Component' is not allowed"]}}
+
         response = await client.post(
             "api/v1/flows/upload/",
             files={"file": ("flows.json", file_content, "application/json")},
             headers=logged_in_headers,
         )
-        
+
         assert response.status_code == 400
         assert "Upload blocked" in response.json()["detail"]
         assert "My Custom Component" in response.json()["detail"]
@@ -581,33 +579,32 @@ class AllowedCustomComponent(Component):
         return "test"
 """
                                 }
-                            }
-                        }
-                    }
+                            },
+                        },
+                    },
                 }
             ]
-        }
+        },
     }
-    
+
     file_content = json.dumps({"flows": [flow_data]})
-    
+
     # Mock the validation to return that the component is allowed
     with patch("langflow.api.utils.flow_validation.validate_code") as mock_validate:
         mock_validate.return_value = {
             "function": {"errors": []}  # No errors means it's allowed
         }
-        
+
         response = await client.post(
             "api/v1/flows/upload/",
             files={"file": ("flows.json", file_content, "application/json")},
             headers=logged_in_headers,
         )
-        
+
         assert response.status_code == 201
         result = response.json()
         assert len(result) == 1
         assert result[0]["name"] == "test_flow_with_allowed_custom"
-
 
 
 # PUT endpoint tests (upsert)

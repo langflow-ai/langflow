@@ -119,8 +119,6 @@ class TestComponent(Component):
         result = extract_display_name(code)
         assert result == "Correct Display Name"
 
-from lfx.custom.validate import create_class, create_function
-
 
 class TestBlockCustomCodeIntegration:
     """Integration tests for blocking custom code execution."""

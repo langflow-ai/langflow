@@ -298,9 +298,9 @@ async def create_flow(
     # Validate custom components before creating the flow
     if flow.data is not None:
         from langflow.api.utils.flow_validation import validate_flow_custom_components
-        
+
         blocked_components = validate_flow_custom_components(flow.data)
-        
+
         if blocked_components:
             component_names = [comp["display_name"] for comp in blocked_components]
             error_message = (
@@ -308,7 +308,7 @@ async def create_flow(
                 f"{', '.join(component_names)}"
             )
             raise HTTPException(status_code=400, detail=error_message)
-    
+
     try:
         return await _new_flow(session=session, flow=flow, user_id=current_user.id, storage_service=storage_service)
     except Exception as e:
@@ -474,9 +474,9 @@ async def update_flow(
     # Validate custom components if flow data is being updated
     if flow.data is not None:
         from langflow.api.utils.flow_validation import validate_flow_custom_components
-        
+
         blocked_components = validate_flow_custom_components(flow.data)
-        
+
         if blocked_components:
             component_names = [comp["display_name"] for comp in blocked_components]
             error_message = (
@@ -484,7 +484,7 @@ async def update_flow(
                 f"{', '.join(component_names)}"
             )
             raise HTTPException(status_code=400, detail=error_message)
-    
+
     settings_service = get_settings_service()
     try:
         db_flow = await _read_flow(
@@ -566,13 +566,13 @@ async def upsert_flow(
     Returns 201 for creation, 200 for update.
     """
     from fastapi.responses import JSONResponse
-    
+
     # Validate custom components before creating/updating the flow
     if flow.data is not None:
         from langflow.api.utils.flow_validation import validate_flow_custom_components
-        
+
         blocked_components = validate_flow_custom_components(flow.data)
-        
+
         if blocked_components:
             component_names = [comp["display_name"] for comp in blocked_components]
             error_message = (
@@ -643,9 +643,9 @@ async def _update_existing_flow(
     # Validate custom components if flow data is being updated
     if flow.data is not None:
         from langflow.api.utils.flow_validation import validate_flow_custom_components
-        
+
         blocked_components = validate_flow_custom_components(flow.data)
-        
+
         if blocked_components:
             component_names = [comp["display_name"] for comp in blocked_components]
             error_message = (
@@ -653,7 +653,7 @@ async def _update_existing_flow(
                 f"{', '.join(component_names)}"
             )
             raise HTTPException(status_code=400, detail=error_message)
-    
+
     settings_service = get_settings_service()
     user_id = current_user.id
 
@@ -759,23 +759,23 @@ async def create_flows(
     """Create multiple new flows."""
     # Validate custom components in all flows before creating them
     from langflow.api.utils.flow_validation import validate_flows_custom_components
-    
+
     flows_data = [flow.model_dump() for flow in flow_list.flows]
     blocked_by_flow = validate_flows_custom_components(flows_data)
-    
+
     if blocked_by_flow:
         # Build detailed error message
         error_details = []
         for flow_name, blocked_components in blocked_by_flow.items():
             component_names = [comp["display_name"] for comp in blocked_components]
             error_details.append(f"Flow '{flow_name}': {', '.join(component_names)}")
-        
+
         error_message = (
             "Batch creation blocked: The following flows contain custom components that are not allowed:\n"
             + "\n".join(error_details)
         )
         raise HTTPException(status_code=400, detail=error_message)
-    
+
     db_flows = []
     for flow in flow_list.flows:
         flow.user_id = current_user.id
@@ -806,17 +806,17 @@ async def upload_file(
 
     # Validate custom components in all flows before creating them
     from langflow.api.utils.flow_validation import validate_flows_custom_components
-    
+
     flows_data = [flow.model_dump() for flow in flow_list.flows]
     blocked_by_flow = validate_flows_custom_components(flows_data)
-    
+
     if blocked_by_flow:
         # Build detailed error message
         error_details = []
         for flow_name, blocked_components in blocked_by_flow.items():
             component_names = [comp["display_name"] for comp in blocked_components]
             error_details.append(f"Flow '{flow_name}': {', '.join(component_names)}")
-        
+
         error_message = (
             "Upload blocked: The following flows contain custom components that are not allowed:\n"
             + "\n".join(error_details)
