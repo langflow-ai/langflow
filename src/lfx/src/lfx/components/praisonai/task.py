@@ -277,14 +277,18 @@ class PraisonAITaskComponent(Component):
                 if field_definitions:
                     return create_model("TaskOutputModel", **field_definitions)
             else:
-                self.log(f"Invalid JSON schema format in task '{self.name}': expected dictionary, got {type(schema).__name__}")
+                self.log(
+                    f"Invalid JSON schema format in task '{self.name}': "
+                    f"expected dictionary, got {type(schema).__name__}"
+                )
 
         except json.JSONDecodeError as e:
             self.log(f"JSON decode error in task '{self.name}': {e}")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             self.log(f"Unexpected error parsing JSON schema in task '{self.name}': {e}")
 
         return None
+
 
     def build_task(self) -> Any:
         """Build and return the PraisonAI Task instance."""
