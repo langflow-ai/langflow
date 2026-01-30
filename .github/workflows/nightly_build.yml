@@ -37,6 +37,11 @@ on:
         required: false
         type: boolean
         default: true
+      test_merge_pr:
+        description: "TESTING ONLY: Skip all jobs except merge PR (requires existing nightly tag and branch)"
+        required: false
+        type: boolean
+        default: false
   schedule:
     # Run job at 00:00 UTC (4:00 PM PST / 5:00 PM PDT)
     - cron: "0 0 * * *"
@@ -56,7 +61,7 @@ jobs:
           exit 1
 
   create-nightly-tag:
-    if: github.repository == 'langflow-ai/langflow'
+    if: github.repository == 'langflow-ai/langflow' && !inputs.test_merge_pr
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -182,7 +187,7 @@ jobs:
           fi
 
   build-hash-history:
-    if: github.repository == 'langflow-ai/langflow'
+    if: github.repository == 'langflow-ai/langflow' && !inputs.test_merge_pr
     name: Build Nightly Hash History
     needs: create-nightly-tag
     runs-on: ubuntu-latest
@@ -253,7 +258,7 @@ jobs:
           fi
 
   frontend-tests:
-    if: github.repository == 'langflow-ai/langflow' && !inputs.skip_frontend_tests
+    if: github.repository == 'langflow-ai/langflow' && !inputs.skip_frontend_tests && !inputs.test_merge_pr
     name: Run Frontend Tests
     needs: create-nightly-tag
     uses: ./.github/workflows/typescript_test.yml
@@ -268,7 +273,7 @@ jobs:
       TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
 
   backend-unit-tests:
-    if: github.repository == 'langflow-ai/langflow' && !inputs.skip_backend_tests
+    if: github.repository == 'langflow-ai/langflow' && !inputs.skip_backend_tests && !inputs.test_merge_pr
     name: Run Backend Unit Tests
     needs: create-nightly-tag
     uses: ./.github/workflows/python_test.yml
@@ -291,7 +296,7 @@ jobs:
   #     ref: ${{ needs.create-nightly-tag.outputs.tag }}
 
   release-nightly-build:
-    if: github.repository == 'langflow-ai/langflow' && always() && needs.frontend-tests.result != 'failure' && needs.backend-unit-tests.result != 'failure' && needs.build-hash-history.result != 'failure'
+    if: github.repository == 'langflow-ai/langflow' && !inputs.test_merge_pr && always() && needs.frontend-tests.result != 'failure' && needs.backend-unit-tests.result != 'failure' && needs.build-hash-history.result != 'failure'
     name: Run Nightly Langflow Build
     needs: [create-nightly-tag, frontend-tests, backend-unit-tests, build-hash-history]
     uses: ./.github/workflows/release_nightly.yml
@@ -370,7 +375,8 @@ jobs:
     # Run if auto_merge_hash_history is true (default) or not set (scheduled runs)
     # When triggered by schedule, inputs.auto_merge_hash_history is not set, so default to true
     # Only run when the base branch is 'main' to prevent PRs from feature branches
-    if: github.repository == 'langflow-ai/langflow' && github.ref == 'refs/heads/main' && always() && needs.build-hash-history.result == 'success' && needs.release-nightly-build.result == 'success' && (github.event_name == 'schedule' || inputs.auto_merge_hash_history != false)
+    # OR run if test_merge_pr is true (for testing the PR creation logic)
+    if: github.repository == 'langflow-ai/langflow' && github.ref == 'refs/heads/main' && always() && (inputs.test_merge_pr || (needs.build-hash-history.result == 'success' && needs.release-nightly-build.result == 'success' && (github.event_name == 'schedule' || inputs.auto_merge_hash_history != false)))
     runs-on: ubuntu-latest
     permissions:
       contents: write
