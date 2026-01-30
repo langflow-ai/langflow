@@ -145,13 +145,13 @@ class TestComponent(Component):
 """
         # Set environment variable to disable custom components
         monkeypatch.setenv("LANGFLOW_ALLOW_CUSTOM_COMPONENTS", "false")
-        
+
         # Mock the hash lookup to return False (hash not found)
         with patch("lfx.custom.hash_validator.is_code_hash_allowed") as mock_hash_check:
             mock_hash_check.return_value = False
             with pytest.raises(ValueError, match="Custom Component 'Test' is not allowed"):
                 create_class(code, "TestComponent")
-            
+
             # Verify is_code_hash_allowed was called
             mock_hash_check.assert_called_once()
 
@@ -165,14 +165,14 @@ class TestComponent(Component):
 """
         # Set environment variable to disable custom components
         monkeypatch.setenv("LANGFLOW_ALLOW_CUSTOM_COMPONENTS", "false")
-        
+
         # Mock the hash lookup to return True (hash found)
         with patch("lfx.custom.hash_validator.is_code_hash_allowed") as mock_hash_check:
             mock_hash_check.return_value = True
             # Should not raise
             result = create_class(code, "TestComponent")
             assert result is not None
-            
+
             # Verify is_code_hash_allowed was called
             mock_hash_check.assert_called_once()
 
@@ -236,11 +236,11 @@ class TestComponent(Component):
         # Mock get_settings_service to return our mock settings
         with patch("lfx.custom.hash_validator.get_settings_service") as mock_get_settings:
             mock_get_settings.return_value = mock_settings
-            
+
             # Mock _get_cached_hashes to return empty set (hash not found)
             with patch("lfx.custom.hash_validator._get_cached_hashes") as mock_get_hashes:
                 mock_get_hashes.return_value = set()
-                
+
                 with pytest.raises(ValueError, match="Custom Component 'Test' is not allowed"):
                     create_class(code, "TestComponent")
 
@@ -249,10 +249,10 @@ class TestComponent(Component):
 
         with patch("lfx.custom.hash_validator.get_settings_service") as mock_get_settings:
             mock_get_settings.return_value = mock_settings
-            
+
             # Mock _get_cached_hashes to return empty set (hash not found, but should be allowed)
             with patch("lfx.custom.hash_validator._get_cached_hashes") as mock_get_hashes:
                 mock_get_hashes.return_value = set()
-                
+
                 result = create_class(code, "TestComponent")
                 assert result is not None
