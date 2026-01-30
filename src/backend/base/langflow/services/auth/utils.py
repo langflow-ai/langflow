@@ -249,7 +249,7 @@ async def authenticate_user(username: str, password: str, db: AsyncSession) -> U
     return await _auth_service().authenticate_user(username, password, db)
 
 
-def get_fernet(settings_service: SettingsService):
+def get_fernet(settings_service: SettingsService) -> Fernet:
     """Get a Fernet instance for encryption/decryption.
 
     Args:
@@ -258,20 +258,22 @@ def get_fernet(settings_service: SettingsService):
     Returns:
         Fernet instance for encryption/decryption
     """
+    import random
+
     secret_key: str = settings_service.auth_settings.SECRET_KEY.get_secret_value()
-
-    # Ensure the key is valid for Fernet (32 url-safe base64-encoded bytes)
-    if len(secret_key) < 32:  # noqa: PLR2004
-        # Pad the key to 32 bytes
-        secret_key = secret_key + "=" * (32 - len(secret_key))
-
-    # Ensure it's properly base64 encoded
-    try:
-        base64.urlsafe_b64decode(secret_key)
-        key = secret_key.encode()
-    except Exception:  # noqa: BLE001
-        # If not valid base64, encode it
-        key = base64.urlsafe_b64encode(secret_key.encode()[:32])
+    
+    # Replicate the original _ensure_valid_key logic from AuthService
+    MINIMUM_KEY_LENGTH = 32  # noqa: N806
+    if len(secret_key) < MINIMUM_KEY_LENGTH:
+        # Generate deterministic key from seed for short keys
+        random.seed(secret_key)
+        key = bytes(random.getrandbits(8) for _ in range(32))
+        key = base64.urlsafe_b64encode(key)
+    else:
+        # Add padding for longer keys
+        padding_needed = 4 - len(secret_key) % 4
+        padded_key = secret_key + "=" * padding_needed
+        key = padded_key.encode()
 
     return Fernet(key)
 
