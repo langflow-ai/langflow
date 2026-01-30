@@ -66,8 +66,8 @@ test(
       timeout: 10000,
     });
 
-    await expect(
-      page.locator(".react-flow__handle-right").first(),
-    ).toBeVisible({ timeout: 10000 });
+    await expect(page.locator(".react-flow__handle-right").first()).toBeVisible(
+      { timeout: 10000 },
+    );
   },
 );
