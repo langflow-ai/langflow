@@ -6,6 +6,10 @@ import {
   TITLE_ERROR_UPDATING_COMPONENT,
 } from "@/constants/constants";
 import type { APIClassType, ResponseErrorDetailAPI } from "@/types/api";
+import {
+  extractOAuthError,
+  handleMCPOAuthFlow,
+} from "@/controllers/API/queries/mcp/use-mcp-oauth";
 import { updateHiddenOutputs } from "./update-hidden-outputs";
 
 // Map to store debounced functions for each node ID
@@ -76,9 +80,47 @@ export const mutateTemplate = async (
             callback?.();
           } catch (e) {
             const error = e as ResponseErrorDetailAPI;
+
+            // Check if this is an OAuth required error
+            const oauthError = extractOAuthError(error);
+            if (oauthError) {
+              // Show notice that OAuth is required
+              setErrorData({
+                title: "OAuth Authentication Required",
+                list: [
+                  `The MCP server requires authentication. Starting OAuth flow...`,
+                ],
+              });
+
+              // Handle the OAuth flow - pass full error object with credentials
+              const result = await handleMCPOAuthFlow(oauthError);
+
+              if (result.success) {
+                // OAuth succeeded - retry the mutation
+                setErrorData({
+                  title: "Authentication Successful",
+                  list: [
+                    "OAuth authentication completed. Please try your action again.",
+                  ],
+                });
+              } else {
+                // OAuth failed
+                setErrorData({
+                  title: "OAuth Authentication Failed",
+                  list: [result.error || "Failed to authenticate with MCP server"],
+                });
+              }
+              return;
+            }
+
+            // Regular error handling
             setErrorData({
               title: TITLE_ERROR_UPDATING_COMPONENT,
-              list: [error.response?.data?.detail || ERROR_UPDATING_COMPONENT],
+              list: [
+                typeof error.response?.data?.detail === "string"
+                  ? error.response.data.detail
+                  : ERROR_UPDATING_COMPONENT,
+              ],
             });
           }
         },

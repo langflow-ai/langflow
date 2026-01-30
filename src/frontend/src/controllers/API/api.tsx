@@ -71,6 +71,19 @@ function ApiInterceptor() {
         return response;
       },
       async (error: AxiosError) => {
+        // Check if this is an MCP OAuth required error - these should pass through
+        // to be handled by the component-level error handler
+        const errorDetail = (error?.response?.data as any)?.detail;
+        const isOAuthRequiredError =
+          error?.response?.status === 401 &&
+          typeof errorDetail === "object" &&
+          errorDetail?.error === "oauth_required";
+
+        if (isOAuthRequiredError) {
+          // Let OAuth errors pass through to component error handlers
+          return Promise.reject(error);
+        }
+
         const isAuthenticationError =
           error?.response?.status === 403 || error?.response?.status === 401;
 

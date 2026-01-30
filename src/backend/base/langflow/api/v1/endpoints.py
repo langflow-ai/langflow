@@ -38,6 +38,7 @@ from langflow.api.v1.schemas import (
     UploadFileResponse,
 )
 from langflow.events.event_manager import create_stream_tokens_event_manager
+from lfx.base.mcp.oauth.provider import OAuthRequiredError
 from langflow.exceptions.api import APIException, InvalidChatInputError
 from langflow.exceptions.serialization import SerializationError
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
@@ -952,6 +953,8 @@ async def custom_component_update(
                 field_value=code_request.field_value,
             )
 
+    except OAuthRequiredError:
+        raise  # Let global handler in main.py handle this
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

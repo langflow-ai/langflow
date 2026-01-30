@@ -28,6 +28,7 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 
 from langflow.api import health_check_router, log_router, router
 from langflow.api.v1.mcp_projects import init_mcp_servers
+from lfx.base.mcp.oauth.provider import OAuthRequiredError
 from langflow.initial_setup.setup import (
     copy_profile_pictures,
     create_or_update_starter_projects,
@@ -516,6 +517,19 @@ def create_app():
     app.include_router(router)
     app.include_router(health_check_router)
     app.include_router(log_router)
+
+    # Handle OAuthRequiredError from MCP components
+    @app.exception_handler(OAuthRequiredError)
+    async def oauth_required_handler(_request: Request, exc: OAuthRequiredError):
+        """Return a structured JSON response for OAuth required errors.
+
+        This allows the frontend to detect when OAuth is needed and initiate
+        the OAuth flow via the /api/v1/mcp/oauth/initiate endpoint.
+        """
+        return JSONResponse(
+            status_code=HTTPStatus.UNAUTHORIZED,
+            content=exc.to_dict(),
+        )
 
     @app.exception_handler(Exception)
     async def exception_handler(_request: Request, exc: Exception):

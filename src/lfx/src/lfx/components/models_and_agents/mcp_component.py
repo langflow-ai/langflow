@@ -7,6 +7,7 @@ import uuid
 from langchain_core.tools import StructuredTool  # noqa: TC002
 
 from lfx.base.agents.utils import maybe_unflatten_dict, safe_cache_get, safe_cache_set
+from lfx.base.mcp.oauth.provider import OAuthRequiredError
 from lfx.base.mcp.util import (
     MCPStdioClient,
     MCPStreamableHttpClient,
@@ -365,23 +366,27 @@ class MCPToolsComponent(ComponentWithCache):
             oauth_cleanup = None
             use_oauth = getattr(self, "use_oauth", False)
             if use_oauth and server_config.get("url"):
+                server_url = server_config["url"]
                 try:
-                    from lfx.base.mcp.oauth import create_mcp_oauth_provider
+                    from lfx.base.mcp.oauth.provider import create_token_auth
 
-                    # Get optional OAuth configuration from component inputs
-                    oauth_client_id = getattr(self, "oauth_client_id", None) or None
-                    oauth_client_secret = getattr(self, "oauth_client_secret", None) or None
-                    oauth_redirect_uri = getattr(self, "oauth_redirect_uri", None) or None
-                    oauth_client_metadata_url = getattr(self, "oauth_client_metadata_url", None) or None
+                    # Check for cached tokens from the OAuth API flow
+                    cached_tokens = await self._get_cached_oauth_tokens(server_url)
 
-                    oauth_auth, _, oauth_cleanup = await create_mcp_oauth_provider(
-                        server_url=server_config["url"],
-                        client_name="langflow",
-                        client_id=oauth_client_id,
-                        client_secret=oauth_client_secret,
-                        redirect_uri=oauth_redirect_uri,
-                        client_metadata_url=oauth_client_metadata_url,
-                    )
+                    if cached_tokens:
+                        # Use cached tokens - obtained via /api/v1/mcp/oauth/initiate flow
+                        oauth_auth = create_token_auth(cached_tokens)
+                        await logger.ainfo(f"Using cached OAuth tokens for {server_url}")
+                    else:
+                        # No cached tokens - frontend needs to initiate OAuth via API
+                        # This works in both local and deployed environments
+                        raise OAuthRequiredError(
+                            message="OAuth authentication required. Please authenticate via the OAuth flow.",
+                            server_url=server_url,
+                        )
+                except OAuthRequiredError:
+                    # Re-raise OAuth required errors for frontend handling
+                    raise
                 except Exception as e:
                     msg = f"Failed to create OAuth provider: {e!s}"
                     await logger.awarning(msg)
@@ -423,6 +428,9 @@ class MCPToolsComponent(ComponentWithCache):
             msg = f"Timeout updating tool list: {e!s}"
             await logger.aexception(msg)
             raise TimeoutError(msg) from e
+        except OAuthRequiredError:
+            # Re-raise OAuth errors for frontend handling
+            raise
         except Exception as e:
             msg = f"Error updating tool list: {e!s}"
             await logger.aexception(msg)
@@ -474,6 +482,9 @@ class MCPToolsComponent(ComponentWithCache):
                         await logger.awarning(msg)
                         return build_config
                     await self._update_tool_config(build_config, field_value)
+                except OAuthRequiredError:
+                    # Re-raise OAuth errors for proper frontend handling
+                    raise
                 except Exception as e:
                     build_config["tool"]["options"] = []
                     msg = f"Failed to update tools: {e!s}"
@@ -616,6 +627,37 @@ class MCPToolsComponent(ComponentWithCache):
                     if oauth_field in build_config:
                         build_config[oauth_field]["show"] = oauth_enabled
 
+                # When OAuth is enabled and we have a server configured, check for tokens
+                # and trigger OAuth flow if needed
+                if oauth_enabled:
+                    mcp_server = build_config.get("mcp_server", {}).get("value")
+                    server_url = None
+                    if isinstance(mcp_server, dict):
+                        server_url = mcp_server.get("url")
+                    elif isinstance(mcp_server, str) and mcp_server.startswith("http"):
+                        server_url = mcp_server
+
+                    if server_url:
+                        # Check for cached OAuth tokens
+                        cached_tokens = await self._get_cached_oauth_tokens(server_url)
+                        if not cached_tokens:
+                            # No tokens - raise OAuthRequiredError for frontend to handle
+                            # Extract OAuth configuration from build_config
+                            client_id = build_config.get("oauth_client_id", {}).get("value")
+                            client_secret = build_config.get("oauth_client_secret", {}).get("value")
+                            redirect_uri = build_config.get("oauth_redirect_uri", {}).get("value")
+
+                            raise OAuthRequiredError(
+                                message="OAuth authentication required. Please authenticate via the OAuth flow.",
+                                server_url=server_url,
+                                client_id=client_id if client_id else None,
+                                client_secret=client_secret if client_secret else None,
+                                redirect_uri=redirect_uri if redirect_uri else None,
+                            )
+
+        except OAuthRequiredError:
+            # Re-raise OAuth errors for proper frontend handling
+            raise
         except Exception as e:
             msg = f"Error in update_build_config: {e!s}"
             await logger.aexception(msg)
@@ -788,3 +830,29 @@ class MCPToolsComponent(ComponentWithCache):
             tools, _ = await self.update_tool_list(mcp_server)
             return tools
         return []
+
+    async def _get_cached_oauth_tokens(self, server_url: str) -> dict | None:
+        """Get cached OAuth tokens for a server from the OAuth state manager.
+
+        Args:
+            server_url: The MCP server URL.
+
+        Returns:
+            The cached tokens dict if found and valid, None otherwise.
+        """
+        try:
+            from lfx.base.mcp.oauth.provider import get_server_key
+            from lfx.base.mcp.oauth.state_manager import get_oauth_state_manager
+
+            # Get user ID from component context
+            user_id = self.user_id
+            if not user_id:
+                return None
+
+            server_key = get_server_key(server_url)
+            state_manager = await get_oauth_state_manager()
+            tokens = await state_manager.get_tokens(str(user_id), server_key)
+            return tokens
+        except Exception as e:
+            await logger.awarning(f"Failed to get cached OAuth tokens: {e}")
+            return None
