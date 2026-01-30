@@ -1,21 +1,21 @@
 from __future__ import annotations
 
 import base64
+from functools import lru_cache
 from typing import TYPE_CHECKING, Annotated, Final
 
 from cryptography.fernet import Fernet
-from fastapi import Depends, HTTPException, Request, Security, WebSocket, status
+from fastapi import (Depends, HTTPException, Request, Security, WebSocket,
+                     status)
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
 from fastapi.security.utils import get_authorization_scheme_param
 from lfx.log.logger import logger
 from lfx.services.deps import injectable_session_scope
 
-from langflow.services.auth.service import (
-    AUTO_LOGIN_ERROR as SERVICE_AUTO_LOGIN_ERROR,
-)
-from langflow.services.auth.service import (
-    AUTO_LOGIN_WARNING as SERVICE_AUTO_LOGIN_WARNING,
-)
+from langflow.services.auth.service import \
+    AUTO_LOGIN_ERROR as SERVICE_AUTO_LOGIN_ERROR
+from langflow.services.auth.service import \
+    AUTO_LOGIN_WARNING as SERVICE_AUTO_LOGIN_WARNING
 from langflow.services.deps import get_auth_service
 
 if TYPE_CHECKING:
@@ -304,7 +304,7 @@ def decrypt_api_key(
     Returns:
         Decrypted API key string
     """
-    return _auth_service().decrypt_api_key(encrypted_api_key)
+    return _cached_decrypt(encrypted_api_key)
 
 
 async def get_current_user_mcp(
@@ -318,3 +318,9 @@ async def get_current_user_mcp(
 
 async def get_current_active_user_mcp(user: User = Depends(get_current_user_mcp)) -> User:
     return await _auth_service().get_current_active_user_mcp(user)
+
+
+@lru_cache(maxsize=1024)
+def _cached_decrypt(encrypted_api_key: str) -> str:
+    # Cached wrapper around the auth service decrypt to avoid repeated expensive calls
+    return _auth_service().decrypt_api_key(encrypted_api_key)
