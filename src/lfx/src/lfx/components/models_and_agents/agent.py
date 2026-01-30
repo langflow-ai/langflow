@@ -468,23 +468,26 @@ class AgentComponent(ToolCallingAgentComponent):
         )
         build_config = dotdict(build_config)
 
-        # Show/hide provider-specific fields based on selected model
-        current_model_value = field_value if field_name == "model" else build_config.get("model", {}).get("value")
-        if isinstance(current_model_value, list) and len(current_model_value) > 0:
-            selected_model = current_model_value[0]
-            provider = selected_model.get("provider", "")
-
-            # Show/hide IBM WatsonX fields
-            is_watsonx = provider == "IBM WatsonX"
-            build_config["base_url_ibm_watsonx"]["show"] = is_watsonx
-            build_config["project_id"]["show"] = is_watsonx
-            build_config["base_url_ibm_watsonx"]["required"] = is_watsonx
-            build_config["project_id"]["required"] = is_watsonx
-
         # Iterate over all providers in the MODEL_PROVIDERS_DICT
         if field_name == "model":
             # Update input types for all fields
             build_config = self.update_input_types(build_config)
+
+            # Show/hide provider-specific fields based on selected model
+            # Get current model value - from field_value if model is being changed, otherwise from build_config
+            current_model_value = field_value if field_name == "model" else build_config.get("model", {}).get("value")
+            if isinstance(current_model_value, list) and len(current_model_value) > 0:
+                selected_model = current_model_value[0]
+                provider = selected_model.get("provider", "")
+
+                # Show/hide watsonx fields
+                is_watsonx = provider == "IBM WatsonX"
+                if "base_url_ibm_watsonx" in build_config:
+                    build_config["base_url_ibm_watsonx"]["show"] = is_watsonx
+                    build_config["base_url_ibm_watsonx"]["required"] = is_watsonx
+                if "project_id" in build_config:
+                    build_config["project_id"]["show"] = is_watsonx
+                    build_config["project_id"]["required"] = is_watsonx
 
             # Validate required keys
             default_keys = [
@@ -504,7 +507,6 @@ class AgentComponent(ToolCallingAgentComponent):
             if missing_keys:
                 msg = f"Missing required keys in build_config: {missing_keys}"
                 raise ValueError(msg)
-
         return dotdict({k: v.to_dict() if hasattr(v, "to_dict") else v for k, v in build_config.items()})
 
     async def _get_tools(self) -> list[Tool]:
