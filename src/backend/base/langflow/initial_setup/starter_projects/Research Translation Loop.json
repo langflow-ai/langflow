@@ -1717,7 +1717,7 @@
                 "trace_as_metadata": true,
                 "track_in_telemetry": false,
                 "type": "str",
-                "value": "Text: {text}"
+                "value": "Title: {title}\nSummary: {summary}"
               },
               "sep": {
                 "_input_type": "MessageTextInput",
