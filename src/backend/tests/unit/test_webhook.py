@@ -60,13 +60,13 @@ async def test_webhook_with_json_payload(client, added_webhook_test, created_api
 async def test_webhook_endpoint_requires_api_key_when_auto_login_false(client, added_webhook_test):
     """Test that webhook endpoint requires API key when WEBHOOK_AUTH_ENABLE=true."""
     # Modify the auth_settings.WEBHOOK_AUTH_ENABLE on the real settings service
-    from langflow.services.deps import get_auth_service
+    from langflow.services.deps import get_settings_service
 
-    auth_service = get_auth_service()
-    original_webhook_auth_enable = auth_service.settings_service.auth_settings.WEBHOOK_AUTH_ENABLE
+    settings_service = get_settings_service()
+    original_webhook_auth_enable = settings_service.auth_settings.WEBHOOK_AUTH_ENABLE
 
     try:
-        auth_service.settings_service.auth_settings.WEBHOOK_AUTH_ENABLE = True
+        settings_service.auth_settings.WEBHOOK_AUTH_ENABLE = True
 
         endpoint_name = added_webhook_test["endpoint_name"]
         endpoint = f"api/v1/webhook/{endpoint_name}"
@@ -78,7 +78,7 @@ async def test_webhook_endpoint_requires_api_key_when_auto_login_false(client, a
         assert response.status_code == 403
         assert "API key required when webhook authentication is enabled" in response.json()["detail"]
     finally:
-        auth_service.settings_service.auth_settings.WEBHOOK_AUTH_ENABLE = original_webhook_auth_enable
+        settings_service.auth_settings.WEBHOOK_AUTH_ENABLE = original_webhook_auth_enable
 
 
 async def test_webhook_endpoint_with_valid_api_key(client, added_webhook_test, created_api_key):
@@ -106,13 +106,13 @@ async def test_webhook_endpoint_with_valid_api_key(client, added_webhook_test, c
 async def test_webhook_endpoint_unauthorized_user_flow(client, added_webhook_test):
     """Test that webhook fails when user doesn't own the flow."""
     # Modify the auth_settings.WEBHOOK_AUTH_ENABLE on the real settings service
-    from langflow.services.deps import get_auth_service
+    from langflow.services.deps import get_settings_service
 
-    auth_service = get_auth_service()
-    original_webhook_auth_enable = auth_service.settings_service.auth_settings.WEBHOOK_AUTH_ENABLE
+    settings_service = get_settings_service()
+    original_webhook_auth_enable = settings_service.auth_settings.WEBHOOK_AUTH_ENABLE
 
     try:
-        auth_service.settings_service.auth_settings.WEBHOOK_AUTH_ENABLE = True
+        settings_service.auth_settings.WEBHOOK_AUTH_ENABLE = True
 
         # This test would need a different user's API key to test authorization
         # For now, we'll use an invalid API key to simulate this
@@ -127,7 +127,7 @@ async def test_webhook_endpoint_unauthorized_user_flow(client, added_webhook_tes
         # Error message may be "Invalid API key" or "API key authentication failed" depending on implementation
         assert "api key" in response.json()["detail"].lower()
     finally:
-        auth_service.settings_service.auth_settings.WEBHOOK_AUTH_ENABLE = original_webhook_auth_enable
+        settings_service.auth_settings.WEBHOOK_AUTH_ENABLE = original_webhook_auth_enable
 
 
 async def test_webhook_flow_on_run_endpoint(client, added_webhook_test, created_api_key):
@@ -145,13 +145,13 @@ async def test_webhook_flow_on_run_endpoint(client, added_webhook_test, created_
 async def test_webhook_with_auto_login_enabled(client, added_webhook_test):
     """Test webhook behavior when WEBHOOK_AUTH_ENABLE=false - should work without API key."""
     # Modify the auth_settings.WEBHOOK_AUTH_ENABLE on the real settings service
-    from langflow.services.deps import get_auth_service
+    from langflow.services.deps import get_settings_service
 
-    auth_service = get_auth_service()
-    original_webhook_auth_enable = auth_service.settings_service.auth_settings.WEBHOOK_AUTH_ENABLE
+    settings_service = get_settings_service()
+    original_webhook_auth_enable = settings_service.auth_settings.WEBHOOK_AUTH_ENABLE
 
     try:
-        auth_service.settings_service.auth_settings.WEBHOOK_AUTH_ENABLE = False
+        settings_service.auth_settings.WEBHOOK_AUTH_ENABLE = False
 
         endpoint_name = added_webhook_test["endpoint_name"]
         endpoint = f"api/v1/webhook/{endpoint_name}"
@@ -162,7 +162,7 @@ async def test_webhook_with_auto_login_enabled(client, added_webhook_test):
         response = await client.post(endpoint, json=payload)
         assert response.status_code == 202
     finally:
-        auth_service.settings_service.auth_settings.WEBHOOK_AUTH_ENABLE = original_webhook_auth_enable
+        settings_service.auth_settings.WEBHOOK_AUTH_ENABLE = original_webhook_auth_enable
 
 
 async def test_webhook_with_random_payload_requires_auth(client, added_webhook_test, created_api_key):
