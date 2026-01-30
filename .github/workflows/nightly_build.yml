@@ -38,7 +38,7 @@ on:
         type: boolean
         default: true
       test_merge_pr:
-        description: "TESTING ONLY: Skip all jobs except merge PR (requires existing nightly tag and branch)"
+        description: "TESTING ONLY: Skip all jobs except merge PR. Assumes branch already exists from previous nightly run."
         required: false
         type: boolean
         default: false
@@ -74,17 +74,11 @@ jobs:
       base_tag: ${{ steps.set_base_tag.outputs.base_tag }}
       lfx_tag: ${{ steps.generate_lfx_tag.outputs.lfx_tag }}
     steps:
-      - name: Skip if testing merge PR
-        if: inputs.test_merge_pr
-        run: echo "Skipping create-nightly-tag for test_merge_pr mode"
-      
       - name: Checkout code
-        if: ${{ !inputs.test_merge_pr }}
         uses: actions/checkout@v6
         with:
           persist-credentials: true
       - name: "Setup Environment"
-        if: ${{ !inputs.test_merge_pr }}
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
@@ -92,11 +86,9 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
           prune-cache: false
       - name: Install the project
-        if: ${{ !inputs.test_merge_pr }}
         run: uv sync
 
       - name: Generate main nightly tag
-        if: ${{ !inputs.test_merge_pr }}
         id: generate_main_tag
         run: |
           # NOTE: This outputs the tag with the `v` prefix.
@@ -105,7 +97,6 @@ jobs:
           echo "main_tag=$MAIN_TAG"
 
       - name: Delete existing tag if it exists
-        if: ${{ !inputs.test_merge_pr }}
         id: check_main_tag
         run: |
           git fetch --tags
@@ -114,7 +105,6 @@ jobs:
           echo "main_tag_exists=false" >> $GITHUB_OUTPUT
 
       - name: Generate base nightly tag
-        if: ${{ !inputs.test_merge_pr }}
         id: generate_base_tag
         run: |
           # NOTE: This outputs the tag with the `v` prefix.
@@ -123,7 +113,6 @@ jobs:
           echo "base_tag=$BASE_TAG"
 
       - name: Generate LFX nightly tag
-        if: ${{ !inputs.test_merge_pr }}
         id: generate_lfx_tag
         run: |
           # NOTE: This outputs the tag with the `v` prefix.
@@ -132,7 +121,6 @@ jobs:
           echo "lfx_tag=$LFX_TAG"
 
       - name: Commit tag
-        if: ${{ !inputs.test_merge_pr }}
         id: commit_tag
         run: |
           # If the main tag does not exist in GH, we create the base tag from the existing codebase.
@@ -169,13 +157,11 @@ jobs:
           # TODO: notify on failure
 
       - name: Checkout main nightly tag
-        if: ${{ !inputs.test_merge_pr }}
         uses: actions/checkout@v6
         with:
           ref: ${{ steps.generate_main_tag.outputs.main_tag }}
 
       - name: Retrieve Base Tag
-        if: ${{ !inputs.test_merge_pr }}
         id: retrieve_base_tag
         working-directory: src/backend/base
         run: |
@@ -185,7 +171,6 @@ jobs:
           echo "base_tag=$version"
 
       - name: Set Base Tag
-        if: ${{ !inputs.test_merge_pr }}
         id: set_base_tag
         run: |
           if [ "${{ steps.retrieve_base_tag.conclusion }}" != "skipped" ] && [ "${{ steps.retrieve_base_tag.outputs.base_tag }}" ]; then
@@ -212,19 +197,13 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Skip if testing merge PR
-        if: inputs.test_merge_pr
-        run: echo "Skipping build-hash-history for test_merge_pr mode"
-      
       - name: Checkout nightly tag
-        if: ${{ !inputs.test_merge_pr }}
         uses: actions/checkout@v6
         with:
           ref: ${{ needs.create-nightly-tag.outputs.main_tag }}
           persist-credentials: true
       
       - name: "Setup Environment"
-        if: ${{ !inputs.test_merge_pr }}
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
@@ -233,30 +212,25 @@ jobs:
           prune-cache: false
       
       - name: Install the project
-        if: ${{ !inputs.test_merge_pr }}
         run: uv sync
       
       - name: Force reinstall LFX to pick up version change
-        if: ${{ !inputs.test_merge_pr }}
         run: |
           echo "Force reinstalling lfx-nightly to ensure version metadata is updated..."
           uv pip install --reinstall --no-deps src/lfx
       
       - name: Verify LFX version
-        if: ${{ !inputs.test_merge_pr }}
         run: |
           echo "Checking installed LFX version..."
           uv run python -c "from importlib.metadata import version; print(f'lfx-nightly version: {version(\"lfx-nightly\")}')" || \
           uv run python -c "from importlib.metadata import version; print(f'lfx version: {version(\"lfx\")}')"
       
       - name: Build and validate nightly hash history
-        if: ${{ !inputs.test_merge_pr }}
         run: |
           # The script includes append-only validation
           uv run python scripts/build_hash_history.py --nightly
       
       - name: Commit and push hash history changes
-        if: ${{ !inputs.test_merge_pr }}
         run: |
           echo "=== Configuring git ==="
           git config --global user.email "bot-nightly-builds@langflow.org"
@@ -410,13 +384,7 @@ jobs:
 
   merge-hash-history-to-main:
     name: Create PR to Merge Hash History to Main
-    # When test_merge_pr is true, we don't need dependencies since we're just testing PR creation
-    # Otherwise, we need the other jobs to complete successfully
     needs: [create-nightly-tag, build-hash-history]
-    # Run if auto_merge_hash_history is true (default) or not set (scheduled runs)
-    # When triggered by schedule, inputs.auto_merge_hash_history is not set, so default to true
-    # Only run when the base branch is 'main' to prevent PRs from feature branches
-
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -479,7 +447,9 @@ jobs:
           else
             echo "branch_exists=false" >> $GITHUB_OUTPUT
             echo "has_changes=false" >> $GITHUB_OUTPUT
-            echo "Branch does not exist yet - will be created by build-hash-history job"
+            echo "ERROR: Branch nightly-hash-history-updates does not exist!"
+            echo "This should have been created by the build-hash-history job."
+            exit 1
           fi
       
       - name: Validate and prepare PR
