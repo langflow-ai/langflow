@@ -189,6 +189,8 @@ class AuthService(AuthServiceBase):
         token: str | Coroutine | None,
         db: AsyncSession,
     ) -> User:
+        from langflow.services.auth.utils import get_jwt_verification_key
+
         if token is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -209,19 +211,13 @@ class AuthService(AuthServiceBase):
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        secret_key = settings_service.auth_settings.SECRET_KEY.get_secret_value()
-        if secret_key is None:
-            logger.error("Secret key is not set in settings.")
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Authentication failure: Verify authentication settings.",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
+        algorithm = settings_service.auth_settings.ALGORITHM
+        verification_key = get_jwt_verification_key(settings_service)
 
         try:
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
-                payload = jwt.decode(token, secret_key, algorithms=[settings_service.auth_settings.ALGORITHM])
+                payload = jwt.decode(token, verification_key, algorithms=[algorithm])
             user_id: UUID = payload.get("sub")  # type: ignore[assignment]
             token_type: str = payload.get("type")  # type: ignore[assignment]
             if expires := payload.get("exp", None):
@@ -278,6 +274,27 @@ class AuthService(AuthServiceBase):
 
         raise WebSocketException(
             code=status.WS_1008_POLICY_VIOLATION, reason="Missing or invalid credentials (cookie, token or API key)."
+        )
+
+    async def get_current_user_for_sse(
+        self,
+        token: str | None,
+        api_key: str | None,
+        db: AsyncSession,
+    ) -> User | UserRead:
+        if token:
+            user = await self.get_current_user_from_access_token(token, db)
+            if user:
+                return user
+
+        if api_key:
+            user_read = await self.ws_api_key_security(api_key)
+            if user_read:
+                return user_read
+
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Missing or invalid credentials (cookie or API key).",
         )
 
     async def get_current_active_user(self, current_user: User | UserRead) -> User | UserRead:
@@ -353,14 +370,18 @@ class AuthService(AuthServiceBase):
         return self.settings.auth_settings.pwd_context.hash(password)
 
     def create_token(self, data: dict, expires_delta: timedelta):
+        from langflow.services.auth.utils import get_jwt_signing_key
+
         settings_service = self.settings
         to_encode = data.copy()
         expire = datetime.now(timezone.utc) + expires_delta
         to_encode["exp"] = expire
 
+        signing_key = get_jwt_signing_key(settings_service)
+
         return jwt.encode(
             to_encode,
-            settings_service.auth_settings.SECRET_KEY.get_secret_value(),
+            signing_key,
             algorithm=settings_service.auth_settings.ALGORITHM,
         )
 
@@ -486,15 +507,20 @@ class AuthService(AuthServiceBase):
         }
 
     async def create_refresh_token(self, refresh_token: str, db: AsyncSession):
+        from langflow.services.auth.utils import get_jwt_verification_key
+
         settings_service = self.settings
+
+        algorithm = settings_service.auth_settings.ALGORITHM
+        verification_key = get_jwt_verification_key(settings_service)
 
         try:
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 payload = jwt.decode(
                     refresh_token,
-                    settings_service.auth_settings.SECRET_KEY.get_secret_value(),
-                    algorithms=[settings_service.auth_settings.ALGORITHM],
+                    verification_key,
+                    algorithms=[algorithm],
                 )
             user_id: UUID = payload.get("sub")  # type: ignore[assignment]
             token_type: str = payload.get("type")  # type: ignore[assignment]

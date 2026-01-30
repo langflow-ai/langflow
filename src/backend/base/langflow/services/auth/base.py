@@ -118,6 +118,31 @@ class AuthServiceBase(Service, abc.ABC):
         """
 
     @abc.abstractmethod
+    async def get_current_user_for_sse(
+        self,
+        token: str | None,
+        api_key: str | None,
+        db: AsyncSession,
+    ) -> User | UserRead:
+        """Get the current user for SSE (Server-Sent Events) connections.
+
+        Similar to WebSocket authentication, accepts either:
+        - Cookie authentication (access_token_lf)
+        - API key authentication (x-api-key)
+
+        Args:
+            token: Access token from cookie
+            api_key: API key from query param or header
+            db: Database session
+
+        Returns:
+            User or UserRead object
+
+        Raises:
+            HTTPException: If authentication fails
+        """
+
+    @abc.abstractmethod
     async def authenticate_user(
         self,
         username: str,
