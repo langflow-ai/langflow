@@ -7,9 +7,9 @@ It supports any OIDC-compliant identity provider (W3ID, Okta, Azure AD, Google, 
 from __future__ import annotations
 
 import secrets
+from collections.abc import Coroutine
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
-from uuid import UUID
 
 import httpx
 import jwt
@@ -19,15 +19,15 @@ from sqlalchemy.exc import IntegrityError
 
 from langflow.services.auth.base import AuthServiceBase
 from langflow.services.auth.service import AuthService
-from langflow.services.auth.sso_config import OIDCConfig
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.schema import ServiceType
 
 if TYPE_CHECKING:
-    from collections.abc import Coroutine
+    from uuid import UUID
 
     from sqlmodel.ext.asyncio.session import AsyncSession
 
+    from langflow.services.auth.sso_config import OIDCConfig
     from langflow.services.settings.service import SettingsService
 
 
@@ -272,8 +272,6 @@ class OIDCAuthService(AuthServiceBase):
             await db.commit()
             await db.refresh(new_user)
             logger.info(f"New SSO user provisioned: {username}")
-
-            return new_user
         except IntegrityError as e:
             await db.rollback()
             logger.error(f"Failed to create SSO user: {e}")
@@ -281,6 +279,8 @@ class OIDCAuthService(AuthServiceBase):
                 status_code=status.HTTP_409_CONFLICT,
                 detail="User with this email or username already exists",
             ) from e
+        else:
+            return new_user
 
     # =========================================================================
     # AuthServiceBase Implementation (Required Methods)

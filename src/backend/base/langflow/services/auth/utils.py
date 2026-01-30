@@ -261,7 +261,7 @@ def get_fernet(settings_service: SettingsService) -> Fernet:
     import random
 
     secret_key: str = settings_service.auth_settings.SECRET_KEY.get_secret_value()
-    
+
     # Replicate the original _ensure_valid_key logic from AuthService
     MINIMUM_KEY_LENGTH = 32  # noqa: N806
     if len(secret_key) < MINIMUM_KEY_LENGTH:
@@ -278,7 +278,7 @@ def get_fernet(settings_service: SettingsService) -> Fernet:
     return Fernet(key)
 
 
-def encrypt_api_key(api_key: str, settings_service: SettingsService | None = None) -> str:
+def encrypt_api_key(api_key: str, settings_service: SettingsService | None = None) -> str:  # noqa: ARG001
     """Encrypt an API key.
 
     Args:
@@ -293,8 +293,8 @@ def encrypt_api_key(api_key: str, settings_service: SettingsService | None = Non
 
 def decrypt_api_key(
     encrypted_api_key: str,
-    settings_service: SettingsService | None = None,
-    fernet_obj=None,
+    settings_service: SettingsService | None = None,  # noqa: ARG001
+    fernet_obj=None,  # noqa: ARG001
 ) -> str:
     """Decrypt an encrypted API key.
 

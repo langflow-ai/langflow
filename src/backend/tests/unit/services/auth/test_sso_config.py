@@ -8,8 +8,8 @@ from langflow.services.auth.factory import AuthProvider
 from langflow.services.auth.sso_config import OIDCConfig, SSOConfig, SSOConfigLoader
 
 # Test constants
-TEST_CLIENT_SECRET = "test-secret"
-TEST_SECRET = "secret"
+TEST_CLIENT_SECRET = "test-secret"  # noqa: S105
+TEST_SECRET = "secret"  # noqa: S105
 
 
 def test_oidc_config_validation():
