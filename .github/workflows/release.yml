@@ -267,7 +267,7 @@ jobs:
   build-lfx:
     name: Build LFX
     needs: [determine-lfx-version]
-    if: ${{ inputs.release_lfx && needs.determine-lfx-version.outputs.skipped == 'false' }}
+    if: ${{ needs.determine-lfx-version.outputs.skipped == 'false' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
