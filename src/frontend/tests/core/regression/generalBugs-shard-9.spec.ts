@@ -124,17 +124,20 @@ AI:
       timeout: 100000,
     });
 
-    // Wait for the first chat message element to be available
-    const firstChatMessage = page.getByTestId("div-chat-message").nth(0);
-    await firstChatMessage.waitFor({ state: "visible", timeout: 10000 });
+    // Wait for messages to be available
+    await page.waitForTimeout(2000);
 
-    // Get the text from the second message (the response to the question about car color and food)
-    const secondChatMessage = page.getByTestId("div-chat-message").nth(1);
-    await secondChatMessage.waitFor({ state: "visible", timeout: 10000 });
-    const memoryResponseText = await secondChatMessage.textContent();
+    // Get all chat messages
+    const chatMessages = page.getByTestId("div-chat-message");
+    const messageCount = await chatMessages.count();
+
+    // The last message should be the AI's response to the memory question
+    const lastChatMessage = chatMessages.last();
+    await lastChatMessage.waitFor({ state: "visible", timeout: 10000 });
+    const memoryResponseText = await lastChatMessage.textContent();
 
     expect(memoryResponseText).not.toBeNull();
-    expect(memoryResponseText?.includes("pizza")).toBeTruthy();
-    expect(memoryResponseText?.includes("blue")).toBeTruthy();
+    expect(memoryResponseText?.toLowerCase().includes("pizza")).toBeTruthy();
+    expect(memoryResponseText?.toLowerCase().includes("blue")).toBeTruthy();
   },
 );

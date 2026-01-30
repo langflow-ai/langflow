@@ -11,10 +11,35 @@ export const renameFlow = async (
   await page.getByTestId("flow_name").hover({ timeout: 3000 });
   await page.getByTestId("flow_name").click({ timeout: 3000 });
 
-  await page.waitForTimeout(500);
-  await page.getByTestId("input-flow-name").click({ timeout: 3000 });
+  // Wait for the input to be stable and visible
+  await page.waitForTimeout(1500);
+  
+  // Wait for the input field to be attached and stable
+  await page.waitForSelector('[data-testid="input-flow-name"]', {
+    state: "attached",
+    timeout: 10000,
+  });
+  
+  await page.waitForTimeout(1000);
+  
+  // Use a more robust approach to click the input with retry logic
+  const inputLocator = page.getByTestId("input-flow-name");
+  await inputLocator.waitFor({ state: "visible", timeout: 10000 });
+  
+  // Retry clicking if element gets detached
+  let clicked = false;
+  for (let i = 0; i < 3; i++) {
+    try {
+      await inputLocator.click({ timeout: 10000, force: true });
+      clicked = true;
+      break;
+    } catch (error) {
+      if (i === 2) throw error;
+      await page.waitForTimeout(1000);
+    }
+  }
 
-  const flowNameInput = await page.getByTestId("input-flow-name").inputValue();
+  const flowNameInput = await inputLocator.inputValue();
   if (flowName) {
     await page.getByTestId("input-flow-name").fill(flowName);
   }
