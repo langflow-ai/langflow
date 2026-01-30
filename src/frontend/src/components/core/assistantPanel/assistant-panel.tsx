@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
 import {
   postAssistStream,
@@ -15,7 +15,10 @@ import type {
   AssistantMessage,
   AssistantModel,
   AssistantPanelProps,
+  AssistantViewMode,
 } from "./assistant-panel.types";
+
+const ASSISTANT_VIEW_MODE_KEY = "langflow-assistant-view-mode";
 import { AssistantEmptyState } from "./components/assistant-empty-state";
 import { AssistantHeader } from "./components/assistant-header";
 import { AssistantInput } from "./components/assistant-input";
@@ -55,7 +58,20 @@ function AssistantInputWithScroll({
 export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
   const [messages, setMessages] = useState<AssistantMessage[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [viewMode, setViewMode] = useState<AssistantViewMode>(() => {
+    try {
+      const saved = localStorage.getItem(ASSISTANT_VIEW_MODE_KEY);
+      return (saved as AssistantViewMode) || "floating";
+    } catch {
+      return "floating";
+    }
+  });
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Persist view mode to localStorage
+  useEffect(() => {
+    localStorage.setItem(ASSISTANT_VIEW_MODE_KEY, viewMode);
+  }, [viewMode]);
 
   const { data: providersData = [] } = useGetModelProviders({});
   const { data: enabledModelsData } = useGetEnabledModels();
@@ -281,15 +297,31 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
 
   const hasMessages = messages.length > 0;
 
+  // Container classes based on view mode
+  const containerClasses = cn(
+    "fixed z-50 flex flex-col shadow-xl transition-all duration-300",
+    viewMode === "sidebar"
+      ? cn(
+          "left-0 top-12 h-[calc(100%-48px)] w-[500px]",
+          isOpen ? "translate-x-0" : "-translate-x-full",
+        )
+      : cn(
+          "bottom-4 left-1/2 -translate-x-1/2 w-[650px] rounded-2xl border border-border",
+          // Fixed height when there are messages, auto height otherwise
+          hasMessages ? "h-[500px]" : "h-auto",
+          isOpen ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none",
+        ),
+  );
+
   return (
-    <div
-      className={cn(
-        "fixed left-0 top-12 z-50 flex h-[calc(100%-48px)] w-[500px] flex-col shadow-xl transition-transform duration-300",
-        isOpen ? "translate-x-0" : "-translate-x-full",
-      )}
-    >
+    <div className={containerClasses}>
       {/* Background */}
-      <div className="absolute inset-0 overflow-hidden bg-background">
+      <div
+        className={cn(
+          "absolute inset-0 overflow-hidden bg-background",
+          viewMode === "floating" && "rounded-2xl",
+        )}
+      >
         {/* Gradient glow at bottom */}
         <div
           className="absolute -left-6 bottom-0 h-[505px] w-[936px] blur-[48px]"
@@ -308,8 +340,14 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
         />
       </div>
       {/* Content */}
-      <div className="relative z-10 flex h-full flex-col">
-        <AssistantHeader onClose={onClose} onClearHistory={handleClearHistory} disabled={isProcessing} />
+      <div className="relative z-10 flex h-full min-h-0 flex-col overflow-hidden">
+        <AssistantHeader
+          onClose={onClose}
+          onClearHistory={handleClearHistory}
+          disabled={isProcessing}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+        />
         {!hasEnabledModels ? (
           <>
             <div className="flex flex-1 flex-col overflow-hidden">
@@ -343,7 +381,16 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
               isProcessing={isProcessing}
             />
           </StickToBottom>
+        ) : viewMode === "floating" ? (
+          // Compact empty state for floating mode - just the input
+          <AssistantInput
+            onSend={handleSend}
+            onStop={handleStopGeneration}
+            disabled={false}
+            isProcessing={isProcessing}
+          />
         ) : (
+          // Full empty state for sidebar mode
           <>
             <div className="flex flex-1 flex-col overflow-hidden">
               <AssistantEmptyState onSuggestionClick={handleSuggestionClick} />
