@@ -80,11 +80,6 @@ export default function OutputModal({
             name={isCopied ? "Check" : "Copy"}
             className="h-4 w-4"
           />
-          {/* {isCopied ? (
-            <ForwardedIconComponent name="Check" className="h-4 w-4" />
-          ) : (
-            <ForwardedIconComponent name="Copy" className="h-4 w-4" />
-          )} */}
         </Button>
       </BaseModal.Header>
       <BaseModal.Content>
