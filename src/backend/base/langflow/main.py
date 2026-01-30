@@ -525,10 +525,13 @@ def create_app():
 
         This allows the frontend to detect when OAuth is needed and initiate
         the OAuth flow via the /api/v1/mcp/oauth/initiate endpoint.
+
+        The response is wrapped in {"detail": ...} to match FastAPI's standard
+        error response format that the frontend expects.
         """
         return JSONResponse(
             status_code=HTTPStatus.UNAUTHORIZED,
-            content=exc.to_dict(),
+            content={"detail": exc.to_dict()},
         )
 
     @app.exception_handler(Exception)
