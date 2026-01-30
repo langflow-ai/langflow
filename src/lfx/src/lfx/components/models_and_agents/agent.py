@@ -22,6 +22,7 @@ from lfx.base.models.watsonx_constants import IBM_WATSONX_URLS
 from lfx.components.helpers import CurrentDateComponent
 from lfx.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
 from lfx.custom.custom_component.component import get_component_toolkit
+from lfx.field_typing.range_spec import RangeSpec
 from lfx.helpers.base_model import build_model_from_schema
 from lfx.inputs.inputs import BoolInput, DropdownInput, ModelInput, StrInput
 from lfx.io import IntInput, MessageTextInput, MultilineInput, Output, SecretStrInput, TableInput
@@ -99,6 +100,13 @@ class AgentComponent(ToolCallingAgentComponent):
             info="Number of chat history messages to retrieve.",
             advanced=True,
             show=True,
+        ),
+        IntInput(
+            name="max_tokens",
+            display_name="Max Tokens",
+            info="Maximum number of tokens to generate. Field name varies by provider.",
+            advanced=True,
+            range_spec=RangeSpec(min=1, max=128000, step=1, step_type="int"),
         ),
         MultilineInput(
             name="format_instructions",
@@ -180,10 +188,14 @@ class AgentComponent(ToolCallingAgentComponent):
         """Get the agent requirements for the agent."""
         from langchain_core.tools import StructuredTool
 
+        max_tokens_val = getattr(self, "max_tokens", None)
+        if max_tokens_val in {"", 0}:
+            max_tokens_val = None
         llm_model = get_llm(
             model=self.model,
             user_id=self.user_id,
             api_key=self.api_key,
+            max_tokens=max_tokens_val,
             watsonx_url=getattr(self, "base_url_ibm_watsonx", None),
             watsonx_project_id=getattr(self, "project_id", None),
         )

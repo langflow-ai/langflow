@@ -160,14 +160,15 @@ export function ParameterRenderComponent({
           <FloatComponent
             {...baseInputProps}
             id={`float_${id}`}
-            rangeSpec={templateData.range_spec}
+            rangeSpec={templateData.rangeSpec ?? templateData.range_spec}
           />
         );
       case "int":
         return (
           <IntComponent
             {...baseInputProps}
-            rangeSpec={templateData.range_spec}
+            name={name}
+            rangeSpec={templateData.rangeSpec ?? templateData.range_spec}
             id={`int_${id}`}
           />
         );
@@ -232,7 +233,7 @@ export function ParameterRenderComponent({
           <SliderComponent
             {...baseInputProps}
             value={templateValue}
-            rangeSpec={templateData.range_spec}
+            rangeSpec={templateData.rangeSpec ?? templateData.range_spec}
             minLabel={templateData?.min_label}
             maxLabel={templateData?.max_label}
             minLabelIcon={templateData?.min_label_icon}
