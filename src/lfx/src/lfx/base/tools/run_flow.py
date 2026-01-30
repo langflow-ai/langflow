@@ -522,9 +522,10 @@ class RunFlowBaseComponent(Component):
                 graph=graph,
             )
 
-        except Exception as e: # noqa: BLE001
-            logger.error(f"Error running flow: {e}")
-            return None
+        except Exception: # noqa: BLE001
+            msg = f"Error running flow: {self.flow_name_selected}"
+            raise RuntimeError(msg) from None
+
         return result
 
     ################################################################
