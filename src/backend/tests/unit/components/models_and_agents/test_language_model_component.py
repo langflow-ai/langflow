@@ -85,6 +85,10 @@ class TestLanguageModelComponent(ComponentTestBaseWithoutClient):
         mock_model_classes_dict.get.return_value = mock_openai_class
         mock_get_model_classes.return_value = mock_model_classes_dict
 
+        # Update default_kwargs to include max_tokens_field_name in metadata
+        default_kwargs["model"][0]["metadata"]["max_tokens_field_name"] = "max_tokens"
+        default_kwargs["max_tokens"] = 500
+
         component = component_class(**default_kwargs)
         component.api_key = "sk-test-key"
         component.temperature = 0.5
@@ -95,7 +99,7 @@ class TestLanguageModelComponent(ComponentTestBaseWithoutClient):
         # Verify the model class getter was called
         mock_model_classes_dict.get.assert_called_once_with("ChatOpenAI")
 
-        # Verify the mock was called
+        # Verify the mock was called with max_tokens
         assert mock_openai_class.call_count == 1
         call_kwargs = mock_openai_class.call_args[1]
 
@@ -103,6 +107,8 @@ class TestLanguageModelComponent(ComponentTestBaseWithoutClient):
         assert call_kwargs["temperature"] == 0.5
         assert not call_kwargs["streaming"]
         assert call_kwargs["api_key"] == "sk-test-key"
+        assert "max_tokens" in call_kwargs, "OpenAI should use max_tokens"
+        assert call_kwargs["max_tokens"] == 500
         assert model == mock_instance
 
     @patch("lfx.base.models.unified_models.get_model_classes")
@@ -167,18 +173,20 @@ class TestLanguageModelComponent(ComponentTestBaseWithoutClient):
             model=[
                 {
                     "name": GOOGLE_GENERATIVE_AI_MODELS[0],
-                    "provider": "Google",
+                    "provider": "Google Generative AI",
                     "metadata": {
                         "context_length": 32768,
                         "model_class": "ChatGoogleGenerativeAIFixed",
                         "model_name_param": "model",
                         "api_key_param": "google_api_key",
+                        "max_tokens_field_name": "max_output_tokens",
                     },
                 }
             ],
             api_key="google-test-key",
             temperature=0.7,
             stream=False,
+            max_tokens=1000,
         )
 
         model = component.build_model()
@@ -186,8 +194,12 @@ class TestLanguageModelComponent(ComponentTestBaseWithoutClient):
         # Verify the model class getter was called
         mock_model_classes_dict.get.assert_called_once_with("ChatGoogleGenerativeAIFixed")
 
-        # Verify the mock was called
+        # Verify the mock was called with max_output_tokens (not max_tokens)
         assert mock_google_class.call_count == 1
+        call_kwargs = mock_google_class.call_args[1]
+        assert "max_output_tokens" in call_kwargs, "Google should use max_output_tokens"
+        assert call_kwargs["max_output_tokens"] == 1000
+        assert "max_tokens" not in call_kwargs, "max_tokens should not be used for Google"
         call_kwargs = mock_google_class.call_args[1]
 
         assert call_kwargs["model"] == GOOGLE_GENERATIVE_AI_MODELS[0]
