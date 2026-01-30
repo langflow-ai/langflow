@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import inspect
-import time
 import traceback
 import types
 from collections.abc import AsyncIterator, Callable, Iterator, Mapping
@@ -108,8 +107,6 @@ class Vertex:
 
         self.use_result = False
         self.build_times: list[float] = []
-        self._execution_time: float | None = None
-        self._execution_start_time: float | None = None
         self.state = VertexStates.ACTIVE
         self.output_names: list[str] = [
             output["name"] for output in self.outputs if isinstance(output, dict) and "name" in output
@@ -397,10 +394,6 @@ class Vertex:
         """Initiate the build process."""
         await logger.adebug(f"Building {self.display_name}")
         await self._build_each_vertex_in_params_dict()
-
-        # Start timing AFTER dependencies are resolved to measure only this component's execution
-        self._execution_start_time = time.perf_counter()
-
         if self.base_type is None:
             msg = f"Base type for vertex {self.display_name} not found"
             raise ValueError(msg)
@@ -425,10 +418,6 @@ class Vertex:
         self._validate_built_object()
 
         self.built = True
-
-        # Record execution time (only this component, excluding dependency wait time)
-        if self._execution_start_time is not None:
-            self._execution_time = time.perf_counter() - self._execution_start_time
 
     def extract_messages_from_artifacts(self, artifacts: dict[str, Any]) -> list[dict]:
         """Extracts messages from the artifacts.
@@ -709,8 +698,6 @@ class Vertex:
         self.built_result = UnbuiltResult()
         self.artifacts = {}
         self.steps_ran = []
-        self._execution_time = None
-        self._execution_start_time = None
         self.build_params()
 
     def _is_chat_input(self) -> bool:
