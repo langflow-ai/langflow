@@ -315,16 +315,22 @@ build_and_install: ## build the project and install it
 	make build && uv run pip install dist/*.whl && pip install src/backend/base/dist/*.whl --force-reinstall
 
 build: setup_env ## build the frontend static files and package the project
-ifeq ($(base), true)
+ifdef base
+	@echo 'base'
 	make install_frontendci
 	make build_frontend
 	make build_langflow_base args="$(args)"
-else ifeq ($(main), true)
+endif
+
+ifdef main
+	@echo 'main'
 	make install_frontendci
 	make build_frontend
 	make build_langflow_base args="$(args)"
 	make build_langflow args="$(args)"
-else ifeq ($(pre), true)
+endif
+
+ifdef pre
 	@echo 'pre'
 	make install_frontendci
 	make build_frontend
