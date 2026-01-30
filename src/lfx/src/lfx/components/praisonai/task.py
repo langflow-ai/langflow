@@ -243,7 +243,6 @@ class PraisonAITaskComponent(Component):
 
         try:
             import json
-            from typing import Any
 
             from pydantic import create_model
 
@@ -277,10 +276,13 @@ class PraisonAITaskComponent(Component):
 
                 if field_definitions:
                     return create_model("TaskOutputModel", **field_definitions)
+            else:
+                self.log(f"Invalid JSON schema format in task '{self.name}': expected dictionary, got {type(schema).__name__}")
 
-        except json.JSONDecodeError:
-            # If parsing fails, return None and let task use default
-            return None
+        except json.JSONDecodeError as e:
+            self.log(f"JSON decode error in task '{self.name}': {e}")
+        except Exception as e:
+            self.log(f"Unexpected error parsing JSON schema in task '{self.name}': {e}")
 
         return None
 
