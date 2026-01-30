@@ -261,7 +261,7 @@ def get_fernet(settings_service: SettingsService) -> Fernet:
     import random
 
     secret_key: str = settings_service.auth_settings.SECRET_KEY.get_secret_value()
-    
+
     # Replicate the original _ensure_valid_key logic from AuthService
     MINIMUM_KEY_LENGTH = 32  # noqa: N806
     if len(secret_key) < MINIMUM_KEY_LENGTH:
