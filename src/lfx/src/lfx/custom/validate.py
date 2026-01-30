@@ -47,8 +47,12 @@ def _check_and_block_if_not_allowed(code: str, context: str = "code") -> bool:
             )
             return False
     except Exception:  # noqa: BLE001
-        # If hash validation fails, continue (fail open for backward compatibility)
-        pass
+        # Fail closed: if hash validation raises an exception, block the code
+        logger.error(
+            f"Custom {context} blocked: hash validation failed with exception. Custom Component execution is disabled.",
+            exc_info=True,
+        )
+        return False
     return True
 
 

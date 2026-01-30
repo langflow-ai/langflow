@@ -57,6 +57,8 @@ export default function CodeAreaComponent({
   const { data: config } = useGetConfig();
   const allowCustomComponents = config?.allow_custom_components ?? true;
   const isBlocked = !allowCustomComponents;
+  const effectiveDisabled = disabled || isBlocked;
+  
   const renderCodeText = () => (
     <span
       id={id}
@@ -64,10 +66,10 @@ export default function CodeAreaComponent({
       className={cn(
         codeContentClasses.base,
         editNode ? codeContentClasses.editNode : codeContentClasses.normal,
-        disabled && !editNode && codeContentClasses.disabled,
+        effectiveDisabled && !editNode && codeContentClasses.disabled,
       )}
     >
-      {value !== "" ? value : getPlaceholder(disabled, placeholder)}
+      {value !== "" ? value : getPlaceholder(effectiveDisabled, placeholder)}
     </span>
   );
 
@@ -75,35 +77,35 @@ export default function CodeAreaComponent({
     <>
       <div
         className={cn(
-          externalLinkIconClasses.gradient({ disabled, editNode }),
+          externalLinkIconClasses.gradient({ disabled: effectiveDisabled, editNode }),
           editNode
             ? externalLinkIconClasses.editNodeTop
             : externalLinkIconClasses.normalTop,
         )}
         style={{
           pointerEvents: "none",
-          background: disabled ? "" : GRADIENT_CLASS,
+          background: effectiveDisabled ? "" : GRADIENT_CLASS,
         }}
         aria-hidden="true"
       />
       <div
         className={cn(
-          externalLinkIconClasses.background({ disabled, editNode }),
+          externalLinkIconClasses.background({ disabled: effectiveDisabled, editNode }),
           editNode
             ? externalLinkIconClasses.editNodeTop
             : externalLinkIconClasses.normalTop,
-          disabled && "bg-border",
+          effectiveDisabled && "bg-border",
         )}
         aria-hidden="true"
       />
       <IconComponent
-        name={disabled ? "lock" : "Scan"}
+        name={effectiveDisabled ? "lock" : "Scan"}
         className={cn(
           externalLinkIconClasses.icon,
           editNode
             ? externalLinkIconClasses.editNodeTop
             : externalLinkIconClasses.normalTop,
-          disabled ? "text-placeholder-foreground" : "text-foreground",
+          effectiveDisabled ? "text-placeholder-foreground" : "text-foreground",
         )}
       />
     </>
@@ -111,7 +113,7 @@ export default function CodeAreaComponent({
 
   if (isBlocked) {
     return (
-      <div className="w-full pointer-events-none">
+      <div className="w-full pointer-events-none cursor-not-allowed">
         <div className="relative w-full">
           {renderCodeText()}
           {renderExternalLinkIcon()}
@@ -121,7 +123,7 @@ export default function CodeAreaComponent({
   }
 
   return (
-    <div className={cn("w-full", disabled && "pointer-events-none")}>
+    <div className={cn("w-full", effectiveDisabled && "pointer-events-none cursor-not-allowed")}>
       <CodeAreaModal
         dynamic={false}
         value={value}

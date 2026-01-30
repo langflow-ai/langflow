@@ -135,42 +135,46 @@ class TestComponent(Component):
         result = create_class(code, "TestComponent")
         assert result is not None
 
-    def test_create_class_blocked_when_hash_not_in_index(self):
-        """Test that create_class is blocked when hash not in index."""
+    def test_create_class_blocked_when_hash_not_in_index(self, monkeypatch):
+        """Test that create_class is blocked when hash not in index and env var is false."""
         code = """
 from lfx.custom import Component
 
 class TestComponent(Component):
     display_name = "Test"
 """
-        # Mock settings to disable allowing (enable blocking)
-        mock_settings = Mock()
-        mock_settings.settings.allow_custom_components = False
-
-        # Mock hash lookup to return empty set (hash not found)
-        with patch("lfx.custom.validate._check_and_block_if_not_allowed") as mock_check:
-            mock_check.return_value = False
+        # Set environment variable to disable custom components
+        monkeypatch.setenv("LANGFLOW_ALLOW_CUSTOM_COMPONENTS", "false")
+        
+        # Mock the hash lookup to return False (hash not found)
+        with patch("lfx.custom.hash_validator.is_code_hash_allowed") as mock_hash_check:
+            mock_hash_check.return_value = False
             with pytest.raises(ValueError, match="Custom Component 'Test' is not allowed"):
                 create_class(code, "TestComponent")
+            
+            # Verify is_code_hash_allowed was called
+            mock_hash_check.assert_called_once()
 
-    def test_create_class_allowed_when_hash_in_index(self):
-        """Test that create_class works when hash is in index."""
+    def test_create_class_allowed_when_hash_in_index(self, monkeypatch):
+        """Test that create_class works when hash is in index and env var is false."""
         code = """
 from lfx.custom import Component
 
 class TestComponent(Component):
     display_name = "Test"
 """
-        # Mock settings to disable allowing (enable blocking)
-        mock_settings = Mock()
-        mock_settings.settings.allow_custom_components = False
-
-        # Mock hash lookup to return True (hash found)
-        with patch("lfx.custom.validate._check_and_block_if_not_allowed") as mock_check:
-            mock_check.return_value = True
+        # Set environment variable to disable custom components
+        monkeypatch.setenv("LANGFLOW_ALLOW_CUSTOM_COMPONENTS", "false")
+        
+        # Mock the hash lookup to return True (hash found)
+        with patch("lfx.custom.hash_validator.is_code_hash_allowed") as mock_hash_check:
+            mock_hash_check.return_value = True
             # Should not raise
             result = create_class(code, "TestComponent")
             assert result is not None
+            
+            # Verify is_code_hash_allowed was called
+            mock_hash_check.assert_called_once()
 
     def test_create_function_allowed_when_blocking_disabled(self):
         """Test that create_function works when blocking is disabled."""
@@ -223,20 +227,32 @@ from lfx.custom import Component
 class TestComponent(Component):
     display_name = "Test"
 """
-        # Disable allowing (enable blocking) via env var
-        monkeypatch.setenv("LANGFLOW_ALLOW_CUSTOM_COMPONENTS", "false")
+        # Test 1: When allow_custom_components=False, hash not found should block
+        mock_settings = Mock()
+        mock_settings.settings.allow_custom_components = False
+        mock_settings.settings.allow_code_execution_components = True
+        mock_settings.settings.allow_nightly_core_components = False
 
-        # Mock hash lookup to return False (hash not found)
-        with patch("lfx.custom.validate._check_and_block_if_not_allowed") as mock_check:
-            mock_check.return_value = False
-            with pytest.raises(ValueError, match="Custom Component 'Test' is not allowed"):
-                create_class(code, "TestComponent")
+        # Mock get_settings_service to return our mock settings
+        with patch("lfx.custom.hash_validator.get_settings_service") as mock_get_settings:
+            mock_get_settings.return_value = mock_settings
+            
+            # Mock _get_cached_hashes to return empty set (hash not found)
+            with patch("lfx.custom.hash_validator._get_cached_hashes") as mock_get_hashes:
+                mock_get_hashes.return_value = set()
+                
+                with pytest.raises(ValueError, match="Custom Component 'Test' is not allowed"):
+                    create_class(code, "TestComponent")
 
-        # Enable allowing (disable blocking) via env var
-        monkeypatch.setenv("LANGFLOW_ALLOW_CUSTOM_COMPONENTS", "true")
+        # Test 2: When allow_custom_components=True, should work even if hash not found
+        mock_settings.settings.allow_custom_components = True
 
-        # Should work now
-        with patch("lfx.custom.validate._check_and_block_if_not_allowed") as mock_check:
-            mock_check.return_value = True
-            result = create_class(code, "TestComponent")
-            assert result is not None
+        with patch("lfx.custom.hash_validator.get_settings_service") as mock_get_settings:
+            mock_get_settings.return_value = mock_settings
+            
+            # Mock _get_cached_hashes to return empty set (hash not found, but should be allowed)
+            with patch("lfx.custom.hash_validator._get_cached_hashes") as mock_get_hashes:
+                mock_get_hashes.return_value = set()
+                
+                result = create_class(code, "TestComponent")
+                assert result is not None
