@@ -477,7 +477,7 @@ jobs:
 
             - Updates: `src/lfx/src/lfx/_assets/nightly_hash_history.json`
 
-            - Source: Nightly build tag ${{ needs.create-nightly-tag.outputs.main_tag }}
+            - Source: Nightly build tag ${{ needs.create-nightly-tag.outputs.main_tag || 'latest nightly' }}
 
 
             This PR is automatically updated each night with the latest hash history.
