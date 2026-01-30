@@ -975,11 +975,11 @@ test(
 
     await page.getByTestId("add-mcp-server-button").click();
 
-    // Wait for tools to load with proper timeout
+    // Wait for tools to load with proper timeout (external server can be slow in CI)
     await page.waitForSelector(
       '[data-testid="dropdown_str_tool"]:not([disabled])',
       {
-        timeout: 10000,
+        timeout: 30000,
         state: "visible",
       },
     );
@@ -1007,7 +1007,7 @@ test(
       '[data-testid="popover-anchor-input-repoName"]',
       {
         state: "visible",
-        timeout: 10000,
+        timeout: 30000,
       },
     );
 
@@ -1069,11 +1069,11 @@ test(
 
     await page.getByTestId("add-mcp-server-button").click();
 
-    // Wait for tools to load with proper timeout
+    // Wait for tools to load with proper timeout (external server can be slow in CI)
     await page.waitForSelector(
       '[data-testid="dropdown_str_tool"]:not([disabled])',
       {
-        timeout: 10000,
+        timeout: 30000,
         state: "visible",
       },
     );
@@ -1101,7 +1101,7 @@ test(
       '[data-testid="popover-anchor-input-repoName"]',
       {
         state: "visible",
-        timeout: 10000,
+        timeout: 30000,
       },
     );
 
