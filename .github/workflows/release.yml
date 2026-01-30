@@ -126,7 +126,7 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
-          python-version: "3.12"
+          python-version: "3.13"
           prune-cache: false
 
       - name: Install the project
@@ -176,7 +176,7 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
-          python-version: "3.12"
+          python-version: "3.13"
           prune-cache: false
 
       - name: Install the project
@@ -226,7 +226,7 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
-          python-version: "3.12"
+          python-version: "3.13"
           prune-cache: false
 
       - name: Install LFX dependencies
@@ -279,7 +279,7 @@ jobs:
         with:
           enable-cache: false
           cache-dependency-glob: "uv.lock"
-          python-version: "3.12"
+          python-version: "3.13"
           prune-cache: false
 
       - name: Check LFX version requirement
@@ -382,7 +382,7 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
-          python-version: "3.12"
+          python-version: "3.13"
           prune-cache: false
       - name: Install the project
         run: uv sync
@@ -464,7 +464,7 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
-          python-version: "3.12"
+          python-version: "3.13"
           prune-cache: false
       - name: Install the project
         run: uv sync
@@ -573,7 +573,7 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
-          python-version: "3.12"
+          python-version: "3.13"
           prune-cache: false
       - name: Install LFX dependencies
         run: uv sync --dev --package lfx
@@ -651,7 +651,7 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: false
-          python-version: "3.12"
+          python-version: "3.13"
       - name: Publish base to PyPI
         if: ${{ !inputs.dry_run }}
         env:
@@ -674,7 +674,7 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: false
-          python-version: "3.12"
+          python-version: "3.13"
       - name: Publish main to PyPI
         if: ${{ !inputs.dry_run }}
         env:
@@ -697,7 +697,7 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: false
-          python-version: "3.12"
+          python-version: "3.13"
       - name: Publish LFX to PyPI
         if: ${{ !inputs.dry_run }}
         env:
@@ -713,7 +713,7 @@ jobs:
   #   strategy:
   #     matrix:
   #       os: [ubuntu-latest, windows-latest, macos-latest]
-  #       python-version: ["3.10", "3.11", "3.12", "3.12"]
+  #       python-version: ["3.10", "3.11", "3.12", "3.13"]
   #   steps:
   #     - name: Download LFX artifact
   #       uses: actions/download-artifact@v7
