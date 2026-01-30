@@ -21,8 +21,8 @@ from lfx.base.models.unified_models import (
 from lfx.components.helpers import CurrentDateComponent
 from lfx.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
 from lfx.custom.custom_component.component import get_component_toolkit
-from lfx.helpers.base_model import build_model_from_schema
 from lfx.field_typing.range_spec import RangeSpec
+from lfx.helpers.base_model import build_model_from_schema
 from lfx.inputs.inputs import BoolInput, ModelInput
 from lfx.io import IntInput, MessageTextInput, MultilineInput, Output, SecretStrInput, TableInput
 from lfx.log.logger import logger
