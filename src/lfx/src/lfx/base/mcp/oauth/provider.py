@@ -547,16 +547,15 @@ async def get_oauth_token_for_server(
                 await logger.awarning(f"HTTP error during OAuth flow: {e}")
                 # Auth may still have succeeded, check for tokens
 
-            # After auth flow, check if we have tokens
-            # Accessing internal provider state to extract tokens (intentional)
-            if hasattr(provider, "_context") and provider._context:  # noqa: SLF001
-                tokens = provider._context.current_tokens  # noqa: SLF001
+            # After auth flow, check if we have tokens via public API
+            if hasattr(provider, "context") and provider.context:
+                tokens = provider.context.current_tokens
                 if tokens:
                     return tokens.access_token
 
-            # Fallback: try to get tokens from storage
-            if hasattr(provider, "_storage"):
-                tokens = await provider._storage.get_tokens()  # noqa: SLF001
+            # Fallback: try to get tokens from storage via public API
+            if hasattr(provider, "context") and provider.context.storage:
+                tokens = await provider.context.storage.get_tokens()
                 if tokens:
                     return tokens.access_token
 
