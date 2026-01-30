@@ -351,17 +351,10 @@ jobs:
         with:
           name: dist-lfx
           path: ./lfx-dist
-      - name: Install LFX from local wheel
+      - name: Install dependencies with local LFX wheel
         run: |
-          WHEEL_FILE=$(find ./lfx-dist -name "*.whl" -type f | head -1)
-          if [ -n "$WHEEL_FILE" ]; then
-            echo "Installing LFX from local wheel: $WHEEL_FILE"
-            uv pip install --prerelease=allow "$WHEEL_FILE"
-          else
-            echo "No LFX wheel file found, will use PyPI version"
-          fi
-      - name: Install the project
-        run: uv sync
+          # Install using pip with local wheel directory as find-links
+          uv pip install --find-links ./lfx-dist --prerelease=allow -e src/backend/base
       - name: Check for dependency incompatibility
         run: uv pip check
       - name: Set version for pre-release
@@ -485,27 +478,10 @@ jobs:
         with:
           name: dist-base
           path: ./base-dist
-      - name: Install LFX from local wheel
+      - name: Install dependencies with local wheels
         run: |
-          WHEEL_FILE=$(find ./lfx-dist -name "*.whl" -type f | head -1)
-          if [ -n "$WHEEL_FILE" ]; then
-            echo "Installing LFX from local wheel: $WHEEL_FILE"
-            uv pip install --prerelease=allow "$WHEEL_FILE"
-          else
-            echo "No LFX wheel file found, will use PyPI version"
-          fi
-      - name: Install base from local wheel
-        run: |
-          WHEEL_FILE=$(find ./base-dist -name "*.whl" -type f | head -1)
-          if [ -n "$WHEEL_FILE" ]; then
-            echo "Installing langflow-base from local wheel: $WHEEL_FILE"
-            uv pip install --prerelease=allow "$WHEEL_FILE"
-          else
-            echo "Error: No langflow-base wheel file found"
-            exit 1
-          fi
-      - name: Install the project
-        run: uv sync
+          # Install using pip with local wheel directories as find-links
+          uv pip install --find-links ./lfx-dist --find-links ./base-dist --prerelease=allow -e .
       - name: Check for dependency incompatibility
         run: uv pip check
       - name: Set version for pre-release
