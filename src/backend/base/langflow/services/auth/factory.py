@@ -12,12 +12,19 @@ from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
 
+from langflow.services.auth.service import AuthService
 from langflow.services.factory import ServiceFactory
 from langflow.services.schema import ServiceType
 
 if TYPE_CHECKING:
     from langflow.services.auth.base import AuthServiceBase
     from langflow.services.settings.service import SettingsService
+
+_OIDC_NOT_IMPLEMENTED = "OIDC authentication not yet implemented"
+
+_SAML_NOT_IMPLEMENTED = "SAML authentication not yet implemented"
+
+_LDAP_NOT_IMPLEMENTED = "LDAP authentication not yet implemented"
 
 
 class AuthProvider(str, Enum):
@@ -39,9 +46,6 @@ class AuthServiceFactory(ServiceFactory):
     name = ServiceType.AUTH_SERVICE.value
 
     def __init__(self):
-        # Import here to avoid circular dependencies
-        from langflow.services.auth.service import AuthService
-
         super().__init__(AuthService)
 
     def create(self, settings_service: SettingsService) -> AuthServiceBase:
@@ -115,18 +119,13 @@ class AuthServiceFactory(ServiceFactory):
         Raises:
             NotImplementedError: If the provider is not yet implemented
         """
-        from langflow.services.auth.service import AuthService
-
         if provider == AuthProvider.JWT:
             return AuthService(settings_service)
         if provider == AuthProvider.OIDC:
-            msg = "OIDC authentication not yet implemented"
-            raise NotImplementedError(msg)
+            raise NotImplementedError(_OIDC_NOT_IMPLEMENTED)
         if provider == AuthProvider.SAML:
-            msg = "SAML authentication not yet implemented"
-            raise NotImplementedError(msg)
+            raise NotImplementedError(_SAML_NOT_IMPLEMENTED)
         if provider == AuthProvider.LDAP:
-            msg = "LDAP authentication not yet implemented"
-            raise NotImplementedError(msg)
+            raise NotImplementedError(_LDAP_NOT_IMPLEMENTED)
         # Fallback to JWT
         return AuthService(settings_service)
