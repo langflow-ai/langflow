@@ -486,9 +486,8 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         mock_llm = MagicMock()
         mock_get_llm.return_value = mock_llm
 
-        # Set max_tokens and update model metadata to use provider-specific field name
+        # Set max_tokens; get_llm uses model metadata for provider-specific field names (e.g. max_output_tokens)
         default_kwargs["max_tokens"] = 1000
-        default_kwargs["model"][0]["metadata"]["max_tokens_field_name"] = "max_output_tokens"
 
         component = await self.component_setup(component_class, default_kwargs)
 
