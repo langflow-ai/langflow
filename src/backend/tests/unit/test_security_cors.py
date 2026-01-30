@@ -8,7 +8,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from fastapi import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from lfx.services.settings.auth import JWTAlgorithm
 from lfx.services.settings.base import Settings
 
 
@@ -298,7 +297,9 @@ class TestRefreshTokenSecurity:
                 with patch("langflow.services.auth.service.get_user_by_id", new_callable=AsyncMock) as mock_get_user:
                     mock_get_user.return_value = mock_user
 
-                    with patch("langflow.services.auth.service.AuthService.create_user_tokens", new_callable=AsyncMock) as mock_create_tokens:
+                    with patch(
+                        "langflow.services.auth.service.AuthService.create_user_tokens", new_callable=AsyncMock
+                    ) as mock_create_tokens:
                         expected_access = "new-access-token"
                         expected_refresh = "new-refresh-token"
                         mock_create_tokens.return_value = {
