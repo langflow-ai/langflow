@@ -41,7 +41,8 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
 
   value = await page.getByTestId("int_int_max_tokens").inputValue();
 
-  expect(value).toBe("0");
+  // max_tokens displays "" (empty) when value is 0 = no limit
+  expect(value).toBe("");
 
   await page.getByTestId("title-OpenAI").click();
 
@@ -51,7 +52,8 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
 
   value = await page.getByTestId("int_int_edit_max_tokens").inputValue();
 
-  expect(value).toBe("0");
+  // max_tokens displays "" (empty) when value is 0 = no limit
+  expect(value).toBe("");
 
   await page.getByTestId("int_int_edit_max_tokens").click();
   await page.getByTestId("int_int_edit_max_tokens").fill("50000");
@@ -145,6 +147,7 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
 
     value = await page.getByTestId("int_int_max_tokens").inputValue();
 
-    expect(value).toBe("0");
+    // -3 clamps to 0; max_tokens displays "" when value is 0 = no limit
+    expect(value).toBe("");
   }
 });
