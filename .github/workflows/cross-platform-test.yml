@@ -190,7 +190,7 @@ jobs:
           find ./lfx-dist -name "*.whl" -type f
           WHEEL_FILE=$(find ./lfx-dist -name "*.whl" -type f | head -1)
           if [ -n "$WHEEL_FILE" ]; then
-            uv pip install --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
+            uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
           else
             echo "No wheel file found in ./lfx-dist/"
             exit 1
@@ -218,7 +218,7 @@ jobs:
           find ./main-dist -name "*.whl" -type f
           WHEEL_FILE=$(find ./main-dist -name "*.whl" -type f | head -1)
           if [ -n "$WHEEL_FILE" ]; then
-            uv pip install --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
+            uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
           else
             echo "No wheel file found in ./main-dist/"
             exit 1
@@ -232,7 +232,7 @@ jobs:
           find ./lfx-dist -name "*.whl" -type f
           WHEEL_FILE=$(find ./lfx-dist -name "*.whl" -type f | head -1)
           if [ -n "$WHEEL_FILE" ]; then
-            uv pip install --python ./test-env/bin/python "$WHEEL_FILE"
+            uv pip install --prerelease=allow --python ./test-env/bin/python "$WHEEL_FILE"
           else
             echo "No wheel file found in ./lfx-dist/"
             exit 1
@@ -260,7 +260,7 @@ jobs:
           find ./main-dist -name "*.whl" -type f
           WHEEL_FILE=$(find ./main-dist -name "*.whl" -type f | head -1)
           if [ -n "$WHEEL_FILE" ]; then
-            uv pip install --python ./test-env/bin/python "$WHEEL_FILE"
+            uv pip install --prerelease=allow --python ./test-env/bin/python "$WHEEL_FILE"
           else
             echo "No wheel file found in ./main-dist/"
             exit 1
@@ -487,7 +487,7 @@ jobs:
           find ./lfx-dist -name "*.whl" -type f
           WHEEL_FILE=$(find ./lfx-dist -name "*.whl" -type f | head -1)
           if [ -n "$WHEEL_FILE" ]; then
-            uv pip install --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
+            uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
           else
             echo "No wheel file found in ./lfx-dist/"
             exit 1
@@ -529,7 +529,7 @@ jobs:
           find ./lfx-dist -name "*.whl" -type f
           WHEEL_FILE=$(find ./lfx-dist -name "*.whl" -type f | head -1)
           if [ -n "$WHEEL_FILE" ]; then
-            uv pip install --python ./test-env/bin/python "$WHEEL_FILE"
+            uv pip install --prerelease=allow --python ./test-env/bin/python "$WHEEL_FILE"
           else
             echo "No wheel file found in ./lfx-dist/"
             exit 1
@@ -557,7 +557,7 @@ jobs:
           find ./main-dist -name "*.whl" -type f
           WHEEL_FILE=$(find ./main-dist -name "*.whl" -type f | head -1)
           if [ -n "$WHEEL_FILE" ]; then
-            uv pip install --python ./test-env/bin/python "$WHEEL_FILE"
+            uv pip install --prerelease=allow --python ./test-env/bin/python "$WHEEL_FILE"
           else
             echo "No wheel file found in ./main-dist/"
             exit 1
