@@ -410,10 +410,15 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
                 assert "additional_kwargs" not in extracted_text
                 assert "response_metadata" not in extracted_text
 
+    @patch("lfx.components.models_and_agents.agent.AgentComponent.get_memory_data")
     @patch("lfx.components.models_and_agents.agent.get_llm")
-    async def test_agent_passes_max_tokens_to_get_llm(self, mock_get_llm, component_class, default_kwargs):
+    async def test_agent_passes_max_tokens_to_get_llm(
+        self, mock_get_llm, mock_get_memory_data, component_class, default_kwargs
+    ):
         """Test that agent component passes max_tokens parameter to get_llm function."""
-        from unittest.mock import MagicMock
+        from unittest.mock import AsyncMock, MagicMock
+
+        mock_get_memory_data.return_value = AsyncMock(return_value=[])
 
         # Setup mock
         mock_llm = MagicMock()
@@ -434,10 +439,15 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert "max_tokens" in call_kwargs, "max_tokens should be passed to get_llm"
         assert call_kwargs["max_tokens"] == 500
 
+    @patch("lfx.components.models_and_agents.agent.AgentComponent.get_memory_data")
     @patch("lfx.components.models_and_agents.agent.get_llm")
-    async def test_agent_passes_none_max_tokens_when_not_set(self, mock_get_llm, component_class, default_kwargs):
+    async def test_agent_passes_none_max_tokens_when_not_set(
+        self, mock_get_llm, mock_get_memory_data, component_class, default_kwargs
+    ):
         """Test that agent component passes None for max_tokens when not set."""
-        from unittest.mock import MagicMock
+        from unittest.mock import AsyncMock, MagicMock
+
+        mock_get_memory_data.return_value = AsyncMock(return_value=[])
 
         # Setup mock
         mock_llm = MagicMock()
@@ -462,12 +472,15 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert "max_tokens" in call_kwargs, "max_tokens should be passed to get_llm even when None"
         assert call_kwargs["max_tokens"] is None
 
+    @patch("lfx.components.models_and_agents.agent.AgentComponent.get_memory_data")
     @patch("lfx.components.models_and_agents.agent.get_llm")
     async def test_agent_max_tokens_with_provider_specific_field_name(
-        self, mock_get_llm, component_class, default_kwargs
+        self, mock_get_llm, mock_get_memory_data, component_class, default_kwargs
     ):
         """Test that agent component passes max_tokens which will be handled by provider-specific field names."""
-        from unittest.mock import MagicMock
+        from unittest.mock import AsyncMock, MagicMock
+
+        mock_get_memory_data.return_value = AsyncMock(return_value=[])
 
         # Setup mock
         mock_llm = MagicMock()
