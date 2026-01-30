@@ -58,7 +58,7 @@ export default function CodeAreaComponent({
   const allowCustomComponents = config?.allow_custom_components ?? true;
   const isBlocked = !allowCustomComponents;
   const effectiveDisabled = disabled || isBlocked;
-  
+
   const renderCodeText = () => (
     <span
       id={id}
@@ -77,7 +77,10 @@ export default function CodeAreaComponent({
     <>
       <div
         className={cn(
-          externalLinkIconClasses.gradient({ disabled: effectiveDisabled, editNode }),
+          externalLinkIconClasses.gradient({
+            disabled: effectiveDisabled,
+            editNode,
+          }),
           editNode
             ? externalLinkIconClasses.editNodeTop
             : externalLinkIconClasses.normalTop,
@@ -90,7 +93,10 @@ export default function CodeAreaComponent({
       />
       <div
         className={cn(
-          externalLinkIconClasses.background({ disabled: effectiveDisabled, editNode }),
+          externalLinkIconClasses.background({
+            disabled: effectiveDisabled,
+            editNode,
+          }),
           editNode
             ? externalLinkIconClasses.editNodeTop
             : externalLinkIconClasses.normalTop,
@@ -123,7 +129,12 @@ export default function CodeAreaComponent({
   }
 
   return (
-    <div className={cn("w-full", effectiveDisabled && "pointer-events-none cursor-not-allowed")}>
+    <div
+      className={cn(
+        "w-full",
+        effectiveDisabled && "pointer-events-none cursor-not-allowed",
+      )}
+    >
       <CodeAreaModal
         dynamic={false}
         value={value}
