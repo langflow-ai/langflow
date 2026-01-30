@@ -291,8 +291,12 @@ class DatabaseVariableService(VariableService, Service):
             )
             raise ValueError(msg)
 
-        encrypted = auth_utils.encrypt_api_key(value)
-        variable.value = encrypted
+        # Only encrypt CREDENTIAL_TYPE variables
+        if variable.type == CREDENTIAL_TYPE:
+            variable.value = auth_utils.encrypt_api_key(value, settings_service=self.settings_service)
+        else:
+            variable.value = value
+        variable.updated_at = datetime.now(timezone.utc)
         session.add(variable)
         await session.flush()
         await session.refresh(variable)
