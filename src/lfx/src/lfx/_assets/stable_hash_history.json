@@ -1226,7 +1226,7 @@
   },
   "Agent": {
     "versions": {
-      "0.3.0": "ba95845a7a0c"
+      "0.3.0": "60401f4e0ff8"
     }
   },
   "EmbeddingModel": {
@@ -1236,7 +1236,7 @@
   },
   "LanguageModelComponent": {
     "versions": {
-      "0.3.0": "0fe0030cc0b3"
+      "0.3.0": "07d0ce9ea77e"
     }
   },
   "MCPTools": {
