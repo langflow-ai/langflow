@@ -1,6 +1,7 @@
 """Component code validation."""
 
 import re
+from functools import lru_cache
 
 from lfx.custom.validate import create_class, extract_class_name
 
@@ -16,6 +17,7 @@ def _extract_class_name_regex(code: str) -> str | None:
     return match.group(1) if match else None
 
 
+@lru_cache(maxsize=1024)
 def _safe_extract_class_name(code: str) -> str | None:
     """Extract class name with fallback to regex for broken code."""
     try:
