@@ -175,6 +175,9 @@ class Settings(BaseSettings):
     When disabled (False), only components whose code hash matches an entry in the hash history files
     will be allowed to be imported or executed. This provides a security mechanism to prevent
     execution of unauthorized custom code. Defaults to True to allow custom components.
+
+    Note: This feature only works for components developed on LFX version v0.3.0 or later. 
+    Components developed prior to this version will not be recognized as Core Components. 
     """
     allow_code_execution_components: bool = True
     """If False, blocks components that execute arbitrary code even if they are in the hash history.
@@ -186,11 +189,20 @@ class Settings(BaseSettings):
     Note: This setting only takes effect when allow_custom_components is False.
     When allow_custom_components is True, all custom code is allowed regardless of this setting.
     Defaults to True to allow code execution components.
+
+    Note: This feature only works for components developed on LFX version v0.3.0 or later.
+    Components developed prior to this version will not be recognized as Core Components.
     """
     allow_nightly_core_components: bool = True
-    """When disabled (False), only core components whose code hash matches an entry in the stable hash history
+    """Warning: this feature is experimental.
+    
+    When disabled (False), only core components whose code hash matches an entry in the stable hash history
     will be allowed. Nightly hash history (containing experimental/unreleased core components) will be ignored.
     This provides stricter security by only allowing officially released core component versions.
+
+    Warning: This feature is experimental. It is possible that stable releases will falsely block
+    core components that were developed in certain nightly releases. If this occurs, you must
+    update the affected core components. 
     
     Note: This setting only affects built-in/core components, not user-submitted custom code.
     When allow_custom_components is True, all custom code is allowed regardless of this setting.
@@ -198,6 +210,9 @@ class Settings(BaseSettings):
     
     Note: This setting only takes effect when allow_custom_components is False.
     When allow_custom_components is True, all custom code is allowed regardless of this setting.
+
+    Note: This feature only works for components developed on LFX version v0.3.0 or later.
+    Components developed prior to this version will not be recognized as Core Components.
     """
     langchain_cache: str = "InMemoryCache"
     load_flows_path: str | None = None
