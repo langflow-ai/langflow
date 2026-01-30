@@ -1297,7 +1297,7 @@ class ProjectTaskGroup:
     otherwise Asyncio will raise a RuntimeError.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._started = False
         self._start_stop_lock = anyio.Lock()
         self._task_group: TaskGroup | None = None

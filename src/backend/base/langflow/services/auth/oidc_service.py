@@ -332,6 +332,11 @@ class OIDCAuthService(AuthServiceBase):
     ) -> User | UserRead:
         return await self._base_auth.get_current_user_for_websocket(token, api_key, db)
 
+    async def get_current_user_for_sse(
+        self, token: str | None, api_key: str | None, db: AsyncSession
+    ) -> User | UserRead:
+        return await self._base_auth.get_current_user_for_sse(token, api_key, db)
+
     async def authenticate_user(self, username: str, password: str, db: AsyncSession) -> User | None:
         # OIDC doesn't use password authentication
         # Check if SSO enforcement is enabled via settings
