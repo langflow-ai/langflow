@@ -10,9 +10,7 @@ if TYPE_CHECKING:
 import contextlib
 
 from lfx.base.models.anthropic_constants import ANTHROPIC_MODELS_DETAILED
-from lfx.base.models.google_generative_ai_constants import (
-    GOOGLE_GENERATIVE_AI_MODELS_DETAILED,
-)
+from lfx.base.models.google_generative_ai_constants import GOOGLE_GENERATIVE_AI_MODELS_DETAILED
 from lfx.base.models.ollama_constants import OLLAMA_EMBEDDING_MODELS_DETAILED, OLLAMA_MODELS_DETAILED
 from lfx.base.models.openai_constants import OPENAI_EMBEDDING_MODELS_DETAILED, OPENAI_MODELS_DETAILED
 from lfx.base.models.watsonx_constants import WATSONX_MODELS_DETAILED
@@ -21,23 +19,51 @@ from lfx.services.deps import get_variable_service, session_scope
 from lfx.utils.async_helpers import run_until_complete
 
 
-@lru_cache(maxsize=1)
-def get_model_classes():
-    """Lazy load model classes to avoid importing optional dependencies at module level."""
-    from langchain_anthropic import ChatAnthropic
-    from langchain_ibm import ChatWatsonx
-    from langchain_ollama import ChatOllama
-    from langchain_openai import ChatOpenAI
+def get_model_class(class_name: str):
+    """Lazy load a specific model class to avoid importing unused dependencies.
 
-    from lfx.base.models.google_generative_ai_model import ChatGoogleGenerativeAIFixed
+    This imports only the requested provider, not all providers at once.
+    """
+    if class_name == "ChatOpenAI":
+        from langchain_openai import ChatOpenAI
 
-    return {
-        "ChatOpenAI": ChatOpenAI,
-        "ChatAnthropic": ChatAnthropic,
-        "ChatGoogleGenerativeAIFixed": ChatGoogleGenerativeAIFixed,
-        "ChatOllama": ChatOllama,
-        "ChatWatsonx": ChatWatsonx,
-    }
+        return ChatOpenAI
+    if class_name == "ChatAnthropic":
+        from langchain_anthropic import ChatAnthropic
+
+        return ChatAnthropic
+    if class_name == "ChatGoogleGenerativeAIFixed":
+        from lfx.base.models.google_generative_ai_model import ChatGoogleGenerativeAIFixed
+
+        return ChatGoogleGenerativeAIFixed
+    if class_name == "ChatOllama":
+        from langchain_ollama import ChatOllama
+
+        return ChatOllama
+    if class_name == "ChatWatsonx":
+        from langchain_ibm import ChatWatsonx
+
+        return ChatWatsonx
+    return None
+
+
+# List of all model class names for get_model_classes
+_MODEL_CLASS_NAMES = [
+    "ChatOpenAI",
+    "ChatAnthropic",
+    "ChatGoogleGenerativeAIFixed",
+    "ChatOllama",
+    "ChatWatsonx",
+]
+
+
+def get_model_classes() -> dict:
+    """Load all model classes.
+
+    Note: This imports ALL provider packages. For lazy loading of individual
+    providers, use get_model_class(class_name) instead.
+    """
+    return {name: get_model_class(name) for name in _MODEL_CLASS_NAMES}
 
 
 @lru_cache(maxsize=1)
@@ -280,10 +306,10 @@ def validate_model_provider_key(variable_name: str, api_key: str) -> None:
     """
     # Map variable names to providers
     provider_map = {
-        "OPENAI_API_KEY": "OpenAI",
-        "ANTHROPIC_API_KEY": "Anthropic",
-        "GOOGLE_API_KEY": "Google Generative AI",
-        "WATSONX_APIKEY": "IBM WatsonX",
+        "OPENAI_API_KEY": "OpenAI",  # pragma: allowlist secret
+        "ANTHROPIC_API_KEY": "Anthropic",  # pragma: allowlist secret
+        "GOOGLE_API_KEY": "Google Generative AI",  # pragma: allowlist secret
+        "WATSONX_APIKEY": "IBM WatsonX",  # pragma: allowlist secret
         "OLLAMA_BASE_URL": "Ollama",
     }
 
@@ -637,7 +663,7 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
     param_mappings = {
         "OpenAI": {
             "model": "model",
-            "api_key": "api_key",
+            "api_key": "api_key",  # pragma: allowlist secret
             "api_base": "base_url",
             "dimensions": "dimensions",
             "chunk_size": "chunk_size",
@@ -648,7 +674,7 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
         },
         "Google Generative AI": {
             "model": "model",
-            "api_key": "google_api_key",
+            "api_key": "google_api_key",  # pragma: allowlist secret
             "request_timeout": "request_options",
             "model_kwargs": "client_options",
         },
@@ -662,7 +688,7 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
         "IBM WatsonX": {
             "model_id": "model_id",
             "url": "url",
-            "api_key": "apikey",
+            "api_key": "apikey",  # pragma: allowlist secret
             "project_id": "project_id",
             "space_id": "space_id",
             "request_timeout": "request_timeout",
@@ -838,7 +864,7 @@ def normalize_model_names_to_dicts(model_names: list[str] | str) -> list[dict[st
                     "metadata": {
                         "model_class": "ChatOpenAI",  # Default fallback
                         "model_name_param": "model",
-                        "api_key_param": "api_key",
+                        "api_key_param": "api_key",  # pragma: allowlist secret
                     },
                 }
             )
@@ -897,8 +923,9 @@ def get_llm(
         )
         raise ValueError(msg)
 
-    # Get model class from metadata
-    model_class = get_model_classes().get(metadata.get("model_class"))
+    # Get model class from metadata (imports only the needed provider)
+    model_class_name = metadata.get("model_class")
+    model_class = get_model_class(model_class_name) if model_class_name else None
     if model_class is None:
         msg = f"No model class defined for {model_name}"
         raise ValueError(msg)
