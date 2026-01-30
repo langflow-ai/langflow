@@ -213,7 +213,9 @@ class AgenticsComponent(Component):
             ollama_url = getattr(self, "ollama_base_url", DEFAULT_OLLAMA_URL)
             return LLM(model="ollama/" + model_name, base_url=ollama_url)
 
-        msg = f"Unsupported provider: {provider}. Supported: IBM WatsonX, Google Generative AI, OpenAI, Anthropic, Ollama"
+        msg = (
+            f"Unsupported provider: {provider}. Supported: IBM WatsonX, Google Generative AI, OpenAI, Anthropic, Ollama"
+        )
         raise ValueError(msg)
 
     async def transduce(self) -> DataFrame:
