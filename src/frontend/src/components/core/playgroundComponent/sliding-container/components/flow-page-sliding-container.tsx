@@ -7,12 +7,14 @@ import { useGetFlowId } from "@/components/core/playgroundComponent/hooks/use-ge
 import { AnimatedConditional } from "@/components/ui/animated-close";
 import { useSimpleSidebar } from "@/components/ui/simple-sidebar";
 import useFlowStore from "@/stores/flowStore";
+import { useUtilityStore } from "@/stores/utilityStore";
 import type { FilePreviewType } from "@/types/components";
 import { useEditSessionInfo } from "../../chat-view/chat-header/hooks/use-edit-session-info";
 import { useGetAddSessions } from "../../chat-view/chat-header/hooks/use-get-add-sessions";
 import { ChatInput } from "../../chat-view/chat-input";
 import useDragAndDrop from "../../chat-view/chat-input/hooks/use-drag-and-drop";
 import { Messages } from "../../chat-view/chat-messages";
+import { useChatHistory } from "../../chat-view/chat-messages/hooks/use-chat-history";
 
 type FlowPageSlidingContainerContentProps = {
   isFullscreen: boolean;
@@ -26,6 +28,9 @@ export function FlowPageSlidingContainerContent({
   const currentFlowId = useGetFlowId();
   const { setOpen, setWidth } = useSimpleSidebar();
   const inputs = useFlowStore((state) => state.inputs);
+  const nodes = useFlowStore((state) => state.nodes);
+  const isBuilding = useFlowStore((state) => state.isBuilding);
+  const setChatValueStore = useUtilityStore((state) => state.setChatValueStore);
 
   const [currentSessionId, setCurrentSessionId] = useState<string | undefined>(
     currentFlowId,
@@ -66,6 +71,19 @@ export function FlowPageSlidingContainerContent({
   const { sendMessage } = useSendMessage({ sessionId: currentSessionId });
   const inputTypes = inputs.map((obj) => obj.type);
   const noInput = !inputTypes.includes("ChatInput");
+
+  const chatHistory = useChatHistory(currentSessionId ?? currentFlowId ?? null);
+
+  useEffect(() => {
+    const chatInput = inputs.find((input) => input.type === "ChatInput");
+    const chatInputNode = nodes.find((node) => node.id === chatInput?.id);
+
+    if (chatHistory.length === 0 && !isBuilding && chatInputNode) {
+      setChatValueStore(
+        chatInputNode.data.node.template["input_value"].value ?? "",
+      );
+    }
+  }, [chatHistory.length, isBuilding, inputs, nodes, setChatValueStore]);
 
   const { dragOver, dragEnter, dragLeave } = useDragAndDrop(
     setIsDragging,
