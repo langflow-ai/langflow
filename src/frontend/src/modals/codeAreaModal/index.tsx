@@ -8,6 +8,7 @@ import "ace-builds/src-noconflict/ext-searchbox";
 import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-monokai";
+import { cloneDeep } from "lodash";
 import { useEffect, useRef, useState } from "react";
 import AceEditor from "react-ace";
 import type ReactAce from "react-ace/lib/ace";
@@ -123,9 +124,25 @@ export default function CodeAreaModal({
         onSuccess: ({ data, type }) => {
           if (data && type) {
             setValue(code);
-            clearHandlesFromAdvancedFields(componentId!, data);
+            try {
+              const merged = cloneDeep(data);
+              if (nodeClass?.template && merged?.template) {
+                for (const fieldName of Object.keys(merged.template)) {
+                  if (fieldName === "code") continue;
+                  const existing = nodeClass.template[fieldName];
+                  if (existing && Object.hasOwn(existing, "value")) {
+                    // Preserve the user's current value for this parameter
+                    merged.template[fieldName].value = existing.value;
+                  }
+                }
+              }
 
-            setNodeClass(data, type);
+              clearHandlesFromAdvancedFields(componentId!, merged);
+              setNodeClass(merged, type);
+            } catch (e) {
+              clearHandlesFromAdvancedFields(componentId!, data);
+              setNodeClass(data, type);
+            }
             setError({ detail: { error: undefined, traceback: undefined } });
             setOpen(false);
           }

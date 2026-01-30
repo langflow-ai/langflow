@@ -718,7 +718,7 @@
               ]
             },
             "description": "Create a prompt template with dynamic variables.",
-            "display_name": "Prompt",
+            "display_name": "Prompt Template",
             "documentation": "",
             "edited": false,
             "error": null,
@@ -807,27 +807,6 @@
                 "title_case": false,
                 "type": "str",
                 "value": ""
-              },
-              "mode": {
-                "_input_type": "TabInput",
-                "advanced": false,
-                "display_name": "Mode",
-                "dynamic": false,
-                "info": "Choose variable syntax for your template.",
-                "name": "mode",
-                "options": [
-                  "{variable}",
-                  "{{variable}}"
-                ],
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "tab",
-                "value": "f-string"
               },
               "template": {
                 "_input_type": "PromptInput",
