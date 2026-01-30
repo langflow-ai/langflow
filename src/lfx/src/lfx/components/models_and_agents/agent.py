@@ -451,7 +451,6 @@ class AgentComponent(ToolCallingAgentComponent):
 
         # Iterate over all providers in the MODEL_PROVIDERS_DICT
         if field_name == "model":
-            self.log(str(field_value))
             # Update input types for all fields
             build_config = self.update_input_types(build_config)
 
