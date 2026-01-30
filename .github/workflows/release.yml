@@ -353,6 +353,8 @@ jobs:
           path: ./lfx-dist
       - name: Install dependencies with local LFX wheel
         run: |
+          # Create virtual environment
+          uv venv
           # Install using pip with local wheel directory as find-links
           uv pip install --find-links ./lfx-dist --prerelease=allow -e src/backend/base
       - name: Check for dependency incompatibility
@@ -480,6 +482,8 @@ jobs:
           path: ./base-dist
       - name: Install dependencies with local wheels
         run: |
+          # Create virtual environment
+          uv venv
           # Install using pip with local wheel directories as find-links
           uv pip install --find-links ./lfx-dist --find-links ./base-dist --prerelease=allow -e .
       - name: Check for dependency incompatibility
