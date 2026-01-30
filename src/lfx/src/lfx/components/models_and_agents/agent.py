@@ -172,7 +172,7 @@ class AgentComponent(ToolCallingAgentComponent):
         from langchain_core.tools import StructuredTool
 
         max_tokens_val = getattr(self, "max_tokens", None)
-        if max_tokens_val == "":
+        if max_tokens_val == "" or max_tokens_val == 0:
             max_tokens_val = None
         llm_model = get_llm(
             model=self.model,
