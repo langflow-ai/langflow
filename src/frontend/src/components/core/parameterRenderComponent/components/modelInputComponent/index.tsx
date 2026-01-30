@@ -505,15 +505,6 @@ export default function ModelInputComponent({
         () => setOpenManageProvidersDialog(true),
         "manage-model-providers",
       )}
-
-      {externalOptions?.fields?.data?.node &&
-        renderFooterButton(
-          externalOptions.fields.data.node.display_name,
-          externalOptions.fields.data.node.icon || "Box",
-          () =>
-            handleExternalOptions(externalOptions.fields.data.node.name || ""),
-          "external-option-button",
-        )}
     </div>
   );
 

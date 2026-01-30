@@ -30,12 +30,16 @@ export const computeDisplayHandle = (
     Array.isArray(optionalHandle) &&
     optionalHandle.length > 0;
 
+  // Always show handle for model inputs
+  if (isModelInput) {
+    return true;
+  }
+
   return !!(
     (!LANGFLOW_SUPPORTED_TYPES.has(type ?? "") ||
       (optionalHandle && optionalHandle.length > 0)) &&
     !(isToolMode && template.tool_mode) &&
-    (!hasRefreshButton || isModelInput) &&
-    (!isModelInput || hasInputTypes)
+    !hasRefreshButton
   );
 };
 
