@@ -37,11 +37,6 @@ on:
         required: false
         type: boolean
         default: true
-      test_merge_pr:
-        description: "TESTING ONLY: Skip all jobs except merge PR. Assumes branch already exists from previous nightly run."
-        required: false
-        type: boolean
-        default: false
   schedule:
     # Run job at 00:00 UTC (4:00 PM PST / 5:00 PM PDT)
     - cron: "0 0 * * *"
@@ -271,7 +266,7 @@ jobs:
           fi
 
   frontend-tests:
-    if: github.repository == 'langflow-ai/langflow' && !inputs.skip_frontend_tests && !inputs.test_merge_pr
+    if: github.repository == 'langflow-ai/langflow' && !inputs.skip_frontend_tests
     name: Run Frontend Tests
     needs: create-nightly-tag
     uses: ./.github/workflows/typescript_test.yml
@@ -286,7 +281,7 @@ jobs:
       TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
 
   backend-unit-tests:
-    if: github.repository == 'langflow-ai/langflow' && !inputs.skip_backend_tests && !inputs.test_merge_pr
+    if: github.repository == 'langflow-ai/langflow' && !inputs.skip_backend_tests
     name: Run Backend Unit Tests
     needs: create-nightly-tag
     uses: ./.github/workflows/python_test.yml
@@ -309,7 +304,7 @@ jobs:
   #     ref: ${{ needs.create-nightly-tag.outputs.tag }}
 
   release-nightly-build:
-    if: github.repository == 'langflow-ai/langflow' && !inputs.test_merge_pr && always() && needs.frontend-tests.result != 'failure' && needs.backend-unit-tests.result != 'failure' && needs.build-hash-history.result != 'failure'
+    if: github.repository == 'langflow-ai/langflow' && always() && needs.frontend-tests.result != 'failure' && needs.backend-unit-tests.result != 'failure' && needs.build-hash-history.result != 'failure'
     name: Run Nightly Langflow Build
     needs: [create-nightly-tag, frontend-tests, backend-unit-tests, build-hash-history]
     uses: ./.github/workflows/release_nightly.yml
