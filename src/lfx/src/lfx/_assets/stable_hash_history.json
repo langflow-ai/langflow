@@ -1773,5 +1773,10 @@
     "versions": {
       "0.3.0": "ec825c33caf6"
     }
+  },
+  "CombineInputs": {
+    "versions": {
+      "0.3.0": "59971c95febc"
+    }
   }
 }
