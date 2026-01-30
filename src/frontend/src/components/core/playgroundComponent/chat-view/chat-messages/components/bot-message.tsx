@@ -117,14 +117,13 @@ export const BotMessage = memo(
       buildDuration,
     });
 
-    // Prefer live timer during build; fall back to persisted value after page refresh
+    // Prefer persisted duration (frozen value) over live timer
+    // This ensures nested agent segments show their own duration after reset
     const persistedDuration = chat.properties?.build_duration;
     const displayTime =
-      liveDisplayTime > 0
-        ? liveDisplayTime
-        : typeof persistedDuration === "number"
-          ? persistedDuration
-          : 0;
+      typeof persistedDuration === "number" && persistedDuration > 0
+        ? persistedDuration
+        : liveDisplayTime;
 
     // Use shared hook for tool duration tracking
     const { totalToolDuration } = useToolDurations(

@@ -28,6 +28,7 @@ import useFlowStore from "../stores/flowStore";
 import type { VertexBuildTypeAPI } from "../types/api";
 import { isErrorLogType } from "../types/utils/typeCheckingUtils";
 import type { VertexLayerElementType } from "../types/zustand/flow";
+import { isOutputType } from "./reactflowUtils";
 import { isStringArray, tryParseJson } from "./utils";
 
 type BuildVerticesParams = {
@@ -548,6 +549,41 @@ async function onEvent(
 
       await useFlowStore.getState().clearEdgesRunningByNodes();
 
+      // Check if this vertex is a ChatOutput - if so, save segment duration and reset timer
+      const flowState = useFlowStore.getState();
+      const node = flowState.nodes.find((n) => n.id === buildData.id);
+      const nodeType = node?.data?.type as string | undefined;
+
+      if (nodeType && isOutputType(nodeType) && flowState.buildStartTime) {
+        const segmentDurationMs = Date.now() - flowState.buildStartTime;
+
+        // Find and update the last bot message with this segment's duration
+        const found = findLastBotMessage();
+        if (found && !found.message.properties?.build_duration) {
+          updateMessageProperties(found.message.id!, found.queryKey, {
+            build_duration: segmentDurationMs,
+          });
+          // Persist to backend
+          api
+            .put(`${getURL("MESSAGES")}/${found.message.id}`, {
+              ...found.message,
+              properties: {
+                ...found.message.properties,
+                build_duration: segmentDurationMs,
+              },
+            })
+            .catch((err: unknown) => {
+              console.warn("Failed to persist build_duration", {
+                messageId: found.message.id,
+                error: err instanceof Error ? err.message : String(err),
+              });
+            });
+        }
+
+        // Reset timer for the next segment
+        flowState.setBuildStartTime(Date.now());
+      }
+
       if (buildData.next_vertices_ids) {
         if (isStringArray(buildData.next_vertices_ids)) {
           useFlowStore
@@ -562,17 +598,30 @@ async function onEvent(
       return true;
     }
     case "build_start": {
-      // Backend signals that vertex execution is starting — set the timer origin
-      useFlowStore.getState().setBuildStartTime(Date.now());
+      // There are two types of build_start events:
+      // 1. General build start (no data.id) - set the timer origin
+      // 2. Per-vertex build start (with data.id) - just update status
+      if (!data?.id) {
+        useFlowStore.getState().setBuildStartTime(Date.now());
+        return true;
+      }
+      // Per-vertex build_start - update status (handled by second case below)
+      useFlowStore
+        .getState()
+        .updateBuildStatus([data.id], BuildStatus.BUILDING);
       return true;
     }
-    case "add_message":
+    case "add_message": {
+      // Handle message events through chat-view utilities
+      const handled = handleMessageEvent(type, data);
+      if (handled) return true;
+      break;
+    }
     case "token":
     case "remove_message": {
       // Handle message events through chat-view utilities
       const handled = handleMessageEvent(type, data);
       if (handled) return true;
-      // If not handled (shouldn't happen for these cases), fall through
       break;
     }
     case "end": {
@@ -581,8 +630,10 @@ async function onEvent(
         const durationMs = data.build_duration * 1000;
         useFlowStore.getState().setBuildDuration(durationMs);
 
+        // Only set build_duration on last message if it doesn't already have one
+        // (nested agents set their own segment duration in add_message)
         const found = findLastBotMessage();
-        if (found) {
+        if (found && !found.message.properties?.build_duration) {
           updateMessageProperties(found.message.id!, found.queryKey, {
             build_duration: durationMs,
           });
@@ -616,11 +667,6 @@ async function onEvent(
       buildResults.push(false);
       return true;
     }
-    case "build_start":
-      useFlowStore
-        .getState()
-        .updateBuildStatus([data.id], BuildStatus.BUILDING);
-      break;
     case "build_end":
       useFlowStore.getState().updateBuildStatus([data.id], BuildStatus.BUILT);
       break;
