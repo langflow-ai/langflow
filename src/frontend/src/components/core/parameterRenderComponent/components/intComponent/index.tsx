@@ -80,17 +80,19 @@ export default function IntComponent({
     Number.isFinite(minVal) &&
     (value == null || value <= minVal);
 
-  // Clamp existing out-of-range values to min on load (e.g. max_tokens -14 -> 1)
+  // Clamp existing out-of-range values to min on load (e.g. max_tokens -14 -> 1).
+  // For max_tokens, 0 means "empty/no limit" — do not clamp 0 to 1.
   useEffect(() => {
     if (
       typeof minVal === "number" &&
       Number.isFinite(minVal) &&
       typeof value === "number" &&
-      value < minVal
+      value < minVal &&
+      !(name === "max_tokens" && value === 0)
     ) {
       handleOnNewValue({ value: minVal }, { skipSnapshot: true });
     }
-  }, [minVal, value, handleOnNewValue]);
+  }, [minVal, value, handleOnNewValue, name]);
 
   const getInputClassName = () => {
     return cn(
@@ -145,7 +147,11 @@ export default function IntComponent({
         max={getMaxValue()}
         onChange={handleNumberChange}
         isDisabled={disabled || readonly}
-        value={value ?? ""}
+        value={
+          name === "max_tokens" && (value === 0 || value === null)
+            ? ""
+            : value ?? ""
+        }
       >
         <NumberInputField
           className={
