@@ -41,7 +41,4 @@ class AuthServiceFactory(ServiceFactory):
         Returns:
             AuthService instance (JWT-based authentication)
         """
-        # Import here to avoid circular dependencies
-        from langflow.services.auth.service import AuthService
-
-        return AuthService(settings_service)
+        return self.service_class(settings_service)
