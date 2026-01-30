@@ -481,3 +481,70 @@ class ComposerUrlResponse(BaseModel):
 class MCPInstallRequest(BaseModel):
     client: str
     transport: Literal["sse", "streamablehttp"] | None = None
+
+
+# MCP OAuth schemas for deployment-ready authentication
+class OAuthInitiateRequest(BaseModel):
+    """Request to initiate an OAuth flow for an MCP server."""
+
+    server_url: str = Field(..., description="The MCP server URL requiring OAuth authentication")
+    callback_base_url: str | None = Field(
+        default=None,
+        description="Base URL for OAuth callback (e.g., 'https://langflow.example.com'). "
+        "The frontend should pass its own URL here. If not provided, uses the request's origin.",
+    )
+    client_id: str | None = Field(
+        default=None,
+        description="Pre-registered OAuth client ID (optional, for non-DCR servers)",
+    )
+    client_secret: str | None = Field(
+        default=None,
+        description="Pre-registered OAuth client secret (optional, for confidential clients)",
+    )
+    scopes: list[str] | None = Field(
+        default=None,
+        description="OAuth scopes to request (optional)",
+    )
+    redirect_uri: str | None = Field(
+        default=None,
+        description="Custom redirect URI (optional, for specific OAuth provider requirements)",
+    )
+    client_metadata_url: str | None = Field(
+        default=None,
+        description="Client ID Metadata Document URL (optional, for CIMD-supporting servers)",
+    )
+
+
+class OAuthInitiateResponse(BaseModel):
+    """Response from initiating an OAuth flow."""
+
+    flow_id: str = Field(..., description="Unique ID for polling flow status")
+    auth_url: str = Field(..., description="URL to open in browser/popup for OAuth")
+    expires_in: int = Field(
+        default=600,
+        description="Seconds until the OAuth flow expires",
+    )
+
+
+class OAuthStatusResponse(BaseModel):
+    """Response from polling OAuth flow status."""
+
+    status: Literal["pending", "complete", "error", "expired"] = Field(
+        ...,
+        description="Current status of the OAuth flow",
+    )
+    error_message: str | None = Field(
+        default=None,
+        description="Error message if status is 'error'",
+    )
+    server_url: str | None = Field(
+        default=None,
+        description="The MCP server URL (included when status is 'complete')",
+    )
+
+
+class OAuthRevokeResponse(BaseModel):
+    """Response from revoking OAuth tokens."""
+
+    success: bool = Field(..., description="Whether tokens were successfully revoked")
+    message: str = Field(..., description="Status message")
