@@ -1,4 +1,5 @@
 name: CI
+# trigger test run
 
 on:
   workflow_call:
