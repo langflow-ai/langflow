@@ -1,25 +1,61 @@
-"""Tests for Loop component event emission from subgraph execution.
+"""Tests for Loop component and loop utilities.
 
-These tests verify that when LoopComponent executes its loop body as a subgraph,
-events are properly emitted so the UI updates correctly.
-
-Key requirements:
-1. Events should be emitted for each vertex in the loop body
-2. Events should use the ORIGINAL vertex IDs (not subgraph copies)
-3. Events should be emitted for each iteration
+These tests verify the loop body detection and component behavior.
+Event manager propagation is critical for UI updates during loop execution.
+Subgraph isolation tests are in tests/unit/graph/graph/test_subgraph_isolation.py.
 """
 
 from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 
+import pytest
 from lfx.base.flow_controls.loop_utils import execute_loop_body, get_loop_body_vertices
 from lfx.components.flow_controls.loop import LoopComponent
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 
 
-class TestLoopEventEmissionUnit:
-    """Unit tests for event emission during loop subgraph execution."""
+class TestLoopComponentBasics:
+    """Basic tests for LoopComponent."""
 
+    @pytest.mark.asyncio
+    async def test_done_output_accepts_event_manager(self):
+        """Test that done_output accepts event_manager parameter."""
+        loop = LoopComponent(_id="test_loop")
+        loop.set(data=DataFrame([]))
+
+        # Should not raise when event_manager is passed
+        result = await loop.done_output(event_manager=None)
+        assert isinstance(result, DataFrame)
+
+    def test_loop_validates_data_input_types(self):
+        """Test that loop validates data input types."""
+        from lfx.base.flow_controls.loop_utils import validate_data_input
+
+        # DataFrame should work
+        result = validate_data_input(DataFrame([Data(text="item")]))
+        assert len(result) == 1
+
+        # Data should work
+        result = validate_data_input(Data(text="single"))
+        assert len(result) == 1
+
+        # List of Data should work
+        result = validate_data_input([Data(text="a"), Data(text="b")])
+        assert len(result) == 2
+
+        # Invalid type should raise
+        with pytest.raises(TypeError):
+            validate_data_input("invalid")
+
+
+class TestEventManagerPropagation:
+    """Tests for event manager propagation through loop execution.
+
+    Event manager propagation is critical - it enables the UI to receive
+    real-time updates as each vertex in the loop body executes.
+    """
+
+    @pytest.mark.asyncio
     async def test_event_manager_passed_to_subgraph_async_start(self):
         """Test that event_manager is passed to subgraph's async_start method."""
         mock_event_manager = MagicMock()
@@ -31,30 +67,32 @@ class TestLoopEventEmissionUnit:
             received_event_manager = event_manager
             yield MagicMock(valid=True, result_dict=MagicMock(outputs={}))
 
-        mock_subgraph = MagicMock()
-        mock_subgraph.prepare = MagicMock()
-        mock_subgraph.async_start = mock_async_start
-        mock_subgraph.get_vertex = MagicMock(return_value=MagicMock(custom_component=MagicMock()))
+        def create_mock_subgraph(_vertex_ids):
+            mock_subgraph = MagicMock()
+            mock_subgraph.prepare = MagicMock()
+            mock_subgraph.async_start = mock_async_start
+            mock_subgraph.get_vertex = MagicMock(return_value=MagicMock(custom_component=MagicMock()))
+            return mock_subgraph
 
         mock_graph = MagicMock()
-        mock_graph.create_subgraph = MagicMock(return_value=mock_subgraph)
+        mock_graph.create_subgraph = create_mock_subgraph
 
         data_list = [Data(text="item1")]
 
-        with patch("copy.deepcopy", return_value=mock_subgraph):
-            await execute_loop_body(
-                graph=mock_graph,
-                data_list=data_list,
-                loop_body_vertex_ids={"vertex1"},
-                start_vertex_id="vertex1",
-                start_edge=MagicMock(target_handle=MagicMock(fieldName="data")),
-                end_vertex_id="vertex1",
-                event_manager=mock_event_manager,
-            )
+        await execute_loop_body(
+            graph=mock_graph,
+            data_list=data_list,
+            loop_body_vertex_ids={"vertex1"},
+            start_vertex_id="vertex1",
+            start_edge=MagicMock(target_handle=MagicMock(fieldName="data")),
+            end_vertex_id="vertex1",
+            event_manager=mock_event_manager,
+        )
 
         # Verify event_manager was passed to async_start
         assert received_event_manager is mock_event_manager
 
+    @pytest.mark.asyncio
     async def test_event_manager_passed_for_each_iteration(self):
         """Test that event_manager is passed to async_start for each loop iteration."""
         mock_event_manager = MagicMock()
@@ -64,34 +102,39 @@ class TestLoopEventEmissionUnit:
             event_manager_calls.append(event_manager)
             yield MagicMock(valid=True, result_dict=MagicMock(outputs={}))
 
-        mock_subgraph = MagicMock()
-        mock_subgraph.prepare = MagicMock()
-        mock_subgraph.async_start = mock_async_start
-        mock_subgraph.get_vertex = MagicMock(return_value=MagicMock(custom_component=MagicMock()))
+        def create_mock_subgraph(_vertex_ids):
+            mock_subgraph = MagicMock()
+            mock_subgraph.prepare = MagicMock()
+            mock_subgraph.async_start = mock_async_start
+            mock_subgraph.get_vertex = MagicMock(return_value=MagicMock(custom_component=MagicMock()))
+            return mock_subgraph
 
         mock_graph = MagicMock()
-        mock_graph.create_subgraph = MagicMock(return_value=mock_subgraph)
+        mock_graph.create_subgraph = create_mock_subgraph
 
         # 3 items = 3 iterations
         data_list = [Data(text="item1"), Data(text="item2"), Data(text="item3")]
 
-        with patch("copy.deepcopy", return_value=mock_subgraph):
-            await execute_loop_body(
-                graph=mock_graph,
-                data_list=data_list,
-                loop_body_vertex_ids={"vertex1"},
-                start_vertex_id="vertex1",
-                start_edge=MagicMock(target_handle=MagicMock(fieldName="data")),
-                end_vertex_id="vertex1",
-                event_manager=mock_event_manager,
-            )
+        await execute_loop_body(
+            graph=mock_graph,
+            data_list=data_list,
+            loop_body_vertex_ids={"vertex1"},
+            start_vertex_id="vertex1",
+            start_edge=MagicMock(target_handle=MagicMock(fieldName="data")),
+            end_vertex_id="vertex1",
+            event_manager=mock_event_manager,
+        )
 
         # Verify event_manager was passed for each iteration
         assert len(event_manager_calls) == 3
         assert all(em is mock_event_manager for em in event_manager_calls)
 
-    async def test_subgraph_preserves_vertex_ids(self):
-        """Test that subgraph vertices maintain original IDs."""
+    def test_subgraph_preserves_vertex_ids(self):
+        """Test that subgraph vertices maintain original IDs.
+
+        This is critical for the UI to show updates for the correct components.
+        If vertex IDs were modified, the UI wouldn't know which component is executing.
+        """
         mock_graph = MagicMock()
 
         # Simulate _vertices and _edges with original IDs
@@ -126,8 +169,13 @@ class TestLoopEventEmissionUnit:
 
 
 class TestLoopComponentEventManagerPropagation:
-    """Tests for event manager propagation through LoopComponent."""
+    """Tests for event manager propagation through LoopComponent methods.
 
+    These tests verify the component-level propagation:
+    LoopComponent.done_output → execute_loop_body
+    """
+
+    @pytest.mark.asyncio
     async def test_done_output_passes_event_manager(self):
         """Test that done_output properly passes event_manager to execute_loop_body."""
         mock_event_manager = MagicMock()
@@ -167,6 +215,7 @@ class TestLoopComponentEventManagerPropagation:
             assert call_args.kwargs["event_manager"] is mock_event_manager
             assert isinstance(result, DataFrame)
 
+    @pytest.mark.asyncio
     async def test_execute_loop_body_called_with_event_manager(self):
         """Test that execute_loop_body is invoked with event_manager from done_output."""
         # Create a mock event manager
@@ -196,197 +245,147 @@ class TestLoopComponentEventManagerPropagation:
 class TestGetLoopBodyVertices:
     """Tests for get_loop_body_vertices utility function."""
 
-    def test_identifies_simple_loop_body(self):
-        """Test identification of vertices in a simple loop body."""
-        # Create mock vertex
-        mock_vertex = MagicMock()
-        mock_vertex.id = "loop_component"
-        mock_edge = MagicMock()
-        mock_edge.source_handle.name = "item"
-        mock_edge.target_id = "component_a"
-        mock_vertex.outgoing_edges = [mock_edge]
+    def test_returns_empty_set_when_no_outgoing_edges(self):
+        """Test when loop has no outgoing edges."""
 
-        # Create mock graph
-        mock_graph = MagicMock()
-        mock_graph.successor_map = {
-            "component_a": ["component_b"],
-            "component_b": ["feedback_vertex"],
-            "feedback_vertex": [],
-        }
+        class MockVertex:
+            outgoing_edges = []
+            id = "loop"
 
-        # Mock get_incoming_edge_by_target_param
-        def mock_get_incoming_edge(param):
-            if param == "item":
-                return "feedback_vertex"
-            return None
+        class MockGraph:
+            successor_map = {}
 
         result = get_loop_body_vertices(
-            vertex=mock_vertex,
-            graph=mock_graph,
-            get_incoming_edge_by_target_param_fn=mock_get_incoming_edge,
+            vertex=MockVertex(),
+            graph=MockGraph(),
+            get_incoming_edge_by_target_param_fn=lambda _: None,
+        )
+
+        assert result == set()
+
+    def test_returns_empty_set_when_no_feedback_vertex(self):
+        """Test when there's no vertex feeding back to loop."""
+
+        class MockEdge:
+            class SourceHandle:
+                name = "item"
+
+            source_handle = SourceHandle()
+            target_id = "component_a"
+
+        class MockVertex:
+            outgoing_edges = [MockEdge()]
+            id = "loop"
+
+        class MockGraph:
+            successor_map = {"component_a": []}
+
+        result = get_loop_body_vertices(
+            vertex=MockVertex(),
+            graph=MockGraph(),
+            get_incoming_edge_by_target_param_fn=lambda _: None,
+        )
+
+        assert result == set()
+
+    def test_identifies_loop_body_vertices(self):
+        """Test identification of vertices in a loop body."""
+
+        class MockEdge:
+            class SourceHandle:
+                name = "item"
+
+            source_handle = SourceHandle()
+            target_id = "component_a"
+
+        class MockVertex:
+            outgoing_edges = [MockEdge()]
+            id = "loop_component"
+
+        class MockGraph:
+            successor_map = {
+                "component_a": ["component_b"],
+                "component_b": ["feedback_vertex"],
+                "feedback_vertex": [],
+            }
+
+        def get_incoming_edge(param):
+            return "feedback_vertex" if param == "item" else None
+
+        result = get_loop_body_vertices(
+            vertex=MockVertex(),
+            graph=MockGraph(),
+            get_incoming_edge_by_target_param_fn=get_incoming_edge,
         )
 
         assert "component_a" in result
         assert "component_b" in result
         assert "feedback_vertex" in result
 
-    def test_handles_no_outgoing_edges(self):
-        """Test when loop has no outgoing edges."""
-        mock_vertex = MagicMock()
-        mock_vertex.outgoing_edges = []
+    def test_includes_predecessors_of_loop_body(self):
+        """Test that predecessors of loop body vertices are included."""
 
-        mock_graph = MagicMock()
-        mock_graph.successor_map = {}
+        class MockEdge:
+            class SourceHandle:
+                name = "item"
 
-        result = get_loop_body_vertices(
-            vertex=mock_vertex,
-            graph=mock_graph,
-            get_incoming_edge_by_target_param_fn=lambda _: None,
-        )
+            source_handle = SourceHandle()
+            target_id = "processing_vertex"
 
-        assert result == set()
+        class MockVertex:
+            outgoing_edges = [MockEdge()]
+            id = "loop_component"
 
-    def test_handles_no_feedback_vertex(self):
-        """Test when there's no vertex feeding back to loop."""
-        mock_vertex = MagicMock()
-        mock_edge = MagicMock()
-        mock_edge.source_handle.name = "item"
-        mock_edge.target_id = "component_a"
-        mock_vertex.outgoing_edges = [mock_edge]
+        class MockGraph:
+            successor_map = {
+                "llm_model": ["processing_vertex"],
+                "processing_vertex": ["feedback_vertex"],
+                "feedback_vertex": [],
+            }
 
-        mock_graph = MagicMock()
-        mock_graph.successor_map = {"component_a": []}
+        def get_incoming_edge(param):
+            return "feedback_vertex" if param == "item" else None
 
         result = get_loop_body_vertices(
-            vertex=mock_vertex,
-            graph=mock_graph,
-            get_incoming_edge_by_target_param_fn=lambda _: None,  # No feedback
+            vertex=MockVertex(),
+            graph=MockGraph(),
+            get_incoming_edge_by_target_param_fn=get_incoming_edge,
         )
 
-        assert result == set()
-
-    def test_includes_all_predecessors(self):
-        """Test that all predecessors of loop body vertices are included."""
-        mock_vertex = MagicMock()
-        mock_vertex.id = "loop_component"
-        mock_edge = MagicMock()
-        mock_edge.source_handle.name = "item"
-        mock_edge.target_id = "processing_vertex"
-        mock_vertex.outgoing_edges = [mock_edge]
-
-        # Create a graph where processing_vertex has predecessors (e.g., an LLM model)
-        mock_graph = MagicMock()
-        mock_graph.successor_map = {
-            "llm_model": ["processing_vertex"],  # LLM is a predecessor
-            "processing_vertex": ["feedback_vertex"],
-            "feedback_vertex": [],
-        }
-
-        def mock_get_incoming_edge(param):
-            if param == "item":
-                return "feedback_vertex"
-            return None
-
-        result = get_loop_body_vertices(
-            vertex=mock_vertex,
-            graph=mock_graph,
-            get_incoming_edge_by_target_param_fn=mock_get_incoming_edge,
-        )
-
-        # Should include the LLM model predecessor
         assert "llm_model" in result
         assert "processing_vertex" in result
         assert "feedback_vertex" in result
 
+    def test_excludes_loop_component_from_predecessors(self):
+        """Test that the loop component itself is not included as a predecessor."""
 
-class TestSubgraphIsolation:
-    """Tests for subgraph isolation and proper execution context."""
+        class MockEdge:
+            class SourceHandle:
+                name = "item"
 
-    async def test_each_iteration_uses_fresh_subgraph_copy(self):
-        """Test that each iteration uses a fresh deep copy of the subgraph."""
-        deepcopy_calls = []
+            source_handle = SourceHandle()
+            target_id = "component_a"
 
-        def tracking_deepcopy(obj):
-            copy = MagicMock()
-            copy.prepare = MagicMock()
-            copy.get_vertex = MagicMock(return_value=MagicMock(custom_component=MagicMock()))
+        class MockVertex:
+            outgoing_edges = [MockEdge()]
+            id = "loop_component"
 
-            async def mock_async_start(**_kwargs):
-                yield MagicMock(valid=True, result_dict=MagicMock(outputs={}))
+        class MockGraph:
+            successor_map = {
+                "loop_component": ["component_a"],
+                "component_a": ["feedback_vertex"],
+                "feedback_vertex": [],
+            }
 
-            copy.async_start = mock_async_start
-            deepcopy_calls.append(id(obj))
-            return copy
+        def get_incoming_edge(param):
+            return "feedback_vertex" if param == "item" else None
 
-        mock_subgraph = MagicMock()
-        mock_graph = MagicMock()
-        mock_graph.create_subgraph = MagicMock(return_value=mock_subgraph)
+        result = get_loop_body_vertices(
+            vertex=MockVertex(),
+            graph=MockGraph(),
+            get_incoming_edge_by_target_param_fn=get_incoming_edge,
+        )
 
-        data_list = [Data(text="item1"), Data(text="item2"), Data(text="item3")]
-
-        with patch("lfx.base.flow_controls.loop_utils.copy.deepcopy", tracking_deepcopy):
-            await execute_loop_body(
-                graph=mock_graph,
-                data_list=data_list,
-                loop_body_vertex_ids={"vertex1"},
-                start_vertex_id="vertex1",
-                start_edge=MagicMock(target_handle=MagicMock(fieldName="data")),
-                end_vertex_id="vertex1",
-                event_manager=None,
-            )
-
-        # Should have called deepcopy once per iteration
-        assert len(deepcopy_calls) == 3
-
-    async def test_start_vertex_receives_correct_item(self):
-        """Test that each iteration's start vertex receives the correct data item."""
-        received_items = []
-
-        def create_mock_subgraph():
-            mock_custom_component = MagicMock()
-
-            def capture_set(**kwargs):
-                if "data" in kwargs:
-                    received_items.append(kwargs["data"])
-
-            mock_custom_component.set = capture_set
-
-            mock_vertex = MagicMock()
-            mock_vertex.custom_component = mock_custom_component
-
-            mock_subgraph = MagicMock()
-            mock_subgraph.prepare = MagicMock()
-            mock_subgraph.get_vertex = MagicMock(return_value=mock_vertex)
-
-            async def mock_async_start(**_kwargs):
-                yield MagicMock(valid=True, result_dict=MagicMock(outputs={}))
-
-            mock_subgraph.async_start = mock_async_start
-            return mock_subgraph
-
-        mock_graph = MagicMock()
-        base_subgraph = MagicMock()
-        mock_graph.create_subgraph = MagicMock(return_value=base_subgraph)
-
-        data_list = [
-            Data(text="first"),
-            Data(text="second"),
-            Data(text="third"),
-        ]
-
-        with patch("lfx.base.flow_controls.loop_utils.copy.deepcopy", lambda _: create_mock_subgraph()):
-            await execute_loop_body(
-                graph=mock_graph,
-                data_list=data_list,
-                loop_body_vertex_ids={"vertex1"},
-                start_vertex_id="vertex1",
-                start_edge=MagicMock(target_handle=MagicMock(fieldName="data")),
-                end_vertex_id="vertex1",
-                event_manager=None,
-            )
-
-        # Each item should have been passed to the start vertex
-        assert len(received_items) == 3
-        assert received_items[0].text == "first"
-        assert received_items[1].text == "second"
-        assert received_items[2].text == "third"
+        assert "loop_component" not in result
+        assert "component_a" in result
+        assert "feedback_vertex" in result
