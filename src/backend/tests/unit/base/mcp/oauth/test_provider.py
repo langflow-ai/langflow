@@ -7,10 +7,13 @@ This test suite validates the OAuth provider factory functionality including:
 
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
+if TYPE_CHECKING:
+    from pathlib import Path
 from lfx.base.mcp.oauth.provider import create_mcp_oauth_provider
 
 

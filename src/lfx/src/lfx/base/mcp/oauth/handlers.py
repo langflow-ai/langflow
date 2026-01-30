@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import html
 import socket
 import webbrowser
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -137,7 +138,8 @@ class OAuthCallbackHandler:
                 self.send_header("Content-type", "text/html")
                 self.end_headers()
                 # Access outer handler's error info (intentional)
-                error_msg = handler._error_description or handler._error or "Unknown error"  # noqa: SLF001
+                # Escape error message to prevent XSS attacks
+                error_msg = html.escape(handler._error_description or handler._error or "Unknown error")  # noqa: SLF001
                 html = f"""<!DOCTYPE html>
 <html>
 <head>
