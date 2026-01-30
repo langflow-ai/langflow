@@ -289,7 +289,6 @@ class PraisonAITaskComponent(Component):
 
         return None
 
-
     def build_task(self) -> Any:
         """Build and return the PraisonAI Task instance."""
         task_class = self._import_task()
