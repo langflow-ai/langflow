@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+from functools import lru_cache
 from typing import TYPE_CHECKING, Annotated, Final
 
 from cryptography.fernet import Fernet
@@ -306,7 +307,7 @@ def decrypt_api_key(
     Returns:
         Decrypted API key string
     """
-    return _auth_service().decrypt_api_key(encrypted_api_key)
+    return _get_cached_auth_service().decrypt_api_key(encrypted_api_key)
 
 
 async def get_current_user_mcp(
@@ -320,3 +321,9 @@ async def get_current_user_mcp(
 
 async def get_current_active_user_mcp(user: User = Depends(get_current_user_mcp)) -> User:
     return await _auth_service().get_current_active_user_mcp(user)
+
+
+@lru_cache(maxsize=1)
+def _get_cached_auth_service():
+    # Cache the resolved auth service to avoid repeated dependency lookups.
+    return get_auth_service()
