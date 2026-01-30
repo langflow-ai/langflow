@@ -150,7 +150,7 @@ export default function IntComponent({
         value={
           name === "max_tokens" && (value === 0 || value === null)
             ? ""
-            : value ?? ""
+            : (value ?? "")
         }
       >
         <NumberInputField
