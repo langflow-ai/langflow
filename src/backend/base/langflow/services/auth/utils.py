@@ -6,7 +6,7 @@ from fastapi import Depends, HTTPException, Request, Security, WebSocket, status
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
 from fastapi.security.utils import get_authorization_scheme_param
 from lfx.log.logger import logger
-from lfx.services.deps import injectable_session_scope
+from lfx.services.deps import injectable_session_scope,session_scope
 
 from langflow.services.auth.service import (
     AUTO_LOGIN_ERROR as SERVICE_AUTO_LOGIN_ERROR,
@@ -164,6 +164,46 @@ async def get_current_user_for_websocket(
         or websocket.headers.get("api_key")
     )
     return await _auth_service().get_current_user_for_websocket(token, api_key, db)
+
+
+async def get_current_user_for_sse(request: Request) -> User | UserRead:
+    """Authenticate user for SSE endpoints.
+
+    Similar to websocket authentication, accepts either:
+    - Cookie authentication (access_token_lf)
+    - API key authentication (x-api-key query param)
+
+    Args:
+        request: The FastAPI request object
+
+    Returns:
+        User or UserRead: The authenticated user
+
+    Raises:
+        HTTPException: If authentication fails
+    """
+    # Try cookie authentication first
+    token = request.cookies.get("access_token_lf")
+    if token:
+        try:
+            async with session_scope() as db:
+                user = await get_current_user_by_jwt(token, db)
+                if user:
+                    return user
+        except HTTPException:
+            pass
+
+    # Try API key authentication
+    api_key = request.query_params.get("x-api-key") or request.headers.get("x-api-key")
+    if api_key:
+        user_read = await ws_api_key_security(api_key)
+        if user_read:
+            return user_read
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Missing or invalid credentials (cookie or API key).",
+    )
 
 
 async def get_current_active_user(user: User = Depends(get_current_user)) -> User:

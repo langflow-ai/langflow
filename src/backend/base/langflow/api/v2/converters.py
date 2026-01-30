@@ -22,7 +22,7 @@ Internal Helpers:
 
 from __future__ import annotations
 
-import time
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
 from lfx.schema.workflow import (
@@ -72,31 +72,21 @@ def parse_flat_inputs(inputs: dict[str, Any]) -> tuple[dict[str, dict[str, Any]]
     tweaks: dict[str, dict[str, Any]] = {}
     session_id: str | None = None
 
-    # Group inputs by component_id
-    component_inputs: dict[str, dict[str, Any]] = {}
-
     for key, value in inputs.items():
         if "." in key:
             # Split component_id.param
             component_id, param_name = key.split(".", 1)
 
-            if component_id not in component_inputs:
-                component_inputs[component_id] = {}
-            component_inputs[component_id][param_name] = value
+            # Extract session_id if present (use first one found)
+            if param_name == "session_id" and not session_id:
+                session_id = value
+            # Build tweaks for all parameters
+            if component_id not in tweaks:
+                tweaks[component_id] = {}
+            tweaks[component_id][param_name] = value
         # No dot - treat as component-level dict (for backward compatibility)
         elif isinstance(value, dict):
             tweaks[key] = value
-
-    # Process component inputs
-    for component_id, params in component_inputs.items():
-        # Extract session_id if present (use first one found)
-        if "session_id" in params and session_id is None:
-            session_id = params["session_id"]
-
-        # Build tweaks for all parameters except session_id
-        tweak_params = {k: v for k, v in params.items() if k != "session_id"}
-        if tweak_params:
-            tweaks[component_id] = tweak_params
 
     return tweaks, session_id
 
@@ -315,14 +305,12 @@ def _build_metadata_for_non_output(
 def _process_terminal_vertex(
     vertex: Any,
     output_data_map: dict[str, Any],
-    display_name_counts: dict[str, int],
 ) -> tuple[str, ComponentOutput]:
     """Process a single terminal vertex and return (output_key, component_output).
 
     Args:
         vertex: The vertex to process
         output_data_map: Map of component_id to output data
-        display_name_counts: Count of each display_name for duplicate detection
 
     Returns:
         Tuple of (output_key, ComponentOutput)
@@ -377,17 +365,8 @@ def _process_terminal_vertex(
             if isinstance(result_metadata, dict):
                 metadata.update(result_metadata)
 
-    # Determine output key: use display_name if unique, otherwise use id
-    display_name = vertex.display_name or vertex.id
-    if display_name_counts.get(display_name, 0) > 1:
-        # Duplicate display_name detected, use id instead
-        output_key = vertex.id
-        # Store the display_name in metadata for reference
-        if vertex.display_name and vertex.display_name != vertex.id:
-            metadata["display_name"] = vertex.display_name
-    else:
-        # Unique display_name, use it as key
-        output_key = display_name
+    # Determine output key: use vertex id but TODO: add alias handling when avialable
+    output_key = vertex.id
 
     # Build ComponentOutput
     component_output = ComponentOutput(
@@ -461,24 +440,19 @@ def run_response_to_workflow_response(
                     if component_id:
                         output_data_map[component_id] = result_data
 
-    # First pass: collect all terminal vertices and check for duplicate display_names
+    # Collect all terminal vertices
     terminal_vertices = [graph.get_vertex(vertex_id) for vertex_id in terminal_node_ids]
-    display_name_counts: dict[str, int] = {}
-    for vertex in terminal_vertices:
-        display_name = vertex.display_name or vertex.id
-        display_name_counts[display_name] = display_name_counts.get(display_name, 0) + 1
 
     # Process each terminal vertex
     outputs: dict[str, ComponentOutput] = {}
     for vertex in terminal_vertices:
-        output_key, component_output = _process_terminal_vertex(vertex, output_data_map, display_name_counts)
+        output_key, component_output = _process_terminal_vertex(vertex, output_data_map)
         outputs[output_key] = component_output
 
     return WorkflowExecutionResponse(
         flow_id=flow_id,
         job_id=job_id,
         object="response",
-        created_timestamp=str(int(time.time())),
         status=JobStatus.COMPLETED,
         errors=[],
         inputs=workflow_request.inputs or {},
@@ -487,18 +461,20 @@ def run_response_to_workflow_response(
     )
 
 
-def create_job_response(job_id: str) -> WorkflowJobResponse:
+def create_job_response(job_id: str, flow_id: str) -> WorkflowJobResponse:
     """Create a background job response.
 
     Args:
         job_id: The generated job ID
+        flow_id: The flow ID
 
     Returns:
         WorkflowJobResponse for background execution
     """
     return WorkflowJobResponse(
         job_id=job_id,
-        created_timestamp=str(int(time.time())),
+        flow_id=flow_id,
+        created_timestamp=datetime.now(timezone.utc).isoformat(),
         status=JobStatus.QUEUED,
         errors=[],
     )
@@ -506,7 +482,7 @@ def create_job_response(job_id: str) -> WorkflowJobResponse:
 
 def create_error_response(
     flow_id: str,
-    job_id: str,
+    job_id: str | None,
     workflow_request: WorkflowExecutionRequest,
     error: Exception,
 ) -> WorkflowExecutionResponse:
@@ -529,7 +505,6 @@ def create_error_response(
         flow_id=flow_id,
         job_id=job_id,
         object="response",
-        created_timestamp=str(int(time.time())),
         status=JobStatus.FAILED,
         errors=[error_detail],
         inputs=workflow_request.inputs or {},
