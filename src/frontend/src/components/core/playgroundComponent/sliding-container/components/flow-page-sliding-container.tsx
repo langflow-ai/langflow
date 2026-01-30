@@ -71,13 +71,13 @@ export function FlowPageSlidingContainerContent({
   const { sendMessage } = useSendMessage({ sessionId: currentSessionId });
   const inputTypes = inputs.map((obj) => obj.type);
   const noInput = !inputTypes.includes("ChatInput");
-  
+
   const chatHistory = useChatHistory(currentSessionId ?? currentFlowId ?? null);
-  
+
   useEffect(() => {
     const chatInput = inputs.find((input) => input.type === "ChatInput");
     const chatInputNode = nodes.find((node) => node.id === chatInput?.id);
-    
+
     if (chatHistory.length === 0 && !isBuilding && chatInputNode) {
       setChatValueStore(
         chatInputNode.data.node.template["input_value"].value ?? "",
