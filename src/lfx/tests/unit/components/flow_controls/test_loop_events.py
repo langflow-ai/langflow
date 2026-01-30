@@ -84,7 +84,7 @@ class TestEventManagerPropagation:
             data_list=data_list,
             loop_body_vertex_ids={"vertex1"},
             start_vertex_id="vertex1",
-            start_edge=MagicMock(target_handle=MagicMock(fieldName="data")),
+            start_edge=MagicMock(target_handle=MagicMock(field_name="data")),
             end_vertex_id="vertex1",
             event_manager=mock_event_manager,
         )
@@ -120,7 +120,7 @@ class TestEventManagerPropagation:
             data_list=data_list,
             loop_body_vertex_ids={"vertex1"},
             start_vertex_id="vertex1",
-            start_edge=MagicMock(target_handle=MagicMock(fieldName="data")),
+            start_edge=MagicMock(target_handle=MagicMock(field_name="data")),
             end_vertex_id="vertex1",
             event_manager=mock_event_manager,
         )
@@ -240,6 +240,171 @@ class TestLoopComponentEventManagerPropagation:
 
             # Should return empty list when no loop body vertices
             assert result == []
+
+
+class TestRawParamsInjection:
+    """Tests for loop item injection into vertex raw_params.
+
+    These tests verify the fix for the bug where HandleInput fields (type="other")
+    were not receiving loop items because:
+    1. Fields with type="other" are skipped during field param processing
+    2. The updated_raw_params flag was being reset too early
+    3. Multiple build_params() calls would rebuild params, losing the injected values
+    """
+
+    def test_updated_raw_params_flag_persists_across_multiple_build_params_calls(self):
+        """Test that updated_raw_params flag persists across multiple build_params() calls.
+
+        This is the core fix: the flag must stay True through ALL build_params() calls
+        during initialization, not just the first one.
+        """
+        from unittest.mock import MagicMock
+
+        from lfx.schema.data import Data
+
+        # Create a mock vertex with the necessary attributes
+        mock_vertex = MagicMock()
+        mock_vertex.graph = MagicMock()
+        mock_vertex.updated_raw_params = False
+        mock_vertex.raw_params = {}
+        mock_vertex.params = {}
+
+        # Import the actual build_params method
+        from lfx.graph.vertex.base import Vertex
+
+        # Bind build_params to our mock
+        mock_vertex.build_params = Vertex.build_params.__get__(mock_vertex)
+
+        # Simulate loop item injection
+        test_data = Data(text="test item")
+        mock_vertex.raw_params = {"input_data": test_data}
+        mock_vertex.params = {"input_data": test_data}
+        mock_vertex.updated_raw_params = True
+
+        # First build_params() call - should skip and keep flag True
+        mock_vertex.build_params()
+        assert mock_vertex.updated_raw_params is True, "Flag should persist after first build_params()"
+
+        # Second build_params() call - should also skip and keep flag True
+        mock_vertex.build_params()
+        assert mock_vertex.updated_raw_params is True, "Flag should persist after second build_params()"
+
+        # Third build_params() call - should still skip and keep flag True
+        mock_vertex.build_params()
+        assert mock_vertex.updated_raw_params is True, "Flag should persist after third build_params()"
+
+    def test_update_raw_params_sets_flag_and_updates_params(self):
+        """Test that update_raw_params sets the flag and updates both raw_params and params.
+
+        This verifies that when we inject loop items via update_raw_params:
+        1. Both raw_params and params are updated
+        2. The updated_raw_params flag is set to True
+        3. This protects against build_params() rebuilding
+        """
+        from unittest.mock import MagicMock
+
+        from lfx.graph.vertex.base import Vertex
+        from lfx.schema.data import Data
+
+        # Create a mock vertex with minimal setup
+        mock_vertex = MagicMock()
+        mock_vertex.raw_params = {"existing_param": "value"}
+        mock_vertex.params = {"existing_param": "value"}
+        mock_vertex.updated_raw_params = False
+
+        # Bind the actual update_raw_params method
+        mock_vertex.update_raw_params = Vertex.update_raw_params.__get__(mock_vertex)
+
+        # Inject loop item
+        test_data = Data(text="test item")
+        mock_vertex.update_raw_params({"input_data": test_data}, overwrite=True)
+
+        # Verify both raw_params and params are updated
+        assert "input_data" in mock_vertex.raw_params
+        assert mock_vertex.raw_params["input_data"] == test_data
+        assert "input_data" in mock_vertex.params
+        assert mock_vertex.params["input_data"] == test_data
+
+        # Verify flag is set
+        assert mock_vertex.updated_raw_params is True
+
+    @pytest.mark.asyncio
+    async def test_loop_item_injection_via_execute_loop_body(self):
+        """Test that execute_loop_body actually injects loop items into vertex raw_params.
+
+        This is an integration-style test that exercises the actual loop_utils.py code path,
+        verifying that update_raw_params() is called with loop items during execution.
+        """
+        from unittest.mock import MagicMock
+
+        from lfx.schema.data import Data
+
+        # Track calls to update_raw_params
+        update_raw_params_calls = []
+
+        def mock_update_raw_params(params, overwrite=False):  # noqa: FBT002
+            update_raw_params_calls.append((params, overwrite))
+
+        # Create mock vertex that tracks update_raw_params calls
+        mock_start_vertex = MagicMock()
+        mock_start_vertex.id = "start_vertex"
+        mock_start_vertex.custom_component = MagicMock()
+        mock_start_vertex.update_raw_params = mock_update_raw_params
+
+        # Create mock subgraph
+        def create_mock_subgraph(_vertex_ids):
+            mock_subgraph = MagicMock()
+            mock_subgraph._vertices = [
+                {"id": "start_vertex", "data": {"node": {"template": {"input_data": {"value": None}}}}}
+            ]
+            mock_subgraph.prepare = MagicMock()
+            mock_subgraph.get_vertex = MagicMock(return_value=mock_start_vertex)
+
+            # Mock async_start to yield valid results
+            async def mock_async_start(_event_manager=None):
+                yield MagicMock(valid=True, result_dict=MagicMock(outputs={}))
+
+            mock_subgraph.async_start = mock_async_start
+            return mock_subgraph
+
+        mock_graph = MagicMock()
+        mock_graph.create_subgraph = create_mock_subgraph
+
+        # Test data
+        data_list = [
+            Data(text="First item"),
+            Data(text="Second item"),
+        ]
+
+        # Mock edge with field_name
+        mock_edge = MagicMock()
+        mock_edge.target_handle.field_name = "input_data"
+
+        # Execute loop body
+        await execute_loop_body(
+            graph=mock_graph,
+            data_list=data_list,
+            loop_body_vertex_ids={"start_vertex"},
+            start_vertex_id="start_vertex",
+            start_edge=mock_edge,
+            end_vertex_id="start_vertex",
+            event_manager=None,
+        )
+
+        # Verify update_raw_params was called for each loop item
+        assert len(update_raw_params_calls) == 2, "Should call update_raw_params for each loop iteration"
+
+        # Verify first call had first item
+        first_call_params, first_call_overwrite = update_raw_params_calls[0]
+        assert "input_data" in first_call_params
+        assert first_call_params["input_data"].text == "First item"
+        assert first_call_overwrite is True
+
+        # Verify second call had second item
+        second_call_params, second_call_overwrite = update_raw_params_calls[1]
+        assert "input_data" in second_call_params
+        assert second_call_params["input_data"].text == "Second item"
+        assert second_call_overwrite is True
 
 
 class TestGetLoopBodyVertices:
