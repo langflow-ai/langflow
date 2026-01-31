@@ -143,3 +143,22 @@ async def delete_vertex_builds_by_flow_id(db: AsyncSession, flow_id: UUID) -> No
     """
     stmt = delete(VertexBuildTable).where(VertexBuildTable.flow_id == flow_id)
     await db.exec(stmt)
+
+
+async def get_vertex_builds_by_job_id(db: AsyncSession, job_id: str | UUID) -> list[VertexBuildTable]:
+    """Get all vertex builds associated with a specific job ID.
+
+    Args:
+        db (AsyncSession): The database session for executing queries.
+        job_id (str | UUID): The unique identifier of the job to get builds for.
+
+    Returns:
+        list[VertexBuildTable]: List of vertex builds, ordered chronologically by timestamp.
+    """
+    if isinstance(job_id, str):
+        job_id = UUID(job_id)
+
+    stmt = select(VertexBuildTable).where(VertexBuildTable.job_id == job_id).order_by(col(VertexBuildTable.timestamp))
+
+    builds = await db.exec(stmt)
+    return list(builds)

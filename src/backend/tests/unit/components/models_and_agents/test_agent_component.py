@@ -1,5 +1,6 @@
 import os
 from typing import Any
+from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
@@ -285,6 +286,18 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert hasattr(component, "n_messages")
         assert component.n_messages == 100
 
+    async def test_max_tokens_input_field_present(self, component_class, default_kwargs):
+        """Test that max_tokens input field is present in the agent component."""
+        component = await self.component_setup(component_class, default_kwargs)
+
+        input_names = [inp.name for inp in component.inputs if hasattr(inp, "name")]
+
+        # Verify max_tokens field exists
+        assert "max_tokens" in input_names, "max_tokens input field should be present"
+
+        # Verify the component has the attribute
+        assert hasattr(component, "max_tokens"), "Component should have max_tokens attribute"
+
     @pytest.mark.skip(reason="Test marked as skipped, agent dual output removed")
     async def test_agent_has_correct_outputs(self, component_class, default_kwargs):
         """Test that Agent component has the correct output configuration."""
@@ -396,6 +409,233 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
                 # Verify we got text, not a message object
                 assert "additional_kwargs" not in extracted_text
                 assert "response_metadata" not in extracted_text
+
+    async def test_watsonx_input_fields_present(self, component_class, default_kwargs):
+        """Test that IBM WatsonX input fields are present in the component."""
+        component = await self.component_setup(component_class, default_kwargs)
+
+        input_names = [inp.name for inp in component.inputs if hasattr(inp, "name")]
+
+        # Test for WatsonX fields
+        assert "base_url_ibm_watsonx" in input_names
+        assert "project_id" in input_names
+
+    async def test_watsonx_fields_hidden_by_default(self, component_class, default_kwargs):
+        """Test that WatsonX fields are hidden by default."""
+        component = await self.component_setup(component_class, default_kwargs)
+
+        # Find the WatsonX input fields
+        watsonx_url_input = next(
+            (inp for inp in component.inputs if hasattr(inp, "name") and inp.name == "base_url_ibm_watsonx"), None
+        )
+        project_id_input = next(
+            (inp for inp in component.inputs if hasattr(inp, "name") and inp.name == "project_id"), None
+        )
+
+        assert watsonx_url_input is not None
+        assert project_id_input is not None
+        assert watsonx_url_input.show is False
+        assert project_id_input.show is False
+
+    async def test_update_build_config_shows_watsonx_fields(self, component_class, default_kwargs):
+        """Test that update_build_config shows WatsonX fields when IBM WatsonX is selected."""
+        from lfx.schema.dotdict import dotdict
+
+        component = await self.component_setup(component_class, default_kwargs)
+
+        # Get the frontend node to get the build_config
+        frontend_node = component.to_frontend_node()
+        build_config = frontend_node["data"]["node"]["template"]
+
+        # Simulate selecting an IBM WatsonX model
+        watsonx_model_value = [
+            {
+                "name": "ibm/granite-13b-chat-v2",
+                "provider": "IBM WatsonX",
+                "icon": "IBM",
+                "metadata": {
+                    "model_class": "ChatWatsonx",
+                    "model_name_param": "model_id",
+                    "api_key_param": "apikey",
+                },
+            }
+        ]
+
+        # Call update_build_config with WatsonX model selected
+        updated_config = await component.update_build_config(
+            dotdict(build_config), watsonx_model_value, field_name="model"
+        )
+
+        # Verify WatsonX fields are now shown
+        assert updated_config["base_url_ibm_watsonx"]["show"] is True
+        assert updated_config["project_id"]["show"] is True
+        assert updated_config["base_url_ibm_watsonx"]["required"] is True
+        assert updated_config["project_id"]["required"] is True
+
+    async def test_update_build_config_hides_watsonx_fields_for_other_providers(self, component_class, default_kwargs):
+        """Test that update_build_config hides WatsonX fields when other providers are selected."""
+        from lfx.schema.dotdict import dotdict
+
+        component = await self.component_setup(component_class, default_kwargs)
+
+        # Get the frontend node to get the build_config
+        frontend_node = component.to_frontend_node()
+        build_config = frontend_node["data"]["node"]["template"]
+
+        # Simulate selecting an OpenAI model
+        openai_model_value = [
+            {
+                "name": "gpt-4o",
+                "provider": "OpenAI",
+                "icon": "OpenAI",
+                "metadata": {
+                    "model_class": "ChatOpenAI",
+                    "model_name_param": "model",
+                    "api_key_param": "api_key",
+                },
+            }
+        ]
+
+        # Call update_build_config with OpenAI model selected
+        updated_config = await component.update_build_config(
+            dotdict(build_config), openai_model_value, field_name="model"
+        )
+
+        # Verify WatsonX fields are hidden
+        assert updated_config["base_url_ibm_watsonx"]["show"] is False
+        assert updated_config["project_id"]["show"] is False
+
+    async def test_get_agent_requirements_passes_watsonx_params(self, component_class, default_kwargs):
+        """Test that get_agent_requirements passes WatsonX URL and project_id to get_llm()."""
+        from unittest.mock import AsyncMock, patch
+
+        component = await self.component_setup(component_class, default_kwargs)
+
+        # Set WatsonX-specific attributes
+        component.base_url_ibm_watsonx = "https://us-south.ml.cloud.ibm.com"
+        component.project_id = "test-project-id"
+        component.model = [
+            {
+                "name": "ibm/granite-13b-chat-v2",
+                "provider": "IBM WatsonX",
+                "metadata": {
+                    "model_class": "ChatWatsonx",
+                    "model_name_param": "model_id",
+                    "api_key_param": "apikey",
+                },
+            }
+        ]
+        component.api_key = "test-api-key"
+
+        # Mock get_llm to capture the arguments
+        with patch("lfx.components.models_and_agents.agent.get_llm") as mock_get_llm:
+            mock_get_llm.return_value = MockLanguageModel()
+
+            # Mock other required methods
+            component.get_memory_data = AsyncMock(return_value=[])
+            component._get_shared_callbacks = list
+            component.set_tools_callbacks = lambda *_: None
+
+            await component.get_agent_requirements()
+
+            # Verify get_llm was called with WatsonX parameters
+            mock_get_llm.assert_called_once()
+            call_kwargs = mock_get_llm.call_args.kwargs
+            assert call_kwargs.get("watsonx_url") == "https://us-south.ml.cloud.ibm.com"
+            assert call_kwargs.get("watsonx_project_id") == "test-project-id"
+
+    @patch("lfx.components.models_and_agents.agent.AgentComponent.get_memory_data")
+    @patch("lfx.components.models_and_agents.agent.get_llm")
+    async def test_agent_passes_max_tokens_to_get_llm(
+        self, mock_get_llm, mock_get_memory_data, component_class, default_kwargs
+    ):
+        """Test that agent component passes max_tokens parameter to get_llm function."""
+        from unittest.mock import AsyncMock, MagicMock
+
+        mock_get_memory_data.return_value = AsyncMock(return_value=[])
+
+        # Setup mock
+        mock_llm = MagicMock()
+        mock_get_llm.return_value = mock_llm
+
+        # Set max_tokens in default_kwargs
+        default_kwargs["max_tokens"] = 500
+
+        component = await self.component_setup(component_class, default_kwargs)
+
+        # Call get_agent_requirements which internally calls get_llm
+        await component.get_agent_requirements()
+
+        # Verify get_llm was called with max_tokens
+        mock_get_llm.assert_called_once()
+        call_kwargs = mock_get_llm.call_args.kwargs
+
+        assert "max_tokens" in call_kwargs, "max_tokens should be passed to get_llm"
+        assert call_kwargs["max_tokens"] == 500
+
+    @patch("lfx.components.models_and_agents.agent.AgentComponent.get_memory_data")
+    @patch("lfx.components.models_and_agents.agent.get_llm")
+    async def test_agent_passes_none_max_tokens_when_not_set(
+        self, mock_get_llm, mock_get_memory_data, component_class, default_kwargs
+    ):
+        """Test that agent component passes None for max_tokens when not set."""
+        from unittest.mock import AsyncMock, MagicMock
+
+        mock_get_memory_data.return_value = AsyncMock(return_value=[])
+
+        # Setup mock
+        mock_llm = MagicMock()
+        mock_get_llm.return_value = mock_llm
+
+        # Don't set max_tokens in default_kwargs - ensure it's not present
+        if "max_tokens" in default_kwargs:
+            del default_kwargs["max_tokens"]
+
+        component = await self.component_setup(component_class, default_kwargs)
+
+        # Call get_agent_requirements which internally calls get_llm
+        await component.get_agent_requirements()
+
+        # Verify get_llm was called
+        mock_get_llm.assert_called_once()
+
+        # Access kwargs using the .kwargs attribute (more reliable than indexing)
+        call_kwargs = mock_get_llm.call_args.kwargs
+
+        # max_tokens should be passed as None when not set
+        assert "max_tokens" in call_kwargs, "max_tokens should be passed to get_llm even when None"
+        assert call_kwargs["max_tokens"] is None
+
+    @patch("lfx.components.models_and_agents.agent.AgentComponent.get_memory_data")
+    @patch("lfx.components.models_and_agents.agent.get_llm")
+    async def test_agent_max_tokens_with_provider_specific_field_name(
+        self, mock_get_llm, mock_get_memory_data, component_class, default_kwargs
+    ):
+        """Test that agent component passes max_tokens which will be handled by provider-specific field names."""
+        from unittest.mock import AsyncMock, MagicMock
+
+        mock_get_memory_data.return_value = AsyncMock(return_value=[])
+
+        # Setup mock
+        mock_llm = MagicMock()
+        mock_get_llm.return_value = mock_llm
+
+        # Set max_tokens; get_llm uses model metadata for provider-specific field names (e.g. max_output_tokens)
+        default_kwargs["max_tokens"] = 1000
+
+        component = await self.component_setup(component_class, default_kwargs)
+
+        # Call get_agent_requirements which internally calls get_llm
+        await component.get_agent_requirements()
+
+        # Verify get_llm was called with max_tokens
+        mock_get_llm.assert_called_once()
+        call_kwargs = mock_get_llm.call_args.kwargs
+
+        assert "max_tokens" in call_kwargs, "max_tokens should be passed to get_llm"
+        assert call_kwargs["max_tokens"] == 1000
+        # Note: The provider-specific field name mapping happens inside get_llm,
+        # so we just verify max_tokens is passed correctly
 
 
 class TestAgentComponentWithClient(ComponentTestBaseWithClient):
