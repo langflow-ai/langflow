@@ -1,4 +1,4 @@
-import { Outlet, type To } from "react-router-dom";
+import { Outlet } from "react-router-dom";
 import SideBarButtonsComponent from "@/components/core/sidebarComponent";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { CustomStoreSidebar } from "@/customization/components/custom-store-sidebar";
@@ -14,6 +14,8 @@ import PageLayout from "../../components/common/pageLayout";
 export default function SettingsPage(): JSX.Element {
   const autoLogin = useAuthStore((state) => state.autoLogin);
   const hasStore = useStoreStore((state) => state.hasStore);
+
+  const flowsUrl = `${globalThis.location.origin}/flows`;
 
   // Hides the General settings if there is nothing to show
   const showGeneralSettings = ENABLE_PROFILE_ICONS || hasStore || !autoLogin;
@@ -99,7 +101,7 @@ export default function SettingsPage(): JSX.Element {
 
   return (
     <PageLayout
-      backTo={-1 as To}
+      backTo={flowsUrl}
       title="Settings"
       description="Manage the general settings for Langflow."
     >
