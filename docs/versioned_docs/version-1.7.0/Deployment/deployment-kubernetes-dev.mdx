@@ -1,0 +1,186 @@
+---
+title: Deploy the Langflow development environment on Kubernetes
+slug: /deployment-kubernetes-dev
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+The [Langflow integrated development environment (IDE) Helm chart](https://github.com/langflow-ai/langflow-helm-charts/tree/main/charts/langflow-ide) is designed to provide a complete environment for developers to create, test, and debug their flows. It includes both the Langflow API and visual editor.
+
+## Prerequisites
+
+- A [Kubernetes](https://kubernetes.io/docs/setup/) cluster
+- [kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl)
+- [Helm](https://helm.sh/docs/intro/install/)
+
+## Prepare a Kubernetes cluster
+
+This example uses [Minikube](https://minikube.sigs.k8s.io/docs/start/), but you can use any Kubernetes cluster.
+
+1. Create a Kubernetes cluster on Minikube:
+
+	```shell
+	minikube start
+	```
+
+2. Set `kubectl` to use Minikube:
+
+	```shell
+	kubectl config use-context minikube
+	```
+
+## Install the Langflow IDE Helm chart
+
+1. Add the repository to Helm, and then update it:
+
+	```shell
+	helm repo add langflow https://langflow-ai.github.io/langflow-helm-charts
+	helm repo update
+	```
+
+2. Install Langflow with the default options in the `langflow` namespace:
+
+	```shell
+	helm install langflow-ide langflow/langflow-ide -n langflow --create-namespace
+	```
+
+3. Check the status of the pods:
+
+	```shell
+	kubectl get pods -n langflow
+	```
+
+## Access the Langflow IDE
+
+Enable local port forwarding to access Langflow from your local machine:
+
+1. Make the Langflow API accessible from your local machine at port 7860:
+
+    ```shell
+    kubectl port-forward -n langflow svc/langflow-service-backend 7860:7860
+    ```
+
+2. Make the visual editor accessible from your local machine at port 8080:
+
+    ```shell
+    kubectl port-forward -n langflow svc/langflow-service 8080:8080
+    ```
+
+Now you can do the following:
+
+- Access the Langflow API at `http://localhost:7860`.
+- Access the visual editor at `http://localhost:8080`.
+
+## Modify your Langflow IDE deployment
+
+You can modify the Langflow IDE Helm chart's [`values.yaml`](https://github.com/langflow-ai/langflow-helm-charts/blob/main/charts/langflow-ide/values.yaml) file to customize your deployment.
+The following sections describe some common modifications.
+
+If you need to set secrets, Kubernetes secrets are recommended.
+
+### Deploy a different Langflow version
+
+The Langflow IDE Helm chart deploys the latest Langflow version by default.
+
+To specify a different Langflow version, set the `langflow.backend.image.tag` and `langflow.frontend.image.tag` values to your preferred version.
+For example:
+
+```yaml
+langflow:
+  backend:
+    image:
+      tag: "1.0.0a59"
+  frontend:
+    image:
+      tag: "1.0.0a59"
+```
+
+### Use external storage for the Langflow database
+
+The Langflow IDE Helm chart uses the default Langflow database configuration, specifically a SQLite database stored in a local persistent disk.
+
+If you want to use an [external PostgreSQL database](/configuration-custom-database), use `postgresql` chart or `externalDatabase` to configure the database connection in `values.yaml`.
+
+<Tabs>
+<TabItem value="postgresql" label="postgresql" default>
+
+Use the built-in PostgreSQL chart:
+
+```yaml
+postgresql:
+  enabled: true
+  auth:
+    username: "langflow"
+    password: "langflow-postgres"
+    database: "langflow-db"
+```
+
+</TabItem>
+<TabItem value="externaldatabase" label="externalDatabase">
+
+If you don't want to use the built-in PostgreSQL chart, set `postgresql.enabled` to `false`, and then configure the database connection in `langflow.backend.externalDatabase`:
+
+```yaml
+postgresql:
+  enabled: false
+
+langflow:
+  backend:
+    externalDatabase:
+      enabled: true
+      driver:
+        value: "postgresql"
+      port:
+        value: "5432"
+      user:
+        value: "langflow"
+      password:
+        valueFrom:
+          secretKeyRef:
+            key: "password"
+            name: "your-secret-name"
+      database:
+        value: "langflow-db"
+    sqlite:
+      enabled: false
+```
+
+</TabItem>
+</Tabs>
+
+### Configure scaling
+
+To configure scaling for the Langflow IDE Helm chart deployment, you must set `replicaCount` (horizontal scaling) and `resources` (vertical scaling) for both the `langflow.backend` and `langflow.frontend`.
+
+If your flows rely on a shared state, such as [built-in chat memory](/memory), you must also set up a shared database when scaling horizontally.
+
+```yaml
+langflow:
+  backend:
+    replicaCount: 1
+    resources:
+      requests:
+        cpu: 0.5
+        memory: 1Gi
+      # limits:
+      #   cpu: 0.5
+      #   memory: 1Gi
+
+  frontend:
+    enabled: true
+    replicaCount: 1
+    resources:
+      requests:
+        cpu: 0.3
+        memory: 512Mi
+      # limits:
+      #   cpu: 0.3
+      #   memory: 512Mi
+```
+
+## See also
+
+* [Best practices for Langflow on Kubernetes](/deployment-prod-best-practices)
+* [Deploy the Langflow production environment on Kubernetes](/deployment-kubernetes-prod)
+* [Langflow Helm Charts repository](https://github.com/langflow-ai/langflow-helm-charts)
