@@ -536,7 +536,7 @@ async def update_flow(
     return flow_read
 
 
-@router.put("/{flow_id}", response_model=FlowRead)
+@router.put("/{flow_id}", response_model=FlowRead, include_in_schema=False)
 async def upsert_flow(
     *,
     session: DbSession,
@@ -886,7 +886,7 @@ async def read_basic_examples(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.post("/expand/", status_code=200, dependencies=[Depends(get_current_active_user)])
+@router.post("/expand/", status_code=200, dependencies=[Depends(get_current_active_user)], include_in_schema=False)
 async def expand_compact_flow_endpoint(
     compact_data: dict,
 ):

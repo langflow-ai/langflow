@@ -74,7 +74,7 @@ from langflow.services.deps import get_service
 # Constants
 ALL_INTERFACES_HOST = "0.0.0.0"  # noqa: S104
 
-router = APIRouter(prefix="/mcp/project", tags=["mcp_projects"])
+router = APIRouter(prefix="/mcp/project", tags=["mcp_projects"], include_in_schema=False)
 
 
 async def verify_project_auth(

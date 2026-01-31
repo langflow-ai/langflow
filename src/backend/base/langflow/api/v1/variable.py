@@ -98,7 +98,7 @@ async def _cleanup_provider_models(
     await _cleanup_model_list_variable(variable_service, user_id, ENABLED_MODELS_VAR, provider_models, session)
 
 
-@router.post("/", response_model=VariableRead, status_code=201)
+@router.post("/", response_model=VariableRead, status_code=201, include_in_schema=False)
 async def create_variable(
     *,
     session: DbSession,
@@ -143,7 +143,7 @@ async def create_variable(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.get("/", response_model=list[VariableRead], status_code=200)
+@router.get("/", response_model=list[VariableRead], status_code=200, include_in_schema=False)
 async def read_variables(
     *,
     session: DbSession,
@@ -286,7 +286,7 @@ async def read_variables(
         return filtered_variables
 
 
-@router.patch("/{variable_id}", response_model=VariableRead, status_code=200)
+@router.patch("/{variable_id}", response_model=VariableRead, status_code=200, include_in_schema=False)
 async def update_variable(
     *,
     session: DbSession,
@@ -329,7 +329,7 @@ async def update_variable(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.delete("/{variable_id}", status_code=204)
+@router.delete("/{variable_id}", status_code=204, include_in_schema=False)
 async def delete_variable(
     *,
     session: DbSession,
