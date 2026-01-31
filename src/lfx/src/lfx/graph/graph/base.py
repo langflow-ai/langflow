@@ -654,8 +654,26 @@ class Graph:
                 session_id=self.session_id,
             )
 
+    async def cleanup_async_tasks(self) -> None:
+        """Ensure all async tasks complete before cleanup."""
+        logger.info(f"Cleaning up async tasks for run_id: {self._run_id}")
+        if self._end_trace_tasks:
+            logger.info(f"Waiting for {len(self._end_trace_tasks)} trace tasks to complete")
+            try:
+                await asyncio.wait_for(asyncio.gather(*self._end_trace_tasks, return_exceptions=True), timeout=30.0)
+            except asyncio.TimeoutError:
+                logger.warning("Some trace tasks did not complete within timeout")
+            finally:
+                self._end_trace_tasks.clear()
+
     def _end_all_traces_async(self, outputs: dict[str, Any] | None = None, error: Exception | None = None) -> None:
-        task = asyncio.create_task(self.end_all_traces(outputs, error))
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            run_until_complete(self.end_all_traces(outputs, error))
+            return
+
+        task = loop.create_task(self.end_all_traces(outputs, error))
         self._end_trace_tasks.add(task)
         task.add_done_callback(self._end_trace_tasks.discard)
 
