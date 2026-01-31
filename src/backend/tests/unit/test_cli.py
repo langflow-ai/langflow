@@ -132,7 +132,7 @@ class TestSuperuserCommand:
         with (
             patch("langflow.services.deps.get_settings_service") as mock_settings,
             patch("langflow.__main__.get_settings_service") as mock_settings2,
-            patch("langflow.__main__.get_current_user_by_jwt", side_effect=Exception("Invalid token")),
+            patch("langflow.__main__.get_current_user_from_access_token", side_effect=Exception("Invalid token")),
             patch("langflow.__main__.check_key", return_value=None),
         ):
             # Configure settings for production mode (AUTO_LOGIN=False)

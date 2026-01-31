@@ -165,7 +165,7 @@ class KubernetesSecretService(VariableService, Service):
         variable_base = VariableCreate(
             name=name,
             type=type_,
-            value=auth_utils.encrypt_api_key(value, settings_service=self.settings_service),
+            value=auth_utils.encrypt_api_key(value),
             default_fields=default_fields,
         )
         return Variable.model_validate(variable_base, from_attributes=True, update={"user_id": user_id})
@@ -192,7 +192,7 @@ class KubernetesSecretService(VariableService, Service):
             variable_base = VariableCreate(
                 name=name,
                 type=type_,
-                value=auth_utils.encrypt_api_key(value, settings_service=self.settings_service),
+                value=auth_utils.encrypt_api_key(value),
                 default_fields=[],
             )
             variable = Variable.model_validate(variable_base, from_attributes=True, update={"user_id": user_id})
@@ -220,7 +220,7 @@ class KubernetesSecretService(VariableService, Service):
         variable_base = VariableCreate(
             name=name,
             type=type_,
-            value=auth_utils.encrypt_api_key(value, settings_service=self.settings_service),
+            value=auth_utils.encrypt_api_key(value),
             default_fields=[],
         )
         return Variable.model_validate(variable_base, from_attributes=True, update={"user_id": user_id})
@@ -240,7 +240,7 @@ class KubernetesSecretService(VariableService, Service):
         variable_base = VariableCreate(
             name=var_name,
             type=type_,
-            value=auth_utils.encrypt_api_key(value, settings_service=self.settings_service),
+            value=auth_utils.encrypt_api_key(value),
             default_fields=[],
         )
         return Variable.model_validate(variable_base, from_attributes=True, update={"user_id": user_id})

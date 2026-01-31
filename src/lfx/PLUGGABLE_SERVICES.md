@@ -107,6 +107,7 @@ storage_service = "package.module:ClassName"
 Service keys **must** match `ServiceType` enum values exactly:
 
 - `database_service`
+- `auth_service`
 - `storage_service`
 - `cache_service`
 - `chat_service`
@@ -120,6 +121,7 @@ Service keys **must** match `ServiceType` enum values exactly:
 - `job_queue_service`
 - `shared_component_cache_service`
 - `mcp_composer_service`
+- `transaction_service`
 
 **Important:** `settings_service` is **not pluggable** and cannot be overridden. It is always created using the built-in factory and provides the foundational configuration for all other services.
 

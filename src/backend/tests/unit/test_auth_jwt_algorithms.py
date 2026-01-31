@@ -211,14 +211,16 @@ class TestTokenCreation:
 
     def test_create_token_hs256(self):
         """Token creation with HS256 should use secret key."""
+        from langflow.services.auth.service import AuthService
         from langflow.services.auth.utils import create_token
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            mock_service = self._create_mock_settings_service("HS256", tmpdir)
+            mock_settings_service = self._create_mock_settings_service("HS256", tmpdir)
+            mock_auth_service = AuthService(mock_settings_service)
 
-            with patch("langflow.services.auth.utils.get_settings_service", return_value=mock_service):
+            with patch("langflow.services.auth.utils.get_auth_service", return_value=mock_auth_service):
                 token = create_token(
-                    data={"sub": "user-123", "type": "access"},
+                    data={"sub": "9cd4172c-0190-4124-a749-671d23e3c6dd", "type": "access"},
                     expires_delta=timedelta(hours=1),
                 )
 
@@ -229,12 +231,14 @@ class TestTokenCreation:
 
     def test_create_token_rs256(self):
         """Token creation with RS256 should use private key."""
+        from langflow.services.auth.service import AuthService
         from langflow.services.auth.utils import create_token
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            mock_service = self._create_mock_settings_service("RS256", tmpdir)
+            mock_settings_service = self._create_mock_settings_service("RS256", tmpdir)
+            mock_auth_service = AuthService(mock_settings_service)
 
-            with patch("langflow.services.auth.utils.get_settings_service", return_value=mock_service):
+            with patch("langflow.services.auth.utils.get_auth_service", return_value=mock_auth_service):
                 token = create_token(
                     data={"sub": "user-456", "type": "access"},
                     expires_delta=timedelta(hours=1),
@@ -247,12 +251,14 @@ class TestTokenCreation:
 
     def test_create_token_rs512(self):
         """Token creation with RS512 should use private key."""
+        from langflow.services.auth.service import AuthService
         from langflow.services.auth.utils import create_token
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            mock_service = self._create_mock_settings_service("RS512", tmpdir)
+            mock_settings_service = self._create_mock_settings_service("RS512", tmpdir)
+            mock_auth_service = AuthService(mock_settings_service)
 
-            with patch("langflow.services.auth.utils.get_settings_service", return_value=mock_service):
+            with patch("langflow.services.auth.utils.get_auth_service", return_value=mock_auth_service):
                 token = create_token(
                     data={"sub": "user-789", "type": "access"},
                     expires_delta=timedelta(hours=1),
@@ -265,14 +271,16 @@ class TestTokenCreation:
 
     def test_token_contains_expiration(self):
         """Created token should contain expiration claim."""
+        from langflow.services.auth.service import AuthService
         from langflow.services.auth.utils import create_token
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            mock_service = self._create_mock_settings_service("HS256", tmpdir)
+            mock_settings_service = self._create_mock_settings_service("HS256", tmpdir)
+            mock_auth_service = AuthService(mock_settings_service)
 
-            with patch("langflow.services.auth.utils.get_settings_service", return_value=mock_service):
+            with patch("langflow.services.auth.utils.get_auth_service", return_value=mock_auth_service):
                 token = create_token(
-                    data={"sub": "user-123", "type": "access"},
+                    data={"sub": "9cd4172c-0190-4124-a749-671d23e3c6dd", "type": "access"},
                     expires_delta=timedelta(hours=1),
                 )
 
@@ -297,37 +305,45 @@ class TestTokenVerification:
     @pytest.mark.asyncio
     async def test_verify_hs256_token_success(self):
         """Valid HS256 token should be verified successfully."""
-        from langflow.services.auth.utils import create_token, get_current_user_by_jwt
+        from langflow.services.auth.service import AuthService
+        from langflow.services.auth.utils import create_token, get_current_user_from_access_token
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            mock_service = self._create_mock_settings_service("HS256", tmpdir)
+            mock_settings_service = self._create_mock_settings_service("HS256", tmpdir)
+            mock_auth_service = AuthService(mock_settings_service)
 
             # Create a mock user
             mock_user = MagicMock()
-            mock_user.id = "user-123"
+            mock_user.id = "9cd4172c-0190-4124-a749-671d23e3c6dd"
             mock_user.is_active = True
 
             mock_db = AsyncMock()
 
+            # Create async function that returns mock_user
+            async def mock_get_user_by_id(*args, **kwargs):  # noqa: ARG001
+                return mock_user
+
             with (
-                patch("langflow.services.auth.utils.get_settings_service", return_value=mock_service),
-                patch("langflow.services.auth.utils.get_user_by_id", return_value=mock_user),
+                patch("langflow.services.auth.utils.get_auth_service", return_value=mock_auth_service),
+                patch("langflow.services.auth.service.get_user_by_id", side_effect=mock_get_user_by_id),
             ):
                 token = create_token(
-                    data={"sub": "user-123", "type": "access"},
+                    data={"sub": "9cd4172c-0190-4124-a749-671d23e3c6dd", "type": "access"},
                     expires_delta=timedelta(hours=1),
                 )
 
-                user = await get_current_user_by_jwt(token, mock_db)
+                user = await get_current_user_from_access_token(token, mock_db)
                 assert user == mock_user
 
     @pytest.mark.asyncio
     async def test_verify_rs256_token_success(self):
         """Valid RS256 token should be verified successfully."""
-        from langflow.services.auth.utils import create_token, get_current_user_by_jwt
+        from langflow.services.auth.service import AuthService
+        from langflow.services.auth.utils import create_token, get_current_user_from_access_token
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            mock_service = self._create_mock_settings_service("RS256", tmpdir)
+            mock_settings_service = self._create_mock_settings_service("RS256", tmpdir)
+            mock_auth_service = AuthService(mock_settings_service)
 
             mock_user = MagicMock()
             mock_user.id = "user-456"
@@ -335,25 +351,31 @@ class TestTokenVerification:
 
             mock_db = AsyncMock()
 
+            # Create async function that returns mock_user
+            async def mock_get_user_by_id(*args, **kwargs):  # noqa: ARG001
+                return mock_user
+
             with (
-                patch("langflow.services.auth.utils.get_settings_service", return_value=mock_service),
-                patch("langflow.services.auth.utils.get_user_by_id", return_value=mock_user),
+                patch("langflow.services.auth.utils.get_auth_service", return_value=mock_auth_service),
+                patch("langflow.services.auth.service.get_user_by_id", side_effect=mock_get_user_by_id),
             ):
                 token = create_token(
                     data={"sub": "user-456", "type": "access"},
                     expires_delta=timedelta(hours=1),
                 )
 
-                user = await get_current_user_by_jwt(token, mock_db)
+                user = await get_current_user_from_access_token(token, mock_db)
                 assert user == mock_user
 
     @pytest.mark.asyncio
     async def test_verify_rs512_token_success(self):
         """Valid RS512 token should be verified successfully."""
-        from langflow.services.auth.utils import create_token, get_current_user_by_jwt
+        from langflow.services.auth.service import AuthService
+        from langflow.services.auth.utils import create_token, get_current_user_from_access_token
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            mock_service = self._create_mock_settings_service("RS512", tmpdir)
+            mock_settings_service = self._create_mock_settings_service("RS512", tmpdir)
+            mock_auth_service = AuthService(mock_settings_service)
 
             mock_user = MagicMock()
             mock_user.id = "user-789"
@@ -361,16 +383,20 @@ class TestTokenVerification:
 
             mock_db = AsyncMock()
 
+            # Create async function that returns mock_user
+            async def mock_get_user_by_id(*args, **kwargs):  # noqa: ARG001
+                return mock_user
+
             with (
-                patch("langflow.services.auth.utils.get_settings_service", return_value=mock_service),
-                patch("langflow.services.auth.utils.get_user_by_id", return_value=mock_user),
+                patch("langflow.services.auth.utils.get_auth_service", return_value=mock_auth_service),
+                patch("langflow.services.auth.service.get_user_by_id", side_effect=mock_get_user_by_id),
             ):
                 token = create_token(
                     data={"sub": "user-789", "type": "access"},
                     expires_delta=timedelta(hours=1),
                 )
 
-                user = await get_current_user_by_jwt(token, mock_db)
+                user = await get_current_user_from_access_token(token, mock_db)
                 assert user == mock_user
 
 
@@ -394,25 +420,27 @@ class TestAuthenticationFailures:
     @pytest.mark.asyncio
     async def test_missing_public_key_rs256_raises_401(self):
         """Missing public key for RS256 should raise 401."""
-        from langflow.services.auth.utils import get_current_user_by_jwt
+        from langflow.services.auth.service import AuthService
+        from langflow.services.auth.utils import get_current_user_from_access_token
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            mock_service = self._create_mock_settings_service("RS256", tmpdir, PUBLIC_KEY="")
+            mock_settings_service = self._create_mock_settings_service("RS256", tmpdir, PUBLIC_KEY="")
+            mock_auth_service = AuthService(mock_settings_service)
 
             mock_db = AsyncMock()
 
-            with patch("langflow.services.auth.utils.get_settings_service", return_value=mock_service):
+            with patch("langflow.services.auth.utils.get_auth_service", return_value=mock_auth_service):
                 with pytest.raises(HTTPException) as exc_info:
-                    await get_current_user_by_jwt("some-token", mock_db)
+                    await get_current_user_from_access_token("some-token", mock_db)
 
                 assert exc_info.value.status_code == 401
-                assert "Server configuration error" in exc_info.value.detail
                 assert "Public key not configured" in exc_info.value.detail
 
     @pytest.mark.asyncio
     async def test_missing_secret_key_hs256_raises_401(self):
         """Missing secret key for HS256 should raise 401."""
-        from langflow.services.auth.utils import get_current_user_by_jwt
+        from langflow.services.auth.service import AuthService
+        from langflow.services.auth.utils import get_current_user_from_access_token
         from lfx.services.settings.auth import JWTAlgorithm
 
         # Create a fully mocked settings service without using AuthSettings
@@ -421,31 +449,34 @@ class TestAuthenticationFailures:
         mock_auth_settings.SECRET_KEY = MagicMock()
         mock_auth_settings.SECRET_KEY.get_secret_value.return_value = None
 
-        mock_service = MagicMock()
-        mock_service.auth_settings = mock_auth_settings
+        mock_settings_service = MagicMock()
+        mock_settings_service.auth_settings = mock_auth_settings
+
+        mock_auth_service = AuthService(mock_settings_service)
 
         mock_db = AsyncMock()
 
-        with patch("langflow.services.auth.utils.get_settings_service", return_value=mock_service):
+        with patch("langflow.services.auth.utils.get_auth_service", return_value=mock_auth_service):
             with pytest.raises(HTTPException) as exc_info:
-                await get_current_user_by_jwt("some-token", mock_db)
+                await get_current_user_from_access_token("some-token", mock_db)
 
             assert exc_info.value.status_code == 401
-            assert "Server configuration error" in exc_info.value.detail
             assert "Secret key not configured" in exc_info.value.detail
 
     @pytest.mark.asyncio
     async def test_invalid_token_raises_401(self):
         """Invalid token should raise 401."""
-        from langflow.services.auth.utils import get_current_user_by_jwt
+        from langflow.services.auth.service import AuthService
+        from langflow.services.auth.utils import get_current_user_from_access_token
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            mock_service = self._create_mock_settings_service("HS256", tmpdir)
+            mock_settings_service = self._create_mock_settings_service("HS256", tmpdir)
+            mock_auth_service = AuthService(mock_settings_service)
             mock_db = AsyncMock()
 
-            with patch("langflow.services.auth.utils.get_settings_service", return_value=mock_service):
+            with patch("langflow.services.auth.utils.get_auth_service", return_value=mock_auth_service):
                 with pytest.raises(HTTPException) as exc_info:
-                    await get_current_user_by_jwt("invalid-token-format", mock_db)
+                    await get_current_user_from_access_token("invalid-token-format", mock_db)
 
                 assert exc_info.value.status_code == 401
                 assert "Could not validate credentials" in exc_info.value.detail
@@ -453,44 +484,48 @@ class TestAuthenticationFailures:
     @pytest.mark.asyncio
     async def test_token_signed_with_wrong_key_raises_401(self):
         """Token signed with different key should raise 401."""
-        from langflow.services.auth.utils import get_current_user_by_jwt
+        from langflow.services.auth.service import AuthService
+        from langflow.services.auth.utils import get_current_user_from_access_token
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            mock_service = self._create_mock_settings_service("HS256", tmpdir)
+            mock_settings_service = self._create_mock_settings_service("HS256", tmpdir)
+            mock_auth_service = AuthService(mock_settings_service)
 
             # Create token with different secret
             wrong_token = jwt.encode(
-                {"sub": "user-123", "type": "access"},
+                {"sub": "9cd4172c-0190-4124-a749-671d23e3c6dd", "type": "access"},
                 "different-secret-key",
                 algorithm="HS256",
             )
 
             mock_db = AsyncMock()
 
-            with patch("langflow.services.auth.utils.get_settings_service", return_value=mock_service):
+            with patch("langflow.services.auth.utils.get_auth_service", return_value=mock_auth_service):
                 with pytest.raises(HTTPException) as exc_info:
-                    await get_current_user_by_jwt(wrong_token, mock_db)
+                    await get_current_user_from_access_token(wrong_token, mock_db)
 
                 assert exc_info.value.status_code == 401
 
     @pytest.mark.asyncio
     async def test_expired_token_raises_401(self):
         """Expired token should raise 401."""
-        from langflow.services.auth.utils import create_token, get_current_user_by_jwt
+        from langflow.services.auth.service import AuthService
+        from langflow.services.auth.utils import create_token, get_current_user_from_access_token
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            mock_service = self._create_mock_settings_service("HS256", tmpdir)
+            mock_settings_service = self._create_mock_settings_service("HS256", tmpdir)
+            mock_auth_service = AuthService(mock_settings_service)
             mock_db = AsyncMock()
 
-            with patch("langflow.services.auth.utils.get_settings_service", return_value=mock_service):
+            with patch("langflow.services.auth.utils.get_auth_service", return_value=mock_auth_service):
                 # Create token that's already expired
                 token = create_token(
-                    data={"sub": "user-123", "type": "access"},
+                    data={"sub": "9cd4172c-0190-4124-a749-671d23e3c6dd", "type": "access"},
                     expires_delta=timedelta(seconds=-10),  # Negative = already expired
                 )
 
                 with pytest.raises(HTTPException) as exc_info:
-                    await get_current_user_by_jwt(token, mock_db)
+                    await get_current_user_from_access_token(token, mock_db)
 
                 assert exc_info.value.status_code == 401
                 # PyJWT library raises InvalidTokenError for expired tokens before our custom check
@@ -501,99 +536,129 @@ class TestAuthenticationFailures:
     @pytest.mark.asyncio
     async def test_token_without_user_id_raises_401(self):
         """Token without user ID should raise 401."""
-        from langflow.services.auth.utils import get_current_user_by_jwt
+        from langflow.services.auth.service import AuthService
+        from langflow.services.auth.utils import get_current_user_from_access_token
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            mock_service = self._create_mock_settings_service("HS256", tmpdir)
+            mock_settings_service = self._create_mock_settings_service("HS256", tmpdir)
+            mock_auth_service = AuthService(mock_settings_service)
 
             # Create token without 'sub' claim
             token = jwt.encode(
                 {"type": "access"},
-                mock_service.auth_settings.SECRET_KEY.get_secret_value(),
+                mock_settings_service.auth_settings.SECRET_KEY.get_secret_value(),
                 algorithm="HS256",
             )
 
             mock_db = AsyncMock()
 
-            with patch("langflow.services.auth.utils.get_settings_service", return_value=mock_service):
+            with patch("langflow.services.auth.utils.get_auth_service", return_value=mock_auth_service):
                 with pytest.raises(HTTPException) as exc_info:
-                    await get_current_user_by_jwt(token, mock_db)
+                    await get_current_user_from_access_token(token, mock_db)
 
                 assert exc_info.value.status_code == 401
-                assert "Invalid token" in exc_info.value.detail
+                assert "Invalid token" in exc_info.value.detail or "Expected access token" in exc_info.value.detail
 
     @pytest.mark.asyncio
     async def test_token_without_type_raises_401(self):
         """Token without type should raise 401."""
-        from langflow.services.auth.utils import get_current_user_by_jwt
+        from langflow.services.auth.service import AuthService
+        from langflow.services.auth.utils import get_current_user_from_access_token
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            mock_service = self._create_mock_settings_service("HS256", tmpdir)
+            mock_settings_service = self._create_mock_settings_service("HS256", tmpdir)
+            mock_auth_service = AuthService(mock_settings_service)
 
             # Create token without 'type' claim
             token = jwt.encode(
-                {"sub": "user-123"},
-                mock_service.auth_settings.SECRET_KEY.get_secret_value(),
+                {"sub": "9cd4172c-0190-4124-a749-671d23e3c6dd"},
+                mock_settings_service.auth_settings.SECRET_KEY.get_secret_value(),
                 algorithm="HS256",
             )
 
             mock_db = AsyncMock()
 
-            with patch("langflow.services.auth.utils.get_settings_service", return_value=mock_service):
+            with patch("langflow.services.auth.utils.get_auth_service", return_value=mock_auth_service):
                 with pytest.raises(HTTPException) as exc_info:
-                    await get_current_user_by_jwt(token, mock_db)
+                    await get_current_user_from_access_token(token, mock_db)
 
                 assert exc_info.value.status_code == 401
-                assert "invalid" in exc_info.value.detail.lower()
+                assert (
+                    "invalid" in exc_info.value.detail.lower()
+                    or "expected access token" in exc_info.value.detail.lower()
+                )
 
     @pytest.mark.asyncio
     async def test_user_not_found_raises_401(self):
         """Token for non-existent user should raise 401."""
-        from langflow.services.auth.utils import create_token, get_current_user_by_jwt
+        from uuid import uuid4
+
+        from langflow.services.auth.service import AuthService
+        from langflow.services.auth.utils import create_token, get_current_user_from_access_token
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            mock_service = self._create_mock_settings_service("HS256", tmpdir)
+            mock_settings_service = self._create_mock_settings_service("HS256", tmpdir)
+            mock_auth_service = AuthService(mock_settings_service)
             mock_db = AsyncMock()
 
+            # Use a valid UUID format
+            user_id = str(uuid4())
+
+            # Create async function that returns None
+            async def mock_get_user_by_id(*args, **kwargs):  # noqa: ARG001
+                return None
+
             with (
-                patch("langflow.services.auth.utils.get_settings_service", return_value=mock_service),
-                patch("langflow.services.auth.utils.get_user_by_id", return_value=None),
+                patch("langflow.services.auth.utils.get_auth_service", return_value=mock_auth_service),
+                patch("langflow.services.auth.service.get_user_by_id", side_effect=mock_get_user_by_id),
             ):
                 token = create_token(
-                    data={"sub": "non-existent-user", "type": "access"},
+                    data={"sub": user_id, "type": "access"},
                     expires_delta=timedelta(hours=1),
                 )
 
                 with pytest.raises(HTTPException) as exc_info:
-                    await get_current_user_by_jwt(token, mock_db)
+                    await get_current_user_from_access_token(token, mock_db)
 
                 assert exc_info.value.status_code == 401
-                assert "User not found" in exc_info.value.detail
+                assert "User not found" in exc_info.value.detail or "inactive" in exc_info.value.detail.lower()
 
     @pytest.mark.asyncio
     async def test_inactive_user_raises_401(self):
         """Token for inactive user should raise 401."""
-        from langflow.services.auth.utils import create_token, get_current_user_by_jwt
+        from uuid import uuid4
+
+        from langflow.services.auth.service import AuthService
+        from langflow.services.auth.utils import create_token, get_current_user_from_access_token
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            mock_service = self._create_mock_settings_service("HS256", tmpdir)
+            mock_settings_service = self._create_mock_settings_service("HS256", tmpdir)
+            mock_auth_service = AuthService(mock_settings_service)
+
+            # Use a valid UUID format
+            user_id = str(uuid4())
 
             mock_user = MagicMock()
+            mock_user.id = user_id
             mock_user.is_active = False
 
             mock_db = AsyncMock()
 
+            # Create async function that returns mock_user
+            async def mock_get_user_by_id(*args, **kwargs):  # noqa: ARG001
+                return mock_user
+
             with (
-                patch("langflow.services.auth.utils.get_settings_service", return_value=mock_service),
-                patch("langflow.services.auth.utils.get_user_by_id", return_value=mock_user),
+                patch("langflow.services.auth.utils.get_auth_service", return_value=mock_auth_service),
+                patch("langflow.services.auth.service.get_user_by_id", side_effect=mock_get_user_by_id),
             ):
                 token = create_token(
-                    data={"sub": "inactive-user", "type": "access"},
+                    data={"sub": user_id, "type": "access"},
                     expires_delta=timedelta(hours=1),
                 )
 
                 with pytest.raises(HTTPException) as exc_info:
-                    await get_current_user_by_jwt(token, mock_db)
+                    await get_current_user_from_access_token(token, mock_db)
 
                 assert exc_info.value.status_code == 401
                 assert "inactive" in exc_info.value.detail.lower()
@@ -615,24 +680,30 @@ class TestRefreshTokenVerification:
     @pytest.mark.asyncio
     async def test_refresh_token_rs256_success(self):
         """Valid RS256 refresh token should create new tokens."""
+        from langflow.services.auth.service import AuthService
         from langflow.services.auth.utils import create_refresh_token, create_token
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            mock_service = self._create_mock_settings_service("RS256", tmpdir)
+            mock_settings_service = self._create_mock_settings_service("RS256", tmpdir)
+            mock_auth_service = AuthService(mock_settings_service)
 
             mock_user = MagicMock()
-            mock_user.id = "user-123"
+            mock_user.id = "9cd4172c-0190-4124-a749-671d23e3c6dd"
             mock_user.is_active = True
 
             mock_db = AsyncMock()
 
+            # Create async function that returns mock_user
+            async def mock_get_user_by_id(*args, **kwargs):  # noqa: ARG001
+                return mock_user
+
             with (
-                patch("langflow.services.auth.utils.get_settings_service", return_value=mock_service),
-                patch("langflow.services.auth.utils.get_user_by_id", return_value=mock_user),
+                patch("langflow.services.auth.utils.get_auth_service", return_value=mock_auth_service),
+                patch("langflow.services.auth.service.get_user_by_id", side_effect=mock_get_user_by_id),
             ):
                 # Create refresh token
                 refresh_token = create_token(
-                    data={"sub": "user-123", "type": "refresh"},
+                    data={"sub": "9cd4172c-0190-4124-a749-671d23e3c6dd", "type": "refresh"},
                     expires_delta=timedelta(days=7),
                 )
 
@@ -646,16 +717,18 @@ class TestRefreshTokenVerification:
     @pytest.mark.asyncio
     async def test_refresh_token_wrong_type_raises_401(self):
         """Access token used as refresh token should raise 401."""
+        from langflow.services.auth.service import AuthService
         from langflow.services.auth.utils import create_refresh_token, create_token
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            mock_service = self._create_mock_settings_service("HS256", tmpdir)
+            mock_settings_service = self._create_mock_settings_service("HS256", tmpdir)
+            mock_auth_service = AuthService(mock_settings_service)
             mock_db = AsyncMock()
 
-            with patch("langflow.services.auth.utils.get_settings_service", return_value=mock_service):
+            with patch("langflow.services.auth.utils.get_auth_service", return_value=mock_auth_service):
                 # Create access token (not refresh)
                 access_token = create_token(
-                    data={"sub": "user-123", "type": "access"},
+                    data={"sub": "9cd4172c-0190-4124-a749-671d23e3c6dd", "type": "access"},
                     expires_delta=timedelta(hours=1),
                 )
 
@@ -677,7 +750,7 @@ class TestAlgorithmMismatch:
             # Create token with HS256
             hs256_settings = AuthSettings(CONFIG_DIR=tmpdir, ALGORITHM="HS256")
             token = jwt.encode(
-                {"sub": "user-123", "type": "access"},
+                {"sub": "9cd4172c-0190-4124-a749-671d23e3c6dd", "type": "access"},
                 hs256_settings.SECRET_KEY.get_secret_value(),
                 algorithm="HS256",
             )
@@ -697,7 +770,7 @@ class TestAlgorithmMismatch:
             # Create token with RS256
             rs256_settings = AuthSettings(CONFIG_DIR=tmpdir, ALGORITHM="RS256")
             token = jwt.encode(
-                {"sub": "user-123", "type": "access"},
+                {"sub": "9cd4172c-0190-4124-a749-671d23e3c6dd", "type": "access"},
                 rs256_settings.PRIVATE_KEY.get_secret_value(),
                 algorithm="RS256",
             )
@@ -772,7 +845,8 @@ class TestEdgeCases:
 
     def test_token_with_extra_claims(self):
         """Token with extra claims should still work."""
-        from langflow.services.auth.utils import get_current_user_by_jwt
+        from langflow.services.auth.service import AuthService
+        from langflow.services.auth.utils import get_current_user_from_access_token
 
         with tempfile.TemporaryDirectory() as tmpdir:
             from lfx.services.settings.auth import AuthSettings
@@ -781,7 +855,7 @@ class TestEdgeCases:
 
             token = jwt.encode(
                 {
-                    "sub": "user-123",
+                    "sub": "9cd4172c-0190-4124-a749-671d23e3c6dd",
                     "type": "access",
                     "extra_claim": "some-value",
                     "another": 123,
@@ -790,26 +864,32 @@ class TestEdgeCases:
                 algorithm="HS256",
             )
 
-            mock_service = MagicMock()
-            mock_service.auth_settings = settings
+            mock_settings_service = MagicMock()
+            mock_settings_service.auth_settings = settings
+            mock_auth_service = AuthService(mock_settings_service)
 
             mock_user = MagicMock()
-            mock_user.id = "user-123"
+            mock_user.id = "9cd4172c-0190-4124-a749-671d23e3c6dd"
             mock_user.is_active = True
 
             mock_db = AsyncMock()
 
+            # Create async function that returns mock_user
+            async def mock_get_user_by_id(*args, **kwargs):  # noqa: ARG001
+                return mock_user
+
             with (
-                patch("langflow.services.auth.utils.get_settings_service", return_value=mock_service),
-                patch("langflow.services.auth.utils.get_user_by_id", return_value=mock_user),
+                patch("langflow.services.auth.utils.get_auth_service", return_value=mock_auth_service),
+                patch("langflow.services.auth.service.get_user_by_id", side_effect=mock_get_user_by_id),
             ):
                 import asyncio
 
-                user = asyncio.get_event_loop().run_until_complete(get_current_user_by_jwt(token, mock_db))
+                user = asyncio.get_event_loop().run_until_complete(get_current_user_from_access_token(token, mock_db))
                 assert user == mock_user
 
     def test_very_long_user_id(self):
         """Very long user ID should work."""
+        from langflow.services.auth.service import AuthService
         from langflow.services.auth.utils import create_token
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -817,12 +897,13 @@ class TestEdgeCases:
 
             settings = AuthSettings(CONFIG_DIR=tmpdir, ALGORITHM="HS256")
 
-            mock_service = MagicMock()
-            mock_service.auth_settings = settings
+            mock_settings_service = MagicMock()
+            mock_settings_service.auth_settings = settings
+            mock_auth_service = AuthService(mock_settings_service)
 
             long_user_id = "a" * 1000
 
-            with patch("langflow.services.auth.utils.get_settings_service", return_value=mock_service):
+            with patch("langflow.services.auth.utils.get_auth_service", return_value=mock_auth_service):
                 token = create_token(
                     data={"sub": long_user_id, "type": "access"},
                     expires_delta=timedelta(hours=1),

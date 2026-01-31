@@ -6,18 +6,36 @@ from lfx.services.manager import ServiceManager
 from lfx.services.schema import ServiceType
 
 
+class MockSessionService(Service):
+    """Mock session service for testing."""
+
+    name = "session_service"
+
+    def __init__(self):
+        """Initialize mock session service."""
+        self.set_ready()
+
+    async def teardown(self) -> None:
+        """Teardown the mock session service."""
+
+
+@pytest.fixture
+def clean_manager():
+    """Create a clean ServiceManager instance with mock dependencies."""
+    manager = ServiceManager()
+
+    # Register mock SESSION_SERVICE so services with dependencies can be created
+    manager.register_service_class(ServiceType.SESSION_SERVICE, MockSessionService, override=True)
+
+    yield manager
+    # Cleanup
+    import asyncio
+
+    asyncio.run(manager.teardown())
+
+
 class TestCircularDependencyDetection:
     """Test detection and handling of circular dependencies."""
-
-    @pytest.fixture
-    def clean_manager(self):
-        """Create a clean ServiceManager instance."""
-        manager = ServiceManager()
-        yield manager
-        # Cleanup
-        import asyncio
-
-        asyncio.run(manager.teardown())
 
     def test_self_circular_dependency(self, clean_manager):
         """Test service that depends on itself."""
@@ -139,6 +157,10 @@ class TestConfigParsingEdgeCases:
     def clean_manager(self):
         """Create a clean ServiceManager instance."""
         manager = ServiceManager()
+
+        # Register mock SESSION_SERVICE so services with dependencies can be created
+        manager.register_service_class(ServiceType.SESSION_SERVICE, MockSessionService, override=True)
+
         yield manager
         # Cleanup
         import asyncio
@@ -155,7 +177,7 @@ class TestConfigParsingEdgeCases:
         # Should not raise
         clean_manager.discover_plugins(config_dir)
 
-        assert len(clean_manager.service_classes) == 0
+        assert len(clean_manager.service_classes) == 1  # MockSessionService from fixture
 
     def test_config_with_no_services_section(self, clean_manager, tmp_path):
         """Test config file with no [services] section."""
@@ -172,7 +194,7 @@ key = "value"
         # Should not raise
         clean_manager.discover_plugins(config_dir)
 
-        assert len(clean_manager.service_classes) == 0
+        assert len(clean_manager.service_classes) == 1  # MockSessionService from fixture
 
     def test_config_with_empty_services_section(self, clean_manager, tmp_path):
         """Test config with empty [services] section."""
@@ -188,7 +210,7 @@ key = "value"
         # Should not raise
         clean_manager.discover_plugins(config_dir)
 
-        assert len(clean_manager.service_classes) == 0
+        assert len(clean_manager.service_classes) == 1  # MockSessionService from fixture
 
     def test_config_with_malformed_import_path(self, clean_manager, tmp_path):
         """Test config with malformed import path."""

@@ -178,7 +178,12 @@ class ServiceManager:
                     continue
 
             if dependency_type:
+                # Check for circular dependency (service depending on itself)
+                if dependency_type == service_name:
+                    msg = f"Circular dependency detected: {service_name.value} depends on itself"
+                    raise RuntimeError(msg)
                 # Recursively create dependency if not exists
+                # Note: Thread safety is handled by the caller's keyed lock context
                 if dependency_type not in self.services:
                     self._create_service(dependency_type)
                 dependencies[param_name] = self.services[dependency_type]
@@ -332,26 +337,27 @@ class ServiceManager:
             The settings service cannot be overridden via plugins and is always
             created using the built-in factory.
         """
-        if self._plugins_discovered:
-            logger.debug("Plugins already discovered, skipping...")
-            return
+        with self._lock:
+            if self._plugins_discovered:
+                logger.debug("Plugins already discovered, skipping...")
+                return
 
-        # Get config_dir from settings service if not provided
-        if config_dir is None and ServiceType.SETTINGS_SERVICE in self.services:
-            settings_service = self.services[ServiceType.SETTINGS_SERVICE]
-            if hasattr(settings_service, "settings") and settings_service.settings.config_dir:
-                config_dir = Path(settings_service.settings.config_dir)
+            # Get config_dir from settings service if not provided
+            if config_dir is None and ServiceType.SETTINGS_SERVICE in self.services:
+                settings_service = self.services[ServiceType.SETTINGS_SERVICE]
+                if hasattr(settings_service, "settings") and settings_service.settings.config_dir:
+                    config_dir = Path(settings_service.settings.config_dir)
 
-        logger.debug(f"Starting plugin discovery (config_dir: {config_dir or 'cwd'})...")
+            logger.debug(f"Starting plugin discovery (config_dir: {config_dir or 'cwd'})...")
 
-        # 1. Discover from entry points
-        self._discover_from_entry_points()
+            # 1. Discover from entry points
+            self._discover_from_entry_points()
 
-        # 2. Discover from config files
-        self._discover_from_config(config_dir)
+            # 2. Discover from config files
+            self._discover_from_config(config_dir)
 
-        self._plugins_discovered = True
-        logger.debug(f"Plugin discovery complete. Registered services: {list(self.service_classes.keys())}")
+            self._plugins_discovered = True
+            logger.debug(f"Plugin discovery complete. Registered services: {list(self.service_classes.keys())}")
 
     def _discover_from_entry_points(self) -> None:
         """Discover services from Python entry points."""

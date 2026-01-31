@@ -3,9 +3,10 @@ import json
 from io import BytesIO
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile
+from fastapi import APIRouter, Body, Depends, HTTPException, UploadFile
 from lfx.base.agents.utils import safe_cache_get, safe_cache_set
 from lfx.base.mcp.util import update_tools
+from pydantic import BaseModel
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v2.files import (
@@ -23,6 +24,19 @@ from langflow.services.settings.service import SettingsService
 from langflow.services.storage.service import StorageService
 
 router = APIRouter(tags=["MCP"], prefix="/mcp")
+
+
+class MCPServerConfig(BaseModel):
+    """Pydantic model for MCP server configuration."""
+
+    command: str | None = None
+    args: list[str] | None = None
+    env: dict[str, str] | None = None
+    headers: dict[str, str] | None = None
+    url: str | None = None
+
+    class Config:
+        extra = "allow"  # Allow additional fields for flexibility
 
 
 async def upload_server_config(
@@ -163,9 +177,6 @@ async def get_servers(
 
                 from langflow.services.auth import utils as auth_utils
                 from langflow.services.database.models.variable.model import Variable
-                from langflow.services.deps import get_settings_service
-
-                settings_service = get_settings_service()
 
                 # Load variables directly from database and decrypt ALL types (including CREDENTIAL)
                 stmt = select(Variable).where(Variable.user_id == current_user.id)
@@ -177,9 +188,7 @@ async def get_servers(
                         # Prior to v1.8, both Generic and Credential variables were encrypted.
                         # As such, must attempt to decrypt both types to ensure backwards-compatibility.
                         try:
-                            decrypted_value = auth_utils.decrypt_api_key(
-                                variable.value, settings_service=settings_service
-                            )
+                            decrypted_value = auth_utils.decrypt_api_key(variable.value)
                             request_variables[variable.name] = decrypted_value
                         except Exception as e:  # noqa: BLE001
                             await logger.aerror(
@@ -324,7 +333,8 @@ async def update_server(
 @router.post("/servers/{server_name}")
 async def add_server(
     server_name: str,
-    server_config: dict,
+    *,
+    server_config: Annotated[MCPServerConfig, Body()],
     current_user: CurrentActiveUser,
     session: DbSession,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
@@ -332,7 +342,7 @@ async def add_server(
 ):
     return await update_server(
         server_name,
-        server_config,
+        server_config.model_dump(exclude_none=True),
         current_user,
         session,
         storage_service,
@@ -344,7 +354,8 @@ async def add_server(
 @router.patch("/servers/{server_name}")
 async def update_server_endpoint(
     server_name: str,
-    server_config: dict,
+    *,
+    server_config: Annotated[MCPServerConfig, Body()],
     current_user: CurrentActiveUser,
     session: DbSession,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
@@ -352,7 +363,7 @@ async def update_server_endpoint(
 ):
     return await update_server(
         server_name,
-        server_config,
+        server_config.model_dump(exclude_none=True),
         current_user,
         session,
         storage_service,
