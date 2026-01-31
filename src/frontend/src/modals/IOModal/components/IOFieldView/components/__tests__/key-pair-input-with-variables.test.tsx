@@ -226,5 +226,3 @@ describe("IOKeyPairInputWithVariables", () => {
     expect(screen.getAllByPlaceholderText("Type key...")).toHaveLength(2);
   });
 });
-
-// Made with Bob
