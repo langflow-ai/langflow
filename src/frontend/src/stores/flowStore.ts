@@ -932,21 +932,21 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   },
   updateEdgesRunningByNodes: (ids: string[], running: boolean) => {
     const edges = get().edges;
+    const stopNodeId = get().stopNodeId;
 
     const newEdges = edges.map((edge) => {
-      if (
+      const shouldRun =
         edge.data?.sourceHandle &&
         ids.includes(edge.data.sourceHandle.id ?? "") &&
-        edge.data.sourceHandle.id !== get().stopNodeId
-      ) {
-        edge.animated = running;
-        edge.className = running ? "running" : "";
-      } else {
-        edge.animated = false;
-        edge.className = "not-running";
-      }
-      return edge;
+        edge.data.sourceHandle.id !== stopNodeId;
+
+      return {
+        ...edge,
+        animated: shouldRun ? running : false,
+        className: shouldRun && running ? "running" : "not-running",
+      };
     });
+
     set({ edges: newEdges });
   },
   clearEdgesRunningByNodes: async (): Promise<void> => {
