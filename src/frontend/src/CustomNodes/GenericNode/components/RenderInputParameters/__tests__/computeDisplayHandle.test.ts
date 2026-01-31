@@ -100,11 +100,11 @@ describe("computeDisplayHandle", () => {
   });
 
   describe("model input handling", () => {
-    it("should require input_types for model type to show handle", () => {
-      expect(computeDisplayHandle({ type: "model" }, false)).toBe(false);
+    it("should always show handle for model type", () => {
+      expect(computeDisplayHandle({ type: "model" }, false)).toBe(true);
       expect(
         computeDisplayHandle({ type: "model", input_types: [] }, false),
-      ).toBe(false);
+      ).toBe(true);
       expect(
         computeDisplayHandle(
           { type: "model", input_types: ["LanguageModel"] },
@@ -113,7 +113,7 @@ describe("computeDisplayHandle", () => {
       ).toBe(true);
     });
 
-    it("should allow refresh_button for model type if it has input_types", () => {
+    it("should always show handle for model type even with refresh_button", () => {
       expect(
         computeDisplayHandle(
           {
@@ -126,18 +126,28 @@ describe("computeDisplayHandle", () => {
       ).toBe(true);
       expect(
         computeDisplayHandle({ type: "model", refresh_button: true }, false),
-      ).toBe(false);
+      ).toBe(true);
     });
   });
 
   describe("real-world scenarios", () => {
     it("should handle LLM component inputs correctly", () => {
-      // Model selector with refresh
+      // Model selector always shows handle
       expect(
         computeDisplayHandle(
           {
             type: "model",
             input_types: ["LanguageModel"],
+            refresh_button: true,
+          },
+          false,
+        ),
+      ).toBe(true);
+      // Model selector without input_types also shows handle
+      expect(
+        computeDisplayHandle(
+          {
+            type: "model",
             refresh_button: true,
           },
           false,
