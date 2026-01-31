@@ -147,9 +147,6 @@ class TestDecryptApiKey:
         assert result != encrypted_value
 
 
-# Made with Bob
-
-
 class TestIsEncrypted:
     """Test is_encrypted helper function."""
 

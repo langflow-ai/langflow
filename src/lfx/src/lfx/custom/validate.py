@@ -28,9 +28,48 @@ def add_type_ignores() -> None:
         ast.TypeIgnore = TypeIgnore  # type: ignore[assignment, misc]
 
 
+def _check_and_block_if_not_allowed(code: str, context: str = "code") -> bool:
+    """Check if code is allowed and block if not.
+
+    Args:
+        code: The source code to validate
+        context: Context for logging (e.g., "class 'MyClass'", "function 'my_func'")
+
+    Returns:
+        True if code is allowed, False if blocked
+    """
+    try:
+        from lfx.custom.hash_validator import is_code_hash_allowed
+
+        if not is_code_hash_allowed(code):
+            logger.warning(
+                f"Custom {context} blocked: not found in component index. Custom Component execution is disabled."
+            )
+            return False
+    except Exception:  # noqa: BLE001
+        # Fail closed: if hash validation raises an exception, block the code
+        logger.error(
+            f"Custom {context} blocked: hash validation failed with exception. Custom Component execution is disabled.",
+            exc_info=True,
+        )
+        return False
+    return True
+
+
 def validate_code(code):
-    # Initialize the errors dictionary
     errors = {"imports": {"errors": []}, "function": {"errors": []}}
+
+    # Check hash validation first if blocking is enabled
+    if not _check_and_block_if_not_allowed(code, "component validation"):
+        # Try to get display_name first, fall back to class name
+        component_name = extract_display_name(code)
+        if not component_name:
+            try:
+                component_name = extract_class_name(code)
+            except Exception:  # noqa: BLE001
+                component_name = "Unknown"
+        errors["function"]["errors"].append(f"Custom Component '{component_name}' is not allowed")
+        return errors
 
     # Parse the code string into an abstract syntax tree (AST)
     try:
@@ -153,6 +192,13 @@ def eval_function(function_string: str):
 
 
 def execute_function(code, function_name, *args, **kwargs):
+    # Check hash validation before processing
+    if not _check_and_block_if_not_allowed(code, f"function execution: function '{function_name}'"):
+        # Try to get display_name, fall back to function_name
+        display_name = extract_display_name(code) or function_name
+        msg = f"Custom Component '{display_name}' is not allowed"
+        raise ValueError(msg)
+
     add_type_ignores()
 
     module = ast.parse(code)
@@ -191,6 +237,13 @@ def execute_function(code, function_name, *args, **kwargs):
 
 
 def create_function(code, function_name):
+    # Check hash validation before processing
+    if not _check_and_block_if_not_allowed(code, f"function creation: function '{function_name}'"):
+        # Try to get display_name, fall back to function_name
+        display_name = extract_display_name(code) or function_name
+        msg = f"Custom Component '{display_name}' is not allowed"
+        raise ValueError(msg)
+
     if not hasattr(ast, "TypeIgnore"):
 
         class TypeIgnore(ast.AST):
@@ -254,11 +307,32 @@ def create_class(code, class_name):
     if not hasattr(ast, "TypeIgnore"):
         ast.TypeIgnore = create_type_ignore_class()
 
-    code = code.replace("from langflow import CustomComponent", "from langflow.custom import CustomComponent")
+    # Transform langflow imports to lfx imports for backward compatibility
+    code = code.replace("from langflow.base.", "from lfx.base.")
+    code = code.replace("from langflow.custom.", "from lfx.custom.")
+    code = code.replace("from langflow.inputs.", "from lfx.inputs.")
+    code = code.replace("from langflow.io ", "from lfx.io ")
+    code = code.replace("from langflow.schema.", "from lfx.schema.")
+    code = code.replace("from langflow.template.", "from lfx.template.")
+    code = code.replace("from langflow.field_typing", "from lfx.field_typing")
+    code = code.replace("from langflow.components.", "from lfx.components.")
+    code = code.replace("from langflow.helpers", "from lfx.helpers")
+    code = code.replace("from langflow.utils", "from lfx.utils")
+    code = code.replace("from langflow import CustomComponent", "from lfx.custom import CustomComponent")
     code = code.replace(
         "from langflow.interface.custom.custom_component import CustomComponent",
-        "from langflow.custom import CustomComponent",
+        "from lfx.custom import CustomComponent",
     )
+
+    # Normalize whitespace
+    code = code.rstrip() + "\n"
+
+    # Validate hash before adding DEFAULT_IMPORT_STRING
+    if not _check_and_block_if_not_allowed(code, f"component creation: class '{class_name}'"):
+        # Try to get display_name, fall back to class_name
+        display_name = extract_display_name(code) or class_name
+        msg = f"Custom Component '{display_name}' is not allowed"
+        raise ValueError(msg)
 
     code = DEFAULT_IMPORT_STRING + "\n" + code
     try:
@@ -490,6 +564,49 @@ def extract_function_name(code):
             return node.name
     msg = "No function definition found in the code string"
     raise ValueError(msg)
+
+
+def extract_display_name(code: str) -> str | None:
+    """Extract the display_name attribute from the Component class.
+
+    Args:
+        code (str): The source code to parse
+
+    Returns:
+        str | None: The display_name if found, None otherwise
+    """
+    try:
+        module = ast.parse(code)
+        for node in module.body:
+            if not isinstance(node, ast.ClassDef):
+                continue
+
+            # Check if this is a Component subclass
+            is_component = False
+            for base in node.bases:
+                if isinstance(base, ast.Name) and any(pattern in base.id for pattern in ["Component", "LC"]):
+                    is_component = True
+                    break
+
+            if not is_component:
+                continue
+
+            # Look for display_name attribute in the class body
+            for item in node.body:
+                if isinstance(item, ast.AnnAssign) and isinstance(item.target, ast.Name):
+                    if item.target.id == "display_name" and isinstance(item.value, ast.Constant):
+                        return item.value.value
+                elif isinstance(item, ast.Assign):
+                    for target in item.targets:
+                        if (
+                            isinstance(target, ast.Name)
+                            and target.id == "display_name"
+                            and isinstance(item.value, ast.Constant)
+                        ):
+                            return item.value.value
+    except (SyntaxError, AttributeError):
+        pass
+    return None
 
 
 def extract_class_name(code: str) -> str:

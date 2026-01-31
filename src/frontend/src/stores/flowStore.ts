@@ -872,7 +872,30 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
             ?.map((element) => element.id)
             .filter(Boolean) as string[]) ?? get().nodes.map((n) => n.id);
         useFlowStore.getState().updateBuildStatus(idList, BuildStatus.ERROR);
-        if (get().componentsToUpdate.length > 0)
+
+        // TODO: Fix root cause in checkCodeValidity function
+        // Currently, user-edited Custom Components are incorrectly marked as "outdated"
+        // because checkCodeValidity compares the user's modified code against the original
+        // template (currentCode !== thisNodesCode). This causes false positives where
+        // intentionally customized components appear outdated.
+        //
+        // Future fix: Modify checkCodeValidity to check data.node?.edited flag and exclude
+        // user-edited custom components from being marked as outdated, since they are
+        // intentionally modified, not actually outdated.
+        //
+        // Current workaround: Don't show "outdated components" message when the actual
+        // error is about blocked custom components (security restrictions), as this would
+        // be misleading - the issue is permissions, not component versions.
+        const isCustomComponentError = list.some(
+          (error) =>
+            error.includes("is not allowed") ||
+            error.includes("Custom Component"),
+        );
+
+        // Only show "outdated components" message if:
+        // 1. There are components to update
+        // 2. The error is NOT about blocked custom components
+        if (get().componentsToUpdate.length > 0 && !isCustomComponentError)
           setErrorData({
             title:
               "There are outdated components in the flow. The error could be related to them.",

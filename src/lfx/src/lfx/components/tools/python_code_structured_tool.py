@@ -38,6 +38,7 @@ class PythonCodeStructuredTool(LCToolComponent):
     field_order = ["name", "description", "tool_code", "return_direct", "tool_function"]
     legacy: bool = True
     replacement = ["processing.PythonREPLComponent"]
+    executes_code = True  # Executes user-provided tool code via exec()
 
     inputs = [
         MultilineInput(

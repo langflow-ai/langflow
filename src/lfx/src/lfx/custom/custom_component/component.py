@@ -114,6 +114,17 @@ class Component(CustomComponent):
     outputs: list[Output] = []
     selected_output: str | None = None
     code_class_base_inheritance: ClassVar[str] = "Component"
+    executes_code: ClassVar[bool] = False
+    """Flag indicating whether this component executes arbitrary code.
+
+    When True, this component will be blocked if LANGFLOW_ALLOW_CODE_EXECUTION_COMPONENTS=false.
+    This should be set to True for components that:
+    - Execute user-provided Python code (e.g., Python REPL)
+    - Execute LLM-generated code (e.g., Smart Transform with lambda eval)
+    - Use eval() or exec() on untrusted input
+
+    Default is False for security.
+    """
 
     def __init__(self, **kwargs) -> None:
         # Initialize instance-specific attributes first

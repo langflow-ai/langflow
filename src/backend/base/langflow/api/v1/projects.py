@@ -681,6 +681,26 @@ async def upload_file(
         flow_list = FlowListCreate(flows=[FlowCreate(**flow) for flow in data["flows"]])
     else:
         raise HTTPException(status_code=400, detail="No flows found in the data")
+
+    # Validate custom components in all flows before creating them
+    from langflow.api.utils.flow_validation import validate_flows_custom_components
+
+    flows_data = data["flows"]
+    blocked_by_flow = validate_flows_custom_components(flows_data)
+
+    if blocked_by_flow:
+        # Build detailed error message
+        error_details = []
+        for flow_name, blocked_components in blocked_by_flow.items():
+            component_names = [comp["display_name"] for comp in blocked_components]
+            error_details.append(f"Flow '{flow_name}': {', '.join(component_names)}")
+
+        error_message = (
+            "Upload blocked: The following flows contain custom components that are not allowed:\n"
+            + "\n".join(error_details)
+        )
+        raise HTTPException(status_code=400, detail=error_message)
+
     # Now we set the user_id for all flows
     for flow in flow_list.flows:
         flow_name = await generate_unique_flow_name(flow.name, current_user.id, session)

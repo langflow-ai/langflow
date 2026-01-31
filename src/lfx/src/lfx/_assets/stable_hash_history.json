@@ -66,7 +66,7 @@
   },
   "AmazonBedrockConverseModel": {
     "versions": {
-      "0.3.0": "54c335f8699f"
+      "0.3.0": "66b9519f4f62"
     }
   },
   "AmazonBedrockEmbeddings": {
@@ -1171,7 +1171,10 @@
   },
   "Smart Transform": {
     "versions": {
-      "0.3.0": "9912fe8c7f1b"
+      "0.3.0": {
+        "hash": "a941e962d6f2",
+        "executes_code": true
+      }
     }
   },
   "SmartRouter": {
@@ -1556,7 +1559,10 @@
   },
   "PythonCodeStructuredTool": {
     "versions": {
-      "0.3.0": "99f294af525b"
+      "0.3.0": {
+        "hash": "27a339f95737",
+        "executes_code": true
+      }
     }
   },
   "PythonREPLTool": {
@@ -1661,7 +1667,10 @@
   },
   "PythonREPLComponent": {
     "versions": {
-      "0.3.0": "80eeaf032b83"
+      "0.3.0": {
+        "hash": "ffad84f921d6",
+        "executes_code": true
+      }
     }
   },
   "Vectara": {
@@ -1701,7 +1710,7 @@
   },
   "VLMRunTranscription": {
     "versions": {
-      "0.3.0": "c91e2349a3df"
+      "0.3.0": "37232d071b96"
     }
   },
   "Weaviate": {

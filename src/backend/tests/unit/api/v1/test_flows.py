@@ -498,6 +498,115 @@ async def test_upload_flow_rejects_absolute_path(client: AsyncClient, logged_in_
     assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 
+async def test_upload_flow_blocks_custom_component_not_in_hash_history(client: AsyncClient, logged_in_headers):
+    """Test that uploading flows with blocked custom components is rejected."""
+    import json
+    from unittest.mock import patch
+
+    # Create a flow with a custom component
+    flow_data = {
+        "name": "test_flow_with_custom",
+        "data": {
+            "nodes": [
+                {
+                    "id": "custom-1",
+                    "data": {
+                        "type": "CustomComponent",
+                        "node": {
+                            "display_name": "My Custom Component",
+                            "template": {
+                                "code": {
+                                    "value": """
+from lfx.custom import Component
+
+class MyCustomComponent(Component):
+    display_name = "My Custom Component"
+
+    def build(self):
+        return "test"
+"""
+                                }
+                            },
+                        },
+                    },
+                }
+            ]
+        },
+    }
+
+    file_content = json.dumps({"flows": [flow_data]})
+
+    # Mock the validation to return that the component is blocked
+    with patch("langflow.api.utils.flow_validation.validate_code") as mock_validate:
+        mock_validate.return_value = {"function": {"errors": ["Custom Component 'My Custom Component' is not allowed"]}}
+
+        response = await client.post(
+            "api/v1/flows/upload/",
+            files={"file": ("flows.json", file_content, "application/json")},
+            headers=logged_in_headers,
+        )
+
+        assert response.status_code == 400
+        assert "Upload blocked" in response.json()["detail"]
+        assert "My Custom Component" in response.json()["detail"]
+
+
+async def test_upload_flow_allows_custom_component_in_hash_history(client: AsyncClient, logged_in_headers):
+    """Test that uploading flows with allowed custom components succeeds."""
+    import json
+    from unittest.mock import patch
+
+    # Create a flow with a custom component
+    flow_data = {
+        "name": "test_flow_with_allowed_custom",
+        "data": {
+            "nodes": [
+                {
+                    "id": "custom-1",
+                    "data": {
+                        "type": "CustomComponent",
+                        "node": {
+                            "display_name": "Allowed Custom Component",
+                            "template": {
+                                "code": {
+                                    "value": """
+from lfx.custom import Component
+
+class AllowedCustomComponent(Component):
+    display_name = "Allowed Custom Component"
+
+    def build(self):
+        return "test"
+"""
+                                }
+                            },
+                        },
+                    },
+                }
+            ]
+        },
+    }
+
+    file_content = json.dumps({"flows": [flow_data]})
+
+    # Mock the validation to return that the component is allowed
+    with patch("langflow.api.utils.flow_validation.validate_code") as mock_validate:
+        mock_validate.return_value = {
+            "function": {"errors": []}  # No errors means it's allowed
+        }
+
+        response = await client.post(
+            "api/v1/flows/upload/",
+            files={"file": ("flows.json", file_content, "application/json")},
+            headers=logged_in_headers,
+        )
+
+        assert response.status_code == 201
+        result = response.json()
+        assert len(result) == 1
+        assert result[0]["name"] == "test_flow_with_allowed_custom"
+
+
 # PUT endpoint tests (upsert)
 
 

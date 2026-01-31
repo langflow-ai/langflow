@@ -376,6 +376,9 @@ class ConfigResponse(BaseModel):
     voice_mode_available: bool
     default_folder_name: str
     hide_getting_started_progress: bool
+    allow_custom_components: bool
+    allow_nightly_core_components: bool
+    allow_code_execution_components: bool
 
     @classmethod
     def from_settings(cls, settings: Settings, auth_settings) -> "ConfigResponse":
@@ -409,6 +412,9 @@ class ConfigResponse(BaseModel):
             webhook_auth_enable=auth_settings.WEBHOOK_AUTH_ENABLE,
             default_folder_name=DEFAULT_FOLDER_NAME,
             hide_getting_started_progress=os.getenv("HIDE_GETTING_STARTED_PROGRESS", "").lower() == "true",
+            allow_custom_components=settings.allow_custom_components,
+            allow_nightly_core_components=settings.allow_nightly_core_components,
+            allow_code_execution_components=settings.allow_code_execution_components,
         )
 
 

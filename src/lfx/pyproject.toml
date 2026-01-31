@@ -58,6 +58,9 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/lfx"]
 
+[tool.hatch.build.targets.sdist]
+include = ["src/lfx"]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
@@ -109,4 +112,9 @@ exclude_lines = [
     "if __name__ == '__main__':",
     "if TYPE_CHECKING:",
     "@abstractmethod",
+]
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=8.4.2",
 ]

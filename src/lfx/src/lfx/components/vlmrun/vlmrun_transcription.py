@@ -1,8 +1,10 @@
 from pathlib import Path
 from urllib.parse import urlparse
 
-from langflow.custom.custom_component.component import Component
-from langflow.io import (
+from loguru import logger
+
+from lfx.custom.custom_component.component import Component
+from lfx.io import (
     DropdownInput,
     FileInput,
     IntInput,
@@ -10,8 +12,7 @@ from langflow.io import (
     Output,
     SecretStrInput,
 )
-from langflow.schema.data import Data
-from loguru import logger
+from lfx.schema.data import Data
 
 
 class VLMRunTranscription(Component):
