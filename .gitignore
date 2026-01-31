@@ -287,6 +287,9 @@ member_servers.json
 # Component index cache (user-specific)
 **/.cache/lfx/
 
+# lfx generated stubs (generated at build time)
+src/lfx/src/lfx/**/*.pyi
+
 # data files used for desktop registration
 data/user
 

@@ -164,6 +164,9 @@ jobs:
 
           echo "version=$version" >> $GITHUB_OUTPUT
 
+      - name: Generate type stubs
+        run: uv run python scripts/generate_lfx_stubs.py --inline
+
       - name: Build distribution
         run: |
           cd src/lfx
@@ -176,6 +179,16 @@ jobs:
           ls -la dist/
           # Verify wheel contents
           unzip -l dist/*.whl | grep -E "(lfx/__main__.py|lfx/cli/run.py|lfx/cli/commands.py)"
+          # Verify type stubs are included
+          echo "Checking for type stubs..."
+          unzip -l dist/*.whl | grep -E "\.pyi$" | head -5
+          STUB_COUNT=$(unzip -l dist/*.whl | grep -c "\.pyi$" || true)
+          echo "Found $STUB_COUNT stub files in wheel"
+          if [ "$STUB_COUNT" -lt 100 ]; then
+            echo "❌ Expected at least 100 stub files, found $STUB_COUNT"
+            exit 1
+          fi
+          echo "✅ Type stubs verified"
 
       - name: Test installation from wheel
         run: |
