@@ -97,7 +97,7 @@ export default function NodeName({
         )}
       >
         <div className="flex cursor-grab items-center gap-2">
-          <span className={cn("cursor-grab truncate text-sm")}>
+          <span className={cn("cursor-grab truncate text-base")}>
             {display_name}
           </span>
           {legacy && (

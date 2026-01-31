@@ -40,6 +40,7 @@ import ToolbarModals from "./components/toolbar-modals";
 import useShortcuts from "./hooks/use-shortcuts";
 import ShortcutDisplay from "./shortcutDisplay";
 import ToolbarSelectItem from "./toolbarSelectItem";
+import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
 
 const NodeToolbarComponent = memo(
   ({
@@ -478,7 +479,7 @@ const NodeToolbarComponent = memo(
     const renderToolbarButtons = useMemo(
       () => (
         <>
-          {hasCode && (
+          {hasCode && !ENABLE_INSPECTION_PANEL && (
             <ToolbarButton
               className={isCustomComponent ? "animate-pulse-pink" : ""}
               icon="Code"
@@ -490,7 +491,7 @@ const NodeToolbarComponent = memo(
               dataTestId="code-button-modal"
             />
           )}
-          {nodeLength > 0 && (
+          {nodeLength > 0 && !ENABLE_INSPECTION_PANEL && (
             <ToolbarButton
               icon="SlidersHorizontal"
               label="Controls"
@@ -501,7 +502,7 @@ const NodeToolbarComponent = memo(
               dataTestId="edit-button-modal"
             />
           )}
-          {!hasToolMode && (
+          {(!hasToolMode || ENABLE_INSPECTION_PANEL) && (
             <ToolbarButton
               icon="FreezeAll"
               label="Freeze"
@@ -681,19 +682,22 @@ const NodeToolbarComponent = memo(
                   </SelectItem>
                 )}
 
-                <SelectItem
-                  value={"documentation"}
-                  disabled={data.node?.documentation === ""}
-                >
-                  <ToolbarSelectItem
-                    shortcut={
-                      shortcuts.find((obj) => obj.name === "Docs")?.shortcut!
-                    }
-                    value={"Docs"}
-                    icon={"FileText"}
-                    dataTestId="docs-button-modal"
-                  />
-                </SelectItem>
+                {!ENABLE_INSPECTION_PANEL && (
+                  <SelectItem
+                    value={"documentation"}
+                    disabled={data.node?.documentation === ""}
+                  >
+                    <ToolbarSelectItem
+                      shortcut={
+                        shortcuts.find((obj) => obj.name === "Docs")?.shortcut!
+                      }
+                      value={"Docs"}
+                      icon={"FileText"}
+                      dataTestId="docs-button-modal"
+                    />
+                  </SelectItem>
+                )}
+
                 {(isMinimal || !showNode) && (
                   <SelectItem
                     value={"show"}
@@ -723,7 +727,7 @@ const NodeToolbarComponent = memo(
                     />
                   </SelectItem>
                 )}
-                {hasToolMode && (
+                {hasToolMode && !ENABLE_INSPECTION_PANEL && (
                   <SelectItem
                     value="freezeAll"
                     data-testid="freeze-all-button-modal"
