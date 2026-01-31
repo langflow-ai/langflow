@@ -5,6 +5,10 @@ export const lazyIconsMapping = {
     import("@/icons/AgentQL").then((mod) => ({ default: mod.AgentQLIcon })),
   Agiled: () =>
     import("@/icons/Agiled").then((mod) => ({ default: mod.AgiledIcon })),
+  Agentics: () =>
+    import("@/icons/Agentics").then((mod) => ({
+      default: mod.AgenticsIcon,
+    })),
   Airbyte: () =>
     import("@/icons/Airbyte").then((mod) => ({ default: mod.AirbyteIcon })),
   Anthropic: () =>
