@@ -95,6 +95,7 @@ module.exports = {
       label: "Develop",
       items: [
         "Develop/api-keys-and-authentication",
+        "Develop/jwt-authentication",
         "Develop/install-custom-dependencies",
         "Develop/configuration-global-variables",
         "Develop/environment-variables",
