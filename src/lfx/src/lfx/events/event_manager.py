@@ -107,4 +107,5 @@ def create_stream_tokens_event_manager(queue=None):
     manager.register_event("on_message", "add_message")
     manager.register_event("on_token", "token")
     manager.register_event("on_end", "end")
+    manager.register_event("on_error", "error")  # Register error event for streaming
     return manager
