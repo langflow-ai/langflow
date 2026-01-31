@@ -19,6 +19,7 @@ from langflow.api.v1.mcp_utils import (
     handle_mcp_errors,
     handle_read_resource,
 )
+from langflow.services.deps import get_settings_service
 
 router = APIRouter(prefix="/mcp", tags=["mcp"])
 
@@ -159,6 +160,8 @@ async def handle_messages(request: Request):
 ################################################################################
 # Streamable HTTP Transport
 ################################################################################
+
+
 class StreamableHTTP:
     def __init__(self):
         self.session_manager: StreamableHTTPSessionManager | None = None
@@ -185,14 +188,17 @@ class StreamableHTTP:
             self._mgr_ready.set()  # type: ignore[union-attr] # unblock listeners
             self._started = False
 
-    async def start(self, *, stateless: bool = True) -> None:
+    async def start(self) -> None:
         """Create and enter the Streamable HTTP session manager lifecycle."""
         async with self._start_stop_lock:
             if self._started:
                 await logger.adebug("Streamable HTTP session manager already running; skipping start")
                 return
             try:
-                self.session_manager = StreamableHTTPSessionManager(server, stateless=stateless)
+                settings = get_settings_service().settings
+                self.session_manager = StreamableHTTPSessionManager(
+                    app=server, stateless=settings.mcp_streamable_http_stateless
+                )
                 self._mgr_ready = asyncio.Event()
                 self._mgr_close = asyncio.Event()
                 self._mgr_task = asyncio.create_task(self._start_session_manager())
@@ -237,8 +243,8 @@ class StreamableHTTP:
 _streamable_http = StreamableHTTP()
 
 
-async def start_streamable_http_manager(stateless: bool = True) -> None:  # noqa: FBT001, FBT002
-    await _streamable_http.start(stateless=stateless)
+async def start_streamable_http_manager() -> None:
+    await _streamable_http.start()
 
 
 def get_streamable_http_manager() -> StreamableHTTPSessionManager:
