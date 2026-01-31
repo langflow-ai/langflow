@@ -132,6 +132,7 @@ async def run_flow_for_openai_responses(
                 tool_call_counter = 0
                 processed_tools = set()  # Track processed tool calls to avoid duplicates
                 previous_content = ""  # Track content already sent to calculate deltas
+                stream_usage_data = None  # Track usage from completed message
 
                 async for event_data in consume_and_yield(asyncio_queue, asyncio_queue_client_consumed):
                     if event_data is None:
@@ -201,6 +202,18 @@ async def run_flow_for_openai_responses(
                                         await logger.adebug(
                                             "[OpenAIResponses][stream] skipping add_message with state=complete"
                                         )
+                                        # Extract usage from completed message properties
+                                        if isinstance(properties, dict) and "usage" in properties:
+                                            usage_obj = properties.get("usage")
+                                            if usage_obj and isinstance(usage_obj, dict):
+                                                stream_usage_data = {
+                                                    "input_tokens": usage_obj.get("input_tokens") or 0,
+                                                    "output_tokens": usage_obj.get("output_tokens") or 0,
+                                                    "total_tokens": usage_obj.get("total_tokens") or 0,
+                                                }
+                                                await logger.adebug(
+                                                    "[OpenAIResponses][stream] captured usage: %s", stream_usage_data
+                                                )
                                         # Still process content_blocks for tool calls, but skip text content
                                         text = ""
 
@@ -379,11 +392,27 @@ async def run_flow_for_openai_responses(
                     status="completed",
                 )
                 yield f"data: {final_chunk.model_dump_json()}\n\n"
+
+                # Send response.completed event with usage (OpenAI format)
+                completed_event = {
+                    "type": "response.completed",
+                    "response": {
+                        "id": response_id,
+                        "object": "response",
+                        "created_at": created_timestamp,
+                        "status": "completed",
+                        "model": request.model,
+                        "usage": stream_usage_data,
+                    },
+                }
+                yield f"event: response.completed\ndata: {json.dumps(completed_event)}\n\n"
+
                 yield "data: [DONE]\n\n"
                 await logger.adebug(
-                    "[OpenAIResponses][stream] completed: response_id=%s total_sent_len=%d",
+                    "[OpenAIResponses][stream] completed: response_id=%s total_sent_len=%d usage=%s",
                     response_id,
                     len(previous_content),
+                    stream_usage_data,
                 )
 
             except Exception as e:  # noqa: BLE001
@@ -416,9 +445,10 @@ async def run_flow_for_openai_responses(
         context=context,
     )
 
-    # Extract output text and tool calls from result
+    # Extract output text, tool calls, and usage from result
     output_text = ""
     tool_calls: list[dict[str, Any]] = []
+    usage_data: dict[str, int] | None = None
     try:
         outputs_len = len(result.outputs) if getattr(result, "outputs", None) else 0
         await logger.adebug("[OpenAIResponses][non-stream] result.outputs len=%d", outputs_len)
@@ -430,13 +460,30 @@ async def run_flow_for_openai_responses(
             if run_output and run_output.outputs:
                 for component_output in run_output.outputs:
                     if component_output:
-                        # Handle messages (final chat outputs)
+                        # First, try to extract usage from results (contains actual Message objects)
+                        if hasattr(component_output, "results") and component_output.results:
+                            for value in component_output.results.values():
+                                # Extract usage from Message properties if available
+                                if (
+                                    not usage_data
+                                    and hasattr(value, "properties")
+                                    and hasattr(value.properties, "usage")
+                                    and value.properties.usage
+                                ):
+                                    usage_obj = value.properties.usage
+                                    usage_data = {
+                                        "input_tokens": getattr(usage_obj, "input_tokens", None) or 0,
+                                        "output_tokens": getattr(usage_obj, "output_tokens", None) or 0,
+                                        "total_tokens": getattr(usage_obj, "total_tokens", None) or 0,
+                                    }
+                                    break
+                        # Handle messages (final chat outputs) for text extraction
                         if hasattr(component_output, "messages") and component_output.messages:
                             for msg in component_output.messages:
                                 if hasattr(msg, "message"):
                                     output_text = msg.message
                                     break
-                        # Handle results
+                        # Handle results for text extraction if not found in messages
                         if not output_text and hasattr(component_output, "results") and component_output.results:
                             for value in component_output.results.values():
                                 if hasattr(value, "get_text"):
@@ -463,9 +510,10 @@ async def run_flow_for_openai_responses(
                 break
 
     await logger.adebug(
-        "[OpenAIResponses][non-stream] extracted output_text_len=%d tool_calls=%d",
+        "[OpenAIResponses][non-stream] extracted output_text_len=%d tool_calls=%d usage=%s",
         len(output_text) if isinstance(output_text, str) else -1,
         len(tool_calls),
+        usage_data,
     )
 
     # Build output array
@@ -517,6 +565,7 @@ async def run_flow_for_openai_responses(
         model=request.model,
         output=output_items,
         previous_response_id=request.previous_response_id,
+        usage=usage_data,
     )
 
 
