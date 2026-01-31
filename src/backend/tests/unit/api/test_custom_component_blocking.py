@@ -138,7 +138,9 @@ class TestCustomComponentBlocking:
 
     @pytest.mark.asyncio
     async def test_empty_code_is_allowed(
-        self, client: AsyncClient, logged_in_headers  # noqa: ARG002
+        self,
+        client: AsyncClient,
+        logged_in_headers,  # noqa: ARG002
     ):
         """Test that empty code is allowed (will fail validation elsewhere)."""
         from lfx.custom.hash_validator import is_code_hash_allowed

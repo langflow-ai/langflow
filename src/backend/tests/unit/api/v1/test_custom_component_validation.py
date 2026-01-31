@@ -163,13 +163,7 @@ async def test_upsert_flow_blocks_custom_component_on_update(client: AsyncClient
 
 async def test_batch_create_blocks_custom_components(client: AsyncClient, logged_in_headers):
     """Test that POST /flows/batch/ blocks flows with custom components."""
-    flows = [
-        create_flow_with_custom_component(),
-        {
-            "name": "normal_flow",
-            "data": {"nodes": [], "edges": []}
-        }
-    ]
+    flows = [create_flow_with_custom_component(), {"name": "normal_flow", "data": {"nodes": [], "edges": []}}]
 
     response = await client.post("api/v1/flows/batch/", json={"flows": flows}, headers=logged_in_headers)
 

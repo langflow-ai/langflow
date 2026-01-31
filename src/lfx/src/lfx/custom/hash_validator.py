@@ -53,9 +53,7 @@ def _generate_code_hash(source_code: str) -> str:
     return hashlib.sha256(source_code.encode("utf-8")).hexdigest()[:12]
 
 
-def _extract_hashes_from_history(
-    history: dict, *, allow_code_execution: bool = True
-) -> tuple[set[str], set[str]]:
+def _extract_hashes_from_history(history: dict, *, allow_code_execution: bool = True) -> tuple[set[str], set[str]]:
     """Extract code hashes from hash history file, separating code-execution components.
 
     Args:
