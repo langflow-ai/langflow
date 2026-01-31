@@ -5514,7 +5514,7 @@
         ],
         "summary": "Handle Streamable Http",
         "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
-        "operationId": "handle_streamable_http_api_v1_mcp_streamable__post",
+        "operationId": "handle_streamable_http_api_v1_mcp_streamable__get",
         "responses": {
           "200": {
             "description": "Successful Response"
@@ -5538,7 +5538,7 @@
         ],
         "summary": "Handle Streamable Http",
         "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
-        "operationId": "handle_streamable_http_api_v1_mcp_streamable__post",
+        "operationId": "handle_streamable_http_api_v1_mcp_streamable__get",
         "responses": {
           "200": {
             "description": "Successful Response"
@@ -5562,7 +5562,7 @@
         ],
         "summary": "Handle Streamable Http",
         "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
-        "operationId": "handle_streamable_http_api_v1_mcp_streamable__post",
+        "operationId": "handle_streamable_http_api_v1_mcp_streamable__get",
         "responses": {
           "200": {
             "description": "Successful Response"
@@ -5588,7 +5588,7 @@
         ],
         "summary": "Handle Streamable Http",
         "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
-        "operationId": "handle_streamable_http_api_v1_mcp_streamable_post",
+        "operationId": "handle_streamable_http_api_v1_mcp_streamable_get",
         "responses": {
           "200": {
             "description": "Successful Response"
@@ -5612,7 +5612,7 @@
         ],
         "summary": "Handle Streamable Http",
         "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
-        "operationId": "handle_streamable_http_api_v1_mcp_streamable_post",
+        "operationId": "handle_streamable_http_api_v1_mcp_streamable_get",
         "responses": {
           "200": {
             "description": "Successful Response"
@@ -5636,7 +5636,7 @@
         ],
         "summary": "Handle Streamable Http",
         "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
-        "operationId": "handle_streamable_http_api_v1_mcp_streamable_post",
+        "operationId": "handle_streamable_http_api_v1_mcp_streamable_get",
         "responses": {
           "200": {
             "description": "Successful Response"
@@ -5937,13 +5937,13 @@
       }
     },
     "/api/v1/mcp/project/{project_id}/streamable/": {
-      "post": {
+      "get": {
         "tags": [
           "mcp_projects"
         ],
         "summary": "Handle Project Streamable Http",
         "description": "Handle Streamable HTTP connections for a specific project.",
-        "operationId": "handle_project_streamable_http_api_v1_mcp_project__project_id__streamable__post",
+        "operationId": "handle_project_streamable_http_api_v1_mcp_project__project_id__streamable__get",
         "parameters": [
           {
             "name": "project_id",
@@ -5972,13 +5972,13 @@
           }
         }
       },
-      "get": {
+      "post": {
         "tags": [
           "mcp_projects"
         ],
         "summary": "Handle Project Streamable Http",
         "description": "Handle Streamable HTTP connections for a specific project.",
-        "operationId": "handle_project_streamable_http_api_v1_mcp_project__project_id__streamable__post",
+        "operationId": "handle_project_streamable_http_api_v1_mcp_project__project_id__streamable__get",
         "parameters": [
           {
             "name": "project_id",
@@ -6013,7 +6013,7 @@
         ],
         "summary": "Handle Project Streamable Http",
         "description": "Handle Streamable HTTP connections for a specific project.",
-        "operationId": "handle_project_streamable_http_api_v1_mcp_project__project_id__streamable__post",
+        "operationId": "handle_project_streamable_http_api_v1_mcp_project__project_id__streamable__get",
         "parameters": [
           {
             "name": "project_id",
@@ -6044,13 +6044,13 @@
       }
     },
     "/api/v1/mcp/project/{project_id}/streamable": {
-      "post": {
+      "get": {
         "tags": [
           "mcp_projects"
         ],
         "summary": "Handle Project Streamable Http",
         "description": "Handle Streamable HTTP connections for a specific project.",
-        "operationId": "handle_project_streamable_http_api_v1_mcp_project__project_id__streamable_post",
+        "operationId": "handle_project_streamable_http_api_v1_mcp_project__project_id__streamable_get",
         "parameters": [
           {
             "name": "project_id",
@@ -6079,13 +6079,13 @@
           }
         }
       },
-      "get": {
+      "post": {
         "tags": [
           "mcp_projects"
         ],
         "summary": "Handle Project Streamable Http",
         "description": "Handle Streamable HTTP connections for a specific project.",
-        "operationId": "handle_project_streamable_http_api_v1_mcp_project__project_id__streamable_post",
+        "operationId": "handle_project_streamable_http_api_v1_mcp_project__project_id__streamable_get",
         "parameters": [
           {
             "name": "project_id",
@@ -6120,7 +6120,7 @@
         ],
         "summary": "Handle Project Streamable Http",
         "description": "Handle Streamable HTTP connections for a specific project.",
-        "operationId": "handle_project_streamable_http_api_v1_mcp_project__project_id__streamable_post",
+        "operationId": "handle_project_streamable_http_api_v1_mcp_project__project_id__streamable_get",
         "parameters": [
           {
             "name": "project_id",
@@ -7317,7 +7317,7 @@
         ],
         "summary": "Handle Streamable Http",
         "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
-        "operationId": "handle_streamable_http_api_mcp_streamable__post",
+        "operationId": "handle_streamable_http_api_mcp_streamable__get",
         "responses": {
           "200": {
             "description": "Successful Response"
@@ -7341,7 +7341,7 @@
         ],
         "summary": "Handle Streamable Http",
         "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
-        "operationId": "handle_streamable_http_api_mcp_streamable__post",
+        "operationId": "handle_streamable_http_api_mcp_streamable__get",
         "responses": {
           "200": {
             "description": "Successful Response"
@@ -7365,7 +7365,7 @@
         ],
         "summary": "Handle Streamable Http",
         "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
-        "operationId": "handle_streamable_http_api_mcp_streamable__post",
+        "operationId": "handle_streamable_http_api_mcp_streamable__get",
         "responses": {
           "200": {
             "description": "Successful Response"
@@ -7391,7 +7391,7 @@
         ],
         "summary": "Handle Streamable Http",
         "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
-        "operationId": "handle_streamable_http_api_mcp_streamable_post",
+        "operationId": "handle_streamable_http_api_mcp_streamable_get",
         "responses": {
           "200": {
             "description": "Successful Response"
@@ -7415,7 +7415,7 @@
         ],
         "summary": "Handle Streamable Http",
         "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
-        "operationId": "handle_streamable_http_api_mcp_streamable_post",
+        "operationId": "handle_streamable_http_api_mcp_streamable_get",
         "responses": {
           "200": {
             "description": "Successful Response"
@@ -7439,7 +7439,7 @@
         ],
         "summary": "Handle Streamable Http",
         "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
-        "operationId": "handle_streamable_http_api_mcp_streamable_post",
+        "operationId": "handle_streamable_http_api_mcp_streamable_get",
         "responses": {
           "200": {
             "description": "Successful Response"
@@ -11287,7 +11287,7 @@
           },
           "content_blocks": {
             "items": {
-              "$ref": "#/components/schemas/langflow__schema__content_block__ContentBlock"
+              "$ref": "#/components/schemas/lfx__schema__content_block__ContentBlock"
             },
             "type": "array",
             "title": "Content Blocks"
@@ -11430,7 +11430,7 @@
             "anyOf": [
               {
                 "items": {
-                  "$ref": "#/components/schemas/langflow__schema__content_block__ContentBlock"
+                  "$ref": "#/components/schemas/lfx__schema__content_block__ContentBlock"
                 },
                 "type": "array"
               },
@@ -11965,7 +11965,7 @@
             "anyOf": [
               {
                 "items": {
-                  "$ref": "#/components/schemas/langflow__schema__content_block__ContentBlock"
+                  "$ref": "#/components/schemas/lfx__schema__content_block__ContentBlock"
                 },
                 "type": "array"
               },
@@ -13569,52 +13569,6 @@
         "title": "UploadFileResponse",
         "description": "Upload file response schema."
       },
-      "langflow__schema__content_block__ContentBlock": {
-        "properties": {
-          "title": {
-            "type": "string",
-            "title": "Title"
-          },
-          "contents": {
-            "items": {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            "type": "array",
-            "title": "Contents"
-          },
-          "allow_markdown": {
-            "type": "boolean",
-            "title": "Allow Markdown",
-            "default": true
-          },
-          "media_url": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Media Url"
-          }
-        },
-        "type": "object",
-        "required": [
-          "title",
-          "contents"
-        ],
-        "title": "ContentBlock",
-        "description": "A block of content that can contain different types of content."
-      },
-      "langflow__schema__content_types__CodeContent": {
-        "additionalProperties": true,
-        "type": "object"
-      },
       "langflow__schema__content_types__ErrorContent": {
         "additionalProperties": true,
         "type": "object"
@@ -13672,6 +13626,52 @@
         },
         "type": "object",
         "title": "Source"
+      },
+      "lfx__schema__content_block__ContentBlock": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "contents": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Contents"
+          },
+          "allow_markdown": {
+            "type": "boolean",
+            "title": "Allow Markdown",
+            "default": true
+          },
+          "media_url": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Media Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "contents"
+        ],
+        "title": "ContentBlock",
+        "description": "A block of content that can contain different types of content."
+      },
+      "lfx__schema__content_types__CodeContent": {
+        "additionalProperties": true,
+        "type": "object"
       },
       "lfx__schema__content_types__JSONContent": {
         "additionalProperties": true,
