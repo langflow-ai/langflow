@@ -15,7 +15,7 @@ from lfx.custom import Component
 
 class MyCustomComponent(Component):
     display_name = "My Custom Component"
-    
+
     def build(self):
         return "test"
 """
@@ -29,7 +29,7 @@ from lfx.schema.message import Message
 class ChatInput(ChatComponent):
     display_name = "I am a custom component"
     description = "Get chat inputs from the Playground."
-    
+
     inputs = [
         MessageTextInput(
             name="input_value",
@@ -48,7 +48,7 @@ class ChatInput(ChatComponent):
 """
 
 
-def create_flow_with_custom_component(component_type="CustomComponent", code=CUSTOM_COMPONENT_CODE, edited=False):
+def create_flow_with_custom_component(component_type="CustomComponent", code=CUSTOM_COMPONENT_CODE, edited=False):  # noqa: FBT002
     """Helper to create flow data with a custom component."""
     return {
         "name": "test_flow_with_custom",
@@ -163,7 +163,13 @@ async def test_upsert_flow_blocks_custom_component_on_update(client: AsyncClient
 
 async def test_batch_create_blocks_custom_components(client: AsyncClient, logged_in_headers):
     """Test that POST /flows/batch/ blocks flows with custom components."""
-    flows = [create_flow_with_custom_component(), {"name": "normal_flow", "data": {"nodes": [], "edges": []}}]
+    flows = [
+        create_flow_with_custom_component(),
+        {
+            "name": "normal_flow",
+            "data": {"nodes": [], "edges": []}
+        }
+    ]
 
     response = await client.post("api/v1/flows/batch/", json={"flows": flows}, headers=logged_in_headers)
 

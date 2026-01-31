@@ -16,7 +16,7 @@ from lfx.io import Output
 class TestComponent(Component):
     display_name = "Test Component"
     description = "A test component"
-    
+
     def build(self) -> str:
         return "test output"
 """
@@ -118,7 +118,10 @@ class TestCustomComponentBlocking:
 
     @pytest.mark.asyncio
     async def test_blocking_respects_allow_custom_components_setting(
-        self, client: AsyncClient, logged_in_headers, custom_component_code
+        self,
+        client: AsyncClient,  # noqa: ARG002
+        logged_in_headers,  # noqa: ARG002
+        custom_component_code,
     ):
         """Test that blocking respects the allow_custom_components setting."""
         # When allow_custom_components is True, hash check should pass
@@ -134,7 +137,9 @@ class TestCustomComponentBlocking:
             assert result is True
 
     @pytest.mark.asyncio
-    async def test_empty_code_is_allowed(self, client: AsyncClient, logged_in_headers):
+    async def test_empty_code_is_allowed(
+        self, client: AsyncClient, logged_in_headers  # noqa: ARG002
+    ):
         """Test that empty code is allowed (will fail validation elsewhere)."""
         from lfx.custom.hash_validator import is_code_hash_allowed
 

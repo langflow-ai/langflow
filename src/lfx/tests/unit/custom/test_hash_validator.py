@@ -1,3 +1,4 @@
+# ruff: noqa: PT017, PGH003
 """Tests for hash validator module."""
 
 from unittest.mock import Mock, patch
@@ -104,7 +105,8 @@ class TestExtractHashesFromHistory:
         }
         try:
             _extract_hashes_from_history(history)
-            assert False, "Should have raised ValueError"
+            msg = "Should have raised ValueError"
+            raise AssertionError(msg)
         except ValueError as e:
             assert "Missing 'versions' key" in str(e)
             assert "Component1" in str(e)
@@ -186,7 +188,8 @@ class TestExtractHashesFromHistory:
         }
         try:
             _extract_hashes_from_history(history)
-            assert False, "Should have raised ValueError"
+            msg = "Should have raised ValueError"
+            raise AssertionError(msg)
         except ValueError as e:
             assert "Empty hash" in str(e)
             assert "Component1" in str(e)
@@ -203,7 +206,8 @@ class TestExtractHashesFromHistory:
         }
         try:
             _extract_hashes_from_history(history)
-            assert False, "Should have raised ValueError"
+            msg = "Should have raised ValueError"
+            raise AssertionError(msg)
         except ValueError as e:
             assert "Invalid version data type" in str(e)
             assert "Component1" in str(e)
@@ -215,7 +219,8 @@ class TestExtractHashesFromHistory:
         }
         try:
             _extract_hashes_from_history(history)
-            assert False, "Should have raised ValueError"
+            msg = "Should have raised ValueError"
+            raise AssertionError(msg)
         except ValueError as e:
             assert "Invalid component data format" in str(e)
             assert "Component1" in str(e)
@@ -229,7 +234,8 @@ class TestExtractHashesFromHistory:
         }
         try:
             _extract_hashes_from_history(history)
-            assert False, "Should have raised ValueError"
+            msg = "Should have raised ValueError"
+            raise AssertionError(msg)
         except ValueError as e:
             assert "Invalid versions format" in str(e)
             assert "Component1" in str(e)
@@ -344,7 +350,8 @@ class TestExtractHashesFromHistory:
         }
         try:
             _extract_hashes_from_history(history)
-            assert False, "Should have raised ValueError"
+            msg = "Should have raised ValueError"
+            raise AssertionError(msg)
         except ValueError as e:
             assert "Missing 'hash' key" in str(e)
             assert "Component1" in str(e)
@@ -403,7 +410,8 @@ class TestIsCodeHashAllowed:
         with patch("lfx.custom.hash_validator.get_settings_service", return_value=None):
             try:
                 is_code_hash_allowed(code)
-                assert False, "Should have raised ValueError"
+                msg = "Should have raised ValueError"
+                raise AssertionError(msg)
             except ValueError as e:
                 assert "Settings service is not available" in str(e)
 
@@ -414,7 +422,8 @@ class TestIsCodeHashAllowed:
             # Should raise exception when service unavailable (fail fast)
             try:
                 is_code_hash_allowed(code)
-                assert False, "Should have raised Exception"
+                msg = "Should have raised Exception"
+                raise AssertionError(msg)
             except Exception as e:
                 assert "Service unavailable" in str(e)
 
@@ -437,7 +446,8 @@ class TestIsCodeHashAllowed:
             # Should raise exception when hash generation fails (fail fast)
             try:
                 is_code_hash_allowed(code, mock_settings)
-                assert False, "Should have raised Exception"
+                msg = "Should have raised Exception"
+                raise AssertionError(msg)
             except Exception as e:
                 assert "Hash error" in str(e)
 
@@ -452,7 +462,8 @@ class TestIsCodeHashAllowed:
             # Should raise exception when history loading fails (fail fast)
             try:
                 is_code_hash_allowed(code, mock_settings)
-                assert False, "Should have raised ValueError"
+                msg = "Should have raised ValueError"
+                raise AssertionError(msg)
             except ValueError as e:
                 assert "History error" in str(e)
 
@@ -469,7 +480,8 @@ class TestIsCodeHashAllowed:
             # Should raise ValueError when history is empty (critical error)
             try:
                 _load_hash_history(mock_settings)
-                assert False, "Should have raised ValueError"
+                msg = "Should have raised ValueError"
+                raise AssertionError(msg)
             except ValueError as e:
                 assert "No hashes loaded" in str(e)
 

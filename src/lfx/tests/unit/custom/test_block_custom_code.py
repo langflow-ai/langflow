@@ -1,3 +1,4 @@
+# ruff: noqa: ARG002
 """Integration tests for custom code blocking feature."""
 
 from unittest.mock import Mock, patch
@@ -75,7 +76,7 @@ from lfx.custom import Component
 class TestComponent(Component):
     """This is a test component."""
     display_name = "Test Component"
-    
+
     def build(self):
         pass
 '''
@@ -113,7 +114,7 @@ from lfx.custom import Component
 class TestComponent(Component):
     def __init__(self):
         self.display_name = "Should Not Extract This"
-    
+
     display_name = "Correct Display Name"
 """
         result = extract_display_name(code)

@@ -196,7 +196,8 @@ def execute_function(code, function_name, *args, **kwargs):
     if not _check_and_block_if_not_allowed(code, f"function execution: function '{function_name}'"):
         # Try to get display_name, fall back to function_name
         display_name = extract_display_name(code) or function_name
-        raise ValueError(f"Custom Component '{display_name}' is not allowed")
+        msg = f"Custom Component '{display_name}' is not allowed"
+        raise ValueError(msg)
 
     add_type_ignores()
 
@@ -240,7 +241,8 @@ def create_function(code, function_name):
     if not _check_and_block_if_not_allowed(code, f"function creation: function '{function_name}'"):
         # Try to get display_name, fall back to function_name
         display_name = extract_display_name(code) or function_name
-        raise ValueError(f"Custom Component '{display_name}' is not allowed")
+        msg = f"Custom Component '{display_name}' is not allowed"
+        raise ValueError(msg)
 
     if not hasattr(ast, "TypeIgnore"):
 
@@ -329,7 +331,8 @@ def create_class(code, class_name):
     if not _check_and_block_if_not_allowed(code, f"component creation: class '{class_name}'"):
         # Try to get display_name, fall back to class_name
         display_name = extract_display_name(code) or class_name
-        raise ValueError(f"Custom Component '{display_name}' is not allowed")
+        msg = f"Custom Component '{display_name}' is not allowed"
+        raise ValueError(msg)
 
     code = DEFAULT_IMPORT_STRING + "\n" + code
     try:
@@ -595,13 +598,15 @@ def extract_display_name(code: str) -> str | None:
                         return item.value.value
                 elif isinstance(item, ast.Assign):
                     for target in item.targets:
-                        if isinstance(target, ast.Name) and target.id == "display_name":
-                            if isinstance(item.value, ast.Constant):
-                                return item.value.value
-
-        return None
+                        if (
+                            isinstance(target, ast.Name)
+                            and target.id == "display_name"
+                            and isinstance(item.value, ast.Constant)
+                        ):
+                            return item.value.value
     except (SyntaxError, AttributeError):
-        return None
+        pass
+    return None
 
 
 def extract_class_name(code: str) -> str:

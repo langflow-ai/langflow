@@ -53,7 +53,9 @@ def _generate_code_hash(source_code: str) -> str:
     return hashlib.sha256(source_code.encode("utf-8")).hexdigest()[:12]
 
 
-def _extract_hashes_from_history(history: dict, allow_code_execution: bool = True) -> tuple[set[str], set[str]]:
+def _extract_hashes_from_history(
+    history: dict, *, allow_code_execution: bool = True
+) -> tuple[set[str], set[str]]:
     """Extract code hashes from hash history file, separating code-execution components.
 
     Args:
@@ -76,9 +78,12 @@ def _extract_hashes_from_history(history: dict, allow_code_execution: bool = Tru
 
     for component_name, component_data in history.items():
         if not isinstance(component_data, dict):
-            msg = f"Invalid component data format for '{component_name}' - expected dict, got {type(component_data).__name__}"
+            msg = (
+                f"Invalid component data format for '{component_name}' - "
+                f"expected dict, got {type(component_data).__name__}"
+            )
             logger.error(msg)
-            raise ValueError(msg)
+            raise TypeError(msg)
 
         if "versions" not in component_data:
             msg = f"Missing 'versions' key for component '{component_name}'"
@@ -87,9 +92,12 @@ def _extract_hashes_from_history(history: dict, allow_code_execution: bool = Tru
 
         versions = component_data["versions"]
         if not isinstance(versions, dict):
-            msg = f"Invalid versions format for component '{component_name}' - expected dict, got {type(versions).__name__}"
+            msg = (
+                f"Invalid versions format for component '{component_name}' - "
+                f"expected dict, got {type(versions).__name__}"
+            )
             logger.error(msg)
-            raise ValueError(msg)
+            raise TypeError(msg)
 
         for version, version_data in versions.items():
             # Support both old format (string hash) and new format (dict with hash and flags)
@@ -106,14 +114,20 @@ def _extract_hashes_from_history(history: dict, allow_code_execution: bool = Tru
                 code_hash = version_data["hash"]
                 executes_code = version_data.get("executes_code", False)
             else:
-                msg = f"Invalid version data type for component '{component_name}' version '{version}' - expected str or dict, got {type(version_data).__name__}"
+                msg = (
+                    f"Invalid version data type for component '{component_name}' "
+                    f"version '{version}' - expected str or dict, got {type(version_data).__name__}"
+                )
                 logger.error(msg)
-                raise ValueError(msg)
+                raise TypeError(msg)
 
             if not isinstance(code_hash, str):
-                msg = f"Invalid hash type for component '{component_name}' version '{version}' - expected str, got {type(code_hash).__name__}"
+                msg = (
+                    f"Invalid hash type for component '{component_name}' version '{version}' - "
+                    f"expected str, got {type(code_hash).__name__}"
+                )
                 logger.error(msg)
-                raise ValueError(msg)
+                raise TypeError(msg)
             if not code_hash:
                 msg = f"Empty hash for component '{component_name}' version '{version}'"
                 logger.error(msg)
@@ -167,7 +181,9 @@ def _load_hash_history(settings_service: "SettingsService") -> set[str]:
 
     try:
         stable_history = orjson.loads(stable_history_path.read_bytes())
-        stable_hashes, stable_code_exec = _extract_hashes_from_history(stable_history, allow_code_execution)
+        stable_hashes, stable_code_exec = _extract_hashes_from_history(
+            stable_history, allow_code_execution=allow_code_execution
+        )
         all_hashes.update(stable_hashes)
         all_code_execution_hashes.update(stable_code_exec)
         logger.debug(
@@ -187,7 +203,9 @@ def _load_hash_history(settings_service: "SettingsService") -> set[str]:
 
         try:
             nightly_history = orjson.loads(nightly_history_path.read_bytes())
-            nightly_hashes, nightly_code_exec = _extract_hashes_from_history(nightly_history, allow_code_execution)
+            nightly_hashes, nightly_code_exec = _extract_hashes_from_history(
+                nightly_history, allow_code_execution=allow_code_execution
+            )
             all_hashes.update(nightly_hashes)
             all_code_execution_hashes.update(nightly_code_exec)
             logger.debug(

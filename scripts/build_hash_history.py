@@ -62,6 +62,7 @@ def update_history(
     component_name: str,
     code_hash: str,
     current_version: str,
+    *,
     executes_code: bool = False,
     debug: bool = False,
 ) -> dict:
@@ -84,10 +85,7 @@ def update_history(
     version_key = str(current_version_parsed)
 
     # Create version data - use dict format if executes_code is True, otherwise use simple string
-    if executes_code:
-        version_data = {"hash": code_hash, "executes_code": True}
-    else:
-        version_data = code_hash
+    version_data = {"hash": code_hash, "executes_code": True} if executes_code else code_hash
 
     if component_name not in history:
         print(f"Component {component_name} not found in history. Adding...")
@@ -116,9 +114,8 @@ def update_history(
             # Extract hash from either string or dict format
             old_hash = old_hash_data if isinstance(old_hash_data, str) else old_hash_data.get("hash")
 
-            if old_hash != code_hash:
-                if debug:
-                    print(f"  [DEBUG] Updating hash for {component_name} v{version_key}: {old_hash} → {code_hash}")
+            if old_hash != code_hash and debug:
+                print(f"  [DEBUG] Updating hash for {component_name} v{version_key}: {old_hash} → {code_hash}")
 
         history[component_name]["versions"][version_key] = version_data
 
@@ -229,7 +226,7 @@ def main(argv=None):
                 print(f"  → Component {comp_name} marked as executes_code=True")
 
             new_history = update_history(
-                new_history, comp_name, code_hash, current_version, executes_code, debug=args.debug
+                new_history, comp_name, code_hash, current_version, executes_code=executes_code, debug=args.debug
             )
 
     # Validate append-only constraint before saving

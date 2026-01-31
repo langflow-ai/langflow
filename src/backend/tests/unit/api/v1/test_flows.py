@@ -521,7 +521,7 @@ from lfx.custom import Component
 
 class MyCustomComponent(Component):
     display_name = "My Custom Component"
-    
+
     def build(self):
         return "test"
 """
@@ -574,7 +574,7 @@ from lfx.custom import Component
 
 class AllowedCustomComponent(Component):
     display_name = "Allowed Custom Component"
-    
+
     def build(self):
         return "test"
 """
