@@ -230,11 +230,24 @@ class JobQueueService(Service):
         if task and not task.done():
             await logger.adebug(f"Cancelling active task for job_id {job_id}")
             task.cancel()
-            await asyncio.wait([task])
-            # Log any exceptions that occurred during the task's execution.
-            if exc := task.exception():
-                await logger.aerror(f"Error in task for job_id {job_id}: {exc}")
-            await logger.adebug(f"Task cancellation complete for job_id {job_id}")
+            try:
+                await task
+            except asyncio.CancelledError as exc:
+                # Check if this was a user-initiated cancellation (user called task.cancel())
+                if task.cancelled():
+                    # User-initiated cancellation so we explicitly called task.cancel() above
+                    await logger.adebug(f"Task for job_id {job_id} was successfully cancelled.")
+                    # Re-raise with user cancellation message code
+                    exc.args = ("LANGFLOW_USER_CANCELLED",)
+                    raise
+                # System-initiated cancellation for other reasons
+                await logger.adebug(f"Task for job_id {job_id} was cancelled by system.")
+                exc.args = ("LANGFLOW_SYSTEM_CANCELLED",)
+                raise
+            except Exception as exc:
+                await logger.aerror(f"Error in task for job_id {job_id} during cancellation: {exc}")
+                raise
+        await logger.adebug(f"Task cancellation complete for job_id {job_id}")
 
         # Clear the queue since we just cancelled the task or it has completed
         items_cleared = 0

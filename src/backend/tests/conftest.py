@@ -184,14 +184,23 @@ async def delete_transactions_by_flow_id(db: AsyncSession, flow_id: UUID):
 
 
 async def _delete_transactions_and_vertex_builds(session, flows: list[Flow]):
+    from langflow.services.database.models.jobs.model import Job
+
     flow_ids = [flow.id for flow in flows]
     for flow_id in flow_ids:
         if not flow_id:
             continue
         try:
+            # Delete associated jobs first due to foreign keys
+            stmt = select(Job).where(Job.flow_id == flow_id)
+            jobs = (await session.exec(stmt)).all()
+            for job in jobs:
+                await session.delete(job)
+            await session.flush()
+
             await delete_vertex_builds_by_flow_id(session, flow_id)
         except Exception as e:
-            logger.debug(f"Error deleting vertex builds for flow {flow_id}: {e}")
+            logger.debug(f"Error deleting jobs/vertex builds for flow {flow_id}: {e}")
         try:
             await delete_transactions_by_flow_id(session, flow_id)
         except Exception as e:
@@ -215,6 +224,15 @@ def session_fixture():
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
+    # Ensure foreign keys are enabled for the in-memory session engine
+    from sqlalchemy import event
+
+    @event.listens_for(engine, "connect")
+    def set_sqlite_pragma(dbapi_connection, connection_record):  # noqa: ARG001
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+
     try:
         SQLModel.metadata.create_all(engine)
         with Session(engine) as session:

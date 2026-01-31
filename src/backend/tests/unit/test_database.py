@@ -810,12 +810,12 @@ async def test_read_folder_with_component_filter(client: AsyncClient, json_flow:
     assert folder_data["flows"]["items"][0]["is_component"] == True  # noqa: E712
 
 
-def test_transaction_excludes_code_key(session, active_user):
+def test_transaction_excludes_code_key(session):
     """Test that the code key is excluded from transaction inputs when logged to the database."""
     from langflow.services.database.models.transactions.model import TransactionTable
 
     # Create a flow to associate with the transaction
-    flow = Flow(name=str(uuid4()), description="Test flow", data={}, user_id=active_user.id)
+    flow = Flow(name=str(uuid4()), description="Test flow", data={})
     session.add(flow)
     session.commit()
     session.refresh(flow)

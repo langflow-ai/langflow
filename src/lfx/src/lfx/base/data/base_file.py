@@ -11,7 +11,7 @@ from zipfile import ZipFile, is_zipfile
 import orjson
 import pandas as pd
 
-from lfx.base.data.storage_utils import get_file_size, read_file_bytes
+from lfx.base.data.storage_utils import get_file_size, parse_storage_path, read_file_bytes
 from lfx.custom.custom_component.component import Component
 from lfx.io import BoolInput, FileInput, HandleInput, Output, StrInput
 from lfx.schema.data import Data
@@ -618,7 +618,7 @@ class BaseFileComponent(Component, ABC):
             else:
                 # Check if path looks like a storage path (flow_id/filename format)
                 # If so, use get_full_path to resolve it to the actual storage location
-                if "/" in path_str and not Path(path_str).is_absolute():
+                if parse_storage_path(path_str):
                     try:
                         resolved_path = Path(self.get_full_path(path_str))
                         self.log(f"Resolved storage path '{path_str}' to '{resolved_path}'")
