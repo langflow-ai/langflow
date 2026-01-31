@@ -297,7 +297,7 @@ const CustomInputPopover = ({
                 onInputLostFocus?.();
                 setIsFocused(false);
               }}
-              value={disabled ? "" : value || ""}
+              defaultValue={disabled ? "" : value || ""}
               disabled={disabled}
               required={required}
               className={getInputClassName(
