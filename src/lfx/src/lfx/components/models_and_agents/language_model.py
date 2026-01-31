@@ -8,7 +8,7 @@ from lfx.base.models.watsonx_constants import IBM_WATSONX_URLS
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import BoolInput, DropdownInput, StrInput
-from lfx.io import MessageInput, ModelInput, MultilineInput, SecretStrInput, SliderInput
+from lfx.io import IntInput, MessageInput, ModelInput, MultilineInput, SecretStrInput, SliderInput
 
 DEFAULT_OLLAMA_URL = "http://localhost:11434"
 
@@ -89,6 +89,13 @@ class LanguageModelComponent(LCModelComponent):
             range_spec=RangeSpec(min=0, max=1, step=0.01),
             advanced=True,
         ),
+        IntInput(
+            name="max_tokens",
+            display_name="Max Tokens",
+            info="Maximum number of tokens to generate. Field name varies by provider.",
+            advanced=True,
+            range_spec=RangeSpec(min=1, max=128000, step=1, step_type="int"),
+        ),
     ]
 
     def build_model(self) -> LanguageModel:
@@ -98,6 +105,7 @@ class LanguageModelComponent(LCModelComponent):
             api_key=self.api_key,
             temperature=self.temperature,
             stream=self.stream,
+            max_tokens=getattr(self, "max_tokens", None),
             watsonx_url=getattr(self, "base_url_ibm_watsonx", None),
             watsonx_project_id=getattr(self, "project_id", None),
             ollama_base_url=getattr(self, "ollama_base_url", None),
