@@ -1,10 +1,17 @@
 services:
+  chown-volume:
+    image: busybox
+    command: ["sh", "-c", "chown 1000 /app/langflow"]
+    volumes:
+      - langflow-data:/app/langflow
+
   langflow:
     image: langflowai/langflow:latest # or another version tag on https://hub.docker.com/r/langflowai/langflow
     pull_policy: always               # set to 'always' when using 'latest' image
     ports:
       - "7860:7860"
     depends_on:
+      - chown-volume
       - postgres
     environment:
       - LANGFLOW_DATABASE_URL=postgresql://langflow:langflow@postgres:5432/langflow
