@@ -13,6 +13,9 @@ if TYPE_CHECKING:
     from langflow.services.database.models.flow.model import FlowRead
 
 
+DEFAULT_FLOW_NAME = "Unknown Flow"
+
+
 async def get_flow_graph_representations(
     flow_id_or_name: str,
     user_id: str | UUID | None = None,
@@ -82,12 +85,12 @@ async def get_flow_graph_representations(
         return {
             "flow_id": flow_id_str,
             "flow_name": flow.name,
+            "flow_description": flow.description or "",
             "ascii_graph": ascii_graph,
             "text_repr": text_repr,
             "vertex_count": len(graph.vertices),
             "edge_count": len(graph.edges),
             "tags": flow.tags,
-            "description": flow.description,
         }
 
     except Exception as e:  # noqa: BLE001
@@ -99,6 +102,103 @@ async def get_flow_graph_representations(
 
     finally:
         await logger.ainfo("Getting flow graph representations completed")
+
+
+async def get_flow_graph_representations_from_dict(
+    flow_dict: dict[str, Any],
+) -> dict[str, Any]:
+    """Get both ASCII and text representations of a flow graph from a flow dictionary.
+
+    Args:
+        flow_dict: Dictionary containing flow data with keys:
+            - data: The flow data payload (required)
+            - id: The flow ID (optional, defaults to "unknown")
+            - name: The flow name (optional, defaults to "Unknown Flow")
+            - description: Flow description (optional)
+            - tags: Flow tags (optional)
+
+    Returns:
+        Dictionary containing:
+        - flow_id: The flow ID
+        - flow_name: The flow name
+        - flow_description: The flow description
+        - ascii_graph: ASCII art representation of the graph
+        - text_repr: Text representation with vertices and edges
+        - vertex_count: Number of vertices in the graph
+        - edge_count: Number of edges in the graph
+        - tags: Flow tags
+        - error: Error message if any (only if operation fails)
+
+    Example:
+        >>> flow_data = {
+        ...     "data": {"nodes": [...], "edges": [...]},
+        ...     "id": "flow-123",
+        ...     "name": "My Flow"
+        ... }
+        >>> result = await get_flow_graph_representations_from_dict(flow_data)
+        >>> print(result["ascii_graph"])
+        >>> print(result["text_repr"])
+    """
+    try:
+        # Extract flow data
+        flow_data = flow_dict.get("data")
+        if flow_data is None:
+            return {
+                "error": "Flow dictionary has no 'data' key",
+                "flow_id": flow_dict.get("id", "unknown"),
+                "flow_name": flow_dict.get("name", DEFAULT_FLOW_NAME),
+            }
+
+        # Extract metadata with defaults
+        flow_id_str = str(flow_dict.get("id", "unknown"))
+        flow_name = flow_dict.get("name", DEFAULT_FLOW_NAME)
+        flow_description = flow_dict.get("description", "")
+        flow_tags = flow_dict.get("tags", [])
+
+        # Create graph from flow data
+        graph = Graph.from_payload(
+            flow_data,
+            flow_id=flow_id_str,
+            flow_name=flow_name,
+        )
+
+        # Get text representation using __repr__
+        text_repr = repr(graph)
+
+        # Get ASCII representation using draw_graph
+        # Extract vertex and edge data for ASCII drawing
+        vertices = [vertex.id for vertex in graph.vertices]
+        edges = [(edge.source_id, edge.target_id) for edge in graph.edges]
+
+        ascii_graph = None
+        if vertices and edges:
+            try:
+                ascii_graph = draw_graph(vertices, edges, return_ascii=True)
+            except Exception as e:  # noqa: BLE001
+                await logger.awarning(f"Failed to generate ASCII graph: {e}")
+                ascii_graph = "ASCII graph generation failed (graph may be too complex or have cycles)"
+
+        return {
+            "flow_id": flow_id_str,
+            "flow_name": flow_name,
+            "flow_description": flow_description,
+            "ascii_graph": ascii_graph,
+            "text_repr": text_repr,
+            "vertex_count": len(graph.vertices),
+            "edge_count": len(graph.edges),
+            "tags": flow_tags,
+        }
+
+    except Exception as e:  # noqa: BLE001
+        await logger.aerror(f"Error getting flow graph representations from dictionary: {e}")
+        return {
+            "error": str(e),
+            "flow_id": flow_dict.get("id", "unknown"),
+            "flow_name": flow_dict.get("name", DEFAULT_FLOW_NAME),
+        }
+
+    finally:
+        await logger.ainfo("Getting flow graph representations from dictionary completed")
 
 
 async def get_flow_ascii_graph(
