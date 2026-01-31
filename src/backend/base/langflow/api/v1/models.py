@@ -328,9 +328,10 @@ async def _get_enabled_models(session: DbSession, current_user: CurrentActiveUse
         var = await variable_service.get_variable_object(
             user_id=current_user.id, name=ENABLED_MODELS_VAR, session=session
         )
-        if var.value:  # This checks for both None and empty string
+        # Strip whitespace and check if value is non-empty
+        if var.value and (value_stripped := var.value.strip()):
             try:
-                parsed_value = json.loads(var.value)
+                parsed_value = json.loads(value_stripped)
                 # Validate it's a list of strings
                 if not isinstance(parsed_value, list):
                     logger.warning("Invalid enabled models format for user %s: not a list", current_user.id)
@@ -338,7 +339,8 @@ async def _get_enabled_models(session: DbSession, current_user: CurrentActiveUse
                 # Ensure all items are strings
                 return {str(item) for item in parsed_value if isinstance(item, str)}
             except (json.JSONDecodeError, TypeError):
-                logger.warning("Failed to parse enabled models for user %s", current_user.id, exc_info=True)
+                # Log at debug level to avoid flooding logs with expected edge cases
+                logger.debug("Failed to parse enabled models for user %s: %s", current_user.id, var.value)
                 return set()
     except ValueError:
         # Variable not found, return empty set

@@ -313,9 +313,22 @@ class DatabaseVariableService(VariableService, Service):
         db_variable = (await session.exec(query)).one()
         db_variable.updated_at = datetime.now(timezone.utc)
 
-        variable.value = variable.value or ""
-        encrypted = auth_utils.encrypt_api_key(variable.value)
-        variable.value = encrypted
+        # Handle value encryption based on variable type (consistent with update_variable and create_variable)
+        if variable.value is not None:
+            variable_type = variable.type if variable.type is not None else db_variable.type
+            
+            # Validate that GENERIC variables don't start with Fernet signature
+            if variable_type == GENERIC_TYPE and variable.value.startswith("gAAAAA"):
+                msg = (
+                    f"Generic variable '{db_variable.name}' cannot start with 'gAAAAA' as this is reserved "
+                    "for encrypted values. Please use a different value."
+                )
+                raise ValueError(msg)
+            
+            # Only encrypt CREDENTIAL_TYPE variables (consistent with update_variable and create_variable)
+            if variable_type == CREDENTIAL_TYPE:
+                variable.value = auth_utils.encrypt_api_key(variable.value, settings_service=self.settings_service)
+            # GENERIC_TYPE variables are stored as plain text
 
         variable_data = variable.model_dump(exclude_unset=True)
         for key, value in variable_data.items():

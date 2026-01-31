@@ -17,7 +17,7 @@ from langflow.services.auth.utils import (
 )
 from langflow.services.database.models.user.crud import get_user_by_id, update_user
 from langflow.services.database.models.user.model import User, UserCreate, UserRead, UserUpdate
-from langflow.services.deps import get_settings_service
+from langflow.services.deps import get_settings_service, get_variable_service
 
 router = APIRouter(tags=["Users"], prefix="/users")
 

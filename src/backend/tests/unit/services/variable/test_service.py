@@ -5,7 +5,7 @@ from uuid import uuid4
 import pytest
 from langflow.services.database.models.variable.model import VariableUpdate
 from langflow.services.deps import get_settings_service
-from langflow.services.variable.constants import CREDENTIAL_TYPE
+from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 from langflow.services.variable.service import DatabaseVariableService
 from lfx.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
 from sqlalchemy.ext.asyncio import create_async_engine
@@ -178,6 +178,37 @@ async def test_update_variable_fields(service, session: AsyncSession):
     assert saved.get("type") == result.type
     assert saved.get("created_at") == result.created_at
     assert saved.get("updated_at") != result.updated_at
+
+
+async def test_update_variable_fields__generic_type_not_encrypted(service, session: AsyncSession):
+    """Test that GENERIC_TYPE variables are NOT encrypted when using update_variable_fields."""
+    user_id = uuid4()
+    original_value = '["model1", "model2"]'  # JSON string like __enabled_models__
+    new_value = '["model3", "model4"]'
+    
+    # Create a GENERIC_TYPE variable (like __enabled_models__)
+    variable = await service.create_variable(
+        user_id, "enabled_models", original_value, type_=GENERIC_TYPE, session=session
+    )
+    saved = variable.model_dump()
+    
+    # Verify it was stored as plain text (not encrypted)
+    assert saved.get("value") == original_value
+    
+    # Update using update_variable_fields
+    variable_update = VariableUpdate(**saved)
+    variable_update.value = new_value
+    
+    result = await service.update_variable_fields(
+        user_id=user_id,
+        variable_id=saved.get("id"),
+        variable=variable_update,
+        session=session,
+    )
+    
+    # For GENERIC_TYPE, value should be stored as plain text (not encrypted)
+    assert result.value == new_value
+    assert result.type == GENERIC_TYPE
 
 
 async def test_delete_variable(service, session: AsyncSession):
