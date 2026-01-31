@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Annotated, Any
 
 from fastapi import Depends, HTTPException, Path, Query
 from fastapi_pagination import Params
+from lfx.graph.coercion import CoercionSettings
 from lfx.graph.graph.base import Graph
 from lfx.log.logger import logger
 from lfx.services.deps import injectable_session_scope, injectable_session_scope_readonly, session_scope
@@ -179,7 +180,12 @@ async def _get_flow_name(flow_id: uuid.UUID) -> str:
     return flow.name
 
 
-async def build_graph_from_data(flow_id: uuid.UUID | str, payload: dict, **kwargs):
+async def build_graph_from_data(
+    flow_id: uuid.UUID | str,
+    payload: dict,
+    coercion_settings: CoercionSettings | None = None,
+    **kwargs,
+):
     """Build and cache the graph."""
     # Get flow name
     if "flow_name" not in kwargs:
@@ -189,7 +195,13 @@ async def build_graph_from_data(flow_id: uuid.UUID | str, payload: dict, **kwarg
     str_flow_id = str(flow_id)
     session_id = kwargs.get("session_id") or str_flow_id
 
-    graph = Graph.from_payload(payload, str_flow_id, flow_name, kwargs.get("user_id"))
+    graph = Graph.from_payload(
+        payload,
+        str_flow_id,
+        flow_name,
+        kwargs.get("user_id"),
+        coercion_settings=coercion_settings,
+    )
     for vertex_id in graph.has_session_id_vertices:
         vertex = graph.get_vertex(vertex_id)
         if vertex is None:

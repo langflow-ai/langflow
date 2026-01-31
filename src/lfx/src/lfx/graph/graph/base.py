@@ -19,6 +19,7 @@ from ag_ui.core import RunFinishedEvent, RunStartedEvent
 
 from lfx.events.observability.lifecycle_events import observable
 from lfx.exceptions.component import ComponentBuildError
+from lfx.graph.coercion import CoercionSettings
 from lfx.graph.edge.base import CycleEdge, Edge
 from lfx.graph.graph.constants import Finish, lazy_load_vertex_dict
 from lfx.graph.graph.runnable_vertices_manager import RunnableVerticesManager
@@ -70,6 +71,7 @@ class Graph:
         user_id: str | None = None,
         log_config: LogConfig | None = None,
         context: dict[str, Any] | None = None,
+        coercion_settings: CoercionSettings | None = None,
     ) -> None:
         """Initializes a new Graph instance.
 
@@ -80,6 +82,9 @@ class Graph:
         """
         if log_config:
             configure(**log_config)
+
+        # Auto-coercion settings for Data/Message/DataFrame type conversion
+        self.coercion_settings = coercion_settings or CoercionSettings()
 
         self._start = start
         self._state_model = None
@@ -1131,6 +1136,7 @@ class Graph:
         flow_name: str | None = None,
         user_id: str | None = None,
         context: dict | None = None,
+        coercion_settings: CoercionSettings | None = None,
     ) -> Graph:
         """Creates a graph from a payload.
 
@@ -1140,6 +1146,7 @@ class Graph:
             flow_name: The flow name.
             user_id: The user ID.
             context: Optional context dictionary for request-specific data.
+            coercion_settings: Optional settings for auto-coercion between Data/Message/DataFrame.
 
         Returns:
             Graph: The created graph.
@@ -1149,7 +1156,13 @@ class Graph:
         try:
             vertices = payload["nodes"]
             edges = payload["edges"]
-            graph = cls(flow_id=flow_id, flow_name=flow_name, user_id=user_id, context=context)
+            graph = cls(
+                flow_id=flow_id,
+                flow_name=flow_name,
+                user_id=user_id,
+                context=context,
+                coercion_settings=coercion_settings,
+            )
             graph.add_nodes_and_edges(vertices, edges)
         except KeyError as exc:
             logger.exception(exc)
