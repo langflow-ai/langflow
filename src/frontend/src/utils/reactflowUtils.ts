@@ -72,12 +72,29 @@ import { createRandomKey, toTitleCase } from "./utils";
 
 const uid = new ShortUniqueId();
 
+/**
+ * Check if a node is a FlowStart component in a specific mode
+ */
+export function isFlowStartInMode(node: any, mode: string): boolean {
+  if (node?.type === "FlowStart" || node?.data?.type === "FlowStart") {
+    const inputTypeValue =
+      node?.data?.node?.template?.input_type?.value ||
+      node?.node?.template?.input_type?.value;
+    return inputTypeValue === mode;
+  }
+  return false;
+}
+
 export function checkChatInput(nodes: Node[]) {
-  return nodes.some((node) => node.data.type === "ChatInput");
+  return nodes.some((node) => {
+    return node.data.type === "ChatInput" || isFlowStartInMode(node, "Chat");
+  });
 }
 
 export function checkWebhookInput(nodes: Node[]) {
-  return nodes.some((node) => node.data.type === "Webhook");
+  return nodes.some((node) => {
+    return node.data.type === "Webhook" || isFlowStartInMode(node, "Webhook");
+  });
 }
 
 export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {

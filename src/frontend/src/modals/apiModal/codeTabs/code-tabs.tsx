@@ -13,7 +13,7 @@ import { useIsAutoLogin } from "@/hooks/use-is-auto-login";
 import useAuthStore from "@/stores/authStore";
 import useFlowStore from "@/stores/flowStore";
 import { useTweaksStore } from "@/stores/tweaksStore";
-import { hasStreaming } from "@/utils/reactflowUtils";
+import { hasStreaming, isFlowStartInMode } from "@/utils/reactflowUtils";
 import { getOS } from "@/utils/utils";
 import { useDarkStore } from "../../../stores/darkStore";
 import { formatPayloadTweaks } from "../utils/filter-tweaks";
@@ -45,11 +45,19 @@ export default function APITabsComponent() {
   const flowId = useFlowStore((state) => state.currentFlow?.id);
   const inputs = useFlowStore((state) => state.inputs);
   const outputs = useFlowStore((state) => state.outputs);
-  const hasChatInput = inputs.some((input) => input.type === "ChatInput");
+  const hasChatInput = inputs.some((input) => {
+    if (input.type === "ChatInput") return true;
+    const node = nodes.find((n) => n.id === input.id);
+    return node && isFlowStartInMode(node, "Chat");
+  });
   const hasChatOutput = outputs.some((output) => output.type === "ChatOutput");
   let input_value = "hello world!";
   if (hasChatInput) {
-    const chatInputId = inputs.find((input) => input.type === "ChatInput")?.id;
+    const chatInputId = inputs.find((input) => {
+      if (input.type === "ChatInput") return true;
+      const node = nodes.find((n) => n.id === input.id);
+      return node && isFlowStartInMode(node, "Chat");
+    })?.id;
     const inputNode = nodes.find((node) => node.id === chatInputId);
     if (inputNode && inputNode?.data.node?.template?.input_value?.value) {
       input_value = inputNode?.data.node?.template.input_value?.value;

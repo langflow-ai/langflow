@@ -437,6 +437,24 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       );
     }
 
+    // Prevent multiple FlowStart components
+    if (
+      selection.nodes.some((node) => node.data.type === "FlowStart") &&
+      get().nodes.some((node) => node.data.type === "FlowStart")
+    ) {
+      useAlertStore.getState().setNoticeData({
+        title: "You can only have one Flow Start component in a flow.",
+      });
+      selection.nodes = selection.nodes.filter(
+        (node) => node.data.type !== "FlowStart",
+      );
+      selection.edges = selection.edges.filter(
+        (edge) =>
+          selection.nodes.some((node) => edge.source === node.id) &&
+          selection.nodes.some((node) => edge.target === node.id),
+      );
+    }
+
     let minimumX = Infinity;
     let minimumY = Infinity;
     const idsMap = {};

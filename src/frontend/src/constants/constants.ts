@@ -699,6 +699,7 @@ export const priorityFields = new Set(["code", "template", "mode"]);
 
 export const INPUT_TYPES = new Set([
   "ChatInput",
+  "FlowStart",
   // "TextInput",
   // "KeyPairInput",
   // "JsonInput",

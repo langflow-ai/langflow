@@ -402,6 +402,62 @@ async def verify_public_flow_and_get_user(flow_id: uuid.UUID, client_id: str | N
     return user, new_flow_id
 
 
+def flow_has_json_input_mode(flow_data: dict | None) -> bool:
+    """Check if a flow has a FlowStartComponent in JSON Input mode.
+
+    Args:
+        flow_data: The flow's data dictionary containing nodes
+
+    Returns:
+        True if the flow has a FlowStartComponent with input_type="JSON"
+    """
+    if not flow_data:
+        return False
+
+    # Find FlowStart node and check its mode (there's typically only one per flow)
+    for node in flow_data.get("nodes", []):
+        if node.get("data", {}).get("type") == "FlowStart":
+            # Found FlowStart - check if it's JSON mode and return immediately
+            input_type = node.get("data", {}).get("node", {}).get("template", {}).get("input_type", {})
+            if isinstance(input_type, dict):
+                return input_type.get("value") == "JSON"
+            return input_type == "JSON"
+
+    return False
+
+
+async def extract_request_data_for_flow(request) -> dict:
+    """Extract HTTP request data for FlowStartComponent's JSON Input mode.
+
+    Args:
+        request: FastAPI Request object
+
+    Returns:
+        Dictionary containing method, headers, body, query, path, and url
+    """
+    # Get request body
+    body = {}
+    try:
+        body_bytes = await request.body()
+        if body_bytes:
+            import orjson
+
+            body = orjson.loads(body_bytes)
+    except (orjson.JSONDecodeError, TypeError, ValueError):
+        # Body might not be JSON or might be empty - use empty dict
+        body = {}
+
+    # Build request data structure
+    return {
+        "method": request.method,
+        "headers": dict(request.headers),
+        "body": body if isinstance(body, dict) else {"raw": body},
+        "query": dict(request.query_params),
+        "path": dict(request.path_params),
+        "url": str(request.url.path),
+    }
+
+
 def extract_global_variables_from_headers(headers) -> dict[str, str]:
     """Extract global variables from HTTP headers with prefix X-LANGFLOW-GLOBAL-VAR-*.
 
