@@ -1,0 +1,38 @@
+<svg version="1.1" id="svg855" xmlns:x="ns_extend;" xmlns:i="ns_ai;" xmlns:graph="ns_graphs;" xmlns:cc="http://creativecommons.org/ns#" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd" xmlns:svg="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 77.8 46.9" style="enable-background:new 0 0 77.8 46.9;" xml:space="preserve">
+ <style type="text/css">
+  .st0{fill:#F62B54;}
+	.st1{fill:#FFCC00;}
+	.st2{fill:#00CA72;}
+ </style>
+ <metadata id="metadata861">
+  <rdf:RDF>
+   <cc:Work rdf:about="">
+    <dc:format>
+     image/svg+xml
+    </dc:format>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage">
+    </dc:type>
+   </cc:Work>
+  </rdf:RDF>
+  <sfw xmlns="ns_sfw;">
+   <slices>
+   </slices>
+   <sliceSourceBounds bottomLeftOrigin="true" height="46.9" width="77.8" x="-98.5" y="8.7">
+   </sliceSourceBounds>
+  </sfw>
+ </metadata>
+ <sodipodi:namedview bordercolor="#666666" borderopacity="1" gridtolerance="10" guidetolerance="10" id="namedview857" inkscape:current-layer="svg855" inkscape:cx="152.96218" inkscape:cy="49.124021" inkscape:guide-bbox="true" inkscape:pageopacity="0" inkscape:pageshadow="2" inkscape:window-height="1017" inkscape:window-maximized="1" inkscape:window-width="1920" inkscape:window-x="-8" inkscape:window-y="176" inkscape:zoom="2.742126" objecttolerance="10" pagecolor="#ffffff" showgrid="false" showguides="true">
+ </sodipodi:namedview>
+ <g id="g853" transform="matrix(3.6956523,0,0,3.6956523,-3.7266276e-4,-19.226192)">
+  <g id="g847" transform="translate(0,5.552)">
+   <path id="path841" inkscape:connector-curvature="0" class="st0" d="M2.6,12.3c-0.9,0-1.8-0.5-2.3-1.3c-0.5-0.8-0.4-1.8,0.1-2.6
+			l4.7-7.4c0.5-0.8,1.4-1.3,2.3-1.3c0.9,0,1.8,0.6,2.3,1.4c0.4,0.8,0.4,1.8-0.1,2.6l-4.7,7.4C4.4,11.8,3.5,12.3,2.6,12.3z">
+   </path>
+   <path id="path843" inkscape:connector-curvature="0" class="st1" d="M10.7,12.3c-1,0-1.8-0.5-2.3-1.3C8,10.1,8,9.1,8.5,8.3
+			l4.7-7.4c0.5-0.8,1.4-1.3,2.3-1.3c1,0,1.8,0.6,2.3,1.4c0.4,0.8,0.4,1.8-0.2,2.6l-4.7,7.4C12.4,11.8,11.6,12.3,10.7,12.3z">
+   </path>
+   <ellipse id="ellipse845" class="st2" cx="18.6" cy="10" rx="2.4" ry="2.4">
+   </ellipse>
+  </g>
+ </g>
+</svg>
