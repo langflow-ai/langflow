@@ -33,6 +33,8 @@ if TYPE_CHECKING:
 
     from langflow.services.database.models.api_key.model import ApiKey
 
+_PADDING = ("====", "===", "==", "=")
+
 MINIMUM_KEY_LENGTH = 32
 AUTO_LOGIN_WARNING = "In v2.0, LANGFLOW_SKIP_AUTH_AUTO_LOGIN will be removed. Please update your authentication method."
 AUTO_LOGIN_ERROR = (
@@ -559,8 +561,8 @@ class AuthService(AuthServiceBase):
         return user if self.verify_password(password, user.password) else None
 
     def _add_padding(self, value: str) -> str:
-        padding_needed = 4 - len(value) % 4
-        return value + "=" * padding_needed
+        rem = len(value) & 3
+        return value + _PADDING[rem]
 
     def _ensure_valid_key(self, raw_key: str) -> bytes:
         if len(raw_key) < MINIMUM_KEY_LENGTH:
