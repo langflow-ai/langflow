@@ -29,19 +29,6 @@ def extract_union_types(return_type: str) -> list[str]:
     return [item.strip() for item in return_types]
 
 
-def extract_uniont_types_from_generic_alias(return_type: GenericAlias) -> list:
-    """Extracts the inner type from a type hint that is a Union."""
-    if isinstance(return_type, list):
-        return [
-            _inner_arg
-            for _type in return_type
-            for _inner_arg in _type.__args__
-            if _inner_arg not in {Any, type(None), type(Any)}
-        ]
-
-    return list(return_type.__args__)
-
-
 def post_process_type(type_):
     """Process the return type of a function.
 
