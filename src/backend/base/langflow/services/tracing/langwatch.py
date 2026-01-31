@@ -112,6 +112,20 @@ class LangWatchTracer(BaseTracer):
         if "session_id" in inputs and inputs["session_id"] != self.flow_id:
             self.trace.update(metadata=(self.trace.metadata or {}) | {"thread_id": inputs["session_id"]})
 
+        # If the trace inputs contain an input value, we may want to use this data to
+        # update the root trace span input/output. We only update the input/output if
+        # the root span still has an input/output that is None.
+        if "input_value" in inputs and inputs["input_value"] is not None and "sender" in inputs:
+            if inputs["sender"] == "User":
+                root_span = self._client.get_current_trace().root_span
+                if root_span.input is None:
+                    self.trace.update(input=self._convert_to_langwatch_types(inputs))
+
+            if inputs["sender"] == "Machine":
+                root_span = self._client.get_current_trace().root_span
+                if root_span.output is None:
+                    self.trace.update(output=self._convert_to_langwatch_types(inputs))
+
         name_without_id = " (".join(trace_name.split(" (")[0:-1])
 
         previous_nodes = (
