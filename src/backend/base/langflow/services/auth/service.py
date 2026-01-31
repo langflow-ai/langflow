@@ -18,11 +18,7 @@ from sqlalchemy.exc import IntegrityError
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.services.auth.base import AuthServiceBase
 from langflow.services.database.models.api_key.crud import check_key
-from langflow.services.database.models.user.crud import (
-    get_user_by_id,
-    get_user_by_username,
-    update_user_last_login_at,
-)
+from langflow.services.database.models.user.crud import get_user_by_id, get_user_by_username, update_user_last_login_at
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import session_scope
 from langflow.services.schema import ServiceType
@@ -49,6 +45,7 @@ class AuthService(AuthServiceBase):
 
     def __init__(self, settings_service: SettingsService):
         self.settings_service = settings_service
+        self._fernet_cache = None
         self.set_ready()
 
     @property
@@ -577,7 +574,9 @@ class AuthService(AuthServiceBase):
         return Fernet(valid_key)
 
     def encrypt_api_key(self, api_key: str) -> str:
-        fernet = self._get_fernet()
+        if self._fernet_cache is None:
+            self._fernet_cache = self._get_fernet()
+        fernet = self._fernet_cache
         encrypted_key = fernet.encrypt(api_key.encode())
         return encrypted_key.decode()
 
