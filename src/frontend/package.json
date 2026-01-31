@@ -3,7 +3,7 @@
   "version": "1.8.0",
   "private": true,
   "engines": {
-    "node": ">=20.19.0"
+    "node": ">=20.20.0"
   },
   "overrides": {
     "tar": "^7.5.7",
