@@ -316,7 +316,7 @@ class DatabaseVariableService(VariableService, Service):
         # Handle value encryption based on variable type (consistent with update_variable and create_variable)
         if variable.value is not None:
             variable_type = variable.type if variable.type is not None else db_variable.type
-            
+
             # Validate that GENERIC variables don't start with Fernet signature
             if variable_type == GENERIC_TYPE and variable.value.startswith("gAAAAA"):
                 msg = (
@@ -324,7 +324,7 @@ class DatabaseVariableService(VariableService, Service):
                     "for encrypted values. Please use a different value."
                 )
                 raise ValueError(msg)
-            
+
             # Only encrypt CREDENTIAL_TYPE variables (consistent with update_variable and create_variable)
             if variable_type == CREDENTIAL_TYPE:
                 variable.value = auth_utils.encrypt_api_key(variable.value, settings_service=self.settings_service)
