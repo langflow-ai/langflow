@@ -283,9 +283,8 @@ class TestStoragePathResolution:
         simple_file = "simple_file.png"
         assert "/" not in simple_file
 
-    @pytest.mark.xfail(reason="Storage path resolution needs to be fixed - currently not using get_full_path correctly")
-    @patch("lfx.services.deps.get_storage_service")
-    @patch("lfx.services.deps.get_settings_service")
+    @patch("lfx.custom.custom_component.custom_component.get_storage_service")
+    @patch("lfx.base.data.base_file.get_settings_service")
     def test_validate_and_resolve_paths_uses_storage_service(self, mock_settings, mock_storage, tmp_path):
         """Test that storage paths are resolved using storage service.
 
