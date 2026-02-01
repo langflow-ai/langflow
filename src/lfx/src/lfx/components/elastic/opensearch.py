@@ -9,7 +9,7 @@ from opensearchpy import OpenSearch, helpers
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from lfx.base.vectorstores.vector_store_connection_decorator import vector_store_connection
 from lfx.io import BoolInput, DropdownInput, HandleInput, IntInput, MultilineInput, SecretStrInput, StrInput, TableInput
-from lfx.log import logger
+from lfx.log.logger import logger
 from lfx.schema.data import Data
 
 

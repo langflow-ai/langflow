@@ -196,7 +196,7 @@ class TestExtractHashesFromHistory:
             assert "0.2.0" in str(e)
 
     def test_extract_hashes_none_hash_raises(self):
-        """Test that None hash raises ValueError."""
+        """Test that None hash raises TypeError."""
         history = {
             "Component1": {
                 "versions": {
@@ -206,27 +206,27 @@ class TestExtractHashesFromHistory:
         }
         try:
             _extract_hashes_from_history(history)
-            msg = "Should have raised ValueError"
+            msg = "Should have raised TypeError"
             raise AssertionError(msg)
-        except ValueError as e:
+        except TypeError as e:
             assert "Invalid version data type" in str(e)
             assert "Component1" in str(e)
 
     def test_extract_hashes_component_not_dict_raises(self):
-        """Test that non-dict component data raises ValueError."""
+        """Test that non-dict component data raises TypeError."""
         history = {
             "Component1": "not_a_dict",  # Not a dict
         }
         try:
             _extract_hashes_from_history(history)
-            msg = "Should have raised ValueError"
+            msg = "Should have raised TypeError"
             raise AssertionError(msg)
-        except ValueError as e:
+        except TypeError as e:
             assert "Invalid component data format" in str(e)
             assert "Component1" in str(e)
 
     def test_extract_hashes_versions_not_a_dict_raises(self):
-        """Test that non-dict versions raises ValueError."""
+        """Test that non-dict versions raises TypeError."""
         history = {
             "Component1": {
                 "versions": "not_a_dict",  # Invalid type
@@ -234,9 +234,9 @@ class TestExtractHashesFromHistory:
         }
         try:
             _extract_hashes_from_history(history)
-            msg = "Should have raised ValueError"
+            msg = "Should have raised TypeError"
             raise AssertionError(msg)
-        except ValueError as e:
+        except TypeError as e:
             assert "Invalid versions format" in str(e)
             assert "Component1" in str(e)
 

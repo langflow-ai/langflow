@@ -29,7 +29,7 @@ import ipaddress
 import socket
 from urllib.parse import urlparse
 
-from lfx.logging import logger
+from lfx.log.logger import logger
 from lfx.services.deps import get_settings_service
 
 
