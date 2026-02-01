@@ -38,7 +38,7 @@ dependencies = [
     "redis>=5.2.1,<6.0.0",
     "metaphor-python==0.1.23",
     'pywin32>=307,<400; sys_platform == "win32"',
-    "langfuse==2.53.9",
+    "langfuse>=3.8.0",
     "metal_sdk==2.5.1",
     "MarkupSafe==3.0.2",
     "boto3>=1.34.162,<2.0.0",
