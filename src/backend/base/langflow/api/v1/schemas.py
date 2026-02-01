@@ -1,3 +1,4 @@
+import os
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
@@ -24,8 +25,11 @@ from langflow.serialization.serialization import get_max_items_length, get_max_t
 from langflow.services.database.models.api_key.model import ApiKeyRead
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow.model import FlowCreate, FlowRead
+from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.user.model import UserRead
 from langflow.services.tracing.schema import Log
+
+_HIDE_ENV_NAME = "HIDE_GETTING_STARTED_PROGRESS"
 
 
 class BuildStatus(Enum):
@@ -391,10 +395,6 @@ class ConfigResponse(BaseModel):
         Returns:
             ConfigResponse: An instance populated with configuration and feature flag values.
         """
-        import os
-
-        from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
-
         return cls(
             feature_flags=FEATURE_FLAGS,
             serialization_max_items_length=settings.max_items_length,
@@ -411,7 +411,7 @@ class ConfigResponse(BaseModel):
             voice_mode_available=settings.voice_mode_available,
             webhook_auth_enable=auth_settings.WEBHOOK_AUTH_ENABLE,
             default_folder_name=DEFAULT_FOLDER_NAME,
-            hide_getting_started_progress=os.getenv("HIDE_GETTING_STARTED_PROGRESS", "").lower() == "true",
+            hide_getting_started_progress=os.getenv(_HIDE_ENV_NAME, "").lower() == "true",
             allow_custom_components=settings.allow_custom_components,
             allow_nightly_core_components=settings.allow_nightly_core_components,
             allow_code_execution_components=settings.allow_code_execution_components,
