@@ -34,7 +34,6 @@ import {
 import {
   Popover,
   PopoverContent,
-  PopoverContentWithoutPortal,
   PopoverTrigger,
 } from "../../ui/popover";
 import type { BaseInputProps } from "../parameterRenderComponent/types";
@@ -99,8 +98,6 @@ export default function Dropdown({
   const sourceOptions = dialogInputs?.fields ? dialogInputs : externalOptions;
   const { firstWord } = formatName(name);
   const fuse = new Fuse(validOptions, { keys: ["name", "value"] });
-  const PopoverContentDropdown =
-    children || editNode ? PopoverContent : PopoverContentWithoutPortal;
   const { helperText, hasRefreshButton } = baseInputProps;
 
   // API and store hooks
@@ -437,16 +434,16 @@ export default function Dropdown({
                     options?.includes(value) ? (
                       value
                     ) : // this logic is used for the agents component, if you update make sure to test the agent component
-                    sourceOptions?.fields?.data?.node?.name ===
-                      "connect_other_models" ? (
-                      <span className="text-muted-foreground">
-                        <LoadingTextComponent
-                          text={placeholder || SELECT_AN_OPTION}
-                        />
-                      </span>
-                    ) : (
-                      placeholder || SELECT_AN_OPTION
-                    )
+                      sourceOptions?.fields?.data?.node?.name ===
+                        "connect_other_models" ? (
+                        <span className="text-muted-foreground">
+                          <LoadingTextComponent
+                            text={placeholder || SELECT_AN_OPTION}
+                          />
+                        </span>
+                      ) : (
+                        placeholder || SELECT_AN_OPTION
+                      )
                     // ) : (
                     //   <span className="text-muted-foreground">
                     //     <LoadingTextComponent
@@ -677,9 +674,9 @@ export default function Dropdown({
   );
 
   const renderPopoverContent = () => (
-    <PopoverContentDropdown
+    <PopoverContent
       side="bottom"
-      avoidCollisions={!!children}
+      avoidCollisions={true}
       className="noflow nowheel nopan nodelete nodrag p-0"
       style={
         children ? {} : { minWidth: refButton?.current?.clientWidth ?? "200px" }
@@ -711,7 +708,7 @@ export default function Dropdown({
           </div>
         )}
       </Command>
-    </PopoverContentDropdown>
+    </PopoverContent>
   );
 
   // Loading state
@@ -725,7 +722,7 @@ export default function Dropdown({
 
   // Main render
   return (
-    <Popover open={open} onOpenChange={children ? () => {} : setOpen}>
+    <Popover open={open} onOpenChange={children ? () => { } : setOpen}>
       {children ? (
         <PopoverAnchor>{children}</PopoverAnchor>
       ) : refreshOptions || isLoading ? (
