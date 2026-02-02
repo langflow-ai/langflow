@@ -242,9 +242,7 @@ class APIRequestComponent(Component):
                 if hasattr(item, "data"):
                     unwrapped = item.data
                     # If it's a dict but not key-value format, use it directly
-                    if isinstance(
-                        unwrapped, dict
-                    ) and not self._is_valid_key_value_item(unwrapped):
+                    if isinstance(unwrapped, dict) and not self._is_valid_key_value_item(unwrapped):
                         return unwrapped
                     current_item = unwrapped
 
@@ -283,11 +281,7 @@ class APIRequestComponent(Component):
         if isinstance(headers, dict):
             return headers
         if isinstance(headers, list):
-            return {
-                item["key"]: item["value"]
-                for item in headers
-                if self._is_valid_key_value_item(item)
-            }
+            return {item["key"]: item["value"] for item in headers if self._is_valid_key_value_item(item)}
         return {}
 
     def _headers_to_dict(self, headers: httpx.Headers) -> dict[str, str]:
@@ -358,9 +352,7 @@ class APIRequestComponent(Component):
         if not placeholders:
             return api_path
 
-        missing = [
-            p for p in placeholders if p not in params or params[p] in (None, "")
-        ]
+        missing = [p for p in placeholders if p not in params or params[p] in (None, "")]
         if missing and strict:
             error_msg = f"Missing path params for placeholders: {missing}"
             raise ValueError(error_msg)
@@ -391,9 +383,7 @@ class APIRequestComponent(Component):
             u = urlparse(raw_url)
 
             # Base = scheme://netloc
-            base_only = urlunparse(
-                u._replace(path="", params="", query="", fragment="")
-            )
+            base_only = urlunparse(u._replace(path="", params="", query="", fragment=""))
 
             # Path = /path + ?query
             path_only = u.path or ""
@@ -418,23 +408,15 @@ class APIRequestComponent(Component):
                         body_list = [
                             {
                                 "key": k,
-                                "value": (
-                                    json.dumps(v)
-                                    if isinstance(v, (dict, list))
-                                    else str(v)
-                                ),
+                                "value": (json.dumps(v) if isinstance(v, (dict, list)) else str(v)),
                             }
                             for k, v in json_data.items()
                         ]
                         build_config["body"]["value"] = body_list
                     else:
-                        build_config["body"]["value"] = [
-                            {"key": "data", "value": json.dumps(json_data)}
-                        ]
+                        build_config["body"]["value"] = [{"key": "data", "value": json.dumps(json_data)}]
                 except json.JSONDecodeError:
-                    build_config["body"]["value"] = [
-                        {"key": "data", "value": parsed.data}
-                    ]
+                    build_config["body"]["value"] = [{"key": "data", "value": parsed.data}]
 
         except Exception as exc:
             error_msg = f"Error parsing curl: {exc}"
@@ -486,9 +468,7 @@ class APIRequestComponent(Component):
                 for redirect in response.history
             ]
 
-            is_binary, file_path = await self._response_info(
-                response, with_file_path=save_to_file
-            )
+            is_binary, file_path = await self._response_info(response, with_file_path=save_to_file)
             response_headers = self._headers_to_dict(response.headers)
 
             metadata: dict[str, Any] = {
@@ -511,9 +491,7 @@ class APIRequestComponent(Component):
                             await f.write(response.content)
                             await f.flush()
                     else:
-                        async with aiofiles.open(
-                            file_path, "w", encoding=encoding
-                        ) as f:
+                        async with aiofiles.open(file_path, "w", encoding=encoding) as f:
                             await f.write(response.text)
                             await f.flush()
                     metadata["file_path"] = str(file_path)
@@ -546,11 +524,7 @@ class APIRequestComponent(Component):
                     "request_headers": headers,
                     "status_code": 500,
                     "error": str(exc),
-                    **(
-                        {"redirection_history": redirection_history}
-                        if redirection_history
-                        else {}
-                    ),
+                    **({"redirection_history": redirection_history} if redirection_history else {}),
                 }
             )
 
@@ -646,9 +620,7 @@ class APIRequestComponent(Component):
         if field_value == "cURL":
             set_field_display(build_config, "curl_input", value=True)
             if build_config["curl_input"]["value"]:
-                build_config = self.parse_curl(
-                    build_config["curl_input"]["value"], build_config
-                )
+                build_config = self.parse_curl(build_config["curl_input"]["value"], build_config)
         else:
             set_field_display(build_config, "curl_input", value=False)
 
@@ -669,10 +641,7 @@ class APIRequestComponent(Component):
     ) -> tuple[bool, Path | None]:
         """Determine whether response is binary and compute a temp file path if requested."""
         content_type = response.headers.get("Content-Type", "")
-        is_binary = (
-            "application/octet-stream" in content_type
-            or "application/binary" in content_type
-        )
+        is_binary = "application/octet-stream" in content_type or "application/binary" in content_type
 
         if not with_file_path:
             return is_binary, None
@@ -689,9 +658,7 @@ class APIRequestComponent(Component):
 
         # Infer file name if missing
         if not filename:
-            url_path = urlparse(
-                str(response.request.url) if response.request else ""
-            ).path
+            url_path = urlparse(str(response.request.url) if response.request else "").path
             base_name = Path(url_path).name or "response"
 
             content_type_to_extension = {
@@ -701,9 +668,7 @@ class APIRequestComponent(Component):
                 "image/png": ".png",
                 "application/octet-stream": ".bin",
             }
-            extension = content_type_to_extension.get(
-                content_type, ".bin" if is_binary else ".txt"
-            )
+            extension = content_type_to_extension.get(content_type, ".bin" if is_binary else ".txt")
             filename = f"{base_name}{extension}"
 
         file_path = component_temp_dir / filename
