@@ -9,7 +9,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-
 from lfx.cli.convert.command import convert_flow_to_python
 
 STARTER_PROJECTS_PATH = Path(__file__).parents[6] / "backend/base/langflow/initial_setup/starter_projects"
@@ -84,9 +83,7 @@ class TestConversionCompleteness:
 
         if failures:
             failure_report = "\n".join(f"  - {name}: {err}" for name, err in failures)
-            pytest.fail(
-                f"Failed to convert {len(failures)}/{len(flows)} flows:\n{failure_report}"
-            )
+            pytest.fail(f"Failed to convert {len(failures)}/{len(flows)} flows:\n{failure_report}")
 
         assert len(successes) == len(flows)
 
@@ -102,22 +99,26 @@ class TestConversionCompleteness:
             try:
                 result = convert_flow_to_python(flow_path)
                 compile(result, "<string>", "exec")
-                results.append({
-                    "name": flow_path.stem,
-                    "status": "OK",
-                    "lines": len(result.splitlines()),
-                })
+                results.append(
+                    {
+                        "name": flow_path.stem,
+                        "status": "OK",
+                        "lines": len(result.splitlines()),
+                    }
+                )
             except Exception as e:
-                results.append({
-                    "name": flow_path.stem,
-                    "status": "FAIL",
-                    "error": str(e)[:100],
-                })
+                results.append(
+                    {
+                        "name": flow_path.stem,
+                        "status": "FAIL",
+                        "error": str(e)[:100],
+                    }
+                )
 
         success_count = sum(1 for r in results if r["status"] == "OK")
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"Conversion Summary: {success_count}/{len(flows)} successful")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
         for r in results:
             if r["status"] == "OK":

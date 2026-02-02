@@ -278,9 +278,7 @@ class TestConvertStarterProjects:
     not just synthetic test data.
     """
 
-    STARTER_PROJECTS_PATH = Path(__file__).parents[6] / (
-        "backend/base/langflow/initial_setup/starter_projects"
-    )
+    STARTER_PROJECTS_PATH = Path(__file__).parents[6] / ("backend/base/langflow/initial_setup/starter_projects")
 
     # Representative flows to test different component types
     STARTER_FLOWS = [

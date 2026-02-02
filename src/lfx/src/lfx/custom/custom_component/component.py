@@ -40,7 +40,6 @@ from lfx.serialization.serialization import serialize
 from lfx.template.field.base import UNDEFINED, Input, Output
 from lfx.template.frontend_node.custom_components import ComponentFrontendNode
 from lfx.utils.async_helpers import run_until_complete
-from lfx.utils.util import find_closest_match
 
 from .custom_component import CustomComponent
 
