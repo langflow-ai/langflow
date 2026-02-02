@@ -85,6 +85,7 @@ const NodeToolbarComponent = memo(
     const paste = useFlowStore((state) => state.paste);
     const setNodes = useFlowStore((state) => state.setNodes);
     const setEdges = useFlowStore((state) => state.setEdges);
+    const edges = useFlowStore((state) => state.edges);
     const getNodePosition = useFlowStore((state) => state.getNodePosition);
     const flows = useFlowsManagerStore((state) => state.flows);
     const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
@@ -131,8 +132,9 @@ const NodeToolbarComponent = memo(
 
     const hasSelectOutput = hasOutputs && !hasGroupOutputs;
     const hasOnlyOneOutput = data.node?.outputs?.length === 1;
+    const hasMaximumOneConnectedInput = edges.filter((edge) => edge.target === data.id).length <= 1;
 
-    const isMinimal = hasSelectOutput || hasOnlyOneOutput;
+    const isMinimal = (hasSelectOutput || hasOnlyOneOutput) && hasMaximumOneConnectedInput;
 
     const [toolMode, setToolMode] = useState(
       () =>
@@ -147,10 +149,10 @@ const NodeToolbarComponent = memo(
       if (data.node?.tool_mode !== undefined) {
         setToolMode(
           data.node?.tool_mode ||
-            data.node?.outputs?.some(
-              (output) => output.name === "component_as_tool",
-            ) ||
-            false,
+          data.node?.outputs?.some(
+            (output) => output.name === "component_as_tool",
+          ) ||
+          false,
         );
       }
     }, [data.node?.tool_mode, data.node?.outputs]);
@@ -701,9 +703,8 @@ const NodeToolbarComponent = memo(
                 {(isMinimal || !showNode) && (
                   <SelectItem
                     value={"show"}
-                    data-testid={`${
-                      showNode ? "minimize" : "expand"
-                    }-button-modal`}
+                    data-testid={`${showNode ? "minimize" : "expand"
+                      }-button-modal`}
                   >
                     <ToolbarSelectItem
                       shortcut={
