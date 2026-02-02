@@ -482,9 +482,7 @@ def _validate_and_get_enabled_providers(
                 # All database variables are stored encrypted, so we always try to decrypt
                 if variable.value is not None:
                     try:
-                        decrypted_value = auth_utils.decrypt_api_key(
-                            variable.value, settings_service=settings_service
-                        )
+                        decrypted_value = auth_utils.decrypt_api_key(variable.value, settings_service=settings_service)
                         if decrypted_value and decrypted_value.strip():
                             value = decrypted_value
                     except Exception as e:  # noqa: BLE001
@@ -558,8 +556,6 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
     Raises:
         ValueError: If the credentials are invalid
     """
-
-
     if not provider:
         return
 
@@ -578,6 +574,7 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
     try:
         if provider == "OpenAI":
             from langchain_openai import ChatOpenAI  # type: ignore  # noqa: PGH003
+
             api_key = variables.get("OPENAI_API_KEY")
             if not api_key:
                 return
@@ -586,6 +583,7 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
 
         elif provider == "Anthropic":
             from langchain_anthropic import ChatAnthropic  # type: ignore  # noqa: PGH003
+
             api_key = variables.get("ANTHROPIC_API_KEY")
             if not api_key:
                 return
@@ -594,6 +592,7 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
 
         elif provider == "Google Generative AI":
             from langchain_google_genai import ChatGoogleGenerativeAI  # type: ignore  # noqa: PGH003
+
             api_key = variables.get("GOOGLE_API_KEY")
             if not api_key:
                 return
@@ -602,24 +601,28 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
 
         elif provider == "IBM WatsonX":
             from langchain_ibm import ChatWatsonx
+
             api_key = variables.get("WATSONX_APIKEY")
             project_id = variables.get("WATSONX_PROJECT_ID")
             url = variables.get("WATSONX_URL", "https://us-south.ml.cloud.ibm.com")
             if not api_key or not project_id:
                 return
-            llm = ChatWatsonx(apikey=api_key, url=url, model_id=first_model, project_id=project_id, params={"max_new_tokens": 1})
+            llm = ChatWatsonx(
+                apikey=api_key, url=url, model_id=first_model, project_id=project_id, params={"max_new_tokens": 1}
+            )
             llm.invoke("test")
 
         elif provider == "Ollama":
             import requests
+
             base_url = variables.get("OLLAMA_BASE_URL")
             if not base_url:
                 raise ValueError("Ollama Base URL is not configured.")
-            
+
             base_url = base_url.rstrip("/")
             response = requests.get(f"{base_url}/api/tags", timeout=5)
             response.raise_for_status()
-            
+
             data = response.json()
             if not isinstance(data, dict) or "models" not in data:
                 raise ValueError(f"URL {base_url} does not appear to be an Ollama server.")
@@ -631,9 +634,13 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
                     # Lenient check for missing tag
                     if ":" not in model_name:
                         if not any(m.startswith(f"{model_name}:") for m in available_models):
-                            raise ValueError(f"Model '{model_name}' not found on Ollama server. Available: {', '.join(available_models[:3])}...")
+                            raise ValueError(
+                                f"Model '{model_name}' not found on Ollama server. Available: {', '.join(available_models[:3])}..."
+                            )
                     else:
-                        raise ValueError(f"Model '{model_name}' not found on Ollama server. Available: {', '.join(available_models[:3])}...")
+                        raise ValueError(
+                            f"Model '{model_name}' not found on Ollama server. Available: {', '.join(available_models[:3])}..."
+                        )
 
     except ValueError:
         raise
@@ -641,11 +648,11 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
         error_msg = str(e).lower()
         if any(word in error_msg for word in ["401", "authentication", "api key"]):
             raise ValueError(f"Invalid API key for {provider}") from e
-        
+
         # Rethrow specific Ollama errors
         if provider == "Ollama":
             raise ValueError(str(e)) from e
-        
+
         # For others, log and return (allow saving despite minor errors)
         return
 
@@ -1301,14 +1308,12 @@ def get_llm(
 
         # Priority: component value > database value > env var
         watsonx_url_value = (
-            watsonx_url if watsonx_url
-            else provider_vars.get("WATSONX_URL")
-            or os.environ.get("WATSONX_URL")
+            watsonx_url if watsonx_url else provider_vars.get("WATSONX_URL") or os.environ.get("WATSONX_URL")
         )
         watsonx_project_id_value = (
-            watsonx_project_id if watsonx_project_id
-            else provider_vars.get("WATSONX_PROJECT_ID")
-            or os.environ.get("WATSONX_PROJECT_ID")
+            watsonx_project_id
+            if watsonx_project_id
+            else provider_vars.get("WATSONX_PROJECT_ID") or os.environ.get("WATSONX_PROJECT_ID")
         )
 
         has_url = bool(watsonx_url_value)
@@ -1338,9 +1343,9 @@ def get_llm(
 
         # Priority: component value > database value > env var
         ollama_base_url_value = (
-            ollama_base_url if ollama_base_url
-            else provider_vars.get("OLLAMA_BASE_URL")
-            or os.environ.get("OLLAMA_BASE_URL")
+            ollama_base_url
+            if ollama_base_url
+            else provider_vars.get("OLLAMA_BASE_URL") or os.environ.get("OLLAMA_BASE_URL")
         )
         if ollama_base_url_value:
             kwargs[base_url_param] = ollama_base_url_value

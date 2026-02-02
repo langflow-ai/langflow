@@ -4,7 +4,6 @@ import json
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from loguru import logger
 from lfx.base.models.unified_models import (
     get_model_provider_metadata,
     get_model_provider_variable_mapping,
@@ -12,6 +11,7 @@ from lfx.base.models.unified_models import (
     get_provider_all_variables,
     get_unified_models_detailed,
 )
+from loguru import logger
 from pydantic import BaseModel, field_validator
 
 from langflow.api.utils import CurrentActiveUser, DbSession
@@ -278,9 +278,7 @@ async def get_enabled_providers(
 
             # Check if all REQUIRED variables are present
             required_vars = [v for v in provider_vars if v.get("required", False)]
-            all_required_present = all(
-                v.get("variable_key") in all_variable_names for v in required_vars
-            )
+            all_required_present = all(v.get("variable_key") in all_variable_names for v in required_vars)
 
             provider_status[provider] = all_required_present
             if all_required_present:

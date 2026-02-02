@@ -30,7 +30,6 @@ from langflow.agentic.services.flow_executor import execute_flow_file
 from langflow.agentic.services.provider_service import (
     DEFAULT_MODELS,
     PREFERRED_PROVIDERS,
-    check_api_key,
     get_enabled_providers_for_user,
 )
 from langflow.api.utils.core import CurrentActiveUser, DbSession

@@ -30,15 +30,24 @@ class TestGetEnabledProvidersForUserMulti:
 
         with patch("langflow.agentic.services.provider_service.get_variable_service") as mock_get_service:
             from langflow.services.variable.service import DatabaseVariableService
+
             mock_service = MagicMock(spec=DatabaseVariableService)
             mock_service.get_all.return_value = mock_variables
             mock_get_service.return_value = mock_service
 
-            with patch("langflow.agentic.services.provider_service.get_provider_required_variable_keys") as mock_get_keys:
+            with patch(
+                "langflow.agentic.services.provider_service.get_provider_required_variable_keys"
+            ) as mock_get_keys:
                 # WatsonX requires these 3 keys
-                mock_get_keys.side_effect = lambda p: ["WATSONX_APIKEY", "WATSONX_PROJECT_ID", "WATSONX_URL"] if p == "IBM WatsonX" else ["OTHER_KEY"]
+                mock_get_keys.side_effect = (
+                    lambda p: ["WATSONX_APIKEY", "WATSONX_PROJECT_ID", "WATSONX_URL"]
+                    if p == "IBM WatsonX"
+                    else ["OTHER_KEY"]
+                )
 
-                with patch("langflow.agentic.services.provider_service.get_model_provider_variable_mapping") as mock_get_map:
+                with patch(
+                    "langflow.agentic.services.provider_service.get_model_provider_variable_mapping"
+                ) as mock_get_map:
                     mock_get_map.return_value = {"IBM WatsonX": "WATSONX_APIKEY"}
 
                     enabled, status = await get_enabled_providers_for_user(user_id, mock_session)
@@ -64,15 +73,24 @@ class TestGetEnabledProvidersForUserMulti:
 
         with patch("langflow.agentic.services.provider_service.get_variable_service") as mock_get_service:
             from langflow.services.variable.service import DatabaseVariableService
+
             mock_service = MagicMock(spec=DatabaseVariableService)
             mock_service.get_all.return_value = mock_variables
             mock_get_service.return_value = mock_service
 
-            with patch("langflow.agentic.services.provider_service.get_provider_required_variable_keys") as mock_get_keys:
+            with patch(
+                "langflow.agentic.services.provider_service.get_provider_required_variable_keys"
+            ) as mock_get_keys:
                 # WatsonX requires these 3 keys
-                mock_get_keys.side_effect = lambda p: ["WATSONX_APIKEY", "WATSONX_PROJECT_ID", "WATSONX_URL"] if p == "IBM WatsonX" else ["OTHER_KEY"]
+                mock_get_keys.side_effect = (
+                    lambda p: ["WATSONX_APIKEY", "WATSONX_PROJECT_ID", "WATSONX_URL"]
+                    if p == "IBM WatsonX"
+                    else ["OTHER_KEY"]
+                )
 
-                with patch("langflow.agentic.services.provider_service.get_model_provider_variable_mapping") as mock_get_map:
+                with patch(
+                    "langflow.agentic.services.provider_service.get_model_provider_variable_mapping"
+                ) as mock_get_map:
                     mock_get_map.return_value = {"IBM WatsonX": "WATSONX_APIKEY"}
 
                     enabled, status = await get_enabled_providers_for_user(user_id, mock_session)
