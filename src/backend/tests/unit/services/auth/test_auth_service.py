@@ -87,9 +87,7 @@ async def test_get_current_user_from_access_token_rejects_malformed_token(auth_s
     for token in malformed_tokens:
         with pytest.raises(HTTPException) as exc:
             await auth_service.get_current_user_from_access_token(token, db)
-        assert exc.value.status_code == status.HTTP_401_UNAUTHORIZED, (
-            f"Malformed token {token!r} should return 401"
-        )
+        assert exc.value.status_code == status.HTTP_401_UNAUTHORIZED, f"Malformed token {token!r} should return 401"
 
 
 @pytest.mark.anyio
