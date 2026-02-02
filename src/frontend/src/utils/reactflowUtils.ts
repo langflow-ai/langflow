@@ -81,6 +81,45 @@ export function checkWebhookInput(nodes: Node[]) {
 }
 
 export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
+  const brokenEdges: {
+    source: {
+      nodeDisplayName: string;
+      outputDisplayName?: string;
+    };
+    target: {
+      displayName: string;
+      field: string;
+    };
+  }[] = [];
+
+  function generateAlertObject(sourceNode, targetNode, edge) {
+    const targetHandleObject: targetHandleType = scapeJSONParse(
+      edge.targetHandle,
+    );
+    const sourceHandleObject: sourceHandleType = scapeJSONParse(
+      edge.sourceHandle,
+    );
+    const name = sourceHandleObject.name;
+    const output = sourceNode.data.node!.outputs?.find(
+      (output) => output.name === name,
+    );
+
+    return {
+      source: {
+        nodeDisplayName: sourceNode.data.node!.display_name,
+        outputDisplayName: output?.display_name,
+      },
+      target: {
+        displayName: targetNode.data.node!.display_name,
+        field:
+          targetNode.data.node!.template[targetHandleObject.fieldName]
+            ?.display_name ??
+          targetHandleObject.fieldName ??
+          targetHandleObject.name,
+      },
+    };
+  }
+
   let newEdges: EdgeType[] = cloneDeep(
     edges.map((edge) => ({ ...edge, selected: false, animated: false })),
   );
@@ -101,7 +140,15 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
       let id: targetHandleType | sourceHandleType;
 
       const templateFieldType = targetNode.data.node!.template[field]?.type;
-      const inputTypes = targetNode.data.node!.template[field]?.input_types;
+      const rawInputTypes = targetNode.data.node!.template[field]?.input_types;
+      // For ModelInput types, default to ["LanguageModel"] when input_types is empty
+      // This matches the behavior in RenderInputParameters
+      const isModelType = templateFieldType === "model";
+      const inputTypes = rawInputTypes?.length
+        ? rawInputTypes
+        : isModelType
+          ? ["LanguageModel"]
+          : rawInputTypes;
       const hasProxy = targetNode.data.node!.template[field]?.proxy;
       const isToolMode = targetNode.data.node!.template[field]?.tool_mode;
 
@@ -149,6 +196,7 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
         (targetNode.data.node?.tool_mode && isToolMode)
       ) {
         newEdges = newEdges.filter((e) => e.id !== edge.id);
+        brokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
       }
     }
     if (sourceHandle) {
@@ -198,16 +246,19 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
 
           if (scapedJSONStringfy(id) !== sourceHandle) {
             newEdges = newEdges.filter((e) => e.id !== edge.id);
+            brokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
           }
         } else {
           newEdges = newEdges.filter((e) => e.id !== edge.id);
+          brokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
         }
       }
     }
 
     newEdges = filterHiddenFieldsEdges(edge, newEdges, targetNode);
   });
-  return newEdges;
+
+  return { edges: newEdges, brokenEdges };
 }
 
 export function clearHandlesFromAdvancedFields(
@@ -270,33 +321,6 @@ export function filterHiddenFieldsEdges(
 }
 
 export function detectBrokenEdgesEdges(nodes: AllNodeType[], edges: Edge[]) {
-  function generateAlertObject(sourceNode, targetNode, edge) {
-    const targetHandleObject: targetHandleType = scapeJSONParse(
-      edge.targetHandle,
-    );
-    const sourceHandleObject: sourceHandleType = scapeJSONParse(
-      edge.sourceHandle,
-    );
-    const name = sourceHandleObject.name;
-    const output = sourceNode.data.node!.outputs?.find(
-      (output) => output.name === name,
-    );
-
-    return {
-      source: {
-        nodeDisplayName: sourceNode.data.node!.display_name,
-        outputDisplayName: output?.display_name,
-      },
-      target: {
-        displayName: targetNode.data.node!.display_name,
-        field:
-          targetNode.data.node!.template[targetHandleObject.fieldName]
-            ?.display_name ??
-          targetHandleObject.fieldName ??
-          targetHandleObject.name,
-      },
-    };
-  }
   let newEdges = cloneDeep(edges);
   const BrokenEdges: {
     source: {

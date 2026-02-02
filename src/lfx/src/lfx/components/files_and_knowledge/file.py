@@ -587,7 +587,16 @@ class FileComponent(BaseFileComponent):
 
             from lfx.schema.data import Data
 
-            resolved_path = Path(self.resolve_path(file_path_str))
+            # Use same resolution logic as BaseFileComponent (support storage paths)
+            path_str = str(file_path_str)
+            if parse_storage_path(path_str):
+                try:
+                    resolved_path = Path(self.get_full_path(path_str))
+                except (ValueError, AttributeError):
+                    resolved_path = Path(self.resolve_path(path_str))
+            else:
+                resolved_path = Path(self.resolve_path(path_str))
+
             if not resolved_path.exists():
                 msg = f"File or directory not found: {file_path_str}"
                 self.log(msg)

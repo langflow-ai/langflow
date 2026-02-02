@@ -23,12 +23,17 @@ on:
         type: boolean
         default: false
       skip_slack:
-        description: "Skip slack message on failure. Only do this for testing purposes."
+        description: "Skip slack message. Only do this for testing purposes."
         required: false
         type: boolean
         default: false
       push_to_registry:
         description: "Whether to push images to registries. Set to false for testing builds without publishing."
+        required: false
+        type: boolean
+        default: true
+      auto_merge_hash_history:
+        description: "Create PR to merge hash history back to main. Set to false when not running from main."
         required: false
         type: boolean
         default: true
@@ -128,6 +133,7 @@ jobs:
 
           uv lock
           cd src/backend/base && uv lock && cd ../../..
+          cd src/lfx && uv lock && cd ../..
 
           git add pyproject.toml src/backend/base/pyproject.toml src/lfx/pyproject.toml uv.lock src/backend/base/uv.lock
           git commit -m "Update version and project name"
@@ -175,6 +181,77 @@ jobs:
             exit 1
           fi
 
+  build-hash-history:
+    if: github.repository == 'langflow-ai/langflow'
+    name: Build Nightly Hash History
+    needs: create-nightly-tag
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -ex -o pipefail {0}
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout nightly tag
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.create-nightly-tag.outputs.main_tag }}
+          persist-credentials: true
+      
+      - name: "Setup Environment"
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: ${{ env.PYTHON_VERSION }}
+          prune-cache: false
+      
+      - name: Install the project
+        run: uv sync
+      
+      - name: Force reinstall LFX to pick up version change
+        run: |
+          echo "Force reinstalling lfx-nightly to ensure version metadata is updated..."
+          uv pip install --reinstall --no-deps src/lfx
+      
+      - name: Verify LFX version
+        run: |
+          echo "Checking installed LFX version..."
+          uv run python -c "from importlib.metadata import version; print(f'lfx-nightly version: {version(\"lfx-nightly\")}')" || \
+          uv run python -c "from importlib.metadata import version; print(f'lfx version: {version(\"lfx\")}')"
+      
+      - name: Build and validate nightly hash history
+        run: |
+          # The script includes append-only validation
+          uv run python scripts/build_hash_history.py --nightly
+      
+      - name: Commit and push hash history changes
+        run: |
+          echo "=== Configuring git ==="
+          git config --global user.email "bot-nightly-builds@langflow.org"
+          git config --global user.name "Langflow Bot"
+          
+          echo "=== Checking for hash history changes ==="
+          # Check if there are changes to commit (handles if it's a new file for first run)
+          git add src/lfx/src/lfx/_assets/nightly_hash_history.json
+          if git diff --cached --quiet src/lfx/src/lfx/_assets/nightly_hash_history.json; then
+            echo "No changes to nightly hash history"
+          else
+            echo "Hash history changes detected, committing..."
+            # Commit to the nightly tag itself so builds include the hash history
+            git commit -m "Update nightly hash history for ${{ needs.create-nightly-tag.outputs.main_tag }}"
+            
+            echo "=== Updating nightly tag ${{ needs.create-nightly-tag.outputs.main_tag }} ==="
+            # Update the tag to include the hash history
+            git tag -f ${{ needs.create-nightly-tag.outputs.main_tag }}
+            git push -f origin ${{ needs.create-nightly-tag.outputs.main_tag }}
+            
+            echo "=== Pushing to nightly-hash-history-updates branch ==="
+            # Also push to the branch for PR creation
+            git push origin HEAD:refs/heads/nightly-hash-history-updates --force
+            echo "Updated nightly tag and branch with hash history changes"
+          fi
+
   frontend-tests:
     if: github.repository == 'langflow-ai/langflow' && !inputs.skip_frontend_tests
     name: Run Frontend Tests
@@ -214,9 +291,9 @@ jobs:
   #     ref: ${{ needs.create-nightly-tag.outputs.tag }}
 
   release-nightly-build:
-    if: github.repository == 'langflow-ai/langflow' && (needs.frontend-tests.result == 'success' || needs.frontend-tests.result == 'skipped') && (needs.backend-unit-tests.result == 'success' || needs.backend-unit-tests.result == 'skipped')
+    if: github.repository == 'langflow-ai/langflow' && always() && needs.frontend-tests.result != 'failure' && needs.backend-unit-tests.result != 'failure' && needs.build-hash-history.result != 'failure'
     name: Run Nightly Langflow Build
-    needs: [create-nightly-tag, frontend-tests, backend-unit-tests]
+    needs: [create-nightly-tag, frontend-tests, backend-unit-tests, build-hash-history]
     uses: ./.github/workflows/release_nightly.yml
     with:
       build_docker_base: true
@@ -275,8 +352,131 @@ jobs:
             ]
           }' ${{ secrets.LANGFLOW_ENG_SLACK_WEBHOOK_URL }}
 
+  merge-hash-history-to-main:
+    name: Create PR to Merge Hash History to Main
+    needs: [create-nightly-tag, build-hash-history, release-nightly-build]
+    # Run if auto_merge_hash_history is true (default) or not set (scheduled runs)
+    # When triggered by schedule, inputs.auto_merge_hash_history is not set, so default to true
+    # Only run when the base branch is 'main' to prevent PRs from feature branches
+    if: github.repository == 'langflow-ai/langflow' && github.ref == 'refs/heads/main' && always() && needs.build-hash-history.result == 'success' && needs.release-nightly-build.result == 'success' && (github.event_name == 'schedule' || inputs.auto_merge_hash_history != false)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout main branch
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: true
+      
+      - name: Configure Git
+        run: |
+          git config --global user.email "bot-nightly-builds@langflow.org"
+          git config --global user.name "Langflow Bot"
+      
+      - name: "Setup Environment"
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: ${{ env.PYTHON_VERSION }}
+          prune-cache: false
+      
+      - name: Fetch nightly hash history branch
+        run: |
+          echo "=== Fetching nightly-hash-history-updates branch ==="
+          git fetch origin nightly-hash-history-updates || echo "Branch does not exist yet, will be created"
+          echo "Fetch completed"
+      
+      - name: Check if branch exists and has changes
+        id: check_branch
+        run: |
+          echo "=== Checking branch status ==="
+          if git rev-parse --verify origin/nightly-hash-history-updates >/dev/null 2>&1; then
+            echo "branch_exists=true" >> $GITHUB_OUTPUT
+            echo "Branch exists"
+            
+            # Check if there are differences between main and the nightly branch
+            echo "=== Comparing with main branch ==="
+            if git diff --quiet main origin/nightly-hash-history-updates -- src/lfx/src/lfx/_assets/nightly_hash_history.json; then
+              echo "has_changes=false" >> $GITHUB_OUTPUT
+              echo "No changes to merge"
+            else
+              echo "has_changes=true" >> $GITHUB_OUTPUT
+              echo "Changes detected - PR will be created/updated"
+            fi
+          else
+            echo "branch_exists=false" >> $GITHUB_OUTPUT
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "Branch does not exist yet - will be created by build-hash-history job"
+          fi
+      
+      - name: Validate and prepare PR
+        if: steps.check_branch.outputs.branch_exists == 'true' && steps.check_branch.outputs.has_changes == 'true'
+        run: |
+          echo "=== Checking out hash history file from nightly branch ==="
+          # Checkout the nightly hash history file to verify it
+          git checkout origin/nightly-hash-history-updates -- src/lfx/src/lfx/_assets/nightly_hash_history.json
+          
+          echo "=== Verifying only hash history file was modified ==="
+          # Verify that ONLY the nightly_hash_history.json file was modified
+          CHANGED_FILES=$(git diff --name-only main)
+          if [ "$CHANGED_FILES" != "src/lfx/src/lfx/_assets/nightly_hash_history.json" ]; then
+            echo "ERROR: Unexpected files were modified: $CHANGED_FILES"
+            echo "Only nightly_hash_history.json should be changed"
+            exit 1
+          fi
+          echo "Only hash history file modified"
+          
+          echo "=== Validating hash history file ==="
+          # Basic validation - ensure file exists and is valid JSON
+          
+          if [ ! -f "src/lfx/src/lfx/_assets/nightly_hash_history.json" ]; then
+            echo "ERROR: nightly_hash_history.json file was deleted!"
+            exit 1
+          fi
+          
+          if ! uv run python -c "import json; json.load(open('src/lfx/src/lfx/_assets/nightly_hash_history.json'))"; then
+            echo "ERROR: nightly_hash_history.json is not valid JSON!"
+            exit 1
+          fi
+          
+          echo "Hash history file validation passed"
+          echo "Note: Append-only validation was performed during the build step"
+      
+      - name: Create Pull Request
+        if: steps.check_branch.outputs.branch_exists == 'true' && steps.check_branch.outputs.has_changes == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Create or update PR from the nightly-hash-history-updates branch
+          PR_URL=$(gh pr create \
+            --title "chore: update nightly hash history" \
+            --body "This PR updates the nightly hash history file with the latest component hashes from the nightly build.
+
+          **Automated PR** - Generated by nightly build workflow
+          
+          - Updates: \`src/lfx/src/lfx/_assets/nightly_hash_history.json\`
+          - Source: Nightly build tag ${{ needs.create-nightly-tag.outputs.main_tag }}
+          
+          This PR is automatically updated each night with the latest hash history.
+          Auto-merge is enabled - PR will merge automatically when checks pass." \
+            --base main \
+            --head nightly-hash-history-updates \
+            --label "automated" \
+            --label "nightly" 2>&1 || echo "")
+          
+          # Enable auto-merge if PR was created or get existing PR
+          if [ -n "$PR_URL" ]; then
+            echo "PR created or found: $PR_URL"
+            # Enable auto-merge on the PR
+            gh pr merge nightly-hash-history-updates --auto --squash || echo "Auto-merge may already be enabled or PR doesn't exist yet"
+          fi
+
       - name: Send success notification to Slack
-        if: ${{ needs.release-nightly-build.result == 'success' }}
+        if: ${{ !inputs.skip_slack && needs.release-nightly-build.result == 'success' }}
         run: |
           curl -X POST -H 'Content-type: application/json' \
           --data '{

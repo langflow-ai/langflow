@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from aiofile import async_open
+import aiofiles
 
 from lfx.log.logger import logger
+from lfx.services.base import Service
 from lfx.services.storage.service import StorageService
 
 if TYPE_CHECKING:
@@ -18,7 +19,7 @@ if TYPE_CHECKING:
 EXPECTED_PATH_PARTS = 2  # Path format: "flow_id/filename"
 
 
-class LocalStorageService(StorageService):
+class LocalStorageService(StorageService, Service):
     """A service class for handling local file storage operations."""
 
     def __init__(
@@ -52,6 +53,10 @@ class LocalStorageService(StorageService):
 
         flow_id, file_name = parts
         return self.build_full_path(flow_id, file_name)
+
+    async def teardown(self) -> None:
+        """Teardown the storage service."""
+        # No cleanup needed for local storage
 
     def build_full_path(self, flow_id: str, file_name: str) -> str:
         """Build the full path of a file in the local storage."""
@@ -114,7 +119,7 @@ class LocalStorageService(StorageService):
 
         try:
             mode = "ab" if append else "wb"
-            async with async_open(str(file_path), mode) as f:
+            async with aiofiles.open(str(file_path), mode) as f:
                 await f.write(data)
             action = "appended to" if append else "saved"
             await logger.ainfo(f"File {file_name} {action} successfully in flow {flow_id}.")
@@ -141,7 +146,7 @@ class LocalStorageService(StorageService):
             msg = f"File {file_name} not found in flow {flow_id}"
             raise FileNotFoundError(msg)
 
-        async with async_open(str(file_path), "rb") as f:
+        async with aiofiles.open(str(file_path), "rb") as f:
             content = await f.read()
 
         logger.debug(f"File {file_name} retrieved successfully from flow {flow_id}.")
@@ -216,7 +221,3 @@ class LocalStorageService(StorageService):
             raise
         else:
             return file_size_stat.st_size
-
-    async def teardown(self) -> None:
-        """Perform any cleanup operations when the service is being torn down."""
-        # No specific teardown actions required for local

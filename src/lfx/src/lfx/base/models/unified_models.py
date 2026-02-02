@@ -8,9 +8,13 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 import contextlib
+import json
 
 from lfx.base.models.anthropic_constants import ANTHROPIC_MODELS_DETAILED
-from lfx.base.models.google_generative_ai_constants import GOOGLE_GENERATIVE_AI_MODELS_DETAILED
+from lfx.base.models.google_generative_ai_constants import (
+    GOOGLE_GENERATIVE_AI_EMBEDDING_MODELS_DETAILED,
+    GOOGLE_GENERATIVE_AI_MODELS_DETAILED,
+)
 from lfx.base.models.ollama_constants import OLLAMA_EMBEDDING_MODELS_DETAILED, OLLAMA_MODELS_DETAILED
 from lfx.base.models.openai_constants import OPENAI_EMBEDDING_MODELS_DETAILED, OPENAI_MODELS_DETAILED
 from lfx.base.models.watsonx_constants import WATSONX_MODELS_DETAILED
@@ -19,6 +23,7 @@ from lfx.services.deps import get_variable_service, session_scope
 from lfx.utils.async_helpers import run_until_complete
 
 
+@lru_cache(maxsize=1)
 def get_model_class(class_name: str):
     """Lazy load a specific model class to avoid importing unused dependencies.
 
@@ -69,10 +74,10 @@ def get_model_classes() -> dict:
 @lru_cache(maxsize=1)
 def get_embedding_classes():
     """Lazy load embedding classes to avoid importing optional dependencies at module level."""
-    from langchain_google_genai import GoogleGenerativeAIEmbeddings
-    from langchain_ibm import WatsonxEmbeddings
-    from langchain_ollama import OllamaEmbeddings
-    from langchain_openai import OpenAIEmbeddings
+    from langchain_google_genai import GoogleGenerativeAIEmbeddings  # type: ignore  # noqa: PGH003
+    from langchain_ibm import WatsonxEmbeddings  # type: ignore  # noqa: PGH003
+    from langchain_ollama import OllamaEmbeddings  # type: ignore  # noqa: PGH003
+    from langchain_openai import OpenAIEmbeddings  # type: ignore  # noqa: PGH003
 
     return {
         "GoogleGenerativeAIEmbeddings": GoogleGenerativeAIEmbeddings,
@@ -84,26 +89,55 @@ def get_embedding_classes():
 
 @lru_cache(maxsize=1)
 def get_model_provider_metadata():
+    """Get complete provider metadata including model class, API key param, and extra params."""
     return {
         "OpenAI": {
             "icon": "OpenAI",
             "variable_name": "OPENAI_API_KEY",
+            "model_class": "ChatOpenAI",
+            "api_key_param": "api_key",
+            "model_name_param": "model",
+            "api_docs_url": "https://platform.openai.com/docs/overview",
+            "max_tokens_field_name": "max_tokens",
         },
         "Anthropic": {
             "icon": "Anthropic",
             "variable_name": "ANTHROPIC_API_KEY",
+            "model_class": "ChatAnthropic",
+            "api_key_param": "api_key",
+            "model_name_param": "model",
+            "api_docs_url": "https://console.anthropic.com/docs",
+            "max_tokens_field_name": "max_tokens",
         },
         "Google Generative AI": {
             "icon": "GoogleGenerativeAI",
             "variable_name": "GOOGLE_API_KEY",
+            "model_class": "ChatGoogleGenerativeAIFixed",
+            "api_key_param": "google_api_key",
+            "model_name_param": "model",
+            "api_docs_url": "https://aistudio.google.com/app/apikey",
+            "max_tokens_field_name": "max_output_tokens",
         },
         "Ollama": {
             "icon": "Ollama",
-            "variable_name": "OLLAMA_BASE_URL",  # Ollama is local but can have custom URL
+            "variable_name": "OLLAMA_BASE_URL",
+            "model_class": "ChatOllama",
+            "api_key_param": "base_url",
+            "model_name_param": "model",
+            "base_url_param": "base_url",
+            "api_docs_url": "https://ollama.com/",
+            "max_tokens_field_name": "max_tokens",
         },
         "IBM WatsonX": {
             "icon": "WatsonxAI",
             "variable_name": "WATSONX_APIKEY",
+            "model_class": "ChatWatsonx",
+            "api_key_param": "apikey",
+            "model_name_param": "model_id",
+            "url_param": "url",
+            "project_id_param": "project_id",
+            "api_docs_url": "https://www.ibm.com/products/watsonx",
+            "max_tokens_field_name": "max_tokens",
         },
     }
 
@@ -118,6 +152,7 @@ def get_models_detailed():
         OPENAI_MODELS_DETAILED,
         OPENAI_EMBEDDING_MODELS_DETAILED,
         GOOGLE_GENERATIVE_AI_MODELS_DETAILED,
+        GOOGLE_GENERATIVE_AI_EMBEDDING_MODELS_DETAILED,
         OLLAMA_MODELS_DETAILED,
         OLLAMA_EMBEDDING_MODELS_DETAILED,
         WATSONX_MODELS_DETAILED,
@@ -130,6 +165,25 @@ MODELS_DETAILED = get_models_detailed()
 @lru_cache(maxsize=1)
 def get_model_provider_variable_mapping() -> dict[str, str]:
     return {provider: meta["variable_name"] for provider, meta in model_provider_metadata.items()}
+
+
+def get_provider_config(provider: str) -> dict:
+    """Get complete provider configuration.
+
+    Args:
+        provider: Provider name (e.g., "OpenAI", "Anthropic")
+
+    Returns:
+        Dict with model_class, api_key_param, icon, variable_name, model_name_param, and extra params
+
+    Raises:
+        ValueError: If provider is unknown
+    """
+    if provider not in model_provider_metadata:
+        msg = f"Unknown provider: {provider}"
+        raise ValueError(msg)
+
+    return model_provider_metadata[provider].copy()
 
 
 def get_model_providers() -> list[str]:
@@ -294,6 +348,46 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
     return run_until_complete(_get_variable())
 
 
+def _validate_and_get_enabled_providers(
+    credential_variables: dict[str, Any],
+    provider_variable_map: dict[str, str],
+) -> set[str]:
+    """Validate API keys and return set of enabled providers.
+
+    This helper function validates API keys for credential variables and returns
+    only providers with valid keys. Used by get_enabled_providers and model options functions.
+
+    Args:
+        credential_variables: Dictionary mapping variable names to VariableRead objects
+        provider_variable_map: Dictionary mapping provider names to variable names
+
+    Returns:
+        Set of provider names that have valid API keys
+    """
+    from langflow.services.auth import utils as auth_utils
+    from langflow.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    enabled = set()
+
+    for provider, var_name in provider_variable_map.items():
+        if var_name in credential_variables:
+            # Validate the API key before marking as enabled
+            credential_var = credential_variables[var_name]
+            try:
+                # Decrypt the API key value
+                api_key = auth_utils.decrypt_api_key(credential_var.value, settings_service=settings_service)
+                # Validate the key (this will raise ValueError if invalid)
+                if api_key and api_key.strip():
+                    validate_model_provider_key(var_name, api_key)
+                    enabled.add(provider)
+            except (ValueError, Exception) as e:  # noqa: BLE001
+                # Key validation failed or decryption failed - don't enable provider
+                logger.debug("Provider %s validation failed for variable %s: %s", provider, var_name, e)
+
+    return enabled
+
+
 def validate_model_provider_key(variable_name: str, api_key: str) -> None:
     """Validate a model provider API key by making a minimal test call.
 
@@ -330,24 +424,33 @@ def validate_model_provider_key(variable_name: str, api_key: str) -> None:
     # Test the API key based on provider
     try:
         if provider == "OpenAI":
-            from langchain_openai import ChatOpenAI
+            from langchain_openai import ChatOpenAI  # type: ignore  # noqa: PGH003
 
             llm = ChatOpenAI(api_key=api_key, model_name=first_model, max_tokens=1)
             llm.invoke("test")
         elif provider == "Anthropic":
-            from langchain_anthropic import ChatAnthropic
+            from langchain_anthropic import ChatAnthropic  # type: ignore  # noqa: PGH003
 
             llm = ChatAnthropic(anthropic_api_key=api_key, model=first_model, max_tokens=1)
             llm.invoke("test")
         elif provider == "Google Generative AI":
-            from langchain_google_genai import ChatGoogleGenerativeAI
+            from langchain_google_genai import ChatGoogleGenerativeAI  # type: ignore  # noqa: PGH003
 
             llm = ChatGoogleGenerativeAI(google_api_key=api_key, model=first_model, max_tokens=1)
             llm.invoke("test")
         elif provider == "IBM WatsonX":
-            # WatsonX validation would require additional parameters
-            # Skip for now as it needs project_id, url, etc.
-            return
+            from langchain_ibm import ChatWatsonx
+
+            default_url = "https://us-south.ml.cloud.ibm.com"
+            llm = ChatWatsonx(
+                apikey=api_key,
+                url=default_url,
+                model_id=first_model,
+                project_id="dummy_project_for_validation",  # Dummy project_id for validation
+                params={"max_new_tokens": 1},
+            )
+            llm.invoke("test")
+
         elif provider == "Ollama":
             # Ollama is local, just verify the URL is accessible
             import requests
@@ -435,7 +538,7 @@ def get_language_model_options(
             # If we can't get model status, continue without filtering
             pass
 
-    # Get enabled providers (those with credentials configured)
+    # Get enabled providers (those with credentials configured and validated)
     enabled_providers = set()
     if user_id:
         try:
@@ -445,6 +548,7 @@ def get_language_model_options(
                     variable_service = get_variable_service()
                     if variable_service is None:
                         return set()
+
                     from langflow.services.variable.constants import CREDENTIAL_TYPE
                     from langflow.services.variable.service import DatabaseVariableService
 
@@ -454,11 +558,11 @@ def get_language_model_options(
                         user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
                         session=session,
                     )
-                    credential_names = {var.name for var in all_vars if var.type == CREDENTIAL_TYPE}
+                    credential_vars = {var.name: var for var in all_vars if var.type == CREDENTIAL_TYPE}
                     provider_variable_map = get_model_provider_variable_mapping()
-                    return {
-                        provider for provider, var_name in provider_variable_map.items() if var_name in credential_names
-                    }
+
+                    # Use shared helper to validate and get enabled providers
+                    return _validate_and_get_enabled_providers(credential_vars, provider_variable_map)
 
             enabled_providers = run_until_complete(_get_enabled_providers())
         except Exception:  # noqa: BLE001, S110
@@ -621,7 +725,7 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
             # If we can't get model status, continue without filtering
             pass
 
-    # Get enabled providers (those with credentials configured)
+    # Get enabled providers (those with credentials configured and validated)
     enabled_providers = set()
     if user_id:
         try:
@@ -631,6 +735,7 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
                     variable_service = get_variable_service()
                     if variable_service is None:
                         return set()
+
                     from langflow.services.variable.constants import CREDENTIAL_TYPE
                     from langflow.services.variable.service import DatabaseVariableService
 
@@ -640,11 +745,11 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
                         user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
                         session=session,
                     )
-                    credential_names = {var.name for var in all_vars if var.type == CREDENTIAL_TYPE}
+                    credential_vars = {var.name: var for var in all_vars if var.type == CREDENTIAL_TYPE}
                     provider_variable_map = get_model_provider_variable_mapping()
-                    return {
-                        provider for provider, var_name in provider_variable_map.items() if var_name in credential_names
-                    }
+
+                    # Use shared helper to validate and get enabled providers
+                    return _validate_and_get_enabled_providers(credential_vars, provider_variable_map)
 
             enabled_providers = run_until_complete(_get_enabled_providers())
         except Exception:  # noqa: BLE001, S110
@@ -825,6 +930,11 @@ def normalize_model_names_to_dicts(model_names: list[str] | str) -> list[dict[st
                 "api_key_param": api_key_param_mapping.get(provider, "api_key"),
             }
 
+            # Add max_tokens_field_name from provider metadata
+            provider_meta = model_provider_metadata.get(provider, {})
+            if "max_tokens_field_name" in provider_meta:
+                runtime_metadata["max_tokens_field_name"] = provider_meta["max_tokens_field_name"]
+
             # Add reasoning models list for OpenAI
             if provider == "OpenAI" and base_metadata.get("reasoning"):
                 runtime_metadata["reasoning_models"] = [model_name]
@@ -879,6 +989,7 @@ def get_llm(
     temperature=None,
     *,
     stream=False,
+    max_tokens=None,
     watsonx_url=None,
     watsonx_project_id=None,
     ollama_base_url=None,
@@ -945,6 +1056,16 @@ def get_llm(
 
     if temperature is not None:
         kwargs["temperature"] = temperature
+
+    # Add max_tokens with provider-specific field name (only when a valid integer >= 1)
+    if max_tokens is not None and max_tokens != "":
+        try:
+            max_tokens_int = int(max_tokens)
+            if max_tokens_int >= 1:
+                max_tokens_param = metadata.get("max_tokens_field_name", "max_tokens")
+                kwargs[max_tokens_param] = max_tokens_int
+        except (TypeError, ValueError):
+            pass  # Skip invalid max_tokens (e.g. empty string from form input)
 
     # Add provider-specific parameters
     if provider == "IBM WatsonX":
@@ -1013,6 +1134,8 @@ def update_model_options_in_build_config(
     - Cache is empty or expired
     - Model field is being refreshed (field_name == "model")
 
+    If the component specifies static options, those are preserved and not refreshed.
+
     Args:
         component: Component instance with cache, user_id, and log attributes
         build_config: The build configuration dict to update
@@ -1025,6 +1148,35 @@ def update_model_options_in_build_config(
         Updated build_config dict with model options and providers set
     """
     import time
+
+    # Check if component specified static options - if so, preserve them
+    # The cache key for static options detection
+    static_options_cache_key = f"{cache_key_prefix}_static_options_detected"
+
+    # On initial load, check if the component has static options
+    if field_name is None and static_options_cache_key not in component.cache:
+        # Check if the model field in build_config already has options set
+        existing_options = build_config.get("model", {}).get("options")
+        if existing_options:
+            # Component specified static options - mark them as static
+            component.cache[static_options_cache_key] = True
+        else:
+            component.cache[static_options_cache_key] = False
+
+    # If component has static options, skip the refresh logic entirely
+    if component.cache.get(static_options_cache_key, False):
+        # Static options - don't override them
+        # Just handle the visibility logic and return
+        if field_value == "connect_other_models":
+            # User explicitly selected "Connect other models", show the handle
+            if cache_key_prefix == "embedding_model_options":
+                build_config["model"]["input_types"] = ["Embeddings"]
+            else:
+                build_config["model"]["input_types"] = ["LanguageModel"]
+        else:
+            # Default case or model selection: hide the handle
+            build_config["model"]["input_types"] = []
+        return build_config
 
     # Cache key based on user_id
     cache_key = f"{cache_key_prefix}_{component.user_id}"
@@ -1102,8 +1254,6 @@ def update_model_options_in_build_config(
                                 session=session,
                             )
                             if var and var.value:
-                                import json
-
                                 parsed_value = json.loads(var.value)
                                 if isinstance(parsed_value, dict):
                                     return parsed_value.get("model_name"), parsed_value.get("provider")
