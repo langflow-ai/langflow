@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
-from .constants import COMPONENT_IMPORTS
+from .constants import COMPONENT_IMPORTS, KNOWN_INPUT_TYPES
 from .formatting import format_value
 from .parsing import _parse_to_snake_case
 
@@ -86,11 +86,70 @@ def _generate_custom_components(lines: list[str], flow_info: FlowInfo) -> None:
     lines.append("# " + "=" * 70)
     lines.append("# NOTE: Review and move to a separate file if needed.")
     lines.append("")
+
+    # Collect all custom code to detect Input types
+    all_custom_code = "\n".join(n.custom_code or "" for n in custom_components)
+
+    # Detect Input types used in custom code
+    used_input_types = _detect_input_types(all_custom_code)
+
+    # Generate imports for custom components
+    if used_input_types:
+        lines.append("from langflow.custom import Component")
+        input_imports = ", ".join(sorted(used_input_types))
+        lines.append(f"from langflow.io import {input_imports}")
+        # Check for DataFrame usage
+        if "DataFrame" in all_custom_code:
+            lines.append("from langflow.schema import DataFrame")
+        # Check for pandas usage
+        if "import pandas" in all_custom_code or "pd." in all_custom_code:
+            lines.append("import pandas as pd")
+        lines.append("")
+
     for node in custom_components:
         lines.append(f"# Custom component: {node.display_name}")
         if node.custom_code:
-            lines.append(node.custom_code.rstrip())
+            # Remove the imports from the custom code since we generate them above
+            clean_code = _strip_custom_code_imports(node.custom_code)
+            lines.append(clean_code.rstrip())
         lines.append("")
+
+
+def _detect_input_types(code: str) -> set[str]:
+    """Detect Input types used in custom component code."""
+    found_types = set()
+    for input_type in KNOWN_INPUT_TYPES:
+        # Look for the type being used (e.g., "IntInput(" or "IntInput,")
+        if re.search(rf"\b{input_type}\b", code):
+            found_types.add(input_type)
+    return found_types
+
+
+def _strip_custom_code_imports(code: str) -> str:
+    """Remove import statements from custom component code.
+
+    These are generated separately to avoid duplicates and ensure consistency.
+    """
+    lines = code.split("\n")
+    filtered_lines = []
+    skip_patterns = [
+        "from langflow.custom import",
+        "from langflow.io import",
+        "from langflow.schema import",
+        "import pandas",
+    ]
+
+    for line in lines:
+        # Skip lines that match import patterns
+        if any(pattern in line for pattern in skip_patterns):
+            continue
+        filtered_lines.append(line)
+
+    # Remove leading empty lines
+    while filtered_lines and not filtered_lines[0].strip():
+        filtered_lines.pop(0)
+
+    return "\n".join(filtered_lines)
 
 
 def _generate_prompts(lines: list[str], flow_info: FlowInfo) -> None:
@@ -207,7 +266,8 @@ def _generate_connections(
         set_args = []
         for edge in other_edges:
             source_var = id_to_var.get(edge.source_id, edge.source_id)
-            set_args.append(f"{edge.target_input}={source_var}.{edge.source_output}")
+            # Use source_method (resolved method name) instead of source_output (JSON output name)
+            set_args.append(f"{edge.target_input}={source_var}.{edge.source_method}")
 
         if tool_edges:
             tool_refs = [f"{id_to_var.get(e.source_id, e.source_id)}.component_as_tool" for e in tool_edges]

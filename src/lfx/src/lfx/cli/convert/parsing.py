@@ -12,6 +12,7 @@ from .constants import (
     MIN_PROMPT_LENGTH,
     PYTHON_RESERVED_WORDS,
     SKIP_FIELDS,
+    get_method_name,
 )
 from .types import EdgeInfo, FlowInfo, NodeInfo
 
@@ -40,8 +41,11 @@ def parse_flow_json(flow_path: Path) -> FlowInfo:
         if node_info:
             flow_info.nodes.append(node_info)
 
+    # Build mapping of node_id -> node_type for method name resolution
+    id_to_type = {node.node_id: node.node_type for node in flow_info.nodes}
+
     for edge in edges_data:
-        edge_info = _parse_edge(edge)
+        edge_info = _parse_edge(edge, id_to_type)
         flow_info.edges.append(edge_info)
 
     return flow_info
@@ -125,17 +129,29 @@ def _parse_custom_code(template: dict, node_type: str) -> tuple[bool, str | None
     return False, None
 
 
-def _parse_edge(edge: dict) -> EdgeInfo:
-    """Parse a single edge from the flow JSON."""
+def _parse_edge(edge: dict, id_to_type: dict[str, str]) -> EdgeInfo:
+    """Parse a single edge from the flow JSON.
+
+    Args:
+        edge: Edge data from JSON
+        id_to_type: Mapping of node_id to node_type for method name resolution
+    """
     source_id = edge.get("source", "")
     target_id = edge.get("target", "")
     edge_data = edge.get("data", {})
     source_handle = edge_data.get("sourceHandle", {})
     target_handle = edge_data.get("targetHandle", {})
 
+    output_name = source_handle.get("name", "output")
+    source_type = id_to_type.get(source_id, "")
+
+    # Resolve output name to method name
+    method_name = get_method_name(source_type, output_name)
+
     return EdgeInfo(
         source_id=source_id,
-        source_output=source_handle.get("name", "output"),
+        source_output=output_name,
+        source_method=method_name,
         target_id=target_id,
         target_input=target_handle.get("fieldName", "input"),
     )

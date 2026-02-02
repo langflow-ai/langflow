@@ -81,8 +81,9 @@ def convert_command_wrapper(
         "--output",
         help="Output Python file (default: stdout)",
     ),
+    *,
     quiet: bool = typer.Option(
-        False,
+        False,  # noqa: FBT003
         "-q",
         "--quiet",
         help="Suppress informational messages",

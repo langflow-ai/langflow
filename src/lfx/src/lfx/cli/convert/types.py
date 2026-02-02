@@ -24,7 +24,8 @@ class EdgeInfo:
     """Parsed edge information representing a connection between nodes."""
 
     source_id: str
-    source_output: str
+    source_output: str  # Output name from JSON (e.g., "message")
+    source_method: str  # Method name to call (e.g., "message_response")
     target_id: str
     target_input: str
 
