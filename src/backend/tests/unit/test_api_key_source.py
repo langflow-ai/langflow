@@ -62,6 +62,7 @@ def mock_settings_service_db():
     settings_service = MagicMock()
     settings_service.auth_settings.API_KEY_SOURCE = "db"
     settings_service.auth_settings.SUPERUSER = "langflow"
+    settings_service.auth_settings.SECRET_KEY.get_secret_value.return_value = "test-secret-key-for-unit-tests"
     settings_service.settings.disable_track_apikey_usage = False
     return settings_service
 
@@ -72,6 +73,7 @@ def mock_settings_service_env():
     settings_service = MagicMock()
     settings_service.auth_settings.API_KEY_SOURCE = "env"
     settings_service.auth_settings.SUPERUSER = "langflow"
+    settings_service.auth_settings.SECRET_KEY.get_secret_value.return_value = "test-secret-key-for-unit-tests"
     settings_service.settings.disable_track_apikey_usage = False
     return settings_service
 
@@ -490,6 +492,7 @@ class TestCheckKeyIntegration:
 
         mock_settings = MagicMock()
         mock_settings.auth_settings.API_KEY_SOURCE = "db"
+        mock_settings.auth_settings.SECRET_KEY.get_secret_value.return_value = "test-secret-key-for-unit-tests"
         mock_settings.settings.disable_track_apikey_usage = False
 
         with patch(
@@ -548,6 +551,7 @@ class TestCheckKeyIntegration:
         mock_settings = MagicMock()
         mock_settings.auth_settings.API_KEY_SOURCE = "env"
         mock_settings.auth_settings.SUPERUSER = "langflow"
+        mock_settings.auth_settings.SECRET_KEY.get_secret_value.return_value = "test-secret-key-for-unit-tests"
         mock_settings.settings.disable_track_apikey_usage = False
 
         with patch(
@@ -573,6 +577,7 @@ class TestCheckKeyIntegration:
         mock_settings = MagicMock()
         mock_settings.auth_settings.API_KEY_SOURCE = "env"
         mock_settings.auth_settings.SUPERUSER = "langflow"
+        mock_settings.auth_settings.SECRET_KEY.get_secret_value.return_value = "test-secret-key-for-unit-tests"
         mock_settings.settings.disable_track_apikey_usage = False
 
         with patch(
