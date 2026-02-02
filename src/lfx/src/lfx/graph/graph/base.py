@@ -130,6 +130,7 @@ class Graph:
         self._call_order: list[str] = []
         self._snapshots: list[dict[str, Any]] = []
         self._end_trace_tasks: set[asyncio.Task] = set()
+        self._is_subgraph = False
 
         if context and not isinstance(context, dict):
             msg = "Context must be a dictionary"
@@ -671,6 +672,9 @@ class Graph:
             )
 
     def _end_all_traces_async(self, outputs: dict[str, Any] | None = None, error: Exception | None = None) -> None:
+        # Subgraphs don't end traces - the parent graph owns the trace lifecycle
+        if self._is_subgraph:
+            return
         task = asyncio.create_task(self.end_all_traces(outputs, error))
         self._end_trace_tasks.add(task)
         task.add_done_callback(self._end_trace_tasks.discard)
@@ -2379,16 +2383,17 @@ class Graph:
             context=dict(self.context) if self.context else None,
         )
 
+        # Inherit parent's tracing context - subgraph is an extension of parent's execution
+        subgraph._tracing_service = self._tracing_service
+        subgraph._tracing_service_initialized = True
+        subgraph._run_id = self._run_id
+        subgraph.session_id = self.session_id
+        subgraph._is_subgraph = True
+
         # Add the filtered nodes and edges
         subgraph.add_nodes_and_edges(subgraph_nodes, subgraph_edges)
 
-        try:
-            yield subgraph
-        finally:
-            # Await any pending trace tasks to ensure clean shutdown
-            if subgraph._end_trace_tasks:
-                await asyncio.gather(*subgraph._end_trace_tasks, return_exceptions=True)
-                subgraph._end_trace_tasks.clear()
+        yield subgraph
 
     @staticmethod
     def build_adjacency_maps(edges: list[CycleEdge]) -> tuple[dict[str, list[str]], dict[str, list[str]]]:
