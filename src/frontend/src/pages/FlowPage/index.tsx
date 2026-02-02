@@ -187,13 +187,21 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   // Auto-close playground when all chat components are removed
   useEffect(() => {
     const hasChatInput = inputs.some((input) => input.type === "ChatInput");
-    const hasChatOutput = outputs.some((output) => output.type === "ChatOutput");
-    
+    const hasChatOutput = outputs.some(
+      (output) => output.type === "ChatOutput",
+    );
+
     if (isSlidingContainerOpen && !hasChatInput && !hasChatOutput) {
       setSlidingContainerOpen(false);
       setIsFullscreen(false);
     }
-  }, [inputs, outputs, isSlidingContainerOpen, setSlidingContainerOpen, setIsFullscreen]);
+  }, [
+    inputs,
+    outputs,
+    isSlidingContainerOpen,
+    setSlidingContainerOpen,
+    setIsFullscreen,
+  ]);
 
   return (
     <>
