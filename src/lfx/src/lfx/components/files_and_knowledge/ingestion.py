@@ -18,7 +18,6 @@ from langflow.services.auth.utils import decrypt_api_key, encrypt_api_key
 from langflow.services.database.models.user.crud import get_user_by_id
 
 from lfx.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
-from lfx.log.logger import logger
 from lfx.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES
 from lfx.components.processing.converter import convert_to_dataframe
 from lfx.custom import Component
@@ -32,6 +31,7 @@ from lfx.io import (
     StrInput,
     TableInput,
 )
+from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.table import EditMode
 from lfx.services.deps import (
@@ -414,7 +414,9 @@ class KnowledgeIngestionComponent(Component):
                 for i in range(0, total_docs, batch_size):
                     batch_num = i // batch_size + 1
                     batch = documents[i : i + batch_size]
-                    logger.info(f"Knowledge Ingestion: Processing batch {batch_num}/{total_batches} ({len(batch)} docs)")
+                    logger.info(
+                        f"Knowledge Ingestion: Processing batch {batch_num}/{total_batches} ({len(batch)} docs)"
+                    )
                     chroma.add_documents(batch)
                     logger.info(f"Knowledge Ingestion: Batch {batch_num}/{total_batches} completed")
                 logger.info(f"Knowledge Ingestion: All {total_docs} documents added to '{self.knowledge_base}'")
