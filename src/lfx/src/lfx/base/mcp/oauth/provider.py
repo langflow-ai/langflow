@@ -80,29 +80,6 @@ class OAuthRequiredError(Exception):
         return result
 
 
-class OAuthFlowStartedError(Exception):
-    """Raised when OAuth flow needs user action (deployed mode).
-
-    This exception is raised by the redirect_handler in deployed mode
-    to signal that the user needs to be redirected to the authorization URL.
-    The API endpoint should catch this and return the authorization URL
-    to the frontend.
-
-    Attributes:
-        authorization_url: The OAuth authorization URL to redirect to.
-        flow_id: The flow ID for tracking the OAuth flow.
-    """
-
-    def __init__(self, authorization_url: str, flow_id: str) -> None:
-        self.authorization_url = authorization_url
-        self.flow_id = flow_id
-        super().__init__(f"OAuth flow started: {flow_id}")
-
-
-# Alias for backward compatibility
-OAuthFlowStarted = OAuthFlowStartedError
-
-
 def get_server_key(server_url: str) -> str:
     """Generate a cache-safe key from a server URL.
 
@@ -359,64 +336,3 @@ async def create_deployed_oauth_provider(
         pass
 
     return wrapped_provider, flow_id, cleanup
-
-
-async def get_oauth_token_for_server(
-    server_url: str,
-    user_id: str,
-    redirect_uri: str,
-    client_id: str | None = None,
-    client_secret: str | None = None,
-    scopes: list[str] | None = None,
-    timeout: float = 300.0,
-) -> str | None:
-    """Get an OAuth access token for an MCP server.
-
-    This is a convenience function that returns just the access token
-    from stored tokens. Use this when you need to make authenticated
-    requests manually.
-
-    If valid tokens are stored, they will be returned. If tokens are
-    expired but a refresh token is available, the SDK will refresh them
-    automatically when used.
-
-    Args:
-        server_url: The MCP server URL to authenticate with.
-        user_id: The ID of the user.
-        redirect_uri: The OAuth callback URI.
-        client_id: Pre-registered OAuth client ID.
-        client_secret: Pre-registered OAuth client secret.
-        scopes: OAuth scopes to request.
-        timeout: OAuth flow timeout in seconds.
-
-    Returns:
-        The access token string if tokens are available, None otherwise.
-        Raises OAuthFlowStarted if user interaction is needed.
-    """
-    provider, _, cleanup = await create_deployed_oauth_provider(
-        server_url=server_url,
-        user_id=user_id,
-        redirect_uri=redirect_uri,
-        client_id=client_id,
-        client_secret=client_secret,
-        scopes=scopes,
-        timeout=timeout,
-    )
-
-    try:
-        # Check if we have valid tokens via the provider's context
-        if hasattr(provider, "context") and provider.context:
-            tokens = provider.context.current_tokens
-            if tokens:
-                return tokens.access_token
-
-        # Try to get tokens from storage
-        if hasattr(provider, "_storage"):
-            tokens = await provider._storage.get_tokens()  # noqa: SLF001
-            if tokens:
-                return tokens.access_token
-
-        return None
-
-    finally:
-        cleanup()
