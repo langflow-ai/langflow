@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
-
 from lfx.cli.convert.command import convert_flow_to_python
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class TestConvertFlowToPython:

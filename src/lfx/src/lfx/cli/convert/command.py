@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
+from typing import TYPE_CHECKING, Annotated
 
 import typer
 from rich.console import Console
@@ -11,7 +11,31 @@ from rich.console import Console
 from .generator import generate_python_code
 from .parsing import parse_flow_json
 
+if TYPE_CHECKING:
+    from pathlib import Path
+
 console = Console()
+
+# Typer argument/option definitions (B008 fix)
+_FLOW_JSON_ARG = typer.Argument(
+    ...,
+    help="Path to the Langflow JSON flow file",
+    exists=True,
+    dir_okay=False,
+    resolve_path=True,
+)
+_OUTPUT_OPT = typer.Option(
+    None,
+    "-o",
+    "--output",
+    help="Output Python file (default: stdout)",
+)
+_QUIET_OPT = typer.Option(
+    False,  # noqa: FBT003
+    "-q",
+    "--quiet",
+    help="Suppress informational messages",
+)
 
 
 def convert_flow_to_python(flow_path: Path) -> str:
@@ -28,25 +52,10 @@ def convert_flow_to_python(flow_path: Path) -> str:
 
 
 def convert_command(
-    flow_json: Path = typer.Argument(
-        ...,
-        help="Path to the Langflow JSON flow file",
-        exists=True,
-        dir_okay=False,
-        resolve_path=True,
-    ),
-    output: Path | None = typer.Option(
-        None,
-        "-o",
-        "--output",
-        help="Output Python file (default: stdout)",
-    ),
-    quiet: bool = typer.Option(
-        False,  # noqa: FBT003
-        "-q",
-        "--quiet",
-        help="Suppress informational messages",
-    ),
+    flow_json: Annotated[Path, _FLOW_JSON_ARG],
+    output: Annotated[Path | None, _OUTPUT_OPT] = None,
+    *,
+    quiet: Annotated[bool, _QUIET_OPT] = False,
 ) -> None:
     """Convert a Langflow JSON flow to Python code.
 
@@ -54,23 +63,15 @@ def convert_command(
     into Python code that can be version-controlled and maintained as code.
 
     The generated Python code includes:
-
     - Component imports from lfx
-
     - Custom component class definitions (if any)
-
     - Prompt constants (extracted from long text fields)
-
     - A build_*_graph() function that constructs the flow
-
     - Connection setup via .set() method calls
 
     Examples:
-
         lfx convert my_flow.json                    # Output to stdout
-
         lfx convert my_flow.json -o my_flow.py     # Output to file
-
         lfx convert flow.json | ruff format -      # Format with ruff
     """
     try:

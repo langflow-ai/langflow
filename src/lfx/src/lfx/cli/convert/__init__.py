@@ -17,9 +17,9 @@ from .command import convert_command, convert_flow_to_python
 from .types import EdgeInfo, FlowInfo, NodeInfo
 
 __all__ = [
-    "convert_command",
-    "convert_flow_to_python",
     "EdgeInfo",
     "FlowInfo",
     "NodeInfo",
+    "convert_command",
+    "convert_flow_to_python",
 ]

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import re
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from .constants import (
     COMPONENT_IMPORTS,
@@ -15,10 +15,13 @@ from .constants import (
 )
 from .types import EdgeInfo, FlowInfo, NodeInfo
 
+if TYPE_CHECKING:
+    from pathlib import Path
+
 
 def parse_flow_json(flow_path: Path) -> FlowInfo:
     """Parse a flow JSON file into structured data."""
-    with open(flow_path) as f:
+    with flow_path.open() as f:
         data = json.load(f)
 
     flow_data = data.get("data", data)
@@ -88,7 +91,7 @@ def _parse_node_config(
             continue
 
         value = field_data.get("value")
-        if value is None or value == "" or value == []:
+        if value is None or value in ("", []):
             continue
         if field_name == "model" and value == []:
             continue

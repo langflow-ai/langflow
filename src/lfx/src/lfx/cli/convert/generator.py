@@ -3,11 +3,20 @@
 from __future__ import annotations
 
 import re
+from typing import TYPE_CHECKING
 
 from .constants import COMPONENT_IMPORTS
 from .formatting import format_value
 from .parsing import _parse_to_snake_case
-from .types import EdgeInfo, FlowInfo, NodeInfo
+
+if TYPE_CHECKING:
+    from .types import EdgeInfo, FlowInfo, NodeInfo
+
+# Code generation thresholds
+_SINGLE_ITEM = 1
+_INLINE_MAX_PARTS = 2
+_INLINE_PART_THRESHOLD = 40
+_INLINE_SET_ARG_THRESHOLD = 60
 
 
 def generate_python_code(flow_info: FlowInfo) -> str:
@@ -56,12 +65,11 @@ def _generate_imports(lines: list[str], flow_info: FlowInfo) -> None:
     lines.append("from lfx.graph import Graph")
     for module in sorted(imports_by_module.keys()):
         classes = sorted(imports_by_module[module])
-        if len(classes) == 1:
+        if len(classes) == _SINGLE_ITEM:
             lines.append(f"from {module} import {classes[0]}")
         else:
             lines.append(f"from {module} import (")
-            for cls in classes:
-                lines.append(f"    {cls},")
+            lines.extend(f"    {cls}," for cls in classes)
             lines.append(")")
     lines.append("")
 
@@ -165,14 +173,15 @@ def _generate_components(lines: list[str], nodes: list[NodeInfo]) -> None:
             if key != "tools":
                 config_parts.append(f"{key}={format_value(value, 8)}")
 
-        if len(config_parts) == 1:
+        if len(config_parts) == _SINGLE_ITEM:
             lines.append(f'    {node.var_name} = {class_name}(_id="{node.node_id}")')
-        elif len(config_parts) <= 2 and all(len(p) < 40 for p in config_parts):
+        elif len(config_parts) <= _INLINE_MAX_PARTS and all(
+            len(p) < _INLINE_PART_THRESHOLD for p in config_parts
+        ):
             lines.append(f"    {node.var_name} = {class_name}({', '.join(config_parts)})")
         else:
             lines.append(f"    {node.var_name} = {class_name}(")
-            for part in config_parts:
-                lines.append(f"        {part},")
+            lines.extend(f"        {part}," for part in config_parts)
             lines.append("    )")
 
 
@@ -202,7 +211,7 @@ def _generate_connections(
 
         if tool_edges:
             tool_refs = [f"{id_to_var.get(e.source_id, e.source_id)}.component_as_tool" for e in tool_edges]
-            if len(tool_refs) == 1:
+            if len(tool_refs) == _SINGLE_ITEM:
                 set_args.append(f"tools=[{tool_refs[0]}]")
             else:
                 tools_str = ",\n            ".join(tool_refs)
@@ -210,12 +219,11 @@ def _generate_connections(
 
         if set_args:
             var_name = id_to_var.get(node.node_id, node.node_id)
-            if len(set_args) == 1 and len(set_args[0]) < 60:
+            if len(set_args) == _SINGLE_ITEM and len(set_args[0]) < _INLINE_SET_ARG_THRESHOLD:
                 lines.append(f"    {var_name}.set({set_args[0]})")
             else:
                 lines.append(f"    {var_name}.set(")
-                for arg in set_args:
-                    lines.append(f"        {arg},")
+                lines.extend(f"        {arg}," for arg in set_args)
                 lines.append("    )")
 
 

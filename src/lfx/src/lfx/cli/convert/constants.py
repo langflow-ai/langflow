@@ -176,8 +176,12 @@ COMPONENT_IMPORTS: dict[str, str] = {
     # =========================================================================
     "CharacterTextSplitter": "lfx.components.langchain_utilities.CharacterTextSplitterComponent",
     "CharacterTextSplitterComponent": "lfx.components.langchain_utilities.CharacterTextSplitterComponent",
-    "RecursiveCharacterTextSplitter": "lfx.components.langchain_utilities.RecursiveCharacterTextSplitterComponent",
-    "RecursiveCharacterTextSplitterComponent": "lfx.components.langchain_utilities.RecursiveCharacterTextSplitterComponent",
+    "RecursiveCharacterTextSplitter": (
+        "lfx.components.langchain_utilities.RecursiveCharacterTextSplitterComponent"
+    ),
+    "RecursiveCharacterTextSplitterComponent": (
+        "lfx.components.langchain_utilities.RecursiveCharacterTextSplitterComponent"
+    ),
     "SemanticTextSplitter": "lfx.components.langchain_utilities.SemanticTextSplitterComponent",
     "SemanticTextSplitterComponent": "lfx.components.langchain_utilities.SemanticTextSplitterComponent",
     # =========================================================================

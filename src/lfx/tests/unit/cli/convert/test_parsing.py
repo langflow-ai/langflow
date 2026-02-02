@@ -3,18 +3,18 @@
 from __future__ import annotations
 
 import json
-import tempfile
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
-
 from lfx.cli.convert.parsing import (
     _parse_to_snake_case,
     _parse_unique_var_name,
     _parse_var_name,
     parse_flow_json,
 )
-from lfx.cli.convert.types import EdgeInfo, FlowInfo, NodeInfo
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class TestParseToSnakeCase:
@@ -286,5 +286,5 @@ class TestParseFlowJson:
         """Test extracting long prompts into separate constants."""
         result = parse_flow_json(flow_with_long_prompt)
         assert len(result.prompts) == 1
-        prompt_key = list(result.prompts.keys())[0]
+        prompt_key = next(iter(result.prompts.keys()))
         assert "TEMPLATE" in prompt_key.upper()

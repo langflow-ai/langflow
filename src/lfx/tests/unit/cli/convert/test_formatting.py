@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from lfx.cli.convert.formatting import format_value
 
 
@@ -42,12 +40,14 @@ class TestFormatValue:
 
     def test_should_format_boolean_true(self) -> None:
         """Test formatting boolean True."""
-        result = format_value(True)
+        bool_true: bool = True
+        result = format_value(bool_true)
         assert result == "True"
 
     def test_should_format_boolean_false(self) -> None:
         """Test formatting boolean False."""
-        result = format_value(False)
+        bool_false: bool = False
+        result = format_value(bool_false)
         assert result == "False"
 
     def test_should_format_integer(self) -> None:

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pytest
-
 from lfx.cli.convert.generator import generate_python_code
 from lfx.cli.convert.types import EdgeInfo, FlowInfo, NodeInfo
 
@@ -242,10 +241,10 @@ class TestGeneratePythonCode:
     @pytest.fixture
     def flow_with_custom_code(self) -> FlowInfo:
         """Create a FlowInfo with custom component code."""
-        custom_code = '''class CustomComponent(Component):
+        custom_code = """class CustomComponent(Component):
     def build(self):
         return "custom"
-'''
+"""
         return FlowInfo(
             name="Custom Flow",
             description="",
