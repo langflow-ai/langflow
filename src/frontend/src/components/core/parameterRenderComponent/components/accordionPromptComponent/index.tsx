@@ -34,7 +34,7 @@ export default function AccordionPromptComponent({
   const isTypingRef = useRef(false);
   const { mutate: postValidatePrompt } = usePostValidatePrompt();
   const validateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const lastValidatedValueRef = useRef<string>("");
+  const lastValidatedValueRef = useRef<string>(value);
 
   // Apply highlighting to the content
   const getHighlightedHTML = (text: string) => {
@@ -211,6 +211,9 @@ export default function AccordionPromptComponent({
         contentEditableRef.current.innerHTML = getHighlightedHTML(value);
         restoreCursorPosition();
       }
+
+      // Update last validated value to avoid redundant calls
+      lastValidatedValueRef.current = value;
     }
   }, [value]);
 
@@ -287,10 +290,11 @@ export default function AccordionPromptComponent({
   const handleInput = (e: React.FormEvent<HTMLDivElement>) => {
     if (!contentEditableRef.current) return;
 
-    isTypingRef.current = true;
-
-    // Get the plain text value
     const newValue = contentEditableRef.current.innerText;
+
+    if (newValue === internalValue) return;
+
+    isTypingRef.current = true;
 
     // Update internal state
     setInternalValue(newValue);
