@@ -193,7 +193,7 @@ class Settings(BaseSettings):
     Note: This feature only works for components developed on LFX version v0.3.0 or later.
     Components developed prior to this version will not be recognized as Core Components.
     """
-    allow_nightly_core_components: bool = True
+    allow_nightly_core_components: bool = False
     """Warning: this feature is experimental.
 
     When disabled (False), only core components whose code hash matches an entry in the stable hash history

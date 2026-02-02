@@ -2,6 +2,7 @@ import { useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { SidebarMenuButton, useSidebar } from "@/components/ui/sidebar";
+import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import AddMcpServerModal from "@/modals/addMcpServerModal";
@@ -14,6 +15,8 @@ const SidebarMenuButtons = ({
   const { activeSection } = useSidebar();
   const [addMcpOpen, setAddMcpOpen] = useState(false);
   const navigate = useCustomNavigate();
+  const { data: config } = useGetConfig();
+  const allowCustomComponents = config?.allow_custom_components ?? true;
 
   const handleAddMcpServerClick = () => {
     setAddMcpOpen(true);
@@ -61,6 +64,11 @@ const SidebarMenuButtons = ({
         <AddMcpServerModal open={addMcpOpen} setOpen={setAddMcpOpen} />
       </>
     );
+  }
+
+  // Hide custom component button when custom components are not allowed
+  if (!allowCustomComponents) {
+    return null;
   }
 
   // Render custom component button for non-MCP sections

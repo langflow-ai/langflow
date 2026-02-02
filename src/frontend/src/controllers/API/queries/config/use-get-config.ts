@@ -26,6 +26,8 @@ export interface ConfigResponse {
   default_folder_name: string;
   hide_getting_started_progress: boolean;
   allow_custom_components: boolean;
+  allow_nightly_core_components: boolean;
+  allow_code_execution_components: boolean;
 }
 
 export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (

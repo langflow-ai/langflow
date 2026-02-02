@@ -304,6 +304,14 @@ def create_class(code, class_name):
     Raises:
         ValueError: If the code contains syntax errors or the class definition is invalid
     """
+    # Validate hash BEFORE any transformations to match hash history
+    # Hash history is built from raw source code via inspect.getsource()
+    if not _check_and_block_if_not_allowed(code, f"component creation: class '{class_name}'"):
+        # Try to get display_name, fall back to class_name
+        display_name = extract_display_name(code) or class_name
+        msg = f"Custom Component '{display_name}' is not allowed"
+        raise ValueError(msg)
+
     if not hasattr(ast, "TypeIgnore"):
         ast.TypeIgnore = create_type_ignore_class()
 
@@ -324,15 +332,8 @@ def create_class(code, class_name):
         "from lfx.custom import CustomComponent",
     )
 
-    # Normalize whitespace
+    # Normalize whitespace for execution (after hash validation)
     code = code.rstrip() + "\n"
-
-    # Validate hash before adding DEFAULT_IMPORT_STRING
-    if not _check_and_block_if_not_allowed(code, f"component creation: class '{class_name}'"):
-        # Try to get display_name, fall back to class_name
-        display_name = extract_display_name(code) or class_name
-        msg = f"Custom Component '{display_name}' is not allowed"
-        raise ValueError(msg)
 
     code = DEFAULT_IMPORT_STRING + "\n" + code
     try:
