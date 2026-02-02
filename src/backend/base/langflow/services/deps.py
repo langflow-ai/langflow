@@ -252,3 +252,14 @@ def get_auth_service() -> AuthServiceBase:
     from langflow.services.auth.factory import AuthServiceFactory
 
     return get_service(ServiceType.AUTH_SERVICE, AuthServiceFactory())
+
+
+def get_job_service():
+    """Retrieves the JobService instance from the service manager.
+
+    Returns:
+        JobService: The JobService instance.
+    """
+    from langflow.services.jobs.factory import JobServiceFactory
+
+    return get_service(ServiceType.JOB_SERVICE, JobServiceFactory())
