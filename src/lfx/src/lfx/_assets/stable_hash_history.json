@@ -576,7 +576,7 @@
   },
   "APIRequest": {
     "versions": {
-      "0.3.0": "c772807736d7"
+      "0.3.0": "f248c1a9872f"
     }
   },
   "CSVtoData": {
