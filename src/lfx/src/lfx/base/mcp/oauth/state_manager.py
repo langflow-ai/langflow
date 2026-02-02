@@ -465,8 +465,7 @@ async def get_oauth_state_manager() -> OAuthStateManager:
         cache_type = type(cache_service).__name__
         if "Redis" not in cache_type:
             await logger.ainfo(
-                f"Using {cache_type} for OAuth state. "
-                "For multi-instance deployments, configure Redis for shared state."
+                f"Using {cache_type} for OAuth state. For multi-instance deployments, configure Redis for shared state."
             )
 
     return _state_manager

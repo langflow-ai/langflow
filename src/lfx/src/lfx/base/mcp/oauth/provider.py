@@ -312,9 +312,7 @@ async def create_deployed_oauth_provider(
                 state_manager._state_key(sdk_state),  # noqa: SLF001
                 captured_flow_id,
             )
-            await logger.ainfo(
-                f"Stored SDK state mapping for flow {captured_flow_id}: {sdk_state[:20]}..."
-            )
+            await logger.ainfo(f"Stored SDK state mapping for flow {captured_flow_id}: {sdk_state[:20]}...")
 
         # Store the auth URL in the flow data so /status can return it
         flow_data = await state_manager.get_flow_by_id(captured_flow_id)
