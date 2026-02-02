@@ -402,11 +402,13 @@ const SimpleSidebar = React.forwardRef<
             ...props.style,
             left: side === "left" ? 0 : "auto",
             right: side === "right" ? 0 : "auto",
+            pointerEvents: open ? "auto" : "none",
           }}
         >
           <div
             data-simple-sidebar="sidebar"
             className="flex h-full w-full flex-col bg-background relative"
+            style={{ visibility: open ? "visible" : "hidden" }}
           >
             {children}
             {resizable && open && !fullscreen && (
