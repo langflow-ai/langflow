@@ -178,7 +178,7 @@ class TestRunFlowJsonInput:
             mock_graph.edges = []
             mock_graph.prepare = MagicMock()
 
-            async def mock_async_start(_inputs):
+            async def mock_async_start(_inputs, **_kwargs):
                 yield
 
             mock_graph.async_start = mock_async_start
@@ -266,7 +266,7 @@ class TestRunFlowGlobalVariables:
         mock_graph.edges = []
         mock_graph.prepare = MagicMock()
 
-        async def mock_async_start(_inputs):
+        async def mock_async_start(_inputs, **_kwargs):
             yield
 
         mock_graph.async_start = mock_async_start
@@ -307,7 +307,7 @@ graph = Graph(chat_input, chat_output)
         mock_graph.edges = []
         mock_graph.prepare = MagicMock()
 
-        async def mock_async_start(_inputs):
+        async def mock_async_start(_inputs, **_kwargs):
             yield
 
         mock_graph.async_start = mock_async_start
@@ -348,7 +348,7 @@ class TestRunFlowOutputFormats:
         mock_graph.edges = []
         mock_graph.prepare = MagicMock()
 
-        async def mock_async_start(_inputs):
+        async def mock_async_start(_inputs, **_kwargs):
             yield
 
         mock_graph.async_start = mock_async_start
@@ -461,7 +461,7 @@ class TestRunFlowTiming:
         mock_result.vertex.display_name = "TestComponent"
         mock_result.vertex.id = "test-id-123"
 
-        async def mock_async_start(_inputs):
+        async def mock_async_start(_inputs, **_kwargs):
             yield mock_result
 
         mock_graph.async_start = mock_async_start
@@ -656,7 +656,7 @@ class TestRunFlowVariableValidation:
         mock_graph.edges = []
         mock_graph.prepare = MagicMock()
 
-        async def mock_async_start(_inputs):
+        async def mock_async_start(_inputs, **_kwargs):
             yield
 
         mock_graph.async_start = mock_async_start
@@ -692,7 +692,7 @@ class TestRunFlowInputValueHandling:
         mock_graph.edges = []
         mock_graph.prepare = MagicMock()
 
-        async def mock_async_start(_inputs):
+        async def mock_async_start(_inputs, **_kwargs):
             yield
 
         mock_graph.async_start = mock_async_start
@@ -730,7 +730,7 @@ class TestRunFlowInputValueHandling:
         mock_graph.edges = []
         mock_graph.prepare = MagicMock()
 
-        async def mock_async_start(_inputs):
+        async def mock_async_start(_inputs, **_kwargs):
             yield
 
         mock_graph.async_start = mock_async_start
@@ -787,7 +787,7 @@ class TestRunFlowJsonFileExecution:
         mock_graph.edges = []
         mock_graph.prepare = MagicMock()
 
-        async def mock_async_start(_inputs):
+        async def mock_async_start(_inputs, **_kwargs):
             yield
 
         mock_graph.async_start = mock_async_start
@@ -887,7 +887,7 @@ class TestRunFlowExecutionErrors:
         mock_graph.edges = []
         mock_graph.prepare = MagicMock()
 
-        async def failing_async_start(_inputs):
+        async def failing_async_start(_inputs, **_kwargs):
             msg = "Execution failed"
             raise ValueError(msg)
             yield  # Required to make it an async generator
