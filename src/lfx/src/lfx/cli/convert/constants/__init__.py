@@ -1,21 +1,17 @@
-"""Constants for JSON to Python flow conversion.
-
-This module re-exports all constants from the constants package for backward compatibility.
-"""
+"""Constants for JSON to Python flow conversion."""
 
 from __future__ import annotations
 
-from .constants import (
-    COMPONENT_IMPORTS,
+from .component_imports import COMPONENT_IMPORTS
+from .field_constants import (
     KNOWN_INPUT_TYPES,
     LONG_TEXT_FIELDS,
     MIN_PROMPT_LENGTH,
-    OUTPUT_TO_METHOD,
     PYTHON_RESERVED_WORDS,
     SKIP_FIELDS,
     SKIP_NODE_TYPES,
-    get_method_name,
 )
+from .output_mappings import OUTPUT_TO_METHOD, get_method_name
 
 __all__ = [
     "COMPONENT_IMPORTS",

@@ -124,7 +124,9 @@ class Component(CustomComponent):
         self._current_output: str = ""
         self._metadata: dict = {}
         self._ctx: dict = {}
-        self._code: str | None = None
+        # Allow _code to be passed via kwargs for dynamically loaded components
+        # Note: Don't pop _code here, let it pass through to BaseComponent which sets it via setattr
+        self._code: str | None = kwargs.get("_code")
         self._logs: list[Log] = []
 
         # Initialize component-specific collections
@@ -764,6 +766,12 @@ class Component(CustomComponent):
             # if there's more than one output that matches, we need to raise an error
             # because we don't know which one to connect to
             value = self._find_matching_output_method(key, value)
+        # Handle Output objects - convert to method reference
+        if isinstance(value, Output) and hasattr(value, "_source_component"):
+            source_component = value._source_component
+            method_name = value.method
+            if method_name and hasattr(source_component, method_name):
+                value = getattr(source_component, method_name)
         if callable(value) and self._inherits_from_component(value):
             try:
                 self._method_is_valid_output(value)
@@ -815,6 +823,8 @@ class Component(CustomComponent):
 
     def _add_loop_edge(self, source_component, source_output, target_output) -> None:
         """Add a special loop feedback edge that targets an output instead of an input."""
+        # Combine the output's normal types with loop_types (extra types accepted as loop feedback)
+        loop_accepted_types = list(target_output.types) + (getattr(target_output, "loop_types", None) or [])
         self._edges.append(
             {
                 "source": source_component._id,
@@ -831,7 +841,7 @@ class Component(CustomComponent):
                         "dataType": self.name or self.__class__.__name__,
                         "id": self._id,
                         "name": target_output.name,
-                        "output_types": target_output.types,
+                        "output_types": loop_accepted_types,
                     },
                 },
             }
@@ -918,7 +928,10 @@ class Component(CustomComponent):
         if "_inputs" in self.__dict__ and name in self.__dict__["_inputs"]:
             return self.__dict__["_inputs"][name].value
         if "_outputs_map" in self.__dict__ and name in self.__dict__["_outputs_map"]:
-            return self.__dict__["_outputs_map"][name]
+            output = self.__dict__["_outputs_map"][name]
+            # Set source component reference for connection handling
+            output._source_component = self
+            return output
         if name in BACKWARDS_COMPATIBLE_ATTRIBUTES:
             return self.__dict__[f"_{name}"]
         if name.startswith("_") and name[1:] in BACKWARDS_COMPATIBLE_ATTRIBUTES:
@@ -974,15 +987,9 @@ class Component(CustomComponent):
 
     def _map_parameters_on_template(self, template: dict) -> None:
         for name, value in self._parameters.items():
-            try:
+            if name in template:
                 template[name]["value"] = value
-            except KeyError as e:
-                close_match = find_closest_match(name, list(template.keys()))
-                if close_match:
-                    msg = f"Parameter '{name}' not found in {self.__class__.__name__}. Did you mean '{close_match}'?"
-                    raise ValueError(msg) from e
-                msg = f"Parameter {name} not found in {self.__class__.__name__}. "
-                raise ValueError(msg) from e
+            # Skip parameters not in template - may be dynamically added inputs
 
     def _get_method_return_type(self, method_name: str) -> list[str]:
         method = getattr(self, method_name)

@@ -3,13 +3,10 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 import pytest
 from lfx.cli.convert.command import convert_flow_to_python
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 class TestConvertFlowToPython:
@@ -272,3 +269,115 @@ class TestConvertFlowEdgeCases:
         """Test sanitizing flow name for function name."""
         result = convert_flow_to_python(flow_with_special_chars)
         assert "def build_my_flow_1_test_2024_graph(" in result
+
+
+class TestConvertStarterProjects:
+    """Tests using real flows from starter projects.
+
+    These tests ensure the converter works with production flows,
+    not just synthetic test data.
+    """
+
+    STARTER_PROJECTS_PATH = Path(__file__).parents[6] / (
+        "backend/base/langflow/initial_setup/starter_projects"
+    )
+
+    # Representative flows to test different component types
+    STARTER_FLOWS = [
+        "Basic Prompting.json",  # Simple flow with ChatInput, Prompt, OpenAI, ChatOutput
+        "Memory Chatbot.json",  # Flow with memory component
+        "Simple Agent.json",  # Flow with agent and tools
+        "Vector Store RAG.json",  # Flow with vector store and retrieval
+    ]
+
+    @pytest.fixture(params=STARTER_FLOWS)
+    def starter_flow_path(self, request: pytest.FixtureRequest) -> Path:
+        """Parametrized fixture that yields each starter flow path."""
+        flow_path = self.STARTER_PROJECTS_PATH / request.param
+        if not flow_path.exists():
+            pytest.skip(f"Starter project not found: {request.param}")
+        return flow_path
+
+    def test_starter_flow_converts_to_valid_python(self, starter_flow_path: Path) -> None:
+        """Test that starter flows convert to valid Python code."""
+        result = convert_flow_to_python(starter_flow_path)
+
+        # Should compile without syntax errors
+        try:
+            compile(result, "<string>", "exec")
+        except SyntaxError as e:
+            pytest.fail(f"Generated code has syntax error: {e}\n\nCode:\n{result[:2000]}...")
+
+    def test_starter_flow_has_required_structure(self, starter_flow_path: Path) -> None:
+        """Test that generated code has the required structure."""
+        result = convert_flow_to_python(starter_flow_path)
+
+        # Must have essential imports
+        assert "from lfx.graph import Graph" in result
+
+        # Must have builder function
+        assert "def build_" in result
+        assert "_graph(" in result
+        assert ") -> Graph:" in result
+
+        # Must have get_graph entry point
+        assert "def get_graph() -> Graph:" in result
+
+        # Must have main block
+        assert 'if __name__ == "__main__":' in result
+
+    def test_starter_flow_has_components(self, starter_flow_path: Path) -> None:
+        """Test that generated code instantiates components."""
+        result = convert_flow_to_python(starter_flow_path)
+
+        # Should have at least one component instantiation
+        assert "# === Components ===" in result
+
+        # Should have ChatInput or TextInput (most flows have input)
+        has_input = "ChatInput(" in result or "TextInput(" in result
+        # Some flows might have webhook or other inputs
+        has_any_component = "Component(" in result or "(_id=" in result
+
+        assert has_input or has_any_component, "No component instantiation found"
+
+    def test_starter_flow_has_connections(self, starter_flow_path: Path) -> None:
+        """Test that generated code has connection setup."""
+        result = convert_flow_to_python(starter_flow_path)
+
+        # Should have connections section (most flows have connections)
+        assert "# === Connections ===" in result
+
+        # Most flows should have .set() calls (unless single node)
+        # Don't fail on this as some minimal flows may not have connections
+        if ".set(" not in result:
+            # Check if it's a single-node flow (no connections expected)
+            import json
+
+            with starter_flow_path.open() as f:
+                data = json.load(f)
+            flow_data = data.get("data", data)
+            edges = flow_data.get("edges", [])
+            if edges:
+                pytest.fail("Flow has edges but no .set() calls in generated code")
+
+    @pytest.mark.parametrize(
+        "flow_name",
+        [
+            "Basic Prompting.json",
+            "Basic Prompt Chaining.json",
+        ],
+    )
+    def test_specific_basic_flows(self, flow_name: str) -> None:
+        """Test specific basic flows that should always work."""
+        flow_path = self.STARTER_PROJECTS_PATH / flow_name
+        if not flow_path.exists():
+            pytest.skip(f"Starter project not found: {flow_name}")
+
+        result = convert_flow_to_python(flow_path)
+
+        # Basic flows should have these components
+        assert "ChatInput" in result
+        assert "ChatOutput" in result
+
+        # Should compile
+        compile(result, "<string>", "exec")

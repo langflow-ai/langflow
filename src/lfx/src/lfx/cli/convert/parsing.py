@@ -49,7 +49,7 @@ def parse_flow_json(flow_path: Path) -> FlowInfo:
     id_to_type = {node.node_id: node.node_type for node in flow_info.nodes}
 
     for edge in edges_data:
-        edge_info = _parse_edge(edge, id_to_type)
+        edge_info = _parse_edge(edge, id_to_type, flow_info.custom_output_mappings)
         flow_info.edges.append(edge_info)
 
     return flow_info
@@ -86,6 +86,12 @@ def _parse_node(
     if not has_custom_code and node_type not in COMPONENT_IMPORTS:
         flow_info.unknown_components.add(node_type)
 
+    # Extract output → method mappings from custom component code
+    if has_custom_code and custom_code:
+        output_mappings = extract_output_method_mapping(custom_code)
+        for output_name, method_name in output_mappings.items():
+            flow_info.custom_output_mappings[f"{node_id}.{output_name}"] = method_name
+
     return NodeInfo(
         node_id=node_id,
         node_type=node_type,
@@ -99,21 +105,23 @@ def _parse_node(
 
 # Fields that may contain Langflow global variable references
 # These are template/input fields, not Python code
-GLOBAL_VAR_FIELDS: frozenset[str] = frozenset({
-    "input_value",
-    "text",
-    "query",
-    "url",
-    "api_key",
-    "api_endpoint",
-    "base_url",
-    "database_url",
-    "connection_string",
-    "file_path",
-    "collection_name",
-    "table_name",
-    "index_name",
-})
+GLOBAL_VAR_FIELDS: frozenset[str] = frozenset(
+    {
+        "input_value",
+        "text",
+        "query",
+        "url",
+        "api_key",
+        "api_endpoint",
+        "base_url",
+        "database_url",
+        "connection_string",
+        "file_path",
+        "collection_name",
+        "table_name",
+        "index_name",
+    }
+)
 
 
 def _parse_node_config(
@@ -177,12 +185,44 @@ def _parse_custom_code(template: dict, node_type: str) -> tuple[bool, str | None
     return False, None
 
 
-def _parse_edge(edge: dict, id_to_type: dict[str, str]) -> EdgeInfo:
+def extract_output_method_mapping(custom_code: str) -> dict[str, str]:
+    """Extract output name → method name mapping from custom component code.
+
+    Parses Output() definitions in the outputs list to find the mapping
+    between output names and method names.
+
+    Returns:
+        Dict mapping output names to method names.
+    """
+    mapping = {}
+    # Find Output definitions: Output(..., name="xxx", ..., method="yyy", ...)
+    output_pattern = re.compile(
+        r'Output\s*\([^)]*name\s*=\s*["\']([^"\']+)["\'][^)]*method\s*=\s*["\']([^"\']+)["\']'
+        r"|"
+        r'Output\s*\([^)]*method\s*=\s*["\']([^"\']+)["\'][^)]*name\s*=\s*["\']([^"\']+)["\']',
+        re.DOTALL,
+    )
+    for match in output_pattern.finditer(custom_code):
+        if match.group(1) and match.group(2):
+            # name first, then method
+            mapping[match.group(1)] = match.group(2)
+        elif match.group(3) and match.group(4):
+            # method first, then name
+            mapping[match.group(4)] = match.group(3)
+    return mapping
+
+
+def _parse_edge(
+    edge: dict,
+    id_to_type: dict[str, str],
+    custom_output_mappings: dict[str, str],
+) -> EdgeInfo:
     """Parse a single edge from the flow JSON.
 
     Args:
         edge: Edge data from JSON
         id_to_type: Mapping of node_id to node_type for method name resolution
+        custom_output_mappings: Mapping of "node_id.output_name" to method name for custom components
     """
     source_id = edge.get("source", "")
     target_id = edge.get("target", "")
@@ -193,15 +233,23 @@ def _parse_edge(edge: dict, id_to_type: dict[str, str]) -> EdgeInfo:
     output_name = source_handle.get("name", "output")
     source_type = id_to_type.get(source_id, "")
 
-    # Resolve output name to method name
-    method_name = get_method_name(source_type, output_name)
+    # First check custom output mappings (for custom components)
+    custom_key = f"{source_id}.{output_name}"
+    if custom_key in custom_output_mappings:
+        method_name = custom_output_mappings[custom_key]
+    else:
+        # Fall back to standard mapping
+        method_name = get_method_name(source_type, output_name)
+
+    # For loop feedback edges, target has 'name' (output name) instead of 'fieldName' (input name)
+    target_field = target_handle.get("fieldName") or target_handle.get("name", "input")
 
     return EdgeInfo(
         source_id=source_id,
         source_output=output_name,
         source_method=method_name,
         target_id=target_id,
-        target_input=target_handle.get("fieldName", "input"),
+        target_input=target_field,
     )
 
 

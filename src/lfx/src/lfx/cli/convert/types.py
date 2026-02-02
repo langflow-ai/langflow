@@ -41,3 +41,5 @@ class FlowInfo:
     prompts: dict[str, str] = field(default_factory=dict)
     global_variables: set[str] = field(default_factory=set)  # {var_name} references found
     unknown_components: set[str] = field(default_factory=set)  # Components not in COMPONENT_IMPORTS
+    # Maps "node_id.output_name" → "method_name" for custom components
+    custom_output_mappings: dict[str, str] = field(default_factory=dict)
