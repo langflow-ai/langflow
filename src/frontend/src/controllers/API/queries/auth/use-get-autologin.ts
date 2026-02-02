@@ -13,10 +13,9 @@ import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
 export interface AutoLoginResponse {
-  frontend_timeout: number;
-  auto_saving: boolean;
-  auto_saving_interval: number;
-  health_check_max_retries: number;
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
 }
 
 export const useGetAutoLogin: useQueryFunctionType<undefined, undefined> = (
@@ -33,6 +32,17 @@ export const useGetAutoLogin: useQueryFunctionType<undefined, undefined> = (
   const retryTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   async function getAutoLoginFn(): Promise<null> {
+    // Skip auto-login API call if:
+    // - User is already authenticated (e.g., after manual login)
+    // - Auto-login is already known to be disabled (backend returned auto_login: false)
+    const currentAuthState = useAuthStore.getState();
+    if (
+      currentAuthState.isAuthenticated ||
+      currentAuthState.autoLogin === false
+    ) {
+      return null;
+    }
+
     try {
       const response = await api.get<Users>(`${getURL("AUTOLOGIN")}`);
       const user = response.data;
@@ -44,10 +54,13 @@ export const useGetAutoLogin: useQueryFunctionType<undefined, undefined> = (
         resetTimer();
       }
     } catch (e) {
-      const error = e as AxiosError;
+      const error = e as AxiosError<{ auto_login?: boolean }>;
       if (error.name !== "CanceledError") {
         setAutoLogin(false);
-        if (!isLoginPage) {
+        // Don't retry if backend explicitly says auto-login is disabled
+        const autoLoginDisabledByBackend =
+          error.response?.data?.auto_login === false;
+        if (!isLoginPage && !autoLoginDisabledByBackend) {
           await handleAutoLoginError();
         }
       }
@@ -64,9 +77,13 @@ export const useGetAutoLogin: useQueryFunctionType<undefined, undefined> = (
   };
 
   const handleAutoLoginError = async () => {
+    // Get current state from store to avoid stale closure values
+    const currentAuthState = useAuthStore.getState();
     const autoLoginNotAuthenticated =
-      (!isAuthenticated && IS_AUTO_LOGIN) ||
-      (!isAuthenticated && autoLogin !== undefined && autoLogin);
+      (!currentAuthState.isAuthenticated && IS_AUTO_LOGIN) ||
+      (!currentAuthState.isAuthenticated &&
+        currentAuthState.autoLogin !== undefined &&
+        currentAuthState.autoLogin);
 
     if (autoLoginNotAuthenticated) {
       const retryCount = retryCountRef.current;
@@ -89,10 +106,20 @@ export const useGetAutoLogin: useQueryFunctionType<undefined, undefined> = (
     }
   };
 
+  // Determine if query should be enabled:
+  // - Don't run if autoLogin is explicitly false (backend said it's disabled)
+  // - Don't run if user is already authenticated
+  // - Respect the enabled option from caller
+  const shouldBeEnabled =
+    autoLogin !== false && !isAuthenticated && (options?.enabled ?? true);
+
   const queryResult = query(["useGetAutoLogin"], getAutoLoginFn, {
     refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    staleTime: Infinity,
     retry: false,
     ...options,
+    enabled: shouldBeEnabled,
   });
 
   return queryResult;
