@@ -6,15 +6,31 @@ the CacheService, enabling OAuth flows to work in multi-instance deployments.
 
 from __future__ import annotations
 
+import asyncio
 import secrets
 from typing import TYPE_CHECKING, Any, Literal
+from urllib.parse import urlparse
 from uuid import UUID, uuid4
 
-from lfx.base.mcp.oauth.provider import get_server_key
 from lfx.log.logger import logger
 
 if TYPE_CHECKING:
     from langflow.services.cache.base import AsyncBaseCacheService, CacheService
+
+
+def _get_server_key(server_url: str) -> str:
+    """Generate a cache-safe key from a server URL.
+
+    This is a local copy to avoid circular imports with provider.py.
+
+    Args:
+        server_url: The MCP server URL.
+
+    Returns:
+        A safe string key for cache storage.
+    """
+    parsed = urlparse(server_url)
+    return f"{parsed.netloc}{parsed.path}".replace("/", "_").replace(":", "_")
 
 
 class OAuthStateManager:
@@ -123,6 +139,88 @@ class OAuthStateManager:
 
         return flow_data
 
+    async def get_flow_by_id(self, flow_id: str) -> dict[str, Any] | None:
+        """Get flow data directly by flow ID.
+
+        Args:
+            flow_id: The flow ID.
+
+        Returns:
+            The flow data dict if found, None otherwise.
+        """
+        return await self._cache_get(self._flow_key(flow_id))
+
+    async def store_callback(self, state_param: str, code: str) -> bool:
+        """Store OAuth callback code for retrieval by SDK's callback_handler.
+
+        This is called by the /callback endpoint when the OAuth provider
+        redirects back with the authorization code. The SDK's callback_handler
+        (via get_callback) will retrieve this code to complete the token exchange.
+
+        Args:
+            state_param: The OAuth state parameter from the callback.
+            code: The authorization code from the OAuth provider.
+
+        Returns:
+            True if callback was stored successfully, False if flow not found.
+        """
+        flow_data = await self.get_flow(state_param)
+        if not flow_data:
+            return False
+
+        flow_id = flow_data["flow_id"]
+        flow_data["callback_code"] = code
+        flow_data["callback_received"] = True
+        flow_data["callback_state"] = state_param
+        await self._cache_set(self._flow_key(flow_id), flow_data)
+
+        await logger.ainfo(f"Stored OAuth callback for flow {flow_id}")
+        return True
+
+    async def get_callback(self, flow_id: str, timeout: float = 300.0) -> tuple[str, str | None]:
+        """Wait for and retrieve callback code (used by SDK's callback_handler).
+
+        This method polls the cache waiting for the callback to be stored
+        by the /callback endpoint. Once received, it returns the authorization
+        code and state for the SDK to complete the token exchange.
+
+        Args:
+            flow_id: The flow ID to wait for callback on.
+            timeout: Maximum time to wait for callback in seconds.
+
+        Returns:
+            A tuple of (authorization_code, state_param).
+
+        Raises:
+            TimeoutError: If callback is not received within timeout.
+            ValueError: If flow not found or callback failed.
+        """
+        start = asyncio.get_event_loop().time()
+        while asyncio.get_event_loop().time() - start < timeout:
+            flow_data = await self._cache_get(self._flow_key(flow_id))
+            if not flow_data:
+                msg = f"OAuth flow {flow_id} not found or expired"
+                raise ValueError(msg)
+
+            if flow_data.get("callback_received"):
+                code = flow_data.get("callback_code")
+                state = flow_data.get("callback_state")
+                if code:
+                    await logger.ainfo(f"Retrieved OAuth callback for flow {flow_id}")
+                    return code, state
+                msg = f"OAuth flow {flow_id} callback received but no code"
+                raise ValueError(msg)
+
+            if flow_data.get("status") == "error":
+                error_msg = flow_data.get("error_message", "Unknown error")
+                msg = f"OAuth flow {flow_id} failed: {error_msg}"
+                raise ValueError(msg)
+
+            await asyncio.sleep(0.5)
+
+        msg = f"OAuth callback not received for flow {flow_id} within {timeout}s"
+        raise TimeoutError(msg)
+
     async def complete_flow(
         self,
         state_param: str,
@@ -154,7 +252,7 @@ class OAuthStateManager:
         await self._cache_set(self._flow_key(flow_id), flow_data)
 
         # Also store tokens for future use
-        server_key = get_server_key(server_url)
+        server_key = _get_server_key(server_url)
         await self.store_tokens(user_id, server_key, tokens)
 
         # Clean up state mapping (one-time use)
@@ -209,9 +307,10 @@ class OAuthStateManager:
 
         Returns:
             A dict with status information:
-            - status: "pending" | "complete" | "error" | "expired"
+            - status: "pending" | "awaiting_callback" | "complete" | "error" | "expired"
+            - auth_url: Authorization URL if status is "awaiting_callback"
             - error_message: Error message if status is "error"
-            - tokens: Tokens if status is "complete" (only access_token exposed)
+            - server_url: Server URL if status is "complete"
         """
         flow_data = await self._cache_get(self._flow_key(flow_id))
 
@@ -225,10 +324,15 @@ class OAuthStateManager:
             )
             return {"status": "expired", "error_message": "OAuth flow not found"}
 
-        status: Literal["pending", "complete", "error", "expired"] = flow_data.get("status", "pending")
+        status: Literal["pending", "awaiting_callback", "complete", "error", "expired"] = flow_data.get(
+            "status", "pending"
+        )
         result: dict[str, Any] = {"status": status}
 
-        if status == "error":
+        if status == "awaiting_callback":
+            # Include the auth URL so frontend can open it
+            result["auth_url"] = flow_data.get("auth_url")
+        elif status == "error":
             result["error_message"] = flow_data.get("error_message")
         elif status == "complete":
             # Don't expose full tokens to frontend, just indicate success
@@ -357,17 +461,12 @@ async def get_oauth_state_manager() -> OAuthStateManager:
         cache_service = get_cache_service()
         _state_manager = OAuthStateManager(cache_service)
 
-        # Log warning if using in-memory cache in deployed mode
-        from lfx.base.mcp.oauth.provider import is_deployed_mode
-
-        if is_deployed_mode():
-            # Check if we're using Redis
-            cache_type = type(cache_service).__name__
-            if "Redis" not in cache_type:
-                await logger.awarning(
-                    f"Using {cache_type} for OAuth state in deployed mode. "
-                    "OAuth flows will not work across multiple server instances. "
-                    "Consider configuring Redis for production deployments."
-                )
+        # Log warning if using in-memory cache (won't work across instances)
+        cache_type = type(cache_service).__name__
+        if "Redis" not in cache_type:
+            await logger.ainfo(
+                f"Using {cache_type} for OAuth state. "
+                "For multi-instance deployments, configure Redis for shared state."
+            )
 
     return _state_manager

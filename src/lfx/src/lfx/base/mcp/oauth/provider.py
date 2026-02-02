@@ -1,35 +1,31 @@
 """OAuth provider factory for MCP authentication.
 
-This module provides a factory function to create an OAuthClientProvider
-configured for use with Langflow and MCP servers.
-
-For deployed environments, use `is_deployed_mode()` to detect if the server
-is running in a deployment (non-localhost) environment, and use
-`create_token_auth()` with pre-obtained tokens from the OAuth API endpoints.
+This module provides a unified OAuth flow using the MCP SDK's OAuthClientProvider
+for all environments (local and deployed). All OAuth flows go through backend
+API endpoints for consistent behavior and automatic token refresh.
 """
 
 from __future__ import annotations
 
-import os
-import webbrowser
-from pathlib import Path
+import contextlib
+from http import HTTPStatus
 from typing import TYPE_CHECKING, Any
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 import httpx
 
-from lfx.base.mcp.oauth.handlers import OAuthCallbackHandler
-from lfx.base.mcp.oauth.storage import FileTokenStorage, InMemoryTokenStorage
 from lfx.log.logger import logger
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Generator
+    from collections.abc import Callable
 
     from mcp.client.auth import OAuthClientProvider
 
+    from lfx.base.mcp.oauth.storage import UserScopedTokenStorage
+
 
 class OAuthRequiredError(Exception):
-    """Raised when OAuth authentication is required in deployed mode.
+    """Raised when OAuth authentication is required.
 
     This error is raised when the MCP component detects that OAuth is needed
     but no cached tokens are available. The frontend should handle this by
@@ -84,104 +80,27 @@ class OAuthRequiredError(Exception):
         return result
 
 
-def is_deployed_mode() -> bool:
-    """Detect if Langflow is running in a deployed environment.
+class OAuthFlowStartedError(Exception):
+    """Raised when OAuth flow needs user action (deployed mode).
 
-    A deployed environment is one where users access Langflow through
-    a network (not localhost), meaning the local browser-based OAuth
-    callback flow won't work.
+    This exception is raised by the redirect_handler in deployed mode
+    to signal that the user needs to be redirected to the authorization URL.
+    The API endpoint should catch this and return the authorization URL
+    to the frontend.
 
-    Detection methods:
-    1. Explicit environment variable: LANGFLOW_DEPLOYED=true
-    2. Running in Docker container (/.dockerenv exists)
-    3. Host setting is not localhost/127.0.0.1
-
-    Returns:
-        True if running in deployed mode, False for local development.
-    """
-    # Check explicit environment variable
-    if os.getenv("LANGFLOW_DEPLOYED", "").lower() == "true":
-        return True
-
-    # Check for Docker container
-    if Path("/.dockerenv").exists():
-        return True
-
-    # Check if running in Kubernetes (common env var)
-    if os.getenv("KUBERNETES_SERVICE_HOST"):
-        return True
-
-    # Check host setting from Langflow settings
-    try:
-        from lfx.services.deps import get_settings_service
-
-        settings = get_settings_service().settings
-        host = getattr(settings, "host", "localhost")
-
-        # Consider deployed if host is not localhost
-        # Note: 0.0.0.0 means "all interfaces" but is commonly used in containers
-        if host not in ("localhost", "127.0.0.1", "0.0.0.0"):  # noqa: S104
-            return True
-    except Exception:  # noqa: BLE001, S110
-        # If we can't get settings, assume local mode
-        pass
-
-    return False
-
-
-class TokenAuth(httpx.Auth):
-    """Simple token-based authentication for pre-obtained OAuth tokens.
-
-    This is used in deployed mode where tokens are obtained via the
-    OAuth API endpoints and cached. It adds the Bearer token to requests.
+    Attributes:
+        authorization_url: The OAuth authorization URL to redirect to.
+        flow_id: The flow ID for tracking the OAuth flow.
     """
 
-    def __init__(self, access_token: str, token_type: str = "Bearer") -> None:  # noqa: S107
-        """Initialize token auth.
-
-        Args:
-            access_token: The OAuth access token.
-            token_type: The token type (default: "Bearer").
-        """
-        self._access_token = access_token
-        self._token_type = token_type
-
-    def auth_flow(self, request: httpx.Request) -> Generator[httpx.Request, httpx.Response, None]:
-        """Add authorization header to the request."""
-        request.headers["Authorization"] = f"{self._token_type} {self._access_token}"
-        yield request
+    def __init__(self, authorization_url: str, flow_id: str) -> None:
+        self.authorization_url = authorization_url
+        self.flow_id = flow_id
+        super().__init__(f"OAuth flow started: {flow_id}")
 
 
-def create_token_auth(tokens: dict[str, Any]) -> httpx.Auth:
-    """Create an httpx.Auth instance from pre-obtained tokens.
-
-    Use this in deployed mode with tokens obtained from the OAuth API
-    endpoints or from the OAuth state manager cache.
-
-    Args:
-        tokens: A dict containing at least 'access_token' and optionally
-            'token_type' (defaults to 'Bearer').
-
-    Returns:
-        An httpx.Auth instance that adds the Bearer token to requests.
-
-    Raises:
-        ValueError: If tokens dict doesn't contain access_token.
-
-    Example:
-        >>> tokens = await state_manager.get_tokens(user_id, server_key)
-        >>> if tokens:
-        ...     auth = create_token_auth(tokens)
-        ...     async with httpx.AsyncClient(auth=auth) as client:
-        ...         response = await client.get(server_url)
-    """
-    access_token = tokens.get("access_token")
-    if not access_token:
-        msg = "tokens dict must contain 'access_token'"
-        raise ValueError(msg)
-
-    token_type = tokens.get("token_type", "Bearer")
-    return TokenAuth(access_token, token_type)
+# Alias for backward compatibility
+OAuthFlowStarted = OAuthFlowStartedError
 
 
 def get_server_key(server_url: str) -> str:
@@ -210,7 +129,7 @@ class OAuthAuthWrapper(httpx.Auth):
     def __init__(
         self,
         provider: OAuthClientProvider,
-        storage: FileTokenStorage | InMemoryTokenStorage,
+        storage: UserScopedTokenStorage,
     ) -> None:
         """Initialize the OAuth auth wrapper.
 
@@ -230,7 +149,7 @@ class OAuthAuthWrapper(httpx.Auth):
         """
         return getattr(self._provider, name)
 
-    def auth_flow(self, request: httpx.Request) -> Generator[httpx.Request, httpx.Response, None]:
+    def auth_flow(self, request: httpx.Request):
         """Handle the authentication flow with 401 error detection.
 
         This method wraps the underlying provider's auth_flow and monitors
@@ -251,10 +170,7 @@ class OAuthAuthWrapper(httpx.Auth):
         except StopIteration:
             pass
 
-        # Check if we got a 401 response (response is available after yield)
-        # Note: This check happens after the flow completes
-
-    async def async_auth_flow(self, request: httpx.Request) -> Any:  # Generator type is complex for async
+    async def async_auth_flow(self, request: httpx.Request):
         """Handle async authentication flow with 401 error detection.
 
         This method wraps the underlying provider's async_auth_flow and
@@ -267,7 +183,7 @@ class OAuthAuthWrapper(httpx.Auth):
         while True:
             response = yield request
             # Check for 401 and clear tokens if needed
-            if response.status_code == 401 and not self._tokens_cleared:
+            if response.status_code == HTTPStatus.UNAUTHORIZED and not self._tokens_cleared:
                 await self._clear_tokens_on_401(response)
             try:
                 request = await flow.asend(response)
@@ -282,10 +198,8 @@ class OAuthAuthWrapper(httpx.Auth):
         """
         # Check if this is an OAuth-related 401 (invalid_token, expired_token, etc.)
         error_body = ""
-        try:
+        with contextlib.suppress(Exception):
             error_body = response.text
-        except Exception:  # noqa: BLE001
-            pass
 
         # Log the error
         await logger.awarning(
@@ -295,274 +209,215 @@ class OAuthAuthWrapper(httpx.Auth):
         )
 
         # Clear cached tokens
-        if hasattr(self._storage, "clear"):
-            self._storage.clear()
-        else:
-            # For InMemoryTokenStorage, set to None
-            self._storage._tokens = None  # noqa: SLF001
-            self._storage._client_info = None  # noqa: SLF001
-
+        await self._storage.clear()
         self._tokens_cleared = True
 
 
-async def create_mcp_oauth_provider(
+async def create_deployed_oauth_provider(
     server_url: str,
-    client_name: str = "langflow",
-    storage_dir: Path | None = None,
-    timeout: float = 300.0,
-    *,
-    use_file_storage: bool = True,
-    redirect_port: int = 18085,
-    redirect_host: str = "localhost",
-    redirect_uri: str | None = None,
-    client_metadata_url: str | None = None,
+    user_id: str,
+    redirect_uri: str,
     client_id: str | None = None,
     client_secret: str | None = None,
+    scopes: list[str] | None = None,
+    timeout: float = 300.0,
+    flow_id: str | None = None,
 ) -> tuple[httpx.Auth, str, Callable[[], None]]:
-    """Create an OAuthClientProvider for an MCP server.
+    """Create OAuthClientProvider for deployed environments.
 
-    This factory function sets up all the components needed for OAuth 2.1
-    authentication with an MCP server:
-    - Token storage (file-based or in-memory)
-    - Callback handler (local HTTP server)
-    - Redirect handler (browser opener)
-    - The OAuthClientProvider itself
+    This factory function sets up the MCP SDK's OAuthClientProvider configured
+    for deployed environments where OAuth callbacks go through the backend API.
 
-    The returned provider implements httpx.Auth, so it can be passed directly
-    to httpx.AsyncClient as the `auth` parameter.
-
-    Client Registration Priority (per MCP spec):
-    1. Pre-registered credentials (if client_id is provided)
-    2. Client ID Metadata Documents (if client_metadata_url is provided and server supports it)
-    3. Dynamic Client Registration (fallback)
+    The provider will:
+    - Use UserScopedTokenStorage for per-user token persistence
+    - Automatically refresh tokens when they expire
+    - Raise OAuthFlowStarted when user interaction is needed
+    - Wait for callback via the state manager
 
     Args:
         server_url: The MCP server URL to authenticate with.
-        client_name: Client name for dynamic registration (default: "langflow").
-        storage_dir: Directory for file-based token storage.
-            Default: ~/.langflow/oauth
+        user_id: The ID of the user initiating the OAuth flow.
+        redirect_uri: The OAuth callback URI (should point to /api/v1/mcp/oauth/callback).
+        client_id: Pre-registered OAuth client ID (optional, uses dynamic registration if not provided).
+        client_secret: Pre-registered OAuth client secret (optional).
+        scopes: OAuth scopes to request (optional).
         timeout: OAuth flow timeout in seconds (default: 300).
-        use_file_storage: Whether to use file-based storage (True) or in-memory (False).
-        redirect_port: Port for OAuth callback server (default: 18085).
-            Ignored if redirect_uri is provided.
-        redirect_host: Host for redirect_uri (default: "localhost").
-            Ignored if redirect_uri is provided.
-        redirect_uri: Custom OAuth redirect URI. Use this when the OAuth provider
-            requires a specific callback URL (e.g., "http://localhost:9000/auth/callback").
-            The callback server will listen on the host:port parsed from this URI.
-            If not provided, defaults to "http://{redirect_host}:{redirect_port}/callback".
-        client_metadata_url: URL-based client ID for Client ID Metadata Documents (CIMD).
-            When provided and the authorization server advertises
-            `client_id_metadata_document_supported=true`, this URL will be used as
-            the client_id instead of performing dynamic client registration.
-            Must be a valid HTTPS URL with a non-root pathname (e.g.,
-            "https://app.example.com/oauth/client-metadata.json").
-            See: https://datatracker.ietf.org/doc/html/draft-ietf-oauth-client-id-metadata-document
-        client_id: Pre-registered OAuth client ID. Use this when the authorization
-            server doesn't support Dynamic Client Registration (e.g., Logto, Auth0).
-            Takes priority over client_metadata_url and dynamic registration.
-        client_secret: Pre-registered OAuth client secret. Required for confidential
-            clients. If not provided with client_id, the client is treated as a
-            public client (token_endpoint_auth_method="none").
+        flow_id: Pre-created flow ID from state manager (optional).
 
     Returns:
-        A tuple of (oauth_provider, redirect_uri, cleanup_function):
+        A tuple of (oauth_provider, flow_id, cleanup_function):
         - oauth_provider: The configured OAuthClientProvider (implements httpx.Auth)
-        - redirect_uri: The redirect URI configured for this OAuth flow
-        - cleanup_function: Call this to clean up resources when done
+        - flow_id: The flow ID for tracking the OAuth flow
+        - cleanup_function: Call this to clean up resources when done (no-op for deployed mode)
 
     Raises:
-        ValueError: If client_metadata_url is provided but is not a valid HTTPS URL
-            with a non-root pathname.
-        ValueError: If redirect_uri is provided but cannot be parsed.
+        OAuthFlowStarted: When the user needs to authorize (contains auth URL and flow ID).
 
     Example:
-        >>> # Dynamic Client Registration (default):
-        >>> provider, redirect_uri, cleanup = await create_mcp_oauth_provider(
-        ...     server_url="https://mcp.example.com",
-        ...     client_name="my-app",
-        ... )
-
-        >>> # Pre-registered client (e.g., for Logto, Auth0):
-        >>> provider, redirect_uri, cleanup = await create_mcp_oauth_provider(
-        ...     server_url="https://mcp.example.com",
-        ...     client_id="my-client-id-from-auth-server",
-        ... )
-
-        >>> # Custom redirect URI (for IBM, Okta, etc.):
-        >>> provider, redirect_uri, cleanup = await create_mcp_oauth_provider(
-        ...     server_url="https://mcp.example.com",
-        ...     client_id="my-client-id",
-        ...     redirect_uri="http://localhost:9000/auth/idaas/callback",
-        ... )
-
-        >>> # Client ID Metadata Documents (CIMD):
-        >>> provider, redirect_uri, cleanup = await create_mcp_oauth_provider(
-        ...     server_url="https://mcp.example.com",
-        ...     client_metadata_url="https://myapp.example.com/oauth/metadata.json",
-        ... )
+        >>> try:
+        ...     provider, flow_id, cleanup = await create_deployed_oauth_provider(
+        ...         server_url="https://mcp.example.com",
+        ...         user_id="user-123",
+        ...         redirect_uri="https://app.example.com/api/v1/mcp/oauth/callback",
+        ...     )
+        ...     # Provider has valid tokens, use it
+        ...     async with httpx.AsyncClient(auth=provider) as client:
+        ...         response = await client.get(server_url)
+        ... except OAuthFlowStarted as e:
+        ...     # Return auth URL to frontend
+        ...     return {"auth_url": e.authorization_url, "flow_id": e.flow_id}
     """
     from mcp.client.auth import OAuthClientProvider
     from mcp.shared.auth import OAuthClientInformationFull, OAuthClientMetadata
 
-    # Generate storage key from server URL
-    parsed = urlparse(server_url)
-    server_key = f"mcp_{parsed.netloc}_{parsed.path.replace('/', '_')}"
+    from lfx.base.mcp.oauth.state_manager import get_oauth_state_manager
+    from lfx.base.mcp.oauth.storage import UserScopedTokenStorage
 
-    # Set up storage
-    storage: FileTokenStorage | InMemoryTokenStorage
-    if use_file_storage:
-        if storage_dir is None:
-            storage_dir = Path.home() / ".langflow" / "oauth"
-        storage = FileTokenStorage(storage_dir, server_key)
-    else:
-        storage = InMemoryTokenStorage()
+    state_manager = await get_oauth_state_manager()
 
-    # Set up callback handler with configured port and host
-    # If redirect_uri is provided, parse it to extract host and port
-    effective_redirect_uri: str
-    if redirect_uri is not None:
-        parsed_redirect = urlparse(redirect_uri)
-        if not parsed_redirect.scheme or not parsed_redirect.netloc:
-            msg = f"Invalid redirect_uri: {redirect_uri}. Must be a valid URL."
-            raise ValueError(msg)
-        # Extract host and port from the redirect URI
-        callback_host = parsed_redirect.hostname or "localhost"
-        callback_port = parsed_redirect.port or (443 if parsed_redirect.scheme == "https" else 80)
-        callback_handler = OAuthCallbackHandler(port=callback_port, host=callback_host)
-        # Start the handler but use the exact redirect_uri provided
-        await callback_handler.start()
-        effective_redirect_uri = redirect_uri
-    else:
-        callback_handler = OAuthCallbackHandler(port=redirect_port, host=redirect_host)
-        effective_redirect_uri = await callback_handler.start()
+    # Create flow for tracking if not provided
+    if not flow_id:
+        flow_config = {"client_id": client_id, "client_secret": client_secret}
+        flow_id, _state_param = await state_manager.create_flow(user_id, server_url, flow_config)
 
-    # If pre-registered client credentials are provided, store them
-    if client_id is not None:
+    # User-scoped storage using the state manager's cache
+    storage = UserScopedTokenStorage(user_id, server_url, state_manager)
+
+    # Pre-register client if provided
+    if client_id:
         token_endpoint_auth_method = "client_secret_post" if client_secret else "none"
-        pre_registered_client = OAuthClientInformationFull(
+        client_info = OAuthClientInformationFull(
             client_id=client_id,
             client_secret=client_secret,
-            redirect_uris=[effective_redirect_uri],
+            redirect_uris=[redirect_uri],
             token_endpoint_auth_method=token_endpoint_auth_method,
         )
-        await storage.set_client_info(pre_registered_client)
+        await storage.set_client_info(client_info)
 
-    # Create client metadata for dynamic registration (public client)
+    # Capture flow_id in closure for redirect_handler
+    captured_flow_id = flow_id
+
+    # Redirect handler stores auth URL and waits for callback (doesn't raise)
+    # This allows the SDK to complete the full OAuth flow including token exchange
+    async def redirect_handler(url: str) -> None:
+        # Extract the SDK's state parameter from the authorization URL
+        # and store a mapping so the callback can find our flow
+        parsed_url = urlparse(url)
+        query_params = parse_qs(parsed_url.query)
+        sdk_state = query_params.get("state", [None])[0]
+
+        if sdk_state:
+            # Store mapping from SDK's state -> our flow_id
+            await state_manager._cache_set(  # noqa: SLF001
+                state_manager._state_key(sdk_state),  # noqa: SLF001
+                captured_flow_id,
+            )
+            await logger.ainfo(
+                f"Stored SDK state mapping for flow {captured_flow_id}: {sdk_state[:20]}..."
+            )
+
+        # Store the auth URL in the flow data so /status can return it
+        flow_data = await state_manager.get_flow_by_id(captured_flow_id)
+        if flow_data:
+            flow_data["auth_url"] = url
+            flow_data["status"] = "awaiting_callback"
+            await state_manager._cache_set(  # noqa: SLF001
+                state_manager._flow_key(captured_flow_id),  # noqa: SLF001
+                flow_data,
+            )
+            await logger.ainfo(f"Stored auth URL for flow {captured_flow_id}, waiting for callback...")
+
+        # Don't raise - let the SDK continue to call callback_handler
+        # The callback_handler will wait for the callback to be received
+
+    # Callback handler waits for callback via state manager
+    async def callback_handler() -> tuple[str, str | None]:
+        return await state_manager.get_callback(captured_flow_id, timeout)
+
+    # Create client metadata for dynamic registration
     client_metadata = OAuthClientMetadata(
-        client_name=client_name,
-        redirect_uris=[effective_redirect_uri],
+        client_name="langflow",
+        redirect_uris=[redirect_uri],
         grant_types=["authorization_code", "refresh_token"],
         response_types=["code"],
-        token_endpoint_auth_method="none",
+        token_endpoint_auth_method="none",  # noqa: S106
+        scope=" ".join(scopes) if scopes else None,
     )
 
-    # Redirect handler opens browser
-    async def redirect_handler(url: str) -> None:
-        webbrowser.open(url)
-
-    # Callback handler waits for OAuth response
-    async def callback_fn() -> tuple[str, str | None]:
-        return await callback_handler.wait_for_callback(timeout=timeout)
-
-    # Create the provider
+    # Create the SDK provider
     provider = OAuthClientProvider(
         server_url=server_url,
         client_metadata=client_metadata,
         storage=storage,
         redirect_handler=redirect_handler,
-        callback_handler=callback_fn,
-        client_metadata_url=client_metadata_url,
+        callback_handler=callback_handler,
     )
 
-    # Wrap the provider to handle 401 errors and clear cached tokens
+    # Wrap the provider to handle 401 errors
     wrapped_provider = OAuthAuthWrapper(provider, storage)
 
+    # No-op cleanup for deployed mode (no local resources to clean up)
     def cleanup() -> None:
-        """Clean up OAuth resources."""
-        callback_handler.shutdown()
+        pass
 
-    return wrapped_provider, effective_redirect_uri, cleanup
+    return wrapped_provider, flow_id, cleanup
 
 
 async def get_oauth_token_for_server(
     server_url: str,
-    client_name: str = "langflow",
-    storage_dir: Path | None = None,
-    timeout: float = 300.0,
-    *,
-    redirect_uri: str | None = None,
-    client_metadata_url: str | None = None,
+    user_id: str,
+    redirect_uri: str,
     client_id: str | None = None,
     client_secret: str | None = None,
+    scopes: list[str] | None = None,
+    timeout: float = 300.0,
 ) -> str | None:
     """Get an OAuth access token for an MCP server.
 
-    This is a convenience function that handles the complete OAuth flow
-    and returns just the access token. Use this when you need to make
-    authenticated requests manually.
+    This is a convenience function that returns just the access token
+    from stored tokens. Use this when you need to make authenticated
+    requests manually.
 
-    If valid tokens are already stored, they will be returned without
-    requiring user interaction. If tokens are expired but a refresh token
-    is available, the tokens will be refreshed automatically.
+    If valid tokens are stored, they will be returned. If tokens are
+    expired but a refresh token is available, the SDK will refresh them
+    automatically when used.
 
     Args:
         server_url: The MCP server URL to authenticate with.
-        client_name: Client name for dynamic registration.
-        storage_dir: Directory for token storage.
+        user_id: The ID of the user.
+        redirect_uri: The OAuth callback URI.
+        client_id: Pre-registered OAuth client ID.
+        client_secret: Pre-registered OAuth client secret.
+        scopes: OAuth scopes to request.
         timeout: OAuth flow timeout in seconds.
-        redirect_uri: Custom OAuth redirect URI. Use this when the OAuth provider
-            requires a specific callback URL.
-        client_metadata_url: URL-based client ID for Client ID Metadata Documents (CIMD).
-            When provided and the authorization server advertises
-            `client_id_metadata_document_supported=true`, this URL will be used as
-            the client_id instead of performing dynamic client registration.
-        client_id: Pre-registered OAuth client ID. Use this when the authorization
-            server doesn't support Dynamic Client Registration (e.g., Logto, Auth0).
-        client_secret: Pre-registered OAuth client secret for confidential clients.
 
     Returns:
-        The access token string if authentication succeeds, None otherwise.
+        The access token string if tokens are available, None otherwise.
+        Raises OAuthFlowStarted if user interaction is needed.
     """
-    provider, _, cleanup = await create_mcp_oauth_provider(
+    provider, _, cleanup = await create_deployed_oauth_provider(
         server_url=server_url,
-        client_name=client_name,
-        storage_dir=storage_dir,
-        timeout=timeout,
+        user_id=user_id,
         redirect_uri=redirect_uri,
-        client_metadata_url=client_metadata_url,
         client_id=client_id,
         client_secret=client_secret,
+        scopes=scopes,
+        timeout=timeout,
     )
 
     try:
-        # The OAuthClientProvider implements httpx.Auth
-        # Making a request triggers the OAuth flow if needed
-        async with httpx.AsyncClient(auth=provider) as client:
-            # Make a lightweight request to trigger auth flow
-            # Using HEAD to minimize data transfer
-            try:
-                await client.head(server_url, timeout=timeout)
-            except httpx.HTTPError as e:
-                await logger.awarning(f"HTTP error during OAuth flow: {e}")
-                # Auth may still have succeeded, check for tokens
+        # Check if we have valid tokens via the provider's context
+        if hasattr(provider, "context") and provider.context:
+            tokens = provider.context.current_tokens
+            if tokens:
+                return tokens.access_token
 
-            # After auth flow, check if we have tokens via public API
-            if hasattr(provider, "context") and provider.context:
-                tokens = provider.context.current_tokens
-                if tokens:
-                    return tokens.access_token
+        # Try to get tokens from storage
+        if hasattr(provider, "_storage"):
+            tokens = await provider._storage.get_tokens()  # noqa: SLF001
+            if tokens:
+                return tokens.access_token
 
-            # Fallback: try to get tokens from storage via public API
-            if hasattr(provider, "context") and provider.context.storage:
-                tokens = await provider.context.storage.get_tokens()
-                if tokens:
-                    return tokens.access_token
-
-            return None
-
-    except (httpx.HTTPError, OSError, ValueError, TimeoutError) as e:
-        await logger.aerror(f"OAuth authentication failed: {e}")
         return None
 
     finally:

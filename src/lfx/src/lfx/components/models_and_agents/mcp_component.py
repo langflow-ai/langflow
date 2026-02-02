@@ -390,26 +390,35 @@ class MCPToolsComponent(ComponentWithCache):
             if use_oauth and server_config.get("url"):
                 server_url = server_config["url"]
                 try:
-                    from lfx.base.mcp.oauth.provider import create_token_auth
+                    from lfx.base.mcp.oauth.provider import (
+                        OAuthFlowStarted,
+                        create_deployed_oauth_provider,
+                    )
 
-                    # Check for cached tokens from the OAuth API flow
+                    # Check for cached tokens first
                     cached_tokens = await self._get_cached_oauth_tokens(server_url)
 
                     if cached_tokens:
-                        # Use cached tokens - obtained via /api/v1/mcp/oauth/initiate flow
-                        oauth_auth = create_token_auth(cached_tokens)
-                        await logger.ainfo(f"Using cached OAuth tokens for {server_url}")
+                        # Use SDK provider with cached tokens - it will handle automatic refresh
+                        redirect_uri = await self._get_oauth_redirect_uri()
+                        oauth_auth, _, oauth_cleanup = await create_deployed_oauth_provider(
+                            server_url=server_url,
+                            user_id=str(self.user_id),
+                            redirect_uri=redirect_uri,
+                            client_id=getattr(self, "oauth_client_id", None) or None,
+                            client_secret=getattr(self, "oauth_client_secret", None) or None,
+                        )
+                        await logger.ainfo(f"Using SDK OAuth provider with cached tokens for {server_url}")
                     else:
                         # No cached tokens - frontend needs to initiate OAuth via API
-                        # This works in both local and deployed environments
                         raise OAuthRequiredError(
                             message="OAuth authentication required. Please authenticate via the OAuth flow.",
                             server_url=server_url,
                         )
-                except OAuthRequiredError:
-                    # Re-raise OAuth required errors for frontend handling
+                except (OAuthRequiredError, OAuthFlowStarted):
+                    # Re-raise OAuth errors for frontend handling
                     raise
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001
                     msg = f"Failed to create OAuth provider: {e!s}"
                     await logger.awarning(msg)
                     # Continue without OAuth if it fails
@@ -874,8 +883,34 @@ class MCPToolsComponent(ComponentWithCache):
 
             server_key = get_server_key(server_url)
             state_manager = await get_oauth_state_manager()
-            tokens = await state_manager.get_tokens(str(user_id), server_key)
-            return tokens
-        except Exception as e:
+            return await state_manager.get_tokens(str(user_id), server_key)
+        except Exception as e:  # noqa: BLE001
             await logger.awarning(f"Failed to get cached OAuth tokens: {e}")
             return None
+
+    async def _get_oauth_redirect_uri(self) -> str:
+        """Get the OAuth redirect URI for the MCP component.
+
+        This returns the backend callback URL that the OAuth provider
+        will redirect to after authentication.
+
+        Returns:
+            The OAuth callback URI.
+        """
+        # Check for custom redirect URI from component config
+        custom_uri = getattr(self, "oauth_redirect_uri", None)
+        if custom_uri:
+            return custom_uri
+
+        # Get backend URL from settings
+        try:
+            settings = get_settings_service().settings
+            if getattr(settings, "backend_url", None):
+                base_url = settings.backend_url.rstrip("/")
+                return f"{base_url}/api/v1/mcp/oauth/callback"
+        except Exception:  # noqa: BLE001
+            # Settings may not be available in all contexts
+            await logger.adebug("Could not get backend URL from settings")
+
+        # Default fallback (may not work in all deployment scenarios)
+        return "http://localhost:7860/api/v1/mcp/oauth/callback"

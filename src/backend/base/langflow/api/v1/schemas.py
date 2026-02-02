@@ -529,9 +529,13 @@ class OAuthInitiateResponse(BaseModel):
 class OAuthStatusResponse(BaseModel):
     """Response from polling OAuth flow status."""
 
-    status: Literal["pending", "complete", "error", "expired"] = Field(
+    status: Literal["pending", "awaiting_callback", "complete", "error", "expired"] = Field(
         ...,
         description="Current status of the OAuth flow",
+    )
+    auth_url: str | None = Field(
+        default=None,
+        description="The authorization URL to open in popup (included when status is 'awaiting_callback')",
     )
     error_message: str | None = Field(
         default=None,
