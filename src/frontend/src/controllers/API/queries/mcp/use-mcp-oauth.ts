@@ -50,7 +50,7 @@ export async function initiateMCPOAuth(
     clientSecret?: string;
     redirectUri?: string;
     scopes?: string[];
-  }
+  },
 ): Promise<MCPOAuthInitiateResponse> {
   const response = await api.post<MCPOAuthInitiateResponse>(
     "/api/v1/mcp/oauth/initiate",
@@ -61,7 +61,7 @@ export async function initiateMCPOAuth(
       client_secret: options?.clientSecret,
       redirect_uri: options?.redirectUri,
       scopes: options?.scopes,
-    }
+    },
   );
   return response.data;
 }
@@ -70,10 +70,10 @@ export async function initiateMCPOAuth(
  * Check the status of an OAuth flow
  */
 export async function checkMCPOAuthStatus(
-  flowId: string
+  flowId: string,
 ): Promise<MCPOAuthStatusResponse> {
   const response = await api.get<MCPOAuthStatusResponse>(
-    `/api/v1/mcp/oauth/status/${flowId}`
+    `/api/v1/mcp/oauth/status/${flowId}`,
   );
   return response.data;
 }
@@ -85,7 +85,7 @@ async function pollOAuthStatus(
   flowId: string,
   onStatusChange?: (status: MCPOAuthStatusResponse) => void,
   maxAttempts: number = 300, // 10 minutes at 2 second intervals
-  intervalMs: number = 2000
+  intervalMs: number = 2000,
 ): Promise<MCPOAuthStatusResponse> {
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const status = await checkMCPOAuthStatus(flowId);
@@ -115,21 +115,34 @@ export async function handleMCPOAuthFlow(
     redirectUri?: string;
     scopes?: string[];
     onStatusChange?: (status: MCPOAuthStatusResponse) => void;
-  }
+  },
 ): Promise<{ success: boolean; error?: string }> {
   // Extract parameters from error object if provided
-  const serverUrl = typeof serverUrlOrError === "string"
-    ? serverUrlOrError
-    : serverUrlOrError.server_url;
+  const serverUrl =
+    typeof serverUrlOrError === "string"
+      ? serverUrlOrError
+      : serverUrlOrError.server_url;
 
-  const clientId = options?.clientId ??
-    (typeof serverUrlOrError === "object" ? serverUrlOrError.client_id : undefined);
-  const clientSecret = options?.clientSecret ??
-    (typeof serverUrlOrError === "object" ? serverUrlOrError.client_secret : undefined);
-  const redirectUri = options?.redirectUri ??
-    (typeof serverUrlOrError === "object" ? serverUrlOrError.redirect_uri : undefined);
-  const scopes = options?.scopes ??
-    (typeof serverUrlOrError === "object" ? serverUrlOrError.scopes : undefined);
+  const clientId =
+    options?.clientId ??
+    (typeof serverUrlOrError === "object"
+      ? serverUrlOrError.client_id
+      : undefined);
+  const clientSecret =
+    options?.clientSecret ??
+    (typeof serverUrlOrError === "object"
+      ? serverUrlOrError.client_secret
+      : undefined);
+  const redirectUri =
+    options?.redirectUri ??
+    (typeof serverUrlOrError === "object"
+      ? serverUrlOrError.redirect_uri
+      : undefined);
+  const scopes =
+    options?.scopes ??
+    (typeof serverUrlOrError === "object"
+      ? serverUrlOrError.scopes
+      : undefined);
   try {
     // Initiate the OAuth flow with extracted credentials
     const { flow_id, auth_url } = await initiateMCPOAuth(serverUrl, {
@@ -143,7 +156,7 @@ export async function handleMCPOAuthFlow(
     const popup = window.open(
       auth_url,
       "mcp_oauth_popup",
-      "width=600,height=700,menubar=no,toolbar=no,location=no,status=no"
+      "width=600,height=700,menubar=no,toolbar=no,location=no,status=no",
     );
 
     if (!popup) {
@@ -158,7 +171,12 @@ export async function handleMCPOAuthFlow(
       options?.onStatusChange?.(status);
 
       // Close popup if flow is complete (not pending or awaiting_callback)
-      if (status.status !== "pending" && status.status !== "awaiting_callback" && popup && !popup.closed) {
+      if (
+        status.status !== "pending" &&
+        status.status !== "awaiting_callback" &&
+        popup &&
+        !popup.closed
+      ) {
         popup.close();
       }
     });
@@ -170,7 +188,11 @@ export async function handleMCPOAuthFlow(
 
     return finalStatus.status === "complete"
       ? { success: true }
-      : { success: false, error: finalStatus.error_message || `OAuth flow ${finalStatus.status}` };
+      : {
+          success: false,
+          error:
+            finalStatus.error_message || `OAuth flow ${finalStatus.status}`,
+        };
   } catch (error: any) {
     const message =
       error?.response?.data?.detail ||
