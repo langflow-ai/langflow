@@ -35,7 +35,7 @@ def _format_string(value: str) -> str:
     if value.startswith("$"):
         return value[1:]
     if "\n" in value or len(value) > _MULTILINE_STRING_THRESHOLD:
-        escaped = value.replace('"""', r'\"\"\"')
+        escaped = value.replace('"""', r"\"\"\"")
         return f'"""{escaped}"""'
     return repr(value)
 
@@ -56,9 +56,7 @@ def _format_dict(value: dict, indent: int) -> str:
     if not value:
         return "{}"
     items = [f"{key!r}: {format_value(v, indent + 4)}" for key, v in value.items()]
-    if len(items) <= _INLINE_DICT_MAX_ITEMS and all(
-        len(i) < _INLINE_DICT_ITEM_THRESHOLD for i in items
-    ):
+    if len(items) <= _INLINE_DICT_MAX_ITEMS and all(len(i) < _INLINE_DICT_ITEM_THRESHOLD for i in items):
         return "{" + ", ".join(items) + "}"
     inner = ",\n".join(" " * (indent + 4) + item for item in items)
     return f"{{\n{inner},\n{' ' * indent}}}"

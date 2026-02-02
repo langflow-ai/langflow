@@ -16,7 +16,7 @@ class TestFormatValue:
     def test_should_format_string_with_single_quotes(self) -> None:
         """Test formatting a string containing single quotes."""
         result = format_value("it's a test")
-        assert result == "\"it's a test\""
+        assert result == '"it\'s a test"'
 
     def test_should_format_multiline_string_as_triple_quoted(self) -> None:
         """Test formatting a multiline string uses triple quotes."""
@@ -96,4 +96,4 @@ class TestFormatValue:
     def test_should_escape_triple_quotes_in_multiline_string(self) -> None:
         """Test that triple quotes in content are escaped."""
         result = format_value('has """triple""" quotes\ninside')
-        assert r'\"\"\"' in result
+        assert r"\"\"\"" in result

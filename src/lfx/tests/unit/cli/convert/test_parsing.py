@@ -243,9 +243,7 @@ class TestParseFlowJson:
         flow_path.write_text(json.dumps(flow_data))
         return flow_path
 
-    def test_should_handle_duplicate_display_names(
-        self, flow_with_duplicate_names: Path
-    ) -> None:
+    def test_should_handle_duplicate_display_names(self, flow_with_duplicate_names: Path) -> None:
         """Test handling duplicate display names with unique variable names."""
         result = parse_flow_json(flow_with_duplicate_names)
         var_names = [n.var_name for n in result.nodes]

@@ -176,9 +176,7 @@ COMPONENT_IMPORTS: dict[str, str] = {
     # =========================================================================
     "CharacterTextSplitter": "lfx.components.langchain_utilities.CharacterTextSplitterComponent",
     "CharacterTextSplitterComponent": "lfx.components.langchain_utilities.CharacterTextSplitterComponent",
-    "RecursiveCharacterTextSplitter": (
-        "lfx.components.langchain_utilities.RecursiveCharacterTextSplitterComponent"
-    ),
+    "RecursiveCharacterTextSplitter": ("lfx.components.langchain_utilities.RecursiveCharacterTextSplitterComponent"),
     "RecursiveCharacterTextSplitterComponent": (
         "lfx.components.langchain_utilities.RecursiveCharacterTextSplitterComponent"
     ),
@@ -371,50 +369,54 @@ COMPONENT_IMPORTS: dict[str, str] = {
 # Field Filtering Constants
 # ============================================================================
 
-SKIP_FIELDS: frozenset[str] = frozenset({
-    "code",
-    "_type",
-    "_frontend_node_flow_id",
-    "_frontend_node_folder_id",
-    "show",
-    "advanced",
-    "dynamic",
-    "info",
-    "display_name",
-    "required",
-    "placeholder",
-    "list",
-    "multiline",
-    "input_types",
-    "output_types",
-    "file_path",
-    "fileTypes",
-    "password",
-    "load_from_db",
-    "title_case",
-    "real_time_refresh",
-    "refresh_button",
-    "trace_as_input",
-    "trace_as_metadata",
-    "_input_type",
-    "list_add_label",
-    "name",
-    "type",
-    "options",
-    "tool_mode",
-    "track_in_telemetry",
-    "copy_field",
-    "ai_enabled",
-    "override_skip",
-})
+SKIP_FIELDS: frozenset[str] = frozenset(
+    {
+        "code",
+        "_type",
+        "_frontend_node_flow_id",
+        "_frontend_node_folder_id",
+        "show",
+        "advanced",
+        "dynamic",
+        "info",
+        "display_name",
+        "required",
+        "placeholder",
+        "list",
+        "multiline",
+        "input_types",
+        "output_types",
+        "file_path",
+        "fileTypes",
+        "password",
+        "load_from_db",
+        "title_case",
+        "real_time_refresh",
+        "refresh_button",
+        "trace_as_input",
+        "trace_as_metadata",
+        "_input_type",
+        "list_add_label",
+        "name",
+        "type",
+        "options",
+        "tool_mode",
+        "track_in_telemetry",
+        "copy_field",
+        "ai_enabled",
+        "override_skip",
+    }
+)
 
-LONG_TEXT_FIELDS: frozenset[str] = frozenset({
-    "system_prompt",
-    "prompt",
-    "template",
-    "agent_description",
-    "format_instructions",
-})
+LONG_TEXT_FIELDS: frozenset[str] = frozenset(
+    {
+        "system_prompt",
+        "prompt",
+        "template",
+        "agent_description",
+        "format_instructions",
+    }
+)
 
 MIN_PROMPT_LENGTH = 200
 
