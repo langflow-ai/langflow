@@ -28,6 +28,8 @@ if TYPE_CHECKING:
 
     from langflow.services.database.models.user.model import User, UserRead
 
+_cached_auth_service = None
+
 
 class OAuth2PasswordBearerCookie(OAuth2PasswordBearer):
     """Custom OAuth2 scheme that checks Authorization header first, then cookies.
@@ -306,7 +308,14 @@ def decrypt_api_key(
     Returns:
         Decrypted API key string
     """
-    return _auth_service().decrypt_api_key(encrypted_api_key)
+    global _cached_auth_service
+    svc = _cached_auth_service
+    if svc is None:
+        svc = get_auth_service()
+        _cached_auth_service = svc
+    # Bind method to a local name to avoid attribute lookup cost on return
+    decrypt = svc.decrypt_api_key
+    return decrypt(encrypted_api_key)
 
 
 async def get_current_user_mcp(

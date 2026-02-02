@@ -6,6 +6,7 @@ from lfx.log.logger import logger
 
 from langflow.api.utils import CurrentActiveUser, check_langflow_version
 from langflow.services.auth import utils as auth_utils
+from langflow.services.auth.utils import decrypt_api_key
 from langflow.services.deps import get_settings_service, get_store_service
 from langflow.services.store.exceptions import CustomError
 from langflow.services.store.schema import (
@@ -24,7 +25,7 @@ def get_user_store_api_key(user: CurrentActiveUser):
     if not user.store_api_key:
         raise HTTPException(status_code=400, detail="You must have a store API key set.")
     try:
-        return auth_utils.decrypt_api_key(user.store_api_key)
+        return decrypt_api_key(user.store_api_key)
     except Exception as e:
         raise HTTPException(status_code=500, detail="Failed to decrypt API key. Please set a new one.") from e
 
