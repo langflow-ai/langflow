@@ -1773,5 +1773,10 @@
     "versions": {
       "0.3.0": "ec825c33caf6"
     }
+  },
+  "AgenticsComponent": {
+    "versions": {
+      "0.3.0": "3c3298627b0f"
+    }
   }
 }
