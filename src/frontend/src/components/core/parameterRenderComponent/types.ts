@@ -66,6 +66,7 @@ export type FloatComponentType = {
 
 export type IntComponentType = {
   rangeSpec: RangeSpecType;
+  name?: string;
 };
 export type ToggleComponentType = {
   size?: "small" | "medium" | "large";

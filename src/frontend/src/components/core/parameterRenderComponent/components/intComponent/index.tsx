@@ -16,6 +16,7 @@ export default function IntComponent({
   value,
   handleOnNewValue,
   rangeSpec,
+  name,
   disabled,
   editNode = false,
   id = "",
@@ -23,7 +24,7 @@ export default function IntComponent({
   showParameter = true,
 }: InputProps<number, IntComponentType>): JSX.Element | null {
   const min = -Infinity;
-  // Clear component state
+  // Clear component state when disabled
   useEffect(() => {
     if (disabled && value !== 0) {
       handleOnNewValue({ value: 0 }, { skipSnapshot: true });
@@ -37,9 +38,25 @@ export default function IntComponent({
     ref.current?.setSelectionRange(cursor, cursor);
   }, [ref, cursor, value]);
 
+  const parseAndValidate = (raw: string): number | null => {
+    const trimmed = raw.trim();
+    if (trimmed === "") return null;
+    const num = Number(trimmed);
+    if (!Number.isFinite(num) || !Number.isInteger(num)) return null;
+    const minVal = getMinValue();
+    const maxVal = getMaxValue();
+    if (num < minVal) return minVal;
+    if (maxVal !== undefined && num > maxVal) return maxVal;
+    return num;
+  };
+
   const handleChangeInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setCursor(e.target.selectionStart);
-    handleOnNewValue({ value: Number(e.target.value) });
+    setCursor(e.target.selectionStart ?? null);
+    const raw = e.target.value;
+    const parsed = parseAndValidate(raw);
+    handleOnNewValue({
+      value: parsed !== null ? parsed : (null as unknown as number),
+    });
   };
 
   const getStepValue = () => {
@@ -47,12 +64,36 @@ export default function IntComponent({
   };
 
   const getMinValue = () => {
+    // max_tokens must be at least 1; enforce even when rangeSpec is missing (e.g. saved flows)
+    if (name === "max_tokens") {
+      return rangeSpec?.min ?? 1;
+    }
     return rangeSpec?.min ?? min;
   };
 
   const getMaxValue = () => {
     return rangeSpec?.max ?? undefined;
   };
+
+  const minVal = getMinValue();
+  const isAtOrBelowMin =
+    typeof minVal === "number" &&
+    Number.isFinite(minVal) &&
+    (value == null || value <= minVal);
+
+  // Clamp existing out-of-range values to min on load (e.g. max_tokens -14 -> 1).
+  // For max_tokens, 0 means "empty/no limit" — do not clamp 0 to 1.
+  useEffect(() => {
+    if (
+      typeof minVal === "number" &&
+      Number.isFinite(minVal) &&
+      typeof value === "number" &&
+      value < minVal &&
+      !(name === "max_tokens" && value === 0)
+    ) {
+      handleOnNewValue({ value: minVal }, { skipSnapshot: true });
+    }
+  }, [minVal, value, handleOnNewValue, name]);
 
   const getInputClassName = () => {
     return cn(
@@ -64,14 +105,28 @@ export default function IntComponent({
   const DISABLED_INPUT_CLASS =
     "cursor-default bg-secondary border-border border rounded-md py-2 px-3 text-sm text-input placeholder:text-input";
 
-  const handleNumberChange = (newValue) => {
-    handleOnNewValue({ value: Number(newValue) });
+  const handleNumberChange = (newValue: string | number) => {
+    if (newValue === "" || newValue === undefined) {
+      handleOnNewValue({ value: null as unknown as number });
+      return;
+    }
+    const num = Number(newValue);
+    if (!Number.isFinite(num)) {
+      handleOnNewValue({ value: null as unknown as number });
+      return;
+    }
+    const minVal = getMinValue();
+    const maxVal = getMaxValue();
+    let clamped = Math.round(num);
+    if (clamped < minVal) clamped = minVal;
+    if (maxVal !== undefined && clamped > maxVal) clamped = maxVal;
+    handleOnNewValue({ value: clamped });
   };
 
-  const handleInputChange = (event) => {
-    const inputValue = Number(event.target.value);
-    if (inputValue < getMinValue()) {
-      event.target.value = getMinValue().toString();
+  const handleInputChange = (event: React.FormEvent<HTMLInputElement>) => {
+    const inputValue = Number((event.target as HTMLInputElement).value);
+    if (Number.isFinite(inputValue) && inputValue < getMinValue()) {
+      (event.target as HTMLInputElement).value = getMinValue().toString();
     }
   };
 
@@ -97,7 +152,11 @@ export default function IntComponent({
         max={getMaxValue()}
         onChange={handleNumberChange}
         isDisabled={disabled || readonly}
-        value={value ?? ""}
+        value={
+          name === "max_tokens" && (value === 0 || value === null)
+            ? ""
+            : (value ?? "")
+        }
       >
         <NumberInputField
           className={
@@ -124,6 +183,15 @@ export default function IntComponent({
           <NumberDecrementStepper
             className={decrementStepperClassName}
             _disabled={{ cursor: "default" }}
+            isDisabled={isAtOrBelowMin}
+            onClickCapture={
+              isAtOrBelowMin
+                ? (e: React.MouseEvent) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }
+                : undefined
+            }
           >
             <MinusIcon
               className={iconClassName}
