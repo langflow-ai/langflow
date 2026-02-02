@@ -8,7 +8,8 @@ export interface MCPOAuthInitiateResponse {
 }
 
 export interface MCPOAuthStatusResponse {
-  status: "pending" | "complete" | "error" | "expired";
+  status: "pending" | "awaiting_callback" | "complete" | "error" | "expired";
+  auth_url?: string;
   error_message?: string;
   server_url?: string;
 }
@@ -90,7 +91,8 @@ async function pollOAuthStatus(
     const status = await checkMCPOAuthStatus(flowId);
     onStatusChange?.(status);
 
-    if (status.status !== "pending") {
+    // Keep polling while pending or awaiting_callback (user hasn't completed OAuth yet)
+    if (status.status !== "pending" && status.status !== "awaiting_callback") {
       return status;
     }
 
@@ -155,8 +157,8 @@ export async function handleMCPOAuthFlow(
     const finalStatus = await pollOAuthStatus(flow_id, (status) => {
       options?.onStatusChange?.(status);
 
-      // Close popup if flow is complete
-      if (status.status !== "pending" && popup && !popup.closed) {
+      // Close popup if flow is complete (not pending or awaiting_callback)
+      if (status.status !== "pending" && status.status !== "awaiting_callback" && popup && !popup.closed) {
         popup.close();
       }
     });
