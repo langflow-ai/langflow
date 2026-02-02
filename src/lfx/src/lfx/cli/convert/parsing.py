@@ -12,6 +12,7 @@ from .constants import (
     MIN_PROMPT_LENGTH,
     PYTHON_RESERVED_WORDS,
     SKIP_FIELDS,
+    SKIP_NODE_TYPES,
     get_method_name,
 )
 from .types import EdgeInfo, FlowInfo, NodeInfo
@@ -55,11 +56,18 @@ def _parse_node(
     node: dict,
     used_var_names: dict[str, int],
     flow_info: FlowInfo,
-) -> NodeInfo:
-    """Parse a single node from the flow JSON."""
+) -> NodeInfo | None:
+    """Parse a single node from the flow JSON.
+
+    Returns None for UI-only nodes (notes, comments, etc.) that should be skipped.
+    """
     node_data = node.get("data", {})
     node_id = node_data.get("id", "")
     node_type = node_data.get("type", "")
+
+    # Skip UI-only node types (notes, comments, readme, etc.)
+    if node_type in SKIP_NODE_TYPES:
+        return None
     node_config = node_data.get("node", {})
     display_name = node_config.get("display_name", node_type)
     template = node_config.get("template", {})

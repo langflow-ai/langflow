@@ -405,6 +405,9 @@ SKIP_FIELDS: frozenset[str] = frozenset(
         "copy_field",
         "ai_enabled",
         "override_skip",
+        # JSON-only fields not present in lfx components
+        "mode",
+        "use_double_brackets",
     }
 )
 
@@ -433,6 +436,28 @@ PYTHON_RESERVED_WORDS: frozenset[str] = frozenset(
         "else",
         "for",
         "while",
+    }
+)
+
+# ============================================================================
+# UI-Only Node Types (Skip During Conversion)
+# ============================================================================
+# These node types are purely visual/UI elements in Langflow and have no
+# runtime behavior. They should be skipped when generating Python code.
+
+SKIP_NODE_TYPES: frozenset[str] = frozenset(
+    {
+        "note",
+        "Note",
+        "NoteNode",
+        "undefined",
+        "Undefined",
+        "ReadMe",
+        "readme",
+        "StickyNote",
+        "sticky_note",
+        "CommentNode",
+        "comment",
     }
 )
 
