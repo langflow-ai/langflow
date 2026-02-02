@@ -31,6 +31,7 @@ from lfx.io import (
     StrInput,
     TableInput,
 )
+from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.table import EditMode
 from lfx.services.deps import (
@@ -49,23 +50,21 @@ HUGGINGFACE_MODEL_NAMES = [
 ]
 COHERE_MODEL_NAMES = ["embed-english-v3.0", "embed-multilingual-v3.0"]
 
-_KNOWLEDGE_BASES_ROOT_PATH: Path | None = None
-
 # Error message to raise if we're in Astra cloud environment and the component is not supported.
 astra_error_msg = "Knowledge ingestion is not supported in Astra cloud environment."
 
 
 def _get_knowledge_bases_root_path() -> Path:
-    """Lazy load the knowledge bases root path from settings."""
-    global _KNOWLEDGE_BASES_ROOT_PATH  # noqa: PLW0603
-    if _KNOWLEDGE_BASES_ROOT_PATH is None:
+    """Get the knowledge bases root path from settings with caching."""
+    # Use function attribute for caching instead of global variable
+    if not hasattr(_get_knowledge_bases_root_path, "_cached_path"):
         settings = get_settings_service().settings
         knowledge_directory = settings.knowledge_bases_dir
         if not knowledge_directory:
             msg = "Knowledge bases directory is not set in the settings."
             raise ValueError(msg)
-        _KNOWLEDGE_BASES_ROOT_PATH = Path(knowledge_directory).expanduser()
-    return _KNOWLEDGE_BASES_ROOT_PATH
+        _get_knowledge_bases_root_path._cached_path = Path(knowledge_directory).expanduser()
+    return _get_knowledge_bases_root_path._cached_path
 
 
 class KnowledgeIngestionComponent(Component):
@@ -406,10 +405,21 @@ class KnowledgeIngestionComponent(Component):
                 doc = data_obj.to_lc_document()
                 documents.append(doc)
 
-            # Add documents to vector store
+            # Add documents to vector store in batches (Chroma limit is ~5461)
             if documents:
-                chroma.add_documents(documents)
-                self.log(f"Added {len(documents)} documents to vector store '{self.knowledge_base}'")
+                batch_size = 5000
+                total_docs = len(documents)
+                total_batches = (total_docs + batch_size - 1) // batch_size
+                logger.info(f"Knowledge Ingestion: Adding {total_docs} documents in {total_batches} batches")
+                for i in range(0, total_docs, batch_size):
+                    batch_num = i // batch_size + 1
+                    batch = documents[i : i + batch_size]
+                    logger.info(
+                        f"Knowledge Ingestion: Processing batch {batch_num}/{total_batches} ({len(batch)} docs)"
+                    )
+                    chroma.add_documents(batch)
+                    logger.info(f"Knowledge Ingestion: Batch {batch_num}/{total_batches} completed")
+                logger.info(f"Knowledge Ingestion: All {total_docs} documents added to '{self.knowledge_base}'")
 
         except (OSError, ValueError, RuntimeError) as e:
             self.log(f"Error creating vector store: {e}")
