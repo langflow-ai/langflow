@@ -506,6 +506,9 @@ async function onEvent(
     }
     case "end_vertex": {
       const buildData = data.build_data;
+      // Clear progress for this node when it finishes
+      useFlowStore.getState().setNodeProgress(buildData.id, null);
+
       const startTimeMs = verticesStartTimeMs.get(buildData.id);
       if (startTimeMs) {
         const delta = Date.now() - startTimeMs;
@@ -655,6 +658,8 @@ async function onEvent(
       }
       onBuildComplete && onBuildComplete(allNodesValid);
       useFlowStore.getState().setIsBuilding(false);
+      // Clear all progress when build ends
+      useFlowStore.getState().clearAllNodeProgress();
       return true;
     }
     case "error": {
@@ -670,6 +675,14 @@ async function onEvent(
     case "build_end":
       useFlowStore.getState().updateBuildStatus([data.id], BuildStatus.BUILT);
       break;
+    case "progress": {
+      // Handle progress events from components (e.g., batch processing)
+      const { id, current, total, message } = data;
+      if (id && typeof current === "number" && typeof total === "number") {
+        useFlowStore.getState().setNodeProgress(id, { current, total, message });
+      }
+      return true;
+    }
     default:
       return true;
   }

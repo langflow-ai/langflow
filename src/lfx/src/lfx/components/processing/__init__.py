@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from lfx.components.processing.output_parser import OutputParserComponent
     from lfx.components.processing.parse_data import ParseDataComponent
     from lfx.components.processing.parser import ParserComponent
+    from lfx.components.processing.progress_test import ProgressTestComponent
     from lfx.components.processing.regex import RegexExtractorComponent
     from lfx.components.processing.split_text import SplitTextComponent
     from lfx.components.processing.store_message import MessageStoreComponent
@@ -34,6 +35,7 @@ _dynamic_imports = {
     "OutputParserComponent": "output_parser",
     "ParseDataComponent": "parse_data",
     "ParserComponent": "parser",
+    "ProgressTestComponent": "progress_test",
     "RegexExtractorComponent": "regex",
     "SplitTextComponent": "split_text",
     "MessageStoreComponent": "store_message",
@@ -51,6 +53,7 @@ __all__ = [
     "OutputParserComponent",
     "ParseDataComponent",
     "ParserComponent",
+    "ProgressTestComponent",
     "RegexExtractorComponent",
     "SplitTextComponent",
     "TypeConverterComponent",

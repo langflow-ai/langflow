@@ -61,7 +61,16 @@ export type ComponentsToUpdateType = {
   userEdited: boolean;
 };
 
+export type NodeProgressType = {
+  current: number;
+  total: number;
+  message?: string;
+};
+
 export type FlowStoreType = {
+  nodeProgress: { [nodeId: string]: NodeProgressType };
+  setNodeProgress: (nodeId: string, progress: NodeProgressType | null) => void;
+  clearAllNodeProgress: () => void;
   dismissedNodes: string[];
   addDismissedNodes: (dismissedNodes: string[]) => void;
   removeDismissedNodes: (dismissedNodes: string[]) => void;
