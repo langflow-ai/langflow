@@ -358,6 +358,19 @@ module.exports = {
           label: "Bundles",
           items: [
             "Components/components-bundles",
+            {
+              type: "category",
+              label: "Agents Blocks",
+              items: [
+                "Agents/agent-blocks",
+                "Components/agent-blocks-agent-loop",
+                "Components/agent-blocks-agent-step",
+                "Components/agent-blocks-execute-tool",
+                "Components/agent-blocks-shared-context",
+                "Components/agent-blocks-think-tool",
+                "Components/agent-blocks-while-loop",
+              ]
+            },
             "Components/bundles-aiml",
             "Components/bundles-altk",
             "Components/bundles-amazon",
