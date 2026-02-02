@@ -10,6 +10,7 @@ export interface ModelProviderInfo {
     metadata: Record<string, any>;
   }>;
   is_enabled: boolean;
+  is_configured?: boolean;
   api_docs_url?: string;
 }
 
@@ -39,9 +40,8 @@ export const useGetModelProviders: useQueryFunctionType<
         queryParams.append("include_unsupported", "true");
       }
 
-      const url = `${getURL("MODELS")}${
-        queryParams.toString() ? `?${queryParams.toString()}` : ""
-      }`;
+      const url = `${getURL("MODELS")}${queryParams.toString() ? `?${queryParams.toString()}` : ""
+        }`;
 
       // Fetch the models with provider information including is_enabled status from server
       const response = await api.get<ModelProviderInfo[]>(url);
