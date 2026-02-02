@@ -4,6 +4,7 @@ import asyncio
 import inspect
 import traceback
 import types
+import weakref
 from collections.abc import AsyncIterator, Callable, Iterator, Mapping
 from enum import Enum
 from typing import TYPE_CHECKING, Any
@@ -74,7 +75,7 @@ class Vertex:
         self.custom_component = None
         self.has_external_input = False
         self.has_external_output = False
-        self.graph = graph
+        self._graph_ref = weakref.ref(graph)
         self.full_data = data.copy()
         self.base_type: str | None = base_type
         self.outputs: list[dict] = []
@@ -113,6 +114,15 @@ class Vertex:
         ]
         self._incoming_edges: list[CycleEdge] | None = None
         self._outgoing_edges: list[CycleEdge] | None = None
+
+    @property
+    def graph(self) -> Graph:
+        """Get graph from weak reference."""
+        graph = self._graph_ref()
+        if graph is None:
+            msg = "Graph has been garbage collected"
+            raise ValueError(msg)
+        return graph
 
     @property
     def lock(self):
