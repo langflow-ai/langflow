@@ -18,7 +18,7 @@ from lfx.template.field.base import Output
 class LoopComponent(Component):
     display_name = "Loop"
     description = (
-        "Iterates over a list of Data or Message objects, outputting one item at a time and "
+        "Iterates over a list of Data or Message objects, processing one item at a time and "
         "aggregating results from loop inputs. Message objects are automatically converted to "
         "Data objects for consistent processing."
     )
@@ -155,7 +155,7 @@ class LoopComponent(Component):
         self.stop("item")
         return Data(text="")
 
-    async def done_output(self, event_manager=None) -> DataFrame:
+    async def done_output(self) -> DataFrame:
         """Execute the loop body for all items and return aggregated results.
 
         This is now the main execution point for the loop. It:
@@ -176,7 +176,7 @@ class LoopComponent(Component):
 
         # Execute loop body for all items
         try:
-            aggregated_results = await self.execute_loop_body(data_list, event_manager=event_manager)
+            aggregated_results = await self.execute_loop_body(data_list, event_manager=self._event_manager)
             return DataFrame(aggregated_results)
         except Exception as e:
             # Log error and return empty DataFrame

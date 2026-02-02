@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import time
 from collections.abc import AsyncGenerator
 from http import HTTPStatus
@@ -44,12 +45,18 @@ from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
 from langflow.interface.initialize.loading import update_params_with_load_from_db_fields
 from langflow.processing.process import process_tweaks, run_graph_internal
 from langflow.schema.graph import Tweaks
-from langflow.services.auth.utils import api_key_security, get_current_active_user, get_webhook_user
+from langflow.services.auth.utils import (
+    api_key_security,
+    get_current_active_user,
+    get_current_user_for_sse,
+    get_webhook_user,
+)
 from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import get_session_service, get_settings_service, get_telemetry_service
+from langflow.services.event_manager import create_webhook_event_manager, webhook_event_manager
 from langflow.services.telemetry.schema import RunPayload
 from langflow.utils.compression import compress_response
 from langflow.utils.version import get_version_info
@@ -58,6 +65,9 @@ if TYPE_CHECKING:
     from langflow.events.event_manager import EventManager
 
 router = APIRouter(tags=["Base"])
+
+# SSE Constants
+SSE_HEARTBEAT_TIMEOUT_SECONDS = 30.0
 
 
 async def parse_input_request_from_body(http_request: Request) -> SimplifiedAPIRequest:
@@ -195,6 +205,13 @@ async def simple_run_flow(
         raise ValueError(str(exc)) from exc
 
 
+def _get_vertex_ids_from_flow(flow: Flow) -> list[str]:
+    """Extract vertex IDs from flow data."""
+    if not flow.data or not flow.data.get("nodes"):
+        return []
+    return [node.get("id") for node in flow.data.get("nodes", []) if node.get("id")]
+
+
 async def simple_run_flow_task(
     flow: Flow,
     input_request: SimplifiedAPIRequest,
@@ -205,17 +222,54 @@ async def simple_run_flow_task(
     telemetry_service=None,
     start_time: float | None = None,
     run_id: str | None = None,
+    emit_events: bool = False,
+    flow_id: str | None = None,
 ):
-    """Run a flow task as a BackgroundTask, therefore it should not throw exceptions."""
+    """Run a flow task as a BackgroundTask, therefore it should not throw exceptions.
+
+    Args:
+        flow: The flow to execute
+        input_request: The simplified API request
+        stream: Whether to stream results
+        api_key_user: The user executing the flow
+        event_manager: Event manager for streaming
+        telemetry_service: Service for logging telemetry
+        start_time: Start time for duration calculation
+        run_id: Unique ID for this run
+        emit_events: Whether to emit events to webhook_event_manager (for UI feedback)
+        flow_id: Flow ID for event emission (required if emit_events=True)
+    """
+    should_emit = emit_events and flow_id
+
+    # Create an EventManager that forwards events to webhook SSE if we should emit
+    webhook_em = None
+    if should_emit and event_manager is None and flow_id is not None:
+        webhook_em = create_webhook_event_manager(flow_id, run_id)
+
+    # Use provided event_manager or the webhook one
+    effective_event_manager = event_manager or webhook_em
+
     try:
+        if should_emit and flow_id is not None:
+            vertex_ids = _get_vertex_ids_from_flow(flow)
+            await webhook_event_manager.emit(
+                flow_id,
+                "vertices_sorted",
+                {"ids": vertex_ids, "to_run": vertex_ids, "run_id": run_id},
+            )
+
         result = await simple_run_flow(
             flow=flow,
             input_request=input_request,
             stream=stream,
             api_key_user=api_key_user,
-            event_manager=event_manager,
+            event_manager=effective_event_manager,
             run_id=run_id,
         )
+
+        if should_emit and flow_id is not None:
+            await webhook_event_manager.emit(flow_id, "end", {"run_id": run_id, "success": True})
+
         if telemetry_service and start_time is not None:
             await telemetry_service.log_package_run(
                 RunPayload(
@@ -230,6 +284,10 @@ async def simple_run_flow_task(
 
     except Exception as exc:  # noqa: BLE001
         await logger.aexception(f"Error running flow {flow.id} task")
+
+        if should_emit and flow_id is not None:
+            await webhook_event_manager.emit(flow_id, "end", {"run_id": run_id, "success": False, "error": str(exc)})
+
         if telemetry_service and start_time is not None:
             await telemetry_service.log_package_run(
                 RunPayload(
@@ -488,7 +546,7 @@ async def _run_flow_internal(
 async def simplified_run_flow(
     *,
     background_tasks: BackgroundTasks,
-    flow: Annotated[FlowRead | None, Depends(get_flow_by_id_or_endpoint_name)],
+    flow: Annotated[FlowRead, Depends(get_flow_by_id_or_endpoint_name)],
     input_request: SimplifiedAPIRequest | None = None,
     stream: bool = False,
     api_key_user: Annotated[UserRead, Depends(api_key_security)],
@@ -546,7 +604,7 @@ async def simplified_run_flow(
 async def simplified_run_flow_session(
     *,
     background_tasks: BackgroundTasks,
-    flow: Annotated[FlowRead | None, Depends(get_flow_by_id_or_endpoint_name)],
+    flow: Annotated[FlowRead, Depends(get_flow_by_id_or_endpoint_name)],
     input_request: SimplifiedAPIRequest | None = None,
     stream: bool = False,
     api_key_user: CurrentActiveUser,
@@ -608,23 +666,82 @@ async def simplified_run_flow_session(
     )
 
 
+@router.get("/webhook-events/{flow_id_or_name}")
+async def webhook_events_stream(
+    flow_id_or_name: str,  # noqa: ARG001 - Used by get_flow_by_id_or_endpoint_name dependency
+    flow: Annotated[Flow, Depends(get_flow_by_id_or_endpoint_name)],
+    request: Request,
+):
+    """Server-Sent Events (SSE) endpoint for real-time webhook build updates.
+
+    When a flow is open in the UI, this endpoint provides live feedback
+    of webhook execution progress, similar to clicking "Play" in the UI.
+
+    Authentication: Requires user to be logged in (via cookie) or provide API key.
+    The user must own the flow to subscribe to its events.
+    """
+    # Authenticate user via cookie or API key
+    user = await get_current_user_for_sse(request)
+
+    # Verify user owns the flow
+    if str(flow.user_id) != str(user.id):
+        raise HTTPException(
+            status_code=HTTPStatus.FORBIDDEN,
+            detail="Access denied: You can only subscribe to events for flows you own",
+        )
+
+    async def event_generator() -> AsyncGenerator[str, None]:
+        """Generate SSE events from the webhook event manager."""
+        flow_id_str = str(flow.id)
+        queue = await webhook_event_manager.subscribe(flow_id_str)
+
+        try:
+            # Send initial connection event
+            yield f"event: connected\ndata: {json.dumps({'flow_id': flow_id_str, 'flow_name': flow.name})}\n\n"
+
+            while True:
+                if await request.is_disconnected():
+                    break
+
+                try:
+                    event = await asyncio.wait_for(queue.get(), timeout=SSE_HEARTBEAT_TIMEOUT_SECONDS)
+                    event_type = event["event"]
+                    event_data = json.dumps(event["data"])
+                    yield f"event: {event_type}\ndata: {event_data}\n\n"
+                except asyncio.TimeoutError:
+                    yield f"event: heartbeat\ndata: {json.dumps({'timestamp': time.time()})}\n\n"
+
+        except asyncio.CancelledError:
+            pass
+        finally:
+            await webhook_event_manager.unsubscribe(flow_id_str, queue)
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
 @router.post("/webhook/{flow_id_or_name}", response_model=dict, status_code=HTTPStatus.ACCEPTED)  # noqa: RUF100, FAST003
 async def webhook_run_flow(
     flow_id_or_name: str,
     flow: Annotated[Flow, Depends(get_flow_by_id_or_endpoint_name)],
     request: Request,
-    background_tasks: BackgroundTasks,
 ):
     """Run a flow using a webhook request.
 
     Args:
-        flow_id_or_name (str): The flow ID or endpoint name.
-        flow (Flow): The flow to be executed.
-        request (Request): The incoming HTTP request.
-        background_tasks (BackgroundTasks): The background tasks manager.
+        flow_id_or_name: The flow ID or endpoint name (used by dependency).
+        flow: The flow to be executed.
+        request: The incoming HTTP request.
 
     Returns:
-        dict: A dictionary containing the status of the task.
+        A dictionary containing the status of the task.
 
     Raises:
         HTTPException: If the flow is not found or if there is an error processing the request.
@@ -662,17 +779,28 @@ async def webhook_run_flow(
             session_id=None,
         )
 
+        # Check if there are UI listeners connected via SSE
+        flow_id_str = str(flow.id)
+        has_ui_listeners = webhook_event_manager.has_listeners(flow_id_str)
+
         await logger.adebug("Starting background task")
         run_id = str(uuid4())
-        background_tasks.add_task(
-            simple_run_flow_task,
-            flow=flow,
-            input_request=input_request,
-            api_key_user=webhook_user,
-            telemetry_service=telemetry_service,
-            start_time=start_time,
-            run_id=run_id,
+
+        # Use asyncio.create_task to run in same event loop (needed for SSE)
+        background_task = asyncio.create_task(
+            simple_run_flow_task(
+                flow=flow,
+                input_request=input_request,
+                api_key_user=webhook_user,
+                telemetry_service=telemetry_service,
+                start_time=start_time,
+                run_id=run_id,
+                emit_events=has_ui_listeners,
+                flow_id=flow_id_str,
+            )
         )
+        # Fire-and-forget: log exceptions but don't block
+        background_task.add_done_callback(lambda t: t.exception() if not t.cancelled() else None)
     except Exception as exc:
         error_msg = str(exc)
         raise HTTPException(status_code=500, detail=error_msg) from exc

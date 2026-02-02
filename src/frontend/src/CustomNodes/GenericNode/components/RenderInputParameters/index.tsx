@@ -5,6 +5,7 @@ import { sortToolModeFields } from "@/CustomNodes/helpers/sort-tool-mode-field";
 import getFieldTitle from "@/CustomNodes/utils/get-field-title";
 import { scapedJSONStringfy } from "@/utils/reactflowUtils";
 import NodeInputField from "../NodeInputField";
+import { findPrimaryInput } from "./utils";
 
 const RenderInputParameters = ({
   data,
@@ -45,14 +46,19 @@ const RenderInputParameters = ({
     templateFields.forEach((templateField) => {
       const template = data.node?.template[templateField];
       if (template) {
+        // For model type fields, provide default input_types if not set
+        const isModelType = template.type === "model";
+        const effectiveInputTypes =
+          template.input_types && template.input_types.length > 0
+            ? template.input_types
+            : isModelType
+              ? ["LanguageModel"]
+              : template.input_types;
+
         colorMap.set(templateField, {
-          colors: getNodeInputColors(
-            template.input_types,
-            template.type,
-            types,
-          ),
+          colors: getNodeInputColors(effectiveInputTypes, template.type, types),
           colorsName: getNodeInputColorsName(
-            template.input_types,
+            effectiveInputTypes,
             template.type,
             types,
           ),
@@ -85,12 +91,29 @@ const RenderInputParameters = ({
     return keyMap;
   }, [templateFields, data.id, data.node?.template]);
 
+  const { displayHandleMap, primaryInputFieldName } = useMemo(() => {
+    return findPrimaryInput(
+      shownTemplateFields,
+      data.node?.template ?? {},
+      isToolMode,
+    );
+  }, [shownTemplateFields, data.node?.template, isToolMode]);
+
   const renderInputParameter = shownTemplateFields.map(
     (templateField: string, idx: number) => {
       const template = data.node?.template[templateField];
 
       const memoizedColor = memoizedColors.get(templateField);
       const memoizedKey = memoizedKeys.get(templateField);
+
+      // For model type fields, provide default input_types if not set
+      const isModelType = template.type === "model";
+      const effectiveInputTypes =
+        template.input_types && template.input_types.length > 0
+          ? template.input_types
+          : isModelType
+            ? ["LanguageModel"]
+            : template.input_types;
 
       return (
         <NodeInputField
@@ -104,20 +127,22 @@ const RenderInputParameters = ({
           title={getFieldTitle(data.node?.template!, templateField)}
           info={template.info!}
           name={templateField}
-          tooltipTitle={template.input_types?.join("\n") ?? template.type}
+          tooltipTitle={effectiveInputTypes?.join("\n") ?? template.type}
           required={template.required}
           id={{
-            inputTypes: template.input_types,
+            inputTypes: effectiveInputTypes,
             type: template.type,
             id: data.id,
             fieldName: templateField,
           }}
           type={template.type}
-          optionalHandle={template.input_types}
+          optionalHandle={effectiveInputTypes}
           proxy={template.proxy}
           showNode={showNode}
           colorName={memoizedColor.colorsName}
           isToolMode={isToolMode && template.tool_mode}
+          isPrimaryInput={templateField === primaryInputFieldName}
+          displayHandle={displayHandleMap.get(templateField) ?? false}
         />
       );
     },

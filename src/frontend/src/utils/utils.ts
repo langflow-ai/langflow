@@ -425,7 +425,6 @@ export function extractColumnsFromRows(
           filter: true,
           cellRenderer: TableAutoCellRender,
           suppressAutoSize: true,
-          tooltipField: key,
         };
       }
     }

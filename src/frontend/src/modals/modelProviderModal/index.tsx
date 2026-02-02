@@ -1,4 +1,5 @@
 import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
+import { useRefreshModelInputs } from "@/hooks/use-refresh-model-inputs";
 import ModelProvidersContent from "./components/ModelProvidersContent";
 
 interface ModelProviderModalProps {
@@ -12,8 +13,16 @@ const ModelProviderModal = ({
   onClose,
   modelType,
 }: ModelProviderModalProps) => {
+  const { refreshAllModelInputs } = useRefreshModelInputs();
+
   const handleClose = () => {
     onClose();
+    // Refresh after a delay to allow pending API operations to complete
+    // This ensures model toggles are persisted before we fetch updated options
+    // Using 1000ms to ensure database transactions complete for both LLM and embedding models
+    setTimeout(() => {
+      refreshAllModelInputs({ silent: true });
+    }, 1000);
   };
 
   return (

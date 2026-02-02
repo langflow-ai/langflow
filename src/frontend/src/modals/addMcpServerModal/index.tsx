@@ -1,10 +1,7 @@
-import {
-  useIsFetching,
-  usePrefetchQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { nanoid } from "nanoid";
 import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import InputListComponent from "@/components/core/parameterRenderComponent/components/inputListComponent";
@@ -26,13 +23,15 @@ import BaseModal from "@/modals/baseModal";
 import IOKeyPairInput, {
   KeyPairRow,
 } from "@/modals/IOModal/components/IOFieldView/components/key-pair-input";
+import IOKeyPairInputWithVariables from "@/modals/IOModal/components/IOFieldView/components/key-pair-input-with-variables";
 import type { MCPServerType } from "@/types/mcp";
 import { extractMcpServersFromJson } from "@/utils/mcpUtils";
 import { parseString } from "@/utils/stringManipulation";
 import { cn } from "@/utils/utils";
 
-//TODO IMPLEMENT FORM LOGIC
+const MCP_SETTINGS_PAGE = "/settings/mcp-servers";
 
+//TODO IMPLEMENT FORM LOGIC
 const objectToKeyPairRow = (
   obj?: Record<string, string>,
   oldData: KeyPairRow[] = [],
@@ -75,6 +74,9 @@ export default function AddMcpServerModal({
     mySetOpen !== undefined && myOpen !== undefined
       ? [myOpen, mySetOpen]
       : useState(false);
+
+  const location = useLocation();
+  const isOnMcpSettingsPage = location.pathname === MCP_SETTINGS_PAGE;
 
   const [type, setType] = useState(
     initialData ? (initialData.command ? "STDIO" : "HTTP") : "JSON",
@@ -167,9 +169,15 @@ export default function AddMcpServerModal({
           env: keyPairRowToObject(stdioEnv),
         });
         if (!initialData) {
-          await queryClient.setQueryData(["useGetMCPServers"], (old: any) => {
-            return [...old, { name, toolsCount: 0 }];
-          });
+          await queryClient.setQueryData(
+            ["useGetMCPServers"],
+            (old: unknown) => {
+              return [
+                ...(Array.isArray(old) ? old : []),
+                { name, toolsCount: 0 },
+              ];
+            },
+          );
         }
         onSuccess?.(name);
         setOpen(false);
@@ -178,8 +186,10 @@ export default function AddMcpServerModal({
         setStdioArgs([""]);
         setStdioEnv([{ key: "", value: "", id: nanoid(), error: false }]);
         setError(null);
-      } catch (err: any) {
-        setError(err?.message || "Failed to add MCP server.");
+      } catch (err: unknown) {
+        setError(
+          err instanceof Error ? err.message : "Failed to add MCP server.",
+        );
       }
       return;
     }
@@ -209,9 +219,15 @@ export default function AddMcpServerModal({
           headers: keyPairRowToObject(httpHeaders),
         });
         if (!initialData) {
-          await queryClient.setQueryData(["useGetMCPServers"], (old: any) => {
-            return [...old, { name, toolsCount: 0 }];
-          });
+          await queryClient.setQueryData(
+            ["useGetMCPServers"],
+            (old: unknown) => {
+              return [
+                ...(Array.isArray(old) ? old : []),
+                { name, toolsCount: 0 },
+              ];
+            },
+          );
         }
         onSuccess?.(name);
         setOpen(false);
@@ -220,8 +236,10 @@ export default function AddMcpServerModal({
         setHttpEnv([{ key: "", value: "", id: nanoid(), error: false }]);
         setHttpHeaders([{ key: "", value: "", id: nanoid(), error: false }]);
         setError(null);
-      } catch (err: any) {
-        setError(err?.message || "Failed to add MCP server.");
+      } catch (err: unknown) {
+        setError(
+          err instanceof Error ? err.message : "Failed to add MCP server.",
+        );
       }
       return;
     }
@@ -236,8 +254,8 @@ export default function AddMcpServerModal({
           "lowercase",
         ]).slice(0, MAX_MCP_SERVER_NAME_LENGTH),
       }));
-    } catch (e: any) {
-      setError(e.message || "Invalid input");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Invalid input");
       return;
     }
     if (servers.length === 0) {
@@ -247,9 +265,9 @@ export default function AddMcpServerModal({
     try {
       await Promise.all(servers.map((server) => modifyMCPServer(server)));
       if (!initialData) {
-        await queryClient.setQueryData(["useGetMCPServers"], (old: any) => {
+        await queryClient.setQueryData(["useGetMCPServers"], (old: unknown) => {
           return [
-            ...old,
+            ...(Array.isArray(old) ? old : []),
             ...servers.map((server) => ({
               name: server.name,
               toolsCount: 0,
@@ -261,8 +279,12 @@ export default function AddMcpServerModal({
       setOpen(false);
       setJsonValue("");
       setError(null);
-    } catch (err: any) {
-      setError(err?.message || "Failed to add one or more MCP servers.");
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to add one or more MCP servers.",
+      );
     }
   }
 
@@ -287,11 +309,17 @@ export default function AddMcpServerModal({
               {initialData ? "Update MCP Server" : "Add MCP Server"}
             </div>
             <span className="text-mmd font-normal text-muted-foreground">
-              Save MCP Servers. Manage added servers in{" "}
-              <CustomLink className="underline" to="/settings/mcp-servers">
-                settings
-              </CustomLink>
-              .
+              {isOnMcpSettingsPage ? (
+                "Add and save MCP servers to use across your flows."
+              ) : (
+                <>
+                  Add and save MCP servers. Manage servers in{" "}
+                  <CustomLink className="underline" to={MCP_SETTINGS_PAGE}>
+                    settings
+                  </CustomLink>
+                  .
+                </>
+              )}
             </span>
           </div>
           <div className="flex h-full w-full flex-col gap-4 overflow-hidden">
@@ -435,13 +463,14 @@ export default function AddMcpServerModal({
                     </div>
                     <div className="flex flex-col gap-2">
                       <Label className="!text-mmd">Headers</Label>
-                      <IOKeyPairInput
+                      <IOKeyPairInputWithVariables
                         value={httpHeaders}
                         onChange={setHttpHeaders}
                         duplicateKey={false}
                         isList={true}
                         isInputField={true}
                         testId="http-headers"
+                        enableGlobalVariables={true}
                       />
                     </div>
                     <div className="flex flex-col gap-2">
