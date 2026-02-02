@@ -14,6 +14,7 @@ from langflow.services.schema import ServiceType
 
 if TYPE_CHECKING:
     from langflow.services.auth.base import AuthServiceBase
+    from langflow.services.auth.service import AuthService
     from langflow.services.settings.service import SettingsService
 
 
@@ -26,8 +27,11 @@ class AuthServiceFactory(ServiceFactory):
 
     name = ServiceType.AUTH_SERVICE.value
 
-    def __init__(self):
-        # Import here to avoid circular dependencies
+    # Narrow type from parent's type[Service] so create() can call with settings_service
+    service_class: type[AuthService]
+
+    def __init__(self) -> None:
+        # Import here to avoid circular dependencies; stored on instance by parent
         from langflow.services.auth.service import AuthService
 
         super().__init__(AuthService)
