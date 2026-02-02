@@ -420,19 +420,21 @@ LONG_TEXT_FIELDS: frozenset[str] = frozenset(
 
 MIN_PROMPT_LENGTH = 200
 
-PYTHON_RESERVED_WORDS: frozenset[str] = frozenset({
-    "input",
-    "output",
-    "type",
-    "id",
-    "class",
-    "def",
-    "return",
-    "if",
-    "else",
-    "for",
-    "while",
-})
+PYTHON_RESERVED_WORDS: frozenset[str] = frozenset(
+    {
+        "input",
+        "output",
+        "type",
+        "id",
+        "class",
+        "def",
+        "return",
+        "if",
+        "else",
+        "for",
+        "while",
+    }
+)
 
 # ============================================================================
 # Output Name to Method Name Mapping
@@ -541,27 +543,29 @@ def get_method_name(node_type: str, output_name: str) -> str:
 # These are the Input types that might be used in custom component code.
 # When parsing custom component code, we detect these to generate proper imports.
 
-KNOWN_INPUT_TYPES: frozenset[str] = frozenset({
-    "BoolInput",
-    "DataInput",
-    "DataFrameInput",
-    "DictInput",
-    "DropdownInput",
-    "FileInput",
-    "FloatInput",
-    "HandleInput",
-    "IntInput",
-    "LinkInput",
-    "MessageInput",
-    "MessageTextInput",
-    "MultilineInput",
-    "MultilineSecretInput",
-    "MultiselectInput",
-    "NestedDictInput",
-    "Output",
-    "PromptInput",
-    "SecretStrInput",
-    "SliderInput",
-    "StrInput",
-    "TableInput",
-})
+KNOWN_INPUT_TYPES: frozenset[str] = frozenset(
+    {
+        "BoolInput",
+        "DataInput",
+        "DataFrameInput",
+        "DictInput",
+        "DropdownInput",
+        "FileInput",
+        "FloatInput",
+        "HandleInput",
+        "IntInput",
+        "LinkInput",
+        "MessageInput",
+        "MessageTextInput",
+        "MultilineInput",
+        "MultilineSecretInput",
+        "MultiselectInput",
+        "NestedDictInput",
+        "Output",
+        "PromptInput",
+        "SecretStrInput",
+        "SliderInput",
+        "StrInput",
+        "TableInput",
+    }
+)
