@@ -141,6 +141,9 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
       console.warn("unmounting");
 
       setCurrentFlow(undefined);
+      // Reset playground state when leaving the flow
+      setSlidingContainerOpen(false);
+      setIsFullscreen(false);
     };
   }, [id]);
 
