@@ -10,10 +10,7 @@ import type { APIClassType } from "@/types/api";
 import ForwardedIconComponent from "../../../../common/genericIconComponent";
 import { Button } from "../../../../ui/button";
 import { Command } from "../../../../ui/command";
-import {
-  Popover,
-  PopoverContentWithoutPortal,
-} from "../../../../ui/popover";
+import { Popover, PopoverContentWithoutPortal } from "../../../../ui/popover";
 import type { BaseInputProps } from "../../types";
 import ModelList from "./components/ModelList";
 import ModelTrigger from "./components/ModelTrigger";
@@ -154,7 +151,7 @@ export default function ModelInputComponent({
     setErrorData,
     handleOnNewValue,
     closePopover: () => setOpen(false),
-    clearSelection: () => { }, // No local state to clear anymore
+    clearSelection: () => {}, // No local state to clear anymore
   });
 
   const renderLoadingButton = () => (
@@ -209,7 +206,6 @@ export default function ModelInputComponent({
         )}
     </div>
   );
-
 
   const renderPopoverContent = () => (
     <PopoverContentWithoutPortal

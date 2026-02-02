@@ -10,9 +10,7 @@ interface ModelProvidersContentProps {
   modelType: "llm" | "embeddings" | "all";
 }
 
-const ModelProvidersContent = ({
-  modelType,
-}: ModelProvidersContentProps) => {
+const ModelProvidersContent = ({ modelType }: ModelProvidersContentProps) => {
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(
     null,
   );
