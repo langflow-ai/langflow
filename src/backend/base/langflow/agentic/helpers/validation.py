@@ -1,10 +1,13 @@
 """Component code validation."""
 
 import re
+from functools import lru_cache
 
 from lfx.custom.validate import create_class, extract_class_name
 
 from langflow.agentic.api.schemas import ValidationResult
+
+_cached_extract_class_name = lru_cache(maxsize=2048)(extract_class_name)
 
 # Regex pattern to extract class name that inherits from Component
 CLASS_NAME_PATTERN = re.compile(r"class\s+(\w+)\s*\([^)]*Component[^)]*\)")
@@ -19,7 +22,7 @@ def _extract_class_name_regex(code: str) -> str | None:
 def _safe_extract_class_name(code: str) -> str | None:
     """Extract class name with fallback to regex for broken code."""
     try:
-        return extract_class_name(code)
+        return _cached_extract_class_name(code)
     except (ValueError, SyntaxError, TypeError):
         return _extract_class_name_regex(code)
 
