@@ -74,7 +74,22 @@ def update_projects_components_with_latest_component_versions(project_data, all_
     }
 
     node_changes_log = defaultdict(list)
-    project_data_copy = deepcopy(project_data)
+
+    # Optimize: Only deep copy the nodes structure instead of entire project_data
+    # This avoids copying unchanged data like edges, viewport, etc.
+    project_data_copy = {**project_data}
+    if "nodes" in project_data:
+        project_data_copy["nodes"] = []
+        for node in project_data["nodes"]:
+            node_copy = {**node}
+            if "data" in node:
+                node_copy["data"] = {**node["data"]}
+                if "node" in node["data"]:
+                    node_copy["data"]["node"] = deepcopy(node["data"]["node"])
+            project_data_copy["nodes"].append(node_copy)
+
+    # Pre-compute set for faster lookup
+    skipped_field_attrs_set = set(SKIPPED_FIELD_ATTRIBUTES)
 
     for node in project_data_copy.get("nodes", []):
         node_data = node.get("data").get("node")
@@ -97,7 +112,9 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                 "LanguageModelComponent",
                 "TypeConverterComponent",
             }
-            has_tool_outputs = any(output.get("types") == ["Tool"] for output in node_data.get("outputs", []))
+            # Optimize: More efficient check using generator expression
+            node_outputs = node_data.get("outputs", [])
+            has_tool_outputs = any(output.get("types") == ["Tool"] for output in node_outputs)
             if "outputs" in latest_node and not has_tool_outputs and not is_tool_or_agent:
                 # Set selected output as the previous selected output
                 for output in latest_node["outputs"]:
@@ -173,7 +190,7 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                     # Iterate through the attributes we want to potentially update
                     for attr in to_check_attributes:
                         # Respect the template value by not updating if the attribute is in the skipped set
-                        if attr in SKIPPED_FIELD_ATTRIBUTES:
+                        if attr in skipped_field_attrs_set:
                             continue
                         if (
                             attr in field_dict
