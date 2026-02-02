@@ -937,8 +937,8 @@ class TestRunResponseToWorkflowResponse:
         assert response.flow_id == "flow-123"
         assert response.job_id == "job-456"
         assert response.status == JobStatus.COMPLETED
-        assert "ChatOutput" in response.outputs
-        assert response.outputs["ChatOutput"].content == "Hello World"
+        assert "output-123" in response.outputs
+        assert response.outputs["output-123"].content == "Hello World"
 
     def test_run_response_non_output_terminal_node(self):
         """Test conversion with non-output terminal node."""
@@ -970,8 +970,8 @@ class TestRunResponseToWorkflowResponse:
 
         response = run_response_to_workflow_response(run_response, "flow-1", "job-1", request, graph)
 
-        assert "LLM" in response.outputs
-        output = response.outputs["LLM"]
+        assert "llm-123" in response.outputs
+        output = response.outputs["llm-123"]
         assert output.content is None  # Non-output message nodes don't show content
         assert "source" in output.metadata
         assert output.metadata["source"]["source"] == "gpt-4"
@@ -1042,7 +1042,7 @@ class TestRunResponseToWorkflowResponse:
         response = run_response_to_workflow_response(run_response, "flow-1", "job-1", request, graph)
 
         # Data type non-output nodes should show content
-        assert response.outputs["DataNode"].content == {"result": "42"}
+        assert response.outputs["data-123"].content == {"result": "42"}
 
     def test_run_response_fallback_terminal_detection(self):
         """Test fallback terminal node detection when get_terminal_nodes fails."""
@@ -1067,7 +1067,7 @@ class TestRunResponseToWorkflowResponse:
 
         response = run_response_to_workflow_response(run_response, "flow-1", "job-1", request, graph)
 
-        assert "Output" in response.outputs
+        assert "output-123" in response.outputs
 
     def test_run_response_preserves_inputs(self):
         """Test that inputs are preserved in response."""
@@ -1114,9 +1114,9 @@ class TestRunResponseToWorkflowResponse:
         response = run_response_to_workflow_response(run_response, "flow-1", "job-1", request, graph)
 
         # Data type non-output nodes should show content
-        assert "Vector Store" in response.outputs
-        assert response.outputs["Vector Store"].content is not None
-        assert "stored_count" in str(response.outputs["Vector Store"].content)
+        assert "pinecone-123" in response.outputs
+        assert response.outputs["pinecone-123"].content is not None
+        assert "stored_count" in str(response.outputs["pinecone-123"].content)
 
     def test_run_response_retriever_with_metadata(self):
         """Test retriever with search metadata."""
@@ -1149,8 +1149,8 @@ class TestRunResponseToWorkflowResponse:
         response = run_response_to_workflow_response(run_response, "flow-1", "job-1", request, graph)
 
         # Should include content and metadata
-        assert "Retriever" in response.outputs
-        output = response.outputs["Retriever"]
+        assert "retriever-456" in response.outputs
+        output = response.outputs["retriever-456"]
         assert output.content is not None
         assert "documents" in str(output.content)
         # Metadata from result_data should be included
@@ -1234,8 +1234,8 @@ class TestRunResponseToWorkflowResponse:
         response = run_response_to_workflow_response(run_response, "flow-1", "job-1", request, graph)
 
         # Output should exist but with no content (no matching result_data)
-        assert "Output" in response.outputs
-        assert response.outputs["Output"].content is None
+        assert "output-123" in response.outputs
+        assert response.outputs["output-123"].content is None
 
 
 if __name__ == "__main__":
