@@ -74,5 +74,3 @@ export default function InspectionPanelOutputs({
     </div>
   );
 }
-
-// Made with Bob

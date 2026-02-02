@@ -124,5 +124,3 @@ export default function InspectionPanelFields({
     </div>
   );
 }
-
-// Made with Bob

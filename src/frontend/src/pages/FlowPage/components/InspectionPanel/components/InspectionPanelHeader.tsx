@@ -168,5 +168,3 @@ export default function InspectionPanelHeader({
     </div>
   );
 }
-
-// Made with Bob

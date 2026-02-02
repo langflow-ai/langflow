@@ -211,5 +211,3 @@ export default function EditableHeaderContent({
     ),
   };
 }
-
-// Made with Bob

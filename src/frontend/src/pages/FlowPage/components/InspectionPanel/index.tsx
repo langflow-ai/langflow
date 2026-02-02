@@ -49,5 +49,3 @@ const InspectionPanel = memo(function InspectionPanel({
 });
 
 export default InspectionPanel;
-
-// Made with Bob
