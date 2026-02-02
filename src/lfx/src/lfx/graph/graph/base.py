@@ -45,7 +45,7 @@ from lfx.services.deps import get_chat_service, get_tracing_service
 from lfx.utils.async_helpers import run_until_complete
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Generator, Iterable
+    from collections.abc import AsyncIterator, Callable, Generator, Iterable
     from typing import Any
 
     from lfx.custom.custom_component.component import Component
@@ -2342,18 +2342,28 @@ class Graph:
                 in_degree[vertex.id] = 0
         return in_degree
 
-    def create_subgraph(self, vertex_ids: set[str]) -> Graph:
+    @contextlib.asynccontextmanager
+    async def create_subgraph(self, vertex_ids: set[str]) -> AsyncIterator[Graph]:
         """Create an isolated subgraph containing only specified vertices.
 
         This creates a new Graph instance with only the vertices and edges
         that connect the specified vertices. The subgraph shares the same
         flow_id and user_id but gets its own context copy.
 
+        Must be used as an async context manager to ensure proper cleanup
+        of any pending trace tasks when the subgraph execution completes.
+
         Args:
             vertex_ids: Set of vertex IDs to include in the subgraph
 
-        Returns:
+        Yields:
             A new Graph instance containing only the specified vertices
+
+        Example:
+            async with graph.create_subgraph(vertex_ids) as subgraph:
+                subgraph.prepare()
+                async for result in subgraph.async_start():
+                    process(result)
         """
         # Filter nodes to only include specified vertex IDs
         subgraph_nodes = [n for n in self._vertices if n["id"] in vertex_ids]
@@ -2372,7 +2382,13 @@ class Graph:
         # Add the filtered nodes and edges
         subgraph.add_nodes_and_edges(subgraph_nodes, subgraph_edges)
 
-        return subgraph
+        try:
+            yield subgraph
+        finally:
+            # Await any pending trace tasks to ensure clean shutdown
+            if subgraph._end_trace_tasks:
+                await asyncio.gather(*subgraph._end_trace_tasks, return_exceptions=True)
+                subgraph._end_trace_tasks.clear()
 
     @staticmethod
     def build_adjacency_maps(edges: list[CycleEdge]) -> tuple[dict[str, list[str]], dict[str, list[str]]]:

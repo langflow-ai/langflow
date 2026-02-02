@@ -5,6 +5,7 @@ Event manager propagation is critical for UI updates during loop execution.
 Subgraph isolation tests are in tests/unit/graph/graph/test_subgraph_isolation.py.
 """
 
+from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 
 import pytest
@@ -12,6 +13,24 @@ from lfx.base.flow_controls.loop_utils import execute_loop_body, get_loop_body_v
 from lfx.components.flow_controls.loop import LoopComponent
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
+
+
+def create_subgraph_context_manager_mock(subgraph_factory):
+    """Create a mock for create_subgraph that works as an async context manager.
+
+    Args:
+        subgraph_factory: A callable that takes vertex_ids and returns a mock subgraph
+    """
+
+    @asynccontextmanager
+    async def mock_create_subgraph(vertex_ids):
+        subgraph = subgraph_factory(vertex_ids)
+        try:
+            yield subgraph
+        finally:
+            pass  # Cleanup would happen here in real code
+
+    return mock_create_subgraph
 
 
 class TestLoopComponentBasics:
@@ -70,13 +89,14 @@ class TestEventManagerPropagation:
 
         def create_mock_subgraph(_vertex_ids):
             mock_subgraph = MagicMock()
+            mock_subgraph._vertices = []
             mock_subgraph.prepare = MagicMock()
             mock_subgraph.async_start = mock_async_start
             mock_subgraph.get_vertex = MagicMock(return_value=MagicMock(custom_component=MagicMock()))
             return mock_subgraph
 
         mock_graph = MagicMock()
-        mock_graph.create_subgraph = create_mock_subgraph
+        mock_graph.create_subgraph = create_subgraph_context_manager_mock(create_mock_subgraph)
 
         data_list = [Data(text="item1")]
 
@@ -105,13 +125,14 @@ class TestEventManagerPropagation:
 
         def create_mock_subgraph(_vertex_ids):
             mock_subgraph = MagicMock()
+            mock_subgraph._vertices = []
             mock_subgraph.prepare = MagicMock()
             mock_subgraph.async_start = mock_async_start
             mock_subgraph.get_vertex = MagicMock(return_value=MagicMock(custom_component=MagicMock()))
             return mock_subgraph
 
         mock_graph = MagicMock()
-        mock_graph.create_subgraph = create_mock_subgraph
+        mock_graph.create_subgraph = create_subgraph_context_manager_mock(create_mock_subgraph)
 
         # 3 items = 3 iterations
         data_list = [Data(text="item1"), Data(text="item2"), Data(text="item3")]
@@ -370,7 +391,7 @@ class TestRawParamsInjection:
             return mock_subgraph
 
         mock_graph = MagicMock()
-        mock_graph.create_subgraph = create_mock_subgraph
+        mock_graph.create_subgraph = create_subgraph_context_manager_mock(create_mock_subgraph)
 
         # Test data
         data_list = [
