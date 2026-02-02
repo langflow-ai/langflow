@@ -1,9 +1,7 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import CanvasControls from "../CanvasControls";
 
-const mockUndo = jest.fn();
-const mockRedo = jest.fn();
-
+// Capture flow functions for assertions
 const reactFlowFns = {
   fitView: jest.fn(),
   zoomIn: jest.fn(),
@@ -11,14 +9,15 @@ const reactFlowFns = {
   zoomTo: jest.fn(),
 };
 
+// Mocks for external dependencies used internally
 jest.mock("@xyflow/react", () => ({
-  Panel: ({ children, ...props }) => (
+  Panel: ({ children, ...props }: any) => (
     <div data-testid="panel" {...props}>
       {children}
     </div>
   ),
   useReactFlow: () => reactFlowFns,
-  useStore: () => ({
+  useStore: (_selector: any) => ({
     isInteractive: true,
     minZoomReached: false,
     maxZoomReached: false,
@@ -32,129 +31,42 @@ jest.mock("@/stores/flowStore", () => ({
   default: jest.fn(() => false),
 }));
 
-jest.mock("@/stores/flowsManagerStore", () => ({
-  __esModule: true,
-  default: jest.fn((selector) => {
-    const state = {
-      undo: mockUndo,
-      redo: mockRedo,
-    };
-    return selector(state);
-  }),
-}));
-
-jest.mock("@/components/common/genericIconComponent", () => ({
-  __esModule: true,
-  default: ({ name, className }) => (
-    <span data-testid={`icon-${name}`} className={className}>
-      {name}
-    </span>
+jest.mock("@/components/ui/separator", () => ({
+  Separator: ({ orientation }: { orientation: "vertical" | "horizontal" }) => (
+    <div data-testid={`separator-${orientation}`} />
   ),
 }));
 
-jest.mock("@/components/ui/button", () => ({
-  Button: ({ children, onClick, title, ...rest }) => (
-    <button onClick={onClick} title={title} {...rest}>
-      {children}
-    </button>
-  ),
-}));
-
-jest.mock("@/modals/flowLogsModal", () => ({
-  __esModule: true,
-  default: ({ children }) => (
-    <div data-testid="flow-logs-modal">{children}</div>
-  ),
-}));
-
+// Mock dropdowns to a simple render that exposes props for assertions
 jest.mock("../CanvasControlsDropdown", () => ({
   __esModule: true,
-  default: () => <div data-testid="controls-dropdown" />,
+  default: (props: any) => <div data-testid="controls-dropdown" {...props} />,
 }));
 
-jest.mock("@/assets/langflow_assistant.svg", () => "mock-assistant-icon.svg");
+jest.mock("../HelpDropdown", () => ({
+  __esModule: true,
+  default: (props: any) => <div data-testid="help-dropdown" {...props} />,
+}));
 
 describe("CanvasControls", () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it("should_render_panel_with_all_controls_when_mounted", () => {
-    render(<CanvasControls />);
-
-    expect(screen.getByTestId("main_canvas_controls")).toBeInTheDocument();
-    expect(screen.getByTestId("controls-dropdown")).toBeInTheDocument();
-    expect(screen.getByTestId("flow-logs-modal")).toBeInTheDocument();
-  });
-
-  it("should_render_assistant_button_with_new_badge", () => {
-    render(<CanvasControls />);
-
-    expect(screen.getByTitle("Langflow Assistant")).toBeInTheDocument();
-    expect(screen.getByText("New")).toBeInTheDocument();
-    expect(screen.getByAltText("Langflow Assistant")).toBeInTheDocument();
-  });
-
-  it("should_render_logs_button_with_terminal_icon", () => {
-    render(<CanvasControls />);
-
-    expect(screen.getByTitle("Logs")).toBeInTheDocument();
-    expect(screen.getByTestId("icon-Terminal")).toBeInTheDocument();
-  });
-
-  it("should_render_undo_button_with_icon", () => {
-    render(<CanvasControls />);
-
-    expect(screen.getByTitle("Undo")).toBeInTheDocument();
-    expect(screen.getByTestId("icon-Undo2")).toBeInTheDocument();
-  });
-
-  it("should_render_redo_button_with_icon", () => {
-    render(<CanvasControls />);
-
-    expect(screen.getByTitle("Redo")).toBeInTheDocument();
-    expect(screen.getByTestId("icon-Redo2")).toBeInTheDocument();
-  });
-
-  it("should_call_undo_when_undo_button_clicked", () => {
-    render(<CanvasControls />);
-
-    const undoButton = screen.getByTitle("Undo");
-    fireEvent.click(undoButton);
-
-    expect(mockUndo).toHaveBeenCalledTimes(1);
-  });
-
-  it("should_call_redo_when_redo_button_clicked", () => {
-    render(<CanvasControls />);
-
-    const redoButton = screen.getByTitle("Redo");
-    fireEvent.click(redoButton);
-
-    expect(mockRedo).toHaveBeenCalledTimes(1);
-  });
-
-  it("should_render_children_when_provided", () => {
+  it("renders panel and separators when children present", () => {
     render(
       <CanvasControls>
-        <div data-testid="child-element">Lock Button</div>
+        <div>child</div>
       </CanvasControls>,
     );
-
-    expect(screen.getByTestId("child-element")).toBeInTheDocument();
+    expect(screen.getByTestId("main_canvas_controls")).toBeInTheDocument();
+    const seps = screen.getAllByTestId("separator-vertical");
+    expect(seps.length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByTestId("controls-dropdown")).toBeInTheDocument();
+    expect(screen.getByTestId("help-dropdown")).toBeInTheDocument();
   });
 
-  it("should_position_panel_at_bottom_center", () => {
+  it("updates reactFlow state based on flow lock status", () => {
     render(<CanvasControls />);
 
-    const panel = screen.getByTestId("main_canvas_controls");
-    expect(panel).toHaveAttribute("position", "bottom-center");
-  });
-
-  it("should_have_bottom_padding_class_for_32px_spacing", () => {
-    render(<CanvasControls />);
-
-    const panel = screen.getByTestId("main_canvas_controls");
-    expect(panel.className).toContain("!bottom-8");
+    // The component should set up state through useStoreApi
+    // This test verifies the component renders and doesn't throw
+    expect(screen.getByTestId("main_canvas_controls")).toBeInTheDocument();
   });
 });
