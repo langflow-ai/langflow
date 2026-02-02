@@ -390,10 +390,7 @@ class MCPToolsComponent(ComponentWithCache):
             if use_oauth and server_config.get("url"):
                 server_url = server_config["url"]
                 try:
-                    from lfx.base.mcp.oauth.provider import (
-                        OAuthFlowStarted,
-                        create_deployed_oauth_provider,
-                    )
+                    from lfx.base.mcp.oauth.provider import create_deployed_oauth_provider
 
                     # Check for cached tokens first
                     cached_tokens = await self._get_cached_oauth_tokens(server_url)
@@ -415,7 +412,7 @@ class MCPToolsComponent(ComponentWithCache):
                             message="OAuth authentication required. Please authenticate via the OAuth flow.",
                             server_url=server_url,
                         )
-                except (OAuthRequiredError, OAuthFlowStarted):
+                except OAuthRequiredError:
                     # Re-raise OAuth errors for frontend handling
                     raise
                 except Exception as e:  # noqa: BLE001

@@ -1382,7 +1382,7 @@ class MCPStreamableHttpClient:
             sse_read_timeout_seconds: SSE read timeout in seconds.
             verify_ssl: Whether to verify SSL certificates.
             oauth_auth: Optional OAuth authentication provider (implements httpx.Auth).
-                Use create_mcp_oauth_provider() from lfx.base.mcp.oauth to create one.
+                Use create_deployed_oauth_provider() from lfx.base.mcp.oauth to create one.
 
         Returns:
             List of available tools from the MCP server.
@@ -1597,7 +1597,7 @@ async def update_tools(
         mcp_sse_client: Deprecated, use mcp_streamable_http_client instead.
         request_variables: Optional dict of global variables to resolve in headers.
         oauth_auth: Optional OAuth authentication provider (implements httpx.Auth).
-            Use create_mcp_oauth_provider() from lfx.base.mcp.oauth to create one.
+            Use create_deployed_oauth_provider() from lfx.base.mcp.oauth to create one.
 
     Returns:
         Tuple of (mode, tool_list, tool_cache).
