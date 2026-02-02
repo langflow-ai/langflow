@@ -25,7 +25,7 @@ const InspectionPanel = memo(function InspectionPanel({
           className={cn(
             "!top-[3rem] !-right-2 !bottom-10",
             "w-[320px]",
-            "overflow-hidden",
+            "overflow-hidden pointer-events-none",
           )}
         >
           <motion.div
@@ -36,7 +36,7 @@ const InspectionPanel = memo(function InspectionPanel({
             className={cn(
               "max-h-full w-full",
               "rounded-xl border bg-background shadow-lg",
-              "overflow-y-auto flex flex-col",
+              "overflow-y-auto flex flex-col pointer-events-auto",
             )}
           >
             <InspectionPanelHeader data={selectedNode.data} onClose={onClose} />
