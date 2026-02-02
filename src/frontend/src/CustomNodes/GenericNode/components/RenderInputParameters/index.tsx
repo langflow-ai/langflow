@@ -12,6 +12,7 @@ import {
   isInternalField,
   shouldDisplayOnCanvas,
 } from "@/CustomNodes/helpers/parameter-filtering";
+import useFlowStore from "@/stores/flowStore";
 
 const RenderInputParameters = ({
   data,
@@ -21,6 +22,8 @@ const RenderInputParameters = ({
   shownOutputs,
   showHiddenOutputs,
 }) => {
+  const edges = useFlowStore((state) => state.edges);
+
   const templateFields = useMemo(() => {
     return Object.keys(data.node?.template || {})
       .filter((templateField) => !isInternalField(templateField))
@@ -106,8 +109,10 @@ const RenderInputParameters = ({
       shownTemplateFields,
       data.node?.template ?? {},
       isToolMode,
+      data.id,
+      edges,
     );
-  }, [shownTemplateFields, data.node?.template, isToolMode]);
+  }, [shownTemplateFields, data.node?.template, isToolMode, data.id, edges]);
 
   const renderInputParameter = shownTemplateFields.map(
     (templateField: string, idx: number) => {
