@@ -77,6 +77,22 @@ async def test_get_current_user_from_access_token_rejects_expired(
 
 
 @pytest.mark.anyio
+async def test_get_current_user_from_access_token_rejects_malformed_token(auth_service: AuthService):
+    """CT-010: Malformed Bearer token must return 401; jwt.decode rejects invalid tokens."""
+    db = AsyncMock()
+    malformed_tokens = [
+        "invalid.token.here",  # invalid signature / not a valid JWT
+        "not-a-jwt",  # not 3 segments, jwt.decode raises
+    ]
+    for token in malformed_tokens:
+        with pytest.raises(HTTPException) as exc:
+            await auth_service.get_current_user_from_access_token(token, db)
+        assert exc.value.status_code == status.HTTP_401_UNAUTHORIZED, (
+            f"Malformed token {token!r} should return 401"
+        )
+
+
+@pytest.mark.anyio
 async def test_get_current_user_from_access_token_requires_active_user(auth_service: AuthService):
     user_id = uuid4()
     db = AsyncMock()

@@ -189,7 +189,7 @@ class AuthService(AuthServiceBase):
         token: str | Coroutine | None,
         db: AsyncSession,
     ) -> User:
-        from langflow.services.auth.utils import get_jwt_verification_key
+        from langflow.services.auth.utils import ACCESS_TOKEN_TYPE, get_jwt_verification_key
 
         if token is None:
             raise HTTPException(
@@ -220,6 +220,15 @@ class AuthService(AuthServiceBase):
                 payload = jwt.decode(token, verification_key, algorithms=[algorithm])
             user_id: UUID = payload.get("sub")  # type: ignore[assignment]
             token_type: str = payload.get("type")  # type: ignore[assignment]
+
+            # Order and messages aligned with main branch get_current_user_by_jwt
+            if token_type != ACCESS_TOKEN_TYPE:
+                logger.error(f"Token type is invalid: {token_type}. Expected: {ACCESS_TOKEN_TYPE}.")
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Token is invalid.",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
             if expires := payload.get("exp", None):
                 expires_datetime = datetime.fromtimestamp(expires, timezone.utc)
                 if datetime.now(timezone.utc) > expires_datetime:
@@ -229,13 +238,11 @@ class AuthService(AuthServiceBase):
                         detail="Token has expired.",
                         headers={"WWW-Authenticate": "Bearer"},
                     )
-
-            # Validate token type - must be "access" for authentication
-            if user_id is None or token_type != "access":  # noqa: S105
-                logger.warning(f"Invalid token payload. Expected 'access' token, got: {token_type}")
+            if user_id is None or token_type is None:
+                logger.info(f"Invalid token payload. Token type: {token_type}")
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Invalid token type. Expected access token.",
+                    detail="Invalid token details.",
                     headers={"WWW-Authenticate": "Bearer"},
                 )
         except InvalidTokenError as e:
