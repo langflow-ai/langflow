@@ -333,6 +333,46 @@ async def get_current_user_for_websocket(
     )
 
 
+async def get_current_user_for_sse(request: Request) -> User | UserRead:
+    """Authenticate user for SSE endpoints.
+
+    Similar to websocket authentication, accepts either:
+    - Cookie authentication (access_token_lf)
+    - API key authentication (x-api-key query param)
+
+    Args:
+        request: The FastAPI request object
+
+    Returns:
+        User or UserRead: The authenticated user
+
+    Raises:
+        HTTPException: If authentication fails
+    """
+    # Try cookie authentication first
+    token = request.cookies.get("access_token_lf")
+    if token:
+        try:
+            async with session_scope() as db:
+                user = await get_current_user_by_jwt(token, db)
+                if user:
+                    return user
+        except HTTPException:
+            pass
+
+    # Try API key authentication
+    api_key = request.query_params.get("x-api-key") or request.headers.get("x-api-key")
+    if api_key:
+        user_read = await ws_api_key_security(api_key)
+        if user_read:
+            return user_read
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Missing or invalid credentials (cookie or API key).",
+    )
+
+
 async def get_current_active_user(current_user: Annotated[User, Depends(get_current_user)]):
     if not current_user.is_active:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive user")
@@ -646,7 +686,7 @@ def encrypt_api_key(api_key: str, settings_service: SettingsService):
     return encrypted_key.decode()
 
 
-def decrypt_api_key(encrypted_api_key: str, settings_service: SettingsService):
+def decrypt_api_key(encrypted_api_key: str, settings_service: SettingsService, fernet_obj: Fernet | None = None) -> str:
     """Decrypt the provided encrypted API key using Fernet decryption.
 
     This function supports both encrypted and plain text values. It first attempts
@@ -659,21 +699,20 @@ def decrypt_api_key(encrypted_api_key: str, settings_service: SettingsService):
     Args:
         encrypted_api_key (str): The encrypted API key or plain text value.
         settings_service (SettingsService): Service providing authentication settings.
+        fernet_obj (Fernet | None): Optional pre-initialized Fernet object.
 
     Returns:
         str: The decrypted API key, the original value if plain text, or empty string
              if it's encrypted with a different key.
     """
-    fernet = get_fernet(settings_service)
+    fernet = fernet_obj
+    if fernet is None:
+        fernet = get_fernet(settings_service)
+
     if isinstance(encrypted_api_key, str):
         try:
             return fernet.decrypt(encrypted_api_key.encode()).decode()
-        except Exception as primary_exception:  # noqa: BLE001
-            logger.debug(
-                "Decryption using UTF-8 encoded API key failed. Error: %s. "
-                "Retrying decryption using the raw string input.",
-                primary_exception,
-            )
+        except Exception:  # noqa: BLE001
             try:
                 return fernet.decrypt(encrypted_api_key).decode()
             except Exception as secondary_exception:  # noqa: BLE001
@@ -685,10 +724,8 @@ def decrypt_api_key(encrypted_api_key: str, settings_service: SettingsService):
                         secondary_exception,
                     )
                     return ""
+
                 # Assume the value is plain text and return it as-is
-                logger.debug(
-                    "Value does not appear to be encrypted (no Fernet token signature). Returning value as plain text."
-                )
                 return encrypted_api_key
 
     msg = "Unexpected variable type. Expected string"

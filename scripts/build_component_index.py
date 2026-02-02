@@ -65,25 +65,6 @@ def _strip_dynamic_fields(obj):
     return obj
 
 
-def _strip_realtime_refresh_options(obj):
-    """Strip options from fields that have real_time_refresh=True.
-
-    These fields populate their options dynamically at runtime via update_build_config,
-    so including them in the index creates unnecessary churn when external data changes
-    (e.g., LiteLLM model lists).
-    """
-    if isinstance(obj, dict):
-        # Check if this is a field with real_time_refresh=True
-        if obj.get("real_time_refresh") is True and "options" in obj:
-            # Return a copy with options cleared
-            return {k: _strip_realtime_refresh_options(v) if k != "options" else [] for k, v in obj.items()}
-        # Recurse into all dict values
-        return {k: _strip_realtime_refresh_options(v) for k, v in obj.items()}
-    if isinstance(obj, list):
-        return [_strip_realtime_refresh_options(item) for item in obj]
-    return obj
-
-
 def _import_components() -> tuple[dict, int]:
     """Import all lfx components using the async import function.
 
@@ -156,11 +137,6 @@ def build_component_index() -> dict:
     print("\nStripping dynamic fields from component metadata...")
     index = _strip_dynamic_fields(index)
 
-    # Strip options from fields with real_time_refresh=True
-    # These fields populate their options dynamically at runtime
-    print("Stripping options from real_time_refresh fields...")
-    index = _strip_realtime_refresh_options(index)
-
     # Normalize the entire structure for deterministic output
     index = _normalize_for_determinism(index)
 
@@ -201,7 +177,6 @@ def main():
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     # Pretty-print for readable git diffs and resolvable merge conflicts
-    # With dynamic options stripped, the file is stable and conflicts are manageable
     print(f"\nWriting formatted index to {output_path}")
     json_bytes = orjson.dumps(index, option=orjson.OPT_SORT_KEYS | orjson.OPT_INDENT_2)
     output_path.write_text(json_bytes.decode("utf-8"), encoding="utf-8")

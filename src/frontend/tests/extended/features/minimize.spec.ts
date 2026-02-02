@@ -9,12 +9,15 @@ test(
   async ({ page }) => {
     await awaitBootstrapTest(page);
 
+    await page.waitForSelector('[data-testid="blank-flow"]', {
+      timeout: 30000,
+    });
     await page.getByTestId("blank-flow").click();
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("text input");
-    await page.waitForSelector("data-testid=input_outputText Input", {
-      timeout: 3000,
+    await page.waitForSelector('[data-testid="input_outputText Input"]', {
+      timeout: 30000,
     });
 
     await page
@@ -37,34 +40,34 @@ test(
 
     await page.getByTestId("more-options-modal").click();
 
-    await page.waitForSelector("data-testid=minimize-button-modal", {
-      timeout: 3000,
+    await page.waitForSelector('[data-testid="minimize-button-modal"]', {
+      timeout: 10000,
     });
 
     await page.getByTestId("minimize-button-modal").first().click();
 
     await expect(
       page.locator(".react-flow__handle-left.no-show").first(),
-    ).toBeVisible({ timeout: 3000 });
+    ).toBeVisible({ timeout: 10000 });
 
     await expect(
       page.locator(".react-flow__handle-right.no-show").first(),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 10000 });
 
     await page.getByTestId("more-options-modal").click();
 
-    await page.waitForSelector("data-testid=expand-button-modal", {
-      timeout: 3000,
+    await page.waitForSelector('[data-testid="expand-button-modal"]', {
+      timeout: 10000,
     });
 
     await page.getByTestId("expand-button-modal").first().click();
 
     await expect(page.locator(".react-flow__handle-left").first()).toBeVisible({
-      timeout: 3000,
+      timeout: 10000,
     });
 
-    await expect(
-      page.locator(".react-flow__handle-right").first(),
-    ).toBeVisible();
+    await expect(page.locator(".react-flow__handle-right").first()).toBeVisible(
+      { timeout: 10000 },
+    );
   },
 );

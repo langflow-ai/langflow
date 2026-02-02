@@ -766,7 +766,7 @@
   },
   "File": {
     "versions": {
-      "0.3.0": "5008cc086d7f"
+      "0.3.0": "fccb3ab047f1"
     }
   },
   "KnowledgeIngestion": {
@@ -961,7 +961,7 @@
   },
   "TextInput": {
     "versions": {
-      "0.3.0": "3d80f125b734"
+      "0.3.0": "518f16485886"
     }
   },
   "TextOutput": {
@@ -1176,7 +1176,7 @@
   },
   "SmartRouter": {
     "versions": {
-      "0.3.0": "9c6736e784f6"
+      "0.3.0": "7bdefeec6280"
     }
   },
   "LLMSelectorComponent": {
@@ -1226,17 +1226,17 @@
   },
   "Agent": {
     "versions": {
-      "0.3.0": "bdc309bc2d2a"
+      "0.3.0": "60401f4e0ff8"
     }
   },
   "EmbeddingModel": {
     "versions": {
-      "0.3.0": "277f5f28215b"
+      "0.3.0": "3e0b64afc9a2"
     }
   },
   "LanguageModelComponent": {
     "versions": {
-      "0.3.0": "0fe0030cc0b3"
+      "0.3.0": "07d0ce9ea77e"
     }
   },
   "MCPTools": {
@@ -1651,7 +1651,7 @@
   },
   "CurrentDate": {
     "versions": {
-      "0.3.0": "8311e820e80c"
+      "0.3.0": "4a93d7b489e6"
     }
   },
   "IDGenerator": {
