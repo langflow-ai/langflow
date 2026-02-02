@@ -99,6 +99,7 @@ def create_default_event_manager(queue=None):
     manager.register_event("on_end_vertex", "end_vertex")
     manager.register_event("on_build_start", "build_start")
     manager.register_event("on_build_end", "build_end")
+    manager.register_event("on_progress", "progress")
     return manager
 
 
