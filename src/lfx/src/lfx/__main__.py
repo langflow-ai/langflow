@@ -69,6 +69,39 @@ def serve_command_wrapper(
     )
 
 
+@app.command(name="convert", help="Convert JSON flow to Python code")
+def convert_command_wrapper(
+    flow_json: str = typer.Argument(
+        ...,
+        help="Path to the Langflow JSON flow file",
+    ),
+    output: str | None = typer.Option(
+        None,
+        "-o",
+        "--output",
+        help="Output Python file (default: stdout)",
+    ),
+    quiet: bool = typer.Option(
+        False,
+        "-q",
+        "--quiet",
+        help="Suppress informational messages",
+    ),
+) -> None:
+    """Convert a Langflow JSON flow to Python code (lazy-loaded)."""
+    from pathlib import Path
+
+    from lfx.cli.convert import convert_command
+
+    flow_path = Path(flow_json)
+    if not flow_path.exists():
+        typer.echo(f"Error: File not found: {flow_path}", err=True)
+        raise typer.Exit(1)
+
+    output_path = Path(output) if output else None
+    return convert_command(flow_json=flow_path, output=output_path, quiet=quiet)
+
+
 @app.command(name="run", help="Run a flow directly", no_args_is_help=True)
 def run_command_wrapper(
     script_path: str | None = typer.Argument(
