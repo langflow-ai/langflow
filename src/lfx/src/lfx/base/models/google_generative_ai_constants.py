@@ -50,6 +50,28 @@ GOOGLE_GENERATIVE_AI_MODELS_DETAILED = [
         preview=True,
         not_supported=True,
     ),
+    # GEMINI 3.0 (preview)
+    create_model_metadata(
+        provider="Google Generative AI",
+        name="gemini-3-pro-preview",
+        icon="GoogleGenerativeAI",
+        tool_calling=True,
+        preview=True,
+    ),
+    create_model_metadata(
+        provider="Google Generative AI",
+        name="gemini-3-flash-preview",
+        icon="GoogleGenerativeAI",
+        tool_calling=True,
+        preview=True,
+    ),
+    create_model_metadata(
+        provider="Google Generative AI",
+        name="gemini-3-pro-image-preview",
+        icon="GoogleGenerativeAI",
+        tool_calling=True,
+        preview=True,
+    ),
     # PREVIEW
     create_model_metadata(
         provider="Google Generative AI",
