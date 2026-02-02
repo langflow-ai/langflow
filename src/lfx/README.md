@@ -4,7 +4,7 @@ lfx is a command-line tool for running Langflow workflows. It provides three mai
 
 - **`serve`** - Run flows as a REST API
 - **`run`** - Execute flows directly from the command line
-- **`convert`** - Convert JSON flows to Python scripts
+- **`convert`** - Convert JSON Flows to Python scripts
 
 ## Installation
 
@@ -155,9 +155,9 @@ echo '{"data": {"nodes": [...], "edges": [...]}}' | uv run lfx run --stdin --inp
 uv run lfx run --flow-json '{"data": {"nodes": [...], "edges": [...]}}' --input-value "Test"
 ```
 
-### `lfx convert` - Convert JSON flows to Python
+### `lfx convert` - Convert JSON Flows to Python
 
-Convert a Langflow JSON flow to a Python script for better version control, customization, and IDE support.
+Convert a Langflow JSON Flow to a Python script for better version control, customization, and IDE support.
 
 ```bash
 uv run lfx convert my_flow.json

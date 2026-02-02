@@ -29,6 +29,9 @@ _OUTPUT_OPT = typer.Option(
     "-o",
     "--output",
     help="Output Python file (default: stdout)",
+    dir_okay=False,
+    writable=True,
+    resolve_path=True,
 )
 _QUIET_OPT = typer.Option(
     False,  # noqa: FBT003
