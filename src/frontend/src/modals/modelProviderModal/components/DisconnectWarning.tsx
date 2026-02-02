@@ -44,7 +44,6 @@ const DisconnectWarning = ({
         <Button
           size="sm"
           variant="destructive"
-          // className="text-destructive"
           onClick={onConfirm}
           loading={isLoading}
         >
