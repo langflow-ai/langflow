@@ -7,6 +7,11 @@ import { scapedJSONStringfy } from "@/utils/reactflowUtils";
 import NodeInputField from "../NodeInputField";
 import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
 import { findPrimaryInput } from "./utils";
+import {
+  isCanvasVisible,
+  isInternalField,
+  shouldDisplayOnCanvas,
+} from "@/CustomNodes/helpers/parameter-filtering";
 
 const RenderInputParameters = ({
   data,
@@ -18,7 +23,7 @@ const RenderInputParameters = ({
 }) => {
   const templateFields = useMemo(() => {
     return Object.keys(data.node?.template || {})
-      .filter((templateField) => templateField.charAt(0) !== "_")
+      .filter((templateField) => !isInternalField(templateField))
       .sort((a, b) =>
         sortToolModeFields(
           a,
@@ -33,39 +38,15 @@ const RenderInputParameters = ({
   const shownTemplateFields = useMemo(() => {
     return templateFields.filter((templateField) => {
       const template = data.node?.template[templateField];
-
-      if (!ENABLE_INSPECTION_PANEL) {
-        return (
-          template?.show &&
-          !template?.advanced &&
-          !(template?.tool_mode && isToolMode)
-        );
-      }
-
-      // Basic visibility check
-      if (
-        !template?.show ||
-        template?.advanced ||
-        (template?.tool_mode && isToolMode)
-      ) {
-        return false;
-      }
-
-      return true;
+      return isCanvasVisible(template, isToolMode);
     });
   }, [templateFields, data.node?.template, isToolMode]);
 
   // Separate list for fields that should be visually displayed
   const visuallyShownFields = useMemo(() => {
-    if (!ENABLE_INSPECTION_PANEL) {
-      return shownTemplateFields;
-    }
-
     return shownTemplateFields.filter((templateField) => {
       const template = data.node?.template[templateField];
-      // Only show fields that have handles (input_types)
-      const hasHandle = template.input_types && template.input_types.length > 0;
-      return hasHandle;
+      return shouldDisplayOnCanvas(template);
     });
   }, [shownTemplateFields, data.node?.template]);
 

@@ -11,6 +11,7 @@ import {
   DisclosureTrigger,
   DisclosureContent,
 } from "@/components/ui/disclosure";
+import { shouldRenderInspectionPanelField } from "@/CustomNodes/helpers/parameter-filtering";
 
 interface InspectionPanelFieldsProps {
   data: NodeDataType;
@@ -26,24 +27,7 @@ export default function InspectionPanelFields({
     const allFields = Object.keys(data.node?.template || {})
       .filter((templateField) => {
         const template = data.node?.template[templateField];
-
-        // Filter out fields that shouldn't be shown
-        if (
-          templateField.charAt(0) === "_" ||
-          !template?.show ||
-          (templateField === "code" && template.type === "code") ||
-          (templateField.includes("code") && template.proxy)
-        ) {
-          return false;
-        }
-
-        // Filter out fields that are just handles (HandleInput type)
-        // These are fields that only serve as connection points
-        if (template._input_type === "HandleInput") {
-          return false;
-        }
-
-        return true;
+        return shouldRenderInspectionPanelField(templateField, template);
       })
       .sort((a, b) =>
         sortToolModeFields(
