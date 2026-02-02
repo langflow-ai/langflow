@@ -1,6 +1,10 @@
 # lfx - Langflow Executor
 
-lfx is a command-line tool for running Langflow workflows. It provides two main commands: `serve` and `run`.
+lfx is a command-line tool for running Langflow workflows. It provides three main commands:
+
+- **`serve`** - Run flows as a REST API
+- **`run`** - Execute flows directly from the command line
+- **`convert`** - Convert JSON flows to Python scripts
 
 ## Installation
 
@@ -149,6 +153,100 @@ echo '{"data": {"nodes": [...], "edges": [...]}}' | uv run lfx run --stdin --inp
 
 # Inline JSON
 uv run lfx run --flow-json '{"data": {"nodes": [...], "edges": [...]}}' --input-value "Test"
+```
+
+### `lfx convert` - Convert JSON flows to Python
+
+Convert a Langflow JSON flow to a Python script for better version control, customization, and IDE support.
+
+```bash
+uv run lfx convert my_flow.json
+```
+
+**Options:**
+
+- `--output, -o`: Output file path (default: prints to stdout)
+- `--quiet, -q`: Suppress informational messages
+
+**Examples:**
+
+```bash
+# Convert and print to stdout
+uv run lfx convert my_flow.json
+
+# Convert and save to a file
+uv run lfx convert my_flow.json -o my_flow.py
+
+# Quiet mode (no info messages)
+uv run lfx convert my_flow.json -o my_flow.py --quiet
+```
+
+**Generated Code Features:**
+
+The generated Python code includes:
+
+- **Module docstring** with flow name and description
+- **Component imports** organized by module
+- **Custom components** (if any) extracted inline
+- **Long prompts** extracted as constants
+- **`build_*_graph()` function** with optional model configuration parameters
+- **`get_graph()` entry point** for `lfx run` compatibility
+- **`if __name__ == "__main__"` block** for standalone testing
+
+**Example Generated Code:**
+
+```python
+"""Flow: My Chat Flow
+
+A simple chat flow.
+
+Auto-generated from JSON using `lfx convert`.
+Review and adjust as needed before committing.
+"""
+
+from __future__ import annotations
+
+from lfx.graph import Graph
+from lfx.components.input_output import ChatInput, ChatOutput
+from lfx.components.models_and_agents import AgentComponent
+
+
+def build_my_chat_flow_graph(
+    provider: str | None = None,
+    model_name: str | None = None,
+    api_key: str | None = None,
+) -> Graph:
+    """Build the My Chat Flow graph."""
+    chat_input = ChatInput(_id="input-1")
+    agent = AgentComponent(_id="agent-1")
+    chat_output = ChatOutput(_id="output-1")
+
+    agent.set(input_value=chat_input.message)
+    chat_output.set(input_value=agent.response)
+
+    return Graph(chat_input, chat_output)
+
+
+def get_graph() -> Graph:
+    """Entry point for lfx run command."""
+    return build_my_chat_flow_graph()
+
+
+if __name__ == "__main__":
+    graph = build_my_chat_flow_graph()
+    print(f"Graph: {len(graph.vertices)} nodes, {len(graph.edges)} edges")
+```
+
+**Running Converted Flows:**
+
+Both `.json` and `.py` flows can be executed with `lfx run`:
+
+```bash
+# Run JSON flow
+uv run lfx run my_flow.json "Hello"
+
+# Run converted Python flow
+uv run lfx run my_flow.py "Hello"
 ```
 
 ### Complete Agent Example
