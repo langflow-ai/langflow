@@ -18,13 +18,20 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
+function hasNodesAndEdges(obj: Record<string, unknown>): boolean {
+  return (
+    Array.isArray(obj.nodes) &&
+    Array.isArray(obj.edges) &&
+    (obj.nodes as unknown[]).length >= 0 &&
+    (obj.edges as unknown[]).length >= 0
+  );
+}
+
 function looksLikeFlowImportPayload(payload: unknown): boolean {
   if (!isRecord(payload)) return false;
   if (Array.isArray(payload.flows)) return true;
-  if (!isRecord(payload.data)) return false;
-  return (
-    Array.isArray(payload.data.nodes) && Array.isArray(payload.data.edges)
-  );
+  if (isRecord(payload.data) && hasNodesAndEdges(payload.data)) return true;
+  return hasNodesAndEdges(payload);
 }
 
 /**
@@ -39,6 +46,25 @@ export function isEditablePasteTarget(target: EventTarget | null): boolean {
     target instanceof HTMLTextAreaElement ||
     target.isContentEditable === true
   );
+}
+
+/**
+ * Normalizes payload so it has flow.data (nodes, edges). Accepts Langflow shape or raw { nodes, edges }.
+ */
+function normalizeToFlowShape(payload: Record<string, unknown>): Record<string, unknown> {
+  if (Array.isArray(payload.flows)) return payload;
+  if (isRecord(payload.data) && hasNodesAndEdges(payload.data)) return payload;
+  if (hasNodesAndEdges(payload)) {
+    return {
+      ...payload,
+      data: {
+        nodes: payload.nodes,
+        edges: payload.edges,
+        viewport: (payload as { viewport?: unknown }).viewport ?? { x: 0, y: 0, zoom: 1 },
+      },
+    };
+  }
+  return payload;
 }
 
 /**
@@ -58,8 +84,9 @@ export function getPastedFlowFile(text: string): File | null {
     return null;
   }
   if (!looksLikeFlowImportPayload(parsed)) return null;
+  const normalized = normalizeToFlowShape(parsed as Record<string, unknown>);
   const safeTimestamp = new Date().toISOString().replace(/[:.]/g, "-");
-  return new File([JSON.stringify(parsed)], `pasted-flow-${safeTimestamp}.json`, {
+  return new File([JSON.stringify(normalized)], `pasted-flow-${safeTimestamp}.json`, {
     type: "application/json",
   });
 }
