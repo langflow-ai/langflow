@@ -69,6 +69,7 @@ def create_model_metadata(
 MODEL_PROVIDER_METADATA: dict[str, Any] = {
     "OpenAI": {
         "icon": "OpenAI",
+        "max_tokens_field_name": "max_tokens",
         "variables": [
             {
                 "variable_name": "API Key",
@@ -95,6 +96,7 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
     },
     "Anthropic": {
         "icon": "Anthropic",
+        "max_tokens_field_name": "max_tokens",
         "variables": [
             {
                 "variable_name": "API Key",
@@ -121,6 +123,7 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
     },
     "Google Generative AI": {
         "icon": "GoogleGenerativeAI",
+        "max_tokens_field_name": "max_output_tokens",
         "variables": [
             {
                 "variable_name": "API Key",
@@ -147,6 +150,7 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
     },
     "Ollama": {
         "icon": "Ollama",
+        "max_tokens_field_name": "max_tokens",
         "variables": [
             {
                 "variable_name": "Base URL",
@@ -172,7 +176,8 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
         },
     },
     "IBM WatsonX": {
-        "icon": "IBM",
+        "icon": "WatsonxAI",
+        "max_tokens_field_name": "max_tokens",
         "variables": [
             {
                 "variable_name": "API Key",

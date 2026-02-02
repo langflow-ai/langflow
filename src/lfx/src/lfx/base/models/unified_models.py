@@ -185,6 +185,25 @@ def apply_provider_variable_config_to_build_config(
     return build_config
 
 
+def get_provider_config(provider: str) -> dict:
+    """Get complete provider configuration.
+
+    Args:
+        provider: Provider name (e.g., "OpenAI", "Anthropic")
+
+    Returns:
+        Dict with model_class, api_key_param, icon, variable_name, model_name_param, and extra params
+
+    Raises:
+        ValueError: If provider is unknown
+    """
+    if provider not in model_provider_metadata:
+        msg = f"Unknown provider: {provider}"
+        raise ValueError(msg)
+
+    return model_provider_metadata[provider].copy()
+
+
 def get_model_providers() -> list[str]:
     """Return a sorted list of unique provider names."""
     return sorted({md.get("provider", "Unknown") for group in MODELS_DETAILED for md in group})
@@ -1136,6 +1155,11 @@ def normalize_model_names_to_dicts(model_names: list[str] | str) -> list[dict[st
                 "api_key_param": param_mapping.get("api_key_param", "api_key"),
             }
 
+            # Add max_tokens_field_name from provider metadata
+            provider_meta = model_provider_metadata.get(provider, {})
+            if "max_tokens_field_name" in provider_meta:
+                runtime_metadata["max_tokens_field_name"] = provider_meta["max_tokens_field_name"]
+
             # Add reasoning models list for OpenAI
             if provider == "OpenAI" and base_metadata.get("reasoning"):
                 runtime_metadata["reasoning_models"] = [model_name]
@@ -1188,6 +1212,7 @@ def get_llm(
     temperature=None,
     *,
     stream=False,
+    max_tokens=None,
     watsonx_url=None,
     watsonx_project_id=None,
     ollama_base_url=None,
@@ -1253,6 +1278,16 @@ def get_llm(
 
     if temperature is not None:
         kwargs["temperature"] = temperature
+
+    # Add max_tokens with provider-specific field name (only when a valid integer >= 1)
+    if max_tokens is not None and max_tokens != "":
+        try:
+            max_tokens_int = int(max_tokens)
+            if max_tokens_int >= 1:
+                max_tokens_param = metadata.get("max_tokens_field_name", "max_tokens")
+                kwargs[max_tokens_param] = max_tokens_int
+        except (TypeError, ValueError):
+            pass  # Skip invalid max_tokens (e.g. empty string from form input)
 
     # Add provider-specific parameters
     if provider == "IBM WatsonX":
@@ -1398,9 +1433,6 @@ def update_model_options_in_build_config(
         time_since_cache = time.time() - component.cache[cache_timestamp_key]
         cache_expired = time_since_cache > cache_ttl
 
-    # Check if is_refresh flag is set in build_config (from frontend refresh request)
-    is_refresh_request = build_config.get("is_refresh", False)
-
     # Check if we need to refresh
     should_refresh = (
         field_name == "api_key"  # API key changed
@@ -1408,7 +1440,6 @@ def update_model_options_in_build_config(
         or field_name == "model"  # Model field refresh button clicked
         or cache_key not in component.cache  # Cache miss
         or cache_expired  # Cache expired
-        or is_refresh_request  # Frontend requested a refresh
     )
 
     if should_refresh:
@@ -1428,13 +1459,9 @@ def update_model_options_in_build_config(
     cached = component.cache.get(cache_key, {"options": []})
     build_config["model"]["options"] = cached["options"]
 
-    # Set default value on initial load when model field is empty
-    # Only set default when: initial load (field_name is None) or model field is being set and is empty
-    # Get the current model value to check if it's empty
-    current_model_value = build_config.get("model", {}).get("value")
-    model_is_empty = not current_model_value
-    should_set_default = field_name is None or (field_name == "model" and model_is_empty)
-    if should_set_default:
+    # Set default value on initial load when field is empty
+    # Fetch from user's default model setting in the database
+    if not field_value or field_value == "":
         options = cached.get("options", [])
         if options:
             # Determine model type based on cache_key_prefix

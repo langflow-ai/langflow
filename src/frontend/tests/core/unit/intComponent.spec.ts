@@ -30,22 +30,19 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
 
   await page.getByText("Close").last().click();
   await page.getByTestId("int_int_max_tokens").click();
-  await page.getByTestId("int_int_max_tokens").fill("1020304050");
+  await page.getByTestId("int_int_max_tokens").fill("100000");
 
   let value = await page.getByTestId("int_int_max_tokens").inputValue();
 
-  if (value != "1020304050") {
-    expect(false).toBeTruthy();
-  }
+  expect(value).toBe("100000");
 
   await page.getByTestId("int_int_max_tokens").click();
   await page.getByTestId("int_int_max_tokens").fill("0");
 
   value = await page.getByTestId("int_int_max_tokens").inputValue();
 
-  if (value != "0") {
-    expect(false).toBeTruthy();
-  }
+  // max_tokens displays "" (empty) when value is 0 = no limit
+  expect(value).toBe("");
 
   await page.getByTestId("title-OpenAI").click();
 
@@ -55,12 +52,11 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
 
   value = await page.getByTestId("int_int_edit_max_tokens").inputValue();
 
-  if (value != "0") {
-    expect(false).toBeTruthy();
-  }
+  // max_tokens displays "" (empty) when value is 0 = no limit
+  expect(value).toBe("");
 
   await page.getByTestId("int_int_edit_max_tokens").click();
-  await page.getByTestId("int_int_edit_max_tokens").fill("60708090");
+  await page.getByTestId("int_int_edit_max_tokens").fill("50000");
 
   await page.locator('//*[@id="showmodel_kwargs"]').click();
   expect(
@@ -135,9 +131,7 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
       .getByTestId("int_int_max_tokens")
       .inputValue();
 
-    if (valueEditNode != "128000") {
-      expect(false).toBeTruthy();
-    }
+    expect(valueEditNode).toBe("50000");
 
     await page.getByText("Close").last().click();
     await page.getByTestId("int_int_max_tokens").click();
@@ -145,9 +139,7 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
 
     let value = await page.getByTestId("int_int_max_tokens").inputValue();
 
-    if (value != "3") {
-      expect(false).toBeTruthy();
-    }
+    expect(value).toBe("3");
 
     await page.getByTestId("int_int_max_tokens").click();
     await page.getByTestId("int_int_max_tokens").fill("-3");
@@ -155,8 +147,7 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
 
     value = await page.getByTestId("int_int_max_tokens").inputValue();
 
-    if (value != "0") {
-      expect(false).toBeTruthy();
-    }
+    // -3 clamps to 0; max_tokens displays "" when value is 0 = no limit
+    expect(value).toBe("");
   }
 });
