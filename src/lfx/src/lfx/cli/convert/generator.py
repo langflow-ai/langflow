@@ -26,6 +26,8 @@ def generate_python_code(flow_info: FlowInfo) -> str:
 
     _generate_header(lines, flow_info)
     _generate_imports(lines, flow_info)
+    _generate_unknown_components_warning(lines, flow_info)
+    _generate_global_variables_section(lines, flow_info)
     _generate_custom_components(lines, flow_info)
     _generate_prompts(lines, flow_info)
     _generate_builder_function(lines, flow_info, flow_name)
@@ -72,6 +74,63 @@ def _generate_imports(lines: list[str], flow_info: FlowInfo) -> None:
             lines.extend(f"    {cls}," for cls in classes)
             lines.append(")")
     lines.append("")
+
+
+def _generate_unknown_components_warning(lines: list[str], flow_info: FlowInfo) -> None:
+    """Generate warning section for components not found in COMPONENT_IMPORTS."""
+    if not flow_info.unknown_components:
+        return
+
+    lines.extend([
+        "",
+        "# " + "=" * 70,
+        "# WARNING: Unknown Components",
+        "# " + "=" * 70,
+        "# The following components are not in the default lfx imports.",
+        "# You need to manually import them or convert them to custom components.",
+        "#",
+    ])
+    lines.extend(f"# TODO: Import or define '{c}'" for c in sorted(flow_info.unknown_components))
+    lines.extend([
+        "#",
+        "# Options:",
+        "#   1. Add the import manually if the component exists elsewhere",
+        "#   2. Convert the node to a custom component in the Langflow UI",
+        "#   3. Add the component mapping to lfx.cli.convert.constants.COMPONENT_IMPORTS",
+        "",
+    ])
+
+
+def _generate_global_variables_section(lines: list[str], flow_info: FlowInfo) -> None:
+    """Generate documentation section for global variables used in the flow."""
+    if not flow_info.global_variables:
+        return
+
+    sorted_vars = sorted(flow_info.global_variables)
+    lines.extend([
+        "",
+        "# " + "=" * 70,
+        "# Global Variables",
+        "# " + "=" * 70,
+        "# This flow uses the following global variables (referenced as {var_name}).",
+        "# These must be provided at runtime via the global_variables parameter.",
+        "#",
+    ])
+    lines.extend(f"# - {var_name}" for var_name in sorted_vars)
+    lines.extend([
+        "#",
+        "# Example usage:",
+        "#   graph = get_graph()",
+        "#   result = await graph.run(",
+        "#       input_value='Hello',",
+        "#       global_variables={",
+    ])
+    lines.extend(f"#           '{var_name}': 'your_value_here'," for var_name in sorted_vars)
+    lines.extend([
+        "#       },",
+        "#   )",
+        "",
+    ])
 
 
 def _generate_custom_components(lines: list[str], flow_info: FlowInfo) -> None:

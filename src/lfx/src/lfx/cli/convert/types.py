@@ -39,3 +39,5 @@ class FlowInfo:
     nodes: list[NodeInfo] = field(default_factory=list)
     edges: list[EdgeInfo] = field(default_factory=list)
     prompts: dict[str, str] = field(default_factory=dict)
+    global_variables: set[str] = field(default_factory=set)  # {var_name} references found
+    unknown_components: set[str] = field(default_factory=set)  # Components not in COMPONENT_IMPORTS

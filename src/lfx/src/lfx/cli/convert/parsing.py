@@ -20,6 +20,9 @@ from .types import EdgeInfo, FlowInfo, NodeInfo
 if TYPE_CHECKING:
     from pathlib import Path
 
+# Pattern to detect global variable references like {var_name} (not {{ escaped }})
+GLOBAL_VAR_PATTERN = re.compile(r"(?<!\{)\{([a-zA-Z_][a-zA-Z0-9_]*)\}(?!\})")
+
 
 def parse_flow_json(flow_path: Path) -> FlowInfo:
     """Parse a flow JSON file into structured data."""
@@ -79,6 +82,10 @@ def _parse_node(
     config = _parse_node_config(template, var_name, flow_info)
     has_custom_code, custom_code = _parse_custom_code(template, node_type)
 
+    # Track unknown components (not in COMPONENT_IMPORTS and not custom code)
+    if not has_custom_code and node_type not in COMPONENT_IMPORTS:
+        flow_info.unknown_components.add(node_type)
+
     return NodeInfo(
         node_id=node_id,
         node_type=node_type,
@@ -88,6 +95,25 @@ def _parse_node(
         has_custom_code=has_custom_code,
         custom_code=custom_code,
     )
+
+
+# Fields that may contain Langflow global variable references
+# These are template/input fields, not Python code
+GLOBAL_VAR_FIELDS: frozenset[str] = frozenset({
+    "input_value",
+    "text",
+    "query",
+    "url",
+    "api_key",
+    "api_endpoint",
+    "base_url",
+    "database_url",
+    "connection_string",
+    "file_path",
+    "collection_name",
+    "table_name",
+    "index_name",
+})
 
 
 def _parse_node_config(
@@ -108,6 +134,11 @@ def _parse_node_config(
         if field_name == "model" and value == []:
             continue
 
+        # Only detect global variables in fields that typically use them
+        # Exclude prompts/code which contain {var} as documentation/examples
+        if field_name in GLOBAL_VAR_FIELDS:
+            _extract_global_variables(value, flow_info)
+
         if _is_long_text_field(field_name, value):
             prompt_name = f"{var_name.upper()}_{field_name.upper()}"
             flow_info.prompts[prompt_name] = value
@@ -116,6 +147,19 @@ def _parse_node_config(
             config[field_name] = value
 
     return config
+
+
+def _extract_global_variables(value: object, flow_info: FlowInfo) -> None:
+    """Extract global variable references from a value (recursively for nested structures)."""
+    if isinstance(value, str):
+        matches = GLOBAL_VAR_PATTERN.findall(value)
+        flow_info.global_variables.update(matches)
+    elif isinstance(value, list):
+        for item in value:
+            _extract_global_variables(item, flow_info)
+    elif isinstance(value, dict):
+        for v in value.values():
+            _extract_global_variables(v, flow_info)
 
 
 def _is_long_text_field(field_name: str, value: object) -> bool:
