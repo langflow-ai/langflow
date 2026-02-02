@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import random
 import warnings
+from collections import OrderedDict
 from collections.abc import Coroutine
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
@@ -49,6 +50,8 @@ class AuthService(AuthServiceBase):
 
     def __init__(self, settings_service: SettingsService):
         self.settings_service = settings_service
+        self._verify_cache: OrderedDict[tuple, bool] = OrderedDict()
+        self._verify_cache_size: int = 1024
         self.set_ready()
 
     @property
@@ -371,7 +374,17 @@ class AuthService(AuthServiceBase):
         return authenticated_user
 
     def verify_password(self, plain_password, hashed_password):
-        return self.settings.auth_settings.pwd_context.verify(plain_password, hashed_password)
+        try:
+            key = (plain_password, hashed_password)
+            if key in self._verify_cache:
+                return self._verify_cache[key]
+            result = self.settings.auth_settings.pwd_context.verify(plain_password, hashed_password)
+            self._verify_cache[key] = result
+            if len(self._verify_cache) > self._verify_cache_size:
+                self._verify_cache.popitem(last=False)
+            return result
+        except TypeError:
+            return self.settings.auth_settings.pwd_context.verify(plain_password, hashed_password)
 
     def get_password_hash(self, password):
         return self.settings.auth_settings.pwd_context.hash(password)
