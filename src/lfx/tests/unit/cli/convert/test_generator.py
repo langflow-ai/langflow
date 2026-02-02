@@ -47,16 +47,12 @@ class TestGeneratePythonCode:
         result = generate_python_code(simple_flow_info)
         assert '"""Flow: Simple Chat' in result
 
-    def test_should_include_description_in_docstring(
-        self, simple_flow_info: FlowInfo
-    ) -> None:
+    def test_should_include_description_in_docstring(self, simple_flow_info: FlowInfo) -> None:
         """Test including flow description in docstring."""
         result = generate_python_code(simple_flow_info)
         assert "A simple chat flow" in result
 
-    def test_should_include_auto_generated_notice(
-        self, simple_flow_info: FlowInfo
-    ) -> None:
+    def test_should_include_auto_generated_notice(self, simple_flow_info: FlowInfo) -> None:
         """Test including auto-generated notice."""
         result = generate_python_code(simple_flow_info)
         assert "Auto-generated from JSON" in result
@@ -77,18 +73,14 @@ class TestGeneratePythonCode:
         result = generate_python_code(simple_flow_info)
         assert "def build_simple_chat_graph(" in result
 
-    def test_should_include_function_parameters(
-        self, simple_flow_info: FlowInfo
-    ) -> None:
+    def test_should_include_function_parameters(self, simple_flow_info: FlowInfo) -> None:
         """Test including function parameters."""
         result = generate_python_code(simple_flow_info)
         assert "provider: str | None = None" in result
         assert "model_name: str | None = None" in result
         assert "api_key: str | None = None" in result
 
-    def test_should_generate_component_instantiation(
-        self, simple_flow_info: FlowInfo
-    ) -> None:
+    def test_should_generate_component_instantiation(self, simple_flow_info: FlowInfo) -> None:
         """Test generating component instantiation code."""
         result = generate_python_code(simple_flow_info)
         assert "chat_input = ChatInput(" in result
@@ -186,17 +178,13 @@ class TestGeneratePythonCode:
             prompts={"PROMPT_TEMPLATE": "You are a helpful assistant."},
         )
 
-    def test_should_generate_prompt_constants(
-        self, flow_with_prompts: FlowInfo
-    ) -> None:
+    def test_should_generate_prompt_constants(self, flow_with_prompts: FlowInfo) -> None:
         """Test generating prompt constant definitions."""
         result = generate_python_code(flow_with_prompts)
         assert "PROMPT_TEMPLATE = " in result
         assert "You are a helpful assistant." in result
 
-    def test_should_reference_prompt_constant_in_config(
-        self, flow_with_prompts: FlowInfo
-    ) -> None:
+    def test_should_reference_prompt_constant_in_config(self, flow_with_prompts: FlowInfo) -> None:
         """Test referencing prompt constant in component config."""
         result = generate_python_code(flow_with_prompts)
         assert "template=PROMPT_TEMPLATE" in result
@@ -262,9 +250,7 @@ class TestGeneratePythonCode:
             edges=[],
         )
 
-    def test_should_include_custom_component_code(
-        self, flow_with_custom_code: FlowInfo
-    ) -> None:
+    def test_should_include_custom_component_code(self, flow_with_custom_code: FlowInfo) -> None:
         """Test including custom component class definitions."""
         result = generate_python_code(flow_with_custom_code)
         assert "# Custom Components" in result

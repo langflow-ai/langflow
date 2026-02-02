@@ -175,9 +175,7 @@ def _generate_components(lines: list[str], nodes: list[NodeInfo]) -> None:
 
         if len(config_parts) == _SINGLE_ITEM:
             lines.append(f'    {node.var_name} = {class_name}(_id="{node.node_id}")')
-        elif len(config_parts) <= _INLINE_MAX_PARTS and all(
-            len(p) < _INLINE_PART_THRESHOLD for p in config_parts
-        ):
+        elif len(config_parts) <= _INLINE_MAX_PARTS and all(len(p) < _INLINE_PART_THRESHOLD for p in config_parts):
             lines.append(f"    {node.var_name} = {class_name}({', '.join(config_parts)})")
         else:
             lines.append(f"    {node.var_name} = {class_name}(")

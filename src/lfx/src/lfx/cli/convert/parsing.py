@@ -108,11 +108,7 @@ def _parse_node_config(
 
 def _is_long_text_field(field_name: str, value: object) -> bool:
     """Check if a field contains long text that should be extracted."""
-    return (
-        field_name in LONG_TEXT_FIELDS
-        and isinstance(value, str)
-        and len(value) > MIN_PROMPT_LENGTH
-    )
+    return field_name in LONG_TEXT_FIELDS and isinstance(value, str) and len(value) > MIN_PROMPT_LENGTH
 
 
 def _parse_custom_code(template: dict, node_type: str) -> tuple[bool, str | None]:
