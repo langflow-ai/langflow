@@ -4,7 +4,7 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse, quote
+from urllib.parse import parse_qsl, quote, urlencode, urlparse, urlunparse
 
 import aiofiles
 import aiofiles.os as aiofiles_os
@@ -26,9 +26,12 @@ from lfx.io import (
 )
 from lfx.schema.data import Data
 from lfx.schema.dotdict import dotdict
-from lfx.utils.component_utils import set_current_fields, set_field_advanced, set_field_display
+from lfx.utils.component_utils import (
+    set_current_fields,
+    set_field_advanced,
+    set_field_display,
+)
 from lfx.utils.ssrf_protection import SSRFProtectionError, validate_url_for_ssrf
-
 
 # -----------------------------------------------------------------------------
 # UI behavior: fields shown/hidden based on "mode"
@@ -65,7 +68,6 @@ class APIRequestComponent(Component):
             advanced=False,
             tool_mode=True,
         ),
-
         # Relative path (optionally with querystring), supports placeholders
         MessageTextInput(
             name="path_input",
@@ -75,7 +77,6 @@ class APIRequestComponent(Component):
             advanced=False,
             tool_mode=True,
         ),
-
         # cURL mode input (hidden by default)
         MultilineInput(
             name="curl_input",
@@ -89,7 +90,6 @@ class APIRequestComponent(Component):
             advanced=True,
             show=False,
         ),
-
         DropdownInput(
             name="method",
             display_name="Method",
@@ -98,7 +98,6 @@ class APIRequestComponent(Component):
             info="The HTTP method to use.",
             real_time_refresh=True,
         ),
-
         TabInput(
             name="mode",
             display_name="Mode",
@@ -107,7 +106,6 @@ class APIRequestComponent(Component):
             info="Enable cURL mode to populate fields from a cURL command.",
             real_time_refresh=True,
         ),
-
         # Query parameters appended to the final URL
         DataInput(
             name="query_params",
@@ -115,45 +113,60 @@ class APIRequestComponent(Component):
             info="Query parameters to append to the URL.",
             advanced=True,
         ),
-
         # Parameters used to replace placeholders in path_input: /x/{id} -> /x/123
         DataInput(
             name="path_params",
             display_name="Path Parameters",
-            info="Path parameters as Data (e.g. {\"command_id\": \"...\"}).",
+            info='Path parameters as Data (e.g. {"command_id": "..."}).',
             advanced=True,
         ),
-
         # Body as a key/value table (POST/PATCH/PUT)
         TableInput(
             name="body",
             display_name="Body",
             info="Body to send with the request as a dictionary (POST, PATCH, PUT).",
             table_schema=[
-                {"name": "key", "display_name": "Key", "type": "str", "description": "Parameter name"},
-                {"name": "value", "display_name": "Value", "description": "Parameter value"},
+                {
+                    "name": "key",
+                    "display_name": "Key",
+                    "type": "str",
+                    "description": "Parameter name",
+                },
+                {
+                    "name": "value",
+                    "display_name": "Value",
+                    "description": "Parameter value",
+                },
             ],
             value=[],
             input_types=["Data"],
             advanced=True,
             real_time_refresh=True,
         ),
-
         # Headers as a key/value table
         TableInput(
             name="headers",
             display_name="Headers",
             info="Headers to send with the request.",
             table_schema=[
-                {"name": "key", "display_name": "Header", "type": "str", "description": "Header name"},
-                {"name": "value", "display_name": "Value", "type": "str", "description": "Header value"},
+                {
+                    "name": "key",
+                    "display_name": "Header",
+                    "type": "str",
+                    "description": "Header name",
+                },
+                {
+                    "name": "value",
+                    "display_name": "Value",
+                    "type": "str",
+                    "description": "Header value",
+                },
             ],
             value=[{"key": "User-Agent", "value": "Langflow/1.0"}],
             advanced=True,
             input_types=["Data"],
             real_time_refresh=True,
         ),
-
         IntInput(
             name="timeout",
             display_name="Timeout",
@@ -161,7 +174,6 @@ class APIRequestComponent(Component):
             info="Timeout in seconds.",
             advanced=True,
         ),
-
         BoolInput(
             name="follow_redirects",
             display_name="Follow Redirects",
@@ -173,7 +185,6 @@ class APIRequestComponent(Component):
             ),
             advanced=True,
         ),
-
         BoolInput(
             name="save_to_file",
             display_name="Save to File",
@@ -181,7 +192,6 @@ class APIRequestComponent(Component):
             info="Save the API response to a temporary file.",
             advanced=True,
         ),
-
         BoolInput(
             name="include_httpx_metadata",
             display_name="Include HTTPx Metadata",
@@ -232,7 +242,9 @@ class APIRequestComponent(Component):
                 if hasattr(item, "data"):
                     unwrapped = item.data
                     # If it's a dict but not key-value format, use it directly
-                    if isinstance(unwrapped, dict) and not self._is_valid_key_value_item(unwrapped):
+                    if isinstance(
+                        unwrapped, dict
+                    ) and not self._is_valid_key_value_item(unwrapped):
                         return unwrapped
                     current_item = unwrapped
 
@@ -271,7 +283,11 @@ class APIRequestComponent(Component):
         if isinstance(headers, dict):
             return headers
         if isinstance(headers, list):
-            return {item["key"]: item["value"] for item in headers if self._is_valid_key_value_item(item)}
+            return {
+                item["key"]: item["value"]
+                for item in headers
+                if self._is_valid_key_value_item(item)
+            }
         return {}
 
     def _headers_to_dict(self, headers: httpx.Headers) -> dict[str, str]:
@@ -284,7 +300,8 @@ class APIRequestComponent(Component):
     def _normalize_url(self, url: str) -> str:
         """Normalize URL by adding https:// if protocol is missing."""
         if not url or not isinstance(url, str):
-            raise ValueError("URL cannot be empty")
+            empty_url_msg = "URL cannot be empty"
+            raise ValueError(empty_url_msg)
         url = url.strip()
         if url.startswith(("http://", "https://")):
             return url
@@ -301,10 +318,10 @@ class APIRequestComponent(Component):
         return urlunparse(url_parts)
 
     def _join_base_and_path(self, base_url: str, path_input: str) -> str:
-        """
-        Join base URL and a (possibly relative) path_input.
+        """Join base URL and a (possibly relative) path_input.
+
         - Keeps base scheme/netloc
-        - Preserves/merges query if path_input contains '?'
+        - Preserves/merges query if path_input contains "?"
         """
         base_url = self._normalize_url(base_url)
         if not path_input:
@@ -329,8 +346,8 @@ class APIRequestComponent(Component):
         return urlunparse(final)
 
     def _apply_path_template(self, api_path: str, params: dict[str, Any], *, strict: bool = True) -> str:
-        """
-        Replace placeholders like {case_id} in api_path using params.
+        """Replace placeholders like {case_id} in api_path using params.
+
         - strict=True: raises if any placeholder is missing/empty in params.
         Values are URL-encoded using quote(..., safe="") to avoid path injection.
         """
@@ -341,9 +358,12 @@ class APIRequestComponent(Component):
         if not placeholders:
             return api_path
 
-        missing = [p for p in placeholders if p not in params or params[p] in (None, "")]
+        missing = [
+            p for p in placeholders if p not in params or params[p] in (None, "")
+        ]
         if missing and strict:
-            raise ValueError(f"Missing path params for placeholders: {missing}")
+            error_msg = f"Missing path params for placeholders: {missing}"
+            raise ValueError(error_msg)
 
         def repl(match: re.Match) -> str:
             key = match.group(1)
@@ -358,8 +378,8 @@ class APIRequestComponent(Component):
     # cURL parsing (optional convenience)
     # -------------------------------------------------------------------------
     def parse_curl(self, curl: str, build_config: dotdict) -> dotdict:
-        """
-        Parse a cURL command and update the component configuration.
+        """Parse a cURL command and update the component configuration.
+
         Additionally, split the parsed URL into:
         - url_input: scheme://netloc
         - path_input: path + ?query
@@ -371,7 +391,9 @@ class APIRequestComponent(Component):
             u = urlparse(raw_url)
 
             # Base = scheme://netloc
-            base_only = urlunparse(u._replace(path="", params="", query="", fragment=""))
+            base_only = urlunparse(
+                u._replace(path="", params="", query="", fragment="")
+            )
 
             # Path = /path + ?query
             path_only = u.path or ""
@@ -394,19 +416,30 @@ class APIRequestComponent(Component):
                     json_data = json.loads(parsed.data)
                     if isinstance(json_data, dict):
                         body_list = [
-                            {"key": k, "value": json.dumps(v) if isinstance(v, (dict, list)) else str(v)}
+                            {
+                                "key": k,
+                                "value": (
+                                    json.dumps(v)
+                                    if isinstance(v, (dict, list))
+                                    else str(v)
+                                ),
+                            }
                             for k, v in json_data.items()
                         ]
                         build_config["body"]["value"] = body_list
                     else:
-                        build_config["body"]["value"] = [{"key": "data", "value": json.dumps(json_data)}]
+                        build_config["body"]["value"] = [
+                            {"key": "data", "value": json.dumps(json_data)}
+                        ]
                 except json.JSONDecodeError:
-                    build_config["body"]["value"] = [{"key": "data", "value": parsed.data}]
+                    build_config["body"]["value"] = [
+                        {"key": "data", "value": parsed.data}
+                    ]
 
         except Exception as exc:
-            msg = f"Error parsing curl: {exc}"
-            self.log(msg)
-            raise ValueError(msg) from exc
+            error_msg = f"Error parsing curl: {exc}"
+            self.log(error_msg)
+            raise ValueError(error_msg) from exc
 
         return build_config
 
@@ -428,7 +461,8 @@ class APIRequestComponent(Component):
     ) -> Data:
         method = method.upper()
         if method not in {"GET", "POST", "PATCH", "PUT", "DELETE"}:
-            raise ValueError(f"Unsupported method: {method}")
+            unsupported_method_msg = f"Unsupported method: {method}"
+            raise ValueError(unsupported_method_msg)
 
         processed_body = self._process_body(body)
         redirection_history: list[dict[str, Any]] = []
@@ -445,11 +479,16 @@ class APIRequestComponent(Component):
             response = await client.request(**request_params)
 
             redirection_history = [
-                {"url": redirect.headers.get("Location", str(redirect.url)), "status_code": redirect.status_code}
+                {
+                    "url": redirect.headers.get("Location", str(redirect.url)),
+                    "status_code": redirect.status_code,
+                }
                 for redirect in response.history
             ]
 
-            is_binary, file_path = await self._response_info(response, with_file_path=save_to_file)
+            is_binary, file_path = await self._response_info(
+                response, with_file_path=save_to_file
+            )
             response_headers = self._headers_to_dict(response.headers)
 
             metadata: dict[str, Any] = {
@@ -472,7 +511,9 @@ class APIRequestComponent(Component):
                             await f.write(response.content)
                             await f.flush()
                     else:
-                        async with aiofiles.open(file_path, "w", encoding=encoding) as f:
+                        async with aiofiles.open(
+                            file_path, "w", encoding=encoding
+                        ) as f:
                             await f.write(response.text)
                             await f.flush()
                     metadata["file_path"] = str(file_path)
@@ -505,7 +546,11 @@ class APIRequestComponent(Component):
                     "request_headers": headers,
                     "status_code": 500,
                     "error": str(exc),
-                    **({"redirection_history": redirection_history} if redirection_history else {}),
+                    **(
+                        {"redirection_history": redirection_history}
+                        if redirection_history
+                        else {}
+                    ),
                 }
             )
 
@@ -513,9 +558,9 @@ class APIRequestComponent(Component):
     # Main entrypoint
     # -------------------------------------------------------------------------
     async def make_api_request(self) -> Data:
-        """
-        Build final URL (base + templated path + query params),
-        validate, apply SSRF protection, then execute the request.
+        """Build final URL (base + templated path + query params).
+
+        Validate, apply SSRF protection, then execute the request.
         """
         method = self.method
 
@@ -524,10 +569,7 @@ class APIRequestComponent(Component):
         path_input = self.path_input.strip() if isinstance(self.path_input, str) else ""
 
         # Replace placeholders in path using path_params, if present
-        if self.path_params:
-            path_params_dict = self.path_params.data
-        else:
-            path_params_dict = {}        
+        path_params_dict = self.path_params.data if self.path_params else {}
         path_input = self._apply_path_template(path_input, path_params_dict, strict=True)
 
         # Join base + path (and merge query in path_input, if present)
@@ -535,13 +577,15 @@ class APIRequestComponent(Component):
 
         # Validate URL syntax
         if not validators.url(url):
-            raise ValueError(f"Invalid URL provided: {url}")
+            invalid_url_msg = f"Invalid URL provided: {url}"
+            raise ValueError(invalid_url_msg)
 
         # SSRF protection (warn_only=True: logs warnings but doesn't block by default)
         try:
             validate_url_for_ssrf(url, warn_only=True)
         except SSRFProtectionError as e:
-            raise ValueError(f"SSRF Protection: {e}") from e
+            ssrf_error_msg = f"SSRF Protection: {e}"
+            raise ValueError(ssrf_error_msg) from e
 
         # Query params appended afterwards (in addition to any query already in path_input)
         if isinstance(self.query_params, str):
@@ -587,8 +631,8 @@ class APIRequestComponent(Component):
     # Dynamic UI updates (show/hide fields based on Mode)
     # -------------------------------------------------------------------------
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
-        """
-        Update the build config based on the selected mode.
+        """Update the build config based on the selected mode.
+
         - When switching to cURL, show curl_input and optionally parse it.
         - When switching to URL, hide curl_input.
         - set_current_fields controls which fields are shown/advanced.
@@ -602,7 +646,9 @@ class APIRequestComponent(Component):
         if field_value == "cURL":
             set_field_display(build_config, "curl_input", value=True)
             if build_config["curl_input"]["value"]:
-                build_config = self.parse_curl(build_config["curl_input"]["value"], build_config)
+                build_config = self.parse_curl(
+                    build_config["curl_input"]["value"], build_config
+                )
         else:
             set_field_display(build_config, "curl_input", value=False)
 
@@ -618,12 +664,15 @@ class APIRequestComponent(Component):
     # -------------------------------------------------------------------------
     # Response helper: decide binary/text and optionally file name/path
     # -------------------------------------------------------------------------
-    async def _response_info(self, response: httpx.Response, *, with_file_path: bool = False) -> tuple[bool, Path | None]:
-        """
-        Determine whether response is binary and compute a temp file path if requested.
-        """
+    async def _response_info(
+        self, response: httpx.Response, *, with_file_path: bool = False
+    ) -> tuple[bool, Path | None]:
+        """Determine whether response is binary and compute a temp file path if requested."""
         content_type = response.headers.get("Content-Type", "")
-        is_binary = "application/octet-stream" in content_type or "application/binary" in content_type
+        is_binary = (
+            "application/octet-stream" in content_type
+            or "application/binary" in content_type
+        )
 
         if not with_file_path:
             return is_binary, None
@@ -640,7 +689,9 @@ class APIRequestComponent(Component):
 
         # Infer file name if missing
         if not filename:
-            url_path = urlparse(str(response.request.url) if response.request else "").path
+            url_path = urlparse(
+                str(response.request.url) if response.request else ""
+            ).path
             base_name = Path(url_path).name or "response"
 
             content_type_to_extension = {
@@ -650,7 +701,9 @@ class APIRequestComponent(Component):
                 "image/png": ".png",
                 "application/octet-stream": ".bin",
             }
-            extension = content_type_to_extension.get(content_type, ".bin" if is_binary else ".txt")
+            extension = content_type_to_extension.get(
+                content_type, ".bin" if is_binary else ".txt"
+            )
             filename = f"{base_name}{extension}"
 
         file_path = component_temp_dir / filename

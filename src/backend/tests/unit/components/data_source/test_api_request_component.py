@@ -36,6 +36,8 @@ class TestAPIRequestComponent(ComponentTestBaseWithoutClient):
             "mode": "URL",
             "curl_input": "",
             "query_params": {},
+            "path_input": "",
+            "path_params": None,
         }
 
     @pytest.fixture
@@ -57,6 +59,7 @@ class TestAPIRequestComponent(ComponentTestBaseWithoutClient):
             {
                 "method": {"value": ""},
                 "url_input": {"value": ""},
+                "path_input": {"value": ""},
                 "headers": {"value": []},
                 "body": {"value": []},
             }
@@ -64,9 +67,98 @@ class TestAPIRequestComponent(ComponentTestBaseWithoutClient):
         new_build_config = component.parse_curl(curl_cmd, build_config.copy())
 
         assert new_build_config["method"]["value"] == "GET"
-        assert new_build_config["url_input"]["value"] == "https://example.com/api/test"
+        assert new_build_config["url_input"]["value"] == "https://example.com"
+        assert new_build_config["path_input"]["value"] == "/api/test"
         assert new_build_config["headers"]["value"] == [{"key": "Content-Type", "value": "application/json"}]
         assert new_build_config["body"]["value"] == [{"key": "key", "value": "value"}]
+
+    async def test_parse_curl_with_query_params(self, component):
+        # Test curl parsing with query parameters
+        curl_cmd = "curl https://example.com/api/test?foo=bar&baz=qux"
+        build_config = dotdict(
+            {
+                "method": {"value": ""},
+                "url_input": {"value": ""},
+                "path_input": {"value": ""},
+                "headers": {"value": []},
+                "body": {"value": []},
+            }
+        )
+        new_build_config = component.parse_curl(curl_cmd, build_config.copy())
+
+        assert new_build_config["url_input"]["value"] == "https://example.com"
+        assert new_build_config["path_input"]["value"] == "/api/test?foo=bar&baz=qux"
+
+    async def test_apply_path_template(self, component):
+        # Test path parameter substitution
+        path = "/api/cases/{case_id}/commands/{command_id}"
+        params = {"case_id": "123", "command_id": "456"}
+        result = component._apply_path_template(path, params)
+        assert result == "/api/cases/123/commands/456"
+
+    async def test_apply_path_template_url_encoding(self, component):
+        # Test that path parameters are URL-encoded
+        path = "/api/users/{user_id}"
+        params = {"user_id": "john/doe"}
+        result = component._apply_path_template(path, params)
+        assert result == "/api/users/john%2Fdoe"
+
+    async def test_apply_path_template_missing_param(self, component):
+        # Test missing path parameter raises error
+        path = "/api/cases/{case_id}"
+        params = {}
+        with pytest.raises(ValueError, match="Missing path params"):
+            component._apply_path_template(path, params, strict=True)
+
+    async def test_apply_path_template_no_placeholders(self, component):
+        # Test path without placeholders
+        path = "/api/test"
+        params = {"unused": "value"}
+        result = component._apply_path_template(path, params)
+        assert result == "/api/test"
+
+    async def test_join_base_and_path(self, component):
+        # Test URL composition
+        base = "https://example.com"
+        path = "/api/test"
+        result = component._join_base_and_path(base, path)
+        assert result == "https://example.com/api/test"
+
+    async def test_join_base_and_path_with_trailing_slash(self, component):
+        # Test URL composition with trailing slash
+        base = "https://example.com/"
+        path = "/api/test"
+        result = component._join_base_and_path(base, path)
+        assert result == "https://example.com/api/test"
+
+    async def test_join_base_and_path_with_query(self, component):
+        # Test URL composition with query parameters
+        base = "https://example.com?base=param"
+        path = "/api/test?path=param"
+        result = component._join_base_and_path(base, path)
+        assert "base=param" in result
+        assert "path=param" in result
+        assert "/api/test" in result
+
+    async def test_join_base_and_path_empty_path(self, component):
+        # Test URL composition with empty path
+        base = "https://example.com"
+        path = ""
+        result = component._join_base_and_path(base, path)
+        assert result == "https://example.com"
+
+    @respx.mock
+    async def test_make_api_request_with_path_params(self, component):
+        # Test full integration with path parameters
+        component.url_input = "https://example.com"
+        component.path_input = "/api/cases/{case_id}"
+        component.path_params = Data(data={"case_id": "123"})
+
+        respx.get("https://example.com/api/cases/123").mock(return_value=Response(200, json={"id": "123"}))
+
+        result = await component.make_api_request()
+        assert isinstance(result, Data)
+        assert result.data["source"] == "https://example.com/api/cases/123"
 
     @respx.mock
     async def test_make_request_success(self, component):
@@ -278,6 +370,8 @@ class TestAPIRequestComponent(ComponentTestBaseWithoutClient):
                 "body": {"value": [], "advanced": True},
                 "mode": {"value": "URL", "advanced": False},
                 "curl_input": {"value": "curl -X GET https://example.com/api/test", "advanced": True},
+                "path_input": {"value": "", "advanced": False},
+                "path_params": {"value": None, "advanced": True},
                 "timeout": {"value": 30, "advanced": True},
                 "follow_redirects": {"value": True, "advanced": True},
                 "save_to_file": {"value": False, "advanced": True},
@@ -366,6 +460,8 @@ class TestAPIRequestSSRFProtection:
             "mode": "URL",
             "curl_input": "",
             "query_params": {},
+            "path_input": "",
+            "path_params": None,
         }
 
     @pytest.fixture
