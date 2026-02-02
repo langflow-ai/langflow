@@ -138,7 +138,6 @@ const RenderInputParameters = ({
       // Check if this field should be visually displayed
       const shouldDisplay = visuallyShownFields.includes(templateField);
 
-
       // For model type fields, provide default input_types if not set
       const isModelType = template.type === "model";
       const effectiveInputTypes =
