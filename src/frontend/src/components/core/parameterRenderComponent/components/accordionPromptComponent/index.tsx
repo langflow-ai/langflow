@@ -137,7 +137,11 @@ export default function AccordionPromptComponent({
         selection.removeAllRanges();
         selection.addRange(newRange);
       } catch (e) {
-        // Ignore range errors
+        if (e instanceof DOMException && e.name === "IndexSizeError") {
+          // Ignore range errors
+          return;
+        }
+        console.error("An unexpected error occurred while setting the cursor position:", e);
       }
     };
 
