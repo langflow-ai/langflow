@@ -313,6 +313,7 @@ async def log_vertex_build(
     params: Any,
     data: dict | Any,
     artifacts: dict | None = None,
+    job_id: str | None = None,
 ) -> None:
     """Asynchronously logs a vertex build record if vertex build storage is enabled.
 
@@ -362,6 +363,7 @@ async def log_vertex_build(
                 params=str(params) if params else None,
                 data=data_dict,
                 artifacts=artifacts_dict,
+                job_id=job_id,
             )
 
             db_service = langflow_get_db_service()

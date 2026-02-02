@@ -1802,6 +1802,7 @@ class Graph:
             params=params,
             data=result_data_response,
             artifacts={},
+            job_id=self._run_id if self._run_id else None,
         )
 
     async def _execute_tasks(
@@ -1844,6 +1845,7 @@ class Graph:
                         params=result.params,
                         data=result.result_dict,
                         artifacts=result.artifacts,
+                        job_id=self._run_id if self._run_id else None,
                     )
                     # Store for SSE emission later
                     build_results[result.vertex.id] = result
