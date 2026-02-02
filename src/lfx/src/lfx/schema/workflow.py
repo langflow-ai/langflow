@@ -159,6 +159,7 @@ class WorkflowStopResponse(BaseModel):
 
 
 # OpenAPI response definitions
+# Use schema references instead of inline schemas to ensure they appear in components.schemas
 WORKFLOW_EXECUTION_RESPONSES = {
     200: {
         "description": "Workflow execution response",
@@ -166,8 +167,8 @@ WORKFLOW_EXECUTION_RESPONSES = {
             "application/json": {
                 "schema": {
                     "oneOf": [
-                        WorkflowExecutionResponse.model_json_schema(),
-                        WorkflowJobResponse.model_json_schema(),
+                        {"$ref": "#/components/schemas/WorkflowExecutionResponse"},
+                        {"$ref": "#/components/schemas/WorkflowJobResponse"},
                     ],
                     "discriminator": {
                         "propertyName": "object",
@@ -179,7 +180,7 @@ WORKFLOW_EXECUTION_RESPONSES = {
                 }
             },
             "text/event-stream": {
-                "schema": WorkflowStreamEvent.model_json_schema(),
+                "schema": {"$ref": "#/components/schemas/WorkflowStreamEvent"},
                 "description": "Server-sent events for streaming execution",
             },
         },
@@ -190,9 +191,9 @@ WORKFLOW_STATUS_RESPONSES = {
     200: {
         "description": "Workflow status response",
         "content": {
-            "application/json": {"schema": WorkflowExecutionResponse.model_json_schema()},
+            "application/json": {"schema": {"$ref": "#/components/schemas/WorkflowExecutionResponse"}},
             "text/event-stream": {
-                "schema": WorkflowStreamEvent.model_json_schema(),
+                "schema": {"$ref": "#/components/schemas/WorkflowStreamEvent"},
                 "description": "Server-sent events for streaming status",
             },
         },

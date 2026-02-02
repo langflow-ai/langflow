@@ -99,7 +99,7 @@ router = APIRouter(prefix="/workflows", tags=["Workflow"], dependencies=[Depends
 
 @router.post(
     "",
-    response_model=None,
+    response_model=WorkflowExecutionResponse | WorkflowJobResponse,
     response_model_exclude_none=True,
     responses=WORKFLOW_EXECUTION_RESPONSES,
     summary="Execute Workflow",
@@ -491,7 +491,7 @@ async def execute_workflow_background(
 
 @router.get(
     "",
-    response_model=None,
+    response_model=WorkflowExecutionResponse | WorkflowJobResponse,
     response_model_exclude_none=True,
     responses=WORKFLOW_STATUS_RESPONSES,
     summary="Get Workflow Status",

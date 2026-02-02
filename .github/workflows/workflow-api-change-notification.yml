@@ -1,0 +1,132 @@
+name: Workflow API Change Notification
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/backend/base/langflow/api/v2/workflow.py'
+      - 'src/lfx/src/lfx/schema/workflow.py'
+
+permissions:
+  contents: read
+
+jobs:
+  notify-workflow-api-changes:
+    name: Notify Workflow API Changes
+    runs-on: ubuntu-latest
+    if: github.repository == 'langflow-ai/langflow'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
+
+      - name: Get changed files
+        id: changed-files
+        run: |
+          CHANGED_FILES=$(git diff --name-only HEAD^ HEAD | grep -E '(workflow\.py)' || echo "")
+          echo "changed_files<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGED_FILES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Send Slack notification
+        if: steps.changed-files.outputs.changed_files != ''
+        run: |
+          COMMIT_SHA="${{ github.sha }}"
+          COMMIT_URL="https://github.com/${{ github.repository }}/commit/${COMMIT_SHA}"
+          COMMIT_MESSAGE=$(git log -1 --pretty=format:'%s')
+          COMMIT_AUTHOR=$(git log -1 --pretty=format:'%an')
+          
+          CHANGED_FILES="${{ steps.changed-files.outputs.changed_files }}"
+          
+          # Format changed files for Slack
+          FILES_LIST=$(echo "$CHANGED_FILES" | sed 's/^/• /' | tr '\n' '\\n')
+          
+          curl -X POST -H 'Content-type: application/json' --data "{
+            \"text\": \"⚠️ Workflow API Updated\",
+            \"blocks\": [
+              {
+                \"type\": \"header\",
+                \"text\": {
+                  \"type\": \"plain_text\",
+                  \"text\": \"⚠️ Workflow API Updated\"
+                }
+              },
+              {
+                \"type\": \"section\",
+                \"text\": {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*Workflow API files have been modified. Please update the SDK accordingly.*\"
+                }
+              },
+              {
+                \"type\": \"section\",
+                \"fields\": [
+                  {
+                    \"type\": \"mrkdwn\",
+                    \"text\": \"*Repository:*\\n<https://github.com/${{ github.repository }}|${{ github.repository }}>\"
+                  },
+                  {
+                    \"type\": \"mrkdwn\",
+                    \"text\": \"*Branch:*\\n${{ github.ref_name }}\"
+                  },
+                  {
+                    \"type\": \"mrkdwn\",
+                    \"text\": \"*Commit:*\\n<${COMMIT_URL}|${COMMIT_SHA:0:7}>\"
+                  },
+                  {
+                    \"type\": \"mrkdwn\",
+                    \"text\": \"*Author:*\\n${COMMIT_AUTHOR}\"
+                  }
+                ]
+              },
+              {
+                \"type\": \"section\",
+                \"text\": {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*Commit Message:*\\n${COMMIT_MESSAGE}\"
+                }
+              },
+              {
+                \"type\": \"section\",
+                \"text\": {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*Changed Files:*\\n${FILES_LIST}\"
+                }
+              },
+              {
+                \"type\": \"divider\"
+              },
+              {
+                \"type\": \"section\",
+                \"text\": {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"📦 *Action Required:* Please make corresponding changes in the SDK\"
+                }
+              },
+              {
+                \"type\": \"actions\",
+                \"elements\": [
+                  {
+                    \"type\": \"button\",
+                    \"text\": {
+                      \"type\": \"plain_text\",
+                      \"text\": \"View SDK Repository\"
+                    },
+                    \"url\": \"https://github.com/langflow-ai/sdk\",
+                    \"style\": \"primary\"
+                  },
+                  {
+                    \"type\": \"button\",
+                    \"text\": {
+                      \"type\": \"plain_text\",
+                      \"text\": \"View Commit\"
+                    },
+                    \"url\": \"${COMMIT_URL}\"
+                  }
+                ]
+              }
+            ]
+          }" ${{ secrets.LANGFLOW_ENG_SLACK_WEBHOOK_URL }}
