@@ -107,7 +107,9 @@ export const mutateTemplate = async (
                 // OAuth failed
                 setErrorData({
                   title: "OAuth Authentication Failed",
-                  list: [result.error || "Failed to authenticate with MCP server"],
+                  list: [
+                    result.error || "Failed to authenticate with MCP server",
+                  ],
                 });
               }
               return;
