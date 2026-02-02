@@ -211,9 +211,7 @@ async def initiate_oauth_flow(
                         json={"jsonrpc": "2.0", "method": "initialize", "id": 1},
                     )
                     # If we get here, the OAuth flow completed successfully
-                    await logger.ainfo(
-                        f"OAuth flow {flow_id} completed successfully, status: {response.status_code}"
-                    )
+                    await logger.ainfo(f"OAuth flow {flow_id} completed successfully, status: {response.status_code}")
 
                 # Mark flow as complete
                 flow_data = await state_manager.get_flow_by_id(flow_id)
@@ -380,7 +378,9 @@ async def get_oauth_status(
         error_message=result.get("error_message"),
         server_url=result.get("server_url"),
     )
-    await logger.adebug(f"OAuth status for {flow_id}: {response.status}, auth_url={'present' if response.auth_url else 'none'}")
+    await logger.adebug(
+        f"OAuth status for {flow_id}: {response.status}, auth_url={'present' if response.auth_url else 'none'}"
+    )
     return response
 
 
