@@ -141,7 +141,10 @@ export default function AccordionPromptComponent({
           // Ignore range errors
           return;
         }
-        console.error("An unexpected error occurred while setting the cursor position:", e);
+        console.error(
+          "An unexpected error occurred while setting the cursor position:",
+          e,
+        );
       }
     };
 
