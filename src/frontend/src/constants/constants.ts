@@ -898,6 +898,7 @@ export const NOTE_NODE_MIN_WIDTH = 280;
 export const NOTE_NODE_MIN_HEIGHT = 140;
 export const DEFAULT_NOTE_SIZE = 324;
 export const CHAT_INPUT_MIN_HEIGHT = 16;
+export const CHAT_INPUT_MAX_HEIGHT = 200;
 
 export const COLOR_OPTIONS = {
   amber: "hsl(var(--note-amber))",

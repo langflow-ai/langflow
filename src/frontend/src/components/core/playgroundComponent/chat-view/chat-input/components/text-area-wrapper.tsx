@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useRef } from "react";
-import { CHAT_INPUT_MIN_HEIGHT } from "@/constants/constants";
+import {
+  CHAT_INPUT_MIN_HEIGHT,
+  CHAT_INPUT_MAX_HEIGHT,
+} from "@/constants/constants";
 import { useUtilityStore } from "@/stores/utilityStore";
 import type { FilePreviewType } from "@/types/components";
 import { Textarea } from "../../../../../../components/ui/textarea";
@@ -17,7 +20,7 @@ interface TextAreaWrapperProps {
   isDragging: boolean;
 }
 
-//Resizes a textarea element to fit its content, with a minimum height when empty.
+//Resizes a textarea element to fit its content, with a minimum height when empty and a maximum height constraint.
 const resizeTextarea = (
   textarea: HTMLTextAreaElement,
   value: string,
@@ -33,6 +36,7 @@ const resizeTextarea = (
   // If empty, set minimal height (one line)
   if (!value || value.trim() === "") {
     textarea.style.height = `${CHAT_INPUT_MIN_HEIGHT}px`;
+    textarea.style.overflowY = "hidden";
     previousScrollHeightRef.current = CHAT_INPUT_MIN_HEIGHT;
   } else {
     // Only resize when:
@@ -43,19 +47,22 @@ const resizeTextarea = (
     const heightDifference = scrollHeight - previousScrollHeight;
 
     if (Math.abs(heightDifference) > threshold) {
-      // Content wrapped/unwrapped significantly - resize to fit
-      textarea.style.height = `${scrollHeight}px`;
-      previousScrollHeightRef.current = scrollHeight;
+      // Content wrapped/unwrapped significantly - resize to fit, but respect max height
+      const newHeight = Math.min(scrollHeight, CHAT_INPUT_MAX_HEIGHT);
+      textarea.style.height = `${newHeight}px`;
+      previousScrollHeightRef.current = newHeight;
+      
+      // Enable scroll if content exceeds max height
+      textarea.style.overflowY = scrollHeight > CHAT_INPUT_MAX_HEIGHT ? "auto" : "hidden";
     } else {
       // No significant change - restore previous height immediately to prevent any visual growth
       // Don't update the ref so we maintain the stable height
       textarea.style.height = `${previousScrollHeight}px`;
+      
+      // Check if we need scroll based on current height
+      textarea.style.overflowY = previousScrollHeight >= CHAT_INPUT_MAX_HEIGHT ? "auto" : "hidden";
     }
   }
-
-  // Ensure no overflow and no max-height constraint
-  textarea.style.overflowY = "hidden";
-  textarea.style.maxHeight = "none";
 };
 
 const TextAreaWrapper = ({
@@ -85,7 +92,7 @@ const TextAreaWrapper = ({
   const fileClass = files.length > 0 ? "!rounded-t-none border-t-0" : "";
 
   const additionalClassNames =
-    "form-input block w-full border-0 custom-scroll focus:border-ring rounded-none shadow-none focus:ring-0 p-0 sm:text-sm !bg-transparent resize-none overflow-hidden !max-h-none";
+    "form-input block w-full border-0 custom-scroll focus:border-ring rounded-none shadow-none focus:ring-0 p-0 sm:text-sm !bg-transparent resize-none";
 
   // Auto-focus when not building and input is enabled
   useEffect(() => {
