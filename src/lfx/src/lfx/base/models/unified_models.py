@@ -67,6 +67,8 @@ def get_model_provider_metadata():
             "model_class": "ChatOpenAI",
             "api_key_param": "api_key",
             "model_name_param": "model",
+            "api_docs_url": "https://platform.openai.com/docs/overview",
+            "max_tokens_field_name": "max_tokens",
         },
         "Anthropic": {
             "icon": "Anthropic",
@@ -74,6 +76,8 @@ def get_model_provider_metadata():
             "model_class": "ChatAnthropic",
             "api_key_param": "api_key",
             "model_name_param": "model",
+            "api_docs_url": "https://console.anthropic.com/docs",
+            "max_tokens_field_name": "max_tokens",
         },
         "Google Generative AI": {
             "icon": "GoogleGenerativeAI",
@@ -81,6 +85,8 @@ def get_model_provider_metadata():
             "model_class": "ChatGoogleGenerativeAIFixed",
             "api_key_param": "google_api_key",
             "model_name_param": "model",
+            "api_docs_url": "https://aistudio.google.com/app/apikey",
+            "max_tokens_field_name": "max_output_tokens",
         },
         "Ollama": {
             "icon": "Ollama",
@@ -89,6 +95,8 @@ def get_model_provider_metadata():
             "api_key_param": "base_url",
             "model_name_param": "model",
             "base_url_param": "base_url",
+            "api_docs_url": "https://ollama.com/",
+            "max_tokens_field_name": "max_tokens",
         },
         "IBM WatsonX": {
             "icon": "WatsonxAI",
@@ -98,6 +106,8 @@ def get_model_provider_metadata():
             "model_name_param": "model_id",
             "url_param": "url",
             "project_id_param": "project_id",
+            "api_docs_url": "https://www.ibm.com/products/watsonx",
+            "max_tokens_field_name": "max_tokens",
         },
     }
 
@@ -890,6 +900,11 @@ def normalize_model_names_to_dicts(model_names: list[str] | str) -> list[dict[st
                 "api_key_param": api_key_param_mapping.get(provider, "api_key"),
             }
 
+            # Add max_tokens_field_name from provider metadata
+            provider_meta = model_provider_metadata.get(provider, {})
+            if "max_tokens_field_name" in provider_meta:
+                runtime_metadata["max_tokens_field_name"] = provider_meta["max_tokens_field_name"]
+
             # Add reasoning models list for OpenAI
             if provider == "OpenAI" and base_metadata.get("reasoning"):
                 runtime_metadata["reasoning_models"] = [model_name]
@@ -944,6 +959,7 @@ def get_llm(
     temperature=None,
     *,
     stream=False,
+    max_tokens=None,
     watsonx_url=None,
     watsonx_project_id=None,
     ollama_base_url=None,
@@ -1009,6 +1025,16 @@ def get_llm(
 
     if temperature is not None:
         kwargs["temperature"] = temperature
+
+    # Add max_tokens with provider-specific field name (only when a valid integer >= 1)
+    if max_tokens is not None and max_tokens != "":
+        try:
+            max_tokens_int = int(max_tokens)
+            if max_tokens_int >= 1:
+                max_tokens_param = metadata.get("max_tokens_field_name", "max_tokens")
+                kwargs[max_tokens_param] = max_tokens_int
+        except (TypeError, ValueError):
+            pass  # Skip invalid max_tokens (e.g. empty string from form input)
 
     # Add provider-specific parameters
     if provider == "IBM WatsonX":
