@@ -5,6 +5,12 @@ import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import Loading from "@/components/ui/loading";
 import { useDeleteKnowledgeBase } from "@/controllers/API/queries/knowledge-bases/use-delete-knowledge-base";
@@ -183,12 +189,22 @@ const KnowledgeBasesTab = ({
             onChange={(event) => setQuickFilterText(event.target.value)}
           />
         </div>
-        <Button
-          className="flex items-center gap-2 font-semibold"
-          onClick={handleCreateKnowledge}
-        >
-          <ForwardedIconComponent name="Plus" /> Create knowledge
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button className="flex items-center gap-2 font-semibold">
+              Add Knowledge
+              <ForwardedIconComponent name="ChevronDown" className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={handleCreateKnowledge}>
+              File
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleCreateKnowledge}>
+              Folder
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <div className="flex h-full flex-col pt-4">

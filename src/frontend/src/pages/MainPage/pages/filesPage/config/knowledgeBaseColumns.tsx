@@ -11,33 +11,14 @@ export const createKnowledgeBaseColumns = (): ColDef[] => {
 
   return [
     {
-      headerName: "Name",
+      headerName: "Source",
       field: "name",
       flex: 2,
-      sortable: false,
+      sortable: true,
       headerCheckboxSelection: true,
       checkboxSelection: true,
       editable: false,
-      filter: "agTextColumnFilter",
       cellClass: baseCellClass,
-      cellRenderer: (params) => (
-        <div className="flex items-center gap-3 font-medium">
-          <div className="flex flex-col">
-            <div className="text-sm font-medium">{params.value}</div>
-          </div>
-        </div>
-      ),
-    },
-    {
-      headerName: "Embedding Model",
-      field: "embedding_provider",
-      flex: 2,
-      sortable: false,
-      filter: "agTextColumnFilter",
-      editable: false,
-      cellClass: baseCellClass,
-      tooltipValueGetter: (params) => params.data.embedding_model || "Unknown",
-      valueGetter: (params) => params.data.embedding_model || "Unknown",
     },
     {
       headerName: "Size",
@@ -49,22 +30,22 @@ export const createKnowledgeBaseColumns = (): ColDef[] => {
       cellClass: baseCellClass,
     },
     {
-      headerName: "Words",
-      field: "words",
+      headerName: "Type",
+      field: "type",
       flex: 1,
       sortable: false,
       editable: false,
       cellClass: baseCellClass,
-      valueFormatter: (params) => formatNumber(params.value),
+      valueGetter: (params) => params.data.type || "—",
     },
     {
-      headerName: "Characters",
-      field: "characters",
+      headerName: "Owner",
+      field: "owner",
       flex: 1,
       sortable: false,
       editable: false,
       cellClass: baseCellClass,
-      valueFormatter: (params) => formatNumber(params.value),
+      valueGetter: (params) => params.data.owner || "—",
     },
     {
       headerName: "Chunks",
@@ -76,13 +57,22 @@ export const createKnowledgeBaseColumns = (): ColDef[] => {
       valueFormatter: (params) => formatNumber(params.value),
     },
     {
-      headerName: "Avg Chunks",
+      headerName: "Avg Chunk Size",
       field: "avg_chunk_size",
       flex: 1,
       sortable: false,
       editable: false,
       cellClass: baseCellClass,
       valueFormatter: (params) => formatAverageChunkSize(params.value),
+    },
+    {
+      headerName: "Status",
+      field: "status",
+      flex: 1,
+      sortable: false,
+      editable: false,
+      cellClass: baseCellClass,
+      valueGetter: (params) => params.data.status || "—",
     },
   ];
 };
