@@ -34,6 +34,10 @@ import { track } from "@/customization/utils/analytics";
 import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { useAddComponent } from "@/hooks/use-add-component";
+import {
+  getPastedFlowFile,
+  isEditablePasteTarget,
+} from "@/utils/pasteFlowImport";
 import { nodeColorsName } from "@/utils/styleUtils";
 import { isSupportedNodeTypes } from "@/utils/utils";
 import GenericNode from "../../../../CustomNodes/GenericNode";
@@ -212,6 +216,60 @@ export default function Page({
     };
   }, [lastCopiedSelection, lastSelection, takeSnapshot, selectionMenuVisible]);
 
+  // Paste flow JSON or copied nodes into the canvas (same behavior as dropping a flow file).
+  useEffect(() => {
+    const handlePaste = (event: ClipboardEvent) => {
+      if (isLocked) return;
+      if (isEditablePasteTarget(event.target)) return;
+
+      const rawText =
+        event.clipboardData?.getData("text/plain") ??
+        event.clipboardData?.getData("text") ??
+        "";
+      const file = getPastedFlowFile(rawText);
+
+      if (file) {
+        event.preventDefault();
+        event.stopPropagation();
+        takeSnapshot();
+        uploadFlow({
+          files: [file],
+          position: position.current,
+        }).catch((error) => {
+          setErrorData({
+            title: UPLOAD_ERROR_ALERT,
+            list: [(error as Error).message],
+          });
+        });
+        return;
+      }
+
+      const lastCopied = useFlowStore.getState().lastCopiedSelection;
+      const hasTextSelection =
+        (window.getSelection()?.toString().length ?? 0) > 0;
+      if (lastCopied && !hasTextSelection) {
+        event.preventDefault();
+        event.stopPropagation();
+        takeSnapshot();
+        paste(lastCopied, {
+          x: position.current.x,
+          y: position.current.y,
+        });
+      }
+    };
+
+    document.addEventListener("paste", handlePaste, true);
+    return () => {
+      document.removeEventListener("paste", handlePaste, true);
+    };
+  }, [
+    isLocked,
+    takeSnapshot,
+    uploadFlow,
+    setErrorData,
+    paste,
+  ]);
+
   const { isFetching } = useGetBuildsQuery({ flowId: currentFlowId });
 
   const showCanvas =
@@ -297,20 +355,10 @@ export default function Page({
     }
   }
 
-  function handlePaste(e: KeyboardEvent) {
-    if (!isWrappedWithClass(e, "noflow")) {
-      e.preventDefault();
-      (e as unknown as Event).stopImmediatePropagation();
-      if (
-        window.getSelection()?.toString().length === 0 &&
-        lastCopiedSelection
-      ) {
-        takeSnapshot();
-        paste(lastCopiedSelection, {
-          x: position.current.x,
-          y: position.current.y,
-        });
-      }
+  // Paste (flow JSON or nodes) is handled in the document paste listener so we do not block it here.
+  function handlePaste(_e: KeyboardEvent) {
+    if (!isWrappedWithClass(_e, "noflow")) {
+      return;
     }
   }
 

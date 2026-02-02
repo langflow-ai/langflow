@@ -1,43 +1,12 @@
+import type { DragEvent } from "react";
 import { useCallback, useEffect, useRef } from "react";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
+import {
+  getPastedFlowFile,
+  isEditablePasteTarget,
+} from "@/utils/pasteFlowImport";
 import { CONSOLE_ERROR_MSG } from "../../../constants/alerts_constants";
 import useAlertStore from "../../../stores/alertStore";
-
-function isEditablePasteTarget(target: EventTarget | null): boolean {
-  // Do not hijack paste when the user is typing in an input/editor.
-  if (!target || !(target instanceof HTMLElement)) return false;
-  return (
-    target instanceof HTMLInputElement ||
-    target instanceof HTMLTextAreaElement ||
-    target.isContentEditable === true
-  );
-}
-
-function stripJsonCodeFence(text: string): string {
-  // Accept common "```json ... ```" clipboard formats.
-  const trimmed = text.trim();
-  return trimmed
-    .replace(/^```(?:json)?\s*/i, "")
-    .replace(/\s*```$/i, "")
-    .trim();
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
-
-function looksLikeFlowImportPayload(payload: unknown): boolean {
-  if (!isRecord(payload)) return false;
-
-  // Collection export: { flows: FlowType[] }
-  if (Array.isArray(payload.flows)) {
-    return true;
-  }
-
-  // Single flow export: FlowType shape (at least { data: { nodes: [], edges: [] } })
-  if (!isRecord(payload.data)) return false;
-  return Array.isArray(payload.data.nodes) && Array.isArray(payload.data.edges);
-}
 
 const useFileDrop = (type?: string) => {
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
@@ -75,10 +44,9 @@ const useFileDrop = (type?: string) => {
   );
 
   const handleFileDrop = useCallback(
-    (e) => {
+    (e: DragEvent<HTMLElement>) => {
       e.preventDefault();
-
-      if (e.dataTransfer?.types?.every((type) => type === "Files")) {
+      if (e.dataTransfer?.types?.every((t) => t === "Files")) {
         const files: File[] = Array.from(e.dataTransfer.files);
         uploadFiles(files);
       }
@@ -88,7 +56,6 @@ const useFileDrop = (type?: string) => {
 
   useEffect(() => {
     const handlePaste = (event: ClipboardEvent) => {
-      // Keep paste import disabled when the UI is not accepting flow drops (e.g. MCP tab).
       if (type === "mcp") return;
       if (isEditablePasteTarget(event.target)) return;
 
@@ -96,39 +63,19 @@ const useFileDrop = (type?: string) => {
         event.clipboardData?.getData("text/plain") ??
         event.clipboardData?.getData("text") ??
         "";
-      if (!rawText) return;
+      const file = getPastedFlowFile(rawText);
+      if (!file) return;
 
-      const maybeJson = stripJsonCodeFence(rawText);
-      if (!maybeJson) return;
-
-      let parsed: unknown;
-      try {
-        parsed = JSON.parse(maybeJson);
-      } catch {
-        return;
-      }
-
-      if (!looksLikeFlowImportPayload(parsed)) return;
-
-      // At this point we are confident this is a flow JSON, so we can hijack paste.
       event.preventDefault();
       event.stopPropagation();
-
-      const safeTimestamp = new Date().toISOString().replace(/[:.]/g, "-");
-      const file = new File(
-        [JSON.stringify(parsed)],
-        `pasted-flow-${safeTimestamp}.json`,
-        { type: "application/json" },
-      );
       uploadFiles([file]);
     };
 
-    // Use capture to run before most other handlers, but only prevent default when importing.
     document.addEventListener("paste", handlePaste, true);
     return () => {
       document.removeEventListener("paste", handlePaste, true);
     };
-  }, [uploadFiles]);
+  }, [type, uploadFiles]);
 
   return handleFileDrop;
 };
