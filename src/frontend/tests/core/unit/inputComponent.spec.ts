@@ -118,7 +118,8 @@ test(
     ).toBeFalsy();
 
     const valueEditNode = await page
-      .getByTestId("popover-anchor-input-collection_name-edit")
+      .getByTestId(/^popover-anchor-input-collection_name.*/)
+      .nth(0)
       .inputValue();
 
     if (valueEditNode != "collection_name_test_123123123!@#$&*(&%$@") {
@@ -126,7 +127,8 @@ test(
     }
 
     await page
-      .getByTestId("popover-anchor-input-collection_name-edit")
+      .getByTestId(/^popover-anchor-input-collection_name.*/)
+      .nth(0)
       .fill("NEW_collection_name_test_123123123!@#$&*(&%$@ÇÇÇÀõe");
 
     await page.getByTestId("edit-button-close").last().click();

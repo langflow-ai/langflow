@@ -30,7 +30,8 @@ test(
 
     // Fill in the API Key in the modal
     await page
-      .getByTestId("popover-anchor-input-api_key-edit")
+      .getByTestId(/^popover-anchor-input-api_key.*/)
+      .nth(0)
       .fill(process.env.ANTHROPIC_API_KEY || "");
 
     // Close the modal

@@ -10,7 +10,8 @@ async function verifyPromptVariables(
   expectedVars: string[],
   isFirstTime = true,
 ) {
-  await page.getByTestId("promptarea_prompt_template").click();
+  await page.getByText("Prompt Template", { exact: true }).click();
+  await page.getByTestId("button_open_prompt_modal").click();
 
   // Use different selectors based on whether this is the first time or a subsequent edit
   if (isFirstTime) {

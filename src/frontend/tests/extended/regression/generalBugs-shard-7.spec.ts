@@ -52,20 +52,18 @@ test(
     });
 
     // Wait for the modal inputs to be visible
-    await page.waitForSelector(
-      '[data-testid="popover-anchor-input-base_url-edit"]',
-      {
-        timeout: 5000,
-        state: "visible",
-      },
-    );
+    await expect(
+      page.getByTestId(/^popover-anchor-input-base_url.*/).nth(0),
+    ).toBeVisible({ timeout: 5000 });
 
     // Fill the first input (base_url field)
     await page
-      .getByTestId("popover-anchor-input-base_url-edit")
+      .getByTestId(/^popover-anchor-input-base_url.*/)
+      .nth(0)
       .fill("ollama_test_ctrl_a_first_input");
     let value = await page
-      .getByTestId("popover-anchor-input-base_url-edit")
+      .getByTestId(/^popover-anchor-input-base_url.*/)
+      .nth(0)
       .inputValue();
     expect(value).toBe("ollama_test_ctrl_a_first_input");
 
@@ -75,14 +73,16 @@ test(
 
     await page.keyboard.press("Backspace");
     value = await page
-      .getByTestId("popover-anchor-input-base_url-edit")
+      .getByTestId(/^popover-anchor-input-base_url.*/)
+      .nth(0)
       .inputValue();
     expect(value).toBe("");
 
     await page.keyboard.press("ControlOrMeta+v");
 
     value = await page
-      .getByTestId("popover-anchor-input-base_url-edit")
+      .getByTestId(/^popover-anchor-input-base_url.*/)
+      .nth(0)
       .inputValue();
     expect(value).toBe("ollama_test_ctrl_a_first_input");
   },
