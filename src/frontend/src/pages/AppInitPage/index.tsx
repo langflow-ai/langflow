@@ -93,12 +93,10 @@ export function AppInitPage() {
     return false;
   }, [autoLogin, isSessionFetched, isAuthenticated]);
 
-  // Auto-login is "complete" if any of:
-  // - The query actually ran (isFetched)
+  // Auto-login is "complete" if:
+  // - The query actually ran (isFetched), OR
   // - We're already authenticated (so we skipped auto-login intentionally)
-  // - Auto-login is disabled (autoLogin === false), so we don't need to wait for it
-  const isAutoLoginComplete =
-    isFetched || isAuthenticated || autoLogin === false;
+  const isAutoLoginComplete = isFetched || isAuthenticated;
 
   const isReady = isAutoLoginComplete && isExamplesFetched && isSessionReady;
 

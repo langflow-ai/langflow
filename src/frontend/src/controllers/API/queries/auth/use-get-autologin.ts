@@ -13,9 +13,10 @@ import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
 export interface AutoLoginResponse {
-  access_token: string;
-  refresh_token: string;
-  token_type: string;
+  frontend_timeout: number;
+  auto_saving: boolean;
+  auto_saving_interval: number;
+  health_check_max_retries: number;
 }
 
 export const useGetAutoLogin: useQueryFunctionType<undefined, undefined> = (
@@ -32,14 +33,9 @@ export const useGetAutoLogin: useQueryFunctionType<undefined, undefined> = (
   const retryTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   async function getAutoLoginFn(): Promise<null> {
-    // Skip auto-login API call if:
-    // - User is already authenticated (e.g., after manual login)
-    // - Auto-login is already known to be disabled (backend returned auto_login: false)
+    // Skip auto-login API call if user is already authenticated (e.g., after manual login)
     const currentAuthState = useAuthStore.getState();
-    if (
-      currentAuthState.isAuthenticated ||
-      currentAuthState.autoLogin === false
-    ) {
+    if (currentAuthState.isAuthenticated) {
       return null;
     }
 
@@ -107,11 +103,11 @@ export const useGetAutoLogin: useQueryFunctionType<undefined, undefined> = (
   };
 
   // Determine if query should be enabled:
-  // - Don't run if autoLogin is explicitly false (backend said it's disabled)
   // - Don't run if user is already authenticated
   // - Respect the enabled option from caller
-  const shouldBeEnabled =
-    autoLogin !== false && !isAuthenticated && (options?.enabled ?? true);
+  // Note: We don't skip based on autoLogin === false because the frontend may
+  // connect to different backends with different configurations
+  const shouldBeEnabled = !isAuthenticated && (options?.enabled ?? true);
 
   const queryResult = query(["useGetAutoLogin"], getAutoLoginFn, {
     refetchOnWindowFocus: false,
