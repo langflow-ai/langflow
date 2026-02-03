@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import uuid
 from ast import literal_eval
-from datetime import timedelta
 from enum import Enum
 from typing import TYPE_CHECKING, Annotated, Any
 
@@ -27,6 +26,12 @@ from langflow.utils.constants import LANGFLOW_GLOBAL_VAR_HEADER_PREFIX
 if TYPE_CHECKING:
     from langflow.services.chat.service import ChatService
     from langflow.services.store.schema import StoreComponentCreate
+
+_ONE_SECOND = 1.0
+
+_ONE_MINUTE = 60.0
+
+_MS_PER_SECOND = 1000.0
 
 
 API_WORDS = ["api", "key", "token"]
@@ -153,18 +158,17 @@ def format_elapsed_time(elapsed_time: float) -> str:
     - Less than 1 minute: returns seconds rounded to 1 decimal
     - 1 minute or more: returns minutes and seconds
     """
-    delta = timedelta(seconds=elapsed_time)
-    if delta < timedelta(seconds=1):
-        milliseconds = round(delta / timedelta(milliseconds=1))
+    if elapsed_time < _ONE_SECOND:
+        milliseconds = round(elapsed_time * _MS_PER_SECOND)
         return f"{milliseconds} ms"
 
-    if delta < timedelta(minutes=1):
+    if elapsed_time < _ONE_MINUTE:
         seconds = round(elapsed_time, 1)
         unit = "second" if seconds == 1 else "seconds"
         return f"{seconds} {unit}"
 
-    minutes = delta // timedelta(minutes=1)
-    seconds = round((delta - timedelta(minutes=minutes)).total_seconds(), 1)
+    minutes = int(elapsed_time // _ONE_MINUTE)
+    seconds = round(elapsed_time - minutes * _ONE_MINUTE, 1)
     minutes_unit = "minute" if minutes == 1 else "minutes"
     seconds_unit = "second" if seconds == 1 else "seconds"
     return f"{minutes} {minutes_unit}, {seconds} {seconds_unit}"
