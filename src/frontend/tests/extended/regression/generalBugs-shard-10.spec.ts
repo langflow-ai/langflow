@@ -104,7 +104,7 @@ test(
 
     await page.waitForTimeout(500);
 
-    if (await page.getByTestId("edit-prompt-sanitized").count() > 0) {
+    if ((await page.getByTestId("edit-prompt-sanitized").count()) > 0) {
       await page.getByTestId("edit-prompt-sanitized").last().click();
     }
 
