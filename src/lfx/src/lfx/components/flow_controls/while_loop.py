@@ -12,7 +12,6 @@ WhileLoop.done → (outputs final accumulated state)
 
 from __future__ import annotations
 
-import copy
 from typing import Any
 
 from lfx.base.flow_controls.loop_utils import (
@@ -90,6 +89,10 @@ class WhileLoopComponent(Component):
         """Convert input value to DataFrame."""
         if isinstance(value, DataFrame):
             return value
+        if isinstance(value, list):
+            # List of dicts (e.g., from ExecuteTool) - create DataFrame directly
+            # This preserves all columns including _agent_message_id
+            return DataFrame(value)
         if isinstance(value, Data):
             return DataFrame([value])
         if isinstance(value, dict):
@@ -219,18 +222,17 @@ class WhileLoopComponent(Component):
         # End vertex didn't produce output - loop body stopped (termination condition)
         return None
 
-    async def execute_loop(self, event_manager=None) -> DataFrame:
+    async def execute_loop(self) -> DataFrame:
         """Execute the loop body repeatedly until termination.
 
         Creates an isolated subgraph for the loop body and executes it
         for each iteration, accumulating state until termination.
 
-        Args:
-            event_manager: Optional event manager for UI event emission
-
         Returns:
             Final accumulated DataFrame after loop terminates
         """
+        # Get event_manager from component (set via set_event_manager)
+        event_manager = self._event_manager
         # Get the loop body configuration once
         loop_body_vertex_ids = self.get_loop_body_vertices()
         start_vertex_id = self._get_loop_body_start_vertex()
@@ -240,47 +242,65 @@ class WhileLoopComponent(Component):
             # No loop body connected - just return initial state
             return self._build_initial_state()
 
-        # Create base subgraph (once)
-        base_subgraph = self.graph.create_subgraph(loop_body_vertex_ids)
-
         # Initialize accumulated state
         accumulated_state = self._build_initial_state()
 
         for iteration in range(self.max_iterations):
-            # Deep copy for this iteration
-            iteration_subgraph = copy.deepcopy(base_subgraph)
-            iteration_subgraph.prepare()
-
-            # Inject current accumulated state as input to the first vertex in loop body
-            if start_vertex_id and start_edge:
-                start_vertex = iteration_subgraph.get_vertex(start_vertex_id)
+            # Create fresh subgraph for each iteration using async context manager
+            async with self.graph.create_subgraph(loop_body_vertex_ids) as iteration_subgraph:
                 # Get the target parameter name from the edge
-                target_param = (
-                    start_edge.target_handle.fieldName if hasattr(start_edge.target_handle, "fieldName") else "messages"
-                )
-                # Use set() with the target parameter as a keyword argument
-                if hasattr(start_vertex, "custom_component") and start_vertex.custom_component:
-                    start_vertex.custom_component.set(**{target_param: accumulated_state})
+                target_param = "messages"  # default
+                if start_vertex_id and start_edge and start_edge.target_handle:
+                    target_param = getattr(start_edge.target_handle, "field_name", "messages")
 
-            # Execute subgraph and collect results
-            # Pass event_manager so UI receives events from subgraph execution
-            results = []
-            async for result in iteration_subgraph.async_start(event_manager=event_manager):
-                results.append(result)
-                # Stop on error
-                if hasattr(result, "valid") and not result.valid:
-                    from lfx.log.logger import logger
+                    # Inject accumulated state into vertex data BEFORE preparing
+                    # This ensures components have data during build/validation
+                    for vertex_data in iteration_subgraph._vertices:  # noqa: SLF001
+                        if vertex_data.get("id") == start_vertex_id:
+                            if "data" in vertex_data and "node" in vertex_data["data"]:
+                                template = vertex_data["data"]["node"].get("template", {})
+                                if target_param in template:
+                                    template[target_param]["value"] = accumulated_state
+                            break
 
-                    await logger.aerror(f"Error in loop iteration {iteration}: {result}")
-                    return accumulated_state
+                iteration_subgraph.prepare()
 
-            # Extract output from this iteration
-            iteration_output = self._extract_loop_output(results)
+                # Also set the value in the vertex's raw_params after prepare
+                # This ensures the value is available during component build
+                if start_vertex_id and start_edge:
+                    start_vertex = iteration_subgraph.get_vertex(start_vertex_id)
+                    if start_vertex:
+                        start_vertex.update_raw_params({target_param: accumulated_state}, overwrite=True)
 
-            if iteration_output is None:
-                # No feedback output - loop body took a different branch (termination)
-                # This happens when e.g. AgentStep outputs ai_message instead of tool_calls
-                break
+                # Store reference to parent graph so subgraph can delegate ChatOutput checks
+                # This allows components in the subgraph to correctly determine if they're
+                # connected to ChatOutput by checking the parent graph's connections
+                iteration_subgraph._parent_graph = self.graph  # noqa: SLF001
+
+                # If WhileLoop is connected to ChatOutput (via "done" output), mark the subgraph
+                # so that components inside know they should store/stream messages
+                if self.is_connected_to_chat_output():
+                    iteration_subgraph._stream_to_playground = True  # noqa: SLF001
+
+                # Execute subgraph and collect results
+                # Pass event_manager so UI receives events from subgraph execution
+                results = []
+                async for result in iteration_subgraph.async_start(event_manager=event_manager):
+                    results.append(result)
+                    # Stop on error
+                    if hasattr(result, "valid") and not result.valid:
+                        from lfx.log.logger import logger
+
+                        await logger.aerror(f"Error in loop iteration {iteration}: {result}")
+                        return accumulated_state
+
+                # Extract output from this iteration
+                iteration_output = self._extract_loop_output(results)
+
+                if iteration_output is None:
+                    # No feedback output - loop body took a different branch (termination)
+                    # This happens when e.g. AgentStep outputs ai_message instead of tool_calls
+                    break
 
             # Accumulate: existing state + new data from loop body
             new_rows = iteration_output.to_dict(orient="records")
@@ -297,7 +317,7 @@ class WhileLoopComponent(Component):
         self.stop("loop")
         return DataFrame([])
 
-    async def done_output(self, event_manager=None) -> DataFrame:
+    async def done_output(self) -> DataFrame:
         """Execute the loop and return final accumulated state.
 
         This is the main execution point for the while loop. It:
@@ -306,14 +326,11 @@ class WhileLoopComponent(Component):
         3. Accumulates state until termination condition
         4. Returns final accumulated state
 
-        Args:
-            event_manager: Optional event manager for UI event emission
-
         Returns:
             Final accumulated DataFrame after loop terminates
         """
         try:
-            return await self.execute_loop(event_manager=event_manager)
+            return await self.execute_loop()
         except Exception as e:
             from lfx.log.logger import logger
 
