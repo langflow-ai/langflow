@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from lfx.base.models.watsonx_constants import IBM_WATSONX_URLS
 from lfx.components.agentics.constants import (
@@ -31,7 +31,7 @@ def create_llm(
     base_url_ibm_watsonx: str | None = None,
     project_id: str | None = None,
     ollama_base_url: str | None = None,
-) -> "LLM":
+) -> LLM:
     """Create LLM instance based on provider.
 
     Args:
@@ -78,7 +78,7 @@ def _create_watsonx_llm(
     api_key: str | None,
     base_url: str,
     project_id: str | None,
-) -> "LLM":
+) -> LLM:
     """Create IBM WatsonX LLM instance."""
     from crewai import LLM
 
@@ -93,7 +93,7 @@ def _create_watsonx_llm(
     )
 
 
-def _create_ollama_llm(model_name: str, base_url: str | None) -> "LLM":
+def _create_ollama_llm(model_name: str, base_url: str | None) -> LLM:
     """Create Ollama LLM instance."""
     from crewai import LLM
 
