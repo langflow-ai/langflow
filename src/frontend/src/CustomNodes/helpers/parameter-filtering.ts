@@ -16,6 +16,10 @@ export function isHandleInput(template: InputFieldType) {
   return template?.type === "other";
 }
 
+export function isToolModeEnabled(template: InputFieldType) {
+  return template?.tool_mode;
+}
+
 export function isHidden(template: InputFieldType, isToolMode: boolean) {
   return !template?.show || (template?.tool_mode && isToolMode);
 }
@@ -51,11 +55,14 @@ export function shouldDisplayOnCanvas(template: InputFieldType) {
 export function shouldRenderInspectionPanelField(
   templateField: string,
   template: InputFieldType,
+  isToolMode: boolean | undefined,
 ) {
   if (isInternalField(templateField)) return false;
   if (!template?.show) return false;
   if (isCodeField(templateField, template)) return false;
   if (isHandleInput(template)) return false;
+  if (isToolModeEnabled(template) && isToolMode) return false;
+
 
   return true;
 }

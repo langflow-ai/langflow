@@ -22,13 +22,14 @@ export default function InspectionPanelFields({
   data,
 }: InspectionPanelFieldsProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const isToolMode = data.node?.tool_mode;
 
   // Separate basic and advanced fields
   const { basicFields, advancedFields } = useMemo(() => {
     const allFields = Object.keys(data.node?.template || {})
       .filter((templateField) => {
         const template = data.node?.template[templateField];
-        return shouldRenderInspectionPanelField(templateField, template);
+        return shouldRenderInspectionPanelField(templateField, template, isToolMode);
       })
       .sort((a, b) =>
         sortToolModeFields(
