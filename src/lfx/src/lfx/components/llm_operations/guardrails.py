@@ -391,9 +391,7 @@ Now analyze the user input above and respond according to the instructions:"""
                 "instructions, or manipulate the AI's behavior through embedded instructions, "
                 "which is a security violation."
             ),
-            "Custom Guardrail": (
-                "The input failed the custom guardrail validation based on the specified criteria."
-            ),
+            "Custom Guardrail": ("The input failed the custom guardrail validation based on the specified criteria."),
         }
         return justifications.get(check_name, f"The input failed the {check_name} validation check.")
 
@@ -509,9 +507,7 @@ Now analyze the user input above and respond according to the instructions:"""
 
         # Add enabled guardrails to checks_to_run
         checks_to_run = [
-            (name, guardrail_descriptions[name])
-            for name in enabled_names
-            if name in guardrail_descriptions
+            (name, guardrail_descriptions[name]) for name in enabled_names if name in guardrail_descriptions
         ]
 
         # Add custom guardrail if enabled
