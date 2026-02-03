@@ -1,6 +1,10 @@
 import { useState } from "react";
 import InputFileComponent from "@/components/core/parameterRenderComponent/components/inputFileComponent";
-import { FileComponentType } from "@/types/components";
+
+type FolderSelectionData = {
+  value?: string;
+  file_path?: string;
+};
 
 /**
  * Example component demonstrating the folder selection functionality
@@ -12,13 +16,9 @@ export default function FolderSelectionExample() {
   const [value, setValue] = useState<string>("");
   const [filePath, setFilePath] = useState<string>("");
 
-  const handleOnNewValue = (data: { value: string; file_path: string }) => {
-    setValue(data.value);
-    setFilePath(data.file_path);
-    console.log("File(s) selected:", {
-      value: data.value,
-      file_path: data.file_path,
-    });
+  const handleOnNewValue = (data: Partial<FolderSelectionData>) => {
+    setValue(data.value ?? "");
+    setFilePath(data.file_path ?? "");
   };
 
   return (

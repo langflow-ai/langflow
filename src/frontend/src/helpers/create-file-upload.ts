@@ -19,7 +19,9 @@ export function createFileUpload(props?: {
 
     // Enable folder selection if webkitdirectory is true
     if (props?.webkitdirectory) {
-      (input as any).webkitdirectory = true;
+      (
+        input as HTMLInputElement & { webkitdirectory?: boolean }
+      ).webkitdirectory = true;
       input.multiple = true; // webkitdirectory requires multiple to be true
     }
 
@@ -56,24 +58,6 @@ export function createFileUpload(props?: {
         }
         const originalCount = files.length;
 
-        // First, let's see what we're dealing with
-        console.log("Before filtering - total files:", originalCount);
-        console.log(
-          "Sample paths before filtering:",
-          files.slice(0, 10).map((f) => f.webkitRelativePath),
-        );
-
-        // Show a few .mypy_cache examples if they exist
-        const mypyCacheFiles = files
-          .filter((f) => f.webkitRelativePath.includes(".mypy_cache"))
-          .slice(0, 3);
-        if (mypyCacheFiles.length > 0) {
-          console.log(
-            "Found .mypy_cache files (sample):",
-            mypyCacheFiles.map((f) => f.webkitRelativePath),
-          );
-        }
-
         files = files.filter((file) => {
           const path = file.webkitRelativePath;
           const pathParts = path.split("/");
@@ -82,21 +66,16 @@ export function createFileUpload(props?: {
 
           // 1. Check if path contains .mypy_cache specifically
           if (path.includes(".mypy_cache")) {
-            console.log("Filtering out .mypy_cache file:", path);
             return false;
           }
 
           // 2. Check if any path part starts with '.'
           const hasHiddenPath = pathParts.some((part) => {
             const startsWithDot = part.startsWith(".") && part.length > 0;
-            if (startsWithDot) {
-              console.log(`Found hidden part "${part}" in path: ${path}`);
-            }
             return startsWithDot;
           });
 
           if (hasHiddenPath) {
-            console.log("Filtering out hidden path:", path);
             return false;
           }
 
@@ -114,28 +93,11 @@ export function createFileUpload(props?: {
           );
 
           if (hasHiddenPattern) {
-            console.log("Filtering out file with hidden pattern:", path);
             return false;
           }
 
           return true;
         });
-
-        // Debug logging for folder selection
-        console.log("Folder selection results:");
-        console.log(
-          `Total files found: ${originalCount}, after filtering hidden files/folders: ${files.length}`,
-        );
-        if (files.length > 0) {
-          console.log(
-            "Remaining files (first 5):",
-            files.slice(0, 5).map((f) => ({
-              name: f.name,
-              webkitRelativePath: f.webkitRelativePath,
-              size: f.size,
-            })),
-          );
-        }
       }
 
       cleanup();
