@@ -40,7 +40,7 @@ class SemanticFilter(Component):
     display_name = "SemanticFilter"
     description = "Reads each of the input rows and filters those matching the provided predicate template"
     documentation: str = "github.com/IBM/agentics/"
-    icon = "List"
+    icon = "Agentics"
 
     inputs = [
         ModelInput(
