@@ -319,34 +319,41 @@ def update_edges_with_latest_component_versions(project_data):
     # Initialize a dictionary to track changes for logging
     edge_changes_log = defaultdict(list)
     # Create a deep copy to avoid modifying the original data
-    project_data_copy = deepcopy(project_data)
+    project_data_copy = _deepcopy_simple(project_data)
+
+    # Local references for nodes/edges to avoid repeated lookups
+    nodes_list = project_data_copy.get("nodes", [])
+    edges_list = project_data_copy.get("edges", [])
+
+    # Create a mapping of node types to node IDs for node reconciliation
 
     # Create a mapping of node types to node IDs for node reconciliation
     node_type_map = {}
-    for node in project_data_copy.get("nodes", []):
+    node_id_map = {}
+    for node in nodes_list:
+        node_id = node.get("id")
         node_type = node.get("data", {}).get("type", "")
+        if node_id is not None:
+            node_id_map[node_id] = node
         if node_type:
             if node_type not in node_type_map:
                 node_type_map[node_type] = []
-            node_type_map[node_type].append(node.get("id"))
+            node_type_map[node_type].append(node_id)
 
     # Process each edge in the project
-    for edge in project_data_copy.get("edges", []):
+    for edge in edges_list:
+        # Extract and parse source and target handles
         # Extract and parse source and target handles
         source_handle = edge.get("data", {}).get("sourceHandle")
         source_handle = scape_json_parse(source_handle)
         target_handle = edge.get("data", {}).get("targetHandle")
         target_handle = scape_json_parse(target_handle)
 
-        # Find the corresponding source and target nodes
-        source_node = next(
-            (node for node in project_data.get("nodes", []) if node.get("id") == edge.get("source")),
-            None,
-        )
-        target_node = next(
-            (node for node in project_data.get("nodes", []) if node.get("id") == edge.get("target")),
-            None,
-        )
+        # Find the corresponding source and target nodes using id map
+        source_node = node_id_map.get(edge.get("source"))
+        target_node = node_id_map.get(edge.get("target"))
+
+        # Try to reconcile missing nodes by type
 
         # Try to reconcile missing nodes by type
         if source_node is None and source_handle and "dataType" in source_handle:
@@ -362,11 +369,11 @@ def update_edges_with_latest_component_versions(project_data):
                 # Update source handle ID
                 source_handle["id"] = new_node_id
 
-                # Find the new source node
-                source_node = next(
-                    (node for node in project_data.get("nodes", []) if node.get("id") == new_node_id),
-                    None,
-                )
+                # Find the new source node from the id map
+                source_node = node_id_map.get(new_node_id)
+
+                # Update edge ID (complex as it contains encoded handles)
+                # This is a simplified approach - in production you'd need to parse and rebuild the ID
 
                 # Update edge ID (complex as it contains encoded handles)
                 # This is a simplified approach - in production you'd need to parse and rebuild the ID
@@ -391,11 +398,10 @@ def update_edges_with_latest_component_versions(project_data):
                     # Update target handle ID
                     target_handle["id"] = new_node_id
 
-                    # Find the new target node
-                    target_node = next(
-                        (node for node in project_data.get("nodes", []) if node.get("id") == new_node_id),
-                        None,
-                    )
+                    # Find the new target node from the id map
+                    target_node = node_id_map.get(new_node_id)
+
+                    # Update edge ID (simplified approach)
 
                     # Update edge ID (simplified approach)
                     old_id_suffix = edge.get("id", "").split("}-")[1] if "}-" in edge.get("id", "") else ""
@@ -409,25 +415,23 @@ def update_edges_with_latest_component_versions(project_data):
             target_node_data = target_node.get("data", {}).get("node", {})
 
             # Find the output data that matches the source handle name
-            output_data = next(
-                (
-                    output
-                    for output in source_node_data.get("outputs", [])
-                    if output.get("name") == source_handle.get("name")
-                ),
-                None,
-            )
+            outputs = source_node_data.get("outputs", [])
+            output_data = None
+            src_name = source_handle.get("name")
+            for output in outputs:
+                if output.get("name") == src_name:
+                    output_data = output
+                    break
+
+            # If not found by name, try to find by display_name
 
             # If not found by name, try to find by display_name
             if not output_data:
-                output_data = next(
-                    (
-                        output
-                        for output in source_node_data.get("outputs", [])
-                        if output.get("display_name") == source_handle.get("name")
-                    ),
-                    None,
-                )
+                for output in outputs:
+                    if output.get("display_name") == src_name:
+                        output_data = output
+                        break
+                # Update source handle name if found by display_name
                 # Update source handle name if found by display_name
                 if output_data:
                     source_handle["name"] = output_data.get("name")
@@ -436,9 +440,12 @@ def update_edges_with_latest_component_versions(project_data):
             # Always prefer "types" over "selected" to ensure we use the current type names (JSON/Table)
             # rather than potentially stale "selected" values (Data/DataFrame)
             if output_data:
-                if len(output_data.get("types", [])) == 1:
-                    new_output_types = output_data.get("types", [])
-                elif len(output_data.get("types", [])) > 1 and output_data.get("selected"):
+                types_list = output_data.get("types", [])
+                if len(types_list) == 1:
+                    new_output_types = types_list
+                elif len(types_list) > 1 and output_data.get("selected"):
+                    # Only use "selected" if there are multiple types available
+                    # and selected is present
                     # Only use "selected" if there are multiple types available
                     # and selected is present
                     selected = output_data.get("selected")
@@ -449,13 +456,13 @@ def update_edges_with_latest_component_versions(project_data):
                     }
                     migrated_selected = type_migrations.get(selected, selected)
                     # Verify the migrated selected is in the available types
-                    if migrated_selected in output_data.get("types", []):
+                    if migrated_selected in types_list:
                         new_output_types = [migrated_selected]
                     else:
                         # Fallback to first type if selected is invalid
-                        new_output_types = output_data.get("types", [])
+                        new_output_types = types_list
                 else:
-                    new_output_types = output_data.get("types", [])
+                    new_output_types = types_list
             else:
                 new_output_types = []
 
@@ -472,41 +479,42 @@ def update_edges_with_latest_component_versions(project_data):
 
             # Update input types if they've changed and log the change
             field_name = target_handle.get("fieldName")
-            if field_name in target_node_data.get("template", {}) and target_handle.get(
-                "inputTypes", []
-            ) != target_node_data.get("template", {}).get(field_name, {}).get("input_types", []):
+            template = target_node_data.get("template", {})
+            new_input_types = template.get(field_name, {}).get("input_types", [])
+            if field_name in template and target_handle.get("inputTypes", []) != new_input_types:
                 edge_changes_log[target_node_data.get("display_name", "unknown")].append(
                     {
                         "attr": "inputTypes",
                         "old_value": target_handle.get("inputTypes", []),
-                        "new_value": target_node_data.get("template", {}).get(field_name, {}).get("input_types", []),
+                        "new_value": new_input_types,
                     }
                 )
-                target_handle["inputTypes"] = (
-                    target_node_data.get("template", {}).get(field_name, {}).get("input_types", [])
-                )
+                target_handle["inputTypes"] = new_input_types
 
-            # Escape the updated handles for JSON storage
-            escaped_source_handle = escape_json_dump(source_handle)
-            escaped_target_handle = escape_json_dump(target_handle)
+            # Only escape and update edge handle strings if the parsed dict has changed
+            # Compare parsed dicts (old vs new) to avoid unnecessary expensive serialization
 
             # Try to parse and escape the old handles for comparison
             try:
-                old_escape_source_handle = escape_json_dump(json.loads(edge.get("sourceHandle", "{}")))
-            except (json.JSONDecodeError, TypeError):
-                old_escape_source_handle = edge.get("sourceHandle", "")
+                old_parsed_source = scape_json_parse(edge.get("sourceHandle"))
+            except Exception:
+                old_parsed_source = None
 
             try:
-                old_escape_target_handle = escape_json_dump(json.loads(edge.get("targetHandle", "{}")))
-            except (json.JSONDecodeError, TypeError):
-                old_escape_target_handle = edge.get("targetHandle", "")
+                old_parsed_target = scape_json_parse(edge.get("targetHandle"))
+            except Exception:
+                old_parsed_target = None
 
             # Update source handle if it's changed and log the change
-            if old_escape_source_handle != escaped_source_handle:
+            source_changed = old_parsed_source != source_handle
+            if source_changed:
+                escaped_source_handle = escape_json_dump(source_handle)
                 edge_changes_log[source_node_data.get("display_name", "unknown")].append(
                     {
                         "attr": "sourceHandle",
-                        "old_value": old_escape_source_handle,
+                        "old_value": escape_json_dump(old_parsed_source)
+                        if isinstance(old_parsed_source, dict)
+                        else edge.get("sourceHandle", ""),
                         "new_value": escaped_source_handle,
                     }
                 )
@@ -515,11 +523,15 @@ def update_edges_with_latest_component_versions(project_data):
                     edge["data"]["sourceHandle"] = source_handle
 
             # Update target handle if it's changed and log the change
-            if old_escape_target_handle != escaped_target_handle:
+            target_changed = old_parsed_target != target_handle
+            if target_changed:
+                escaped_target_handle = escape_json_dump(target_handle)
                 edge_changes_log[target_node_data.get("display_name", "unknown")].append(
                     {
                         "attr": "targetHandle",
-                        "old_value": old_escape_target_handle,
+                        "old_value": escape_json_dump(old_parsed_target)
+                        if isinstance(old_parsed_target, dict)
+                        else edge.get("targetHandle", ""),
                         "new_value": escaped_target_handle,
                     }
                 )
@@ -544,10 +556,10 @@ def log_node_changes(node_changes_log) -> None:
     # let's create one log per node
     formatted_messages = []
     for node_name, changes in node_changes_log.items():
-        message = f"\nNode: {node_name} was updated with the following changes:"
+        parts = [f"\nNode: {node_name} was updated with the following changes:"]
         for change in changes:
-            message += f"\n- {change['attr']}: {change['old_value']} -> {change['new_value']}"
-        formatted_messages.append(message)
+            parts.append(f"\n- {change['attr']}: {change['old_value']} -> {change['new_value']}")
+        formatted_messages.append("".join(parts))
     if formatted_messages:
         logger.debug("\n".join(formatted_messages))
 
@@ -1356,3 +1368,17 @@ async def sync_flows_from_fs():
             await asyncio.sleep(fs_flows_polling_interval)
     except asyncio.CancelledError:
         await logger.adebug("Flow sync task cancelled")
+
+
+def _deepcopy_simple(obj):
+    """A faster deepcopy for common JSON-like structures (dict, list, tuple, set, primitives)."""
+    if isinstance(obj, dict):
+        return {k: _deepcopy_simple(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_deepcopy_simple(v) for v in obj]
+    if isinstance(obj, tuple):
+        return tuple(_deepcopy_simple(v) for v in obj)
+    if isinstance(obj, set):
+        return {_deepcopy_simple(v) for v in obj}
+    # primitives and objects we don't specially handle are returned as-is
+    return obj
