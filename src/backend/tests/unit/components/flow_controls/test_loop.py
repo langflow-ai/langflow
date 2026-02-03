@@ -421,6 +421,8 @@ class TestLoopComponentSubgraphExecution:
         data_list = [Data(text="item1")]
         loop.set(data=DataFrame(data_list))
         loop._id = "test_loop"
+        # Set the event manager as an instance attribute (this is how it's accessed in done_output)
+        loop._event_manager = mock_event_manager
 
         # Mock execute_loop_body to return expected data
         mock_execute = AsyncMock(return_value=[Data(text="result")])
@@ -441,7 +443,7 @@ class TestLoopComponentSubgraphExecution:
             patch.object(loop, "initialize_data", mock_initialize_data),
             patch.object(type(loop), "ctx", new_callable=PropertyMock, return_value=mock_ctx),
         ):
-            result = await loop.done_output(event_manager=mock_event_manager)
+            result = await loop.done_output()
 
             # Verify execute_loop_body was called with the event_manager
             mock_execute.assert_called_once()
