@@ -193,7 +193,6 @@ async def execute_flow_with_validation_streaming(
                 flow_filename=flow_filename,
                 input_value=current_input,
                 global_variables=global_variables,
-                verbose=True,
                 user_id=user_id,
                 session_id=session_id,
                 provider=provider,
