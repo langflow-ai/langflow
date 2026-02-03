@@ -63,6 +63,5 @@ export function shouldRenderInspectionPanelField(
   if (isHandleInput(template)) return false;
   if (isToolModeEnabled(template) && isToolMode) return false;
 
-
   return true;
 }

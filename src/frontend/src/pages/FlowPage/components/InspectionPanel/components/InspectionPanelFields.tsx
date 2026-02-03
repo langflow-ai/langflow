@@ -29,7 +29,11 @@ export default function InspectionPanelFields({
     const allFields = Object.keys(data.node?.template || {})
       .filter((templateField) => {
         const template = data.node?.template[templateField];
-        return shouldRenderInspectionPanelField(templateField, template, isToolMode);
+        return shouldRenderInspectionPanelField(
+          templateField,
+          template,
+          isToolMode,
+        );
       })
       .sort((a, b) =>
         sortToolModeFields(
