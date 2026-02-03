@@ -88,7 +88,7 @@ export default function InspectionPanelHeader({
 
   return (
     <div
-      className="flex flex-col gap-2 pt-3 pb-1 px-4"
+      className="flex flex-col gap-2 py-3 px-4"
       ref={containerRef}
       onMouseEnter={() => setIsHoveringContent(true)}
       onMouseLeave={() => setIsHoveringContent(false)}

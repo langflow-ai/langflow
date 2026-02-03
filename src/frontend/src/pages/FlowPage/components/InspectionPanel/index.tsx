@@ -5,6 +5,7 @@ import type { AllNodeType } from "@/types/flow";
 import { cn } from "@/utils/utils";
 import InspectionPanelFields from "./components/InspectionPanelFields";
 import InspectionPanelHeader from "./components/InspectionPanelHeader";
+import { Separator } from "@/components/ui/separator";
 
 interface InspectionPanelProps {
   selectedNode: AllNodeType | null;
@@ -40,6 +41,7 @@ const InspectionPanel = memo(function InspectionPanel({
             )}
           >
             <InspectionPanelHeader data={selectedNode.data} onClose={onClose} />
+            <Separator className="my-0.5" />
             <InspectionPanelFields data={selectedNode.data} />
           </motion.div>
         </Panel>
