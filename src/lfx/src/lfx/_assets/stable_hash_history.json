@@ -1781,12 +1781,12 @@
   },
   "AgentStepComponent": {
     "versions": {
-      "0.3.0": "079f04de8021"
+      "0.3.0": "ae573cae2a02"
     }
   },
   "ExecuteToolComponent": {
     "versions": {
-      "0.3.0": "1f4f97b885aa"
+      "0.3.0": "4ffe232d0c6f"
     }
   },
   "SharedContextComponent": {
@@ -1801,7 +1801,7 @@
   },
   "WhileLoopComponent": {
     "versions": {
-      "0.3.0": "f9cc625c0fb5"
+      "0.3.0": "c699c88683ed"
     }
   }
 }
