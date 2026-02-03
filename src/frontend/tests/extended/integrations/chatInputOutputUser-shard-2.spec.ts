@@ -67,12 +67,12 @@ test(
     await page.getByText("Chat Input", { exact: true }).click();
     await page.getByTestId("edit-button-modal").click();
     await page.getByTestId("showsender_name").click();
-    await page.getByText("Close").last().click();
+    await page.getByTestId("edit-button-close").last().click();
 
     await page.getByText("Chat Output", { exact: true }).click();
     await page.getByTestId("edit-button-modal").click();
     await page.getByTestId("showsender_name").click();
-    await page.getByText("Close").last().click();
+    await page.getByTestId("edit-button-close").last().click();
 
     await page
       .getByTestId("popover-anchor-input-sender_name")

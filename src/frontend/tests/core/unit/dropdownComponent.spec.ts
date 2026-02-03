@@ -124,7 +124,7 @@ test(
       expect(false).toBeTruthy();
     }
 
-    await page.getByText("Close").last().click();
+    await page.getByTestId("edit-button-close").last().click();
 
     value = await page
       .getByTestId("value-dropdown-dropdown_str_model_id")

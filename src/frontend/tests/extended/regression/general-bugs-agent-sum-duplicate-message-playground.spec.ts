@@ -34,7 +34,7 @@ test(
       .fill(process.env.ANTHROPIC_API_KEY || "");
 
     // Close the modal
-    await page.getByText("Close").last().click();
+    await page.getByTestId("edit-button-close").last().click();
 
     await page.getByTestId("playground-btn-flow-io").click();
 

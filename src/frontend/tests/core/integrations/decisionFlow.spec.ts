@@ -309,7 +309,7 @@ test(
       .nth(0)
       .fill("You're Happy! 🤪");
     await page.getByTestId("showignored_message").last().click();
-    await page.getByText("Close").last().click();
+    await page.getByTestId("edit-button-close").last().click();
     await page.getByTestId("title-Pass").nth(0).click();
     await page.getByTestId("edit-button-modal").click();
     await page
@@ -317,7 +317,7 @@ test(
       .nth(0)
       .fill("You're Sad! 🥲");
     await page.getByTestId("showignored_message").last().click();
-    await page.getByText("Close").last().click();
+    await page.getByTestId("edit-button-close").last().click();
 
     await page
       .getByTestId("handle-conditionalrouter-shownode-true-right")

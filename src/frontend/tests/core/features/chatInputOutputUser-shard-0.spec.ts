@@ -32,7 +32,7 @@ test(
 
     await page.getByText("Chat Input", { exact: true }).click();
     await page.getByTestId("edit-button-modal").last().click();
-    await page.getByText("Close").last().click();
+    await page.getByTestId("edit-button-close").last().click();
     await page.getByRole("button", { name: "Playground", exact: true }).click();
 
     // Read the image file as a binary string

@@ -31,7 +31,7 @@ test(
     await page.getByTestId("edit-button-modal").click();
 
     await page.getByTestId("showtrue_case_message").click();
-    await page.getByText("Close").last().click();
+    await page.getByTestId("edit-button-close").last().click();
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("text input");
@@ -66,7 +66,7 @@ test(
 
     expect(numberOfLockIcons).toBe(2);
 
-    await page.getByText("Close").last().click();
+    await page.getByTestId("edit-button-close").last().click();
 
     await page.getByTestId("title-If-Else").click();
 

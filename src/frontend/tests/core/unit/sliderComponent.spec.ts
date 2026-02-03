@@ -86,7 +86,7 @@ test(
       page.getByTestId("default_slider_display_value_advanced"),
     ).toHaveText("14.00");
 
-    await page.getByText("Close").last().click();
+    await page.getByTestId("edit-button-close").last().click();
 
     await expect(page.getByTestId("default_slider_display_value")).toHaveText(
       "14.00",

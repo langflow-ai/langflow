@@ -80,7 +80,7 @@ test(
       await page.getByTestId("input-list-delete-btn-edit_urls-1").count(),
     ).toBe(0);
 
-    await page.getByText("Close").last().click();
+    await page.getByTestId("edit-button-close").last().click();
 
     await page.getByTestId("input-list-plus-btn_urls-0").click();
     await page.getByTestId("input-list-plus-btn_urls-0").click();

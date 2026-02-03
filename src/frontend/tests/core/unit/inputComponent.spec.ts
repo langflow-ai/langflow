@@ -129,7 +129,7 @@ test(
       .getByTestId("popover-anchor-input-collection_name-edit")
       .fill("NEW_collection_name_test_123123123!@#$&*(&%$@ÇÇÇÀõe");
 
-    await page.getByText("Close").last().click();
+    await page.getByTestId("edit-button-close").last().click();
 
     const plusButtonLocator = page.getByTestId("input-collection_name");
     const elementCount = await plusButtonLocator?.count();
@@ -140,7 +140,7 @@ test(
 
       await page.getByTestId("edit-button-modal").last().click();
 
-      await page.getByText("Close").last().click();
+      await page.getByTestId("edit-button-close").last().click();
 
       const value = await page
         .getByTestId("popover-anchor-input-collection_name")

@@ -103,7 +103,7 @@ export default function InspectionPanelHeader({
           <div className="truncate">{nameElement}</div>
         </div>
         <div className="flex items-center gap-1">
-          <ShadTooltip content="Edit" side="top">
+          <ShadTooltip content={editMode ? "Save" : "Edit"} side="top">
             <Button
               onClick={toggleEditMode}
               className={cn(
@@ -113,9 +113,11 @@ export default function InspectionPanelHeader({
               )}
               size="node-toolbar"
               variant="ghost"
-              datatest-id="edit-button-modal"
+              datatest-id={editMode
+                ? "save-name-description-button"
+                : "edit-name-description-button"}
             >
-              <IconComponent name="PencilLine" className="h-4 w-4" />
+              <IconComponent name={editMode ? "Check" : "PencilLine"} className="h-4 w-4" />
             </Button>
           </ShadTooltip>
           {hasDocs && (

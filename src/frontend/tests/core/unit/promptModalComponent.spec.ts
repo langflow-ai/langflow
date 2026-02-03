@@ -131,7 +131,7 @@ test(
     );
 
     // Close the final modal
-    await page.getByText("Close").last().click();
+    await page.getByTestId("edit-button-close").last().click();
   },
 );
 
@@ -320,7 +320,7 @@ test(
       await page.locator('//*[@id="showprompt"]').isChecked(),
     ).toBeTruthy();
 
-    await page.getByText("Close").last().click();
+    await page.getByTestId("edit-button-close").last().click();
     await adjustScreenView(page, { numberOfZoomOut: 2 });
 
     await page.getByTestId("edit-button-modal").last().click();
@@ -418,7 +418,7 @@ test(
     ).toBeTruthy();
 
     // Close the modal
-    await page.getByText("Close").last().click();
+    await page.getByTestId("edit-button-close").last().click();
 
     // Now test double bracket variable extraction - click the mustache prompt button
     await page.waitForSelector(
@@ -522,7 +522,7 @@ test(
     ).toBeTruthy();
 
     // Close the modal
-    await page.getByText("Close").last().click();
+    await page.getByTestId("edit-button-close").last().click();
 
     // Test multiple double bracket variables - click the mustache prompt button
     await page.waitForSelector(

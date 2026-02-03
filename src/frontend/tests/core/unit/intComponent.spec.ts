@@ -28,7 +28,7 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
   await page.getByTestId("edit-button-modal").last().click();
   await page.getByTestId("showmax_tokens").click();
 
-  await page.getByText("Close").last().click();
+  await page.getByTestId("edit-button-close").last().click();
   await page.getByTestId("int_int_max_tokens").click();
   await page.getByTestId("int_int_max_tokens").fill("100000");
 
@@ -118,7 +118,7 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
     await page.locator('//*[@id="showtemperature"]').isChecked(),
   ).toBeFalsy();
 
-  await page.getByText("Close").last().click();
+  await page.getByTestId("edit-button-close").last().click();
 
   const plusButtonLocator = page.getByTestId("int-input-max_tokens");
   const elementCount = await plusButtonLocator?.count();
@@ -133,7 +133,7 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
 
     expect(valueEditNode).toBe("50000");
 
-    await page.getByText("Close").last().click();
+    await page.getByTestId("edit-button-close").last().click();
     await page.getByTestId("int_int_max_tokens").click();
     await page.getByTestId("int_int_max_tokens").fill("3");
 
