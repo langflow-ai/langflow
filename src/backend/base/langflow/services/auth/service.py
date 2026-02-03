@@ -27,9 +27,6 @@ from langflow.services.auth.exceptions import (
 from langflow.services.auth.exceptions import (
     InvalidTokenError as AuthInvalidTokenError,
 )
-from langflow.services.auth.exceptions import (
-    InvalidTokenError as AuthInvalidTokenError,
-)
 from langflow.services.database.models.api_key.crud import check_key
 from langflow.services.database.models.user.crud import (
     get_user_by_id,
@@ -75,7 +72,6 @@ class AuthService(AuthServiceBase):
         db: AsyncSession,
     ) -> User | UserRead:
         """Framework-agnostic authentication method.
-
 
         This is the core authentication logic that validates credentials and returns a user.
         It raises generic AuthenticationError exceptions that should be converted to
@@ -135,11 +131,9 @@ class AuthService(AuthServiceBase):
         """Internal method to authenticate with token (raises generic exceptions)."""
         from langflow.services.auth.utils import ACCESS_TOKEN_TYPE, get_jwt_verification_key
 
-
         settings_service = self.settings
         algorithm = settings_service.auth_settings.ALGORITHM
         verification_key = get_jwt_verification_key(settings_service)
-
 
         try:
             with warnings.catch_warnings():
@@ -147,7 +141,6 @@ class AuthService(AuthServiceBase):
                 payload = jwt.decode(token, verification_key, algorithms=[algorithm])
             user_id: UUID = payload.get("sub")  # type: ignore[assignment]
             token_type: str = payload.get("type")  # type: ignore[assignment]
-
 
             # Validate token type
             if token_type != ACCESS_TOKEN_TYPE:
@@ -198,13 +191,11 @@ class AuthService(AuthServiceBase):
 
         return user
 
-
     async def _authenticate_with_api_key(self, api_key: str, db: AsyncSession) -> UserRead | None:
         """Internal method to authenticate with API key (raises generic exceptions)."""
         result = await check_key(db, api_key)
         if not result:
             return None
-
 
         if isinstance(result, User):
             user_read = UserRead.model_validate(result, from_attributes=True)
@@ -212,7 +203,6 @@ class AuthService(AuthServiceBase):
                 msg = "User account is inactive"
                 raise InactiveUserError(msg)
             return user_read
-
 
         return None
 
@@ -340,10 +330,8 @@ class AuthService(AuthServiceBase):
         elif isinstance(token, str):
             resolved_token = token
 
-
         # Combine API key params
         api_key = query_param or header_param
-
 
         # Delegate to framework-agnostic method
         return await self.authenticate_with_credentials(resolved_token, api_key, db)
@@ -354,7 +342,6 @@ class AuthService(AuthServiceBase):
         db: AsyncSession,
     ) -> User:
         """Get user from access token (raises generic exceptions).
-
 
         This method now uses the framework-agnostic _authenticate_with_token() internally.
         """
@@ -383,7 +370,6 @@ class AuthService(AuthServiceBase):
     ) -> User | UserRead:
         """DEPRECATED: Delegates to authenticate_with_credentials().
 
-
         Kept for backward compatibility. Protocol-specific error handling
         should be done in the adapter layer (utils.py).
         """
@@ -396,7 +382,6 @@ class AuthService(AuthServiceBase):
         db: AsyncSession,
     ) -> User | UserRead:
         """DEPRECATED: Delegates to authenticate_with_credentials().
-
 
         Kept for backward compatibility. Protocol-specific error handling
         should be done in the adapter layer (utils.py).

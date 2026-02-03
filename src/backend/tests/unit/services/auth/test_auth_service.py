@@ -11,7 +11,6 @@ from fastapi import HTTPException, status
 from langflow.services.auth.exceptions import (
     InactiveUserError,
     InsufficientPermissionsError,
-    InvalidCredentialsError,
     InvalidTokenError,
     TokenExpiredError,
 )

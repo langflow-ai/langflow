@@ -183,23 +183,19 @@ async def get_current_user_for_websocket(
         return await _auth_service().get_current_user_for_websocket(token, api_key, db)
     except MissingCredentialsError as e:
         raise WebSocketException(
-            code=status.WS_1008_POLICY_VIOLATION,
-            reason="Missing or invalid credentials (cookie, token or API key)."
+            code=status.WS_1008_POLICY_VIOLATION, reason="Missing or invalid credentials (cookie, token or API key)."
         ) from e
     except (InvalidCredentialsError, InvalidTokenError) as e:
         raise WebSocketException(
-            code=status.WS_1008_POLICY_VIOLATION,
-            reason="Missing or invalid credentials (cookie, token or API key)."
+            code=status.WS_1008_POLICY_VIOLATION, reason="Missing or invalid credentials (cookie, token or API key)."
         ) from e
     except TokenExpiredError as e:
         raise WebSocketException(
-            code=status.WS_1008_POLICY_VIOLATION,
-            reason="Missing or invalid credentials (cookie, token or API key)."
+            code=status.WS_1008_POLICY_VIOLATION, reason="Missing or invalid credentials (cookie, token or API key)."
         ) from e
     except InactiveUserError as e:
         raise WebSocketException(
-            code=status.WS_1008_POLICY_VIOLATION,
-            reason="Missing or invalid credentials (cookie, token or API key)."
+            code=status.WS_1008_POLICY_VIOLATION, reason="Missing or invalid credentials (cookie, token or API key)."
         ) from e
     except AuthenticationError as e:
         # Catch-all for any other authentication errors
