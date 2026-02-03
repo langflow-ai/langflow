@@ -2,6 +2,7 @@ import type { DragEvent } from "react";
 import { useCallback, useEffect, useRef } from "react";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import {
+  getFlowFilesFromClipboard,
   getPastedFlowFile,
   isEditablePasteTarget,
 } from "@/utils/pasteFlowImport";
@@ -58,6 +59,14 @@ const useFileDrop = (type?: string) => {
     const handlePaste = (event: ClipboardEvent) => {
       if (type === "mcp") return;
       if (isEditablePasteTarget(event.target)) return;
+
+      const pastedFiles = getFlowFilesFromClipboard(event.clipboardData);
+      if (pastedFiles.length > 0) {
+        event.preventDefault();
+        event.stopPropagation();
+        uploadFiles(pastedFiles);
+        return;
+      }
 
       const rawText =
         event.clipboardData?.getData("text/plain") ??

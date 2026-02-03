@@ -34,6 +34,31 @@ function looksLikeFlowImportPayload(payload: unknown): boolean {
   return hasNodesAndEdges(payload);
 }
 
+const JSON_MIME = "application/json";
+
+function isFlowFile(file: File): boolean {
+  return file.type === JSON_MIME || file.name.toLowerCase().endsWith(".json");
+}
+
+/**
+ * Returns flow files from a paste event's clipboard (e.g. when user copies a .json file in the OS and pastes).
+ * Normalizes type to application/json so upload flow accepts them. Returns empty array if none.
+ *
+ * @param dataTransfer - event.clipboardData from ClipboardEvent.
+ */
+export function getFlowFilesFromClipboard(dataTransfer: DataTransfer | null): File[] {
+  if (!dataTransfer?.files?.length) return [];
+  const out: File[] = [];
+  for (let i = 0; i < dataTransfer.files.length; i++) {
+    const file = dataTransfer.files[i];
+    if (!isFlowFile(file)) continue;
+    out.push(
+      file.type === JSON_MIME ? file : new File([file], file.name, { type: JSON_MIME }),
+    );
+  }
+  return out;
+}
+
 /**
  * Returns true when paste should not be hijacked (user is typing in an input/editor).
  *

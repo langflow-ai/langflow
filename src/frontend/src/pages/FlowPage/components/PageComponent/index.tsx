@@ -34,7 +34,11 @@ import { track } from "@/customization/utils/analytics";
 import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { useAddComponent } from "@/hooks/use-add-component";
-import { getPastedFlowFile } from "@/utils/pasteFlowImport";
+import {
+  getFlowFilesFromClipboard,
+  getPastedFlowFile,
+  isEditablePasteTarget,
+} from "@/utils/pasteFlowImport";
 import { nodeColorsName } from "@/utils/styleUtils";
 import { isSupportedNodeTypes } from "@/utils/utils";
 import GenericNode from "../../../../CustomNodes/GenericNode";
@@ -298,27 +302,39 @@ export default function Page({
     }
   }
 
-  // Handle paste on canvas in keydown: clipboard may not be available in paste event in all contexts.
-  function handlePaste(e: KeyboardEvent) {
-    if (isWrappedWithClass(e, "noflow")) return;
-    if (isLocked) return;
-    if ((window.getSelection()?.toString().length ?? 0) > 0) return;
+  // Handle paste (files, flow JSON text, or copied nodes) via paste event so we get clipboardData.files.
+  const handlePaste = useCallback(
+    async (event: ClipboardEvent) => {
+      const target = event.target as Element | null;
+      if (target?.closest?.(".noflow")) return;
+      if (isLocked) return;
+      if ((window.getSelection()?.toString().length ?? 0) > 0) return;
+      if (isEditablePasteTarget(event.target)) return;
 
-    e.preventDefault();
-    (e as unknown as Event).stopPropagation();
+      event.preventDefault();
+      event.stopPropagation();
 
-    void (async () => {
-      let rawText = "";
-      try {
-        if (!navigator.clipboard?.readText) return;
-        rawText = await navigator.clipboard.readText();
-      } catch {
-        setErrorData({
-          title: UPLOAD_ERROR_ALERT,
-          list: ["Could not read clipboard. Try pasting again or check browser permissions."],
-        });
+      const pastedFiles = getFlowFilesFromClipboard(event.clipboardData);
+      if (pastedFiles.length > 0) {
+        takeSnapshot();
+        try {
+          await uploadFlow({
+            files: pastedFiles,
+            position: position.current,
+          });
+        } catch (error) {
+          setErrorData({
+            title: UPLOAD_ERROR_ALERT,
+            list: [(error as Error).message],
+          });
+        }
         return;
       }
+
+      const rawText =
+        event.clipboardData?.getData("text/plain") ??
+        event.clipboardData?.getData("text") ??
+        "";
       const file = getPastedFlowFile(rawText);
       if (file) {
         takeSnapshot();
@@ -335,6 +351,7 @@ export default function Page({
         }
         return;
       }
+
       const lastCopied = useFlowStore.getState().lastCopiedSelection;
       if (lastCopied) {
         takeSnapshot();
@@ -343,8 +360,21 @@ export default function Page({
           y: position.current.y,
         });
       }
-    })();
-  }
+    },
+    [
+      isLocked,
+      takeSnapshot,
+      uploadFlow,
+      setErrorData,
+      paste,
+    ],
+  );
+
+  useEffect(() => {
+    const onPaste = (e: ClipboardEvent) => void handlePaste(e);
+    document.addEventListener("paste", onPaste, true);
+    return () => document.removeEventListener("paste", onPaste, true);
+  }, [handlePaste]);
 
   function handleDelete(e: KeyboardEvent) {
     if (isLocked) return;
@@ -387,7 +417,6 @@ export default function Page({
   const deleteAction = useShortcutsStore((state) => state.delete);
   const groupAction = useShortcutsStore((state) => state.group);
   const cutAction = useShortcutsStore((state) => state.cut);
-  const pasteAction = useShortcutsStore((state) => state.paste);
   const downloadAction = useShortcutsStore((state) => state.download);
   //@ts-ignore
   useHotkeys(undoAction, handleUndo);
@@ -403,8 +432,7 @@ export default function Page({
   useHotkeys(copyAction, handleCopy);
   //@ts-ignore
   useHotkeys(cutAction, handleCut);
-  //@ts-ignore
-  useHotkeys(pasteAction, handlePaste);
+  // Paste is handled via document paste event to support pasted files and text
   //@ts-ignore
   useHotkeys(deleteAction, handleDelete);
   //@ts-ignore
