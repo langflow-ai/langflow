@@ -83,6 +83,19 @@ class GuardrailsComponent(Component):
             ),
             advanced=True,
         ),
+        MessageTextInput(
+            name="heuristic_threshold",
+            display_name="Heuristic Detection Threshold",
+            info=(
+                "Score threshold (0.0-1.0) for heuristic jailbreak/prompt injection detection. "
+                "Strong patterns (e.g., 'ignore instructions', 'jailbreak') have high weights, "
+                "while weak patterns (e.g., 'bypass', 'act as') have low weights. If the "
+                "cumulative score meets or exceeds this threshold, the input fails immediately. "
+                "Lower values are more strict; higher values defer more cases to LLM validation."
+            ),
+            value="0.7",
+            advanced=True,
+        ),
     ]
 
     outputs = [
@@ -147,9 +160,16 @@ class GuardrailsComponent(Component):
 
         # Quick heuristic for jailbreak/prompt injection to avoid false passes
         if check_type in ("Jailbreak", "Prompt Injection"):
-            heuristic_reason = self._heuristic_jailbreak_check(input_text)
-            if heuristic_reason:
-                return False, heuristic_reason
+            heuristic_result = self._heuristic_jailbreak_check(input_text)
+            if heuristic_result:
+                score, matched_patterns = heuristic_result
+                threshold = float(getattr(self, "heuristic_threshold", "0.7") or "0.7")
+                if score >= threshold:
+                    logger.debug(
+                        f"Heuristic jailbreak check failed: score={score:.2f}, "
+                        f"threshold={threshold}, patterns={matched_patterns}"
+                    )
+                    return False, "Matched jailbreak or prompt injection pattern."
 
         # Create more specific prompts for different check types to reduce false positives
         if check_type == "Prompt Injection":
@@ -395,26 +415,52 @@ Now analyze the user input above and respond according to the instructions:"""
         }
         return justifications.get(check_name, f"The input failed the {check_name} validation check.")
 
-    def _heuristic_jailbreak_check(self, input_text: str) -> str | None:
+    def _heuristic_jailbreak_check(self, input_text: str) -> tuple[float, list[str]] | None:
+        """Check input for jailbreak/prompt injection patterns using weighted scoring.
+
+        Strong patterns (high confidence of malicious intent) have weights 0.7-0.9.
+        Weak patterns (common in legitimate text) have weights 0.15-0.3.
+
+        Returns:
+            tuple[float, list[str]] | None: (score, matched_patterns) if any patterns match,
+                None if no patterns matched. Score is capped at 1.0.
+        """
         text = input_text.lower()
-        patterns = [
-            r"ignore .*instruc",
-            r"forget .*instruc",
-            r"disregard .*instruc",
-            r"ignore .*previous",
-            r"system prompt",
-            r"prompt do sistema",
-            r"sem restric",
-            r"sem filtros",
-            r"bypass",
-            r"jailbreak",
-            r"act as",
-            r"no rules",
-        ]
-        for pattern in patterns:
+
+        # Strong signals: high confidence of jailbreak/injection attempt
+        strong_patterns = {
+            r"ignore .*instruc": 0.8,
+            r"forget .*instruc": 0.8,
+            r"disregard .*instruc": 0.8,
+            r"ignore .*previous": 0.7,
+            r"\bjailbreak\b": 0.9,
+        }
+
+        # Weak signals: often appear in legitimate text, need multiple to trigger
+        weak_patterns = {
+            r"\bbypass\b": 0.2,
+            r"system prompt": 0.3,
+            r"prompt do sistema": 0.3,
+            r"\bact as\b": 0.15,
+            r"\bno rules\b": 0.2,
+            r"sem restric": 0.25,
+            r"sem filtros": 0.25,
+        }
+
+        total_score = 0.0
+        matched_patterns: list[str] = []
+
+        all_patterns = {**strong_patterns, **weak_patterns}
+        for pattern, weight in all_patterns.items():
             if re.search(pattern, text):
-                return "Matched jailbreak or prompt injection pattern."
-        return None
+                total_score += weight
+                matched_patterns.append(pattern)
+
+        if not matched_patterns:
+            return None
+
+        # Cap score at 1.0
+        return (min(total_score, 1.0), matched_patterns)
 
     def _run_validation(self):
         """Run validation once and store the result."""
