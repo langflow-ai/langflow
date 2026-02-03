@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import { expect } from "../fixtures";
 import { generateRandomFilename } from "./generate-filename";
+import { unselectNodes } from "./unselect-nodes";
 
 // Function to get the correct mimeType based on file extension
 function getMimeType(extension: string): string {
@@ -40,8 +41,10 @@ export async function uploadFile(page: Page, fileName: string) {
   await page.getByTestId("fit_view").click();
   await page.getByTestId("canvas_controls_dropdown").click({ force: true });
 
+  await page.getByText("File", { exact: true }).last().click();
+
   const fileManagement = await page
-    .getByTestId("button_open_file_management")
+    .getByTestId("button_open_file_management").first()
     ?.isVisible();
 
   if (!fileManagement) {
@@ -87,4 +90,6 @@ export async function uploadFile(page: Page, fileName: string) {
     .getByText(sourceFileName + `.${testFileType}`)
     .first()
     .waitFor({ state: "visible", timeout: 1000 });
+
+  await unselectNodes(page);
 }

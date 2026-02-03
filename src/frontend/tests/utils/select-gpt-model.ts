@@ -1,5 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect } from "../fixtures";
+import { unselectNodes } from "./unselect-nodes";
 
 export const selectGptModel = async (page: Page) => {
   const nodes = page.locator(".react-flow__node", {
@@ -57,5 +58,6 @@ export const selectGptModel = async (page: Page) => {
     }
     await page.waitForTimeout(500);
     await page.getByTestId("gpt-4o-mini-option").click();
+    await unselectNodes(page);
   }
 };
