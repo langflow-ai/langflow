@@ -67,6 +67,7 @@ api_key_query = APIKeyQuery(name=API_KEY_NAME, scheme_name="API key query", auto
 api_key_header = APIKeyHeader(name=API_KEY_NAME, scheme_name="API key header", auto_error=False)
 
 
+@lru_cache(maxsize=1)
 def _auth_service():
     return get_auth_service()
 
@@ -386,4 +387,6 @@ async def get_current_active_user_mcp(user: User = Depends(get_current_user_mcp)
 @lru_cache(maxsize=1024)
 def _cached_decrypt(encrypted_api_key: str) -> str:
     # Cached wrapper around the auth service decryption to avoid repeated expensive calls
-    return _auth_service().decrypt_api_key(encrypted_api_key)
+    # Bind method to a local variable to avoid an extra attribute lookup on the hot path
+    decrypt = _auth_service().decrypt_api_key
+    return decrypt(encrypted_api_key)
