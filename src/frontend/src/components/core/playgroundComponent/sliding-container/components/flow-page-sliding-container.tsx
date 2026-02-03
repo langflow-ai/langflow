@@ -37,14 +37,20 @@ export function FlowPageSlidingContainerContent({
   );
   const [openLogsModal, setOpenLogsModal] = useState(false);
 
-  const { sessions, addNewSession, removeLocalSession, fetchedSessions } =
-    useGetAddSessions({
-      flowId: currentFlowId,
-      currentSessionId,
-    });
+  const {
+    sessions,
+    addNewSession,
+    removeLocalSession,
+    renameLocalSession,
+    fetchedSessions,
+  } = useGetAddSessions({
+    flowId: currentFlowId,
+    currentSessionId,
+  });
   const { handleDelete } = useEditSessionInfo({
     flowId: currentFlowId,
     dbSessions: fetchedSessions,
+    renameLocalSession,
   });
 
   // Ensure currentFlowId is always first in sessions list
@@ -157,6 +163,7 @@ export function FlowPageSlidingContainerContent({
                 currentSessionId={currentSessionId}
                 onDeleteSession={handleDeleteSession}
                 onOpenLogs={handleOpenLogs}
+                renameLocalSession={renameLocalSession}
               />
             </div>
           </div>
