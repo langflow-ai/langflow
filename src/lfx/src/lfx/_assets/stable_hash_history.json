@@ -81,7 +81,7 @@
   },
   "s3bucketuploader": {
     "versions": {
-      "0.3.0": "6e4ba2dafc3c"
+      "0.3.0": "119c89b6bd40"
     }
   },
   "AnthropicModel": {
@@ -576,7 +576,7 @@
   },
   "APIRequest": {
     "versions": {
-      "0.3.0": "7f013aba27c9"
+      "0.3.0": "17d857fd63d6"
     }
   },
   "CSVtoData": {
@@ -611,7 +611,7 @@
   },
   "URLComponent": {
     "versions": {
-      "0.3.0": "f773f55e3820"
+      "0.3.0": "7c2b0b18854e"
     }
   },
   "UnifiedWebSearch": {
@@ -706,7 +706,7 @@
   },
   "ChunkDoclingDocument": {
     "versions": {
-      "0.3.0": "d84ce7ffc6cb"
+      "0.3.0": "c6a9c68962f0"
     }
   },
   "DoclingInline": {
@@ -721,7 +721,7 @@
   },
   "ExportDoclingDocument": {
     "versions": {
-      "0.3.0": "32577a7e396b"
+      "0.3.0": "2576d7a17103"
     }
   },
   "DuckDuckGoSearchComponent": {
@@ -736,12 +736,12 @@
   },
   "OpenSearchVectorStoreComponent": {
     "versions": {
-      "0.3.0": "77834dd0fa75"
+      "0.3.0": "128c3a17d217"
     }
   },
   "OpenSearchVectorStoreComponentMultimodalMultiEmbedding": {
     "versions": {
-      "0.3.0": "a52b7daaae16"
+      "0.3.0": "49164c9f549a"
     }
   },
   "EmbeddingSimilarityComponent": {
@@ -771,7 +771,7 @@
   },
   "KnowledgeIngestion": {
     "versions": {
-      "0.3.0": "52a451e4f053"
+      "0.3.0": "c8b54f5a01fd"
     }
   },
   "KnowledgeRetrieval": {
@@ -781,7 +781,7 @@
   },
   "SaveToFile": {
     "versions": {
-      "0.3.0": "6657b458359b"
+      "0.3.0": "337ff633717e"
     }
   },
   "FirecrawlCrawlApi": {
@@ -826,12 +826,12 @@
   },
   "LoopComponent": {
     "versions": {
-      "0.3.0": "e179036a232d"
+      "0.3.0": "125bb442147e"
     }
   },
   "Notify": {
     "versions": {
-      "0.3.0": "03d68ba28530"
+      "0.3.0": "7acbad418201"
     }
   },
   "Pass": {
@@ -956,7 +956,7 @@
   },
   "ChatOutput": {
     "versions": {
-      "0.3.0": "8c87e536cca4"
+      "0.3.0": "c312c84b1777"
     }
   },
   "TextInput": {
@@ -1031,7 +1031,7 @@
   },
   "CharacterTextSplitter": {
     "versions": {
-      "0.3.0": "995b35c5296c"
+      "0.3.0": "ea7c81772b05"
     }
   },
   "ConversationChain": {
@@ -1051,7 +1051,7 @@
   },
   "HtmlLinkExtractor": {
     "versions": {
-      "0.3.0": "13cc6457f84c"
+      "0.3.0": "7acefd9ece13"
     }
   },
   "JsonAgent": {
@@ -1066,12 +1066,12 @@
   },
   "LanguageRecursiveTextSplitter": {
     "versions": {
-      "0.3.0": "207a88b20a7e"
+      "0.3.0": "ee28cc4c2001"
     }
   },
   "SemanticTextSplitter": {
     "versions": {
-      "0.3.0": "e9178757dea0"
+      "0.3.0": "8a7e7a5a39ed"
     }
   },
   "LLMCheckerChain": {
@@ -1086,7 +1086,7 @@
   },
   "NaturalLanguageTextSplitter": {
     "versions": {
-      "0.3.0": "aed1e0bb411e"
+      "0.3.0": "6483da1155b8"
     }
   },
   "OpenAIToolsAgent": {
@@ -1101,7 +1101,7 @@
   },
   "RecursiveCharacterTextSplitter": {
     "versions": {
-      "0.3.0": "9ed58a212804"
+      "0.3.0": "1cad6dd9957a"
     }
   },
   "RetrievalQA": {
@@ -1116,7 +1116,7 @@
   },
   "SelfQueryRetriever": {
     "versions": {
-      "0.3.0": "a18169f36371"
+      "0.3.0": "3b647e2416be"
     }
   },
   "SpiderTool": {
@@ -1171,7 +1171,7 @@
   },
   "Smart Transform": {
     "versions": {
-      "0.3.0": "9912fe8c7f1b"
+      "0.3.0": "3ab21c919535"
     }
   },
   "SmartRouter": {
@@ -1206,7 +1206,7 @@
   },
   "mem0_chat_memory": {
     "versions": {
-      "0.3.0": "b6addbcccf9a"
+      "0.3.0": "309abc9375f4"
     }
   },
   "Milvus": {
@@ -1346,7 +1346,7 @@
   },
   "AlterMetadata": {
     "versions": {
-      "0.3.0": "0b2fe62eaec4"
+      "0.3.0": "87ccc8188cfe"
     }
   },
   "CombineText": {
@@ -1356,12 +1356,12 @@
   },
   "TypeConverterComponent": {
     "versions": {
-      "0.3.0": "be7797f8df1c"
+      "0.3.0": "6ce26e994c2d"
     }
   },
   "CreateData": {
     "versions": {
-      "0.3.0": "3e313525090d"
+      "0.3.0": "a2da17dd0b45"
     }
   },
   "CreateList": {
@@ -1401,7 +1401,7 @@
   },
   "FilterDataValues": {
     "versions": {
-      "0.3.0": "847522549c67"
+      "0.3.0": "274c9e3a6e7e"
     }
   },
   "JSONCleaner": {
@@ -1436,12 +1436,12 @@
   },
   "ParseJSONData": {
     "versions": {
-      "0.3.0": "5268ca4c42d6"
+      "0.3.0": "2ad980f8bac3"
     }
   },
   "ParserComponent": {
     "versions": {
-      "0.3.0": "3cda25c3f7b5"
+      "0.3.0": "a638aab912d3"
     }
   },
   "RegexExtractorComponent": {
@@ -1456,7 +1456,7 @@
   },
   "SplitText": {
     "versions": {
-      "0.3.0": "b9d63ae59e8a"
+      "0.3.0": "ee4760995e74"
     }
   },
   "StoreMessage": {
@@ -1471,7 +1471,7 @@
   },
   "UpdateData": {
     "versions": {
-      "0.3.0": "d0790af3ac9b"
+      "0.3.0": "bd768d5d3f19"
     }
   },
   "PythonFunction": {
@@ -1556,7 +1556,7 @@
   },
   "PythonCodeStructuredTool": {
     "versions": {
-      "0.3.0": "99f294af525b"
+      "0.3.0": "3f913a303e47"
     }
   },
   "PythonREPLTool": {
@@ -1601,17 +1601,17 @@
   },
   "ConvertAstraToTwelveLabs": {
     "versions": {
-      "0.3.0": "90ad7b9b59eb"
+      "0.3.0": "2a65cbf14ce5"
     }
   },
   "TwelveLabsPegasusIndexVideo": {
     "versions": {
-      "0.3.0": "a2c0865be096"
+      "0.3.0": "faa14b3d6a18"
     }
   },
   "SplitVideo": {
     "versions": {
-      "0.3.0": "4d3a4a724aa5"
+      "0.3.0": "56ccb4106c30"
     }
   },
   "TwelveLabsTextEmbeddings": {
@@ -1676,7 +1676,7 @@
   },
   "LocalDB": {
     "versions": {
-      "0.3.0": "767988a11f4a"
+      "0.3.0": "b5a0747b4fcf"
     }
   },
   "VertexAiModel": {
