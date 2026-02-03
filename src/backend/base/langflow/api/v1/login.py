@@ -138,9 +138,9 @@ async def auto_login(response: Response, db: DbSession):
         return tokens
 
     raise HTTPException(
-        status_code=status.HTTP_400_BAD_REQUEST,
+        status_code=status.HTTP_403_FORBIDDEN,
         detail={
-            "message": "Auto login is disabled. Please enable it in the settings",
+            "message": "Auto login is disabled.",
             "auto_login": False,
         },
     )
