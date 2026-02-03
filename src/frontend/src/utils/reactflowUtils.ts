@@ -235,7 +235,10 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
           const hasAllowsLoop = output?.allows_loop === true;
           // Backward compatibility: old flows may have Data/DataFrame types that need to match JSON/Table
           const expectedSourceHandle = scapedJSONStringfy(id);
-          if (!handlesMatch(expectedSourceHandle, sourceHandle) && !hasAllowsLoop) {
+          if (
+            !handlesMatch(expectedSourceHandle, sourceHandle) &&
+            !hasAllowsLoop
+          ) {
             newEdges = newEdges.filter((e) => e.id !== edge.id);
             brokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
           }
@@ -1149,12 +1152,18 @@ export function handlesMatch(
     }
 
     // For source handles (have dataType)
-    if (expected.dataType !== undefined && expected.dataType !== actual.dataType) {
+    if (
+      expected.dataType !== undefined &&
+      expected.dataType !== actual.dataType
+    ) {
       return false;
     }
 
     // For target handles (have fieldName)
-    if (expected.fieldName !== undefined && expected.fieldName !== actual.fieldName) {
+    if (
+      expected.fieldName !== undefined &&
+      expected.fieldName !== actual.fieldName
+    ) {
       return false;
     }
     if (expected.type !== undefined && expected.type !== actual.type) {
