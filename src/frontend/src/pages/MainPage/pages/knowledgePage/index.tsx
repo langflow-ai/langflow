@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import type { KnowledgeBaseInfo } from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import KnowledgeBaseDrawer from "../filesPage/components/KnowledgeBaseDrawer";
 import KnowledgeBasesTab from "../filesPage/components/KnowledgeBasesTab";
 
@@ -16,6 +17,7 @@ export const KnowledgePage = () => {
   const [selectedKnowledgeBase, setSelectedKnowledgeBase] =
     useState<KnowledgeBaseInfo | null>(null);
 
+  const navigate = useCustomNavigate();
   const drawerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -66,12 +68,7 @@ export const KnowledgePage = () => {
   }, [isDrawerOpen]);
 
   const handleKnowledgeBaseSelect = (knowledgeBase: KnowledgeBaseInfo) => {
-    if (isDrawerOpen) {
-      closeDrawer();
-    } else {
-      setSelectedKnowledgeBase(knowledgeBase);
-      // setIsDrawerOpen(true);
-    }
+    navigate(`/assets/knowledge-bases/${knowledgeBase.id}/chunks`);
   };
 
   const closeDrawer = () => {

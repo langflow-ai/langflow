@@ -47,6 +47,13 @@ class BulkDeleteRequest(BaseModel):
     kb_names: list[str]
 
 
+class ChunkInfo(BaseModel):
+    id: str
+    content: str
+    char_count: int
+    metadata: dict | None = None
+
+
 def get_kb_root_path() -> Path:
     """Get the knowledge bases root path."""
     return _get_knowledge_bases_dir()
@@ -383,6 +390,51 @@ async def get_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -> K
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error getting knowledge base '{kb_name}': {e!s}") from e
+
+
+@router.get("/{kb_name}/chunks", status_code=HTTPStatus.OK)
+async def get_knowledge_base_chunks(kb_name: str, current_user: CurrentActiveUser) -> list[ChunkInfo]:
+    """Get all chunks from a specific knowledge base."""
+    try:
+        kb_root_path = get_kb_root_path()
+        kb_user = current_user.username
+        kb_path = kb_root_path / kb_user / kb_name
+
+        if not kb_path.exists() or not kb_path.is_dir():
+            raise HTTPException(status_code=404, detail=f"Knowledge base '{kb_name}' not found")
+
+        # Create vector store
+        chroma = Chroma(
+            persist_directory=str(kb_path),
+            collection_name=kb_name,
+        )
+
+        # Access the raw collection
+        collection = chroma._collection  # noqa: SLF001
+
+        # Fetch all documents and metadata
+        results = collection.get(include=["documents", "metadatas"])
+
+        chunks = []
+        for i, (doc_id, document, metadata) in enumerate(
+            zip(results["ids"], results["documents"], results["metadatas"], strict=False)
+        ):
+            content = document or ""
+            chunks.append(
+                ChunkInfo(
+                    id=doc_id,
+                    content=content,
+                    char_count=len(content),
+                    metadata=metadata,
+                )
+            )
+
+        return chunks
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting chunks for '{kb_name}': {e!s}") from e
 
 
 @router.delete("/{kb_name}", status_code=HTTPStatus.OK)

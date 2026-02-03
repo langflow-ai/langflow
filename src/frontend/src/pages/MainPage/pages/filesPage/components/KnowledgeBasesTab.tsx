@@ -159,7 +159,10 @@ const KnowledgeBasesTab = ({
     }
   };
 
-  const columnDefs = createKnowledgeBaseColumns();
+  const columnDefs = createKnowledgeBaseColumns({
+    onViewChunks: onRowClick,
+    onDelete: handleDelete,
+  });
 
   if (isLoading || !knowledgeBases || !Array.isArray(knowledgeBases)) {
     return (
