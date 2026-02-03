@@ -11,6 +11,7 @@ interface UseGetAddSessionsProps {
 type UseGetAddSessionsReturnType = (props: UseGetAddSessionsProps) => {
   addNewSession: (allSessions?: string[]) => string;
   removeLocalSession: (sessionId: string) => void;
+  renameLocalSession: (oldSessionId: string, newSessionId: string) => void;
   sessions: string[];
   fetchedSessions: string[];
 };
@@ -138,11 +139,22 @@ export const useGetAddSessions: UseGetAddSessionsReturnType = ({
     });
   };
 
+  const renameLocalSession = (oldSessionId: string, newSessionId: string) => {
+    setLocalSessions((prev) => {
+      const updated = new Set(prev);
+      // Remove old session name and add new one
+      const hadOld = updated.delete(oldSessionId);
+      updated.add(newSessionId);
+      return updated;
+    });
+  };
+
   const stableSessions = useMemo(() => [...sessions], [sessions]);
 
   return {
     addNewSession,
     removeLocalSession,
+    renameLocalSession,
     sessions: stableSessions,
     fetchedSessions,
   };

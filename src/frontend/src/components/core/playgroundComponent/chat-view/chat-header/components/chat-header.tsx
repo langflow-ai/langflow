@@ -119,6 +119,7 @@ export function ChatHeader({
         onMessageLogs={onMessageLogs}
         onClearChat={handleClearChat}
         onDelete={handleDeleteSessionInternal}
+        showRename={!isDefaultSession}
         showClearChat={isDefaultSession}
         showDelete={!isDefaultSession}
         side="bottom"

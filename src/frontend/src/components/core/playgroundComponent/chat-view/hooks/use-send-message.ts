@@ -33,13 +33,6 @@ export const useSendMessage = ({ sessionId }: UseSendMessageProps = {}) => {
     }): Promise<void> => {
       // Resolve session: sessionId prop > selectedSession > flowId (default)
       const actualSession = sessionId ?? selectedSession ?? flowId;
-
-      console.debug("[useSendMessage] invoked", {
-        sessionId: actualSession,
-        chatInputId,
-        hasFiles: Boolean(files?.length),
-      });
-
       // Add placeholder user message immediately
       addUserMessage({
         id: null,
