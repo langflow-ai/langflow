@@ -2,7 +2,7 @@
 
 from typing import Literal
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, model_validator
 
 
 class RangeSpec(BaseModel):
@@ -10,6 +10,17 @@ class RangeSpec(BaseModel):
     min: float = -1.0
     max: float = 1.0
     step: float = 0.1
+
+    @model_validator(mode="before")
+    @classmethod
+    def fix_step_for_int_type(cls, data):
+        """Auto-fix step to 1 when step_type is int but step is default float."""
+        if isinstance(data, dict):
+            step_type = data.get("step_type", "float")
+            step = data.get("step", 0.1)
+            if step_type == "int" and isinstance(step, float) and not step.is_integer():
+                data["step"] = 1
+        return data
 
     @field_validator("max")
     @classmethod
@@ -24,9 +35,6 @@ class RangeSpec(BaseModel):
     def step_must_be_positive(cls, v, values):
         if v <= 0:
             msg = "Step must be positive"
-            raise ValueError(msg)
-        if values.data["step_type"] == "int" and isinstance(v, float) and not v.is_integer():
-            msg = "When step_type is int, step must be an integer"
             raise ValueError(msg)
         return v
 

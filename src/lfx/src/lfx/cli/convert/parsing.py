@@ -1,0 +1,280 @@
+"""Parsing functions for JSON flow conversion."""
+
+from __future__ import annotations
+
+import json
+import re
+from typing import TYPE_CHECKING
+
+from .constants import (
+    COMPONENT_IMPORTS,
+    LONG_TEXT_FIELDS,
+    MIN_PROMPT_LENGTH,
+    PYTHON_RESERVED_WORDS,
+    SKIP_FIELDS,
+    SKIP_NODE_TYPES,
+    get_method_name,
+)
+from .types import EdgeInfo, FlowInfo, NodeInfo
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+# Pattern to detect global variable references like {var_name} (not {{ escaped }})
+GLOBAL_VAR_PATTERN = re.compile(r"(?<!\{)\{([a-zA-Z_][a-zA-Z0-9_]*)\}(?!\})")
+
+
+def parse_flow_json(flow_path: Path) -> FlowInfo:
+    """Parse a flow JSON file into structured data."""
+    with flow_path.open() as f:
+        data = json.load(f)
+
+    flow_data = data.get("data", data)
+    nodes_data = flow_data.get("nodes", [])
+    edges_data = flow_data.get("edges", [])
+
+    flow_info = FlowInfo(
+        name=data.get("name", "UnnamedFlow"),
+        description=data.get("description", ""),
+    )
+
+    used_var_names: dict[str, int] = {}
+
+    for node in nodes_data:
+        node_info = _parse_node(node, used_var_names, flow_info)
+        if node_info:
+            flow_info.nodes.append(node_info)
+
+    # Build mapping of node_id -> node_type for method name resolution
+    id_to_type = {node.node_id: node.node_type for node in flow_info.nodes}
+
+    for edge in edges_data:
+        edge_info = _parse_edge(edge, id_to_type, flow_info.custom_output_mappings)
+        flow_info.edges.append(edge_info)
+
+    return flow_info
+
+
+def _parse_node(
+    node: dict,
+    used_var_names: dict[str, int],
+    flow_info: FlowInfo,
+) -> NodeInfo | None:
+    """Parse a single node from the flow JSON.
+
+    Returns None for UI-only nodes (notes, comments, etc.) that should be skipped.
+    """
+    node_data = node.get("data", {})
+    node_id = node_data.get("id", "")
+    node_type = node_data.get("type", "")
+
+    # Skip UI-only node types (notes, comments, readme, etc.)
+    if node_type in SKIP_NODE_TYPES:
+        return None
+    node_config = node_data.get("node", {})
+    display_name = node_config.get("display_name", node_type)
+    template = node_config.get("template", {})
+
+    base_var_name = _parse_var_name(display_name, node_type)
+    var_name = _parse_unique_var_name(base_var_name, used_var_names)
+    used_var_names[base_var_name] = used_var_names.get(base_var_name, 0) + 1
+
+    config = _parse_node_config(template, var_name, flow_info)
+    has_custom_code, custom_code = _parse_custom_code(template, node_type)
+
+    # Track unknown components (not in COMPONENT_IMPORTS and not custom code)
+    if not has_custom_code and node_type not in COMPONENT_IMPORTS:
+        flow_info.unknown_components.add(node_type)
+
+    # Extract output → method mappings from custom component code
+    if has_custom_code and custom_code:
+        output_mappings = extract_output_method_mapping(custom_code)
+        for output_name, method_name in output_mappings.items():
+            flow_info.custom_output_mappings[f"{node_id}.{output_name}"] = method_name
+
+    return NodeInfo(
+        node_id=node_id,
+        node_type=node_type,
+        display_name=display_name,
+        var_name=var_name,
+        config=config,
+        has_custom_code=has_custom_code,
+        custom_code=custom_code,
+    )
+
+
+# Fields that may contain Langflow global variable references
+# These are template/input fields, not Python code
+GLOBAL_VAR_FIELDS: frozenset[str] = frozenset(
+    {
+        "input_value",
+        "text",
+        "query",
+        "url",
+        "api_key",
+        "api_endpoint",
+        "base_url",
+        "database_url",
+        "connection_string",
+        "file_path",
+        "collection_name",
+        "table_name",
+        "index_name",
+    }
+)
+
+
+def _parse_node_config(
+    template: dict,
+    var_name: str,
+    flow_info: FlowInfo,
+) -> dict:
+    """Parse configuration values from node template."""
+    config = {}
+
+    for field_name, field_data in template.items():
+        if field_name in SKIP_FIELDS or not isinstance(field_data, dict):
+            continue
+
+        value = field_data.get("value")
+        if value is None or value in ("", []):
+            continue
+        if field_name == "model" and value == []:
+            continue
+
+        # Only detect global variables in fields that typically use them
+        # Exclude prompts/code which contain {var} as documentation/examples
+        if field_name in GLOBAL_VAR_FIELDS:
+            _extract_global_variables(value, flow_info)
+
+        if _is_long_text_field(field_name, value):
+            prompt_name = f"{var_name.upper()}_{field_name.upper()}"
+            flow_info.prompts[prompt_name] = value
+            config[field_name] = f"${prompt_name}"
+        else:
+            config[field_name] = value
+
+    return config
+
+
+def _extract_global_variables(value: object, flow_info: FlowInfo) -> None:
+    """Extract global variable references from a value (recursively for nested structures)."""
+    if isinstance(value, str):
+        matches = GLOBAL_VAR_PATTERN.findall(value)
+        flow_info.global_variables.update(matches)
+    elif isinstance(value, list):
+        for item in value:
+            _extract_global_variables(item, flow_info)
+    elif isinstance(value, dict):
+        for v in value.values():
+            _extract_global_variables(v, flow_info)
+
+
+def _is_long_text_field(field_name: str, value: object) -> bool:
+    """Check if a field contains long text that should be extracted."""
+    return field_name in LONG_TEXT_FIELDS and isinstance(value, str) and len(value) > MIN_PROMPT_LENGTH
+
+
+def _parse_custom_code(template: dict, node_type: str) -> tuple[bool, str | None]:
+    """Parse custom component code from a node template."""
+    code_field = template.get("code", {})
+    if isinstance(code_field, dict):
+        code_value = code_field.get("value", "")
+        if code_value and "class " in code_value and node_type not in COMPONENT_IMPORTS:
+            return True, code_value
+    return False, None
+
+
+def extract_output_method_mapping(custom_code: str) -> dict[str, str]:
+    """Extract output name → method name mapping from custom component code.
+
+    Parses Output() definitions in the outputs list to find the mapping
+    between output names and method names.
+
+    Returns:
+        Dict mapping output names to method names.
+    """
+    mapping = {}
+    # Find Output definitions: Output(..., name="xxx", ..., method="yyy", ...)
+    output_pattern = re.compile(
+        r'Output\s*\([^)]*name\s*=\s*["\']([^"\']+)["\'][^)]*method\s*=\s*["\']([^"\']+)["\']'
+        r"|"
+        r'Output\s*\([^)]*method\s*=\s*["\']([^"\']+)["\'][^)]*name\s*=\s*["\']([^"\']+)["\']',
+        re.DOTALL,
+    )
+    for match in output_pattern.finditer(custom_code):
+        if match.group(1) and match.group(2):
+            # name first, then method
+            mapping[match.group(1)] = match.group(2)
+        elif match.group(3) and match.group(4):
+            # method first, then name
+            mapping[match.group(4)] = match.group(3)
+    return mapping
+
+
+def _parse_edge(
+    edge: dict,
+    id_to_type: dict[str, str],
+    custom_output_mappings: dict[str, str],
+) -> EdgeInfo:
+    """Parse a single edge from the flow JSON.
+
+    Args:
+        edge: Edge data from JSON
+        id_to_type: Mapping of node_id to node_type for method name resolution
+        custom_output_mappings: Mapping of "node_id.output_name" to method name for custom components
+    """
+    source_id = edge.get("source", "")
+    target_id = edge.get("target", "")
+    edge_data = edge.get("data", {})
+    source_handle = edge_data.get("sourceHandle", {})
+    target_handle = edge_data.get("targetHandle", {})
+
+    output_name = source_handle.get("name", "output")
+    source_type = id_to_type.get(source_id, "")
+
+    # First check custom output mappings (for custom components)
+    custom_key = f"{source_id}.{output_name}"
+    if custom_key in custom_output_mappings:
+        method_name = custom_output_mappings[custom_key]
+    else:
+        # Fall back to standard mapping
+        method_name = get_method_name(source_type, output_name)
+
+    # For loop feedback edges, target has 'name' (output name) instead of 'fieldName' (input name)
+    target_field = target_handle.get("fieldName") or target_handle.get("name", "input")
+
+    return EdgeInfo(
+        source_id=source_id,
+        source_output=output_name,
+        source_method=method_name,
+        target_id=target_id,
+        target_input=target_field,
+    )
+
+
+def _parse_var_name(display_name: str, node_type: str) -> str:
+    """Parse a clean Python variable name from display name or type."""
+    name = _parse_to_snake_case(display_name or node_type)
+    if not name or name[0].isdigit():
+        name = f"node_{name}" if name else "node"
+    if name in PYTHON_RESERVED_WORDS:
+        name = f"{name}_component"
+    return name
+
+
+def _parse_unique_var_name(base_name: str, used_names: dict[str, int]) -> str:
+    """Parse a unique variable name by appending a number if needed."""
+    if base_name not in used_names:
+        return base_name
+    return f"{base_name}_{used_names[base_name] + 1}"
+
+
+def _parse_to_snake_case(name: str) -> str:
+    """Parse a name to snake_case format."""
+    name = re.sub(r"[^a-zA-Z0-9\s]", "", name)
+    name = re.sub(r"([a-z])([A-Z])", r"\1_\2", name)
+    name = re.sub(r"\s+", "_", name)
+    name = name.lower()
+    name = re.sub(r"_+", "_", name)
+    return name.strip("_")
