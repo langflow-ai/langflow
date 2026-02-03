@@ -12,6 +12,14 @@ from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.components.models import LanguageModelComponent
 from lfx.graph import Graph
 
+_MODEL_CLASSES = {
+    "OpenAI": "ChatOpenAI",
+    "Anthropic": "ChatAnthropic",
+    "Google Generative AI": "ChatGoogleGenerativeAI",
+    "Groq": "ChatGroq",
+    "Azure OpenAI": "AzureChatOpenAI",
+}
+
 TRANSLATION_PROMPT = """You are a Language Detection, Translation, and Intent Classification \
 Agent for Langflow Assistant.
 
@@ -49,20 +57,13 @@ Output: {{"translation": "make me a component that parses JSON", "intent": "gene
 
 def _build_model_config(provider: str, model_name: str) -> list[dict]:
     """Build model configuration for LanguageModelComponent."""
-    model_classes = {
-        "OpenAI": "ChatOpenAI",
-        "Anthropic": "ChatAnthropic",
-        "Google Generative AI": "ChatGoogleGenerativeAI",
-        "Groq": "ChatGroq",
-        "Azure OpenAI": "AzureChatOpenAI",
-    }
     return [
         {
             "icon": provider,
             "metadata": {
                 "api_key_param": "api_key",
                 "context_length": 128000,
-                "model_class": model_classes.get(provider, "ChatOpenAI"),
+                "model_class": _MODEL_CLASSES.get(provider, "ChatOpenAI"),
                 "model_name_param": "model",
             },
             "name": model_name,
