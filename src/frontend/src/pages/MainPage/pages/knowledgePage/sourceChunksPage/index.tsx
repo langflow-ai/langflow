@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Loading from "@/components/ui/loading";
@@ -21,51 +22,80 @@ interface ChunkCardProps {
 
 const ChunkCard = ({ chunk, index, onCopy }: ChunkCardProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
   const shouldTruncate = chunk.content.length > TRUNCATE_LENGTH;
   const displayContent =
     shouldTruncate && !isExpanded
       ? chunk.content.slice(0, TRUNCATE_LENGTH) + "..."
       : chunk.content;
 
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onCopy(chunk.content);
+    setIsCopied(true);
+    setTimeout(() => setIsCopied(false), 2000);
+  };
+
   return (
     <div
       className={cn(
-        "cursor-pointer rounded-lg border border-border bg-background p-4 transition-all duration-200",
-        isExpanded && "ring-1 ring-ring",
+        "cursor-pointer rounded-lg border border-muted bg-muted p-3 transition-all duration-200",
       )}
       onClick={() => shouldTruncate && setIsExpanded(!isExpanded)}
     >
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <span className="font-medium">Chunk {index}</span>
-          <span className="text-sm text-muted-foreground">
+          <span className="text-sm font-medium">Chunk {index}</span>
+          <Badge
+            variant="secondary"
+            size="sq"
+            className="text-xs text-muted-foreground"
+          >
             {chunk.char_count} chars
-          </span>
+          </Badge>
           <Button
             variant="ghost"
             size="icon"
-            className="h-6 w-6"
-            onClick={(e) => {
-              e.stopPropagation();
-              onCopy(chunk.content);
-            }}
+            className={cn(
+              "group h-6 w-6 transition-colors",
+              isCopied && "text-accent-emerald-foreground",
+            )}
+            onClick={handleCopy}
           >
             <ForwardedIconComponent
-              name="Copy"
-              className="h-3.5 w-3.5 text-muted-foreground"
+              name={isCopied ? "Check" : "Copy"}
+              className={cn(
+                "h-3.5 w-3.5 transition-colors",
+                isCopied
+                  ? "text-accent-emerald-foreground"
+                  : "text-muted-foreground group-hover:text-foreground",
+              )}
             />
           </Button>
         </div>
-        {shouldTruncate && (
-          <ForwardedIconComponent
-            name={isExpanded ? "ChevronUp" : "ChevronDown"}
-            className="h-4 w-4 text-muted-foreground transition-transform duration-200"
-          />
-        )}
+        <div className="flex items-center gap-3">
+          {/* TODO: Add score when semantic search is implemented
+          <Badge
+            variant="secondary"
+            size="sq"
+            className="text-xs text-muted-foreground"
+          >
+            {chunk?.score ?? "N/A"} score
+          </Badge>
+          */}
+          <div className="w-4">
+            {shouldTruncate && (
+              <ForwardedIconComponent
+                name={isExpanded ? "ChevronUp" : "ChevronDown"}
+                className="h-4 w-4 text-muted-foreground transition-transform duration-200"
+              />
+            )}
+          </div>
+        </div>
       </div>
       <p
         className={cn(
-          "text-sm leading-relaxed text-muted-foreground transition-all duration-200",
+          "text-sm leading-relaxed text-muted-foreground transition-all duration-200 whitespace-pre-wrap break-words",
           !isExpanded && shouldTruncate && "line-clamp-4",
         )}
       >
@@ -95,9 +125,14 @@ export const SourceChunksPage = () => {
     navigator.clipboard.writeText(content);
   };
 
-  const filteredChunks = (chunks || []).filter((chunk) =>
-    chunk.content.toLowerCase().includes(searchText.toLowerCase()),
-  );
+  const filteredChunks = (chunks || [])
+    .map((chunk, originalIndex) => ({
+      ...chunk,
+      originalIndex: originalIndex + 1,
+    }))
+    .filter((chunk) =>
+      chunk.content.toLowerCase().includes(searchText.toLowerCase()),
+    );
 
   const totalPages = Math.ceil(filteredChunks.length / CHUNKS_PER_PAGE);
   const startIndex = (currentPage - 1) * CHUNKS_PER_PAGE;
@@ -112,12 +147,12 @@ export const SourceChunksPage = () => {
 
   return (
     <div className="flex h-full w-full" data-testid="source-chunks-wrapper">
-      <div className="flex h-full w-full flex-col overflow-y-auto">
-        <div className="flex h-full w-full flex-col xl:container">
-          <div className="flex flex-1 flex-col justify-start px-5 pt-10">
-            <div className="flex h-full flex-col justify-start">
+      <div className="flex h-full w-full flex-col overflow-hidden">
+        <div className="flex h-full w-full flex-col overflow-hidden xl:container">
+          <div className="flex h-full flex-col px-5 pt-10">
+            <div className="flex h-full flex-col overflow-hidden">
               <div
-                className="flex items-center pb-8 text-xl font-semibold"
+                className="flex shrink-0 items-center pb-4 text-base h-[44px] font-semibold"
                 data-testid="mainpage_title"
               >
                 <div className="h-7 w-10 transition-all group-data-[open=true]/sidebar-wrapper:md:w-0 lg:hidden">
@@ -141,11 +176,11 @@ export const SourceChunksPage = () => {
                     className="h-4 w-4"
                   />
                 </Button>
-                {sourceId}
+                <span style={{ textTransform: "none" }}>{sourceId}</span>
               </div>
 
-              <div className="flex h-full flex-col">
-                <div className="pb-6">
+              <div className="flex flex-1 flex-col overflow-hidden">
+                <div className="shrink-0 pb-4 xl:w-[600px]">
                   <Input
                     icon="Search"
                     type="text"
@@ -169,64 +204,110 @@ export const SourceChunksPage = () => {
                     No chunks found
                   </div>
                 ) : (
-                  <>
-                    <div className="flex flex-col gap-3">
-                      {paginatedChunks.map((chunk, index) => (
-                        <ChunkCard
-                          key={chunk.id}
-                          chunk={chunk}
-                          index={startIndex + index + 1}
-                          onCopy={handleCopyChunk}
-                        />
-                      ))}
+                  <div className="flex flex-1 flex-col overflow-hidden">
+                    <div className="flex-1 overflow-y-auto">
+                      <div className="flex flex-col gap-3">
+                        {paginatedChunks.map((chunk) => (
+                          <ChunkCard
+                            key={chunk.id}
+                            chunk={chunk}
+                            index={chunk.originalIndex}
+                            onCopy={handleCopyChunk}
+                          />
+                        ))}
+                      </div>
                     </div>
 
                     {totalPages > 1 && (
-                      <div className="flex items-center justify-between border-t border-border py-4">
-                        <span className="text-sm text-muted-foreground">
-                          Showing {startIndex + 1}-
-                          {Math.min(
-                            startIndex + CHUNKS_PER_PAGE,
-                            filteredChunks.length,
-                          )}{" "}
-                          of {filteredChunks.length} chunks
-                        </span>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              setCurrentPage((p) => Math.max(1, p - 1))
-                            }
-                            disabled={currentPage === 1}
-                          >
-                            <ForwardedIconComponent
-                              name="ChevronLeft"
-                              className="h-4 w-4"
-                            />
-                            Previous
-                          </Button>
-                          <span className="px-2 text-sm">
-                            Page {currentPage} of {totalPages}
+                      <div className="shrink-0 pb-4 pt-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">
+                            Showing {startIndex + 1}-
+                            {Math.min(
+                              startIndex + CHUNKS_PER_PAGE,
+                              filteredChunks.length,
+                            )}{" "}
+                            of {filteredChunks.length} chunks
                           </span>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              setCurrentPage((p) => Math.min(totalPages, p + 1))
-                            }
-                            disabled={currentPage === totalPages}
-                          >
-                            Next
-                            <ForwardedIconComponent
-                              name="ChevronRight"
-                              className="h-4 w-4"
-                            />
-                          </Button>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => setCurrentPage(1)}
+                              disabled={currentPage === 1}
+                            >
+                              <ForwardedIconComponent
+                                name="ChevronsLeft"
+                                className="h-4 w-4"
+                              />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() =>
+                                setCurrentPage((p) => Math.max(1, p - 1))
+                              }
+                              disabled={currentPage === 1}
+                            >
+                              <ForwardedIconComponent
+                                name="ChevronLeft"
+                                className="h-4 w-4"
+                              />
+                            </Button>
+                            <div className="flex items-center gap-1.5 px-2 text-sm">
+                              <span>Page</span>
+                              <input
+                                type="number"
+                                min={1}
+                                max={totalPages}
+                                value={currentPage}
+                                onChange={(e) => {
+                                  const value = parseInt(e.target.value, 10);
+                                  if (!isNaN(value)) {
+                                    setCurrentPage(
+                                      Math.max(1, Math.min(totalPages, value)),
+                                    );
+                                  }
+                                }}
+                                className="h-7 w-16 rounded border border-input bg-background px-2 text-center text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                              />
+                              <span>of {totalPages}</span>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() =>
+                                setCurrentPage((p) =>
+                                  Math.min(totalPages, p + 1),
+                                )
+                              }
+                              disabled={currentPage === totalPages}
+                            >
+                              <ForwardedIconComponent
+                                name="ChevronRight"
+                                className="h-4 w-4"
+                              />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => setCurrentPage(totalPages)}
+                              disabled={currentPage === totalPages}
+                            >
+                              <ForwardedIconComponent
+                                name="ChevronsRight"
+                                className="h-4 w-4"
+                              />
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     )}
-                  </>
+                  </div>
                 )}
               </div>
             </div>

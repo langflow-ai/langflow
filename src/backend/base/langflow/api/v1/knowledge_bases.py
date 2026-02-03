@@ -331,7 +331,7 @@ async def list_knowledge_bases(current_user: CurrentActiveUser) -> list[Knowledg
 
                 kb_info = KnowledgeBaseInfo(
                     id=kb_dir.name,
-                    name=kb_dir.name.replace("_", " ").replace("-", " ").title(),
+                    name=kb_dir.name.replace("_", " ").replace("-", " "),
                     embedding_provider=metadata["embedding_provider"],
                     embedding_model=metadata["embedding_model"],
                     size=size,
@@ -376,7 +376,7 @@ async def get_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -> K
 
         return KnowledgeBaseInfo(
             id=kb_name,
-            name=kb_name.replace("_", " ").replace("-", " ").title(),
+            name=kb_name.replace("_", " ").replace("-", " "),
             embedding_provider=metadata["embedding_provider"],
             embedding_model=metadata["embedding_model"],
             size=size,

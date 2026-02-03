@@ -35,6 +35,7 @@ export const createKnowledgeBaseColumns = (
       checkboxSelection: true,
       editable: false,
       cellClass: baseCellClass,
+      cellStyle: { textTransform: "none" },
     },
     {
       headerName: "Size",
