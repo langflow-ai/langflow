@@ -94,7 +94,9 @@ export default function InspectionPanelFields({
   return (
     <div className="pb-2">
       {/* Render basic fields */}
-      <div className="px-1">{basicFields.map((field) => renderField(field, showAdvanced))}</div>
+      <div className="px-1">
+        {basicFields.map((field) => renderField(field, showAdvanced))}
+      </div>
 
       {/* Render advanced fields disclosure */}
       <Separator className="mt-3" />
@@ -125,7 +127,9 @@ export default function InspectionPanelFields({
           </DisclosureTrigger>
 
           <DisclosureContent>
-            <div className="my-1">{advancedFields.map((field) => renderField(field, true))}</div>
+            <div className="my-1">
+              {advancedFields.map((field) => renderField(field, true))}
+            </div>
           </DisclosureContent>
         </Disclosure>
       )}

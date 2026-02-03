@@ -102,9 +102,12 @@ test(
       timeout: 3000,
     });
 
-    await page.locator(".react-flow__node", {
-      has: page.getByText("Language Model", { exact: true }),
-    }).last().click();
+    await page
+      .locator(".react-flow__node", {
+        has: page.getByText("Language Model", { exact: true }),
+      })
+      .last()
+      .click();
 
     await page.waitForSelector('[data-testid="more-options-modal"]', {
       timeout: 3000,

@@ -22,7 +22,11 @@ export const KEYBOARD_SHORTCUTS = {
   RESET_ZOOM: { key: "0", code: "Digit0" },
 } as const;
 
-const CanvasControlsDropdown = ({ selectedNode }: { selectedNode: AllNodeType | null }) => {
+const CanvasControlsDropdown = ({
+  selectedNode,
+}: {
+  selectedNode: AllNodeType | null;
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const { fitView, zoomIn, zoomOut, zoomTo } = useReactFlow();
 
@@ -74,7 +78,12 @@ const CanvasControlsDropdown = ({ selectedNode }: { selectedNode: AllNodeType | 
   }, [zoomOut]);
 
   const handleFitView = useCallback(() => {
-    fitView({ padding: { left: "20px", right: ENABLE_INSPECTION_PANEL && selectedNode ? "340px" : "20px" } });
+    fitView({
+      padding: {
+        left: "20px",
+        right: ENABLE_INSPECTION_PANEL && selectedNode ? "340px" : "20px",
+      },
+    });
   }, [fitView, selectedNode]);
 
   const handleResetZoom = useCallback(() => {

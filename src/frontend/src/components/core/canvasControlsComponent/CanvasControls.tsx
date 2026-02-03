@@ -7,7 +7,13 @@ import CanvasControlsDropdown from "./CanvasControlsDropdown";
 import HelpDropdown from "./HelpDropdown";
 import { AllNodeType } from "@/types/flow";
 
-const CanvasControls = ({ children, selectedNode }: { children?: ReactNode, selectedNode: AllNodeType | null }) => {
+const CanvasControls = ({
+  children,
+  selectedNode,
+}: {
+  children?: ReactNode;
+  selectedNode: AllNodeType | null;
+}) => {
   const reactFlowStoreApi = useStoreApi();
   const isFlowLocked = useFlowStore(
     useShallow((state) => state.currentFlow?.locked),

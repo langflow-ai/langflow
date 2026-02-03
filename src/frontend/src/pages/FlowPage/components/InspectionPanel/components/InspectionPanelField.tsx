@@ -139,9 +139,7 @@ export default function InspectionPanelField({
                 </ShadTooltip>
               )}
               {showAdvanced && (
-                <ShadTooltip
-                  content={isAdvanced ? "Show" : "Hide"}
-                >
+                <ShadTooltip content={isAdvanced ? "Show" : "Hide"}>
                   <button
                     className="ml-1 cursor-pointer text-placeholder hover:text-foreground"
                     onClick={handleToggleVisibility}
