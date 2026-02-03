@@ -776,6 +776,7 @@ export default function Page({
               <>
                 <MemoizedLogCanvasControls />
                 <MemoizedCanvasControls
+                  selectedNode={selectedNode}
                   setIsAddingNote={setIsAddingNote}
                   shadowBoxWidth={shadowBoxWidth}
                   shadowBoxHeight={shadowBoxHeight}
