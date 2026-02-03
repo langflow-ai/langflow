@@ -368,7 +368,7 @@ export default function AccordionPromptComponent({
     if (disabled || readonly || !contentEditableRef.current) return;
 
     isTypingRef.current = true;
-    const variableText = "{Add variable here}";
+    const variableText = "{variable_name}";
 
     // Get current cursor position or end of text
     let insertPosition = internalValue.length;
