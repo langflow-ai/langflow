@@ -82,6 +82,10 @@ export function SessionSelector({
     }
   };
 
+  // Default session (flowId) cannot be renamed or deleted
+  const isDefaultSession = session === currentFlowId;
+  const canModifySession = !isDefaultSession;
+
   return (
     <div
       data-testid="session-selector"
@@ -116,7 +120,7 @@ export function SessionSelector({
             <ShadTooltip styleClasses="z-50" content={session}>
               <div className="relative w-full overflow-hidden">
                 <span className="w-full truncate bg-transparent text-mmd">
-                  {session === currentFlowId ? "Default Session" : session}
+                  {isDefaultSession ? "Default Session" : session}
                 </span>
               </div>
             </ShadTooltip>
@@ -127,8 +131,8 @@ export function SessionSelector({
           onRename={handleEditClick}
           onMessageLogs={() => inspectSession?.(session)}
           onDelete={() => deleteSession(session)}
-          showRename={session !== currentFlowId}
-          showDelete={session !== currentFlowId}
+          showRename={canModifySession}
+          showDelete={canModifySession}
           side="bottom"
           align="end"
           sideOffset={4}
