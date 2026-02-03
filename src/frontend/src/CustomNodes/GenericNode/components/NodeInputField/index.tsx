@@ -122,12 +122,8 @@ export default function NodeInputField({
     />
   );
 
-  return !showNode ? (
-    displayHandle && isPrimaryInput ? (
-      Handle
-    ) : (
-      <></>
-    )
+  return !showNode && displayHandle && isPrimaryInput ? (
+    Handle
   ) : (
     <div
       ref={ref}
