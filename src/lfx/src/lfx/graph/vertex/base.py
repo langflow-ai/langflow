@@ -336,7 +336,8 @@ class Vertex:
             raise ValueError(msg)
 
         if self.updated_raw_params:
-            self.updated_raw_params = False
+            # Don't reset the flag - keep it True to protect against multiple build_params() calls
+            # The flag will be reset when _build_each_vertex_in_params_dict() processes the params
             return
 
         # Create parameter handler with lazy storage service initialization
@@ -496,6 +497,10 @@ class Vertex:
                 )
             elif key not in self.params or self.updated_raw_params:
                 self.params[key] = value
+
+        # Reset the flag after processing raw_params
+        if self.updated_raw_params:
+            self.updated_raw_params = False
 
     async def _build_dict_and_update_params(
         self,
