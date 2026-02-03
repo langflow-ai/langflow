@@ -64,7 +64,6 @@ test(
       .getByTestId("popover-anchor-input-api_key")
       .fill(process.env.OPENAI_API_KEY || "");
 
-
     await page
       .getByTestId("handle-chatinput-noshownode-chat message-source")
       .click();
