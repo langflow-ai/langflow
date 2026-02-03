@@ -24,6 +24,7 @@ export default function AccordionPromptComponent({
   editNode = false,
   id = "",
   readonly = false,
+  showParameter = false,
 }: InputProps<string, PromptAreaComponentType>): JSX.Element {
   const [isOpen, setIsOpen] = useState(true);
   const [internalValue, setInternalValue] = useState(value);
@@ -389,6 +390,8 @@ export default function AccordionPromptComponent({
     // Update DOM with highlighting
     contentEditableRef.current.innerHTML = getHighlightedHTML(newValue);
   };
+
+  if (!showParameter) return <></>;
 
   return (
     <div className={cn("relative w-full", disabled && "pointer-events-none")}>
