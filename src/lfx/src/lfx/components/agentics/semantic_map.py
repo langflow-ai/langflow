@@ -44,7 +44,7 @@ class SemanticMap(Component):
     display_name = "SemanticMap"
     description = "Reads each of the input rows and generates a new column following provided instructions"
     documentation: str = "github.com/IBM/agentics/"
-    icon = "List"
+    icon = "Agentics"
 
     inputs = [
         ModelInput(
