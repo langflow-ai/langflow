@@ -13,6 +13,7 @@ interface ChatSidebarProps {
   currentSessionId?: string;
   onDeleteSession?: (sessionId: string) => void;
   onOpenLogs?: (sessionId: string) => void;
+  renameLocalSession?: (oldSessionId: string, newSessionId: string) => void;
 }
 
 export function ChatSidebar({
@@ -22,9 +23,13 @@ export function ChatSidebar({
   currentSessionId,
   onDeleteSession,
   onOpenLogs,
+  renameLocalSession,
 }: ChatSidebarProps) {
   const currentFlowId = useGetFlowId();
-  const { handleDelete } = useEditSessionInfo({ flowId: currentFlowId });
+  const { handleDelete, handleRename } = useEditSessionInfo({
+    flowId: currentFlowId,
+    renameLocalSession,
+  });
 
   const sessionIds = useMemo(() => sessions, [sessions]);
 
@@ -81,6 +86,7 @@ export function ChatSidebar({
               isVisible={visibleSession === session}
               updateVisibleSession={handleSessionClick}
               inspectSession={onOpenLogs}
+              handleRename={handleRename}
               setActiveSession={() => {
                 // TODO: Implement active session
               }}

@@ -18,6 +18,7 @@ export interface SessionSelectorProps {
   setSelectedView?: (view: { type: string; id: string } | undefined) => void;
   playgroundPage?: boolean;
   setActiveSession?: (session: string) => void;
+  handleRename?: (oldSessionId: string, newSessionId: string) => Promise<void>;
 }
 
 export function SessionSelector({
@@ -32,6 +33,7 @@ export function SessionSelector({
   setSelectedView,
   playgroundPage = false,
   setActiveSession,
+  handleRename,
 }: SessionSelectorProps) {
   const [isEditing, setIsEditing] = useState(false);
   const { mutate: updateSessionName } = useUpdateSessionName();
@@ -43,27 +45,41 @@ export function SessionSelector({
     setIsEditing(true);
   };
 
-  const handleRenameSave = (newSessionId: string) => {
+  const handleRenameSave = async (newSessionId: string) => {
     setIsEditing(false);
     const trimmed = newSessionId.trim();
     if (!trimmed || trimmed === session) return;
-    updateSessionName(
-      { old_session_id: session, new_session_id: trimmed },
-      {
-        onSuccess: () => {
-          if (isVisible) {
+    
+    // Use handleRename if provided (from sidebar), otherwise use mutation directly (from header)
+    if (handleRename) {
+      await handleRename(session, trimmed);
+      updateVisibleSession(trimmed);
+      if (
+        selectedView?.type === "Session" &&
+        selectedView?.id === session &&
+        setSelectedView
+      ) {
+        setSelectedView({ type: "Session", id: trimmed });
+      }
+    } else {
+      // Wait for the mutation to complete before updating visible session
+      await updateSessionName(
+        { old_session_id: session, new_session_id: trimmed },
+        {
+          onSuccess: () => {
+            // Update visible session after rename is complete
             updateVisibleSession(trimmed);
-          }
-          if (
-            selectedView?.type === "Session" &&
-            selectedView?.id === session &&
-            setSelectedView
-          ) {
-            setSelectedView({ type: "Session", id: trimmed });
-          }
+            if (
+              selectedView?.type === "Session" &&
+              selectedView?.id === session &&
+              setSelectedView
+            ) {
+              setSelectedView({ type: "Session", id: trimmed });
+            }
+          },
         },
-      },
-    );
+      );
+    }
   };
 
   return (

@@ -29,7 +29,8 @@ export const useChatHistory = (visibleSession: string | null) => {
     queryFn: () => {
       // Return cached data immediately - this makes the query active and reactive
       // We're using useQuery purely as a subscription mechanism, not for fetching
-      return queryClient.getQueryData<Message[]>(sessionCacheKey) || [];
+      const cachedData = queryClient.getQueryData<Message[]>(sessionCacheKey) || [];
+      return cachedData;
     },
     staleTime: Infinity, // Never refetch - updates come from setQueryData, not server
     gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes (allows cleanup of old sessions)
@@ -69,12 +70,12 @@ export const useChatHistory = (visibleSession: string | null) => {
         // In the default session, we show messages that have the same session_id as the flow_id
         // OR messages that have NO session_id (legacy behavior)
         if (visibleSession === currentFlowId) {
-          return (
-            isCurrentFlow &&
-            (message.session_id === visibleSession || !message.session_id)
-          );
+          const matches = isCurrentFlow &&
+            (message.session_id === visibleSession || !message.session_id);
+          return matches;
         }
-        return isCurrentFlow && message.session_id === visibleSession;
+        const matches = isCurrentFlow && message.session_id === visibleSession;
+        return matches;
       })
       .map((message: Message) => {
         let files = message.files;
@@ -111,7 +112,8 @@ export const useChatHistory = (visibleSession: string | null) => {
         };
       });
 
-    return [...filteredMessages].sort(sortSenderMessages);
+    const sorted = [...filteredMessages].sort(sortSenderMessages);
+    return sorted;
   }, [messages, visibleSession, currentFlowId]);
 
   return chatHistory;

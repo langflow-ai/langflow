@@ -9,9 +9,11 @@ const LOCAL_SESSIONS_STORAGE_KEY = (flowId: string) =>
 export const useEditSessionInfo = ({
   flowId,
   dbSessions: providedDbSessions,
+  renameLocalSession,
 }: {
   flowId?: string;
   dbSessions?: string[];
+  renameLocalSession?: (oldSessionId: string, newSessionId: string) => void;
 }) => {
   const setSelectedSession = usePlaygroundStore(
     (state) => state.setSelectedSession,
@@ -43,34 +45,17 @@ export const useEditSessionInfo = ({
     }
   };
 
-  const handleRename = async (sessionId: string, newSessionId: string) => {
+  const handleRename = async (sessionId: string, newSessionId: string) => {    
     // Update session name via API or sessionStorage
     await updateSessionName({
       old_session_id: sessionId,
       new_session_id: newSessionId,
     });
 
-    // Update local sessions list if this is a local session
-    if (flowId && isPlayground) {
-      try {
-        const stored = window.sessionStorage.getItem(
-          LOCAL_SESSIONS_STORAGE_KEY(flowId),
-        );
-        if (stored) {
-          const localSessions = JSON.parse(stored) as string[];
-          const index = localSessions.indexOf(sessionId);
-          if (index !== -1) {
-            localSessions[index] = newSessionId;
-            window.sessionStorage.setItem(
-              LOCAL_SESSIONS_STORAGE_KEY(flowId),
-              JSON.stringify(localSessions),
-            );
-          }
-        }
-      } catch (error) {
-        console.error("Error updating local sessions:", error);
-      }
-    }
+    // Update local sessions list using the provided function
+    if (renameLocalSession) {
+      renameLocalSession(sessionId, newSessionId);
+    } 
 
     // Update selected session if the renamed session is currently selected
     if (flowId && sessionId === selectedSession) {
