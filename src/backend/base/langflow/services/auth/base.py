@@ -6,20 +6,23 @@ extend this base class.
 
 Design Principles:
 ------------------
-1. **Unified Identity Type**: Methods return `User | UserRead` where the caller may
+1. **Framework Agnostic**: The service layer is independent of web frameworks (FastAPI, Flask, etc.).
+   It raises generic exceptions that are converted to framework-specific exceptions by the adapter layer.
+
+2. **Unified Identity Type**: Methods return `User | UserRead` where the caller may
    receive either a full database entity or a lightweight DTO. Callers should handle
    both types appropriately (both have `id`, `username`, `is_active`, `is_superuser`).
 
-2. **Session Consistency**: Database sessions are passed through the auth chain to
+3. **Session Consistency**: Database sessions are passed through the auth chain to
    ensure transactional consistency and avoid multiple concurrent connections.
 
-3. **JIT Provisioning**: OIDC/SAML implementations can use `get_or_create_user_from_claims`
+4. **JIT Provisioning**: OIDC/SAML implementations can use `get_or_create_user_from_claims`
    to automatically create users on first login using identity provider claims.
 
-4. **Password Methods**: Password hashing/verification methods have default implementations
+5. **Password Methods**: Password hashing/verification methods have default implementations
    that raise NotImplementedError. OIDC implementations don't manage passwords locally.
 
-5. **Token Abstraction**: Token creation/validation is abstracted to support both local
+6. **Token Abstraction**: Token creation/validation is abstracted to support both local
    JWT tokens and external identity provider tokens.
 """
 
@@ -68,6 +71,46 @@ class AuthServiceBase(Service, abc.ABC):
     # -------------------------------------------------------------------------
 
     @abc.abstractmethod
+    async def authenticate_with_credentials(
+        self,
+        token: str | None,
+        api_key: str | None,
+        db: AsyncSession,
+    ) -> User | UserRead:
+        """Authenticate user with provided credentials (framework-agnostic).
+
+        This is the core authentication method that validates credentials and returns
+        a user. It is framework-agnostic and raises generic AuthenticationError exceptions.
+        
+        The adapter layer (utils.py) is responsible for:
+        1. Extracting credentials from protocol-specific objects (Request, WebSocket, etc.)
+        2. Calling this method
+        3. Converting generic exceptions to protocol-specific ones (HTTPException, WebSocketException)
+
+        Authentication flow:
+        1. If token provided: Validate token and return user
+        2. If api_key provided: Validate API key and return user
+        3. If neither: Raise MissingCredentialsError
+
+        Args:
+            token: Access token (JWT, OIDC token, etc.)
+            api_key: API key for authentication
+            db: Database session for user lookup/creation
+
+        Returns:
+            User or UserRead object representing the authenticated identity.
+            Both types have: id, username, is_active, is_superuser.
+
+        Raises:
+            MissingCredentialsError: If no credentials provided
+            InvalidCredentialsError: If credentials are invalid
+            InvalidTokenError: If token format/signature is invalid
+            TokenExpiredError: If token has expired
+            InactiveUserError: If user account is inactive
+            AuthenticationError: For other authentication failures
+        """
+
+    @abc.abstractmethod
     async def get_current_user(
         self,
         token: str | Coroutine | None,
@@ -77,10 +120,11 @@ class AuthServiceBase(Service, abc.ABC):
     ) -> User | UserRead:
         """Get the current authenticated user from token or API key.
 
-        This is the primary authentication entry point. It should:
-        1. Try token-based auth first (JWT, OIDC token, etc.)
-        2. Fall back to API key auth if no token provided
-        3. For OIDC: Perform JIT provisioning if user doesn't exist
+        DEPRECATED: This method is kept for backward compatibility with existing code.
+        New code should use authenticate_with_credentials() directly.
+
+        This method handles FastAPI-specific concerns (coroutine tokens, separate query/header params)
+        and delegates to authenticate_with_credentials().
 
         Args:
             token: JWT/OAuth token (may be a coroutine that resolves to token)
@@ -90,10 +134,9 @@ class AuthServiceBase(Service, abc.ABC):
 
         Returns:
             User or UserRead object representing the authenticated identity.
-            Both types have: id, username, is_active, is_superuser.
 
         Raises:
-            HTTPException: If authentication fails
+            AuthenticationError subclasses (converted to HTTPException by caller)
         """
 
     @abc.abstractmethod
@@ -105,6 +148,9 @@ class AuthServiceBase(Service, abc.ABC):
     ) -> User | UserRead:
         """Get the current user for WebSocket connections.
 
+        DEPRECATED: This method is kept for backward compatibility.
+        It delegates to authenticate_with_credentials().
+
         Args:
             token: Access token from cookie or query param
             api_key: API key from query param or header
@@ -114,7 +160,7 @@ class AuthServiceBase(Service, abc.ABC):
             User or UserRead object
 
         Raises:
-            WebSocketException: If authentication fails
+            AuthenticationError subclasses (converted to WebSocketException by caller)
         """
 
     @abc.abstractmethod
@@ -126,9 +172,8 @@ class AuthServiceBase(Service, abc.ABC):
     ) -> User | UserRead:
         """Get the current user for SSE (Server-Sent Events) connections.
 
-        Similar to WebSocket authentication, accepts either:
-        - Cookie authentication (access_token_lf)
-        - API key authentication (x-api-key)
+        DEPRECATED: This method is kept for backward compatibility.
+        It delegates to authenticate_with_credentials().
 
         Args:
             token: Access token from cookie
@@ -139,7 +184,7 @@ class AuthServiceBase(Service, abc.ABC):
             User or UserRead object
 
         Raises:
-            HTTPException: If authentication fails
+            AuthenticationError subclasses (converted to HTTPException by caller)
         """
 
     @abc.abstractmethod
@@ -160,7 +205,8 @@ class AuthServiceBase(Service, abc.ABC):
             User if authentication succeeds, None otherwise
 
         Raises:
-            HTTPException: For specific auth failures (inactive user, etc.)
+            InvalidCredentialsError: If username/password is incorrect
+            InactiveUserError: If user account is inactive
         """
 
     # -------------------------------------------------------------------------
@@ -178,7 +224,7 @@ class AuthServiceBase(Service, abc.ABC):
             The same user object if active
 
         Raises:
-            HTTPException: If user is inactive
+            InactiveUserError: If user is inactive
         """
 
     @abc.abstractmethod
@@ -192,7 +238,8 @@ class AuthServiceBase(Service, abc.ABC):
             The same user object if active and superuser
 
         Raises:
-            HTTPException: If user is inactive or not superuser
+            InactiveUserError: If user is inactive
+            InsufficientPermissionsError: If user is not a superuser
         """
 
     # -------------------------------------------------------------------------
@@ -238,7 +285,8 @@ class AuthServiceBase(Service, abc.ABC):
             Dict containing new token information
 
         Raises:
-            HTTPException: If refresh token is invalid
+            InvalidTokenError: If refresh token is invalid
+            TokenExpiredError: If refresh token has expired
         """
 
     # -------------------------------------------------------------------------
@@ -265,12 +313,15 @@ class AuthServiceBase(Service, abc.ABC):
             UserRead if valid, None otherwise
 
         Raises:
-            HTTPException: If API key validation fails
+            InvalidCredentialsError: If API key validation fails
         """
 
     @abc.abstractmethod
     async def ws_api_key_security(self, api_key: str | None) -> UserRead:
         """Validate API key for WebSocket connections.
+
+        DEPRECATED: This method is kept for backward compatibility.
+        New code should use api_key_security() directly.
 
         Args:
             api_key: The API key
@@ -279,7 +330,8 @@ class AuthServiceBase(Service, abc.ABC):
             UserRead for the authenticated user
 
         Raises:
-            WebSocketException: If API key is invalid
+            InvalidCredentialsError: If API key is invalid
+            MissingCredentialsError: If API key is not provided
         """
 
     # -------------------------------------------------------------------------
@@ -290,6 +342,9 @@ class AuthServiceBase(Service, abc.ABC):
     async def get_webhook_user(self, flow_id: str, request: Request) -> UserRead:
         """Get the user for webhook execution.
 
+        NOTE: This method still accepts FastAPI Request object for backward compatibility.
+        Consider refactoring to accept extracted credentials instead.
+
         Args:
             flow_id: The flow ID being executed
             request: The FastAPI request object
@@ -298,7 +353,8 @@ class AuthServiceBase(Service, abc.ABC):
             UserRead for the webhook user
 
         Raises:
-            HTTPException: If authentication fails
+            InvalidCredentialsError: If authentication fails
+            MissingCredentialsError: If no credentials provided
         """
 
     # -------------------------------------------------------------------------
@@ -337,7 +393,7 @@ class AuthServiceBase(Service, abc.ABC):
             Tuple of (user_id, token_dict)
 
         Raises:
-            HTTPException: If auto-login is not enabled
+            AuthenticationError: If auto-login is not enabled
         """
 
     @abc.abstractmethod
@@ -449,7 +505,7 @@ class AuthServiceBase(Service, abc.ABC):
             User or UserRead object representing the authenticated identity
 
         Raises:
-            HTTPException: If authentication fails
+            AuthenticationError subclasses: If authentication fails
         """
 
     @abc.abstractmethod
@@ -463,7 +519,7 @@ class AuthServiceBase(Service, abc.ABC):
             The same user object if active
 
         Raises:
-            HTTPException: If user is inactive
+            InactiveUserError: If user is inactive
         """
 
     # -------------------------------------------------------------------------
@@ -489,7 +545,11 @@ class AuthServiceBase(Service, abc.ABC):
             User or UserRead object representing the authenticated identity
 
         Raises:
-            HTTPException: If token is invalid or authentication fails
+            MissingCredentialsError: If token is None
+            InvalidTokenError: If token format/signature is invalid
+            TokenExpiredError: If token has expired
+            InactiveUserError: If user account is inactive
+            AuthenticationError: For other authentication failures
         """
 
     @abc.abstractmethod
