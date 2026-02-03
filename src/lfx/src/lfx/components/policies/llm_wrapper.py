@@ -6,7 +6,8 @@ from toolguard.buildtime.llm.tg_litellm import LanguageModelBase
 class LangchainModelWrapper(LanguageModelBase):
     def __init__(self, langchain_model: BaseChatModel):
         self.langchain_model = langchain_model
-        self.langchain_model.max_tokens = 10000
+        if hasattr(self.langchain_model, "max_tokens") and getattr(self.langchain_model, "max_tokens", None) is None:
+            self.langchain_model.max_tokens = 10000
 
     async def generate(self, messages: list[dict]) -> str:
         messages = [

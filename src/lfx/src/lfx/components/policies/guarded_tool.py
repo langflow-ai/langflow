@@ -39,13 +39,25 @@ class GuardedTool(Tool):
         return self._orig_tool.args
 
     def parse_input(self, tool_input: str | dict | ToolCall) -> dict:
+        # Handle string input - try to parse as JSON, fallback to wrapped input
         if isinstance(tool_input, str):
             try:
                 return json.loads(tool_input)
             except json.JSONDecodeError:
                 return {"input": tool_input}
-        else:
-            return tool_input or {}  # TODO: ToolCall
+
+        # Handle ToolCall dict format - extract and parse args
+        if isinstance(tool_input, dict) and "args" in tool_input:
+            args = tool_input["args"]
+            if isinstance(args, str):
+                try:
+                    return json.loads(args)
+                except json.JSONDecodeError:
+                    return {"input": args}
+            return args if isinstance(args, dict) else {}
+
+        # Return dict as-is or empty dict for None/other types
+        return tool_input if isinstance(tool_input, dict) else {}
 
     def run(self, tool_input: str | dict | ToolCall, config=None, **kwargs):
         msg = "GuardedTool.run() is not implemented. consider calling the async version arun()"
@@ -89,7 +101,13 @@ class ToolInvoker(IToolInvoker):
             logger.info(f"invoking {toolname} internally")
             res = await tool.ainvoke(input=arguments)
 
-            res_dict = res.structuredContent["result"] if isinstance(res, CallToolResult) else res["value"]
+            if isinstance(res, CallToolResult):
+                res_dict = res.structuredContent.get("result")
+            elif isinstance(res, dict) and "value" in res:
+                res_dict = res["value"]
+            else:
+                res_dict = res
+
             if isinstance(res_dict, BaseModel):
                 res_dict = res_dict.model_dump()
 
