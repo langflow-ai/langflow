@@ -46,14 +46,18 @@ function isFlowFile(file: File): boolean {
  *
  * @param dataTransfer - event.clipboardData from ClipboardEvent.
  */
-export function getFlowFilesFromClipboard(dataTransfer: DataTransfer | null): File[] {
+export function getFlowFilesFromClipboard(
+  dataTransfer: DataTransfer | null,
+): File[] {
   if (!dataTransfer?.files?.length) return [];
   const out: File[] = [];
   for (let i = 0; i < dataTransfer.files.length; i++) {
     const file = dataTransfer.files[i];
     if (!isFlowFile(file)) continue;
     out.push(
-      file.type === JSON_MIME ? file : new File([file], file.name, { type: JSON_MIME }),
+      file.type === JSON_MIME
+        ? file
+        : new File([file], file.name, { type: JSON_MIME }),
     );
   }
   return out;
@@ -76,7 +80,9 @@ export function isEditablePasteTarget(target: EventTarget | null): boolean {
 /**
  * Normalizes payload so it has flow.data (nodes, edges). Accepts Langflow shape or raw { nodes, edges }.
  */
-function normalizeToFlowShape(payload: Record<string, unknown>): Record<string, unknown> {
+function normalizeToFlowShape(
+  payload: Record<string, unknown>,
+): Record<string, unknown> {
   if (Array.isArray(payload.flows)) return payload;
   if (isRecord(payload.data) && hasNodesAndEdges(payload.data)) return payload;
   if (hasNodesAndEdges(payload)) {
@@ -85,7 +91,11 @@ function normalizeToFlowShape(payload: Record<string, unknown>): Record<string, 
       data: {
         nodes: payload.nodes,
         edges: payload.edges,
-        viewport: (payload as { viewport?: unknown }).viewport ?? { x: 0, y: 0, zoom: 1 },
+        viewport: (payload as { viewport?: unknown }).viewport ?? {
+          x: 0,
+          y: 0,
+          zoom: 1,
+        },
       },
     };
   }
@@ -111,7 +121,11 @@ export function getPastedFlowFile(text: string): File | null {
   if (!looksLikeFlowImportPayload(parsed)) return null;
   const normalized = normalizeToFlowShape(parsed as Record<string, unknown>);
   const safeTimestamp = new Date().toISOString().replace(/[:.]/g, "-");
-  return new File([JSON.stringify(normalized)], `pasted-flow-${safeTimestamp}.json`, {
-    type: "application/json",
-  });
+  return new File(
+    [JSON.stringify(normalized)],
+    `pasted-flow-${safeTimestamp}.json`,
+    {
+      type: "application/json",
+    },
+  );
 }

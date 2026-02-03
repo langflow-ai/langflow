@@ -361,13 +361,7 @@ export default function Page({
         });
       }
     },
-    [
-      isLocked,
-      takeSnapshot,
-      uploadFlow,
-      setErrorData,
-      paste,
-    ],
+    [isLocked, takeSnapshot, uploadFlow, setErrorData, paste],
   );
 
   useEffect(() => {
