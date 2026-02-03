@@ -15,6 +15,7 @@ export interface SessionMoreMenuProps {
   onDelete: () => void;
   onClearChat?: () => void;
   showMessageLogs?: boolean;
+  showRename?: boolean;
   showDelete?: boolean;
   showClearChat?: boolean;
   // Positioning props
@@ -36,6 +37,7 @@ export function SessionMoreMenu({
   onDelete,
   onClearChat,
   showMessageLogs = true,
+  showRename = true,
   showDelete = true,
   showClearChat = false,
   side = "bottom",
@@ -102,15 +104,17 @@ export function SessionMoreMenu({
           sideOffset={sideOffset}
           className={cn("p-0", contentClassName)}
         >
-          <SelectItem value="rename" className="session-more-menu-item">
-            <div className="flex items-center">
-              <ForwardedIconComponent
-                name="SquarePen"
-                className="mr-2 h-4 w-4"
-              />
-              Rename
-            </div>
-          </SelectItem>
+          {showRename && (
+            <SelectItem value="rename" className="session-more-menu-item">
+              <div className="flex items-center">
+                <ForwardedIconComponent
+                  name="SquarePen"
+                  className="mr-2 h-4 w-4"
+                />
+                Rename
+              </div>
+            </SelectItem>
+          )}
           {showMessageLogs && (
             <SelectItem value="messageLogs" className="session-more-menu-item">
               <div className="flex items-center">

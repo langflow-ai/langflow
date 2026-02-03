@@ -111,6 +111,7 @@ export function SessionSelector({
           onRename={handleEditClick}
           onMessageLogs={() => inspectSession?.(session)}
           onDelete={() => deleteSession(session)}
+          showRename={session !== currentFlowId}
           showDelete={session !== currentFlowId}
           side="bottom"
           align="end"
