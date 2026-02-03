@@ -342,7 +342,7 @@ def prepare_global_scope(module):
             imports.append(node)
         elif isinstance(node, ast.ImportFrom) and node.module is not None:
             import_froms.append(node)
-        elif isinstance(node, ast.ClassDef | ast.FunctionDef | ast.Assign):
+        elif isinstance(node, ast.ClassDef | ast.FunctionDef | ast.Assign | ast.AnnAssign):
             definitions.append(node)
 
     for node in imports:
