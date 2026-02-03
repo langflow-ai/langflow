@@ -109,9 +109,7 @@ export default function InspectionPanelFields({
       </div>
 
       {/* Render advanced fields disclosure */}
-      {basicFields.length > 0 && (
-        <Separator className="mt-3" />
-      )}
+      {basicFields.length > 0 && <Separator className="mt-3" />}
       <Disclosure
         open={showAdvanced}
         onOpenChange={setShowAdvanced}

@@ -29,7 +29,7 @@ withEventDeliveryModes(
       timeout: 100000,
     });
 
-    await selectAnthropicModel(page)
+    await selectAnthropicModel(page);
 
     await page.getByTestId("playground-btn-flow-io").click();
 
