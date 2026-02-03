@@ -21,9 +21,8 @@ async def get_api_keys_route(
 ) -> ApiKeysResponse:
     try:
         user_id = current_user.id
-        keys = await get_api_keys(db, user_id)
-
-        return ApiKeysResponse(total_count=len(keys), user_id=user_id, api_keys=keys)
+        api_keys = await get_api_keys(db, user_id)
+        return ApiKeysResponse(total_count=len(api_keys), user_id=user_id, api_keys=api_keys)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
