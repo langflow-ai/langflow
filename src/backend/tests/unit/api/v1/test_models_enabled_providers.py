@@ -98,7 +98,10 @@ async def test_enabled_providers_after_credential_creation(client: AsyncClient, 
     assert create_response.status_code == status.HTTP_201_CREATED
 
     # Check status after credential creation
-    after_response = await client.get("api/v1/models/enabled_providers", headers=logged_in_headers)
+    # Mock validation for enabled_providers endpoint as well
+    with mock.patch("lfx.base.models.unified_models.validate_model_provider_key") as mock_validate:
+        mock_validate.return_value = None
+        after_response = await client.get("api/v1/models/enabled_providers", headers=logged_in_headers)
     after_result = after_response.json()
 
     assert after_response.status_code == status.HTTP_200_OK
@@ -137,8 +140,10 @@ async def test_enabled_providers_multiple_credentials(
         await client.post("api/v1/variables/", json=anthropic_var, headers=logged_in_headers)
         await client.post("api/v1/variables/", json=google_var, headers=logged_in_headers)
 
-    # Check enabled providers
-    response = await client.get("api/v1/models/enabled_providers", headers=logged_in_headers)
+    # Check enabled providers - mock validation for enabled_providers endpoint
+    with mock.patch("lfx.base.models.unified_models.validate_model_provider_key") as mock_validate:
+        mock_validate.return_value = None
+        response = await client.get("api/v1/models/enabled_providers", headers=logged_in_headers)
     result = response.json()
 
     assert response.status_code == status.HTTP_200_OK
@@ -170,8 +175,10 @@ async def test_enabled_providers_after_credential_deletion(client: AsyncClient, 
     created_credential = create_response.json()
     credential_id = created_credential["id"]
 
-    # Verify enabled
-    enabled_response = await client.get("api/v1/models/enabled_providers", headers=logged_in_headers)
+    # Verify enabled - mock validation for enabled_providers endpoint as well
+    with mock.patch("lfx.base.models.unified_models.validate_model_provider_key") as mock_validate:
+        mock_validate.return_value = None
+        enabled_response = await client.get("api/v1/models/enabled_providers", headers=logged_in_headers)
     enabled_result = enabled_response.json()
     assert "OpenAI" in enabled_result["enabled_providers"]
     assert enabled_result["provider_status"]["OpenAI"] is True
@@ -213,10 +220,12 @@ async def test_enabled_providers_filter_by_specific_providers(
         await client.post("api/v1/variables/", json=openai_var, headers=logged_in_headers)
         await client.post("api/v1/variables/", json=anthropic_var, headers=logged_in_headers)
 
-    # Request specific providers (only providers that are in the mapping)
-    response = await client.get(
-        "api/v1/models/enabled_providers?providers=OpenAI&providers=Anthropic", headers=logged_in_headers
-    )
+    # Request specific providers (only providers that are in the mapping) - mock validation
+    with mock.patch("lfx.base.models.unified_models.validate_model_provider_key") as mock_validate:
+        mock_validate.return_value = None
+        response = await client.get(
+            "api/v1/models/enabled_providers?providers=OpenAI&providers=Anthropic", headers=logged_in_headers
+        )
     result = response.json()
 
     assert response.status_code == status.HTTP_200_OK
@@ -333,13 +342,16 @@ async def test_enabled_providers_reflects_models_endpoint(client: AsyncClient, o
         mock_validate.return_value = None
         await client.post("api/v1/variables/", json=variable_payload, headers=logged_in_headers)
 
-    # Get enabled providers
-    enabled_response = await client.get("api/v1/models/enabled_providers", headers=logged_in_headers)
-    enabled_result = enabled_response.json()
+    # Get enabled providers and models - mock validation in unified_models so providers are marked enabled
+    with mock.patch("lfx.base.models.unified_models.validate_model_provider_key") as mock_validate:
+        mock_validate.return_value = None
 
-    # Get models (which should include provider information)
-    models_response = await client.get("api/v1/models", headers=logged_in_headers)
-    models_result = models_response.json()
+        enabled_response = await client.get("api/v1/models/enabled_providers", headers=logged_in_headers)
+        enabled_result = enabled_response.json()
+
+        # Get models (which should include provider information)
+        models_response = await client.get("api/v1/models", headers=logged_in_headers)
+        models_result = models_response.json()
 
     assert models_response.status_code == status.HTTP_200_OK
 

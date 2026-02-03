@@ -108,7 +108,7 @@ jobs:
 
       - name: Create Pull Request
         if: env.NEEDS_UPDATE == 'true' && steps.check_pull_request.outputs.pr_exists != 'true'
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@v8
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: "docs: OpenAPI spec ${{ env.UPDATE_REASON }}"
