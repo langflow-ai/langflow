@@ -30,6 +30,8 @@ from langflow.services.job_queue.service import JobQueueService  # noqa: TC001
 from langflow.services.storage.service import StorageService  # noqa: TC001
 from langflow.services.telemetry.service import TelemetryService  # noqa: TC001
 
+_AUTH_SERVICE_FACTORY = None
+
 
 def get_service(service_type: ServiceType, default=None):
     """Retrieves the service instance for the given service type.
@@ -249,9 +251,13 @@ def get_queue_service() -> JobQueueService:
 
 def get_auth_service() -> AuthServiceBase:
     """Retrieve the authentication service."""
-    from langflow.services.auth.factory import AuthServiceFactory
+    global _AUTH_SERVICE_FACTORY
+    if _AUTH_SERVICE_FACTORY is None:
+        from langflow.services.auth.factory import AuthServiceFactory
 
-    return get_service(ServiceType.AUTH_SERVICE, AuthServiceFactory())
+        _AUTH_SERVICE_FACTORY = AuthServiceFactory()
+
+    return get_service(ServiceType.AUTH_SERVICE, _AUTH_SERVICE_FACTORY)
 
 
 def get_job_service():
