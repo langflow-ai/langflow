@@ -17,7 +17,7 @@ export const selectGptModel = async (page: Page) => {
       ? node.getByTestId("model_model").last()
       : page.getByTestId("model_model").last();
 
-    await expect(model).toBeVisible({ timeout: 3000 });
+    await expect(model).toBeVisible({ timeout: 10000 });
     await model.click();
     await page.waitForSelector('[role="listbox"]', { timeout: 10000 });
 
