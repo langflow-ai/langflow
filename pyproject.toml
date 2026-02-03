@@ -18,7 +18,7 @@ maintainers = [
 # Define your main dependencies here
 dependencies = [
     "langflow-base[complete]~=0.8.0",
-    "toolguard>=0.2.4,<1.0.0",
+    "toolguard>=0.2.7,<1.0.0",
 ]
 
 
