@@ -122,9 +122,13 @@ export default function useShortcuts({
   useHotkeys(group, handleGroupWShortcut, { preventDefault: true });
   useHotkeys(componentShare, handleShareWShortcut, { preventDefault: true });
   useHotkeys(code, handleCodeWShortcut, { preventDefault: true });
-  useHotkeys(advancedSettings, !ENABLE_INSPECTION_PANEL ? handleAdvancedWShortcut : () => { }, {
-    preventDefault: true,
-  });
+  useHotkeys(
+    advancedSettings,
+    !ENABLE_INSPECTION_PANEL ? handleAdvancedWShortcut : () => {},
+    {
+      preventDefault: true,
+    },
+  );
   useHotkeys(save, handleSaveWShortcut, { preventDefault: true });
   useHotkeys(docs, handleDocsWShortcut, { preventDefault: true });
   useHotkeys(download, handleDownloadWShortcut, { preventDefault: true });
