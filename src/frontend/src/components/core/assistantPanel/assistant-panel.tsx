@@ -1,4 +1,5 @@
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
+import type { AgenticStepType } from "@/controllers/API/queries/agentic";
 import { cn } from "@/utils/utils";
 import type { AssistantModel, AssistantPanelProps } from "./assistant-panel.types";
 import { AssistantEmptyState } from "./components/assistant-empty-state";
@@ -17,6 +18,7 @@ interface AssistantInputWithScrollProps {
   onStop: () => void;
   disabled: boolean;
   isProcessing: boolean;
+  currentStep: AgenticStepType | null;
 }
 
 function AssistantInputWithScroll({
@@ -24,6 +26,7 @@ function AssistantInputWithScroll({
   onStop,
   disabled,
   isProcessing,
+  currentStep,
 }: AssistantInputWithScrollProps) {
   const { scrollToBottom } = useStickToBottomContext();
 
@@ -38,6 +41,7 @@ function AssistantInputWithScroll({
       onStop={onStop}
       disabled={disabled}
       isProcessing={isProcessing}
+      currentStep={currentStep}
     />
   );
 }
@@ -48,6 +52,7 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
   const {
     messages,
     isProcessing,
+    currentStep,
     handleSend,
     handleApprove,
     handleStopGeneration,
@@ -137,6 +142,7 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
               onStop={handleStopGeneration}
               disabled={isProcessing}
               isProcessing={isProcessing}
+              currentStep={currentStep}
             />
           </StickToBottom>
         ) : viewMode === "floating" ? (
@@ -145,6 +151,7 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
             onStop={handleStopGeneration}
             disabled={false}
             isProcessing={isProcessing}
+            currentStep={currentStep}
           />
         ) : (
           <>
@@ -156,6 +163,7 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
               onStop={handleStopGeneration}
               disabled={false}
               isProcessing={isProcessing}
+              currentStep={currentStep}
             />
           </>
         )}

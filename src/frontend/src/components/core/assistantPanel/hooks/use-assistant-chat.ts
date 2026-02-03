@@ -12,6 +12,7 @@ import type { AssistantMessage, AssistantModel } from "../assistant-panel.types"
 interface UseAssistantChatReturn {
   messages: AssistantMessage[];
   isProcessing: boolean;
+  currentStep: AgenticStepType | null;
   handleSend: (content: string, model: AssistantModel | null) => Promise<void>;
   handleApprove: (messageId: string) => Promise<void>;
   handleStopGeneration: () => void;
@@ -21,6 +22,7 @@ interface UseAssistantChatReturn {
 export function useAssistantChat(): UseAssistantChatReturn {
   const [messages, setMessages] = useState<AssistantMessage[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [currentStep, setCurrentStep] = useState<AgenticStepType | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
@@ -71,6 +73,7 @@ export function useAssistantChat(): UseAssistantChatReturn {
                 }
               }
 
+              setCurrentStep(event.step);
               setMessages((prev) =>
                 prev.map((msg) =>
                   msg.id === assistantMessageId
@@ -119,6 +122,7 @@ export function useAssistantChat(): UseAssistantChatReturn {
                     : msg,
                 ),
               );
+              setCurrentStep(null);
               setIsProcessing(false);
             },
             onError: (event) => {
@@ -133,6 +137,7 @@ export function useAssistantChat(): UseAssistantChatReturn {
                     : msg,
                 ),
               );
+              setCurrentStep(null);
               setIsProcessing(false);
             },
             onCancelled: () => {
@@ -147,6 +152,7 @@ export function useAssistantChat(): UseAssistantChatReturn {
                     : msg,
                 ),
               );
+              setCurrentStep(null);
               setIsProcessing(false);
             },
           },
@@ -166,6 +172,7 @@ export function useAssistantChat(): UseAssistantChatReturn {
             ),
           );
         }
+        setCurrentStep(null);
         setIsProcessing(false);
       }
     },
@@ -207,18 +214,21 @@ export function useAssistantChat(): UseAssistantChatReturn {
           : msg,
       ),
     );
+    setCurrentStep(null);
     setIsProcessing(false);
   }, []);
 
   const handleClearHistory = useCallback(() => {
     abortControllerRef.current?.abort();
     setMessages([]);
+    setCurrentStep(null);
     setIsProcessing(false);
   }, []);
 
   return {
     messages,
     isProcessing,
+    currentStep,
     handleSend,
     handleApprove,
     handleStopGeneration,

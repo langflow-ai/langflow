@@ -1,10 +1,39 @@
 import { useEffect, useRef, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import type { AgenticStepType } from "@/controllers/API/queries/agentic";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/utils/utils";
 import { ASSISTANT_PLACEHOLDER } from "../assistant-panel.constants";
 import type { AssistantModel } from "../assistant-panel.types";
+import { getRandomThinkingMessage } from "../helpers/messages";
 import { ModelSelector } from "./model-selector";
+
+// Steps where the "thinking" animation is showing in the message area
+const GENERATING_STEPS: AgenticStepType[] = ["generating", "generating_component"];
+
+// Hook for rotating placeholder messages during post-generation processing
+function useAnimatedPlaceholder(shouldAnimate: boolean, intervalMs = 2000): string {
+  const [currentMessage, setCurrentMessage] = useState(() => getRandomThinkingMessage());
+
+  useEffect(() => {
+    if (!shouldAnimate) {
+      return;
+    }
+
+    // Set initial message when animation starts
+    setCurrentMessage(getRandomThinkingMessage());
+
+    // Rotate messages at interval
+    const interval = setInterval(() => {
+      setCurrentMessage(getRandomThinkingMessage());
+    }, intervalMs);
+
+    return () => clearInterval(interval);
+  }, [shouldAnimate, intervalMs]);
+
+  return currentMessage;
+}
 
 const ASSISTANT_MODEL_STORAGE_KEY = "langflow-assistant-selected-model";
 
@@ -13,6 +42,7 @@ interface AssistantInputProps {
   onStop?: () => void;
   disabled?: boolean;
   isProcessing?: boolean;
+  currentStep?: AgenticStepType | null;
   placeholder?: string;
 }
 
@@ -21,9 +51,14 @@ export function AssistantInput({
   onStop,
   disabled = false,
   isProcessing = false,
+  currentStep = null,
   placeholder,
 }: AssistantInputProps) {
   const [message, setMessage] = useState("");
+
+  // Show animated placeholder only during post-generation steps (when thinking animation is done)
+  const isPostGenerationStep = isProcessing && currentStep !== null && !GENERATING_STEPS.includes(currentStep);
+  const animatedPlaceholder = useAnimatedPlaceholder(isPostGenerationStep);
   const [selectedModel, setSelectedModel] = useState<AssistantModel | null>(() => {
     // Load from localStorage on init
     try {
@@ -62,16 +97,30 @@ export function AssistantInput({
   return (
     <div className="px-2 pb-2.5">
       <div className="flex flex-col gap-4 rounded-md border border-border bg-background pb-2.5 transition-colors focus-within:border-muted-foreground">
-        <Textarea
-          ref={textareaRef}
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder={placeholder ?? ASSISTANT_PLACEHOLDER}
-          disabled={disabled}
-          className="min-h-[60px] resize-none border-0 bg-transparent px-4 pt-3 text-sm focus-visible:ring-0 disabled:bg-transparent disabled:cursor-not-allowed disabled:opacity-100"
-          rows={2}
-        />
+        <div className="relative">
+          <Textarea
+            ref={textareaRef}
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={isPostGenerationStep ? "" : (placeholder ?? ASSISTANT_PLACEHOLDER)}
+            disabled={disabled || isProcessing}
+            className={cn(
+              "min-h-[60px] resize-none border-0 bg-transparent px-4 pt-3 text-sm focus-visible:ring-0 disabled:bg-transparent disabled:cursor-not-allowed",
+              isProcessing && !isPostGenerationStep && "placeholder:opacity-50"
+            )}
+            rows={2}
+          />
+          {isPostGenerationStep && !message && (
+            <div className="pointer-events-none absolute left-4 top-3 flex items-center gap-2 text-sm text-muted-foreground">
+              <ForwardedIconComponent
+                name="Loader2"
+                className="h-4 w-4 animate-spin"
+              />
+              <span className="animate-pulse">{animatedPlaceholder}</span>
+            </div>
+          )}
+        </div>
         <div className="flex items-center justify-between px-3">
           <div className="flex items-center gap-4">
             <ModelSelector
