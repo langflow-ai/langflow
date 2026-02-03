@@ -79,19 +79,10 @@ export function AppInitPage() {
     }
   }, [isFetched, isConfigFetched]);
 
-  const isSessionReady = useMemo(() => {
-    // If already authenticated (e.g., from session validation after manual login), we're ready
-    if (isAuthenticated) {
-      return true;
-    }
-    if (autoLogin === true) {
-      return true;
-    }
-    if (autoLogin === false) {
-      return isSessionFetched;
-    }
-    return false;
-  }, [autoLogin, isSessionFetched, isAuthenticated]);
+  const isSessionReady = useMemo(
+    () => isAuthenticated || autoLogin || isSessionFetched,
+    [autoLogin, isSessionFetched, isAuthenticated],
+  );
 
   // Auto-login is "complete" if:
   // - The query actually ran (isFetched), OR

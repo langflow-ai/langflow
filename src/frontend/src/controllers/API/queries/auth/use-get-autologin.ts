@@ -19,6 +19,10 @@ export interface AutoLoginResponse {
   health_check_max_retries: number;
 }
 
+export interface AutoLoginErrorResponse {
+  auto_login?: boolean;
+}
+
 export const useGetAutoLogin: useQueryFunctionType<undefined, undefined> = (
   options,
 ) => {
@@ -50,7 +54,7 @@ export const useGetAutoLogin: useQueryFunctionType<undefined, undefined> = (
         resetTimer();
       }
     } catch (e) {
-      const error = e as AxiosError<{ auto_login?: boolean }>;
+      const error = e as AxiosError<AutoLoginErrorResponse>;
       if (error.name !== "CanceledError") {
         setAutoLogin(false);
         // Don't retry if backend explicitly says auto-login is disabled
