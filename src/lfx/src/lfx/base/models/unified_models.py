@@ -8,6 +8,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 import contextlib
+import json
 
 from lfx.base.models.anthropic_constants import ANTHROPIC_MODELS_DETAILED
 from lfx.base.models.google_generative_ai_constants import (
@@ -1223,8 +1224,6 @@ def update_model_options_in_build_config(
                                 session=session,
                             )
                             if var and var.value:
-                                import json
-
                                 parsed_value = json.loads(var.value)
                                 if isinstance(parsed_value, dict):
                                     return parsed_value.get("model_name"), parsed_value.get("provider")
