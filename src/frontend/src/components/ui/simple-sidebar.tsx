@@ -440,6 +440,7 @@ const SimpleSidebarTrigger = React.forwardRef<
     <Button
       ref={ref}
       data-sidebar="trigger"
+      data-testid="playground-btn-flow-io"
       variant="ghost"
       size="md"
       className={cn("!px-2 !font-normal !justify-start !gap-0", className)}
