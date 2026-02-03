@@ -58,6 +58,8 @@ export const selectGptModel = async (page: Page) => {
     }
     await page.waitForTimeout(500);
     await page.getByTestId("gpt-4o-mini-option").click();
-    await unselectNodes(page);
+    if (i < gptModelDropdownCount - 1) {
+      await unselectNodes(page);
+    }
   }
 };

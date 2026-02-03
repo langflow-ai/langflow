@@ -47,9 +47,7 @@ test(
 
     await page.keyboard.press(`ControlOrMeta+Shift+A`);
 
-    await page.waitForSelector('[data-testid="node-modal-title"]', {
-      timeout: 3000,
-    });
+    await page.waitForTimeout(500);
 
     // Wait for the modal inputs to be visible
     await expect(
