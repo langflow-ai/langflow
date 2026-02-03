@@ -15,20 +15,12 @@ _SINGLE_ITEM = 1
 
 
 def generate_header(lines: list[str], flow_info: FlowInfo) -> None:
-    """Generate the module docstring header."""
-    lines.append(f'"""Flow: {flow_info.name}')
-    if flow_info.description:
-        lines.append(f"\n{flow_info.description}")
-    lines.append("\nAuto-generated from JSON using `lfx convert`.")
-    lines.append("Review and adjust as needed before committing.")
-    lines.append('"""')
-    lines.append("")
-    lines.append("from __future__ import annotations")
-    lines.append("")
+    """Generate header - no module docstring, start directly with imports."""
+    # No module docstring - matches hand-written .py files
 
 
 def generate_imports(lines: list[str], flow_info: FlowInfo) -> None:
-    """Generate import statements for components."""
+    """Generate import statements for components - single-line format."""
     imports_by_module: dict[str, set[str]] = {}
 
     for node in flow_info.nodes:
@@ -41,15 +33,12 @@ def generate_imports(lines: list[str], flow_info: FlowInfo) -> None:
                 imports_by_module[module] = set()
             imports_by_module[module].add(class_name)
 
-    lines.append("from lfx.graph import Graph")
+    # Single-line imports, alphabetical order, Graph last
     for module in sorted(imports_by_module.keys()):
         classes = sorted(imports_by_module[module])
-        if len(classes) == _SINGLE_ITEM:
-            lines.append(f"from {module} import {classes[0]}")
-        else:
-            lines.append(f"from {module} import (")
-            lines.extend(f"    {cls}," for cls in classes)
-            lines.append(")")
+        lines.append(f"from {module} import {', '.join(classes)}")
+    lines.append("from lfx.graph import Graph")
+    lines.append("")
     lines.append("")
 
 

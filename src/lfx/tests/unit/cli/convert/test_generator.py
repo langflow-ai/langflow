@@ -35,27 +35,13 @@ class TestGeneratePythonCode:
             edges=[
                 EdgeInfo(
                     source_id="node-1",
-                    source_output="message_response",
+                    source_output="message",
+                    source_method="message_response",
                     target_id="node-2",
                     target_input="input_value",
                 ),
             ],
         )
-
-    def test_should_generate_module_docstring(self, simple_flow_info: FlowInfo) -> None:
-        """Test generating module docstring with flow name."""
-        result = generate_python_code(simple_flow_info)
-        assert '"""Flow: Simple Chat' in result
-
-    def test_should_include_description_in_docstring(self, simple_flow_info: FlowInfo) -> None:
-        """Test including flow description in docstring."""
-        result = generate_python_code(simple_flow_info)
-        assert "A simple chat flow" in result
-
-    def test_should_include_auto_generated_notice(self, simple_flow_info: FlowInfo) -> None:
-        """Test including auto-generated notice."""
-        result = generate_python_code(simple_flow_info)
-        assert "Auto-generated from JSON" in result
 
     def test_should_import_graph(self, simple_flow_info: FlowInfo) -> None:
         """Test importing Graph class."""
@@ -68,29 +54,16 @@ class TestGeneratePythonCode:
         assert "ChatInput" in result
         assert "ChatOutput" in result
 
-    def test_should_generate_build_function(self, simple_flow_info: FlowInfo) -> None:
-        """Test generating build_*_graph function."""
+    def test_should_generate_graph_function(self, simple_flow_info: FlowInfo) -> None:
+        """Test generating *_graph function (minimal style)."""
         result = generate_python_code(simple_flow_info)
-        assert "def build_simple_chat_graph(" in result
-
-    def test_should_include_function_parameters(self, simple_flow_info: FlowInfo) -> None:
-        """Test including function parameters."""
-        result = generate_python_code(simple_flow_info)
-        assert "provider: str | None = None" in result
-        assert "model_name: str | None = None" in result
-        assert "api_key: str | None = None" in result
+        assert "def simple_chat_graph():" in result
 
     def test_should_generate_component_instantiation(self, simple_flow_info: FlowInfo) -> None:
         """Test generating component instantiation code."""
         result = generate_python_code(simple_flow_info)
-        assert "chat_input = ChatInput(" in result
-        assert "chat_output = ChatOutput(" in result
-
-    def test_should_include_node_ids(self, simple_flow_info: FlowInfo) -> None:
-        """Test including node IDs in component instantiation."""
-        result = generate_python_code(simple_flow_info)
-        assert '_id="node-1"' in result
-        assert '_id="node-2"' in result
+        assert "chat_input = ChatInput()" in result
+        assert "chat_output = ChatOutput()" in result
 
     def test_should_generate_connections(self, simple_flow_info: FlowInfo) -> None:
         """Test generating .set() connection code."""
@@ -99,35 +72,30 @@ class TestGeneratePythonCode:
         assert "input_value=chat_input.message_response" in result
 
     def test_should_generate_graph_return(self, simple_flow_info: FlowInfo) -> None:
-        """Test generating Graph return statement."""
+        """Test generating Graph return statement with kwargs."""
         result = generate_python_code(simple_flow_info)
-        assert "return Graph(" in result
+        assert "return Graph(start=chat_input, end=chat_output)" in result
 
-    def test_should_identify_start_node(self, simple_flow_info: FlowInfo) -> None:
-        """Test identifying ChatInput as start node."""
+    def test_should_not_include_node_ids(self, simple_flow_info: FlowInfo) -> None:
+        """Test that _id parameters are not included (minimal style)."""
         result = generate_python_code(simple_flow_info)
-        assert "return Graph(chat_input," in result
+        assert '_id="node-1"' not in result
+        assert '_id="node-2"' not in result
 
-    def test_should_identify_end_node(self, simple_flow_info: FlowInfo) -> None:
-        """Test identifying ChatOutput as end node."""
+    def test_should_not_include_docstring(self, simple_flow_info: FlowInfo) -> None:
+        """Test that module docstring is not included (minimal style)."""
         result = generate_python_code(simple_flow_info)
-        assert "chat_output)" in result
+        assert '"""Flow:' not in result
 
-    def test_should_generate_main_block(self, simple_flow_info: FlowInfo) -> None:
-        """Test generating if __name__ == '__main__' block."""
+    def test_should_not_include_main_block(self, simple_flow_info: FlowInfo) -> None:
+        """Test that __main__ block is not included (minimal style)."""
         result = generate_python_code(simple_flow_info)
-        assert 'if __name__ == "__main__":' in result
+        assert '__name__ == "__main__"' not in result
 
-    def test_should_generate_get_graph_function(self, simple_flow_info: FlowInfo) -> None:
-        """Test generating get_graph() entry point for lfx run compatibility."""
+    def test_should_not_include_get_graph_function(self, simple_flow_info: FlowInfo) -> None:
+        """Test that get_graph() is not included (minimal style)."""
         result = generate_python_code(simple_flow_info)
-        assert "def get_graph() -> Graph:" in result
-        assert "return build_simple_chat_graph()" in result
-
-    def test_should_include_get_graph_docstring(self, simple_flow_info: FlowInfo) -> None:
-        """Test that get_graph() has proper docstring."""
-        result = generate_python_code(simple_flow_info)
-        assert "Entry point for lfx run command" in result
+        assert "def get_graph()" not in result
 
     @pytest.fixture
     def flow_with_config(self) -> FlowInfo:
@@ -138,7 +106,7 @@ class TestGeneratePythonCode:
             nodes=[
                 NodeInfo(
                     node_id="node-1",
-                    node_type="OpenAIModel",
+                    node_type="OpenAIModelComponent",
                     display_name="OpenAI",
                     var_name="openai_model",
                     config={
@@ -154,8 +122,10 @@ class TestGeneratePythonCode:
     def test_should_include_config_values(self, flow_with_config: FlowInfo) -> None:
         """Test including configuration values in component instantiation."""
         result = generate_python_code(flow_with_config)
+        # model_name goes in constructor for model components
         assert "model_name=" in result
         assert "gpt-4" in result
+        # Other config goes in .set()
         assert "temperature=" in result
         assert "0.7" in result
 
@@ -214,7 +184,8 @@ class TestGeneratePythonCode:
             edges=[
                 EdgeInfo(
                     source_id="tool-1",
-                    source_output="component_as_tool",
+                    source_output="tool_output",
+                    source_method="component_as_tool",
                     target_id="agent-1",
                     target_input="tools",
                 ),

@@ -1095,6 +1095,12 @@ class Graph:
                 copy.deepcopy(self.flow_name, memo),
                 copy.deepcopy(self.user_id, memo),
             )
+            # Copy any additional vertices that were added to the graph
+            # (e.g., from combining graphs with +)
+            for vertex in self.vertices:
+                if vertex.id not in new_graph.vertex_map:
+                    vertex_copy = copy.deepcopy(vertex, memo)
+                    new_graph.add_vertex(vertex_copy)
         else:
             # Create a new graph without start and end, but copy flow_id, flow_name, and user_id
             new_graph = type(self)(
@@ -1278,6 +1284,9 @@ class Graph:
 
     def _add_vertex(self, vertex: Vertex) -> None:
         """Adds a vertex to the graph."""
+        # Skip if vertex with same ID already exists (deduplication for graph combination)
+        if vertex.id in self.vertex_map:
+            return
         self.vertices.append(vertex)
         self.vertex_map[vertex.id] = vertex
 

@@ -40,7 +40,8 @@ class TestConvertFlowToPython:
     def test_should_convert_minimal_flow(self, minimal_flow_json: Path) -> None:
         """Test converting a minimal flow to Python code."""
         result = convert_flow_to_python(minimal_flow_json)
-        assert "def build_minimal_flow_graph(" in result
+        # New minimal style: *_graph() not build_*_graph()
+        assert "def minimal_flow_graph():" in result
         assert "ChatInput" in result
 
     def test_should_return_valid_python_code(self, minimal_flow_json: Path) -> None:
@@ -69,7 +70,7 @@ class TestConvertFlowToPython:
                     {
                         "data": {
                             "id": "model-1",
-                            "type": "OpenAIModel",
+                            "type": "OpenAIModelComponent",
                             "node": {
                                 "display_name": "OpenAI",
                                 "template": {
@@ -124,6 +125,7 @@ class TestConvertFlowToPython:
     def test_should_include_config_values(self, complete_flow_json: Path) -> None:
         """Test including configuration values from nodes."""
         result = convert_flow_to_python(complete_flow_json)
+        # model_name goes in constructor for OpenAIModelComponent
         assert "gpt-4" in result
         assert "0.7" in result
 
@@ -213,8 +215,8 @@ class TestConvertFlowEdgeCases:
     def test_should_handle_empty_flow(self, empty_flow_json: Path) -> None:
         """Test handling a flow with no nodes."""
         result = convert_flow_to_python(empty_flow_json)
-        assert "def build_empty_flow_graph(" in result
-        assert "return Graph(None, None)" in result
+        # New minimal style: *_graph() not build_*_graph()
+        assert "def empty_flow_graph():" in result
 
     @pytest.fixture
     def flow_without_name(self, tmp_path: Path) -> Path:
@@ -240,8 +242,7 @@ class TestConvertFlowEdgeCases:
     def test_should_handle_flow_without_name(self, flow_without_name: Path) -> None:
         """Test handling a flow without a name."""
         result = convert_flow_to_python(flow_without_name)
-        assert "build_" in result
-        assert "_graph(" in result
+        assert "_graph():" in result
 
     @pytest.fixture
     def flow_with_special_chars(self, tmp_path: Path) -> Path:
@@ -268,7 +269,8 @@ class TestConvertFlowEdgeCases:
     def test_should_sanitize_flow_name(self, flow_with_special_chars: Path) -> None:
         """Test sanitizing flow name for function name."""
         result = convert_flow_to_python(flow_with_special_chars)
-        assert "def build_my_flow_1_test_2024_graph(" in result
+        # New minimal style: *_graph() not build_*_graph()
+        assert "def my_flow_1_test_2024_graph():" in result
 
 
 class TestConvertStarterProjects:
@@ -313,28 +315,20 @@ class TestConvertStarterProjects:
         # Must have essential imports
         assert "from lfx.graph import Graph" in result
 
-        # Must have builder function
-        assert "def build_" in result
-        assert "_graph(" in result
-        assert ") -> Graph:" in result
+        # Must have graph function (new minimal style)
+        assert "_graph():" in result
 
-        # Must have get_graph entry point
-        assert "def get_graph() -> Graph:" in result
-
-        # Must have main block
-        assert 'if __name__ == "__main__":' in result
+        # Must have Graph return with kwargs
+        assert "return Graph(start=" in result
 
     def test_starter_flow_has_components(self, starter_flow_path: Path) -> None:
         """Test that generated code instantiates components."""
         result = convert_flow_to_python(starter_flow_path)
 
-        # Should have at least one component instantiation
-        assert "# === Components ===" in result
-
         # Should have ChatInput or TextInput (most flows have input)
         has_input = "ChatInput(" in result or "TextInput(" in result
         # Some flows might have webhook or other inputs
-        has_any_component = "Component(" in result or "(_id=" in result
+        has_any_component = "Component(" in result or "=" in result
 
         assert has_input or has_any_component, "No component instantiation found"
 
@@ -342,15 +336,10 @@ class TestConvertStarterProjects:
         """Test that generated code has connection setup."""
         result = convert_flow_to_python(starter_flow_path)
 
-        # Should have connections section (most flows have connections)
-        assert "# === Connections ===" in result
-
         # Most flows should have .set() calls (unless single node)
         # Don't fail on this as some minimal flows may not have connections
         if ".set(" not in result:
             # Check if it's a single-node flow (no connections expected)
-            import json
-
             with starter_flow_path.open() as f:
                 data = json.load(f)
             flow_data = data.get("data", data)

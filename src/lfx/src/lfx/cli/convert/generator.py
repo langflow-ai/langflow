@@ -10,11 +10,9 @@ from typing import TYPE_CHECKING
 from .helpers import (
     generate_builder_function,
     generate_custom_components,
-    generate_get_graph_function,
     generate_global_variables_section,
     generate_header,
     generate_imports,
-    generate_main_block,
     generate_prompts,
     generate_unknown_components_warning,
 )
@@ -36,7 +34,5 @@ def generate_python_code(flow_info: FlowInfo) -> str:
     generate_custom_components(lines, flow_info)
     generate_prompts(lines, flow_info)
     generate_builder_function(lines, flow_info, flow_name)
-    generate_get_graph_function(lines, flow_name)
-    generate_main_block(lines, flow_name)
 
     return "\n".join(lines)
