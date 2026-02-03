@@ -12,6 +12,7 @@ import {
   DisclosureContent,
 } from "@/components/ui/disclosure";
 import { shouldRenderInspectionPanelField } from "@/CustomNodes/helpers/parameter-filtering";
+import { Separator } from "@/components/ui/separator";
 
 interface InspectionPanelFieldsProps {
   data: NodeDataType;
@@ -91,25 +92,23 @@ export default function InspectionPanelFields({
   };
 
   return (
-    <div className="p-1 pb-3">
+    <div className="pb-2">
       {/* Render basic fields */}
-      <div className="">
-        {basicFields.map((field) => renderField(field, showAdvanced))}
-      </div>
+      <div className="px-1">{basicFields.map((field) => renderField(field, showAdvanced))}</div>
 
       {/* Render advanced fields disclosure */}
+      <Separator className="mt-3" />
       {advancedFields.length > 0 && (
         <Disclosure
           open={showAdvanced}
           onOpenChange={setShowAdvanced}
-          className="mt-4"
+          className="mt-2 px-1"
         >
           <DisclosureTrigger>
             <div
               className={cn(
                 "flex w-full items-center justify-between px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground",
                 "cursor-pointer rounded-md hover:bg-muted/50",
-                showAdvanced && "bg-muted/50 text-foreground",
               )}
               data-testid={
                 showAdvanced ? "edit-button-close" : "edit-button-modal"
@@ -126,9 +125,7 @@ export default function InspectionPanelFields({
           </DisclosureTrigger>
 
           <DisclosureContent>
-            <div className="mt-1">
-              {advancedFields.map((field) => renderField(field, true))}
-            </div>
+            <div className="my-1">{advancedFields.map((field) => renderField(field, true))}</div>
           </DisclosureContent>
         </Disclosure>
       )}
