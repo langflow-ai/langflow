@@ -36,6 +36,7 @@ export function ChatSessionsDropdown({
           size="icon"
           className="h-8 w-8 rounded"
           aria-label="Chat sessions"
+          data-testid="session-selector-trigger"
         >
           <ForwardedIconComponent name="ListRestart" className="h-4 w-4" />
         </Button>

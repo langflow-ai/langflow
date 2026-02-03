@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState } from "react";
+import type React from "react";
+import { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 
 interface SessionRenameProps {
@@ -57,6 +58,7 @@ export const SessionRename: React.FC<SessionRenameProps> = ({
 
   return (
     <Input
+      data-testid="session-rename-input"
       ref={inputRef}
       value={value}
       onChange={(e) => setValue(e.target.value)}

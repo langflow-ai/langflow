@@ -105,7 +105,11 @@ export function SessionMoreMenu({
           sideOffset={sideOffset}
           className={cn("p-0", contentClassName)}
         >
-          <SelectItem value="rename" className="session-more-menu-item">
+          <SelectItem
+            value="rename"
+            className="session-more-menu-item"
+            data-testid="rename-session-option"
+          >
             <div className="flex items-center">
               <ForwardedIconComponent
                 name="SquarePen"
@@ -115,7 +119,11 @@ export function SessionMoreMenu({
             </div>
           </SelectItem>
           {showMessageLogs && (
-            <SelectItem value="messageLogs" className="session-more-menu-item">
+            <SelectItem
+              value="messageLogs"
+              className="session-more-menu-item"
+              data-testid="message-logs-option"
+            >
               <div className="flex items-center">
                 <ForwardedIconComponent
                   name="Scroll"
