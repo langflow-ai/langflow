@@ -177,21 +177,20 @@ class ExecuteToolComponent(Component):
     def _should_stream_events(self) -> bool:
         """Determine if tool events should be streamed to the frontend.
 
-        This checks the 'should_stream_events' flag passed from CallModel via the AI message.
-        CallModel knows if the agent flow is connected to a ChatOutput and passes that info.
+        This checks the 'should_stream_events' flag passed from AgentStep via the message.
+        AgentStep knows if events should be streamed and passes that info.
 
         If the flag is not present (e.g., in tests or standalone usage), defaults to True
-        when there's no vertex (standalone) or False when there is one (assume nested).
+        if we have an event_manager available.
         """
-        # Check flag from CallModel via ai_message
+        # Check flag from AgentStep via tool_calls_message
         if self.tool_calls_message is not None and hasattr(self.tool_calls_message, "data"):
             should_stream = self.tool_calls_message.data.get("should_stream_events")
             if should_stream is not None:
                 return should_stream
 
-        # Fallback: if no vertex, assume standalone (stream events)
-        # If vertex exists but no flag, assume nested (don't stream)
-        return self._vertex is None
+        # Fallback: stream if we have an event_manager
+        return self._event_manager is not None
 
     async def _send_tool_event(self, message: Message) -> Message:
         """Send tool execution event to the frontend if streaming is enabled.
