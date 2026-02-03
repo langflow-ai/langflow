@@ -199,8 +199,9 @@ async def get_enabled_providers(
 ):
     """Get enabled providers for the current user.
 
-    Only providers with valid API keys are marked as enabled. This prevents
-    providers from appearing enabled when they have invalid credentials.
+    Providers are considered enabled if they have a credential variable stored.
+    API key validation is performed when credentials are saved, not on every read,
+    to avoid latency from external API calls.
     """
     variable_service = get_variable_service()
     try:
@@ -225,35 +226,12 @@ async def get_enabled_providers(
         # Get the provider-variable mapping
         provider_variable_map = get_model_provider_variable_mapping()
 
-        # Build credential_variables dict with objects that have encrypted values
-        # VariableRead sets value=None for CREDENTIAL_TYPE (via validator), but _validate_and_get_enabled_providers
-        # needs the encrypted value to decrypt and validate. So we create simple objects with the encrypted value.
-        credential_variables = {}
+        # Check which providers have credentials stored (no validation - that happens on save)
+        enabled_providers_set = set()
+        for provider, var_name in provider_variable_map.items():
+            if var_name in credential_variable_names:
+                enabled_providers_set.add(provider)
 
-        for var_name in credential_variable_names:
-            if var_name and var_name in provider_variable_map.values():
-                try:
-                    # Get the raw Variable object to access the encrypted value
-                    variable_obj = await variable_service.get_variable_object(
-                        user_id=current_user.id, name=var_name, session=session
-                    )
-                    if variable_obj and variable_obj.value:
-                        # Create a simple object with the encrypted value
-                        # _validate_and_get_enabled_providers only needs .value attribute
-                        class VarWithValue:
-                            def __init__(self, value):
-                                self.value = value
-
-                        credential_variables[var_name] = VarWithValue(variable_obj.value)
-                except (ValueError, Exception) as e:  # noqa: BLE001
-                    # Variable not found or error accessing it - skip
-                    logger.debug("Skipping variable %s due to error: %s", var_name, e)
-                    continue
-
-        # Use shared helper to validate and get enabled providers
-        from lfx.base.models.unified_models import _validate_and_get_enabled_providers
-
-        enabled_providers_set = _validate_and_get_enabled_providers(credential_variables, provider_variable_map)
         enabled_providers = list(enabled_providers_set)
 
         # Build provider_status dict for all providers

@@ -9,34 +9,47 @@ import {
 } from "@/constants/providerConstants";
 import { useUpdateEnabledModels } from "@/controllers/API/queries/models/use-update-enabled-models";
 import {
+  useDeleteGlobalVariables,
   useGetGlobalVariables,
   usePatchGlobalVariables,
   usePostGlobalVariables,
 } from "@/controllers/API/queries/variables";
-import { useDebounce } from "@/hooks/use-debounce";
 import ProviderList from "@/modals/modelProviderModal/components/ProviderList";
 import { Provider } from "@/modals/modelProviderModal/components/types";
 import useAlertStore from "@/stores/alertStore";
 import { cn } from "@/utils/utils";
+import DisconnectWarning from "./DisconnectWarning";
 import ModelSelection from "./ModelSelection";
 
 interface ModelProvidersContentProps {
   modelType: "llm" | "embeddings" | "all";
-  onClose?: () => void;
 }
 
-const ModelProvidersContent = ({
-  modelType,
-  onClose,
-}: ModelProvidersContentProps) => {
+const ModelProvidersContent = ({ modelType }: ModelProvidersContentProps) => {
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(
     null,
   );
   const [apiKey, setApiKey] = useState("");
   const [validationFailed, setValidationFailed] = useState(false);
-  // Track if API key change came from user typing (vs programmatic reset)
-  // Used to prevent auto-save from triggering when we clear the input after success
-  const isUserInputRef = useRef(false);
+  const [showReplaceWarning, setShowReplaceWarning] = useState(false);
+  const [isEditingKey, setIsEditingKey] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Generate a masked preview of the API key based on provider
+  const getMaskedKeyPreview = (providerName: string): string => {
+    const keyConfig: Record<string, { prefix: string; totalLength: number }> = {
+      OpenAI: { prefix: "sk-proj-", totalLength: 164 },
+      Anthropic: { prefix: "sk-ant-", totalLength: 108 },
+      "Google Generative AI": { prefix: "AIza", totalLength: 39 },
+      "IBM watsonx": { prefix: "", totalLength: 44 },
+    };
+    const config = keyConfig[providerName] || {
+      prefix: "",
+      totalLength: 40,
+    };
+    const maskedLength = config.totalLength - config.prefix.length;
+    return `${config.prefix}${"•".repeat(maskedLength)}`;
+  };
 
   const queryClient = useQueryClient();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
@@ -48,41 +61,71 @@ const ModelProvidersContent = ({
     usePatchGlobalVariables();
   const { data: globalVariables = [] } = useGetGlobalVariables();
   const { mutate: updateEnabledModels } = useUpdateEnabledModels();
+  const { mutate: deleteGlobalVariable, isPending: isDeleting } =
+    useDeleteGlobalVariables();
 
-  const isPending = isCreating || isUpdating;
+  const isPending = isCreating || isUpdating || isDeleting;
 
-  // Invalidate all provider-related caches after successful create/update
-  // This ensures the UI reflects the latest state across all components
   const invalidateProviderQueries = () => {
     queryClient.invalidateQueries({ queryKey: ["useGetModelProviders"] });
     queryClient.invalidateQueries({ queryKey: ["useGetEnabledModels"] });
     queryClient.invalidateQueries({ queryKey: ["useGetGlobalVariables"] });
-    queryClient.refetchQueries({ queryKey: ["flows"] });
   };
 
-  // Reset form when provider changes
+  const placeholderValue = "http://localhost:11434";
+
   useEffect(() => {
     setApiKey("");
     setValidationFailed(false);
+    setShowReplaceWarning(false);
+    setIsEditingKey(false);
   }, [selectedProvider?.provider]);
 
-  // Auto-save API key after user stops typing for 800ms
-  // The debounce prevents API calls on every keystroke
-  const debouncedConfigureProvider = useDebounce(() => {
-    if (apiKey.trim() && selectedProvider && isUserInputRef.current) {
-      handleConfigureProvider();
-      isUserInputRef.current = false;
-    }
-  }, 800);
+  const handleApiKey = () => {
+    setShowReplaceWarning(true);
+  };
 
-  // Trigger debounced save when apiKey changes from user input
-  useEffect(() => {
-    if (apiKey.trim() && isUserInputRef.current) {
-      debouncedConfigureProvider();
-    }
-  }, [apiKey, debouncedConfigureProvider]);
+  const handleDisconnect = () => {
+    setShowReplaceWarning(true);
+  };
 
-  // Update enabled models when toggled
+  const handleConfirmDisconnect = () => {
+    if (!selectedProvider) return;
+
+    const variableName = PROVIDER_VARIABLE_MAPPING[selectedProvider.provider];
+    if (!variableName) return;
+
+    const existingVariable = globalVariables.find(
+      (v) => v.name === variableName,
+    );
+    if (!existingVariable) return;
+
+    deleteGlobalVariable(
+      { id: existingVariable.id },
+      {
+        onSuccess: () => {
+          setSuccessData({
+            title: `${selectedProvider.provider} Disconnected`,
+          });
+          invalidateProviderQueries();
+          setShowReplaceWarning(false);
+          setSelectedProvider((prev) =>
+            prev ? { ...prev, is_enabled: false } : null,
+          );
+        },
+        onError: (error: any) => {
+          setErrorData({
+            title: "Error Disconnecting Provider",
+            list: [
+              error?.response?.data?.detail ||
+                "An unexpected error occurred. Please try again.",
+            ],
+          });
+        },
+      },
+    );
+  };
+
   const handleModelToggle = (modelName: string, enabled: boolean) => {
     if (!selectedProvider?.provider) return;
 
@@ -104,26 +147,22 @@ const ModelProvidersContent = ({
     );
   };
 
-  // Toggle provider selection - clicking same provider deselects it
   const handleProviderSelect = (provider: Provider) => {
     setSelectedProvider((prev) =>
       prev?.provider === provider.provider ? null : provider,
     );
   };
 
-  // Some providers (e.g., Ollama) don't require API keys - they just need activation
   const requiresApiKey = useMemo(() => {
     if (!selectedProvider) return true;
     return !NO_API_KEY_PROVIDERS.includes(selectedProvider.provider);
   }, [selectedProvider]);
 
-  // Activate providers that don't need API keys (e.g., Ollama)
-  // Creates/updates a global variable with a placeholder URL to mark provider as enabled
   const handleActivateNoApiKeyProvider = () => {
     if (!selectedProvider) return;
 
-    // Map provider name to its corresponding global variable name
     const variableName = PROVIDER_VARIABLE_MAPPING[selectedProvider.provider];
+
     if (!variableName) {
       setErrorData({
         title: "Invalid Provider",
@@ -132,17 +171,13 @@ const ModelProvidersContent = ({
       return;
     }
 
-    // Check if provider was previously configured (variable exists)
     const existingVariable = globalVariables.find(
       (v) => v.name === variableName,
     );
 
-    // Ollama default endpoint - used as placeholder to mark provider as active
-    const placeholderValue = "http://localhost:11434";
-
     const onSuccess = () => {
-      setSuccessData({ title: `${selectedProvider.provider} Activated` });
       invalidateProviderQueries();
+      setSuccessData({ title: `${selectedProvider.provider} Activated` });
       setSelectedProvider((prev) =>
         prev ? { ...prev, is_enabled: true } : null,
       );
@@ -237,9 +272,6 @@ const ModelProvidersContent = ({
     }
   };
 
-  // Note: refreshAllModelInputs is now called in ModelProviderModal's handleClose
-  // to ensure reliable execution when the modal closes
-
   return (
     <div className="flex flex-row w-full h-full overflow-hidden">
       <div
@@ -263,77 +295,188 @@ const ModelProvidersContent = ({
             : "w-0 opacity-0 translate-x-full",
         )}
       >
-        <div className="flex flex-col gap-1 p-4">
-          <div className="flex flex-row gap-1 min-w-[300px]">
-            <span className="text-[13px] font-semibold mr-auto">
-              {selectedProvider?.provider || "Unknown Provider"}
-              {requiresApiKey && " API Key"}
-              {requiresApiKey && <span className="text-red-500 ml-1">*</span>}
-            </span>
-          </div>
-          <span className="text-[13px] text-muted-foreground pt-1 pb-2">
-            {requiresApiKey ? (
-              <>
-                Add your{" "}
-                <span
-                  className="underline cursor-pointer hover:text-primary"
-                  onClick={() => {
-                    if (selectedProvider?.api_docs_url) {
-                      window.open(
-                        selectedProvider.api_docs_url,
-                        "_blank",
-                        "noopener,noreferrer",
-                      );
+        <div className={cn("flex flex-col gap-1 relative p-4")}>
+          {requiresApiKey ? (
+            <>
+              <div
+                className={cn(
+                  "flex flex-col gap-3 transition-all duration-300 ease-in-out relative",
+                  showReplaceWarning
+                    ? "opacity-0 pointer-events-none"
+                    : "opacity-100",
+                )}
+              >
+                <div className="flex flex-col gap-1">
+                  <span className="text-sm font-semibold">
+                    {selectedProvider?.provider || "Unknown Provider"}
+                    {requiresApiKey && " API Key"}
+                    {requiresApiKey && (
+                      <span className="text-red-500 ml-1">*</span>
+                    )}
+                  </span>
+                  <span className="text-sm text-muted-foreground">
+                    Add your{" "}
+                    <span
+                      className="underline cursor-pointer hover:text-primary"
+                      onClick={() => {
+                        if (selectedProvider?.api_docs_url) {
+                          window.open(
+                            selectedProvider.api_docs_url,
+                            "_blank",
+                            "noopener,noreferrer",
+                          );
+                        }
+                      }}
+                    >
+                      {selectedProvider?.provider} API key
+                    </span>{" "}
+                    to enable these models
+                  </span>
+                </div>
+                <Input
+                  ref={inputRef}
+                  placeholder={"Enter API key"}
+                  value={
+                    selectedProvider?.is_enabled && !isEditingKey
+                      ? getMaskedKeyPreview(selectedProvider.provider)
+                      : apiKey
+                  }
+                  className="group"
+                  type={
+                    selectedProvider?.is_enabled && !isEditingKey
+                      ? "text"
+                      : "password"
+                  }
+                  onFocus={() => {
+                    if (selectedProvider?.is_enabled) {
+                      setIsEditingKey(true);
                     }
                   }}
-                >
-                  {selectedProvider?.provider} API key
-                </span>{" "}
-                to enable these models
-              </>
-            ) : (
-              <>Activate {selectedProvider?.provider} to enable these models</>
-            )}
-          </span>
-          {requiresApiKey ? (
-            <Input
-              placeholder="Add API key"
-              value={apiKey}
-              type="password"
-              onChange={(e) => {
-                isUserInputRef.current = true;
-                setValidationFailed(false);
-                setApiKey(e.target.value);
-              }}
-              // Show loading spinner while saving, X on error, checkmark when configured
-              endIcon={
-                isPending
-                  ? "LoaderCircle"
-                  : validationFailed
-                    ? "X"
-                    : selectedProvider?.is_enabled
-                      ? "Check"
-                      : undefined
-              }
-              endIconClassName={cn(
-                isPending && "animate-spin text-muted-foreground top-2.5",
-                validationFailed && "text-red-500",
-                !isPending &&
-                  !validationFailed &&
-                  selectedProvider?.is_enabled &&
-                  "text-green-500",
-              )}
-            />
+                  onBlur={() => {
+                    if (!apiKey) {
+                      setIsEditingKey(false);
+                    }
+                  }}
+                  onChange={(e) => {
+                    setValidationFailed(false);
+                    setApiKey(e.target.value);
+                  }}
+                  endIcon={
+                    isPending
+                      ? "LoaderCircle"
+                      : validationFailed
+                        ? "X"
+                        : selectedProvider?.is_enabled && !isEditingKey
+                          ? "Check"
+                          : undefined
+                  }
+                  endIconClassName={cn(
+                    isPending && "animate-spin text-muted-foreground top-2.5",
+                    validationFailed && "text-red-500",
+                    !isPending &&
+                      !validationFailed &&
+                      selectedProvider?.is_enabled &&
+                      "text-green-500",
+                  )}
+                />
+                <div className="flex gap-2 justify-end">
+                  {selectedProvider?.is_enabled && (
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => {
+                        handleDisconnect();
+                      }}
+                    >
+                      Disconnect
+                    </Button>
+                  )}
+                  <Button size="sm" onClick={handleConfigureProvider}>
+                    <span>
+                      {selectedProvider?.is_enabled ? "Replace" : "Validate"}{" "}
+                      API Key
+                    </span>
+                  </Button>
+                </div>
+              </div>
+              <DisconnectWarning
+                show={showReplaceWarning}
+                message="Disconnecting an API key will disable all of the provider's models being used in a flow."
+                onCancel={() => setShowReplaceWarning(false)}
+                onConfirm={handleConfirmDisconnect}
+                isLoading={isDeleting}
+                className="absolute inset-0 m-4"
+              />
+            </>
           ) : (
-            <Button
-              onClick={handleActivateNoApiKeyProvider}
-              loading={isPending}
-              disabled={selectedProvider?.is_enabled}
-            >
-              {selectedProvider?.is_enabled
-                ? `${selectedProvider?.provider} Activated`
-                : `Activate ${selectedProvider?.provider}`}
-            </Button>
+            <>
+              <div
+                className={cn(
+                  "flex flex-col gap-3 transition-all duration-300 ease-in-out relative",
+                  showReplaceWarning
+                    ? "opacity-0 pointer-events-none"
+                    : "opacity-100",
+                )}
+              >
+                <div className="flex flex-col gap-1">
+                  <span className="text-sm font-semibold">
+                    {selectedProvider?.provider || "Unknown Provider"}
+                  </span>
+                  <span className="text-sm text-muted-foreground">
+                    Activate {selectedProvider?.provider} to enable these models
+                  </span>
+                </div>
+                <Input
+                  disabled
+                  value={"No key required"}
+                  endIcon={
+                    isPending
+                      ? "LoaderCircle"
+                      : validationFailed
+                        ? "X"
+                        : selectedProvider?.is_enabled
+                          ? "Check"
+                          : undefined
+                  }
+                  endIconClassName={cn(
+                    isPending && "animate-spin text-muted-foreground top-2.5",
+                    validationFailed && "text-red-500",
+                    !isPending &&
+                      !validationFailed &&
+                      selectedProvider?.is_enabled &&
+                      "text-green-500",
+                  )}
+                />
+                <div className="flex gap-2 justify-end">
+                  {selectedProvider?.is_enabled && (
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={handleDisconnect}
+                    >
+                      Deactivate {selectedProvider?.provider}
+                    </Button>
+                  )}
+                  {!selectedProvider?.is_enabled && (
+                    <Button
+                      size="sm"
+                      onClick={handleActivateNoApiKeyProvider}
+                      loading={isPending && !showReplaceWarning}
+                    >
+                      Activate {selectedProvider?.provider}
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <DisconnectWarning
+                show={showReplaceWarning}
+                message={`Deactivating ${selectedProvider?.provider} will disable all of the provider's models being used in a flow.`}
+                onCancel={() => setShowReplaceWarning(false)}
+                onConfirm={handleConfirmDisconnect}
+                isLoading={isDeleting}
+                className="absolute inset-0 m-4"
+              />
+            </>
           )}
         </div>
 
