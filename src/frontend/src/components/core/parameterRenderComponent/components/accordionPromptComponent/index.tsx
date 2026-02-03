@@ -469,6 +469,7 @@ export default function AccordionPromptComponent({
                     size="sm"
                     className="h-6 w-6 p-0 text-muted-foreground"
                     title="Fullscreen"
+                    data-testid="button_open_prompt_modal"
                   >
                     <ForwardedIconComponent
                       name="Maximize"

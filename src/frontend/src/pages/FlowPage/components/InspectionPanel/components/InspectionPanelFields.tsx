@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { sortToolModeFields } from "@/CustomNodes/helpers/sort-tool-mode-field";
 import getFieldTitle from "@/CustomNodes/utils/get-field-title";
 import type { NodeDataType } from "@/types/flow";
@@ -22,6 +22,11 @@ export default function InspectionPanelFields({
   data,
 }: InspectionPanelFieldsProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
+
+  // Reset advanced disclosure when node changes
+  useEffect(() => {
+    setShowAdvanced(false);
+  }, [data.id]);
   const isToolMode = data.node?.tool_mode;
 
   // Separate basic and advanced fields
@@ -104,40 +109,40 @@ export default function InspectionPanelFields({
       </div>
 
       {/* Render advanced fields disclosure */}
-      <Separator className="mt-3" />
-      {advancedFields.length > 0 && (
-        <Disclosure
-          open={showAdvanced}
-          onOpenChange={setShowAdvanced}
-          className="mt-2 px-1"
-        >
-          <DisclosureTrigger>
-            <div
-              className={cn(
-                "flex w-full items-center justify-between px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground",
-                "cursor-pointer rounded-md hover:bg-muted/50",
-              )}
-              data-testid={
-                showAdvanced ? "edit-button-close" : "edit-button-modal"
-              }
-            >
-              <span>Advanced</span>
-              <ChevronRight
-                className={cn(
-                  "h-4 w-4 transition-transform duration-200",
-                  showAdvanced && "rotate-90",
-                )}
-              />
-            </div>
-          </DisclosureTrigger>
-
-          <DisclosureContent>
-            <div className="my-1">
-              {advancedFields.map((field) => renderField(field, true))}
-            </div>
-          </DisclosureContent>
-        </Disclosure>
+      {basicFields.length > 0 && (
+        <Separator className="mt-3" />
       )}
+      <Disclosure
+        open={showAdvanced}
+        onOpenChange={setShowAdvanced}
+        className="mt-2 px-1"
+      >
+        <DisclosureTrigger>
+          <div
+            className={cn(
+              "flex w-full items-center justify-between px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground",
+              "cursor-pointer rounded-md hover:bg-muted/50",
+            )}
+            data-testid={
+              showAdvanced ? "edit-button-close" : "edit-button-modal"
+            }
+          >
+            <span>Advanced</span>
+            <ChevronRight
+              className={cn(
+                "h-4 w-4 transition-transform duration-200",
+                showAdvanced && "rotate-90",
+              )}
+            />
+          </div>
+        </DisclosureTrigger>
+
+        <DisclosureContent>
+          <div className="">
+            {advancedFields.map((field) => renderField(field, true))}
+          </div>
+        </DisclosureContent>
+      </Disclosure>
     </div>
   );
 }
