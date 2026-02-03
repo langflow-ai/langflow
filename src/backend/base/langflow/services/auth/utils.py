@@ -13,7 +13,6 @@ from lfx.services.deps import injectable_session_scope
 from langflow.services.auth.exceptions import (
     AuthenticationError,
     InactiveUserError,
-    InsufficientPermissionsError,
     InvalidCredentialsError,
     InvalidTokenError,
     MissingCredentialsError,
@@ -168,7 +167,7 @@ async def get_current_user_for_websocket(
     db: AsyncSession,
 ) -> User | UserRead:
     """Adapter for WebSocket authentication - converts generic exceptions to WebSocketException.
-    
+
     Extracts credentials from WebSocket object and delegates to auth service.
     Converts generic AuthenticationError exceptions to WebSocket-specific exceptions.
     """
@@ -179,34 +178,29 @@ async def get_current_user_for_websocket(
         or websocket.headers.get("x-api-key")
         or websocket.headers.get("api_key")
     )
-    
+
     try:
         return await _auth_service().get_current_user_for_websocket(token, api_key, db)
     except MissingCredentialsError:
         raise WebSocketException(
-            code=status.WS_1008_POLICY_VIOLATION,
-            reason="Missing or invalid credentials (cookie, token or API key)."
+            code=status.WS_1008_POLICY_VIOLATION, reason="Missing or invalid credentials (cookie, token or API key)."
         )
     except (InvalidCredentialsError, InvalidTokenError):
         raise WebSocketException(
-            code=status.WS_1008_POLICY_VIOLATION,
-            reason="Missing or invalid credentials (cookie, token or API key)."
+            code=status.WS_1008_POLICY_VIOLATION, reason="Missing or invalid credentials (cookie, token or API key)."
         )
     except TokenExpiredError:
         raise WebSocketException(
-            code=status.WS_1008_POLICY_VIOLATION,
-            reason="Missing or invalid credentials (cookie, token or API key)."
+            code=status.WS_1008_POLICY_VIOLATION, reason="Missing or invalid credentials (cookie, token or API key)."
         )
     except InactiveUserError:
         raise WebSocketException(
-            code=status.WS_1008_POLICY_VIOLATION,
-            reason="Missing or invalid credentials (cookie, token or API key)."
+            code=status.WS_1008_POLICY_VIOLATION, reason="Missing or invalid credentials (cookie, token or API key)."
         )
     except AuthenticationError as e:
         # Catch-all for any other authentication errors
         raise WebSocketException(
-            code=status.WS_1008_POLICY_VIOLATION,
-            reason="Missing or invalid credentials (cookie, token or API key)."
+            code=status.WS_1008_POLICY_VIOLATION, reason="Missing or invalid credentials (cookie, token or API key)."
         ) from e
 
 
@@ -232,7 +226,7 @@ async def get_current_user_for_sse(
     """
     token = request.cookies.get("access_token_lf")
     api_key = request.query_params.get("x-api-key") or request.headers.get("x-api-key")
-    
+
     try:
         return await _auth_service().get_current_user_for_sse(token, api_key, db)
     except MissingCredentialsError:

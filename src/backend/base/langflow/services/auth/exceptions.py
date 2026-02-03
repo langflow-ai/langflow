@@ -10,14 +10,14 @@ from __future__ import annotations
 
 class AuthenticationError(Exception):
     """Base exception for authentication failures.
-    
+
     This is a framework-agnostic exception that should be caught and converted
     to the appropriate protocol-specific exception by the adapter layer.
     """
 
     def __init__(self, message: str, *, error_code: str | None = None):
         """Initialize authentication error.
-        
+
         Args:
             message: Human-readable error message
             error_code: Optional machine-readable error code for categorization

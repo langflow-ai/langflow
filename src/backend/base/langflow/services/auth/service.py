@@ -21,9 +21,11 @@ from langflow.services.auth.exceptions import (
     InactiveUserError,
     InsufficientPermissionsError,
     InvalidCredentialsError,
-    InvalidTokenError as AuthInvalidTokenError,
     MissingCredentialsError,
     TokenExpiredError,
+)
+from langflow.services.auth.exceptions import (
+    InvalidTokenError as AuthInvalidTokenError,
 )
 from langflow.services.database.models.api_key.crud import check_key
 from langflow.services.database.models.user.crud import (
@@ -62,6 +64,7 @@ class AuthService(AuthServiceBase):
     @property
     def settings(self) -> SettingsService:
         return self.settings_service
+
     async def authenticate_with_credentials(
         self,
         token: str | None,
@@ -69,19 +72,19 @@ class AuthService(AuthServiceBase):
         db: AsyncSession,
     ) -> User | UserRead:
         """Framework-agnostic authentication method.
-        
+
         This is the core authentication logic that validates credentials and returns a user.
         It raises generic AuthenticationError exceptions that should be converted to
         protocol-specific exceptions by the adapter layer.
-        
+
         Args:
             token: Access token (JWT, OIDC token, etc.)
             api_key: API key for authentication
             db: Database session
-            
+
         Returns:
             User or UserRead object
-            
+
         Raises:
             MissingCredentialsError: If no credentials provided
             InvalidCredentialsError: If credentials are invalid
@@ -100,7 +103,7 @@ class AuthService(AuthServiceBase):
                 # Convert any unexpected errors to InvalidTokenError
                 logger.error(f"Unexpected error during token authentication: {e}")
                 raise AuthInvalidTokenError("Token authentication failed") from e
-        
+
         # Try API key authentication
         if api_key:
             try:
@@ -113,42 +116,42 @@ class AuthService(AuthServiceBase):
             except Exception as e:
                 logger.error(f"Unexpected error during API key authentication: {e}")
                 raise InvalidCredentialsError("API key authentication failed") from e
-        
+
         # No credentials provided
         raise MissingCredentialsError("No authentication credentials provided")
-    
+
     async def _authenticate_with_token(self, token: str, db: AsyncSession) -> User:
         """Internal method to authenticate with token (raises generic exceptions)."""
         from langflow.services.auth.utils import ACCESS_TOKEN_TYPE, get_jwt_verification_key
-        
+
         settings_service = self.settings
         algorithm = settings_service.auth_settings.ALGORITHM
         verification_key = get_jwt_verification_key(settings_service)
-        
+
         try:
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 payload = jwt.decode(token, verification_key, algorithms=[algorithm])
             user_id: UUID = payload.get("sub")  # type: ignore[assignment]
             token_type: str = payload.get("type")  # type: ignore[assignment]
-            
+
             # Validate token type
             if token_type != ACCESS_TOKEN_TYPE:
                 logger.error(f"Token type is invalid: {token_type}. Expected: {ACCESS_TOKEN_TYPE}.")
                 raise AuthInvalidTokenError("Invalid token type")
-            
+
             # Check expiration
             if expires := payload.get("exp", None):
                 expires_datetime = datetime.fromtimestamp(expires, timezone.utc)
                 if datetime.now(timezone.utc) > expires_datetime:
                     logger.info("Token expired for user")
                     raise TokenExpiredError("Token has expired")
-            
+
             # Validate payload
             if user_id is None or token_type is None:
                 logger.info(f"Invalid token payload. Token type: {token_type}")
                 raise AuthInvalidTokenError("Invalid token payload")
-                
+
         except (TokenExpiredError, AuthInvalidTokenError):
             raise
         except InvalidTokenError as e:
@@ -157,33 +160,32 @@ class AuthService(AuthServiceBase):
         except Exception as e:
             logger.error(f"Unexpected error decoding token: {e}")
             raise AuthInvalidTokenError("Token validation failed") from e
-        
+
         # Get user from database
         user = await get_user_by_id(db, user_id)
         if user is None:
             logger.info("User not found")
             raise InvalidCredentialsError("User not found")
-        
+
         if not user.is_active:
             logger.info("User is inactive")
             raise InactiveUserError("User account is inactive")
-        
+
         return user
-    
+
     async def _authenticate_with_api_key(self, api_key: str, db: AsyncSession) -> UserRead | None:
         """Internal method to authenticate with API key (raises generic exceptions)."""
         result = await check_key(db, api_key)
         if not result:
             return None
-        
+
         if isinstance(result, User):
             user_read = UserRead.model_validate(result, from_attributes=True)
             if not user_read.is_active:
                 raise InactiveUserError("User account is inactive")
             return user_read
-        
-        return None
 
+        return None
 
     async def api_key_security(
         self, query_param: str | None, header_param: str | None, db: AsyncSession | None = None
@@ -308,10 +310,10 @@ class AuthService(AuthServiceBase):
             resolved_token = await token
         elif isinstance(token, str):
             resolved_token = token
-        
+
         # Combine API key params
         api_key = query_param or header_param
-        
+
         # Delegate to framework-agnostic method
         return await self.authenticate_with_credentials(resolved_token, api_key, db)
 
@@ -321,7 +323,7 @@ class AuthService(AuthServiceBase):
         db: AsyncSession,
     ) -> User:
         """Get user from access token (raises generic exceptions).
-        
+
         This method now uses the framework-agnostic _authenticate_with_token() internally.
         """
         if token is None:
@@ -346,7 +348,7 @@ class AuthService(AuthServiceBase):
         db: AsyncSession,
     ) -> User | UserRead:
         """DEPRECATED: Delegates to authenticate_with_credentials().
-        
+
         Kept for backward compatibility. Protocol-specific error handling
         should be done in the adapter layer (utils.py).
         """
@@ -359,7 +361,7 @@ class AuthService(AuthServiceBase):
         db: AsyncSession,
     ) -> User | UserRead:
         """DEPRECATED: Delegates to authenticate_with_credentials().
-        
+
         Kept for backward compatibility. Protocol-specific error handling
         should be done in the adapter layer (utils.py).
         """

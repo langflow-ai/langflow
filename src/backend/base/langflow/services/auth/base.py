@@ -81,7 +81,7 @@ class AuthServiceBase(Service, abc.ABC):
 
         This is the core authentication method that validates credentials and returns
         a user. It is framework-agnostic and raises generic AuthenticationError exceptions.
-        
+
         The adapter layer (utils.py) is responsible for:
         1. Extracting credentials from protocol-specific objects (Request, WebSocket, etc.)
         2. Calling this method
