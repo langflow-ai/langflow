@@ -22,10 +22,37 @@ langflow/agentic/
 │   ├── __init__.py
 │   ├── assistant_service.py  # Main orchestration with retry logic
 │   ├── flow_executor.py      # Flow execution and streaming
-│   └── provider_service.py   # Model provider configuration
+│   ├── flow_preparation.py   # Model injection for JSON flows
+│   ├── flow_types.py         # Types, dataclasses, and constants
+│   ├── provider_service.py   # Model provider configuration
+│   └── helpers/              # Flow execution helpers
+│       ├── __init__.py
+│       ├── event_consumer.py       # SSE event parsing
+│       ├── flow_loader.py          # Load graphs from .py or .json
+│       └── intent_classification.py # Intent detection via LLM
 ├── flows/
-│   └── LangflowAssistant.json  # The assistant flow definition
+│   ├── __init__.py
+│   ├── langflow_assistant.py   # Main assistant flow (Python)
+│   ├── LangflowAssistant.json  # Main assistant flow (JSON fallback)
+│   ├── translation_flow.py     # Intent classification flow (Python)
+│   └── TranslationFlow.json    # Intent classification flow (JSON fallback)
 └── GENERATE_COMPONENT.md       # Prompt template for component generation
+```
+
+### Flow Priority
+
+The system supports both Python (`.py`) and JSON (`.json`) flows. When loading a flow:
+1. **Python flows take priority** - If a `.py` file exists, it is used
+2. **JSON fallback** - If no `.py` file exists, the `.json` file is used
+
+Python flows export a `get_graph()` function that receives model parameters:
+```python
+async def get_graph(
+    provider: str | None = None,
+    model_name: str | None = None,
+    api_key_var: str | None = None,
+) -> Graph:
+    # Build and return the graph
 ```
 
 ## Module Responsibilities
@@ -211,10 +238,32 @@ def get_default_model(provider: str) -> str | None
 # Returns default model for provider
 ```
 
-#### `flow_executor.py`
-Executes Langflow flows with optional model injection and streaming.
+#### `flow_preparation.py`
+Prepares JSON flow data with model injection.
 
-**Key Classes:**
+**Key Functions:**
+```python
+def inject_model_into_flow(
+    flow_data: dict,
+    provider: str,
+    model_name: str,
+    api_key_var: str | None = None,
+) -> dict
+# Injects model configuration into Agent nodes in the flow
+
+def load_and_prepare_flow(
+    flow_path: Path,
+    provider: str | None,
+    model_name: str | None,
+    api_key_var: str | None,
+) -> str
+# Loads JSON flow file and optionally injects model, returns JSON string
+```
+
+#### `flow_types.py`
+Types, dataclasses, and constants shared across the services module.
+
+**Key Types:**
 ```python
 @dataclass
 class FlowExecutionResult:
@@ -226,18 +275,32 @@ class FlowExecutionResult:
 
     @property
     def has_result(self) -> bool
+
+@dataclass
+class IntentResult:
+    translation: str  # English translation of input
+    intent: str       # "generate_component" or "question"
 ```
+
+**Constants:**
+```python
+FLOWS_BASE_PATH = Path(__file__).parent.parent / "flows"
+STREAMING_QUEUE_MAX_SIZE = 1000
+STREAMING_EVENT_TIMEOUT_SECONDS = 300.0
+
+# Assistant configuration
+MAX_VALIDATION_RETRIES = 3
+VALIDATION_UI_DELAY_SECONDS = 0.3
+LANGFLOW_ASSISTANT_FLOW = "LangflowAssistant.json"
+TRANSLATION_FLOW = "TranslationFlow.json"
+VALIDATION_RETRY_TEMPLATE = "..."  # Template for retry prompts
+```
+
+#### `flow_executor.py`
+Executes Langflow flows with optional model injection and streaming.
 
 **Key Functions:**
 ```python
-def inject_model_into_flow(
-    flow_data: dict,
-    provider: str,
-    model_name: str,
-    api_key_var: str | None = None,
-) -> dict
-# Injects model configuration into Agent nodes
-
 async def execute_flow_file(
     flow_filename: str,
     input_value: str | None = None,
@@ -250,10 +313,12 @@ async def execute_flow_file(
     model_name: str | None = None,
     api_key_var: str | None = None,
 ) -> dict
-# Execute flow and return result
+# Execute flow (.py or .json) and return result
 
 async def execute_flow_file_streaming(
-    # Same parameters as above
+    # Same parameters as above, plus:
+    is_disconnected: Callable | None = None,
+    cancel_event: asyncio.Event | None = None,
 ) -> AsyncGenerator[tuple[str, Any], None]
 # Execute flow with token streaming, yields ("token", chunk) and ("end", result)
 
@@ -261,27 +326,55 @@ def extract_response_text(result: dict) -> str
 # Extract text from various result formats
 ```
 
+#### `services/helpers/`
+Helpers for flow execution, separated by responsibility.
+
+**`flow_loader.py`** - Load graphs from Python or JSON files:
+```python
+def resolve_flow_path(flow_filename: str) -> tuple[Path, str]
+# Returns (path, "python" | "json"), prioritizing .py over .json
+
+async def load_graph_for_execution(
+    flow_path: Path,
+    flow_type: str,
+    provider: str | None = None,
+    model_name: str | None = None,
+    api_key_var: str | None = None,
+) -> Graph
+# Load graph from .py (via get_graph()) or .json file
+```
+
+**`event_consumer.py`** - Parse and consume SSE events:
+```python
+def parse_event_data(event_data: bytes) -> tuple[str | None, dict]
+# Parse raw event bytes into event type and data
+
+async def consume_streaming_events(
+    event_queue: asyncio.Queue,
+    is_disconnected: Callable | None = None,
+    cancel_event: asyncio.Event | None = None,
+) -> AsyncGenerator[tuple[str, str], None]
+# Consume events from queue, yields ("token", chunk) or ("end", "")
+```
+
+**`intent_classification.py`** - Classify user intent via LLM:
+```python
+async def classify_intent(
+    text: str,
+    global_variables: dict[str, str],
+    user_id: str | None = None,
+    session_id: str | None = None,
+    provider: str | None = None,
+    model_name: str | None = None,
+    api_key_var: str | None = None,
+) -> IntentResult
+# Returns IntentResult with translation and intent ("generate_component" or "question")
+```
+
 #### `assistant_service.py`
 Main orchestration service with validation and retry logic.
 
-**Constants:**
-```python
-MAX_VALIDATION_RETRIES = 3
-VALIDATION_UI_DELAY_SECONDS = 0.3  # Small delay for UI feedback
-LANGFLOW_ASSISTANT_FLOW = "LangflowAssistant.json"
-
-VALIDATION_RETRY_TEMPLATE = """The previous component code has an error. Please fix it.
-
-ERROR:
-{error}
-
-BROKEN CODE:
-```python
-{code}
-```
-
-Please provide a corrected version of the component code."""
-```
+Uses constants from `flow_types.py` and intent classification from `helpers/intent_classification.py`.
 
 **Key Functions:**
 ```python
@@ -300,9 +393,11 @@ async def execute_flow_with_validation(
 # Non-streaming execution with validation loop
 
 async def execute_flow_with_validation_streaming(
-    # Same parameters
+    # Same parameters, plus:
+    is_disconnected: Callable | None = None,
 ) -> AsyncGenerator[str, None]
 # Streaming execution with SSE events
+# Uses classify_intent() to detect component generation vs Q&A
 ```
 
 ## Data Flow

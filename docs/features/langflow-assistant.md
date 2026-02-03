@@ -57,7 +57,7 @@ This context owns:
 | **Assistant** | AI-powered chat interface that generates Langflow components from natural language | `AssistantPanel`, `AssistantService` |
 | **AssistantMessage** | A single message in the chat, either from user or assistant | `AssistantMessage` interface |
 | **ComponentCode** | Python code that defines a Langflow component with inputs, outputs, and processing logic | `component_code` field, `extract_component_code()` |
-| **IntentClassification** | LLM-based detection of whether user wants to generate a component or ask a question | `_classify_intent()`, `IntentResult` |
+| **IntentClassification** | LLM-based detection of whether user wants to generate a component or ask a question | `classify_intent()`, `IntentResult` |
 | **ProgressStep** | A discrete stage in the component generation pipeline (generating, validating, etc.) | `StepType`, `AgenticStepType` |
 | **SSE** | Server-Sent Events - Protocol for streaming real-time progress updates from server to client | `StreamingResponse`, `postAssistStream()` |
 | **TokenEvent** | Real-time streaming of LLM output tokens for Q&A responses | `AgenticTokenEvent`, `format_token_event()` |
@@ -375,7 +375,7 @@ Support two view modes: floating (centered modal) and sidebar (docked left). Per
 
 | Type | Name | Purpose |
 |------|------|---------|
-| Service | `FlowExecutor` | Executes pre-built assistant flows (LangflowAssistant.json, TranslationFlow.json) |
+| Service | `FlowExecutor` | Executes pre-built assistant flows (.py or .json, with .py taking priority) |
 | Service | `ProviderService` | Detects configured model providers and retrieves API keys |
 | Service | `VariableService` | Retrieves user's stored API keys from encrypted storage |
 | Service | `ValidationService` | Compiles and instantiates component code for validation |
