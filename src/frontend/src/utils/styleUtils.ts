@@ -437,7 +437,7 @@ export const nodeIconToDisplayIconMap: Record<string, string> = {
   ChatOllamaModel: "Ollama",
   ChatOpenAI: "OpenAI",
   ChatVertexAI: "VertexAI",
-  ChevronsUpDownIcon: "ChevronsUpD pown",
+  ChevronsUpDownIcon: "ChevronsUpDown",
   ClearMessageHistory: "FileClock",
   CohereEmbeddings: "Cohere",
   Discord: "FaDiscord",
