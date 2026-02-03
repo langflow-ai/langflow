@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useRef } from "react";
-import { CHAT_INPUT_MIN_HEIGHT, CHAT_INPUT_MAX_HEIGHT } from "@/constants/constants";
+import {
+  CHAT_INPUT_MIN_HEIGHT,
+  CHAT_INPUT_MAX_HEIGHT,
+} from "@/constants/constants";
 import { useUtilityStore } from "@/stores/utilityStore";
 import type { FilePreviewType } from "@/types/components";
 import { Textarea } from "../../../../../../components/ui/textarea";
@@ -48,7 +51,7 @@ const resizeTextarea = (
       const newHeight = Math.min(scrollHeight, CHAT_INPUT_MAX_HEIGHT);
       textarea.style.height = `${newHeight}px`;
       previousScrollHeightRef.current = newHeight;
-      
+
       // Enable scrolling if content exceeds max height
       if (scrollHeight > CHAT_INPUT_MAX_HEIGHT) {
         textarea.style.overflowY = "auto";
@@ -59,7 +62,7 @@ const resizeTextarea = (
       // No significant change - restore previous height immediately to prevent any visual growth
       // Don't update the ref so we maintain the stable height
       textarea.style.height = `${previousScrollHeight}px`;
-      
+
       // Check if we need scrolling based on current content
       if (scrollHeight > CHAT_INPUT_MAX_HEIGHT) {
         textarea.style.overflowY = "auto";
