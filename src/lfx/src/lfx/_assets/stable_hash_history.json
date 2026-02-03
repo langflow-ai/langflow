@@ -826,7 +826,7 @@
   },
   "LoopComponent": {
     "versions": {
-      "0.3.0": "0e339ea4a431"
+      "0.3.0": "9f88705635cd"
     }
   },
   "Notify": {
@@ -956,7 +956,7 @@
   },
   "ChatOutput": {
     "versions": {
-      "0.3.0": "8c87e536cca4"
+      "0.3.0": "31feb45308cd"
     }
   },
   "TextInput": {
@@ -1772,6 +1772,36 @@
   "ZepChatMemory": {
     "versions": {
       "0.3.0": "ec825c33caf6"
+    }
+  },
+  "AgentLoopComponent": {
+    "versions": {
+      "0.3.0": "7f1e73e79f3c"
+    }
+  },
+  "AgentStepComponent": {
+    "versions": {
+      "0.3.0": "ae573cae2a02"
+    }
+  },
+  "ExecuteToolComponent": {
+    "versions": {
+      "0.3.0": "4ffe232d0c6f"
+    }
+  },
+  "SharedContextComponent": {
+    "versions": {
+      "0.3.0": "48743d67e7b1"
+    }
+  },
+  "ThinkToolComponent": {
+    "versions": {
+      "0.3.0": "a5b44f350753"
+    }
+  },
+  "WhileLoopComponent": {
+    "versions": {
+      "0.3.0": "c699c88683ed"
     }
   }
 }

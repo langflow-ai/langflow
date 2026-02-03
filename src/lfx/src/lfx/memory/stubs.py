@@ -124,6 +124,11 @@ async def aupdate_messages(messages: Message | list[Message]) -> list[Message]:
                     logger.warning(error_message)
                     raise ValueError(error_message)
 
+                # Convert message.id to UUID if it's a string (database expects UUID)
+                msg_id = message.id
+                if isinstance(msg_id, str):
+                    message.id = UUID(msg_id)
+
                 # Convert flow_id to string if it's a UUID
                 if message.flow_id and isinstance(message.flow_id, UUID):
                     message.flow_id = str(message.flow_id)

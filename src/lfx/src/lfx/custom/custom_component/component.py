@@ -971,6 +971,9 @@ class Component(CustomComponent):
     def _map_parameters_on_frontend_node(self, frontend_node: ComponentFrontendNode) -> None:
         for name, value in self._parameters.items():
             frontend_node.set_field_value_in_template(name, value)
+            # Disable load_from_db for explicitly set parameters to prevent
+            # overwriting the value during graph execution
+            frontend_node.set_field_load_from_db_in_template(name, value=False)
 
     def _map_parameters_on_template(self, template: dict) -> None:
         for name, value in self._parameters.items():
@@ -1181,10 +1184,17 @@ class Component(CustomComponent):
     def _should_process_output(self, output):
         """Determines whether a given output should be processed based on vertex edge configuration.
 
-        Returns True if the component has no vertex or outgoing edges, or if the output's name is among
-        the vertex's source edge names.
+        Returns True if:
+        - The component has no vertex or outgoing edges
+        - The output is part of a grouped outputs (conditional routing) - these must always run
+          so the routing logic can execute and decide which branch to take
+        - The output's name is among the vertex's source edge names
         """
         if not self._vertex or not self._vertex.outgoing_edges:
+            return True
+        # Always process outputs with group_outputs=True (conditional routing outputs)
+        # These need to run so the routing logic can execute, even if not connected
+        if getattr(output, "group_outputs", False):
             return True
         return output.name in self._vertex.edges_source_names
 
@@ -1554,7 +1564,21 @@ class Component(CustomComponent):
         # Lazy import to avoid circular dependency
         from lfx.graph.utils import has_chat_output
 
-        return has_chat_output(self.graph.get_vertex_neighbors(self._vertex))
+        # Check current graph first
+        if has_chat_output(self.graph.get_vertex_neighbors(self._vertex)):
+            return True
+
+        # If in a subgraph, also check parent graph's connections
+        # This handles cases like WhileLoop where the ChatOutput is connected
+        # to the parent graph but not visible in the subgraph
+        parent_graph = getattr(self.graph, "_parent_graph", None)
+        if parent_graph is not None:
+            # Find the equivalent vertex in parent graph and check its neighbors
+            parent_vertex = parent_graph.get_vertex(self._vertex.id)
+            if parent_vertex:
+                return has_chat_output(parent_graph.get_vertex_neighbors(parent_vertex))
+
+        return False
 
     def is_connected_to_chat_input(self) -> bool:
         # Lazy import to avoid circular dependency
@@ -1573,6 +1597,7 @@ class Component(CustomComponent):
         - It is still returned to the caller, but no events are sent to the frontend
 
         Messages are skipped when:
+        - The component has stream_events=False (component explicitly opts out)
         - The component is not an input or output vertex
         - The component is not connected to a Chat Output
         - The component does not have _stream_to_playground=True (set by parent for inner graphs)
@@ -1584,8 +1609,17 @@ class Component(CustomComponent):
         Returns:
             bool: True if the message should be skipped, False otherwise
         """
+        # If component explicitly disabled streaming (e.g., AgentStep with stream_events=False)
+        # This takes precedence over _stream_to_playground to allow pure-function mode
+        if hasattr(self, "stream_events") and self.stream_events is False:
+            return True
+
         # If parent explicitly enabled streaming for this inner graph component
         if getattr(self, "_stream_to_playground", False):
+            return False
+
+        # If the graph itself is marked for streaming (e.g., subgraph inside WhileLoop connected to ChatOutput)
+        if hasattr(self, "graph") and self.graph is not None and getattr(self.graph, "_stream_to_playground", False):
             return False
 
         return (
@@ -1718,6 +1752,20 @@ class Component(CustomComponent):
         if hasattr(self, "graph"):
             # Convert UUID to str if needed
             flow_id = str(self.graph.flow_id) if self.graph.flow_id else None
+
+        # If message already has an ID, update instead of creating new record
+        # This is important for agent loops where the same message is updated across iterations
+        if message.has_id():
+            # Ensure flow_id is set for update
+            if flow_id and not message.flow_id:
+                message.flow_id = flow_id
+            updated_messages = await aupdate_messages(message)
+            if len(updated_messages) != 1:
+                msg = "Only one message can be updated at a time."
+                raise ValueError(msg)
+            return await Message.create(**updated_messages[0].model_dump())
+
+        # Normal flow: create new record
         stored_messages = await astore_message(message, flow_id=flow_id)
         if len(stored_messages) != 1:
             msg = "Only one message can be stored at a time."
