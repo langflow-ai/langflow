@@ -1,9 +1,7 @@
 """Assistant service with validation and retry logic."""
 
 import asyncio
-import json
 from collections.abc import AsyncGenerator, Callable, Coroutine
-from dataclasses import dataclass
 from typing import Any
 
 from fastapi import HTTPException
@@ -24,82 +22,12 @@ from langflow.agentic.services.flow_executor import (
     execute_flow_file_streaming,
     extract_response_text,
 )
-
-MAX_VALIDATION_RETRIES = 3
-VALIDATION_UI_DELAY_SECONDS = 0.3
-LANGFLOW_ASSISTANT_FLOW = "LangflowAssistant.json"
-TRANSLATION_FLOW = "TranslationFlow.json"
-
-
-@dataclass
-class IntentResult:
-    """Result from intent classification flow."""
-
-    translation: str
-    intent: str  # "generate_component" or "question"
-
-
-async def _classify_intent(
-    text: str,
-    global_variables: dict[str, str],
-    user_id: str | None = None,
-    session_id: str | None = None,
-    provider: str | None = None,
-    model_name: str | None = None,
-    api_key_var: str | None = None,
-) -> IntentResult:
-    """Translate text to English and classify user intent using the TranslationFlow.
-
-    The flow returns JSON with translation and intent classification.
-    Returns original text with "question" intent if classification fails.
-    """
-    if not text:
-        return IntentResult(translation=text, intent="question")
-
-    try:
-        logger.debug("Classifying intent and translating text")
-        result = await execute_flow_file(
-            flow_filename=TRANSLATION_FLOW,
-            input_value=text,
-            global_variables=global_variables,
-            verbose=False,
-            user_id=user_id,
-            session_id=session_id,
-            provider=provider,
-            model_name=model_name,
-            api_key_var=api_key_var,
-        )
-
-        response_text = extract_response_text(result)
-        if response_text:
-            # Parse JSON response from the flow
-            try:
-                parsed = json.loads(response_text)
-                translation = parsed.get("translation", text)
-                intent = parsed.get("intent", "question")
-                logger.debug(f"Intent: {intent}, Translation: '{translation[:50]}'")
-                return IntentResult(translation=translation, intent=intent)
-            except json.JSONDecodeError:
-                # If response is not JSON, treat it as plain translation (backward compat)
-                logger.warning("Intent flow returned non-JSON, treating as question")
-                return IntentResult(translation=response_text, intent="question")
-
-        return IntentResult(translation=text, intent="question")
-    except Exception as e:  # noqa: BLE001
-        logger.warning(f"Intent classification failed, defaulting to question: {e}")
-        return IntentResult(translation=text, intent="question")
-
-VALIDATION_RETRY_TEMPLATE = """The previous component code has an error. Please fix it.
-
-ERROR:
-{error}
-
-BROKEN CODE:
-```python
-{code}
-```
-
-Please provide a corrected version of the component code."""
+from langflow.agentic.services.flow_types import (
+    MAX_VALIDATION_RETRIES,
+    VALIDATION_RETRY_TEMPLATE,
+    VALIDATION_UI_DELAY_SECONDS,
+)
+from langflow.agentic.services.helpers.intent_classification import classify_intent
 
 
 async def execute_flow_with_validation(
@@ -213,7 +141,7 @@ async def execute_flow_with_validation_streaming(
 
     # Classify intent using LLM (handles multi-language support)
     # This translates the input and determines if user wants to generate a component or ask a question
-    intent_result = await _classify_intent(
+    intent_result = await classify_intent(
         text=input_value,
         global_variables=global_variables,
         user_id=user_id,
@@ -241,7 +169,7 @@ async def execute_flow_with_validation_streaming(
     try:
         # First attempt (attempt=0) doesn't count as retry
         # Retries are attempt 1, 2, 3... up to max_retries
-        for attempt in range(0, max_retries + 1):  # 0 = first try, 1..max_retries = retries
+        for attempt in range(max_retries + 1):  # 0 = first try, 1..max_retries = retries
             # Check if client disconnected before starting
             if await check_cancelled():
                 logger.info("Client disconnected, cancelling generation")
@@ -256,7 +184,7 @@ async def execute_flow_with_validation_streaming(
                 step_name,
                 attempt,  # 0 for first try, 1+ for retries
                 max_retries,  # max retries (not counting first try)
-                message=f"Generating response...",
+                message="Generating response...",
             )
 
             result = None
