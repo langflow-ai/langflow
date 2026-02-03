@@ -3,6 +3,7 @@ import path from "path";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { selectGptModel } from "../../utils/select-gpt-model";
+import { initialGPTsetup } from "../../utils/initialGPTsetup";
 
 test(
   "should able to see and interact with logs",
@@ -51,7 +52,7 @@ test(
       await apiKeyInput.fill(process.env.OPENAI_API_KEY ?? "");
     }
 
-    await selectGptModel(page);
+    await initialGPTsetup(page);
 
     await page.waitForSelector('[data-testid="button_run_chat output"]', {
       timeout: 1000,
