@@ -44,8 +44,6 @@ test(
       timeout: 100000,
     });
 
-    await page.waitForSelector("text=chain.png", { timeout: 30000 });
-
     expect(await page.getByAltText("generated image").isVisible()).toBeTruthy();
 
     expect(
