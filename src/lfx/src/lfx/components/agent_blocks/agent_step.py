@@ -251,8 +251,11 @@ class AgentStepComponent(LCModelComponent):
             return await self._handle_stream_with_immediate_notifications(runnable, inputs, parent_message, start_time)
 
         # Standard streaming path (no parent message or no streaming)
+        # Track captured text during streaming - generator may be consumed by send_message
+        captured_text_parts: list[str] = []
+
         async def stream_and_capture():
-            """Stream chunks to frontend while capturing tool_calls."""
+            """Stream chunks to frontend while capturing tool_calls and text."""
             nonlocal aggregated_chunk
             async for chunk in runnable.astream(inputs):
                 if aggregated_chunk is None:
@@ -261,6 +264,9 @@ class AgentStepComponent(LCModelComponent):
                     aggregated_chunk = aggregated_chunk + chunk
                 elif hasattr(chunk, "tool_calls") and chunk.tool_calls:
                     aggregated_chunk = chunk
+                # Capture text content as we stream
+                if hasattr(chunk, "content") and chunk.content:
+                    captured_text_parts.append(chunk.content)
                 yield chunk
 
         # Create new message with the async stream
@@ -274,22 +280,34 @@ class AgentStepComponent(LCModelComponent):
         )
         # Reuse existing message ID for UI continuity
         if existing_message_id is not None:
-            model_message.id = existing_message_id
+            # Ensure ID is a string (UUID objects need to be converted for Message.id)
+            # The database layer will convert it back to UUID as needed
+            if isinstance(existing_message_id, str):
+                model_message.id = existing_message_id
+            else:
+                model_message.id = str(existing_message_id)
 
-        # send_message handles streaming
+        # send_message handles streaming (consumes the generator)
         lf_message = await self.send_message(model_message)
 
-        # If stream wasn't consumed (no event_manager), consume it
-        # Note: We check model_message.text because lf_message is the stored message
-        # which may have lost the generator reference after serialization
-        if hasattr(model_message.text, "__anext__"):
-            full_text = ""
-            # Just consume the generator to accumulate text - aggregation already
-            # happens inside stream_and_capture() via the nonlocal aggregated_chunk
-            async for chunk in model_message.text:
-                if hasattr(chunk, "content"):
-                    full_text += chunk.content or ""
-            lf_message.text = full_text
+        # Check if streaming worked by seeing if captured_text_parts was populated
+        # The stream_and_capture generator populates this list as it yields chunks
+        # If empty, the generator wasn't consumed by send_message (no event_manager)
+        if not captured_text_parts:
+            # The generator wasn't consumed by send_message, consume it manually
+            if hasattr(model_message.text, "__anext__"):
+                async for chunk in model_message.text:
+                    if hasattr(chunk, "content") and chunk.content:
+                        captured_text_parts.append(chunk.content)  # noqa: PERF401
+
+            # Set the captured text and update the database
+            final_text = "".join(captured_text_parts)
+            lf_message.text = final_text
+            if lf_message.has_id():
+                lf_message = await self._update_stored_message(lf_message)
+        else:
+            # Streaming worked - just ensure lf_message.text is set for consistency
+            lf_message.text = "".join(captured_text_parts)
 
         return lf_message, aggregated_chunk
 
