@@ -5,23 +5,22 @@ from functools import lru_cache
 from typing import TYPE_CHECKING, Annotated, Final
 
 from cryptography.fernet import Fernet
-from fastapi import (Depends, HTTPException, Request, Security, WebSocket,
-                     WebSocketException, status)
+from fastapi import Depends, HTTPException, Request, Security, WebSocket, WebSocketException, status
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
 from fastapi.security.utils import get_authorization_scheme_param
 from lfx.log.logger import logger
 from lfx.services.deps import injectable_session_scope
 
-from langflow.services.auth.exceptions import (AuthenticationError,
-                                               InactiveUserError,
-                                               InvalidCredentialsError,
-                                               InvalidTokenError,
-                                               MissingCredentialsError,
-                                               TokenExpiredError)
-from langflow.services.auth.service import \
-    AUTO_LOGIN_ERROR as SERVICE_AUTO_LOGIN_ERROR
-from langflow.services.auth.service import \
-    AUTO_LOGIN_WARNING as SERVICE_AUTO_LOGIN_WARNING
+from langflow.services.auth.exceptions import (
+    AuthenticationError,
+    InactiveUserError,
+    InvalidCredentialsError,
+    InvalidTokenError,
+    MissingCredentialsError,
+    TokenExpiredError,
+)
+from langflow.services.auth.service import AUTO_LOGIN_ERROR as SERVICE_AUTO_LOGIN_ERROR
+from langflow.services.auth.service import AUTO_LOGIN_WARNING as SERVICE_AUTO_LOGIN_WARNING
 from langflow.services.deps import get_auth_service
 
 if TYPE_CHECKING:
