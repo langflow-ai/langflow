@@ -10,7 +10,7 @@ BUILDTIME_MODELS = [
             "context_length": 128000,
             "model_class": "ChatOpenAI",
             "model_name_param": "model",
-            "api_key_param": "api_key", # pragma: allowlist secret
+            "api_key_param": "api_key",  # pragma: allowlist secret
             "reasoning_models": ["gpt-4o"],
         },
     },
@@ -23,7 +23,7 @@ BUILDTIME_MODELS = [
             "context_length": 128000,
             "model_class": "ChatAnthropic",
             "model_name_param": "model",
-            "api_key_param": "api_key", # pragma: allowlist secret
+            "api_key_param": "api_key",  # pragma: allowlist secret
         },
     },
 ]
