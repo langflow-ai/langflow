@@ -17,7 +17,7 @@ import typer
 from dotenv import load_dotenv
 from fastapi import HTTPException
 from httpx import HTTPError
-from jose import JWTError
+from jwt import InvalidTokenError
 from lfx.log.logger import configure, logger
 from lfx.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
 from multiprocess import cpu_count
@@ -736,7 +736,7 @@ async def _create_superuser(username: str, password: str, auth_token: str | None
                 user = None
                 try:
                     user = await get_current_user_by_jwt(auth_token, session)
-                except (JWTError, HTTPException):
+                except (InvalidTokenError, HTTPException):
                     # Try API key
                     api_key_result = await check_key(session, auth_token)
                     if api_key_result and hasattr(api_key_result, "is_superuser"):
@@ -887,7 +887,7 @@ def api_key(
             stmt = select(ApiKey).where(ApiKey.user_id == superuser.id)
             api_key = (await session.exec(stmt)).first()
             if api_key:
-                await delete_api_key(session, api_key.id)
+                await delete_api_key(session, api_key.id, superuser.id)
 
             api_key_create = ApiKeyCreate(name="CLI")
             return await create_api_key(session, api_key_create, user_id=superuser.id)

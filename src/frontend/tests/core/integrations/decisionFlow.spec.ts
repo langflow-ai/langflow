@@ -5,6 +5,7 @@ import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { zoomOut } from "../../utils/zoom-out";
+import { selectGptModel } from "../../utils/select-gpt-model";
 
 test(
   "should create a flow with decision",
@@ -355,8 +356,8 @@ test(
     if (isApiKeyInputVisible) {
       await apiKeyInput.fill(process.env.OPENAI_API_KEY ?? "");
     }
-    await page.getByTestId("model_model").click();
-    await page.getByTestId("gpt-4o-mini-option").click();
+    await selectGptModel(page);
+
     await adjustScreenView(page);
 
     await page.getByRole("button", { name: "Playground", exact: true }).click();

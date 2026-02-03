@@ -24,6 +24,7 @@ import NoteNode from "@/CustomNodes/NoteNode";
 import FlowToolbar from "@/components/core/flowToolbarComponent";
 import {
   COLOR_OPTIONS,
+  DEFAULT_NOTE_SIZE,
   NOTE_NODE_MIN_HEIGHT,
   NOTE_NODE_MIN_WIDTH,
 } from "@/constants/constants";
@@ -656,6 +657,8 @@ export default function Page({
           id: newId,
           type: "noteNode",
           position: position || { x: 0, y: 0 },
+          width: NOTE_NODE_MIN_WIDTH,
+          height: NOTE_NODE_MIN_HEIGHT,
           data: {
             ...data,
             id: newId,
@@ -823,6 +826,7 @@ export default function Page({
               backgroundColor: `${shadowBoxBackgroundColor}`,
               opacity: 0.7,
               pointerEvents: "none",
+              borderRadius: "12px",
               // Prevent shadow-box from showing unexpectedly during initial renders
               display: "none",
             }}

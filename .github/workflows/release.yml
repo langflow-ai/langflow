@@ -297,7 +297,7 @@ jobs:
 
       - name: Upload Artifact
         if: steps.check-version.outputs.skipped == 'false'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: dist-base
           path: src/backend/base/dist
@@ -378,7 +378,7 @@ jobs:
       # PyPI publishing moved to after cross-platform testing
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: dist-main
           path: dist
@@ -427,14 +427,14 @@ jobs:
           uv pip install dist/*.whl --force-reinstall
           uv run lfx --help
       - name: Upload Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: dist-lfx
           path: src/lfx/dist
 
   test-cross-platform:
     name: Test Cross-Platform Installation
-    needs: [build-base, build-main, build-lfx]
+    needs: [build-base, build-main]
     if: |
       always() &&
       !cancelled() &&
@@ -452,7 +452,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download base artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           name: dist-base
           path: src/backend/base/dist
@@ -475,7 +475,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download main artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           name: dist-main
           path: dist
@@ -498,7 +498,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download LFX artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           name: dist-lfx
           path: src/lfx/dist
@@ -525,7 +525,7 @@ jobs:
   #       python-version: ["3.10", "3.11", "3.12", "3.13"]
   #   steps:
   #     - name: Download LFX artifact
-  #       uses: actions/download-artifact@v5
+  #       uses: actions/download-artifact@v7
   #       with:
   #         name: dist-lfx
   #         path: dist-lfx

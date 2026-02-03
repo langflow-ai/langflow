@@ -120,6 +120,10 @@ class PromptInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeM
     field_type: SerializableFieldTypes = FieldTypes.PROMPT
 
 
+class MustachePromptInput(PromptInput):
+    field_type: SerializableFieldTypes = FieldTypes.MUSTACHE_PROMPT
+
+
 class CodeInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMixin):
     field_type: SerializableFieldTypes = FieldTypes.CODE
 
@@ -378,11 +382,13 @@ class MultilineInput(MessageTextInput, AIMixin, MultilineMixin, InputTraceMixin,
     Attributes:
         field_type (SerializableFieldTypes): The type of the field. Defaults to FieldTypes.TEXT.
         multiline (CoalesceBool): Indicates whether the input field should support multiple lines. Defaults to True.
+        password (CoalesceBool): Whether to mask the input as a password field. Defaults to False.
     """
 
     field_type: SerializableFieldTypes = FieldTypes.TEXT
     multiline: CoalesceBool = True
     copy_field: CoalesceBool = False
+    password: CoalesceBool = Field(default=False)
 
 
 class MultilineSecretInput(MessageTextInput, MultilineMixin, InputTraceMixin):
@@ -470,6 +476,8 @@ class IntInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMixi
 
     field_type: SerializableFieldTypes = FieldTypes.INTEGER
     track_in_telemetry: CoalesceBool = True  # Safe numeric parameter
+
+    value: Any = 0
 
     @field_validator("value")
     @classmethod
@@ -807,6 +815,7 @@ InputTypes: TypeAlias = (
     | NestedDictInput
     | ToolsInput
     | PromptInput
+    | MustachePromptInput
     | CodeInput
     | SecretStrInput
     | StrInput

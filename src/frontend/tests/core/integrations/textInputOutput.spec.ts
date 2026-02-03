@@ -3,6 +3,7 @@ import path from "path";
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { selectGptModel } from "../../utils/select-gpt-model";
 
 test.skip(
   "TextInputOutputComponent",
@@ -132,8 +133,8 @@ test.skip(
     if (isApiKeyInputVisible) {
       await apiKeyInput.fill(process.env.OPENAI_API_KEY ?? "");
     }
-    await page.getByTestId("model_model").click();
-    await page.getByTestId("gpt-4o-mini-option").click();
+    await selectGptModel(page);
+
     await page.waitForTimeout(1000);
     await page.getByRole("button", { name: "Playground", exact: true }).click();
     await page.getByTestId("button_run_text_output").click();

@@ -81,6 +81,16 @@ sudo apt-get install gcc
 
 If you experience an error from the `webrtcvad` package, run `uv pip install webrtcvad-wheels` in your virtual environment, and then retry the Langflow installation.
 
+### Protocol buffers (protoc) required for Intel-based Macs
+
+If you're installing Langflow on an Intel-based Mac, you may encounter installation errors if Protocol Buffers Compiler (`protoc`) is not installed.
+
+This requirement doesn't apply to Apple Silicon Macs on ARM64.
+
+To resolve this issue, install `protoc` using `brew install protobuf`.
+
+For more information, including alternative installation methods, see the [Protocol buffers installation documentation](https://protobuf.dev/installation/).
+
 ### C++ build tools required for Langflow Desktop on Windows
 
 Microsoft Windows installations of Langflow Desktop require a C++ compiler that may not be present on your system. If you receive a `C++ Build Tools Required!` error, follow the on-screen prompt to install Microsoft C++ Build Tools, or [install Microsoft Visual Studio](https://visualstudio.microsoft.com/downloads/).
@@ -146,6 +156,31 @@ To resolve this error, use separate browser instances or browser profiles to acc
 In Langflow OSS, you can follow the error message's instructions to install the missing dependency.
 
 To manage dependencies in Langflow Desktop, see [Install custom dependencies in Langflow Desktop](/install-custom-dependencies#langflow-desktop).
+
+### PostgreSQL asyncpg driver compatibility issue
+
+The following error can occur when initializing Langflow with a PostgreSQL database:
+
+```text
+sqlalchemy.exc.DBAPIError: (sqlalchemy.dialects.postgresql.asyncpg.Error) <class 'asyncpg.exceptions.DataError'>: invalid input for query argument $7: datetime.datetime(2025, 10, 31, 14, 8, 5... (can't subtract offset-naive and offset-aware datetimes)
+```
+
+This error occurs because `asyncpg` has stricter timezone handling than `psycopg2`, and is not fully compatible with Langflow's current database schema.
+
+To resolve this issue, remove `asyncpg` from your installation and use `psycopg2` instead.
+
+### An API key must be passed as query or header
+
+The following error can occur when attempting to sign up on the Langflow sign in page: `An API key must be passed as query or header`.
+
+This means that `LANGFLOW_AUTO_LOGIN` is set to `false`, and only superusers can create and activate non-superuser accounts.
+Therefore, you are locked out of this Langflow instance.
+
+If you aren't an administrator, then a superuser must create and activate a non-superuser account before you can sign in.
+
+If you are the administrator, sign in with a superuser account, or restart Langflow with `LANGFLOW_AUTO_LOGIN=true`.
+
+For more information, see [Start Langflow Server with authentication enabled](/api-keys-and-authentication#start-a-langflow-server-with-authentication-enabled).
 
 ## Langflow upgrade issues
 
@@ -280,6 +315,25 @@ WSL cannot directly access Windows localhost services, and Langflow running on a
 To work around this issue, run the server and host in the same operating environment.
 
 Alternatively, configure Langflow Desktop to accept connections from WSL at the default Windows IP address of `10.255.255.254:7860` instead of `localhost`.
+
+### MCP Tools component loses Tool Mode option after upgrading flows {#mcp-tools-component-loses-tool-mode-option-after-upgrading-flows}
+
+If you upgrade an existing flow that uses the [**MCP Tools** component](/mcp-tools) in **Tool Mode**, the component might lose its **Tool Mode** setting after upgrading the flow.
+This can break flows that rely on the component's **Tool Mode** to expose MCP tools to agents.
+
+If you experience this when upgrading a flow that you created in Langflow version 1.7.1 or earlier, do the following:
+
+1. Select the **MCP Tools** component in your flow.
+2. Click <Icon name="Code" aria-hidden="true"/> **Code** to open the component's code editor.
+3. In the component's template structure, locate the `tool_mode` field under `inputs`.
+   The field can be either missing or set to `false`.
+4. Add the `tool_mode` field if it's missing, and set it to `true`:
+
+   ```python
+   tool_mode = True
+   ```
+
+5. Click **Check & Save** to apply the code changes.
 
 ## Token length limit errors in Embedding Model components
 

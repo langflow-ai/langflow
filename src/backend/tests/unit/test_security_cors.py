@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from fastapi import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from lfx.services.settings.auth import JWTAlgorithm
 from lfx.services.settings.base import Settings
 
 
@@ -290,7 +291,7 @@ class TestRefreshTokenSecurity:
 
             with patch("langflow.services.auth.utils.get_settings_service") as mock_settings:
                 mock_settings.return_value.auth_settings.SECRET_KEY.get_secret_value.return_value = "secret"
-                mock_settings.return_value.auth_settings.ALGORITHM = "HS256"
+                mock_settings.return_value.auth_settings.ALGORITHM = JWTAlgorithm.HS256
                 mock_settings.return_value.auth_settings.ACCESS_TOKEN_EXPIRE_SECONDS = 3600
                 mock_settings.return_value.auth_settings.REFRESH_TOKEN_EXPIRE_SECONDS = 604800
 

@@ -23,10 +23,6 @@ test(
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
-    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
-      timeout: 2000,
-    });
-
     await adjustScreenView(page);
 
     await page.getByTestId("sidebar-search-input").click();
@@ -83,7 +79,7 @@ User: {user_input}
 AI:
   `;
 
-    await page.getByTestId("title-Prompt").last().click();
+    await page.getByTestId("title-Prompt Template").last().click();
     await page.getByTestId("button_open_prompt_modal").nth(0).click();
 
     await page.getByTestId("modal-promptarea_prompt_template").fill(prompt);

@@ -37,8 +37,9 @@ class AstraAssistantManager(ComponentWithCache):
             name="model_name",
             display_name="Model",
             advanced=False,
-            options=litellm_model_names,
+            options=[],  # Options loaded dynamically via update_build_config
             value="gpt-4o-mini",
+            real_time_refresh=True,
         ),
         MultilineInput(
             name="instructions",
@@ -142,6 +143,12 @@ class AstraAssistantManager(ComponentWithCache):
         Output(display_name="Assistant Id", name="output_assistant_id", method="get_assistant_id", hidden=True),
         Output(display_name="Vector Store Id", name="output_vs_id", method="get_vs_id", hidden=True),
     ]
+
+    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):  # noqa: ARG002
+        """Dynamically update build config with LiteLLM model options."""
+        if field_name == "model_name" or field_name is None:
+            build_config["model_name"]["options"] = litellm_model_names
+        return build_config
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
@@ -299,8 +306,10 @@ class AstraAssistantManager(ComponentWithCache):
                 )
                 self.status = processed_result
         except ExceptionWithMessageError as e:
-            msg_id = e.agent_message.id
-            await delete_message(id_=msg_id)
+            # Only delete message from database if it has an ID (was stored)
+            msg_id = e.agent_message.get_id()
+            if msg_id:
+                await delete_message(id_=msg_id)
             await self._send_message_event(e.agent_message, category="remove_message")
             raise
         except Exception:

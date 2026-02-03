@@ -137,6 +137,8 @@ export type NodeInputFieldComponentType = {
   showNode: boolean;
   colorName?: string[];
   isToolMode?: boolean;
+  isPrimaryInput?: boolean;
+  displayHandle?: boolean;
 };
 
 export type IOJSONInputComponentType = {
@@ -296,6 +298,7 @@ export type TextHighlightType = {
 
 export interface IVarHighlightType {
   name: string;
+  addCurlyBraces?: boolean;
 }
 
 export type IconComponentProps = {

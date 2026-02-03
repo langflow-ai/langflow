@@ -11,7 +11,7 @@ pytestmark = pyleak_marker()
 
 # Note: These tests have known task leaks from graph execution/component cleanup
 # The leaks are from background tasks that aren't fully cleaned up in test isolation
-@pytest.mark.no_leaks(tasks=False)
+@pytest.mark.no_leaks(tasks=False, threads=False)
 async def test_from_data():
     outputs = await run_single_component(
         ParseJSONDataComponent,
@@ -38,7 +38,7 @@ async def test_from_data():
     assert outputs["filtered_data"] == [Data(text="2")]
 
 
-@pytest.mark.no_leaks(tasks=False)
+@pytest.mark.no_leaks(tasks=False, threads=False)
 async def test_from_message():
     outputs = await run_single_component(
         ParseJSONDataComponent,

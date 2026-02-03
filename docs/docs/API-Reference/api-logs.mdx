@@ -9,12 +9,12 @@ Retrieve logs for your Langflow flows and server.
 
 The `/logs` endpoint requires log retrieval to be enabled in your Langflow instance.
 
-To enable log retrieval, include set the following [environment variables](/environment-variables) in your Langflow `.env` file, and then start Langflow with `uv run langflow run --env-file .env`:
+To enable log retrieval, set the following [environment variables](/environment-variables) in your Langflow `.env` file, and then start Langflow with `uv run langflow run --env-file .env`:
 
 ```text
 LANGFLOW_ENABLE_LOG_RETRIEVAL=True
-LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE=10000. // Must be greater than 0
-LANGFLOW_LOG_LEVEL=DEBUG. // Can be DEBUG, ERROR, INFO, WARNING, or CRITICAL
+LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE=10000 // Must be greater than 0
+LANGFLOW_LOG_LEVEL=DEBUG // Can be DEBUG, ERROR, INFO, WARNING, or CRITICAL
 ```
 
 ## Stream logs

@@ -185,8 +185,10 @@ class LCAgentComponent(Component):
         if "input" not in input_dict:
             input_dict = {"input": self.input_value}
 
-        if hasattr(self, "system_prompt") and self.system_prompt and self.system_prompt.strip():
-            input_dict["system_prompt"] = self.system_prompt
+        # Use enhanced prompt if available (set by IBM Granite handler), otherwise use original
+        system_prompt_to_use = getattr(self, "_effective_system_prompt", None) or self.system_prompt
+        if system_prompt_to_use and system_prompt_to_use.strip():
+            input_dict["system_prompt"] = system_prompt_to_use
 
         if hasattr(self, "chat_history") and self.chat_history:
             if isinstance(self.chat_history, Data):
@@ -272,9 +274,11 @@ class LCAgentComponent(Component):
                 on_token_callback,
             )
         except ExceptionWithMessageError as e:
-            if hasattr(e, "agent_message") and hasattr(e.agent_message, "id"):
-                msg_id = e.agent_message.id
-                await delete_message(id_=msg_id)
+            # Only delete message from database if it has an ID (was stored)
+            if hasattr(e, "agent_message"):
+                msg_id = e.agent_message.get_id()
+                if msg_id:
+                    await delete_message(id_=msg_id)
             await self._send_message_event(e.agent_message, category="remove_message")
             logger.error(f"ExceptionWithMessageError: {e}")
             raise

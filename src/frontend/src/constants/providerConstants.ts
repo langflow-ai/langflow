@@ -4,7 +4,7 @@ export const PROVIDER_VARIABLE_MAPPING: Record<string, string> = {
   "Google Generative AI": "GOOGLE_API_KEY",
   Google: "GOOGLE_API_KEY",
   Ollama: "OLLAMA_BASE_URL",
-  "IBM Watsonx": "WATSONX_APIKEY",
+  "IBM WatsonX": "WATSONX_APIKEY",
   Cohere: "COHERE_API_KEY",
   HuggingFace: "HUGGINGFACEHUB_API_TOKEN",
   Groq: "GROQ_API_KEY",

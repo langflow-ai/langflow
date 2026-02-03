@@ -34,7 +34,6 @@ test(
     await initialGPTsetup(page, {
       skipAdjustScreenView: true,
       skipUpdateOldComponents: true,
-      skipAddNewApiKeys: true,
       skipSelectGptModel: true,
     });
 

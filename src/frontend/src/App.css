@@ -1,3 +1,4 @@
+@import "./style/custom-ace-overrides.css";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -91,6 +92,35 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background-color: hsl(var(--placeholder-foreground)) !important;
+}
+
+/* Sticky note scrollbar - improved visibility and cursor */
+.sticky-note-scroll::-webkit-scrollbar {
+  width: 6px !important;
+}
+
+.sticky-note-scroll::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--muted-foreground) / 0.4) !important;
+  border-radius: 999px !important;
+  cursor: pointer !important;
+}
+
+.sticky-note-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--muted-foreground) / 0.6) !important;
+  cursor: pointer !important;
+}
+
+.sticky-note-scroll::-webkit-scrollbar-track {
+  background-color: transparent !important;
+}
+
+.sticky-note-scroll {
+  scrollbar-color: hsl(var(--muted-foreground) / 0.4) transparent;
+  scrollbar-width: thin;
+}
+
+.sticky-note-scroll:hover {
+  scrollbar-color: hsl(var(--muted-foreground) / 0.6) transparent;
 }
 
 .jv-indent::-webkit-scrollbar-track {

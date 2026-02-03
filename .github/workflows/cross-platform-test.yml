@@ -56,12 +56,12 @@ jobs:
       - name: Build main package
         run: make build_langflow args="--wheel"
       - name: Upload base artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: adhoc-dist-base
           path: src/backend/base/dist
       - name: Upload main artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: adhoc-dist-main
           path: dist
@@ -89,10 +89,15 @@ jobs:
             arch: amd64
             runner: ubuntu-latest
             python-version: "3.12"
-          # macOS-13 Brown out
-          # TODO add macos-15-intel
-          # https://github.com/actions/runner-images/issues/13046
-          # https://github.com/godot-rust/gdext/pull/1402
+          # macOS AMD64
+          - os: macos
+            arch: amd64
+            runner: macos-latest-large
+            python-version: "3.10"
+          - os: macos
+            arch: amd64
+            runner: macos-latest-large
+            python-version: "3.12"
           # macOS ARM64 (Apple Silicon)
           - os: macos
             arch: arm64
@@ -129,7 +134,7 @@ jobs:
         shell: bash
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
           architecture: ${{ matrix.arch == 'amd64' && 'x64' || matrix.arch }}
@@ -140,24 +145,34 @@ jobs:
           enable-cache: false
           ignore-empty-workdir: true
 
+      - name: Install Protocol Buffers (macOS AMD64)
+        if: matrix.os == 'macos' && matrix.arch == 'amd64'
+        run: |
+          if ! command -v protoc &> /dev/null; then
+            brew install protobuf
+          else
+            echo "protoc already installed, skipping"
+          fi
+        shell: bash
+
       # Download artifacts for wheel installation
       - name: Download LFX package artifact
         if: steps.install-method.outputs.method == 'wheel' && inputs.lfx-artifact-name != ''
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           name: ${{ inputs.lfx-artifact-name }}
           path: ./lfx-dist
 
       - name: Download base package artifact
         if: steps.install-method.outputs.method == 'wheel'
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           name: ${{ inputs.base-artifact-name || needs.build-if-needed.outputs.base-artifact-name || 'adhoc-dist-base' }}
           path: ./base-dist
 
       - name: Download main package artifact
         if: steps.install-method.outputs.method == 'wheel'
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           name: ${{ inputs.main-artifact-name || needs.build-if-needed.outputs.main-artifact-name || 'adhoc-dist-main' }}
           path: ./main-dist
@@ -287,17 +302,16 @@ jobs:
         shell: bash
 
       # Test steps
-      - name: Test CLI help command (Windows)
+      - name: Test CLI help command
         if: matrix.os == 'windows'
         run: |
-          call test-env\Scripts\activate.bat
-          python -m langflow --help
+          uv run --python ./test-env/Scripts/python.exe python -m langflow --help
         shell: cmd
 
       - name: Test CLI help command (Unix)
         if: matrix.os != 'windows'
         run: |
-          ./test-env/bin/python -m langflow --help
+          uv run --python ./test-env/bin/python python -m langflow --help
         shell: bash
 
       - name: Test server startup (Windows)
@@ -387,15 +401,17 @@ jobs:
             arch: amd64
             runner: ubuntu-latest
             python-version: "3.13"
-          # macOS-13 Brown out
-          # TODO add macos-15-intel
-          - os: macos
-            arch: arm64
-            runner: macos-latest
-            python-version: "3.13"
           - os: windows
             arch: amd64
             runner: windows-latest
+            python-version: "3.13"
+          - os: macos
+            arch: amd64
+            runner: macos-latest-large
+            python-version: "3.13"
+          - os: macos
+            arch: arm64
+            runner: macos-latest
             python-version: "3.13"
 
     steps:
@@ -415,7 +431,7 @@ jobs:
         shell: bash
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
           architecture: ${{ matrix.arch == 'amd64' && 'x64' || matrix.arch }}
@@ -426,24 +442,34 @@ jobs:
           enable-cache: false
           ignore-empty-workdir: true
 
+      - name: Install Protocol Buffers (macOS AMD64)
+        if: matrix.os == 'macos' && matrix.arch == 'amd64'
+        run: |
+          if ! command -v protoc &> /dev/null; then
+            brew install protobuf
+          else
+            echo "protoc already installed, skipping"
+          fi
+        shell: bash
+
       # Download artifacts for wheel installation
       - name: Download LFX package artifact
         if: steps.install-method.outputs.method == 'wheel' && inputs.lfx-artifact-name != ''
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           name: ${{ inputs.lfx-artifact-name }}
           path: ./lfx-dist
 
       - name: Download base package artifact
         if: steps.install-method.outputs.method == 'wheel'
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           name: ${{ inputs.base-artifact-name || needs.build-if-needed.outputs.base-artifact-name || 'adhoc-dist-base' }}
           path: ./base-dist
 
       - name: Download main package artifact
         if: steps.install-method.outputs.method == 'wheel'
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           name: ${{ inputs.main-artifact-name || needs.build-if-needed.outputs.main-artifact-name || 'adhoc-dist-main' }}
           path: ./main-dist
@@ -576,14 +602,13 @@ jobs:
       - name: Test CLI help command (Windows)
         if: matrix.os == 'windows'
         run: |
-          call test-env\Scripts\activate.bat
-          python -m langflow --help
+          uv run --python ./test-env/Scripts/python.exe python -m langflow --help
         shell: cmd
 
       - name: Test CLI help command (Unix)
         if: matrix.os != 'windows'
         run: |
-          ./test-env/bin/python -m langflow --help
+          uv run --python ./test-env/bin/python python -m langflow --help
         shell: bash
 
       - name: Test server startup (Windows)

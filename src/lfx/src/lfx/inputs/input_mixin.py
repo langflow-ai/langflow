@@ -28,6 +28,7 @@ class FieldTypes(str, Enum):
     AUTH = "auth"
     FILE = "file"
     PROMPT = "prompt"
+    MUSTACHE_PROMPT = "mustache"
     CODE = "code"
     OTHER = "other"
     TABLE = "table"
