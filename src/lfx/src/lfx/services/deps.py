@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager, suppress
-from http import HTTPStatus
 from typing import TYPE_CHECKING
 
 from fastapi import HTTPException
