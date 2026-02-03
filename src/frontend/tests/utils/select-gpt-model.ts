@@ -13,10 +13,10 @@ export const selectGptModel = async (page: Page) => {
 
     await node.click();
 
-    const model = node.getByTestId("model_model");
+    const model = await node.getByTestId("model_model").last().isVisible() ? node.getByTestId("model_model").last() : page.getByTestId("model_model").last();
 
     await expect(model).toBeVisible({ timeout: 3000 });
-    await model.last().click();
+    await model.click();
     await page.waitForSelector('[role="listbox"]', { timeout: 10000 });
 
     const gptOMiniOption = await page.getByTestId("gpt-4o-mini-option").count();

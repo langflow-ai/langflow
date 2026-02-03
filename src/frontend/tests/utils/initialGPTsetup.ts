@@ -26,6 +26,9 @@ export async function initialGPTsetup(
   if (!options?.skipAddOpenAiInputKey) {
     await addOpenAiInputKey(page);
   }
+  if (!options?.skipAdjustScreenView) {
+    await adjustScreenView(page);
+  }
 
   await unselectNodes(page);
 }
