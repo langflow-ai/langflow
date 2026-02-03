@@ -204,8 +204,7 @@ async def get_current_user_for_websocket(
     except AuthenticationError as e:
         # Catch-all for any other authentication errors
         raise WebSocketException(
-            code=status.WS_1008_POLICY_VIOLATION,
-            reason="Missing or invalid credentials (cookie, token or API key)."
+            code=status.WS_1008_POLICY_VIOLATION, reason="Missing or invalid credentials (cookie, token or API key)."
         ) from e
 
 
