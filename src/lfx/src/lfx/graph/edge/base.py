@@ -35,13 +35,8 @@ def types_compatible(output_types: list[str], input_types: list[str]) -> bool:
             # Get the migrated version of the input type
             migrated_input = TYPE_MIGRATIONS.get(input_type, input_type)
 
-            # Check all possible combinations
-            if (
-                output_type == input_type  # Direct match
-                or migrated_output == input_type  # Migrated output matches input
-                or output_type == migrated_input  # Output matches migrated input
-                or migrated_output == migrated_input  # Both migrated match
-            ):
+            # Check all possible combinations using sets for cleaner comparison
+            if input_type in {output_type, migrated_output} or migrated_input in {output_type, migrated_output}:
                 return True
     return False
 
@@ -138,7 +133,9 @@ class Edge:
             # Backward compatibility: old flows may have Data/DataFrame types
             self.valid_handles = types_compatible(
                 self.source_handle.output_types, self.target_handle.input_types
-            ) or types_compatible(self.source_handle.output_types, [self.target_handle.type] if self.target_handle.type else [])
+            ) or types_compatible(
+                self.source_handle.output_types, [self.target_handle.type] if self.target_handle.type else []
+            )
 
         if not self.valid_handles:
             logger.debug(self.source_handle)
@@ -203,9 +200,7 @@ class Edge:
             # (which already includes original type + loop_types from frontend)
             loop_input_types = list(self.target_handle.input_types)
             # Backward compatibility: old flows may have Data/DataFrame types
-            self.valid = any(
-                types_compatible(output["types"], loop_input_types) for output in self.source_types
-            )
+            self.valid = any(types_compatible(output["types"], loop_input_types) for output in self.source_types)
             # Find the first matching type (considering migrations)
             self.matched_type = next(
                 (
@@ -223,10 +218,7 @@ class Edge:
             # looking for e.g. comgin_out=["Chain"] and target_reqs=["LLMChain"]
             # so we need to check if any of the strings in source_types is in target_reqs
             # Backward compatibility: old flows may have Data/DataFrame types
-            self.valid = any(
-                types_compatible(output["types"], self.target_reqs)
-                for output in self.source_types
-            )
+            self.valid = any(types_compatible(output["types"], self.target_reqs) for output in self.source_types)
             # Update the matched type to be the first found match (considering migrations)
             self.matched_type = next(
                 (
