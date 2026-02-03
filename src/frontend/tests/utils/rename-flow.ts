@@ -39,6 +39,17 @@ export const renameFlow = async (
     await page.waitForSelector('[data-testid="sidebar-search-input"]', {
       timeout: 30000,
     });
+
+    if (flowName) {
+      await page.waitForFunction(
+        (expected) => {
+          const header = document.querySelector('[data-testid="flow_name"]');
+          return header && header.textContent?.trim() === expected;
+        },
+        flowName,
+        { timeout: 30000 },
+      );
+    }
   } else {
     await page.getByTestId("save-flow-settings").isDisabled({ timeout: 3000 });
     await page.getByTestId("cancel-flow-settings").isEnabled({ timeout: 3000 });
