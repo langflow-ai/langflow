@@ -179,9 +179,8 @@ async def execute_flow_with_validation_streaming(
             logger.debug(f"Starting attempt {attempt}, is_disconnected provided: {is_disconnected is not None}")
 
             # Step 1: Generating (different step name based on intent)
-            step_name = "generating_component" if is_component_request else "generating"
             yield format_progress_event(
-                step_name,
+                "generating_component" if is_component_request else "generating",
                 attempt,  # 0 for first try, 1+ for retries
                 max_retries,  # max retries (not counting first try)
                 message="Generating response...",
