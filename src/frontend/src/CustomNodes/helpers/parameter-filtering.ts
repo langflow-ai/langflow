@@ -25,7 +25,7 @@ export function isHidden(template: InputFieldType, isToolMode: boolean) {
 }
 
 export function hasHandle(template: InputFieldType) {
-  return template?.input_types && template?.input_types.length > 0;
+  return template.type === "model" || (template?.input_types && template?.input_types.length > 0);
 }
 
 /**
