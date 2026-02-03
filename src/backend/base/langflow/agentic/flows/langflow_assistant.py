@@ -12,6 +12,20 @@ from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.components.models import LanguageModelComponent
 from lfx.graph import Graph
 
+model_classes = {
+    "OpenAI": "ChatOpenAI",
+    "Anthropic": "ChatAnthropic",
+    "Google Generative AI": "ChatGoogleGenerativeAI",
+    "Groq": "ChatGroq",
+    "Azure OpenAI": "AzureChatOpenAI",
+}
+
+_metadata_template = {
+    "api_key_param": "api_key",
+    "context_length": 128000,
+    "model_name_param": "model",
+}
+
 ASSISTANT_PROMPT = """You are the Langflow Assistant, an AI that helps users with Langflow-related \
 questions and can generate custom components when explicitly requested.
 
@@ -109,22 +123,14 @@ Always cite documentation links when answering questions about Langflow features
 
 def _build_model_config(provider: str, model_name: str) -> list[dict]:
     """Build model configuration for LanguageModelComponent."""
-    model_classes = {
-        "OpenAI": "ChatOpenAI",
-        "Anthropic": "ChatAnthropic",
-        "Google Generative AI": "ChatGoogleGenerativeAI",
-        "Groq": "ChatGroq",
-        "Azure OpenAI": "AzureChatOpenAI",
-    }
+    model_class = model_classes.get(provider, "ChatAnthropic")
+    # Create a per-call metadata dict by copying the shared template and adding model_class
+    metadata = _metadata_template.copy()
+    metadata["model_class"] = model_class
     return [
         {
             "icon": provider,
-            "metadata": {
-                "api_key_param": "api_key",
-                "context_length": 128000,
-                "model_class": model_classes.get(provider, "ChatAnthropic"),
-                "model_name_param": "model",
-            },
+            "metadata": metadata,
             "name": model_name,
             "provider": provider,
         }
