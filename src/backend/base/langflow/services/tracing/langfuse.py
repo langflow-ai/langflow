@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 from collections import OrderedDict
-from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
 from lfx.log.logger import logger
@@ -54,26 +53,39 @@ class LangFuseTracer(BaseTracer):
             from langfuse import Langfuse
 
             self._client = Langfuse(**config)
-            try:
-                from langfuse.api.core.request_options import RequestOptions
 
-                self._client.client.health.health(request_options=RequestOptions(timeout_in_seconds=1))
-            except Exception as e:  # noqa: BLE001
-                logger.debug(f"can not connect to Langfuse: {e}")
-                return False
-            self.trace = self._client.trace(
-                id=str(self.trace_id),
+            # v3 requires 32-char hex trace_id (W3C Trace Context format)
+            trace_id_hex = str(self.trace_id).replace("-", "")
+            logger.debug(f"[Langfuse] Setting up tracer with trace_id_hex={trace_id_hex}, flow_id={self.flow_id}")
+
+            # In v3, create a root span that serves as the trace
+            # Use langfuse_ prefixed metadata for trace-level attributes
+            metadata: dict[str, Any] = {}
+            if self.user_id:
+                metadata["langfuse_user_id"] = self.user_id
+            if self.session_id:
+                metadata["langfuse_session_id"] = self.session_id
+
+            self.trace = self._client.start_span(
+                name=self.flow_id,
+                trace_context={"trace_id": trace_id_hex},
+                metadata=metadata if metadata else None,
+            )
+
+            # Explicitly set trace-level attributes including name
+            self.trace.update_trace(
                 name=self.flow_id,
                 user_id=self.user_id,
                 session_id=self.session_id,
             )
+            logger.debug(f"[Langfuse] Root span created successfully, trace_id={self.trace.trace_id}")
 
         except ImportError:
             logger.exception("Could not import langfuse. Please install it with `pip install langfuse`.")
             return False
 
         except Exception as e:  # noqa: BLE001
-            logger.debug(f"Error setting up LangSmith tracer: {e}")
+            logger.debug(f"Error setting up Langfuse tracer: {e}")
             return False
 
         return True
@@ -88,7 +100,6 @@ class LangFuseTracer(BaseTracer):
         metadata: dict[str, Any] | None = None,
         vertex: Vertex | None = None,
     ) -> None:
-        start_time = datetime.now(tz=timezone.utc)
         if not self._ready:
             return
 
@@ -97,19 +108,20 @@ class LangFuseTracer(BaseTracer):
         metadata_ |= metadata or {}
 
         name = trace_name.removesuffix(f" ({trace_id})")
+        # v3: start_time is automatically set when span is created
         content_span = {
             "name": name,
             "input": inputs,
             "metadata": metadata_,
-            "start_time": start_time,
         }
 
         # if two component is built concurrently, will use wrong last span. just flatten now, maybe fix in future.
         # if len(self.spans) > 0:
         #     last_span = next(reversed(self.spans))
-        #     span = self.spans[last_span].span(**content_span)
+        #     span = self.spans[last_span].start_span(**content_span)
         # else:
-        span = self.trace.span(**serialize(content_span))
+        # v3 uses start_span() instead of span()
+        span = self.trace.start_span(**serialize(content_span))
 
         self.spans[trace_id] = span
 
@@ -122,7 +134,6 @@ class LangFuseTracer(BaseTracer):
         error: Exception | None = None,
         logs: Sequence[Log | dict] = (),
     ) -> None:
-        end_time = datetime.now(tz=timezone.utc)
         if not self._ready:
             return
 
@@ -132,8 +143,10 @@ class LangFuseTracer(BaseTracer):
             output |= outputs or {}
             output |= {"error": str(error)} if error else {}
             output |= {"logs": list(logs)} if logs else {}
-            content = serialize({"output": output, "end_time": end_time})
+            # v3: update output then explicitly end the span (end sets end_time automatically)
+            content = serialize({"output": output})
             span.update(**content)
+            span.end()
 
     @override
     def end(
@@ -151,14 +164,21 @@ class LangFuseTracer(BaseTracer):
             "metadata": metadata,
         }
         self.trace.update(**serialize(content_update))
+        # v3: explicitly end the root span
+        self.trace.end()
 
     def get_langchain_callback(self) -> BaseCallbackHandler | None:
         if not self._ready:
             return None
 
-        # get callback from parent span
-        stateful_client = self.spans[next(reversed(self.spans))] if len(self.spans) > 0 else self.trace
-        return stateful_client.get_langchain_handler()
+        from langfuse.langchain import CallbackHandler
+
+        # v3 requires 32-char hex trace_id (W3C Trace Context format)
+        trace_id_hex = str(self.trace_id).replace("-", "")
+
+        return CallbackHandler(
+            trace_context={"trace_id": trace_id_hex},
+        )
 
     @staticmethod
     def _get_config() -> dict:
