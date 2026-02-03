@@ -1199,7 +1199,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "0.3.81"
+                    "version": "0.3.83"
                   },
                   {
                     "name": "lfx",
