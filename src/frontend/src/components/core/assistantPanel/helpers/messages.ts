@@ -3,16 +3,16 @@
  * Each array contains 8 paraphrased variations with the same meaning.
  */
 
-// Header text for the reasoning loading state
+// Header text for the reasoning loading state (synonyms of "Thinking")
 const REASONING_HEADER_MESSAGES = [
-  "Reasoning...",
   "Thinking...",
   "Processing...",
   "Working on it...",
   "Analyzing...",
-  "Building...",
-  "Generating...",
-  "Creating...",
+  "Reasoning...",
+  "Please wait...",
+  "Just a moment...",
+  "Almost there...",
 ];
 
 // Reasoning step messages
@@ -135,5 +135,10 @@ export function getRandomReasoningHeader(): string {
 }
 
 export function getRandomThinkingMessage(): string {
+  return getRandomMessage(REASONING_HEADER_MESSAGES);
+}
+
+// Alias for placeholder - uses same thinking messages
+export function getRandomPlaceholderMessage(): string {
   return getRandomMessage(REASONING_HEADER_MESSAGES);
 }

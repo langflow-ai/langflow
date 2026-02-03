@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/utils/utils";
 import { ASSISTANT_PLACEHOLDER } from "../assistant-panel.constants";
 import type { AssistantModel } from "../assistant-panel.types";
-import { getRandomThinkingMessage } from "../helpers/messages";
+import { getRandomPlaceholderMessage } from "../helpers/messages";
 import { ModelSelector } from "./model-selector";
 
 // Steps where the "thinking" animation is showing in the message area
@@ -14,7 +14,7 @@ const GENERATING_STEPS: AgenticStepType[] = ["generating", "generating_component
 
 // Hook for rotating placeholder messages during post-generation processing
 function useAnimatedPlaceholder(shouldAnimate: boolean, intervalMs = 2000): string {
-  const [currentMessage, setCurrentMessage] = useState(() => getRandomThinkingMessage());
+  const [currentMessage, setCurrentMessage] = useState(() => getRandomPlaceholderMessage());
 
   useEffect(() => {
     if (!shouldAnimate) {
@@ -22,11 +22,11 @@ function useAnimatedPlaceholder(shouldAnimate: boolean, intervalMs = 2000): stri
     }
 
     // Set initial message when animation starts
-    setCurrentMessage(getRandomThinkingMessage());
+    setCurrentMessage(getRandomPlaceholderMessage());
 
     // Rotate messages at interval
     const interval = setInterval(() => {
-      setCurrentMessage(getRandomThinkingMessage());
+      setCurrentMessage(getRandomPlaceholderMessage());
     }, intervalMs);
 
     return () => clearInterval(interval);
