@@ -45,7 +45,7 @@ export const useEditSessionInfo = ({
     }
   };
 
-  const handleRename = async (sessionId: string, newSessionId: string) => {    
+  const handleRename = async (sessionId: string, newSessionId: string) => {
     // Update session name via API or sessionStorage
     await updateSessionName({
       old_session_id: sessionId,
@@ -55,7 +55,7 @@ export const useEditSessionInfo = ({
     // Update local sessions list using the provided function
     if (renameLocalSession) {
       renameLocalSession(sessionId, newSessionId);
-    } 
+    }
 
     // Update selected session if the renamed session is currently selected
     if (flowId && sessionId === selectedSession) {

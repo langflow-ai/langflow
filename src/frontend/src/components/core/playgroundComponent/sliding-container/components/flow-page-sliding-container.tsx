@@ -37,11 +37,16 @@ export function FlowPageSlidingContainerContent({
   );
   const [openLogsModal, setOpenLogsModal] = useState(false);
 
-  const { sessions, addNewSession, removeLocalSession, renameLocalSession, fetchedSessions } =
-    useGetAddSessions({
-      flowId: currentFlowId,
-      currentSessionId,
-    });
+  const {
+    sessions,
+    addNewSession,
+    removeLocalSession,
+    renameLocalSession,
+    fetchedSessions,
+  } = useGetAddSessions({
+    flowId: currentFlowId,
+    currentSessionId,
+  });
   const { handleDelete } = useEditSessionInfo({
     flowId: currentFlowId,
     dbSessions: fetchedSessions,

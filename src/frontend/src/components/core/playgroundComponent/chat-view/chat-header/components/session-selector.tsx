@@ -49,7 +49,7 @@ export function SessionSelector({
     setIsEditing(false);
     const trimmed = newSessionId.trim();
     if (!trimmed || trimmed === session) return;
-    
+
     // Use handleRename if provided (from sidebar), otherwise use mutation directly (from header)
     if (handleRename) {
       await handleRename(session, trimmed);

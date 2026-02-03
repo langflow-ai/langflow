@@ -29,7 +29,8 @@ export const useChatHistory = (visibleSession: string | null) => {
     queryFn: () => {
       // Return cached data immediately - this makes the query active and reactive
       // We're using useQuery purely as a subscription mechanism, not for fetching
-      const cachedData = queryClient.getQueryData<Message[]>(sessionCacheKey) || [];
+      const cachedData =
+        queryClient.getQueryData<Message[]>(sessionCacheKey) || [];
       return cachedData;
     },
     staleTime: Infinity, // Never refetch - updates come from setQueryData, not server
@@ -70,7 +71,8 @@ export const useChatHistory = (visibleSession: string | null) => {
         // In the default session, we show messages that have the same session_id as the flow_id
         // OR messages that have NO session_id (legacy behavior)
         if (visibleSession === currentFlowId) {
-          const matches = isCurrentFlow &&
+          const matches =
+            isCurrentFlow &&
             (message.session_id === visibleSession || !message.session_id);
           return matches;
         }

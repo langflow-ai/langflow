@@ -24,21 +24,24 @@ export const useUpdateSessionName: useMutationFunctionType<
 
   const updateSessionApi = async (data: UpdateSessionParams) => {
     const isPlaygroundFromFlow = useFlowStore.getState().playgroundPage;
-    const isPlaygroundFromPlayground = usePlaygroundStore.getState().isPlayground;
+    const isPlaygroundFromPlayground =
+      usePlaygroundStore.getState().isPlayground;
     const isPlayground = isPlaygroundFromFlow || isPlaygroundFromPlayground;
     // if we are in playground we will edit the local storage instead of the API
     if (isPlayground && flowId) {
-      const messages = JSON.parse(sessionStorage.getItem(flowId) || "[]");      
+      const messages = JSON.parse(sessionStorage.getItem(flowId) || "[]");
       const messagesWithNewSessionId = messages.map((message: Message) => {
         if (message.session_id === data.old_session_id) {
           message.session_id = data.new_session_id;
         }
         return message;
       });
-      sessionStorage.setItem(flowId, JSON.stringify(messagesWithNewSessionId));      
+      sessionStorage.setItem(flowId, JSON.stringify(messagesWithNewSessionId));
       // Update the messages store to reflect the new session_id
-      useMessagesStore.getState().renameSession(data.old_session_id, data.new_session_id);
-      
+      useMessagesStore
+        .getState()
+        .renameSession(data.old_session_id, data.new_session_id);
+
       // CRITICAL: Move messages from old cache key to new cache key
       const oldCacheKey = [
         "useGetMessagesQuery",
@@ -48,26 +51,26 @@ export const useUpdateSessionName: useMutationFunctionType<
         "useGetMessagesQuery",
         { id: flowId, session_id: data.new_session_id },
       ];
-      
-      const oldCacheData = queryClient.getQueryData<Message[]>(oldCacheKey);      
+
+      const oldCacheData = queryClient.getQueryData<Message[]>(oldCacheKey);
       // Get fresh messages from sessionStorage (source of truth after rename)
       const freshMessages = JSON.parse(sessionStorage.getItem(flowId) || "[]");
       const messagesForNewSession = freshMessages.filter(
-        (msg: Message) => msg.session_id === data.new_session_id
+        (msg: Message) => msg.session_id === data.new_session_id,
       );
-      
+
       // Set the new cache with fresh messages from sessionStorage
       queryClient.setQueryData(newCacheKey, messagesForNewSession);
-      
+
       // Remove the old cache key
       if (oldCacheData && oldCacheData.length > 0) {
         queryClient.removeQueries({ queryKey: oldCacheKey });
       }
-      
+
       queryClient.invalidateQueries({
         queryKey: ["useGetSessionsFromFlowQuery"],
       });
-      
+
       return {
         data: messagesWithNewSessionId,
       };
@@ -79,16 +82,16 @@ export const useUpdateSessionName: useMutationFunctionType<
           params: { new_session_id: data.new_session_id },
         },
       );
-            
+
       // Update React Query cache with the renamed messages
       if (result.data && flowId) {
         const newCacheKey = [
           "useGetMessagesQuery",
           { id: flowId, session_id: data.new_session_id },
         ];
-        
+
         queryClient.setQueryData(newCacheKey, result.data);
-        
+
         // Remove old cache key
         const oldCacheKey = [
           "useGetMessagesQuery",
@@ -96,15 +99,14 @@ export const useUpdateSessionName: useMutationFunctionType<
         ];
         queryClient.removeQueries({ queryKey: oldCacheKey });
       }
-      
+
       return result.data;
     }
   };
 
   const mutation: UseMutationResult<Message[], any, UpdateSessionParams> =
     mutate(["useUpdateSessionName"], updateSessionApi, {
-      onMutate: (variables) => {
-      },
+      onMutate: (variables) => {},
       onSuccess: (data, variables, context, ...rest) => {
         // Call the original onSuccess if provided
         options?.onSuccess?.(data, variables, context, ...rest);
