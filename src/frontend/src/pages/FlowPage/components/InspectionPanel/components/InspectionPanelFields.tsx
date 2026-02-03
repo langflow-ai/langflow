@@ -23,10 +23,6 @@ export default function InspectionPanelFields({
 }: InspectionPanelFieldsProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
 
-  // Reset advanced disclosure when node changes
-  useEffect(() => {
-    setShowAdvanced(false);
-  }, [data.id]);
   const isToolMode = data.node?.tool_mode;
 
   // Separate basic and advanced fields

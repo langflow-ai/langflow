@@ -42,7 +42,7 @@ const InspectionPanel = memo(function InspectionPanel({
           >
             <InspectionPanelHeader data={selectedNode.data} onClose={onClose} />
             <Separator className="my-0.5" />
-            <InspectionPanelFields data={selectedNode.data} />
+            <InspectionPanelFields data={selectedNode.data} key={selectedNode.id} />
           </motion.div>
         </Panel>
       )}
