@@ -113,11 +113,16 @@ export default function InspectionPanelHeader({
               )}
               size="node-toolbar"
               variant="ghost"
-              datatest-id={editMode
-                ? "save-name-description-button"
-                : "edit-name-description-button"}
+              datatest-id={
+                editMode
+                  ? "save-name-description-button"
+                  : "edit-name-description-button"
+              }
             >
-              <IconComponent name={editMode ? "Check" : "PencilLine"} className="h-4 w-4" />
+              <IconComponent
+                name={editMode ? "Check" : "PencilLine"}
+                className="h-4 w-4"
+              />
             </Button>
           </ShadTooltip>
           {hasDocs && (

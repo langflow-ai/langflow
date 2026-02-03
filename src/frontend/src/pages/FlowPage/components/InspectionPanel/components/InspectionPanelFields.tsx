@@ -105,7 +105,9 @@ export default function InspectionPanelFields({
                 "cursor-pointer rounded-md hover:bg-muted/50",
                 showAdvanced && "bg-muted/50 text-foreground",
               )}
-              data-testid={showAdvanced ? "edit-button-close" : "edit-button-modal"}
+              data-testid={
+                showAdvanced ? "edit-button-close" : "edit-button-modal"
+              }
             >
               <span>Advanced</span>
               <ChevronRight
