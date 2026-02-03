@@ -121,7 +121,7 @@ class GuardrailsComponent(Component):
             return value
         return str(value) if value else ""
 
-    def _check_guardrail(self, llm, input_text: str, check_type: str, check_description: str) -> tuple[bool, str]:
+    def _check_guardrail(self, llm: Any, input_text: str, check_type: str, check_description: str) -> tuple[bool, str]:
         """Check a specific guardrail using LLM.
 
         Returns:
@@ -264,7 +264,7 @@ Now analyze the user input above and respond according to the instructions:"""
                 result = str(llm(prompt)).strip()
 
             # Validate LLM response - check for empty responses
-            if not result or len(result.strip()) == 0:
+            if not result:
                 error_msg = (
                     f"LLM returned empty response for {check_type} check. Please verify your API key and credits."
                 )
@@ -425,10 +425,7 @@ Now analyze the user input above and respond according to the instructions:"""
             return self._validation_result
 
         # Initialize failed checks list
-        if not hasattr(self, "_failed_checks"):
-            self._failed_checks = []
-        else:
-            self._failed_checks = []
+        self._failed_checks = []
 
         input_text_value = getattr(self, "input_text", "")
         input_text = self._extract_text(input_text_value)
