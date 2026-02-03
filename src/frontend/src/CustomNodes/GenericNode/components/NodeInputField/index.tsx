@@ -114,9 +114,8 @@ export default function NodeInputField({
       colors={colors}
       setFilterEdge={setFilterEdge}
       showNode={showNode}
-      testIdComplement={`${data?.type?.toLowerCase()}-${
-        showNode ? "shownode" : "noshownode"
-      }`}
+      testIdComplement={`${data?.type?.toLowerCase()}-${showNode ? "shownode" : "noshownode"
+        }`}
       nodeId={data.id}
       colorName={colorName}
     />
@@ -219,7 +218,7 @@ export default function NodeInputField({
               templateValue={data.node?.template[name].value ?? ""}
               editNode={false}
               handleNodeClass={handleNodeClass}
-              showParameter={false}
+              showParameter={!ENABLE_INSPECTION_PANEL}
               nodeClass={data.node!}
               placeholder={
                 isToolMode

@@ -55,6 +55,7 @@ export const findPrimaryInput = (
 ): FindPrimaryInputResult => {
   const handleMap = new Map<string, boolean>();
   let primaryField: string | null = null;
+  let firstHandleField: string | null = null;
 
   for (const templateField of shownTemplateFields) {
     const template = templates[templateField];
@@ -72,19 +73,23 @@ export const findPrimaryInput = (
       const handleId = scapedJSONStringfy(
         template.proxy
           ? {
-              inputTypes: template.input_types,
-              type: template.type,
-              id: nodeId,
-              fieldName: templateField,
-              proxy: template.proxy,
-            }
+            inputTypes: template.input_types,
+            type: template.type,
+            id: nodeId,
+            fieldName: templateField,
+            proxy: template.proxy,
+          }
           : {
-              inputTypes: template.input_types,
-              type: template.type,
-              id: nodeId,
-              fieldName: templateField,
-            },
+            inputTypes: template.input_types,
+            type: template.type,
+            id: nodeId,
+            fieldName: templateField,
+          },
       );
+
+      if (hasHandle && firstHandleField === null) {
+        firstHandleField = templateField;
+      }
 
       const isConnected = edges.some(
         (edge) => edge.target === nodeId && edge.targetHandle === handleId,
@@ -94,6 +99,10 @@ export const findPrimaryInput = (
         primaryField = templateField;
       }
     }
+  }
+
+  if (primaryField === null) {
+    primaryField = firstHandleField;
   }
 
   return { displayHandleMap: handleMap, primaryInputFieldName: primaryField };
