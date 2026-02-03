@@ -40,8 +40,6 @@ export const renameFlow = async (
       timeout: 30000,
     });
 
-    // Wait for the header to be updated with the new name
-    // This ensures the store has been updated before we return
     if (flowName) {
       await page.waitForFunction(
         (expected) => {
