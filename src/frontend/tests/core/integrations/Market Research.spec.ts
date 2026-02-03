@@ -40,11 +40,11 @@ withEventDeliveryModes(
     // Approach 1: Direct fill like Instagram Copywriter (most reliable)
     const tavily = page
       .getByTestId(/rf__node-TavilySearchComponent-[A-Za-z0-9]{5}/)
-      .getByTestId("popover-anchor-input-api_key")
+      .getByTestId("popover-anchor-input-api_key");
 
     await page.getByText("Tavily AI Search", { exact: true }).last().click();
 
-    if (await tavily.count() > 0) {
+    if ((await tavily.count()) > 0) {
       await tavily.nth(0).fill(process.env.TAVILY_API_KEY ?? "");
     } else {
       await page

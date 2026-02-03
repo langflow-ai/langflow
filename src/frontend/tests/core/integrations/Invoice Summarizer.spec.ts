@@ -11,8 +11,8 @@ test(
   async ({ page }) => {
     test.skip(
       !process?.env?.OPENAI_API_KEY ||
-      !process?.env?.NEEDLE_API_KEY ||
-      !process?.env?.NEEDLE_COLLECTION_ID,
+        !process?.env?.NEEDLE_API_KEY ||
+        !process?.env?.NEEDLE_COLLECTION_ID,
       "OPENAI_API_KEY, NEEDLE_API_KEY, and NEEDLE_COLLECTION_ID required to run this test",
     );
 
@@ -31,10 +31,12 @@ test(
 
     // Configure Needle Search Knowledge Base
     await page
-      .getByTestId("popover-anchor-input-needle_api_key").last()
+      .getByTestId("popover-anchor-input-needle_api_key")
+      .last()
       .fill(process.env.NEEDLE_API_KEY || "");
     await page
-      .getByTestId("popover-anchor-input-collection_id").last()
+      .getByTestId("popover-anchor-input-collection_id")
+      .last()
       .fill(process.env.NEEDLE_COLLECTION_ID || "");
 
     await unselectNodes(page);
@@ -58,10 +60,7 @@ test(
 
     // Wait for the playground to be ready
     const inputPlaceholder = page
-      .getByPlaceholder(
-        "Send a message...",
-        { exact: true },
-      )
+      .getByPlaceholder("Send a message...", { exact: true })
       .last();
 
     await expect(inputPlaceholder).toBeVisible({ timeout: 10000 });

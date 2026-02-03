@@ -44,7 +44,8 @@ export async function uploadFile(page: Page, fileName: string) {
   await page.getByText("File", { exact: true }).last().click();
 
   const fileManagement = await page
-    .getByTestId("button_open_file_management").first()
+    .getByTestId("button_open_file_management")
+    .first()
     ?.isVisible();
 
   if (!fileManagement) {
