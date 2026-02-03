@@ -158,7 +158,11 @@ async def aupdate_messages(messages: Message | list[Message]) -> list[Message]:
     async with session_scope() as session:
         updated_messages: list[MessageTable] = []
         for message in messages:
-            msg = await session.get(MessageTable, message.id)
+            # Convert message.id to UUID if it's a string (database expects UUID)
+            msg_id = message.id
+            if isinstance(msg_id, str):
+                msg_id = UUID(msg_id)
+            msg = await session.get(MessageTable, msg_id)
             if msg:
                 msg = msg.sqlmodel_update(message.model_dump(exclude_unset=True, exclude_none=True))
                 # Convert flow_id to UUID if it's a string preventing error when saving to database
