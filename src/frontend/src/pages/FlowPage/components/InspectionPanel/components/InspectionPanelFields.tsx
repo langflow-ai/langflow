@@ -62,7 +62,7 @@ export default function InspectionPanelFields({
     );
   }
 
-  const renderField = (templateField: string) => {
+  const renderField = (templateField: string, showAdvancedButton: boolean = false) => {
     const template = data.node?.template[templateField];
 
     return (
@@ -82,6 +82,7 @@ export default function InspectionPanelFields({
         proxy={template.proxy}
         showNode={true}
         isToolMode={false}
+        showAdvanced={showAdvancedButton}
       />
     );
   };
@@ -89,7 +90,7 @@ export default function InspectionPanelFields({
   return (
     <div className="p-1 pb-3">
       {/* Render basic fields */}
-      <div className="">{basicFields.map(renderField)}</div>
+      <div className="">{basicFields.map((field) => renderField(field, showAdvanced))}</div>
 
       {/* Render advanced fields disclosure */}
       {advancedFields.length > 0 && (
@@ -120,7 +121,7 @@ export default function InspectionPanelFields({
           </DisclosureTrigger>
 
           <DisclosureContent>
-            <div className="mt-1">{advancedFields.map(renderField)}</div>
+            <div className="mt-1">{advancedFields.map((field) => renderField(field, true))}</div>
           </DisclosureContent>
         </Disclosure>
       )}

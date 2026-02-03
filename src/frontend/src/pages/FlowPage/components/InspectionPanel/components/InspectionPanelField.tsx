@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { AssistantButton } from "@/components/common/assistant";
 import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
@@ -11,7 +11,6 @@ import { LANGFLOW_AGENTIC_EXPERIENCE } from "@/customization/feature-flags";
 import { useIsAutoLogin } from "@/hooks/use-is-auto-login";
 import useAuthStore from "@/stores/authStore";
 import useFlowStore from "@/stores/flowStore";
-import { useTypesStore } from "@/stores/typesStore";
 import type { NodeInputFieldComponentType } from "@/types/components";
 import { cn } from "@/utils/utils";
 import {
@@ -23,6 +22,18 @@ import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
 import useHandleOnNewValue from "@/CustomNodes/hooks/use-handle-new-value";
 import NodeInputInfo from "@/CustomNodes/GenericNode/components/NodeInputInfo";
 
+interface InspectionPanelFieldProps extends Omit<
+  NodeInputFieldComponentType,
+  | "colors"
+  | "tooltipTitle"
+  | "type"
+  | "optionalHandle"
+  | "colorName"
+  | "lastInput"
+> {
+  showAdvanced?: boolean;
+}
+
 export default function InspectionPanelField({
   id,
   data,
@@ -33,15 +44,8 @@ export default function InspectionPanelField({
   showNode,
   isToolMode = false,
   proxy,
-}: Omit<
-  NodeInputFieldComponentType,
-  | "colors"
-  | "tooltipTitle"
-  | "type"
-  | "optionalHandle"
-  | "colorName"
-  | "lastInput"
->) {
+  showAdvanced = false,
+}: InspectionPanelFieldProps) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const isAutoLogin = useIsAutoLogin();
   const shouldDisplayApiKey = isAuthenticated && !isAutoLogin;
@@ -72,6 +76,11 @@ export default function InspectionPanelField({
   const template = data.node?.template[name];
   const type = template?.type;
   const isFlexView = FLEX_VIEW_TYPES.includes(type ?? "");
+  const isAdvanced = template?.advanced ?? false;
+
+  const handleToggleVisibility = useCallback(() => {
+    handleOnNewValue({ advanced: !isAdvanced });
+  }, [handleOnNewValue, isAdvanced]);
 
   return (
     <div
@@ -116,7 +125,7 @@ export default function InspectionPanelField({
                 </span>
               </div>
             )}
-            <div>
+            <div className="flex items-center">
               {info !== "" && (
                 <ShadTooltip content={<NodeInputInfo info={info} />}>
                   <div className="cursor-help">
@@ -126,6 +135,23 @@ export default function InspectionPanelField({
                       className="relative ml-1 h-3 w-3 text-placeholder"
                     />
                   </div>
+                </ShadTooltip>
+              )}
+              {showAdvanced && (
+                <ShadTooltip
+                  content={isAdvanced ? "Show in basic view" : "Hide from basic view"}
+                >
+                  <button
+                    className="ml-1 cursor-pointer text-placeholder hover:text-foreground"
+                    onClick={handleToggleVisibility}
+                    data-testid={"show" + name}
+                  >
+                    <IconComponent
+                      name={isAdvanced ? "EyeOff" : "Eye"}
+                      strokeWidth={ICON_STROKE_WIDTH}
+                      className="h-3 w-3"
+                    />
+                  </button>
                 </ShadTooltip>
               )}
             </div>
