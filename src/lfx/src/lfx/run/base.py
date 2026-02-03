@@ -6,6 +6,7 @@ import sys
 import time
 from io import StringIO
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from lfx.cli.script_loader import (
     extract_structured_result,
@@ -16,6 +17,9 @@ from lfx.cli.script_loader import (
 from lfx.cli.validation import validate_global_variables_for_env
 from lfx.log.logger import logger
 from lfx.schema.schema import InputValueRequest
+
+if TYPE_CHECKING:
+    from lfx.events.event_manager import EventManager
 
 # Verbosity level constants
 VERBOSITY_DETAILED = 2
@@ -64,6 +68,9 @@ async def run_flow(
     verbose_full: bool = False,
     timing: bool = False,
     global_variables: dict[str, str] | None = None,
+    user_id: str | None = None,
+    session_id: str | None = None,
+    event_manager: "EventManager | None" = None,
 ) -> dict:
     """Execute a Langflow graph script or JSON flow and return the result.
 
@@ -83,6 +90,9 @@ async def run_flow(
         verbose_full: Show full debugging output including component logs
         timing: Include detailed timing information in output
         global_variables: Dict of global variables to inject into the graph context
+        user_id: Optional user ID for tracking purposes
+        session_id: Optional session ID for memory isolation
+        event_manager: Optional EventManager for streaming token events
 
     Returns:
         dict: Result data containing the execution results, logs, and optionally timing info
@@ -211,6 +221,18 @@ async def run_flow(
             error_msg = "No input source provided"
             raise ValueError(error_msg)
 
+        # Set user_id on graph if provided (required for some components like AgentComponent)
+        if user_id:
+            graph.user_id = user_id
+            if verbosity > 0:
+                logger.info(f"Set graph user_id: {user_id}")
+
+        # Set session_id on graph if provided (isolates memory between requests)
+        if session_id:
+            graph.session_id = session_id
+            if verbosity > 0:
+                logger.info(f"Set graph session_id: {session_id}")
+
         # Inject global variables into graph context
         if global_variables:
             if "request_variables" not in graph.context:
@@ -326,7 +348,7 @@ async def run_flow(
 
         logger.info("Starting graph execution...", level="DEBUG")
 
-        async for result in graph.async_start(inputs):
+        async for result in graph.async_start(inputs, event_manager=event_manager):
             result_count += 1
             if verbosity > 0:
                 logger.debug(f"Processing result #{result_count}")

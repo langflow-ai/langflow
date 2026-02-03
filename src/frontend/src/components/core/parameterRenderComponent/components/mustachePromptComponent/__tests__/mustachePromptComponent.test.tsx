@@ -54,7 +54,7 @@ jest.mock("@/components/common/sanitizedHTMLWrapper", () => {
 describe("MustachePromptAreaComponent", () => {
   const defaultProps = {
     field_name: "template",
-    nodeClass: null,
+    nodeClass: undefined,
     handleOnNewValue: jest.fn(),
     handleNodeClass: jest.fn(),
     value: "",
@@ -73,7 +73,7 @@ describe("MustachePromptAreaComponent", () => {
       render(<MustachePromptAreaComponent {...defaultProps} />);
 
       expect(
-        screen.getByText(/Type your prompt here using/),
+        screen.getByText(/Use {{variable}} as placeholder/),
       ).toBeInTheDocument();
     });
 

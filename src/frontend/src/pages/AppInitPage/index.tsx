@@ -1,4 +1,4 @@
-import { useContext, useEffect } from "react";
+import { useContext, useEffect, useMemo } from "react";
 import { Outlet } from "react-router-dom";
 import { AuthContext } from "@/contexts/authContext";
 import {
@@ -27,11 +27,14 @@ export function AppInitPage() {
   const { setUserData, storeApiKey } = useContext(AuthContext);
   const setIsAuthenticated = useAuthStore((state) => state.setIsAuthenticated);
   const setIsAdmin = useAuthStore((state) => state.setIsAdmin);
+  const autoLogin = useAuthStore((state) => state.autoLogin);
 
   const { isFetched: isLoaded } = useCustomPrimaryLoading();
 
   // Validate session on app init to restore auth state from HttpOnly cookies
-  const { data: sessionData } = useGetAuthSession({ enabled: isLoaded });
+  const { data: sessionData, isFetched: isSessionFetched } = useGetAuthSession({
+    enabled: isLoaded,
+  });
 
   const { isFetched } = useGetAutoLogin({ enabled: isLoaded });
   useGetVersionQuery({ enabled: isFetched });
@@ -68,17 +71,26 @@ export function AppInitPage() {
     }
   }, [isFetched, isConfigFetched]);
 
+  const isSessionReady = useMemo(() => {
+    if (autoLogin === true) {
+      return true;
+    }
+    if (autoLogin === false) {
+      return isSessionFetched;
+    }
+    return false;
+  }, [autoLogin, isSessionFetched]);
+
+  const isReady = isFetched && isExamplesFetched && isSessionReady;
+
   return (
-    //need parent component with width and height
     <>
       {isLoaded ? (
-        (isLoading || !isFetched || !isExamplesFetched) && (
-          <LoadingPage overlay />
-        )
+        (isLoading || !isReady) && <LoadingPage overlay />
       ) : (
         <CustomLoadingPage />
       )}
-      {isFetched && isExamplesFetched && <Outlet />}
+      {isReady && <Outlet />}
     </>
   );
 }
