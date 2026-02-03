@@ -9,10 +9,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
-import {
-  Popover,
-  PopoverContent,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent } from "@/components/ui/popover";
 import { classNames, cn } from "@/utils/utils";
 
 const CustomInputPopoverObject = ({
@@ -65,15 +62,15 @@ const CustomInputPopoverObject = ({
           value={
             (selectedOption !== "" || !onChange) && setSelectedOption
               ? options.find((option) => option.id === selectedOption)?.name ||
-              ""
+                ""
               : (selectedOptions?.length !== 0 || !onChange) &&
-                setSelectedOptions
+                  setSelectedOptions
                 ? selectedOptions
-                  .map(
-                    (optionId) =>
-                      options.find((option) => option.id === optionId)?.name,
-                  )
-                  .join(", ")
+                    .map(
+                      (optionId) =>
+                        options.find((option) => option.id === optionId)?.name,
+                    )
+                    .join(", ")
                 : value
           }
           autoFocus={autoFocus}
@@ -128,8 +125,8 @@ const CustomInputPopoverObject = ({
                       setSelectedOptions(
                         selectedOptions?.includes(currentValue)
                           ? selectedOptions.filter(
-                            (item) => item !== currentValue,
-                          )
+                              (item) => item !== currentValue,
+                            )
                           : [...selectedOptions, currentValue],
                       );
                     !setSelectedOptions && setShowOptions(false);

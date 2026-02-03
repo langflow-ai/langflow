@@ -11,18 +11,18 @@ const createMockEdge = (
   const handleId = scapedJSONStringfy(
     template.proxy
       ? {
-        inputTypes: template.input_types,
-        type: template.type,
-        id: nodeId,
-        fieldName,
-        proxy: template.proxy,
-      }
+          inputTypes: template.input_types,
+          type: template.type,
+          id: nodeId,
+          fieldName,
+          proxy: template.proxy,
+        }
       : {
-        inputTypes: template.input_types,
-        type: template.type,
-        id: nodeId,
-        fieldName,
-      },
+          inputTypes: template.input_types,
+          type: template.type,
+          id: nodeId,
+          fieldName,
+        },
   );
 
   return {
@@ -89,7 +89,9 @@ describe("Primary Input Identification", () => {
       expect(
         findPrimaryInput([], {}, false, nodeId, []).primaryInputFieldName,
       ).toBeNull();
-      expect(findPrimaryInput([], {}, false, nodeId, []).displayHandleMap.size).toBe(0);
+      expect(
+        findPrimaryInput([], {}, false, nodeId, []).displayHandleMap.size,
+      ).toBe(0);
     });
 
     it("should respect field order when identifying primary input", () => {
@@ -106,12 +108,22 @@ describe("Primary Input Identification", () => {
 
       // First in order should be primary
       expect(
-        findPrimaryInput(["primary", "secondary"], templates, false, nodeId, edges)
-          .primaryInputFieldName,
+        findPrimaryInput(
+          ["primary", "secondary"],
+          templates,
+          false,
+          nodeId,
+          edges,
+        ).primaryInputFieldName,
       ).toBe("primary");
       expect(
-        findPrimaryInput(["secondary", "primary"], templates, false, nodeId, edges)
-          .primaryInputFieldName,
+        findPrimaryInput(
+          ["secondary", "primary"],
+          templates,
+          false,
+          nodeId,
+          edges,
+        ).primaryInputFieldName,
       ).toBe("secondary");
     });
   });
@@ -127,7 +139,13 @@ describe("Primary Input Identification", () => {
         createMockEdge(nodeId, "visible", templates.visible),
       ];
 
-      const result = findPrimaryInput(["visible"], templates, false, nodeId, edges);
+      const result = findPrimaryInput(
+        ["visible"],
+        templates,
+        false,
+        nodeId,
+        edges,
+      );
       expect(result.primaryInputFieldName).toBe("visible");
       expect(result.displayHandleMap.has("hidden")).toBe(false);
     });

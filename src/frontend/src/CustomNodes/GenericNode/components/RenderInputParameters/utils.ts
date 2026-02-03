@@ -72,18 +72,18 @@ export const findPrimaryInput = (
       const handleId = scapedJSONStringfy(
         template.proxy
           ? {
-            inputTypes: template.input_types,
-            type: template.type,
-            id: nodeId,
-            fieldName: templateField,
-            proxy: template.proxy,
-          }
+              inputTypes: template.input_types,
+              type: template.type,
+              id: nodeId,
+              fieldName: templateField,
+              proxy: template.proxy,
+            }
           : {
-            inputTypes: template.input_types,
-            type: template.type,
-            id: nodeId,
-            fieldName: templateField,
-          },
+              inputTypes: template.input_types,
+              type: template.type,
+              id: nodeId,
+              fieldName: templateField,
+            },
       );
 
       const isConnected = edges.some(

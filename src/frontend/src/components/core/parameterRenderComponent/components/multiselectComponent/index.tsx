@@ -118,7 +118,7 @@ export default function MultiselectComponent({
       >
         <span className="truncate" data-testid={`value-dropdown-${id}`}>
           {treatedValue.length > 0 &&
-            options.find((option) => treatedValue.includes(option))
+          options.find((option) => treatedValue.includes(option))
             ? treatedValue.join(", ")
             : "Choose an option..."}
         </span>
