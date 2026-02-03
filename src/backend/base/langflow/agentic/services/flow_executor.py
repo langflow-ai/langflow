@@ -1,41 +1,63 @@
-"""Flow execution service."""
+"""Flow execution service.
+
+Orchestrates flow execution for both Python (.py) and JSON (.json) flows.
+Supports both synchronous and streaming execution modes.
+"""
 
 import asyncio
 import json
 from collections.abc import AsyncGenerator, Callable, Coroutine
-from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException
+from lfx.cli.script_loader import extract_structured_result
 from lfx.events.event_manager import EventManager, create_default_event_manager
 from lfx.log.logger import logger
-from lfx.run.base import run_flow
+from lfx.schema.schema import InputValueRequest
 
-from langflow.agentic.services.flow_preparation import load_and_prepare_flow
+from langflow.agentic.services.flow_types import (
+    STREAMING_QUEUE_MAX_SIZE,
+    FlowExecutionResult,
+)
+from langflow.agentic.services.helpers.event_consumer import consume_streaming_events
+from langflow.agentic.services.helpers.flow_loader import load_graph_for_execution, resolve_flow_path
 
-# Base path for flow JSON files
-FLOWS_BASE_PATH = Path(__file__).parent.parent / "flows"
-
-# Streaming configuration
-STREAMING_QUEUE_MAX_SIZE = 1000
-STREAMING_EVENT_TIMEOUT_SECONDS = 300.0
+if TYPE_CHECKING:
+    from lfx.graph.graph.base import Graph
 
 
-@dataclass
-class FlowExecutionResult:
-    """Holds the result or error from async flow execution."""
+async def _run_graph_with_events(
+    graph: "Graph",
+    input_value: str | None,
+    global_variables: dict[str, str] | None,
+    user_id: str | None,
+    session_id: str | None,
+    event_manager: EventManager,
+    event_queue: asyncio.Queue,
+    execution_result: FlowExecutionResult,
+) -> None:
+    """Execute graph and store result, signaling completion via queue."""
+    try:
+        if user_id:
+            graph.user_id = user_id
+        if session_id:
+            graph.session_id = session_id
 
-    result: dict[str, Any] = field(default_factory=dict)
-    error: Exception | None = None
+        if global_variables:
+            if "request_variables" not in graph.context:
+                graph.context["request_variables"] = {}
+            graph.context["request_variables"].update(global_variables)
 
-    @property
-    def has_error(self) -> bool:
-        return self.error is not None
+        graph.prepare()
+        inputs = InputValueRequest(input_value=input_value) if input_value else None
 
-    @property
-    def has_result(self) -> bool:
-        return bool(self.result)
+        results = [result async for result in graph.async_start(inputs=inputs, event_manager=event_manager)]
+        execution_result.result = extract_structured_result(results)
+    except Exception as e:  # noqa: BLE001
+        execution_result.error = e
+        logger.error(f"Flow execution error: {e}")
+    finally:
+        await event_queue.put(None)
 
 
 async def execute_flow_file(
@@ -43,20 +65,22 @@ async def execute_flow_file(
     input_value: str | None = None,
     global_variables: dict[str, str] | None = None,
     *,
-    verbose: bool = False,
+    verbose: bool = False,  # noqa: ARG001
     user_id: str | None = None,
     session_id: str | None = None,
     provider: str | None = None,
     model_name: str | None = None,
     api_key_var: str | None = None,
 ) -> dict:
-    """Execute a flow from a JSON file.
+    """Execute a flow from a Python or JSON file.
+
+    Supports both .py and .json flows. When both exist, .py takes priority.
 
     Args:
-        flow_filename: Name of the flow file (e.g., "MyFlow.json")
+        flow_filename: Name of the flow file (e.g., "MyFlow.json" or "my_flow.py")
         input_value: Input value to pass to the flow
         global_variables: Dict of global variables to inject into the flow context
-        verbose: Whether to enable verbose logging
+        verbose: Kept for backward compatibility (currently unused)
         user_id: User ID for components that require user context
         session_id: Unique session ID to isolate memory between requests
         provider: Model provider to inject into Agent nodes
@@ -69,71 +93,32 @@ async def execute_flow_file(
     Raises:
         HTTPException: If flow file not found or execution fails
     """
-    flow_path = FLOWS_BASE_PATH / flow_filename
-
-    if not flow_path.exists():
-        raise HTTPException(status_code=404, detail=f"Flow file '{flow_filename}' not found")
+    flow_path, flow_type = resolve_flow_path(flow_filename)
 
     try:
-        flow_json = load_and_prepare_flow(flow_path, provider, model_name, api_key_var)
-        result = await run_flow(
-            flow_json=flow_json,
-            input_value=input_value,
-            global_variables=global_variables or {},
-            verbose=verbose,
-            check_variables=False,
-            user_id=user_id,
-            session_id=session_id,
-        )
+        graph = await load_graph_for_execution(flow_path, flow_type, provider, model_name, api_key_var)
+
+        if user_id:
+            graph.user_id = user_id
+        if session_id:
+            graph.session_id = session_id
+
+        if global_variables:
+            if "request_variables" not in graph.context:
+                graph.context["request_variables"] = {}
+            graph.context["request_variables"].update(global_variables)
+
+        graph.prepare()
+        inputs = InputValueRequest(input_value=input_value) if input_value else None
+
+        results = [result async for result in graph.async_start(inputs=inputs)]
+        return extract_structured_result(results)
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Flow execution error: {e}")
         raise HTTPException(status_code=500, detail="An error occurred while executing the flow.") from e
-
-    return result
-
-
-def _parse_event_data(event_data: bytes) -> tuple[str | None, dict[str, Any]]:
-    """Parse raw event bytes into event type and data."""
-    event_str = event_data.decode("utf-8").strip()
-    if not event_str:
-        return None, {}
-
-    event_json = json.loads(event_str)
-    return event_json.get("event"), event_json.get("data", {})
-
-
-async def _create_flow_runner(
-    flow_json: str,
-    input_value: str | None,
-    global_variables: dict[str, str] | None,
-    user_id: str | None,
-    session_id: str | None,
-    event_manager: EventManager,
-    event_queue: asyncio.Queue,
-    execution_result: FlowExecutionResult,
-    *,
-    verbose: bool = False,
-) -> None:
-    """Execute flow and store result, signaling completion via queue."""
-    try:
-        result = await run_flow(
-            flow_json=flow_json,
-            input_value=input_value,
-            global_variables=global_variables or {},
-            verbose=verbose,
-            check_variables=False,
-            user_id=user_id,
-            session_id=session_id,
-            event_manager=event_manager,
-        )
-        execution_result.result = result
-    except Exception as e:  # noqa: BLE001
-        execution_result.error = e
-        logger.error(f"Flow execution error: {e}")
-    finally:
-        await event_queue.put(None)
 
 
 async def execute_flow_file_streaming(
@@ -141,7 +126,6 @@ async def execute_flow_file_streaming(
     input_value: str | None = None,
     global_variables: dict[str, str] | None = None,
     *,
-    verbose: bool = False,
     user_id: str | None = None,
     session_id: str | None = None,
     provider: str | None = None,
@@ -150,7 +134,9 @@ async def execute_flow_file_streaming(
     is_disconnected: Callable[[], Coroutine[Any, Any, bool]] | None = None,
     cancel_event: asyncio.Event | None = None,
 ) -> AsyncGenerator[tuple[str, Any], None]:
-    """Execute a flow from a JSON file with token streaming.
+    """Execute a flow from a Python or JSON file with token streaming.
+
+    Supports both .py and .json flows. When both exist, .py takes priority.
 
     Yields events as they occur:
     - ("token", chunk): Token chunk from LLM streaming
@@ -158,10 +144,9 @@ async def execute_flow_file_streaming(
     - ("cancelled", {}): Flow was cancelled
 
     Args:
-        flow_filename: Name of the flow file (e.g., "MyFlow.json")
+        flow_filename: Name of the flow file (e.g., "MyFlow.json" or "my_flow.py")
         input_value: Input value to pass to the flow
         global_variables: Dict of global variables to inject into the flow context
-        verbose: Whether to enable verbose logging
         user_id: User ID for components that require user context
         session_id: Unique session ID to isolate memory between requests
         provider: Model provider to inject into Agent nodes
@@ -176,13 +161,10 @@ async def execute_flow_file_streaming(
     Raises:
         HTTPException: If flow file not found or execution fails
     """
-    flow_path = FLOWS_BASE_PATH / flow_filename
-
-    if not flow_path.exists():
-        raise HTTPException(status_code=404, detail=f"Flow file '{flow_filename}' not found")
+    flow_path, flow_type = resolve_flow_path(flow_filename)
 
     try:
-        flow_json = load_and_prepare_flow(flow_path, provider, model_name, api_key_var)
+        graph = await load_graph_for_execution(flow_path, flow_type, provider, model_name, api_key_var)
     except (json.JSONDecodeError, OSError, ValueError) as e:
         logger.error(f"Flow preparation error: {e}")
         raise HTTPException(status_code=500, detail="An error occurred while preparing the flow.") from e
@@ -192,11 +174,10 @@ async def execute_flow_file_streaming(
     execution_result = FlowExecutionResult()
 
     flow_task = asyncio.create_task(
-        _create_flow_runner(
-            flow_json=flow_json,
+        _run_graph_with_events(
+            graph=graph,
             input_value=input_value,
             global_variables=global_variables,
-            verbose=verbose,
             user_id=user_id,
             session_id=session_id,
             event_manager=event_manager,
@@ -207,7 +188,7 @@ async def execute_flow_file_streaming(
 
     cancelled = False
     try:
-        async for event_type, chunk in _consume_streaming_events(event_queue, is_disconnected, cancel_event):
+        async for event_type, chunk in consume_streaming_events(event_queue, is_disconnected, cancel_event):
             if event_type == "token":
                 yield ("token", chunk)
             elif event_type == "end":
@@ -216,12 +197,10 @@ async def execute_flow_file_streaming(
                 cancelled = True
                 break
     except GeneratorExit:
-        # Generator was closed externally (client disconnected)
         logger.info("Generator closed externally, cancelling flow")
         cancelled = True
     finally:
         if not flow_task.done():
-            # Always cancel the flow task when generator exits
             flow_task.cancel()
             try:
                 await flow_task
@@ -238,63 +217,6 @@ async def execute_flow_file_streaming(
         ) from execution_result.error
 
     yield ("end", execution_result.result if execution_result.has_result else {})
-
-
-async def _consume_streaming_events(
-    event_queue: asyncio.Queue[tuple[str, bytes, float] | None],
-    is_disconnected: Callable[[], Coroutine[Any, Any, bool]] | None = None,
-    cancel_event: asyncio.Event | None = None,
-) -> AsyncGenerator[tuple[str, str], None]:
-    """Consume events from queue and yield parsed token events."""
-    # Use shorter timeout when checking for cancellation
-    check_interval = 0.5  # Check every 500ms
-
-    while True:
-        # Check cancel event first
-        if cancel_event is not None and cancel_event.is_set():
-            logger.info("Cancel event set, stopping event consumption")
-            yield ("cancelled", "")
-            return
-
-        try:
-            # Use shorter timeout to allow checking for disconnection
-            event = await asyncio.wait_for(event_queue.get(), timeout=check_interval)
-        except asyncio.TimeoutError:
-            # Check cancel event
-            if cancel_event is not None and cancel_event.is_set():
-                logger.info("Cancel event set, stopping event consumption")
-                yield ("cancelled", "")
-                return
-
-            # Check if client disconnected during wait
-            if is_disconnected is not None:
-                try:
-                    disconnected = await is_disconnected()
-                    if disconnected:
-                        logger.info("Client disconnected, stopping event consumption")
-                        yield ("cancelled", "")
-                        return
-                except Exception:  # noqa: BLE001
-                    pass
-            continue
-
-        if event is None:
-            break
-
-        _event_id, event_data, _timestamp = event
-
-        try:
-            event_type, data = _parse_event_data(event_data)
-            if event_type == "token":
-                chunk = data.get("chunk", "")
-                if chunk:
-                    yield ("token", chunk)
-            elif event_type == "end":
-                yield ("end", "")
-                break
-        except (json.JSONDecodeError, UnicodeDecodeError) as e:
-            logger.debug(f"Failed to parse event: {e}")
-            continue
 
 
 def extract_response_text(result: dict) -> str:
