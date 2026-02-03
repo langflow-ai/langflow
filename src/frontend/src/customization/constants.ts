@@ -1,12 +1,14 @@
+import { ENABLE_INSPECTION_PANEL } from "./feature-flags";
+
 //Langflow Desktop Base URL
 export const baseURL = "";
 
 export const customDefaultShortcuts = [
-  {
+  ...(!ENABLE_INSPECTION_PANEL ? [{
     display_name: "Controls",
     name: "Advanced Settings",
     shortcut: "mod+shift+a",
-  },
+  }] : []),
   {
     display_name: "Search Components on Sidebar",
     name: "Search Components Sidebar",
