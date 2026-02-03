@@ -22,15 +22,16 @@ import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
 import useHandleOnNewValue from "@/CustomNodes/hooks/use-handle-new-value";
 import NodeInputInfo from "@/CustomNodes/GenericNode/components/NodeInputInfo";
 
-interface InspectionPanelFieldProps extends Omit<
-  NodeInputFieldComponentType,
-  | "colors"
-  | "tooltipTitle"
-  | "type"
-  | "optionalHandle"
-  | "colorName"
-  | "lastInput"
-> {
+interface InspectionPanelFieldProps
+  extends Omit<
+    NodeInputFieldComponentType,
+    | "colors"
+    | "tooltipTitle"
+    | "type"
+    | "optionalHandle"
+    | "colorName"
+    | "lastInput"
+  > {
   showAdvanced?: boolean;
 }
 
@@ -139,7 +140,9 @@ export default function InspectionPanelField({
               )}
               {showAdvanced && (
                 <ShadTooltip
-                  content={isAdvanced ? "Show in basic view" : "Hide from basic view"}
+                  content={
+                    isAdvanced ? "Show in basic view" : "Hide from basic view"
+                  }
                 >
                   <button
                     className="ml-1 cursor-pointer text-placeholder hover:text-foreground"
