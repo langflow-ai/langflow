@@ -102,11 +102,17 @@ test(
 
     await adjustScreenView(page);
 
+    await page.getByText("Text Input", { exact: true }).click();
+
     await page.getByTestId("textarea_str_input_value").first().fill(",");
+
+    await page.getByText("URL", { exact: true }).click();
 
     await page
       .getByTestId("inputlist_str_urls_0")
       .fill("https://www.nature.com/articles/d41586-023-02870-5");
+
+    await page.getByText("Split Text", { exact: true }).click();
 
     await page.getByTestId("int_int_chunk_size").fill("2");
     await page.getByTestId("int_int_chunk_overlap").fill("1");
