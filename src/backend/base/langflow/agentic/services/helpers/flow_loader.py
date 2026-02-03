@@ -7,8 +7,10 @@ When both exist, .py takes priority for gradual migration.
 import importlib.util
 import inspect
 import json
+import os
 import sys
 from contextlib import contextmanager
+from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -49,12 +51,18 @@ def _validate_path_within_base(candidate: Path, flow_filename: str) -> Path:
     Raises:
         HTTPException: If path is outside FLOWS_BASE_PATH (path traversal attempt).
     """
-    base_path = FLOWS_BASE_PATH.resolve()
+    base_path = _resolved_flows_base()
     resolved = candidate.resolve()
 
     # Check if resolved path is within base path
     try:
-        resolved.relative_to(base_path)
+        base_str = os.fspath(base_path)
+        resolved_str = os.fspath(resolved)
+        # os.path.commonpath is used to determine if base_str is a prefix of resolved_str.
+        # It will raise ValueError on different drives (Windows), which we treat as outside.
+        if os.path.commonpath([base_str, resolved_str]) != base_str:
+            # Path is outside base directory - potential path traversal
+            raise HTTPException(status_code=400, detail=f"Invalid flow path: '{flow_filename}'")
     except ValueError:
         # Path is outside base directory - potential path traversal
         raise HTTPException(status_code=400, detail=f"Invalid flow path: '{flow_filename}'") from None
@@ -214,3 +222,10 @@ async def load_graph_for_execution(
     flow_json = load_and_prepare_flow(flow_path, provider, model_name, api_key_var)
     flow_dict = json.loads(flow_json)
     return await aload_flow_from_json(flow_dict, disable_logs=True)
+
+
+@lru_cache(maxsize=1)
+def _resolved_flows_base() -> Path:
+    # Cache the resolved base path to avoid repeated filesystem resolution.
+    # This preserves behavior while avoiding repeated work across calls.
+    return FLOWS_BASE_PATH.resolve()
