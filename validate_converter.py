@@ -31,9 +31,9 @@ def count_json_nodes_and_edges(flow_path: Path) -> tuple[int, int]:
     edges = flow_data.get("edges", [])
 
     valid_nodes = [
-        n for n in nodes
-        if n.get("data", {}).get("type") not in SKIP_NODE_TYPES
-        and n.get("data", {}).get("type") is not None
+        n
+        for n in nodes
+        if n.get("data", {}).get("type") not in SKIP_NODE_TYPES and n.get("data", {}).get("type") is not None
     ]
 
     return len(valid_nodes), len(edges)
@@ -81,11 +81,13 @@ def validate_all_flows():
             func_name = extract_graph_function_name(code)
 
             if func_name is None:
-                results.append({
-                    "name": flow_path.stem,
-                    "status": "FAIL",
-                    "error": "No graph function found",
-                })
+                results.append(
+                    {
+                        "name": flow_path.stem,
+                        "status": "FAIL",
+                        "error": "No graph function found",
+                    }
+                )
                 continue
 
             graph = execute_and_get_graph(code, func_name)
@@ -93,27 +95,33 @@ def validate_all_flows():
             actual_edges = len(graph.edges)
 
             if actual_nodes == expected_nodes and actual_edges == expected_edges:
-                results.append({
-                    "name": flow_path.stem,
-                    "status": "OK",
-                    "nodes": actual_nodes,
-                    "edges": actual_edges,
-                })
+                results.append(
+                    {
+                        "name": flow_path.stem,
+                        "status": "OK",
+                        "nodes": actual_nodes,
+                        "edges": actual_edges,
+                    }
+                )
             else:
-                results.append({
-                    "name": flow_path.stem,
-                    "status": "MISMATCH",
-                    "expected_nodes": expected_nodes,
-                    "expected_edges": expected_edges,
-                    "actual_nodes": actual_nodes,
-                    "actual_edges": actual_edges,
-                })
+                results.append(
+                    {
+                        "name": flow_path.stem,
+                        "status": "MISMATCH",
+                        "expected_nodes": expected_nodes,
+                        "expected_edges": expected_edges,
+                        "actual_nodes": actual_nodes,
+                        "actual_edges": actual_edges,
+                    }
+                )
         except Exception as e:
-            results.append({
-                "name": flow_path.stem,
-                "status": "ERROR",
-                "error": str(e)[:100],
-            })
+            results.append(
+                {
+                    "name": flow_path.stem,
+                    "status": "ERROR",
+                    "error": str(e)[:100],
+                }
+            )
 
     # Print results
     success_count = sum(1 for r in results if r["status"] == "OK")
@@ -125,8 +133,10 @@ def validate_all_flows():
         if r["status"] == "OK":
             print(f"  ✓ {r['name']} ({r['nodes']} nodes, {r['edges']} edges)")
         elif r["status"] == "MISMATCH":
-            print(f"  ✗ {r['name']}: expected {r['expected_nodes']}N/{r['expected_edges']}E, "
-                  f"got {r['actual_nodes']}N/{r['actual_edges']}E")
+            print(
+                f"  ✗ {r['name']}: expected {r['expected_nodes']}N/{r['expected_edges']}E, "
+                f"got {r['actual_nodes']}N/{r['actual_edges']}E"
+            )
         else:
             print(f"  ✗ {r['name']}: {r.get('error', 'Unknown error')}")
 
@@ -134,9 +144,8 @@ def validate_all_flows():
     if success_count == len(flows):
         print("✅ All flows validated successfully!")
         return 0
-    else:
-        print(f"❌ {len(flows) - success_count} flows failed validation")
-        return 1
+    print(f"❌ {len(flows) - success_count} flows failed validation")
+    return 1
 
 
 if __name__ == "__main__":
