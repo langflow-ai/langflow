@@ -68,7 +68,11 @@ def update_projects_components_with_latest_component_versions(project_data, all_
             all_types_dict_flat[key] = component
 
     node_changes_log = defaultdict(list)
-    project_data_copy = deepcopy(project_data)
+    # Use a specialized fast deepcopy for typical JSON-like project_data shapes to reduce overhead
+    project_data_copy = _fast_deepcopy(project_data)
+
+    # Precompute attributes list excluding skipped ones to avoid repeated membership checks
+    to_check_attributes_filtered = [attr for attr in FIELD_FORMAT_ATTRIBUTES if attr not in SKIPPED_FIELD_ATTRIBUTES]
 
     for node in project_data_copy.get("nodes", []):
         node_data = node.get("data").get("node")
@@ -164,7 +168,13 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                         node_data["template"][field_name] = field_dict
                         continue
                     # The idea here is to update some attributes of the field
-                    to_check_attributes = FIELD_FORMAT_ATTRIBUTES
+                    to_check_attributes = to_check_attributes_filtered
+                    # Skip specific field attributes that should respect the starter project template values.
+                    # Currently we skip 'advanced' so that a field marked as advanced in the component code
+                    # will NOT overwrite the value specified in the starter project template. This preserves
+                    # the intended UX configuration of the starter projects.
+                    # SKIPPED_FIELD_ATTRIBUTES = {"advanced"}
+                    # Iterate through the attributes we want to potentially update
                     # Skip specific field attributes that should respect the starter project template values.
                     # Currently we skip 'advanced' so that a field marked as advanced in the component code
                     # will NOT overwrite the value specified in the starter project template. This preserves
@@ -172,9 +182,6 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                     # SKIPPED_FIELD_ATTRIBUTES = {"advanced"}
                     # Iterate through the attributes we want to potentially update
                     for attr in to_check_attributes:
-                        # Respect the template value by not updating if the attribute is in the skipped set
-                        if attr in SKIPPED_FIELD_ATTRIBUTES:
-                            continue
                         if (
                             attr in field_dict
                             and attr in node_data["template"].get(field_name)
@@ -544,10 +551,11 @@ def log_node_changes(node_changes_log) -> None:
     # let's create one log per node
     formatted_messages = []
     for node_name, changes in node_changes_log.items():
-        message = f"\nNode: {node_name} was updated with the following changes:"
+        lines = [f"\nNode: {node_name} was updated with the following changes:"]
         for change in changes:
-            message += f"\n- {change['attr']}: {change['old_value']} -> {change['new_value']}"
-        formatted_messages.append(message)
+            # Build line pieces and join once to avoid repeated string concatenation overhead
+            lines.append(f"- {change['attr']}: {change['old_value']} -> {change['new_value']}")
+        formatted_messages.append("\n".join(lines))
     if formatted_messages:
         logger.debug("\n".join(formatted_messages))
 
@@ -1356,3 +1364,45 @@ async def sync_flows_from_fs():
             await asyncio.sleep(fs_flows_polling_interval)
     except asyncio.CancelledError:
         await logger.adebug("Flow sync task cancelled")
+
+
+def _fast_deepcopy(obj, _memo=None):
+    """A lightweight deep copy optimized for JSON-like structures (dict, list, tuple, set).
+    This preserves isolation from the input (no shared mutable references) for the
+    common project_data shapes while avoiding the overhead of copy.deepcopy for these types.
+    """
+    if _memo is None:
+        _memo = {}
+    obj_id = id(obj)
+    if obj_id in _memo:
+        return _memo[obj_id]
+    if isinstance(obj, dict):
+        new = {}
+        _memo[obj_id] = new
+        for k, v in obj.items():
+            # Keys are usually immutables (str); keep them as-is if so
+            # but if a key is a mutable container, deepcopy it too
+            if isinstance(k, (dict, list, tuple, set)):
+                new_key = _fast_deepcopy(k, _memo)
+            else:
+                new_key = k
+            new[new_key] = _fast_deepcopy(v, _memo)
+        return new
+    if isinstance(obj, list):
+        new = []
+        _memo[obj_id] = new
+        for v in obj:
+            new.append(_fast_deepcopy(v, _memo))
+        return new
+    if isinstance(obj, tuple):
+        new = tuple(_fast_deepcopy(v, _memo) for v in obj)
+        _memo[obj_id] = new
+        return new
+    if isinstance(obj, set):
+        new = set()
+        _memo[obj_id] = new
+        for v in obj:
+            new.add(_fast_deepcopy(v, _memo))
+        return new
+    # For other types (str, int, custom objects), return as-is (same semantics as deepcopy for immutables).
+    return obj
