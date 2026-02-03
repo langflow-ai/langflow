@@ -52,9 +52,7 @@ def update_provider_fields_visibility(
     Returns:
         Updated build configuration.
     """
-    current_model_value = (
-        field_value if field_name == "model" else build_config.get("model", {}).get("value")
-    )
+    current_model_value = field_value if field_name == "model" else build_config.get("model", {}).get("value")
 
     if not isinstance(current_model_value, list) or len(current_model_value) == 0:
         return build_config
