@@ -14,8 +14,8 @@ STREAMING_EVENT_TIMEOUT_SECONDS = 300.0
 # Assistant configuration
 MAX_VALIDATION_RETRIES = 3
 VALIDATION_UI_DELAY_SECONDS = 0.3
-LANGFLOW_ASSISTANT_FLOW = "LangflowAssistant.json"
-TRANSLATION_FLOW = "TranslationFlow.json"
+LANGFLOW_ASSISTANT_FLOW = "LangflowAssistant"
+TRANSLATION_FLOW = "TranslationFlow"
 
 VALIDATION_RETRY_TEMPLATE = """The previous component code has an error. Please fix it.
 

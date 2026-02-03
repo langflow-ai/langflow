@@ -36,6 +36,32 @@ def _temporary_sys_path(path: str):
         yield
 
 
+def _validate_path_within_base(candidate: Path, flow_filename: str) -> Path:
+    """Validate that a path is within FLOWS_BASE_PATH to prevent path traversal.
+
+    Args:
+        candidate: The candidate path to validate.
+        flow_filename: Original filename for error messages.
+
+    Returns:
+        The resolved path if valid.
+
+    Raises:
+        HTTPException: If path is outside FLOWS_BASE_PATH (path traversal attempt).
+    """
+    base_path = FLOWS_BASE_PATH.resolve()
+    resolved = candidate.resolve()
+
+    # Check if resolved path is within base path
+    try:
+        resolved.relative_to(base_path)
+    except ValueError:
+        # Path is outside base directory - potential path traversal
+        raise HTTPException(status_code=400, detail=f"Invalid flow path: '{flow_filename}'") from None
+
+    return resolved
+
+
 def resolve_flow_path(flow_filename: str) -> tuple[Path, str]:
     """Resolve flow filename to path and determine type.
 
@@ -49,16 +75,16 @@ def resolve_flow_path(flow_filename: str) -> tuple[Path, str]:
         tuple[Path, str]: (resolved path, file type: "json" or "python")
 
     Raises:
-        HTTPException: If flow file not found.
+        HTTPException: If flow file not found or path traversal detected.
     """
     if flow_filename.endswith(".json"):
-        flow_path = FLOWS_BASE_PATH / flow_filename
+        flow_path = _validate_path_within_base(FLOWS_BASE_PATH / flow_filename, flow_filename)
         if flow_path.exists():
             return flow_path, "json"
         raise HTTPException(status_code=404, detail=f"Flow file '{flow_filename}' not found")
 
     if flow_filename.endswith(".py"):
-        flow_path = FLOWS_BASE_PATH / flow_filename
+        flow_path = _validate_path_within_base(FLOWS_BASE_PATH / flow_filename, flow_filename)
         if flow_path.exists():
             return flow_path, "python"
         raise HTTPException(status_code=404, detail=f"Flow file '{flow_filename}' not found")
@@ -66,16 +92,16 @@ def resolve_flow_path(flow_filename: str) -> tuple[Path, str]:
     # Auto-detect: try Python first, then JSON (allows gradual migration)
     base_name = flow_filename.rsplit(".", 1)[0] if "." in flow_filename else flow_filename
 
-    py_path = FLOWS_BASE_PATH / f"{base_name}.py"
+    py_path = _validate_path_within_base(FLOWS_BASE_PATH / f"{base_name}.py", flow_filename)
     if py_path.exists():
         return py_path, "python"
 
-    json_path = FLOWS_BASE_PATH / f"{base_name}.json"
+    json_path = _validate_path_within_base(FLOWS_BASE_PATH / f"{base_name}.json", flow_filename)
     if json_path.exists():
         return json_path, "json"
 
     # Try without adding extension
-    direct_path = FLOWS_BASE_PATH / flow_filename
+    direct_path = _validate_path_within_base(FLOWS_BASE_PATH / flow_filename, flow_filename)
     if direct_path.exists():
         if direct_path.suffix == ".py":
             return direct_path, "python"

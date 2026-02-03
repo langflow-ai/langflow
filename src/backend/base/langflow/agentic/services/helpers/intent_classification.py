@@ -51,7 +51,7 @@ async def classify_intent(
                 parsed = json.loads(response_text)
                 translation = parsed.get("translation", text)
                 intent = parsed.get("intent", "question")
-                logger.debug(f"Intent: {intent}, Translation: '{translation[:50]}'")
+                logger.debug("Intent: %s, translation_length=%d", intent, len(translation))
                 return IntentResult(translation=translation, intent=intent)
             except json.JSONDecodeError:
                 logger.warning("Intent flow returned non-JSON, treating as question")
