@@ -229,4 +229,3 @@ def extract_response_text(result: dict) -> str:
         return result["exception_message"]
 
     return str(result)
-

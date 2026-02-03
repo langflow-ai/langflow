@@ -362,4 +362,3 @@ async def execute_flow_with_validation_streaming(
         # Always set cancel event when generator exits to stop any pending flow execution
         logger.debug("Assistant generator exiting, setting cancel event")
         cancel_event.set()
-
