@@ -436,6 +436,11 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "API-Reference/sdk",
+          label: "Langflow SDKs"
+        },
+        {
+          type: "doc",
           id: "API-Reference/typescript-client",
           label: "Use the TypeScript client"
         },
