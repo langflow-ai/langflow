@@ -1,4 +1,4 @@
-import { type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
 import fs from "fs";
 import path from "path";
 import { expect } from "../fixtures";
@@ -39,6 +39,10 @@ export async function uploadFile(page: Page, fileName: string) {
   await page.getByTestId("canvas_controls_dropdown").click();
   await page.getByTestId("fit_view").click();
   await page.getByTestId("canvas_controls_dropdown").click({ force: true });
+
+  await page.waitForSelector('[data-testid="button_open_file_management"]', {
+    timeout: 3000,
+  });
 
   const fileManagement = await page
     .getByTestId("button_open_file_management")

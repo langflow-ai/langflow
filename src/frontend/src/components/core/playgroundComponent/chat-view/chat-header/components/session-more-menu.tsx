@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import {
@@ -26,6 +26,7 @@ export interface SessionMoreMenuProps {
   isVisible?: boolean;
   tooltipContent?: string;
   tooltipSide?: "top" | "right" | "bottom" | "left";
+  dataTestid?: string;
 }
 
 const DEFAULT_SIDE_OFFSET = 4;
@@ -46,6 +47,7 @@ export function SessionMoreMenu({
   isVisible = true,
   tooltipContent = "More options",
   tooltipSide = "left",
+  dataTestid,
 }: SessionMoreMenuProps) {
   const [selectValue, setSelectValue] = useState("");
 
@@ -88,6 +90,7 @@ export function SessionMoreMenu({
             onClick={(e) => {
               e.stopPropagation();
             }}
+            data-testid={dataTestid}
           >
             <ForwardedIconComponent
               name="MoreVertical"
@@ -123,7 +126,11 @@ export function SessionMoreMenu({
             </SelectItem>
           )}
           {showClearChat && (
-            <SelectItem value="clearChat" className="session-more-menu-item">
+            <SelectItem
+              value="clearChat"
+              className="session-more-menu-item"
+              data-testid="clear-chat-option"
+            >
               <div className="flex items-center text-status-red hover:text-status-red">
                 <ForwardedIconComponent name="X" className="mr-2 h-4 w-4" />
                 Clear chat
@@ -131,7 +138,11 @@ export function SessionMoreMenu({
             </SelectItem>
           )}
           {showDelete && (
-            <SelectItem value="delete" className="session-more-menu-item">
+            <SelectItem
+              value="delete"
+              className="session-more-menu-item"
+              data-testid="delete-session-option"
+            >
               <div className="flex items-center text-status-red hover:text-status-red">
                 <ForwardedIconComponent
                   name="Trash2"

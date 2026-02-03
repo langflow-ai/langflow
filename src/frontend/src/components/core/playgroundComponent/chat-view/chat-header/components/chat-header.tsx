@@ -128,6 +128,7 @@ export function ChatHeader({
         isVisible={true}
         tooltipContent="More options"
         tooltipSide="left"
+        dataTestid="chat-header-more-menu"
       />
     </AnimatedConditional>
   );
