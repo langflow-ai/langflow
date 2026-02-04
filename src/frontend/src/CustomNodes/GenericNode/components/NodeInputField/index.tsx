@@ -161,35 +161,26 @@ export default function NodeInputField({
                 }
               </ShadTooltip>
             ) : (
-              <div className="flex gap-2">
-                <span>
-                  {
-                    <span className="text-sm font-medium">
-                      {getCustomParameterTitle({
-                        title,
-                        nodeId: data.id,
-                        isFlexView,
-                        required,
-                      })}
-                    </span>
-                  }
-                </span>
-              </div>
+              <span className="text-sm font-medium">
+                {getCustomParameterTitle({
+                  title,
+                  nodeId: data.id,
+                  isFlexView,
+                  required,
+                })}
+              </span>
             )}
-            <div>
-              {info !== "" && (
-                <ShadTooltip content={<NodeInputInfo info={info} />}>
-                  {/* put div to avoid bug that does not display tooltip */}
-                  <div className="cursor-help">
-                    <IconComponent
-                      name="Info"
-                      strokeWidth={ICON_STROKE_WIDTH}
-                      className="relative ml-1 h-3 w-3 text-placeholder"
-                    />
-                  </div>
-                </ShadTooltip>
-              )}
-            </div>
+            {info !== "" && (
+              <ShadTooltip content={<NodeInputInfo info={info} />}>
+                <div className="cursor-help">
+                  <IconComponent
+                    name="Info"
+                    strokeWidth={ICON_STROKE_WIDTH}
+                    className="ml-1 h-3 w-3 text-placeholder"
+                  />
+                </div>
+              </ShadTooltip>
+            )}
             {LANGFLOW_AGENTIC_EXPERIENCE &&
               data.node?.template[name]?.ai_enabled && (
                 <AssistantButton
@@ -208,8 +199,7 @@ export default function NodeInputField({
           />
         </div>
 
-        {(!ENABLE_INSPECTION_PANEL || !optionalHandle || !showNode) &&
-          data.node?.template[name] !== undefined && (
+        {data.node?.template[name] !== undefined && (
             <CustomParameterComponent
               handleOnNewValue={handleOnNewValue}
               name={name}
@@ -219,7 +209,7 @@ export default function NodeInputField({
               templateValue={data.node?.template[name].value ?? ""}
               editNode={false}
               handleNodeClass={handleNodeClass}
-              showParameter={!ENABLE_INSPECTION_PANEL}
+              showParameter={true}
               nodeClass={data.node!}
               placeholder={
                 isToolMode

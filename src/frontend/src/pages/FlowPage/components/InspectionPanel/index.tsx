@@ -1,6 +1,6 @@
 import { Panel } from "@xyflow/react";
 import { motion, AnimatePresence } from "framer-motion";
-import { memo } from "react";
+import { memo, useState, useEffect } from "react";
 import type { AllNodeType } from "@/types/flow";
 import { cn } from "@/utils/utils";
 import InspectionPanelFields from "./components/InspectionPanelFields";
@@ -18,6 +18,13 @@ const InspectionPanel = memo(function InspectionPanel({
   isVisible,
   onClose,
 }: InspectionPanelProps) {
+  const [isEditingFields, setIsEditingFields] = useState(false);
+
+  // Reset edit mode when panel closes or node changes
+  useEffect(() => {
+    setIsEditingFields(false);
+  }, [selectedNode?.id, isVisible]);
+
   return (
     <AnimatePresence mode="wait">
       {isVisible && selectedNode && selectedNode.type === "genericNode" && (
@@ -40,11 +47,17 @@ const InspectionPanel = memo(function InspectionPanel({
               "overflow-y-auto flex flex-col pointer-events-auto",
             )}
           >
-            <InspectionPanelHeader data={selectedNode.data} onClose={onClose} />
+            <InspectionPanelHeader
+              data={selectedNode.data}
+              onClose={onClose}
+              isEditingFields={isEditingFields}
+              onToggleEditFields={() => setIsEditingFields(!isEditingFields)}
+            />
             <Separator className="my-0.5" />
             <InspectionPanelFields
               data={selectedNode.data}
               key={selectedNode.id}
+              isEditingFields={isEditingFields}
             />
           </motion.div>
         </Panel>

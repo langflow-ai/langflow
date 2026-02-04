@@ -1,33 +1,55 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { sortToolModeFields } from "@/CustomNodes/helpers/sort-tool-mode-field";
 import getFieldTitle from "@/CustomNodes/utils/get-field-title";
 import type { NodeDataType } from "@/types/flow";
-import { LANGFLOW_SUPPORTED_TYPES } from "@/constants/constants";
 import InspectionPanelField from "./InspectionPanelField";
-import { ChevronRight } from "lucide-react";
-import { cn } from "@/utils/utils";
+import InspectionPanelEditField from "./InspectionPanelEditField";
 import {
-  Disclosure,
-  DisclosureTrigger,
-  DisclosureContent,
-} from "@/components/ui/disclosure";
-import { shouldRenderInspectionPanelField } from "@/CustomNodes/helpers/parameter-filtering";
-import { Separator } from "@/components/ui/separator";
+  shouldRenderInspectionPanelField,
+  isInternalField,
+  isCodeField,
+  isHandleInput,
+  isToolModeEnabled,
+} from "@/CustomNodes/helpers/parameter-filtering";
+import { cn } from "@/utils/utils";
 
 interface InspectionPanelFieldsProps {
   data: NodeDataType;
+  isEditingFields?: boolean;
 }
 
 export default function InspectionPanelFields({
   data,
+  isEditingFields = false,
 }: InspectionPanelFieldsProps) {
-  const [showAdvanced, setShowAdvanced] = useState(false);
-
   const isToolMode = data.node?.tool_mode;
 
-  // Separate basic and advanced fields
-  const { basicFields, advancedFields } = useMemo(() => {
-    const allFields = Object.keys(data.node?.template || {})
+  // Get all editable fields (for edit mode)
+  const allEditableFields = useMemo(() => {
+    return Object.keys(data.node?.template || {})
+      .filter((templateField) => {
+        const template = data.node?.template[templateField];
+        if (isInternalField(templateField)) return false;
+        if (!template?.show) return false;
+        if (isCodeField(templateField, template)) return false;
+        if (isHandleInput(template)) return false;
+        if (isToolModeEnabled(template) && isToolMode) return false;
+        return true;
+      })
+      .sort((a, b) =>
+        sortToolModeFields(
+          a,
+          b,
+          data.node!.template,
+          data.node?.field_order ?? [],
+          false,
+        ),
+      );
+  }, [data.node?.template, data.node?.field_order, isToolMode]);
+
+  // Get only advanced fields (for normal mode)
+  const advancedFields = useMemo(() => {
+    return Object.keys(data.node?.template || {})
       .filter((templateField) => {
         const template = data.node?.template[templateField];
         return shouldRenderInspectionPanelField(
@@ -45,34 +67,49 @@ export default function InspectionPanelFields({
           false,
         ),
       );
+  }, [data.node?.template, data.node?.field_order, isToolMode]);
 
-    const basic: string[] = [];
-    const advanced: string[] = [];
+  // Edit mode - show all fields with simplified edit UI
+  if (isEditingFields) {
+    if (allEditableFields.length === 0) {
+      return (
+        <div className="flex items-center justify-center p-8 text-sm text-muted-foreground">
+          No editable fields
+        </div>
+      );
+    }
 
-    allFields.forEach((field) => {
-      const template = data.node?.template[field];
-      if (template?.advanced) {
-        advanced.push(field);
-      } else {
-        basic.push(field);
-      }
-    });
-
-    return { basicFields: basic, advancedFields: advanced };
-  }, [data.node?.template, data.node?.field_order]);
-
-  if (basicFields.length === 0 && advancedFields.length === 0) {
     return (
-      <div className="flex items-center justify-center p-8 text-sm text-muted-foreground">
-        No fields available
+      <div className="pb-2">
+        <div className="px-1">
+          {allEditableFields.map((templateField) => {
+            const template = data.node?.template[templateField];
+            return (
+              <InspectionPanelEditField
+                key={`${data.id}-${templateField}-edit`}
+                data={data}
+                name={templateField}
+                title={getFieldTitle(data.node?.template!, templateField)}
+                description={template.info || ""}
+                isOnCanvas={!template.advanced}
+              />
+            );
+          })}
+        </div>
       </div>
     );
   }
 
-  const renderField = (
-    templateField: string,
-    showAdvancedButton: boolean = false,
-  ) => {
+  // Normal mode - show only advanced fields with full input UI
+  if (advancedFields.length === 0) {
+    return (
+      <div className="flex items-center justify-center p-8 text-sm text-muted-foreground">
+        No advanced settings
+      </div>
+    );
+  }
+
+  const renderField = (templateField: string) => {
     const template = data.node?.template[templateField];
 
     return (
@@ -92,51 +129,16 @@ export default function InspectionPanelFields({
         proxy={template.proxy}
         showNode={true}
         isToolMode={false}
-        showAdvanced={showAdvancedButton}
+        showAdvanced={false}
       />
     );
   };
 
   return (
     <div className="pb-2">
-      {/* Render basic fields */}
       <div className="px-1">
-        {basicFields.map((field) => renderField(field, showAdvanced))}
+        {advancedFields.map((field) => renderField(field))}
       </div>
-
-      {/* Render advanced fields disclosure */}
-      {basicFields.length > 0 && <Separator className="mt-3" />}
-      <Disclosure
-        open={showAdvanced}
-        onOpenChange={setShowAdvanced}
-        className="mt-2 px-1"
-      >
-        <DisclosureTrigger>
-          <div
-            className={cn(
-              "flex w-full items-center justify-between px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground",
-              "cursor-pointer rounded-md hover:bg-muted/50",
-            )}
-            data-testid={
-              showAdvanced ? "edit-button-close" : "edit-button-modal"
-            }
-          >
-            <span>Advanced</span>
-            <ChevronRight
-              className={cn(
-                "h-4 w-4 transition-transform duration-200",
-                showAdvanced && "rotate-90",
-              )}
-            />
-          </div>
-        </DisclosureTrigger>
-
-        <DisclosureContent>
-          <div className="">
-            {advancedFields.map((field) => renderField(field, true))}
-          </div>
-        </DisclosureContent>
-      </Disclosure>
     </div>
   );
 }
