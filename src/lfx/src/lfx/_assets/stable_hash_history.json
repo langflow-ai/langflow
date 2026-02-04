@@ -771,12 +771,12 @@
   },
   "KnowledgeIngestion": {
     "versions": {
-      "0.3.0": "52a451e4f053"
+      "0.3.0": "d70806d0794a"
     }
   },
   "KnowledgeRetrieval": {
     "versions": {
-      "0.3.0": "af0a162c3f80"
+      "0.3.0": "a02accf0e07f"
     }
   },
   "SaveToFile": {

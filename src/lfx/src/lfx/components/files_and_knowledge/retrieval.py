@@ -17,23 +17,21 @@ from lfx.schema.dataframe import DataFrame
 from lfx.services.deps import get_settings_service, session_scope
 from lfx.utils.validate_cloud import raise_error_if_astra_cloud_disable_component
 
-_KNOWLEDGE_BASES_ROOT_PATH: Path | None = None
-
 # Error message to raise if we're in Astra cloud environment and the component is not supported.
 astra_error_msg = "Knowledge retrieval is not supported in Astra cloud environment."
 
 
 def _get_knowledge_bases_root_path() -> Path:
-    """Lazy load the knowledge bases root path from settings."""
-    global _KNOWLEDGE_BASES_ROOT_PATH  # noqa: PLW0603
-    if _KNOWLEDGE_BASES_ROOT_PATH is None:
+    """Get the knowledge bases root path from settings with caching."""
+    # Use function attribute for caching instead of global variable
+    if not hasattr(_get_knowledge_bases_root_path, "_cached_path"):
         settings = get_settings_service().settings
         knowledge_directory = settings.knowledge_bases_dir
         if not knowledge_directory:
             msg = "Knowledge bases directory is not set in the settings."
             raise ValueError(msg)
-        _KNOWLEDGE_BASES_ROOT_PATH = Path(knowledge_directory).expanduser()
-    return _KNOWLEDGE_BASES_ROOT_PATH
+        _get_knowledge_bases_root_path._cached_path = Path(knowledge_directory).expanduser()
+    return _get_knowledge_bases_root_path._cached_path
 
 
 class KnowledgeRetrievalComponent(Component):
