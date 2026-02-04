@@ -33,8 +33,8 @@ export const useRenameSession = ({
         setIsEditing(false);
         return;
       }
-      await handleRename(currentSessionId, trimmed);
       onSessionSelect?.(trimmed);
+      await handleRename(currentSessionId, trimmed);
       setIsEditing(false);
     },
     [currentSessionId, handleRename, onSessionSelect],
