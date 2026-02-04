@@ -1,4 +1,4 @@
-"""SemanticMap component for generating new columns using LLM instructions."""
+"""Agentics component for Map/Reduce style data transformations."""
 
 from __future__ import annotations
 
@@ -14,7 +14,8 @@ from lfx.components.agentics.constants import (
     ERROR_API_KEY_REQUIRED,
     PROVIDER_OLLAMA,
     TRANSDUCTION_AMAP,
-    TRANSDUCTION_AREDUCE,
+    TRANSDUCTION_GENERATE,
+    TRANSDUCTION_TYPES,
 )
 from lfx.components.agentics.helpers import (
     create_llm,
@@ -26,6 +27,7 @@ from lfx.io import (
     BoolInput,
     DataFrameInput,
     DropdownInput,
+    IntInput,
     MessageInput,
     MessageTextInput,
     ModelInput,
@@ -38,11 +40,11 @@ from lfx.schema.dataframe import DataFrame
 from lfx.schema.table import EditMode
 
 
-class SemanticMap(Component):
-    """Generates new columns in a DataFrame based on LLM instructions."""
+class SyntheticDataGenerator(Component):
+    """Enables Map Reduce Style Agentic data transformations among dataframes."""
 
-    display_name = "SemanticMap"
-    description = "Reads each of the input rows and generates new columns"
+    display_name = "SyntheticDataGen"
+    description = "Generate fake data for the required schema"
     documentation: str = "github.com/IBM/agentics/"
     icon = "Agentics"
 
@@ -86,15 +88,10 @@ class SemanticMap(Component):
             real_time_refresh=True,
             load_from_db=True,
         ),
-        DataFrameInput(
-            name="source",
-            display_name="Source DataFrame",
-            info="Accepts JSON (list of dicts) or DataFrame.",
-        ),
         TableInput(
-            name="generated_fields",
+            name="schema",
             display_name="Generated Fields",
-            info="Define the structure and data types for the generated output.",
+            info="Define the structure and data types for the model's output.",
             required=True,
             table_schema=[
                 {
@@ -140,18 +137,11 @@ class SemanticMap(Component):
                 }
             ],
         ),
-        MessageTextInput(
-            name="instructions",
-            display_name="Instructions",
-            info="Instructions for generating the new column values",
-            value="",
-        ),
-        BoolInput(
-            name="append_to_input_columns",
-            display_name="Append To Source Columns",
-            info="If false, returns only new columns, append to original data otherwise",
-            value=True,
-            advanced=True,
+        IntInput(
+            name="batch_size",
+            display_name="Number of Instances",
+            value=10,
+            advanced=False,
         ),
     ]
 
@@ -159,7 +149,7 @@ class SemanticMap(Component):
         Output(
             name="states",
             display_name="Target DataFrame",
-            method="semantic_map",
+            method="generate",
             tool_mode=True,
         ),
     ]
@@ -181,11 +171,12 @@ class SemanticMap(Component):
         )
         return update_provider_fields_visibility(build_config, field_value, field_name)
 
-    async def semantic_map(self) -> DataFrame:
-        """Generate new columns based on the provided instructions."""
+    async def generate(self) -> DataFrame:
+        """Execute transduction on the source DataFrame."""
         try:
             from agentics import AG
             from agentics.core.atype import create_pydantic_model
+            from agentics.core.transducible_functions import generate_prototypical_instances
         except ImportError as e:
             raise ImportError(ERROR_AGENTICS_NOT_INSTALLED) from e
 
@@ -204,8 +195,6 @@ class SemanticMap(Component):
             ollama_base_url=getattr(self, "ollama_base_url", None),
         )
 
-        source = AG.from_dataframe(DataFrame(self.source))
-
         schema_fields = [
             (
                 field["name"],
@@ -213,21 +202,18 @@ class SemanticMap(Component):
                 field["type"] if not field["multiple"] else f"list[{field['type']}]",
                 False,
             )
-            for field in self.generated_fields
+            for field in self.schema
         ]
-        atype = create_pydantic_model(schema_fields, name="Target")
+        atype = create_pydantic_model(schema_fields, name="GeneratedData")
 
-        transduction_type = TRANSDUCTION_AMAP
-        target = AG(
-            atype=atype,
-            transduction_type=transduction_type,
-            instructions=self.instructions,
+        
+
+        
+        output_states = await generate_prototypical_instances(
+            atype,
+            n_instances=self.batch_size,
             llm=llm,
         )
-
-        output = await (target << source)
-
-        if self.append_to_input_columns:
-            output = source.merge_states(output)
+        output = AG(states=output_states)
 
         return output.to_dataframe().to_dict(orient="records")
