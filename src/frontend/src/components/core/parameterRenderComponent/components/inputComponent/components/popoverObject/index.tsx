@@ -9,7 +9,11 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
-import { Popover, PopoverContent } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverContentWithoutPortal,
+} from "@/components/ui/popover";
 import { classNames, cn } from "@/utils/utils";
 
 const CustomInputPopoverObject = ({
@@ -39,6 +43,10 @@ const CustomInputPopoverObject = ({
 }) => {
   const [cursor, setCursor] = useState<number | null>(null);
 
+  const PopoverContentInput = editNode
+    ? PopoverContent
+    : PopoverContentWithoutPortal;
+
   // Restore cursor position after value changes
   useEffect(() => {
     if (cursor !== null && refInput.current) {
@@ -62,15 +70,15 @@ const CustomInputPopoverObject = ({
           value={
             (selectedOption !== "" || !onChange) && setSelectedOption
               ? options.find((option) => option.id === selectedOption)?.name ||
-                ""
+              ""
               : (selectedOptions?.length !== 0 || !onChange) &&
-                  setSelectedOptions
+                setSelectedOptions
                 ? selectedOptions
-                    .map(
-                      (optionId) =>
-                        options.find((option) => option.id === optionId)?.name,
-                    )
-                    .join(", ")
+                  .map(
+                    (optionId) =>
+                      options.find((option) => option.id === optionId)?.name,
+                  )
+                  .join(", ")
                 : value
           }
           autoFocus={autoFocus}
@@ -92,7 +100,7 @@ const CustomInputPopoverObject = ({
           data-testid={id}
         />
       </PopoverAnchor>
-      <PopoverContent
+      <PopoverContentInput
         className="noflow nowheel nopan nodelete nodrag p-0"
         style={{ minWidth: refInput?.current?.clientWidth ?? "200px" }}
         side="bottom"
@@ -125,8 +133,8 @@ const CustomInputPopoverObject = ({
                       setSelectedOptions(
                         selectedOptions?.includes(currentValue)
                           ? selectedOptions.filter(
-                              (item) => item !== currentValue,
-                            )
+                            (item) => item !== currentValue,
+                          )
                           : [...selectedOptions, currentValue],
                       );
                     !setSelectedOptions && setShowOptions(false);
@@ -172,7 +180,7 @@ const CustomInputPopoverObject = ({
             </CommandGroup>
           </CommandList>
         </Command>
-      </PopoverContent>
+      </PopoverContentInput>
     </Popover>
   );
 };
