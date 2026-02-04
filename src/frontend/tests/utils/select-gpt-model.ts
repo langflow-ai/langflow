@@ -1,5 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect } from "../fixtures";
+import { adjustScreenView } from "./adjust-screen-view";
 import { unselectNodes } from "./unselect-nodes";
 
 export const selectGptModel = async (page: Page) => {
@@ -17,6 +18,7 @@ export const selectGptModel = async (page: Page) => {
     const model = (await node.getByTestId("model_model").last().isVisible())
       ? node.getByTestId("model_model").last()
       : page.getByTestId("model_model").last();
+    await adjustScreenView(page);
 
     await expect(model).toBeVisible({ timeout: 10000 });
     await model.click();
