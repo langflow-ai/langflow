@@ -2,6 +2,7 @@ import type { Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { closeAdvancedOptions, openAdvancedOptions } from "../../utils/open-advanced-options";
 
 // Helper function to verify prompt variables
 async function verifyPromptVariables(
@@ -122,7 +123,7 @@ test(
 
     // Final verification - check that the template persists
     await page.getByTestId("div-generic-node").click();
-    await page.getByTestId("edit-button-modal").last().click();
+    await openAdvancedOptions(page);
 
     const savedTemplate = await page
       .locator('//*[@id="promptarea_prompt_edit_template"]')
@@ -132,7 +133,7 @@ test(
     );
 
     // Close the final modal
-    await page.getByTestId("edit-button-close").last().click();
+    await closeAdvancedOptions(page);
   },
 );
 
@@ -219,7 +220,7 @@ test(
       expect(false).toBeTruthy();
     }
 
-    await page.getByTestId("edit-button-modal").last().click();
+    await openAdvancedOptions(page);
 
     value =
       (await page
@@ -321,10 +322,10 @@ test(
       await page.locator('//*[@id="showprompt"]').isChecked(),
     ).toBeTruthy();
 
-    await page.getByTestId("edit-button-close").last().click();
+    await closeAdvancedOptions(page);
     await adjustScreenView(page, { numberOfZoomOut: 2 });
 
-    await page.getByTestId("edit-button-modal").last().click();
+    await openAdvancedOptions(page);
 
     await page.locator('//*[@id="showprompt1"]').click();
     expect(
@@ -398,7 +399,7 @@ test(
     await page.waitForSelector('[data-testid="edit-button-modal"]', {
       timeout: 5000,
     });
-    await page.getByTestId("edit-button-modal").last().click();
+    await openAdvancedOptions(page);
 
     // Wait for the modal to open and the toggle to be visible
     await page.waitForSelector(
@@ -419,7 +420,7 @@ test(
     ).toBeTruthy();
 
     // Close the modal
-    await page.getByTestId("edit-button-close").last().click();
+    await closeAdvancedOptions(page);
 
     // Now test double bracket variable extraction - click the mustache prompt button
     await page.waitForSelector(
@@ -502,7 +503,7 @@ test(
     await page.waitForSelector('[data-testid="edit-button-modal"]', {
       timeout: 5000,
     });
-    await page.getByTestId("edit-button-modal").last().click();
+    await openAdvancedOptions(page);
 
     // Wait for the modal to open and the toggle to be visible
     await page.waitForSelector(
@@ -523,7 +524,7 @@ test(
     ).toBeTruthy();
 
     // Close the modal
-    await page.getByTestId("edit-button-close").last().click();
+    await closeAdvancedOptions(page);
 
     // Test multiple double bracket variables - click the mustache prompt button
     await page.waitForSelector(

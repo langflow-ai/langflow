@@ -1,6 +1,7 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { openAdvancedOptions } from "../../utils/open-advanced-options";
 
 test(
   "user should be able to create an api key within a webhook component",
@@ -45,7 +46,7 @@ test(
     await page.waitForSelector("text=Endpoint URL copied", { timeout: 30000 });
 
     await page.getByTestId("title-Webhook").click();
-    await page.getByTestId("edit-button-modal").click();
+    await openAdvancedOptions(page);
 
     await page
       .getByTestId("button_open_text_area_modal_str_edit_curl_advanced")

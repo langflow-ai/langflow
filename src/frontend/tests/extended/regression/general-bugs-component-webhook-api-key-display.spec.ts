@@ -3,6 +3,7 @@ import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { extractAndCleanCode } from "../../utils/extract-and-clean-code";
 import { loginLangflow } from "../../utils/login-langflow";
+import { openAdvancedOptions } from "../../utils/open-advanced-options";
 
 test(
   "user must be able to see api key in webhook component when auto login is disabled",
@@ -59,7 +60,7 @@ test(
 
     await page.getByTestId("title-Webhook").click();
 
-    await page.getByTestId("edit-button-modal").click();
+    await openAdvancedOptions(page);
 
     await page
       .getByTestId("button_open_text_area_modal_str_edit_curl_advanced")
@@ -114,7 +115,7 @@ test(
 
     await page.getByTestId("title-Webhook").click();
 
-    await page.getByTestId("edit-button-modal").click();
+    await openAdvancedOptions(page);
 
     await page
       .getByTestId("button_open_text_area_modal_str_edit_curl_advanced")

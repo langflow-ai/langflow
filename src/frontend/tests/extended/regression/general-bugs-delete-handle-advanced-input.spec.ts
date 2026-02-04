@@ -1,6 +1,7 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { closeAdvancedOptions, openAdvancedOptions } from "../../utils/open-advanced-options";
 
 import { zoomOut } from "../../utils/zoom-out";
 
@@ -28,10 +29,10 @@ test(
 
     await adjustScreenView(page, { numberOfZoomOut: 3 });
 
-    await page.getByTestId("edit-button-modal").click();
+    await openAdvancedOptions(page);
 
     await page.getByTestId("showtrue_case_message").click();
-    await page.getByTestId("edit-button-close").last().click();
+    await closeAdvancedOptions(page);
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("text input");
@@ -54,7 +55,7 @@ test(
 
     await page.getByTestId("title-If-Else").click();
 
-    await page.getByTestId("edit-button-modal").click();
+    await openAdvancedOptions(page);
 
     const numberOfDisabledInputs = await page
       .getByPlaceholder("Receiving input")
@@ -66,7 +67,7 @@ test(
 
     expect(numberOfLockIcons).toBe(2);
 
-    await page.getByTestId("edit-button-close").last().click();
+    await closeAdvancedOptions(page);
 
     await page.getByTestId("title-If-Else").click();
 
@@ -74,7 +75,7 @@ test(
 
     await page.getByTestId("checkAndSaveBtn").last().click();
 
-    await page.getByTestId("edit-button-modal").click();
+    await openAdvancedOptions(page);
 
     const numberOfDisabledInputsAfter = await page
       .getByPlaceholder("Receiving input")

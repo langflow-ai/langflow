@@ -1,6 +1,7 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { closeAdvancedOptions, openAdvancedOptions } from "../../utils/open-advanced-options";
 
 test(
   "dropDownComponent",
@@ -60,7 +61,7 @@ test(
       timeout: 3000,
     });
 
-    await page.getByTestId("edit-button-modal").last().click();
+    await openAdvancedOptions(page);
 
     await page.waitForTimeout(1000);
 
@@ -124,7 +125,7 @@ test(
       expect(false).toBeTruthy();
     }
 
-    await page.getByTestId("edit-button-close").last().click();
+    await closeAdvancedOptions(page);
 
     value = await page
       .getByTestId("value-dropdown-dropdown_str_model_id")

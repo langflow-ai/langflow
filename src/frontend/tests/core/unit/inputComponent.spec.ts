@@ -1,6 +1,7 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { closeAdvancedOptions, openAdvancedOptions } from "../../utils/open-advanced-options";
 
 test(
   "InputComponent",
@@ -53,7 +54,7 @@ test(
 
     await page.getByTestId("div-generic-node").click();
 
-    await page.getByTestId("edit-button-modal").last().click();
+    await openAdvancedOptions(page);
 
     await page
       .locator('//*[@id="showchroma_server_cors_allow_origins"]')
@@ -131,7 +132,7 @@ test(
       .nth(0)
       .fill("NEW_collection_name_test_123123123!@#$&*(&%$@ÇÇÇÀõe");
 
-    await page.getByTestId("edit-button-close").last().click();
+    await closeAdvancedOptions(page);
 
     const plusButtonLocator = page.getByTestId("input-collection_name");
     const elementCount = await plusButtonLocator?.count();
@@ -140,9 +141,9 @@ test(
 
       await page.getByTestId("div-generic-node").click();
 
-      await page.getByTestId("edit-button-modal").last().click();
+      await openAdvancedOptions(page);
 
-      await page.getByTestId("edit-button-close").last().click();
+      await closeAdvancedOptions(page);
 
       const value = await page
         .getByTestId("popover-anchor-input-collection_name")

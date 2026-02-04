@@ -52,7 +52,7 @@ export default function InspectionPanelEditField({
             ? "bg-primary/10 text-primary hover:bg-primary/20"
             : "bg-muted text-muted-foreground hover:bg-muted-foreground/20 hover:text-foreground",
         )}
-        data-testid={`toggle-${name}`}
+        data-testid={`show${name}`}
       >
         <IconComponent
           name={isOnCanvas ? "Minus" : "Plus"}
