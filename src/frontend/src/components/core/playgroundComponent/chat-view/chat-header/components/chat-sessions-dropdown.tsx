@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,6 +17,8 @@ interface ChatSessionsDropdownProps {
   onNewChat?: () => void;
   onSessionSelect?: (sessionId: string) => void;
   currentSessionId?: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export function ChatSessionsDropdown({
@@ -24,12 +26,19 @@ export function ChatSessionsDropdown({
   onNewChat,
   onSessionSelect,
   currentSessionId,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
 }: ChatSessionsDropdownProps) {
   const currentFlowId = useGetFlowId();
   const hasSessions: boolean = sessions.length > 0;
+  const [internalOpen, setInternalOpen] = useState(false);
+
+  // Use controlled state if provided, otherwise use internal state
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = controlledOnOpenChange || setInternalOpen;
 
   return (
-    <DropdownMenu>
+    <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
@@ -52,9 +61,9 @@ export function ChatSessionsDropdown({
                     "gap-2 text-sm",
                     currentSessionId === session && "font-semibold bg-accent",
                   )}
-                  onSelect={(event) => {
-                    event.preventDefault();
+                  onSelect={() => {
                     onSessionSelect?.(session);
+                    setOpen(false);
                   }}
                 >
                   {session === currentFlowId ? "Default Session" : session}
@@ -65,9 +74,9 @@ export function ChatSessionsDropdown({
             <DropdownMenuGroup>
               <DropdownMenuItem
                 className="gap-2 text-sm"
-                onSelect={(event) => {
-                  event.preventDefault();
+                onSelect={() => {
                   onNewChat?.();
+                  setOpen(false);
                 }}
               >
                 <ForwardedIconComponent name="Plus" className="h-4 w-4" />
@@ -78,9 +87,9 @@ export function ChatSessionsDropdown({
         ) : (
           <DropdownMenuItem
             className="gap-2 text-sm"
-            onSelect={(event) => {
-              event.preventDefault();
+            onSelect={() => {
               onNewChat?.();
+              setOpen(false);
             }}
           >
             <ForwardedIconComponent name="Plus" className="h-4 w-4" />
