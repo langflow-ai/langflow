@@ -191,3 +191,70 @@ class TestModelInputRefreshButton:
         """ModelInput should allow disabling refresh_button."""
         model_input = ModelInput(name="test_model", refresh_button=False)
         assert model_input.refresh_button is False
+
+
+class TestModelInputEmbeddingType:
+    """Test that ModelInput correctly handles embedding model_type (fix for LE-278).
+
+    When model_type is 'embedding' and value is 'connect_other_models',
+    input_types should be set to ['Embeddings'] instead of ['LanguageModel'].
+    """
+
+    def test_language_model_type_default(self):
+        """Default model_type should be 'language'."""
+        model_input = ModelInput(name="test_model")
+        assert model_input.model_type == "language"
+
+    def test_embedding_model_type_can_be_set(self):
+        """model_type can be set to 'embedding'."""
+        model_input = ModelInput(name="test_model", model_type="embedding")
+        assert model_input.model_type == "embedding"
+
+    def test_connect_other_models_with_language_type(self):
+        """When model_type='language' and value='connect_other_models', input_types should be ['LanguageModel']."""
+        model_input = ModelInput(
+            name="test_model",
+            model_type="language",
+            value="connect_other_models",
+        )
+        assert model_input.input_types == ["LanguageModel"]
+
+    def test_connect_other_models_with_embedding_type(self):
+        """When model_type='embedding' and value='connect_other_models', input_types should be ['Embeddings']."""
+        model_input = ModelInput(
+            name="test_model",
+            model_type="embedding",
+            value="connect_other_models",
+        )
+        assert model_input.input_types == ["Embeddings"]
+
+    def test_embedding_type_no_handle_without_connect_other_models(self):
+        """Embedding model with normal value should not show handle (empty input_types)."""
+        model_input = ModelInput(
+            name="test_model",
+            model_type="embedding",
+            value=[{"name": "text-embedding-ada-002"}],
+        )
+        assert model_input.input_types == []
+
+    def test_explicit_input_types_preserved_for_embedding(self):
+        """If input_types is explicitly set, it should not be overwritten."""
+        model_input = ModelInput(
+            name="test_model",
+            model_type="embedding",
+            input_types=["Embeddings"],
+            value="connect_other_models",
+        )
+        # Should preserve the explicit input_types (condition `not self.input_types` is False)
+        assert model_input.input_types == ["Embeddings"]
+
+    def test_explicit_input_types_preserved_for_language(self):
+        """If input_types is explicitly set for language model, it should not be overwritten."""
+        model_input = ModelInput(
+            name="test_model",
+            model_type="language",
+            input_types=["LanguageModel"],
+            value="connect_other_models",
+        )
+        # Should preserve the explicit input_types
+        assert model_input.input_types == ["LanguageModel"]

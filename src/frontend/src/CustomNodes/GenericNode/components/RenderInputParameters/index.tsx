@@ -48,11 +48,13 @@ const RenderInputParameters = ({
       if (template) {
         // For model type fields, provide default input_types if not set
         const isModelType = template.type === "model";
+        const defaultInputType =
+          template.model_type === "embedding" ? "Embeddings" : "LanguageModel";
         const effectiveInputTypes =
           template.input_types && template.input_types.length > 0
             ? template.input_types
             : isModelType
-              ? ["LanguageModel"]
+              ? [defaultInputType]
               : template.input_types;
 
         colorMap.set(templateField, {
@@ -108,11 +110,13 @@ const RenderInputParameters = ({
 
       // For model type fields, provide default input_types if not set
       const isModelType = template.type === "model";
+      const defaultInputType =
+        template.model_type === "embedding" ? "Embeddings" : "LanguageModel";
       const effectiveInputTypes =
         template.input_types && template.input_types.length > 0
           ? template.input_types
           : isModelType
-            ? ["LanguageModel"]
+            ? [defaultInputType]
             : template.input_types;
 
       return (

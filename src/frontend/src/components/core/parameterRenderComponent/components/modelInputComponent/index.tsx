@@ -249,8 +249,15 @@ export default function ModelInputComponent({
                 (Array.isArray(templateField.input_types)
                   ? templateField.input_types
                   : []) || [];
+              // Read model_type from fresh node data, not captured modelType variable
+              const currentModelType =
+                templateField.model_type === "embedding" ? "embeddings" : "llm";
+              const defaultInputType =
+                currentModelType === "embeddings"
+                  ? "Embeddings"
+                  : "LanguageModel";
               const effectiveInputTypes =
-                inputTypes.length > 0 ? inputTypes : ["LanguageModel"];
+                inputTypes.length > 0 ? inputTypes : [defaultInputType];
 
               const tooltipTitle: string =
                 (inputTypes && inputTypes.length > 0
@@ -288,7 +295,7 @@ export default function ModelInputComponent({
                 sourceHandle: undefined,
                 target: nodeId,
                 targetHandle: pseudoSourceHandle,
-                type: "LanguageModel",
+                type: defaultInputType,
                 color: "datatype-fuchsia",
               } as any;
 

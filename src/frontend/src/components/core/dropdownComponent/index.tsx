@@ -215,8 +215,12 @@ export default function Dropdown({
           (Array.isArray(templateField.input_types)
             ? templateField.input_types
             : []) || [];
+        const defaultInputType =
+          templateField.model_type === "embedding"
+            ? "Embeddings"
+            : "LanguageModel";
         const effectiveInputTypes =
-          inputTypes.length > 0 ? inputTypes : ["LanguageModel"];
+          inputTypes.length > 0 ? inputTypes : [defaultInputType];
         const tooltipTitle: string =
           (inputTypes && inputTypes.length > 0
             ? inputTypes.join("\n")
