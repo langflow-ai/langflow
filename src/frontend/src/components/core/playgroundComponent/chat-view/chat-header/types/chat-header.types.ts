@@ -11,4 +11,5 @@ export interface ChatHeaderProps {
   className?: string;
   openLogsModal?: boolean;
   setOpenLogsModal?: (open: boolean) => void;
+  renameLocalSession?: (oldSessionId: string, newSessionId: string) => void;
 }
