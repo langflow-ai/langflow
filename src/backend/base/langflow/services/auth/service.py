@@ -19,7 +19,6 @@ from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.services.auth.base import AuthServiceBase
 from langflow.services.auth.exceptions import (
     InactiveUserError,
-    InsufficientPermissionsError,
     InvalidCredentialsError,
     MissingCredentialsError,
     TokenExpiredError,
