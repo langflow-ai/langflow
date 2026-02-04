@@ -826,7 +826,7 @@
   },
   "LoopComponent": {
     "versions": {
-      "0.3.0": "0e339ea4a431"
+      "0.3.0": "9f88705635cd"
     }
   },
   "Notify": {
@@ -1772,6 +1772,11 @@
   "ZepChatMemory": {
     "versions": {
       "0.3.0": "ec825c33caf6"
+    }
+  },
+  "WhileLoopComponent": {
+    "versions": {
+      "0.3.0": "f9cc625c0fb5"
     }
   }
 }

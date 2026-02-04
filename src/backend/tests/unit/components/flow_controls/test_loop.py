@@ -356,6 +356,7 @@ class TestLoopComponentSubgraphExecution:
 
     async def test_event_manager_passed_to_subgraph(self):
         """Test that event_manager is properly passed to subgraph execution."""
+        from contextlib import asynccontextmanager
         from unittest.mock import MagicMock, patch
 
         from lfx.schema.dataframe import DataFrame
@@ -384,28 +385,36 @@ class TestLoopComponentSubgraphExecution:
             assert result == []
 
         # Now test with actual loop body vertices
-        mock_subgraph = MagicMock()
-        mock_subgraph.prepare = MagicMock()
+        # Track whether event_manager was passed correctly
+        event_manager_received = []
 
         # Create an async generator that yields mock results
         async def mock_async_start(event_manager=None):
-            # Verify event_manager was passed
-            assert event_manager is mock_event_manager, "event_manager should be passed to async_start"
+            event_manager_received.append(event_manager)
             yield MagicMock(valid=True, result_dict={"outputs": {}})
 
+        mock_subgraph = MagicMock()
+        mock_subgraph.prepare = MagicMock()
         mock_subgraph.async_start = mock_async_start
+        mock_subgraph._vertices = []  # Empty list for iteration
         mock_subgraph.get_vertex = MagicMock(return_value=MagicMock(update_raw_params=MagicMock()))
+
+        # Create async context manager for create_subgraph
+        @asynccontextmanager
+        async def mock_create_subgraph(vertex_ids):  # noqa: ARG001
+            yield mock_subgraph
 
         with (
             patch.object(loop, "get_loop_body_vertices", return_value={"vertex1"}),
             patch.object(loop, "_get_loop_body_start_vertex", return_value="vertex1"),
-            patch.object(loop.graph, "create_subgraph", return_value=mock_subgraph),
-            patch("copy.deepcopy", return_value=mock_subgraph),
+            patch.object(loop.graph, "create_subgraph", mock_create_subgraph),
         ):
-            result = await loop.execute_loop_body(data_list, event_manager=mock_event_manager)
+            await loop.execute_loop_body(data_list, event_manager=mock_event_manager)
 
-            # Should have processed all items
-            assert len(result) == 2
+            # Should have processed all items (one call per item)
+            assert len(event_manager_received) == 2
+            # Verify event_manager was passed correctly to each iteration
+            assert all(em is mock_event_manager for em in event_manager_received)
 
     async def test_done_output_passes_event_manager(self):
         """Test that done_output properly passes event_manager to execute_loop_body."""
@@ -421,6 +430,8 @@ class TestLoopComponentSubgraphExecution:
         data_list = [Data(text="item1")]
         loop.set(data=DataFrame(data_list))
         loop._id = "test_loop"
+        # Set the event manager as an instance attribute (this is how it's accessed in done_output)
+        loop._event_manager = mock_event_manager
 
         # Mock execute_loop_body to return expected data
         mock_execute = AsyncMock(return_value=[Data(text="result")])
@@ -441,7 +452,7 @@ class TestLoopComponentSubgraphExecution:
             patch.object(loop, "initialize_data", mock_initialize_data),
             patch.object(type(loop), "ctx", new_callable=PropertyMock, return_value=mock_ctx),
         ):
-            result = await loop.done_output(event_manager=mock_event_manager)
+            result = await loop.done_output()
 
             # Verify execute_loop_body was called with the event_manager
             mock_execute.assert_called_once()
