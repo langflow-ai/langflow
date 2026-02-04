@@ -1,0 +1,101 @@
+customer_id,first_name,last_name,email,age,city,country,product,order_date,order_value,quantity,discount,is_premium,satisfaction_score,last_contact,full_name,discounted_value,total_value,age_group
+CUST-10000,Lisa,Johnson,user1@example.com,60,New York,UK,Product E,2026-01-13,928.77,7,0.28,False,3,2026-01-11,Lisa Johnson,668.7144,4681.0008,51-65
+CUST-10001,David,Garcia,user2@example.com,38,Los Angeles,Brazil,Product E,2025-07-06,915.76,10,0.09,False,8,2025-06-14,David Garcia,833.3416,8333.416,36-50
+CUST-10002,Robert,Rodriguez,user3@example.com,49,San Jose,France,Product B,2025-03-18,556.2,10,0.28,True,3,2025-06-15,Robert Rodriguez,400.464,4004.64,36-50
+CUST-10003,Michael,Garcia,user4@example.com,29,San Diego,France,Product E,2025-06-27,200.38,3,0.22,True,7,2025-07-13,Michael Garcia,156.2964,468.8892,26-35
+CUST-10004,Michael,Brown,user5@example.com,21,New York,Germany,Product D,2025-10-10,573.89,8,0.23,True,2,2025-12-01,Michael Brown,441.8953,3535.1624,18-25
+CUST-10005,Robert,Brown,user6@example.com,58,New York,Australia,Service X,2025-10-19,503.4,3,0.29,True,2,2025-09-28,Robert Brown,357.414,1072.242,51-65
+CUST-10006,Michael,Martinez,user7@example.com,50,New York,Brazil,Product A,2025-06-24,11.99,8,0.02,True,2,2025-02-07,Michael Martinez,11.7502,94.0016,36-50
+CUST-10007,Jane,Jones,user8@example.com,20,San Jose,Canada,Product E,2025-02-18,358.21,4,0.09,False,7,2025-06-04,Jane Jones,325.9711,1303.8844,18-25
+CUST-10008,Robert,Brown,user9@example.com,45,New York,Germany,Service Z,2025-07-30,945.76,1,0.01,False,10,2025-05-21,Robert Brown,936.3024,936.3024,36-50
+CUST-10009,Sarah,Johnson,user10@example.com,76,Los Angeles,Australia,Product C,2025-05-02,38.65,4,0.07,False,10,2025-05-08,Sarah Johnson,35.9445,143.778,65+
+CUST-10010,Emily,Brown,user11@example.com,21,San Jose,Brazil,Product D,2025-04-21,871.35,7,0.21,True,4,2025-03-07,Emily Brown,688.3665000000001,4818.565500000001,18-25
+CUST-10011,William,Miller,user12@example.com,79,San Diego,Brazil,Product A,2025-08-22,861.73,7,0.17,True,9,2025-04-13,William Miller,715.2359,5006.6513,65+
+CUST-10012,Michael,Davis,user13@example.com,31,Houston,Canada,Service Y,2025-11-14,952.22,7,0.23,False,9,2025-08-14,Michael Davis,733.2094000000001,5132.465800000001,26-35
+CUST-10013,Jane,Jones,user14@example.com,59,Chicago,Brazil,Product D,2026-01-04,752.83,8,0.23,False,2,2025-06-21,Jane Jones,579.6791000000001,4637.4328000000005,51-65
+CUST-10014,Robert,Rodriguez,user15@example.com,78,New York,France,Service Z,2025-03-22,557.61,2,0.25,False,6,2026-01-03,Robert Rodriguez,418.2075,836.415,65+
+CUST-10015,David,Martinez,user16@example.com,58,San Diego,Germany,Product D,2025-05-21,66.24,1,0.15,True,10,2025-07-19,David Martinez,56.303999999999995,56.303999999999995,51-65
+CUST-10016,John,Miller,user17@example.com,42,Philadelphia,Canada,Service Z,2025-02-16,712.84,7,0.2,False,4,2025-07-27,John Miller,570.272,3991.9040000000005,36-50
+CUST-10017,Emily,Williams,user18@example.com,44,Philadelphia,Japan,Product E,2026-01-20,449.79,3,0.03,True,4,2026-01-16,Emily Williams,436.29630000000003,1308.8889000000001,36-50
+CUST-10018,Michael,Garcia,user19@example.com,49,Dallas,India,Product E,2025-03-12,739.28,8,0.23,False,3,2025-07-29,Michael Garcia,569.2456,4553.9648,36-50
+CUST-10019,Jane,Rodriguez,user20@example.com,56,Phoenix,France,Product B,2025-12-13,634.79,10,0.13,True,4,2025-09-22,Jane Rodriguez,552.2673,5522.673,51-65
+CUST-10020,Emily,Jones,user21@example.com,63,Phoenix,Mexico,Service Z,2025-06-08,315.68,9,0.3,False,1,2025-08-08,Emily Jones,220.976,1988.784,51-65
+CUST-10021,Michael,Brown,user22@example.com,22,San Jose,Brazil,Service Y,2026-02-02,850.24,1,0.28,False,1,2026-01-09,Michael Brown,612.1727999999999,612.1727999999999,18-25
+CUST-10022,Sarah,Davis,user23@example.com,76,New York,Brazil,Product C,2025-11-26,369.6,1,0.08,True,4,2025-09-10,Sarah Davis,340.03200000000004,340.03200000000004,65+
+CUST-10023,Jane,Johnson,user24@example.com,74,San Diego,Canada,Product B,2025-11-28,980.09,6,0.28,True,7,2025-12-25,Jane Johnson,705.6648,4233.9888,65+
+CUST-10024,Lisa,Williams,user25@example.com,19,Philadelphia,Japan,Product E,2025-07-02,171.97,8,0.24,False,6,2025-10-25,Lisa Williams,130.6972,1045.5776,18-25
+CUST-10025,Michael,Williams,user26@example.com,50,Phoenix,UK,Service Z,2025-04-12,408.52,10,0.06,True,5,2025-04-25,Michael Williams,384.00879999999995,3840.0879999999997,36-50
+CUST-10026,John,Garcia,user27@example.com,78,San Diego,UK,Product C,2025-09-22,348.45,9,0.05,True,5,2025-09-26,John Garcia,331.0275,2979.2475,65+
+CUST-10027,Sarah,Davis,user28@example.com,60,Phoenix,India,Service X,2026-01-01,240.9,5,0.3,False,5,2025-09-17,Sarah Davis,168.63,843.15,51-65
+CUST-10028,Robert,Williams,user29@example.com,26,Chicago,Germany,Product D,2025-11-25,318.98,4,0.1,True,8,2025-05-13,Robert Williams,287.08200000000005,1148.3280000000002,26-35
+CUST-10029,Michael,Jones,user30@example.com,50,Chicago,France,Product C,2026-01-29,107.39,10,0.28,True,3,2026-02-03,Michael Jones,77.32079999999999,773.2079999999999,36-50
+CUST-10030,Michael,Smith,user31@example.com,76,Dallas,Canada,Service Z,2025-12-25,205.38,1,0.11,True,3,2025-11-04,Michael Smith,182.7882,182.7882,65+
+CUST-10031,Emily,Johnson,user32@example.com,75,Los Angeles,UK,Product A,2025-06-01,984.78,4,0.19,True,4,2025-04-13,Emily Johnson,797.6718000000001,3190.6872000000003,65+
+CUST-10032,William,Brown,user33@example.com,29,New York,UK,Service Z,2025-03-15,773.71,4,0.13,False,6,2026-01-26,William Brown,673.1277,2692.5108,26-35
+CUST-10033,Lisa,Miller,user34@example.com,65,Dallas,USA,Service Y,2025-07-28,539.76,6,0.04,False,3,2025-08-24,Lisa Miller,518.1696,3109.0175999999997,51-65
+CUST-10034,Emily,Smith,user35@example.com,63,Philadelphia,France,Product E,2025-05-20,924.21,3,0.13,False,8,2025-07-15,Emily Smith,804.0627000000001,2412.1881000000003,51-65
+CUST-10035,Robert,Brown,user36@example.com,75,Dallas,India,Product D,2025-10-12,62.78,1,0.27,False,3,2025-07-01,Robert Brown,45.8294,45.8294,65+
+CUST-10036,Robert,Rodriguez,user37@example.com,60,New York,Mexico,Product C,2025-08-08,607.09,1,0.13,False,6,2026-01-13,Robert Rodriguez,528.1683,528.1683,51-65
+CUST-10037,Jane,Garcia,user38@example.com,28,Dallas,UK,Service Y,2025-04-26,845.83,3,0.2,False,7,2025-06-25,Jane Garcia,676.6640000000001,2029.9920000000002,26-35
+CUST-10038,Jennifer,Smith,user39@example.com,51,San Antonio,India,Service Y,2026-01-29,343.33,8,0.03,False,9,2025-11-17,Jennifer Smith,333.03009999999995,2664.2407999999996,51-65
+CUST-10039,Lisa,Miller,user40@example.com,58,Dallas,Japan,Product C,2025-11-07,708.14,10,0.29,True,7,2025-12-09,Lisa Miller,502.77939999999995,5027.794,51-65
+CUST-10040,Jennifer,Williams,user41@example.com,35,Phoenix,India,Product D,2025-12-23,992.82,8,0.11,True,10,2025-09-10,Jennifer Williams,883.6098000000001,7068.8784000000005,26-35
+CUST-10041,Lisa,Williams,user42@example.com,50,San Antonio,Germany,Product B,2025-03-24,58.88,1,0.18,True,6,2025-10-09,Lisa Williams,48.281600000000005,48.281600000000005,36-50
+CUST-10042,Lisa,Brown,user43@example.com,51,Chicago,Canada,Service Z,2025-03-01,912.55,3,0.1,True,10,2025-10-23,Lisa Brown,821.295,2463.8849999999998,51-65
+CUST-10043,Emily,Davis,user44@example.com,39,Los Angeles,USA,Product E,2025-02-23,661.38,6,0.18,False,6,2026-01-30,Emily Davis,542.3316000000001,3253.989600000001,36-50
+CUST-10044,David,Brown,user45@example.com,78,Dallas,UK,Service X,2025-10-13,694.24,2,0.17,False,7,2025-04-01,David Brown,576.2192,1152.4384,65+
+CUST-10045,John,Williams,user46@example.com,28,San Diego,Canada,Product C,2025-04-25,541.17,6,0.17,False,7,2025-10-16,John Williams,449.17109999999997,2695.0265999999997,26-35
+CUST-10046,John,Johnson,user47@example.com,37,Houston,Brazil,Service X,2025-12-12,515.95,6,0.29,False,4,2025-06-23,John Johnson,366.3245,2197.947,36-50
+CUST-10047,Emily,Brown,user48@example.com,18,San Jose,USA,Product D,2025-06-03,420.67,5,0.27,True,1,2025-07-13,Emily Brown,307.08910000000003,1535.4455000000003,18-25
+CUST-10048,Sarah,Brown,user49@example.com,72,New York,Canada,Service Z,2026-01-06,205.55,1,0.12,True,4,2025-08-20,Sarah Brown,180.88400000000001,180.88400000000001,65+
+CUST-10049,Jane,Smith,user50@example.com,60,Houston,Canada,Service Y,2025-11-15,757.69,1,0.11,True,4,2025-09-19,Jane Smith,674.3441,674.3441,51-65
+CUST-10000,Michael,Miller,user1@example.com,40,Phoenix,Australia,Product B,2025-05-22,480.67,5,0.1,False,10,2025-03-29,Michael Miller,432.603,2163.015,36-50
+CUST-10001,Jennifer,Smith,user2@example.com,40,San Jose,France,Product B,2025-11-06,650.72,2,0.28,False,1,2025-07-31,Jennifer Smith,468.5184,937.0368,36-50
+CUST-10002,David,Miller,user3@example.com,23,San Jose,India,Service Z,2025-07-25,463.65,4,0.3,False,4,2025-09-24,David Miller,324.55499999999995,1298.2199999999998,18-25
+CUST-10003,Michael,Garcia,user4@example.com,72,Los Angeles,UK,Product D,2025-10-24,926.02,4,0.21,False,8,2025-05-05,Michael Garcia,731.5558,2926.2232,65+
+CUST-10004,Sarah,Davis,user5@example.com,26,San Diego,Japan,Service Z,2025-10-26,531.32,3,0.05,False,10,2025-10-27,Sarah Davis,504.754,1514.2620000000002,26-35
+CUST-10005,Emily,Garcia,user6@example.com,76,San Antonio,India,Product D,2025-10-17,171.73,1,0.16,True,7,2025-07-15,Emily Garcia,144.2532,144.2532,65+
+CUST-10006,William,Brown,user7@example.com,46,New York,Canada,Service X,2025-08-03,944.88,6,0.18,False,7,2025-07-18,William Brown,774.8016,4648.8096000000005,36-50
+CUST-10007,Lisa,Martinez,user8@example.com,41,New York,India,Service Y,2026-01-17,886.73,3,0.07,False,6,2025-08-22,Lisa Martinez,824.6589,2473.9767,36-50
+CUST-10008,Lisa,Williams,user9@example.com,32,Chicago,Canada,Product C,2025-07-05,342.09,5,0.23,False,10,2025-12-21,Lisa Williams,263.4093,1317.0465,26-35
+CUST-10009,William,Davis,user10@example.com,20,San Diego,USA,Product C,2025-07-29,740.15,5,0.3,False,2,2025-03-15,William Davis,518.1049999999999,2590.5249999999996,18-25
+CUST-10010,Emily,Jones,user11@example.com,31,Phoenix,Mexico,Product E,2025-07-19,513.33,10,0.15,False,6,2025-08-16,Emily Jones,436.33050000000003,4363.305,26-35
+CUST-10011,Michael,Williams,user12@example.com,22,San Jose,Japan,Product B,2025-03-17,114.07,6,0.23,False,3,2025-12-06,Michael Williams,87.8339,527.0034,18-25
+CUST-10012,Lisa,Martinez,user13@example.com,36,Philadelphia,Japan,Product A,2025-11-01,818.09,7,0.14,True,6,2025-10-06,Lisa Martinez,703.5574,4924.901800000001,36-50
+CUST-10013,John,Smith,user14@example.com,22,Phoenix,Japan,Product B,2025-02-09,989.11,2,0.11,True,5,2025-06-22,John Smith,880.3079,1760.6158,18-25
+CUST-10014,Lisa,Johnson,user15@example.com,53,San Jose,Japan,Service Y,2025-03-31,224.01,4,0.2,True,2,2025-04-17,Lisa Johnson,179.208,716.832,51-65
+CUST-10015,Sarah,Davis,user16@example.com,63,Dallas,USA,Service Y,2025-04-07,300.12,6,0.15,True,3,2025-06-29,Sarah Davis,255.102,1530.612,51-65
+CUST-10016,Robert,Rodriguez,user17@example.com,39,Los Angeles,Germany,Product B,2025-12-09,911.13,6,0.29,True,8,2025-11-18,Robert Rodriguez,646.9023,3881.4138,36-50
+CUST-10017,Lisa,Davis,user18@example.com,74,Chicago,Australia,Product D,2025-02-03,211.61,1,0.01,True,7,2025-06-30,Lisa Davis,209.49390000000002,209.49390000000002,65+
+CUST-10018,Jane,Brown,user19@example.com,31,Dallas,Mexico,Product C,2025-07-25,19.4,9,0.03,True,10,2025-10-23,Jane Brown,18.817999999999998,169.36199999999997,26-35
+CUST-10019,Sarah,Garcia,user20@example.com,77,San Antonio,UK,Service X,2025-10-06,351.64,8,0.28,False,3,2025-08-17,Sarah Garcia,253.18079999999998,2025.4463999999998,65+
+CUST-10020,John,Martinez,user21@example.com,41,San Diego,Japan,Product B,2025-11-01,270.08,10,0.08,False,2,2025-02-12,John Martinez,248.4736,2484.736,36-50
+CUST-10021,John,Martinez,user22@example.com,19,New York,Germany,Product A,2025-08-25,465.57,2,0.24,True,10,2025-07-28,John Martinez,353.8332,707.6664,18-25
+CUST-10022,Michael,Garcia,user23@example.com,72,Chicago,Japan,Product E,2025-12-15,960.67,4,0.19,True,3,2025-11-10,Michael Garcia,778.1427,3112.5708,65+
+CUST-10023,John,Johnson,user24@example.com,49,Chicago,India,Product E,2025-08-12,21.94,5,0.03,True,7,2025-04-15,John Johnson,21.2818,106.409,36-50
+CUST-10024,Michael,Martinez,user25@example.com,64,Philadelphia,Germany,Product E,2025-10-17,289.61,1,0.23,True,9,2025-09-08,Michael Martinez,222.99970000000002,222.99970000000002,51-65
+CUST-10025,Jennifer,Williams,user26@example.com,31,New York,Mexico,Product C,2025-02-10,962.1,5,0.14,False,7,2025-09-11,Jennifer Williams,827.4060000000001,4137.030000000001,26-35
+CUST-10026,John,Rodriguez,user27@example.com,21,Chicago,Canada,Product A,2025-12-20,361.17,2,0.26,False,10,2025-05-22,John Rodriguez,267.2658,534.5316,18-25
+CUST-10027,Emily,Williams,user28@example.com,67,San Jose,Australia,Product B,2025-04-19,172.72,9,0.07,False,9,2025-05-14,Emily Williams,160.62959999999998,1445.6663999999998,65+
+CUST-10028,William,Martinez,user29@example.com,71,New York,Brazil,Service Y,2025-06-07,703.74,9,0.22,True,1,2025-11-03,William Martinez,548.9172,4940.2548,65+
+CUST-10029,John,Martinez,user30@example.com,24,Los Angeles,UK,Service Z,2025-03-02,714.85,6,0.06,False,1,2025-09-11,John Martinez,671.959,4031.754,18-25
+CUST-10030,David,Smith,user31@example.com,55,Philadelphia,Mexico,Product B,2025-05-08,228.54,3,0.08,False,9,2025-07-13,David Smith,210.2568,630.7704,51-65
+CUST-10031,Robert,Jones,user32@example.com,63,San Diego,India,Product B,2025-07-23,712.47,10,0.03,False,2,2025-09-08,Robert Jones,691.0959,6910.959000000001,51-65
+CUST-10032,Emily,Williams,user33@example.com,20,San Diego,USA,Product B,2025-10-14,660.56,8,0.06,False,3,2025-07-08,Emily Williams,620.9264,4967.4112,18-25
+CUST-10033,Michael,Smith,user34@example.com,49,Philadelphia,Japan,Service Z,2025-12-16,645.71,10,0.27,False,7,2025-09-26,Michael Smith,471.36830000000003,4713.683,36-50
+CUST-10034,David,Jones,user35@example.com,79,Los Angeles,UK,Product C,2025-05-19,305.64,5,0.25,False,2,2025-05-15,David Jones,229.23,1146.1499999999999,65+
+CUST-10035,Sarah,Martinez,user36@example.com,30,New York,France,Service Z,2025-09-05,168.77,8,0.14,False,10,2025-06-09,Sarah Martinez,145.1422,1161.1376,26-35
+CUST-10036,Michael,Johnson,user37@example.com,19,San Diego,Germany,Product D,2026-01-19,783.37,2,0.07,False,7,2025-10-16,Michael Johnson,728.5341,1457.0682,18-25
+CUST-10037,Jane,Brown,user38@example.com,36,Los Angeles,India,Product E,2025-09-10,886.25,10,0.23,True,1,2025-04-09,Jane Brown,682.4125,6824.125,36-50
+CUST-10038,Jennifer,Rodriguez,user39@example.com,74,Phoenix,Germany,Service X,2025-06-20,203.17,10,0.28,False,10,2025-02-15,Jennifer Rodriguez,146.2824,1462.824,65+
+CUST-10039,William,Rodriguez,user40@example.com,41,Phoenix,Brazil,Service Z,2026-01-12,443.34,9,0.26,False,2,2026-01-01,William Rodriguez,328.0716,2952.6444,36-50
+CUST-10040,Emily,Davis,user41@example.com,76,Dallas,France,Service Y,2025-09-22,314.74,3,0.2,False,3,2025-02-15,Emily Davis,251.79200000000003,755.3760000000001,65+
+CUST-10041,John,Miller,user42@example.com,33,San Diego,Brazil,Product B,2025-09-08,485.34,6,0.15,True,9,2025-12-15,John Miller,412.539,2475.234,26-35
+CUST-10042,Emily,Miller,user43@example.com,60,San Diego,France,Product C,2025-12-21,549.86,6,0.19,False,6,2025-08-15,Emily Miller,445.38660000000004,2672.3196000000003,51-65
+CUST-10043,William,Williams,user44@example.com,26,San Jose,Brazil,Product D,2025-12-11,570.09,6,0.3,True,6,2025-08-29,William Williams,399.063,2394.3779999999997,26-35
+CUST-10044,Jane,Brown,user45@example.com,72,Philadelphia,Mexico,Product A,2025-02-09,38.2,1,0.05,False,10,2025-05-29,Jane Brown,36.29,36.29,65+
+CUST-10045,Jennifer,Garcia,user46@example.com,51,Houston,Mexico,Service X,2025-12-15,617.82,7,0.19,True,4,2025-11-27,Jennifer Garcia,500.4342000000001,3503.0394000000006,51-65
+CUST-10046,Robert,Johnson,user47@example.com,61,San Diego,Mexico,Service X,2026-02-02,375.7,3,0.05,False,3,2026-01-26,Robert Johnson,356.91499999999996,1070.745,51-65
+CUST-10047,Jane,Rodriguez,user48@example.com,22,Los Angeles,Germany,Product C,2025-07-15,401.04,9,0.16,True,8,2026-01-28,Jane Rodriguez,336.8736,3031.8624,18-25
+CUST-10048,Michael,Brown,user49@example.com,55,San Antonio,Germany,Service Z,2025-09-17,784.37,3,0.24,False,3,2025-04-18,Michael Brown,596.1212,1788.3636000000001,51-65
+CUST-10049,Lisa,Martinez,user50@example.com,64,Los Angeles,USA,Service Z,2025-02-15,744.15,5,0.19,True,5,2025-12-13,Lisa Martinez,602.7615000000001,3013.8075000000003,51-65
