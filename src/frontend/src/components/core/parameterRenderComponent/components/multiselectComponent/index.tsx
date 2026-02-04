@@ -35,9 +35,8 @@ export default function MultiselectComponent({
 
   const refButton = useRef<HTMLButtonElement>(null);
 
-  const PopoverContentDropdown = editNode || inspectionPanel
-    ? PopoverContent
-    : PopoverContentWithoutPortal;
+  const PopoverContentDropdown =
+    editNode || inspectionPanel ? PopoverContent : PopoverContentWithoutPortal;
 
   const [customValues, setCustomValues] = useState<string[]>([]);
   const [searchValue, setSearchValue] = useState("");
@@ -124,7 +123,7 @@ export default function MultiselectComponent({
       >
         <span className="truncate" data-testid={`value-dropdown-${id}`}>
           {treatedValue.length > 0 &&
-            options.find((option) => treatedValue.includes(option))
+          options.find((option) => treatedValue.includes(option))
             ? treatedValue.join(", ")
             : "Choose an option..."}
         </span>

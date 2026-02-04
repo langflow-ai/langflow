@@ -101,7 +101,9 @@ export default function Dropdown({
   const { firstWord } = formatName(name);
   const fuse = new Fuse(validOptions, { keys: ["name", "value"] });
   const PopoverContentDropdown =
-    children || editNode || inspectionPanel ? PopoverContent : PopoverContentWithoutPortal;
+    children || editNode || inspectionPanel
+      ? PopoverContent
+      : PopoverContentWithoutPortal;
   const { helperText, hasRefreshButton } = baseInputProps;
 
   // API and store hooks
@@ -438,16 +440,16 @@ export default function Dropdown({
                     options?.includes(value) ? (
                       value
                     ) : // this logic is used for the agents component, if you update make sure to test the agent component
-                      sourceOptions?.fields?.data?.node?.name ===
-                        "connect_other_models" ? (
-                        <span className="text-muted-foreground">
-                          <LoadingTextComponent
-                            text={placeholder || SELECT_AN_OPTION}
-                          />
-                        </span>
-                      ) : (
-                        placeholder || SELECT_AN_OPTION
-                      )
+                    sourceOptions?.fields?.data?.node?.name ===
+                      "connect_other_models" ? (
+                      <span className="text-muted-foreground">
+                        <LoadingTextComponent
+                          text={placeholder || SELECT_AN_OPTION}
+                        />
+                      </span>
+                    ) : (
+                      placeholder || SELECT_AN_OPTION
+                    )
                     // ) : (
                     //   <span className="text-muted-foreground">
                     //     <LoadingTextComponent
@@ -726,7 +728,7 @@ export default function Dropdown({
 
   // Main render
   return (
-    <Popover open={open} onOpenChange={children ? () => { } : setOpen}>
+    <Popover open={open} onOpenChange={children ? () => {} : setOpen}>
       {children ? (
         <PopoverAnchor>{children}</PopoverAnchor>
       ) : refreshOptions || isLoading ? (

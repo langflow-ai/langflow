@@ -26,32 +26,32 @@ const OptionBadge = ({
 }: {
   option: string;
   variant?:
-  | "default"
-  | "emerald"
-  | "gray"
-  | "secondary"
-  | "destructive"
-  | "outline"
-  | "secondaryStatic"
-  | "pinkStatic"
-  | "successStatic"
-  | "errorStatic";
+    | "default"
+    | "emerald"
+    | "gray"
+    | "secondary"
+    | "destructive"
+    | "outline"
+    | "secondaryStatic"
+    | "pinkStatic"
+    | "successStatic"
+    | "errorStatic";
   className?: string;
   onRemove: (e: React.MouseEvent<HTMLButtonElement>) => void;
 }) => (
   <Badge
     variant={
       variant as
-      | "default"
-      | "emerald"
-      | "gray"
-      | "secondary"
-      | "destructive"
-      | "outline"
-      | "secondaryStatic"
-      | "pinkStatic"
-      | "successStatic"
-      | "errorStatic"
+        | "default"
+        | "emerald"
+        | "gray"
+        | "secondary"
+        | "destructive"
+        | "outline"
+        | "secondaryStatic"
+        | "pinkStatic"
+        | "successStatic"
+        | "errorStatic"
     }
     className={cn("flex items-center gap-1 truncate", className)}
   >
@@ -134,7 +134,7 @@ const getInputClassName = (
     editNode && "pl-2 pr-6",
     editNode && disabled && "h-fit w-fit",
     disabled &&
-    "disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground",
+      "disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground",
     password && "text-clip pr-14",
     blockAddNewGlobalVariable && "text-clip pr-8",
     selectedOptions?.length > 0 && "cursor-default",
@@ -152,7 +152,7 @@ const getAnchorClassName = (
     editNode && disabled && "min-h-5 border-muted",
     disabled && "bg-muted text-muted",
     isFocused &&
-    "border-foreground ring-1 ring-foreground hover:border-foreground",
+      "border-foreground ring-1 ring-foreground hover:border-foreground",
   );
 };
 
@@ -192,9 +192,8 @@ const CustomInputPopover = ({
   const [cursor, setCursor] = useState<number | null>(null);
   const memoizedOptions = useMemo(() => new Set<string>(options), [options]);
 
-  const PopoverContentInput = editNode || inspectionPanel
-    ? PopoverContent
-    : PopoverContentWithoutPortal;
+  const PopoverContentInput =
+    editNode || inspectionPanel ? PopoverContent : PopoverContentWithoutPortal;
 
   // Restore cursor position after value changes
   useEffect(() => {

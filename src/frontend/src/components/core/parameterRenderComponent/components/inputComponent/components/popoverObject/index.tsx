@@ -44,9 +44,8 @@ const CustomInputPopoverObject = ({
 }) => {
   const [cursor, setCursor] = useState<number | null>(null);
 
-  const PopoverContentInput = editNode || inspectionPanel
-    ? PopoverContent
-    : PopoverContentWithoutPortal;
+  const PopoverContentInput =
+    editNode || inspectionPanel ? PopoverContent : PopoverContentWithoutPortal;
 
   // Restore cursor position after value changes
   useEffect(() => {
@@ -71,15 +70,15 @@ const CustomInputPopoverObject = ({
           value={
             (selectedOption !== "" || !onChange) && setSelectedOption
               ? options.find((option) => option.id === selectedOption)?.name ||
-              ""
+                ""
               : (selectedOptions?.length !== 0 || !onChange) &&
-                setSelectedOptions
+                  setSelectedOptions
                 ? selectedOptions
-                  .map(
-                    (optionId) =>
-                      options.find((option) => option.id === optionId)?.name,
-                  )
-                  .join(", ")
+                    .map(
+                      (optionId) =>
+                        options.find((option) => option.id === optionId)?.name,
+                    )
+                    .join(", ")
                 : value
           }
           autoFocus={autoFocus}
@@ -135,8 +134,8 @@ const CustomInputPopoverObject = ({
                       setSelectedOptions(
                         selectedOptions?.includes(currentValue)
                           ? selectedOptions.filter(
-                            (item) => item !== currentValue,
-                          )
+                              (item) => item !== currentValue,
+                            )
                           : [...selectedOptions, currentValue],
                       );
                     !setSelectedOptions && setShowOptions(false);
