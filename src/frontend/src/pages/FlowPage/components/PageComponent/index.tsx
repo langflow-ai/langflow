@@ -746,8 +746,14 @@ export default function Page({
     maxZoom: MAX_ZOOM,
   };
 
+  // Get inspection panel visibility from store
+  const inspectionPanelVisible = useFlowStore(
+    (state) => state.inspectionPanelVisible,
+  );
+
   // Determine if InspectionPanel should be visible
   const showInspectionPanel =
+    inspectionPanelVisible &&
     lastSelection?.nodes?.length === 1 &&
     lastSelection.nodes[0].type === "genericNode";
 

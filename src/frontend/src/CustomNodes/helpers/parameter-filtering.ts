@@ -46,8 +46,8 @@ export function isCanvasVisible(template: InputFieldType, isToolMode: boolean) {
  */
 export function shouldDisplayOnCanvas(template: InputFieldType) {
   if (ENABLE_INSPECTION_PANEL) {
-    // When inspection panel is enabled, we only show fields with handles on the canvas
-    return hasHandle(template);
+    // When inspection panel is enabled, show all fields except advanced
+    return !template.advanced;
   }
   return true;
 }
@@ -65,6 +65,8 @@ export function shouldRenderInspectionPanelField(
   if (isCodeField(templateField, template)) return false;
   if (isHandleInput(template)) return false;
   if (isToolModeEnabled(template) && isToolMode) return false;
+  // Only show advanced fields in the inspector panel
+  if (!template?.advanced) return false;
 
   return true;
 }

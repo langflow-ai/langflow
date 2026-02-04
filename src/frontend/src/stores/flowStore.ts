@@ -1114,6 +1114,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   setHelperLineEnabled: (helperLineEnabled: boolean) => {
     set({ helperLineEnabled });
   },
+  inspectionPanelVisible: true,
+  setInspectionPanelVisible: (visible: boolean) => {
+    set({ inspectionPanelVisible: visible });
+  },
   setNewChatOnPlayground: (newChat: boolean) => {
     set({ newChatOnPlayground: newChat });
   },

@@ -523,7 +523,7 @@ function GenericNode({
 
         <div
           data-testid={`${data.id}-main-node`}
-          className={cn("grid text-wrap leading-5", showNode ? "" : "relative")}
+          className={cn("grid text-wrap leading-5", showNode ? "border-b" : "relative")}
         >
           <div
             data-testid={"div-generic-node"}
@@ -599,9 +599,7 @@ function GenericNode({
               getValidationStatus={getValidationStatus}
             />
           </div>
-          {showNode &&
-            !ENABLE_INSPECTION_PANEL &&
-            (hasDescription || editNameDescription) && (
+          {showNode && (hasDescription || editNameDescription) && (
               <div className="px-4 pb-3">
                 <MemoizedNodeDescription
                   description={data.node?.description}
@@ -617,7 +615,10 @@ function GenericNode({
             )}
         </div>
         {showNode && (
-          <div className="nopan nodelete nodrag noflow relative cursor-auto">
+          <div
+            className="nopan nodelete nodrag noflow relative cursor-auto"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
             <>
               <MemoizedRenderInputParameters
                 data={data}

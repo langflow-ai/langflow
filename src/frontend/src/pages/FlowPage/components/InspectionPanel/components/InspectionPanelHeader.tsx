@@ -1,8 +1,6 @@
 import { useState, useCallback, useMemo } from "react";
-import { NodeIcon } from "@/CustomNodes/GenericNode/components/nodeIcon";
-import IconComponent from "@/components/common/genericIconComponent";
+import { Badge } from "@/components/ui/badge";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
-import { Button } from "@/components/ui/button";
 import CodeAreaModal from "@/modals/codeAreaModal";
 import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
 import useHandleOnNewValue from "@/CustomNodes/hooks/use-handle-new-value";
@@ -11,21 +9,22 @@ import { ToolbarButton } from "../../nodeToolbarComponent/components/toolbar-but
 import { useShortcutsStore } from "@/stores/shortcuts";
 import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
 import useAlertStore from "@/stores/alertStore";
-import EditableHeaderContent from "./EditableHeaderContent";
 import { cn } from "@/utils/utils";
 
 interface InspectionPanelHeaderProps {
   data: NodeDataType;
   onClose?: () => void;
+  isEditingFields?: boolean;
+  onToggleEditFields?: () => void;
 }
 
 export default function InspectionPanelHeader({
   data,
   onClose,
+  isEditingFields = false,
+  onToggleEditFields,
 }: InspectionPanelHeaderProps) {
   const [openCodeModal, setOpenCodeModal] = useState(false);
-  const [editMode, setEditMode] = useState(false);
-  const [isHoveringContent, setIsHoveringContent] = useState(false);
   const { handleNodeClass } = useHandleNodeClass(data.id);
   const { handleOnNewValue } = useHandleOnNewValue({
     node: data.node!,
@@ -39,6 +38,12 @@ export default function InspectionPanelHeader({
   );
 
   const setNoticeData = useAlertStore((state) => state.setNoticeData);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+
+  const handleCopyId = useCallback(() => {
+    navigator.clipboard.writeText(data.id);
+    setSuccessData({ title: "Component ID copied to clipboard" });
+  }, [data.id, setSuccessData]);
 
   const handleOpenCode = useCallback(() => {
     if (hasCode) {
@@ -75,56 +80,25 @@ export default function InspectionPanelHeader({
     return isCustom;
   }, [data.type, data.node]);
 
-  const toggleEditMode = useCallback(() => {
-    setEditMode((prev) => !prev);
-  }, []);
-
-  const { containerRef, nameElement, descriptionElement } =
-    EditableHeaderContent({
-      data,
-      editMode,
-      setEditMode,
-    });
-
   return (
-    <div
-      className="flex flex-col gap-2 py-3 px-4"
-      ref={containerRef}
-      onMouseEnter={() => setIsHoveringContent(true)}
-      onMouseLeave={() => setIsHoveringContent(false)}
-    >
+    <div className="flex flex-col gap-2 py-3 px-4">
       <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3 overflow-hidden">
-          <NodeIcon
-            dataType={data.type}
-            icon={data.node?.icon}
-            isGroup={!!data.node?.flow}
-          />
-          <div className="truncate">{nameElement}</div>
+        <div className="flex items-center gap-2">
+          <span className="font-semibold">
+            {data.node?.display_name ?? data.type}
+          </span>
+          <ShadTooltip content="Click to copy full ID">
+            <Badge
+              variant="secondaryStatic"
+              size="sm"
+              className="shrink-0 cursor-pointer rounded-full px-2 text-[10px] font-normal hover:bg-muted-foreground/20"
+              onClick={handleCopyId}
+            >
+              ID: {data.id.split("-").pop()}
+            </Badge>
+          </ShadTooltip>
         </div>
         <div className="flex items-center gap-1">
-          <ShadTooltip content={editMode ? "Save" : "Edit"} side="top">
-            <Button
-              onClick={toggleEditMode}
-              className={cn(
-                editMode ? "bg-accent" : "",
-                "!text-muted-foreground transition-opacity duration-150",
-                isHoveringContent || editMode ? "opacity-100" : "opacity-0",
-              )}
-              size="node-toolbar"
-              variant="ghost"
-              datatest-id={
-                editMode
-                  ? "save-name-description-button"
-                  : "edit-name-description-button"
-              }
-            >
-              <IconComponent
-                name={editMode ? "Check" : "PencilLine"}
-                className="h-4 w-4"
-              />
-            </Button>
-          </ShadTooltip>
           {hasDocs && (
             <ToolbarButton
               icon="FileText"
@@ -171,7 +145,22 @@ export default function InspectionPanelHeader({
           </CodeAreaModal>
         </div>
       )}
-      {descriptionElement}
+      <div className="flex items-end justify-between gap-4">
+        <p className="max-w-[230px] text-xs text-muted-foreground">
+          Configure component settings and toggle parameter visibility.
+        </p>
+        <button
+          onClick={onToggleEditFields}
+          className={cn(
+            "shrink-0 text-xs font-medium transition-colors",
+            isEditingFields
+              ? "text-primary hover:text-primary/80"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          {isEditingFields ? "Done" : "Edit"}
+        </button>
+      </div>
     </div>
   );
 }

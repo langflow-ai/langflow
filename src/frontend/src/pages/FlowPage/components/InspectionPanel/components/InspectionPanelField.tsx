@@ -139,14 +139,14 @@ export default function InspectionPanelField({
                 </ShadTooltip>
               )}
               {showAdvanced && (
-                <ShadTooltip content={isAdvanced ? "Show" : "Hide"}>
+                <ShadTooltip content="Add to canvas">
                   <button
                     className="ml-1 cursor-pointer text-placeholder hover:text-foreground"
                     onClick={handleToggleVisibility}
-                    data-testid={"show" + name}
+                    data-testid={"promote-" + name}
                   >
                     <IconComponent
-                      name={isAdvanced ? "EyeOff" : "Eye"}
+                      name="Plus"
                       strokeWidth={ICON_STROKE_WIDTH}
                       className="h-3 w-3"
                     />
