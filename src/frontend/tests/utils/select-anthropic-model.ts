@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import { expect } from "../fixtures";
 import { adjustScreenView } from "./adjust-screen-view";
+import { unselectNodes } from "./unselect-nodes";
 
 export const selectAnthropicModel = async (page: Page) => {
   const nodes = page.locator(".react-flow__node", {
@@ -11,8 +12,14 @@ export const selectAnthropicModel = async (page: Page) => {
 
   for (let i = 0; i < gptModelDropdownCount; i++) {
     const node = nodes.nth(i);
-
-    await node.click();
+    try {
+      await expect(node.getByTestId("model_model").last()).toBeVisible({
+        timeout: 10000,
+      });
+    } catch (error) {
+      console.log("Node model not visible, proceeding...", error);
+      node.click();
+    }
 
     const model = (await node.getByTestId("model_model").last().isVisible())
       ? node.getByTestId("model_model").last()
@@ -23,13 +30,11 @@ export const selectAnthropicModel = async (page: Page) => {
     await model.click();
     await page.waitForSelector('[role="listbox"]', { timeout: 10000 });
 
-    const anthropicOption = await page
-      .getByTestId("claude-sonnet-4-5-20250929-option")
-      .count();
+    const gptOMiniOption = await page.getByTestId("claude-sonnet-4-5-20250929-option").count();
 
     await page.waitForTimeout(500);
 
-    if (anthropicOption === 0) {
+    if (gptOMiniOption === 0) {
       await page.getByTestId("manage-model-providers").click();
       await page.waitForSelector("text=Model providers", { timeout: 30000 });
 
@@ -53,9 +58,7 @@ export const selectAnthropicModel = async (page: Page) => {
           .getByTestId("llm-toggle-claude-sonnet-4-5-20250929")
           .isChecked();
         if (!isChecked) {
-          await page
-            .getByTestId("llm-toggle-claude-sonnet-4-5-20250929")
-            .click();
+          await page.getByTestId("llm-toggle-claude-sonnet-4-5-20250929").click();
         }
         await page.getByText("Close").last().click();
         await page.getByTestId("model_model").nth(i).click();
@@ -63,5 +66,8 @@ export const selectAnthropicModel = async (page: Page) => {
     }
     await page.waitForTimeout(500);
     await page.getByTestId("claude-sonnet-4-5-20250929-option").click();
+    if (i < gptModelDropdownCount - 1) {
+      await unselectNodes(page);
+    }
   }
 };
