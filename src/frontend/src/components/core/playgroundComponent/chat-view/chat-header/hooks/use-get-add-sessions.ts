@@ -119,7 +119,13 @@ export const useGetAddSessions: UseGetAddSessionsReturnType = ({
     const newSessionId = `${NEW_SESSION_NAME} ${nextNumber}`;
 
     // Add the current session to localSessions before creating new one (if it's a "New Session")
-    if (currentSessionId && currentSessionId.match(newSessionPattern)) {
+    // Only add if it's not already in localSessions or fetchedSessions to prevent duplicates
+    if (
+      currentSessionId &&
+      currentSessionId.match(newSessionPattern) &&
+      !localSessions.has(currentSessionId) &&
+      !fetchedSessions.includes(currentSessionId)
+    ) {
       setLocalSessions(
         (prev) => new Set([...Array.from(prev), currentSessionId]),
       );
