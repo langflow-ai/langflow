@@ -1,21 +1,21 @@
-import { type ReactNode, useMemo, useState } from 'react';
-import ForwardedIconComponent from '@/components/common/genericIconComponent';
+import { type ReactNode, useMemo, useState } from "react";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ModelInputComponent, {
   type ModelOption,
-} from '@/components/core/parameterRenderComponent/components/modelInputComponent';
-import { Button } from '@/components/ui/button';
+} from "@/components/core/parameterRenderComponent/components/modelInputComponent";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { useCreateKnowledgeBase } from '@/controllers/API/queries/knowledge-bases/use-create-knowledge-base';
-import { useGetModelProviders } from '@/controllers/API/queries/models/use-get-model-providers';
-import useAlertStore from '@/stores/alertStore';
-import BaseModal from '../baseModal';
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useCreateKnowledgeBase } from "@/controllers/API/queries/knowledge-bases/use-create-knowledge-base";
+import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
+import useAlertStore from "@/stores/alertStore";
+import BaseModal from "../baseModal";
 
 export interface KnowledgeBaseUploadModalProps {
   children?: ReactNode;
@@ -56,12 +56,12 @@ export default function KnowledgeBaseUploadModal({
 
       for (const model of provider.models) {
         // Only include embedding models
-        if (model.metadata?.model_type !== 'embeddings') continue;
+        if (model.metadata?.model_type !== "embeddings") continue;
 
         options.push({
           id: model.model_name,
           name: model.model_name,
-          icon: provider.icon || 'Bot',
+          icon: provider.icon || "Bot",
           provider: provider.provider,
           metadata: model.metadata,
         });
@@ -72,7 +72,7 @@ export default function KnowledgeBaseUploadModal({
   }, [modelProviders]);
 
   // Form state
-  const [sourceName, setSourceName] = useState('');
+  const [sourceName, setSourceName] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [selectedEmbeddingModel, setSelectedEmbeddingModel] = useState<
     ModelOption[]
@@ -87,21 +87,21 @@ export default function KnowledgeBaseUploadModal({
   }, [embeddingModelOptions]);
 
   // Alert store for notifications
-  const setSuccessData = useAlertStore(state => state.setSuccessData);
-  const setErrorData = useAlertStore(state => state.setErrorData);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
 
   // Create knowledge base mutation
   const createKnowledgeBase = useCreateKnowledgeBase();
 
   const resetForm = () => {
-    setSourceName('');
+    setSourceName("");
     setFiles([]);
     setSelectedEmbeddingModel([]);
   };
 
   const handleSubmit = async () => {
     if (!selectedEmbeddingModel.length) {
-      setErrorData({ title: 'Please select an embedding model' });
+      setErrorData({ title: "Please select an embedding model" });
       return;
     }
 
@@ -111,8 +111,8 @@ export default function KnowledgeBaseUploadModal({
     try {
       // Create the knowledge base
       await createKnowledgeBase.mutateAsync({
-        name: sourceName.trim().replace(/\s+/g, '_'),
-        embedding_provider: selectedModel.provider || 'Unknown',
+        name: sourceName.trim().replace(/\s+/g, "_"),
+        embedding_provider: selectedModel.provider || "Unknown",
         embedding_model: selectedModel.id || selectedModel.name,
       });
 
@@ -134,7 +134,7 @@ export default function KnowledgeBaseUploadModal({
       const errorMessage =
         error?.response?.data?.detail ||
         error?.message ||
-        'Failed to create knowledge base';
+        "Failed to create knowledge base";
       setErrorData({ title: errorMessage });
     } finally {
       setIsSubmitting(false);
@@ -144,27 +144,27 @@ export default function KnowledgeBaseUploadModal({
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = e.target.files;
     if (selectedFiles && selectedFiles.length > 0) {
-      setFiles(prev => [...prev, ...Array.from(selectedFiles)]);
+      setFiles((prev) => [...prev, ...Array.from(selectedFiles)]);
     }
     // Reset input so the same file can be selected again
-    e.target.value = '';
+    e.target.value = "";
   };
 
   const handleFolderSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = e.target.files;
     if (selectedFiles && selectedFiles.length > 0) {
-      setFiles(prev => [...prev, ...Array.from(selectedFiles)]);
+      setFiles((prev) => [...prev, ...Array.from(selectedFiles)]);
     }
     // Reset input so the same folder can be selected again
-    e.target.value = '';
+    e.target.value = "";
   };
 
   const handleRemoveFile = (index: number) => {
-    setFiles(prev => prev.filter((_, i) => i !== index));
+    setFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   const isFormValid =
-    sourceName.trim() !== '' &&
+    sourceName.trim() !== "" &&
     files.length > 0 &&
     selectedEmbeddingModel.length > 0;
 
@@ -172,7 +172,7 @@ export default function KnowledgeBaseUploadModal({
     <BaseModal
       size="small-h-full"
       open={open}
-      setOpen={isOpen => {
+      setOpen={(isOpen) => {
         setOpen(isOpen);
         if (!isOpen) resetForm();
       }}
@@ -188,8 +188,8 @@ export default function KnowledgeBaseUploadModal({
             Add files or folders to create searchable knowledge.
             {onOpenExampleFlow && (
               <>
-                {' '}
-                Try{' '}
+                {" "}
+                Try{" "}
                 <button
                   type="button"
                   className="underline"
@@ -199,7 +199,7 @@ export default function KnowledgeBaseUploadModal({
                   }}
                 >
                   Knowledge Ingestion
-                </button>{' '}
+                </button>{" "}
                 flow for more control.
               </>
             )}
@@ -226,7 +226,7 @@ export default function KnowledgeBaseUploadModal({
                 id="source-name"
                 placeholder="Enter a name for this knowledge source"
                 value={sourceName}
-                onChange={e => setSourceName(e.target.value)}
+                onChange={(e) => setSourceName(e.target.value)}
                 className="flex-1"
                 data-testid="kb-source-name-input"
               />
@@ -243,7 +243,7 @@ export default function KnowledgeBaseUploadModal({
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem
                     onClick={() =>
-                      document.getElementById('file-input')?.click()
+                      document.getElementById("file-input")?.click()
                     }
                   >
                     <ForwardedIconComponent
@@ -254,7 +254,7 @@ export default function KnowledgeBaseUploadModal({
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() =>
-                      document.getElementById('folder-input')?.click()
+                      document.getElementById("folder-input")?.click()
                     }
                   >
                     <ForwardedIconComponent
@@ -278,7 +278,7 @@ export default function KnowledgeBaseUploadModal({
                 type="file"
                 className="hidden"
                 onChange={handleFolderSelect}
-                {...({ webkitdirectory: '', directory: '' } as any)}
+                {...({ webkitdirectory: "", directory: "" } as any)}
               />
             </div>
           </div>
@@ -293,7 +293,7 @@ export default function KnowledgeBaseUploadModal({
                     className="h-4 w-4 text-muted-foreground"
                   />
                   <span className="text-sm font-medium">
-                    {files.length} file{files.length > 1 ? 's' : ''} selected
+                    {files.length} file{files.length > 1 ? "s" : ""} selected
                   </span>
                 </div>
                 <Button
@@ -313,12 +313,12 @@ export default function KnowledgeBaseUploadModal({
                     className="animate-in fade-in-0 slide-in-from-left-2 group flex items-center justify-between truncate py-0.5"
                     style={{
                       animationDelay: `${index * 50}ms`,
-                      animationFillMode: 'both',
+                      animationFillMode: "both",
                     }}
                   >
                     <div className="flex items-center gap-2 truncate">
                       <ForwardedIconComponent
-                        name={file.webkitRelativePath ? 'File' : 'FileText'}
+                        name={file.webkitRelativePath ? "File" : "FileText"}
                         className="h-3 w-3 shrink-0 text-muted-foreground"
                       />
                       <span className="truncate">
@@ -339,8 +339,8 @@ export default function KnowledgeBaseUploadModal({
                   <div
                     className="animate-in fade-in-0 py-0.5 text-xs"
                     style={{
-                      animationDelay: '400ms',
-                      animationFillMode: 'both',
+                      animationDelay: "400ms",
+                      animationFillMode: "both",
                     }}
                   >
                     +{files.length - 8} more files
@@ -372,10 +372,10 @@ export default function KnowledgeBaseUploadModal({
 
       <BaseModal.Footer
         submit={{
-          label: 'Add Knowledge',
+          label: "Add Knowledge",
           disabled: !isFormValid || isSubmitting,
           loading: isSubmitting,
-          dataTestId: 'kb-create-button',
+          dataTestId: "kb-create-button",
         }}
       />
     </BaseModal>
