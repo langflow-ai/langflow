@@ -360,9 +360,9 @@ module.exports = {
             "Components/components-bundles",
             {
               type: "category",
-              label: "Agents Blocks",
+              label: "Agent Blocks",
               items: [
-                "Agents/agent-blocks",
+                "Components/agent-blocks-quickstart",
                 "Components/agent-blocks-agent-loop",
                 "Components/agent-blocks-agent-step",
                 "Components/agent-blocks-execute-tool",

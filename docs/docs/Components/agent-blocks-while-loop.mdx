@@ -6,9 +6,9 @@ slug: /agent-blocks-while-loop
 import Icon from "@site/src/components/icon";
 import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 
-The **WhileLoop** component provides loop control for iterative agent execution. It manages the agent's reasoning loop, continuing iteration until the agent determines the task is complete.
+The **While Loop** component provides loop control for iterative agent execution. It manages the agent's reasoning loop, continuing iteration until the agent determines the task is complete.
 
-**WhileLoop** is the control structure that wraps the agent's reasoning loop:
+**While Loop** is the control structure that wraps the agent's reasoning loop:
 
 ```
 ChatInput → WhileLoop → AgentStep → [Tool Calls] → ExecuteTool → WhileLoop
@@ -16,11 +16,13 @@ ChatInput → WhileLoop → AgentStep → [Tool Calls] → ExecuteTool → While
                          ChatOutput
 ```
 
-**WhileLoop** stops iterating when:
+**While Loop** stops iterating when:
 
-- **AgentStep** outputs an `ai_message` (final answer) instead of `tool_calls`
-- Maximum iterations are reached
-- An explicit stop condition is met
+* The [**Agent Step** component](/agent-blocks-agent-step) outputs an `ai_message` (final answer) instead of `tool_calls`
+* Maximum iterations are reached
+* An explicit stop condition is met
+
+For more information, see the [Agent blocks quickstart](/agent-blocks-quickstart).
 
 ## WhileLoop parameters
 
@@ -31,13 +33,13 @@ ChatInput → WhileLoop → AgentStep → [Tool Calls] → ExecuteTool → While
 | input_value | Input | Message | Input parameter. Initial input or input from previous iteration. |
 | max_iterations | Max Iterations | Integer | Input parameter. Maximum number of iterations allowed. Default: `15`. |
 | iteration | Iteration | Integer | Output parameter. Current iteration count. |
-| output | Output | Message | Output parameter. Output from the current iteration (routes to AgentStep). |
+| output | Output | Message | Output parameter. Output from the current iteration (routes to the [**Agent Step** component](/agent-blocks-agent-step)). |
 | done | Done | Message | Output parameter. Final result when loop completes. |
 
 ## See also
 
 * [Agent Blocks](/agents-blocks)
-* [AgentStep](/agent-blocks-agent-step)
-* [ExecuteTool](/agent-blocks-execute-tool)
-* [AgentLoop](/agent-blocks-agent-loop)
+* [Agent Step](/agent-blocks-agent-step)
+* [Execute Tool](/agent-blocks-execute-tool)
+* [Agent Loop](/agent-blocks-agent-loop)
 * [Loop component](/loop)

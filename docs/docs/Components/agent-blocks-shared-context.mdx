@@ -6,13 +6,15 @@ slug: /agent-blocks-shared-context
 import Icon from "@site/src/components/icon";
 import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 
-The **SharedContext** component provides shared state management across agent iterations. It allows you to maintain and update state that persists throughout the agent loop, enabling complex workflows that require accumulating information or tracking progress.
+The **Shared Context** component provides shared state management across agent iterations. It allows you to maintain and update state that persists throughout the agent loop, enabling complex workflows that require accumulating information or tracking progress.
 
-**SharedContext** is used when you need to maintain state across agent iterations:
+**Shared Context** is used when you need to maintain state across agent iterations:
 
 ```
 ChatInput → WhileLoop → SharedContext → AgentStep → ExecuteTool → SharedContext → WhileLoop
 ```
+
+For more information, see the [Agent blocks quickstart](/agent-blocks-quickstart).
 
 ## SharedContext parameters
 
@@ -28,6 +30,6 @@ ChatInput → WhileLoop → SharedContext → AgentStep → ExecuteTool → Shar
 ## See also
 
 * [Agent Blocks](/agents-blocks)
-* [AgentStep](/agent-blocks-agent-step)
-* [WhileLoop](/agent-blocks-while-loop)
-* [AgentLoop](/agent-blocks-agent-loop)
+* [Agent Step](/agent-blocks-agent-step)
+* [While Loop](/agent-blocks-while-loop)
+* [Agent Loop](/agent-blocks-agent-loop)

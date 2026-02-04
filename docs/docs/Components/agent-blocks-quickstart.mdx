@@ -1,0 +1,107 @@
+---
+title: Agent blocks quickstart
+slug: /agent-blocks-quickstart
+---
+
+import Icon from "@site/src/components/icon";
+
+An agent is fundamentally a while loop.
+The while loop accepts input and iterates over the agent's reasoning.
+The agent's reasoning sends messages to an LLM and examines the LLM's response to determine where to route the request.
+If the LLM's response includes `tool_calls`, the agent sends output to a tool-calling function, and the results are sent back to the while loop to be iterated over again.
+If the LLM's response does not include `tool_calls` and the agent determines the task is complete, the agent sends a "finished" message to output.
+
+```
+ChatInput → WhileLoop → AgentStep → [Tool Calls] → ExecuteTool → WhileLoop
+                              ↓ [AI Message - done]
+                         ChatOutput
+```
+
+Langflow's [**Agent** component](/components-agents) is composed of this same architecture, and is suitable for most tasks that require a reasoning loop that can choose from a list of registered functions.
+
+But what if you want to modify the agent's behavior? For example, how do you include a validation step in your tool outputs before execution?
+
+Use **Agent Blocks** to construct an agent in Langflow's visual builder.
+Agent Blocks are composable primitives that provide the building blocks for constructing each step of custom agent workflows.
+Assemble the blocks to create agents tailored to your exact requirements.
+For example, to add a validation step to your agent, insert an [**If-Else** component](/if-else) between the [**Agent Step** component](/agent-blocks-agent-step)'s `tool_calls` output and the [**Execute Tool** component](/agent-blocks-execute-tool) to validate tool names against an allowed list.
+
+This page includes a quickstart for building an agent with Agent Blocks.
+For the individual Agent Blocks components, see the Components reference pages.
+
+## Agent Blocks quickstart
+
+This quickstart demonstrates building an agent using Agent Blocks components.
+The core agent loop pattern iterates over reasoning and tool execution until completion.
+
+### Prerequisites
+
+- [Install and start Langflow](/get-started-installation)
+- Create an [OpenAI API key](https://platform.openai.com/api-keys) or credentials for your preferred LLM provider
+
+### Build the agent loop
+
+The agent loop consists of four main components:
+
+* [**While Loop** component](/agent-blocks-while-loop): Controls iteration until the agent completes its task.
+* [**Agent Step** component](/agent-blocks-agent-step): The reasoning core that sends messages to the LLM.
+* [**Execute Tool** component](/agent-blocks-execute-tool): Executes tool calls when the agent needs to use tools.
+* [**Chat Output** component](/chat-input-and-output): Displays the final response.
+
+![Agent Loop flow diagram showing WhileLoop, AgentStep, ExecuteTool, and ChatOutput components connected in a loop pattern](/img/component-agent-blocks.png)
+
+To create an agent with agent blocks, do the following:
+
+1. In Langflow, click **New Flow** to create a blank flow.
+2. Add a [**While Loop** component](/agent-blocks-while-loop) from the component library.
+The **While Loop** component manages conversation state and continues iterating until the agent signals completion.
+3. In the **While Loop** component, configure the following fields:
+   * **Initial State**: Leave this empty, or optionally provide initial conversation history as a DataFrame. For more information, see [State management](#state-management).
+   * **Input Value**: Connect this to the [**Chat Input** component](/chat-input-and-output) in a later step.
+   * **Max Iterations**: Set a limit to prevent infinite loops. For this example, enter `10`.
+4. Add an **Agent Step** component to your flow.
+5. In the **Agent Step** component, configure the following fields:
+   * **Language Model**: Select your model provider, such as OpenAI.
+   * **API Key**: Enter your model provider's API key or a [global variable](/configuration-global-variables).
+   * **System Message**: Optionally define the agent's behavior with a prompt.
+
+   The **Agent Step** component has two outputs:
+   * **Response** (`ai_message`): This output sends when the model is done, and no tool calls remain.
+   * **Tool Calls** (`tool_calls`): This output sends when the model wants to execute tools.
+
+6. Connect the **While Loop** component's **Loop** output to the **Agent Step** component's **Messages** input.
+7. Add an [**Execute Tool** component](/agent-blocks-execute-tool) to your flow.
+8. Configure the **Execute Tool** component:
+   - **Parallel Execution**: Enable to execute multiple tool calls concurrently
+   - **Timeout**: Set a timeout for individual tool calls (optional)
+9. Connect the **Agent Step** component's **Tool Calls** output to the **Execute Tool** component's **Tool Calls** input.
+10. Connect the same tools you connected to the **Agent Step** component to the **Execute Tool** component's **tools** input.
+
+    The **Execute Tool** component executes the tool calls and returns the results as a [Message](/data-types#message).
+
+    The next steps complete the agent loop by connecting the tool execution results back to the loop, and then routing the final responses to the output.
+
+11. Connect the **Execute Tool** component's **messages** output back to the **While Loop** component's **loop** input.
+   This creates the iterative loop which sends tool result back into the conversation.
+
+12. Connect the **Agent Step** component's **Response** output to a **Chat Output** component.
+   The Chat output will display the final response when the agent completes its task and no tool calls remain.
+
+### Test the flow
+
+To test the flow in the Playground, do the following:
+
+1. Add a **Chat Input** component.
+2. Connect the **Chat Input** component to the **While Loop** component's **Input** input.
+3. Click <Icon name="Play" aria-hidden="true" /> **Playground** to test your agent.
+4. Enter a message that requires tool usage, such as `What is 15 * 7?`, if you've connected a **Calculator** tool.
+5. The Playground outputs each step of the agent loop as it receives your message, executes tools if required, and then returns a final response.
+
+## Agent Blocks components
+
+- [**Agent Step** component](/agent-blocks-agent-step): The reasoning core that sends messages to the LLM and routes based on tool calls.
+- [**Execute Tool** component](/agent-blocks-execute-tool): Executes tool calls from the **Agent Step** component, with parallel execution support.
+- [**While Loop** component](/agent-blocks-while-loop): Loop control for iterative agent execution.
+- [**Agent Loop** component](/agent-blocks-agent-loop): A pre-composed component that encapsulates the complete agent loop.
+- [**Shared Context** component](/agent-blocks-shared-context): Share state management across agent iterations.
+- [**Think Tool** component](/agent-blocks-think-tool): Think tool support for step-by-step reasoning.

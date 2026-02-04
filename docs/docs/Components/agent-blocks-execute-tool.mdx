@@ -6,7 +6,9 @@ slug: /agent-blocks-execute-tool
 import Icon from "@site/src/components/icon";
 import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 
-The **ExecuteTool** component executes tool calls from **AgentStep** with support for parallel execution and proper error handling.
+The **Execute Tool** component executes tool calls from the [**Agent Step** component](/agent-blocks-agent-step) with support for parallel execution and proper error handling.
+
+For more information, see the [Agent blocks quickstart](/agent-blocks-quickstart).
 
 ## ExecuteTool parameters
 
@@ -14,7 +16,7 @@ The **ExecuteTool** component executes tool calls from **AgentStep** with suppor
 
 | Name | Display Name | Type | Description |
 |------|--------------|------|-------------|
-| tool_calls | Tool Calls | ToolCall[] | Input parameter. Tool calls to execute from AgentStep. |
+| tool_calls | Tool Calls | ToolCall[] | Input parameter. Tool calls to execute from the [**Agent Step** component](/agent-blocks-agent-step). |
 | parallel_execution | Parallel Execution | Boolean | Input parameter. Enable parallel execution of multiple tools. Default: `true`. |
 | error_handling | Error Handling | Dropdown | Input parameter. Error handling strategy: `raise`, `return_error`, or `skip`. Default: `return_error`. |
 | results | Tool Results | Message[] | Output parameter. Results from tool execution, formatted for the agent loop. |
@@ -22,7 +24,7 @@ The **ExecuteTool** component executes tool calls from **AgentStep** with suppor
 ## See also
 
 * [Agent Blocks](/agents-blocks)
-* [AgentStep](/agent-blocks-agent-step)
-* [WhileLoop](/agent-blocks-while-loop)
-* [AgentLoop](/agent-blocks-agent-loop)
+* [Agent Step](/agent-blocks-agent-step)
+* [While Loop](/agent-blocks-while-loop)
+* [Agent Loop](/agent-blocks-agent-loop)
 * [Agent component](/components-agents)

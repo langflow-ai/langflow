@@ -6,16 +6,17 @@ slug: /agent-blocks-agent-step
 import Icon from "@site/src/components/icon";
 import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 
-The **AgentStep** component is the reasoning core of an agent workflow. It sends messages to an LLM and routes the response based on whether the LLM requests tool execution or provides a final answer.
+The **Agent Step** component is the reasoning core of an agent workflow. It sends messages to an LLM and routes the response based on whether the LLM requests tool execution or provides a final answer.
 
-**AgentStep** performs the core reasoning step in the agent loop:
+**Agent Step** performs the core reasoning step in the agent loop:
 
-1. Receives input messages (from **ChatInput** or **WhileLoop**)
-2. Sends messages to the LLM with available tools
-3. Examines the LLM response for `tool_calls`
-4. Routes to either:
-   - `tool_calls` output: When the LLM requests tool execution
-   - `ai_message` output: When the LLM provides a final answer
+1. The **Agent Step** component receives input messages from the [**Chat Input** component](/chat-input-and-output) or [**While Loop** component](/agent-blocks-while-loop).
+2. The **Agent Step** component sends messages to the LLM with available tools.
+3. Examines the LLM response for `tool_calls`, and then routes to either:
+   * `tool_calls` output: When the LLM requests tool execution, the message routes to the [**Execute Tool** component](/agent-blocks-execute-tool).
+   * `ai_message` output: When the LLM provides a final answer, the message routes to the [**Chat Output** component](/chat-input-and-output).
+
+For more information, see the [Agent blocks quickstart](/agent-blocks-quickstart).
 
 ## AgentStep parameters
 
@@ -28,13 +29,13 @@ The **AgentStep** component is the reasoning core of an agent workflow. It sends
 | system_prompt | System Prompt | String | Input parameter. System prompt to guide the agent's behavior. |
 | chat_history | Chat Memory | Data[] | Input parameter. Chat history for context-aware responses. |
 | input_value | Input | Message | Input parameter. The input message to process. |
-| tool_calls | Tool Calls | ToolCall[] | Output parameter. Tool calls requested by the LLM (routes to ExecuteTool). |
-| ai_message | AI Message | Message | Output parameter. Final answer from the LLM (routes to ChatOutput). |
+| tool_calls | Tool Calls | ToolCall[] | Output parameter. Tool calls requested by the LLM (routes to [**Execute Tool** component](/agent-blocks-execute-tool)). |
+| ai_message | AI Message | Message | Output parameter. Final answer from the LLM (routes to [**Chat Output** component](/chat-input-and-output)). |
 
 ## See also
 
 * [Agent Blocks](/agents-blocks)
-* [ExecuteTool](/agent-blocks-execute-tool)
-* [WhileLoop](/agent-blocks-while-loop)
-* [AgentLoop](/agent-blocks-agent-loop)
+* [Execute Tool](/agent-blocks-execute-tool)
+* [While Loop](/agent-blocks-while-loop)
+* [Agent Loop](/agent-blocks-agent-loop)
 * [Agent component](/components-agents)
