@@ -597,7 +597,19 @@ async function onEvent(
       break;
     case "build_end":
       useFlowStore.getState().updateBuildStatus([data.id], BuildStatus.BUILT);
+      // Clear progress when build ends
+      useFlowStore.getState().setNodeProgress(data.id, null);
       break;
+    case "progress":
+      // Handle progress events from components
+      if (data && data.id) {
+        useFlowStore.getState().setNodeProgress(data.id, {
+          current: data.current,
+          total: data.total,
+          message: data.message,
+        });
+      }
+      return true;
     default:
       return true;
   }

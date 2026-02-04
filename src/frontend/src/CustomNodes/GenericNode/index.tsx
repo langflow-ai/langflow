@@ -10,6 +10,7 @@ import UpdateComponentModal from "@/modals/updateComponentModal";
 import { useAlternate } from "@/shared/hooks/use-alternate";
 import type { FlowStoreType } from "@/types/zustand/flow";
 import { Button } from "../../components/ui/button";
+import { BuildStatus } from "../../constants/enums";
 import { ICON_STROKE_WIDTH } from "../../constants/constants";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 import { useChangeOnUnfocus } from "../../shared/hooks/use-change-on-unfocus";
@@ -93,6 +94,7 @@ function GenericNode({
   const removeDismissedNodes = useFlowStore(
     (state) => state.removeDismissedNodes,
   );
+  const nodeProgress = useFlowStore((state) => state.nodeProgress[data.id]);
 
   const dismissedNodesLegacy = useFlowStore(
     (state) => state.dismissedNodesLegacy,
@@ -663,6 +665,20 @@ function GenericNode({
                 handleSelectOutput={handleSelectOutput}
               />
             </>
+          </div>
+        )}
+        {/* Progress Bar - only render when building with progress */}
+        {nodeProgress && buildStatus === BuildStatus.BUILDING && (
+          <div
+            className="pointer-events-none absolute bottom-0 left-0 right-0 h-3 overflow-hidden"
+            style={{ borderRadius: "0 0 11px 11px" }}
+          >
+            <div
+              className="absolute bottom-0 left-0 right-0 h-full bg-accent-indigo-foreground transition-all duration-300 ease-out"
+              style={{
+                width: `${(nodeProgress.current / nodeProgress.total) * 100}%`,
+              }}
+            />
           </div>
         )}
       </div>

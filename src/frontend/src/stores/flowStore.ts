@@ -87,6 +87,21 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       typeof change === "function" ? change(get().componentsToUpdate) : change;
     set({ componentsToUpdate: newChange });
   },
+  nodeProgress: {},
+  setNodeProgress: (nodeId, progress) => {
+    set((state) => {
+      const newProgress = { ...state.nodeProgress };
+      if (progress === null) {
+        delete newProgress[nodeId];
+      } else {
+        newProgress[nodeId] = progress;
+      }
+      return { nodeProgress: newProgress };
+    });
+  },
+  clearAllNodeProgress: () => {
+    set({ nodeProgress: {} });
+  },
   updateComponentsToUpdate: (nodes) => {
     const outdatedNodes: ComponentsToUpdateType[] = [];
     const templates = useTypesStore.getState().templates;

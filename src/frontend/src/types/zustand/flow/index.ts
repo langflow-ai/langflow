@@ -61,6 +61,12 @@ export type ComponentsToUpdateType = {
   userEdited: boolean;
 };
 
+export type NodeProgressType = {
+  current: number;
+  total: number;
+  message?: string;
+};
+
 export type FlowStoreType = {
   dismissedNodes: string[];
   addDismissedNodes: (dismissedNodes: string[]) => void;
@@ -85,6 +91,9 @@ export type FlowStoreType = {
   onFlowPage: boolean;
   setOnFlowPage: (onFlowPage: boolean) => void;
   flowPool: FlowPoolType;
+  nodeProgress: { [nodeId: string]: NodeProgressType };
+  setNodeProgress: (nodeId: string, progress: NodeProgressType | null) => void;
+  clearAllNodeProgress: () => void;
   setHasIO: (hasIO: boolean) => void;
   setInputs: (
     inputs: Array<{ type: string; id: string; displayName: string }>,
