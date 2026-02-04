@@ -20,7 +20,7 @@ export type DropdownControlButtonProps = {
 
 const DropdownControlButton: React.FC<DropdownControlButtonProps> = ({
   tooltipText,
-  onClick = () => { },
+  onClick = () => {},
   disabled,
   testId,
   label = "",

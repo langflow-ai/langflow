@@ -426,9 +426,7 @@ test(
 
     // Verify the toggle is now checked
     expect(
-      await page
-        .getByTestId("toggle_bool_use_double_brackets")
-        .isChecked(),
+      await page.getByTestId("toggle_bool_use_double_brackets").isChecked(),
     ).toBeTruthy();
 
     // Now test double bracket variable extraction - click the mustache prompt button
@@ -470,7 +468,6 @@ test(
 
     value = await page.getByTestId("textarea_str_name").inputValue();
     expect(value).toBe("World");
-
   },
 );
 
