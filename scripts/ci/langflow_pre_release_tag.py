@@ -20,7 +20,7 @@ def create_tag(package_version: str, latest_released_version: str | None) -> str
 
     if latest:
         # match either exact pkg or pkg.rcN
-        m = re.match(rf'^{re.escape(pkg)}(?:\.rc(\d+))?$', latest)
+        m = re.match(rf"^{re.escape(pkg)}(?:\.rc(\d+))?$", latest)
         if m:
             if m.group(1):
                 rc_number = int(m.group(1)) + 1
