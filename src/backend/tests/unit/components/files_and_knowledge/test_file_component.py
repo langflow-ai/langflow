@@ -720,40 +720,15 @@ class TestFileComponentCloudEnvironment:
         assert result["ocr_engine"]["value"] == "None"
 
 
-class TestFileComponentStorageLocationToggle:
-    """Tests for default Local storage and Advanced toggle controlling Storage Location visibility."""
+class TestFileComponentStorageLocation:
+    """Tests for default Local storage and Storage Location in advanced controls."""
 
     def test_storage_location_defaults_to_local(self):
         """Test that storage_location input defaults to Local when component is dropped."""
         storage_input = next(i for i in FileComponent.inputs if i.name == "storage_location")
         assert storage_input.value == [{"name": "Local", "icon": "hard-drive"}]
 
-    def test_storage_location_hidden_when_toggle_off(self):
-        """Test that storage_location is hidden when show_storage_location toggle is off."""
-        component = FileComponent()
-        build_config = {
-            "show_storage_location": {"value": False},
-            "storage_location": {"show": True},
-        }
-        result = component.update_build_config(build_config, None, "path")
-        assert result["storage_location"]["show"] is False
-
-    def test_storage_location_visible_when_toggle_on(self):
-        """Test that storage_location is visible when show_storage_location toggle is on."""
-        component = FileComponent()
-        build_config = {
-            "show_storage_location": {"value": True},
-            "storage_location": {"show": False},
-        }
-        result = component.update_build_config(build_config, True, "show_storage_location")
-        assert result["storage_location"]["show"] is True
-
-    def test_storage_location_syncs_from_toggle_value_in_build_config(self):
-        """Test that storage_location visibility syncs from show_storage_location value in build_config."""
-        component = FileComponent()
-        build_config = {
-            "show_storage_location": {"value": True},
-            "storage_location": {"show": False},
-        }
-        result = component.update_build_config(build_config, ["document.pdf"], "path")
-        assert result["storage_location"]["show"] is True
+    def test_storage_location_is_advanced(self):
+        """Test that storage_location is in advanced controls."""
+        storage_input = next(i for i in FileComponent.inputs if i.name == "storage_location")
+        assert storage_input.advanced is True

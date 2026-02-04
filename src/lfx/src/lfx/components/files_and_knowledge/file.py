@@ -101,13 +101,6 @@ class FileComponent(BaseFileComponent):
             break
 
     inputs = [
-        BoolInput(
-            name="show_storage_location",
-            display_name="Advanced Storage Location",
-            value=False,
-            real_time_refresh=True,
-            info="Show storage location options (Local, AWS, Google Drive).",
-        ),
         SortableListInput(
             name="storage_location",
             display_name="Storage Location",
@@ -117,7 +110,7 @@ class FileComponent(BaseFileComponent):
             real_time_refresh=True,
             limit=1,
             value=[{"name": "Local", "icon": "hard-drive"}],
-            show=False,
+            advanced=True,
         ),
         *_base_inputs,
         StrInput(
@@ -380,13 +373,6 @@ class FileComponent(BaseFileComponent):
         if "storage_location" in build_config:
             updated_options = _get_storage_location_options()
             build_config["storage_location"]["options"] = updated_options
-
-        # Sync Storage Location visibility with Advanced toggle
-        if "show_storage_location" in build_config and "storage_location" in build_config:
-            show = build_config["show_storage_location"].get("value", False)
-            if field_name == "show_storage_location":
-                show = field_value
-            build_config["storage_location"]["show"] = show
 
         # Handle storage location selection
         if field_name == "storage_location":
