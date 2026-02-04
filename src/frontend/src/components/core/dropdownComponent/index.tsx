@@ -31,12 +31,7 @@ import {
   CommandList,
   CommandSeparator,
 } from "../../ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverContentWithoutPortal,
-  PopoverTrigger,
-} from "../../ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover";
 import type { BaseInputProps } from "../parameterRenderComponent/types";
 
 export default function Dropdown({
@@ -99,8 +94,6 @@ export default function Dropdown({
   const sourceOptions = dialogInputs?.fields ? dialogInputs : externalOptions;
   const { firstWord } = formatName(name);
   const fuse = new Fuse(validOptions, { keys: ["name", "value"] });
-  const PopoverContentDropdown =
-    children || editNode ? PopoverContent : PopoverContentWithoutPortal;
   const { helperText, hasRefreshButton } = baseInputProps;
 
   // API and store hooks
@@ -677,9 +670,9 @@ export default function Dropdown({
   );
 
   const renderPopoverContent = () => (
-    <PopoverContentDropdown
+    <PopoverContent
       side="bottom"
-      avoidCollisions={!!children}
+      avoidCollisions={true}
       className="noflow nowheel nopan nodelete nodrag p-0"
       style={
         children ? {} : { minWidth: refButton?.current?.clientWidth ?? "200px" }
@@ -711,7 +704,7 @@ export default function Dropdown({
           </div>
         )}
       </Command>
-    </PopoverContentDropdown>
+    </PopoverContent>
   );
 
   // Loading state

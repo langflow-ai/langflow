@@ -32,6 +32,7 @@ import NodeUpdateComponent from "./components/NodeUpdateComponent";
 import { NodeIcon } from "./components/nodeIcon";
 import RenderInputParameters from "./components/RenderInputParameters";
 import { useBuildStatus } from "./hooks/use-get-build-status";
+import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
 
 const MemoizedRenderInputParameters = memo(RenderInputParameters);
 const MemoizedNodeIcon = memo(NodeIcon);
@@ -617,7 +618,10 @@ function GenericNode({
           )}
         </div>
         {showNode && (
-          <div className="nopan nodelete nodrag noflow relative cursor-auto">
+          <div
+            className="nopan nodelete nodrag noflow relative cursor-auto"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
             <>
               <MemoizedRenderInputParameters
                 data={data}

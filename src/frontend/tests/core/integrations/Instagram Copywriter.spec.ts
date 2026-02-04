@@ -5,6 +5,7 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { getAllResponseMessage } from "../../utils/get-all-response-message";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { waitForOpenModalWithChatInput } from "../../utils/wait-for-open-modal";
+import { unselectNodes } from "../../utils/unselect-nodes";
 
 test(
   "Instagram Copywriter",
@@ -37,12 +38,21 @@ test(
     await initialGPTsetup(page);
 
     // We have to get the rf__node because there are more components with popover-anchor-input-api_key
-    await page
-      .getByTestId(/rf__node-TavilySearchComponent-[A-Za-z0-9]{5}/)
-      .getByTestId("popover-anchor-input-api_key")
-      .nth(0)
-      .fill(process.env.TAVILY_API_KEY ?? "");
 
+    await page.getByText("Tavily AI Search", { exact: true }).last().click();
+    const tavily = page
+      .getByTestId(/rf__node-TavilySearchComponent-[A-Za-z0-9]{5}/)
+      .getByTestId("popover-anchor-input-api_key");
+
+    if ((await tavily.count()) > 0) {
+      await tavily.nth(0).fill(process.env.TAVILY_API_KEY ?? "");
+    } else {
+      await page
+        .getByTestId("popover-anchor-input-api_key")
+        .fill(process.env.TAVILY_API_KEY ?? "");
+    }
+
+    await unselectNodes(page);
     await page.getByTestId("button_run_chat output").click();
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 

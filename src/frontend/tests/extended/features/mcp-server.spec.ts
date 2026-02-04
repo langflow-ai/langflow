@@ -652,7 +652,7 @@ test(
   "mcp server tools should be refreshed when editing a server",
   { tag: ["@release", "@workspace", "@components"] },
   async ({ page }) => {
-    await page.waitForTimeout(10000);
+    await page.waitForTimeout(5000);
 
     await awaitBootstrapTest(page);
 
@@ -798,6 +798,8 @@ test(
 
     await page.getByTestId("add-mcp-server-button").click();
 
+    await page.waitForTimeout(5000);
+
     await awaitBootstrapTest(page, { skipModal: true });
 
     const newFlowDiv = page
@@ -806,6 +808,8 @@ test(
       .first();
     await newFlowDiv.click();
 
+    await page.getByText("MCP Tools", { exact: true }).last().click();
+    await adjustScreenView(page);
     // Re-select the server after returning to flow (server reference may be lost after editing)
     await page.waitForSelector('[data-testid="mcp-server-dropdown"]', {
       timeout: 10000,
@@ -902,6 +906,8 @@ test(
       .filter({ hasText: "New Flow" })
       .first();
     await newFlowDiv2.click();
+
+    await page.getByText("MCP Tools", { exact: true }).last().click();
 
     // Re-select the server after returning to flow (server reference may be lost after editing)
     await page.waitForSelector('[data-testid="mcp-server-dropdown"]', {

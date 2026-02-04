@@ -86,6 +86,7 @@ const SortableListComponent = ({
   searchCategory = [],
   limit,
   id,
+  showParameter = true,
   ...baseInputProps
 }: InputProps<any, SortableListComponentProps>) => {
   const { placeholder, handleOnNewValue, value } = baseInputProps;
@@ -131,6 +132,10 @@ const SortableListComponent = ({
       setOpen(false);
     }
   }, [helperText, open]);
+
+  if (!showParameter) {
+    return null;
+  }
 
   return (
     <div className="flex w-full flex-col">
@@ -201,6 +206,7 @@ const SortableListComponent = ({
         selectedList={listData}
         options={options}
         limit={limit}
+        id={id}
         {...baseInputProps}
       />
     </div>

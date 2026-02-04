@@ -41,7 +41,7 @@ test(
 
     await page.getByTestId("showseed").click();
 
-    await page.getByText("Close").last().click();
+    await page.getByTestId("edit-button-close").last().click();
 
     await adjustScreenView(page);
 
@@ -63,7 +63,7 @@ test(
 
     await page.getByTestId("edit-button-modal").last().click();
 
-    await page.getByText("Close").last().click();
+    await page.getByTestId("edit-button-close").last().click();
 
     const plusButtonLocator = page.locator('//*[@id="int_int_edit_seed"]');
     const elementCount = await plusButtonLocator?.count();
@@ -72,7 +72,7 @@ test(
 
       await page.getByTestId("edit-button-modal").last().click();
 
-      await page.getByText("Close").last().click();
+      await page.getByTestId("edit-button-close").last().click();
       await page.locator('//*[@id="int_int_seed"]').click();
       await page.getByTestId("int_int_seed").fill("");
 

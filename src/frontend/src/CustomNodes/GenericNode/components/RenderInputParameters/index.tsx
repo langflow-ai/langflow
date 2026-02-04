@@ -5,7 +5,14 @@ import { sortToolModeFields } from "@/CustomNodes/helpers/sort-tool-mode-field";
 import getFieldTitle from "@/CustomNodes/utils/get-field-title";
 import { scapedJSONStringfy } from "@/utils/reactflowUtils";
 import NodeInputField from "../NodeInputField";
+import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
 import { findPrimaryInput } from "./utils";
+import {
+  isCanvasVisible,
+  isInternalField,
+  shouldDisplayOnCanvas,
+} from "@/CustomNodes/helpers/parameter-filtering";
+import useFlowStore from "@/stores/flowStore";
 
 const RenderInputParameters = ({
   data,
@@ -15,9 +22,11 @@ const RenderInputParameters = ({
   shownOutputs,
   showHiddenOutputs,
 }) => {
+  const edges = useFlowStore((state) => state.edges);
+
   const templateFields = useMemo(() => {
     return Object.keys(data.node?.template || {})
-      .filter((templateField) => templateField.charAt(0) !== "_")
+      .filter((templateField) => !isInternalField(templateField))
       .sort((a, b) =>
         sortToolModeFields(
           a,
@@ -32,13 +41,17 @@ const RenderInputParameters = ({
   const shownTemplateFields = useMemo(() => {
     return templateFields.filter((templateField) => {
       const template = data.node?.template[templateField];
-      return (
-        template?.show &&
-        !template?.advanced &&
-        !(template?.tool_mode && isToolMode)
-      );
+      return isCanvasVisible(template, isToolMode);
     });
   }, [templateFields, data.node?.template, isToolMode]);
+
+  // Separate list for fields that should be visually displayed
+  const visuallyShownFields = useMemo(() => {
+    return shownTemplateFields.filter((templateField) => {
+      const template = data.node?.template[templateField];
+      return shouldDisplayOnCanvas(template);
+    });
+  }, [shownTemplateFields, data.node?.template]);
 
   const memoizedColors = useMemo(() => {
     const colorMap = new Map();
@@ -96,8 +109,10 @@ const RenderInputParameters = ({
       shownTemplateFields,
       data.node?.template ?? {},
       isToolMode,
+      data.id,
+      edges,
     );
-  }, [shownTemplateFields, data.node?.template, isToolMode]);
+  }, [shownTemplateFields, data.node?.template, isToolMode, data.id, edges]);
 
   const renderInputParameter = shownTemplateFields.map(
     (templateField: string, idx: number) => {
@@ -105,6 +120,9 @@ const RenderInputParameters = ({
 
       const memoizedColor = memoizedColors.get(templateField);
       const memoizedKey = memoizedKeys.get(templateField);
+
+      // Check if this field should be visually displayed
+      const shouldDisplay = visuallyShownFields.includes(templateField);
 
       // For model type fields, provide default input_types if not set
       const isModelType = template.type === "model";
@@ -119,7 +137,8 @@ const RenderInputParameters = ({
         <NodeInputField
           lastInput={
             !(shownOutputs.length > 0 || showHiddenOutputs) &&
-            idx === shownTemplateFields.length - 1
+            idx === visuallyShownFields.length - 1 &&
+            shouldDisplay
           }
           key={memoizedKey}
           data={data}
@@ -138,7 +157,7 @@ const RenderInputParameters = ({
           type={template.type}
           optionalHandle={effectiveInputTypes}
           proxy={template.proxy}
-          showNode={showNode}
+          showNode={showNode && shouldDisplay}
           colorName={memoizedColor.colorsName}
           isToolMode={isToolMode && template.tool_mode}
           isPrimaryInput={templateField === primaryInputFieldName}

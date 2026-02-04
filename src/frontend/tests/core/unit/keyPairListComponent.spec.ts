@@ -36,7 +36,7 @@ test(
 
     await page.getByTestId("showmodel_kwargs").click();
     expect(await page.getByTestId("showmodel_kwargs").isChecked()).toBeTruthy();
-    await page.getByText("Close").last().click();
+    await page.getByTestId("edit-button-close").last().click();
 
     await page.locator('//*[@id="keypair0"]').click();
     await page.locator('//*[@id="keypair0"]').fill("testtesttesttest");
@@ -76,7 +76,7 @@ test(
 
     await page.getByTestId("edit-button-modal").last().click();
 
-    await page.getByText("Close").last().click();
+    await page.getByTestId("edit-button-close").last().click();
 
     const plusButtonLocator = page.locator('//*[@id="plusbtn0"]');
     const elementCount = await plusButtonLocator?.count();
@@ -95,7 +95,7 @@ test(
       const elementKeyCount = await keyPairVerification?.count();
 
       if (elementKeyCount === 1) {
-        await page.getByText("Close").last().click();
+        await page.getByTestId("edit-button-close").last().click();
 
         await page.getByTestId("div-generic-node").click();
 

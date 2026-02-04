@@ -112,7 +112,7 @@ test(
     await page.getByTestId("edit-button-modal").click();
 
     await page.getByTestId("showheaders").click();
-    await page.getByText("Close").last().click();
+    await page.getByTestId("edit-button-close").last().click();
     await page.getByTestId("handle-apirequest-shownode-headers-left").click();
 
     await expect(page.getByTestId("disclosure-data sources")).toBeVisible();

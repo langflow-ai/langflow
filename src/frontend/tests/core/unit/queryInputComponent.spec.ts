@@ -112,7 +112,7 @@ test(
       await page.getByTestId("query_query_edit_openai_api_base").inputValue(),
     ).toEqual("THIS IA TEST TEXT INSIDE CONTROLS PANEL");
 
-    await page.getByText("Close").last().click();
+    await page.getByTestId("edit-button-close").last().click();
 
     expect(
       await page.getByTestId("query_query_openai_api_base").inputValue(),

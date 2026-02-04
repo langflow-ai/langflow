@@ -9,11 +9,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
-import {
-  Popover,
-  PopoverContent,
-  PopoverContentWithoutPortal,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent } from "@/components/ui/popover";
 import { classNames, cn } from "@/utils/utils";
 
 const CustomInputPopoverObject = ({
@@ -42,10 +38,6 @@ const CustomInputPopoverObject = ({
   showOptions,
 }) => {
   const [cursor, setCursor] = useState<number | null>(null);
-
-  const PopoverContentInput = editNode
-    ? PopoverContent
-    : PopoverContentWithoutPortal;
 
   // Restore cursor position after value changes
   useEffect(() => {
@@ -100,7 +92,7 @@ const CustomInputPopoverObject = ({
           data-testid={id}
         />
       </PopoverAnchor>
-      <PopoverContentInput
+      <PopoverContent
         className="noflow nowheel nopan nodelete nodrag p-0"
         style={{ minWidth: refInput?.current?.clientWidth ?? "200px" }}
         side="bottom"
@@ -180,7 +172,7 @@ const CustomInputPopoverObject = ({
             </CommandGroup>
           </CommandList>
         </Command>
-      </PopoverContentInput>
+      </PopoverContent>
     </Popover>
   );
 };

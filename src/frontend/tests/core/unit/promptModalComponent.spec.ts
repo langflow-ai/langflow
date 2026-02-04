@@ -10,7 +10,8 @@ async function verifyPromptVariables(
   expectedVars: string[],
   isFirstTime = true,
 ) {
-  await page.getByTestId("promptarea_prompt_template").click();
+  await page.getByText("Prompt Template", { exact: true }).click();
+  await page.getByTestId("button_open_prompt_modal").click();
 
   // Use different selectors based on whether this is the first time or a subsequent edit
   if (isFirstTime) {
@@ -131,7 +132,7 @@ test(
     );
 
     // Close the final modal
-    await page.getByText("Close").last().click();
+    await page.getByTestId("edit-button-close").last().click();
   },
 );
 
@@ -320,7 +321,7 @@ test(
       await page.locator('//*[@id="showprompt"]').isChecked(),
     ).toBeTruthy();
 
-    await page.getByText("Close").last().click();
+    await page.getByTestId("edit-button-close").last().click();
     await adjustScreenView(page, { numberOfZoomOut: 2 });
 
     await page.getByTestId("edit-button-modal").last().click();
@@ -418,7 +419,7 @@ test(
     ).toBeTruthy();
 
     // Close the modal
-    await page.getByText("Close").last().click();
+    await page.getByTestId("edit-button-close").last().click();
 
     // Now test double bracket variable extraction - click the mustache prompt button
     await page.waitForSelector(
@@ -522,7 +523,7 @@ test(
     ).toBeTruthy();
 
     // Close the modal
-    await page.getByText("Close").last().click();
+    await page.getByTestId("edit-button-close").last().click();
 
     // Test multiple double bracket variables - click the mustache prompt button
     await page.waitForSelector(

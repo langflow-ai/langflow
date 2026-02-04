@@ -40,6 +40,7 @@ import ToolbarModals from "./components/toolbar-modals";
 import useShortcuts from "./hooks/use-shortcuts";
 import ShortcutDisplay from "./shortcutDisplay";
 import ToolbarSelectItem from "./toolbarSelectItem";
+import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
 
 const NodeToolbarComponent = memo(
   ({
@@ -84,6 +85,7 @@ const NodeToolbarComponent = memo(
     const paste = useFlowStore((state) => state.paste);
     const setNodes = useFlowStore((state) => state.setNodes);
     const setEdges = useFlowStore((state) => state.setEdges);
+    const edges = useFlowStore((state) => state.edges);
     const getNodePosition = useFlowStore((state) => state.getNodePosition);
     const flows = useFlowsManagerStore((state) => state.flows);
     const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
@@ -130,8 +132,11 @@ const NodeToolbarComponent = memo(
 
     const hasSelectOutput = hasOutputs && !hasGroupOutputs;
     const hasOnlyOneOutput = data.node?.outputs?.length === 1;
+    const hasMaximumOneConnectedInput =
+      edges.filter((edge) => edge.target === data.id).length <= 1;
 
-    const isMinimal = hasSelectOutput || hasOnlyOneOutput;
+    const isMinimal =
+      (hasSelectOutput || hasOnlyOneOutput) && hasMaximumOneConnectedInput;
 
     const [toolMode, setToolMode] = useState(
       () =>
@@ -186,7 +191,7 @@ const NodeToolbarComponent = memo(
       }
       setNoticeData({
         title:
-          "Minimization only available for components with one handle or fewer.",
+          "Minimization is only available for components with one active connection or fewer.",
       });
     }, [isMinimal, showNode, data.id]);
 
@@ -469,7 +474,7 @@ const NodeToolbarComponent = memo(
 
     const isCustomComponent = useMemo(() => {
       const isCustom = data.type === "CustomComponent" && !data.node?.edited;
-      if (isCustom) {
+      if (isCustom && !ENABLE_INSPECTION_PANEL) {
         data.node.edited = true;
       }
       return isCustom;
@@ -478,7 +483,7 @@ const NodeToolbarComponent = memo(
     const renderToolbarButtons = useMemo(
       () => (
         <>
-          {hasCode && (
+          {hasCode && !ENABLE_INSPECTION_PANEL && (
             <ToolbarButton
               className={isCustomComponent ? "animate-pulse-pink" : ""}
               icon="Code"
@@ -490,7 +495,7 @@ const NodeToolbarComponent = memo(
               dataTestId="code-button-modal"
             />
           )}
-          {nodeLength > 0 && (
+          {nodeLength > 0 && !ENABLE_INSPECTION_PANEL && (
             <ToolbarButton
               icon="SlidersHorizontal"
               label="Controls"
@@ -501,7 +506,7 @@ const NodeToolbarComponent = memo(
               dataTestId="edit-button-modal"
             />
           )}
-          {!hasToolMode && (
+          {(!hasToolMode || ENABLE_INSPECTION_PANEL) && (
             <ToolbarButton
               icon="FreezeAll"
               label="Freeze"
@@ -681,19 +686,22 @@ const NodeToolbarComponent = memo(
                   </SelectItem>
                 )}
 
-                <SelectItem
-                  value={"documentation"}
-                  disabled={data.node?.documentation === ""}
-                >
-                  <ToolbarSelectItem
-                    shortcut={
-                      shortcuts.find((obj) => obj.name === "Docs")?.shortcut!
-                    }
-                    value={"Docs"}
-                    icon={"FileText"}
-                    dataTestId="docs-button-modal"
-                  />
-                </SelectItem>
+                {!ENABLE_INSPECTION_PANEL && (
+                  <SelectItem
+                    value={"documentation"}
+                    disabled={data.node?.documentation === ""}
+                  >
+                    <ToolbarSelectItem
+                      shortcut={
+                        shortcuts.find((obj) => obj.name === "Docs")?.shortcut!
+                      }
+                      value={"Docs"}
+                      icon={"FileText"}
+                      dataTestId="docs-button-modal"
+                    />
+                  </SelectItem>
+                )}
+
                 {(isMinimal || !showNode) && (
                   <SelectItem
                     value={"show"}
@@ -723,7 +731,7 @@ const NodeToolbarComponent = memo(
                     />
                   </SelectItem>
                 )}
-                {hasToolMode && (
+                {hasToolMode && !ENABLE_INSPECTION_PANEL && (
                   <SelectItem
                     value="freezeAll"
                     data-testid="freeze-all-button-modal"

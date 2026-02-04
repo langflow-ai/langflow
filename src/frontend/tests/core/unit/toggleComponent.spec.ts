@@ -36,7 +36,7 @@ test(
       await page.locator('//*[@id="showload_hidden"]').isChecked(),
     ).toBeTruthy();
 
-    await page.getByText("Close").last().click();
+    await page.getByTestId("edit-button-close").last().click();
 
     await adjustScreenView(page);
 
@@ -126,7 +126,7 @@ test(
       await page.locator('//*[@id="showuse_multithreading"]').isChecked(),
     ).toBeFalsy();
 
-    await page.getByText("Close").last().click();
+    await page.getByTestId("edit-button-close").last().click();
 
     const plusButtonLocator = page.getByTestId("toggle_bool_load_hidden");
     const elementCount = await plusButtonLocator?.count();
@@ -146,7 +146,7 @@ test(
         await page.getByTestId("toggle_bool_load_hidden").isChecked(),
       ).toBeTruthy();
 
-      await page.getByText("Close").last().click();
+      await page.getByTestId("edit-button-close").last().click();
 
       await page.getByTestId("toggle_bool_load_hidden").click();
       expect(

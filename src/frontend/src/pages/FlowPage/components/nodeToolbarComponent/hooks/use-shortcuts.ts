@@ -1,6 +1,7 @@
 import { useHotkeys } from "react-hotkeys-hook";
 import { useShortcutsStore } from "@/stores/shortcuts";
 import isWrappedWithClass from "../../PageComponent/utils/is-wrapped-with-class";
+import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
 
 export default function useShortcuts({
   showOverrideModal,
@@ -121,9 +122,13 @@ export default function useShortcuts({
   useHotkeys(group, handleGroupWShortcut, { preventDefault: true });
   useHotkeys(componentShare, handleShareWShortcut, { preventDefault: true });
   useHotkeys(code, handleCodeWShortcut, { preventDefault: true });
-  useHotkeys(advancedSettings, handleAdvancedWShortcut, {
-    preventDefault: true,
-  });
+  useHotkeys(
+    advancedSettings,
+    !ENABLE_INSPECTION_PANEL ? handleAdvancedWShortcut : () => {},
+    {
+      preventDefault: true,
+    },
+  );
   useHotkeys(save, handleSaveWShortcut, { preventDefault: true });
   useHotkeys(docs, handleDocsWShortcut, { preventDefault: true });
   useHotkeys(download, handleDownloadWShortcut, { preventDefault: true });

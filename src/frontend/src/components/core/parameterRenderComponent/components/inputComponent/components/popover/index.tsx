@@ -11,11 +11,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverContentWithoutPortal,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent } from "@/components/ui/popover";
 import { cn } from "@/utils/utils";
 
 const OptionBadge = ({
@@ -191,10 +187,6 @@ const CustomInputPopover = ({
   const [cursor, setCursor] = useState<number | null>(null);
   const memoizedOptions = useMemo(() => new Set<string>(options), [options]);
 
-  const PopoverContentInput = editNode
-    ? PopoverContent
-    : PopoverContentWithoutPortal;
-
   // Restore cursor position after value changes
   useEffect(() => {
     if (cursor !== null && refInput.current) {
@@ -326,7 +318,7 @@ const CustomInputPopover = ({
         </div>
       </PopoverAnchor>
 
-      <PopoverContentInput
+      <PopoverContent
         className="noflow nowheel nopan nodelete nodrag p-0"
         style={{
           minWidth: refInput?.current?.clientWidth ?? "200px",
@@ -371,7 +363,7 @@ const CustomInputPopover = ({
             </CommandGroup>
           </CommandList>
         </Command>
-      </PopoverContentInput>
+      </PopoverContent>
     </Popover>
   );
 };

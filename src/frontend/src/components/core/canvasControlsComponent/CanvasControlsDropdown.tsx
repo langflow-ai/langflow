@@ -11,6 +11,9 @@ import {
 import { Separator } from "@/components/ui/separator";
 import DropdownControlButton from "./DropdownControlButton";
 import { formatZoomPercentage, reactFlowSelector } from "./utils/canvasUtils";
+import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
+import useFlowStore from "@/stores/flowStore";
+import { AllNodeType } from "@/types/flow";
 
 export const KEYBOARD_SHORTCUTS = {
   ZOOM_IN: { key: "+", code: "Equal" },
@@ -19,7 +22,11 @@ export const KEYBOARD_SHORTCUTS = {
   RESET_ZOOM: { key: "0", code: "Digit0" },
 } as const;
 
-const CanvasControlsDropdown = () => {
+const CanvasControlsDropdown = ({
+  selectedNode,
+}: {
+  selectedNode: AllNodeType | null;
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const { fitView, zoomIn, zoomOut, zoomTo } = useReactFlow();
 
@@ -71,8 +78,13 @@ const CanvasControlsDropdown = () => {
   }, [zoomOut]);
 
   const handleFitView = useCallback(() => {
-    fitView();
-  }, [fitView]);
+    fitView({
+      padding: {
+        left: "20px",
+        right: ENABLE_INSPECTION_PANEL && selectedNode ? "340px" : "20px",
+      },
+    });
+  }, [fitView, selectedNode]);
 
   const handleResetZoom = useCallback(() => {
     zoomTo(1);

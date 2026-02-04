@@ -14,7 +14,6 @@ import {
 import {
   Popover,
   PopoverContent,
-  PopoverContentWithoutPortal,
   PopoverTrigger,
 } from "../../../../ui/popover";
 import type { InputProps, MultiselectComponentType } from "../../types";
@@ -27,15 +26,12 @@ export default function MultiselectComponent({
   combobox,
   editNode = false,
   id = "",
-}: InputProps<string[], MultiselectComponentType>): JSX.Element {
+  showParameter = true,
+}: InputProps<string[], MultiselectComponentType>): JSX.Element | null {
   const [open, setOpen] = useState(false);
   const treatedValue = typeof value === "string" ? [value] : value;
 
   const refButton = useRef<HTMLButtonElement>(null);
-
-  const PopoverContentDropdown = editNode
-    ? PopoverContent
-    : PopoverContentWithoutPortal;
 
   const [customValues, setCustomValues] = useState<string[]>([]);
   const [searchValue, setSearchValue] = useState("");
@@ -192,6 +188,10 @@ export default function MultiselectComponent({
     </CommandList>
   );
 
+  if (!showParameter) {
+    return null;
+  }
+
   if (Object.keys(options).length === 0 && !combobox) {
     return (
       <div>
@@ -205,10 +205,10 @@ export default function MultiselectComponent({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       {renderDropdownTrigger()}
-      <PopoverContentDropdown
+      <PopoverContent
         onOpenAutoFocus={(event) => event.preventDefault()}
         side="bottom"
-        avoidCollisions={false}
+        avoidCollisions={true}
         className="noflow nowheel nopan nodelete nodrag p-0"
         style={{ minWidth: refButton?.current?.clientWidth ?? "200px" }}
       >
@@ -216,7 +216,7 @@ export default function MultiselectComponent({
           {renderSearchInput()}
           {renderOptionsList()}
         </Command>
-      </PopoverContentDropdown>
+      </PopoverContent>
     </Popover>
   );
 }
