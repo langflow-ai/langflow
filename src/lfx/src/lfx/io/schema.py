@@ -229,8 +229,7 @@ def create_input_schema(inputs: list["InputTypes"]) -> type[BaseModel]:
             and input_model.options
             and len(input_model.options) <= MAX_OPTIONS_FOR_TOOL_ENUM
         ):
-            literal_string = f"Literal{input_model.options}"
-            field_type = eval(literal_string, {"Literal": Literal})  # noqa: S307
+            field_type = Literal[tuple(input_model.options)]
         if hasattr(input_model, "is_list") and input_model.is_list:
             field_type = list[field_type]  # type: ignore[valid-type]
         if input_model.name:
@@ -271,8 +270,7 @@ def create_input_schema_from_dict(inputs: list[dotdict], param_key: str | None =
             and input_model.options
             and len(input_model.options) <= MAX_OPTIONS_FOR_TOOL_ENUM
         ):
-            literal_string = f"Literal{input_model.options}"
-            field_type = eval(literal_string, {"Literal": Literal})  # noqa: S307
+            field_type = Literal[tuple(input_model.options)]
         if hasattr(input_model, "is_list") and input_model.is_list:
             field_type = list[field_type]  # type: ignore[valid-type]
         if input_model.name:
