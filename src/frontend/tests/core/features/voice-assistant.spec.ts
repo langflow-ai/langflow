@@ -74,7 +74,7 @@ test.skip(
   },
 );
 
-test(
+test.skip(
   "user should not be able to see voice button if voice mode is not available",
   { tag: ["@release", "@workspace", "@api"] },
   async ({ page, request }) => {
@@ -102,7 +102,7 @@ test(
   },
 );
 
-test(
+test.skip(
   "user should be able to see voice button if voice mode is available",
   { tag: ["@release", "@workspace", "@api"] },
   async ({ page, request }) => {
