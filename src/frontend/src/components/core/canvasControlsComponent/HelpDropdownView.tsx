@@ -6,8 +6,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
-import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
 import DropdownControlButton from "./DropdownControlButton";
+import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
 
 export type HelpDropdownViewProps = {
   isOpen: boolean;
@@ -36,6 +36,7 @@ export const HelpDropdownView = ({
   openLink,
   urls,
 }: HelpDropdownViewProps) => {
+
   return (
     <DropdownMenu open={isOpen} onOpenChange={onOpenChange}>
       <DropdownMenuTrigger asChild>

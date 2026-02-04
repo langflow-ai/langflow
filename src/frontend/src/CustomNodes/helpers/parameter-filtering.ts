@@ -1,4 +1,3 @@
-import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
 import { InputFieldType } from "@/types/api";
 
 export function isInternalField(templateField: string) {
@@ -38,17 +37,6 @@ export function hasHandle(template: InputFieldType) {
 export function isCanvasVisible(template: InputFieldType, isToolMode: boolean) {
   if (isHidden(template, isToolMode)) return false;
   if (template?.advanced) return false;
-  return true;
-}
-
-/**
- * Determines if a field should be visually displayed on the canvas.
- */
-export function shouldDisplayOnCanvas(template: InputFieldType) {
-  if (ENABLE_INSPECTION_PANEL) {
-    // When inspection panel is enabled, show all fields except advanced
-    return !template.advanced;
-  }
   return true;
 }
 

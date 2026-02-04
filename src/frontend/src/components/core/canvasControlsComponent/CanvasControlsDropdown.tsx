@@ -11,7 +11,6 @@ import {
 import { Separator } from "@/components/ui/separator";
 import DropdownControlButton from "./DropdownControlButton";
 import { formatZoomPercentage, reactFlowSelector } from "./utils/canvasUtils";
-import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
 import useFlowStore from "@/stores/flowStore";
 import { AllNodeType } from "@/types/flow";
 
@@ -34,6 +33,8 @@ const CanvasControlsDropdown = ({
     reactFlowSelector,
     shallow,
   );
+
+  const inspectionPanelVisible = useFlowStore((state) => state.inspectionPanelVisible);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -81,7 +82,7 @@ const CanvasControlsDropdown = ({
     fitView({
       padding: {
         left: "20px",
-        right: ENABLE_INSPECTION_PANEL && selectedNode ? "340px" : "20px",
+        right: inspectionPanelVisible && selectedNode ? "340px" : "20px",
       },
     });
   }, [fitView, selectedNode]);

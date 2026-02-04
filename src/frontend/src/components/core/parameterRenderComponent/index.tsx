@@ -44,8 +44,8 @@ export function ParameterRenderComponent({
   nodeInformationMetadata,
 }: {
   handleOnNewValue:
-    | handleOnNewValueType
-    | ((value: string, key: string) => void);
+  | handleOnNewValueType
+  | ((value: string, key: string) => void);
   name: string;
   nodeId: string;
   templateData: Partial<InputFieldType>;
@@ -189,7 +189,7 @@ export function ParameterRenderComponent({
           />
         );
       case "prompt":
-        return ENABLE_INSPECTION_PANEL ? (
+        return ENABLE_INSPECTION_PANEL && !baseInputProps.editNode ? (
           <AccordionPromptComponent
             {...baseInputProps}
             readonly={!!nodeClass.flow}

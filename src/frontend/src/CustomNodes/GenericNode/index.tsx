@@ -32,7 +32,6 @@ import NodeUpdateComponent from "./components/NodeUpdateComponent";
 import { NodeIcon } from "./components/nodeIcon";
 import RenderInputParameters from "./components/RenderInputParameters";
 import { useBuildStatus } from "./hooks/use-get-build-status";
-import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
 
 const MemoizedRenderInputParameters = memo(RenderInputParameters);
 const MemoizedNodeIcon = memo(NodeIcon);
@@ -400,7 +399,7 @@ function GenericNode({
             numberOfOutputHandles={shownOutputs.length ?? 0}
             showNode={showNode}
             openAdvancedModal={false}
-            onCloseAdvancedModal={() => {}}
+            onCloseAdvancedModal={() => { }}
             updateNode={() => handleUpdateCode()}
             isOutdated={isOutdated && (dismissAll || isUserEdited)}
             isUserEdited={isUserEdited}

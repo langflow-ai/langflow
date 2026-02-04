@@ -52,11 +52,12 @@ const buttonVariants = cva(
 
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {
+  VariantProps<typeof buttonVariants> {
   asChild?: boolean;
   loading?: boolean;
   unstyled?: boolean;
   ignoreTitleCase?: boolean;
+  shouldScale?: boolean;
 }
 
 function toTitleCase(text: string) {
@@ -81,6 +82,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       asChild = false,
       children,
       ignoreTitleCase = false,
+      shouldScale = true,
       ...props
     },
     ref,
@@ -90,16 +92,16 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     if (typeof children === "string") {
       newChildren = ignoreTitleCase ? children : toTitleCase(children);
     }
-    const shouldScale = props["aria-haspopup"] !== "dialog";
+    const shouldScaleButton = props["aria-haspopup"] !== "dialog" || shouldScale;
     return (
       <>
         <Comp
           className={
             !unstyled
               ? cn(
-                  buttonVariants({ variant, size, className }),
-                  shouldScale && "active:scale-[0.97]",
-                )
+                buttonVariants({ variant, size, className }),
+                shouldScaleButton && "active:scale-[0.97]",
+              )
               : cn(className)
           }
           disabled={loading || disabled}

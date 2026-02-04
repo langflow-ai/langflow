@@ -5,12 +5,10 @@ import { sortToolModeFields } from "@/CustomNodes/helpers/sort-tool-mode-field";
 import getFieldTitle from "@/CustomNodes/utils/get-field-title";
 import { scapedJSONStringfy } from "@/utils/reactflowUtils";
 import NodeInputField from "../NodeInputField";
-import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
 import { findPrimaryInput } from "./utils";
 import {
   isCanvasVisible,
   isInternalField,
-  shouldDisplayOnCanvas,
 } from "@/CustomNodes/helpers/parameter-filtering";
 import useFlowStore from "@/stores/flowStore";
 
@@ -44,14 +42,6 @@ const RenderInputParameters = ({
       return isCanvasVisible(template, isToolMode);
     });
   }, [templateFields, data.node?.template, isToolMode]);
-
-  // Separate list for fields that should be visually displayed
-  const visuallyShownFields = useMemo(() => {
-    return shownTemplateFields.filter((templateField) => {
-      const template = data.node?.template[templateField];
-      return shouldDisplayOnCanvas(template);
-    });
-  }, [shownTemplateFields, data.node?.template]);
 
   const memoizedColors = useMemo(() => {
     const colorMap = new Map();
@@ -122,7 +112,7 @@ const RenderInputParameters = ({
       const memoizedKey = memoizedKeys.get(templateField);
 
       // Check if this field should be visually displayed
-      const shouldDisplay = visuallyShownFields.includes(templateField);
+      const shouldDisplay = shownTemplateFields.includes(templateField);
 
       // For model type fields, provide default input_types if not set
       const isModelType = template.type === "model";
@@ -137,7 +127,7 @@ const RenderInputParameters = ({
         <NodeInputField
           lastInput={
             !(shownOutputs.length > 0 || showHiddenOutputs) &&
-            idx === visuallyShownFields.length - 1 &&
+            idx === shownTemplateFields.length - 1 &&
             shouldDisplay
           }
           key={memoizedKey}

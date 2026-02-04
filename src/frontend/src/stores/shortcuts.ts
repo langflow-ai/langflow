@@ -2,9 +2,10 @@ import { create } from "zustand";
 import { toCamelCase } from "@/utils/utils";
 import { defaultShortcuts } from "../constants/constants";
 import type { shortcutsStoreType } from "../types/store";
+import useFlowStore from "./flowStore";
 
 export const useShortcutsStore = create<shortcutsStoreType>((set, get) => ({
-  shortcuts: defaultShortcuts,
+  shortcuts: useFlowStore.getState().inspectionPanelVisible ? defaultShortcuts.filter((shortcut) => shortcut.name !== "Advanced Settings") : defaultShortcuts,
   setShortcuts: (newShortcuts) => {
     set({ shortcuts: newShortcuts });
   },
@@ -44,13 +45,14 @@ export const useShortcutsStore = create<shortcutsStoreType>((set, get) => ({
     if (localStorage.getItem("langflow-shortcuts")) {
       const savedShortcuts = localStorage.getItem("langflow-shortcuts");
       const savedArr = JSON.parse(savedShortcuts!);
-      savedArr.forEach(({ name, shortcut }) => {
+      const savedArrFiltered = useFlowStore.getState().inspectionPanelVisible ? savedArr.filter((shortcut) => shortcut.name !== "Advanced Settings") : savedArr;
+      savedArrFiltered.forEach(({ name, shortcut }) => {
         const shortcutName = toCamelCase(name);
         set({
           [shortcutName]: shortcut,
         });
       });
-      get().setShortcuts(JSON.parse(savedShortcuts!));
+      get().setShortcuts(savedArrFiltered);
     }
   },
 }));

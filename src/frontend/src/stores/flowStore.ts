@@ -11,7 +11,10 @@ import { create } from "zustand";
 import { checkCodeValidity } from "@/CustomNodes/helpers/check-code-validity";
 import { MISSED_ERROR_ALERT } from "@/constants/alerts_constants";
 import { BROKEN_EDGES_WARNING } from "@/constants/constants";
-import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
+import {
+  ENABLE_DATASTAX_LANGFLOW,
+  ENABLE_INSPECTION_PANEL,
+} from "@/customization/feature-flags";
 import {
   track,
   trackDataLoaded,
@@ -454,9 +457,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     const insidePosition = position.paneX
       ? { x: position.paneX + position.x, y: position.paneY! + position.y }
       : get().reactFlowInstance!.screenToFlowPosition({
-          x: position.x,
-          y: position.y,
-        });
+        x: position.x,
+        y: position.y,
+      });
 
     let internalPostionDictionary = get().positionDictionary;
     if (Object.keys(internalPostionDictionary).length === 0) {
@@ -739,7 +742,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       throw new Error("Invalid components");
     }
 
-    function validateSubgraph() {}
+    function validateSubgraph() { }
     function handleBuildUpdate(
       vertexBuildData: VertexBuildTypeAPI,
       status: BuildStatus,
@@ -782,7 +785,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         // each layer is a list of vertexlayerelementtypes
         const lastLayer =
           get().verticesBuild!.verticesLayers[
-            get().verticesBuild!.verticesLayers.length - 1
+          get().verticesBuild!.verticesLayers.length - 1
           ];
 
         nextVertices = nextVertices.filter(
@@ -849,7 +852,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       flowId: currentFlow!.id,
       startNodeId,
       stopNodeId,
-      onGetOrderSuccess: () => {},
+      onGetOrderSuccess: () => { },
       onBuildComplete: (allNodesValid) => {
         if (!silent) {
           if (allNodesValid) {
@@ -1114,8 +1117,14 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   setHelperLineEnabled: (helperLineEnabled: boolean) => {
     set({ helperLineEnabled });
   },
-  inspectionPanelVisible: true,
+  inspectionPanelVisible: ENABLE_INSPECTION_PANEL
+    ? localStorage.getItem("inspectionPanelVisible") !== null
+      ? localStorage.getItem("inspectionPanelVisible") === "true"
+      : true
+    : false,
   setInspectionPanelVisible: (visible: boolean) => {
+    if (!ENABLE_INSPECTION_PANEL) return;
+    localStorage.setItem("inspectionPanelVisible", String(visible));
     set({ inspectionPanelVisible: visible });
   },
   setNewChatOnPlayground: (newChat: boolean) => {
