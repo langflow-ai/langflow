@@ -6,6 +6,7 @@ import uuid
 from collections.abc import AsyncIterator
 
 from fastapi import BackgroundTasks, HTTPException, Response
+from lfx.graph.coercion import CoercionSettings
 from lfx.graph.graph.base import Graph
 from lfx.graph.utils import log_vertex_build
 from lfx.log.logger import logger
@@ -23,7 +24,7 @@ from langflow.api.utils import (
     get_top_level_vertices,
     parse_exception,
 )
-from langflow.api.v1.schemas import FlowDataRequest, ResultDataResponse, VertexBuildResponse
+from langflow.api.v1.schemas import CoercionSettingsRequest, FlowDataRequest, ResultDataResponse, VertexBuildResponse
 from langflow.events.event_manager import EventManager
 from langflow.exceptions.component import ComponentBuildError
 from langflow.schema.message import ErrorMessage
@@ -69,6 +70,7 @@ async def start_flow_build(
     current_user: CurrentActiveUser,
     queue_service: JobQueueService,
     flow_name: str | None = None,
+    coercion_settings: CoercionSettingsRequest | None = None,
 ) -> str:
     """Start the flow build process by setting up the queue and starting the build task.
 
@@ -90,6 +92,7 @@ async def start_flow_build(
             log_builds=log_builds,
             current_user=current_user,
             flow_name=flow_name,
+            coercion_settings=coercion_settings,
         )
         queue_service.start_job(job_id, task_coro)
     except Exception as e:
@@ -209,6 +212,7 @@ async def generate_flow_events(
     log_builds: bool,
     current_user: CurrentActiveUser,
     flow_name: str | None = None,
+    coercion_settings: CoercionSettingsRequest | None = None,
 ) -> None:
     """Generate events for flow building process.
 
@@ -282,14 +286,26 @@ async def generate_flow_events(
         else:
             effective_session_id = flow_id_str
 
+        # Convert API coercion settings to the internal CoercionSettings dataclass
+        graph_coercion_settings = None
+        if coercion_settings and coercion_settings.enabled:
+            graph_coercion_settings = CoercionSettings(
+                enabled=coercion_settings.enabled,
+                auto_parse=coercion_settings.auto_parse,
+            )
+
         if not data:
-            return await build_graph_from_db(
+            graph = await build_graph_from_db(
                 flow_id=flow_id,
                 session=fresh_session,
                 chat_service=chat_service,
                 user_id=str(current_user.id),
                 session_id=effective_session_id,
             )
+            # Apply coercion settings to the graph
+            if graph_coercion_settings:
+                graph.coercion_settings = graph_coercion_settings
+            return graph
 
         if not flow_name:
             result = await fresh_session.exec(select(Flow.name).where(Flow.id == flow_id))
@@ -301,6 +317,7 @@ async def generate_flow_events(
             user_id=str(current_user.id),
             flow_name=flow_name,
             session_id=effective_session_id,
+            coercion_settings=graph_coercion_settings,
         )
 
     def sort_vertices(graph: Graph) -> list[str]:

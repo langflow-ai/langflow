@@ -89,6 +89,16 @@ export default function SettingsPage(): JSX.Element {
         />
       ),
     },
+    {
+      title: "Type Coercion",
+      href: "/settings/type-coercion",
+      icon: (
+        <ForwardedIconComponent
+          name="Repeat"
+          className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
+        />
+      ),
+    },
   );
 
   // TODO: Remove this on cleanup

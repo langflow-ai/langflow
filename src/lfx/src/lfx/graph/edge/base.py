@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, cast
 
+from lfx.graph.coercion import COERCIBLE_TYPES, are_types_coercible
 from lfx.graph.edge.schema import EdgeData, LoopTargetHandleDict, SourceHandle, TargetHandle, TargetHandleDict
 from lfx.log.logger import logger
 from lfx.schema.schema import INPUT_FIELD_NAME
@@ -81,6 +82,15 @@ class Edge:
             self._validate_handles(source, target)
 
     def _validate_handles(self, source, target) -> None:
+        # AUTO-COERCION CHECK: If coercion is enabled, allow connection between coercible types
+        coercion_settings = getattr(source.graph, "coercion_settings", None)
+        if coercion_settings and coercion_settings.enabled:
+            source_types = list(self.source_handle.output_types or [])
+            target_types = list(self.target_handle.input_types or [])
+            if are_types_coercible(source_types, target_types):
+                self.valid_handles = True
+                return
+
         if self.target_handle.input_types is None:
             self.valid_handles = self.target_handle.type in self.source_handle.output_types
         elif self.target_handle.type is None:
@@ -149,6 +159,20 @@ class Edge:
         # .outputs is a list of Output objects as dictionaries
         # meaning: check for "types" key in each dictionary
         self.source_types = [output for output in source.outputs if output["name"] == self.source_handle.name]
+
+        # AUTO-COERCION CHECK: If coercion is enabled, allow connection between coercible types
+        coercion_settings = getattr(source.graph, "coercion_settings", None)
+        if coercion_settings and coercion_settings.enabled:
+            source_output_types = [t for output in self.source_types for t in output.get("types", [])]
+            target_input_types = list(self.target_handle.input_types or [])
+            if are_types_coercible(source_output_types, target_input_types):
+                self.valid = True
+                # Set matched_type to the first coercible source type for runtime conversion
+                self.matched_type = next(
+                    (t for t in source_output_types if t in COERCIBLE_TYPES),
+                    source_output_types[0] if source_output_types else None,
+                )
+                return
 
         # Check if this is an loop input (loop target handle with output_types)
         is_loop_input = hasattr(self.target_handle, "input_types") and self.target_handle.input_types

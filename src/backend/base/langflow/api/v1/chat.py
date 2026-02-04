@@ -30,6 +30,7 @@ from langflow.api.utils import (
 )
 from langflow.api.v1.schemas import (
     CancelFlowResponse,
+    CoercionSettingsRequest,
     FlowDataRequest,
     ResultDataResponse,
     StreamData,
@@ -145,6 +146,7 @@ async def build_flow(
     queue_service: Annotated[JobQueueService, Depends(get_queue_service)],
     flow_name: str | None = None,
     event_delivery: EventDeliveryType = EventDeliveryType.POLLING,
+    coercion_settings: Annotated[CoercionSettingsRequest | None, Body(embed=True)] = None,
 ):
     """Build and process a flow, returning a job ID for event polling.
 
@@ -186,6 +188,7 @@ async def build_flow(
         current_user=current_user,
         queue_service=queue_service,
         flow_name=flow_name,
+        coercion_settings=coercion_settings,
     )
 
     # This is required to support FE tests - we need to be able to set the event delivery to direct
