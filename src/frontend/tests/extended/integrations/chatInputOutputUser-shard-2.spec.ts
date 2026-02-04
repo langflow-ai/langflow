@@ -5,6 +5,8 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import {
   closeAdvancedOptions,
+  disableInspectPanel,
+  enableInspectPanel,
   openAdvancedOptions,
 } from "../../utils/open-advanced-options";
 
@@ -68,6 +70,7 @@ test(
 
     await page.getByTestId("button-send").click();
     await page.getByText("Close", { exact: true }).click();
+    await disableInspectPanel(page);
     await page.getByText("Chat Input", { exact: true }).click();
     await openAdvancedOptions(page);
     await page.getByTestId("showsender_name").click();
@@ -113,5 +116,8 @@ test(
         )
         .isVisible(),
     );
+
+    await page.getByText("Close", { exact: true }).last().click();
+    await enableInspectPanel(page);
   },
 );

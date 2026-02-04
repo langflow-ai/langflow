@@ -2,7 +2,7 @@ import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { openAdvancedOptions } from "../../utils/open-advanced-options";
+import { closeAdvancedOptions, disableInspectPanel, enableInspectPanel, openAdvancedOptions } from "../../utils/open-advanced-options";
 
 test(
   "user should be able to use nested component",
@@ -54,6 +54,8 @@ test(
 
     await page.getByText("Save").last().click();
 
+    await disableInspectPanel(page);
+
     await page.getByTestId("div-generic-node").click();
 
     await openAdvancedOptions(page);
@@ -79,5 +81,11 @@ test(
 
     expect(await page.getByText("keytest", { exact: true }).count()).toBe(0);
     expect(await page.getByText("proptest", { exact: true }).count()).toBe(0);
+
+    await page.getByText("Save", { exact: true }).last().click();
+
+    await closeAdvancedOptions(page);
+
+    await enableInspectPanel(page);
   },
 );

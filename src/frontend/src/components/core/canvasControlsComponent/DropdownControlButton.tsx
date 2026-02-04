@@ -20,7 +20,7 @@ export type DropdownControlButtonProps = {
 
 const DropdownControlButton: React.FC<DropdownControlButtonProps> = ({
   tooltipText,
-  onClick = () => {},
+  onClick = () => { },
   disabled,
   testId,
   label = "",
@@ -77,7 +77,7 @@ const DropdownControlButton: React.FC<DropdownControlButtonProps> = ({
         value={toggleValue}
         handleOnNewValue={onClick}
         editNode={true}
-        id="helper_lines"
+        id={`${testId}-toggle`}
         disabled={false}
       />
     )}

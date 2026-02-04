@@ -53,6 +53,9 @@ export default function InspectionPanelEditField({
             : "bg-muted text-muted-foreground hover:bg-muted-foreground/20 hover:text-foreground",
         )}
         data-testid={`show${name}`}
+        id={`show${name}`}
+        aria-checked={isOnCanvas}
+        role="checkbox"
       >
         <IconComponent
           name={isOnCanvas ? "Minus" : "Plus"}

@@ -6,6 +6,8 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import {
   closeAdvancedOptions,
+  disableInspectPanel,
+  enableInspectPanel,
   openAdvancedOptions,
 } from "../../utils/open-advanced-options";
 
@@ -44,6 +46,7 @@ test(
 
     await page.waitForSelector("text=Chat Input", { timeout: 30000 });
 
+    await disableInspectPanel(page);
     await page.getByText("Chat Input", { exact: true }).click();
     await openAdvancedOptions(page);
     await closeAdvancedOptions(page);
@@ -92,5 +95,9 @@ test(
         ).toFixed(2)} KB`,
       ),
     ).toBeVisible();
+
+    await page.getByText("Close", { exact: true }).last().click();
+
+    await enableInspectPanel(page);
   },
 );

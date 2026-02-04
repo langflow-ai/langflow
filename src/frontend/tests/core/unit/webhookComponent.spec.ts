@@ -1,7 +1,7 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { openAdvancedOptions } from "../../utils/open-advanced-options";
+import { closeAdvancedOptions, disableInspectPanel, enableInspectPanel, openAdvancedOptions } from "../../utils/open-advanced-options";
 
 test(
   "user should be able to create an api key within a webhook component",
@@ -45,6 +45,7 @@ test(
     await page.getByTestId("btn_copy_str_endpoint").click();
     await page.waitForSelector("text=Endpoint URL copied", { timeout: 30000 });
 
+    await disableInspectPanel(page);
     await page.getByTestId("title-Webhook").click();
     await openAdvancedOptions(page);
 
@@ -59,6 +60,10 @@ test(
     const flowId = currentUrl.split("/")[2];
 
     expect(curl).toContain(flowId);
+
+    await page.getByText("Close", { exact: true }).last().click();
+    await closeAdvancedOptions(page);
+    await enableInspectPanel(page);
   },
 );
 

@@ -3,6 +3,8 @@ import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import {
   closeAdvancedOptions,
+  disableInspectPanel,
+  enableInspectPanel,
   openAdvancedOptions,
 } from "../../utils/open-advanced-options";
 
@@ -63,6 +65,8 @@ test(
     await page.waitForSelector('[data-testid="more-options-modal"]', {
       timeout: 3000,
     });
+
+    await disableInspectPanel(page);
 
     await openAdvancedOptions(page);
 
@@ -248,5 +252,7 @@ class AmazonBedrockComponent(LCModelComponent):
     await page
       .getByText("No parameters are available for display.")
       .isVisible();
+
+    await enableInspectPanel(page);
   },
 );

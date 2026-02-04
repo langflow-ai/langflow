@@ -4,6 +4,8 @@ import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import {
   closeAdvancedOptions,
+  disableInspectPanel,
+  enableInspectPanel,
   openAdvancedOptions,
 } from "../../utils/open-advanced-options";
 
@@ -94,6 +96,8 @@ test(
       await page.getByTestId("query_query_openai_api_base").inputValue(),
     ).toEqual("THIS IS A NEW VALUE");
 
+    await disableInspectPanel(page);
+
     await openAdvancedOptions(page);
 
     expect(
@@ -121,6 +125,8 @@ test(
     expect(
       await page.getByTestId("query_query_openai_api_base").inputValue(),
     ).toEqual("THIS IA TEST TEXT INSIDE CONTROLS PANEL");
+
+    await enableInspectPanel(page);
   },
 );
 

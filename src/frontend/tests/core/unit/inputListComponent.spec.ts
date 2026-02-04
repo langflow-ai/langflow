@@ -3,6 +3,8 @@ import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import {
   closeAdvancedOptions,
+  disableInspectPanel,
+  enableInspectPanel,
   openAdvancedOptions,
 } from "../../utils/open-advanced-options";
 
@@ -55,6 +57,8 @@ test(
     await page
       .getByTestId("inputlist_str_urls_2")
       .fill("test2 test2 test2 test2");
+
+    await disableInspectPanel(page);
 
     await page.getByTestId("div-generic-node").click();
     await openAdvancedOptions(page);
@@ -127,5 +131,9 @@ test(
     expect(
       await page.getByTestId("inputlist_str_edit_urls_1").inputValue(),
     ).toBe("");
+
+    await closeAdvancedOptions(page);
+
+    await enableInspectPanel(page);
   },
 );

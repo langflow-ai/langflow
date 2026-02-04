@@ -44,6 +44,7 @@ export const HelpDropdownView = ({
           size="icon"
           className="group flex items-center justify-center px-2 rounded-none"
           title="Help"
+          data-testid="canvas_controls_dropdown_help"
         >
           <IconComponent
             name="Circle-Help"

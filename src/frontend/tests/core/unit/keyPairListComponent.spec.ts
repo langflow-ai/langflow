@@ -3,6 +3,8 @@ import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import {
   closeAdvancedOptions,
+  disableInspectPanel,
+  enableInspectPanel,
   openAdvancedOptions,
 } from "../../utils/open-advanced-options";
 
@@ -33,6 +35,8 @@ test(
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
     await adjustScreenView(page);
+
+    await disableInspectPanel(page);
 
     await page.getByTestId("div-generic-node").click();
 
@@ -121,5 +125,7 @@ test(
     } else {
       expect(false).toBeTruthy();
     }
+
+    await enableInspectPanel(page);
   },
 );

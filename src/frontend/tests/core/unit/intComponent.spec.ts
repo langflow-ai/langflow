@@ -3,9 +3,10 @@ import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import {
   closeAdvancedOptions,
+  disableInspectPanel,
+  enableInspectPanel,
   openAdvancedOptions,
 } from "../../utils/open-advanced-options";
-import { zoomOut } from "../../utils/zoom-out";
 
 test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
   await awaitBootstrapTest(page);
@@ -26,6 +27,8 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
     .first()
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await adjustScreenView(page, { numberOfZoomOut: 2 });
+
+  await disableInspectPanel(page);
 
   await page.getByTestId("div-generic-node").click();
 
@@ -154,4 +157,6 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
     // -3 clamps to 0; max_tokens displays "" when value is 0 = no limit
     expect(value).toBe("");
   }
+
+  await enableInspectPanel(page);
 });

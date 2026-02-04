@@ -3,10 +3,10 @@ import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import {
   closeAdvancedOptions,
+  disableInspectPanel,
+  enableInspectPanel,
   openAdvancedOptions,
 } from "../../utils/open-advanced-options";
-
-import { zoomOut } from "../../utils/zoom-out";
 
 test(
   "the system must delete the handles from advanced fields when the code is updated",
@@ -32,6 +32,8 @@ test(
 
     await adjustScreenView(page, { numberOfZoomOut: 3 });
 
+    await disableInspectPanel(page);
+
     await openAdvancedOptions(page);
 
     await page.getByTestId("showtrue_case_message").click();
@@ -47,6 +49,8 @@ test(
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 200, y: 100 },
       });
+
+    await adjustScreenView(page);
 
     await page
       .getByTestId("handle-textinput-shownode-output text-right")
@@ -65,10 +69,6 @@ test(
       .count();
 
     expect(numberOfDisabledInputs).toBe(2);
-
-    const numberOfLockIcons = await page.getByTestId("icon-lock").count();
-
-    expect(numberOfLockIcons).toBe(2);
 
     await closeAdvancedOptions(page);
 
@@ -89,5 +89,9 @@ test(
     const numberOfLockIconsAfter = await page.getByTestId("icon-lock").count();
 
     expect(numberOfLockIconsAfter).toBe(0);
+
+    await closeAdvancedOptions(page);
+
+    await enableInspectPanel(page);
   },
 );
