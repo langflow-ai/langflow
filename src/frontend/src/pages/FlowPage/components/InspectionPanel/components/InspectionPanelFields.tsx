@@ -32,7 +32,6 @@ export default function InspectionPanelFields({
         if (isInternalField(templateField)) return false;
         if (!template?.show) return false;
         if (isCodeField(templateField, template)) return false;
-        if (isHandleInput(template)) return false;
         if (isToolModeEnabled(template) && isToolMode) return false;
         return true;
       })
