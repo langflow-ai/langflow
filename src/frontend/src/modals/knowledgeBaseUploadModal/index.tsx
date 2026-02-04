@@ -12,6 +12,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { api } from '@/controllers/API/api';
+import { getURL } from '@/controllers/API/helpers/constants';
 import { useCreateKnowledgeBase } from '@/controllers/API/queries/knowledge-bases/use-create-knowledge-base';
 import { useGetModelProviders } from '@/controllers/API/queries/models/use-get-model-providers';
 import useAlertStore from '@/stores/alertStore';
@@ -106,28 +108,75 @@ export default function KnowledgeBaseUploadModal({
     }
 
     const selectedModel = selectedEmbeddingModel[0];
+    const kbName = sourceName.trim().replace(/\s+/g, '_');
     setIsSubmitting(true);
 
     try {
-      // Create the knowledge base
+      // Step 1: Create the knowledge base
       await createKnowledgeBase.mutateAsync({
-        name: sourceName.trim().replace(/\s+/g, '_'),
+        name: kbName,
         embedding_provider: selectedModel.provider || 'Unknown',
         embedding_model: selectedModel.id || selectedModel.name,
       });
 
+      // Step 2: Upload and ingest files directly to the knowledge base
+      let ingestResult: any = null;
+      if (files.length > 0) {
+        try {
+          // Create FormData with all files
+          const formData = new FormData();
+          files.forEach(file => {
+            formData.append('files', file);
+          });
+          formData.append('source_name', sourceName);
+
+          // Call the ingest endpoint
+          const response = await api.post(
+            `${getURL('KNOWLEDGE_BASES')}/${kbName}/ingest`,
+            formData,
+            {
+              headers: {
+                'Content-Type': 'multipart/form-data',
+              },
+            }
+          );
+          ingestResult = response.data;
+        } catch (ingestError: any) {
+          console.warn('Failed to ingest files:', ingestError);
+          // KB was created, but ingestion failed - still show partial success
+          setSuccessData({
+            title: `Knowledge base "${sourceName}" created, but file ingestion failed. You can add files later.`,
+          });
+          onSubmit?.({
+            sourceName,
+            files,
+            embeddingModel: selectedEmbeddingModel,
+          });
+          setOpen(false);
+          resetForm();
+          return;
+        }
+      }
+
       // Build form data for callback
-      const formData: KnowledgeBaseFormData = {
+      const callbackData: KnowledgeBaseFormData = {
         sourceName,
         files,
         embeddingModel: selectedEmbeddingModel,
       };
 
-      setSuccessData({
-        title: `Knowledge base "${sourceName}" created successfully!`,
-      });
+      if (files.length > 0) {
+        const chunksCreated = ingestResult?.chunks_created || 0;
+        setSuccessData({
+          title: `Knowledge base "${sourceName}" created with ${files.length} file(s) and ${chunksCreated} chunks!`,
+        });
+      } else {
+        setSuccessData({
+          title: `Knowledge base "${sourceName}" created! You can add files later.`,
+        });
+      }
 
-      onSubmit?.(formData);
+      onSubmit?.(callbackData);
       setOpen(false);
       resetForm();
     } catch (error: any) {
@@ -164,13 +213,11 @@ export default function KnowledgeBaseUploadModal({
   };
 
   const isFormValid =
-    sourceName.trim() !== '' &&
-    files.length > 0 &&
-    selectedEmbeddingModel.length > 0;
+    sourceName.trim() !== '' && selectedEmbeddingModel.length > 0;
 
   return (
     <BaseModal
-      size="small-h-full"
+      size="x-small"
       open={open}
       setOpen={isOpen => {
         setOpen(isOpen);
@@ -184,26 +231,27 @@ export default function KnowledgeBaseUploadModal({
 
       <BaseModal.Header
         description={
-          <span>
-            Add files or folders to create searchable knowledge.
-            {onOpenExampleFlow && (
-              <>
-                {' '}
-                Try{' '}
-                <button
-                  type="button"
-                  className="underline"
-                  onClick={() => {
-                    setOpen(false);
-                    onOpenExampleFlow();
-                  }}
-                >
-                  Knowledge Ingestion
-                </button>{' '}
-                flow for more control.
-              </>
-            )}
-          </span>
+          onOpenExampleFlow ? (
+            <span>
+              You can optionally add files or folders now, or add them later.
+              Try{' '}
+              <button
+                type="button"
+                className="underline"
+                onClick={() => {
+                  setOpen(false);
+                  onOpenExampleFlow();
+                }}
+              >
+                Knowledge Ingestion
+              </button>{' '}
+              flow for more control.
+            </span>
+          ) : (
+            <span>
+              Create a knowledge base to store and search your documents.
+            </span>
+          )
         }
       >
         <span className="flex items-center gap-2 font-medium">
@@ -216,71 +264,53 @@ export default function KnowledgeBaseUploadModal({
 
       <BaseModal.Content overflowHidden>
         <div className="flex flex-col gap-4 overflow-y-auto px-1">
-          {/* Source Name + Browse Button on same line */}
+          {/* Source Name */}
           <div className="flex flex-col gap-2">
             <Label htmlFor="source-name" className="text-sm font-medium">
-              Source Name <span className="text-destructive">*</span>
+              Name <span className="text-destructive">*</span>
             </Label>
-            <div className="flex gap-2">
-              <Input
-                id="source-name"
-                placeholder="Enter a name for this knowledge source"
-                value={sourceName}
-                onChange={e => setSourceName(e.target.value)}
-                className="flex-1"
-                data-testid="kb-source-name-input"
-              />
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" data-testid="kb-browse-btn">
-                    Add Source
-                    <ForwardedIconComponent
-                      name="ChevronDown"
-                      className="ml-1 h-4 w-4"
-                    />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem
-                    onClick={() =>
-                      document.getElementById('file-input')?.click()
-                    }
-                  >
-                    <ForwardedIconComponent
-                      name="FileText"
-                      className="mr-2 h-4 w-4"
-                    />
-                    Upload Files
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() =>
-                      document.getElementById('folder-input')?.click()
-                    }
-                  >
-                    <ForwardedIconComponent
-                      name="Folder"
-                      className="mr-2 h-4 w-4"
-                    />
-                    Upload Folder
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <input
-                id="file-input"
-                type="file"
-                multiple
-                className="hidden"
-                onChange={handleFileSelect}
-                accept=".pdf,.txt,.md,.docx,.doc,.csv,.json,.html,.xml"
-              />
-              <input
-                id="folder-input"
-                type="file"
-                className="hidden"
-                onChange={handleFolderSelect}
-                {...({ webkitdirectory: '', directory: '' } as any)}
-              />
-            </div>
+            <Input
+              id="source-name"
+              placeholder="Enter a name for this knowledge base"
+              value={sourceName}
+              onChange={e => setSourceName(e.target.value)}
+              data-testid="kb-source-name-input"
+            />
+          </div>
+
+          {/* Hidden file inputs */}
+          <input
+            id="file-input"
+            type="file"
+            multiple
+            className="hidden"
+            onChange={handleFileSelect}
+            accept=".pdf,.txt,.md,.docx,.doc,.csv,.json,.html,.xml"
+          />
+          <input
+            id="folder-input"
+            type="file"
+            className="hidden"
+            onChange={handleFolderSelect}
+            {...({ webkitdirectory: '', directory: '' } as any)}
+          />
+
+          {/* Embedding Model Selector */}
+          <div className="flex flex-col gap-2">
+            <Label className="text-sm font-medium">
+              Embedding Model <span className="text-destructive">*</span>
+            </Label>
+
+            <ModelInputComponent
+              id="kb-embedding-model"
+              value={selectedEmbeddingModel}
+              editNode={false}
+              disabled={false}
+              handleOnNewValue={({ value }) => setSelectedEmbeddingModel(value)}
+              options={embeddingModelOptions}
+              placeholder="Select embedding model"
+              showEmptyState
+            />
           </div>
 
           {/* Selected Files */}
@@ -349,35 +379,51 @@ export default function KnowledgeBaseUploadModal({
               </div>
             </div>
           )}
-
-          {/* Embedding Model Selector */}
-          <div className="flex flex-col gap-2">
-            <Label className="text-sm font-medium">
-              Embedding Model <span className="text-destructive">*</span>
-            </Label>
-
-            <ModelInputComponent
-              id="kb-embedding-model"
-              value={selectedEmbeddingModel}
-              editNode={false}
-              disabled={false}
-              handleOnNewValue={({ value }) => setSelectedEmbeddingModel(value)}
-              options={embeddingModelOptions}
-              placeholder="Select embedding model"
-              showEmptyState
-            />
-          </div>
         </div>
       </BaseModal.Content>
 
       <BaseModal.Footer
         submit={{
-          label: 'Add Knowledge',
+          label: 'Create',
           disabled: !isFormValid || isSubmitting,
           loading: isSubmitting,
           dataTestId: 'kb-create-button',
         }}
-      />
+      >
+        {onOpenExampleFlow && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" data-testid="kb-browse-btn">
+                Add Sources
+                <ForwardedIconComponent
+                  name="ChevronDown"
+                  className="h-4 w-4"
+                />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuItem
+                onClick={() => document.getElementById('file-input')?.click()}
+              >
+                <ForwardedIconComponent
+                  name="FileText"
+                  className="mr-2 h-4 w-4"
+                />
+                Upload Files
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => document.getElementById('folder-input')?.click()}
+              >
+                <ForwardedIconComponent
+                  name="Folder"
+                  className="mr-2 h-4 w-4"
+                />
+                Upload Folder
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      </BaseModal.Footer>
     </BaseModal>
   );
 }

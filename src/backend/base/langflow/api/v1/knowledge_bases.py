@@ -1,11 +1,15 @@
 import json
 import shutil
+from datetime import datetime, timezone
 from http import HTTPStatus
 from pathlib import Path
+from typing import Annotated
 
 import pandas as pd
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from langchain_chroma import Chroma
+from langchain_core.documents import Document
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from lfx.log import logger
 from pydantic import BaseModel
 
@@ -45,6 +49,17 @@ class KnowledgeBaseInfo(BaseModel):
 
 class BulkDeleteRequest(BaseModel):
     kb_names: list[str]
+
+
+class CreateKnowledgeBaseRequest(BaseModel):
+    name: str
+    embedding_provider: str
+    embedding_model: str
+
+
+class AddSourceRequest(BaseModel):
+    source_name: str
+    files: list[str]  # List of file paths or file IDs
 
 
 class ChunkInfo(BaseModel):
@@ -302,6 +317,236 @@ def get_kb_metadata(kb_path: Path) -> dict:
         logger.exception("Error processing knowledge base directory '%s'", kb_path)
 
     return metadata
+
+
+@router.post("", status_code=HTTPStatus.CREATED)
+@router.post("/", status_code=HTTPStatus.CREATED)
+async def create_knowledge_base(
+    request: CreateKnowledgeBaseRequest,
+    current_user: CurrentActiveUser,
+) -> KnowledgeBaseInfo:
+    """Create a new knowledge base with embedding configuration."""
+    from datetime import datetime, timezone
+
+    from langflow.services.auth.utils import encrypt_api_key
+
+    try:
+        kb_root_path = get_kb_root_path()
+        kb_user = current_user.username
+        kb_name = request.name.strip().replace(" ", "_")
+
+        # Validate KB name
+        if not kb_name or len(kb_name) < 3:
+            raise HTTPException(status_code=400, detail="Knowledge base name must be at least 3 characters")
+
+        kb_path = kb_root_path / kb_user / kb_name
+
+        # Check if KB already exists
+        if kb_path.exists():
+            raise HTTPException(status_code=409, detail=f"Knowledge base '{kb_name}' already exists")
+
+        # Create KB directory
+        kb_path.mkdir(parents=True, exist_ok=True)
+
+        # Save embedding metadata
+        embedding_metadata = {
+            "embedding_provider": request.embedding_provider,
+            "embedding_model": request.embedding_model,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+
+        metadata_path = kb_path / "embedding_metadata.json"
+        metadata_path.write_text(json.dumps(embedding_metadata, indent=2))
+
+        return KnowledgeBaseInfo(
+            id=kb_name,
+            name=kb_name.replace("_", " ").replace("-", " "),
+            embedding_provider=request.embedding_provider,
+            embedding_model=request.embedding_model,
+            size=0,
+            words=0,
+            characters=0,
+            chunks=0,
+            avg_chunk_size=0.0,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        # Clean up if something went wrong
+        if kb_path.exists():
+            shutil.rmtree(kb_path)
+        raise HTTPException(status_code=500, detail=f"Error creating knowledge base: {e!s}") from e
+
+
+@router.post("/{kb_name}/ingest", status_code=HTTPStatus.OK)
+async def ingest_files_to_knowledge_base(
+    kb_name: str,
+    current_user: CurrentActiveUser,
+    files: Annotated[list[UploadFile], File(description="Files to ingest into the knowledge base")],
+    source_name: Annotated[str, Form()] = "",
+    chunk_size: Annotated[int, Form()] = 1000,
+    chunk_overlap: Annotated[int, Form()] = 200,
+) -> dict[str, object]:
+    """Upload and ingest files directly into a knowledge base.
+
+    This endpoint:
+    1. Accepts file uploads
+    2. Extracts text and chunks the content
+    3. Creates embeddings using the KB's configured embedding model
+    4. Stores the vectors in the knowledge base
+    """
+    try:
+        kb_root_path = get_kb_root_path()
+        kb_user = current_user.username
+        kb_path = kb_root_path / kb_user / kb_name
+
+        if not kb_path.exists() or not kb_path.is_dir():
+            raise HTTPException(status_code=404, detail=f"Knowledge base '{kb_name}' not found")
+
+        # Read embedding metadata
+        metadata_path = kb_path / "embedding_metadata.json"
+        if not metadata_path.exists():
+            raise HTTPException(status_code=400, detail="Knowledge base missing embedding configuration")
+
+        embedding_metadata = json.loads(metadata_path.read_text())
+        embedding_provider = embedding_metadata.get("embedding_provider")
+        embedding_model = embedding_metadata.get("embedding_model")
+
+        if not embedding_provider or not embedding_model:
+            raise HTTPException(status_code=400, detail="Invalid embedding configuration")
+
+        if not files:
+            raise HTTPException(status_code=400, detail="No files provided")
+
+        # Process uploaded files and create documents
+        documents = []
+        processed_files = []
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=chunk_size,
+            chunk_overlap=chunk_overlap,
+        )
+
+        for uploaded_file in files:
+            try:
+                # Read file content
+                file_content = await uploaded_file.read()
+                file_name = uploaded_file.filename or "unknown"
+
+                # Decode text content
+                text_content = file_content.decode("utf-8", errors="ignore")
+
+                if not text_content.strip():
+                    await logger.awarning(f"File {file_name} is empty or not readable as text")
+                    continue
+
+                # Split into chunks
+                chunks = text_splitter.split_text(text_content)
+
+                # Create documents from chunks
+                for i, chunk in enumerate(chunks):
+                    doc = Document(
+                        page_content=chunk,
+                        metadata={
+                            "source": source_name or file_name,
+                            "file_name": file_name,
+                            "chunk_index": i,
+                            "total_chunks": len(chunks),
+                            "ingested_at": datetime.now(timezone.utc).isoformat(),
+                        },
+                    )
+                    documents.append(doc)
+
+                processed_files.append(file_name)
+
+            except Exception as file_error:
+                await logger.awarning(f"Error processing file {uploaded_file.filename}: {file_error}")
+                continue
+
+        if not documents:
+            raise HTTPException(status_code=400, detail="No valid content extracted from files")
+
+        # Build embeddings based on provider
+        embeddings = _build_embeddings(embedding_provider, embedding_model, current_user)
+
+        # Create or update vector store
+        chroma = Chroma(
+            persist_directory=str(kb_path),
+            embedding_function=embeddings,
+            collection_name=kb_name,
+        )
+
+        # Add documents to vector store
+        chroma.add_documents(documents)
+
+        return {
+            "message": f"Successfully ingested {len(processed_files)} file(s) with {len(documents)} chunks into '{kb_name}'",
+            "files_processed": len(processed_files),
+            "chunks_created": len(documents),
+            "file_names": processed_files,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error ingesting files to knowledge base: {e!s}") from e
+
+
+def _build_embeddings(provider: str, model: str, current_user):
+    """Build embedding model based on provider configuration."""
+    from langflow.services.deps import get_variable_service
+    from langflow.services.database.utils import session_scope
+
+    # Get API key from global variables based on provider
+    provider_key_mapping = {
+        "OpenAI": "OPENAI_API_KEY",
+        "Cohere": "COHERE_API_KEY",
+        "HuggingFace": "HUGGINGFACEHUB_API_TOKEN",
+        "Google": "GOOGLE_API_KEY",
+    }
+
+    variable_name = provider_key_mapping.get(provider)
+    api_key = None
+
+    if variable_name:
+        import asyncio
+
+        async def get_api_key():
+            variable_service = get_variable_service()
+            async with session_scope() as session:
+                try:
+                    return await variable_service.get_variable(
+                        user_id=current_user.id,
+                        name=variable_name,
+                        field="",
+                        session=session,
+                    )
+                except Exception:
+                    return None
+
+        api_key = asyncio.get_event_loop().run_until_complete(get_api_key())
+
+    if provider == "OpenAI":
+        from langchain_openai import OpenAIEmbeddings
+
+        if not api_key:
+            raise ValueError("OpenAI API key not configured. Please set up the provider in settings.")
+        return OpenAIEmbeddings(model=model, api_key=api_key)
+
+    elif provider == "HuggingFace":
+        from langchain_huggingface import HuggingFaceEmbeddings
+
+        return HuggingFaceEmbeddings(model_name=model)
+
+    elif provider == "Cohere":
+        from langchain_cohere import CohereEmbeddings
+
+        if not api_key:
+            raise ValueError("Cohere API key not configured. Please set up the provider in settings.")
+        return CohereEmbeddings(model=model, cohere_api_key=api_key)
+
+    else:
+        raise ValueError(f"Unsupported embedding provider: {provider}")
 
 
 @router.get("", status_code=HTTPStatus.OK)
