@@ -30,7 +30,9 @@ export const selectAnthropicModel = async (page: Page) => {
     await model.click();
     await page.waitForSelector('[role="listbox"]', { timeout: 10000 });
 
-    const gptOMiniOption = await page.getByTestId("claude-sonnet-4-5-20250929-option").count();
+    const gptOMiniOption = await page
+      .getByTestId("claude-sonnet-4-5-20250929-option")
+      .count();
 
     await page.waitForTimeout(500);
 
@@ -58,7 +60,9 @@ export const selectAnthropicModel = async (page: Page) => {
           .getByTestId("llm-toggle-claude-sonnet-4-5-20250929")
           .isChecked();
         if (!isChecked) {
-          await page.getByTestId("llm-toggle-claude-sonnet-4-5-20250929").click();
+          await page
+            .getByTestId("llm-toggle-claude-sonnet-4-5-20250929")
+            .click();
         }
         await page.getByText("Close").last().click();
         await page.getByTestId("model_model").nth(i).click();

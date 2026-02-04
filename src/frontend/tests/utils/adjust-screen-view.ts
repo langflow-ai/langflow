@@ -32,6 +32,8 @@ export async function adjustScreenView(
     }
   }
   if (fitViewButton > 0) {
-    await page.getByTestId("canvas_controls_dropdown").click({ force: true, timeout: 1000 });
+    await page
+      .getByTestId("canvas_controls_dropdown")
+      .click({ force: true, timeout: 1000 });
   }
 }
