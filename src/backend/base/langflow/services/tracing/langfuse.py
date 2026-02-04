@@ -169,16 +169,24 @@ class LangFuseTracer(BaseTracer):
 
     def get_langchain_callback(self) -> BaseCallbackHandler | None:
         if not self._ready:
+            logger.debug("[Langfuse] get_langchain_callback: tracer not ready")
             return None
 
-        from langfuse.langchain import CallbackHandler
+        try:
+            from langfuse.langchain import CallbackHandler
 
-        # v3 requires 32-char hex trace_id (W3C Trace Context format)
-        trace_id_hex = str(self.trace_id).replace("-", "")
+            # v3 requires 32-char hex trace_id (W3C Trace Context format)
+            trace_id_hex = str(self.trace_id).replace("-", "")
+            logger.debug(f"[Langfuse] Creating CallbackHandler with trace_id={trace_id_hex}")
 
-        return CallbackHandler(
-            trace_context={"trace_id": trace_id_hex},
-        )
+            handler = CallbackHandler(
+                trace_context={"trace_id": trace_id_hex},
+            )
+            logger.debug(f"[Langfuse] CallbackHandler created successfully: {type(handler).__name__}")
+            return handler
+        except Exception as e:
+            logger.error(f"[Langfuse] Error creating CallbackHandler: {e}")
+            return None
 
     @staticmethod
     def _get_config() -> dict:
