@@ -16,6 +16,7 @@ const FlowToolbarOptions = ({
   setOpenApiModal,
 }: FlowToolbarOptionsProps) => {
   const hasIO = useFlowStore((state) => state.hasIO);
+  const hasApiRequest = useFlowStore((state) => state.hasApiRequest);
 
   return (
     <div className="flex items-center gap-1.5">
@@ -25,6 +26,7 @@ const FlowToolbarOptions = ({
           open={open}
           setOpen={setOpen}
           canvasOpen
+          hasApiRequest={hasApiRequest}
         />
       </div>
       <PublishDropdown

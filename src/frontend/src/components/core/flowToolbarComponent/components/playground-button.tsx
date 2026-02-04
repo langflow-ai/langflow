@@ -9,6 +9,7 @@ interface PlaygroundButtonProps {
   open: boolean;
   setOpen: (open: boolean) => void;
   canvasOpen: boolean;
+  hasApiRequest: boolean;
 }
 
 const PlayIcon = () => (
@@ -48,8 +49,18 @@ const PlaygroundButton = ({
   open,
   setOpen,
   canvasOpen,
+  hasApiRequest,
 }: PlaygroundButtonProps) => {
-  return hasIO ? (
+  const shouldEnablePlayground = hasIO && !hasApiRequest;
+
+  const tooltipContent = () => {
+    if (hasApiRequest) {
+      return "Playground is disabled when an API Request is present";
+    }
+    return "Add a Chat Input or Chat Output to use the playground";
+  };
+
+  return shouldEnablePlayground ? (
     <CustomIOModal
       open={open}
       setOpen={setOpen}
@@ -59,7 +70,7 @@ const PlaygroundButton = ({
       <ActiveButton />
     </CustomIOModal>
   ) : (
-    <ShadTooltip content="Add a Chat Input or Chat Output to use the playground">
+    <ShadTooltip content={tooltipContent()}>
       <div>
         <DisabledButton />
       </div>
