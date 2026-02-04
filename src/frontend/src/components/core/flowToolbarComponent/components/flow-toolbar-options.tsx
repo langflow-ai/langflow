@@ -1,5 +1,6 @@
 import type { Dispatch, SetStateAction } from "react";
 import useFlowStore from "@/stores/flowStore";
+import EvaluateButton from "./evaluate-button";
 import PublishDropdown from "./deploy-dropdown";
 import PlaygroundButton from "./playground-button";
 
@@ -28,6 +29,7 @@ const FlowToolbarOptions = ({
           canvasOpen
           hasApiRequest={hasApiRequest}
         />
+        <EvaluateButton />
       </div>
       <PublishDropdown
         openApiModal={openApiModal}

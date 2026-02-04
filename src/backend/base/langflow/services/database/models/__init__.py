@@ -1,5 +1,6 @@
 from .api_key import ApiKey
 from .dataset import Dataset, DatasetItem
+from .evaluation import Evaluation, EvaluationResult
 from .file import File
 from .flow import Flow
 from .folder import Folder
@@ -14,6 +15,8 @@ __all__ = [
     "ApiKey",
     "Dataset",
     "DatasetItem",
+    "Evaluation",
+    "EvaluationResult",
     "File",
     "Flow",
     "Folder",

@@ -6,6 +6,7 @@ export const URLs = {
   TRANSACTIONS: `monitor/transactions`,
   API_KEY: `api_key`,
   DATASETS: `datasets`,
+  EVALUATIONS: `evaluations`,
   FILES: `files`,
   FILE_MANAGEMENT: `files`,
   VERSION: `version`,
