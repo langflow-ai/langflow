@@ -1,24 +1,40 @@
 #!/usr/bin/env python
+#!/usr/bin/env python3
 
+import re
 import sys
 
 ARGUMENT_NUMBER = 3
 
 
 def create_tag(package_version: str, latest_released_version: str | None) -> str:
-    new_pre_release_version = package_version + ".rc0"
-    if latest_released_version and package_version in latest_released_version and ".rc" in latest_released_version:
-        rc_number = int(latest_released_version.split(".rc")[-1])
-        new_pre_release_version = package_version + ".rc" + str(rc_number + 1)
+    # normalize optional leading 'v' and whitespace
+    pkg = package_version.strip().lstrip("v")
+    latest = None
+    if latest_released_version is not None:
+        lr = latest_released_version.strip()
+        if lr != "":
+            latest = lr.lstrip("v")
+
+    new_pre_release_version = f"{pkg}.rc0"
+
+    if latest:
+        # match either exact pkg or pkg.rcN
+        m = re.match(rf'^{re.escape(pkg)}(?:\.rc(\d+))?$', latest)
+        if m:
+            if m.group(1):
+                rc_number = int(m.group(1)) + 1
+                new_pre_release_version = f"{pkg}.rc{rc_number}"
+            else:
+                new_pre_release_version = f"{pkg}.rc1"
+
     return new_pre_release_version
 
 
 if __name__ == "__main__":
     if len(sys.argv) != ARGUMENT_NUMBER:
-        msg = "Specify package_version and latest_released_version"
-        raise ValueError(msg)
+        raise ValueError("Specify package_version and latest_released_version (use empty string for none).")
 
-    package_version: str = sys.argv[1]
-    latest_released_version: str = sys.argv[2]
-    tag = create_tag(package_version, latest_released_version)
-    print(tag)
+    package_version = sys.argv[1]
+    latest_released_version = sys.argv[2]
+    print(create_tag(package_version, latest_released_version))
