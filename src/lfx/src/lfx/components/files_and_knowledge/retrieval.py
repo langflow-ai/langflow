@@ -10,7 +10,7 @@ from pydantic import SecretStr
 
 from lfx.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
 from lfx.custom import Component
-from lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput
+from lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput, TabInput
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
@@ -43,6 +43,14 @@ class KnowledgeRetrievalComponent(Component):
     name = "KnowledgeRetrieval"
 
     inputs = [
+        TabInput(
+            name="search_mode",
+            display_name="Search Mode",
+            info="Choose between similarity (vector) search or exact match (text) search.",
+            options=["Similarity", "Exact Match"],
+            value="Similarity",
+            tool_mode=True,
+        ),
         DropdownInput(
             name="knowledge_base",
             display_name="Knowledge",
@@ -52,18 +60,18 @@ class KnowledgeRetrievalComponent(Component):
             refresh_button=True,
             real_time_refresh=True,
         ),
-        SecretStrInput(
-            name="api_key",
-            display_name="Embedding Provider API Key",
-            info="API key for the embedding provider to generate embeddings.",
-            advanced=True,
-            required=False,
-        ),
         MessageTextInput(
             name="search_query",
             display_name="Search Query",
-            info="Optional search query to filter knowledge base data.",
+            info="Search query to filter knowledge base data.",
             tool_mode=True,
+        ),
+        BoolInput(
+            name="search_metadata",
+            display_name="Also Search Metadata",
+            info="When using Exact Match, also search in metadata fields (not just content).",
+            value=False,
+            advanced=True,
         ),
         IntInput(
             name="top_k",
@@ -86,6 +94,13 @@ class KnowledgeRetrievalComponent(Component):
             info="Whether to include embeddings in the output. Only applicable if 'Include Metadata' is enabled.",
             value=False,
             advanced=True,
+        ),
+        SecretStrInput(
+            name="api_key",
+            display_name="Embedding Provider API Key",
+            info="API key for the embedding provider to generate embeddings. Only required for Similarity search.",
+            advanced=True,
+            required=False,
         ),
     ]
 
@@ -186,6 +201,73 @@ class KnowledgeRetrievalComponent(Component):
         msg = f"Embedding provider '{provider}' is not supported for retrieval."
         raise NotImplementedError(msg)
 
+    def _exact_match_search(self, chroma: Chroma, query: str) -> list[tuple]:
+        """Perform exact match search on content and optionally metadata.
+
+        Args:
+            chroma: The Chroma vector store instance.
+            query: The search query string.
+
+        Returns:
+            List of (Document, score) tuples matching the query.
+        """
+        collection = chroma._collection  # noqa: SLF001
+
+        # Use Chroma's where_document for content search
+        # $contains does a substring match on the document content
+        logger.info(f"Performing exact match search with query: {query}")
+
+        try:
+            # Search in document content
+            content_results = collection.get(
+                where_document={"$contains": query},
+                include=["documents", "metadatas"],
+                limit=self.top_k,
+            )
+
+            # Build results list from content matches
+            results = []
+            for i, doc_content in enumerate(content_results.get("documents", [])):
+                from langchain_core.documents import Document
+
+                metadata = content_results["metadatas"][i] if content_results.get("metadatas") else {}
+                doc = Document(page_content=doc_content or "", metadata=metadata or {})
+                results.append((doc, 0))  # Score 0 for exact match (no similarity score)
+
+            # If search_metadata is enabled, also search in metadata fields
+            if self.search_metadata:
+                logger.info("Also searching in metadata fields")
+                # Get all documents to search metadata (Chroma doesn't support $contains on metadata)
+                all_docs = collection.get(include=["documents", "metadatas"])
+
+                existing_ids = {r[0].metadata.get("_id") for r in results if r[0].metadata.get("_id")}
+
+                for i, metadata in enumerate(all_docs.get("metadatas", [])):
+                    if not metadata:
+                        continue
+                    # Skip if already in results
+                    if metadata.get("_id") in existing_ids:
+                        continue
+                    # Check if query appears in any metadata value
+                    for value in metadata.values():
+                        if value and query.lower() in str(value).lower():
+                            from langchain_core.documents import Document
+
+                            doc_content = all_docs["documents"][i] if all_docs.get("documents") else ""
+                            doc = Document(page_content=doc_content or "", metadata=metadata)
+                            results.append((doc, 0))
+                            existing_ids.add(metadata.get("_id"))
+                            break
+
+                # Limit to top_k
+                results = results[: self.top_k]
+
+            return results
+
+        except Exception as e:
+            logger.error(f"Error during exact match search: {e}")
+            return []
+
     async def retrieve_data(self) -> DataFrame:
         """Retrieve data from the selected knowledge base by reading the Chroma collection.
 
@@ -211,8 +293,13 @@ class KnowledgeRetrievalComponent(Component):
             msg = f"Metadata not found for knowledge base: {self.knowledge_base}. Ensure it has been indexed."
             raise ValueError(msg)
 
-        # Build the embedder for the knowledge base
-        embedding_function = self._build_embeddings(metadata)
+        # Determine if we need embeddings (only for similarity search)
+        use_similarity = self.search_mode == "Similarity"
+
+        # Build the embedder only if needed for similarity search
+        embedding_function = None
+        if use_similarity:
+            embedding_function = self._build_embeddings(metadata)
 
         # Load vector store
         chroma = Chroma(
@@ -221,22 +308,34 @@ class KnowledgeRetrievalComponent(Component):
             collection_name=self.knowledge_base,
         )
 
-        # If a search query is provided, perform a similarity search
-        if self.search_query:
-            # Use the search query to perform a similarity search
-            logger.info(f"Performing similarity search with query: {self.search_query}")
-            results = chroma.similarity_search_with_score(
-                query=self.search_query or "",
-                k=self.top_k,
-            )
-        else:
-            results = chroma.similarity_search(
-                query=self.search_query or "",
-                k=self.top_k,
-            )
+        results: list[tuple] = []
 
-            # For each result, make it a tuple to match the expected output format
-            results = [(doc, 0) for doc in results]  # Assign a dummy score of 0
+        if self.search_query:
+            if use_similarity:
+                # Use the search query to perform a similarity search
+                logger.info(f"Performing similarity search with query: {self.search_query}")
+                results = chroma.similarity_search_with_score(
+                    query=self.search_query,
+                    k=self.top_k,
+                )
+            else:
+                # Exact match search
+                results = self._exact_match_search(chroma, self.search_query)
+        else:
+            # No query - just return top_k documents
+            if use_similarity:
+                docs = chroma.similarity_search(query="", k=self.top_k)
+                results = [(doc, 0) for doc in docs]
+            else:
+                # For exact match without query, just get documents
+                collection = chroma._collection  # noqa: SLF001
+                all_docs = collection.get(include=["documents", "metadatas"], limit=self.top_k)
+                from langchain_core.documents import Document
+
+                for i, doc_content in enumerate(all_docs.get("documents", [])):
+                    meta = all_docs["metadatas"][i] if all_docs.get("metadatas") else {}
+                    doc = Document(page_content=doc_content or "", metadata=meta or {})
+                    results.append((doc, 0))
 
         # If include_embeddings is enabled, get embeddings for the results
         id_to_embedding = {}
@@ -250,9 +349,9 @@ class KnowledgeRetrievalComponent(Component):
                 embeddings_result = collection.get(where={"_id": {"$in": doc_ids}}, include=["metadatas", "embeddings"])
 
                 # Create a mapping from document ID to embedding
-                for i, metadata in enumerate(embeddings_result.get("metadatas", [])):
-                    if metadata and "_id" in metadata:
-                        id_to_embedding[metadata["_id"]] = embeddings_result["embeddings"][i]
+                for i, meta in enumerate(embeddings_result.get("metadatas", [])):
+                    if meta and "_id" in meta:
+                        id_to_embedding[meta["_id"]] = embeddings_result["embeddings"][i]
 
         # Build output data based on include_metadata setting
         data_list = []
@@ -260,7 +359,7 @@ class KnowledgeRetrievalComponent(Component):
             kwargs = {
                 "content": doc[0].page_content,
             }
-            if self.search_query:
+            if self.search_query and use_similarity:
                 kwargs["_score"] = -1 * doc[1]
             if self.include_metadata:
                 # Include all metadata, embeddings, and content
