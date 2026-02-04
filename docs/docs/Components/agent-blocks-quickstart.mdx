@@ -12,7 +12,7 @@ If the LLM's response includes `tool_calls`, the agent sends output to a tool-ca
 If the LLM's response does not include `tool_calls` and the agent determines the task is complete, the agent sends a "finished" message to output.
 
 ```
-ChatInput → WhileLoop → AgentStep → [Tool Calls] → ExecuteTool → WhileLoop
+ChatInput → While Loop → Agent Step → [Tool Calls] → Execute Tool → While Loop
                               ↓ [AI Message - done]
                          ChatOutput
 ```
@@ -48,7 +48,7 @@ The agent loop consists of four main components:
 * [**Execute Tool** component](/agent-blocks-execute-tool): Executes tool calls when the agent needs to use tools.
 * [**Chat Output** component](/chat-input-and-output): Displays the final response.
 
-![Agent Loop flow diagram showing WhileLoop, AgentStep, ExecuteTool, and ChatOutput components connected in a loop pattern](/img/component-agent-blocks.png)
+![Agent Loop flow diagram showing While Loop, Agent Step, Execute Tool, and ChatOutput components connected in a loop pattern](/img/component-agent-blocks.png)
 
 To create an agent with agent blocks, do the following:
 
