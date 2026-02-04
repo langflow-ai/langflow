@@ -844,6 +844,7 @@ export default function Page({
               maxZoom={MAX_ZOOM}
               zoomOnScroll={!view}
               zoomOnPinch={!view}
+              selectNodesOnDrag={false}
               panOnDrag={!view}
               panActivationKeyCode={""}
               proOptions={{ hideAttribution: true }}
