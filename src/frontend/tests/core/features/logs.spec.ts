@@ -89,7 +89,9 @@ test(
     await expect(
       page.getByText("timestamp", { exact: true }).last(),
     ).toBeAttached();
-    await expect(page.getByText("text", { exact: true }).last()).toBeAttached();
+    await expect(
+      page.getByText("files", { exact: true }).last(),
+    ).toBeAttached();
     await expect(
       page.getByText("sender", { exact: true }).last(),
     ).toBeAttached();
