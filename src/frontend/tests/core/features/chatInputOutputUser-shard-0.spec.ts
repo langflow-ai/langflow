@@ -4,6 +4,7 @@ import path from "path";
 import { test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { closeAdvancedOptions, openAdvancedOptions } from "../../utils/open-advanced-options";
 
 test(
   "user must be able to send an image on chat",
@@ -31,8 +32,8 @@ test(
     await page.waitForSelector("text=Chat Input", { timeout: 30000 });
 
     await page.getByText("Chat Input", { exact: true }).click();
-    await page.getByTestId("edit-button-modal").last().click();
-    await page.getByTestId("edit-button-close").last().click();
+    await openAdvancedOptions(page);
+    await closeAdvancedOptions(page);
     await page.getByRole("button", { name: "Playground", exact: true }).click();
 
     // Read the image file as a binary string

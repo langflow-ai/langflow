@@ -2,6 +2,7 @@ import dotenv from "dotenv";
 import path from "path";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { closeAdvancedOptions, openAdvancedOptions } from "../../utils/open-advanced-options";
 
 test(
   "user must not experience message duplication in mathematical expressions with agent component",
@@ -26,7 +27,7 @@ test(
     await page.locator('[role="option"]').first().click();
 
     // Click the Controls button to open the modal
-    await page.getByTestId("edit-button-modal").click();
+    await openAdvancedOptions(page);
 
     // Fill in the API Key in the modal
     await page
@@ -35,7 +36,7 @@ test(
       .fill(process.env.ANTHROPIC_API_KEY || "");
 
     // Close the modal
-    await page.getByTestId("edit-button-close").last().click();
+    await closeAdvancedOptions(page);
 
     await page.getByTestId("playground-btn-flow-io").click();
 

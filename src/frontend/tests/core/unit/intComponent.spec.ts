@@ -1,6 +1,7 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { closeAdvancedOptions, openAdvancedOptions } from "../../utils/open-advanced-options";
 import { zoomOut } from "../../utils/zoom-out";
 
 test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
@@ -25,10 +26,10 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
 
   await page.getByTestId("div-generic-node").click();
 
-  await page.getByTestId("edit-button-modal").last().click();
+  await openAdvancedOptions(page);
   await page.getByTestId("showmax_tokens").click();
 
-  await page.getByTestId("edit-button-close").last().click();
+  await closeAdvancedOptions(page);
   await page.getByTestId("int_int_max_tokens").click();
   await page.getByTestId("int_int_max_tokens").fill("100000");
 
@@ -48,7 +49,7 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
 
   await adjustScreenView(page, { numberOfZoomOut: 3 });
 
-  await page.getByTestId("edit-button-modal").last().click();
+  await openAdvancedOptions(page);
 
   value = await page.getByTestId("int_int_edit_max_tokens").inputValue();
 
@@ -118,14 +119,14 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
     await page.locator('//*[@id="showtemperature"]').isChecked(),
   ).toBeFalsy();
 
-  await page.getByTestId("edit-button-close").last().click();
+  await closeAdvancedOptions(page);
 
   const plusButtonLocator = page.getByTestId("int-input-max_tokens");
   const elementCount = await plusButtonLocator?.count();
   if (elementCount === 0) {
     expect(true).toBeTruthy();
 
-    await page.getByTestId("edit-button-modal").last().click();
+    await openAdvancedOptions(page);
 
     const valueEditNode = await page
       .getByTestId("int_int_max_tokens")
@@ -133,7 +134,7 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
 
     expect(valueEditNode).toBe("50000");
 
-    await page.getByTestId("edit-button-close").last().click();
+    await closeAdvancedOptions(page);
     await page.getByTestId("int_int_max_tokens").click();
     await page.getByTestId("int_int_max_tokens").fill("3");
 

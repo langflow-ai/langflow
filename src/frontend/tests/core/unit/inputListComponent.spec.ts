@@ -1,6 +1,7 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { closeAdvancedOptions, openAdvancedOptions } from "../../utils/open-advanced-options";
 
 test(
   "InputListComponent",
@@ -53,7 +54,7 @@ test(
       .fill("test2 test2 test2 test2");
 
     await page.getByTestId("div-generic-node").click();
-    await page.getByTestId("edit-button-modal").last().click();
+    await openAdvancedOptions(page);
 
     const value0 = await page.getByTestId("inputlist_str_urls_0").inputValue();
     const value1 = await page.getByTestId("inputlist_str_urls_1").inputValue();
@@ -80,7 +81,7 @@ test(
       await page.getByTestId("input-list-delete-btn-edit_urls-1").count(),
     ).toBe(0);
 
-    await page.getByTestId("edit-button-close").last().click();
+    await closeAdvancedOptions(page);
 
     await page.getByTestId("input-list-plus-btn_urls-0").click();
     await page.getByTestId("input-list-plus-btn_urls-0").click();
@@ -114,7 +115,7 @@ test(
       "",
     );
 
-    await page.getByTestId("edit-button-modal").click();
+    await openAdvancedOptions(page);
 
     expect(
       await page.getByTestId("inputlist_str_edit_urls_0").inputValue(),

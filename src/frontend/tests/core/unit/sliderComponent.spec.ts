@@ -2,6 +2,7 @@ import { type Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { closeAdvancedOptions, openAdvancedOptions } from "../../utils/open-advanced-options";
 
 // TODO: This component doesn't have slider needs updating
 test(
@@ -72,8 +73,7 @@ test(
     await page.waitForTimeout(500);
     await adjustScreenView(page, { numberOfZoomOut: 1 });
 
-    await page.getByTestId("more-options-modal").click();
-    await page.getByText("Controls", { exact: true }).last().click();
+    await openAdvancedOptions(page);
     await expect(
       page.getByTestId("default_slider_display_value_advanced"),
     ).toHaveText("19.00");
@@ -86,7 +86,7 @@ test(
       page.getByTestId("default_slider_display_value_advanced"),
     ).toHaveText("14.00");
 
-    await page.getByTestId("edit-button-close").last().click();
+    await closeAdvancedOptions(page);
 
     await expect(page.getByTestId("default_slider_display_value")).toHaveText(
       "14.00",

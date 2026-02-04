@@ -49,6 +49,7 @@ const InspectionPanel = memo(function InspectionPanel({
             <InspectionPanelHeader data={selectedNode.data} onClose={onClose} />
             <Separator className="my-0.5" />
             <Button
+              data-testid="edit-fields-button"
               size="node-toolbar"
               variant="ghost"
               onClick={() => setIsEditingFields(!isEditingFields)}
