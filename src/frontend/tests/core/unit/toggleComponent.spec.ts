@@ -180,7 +180,6 @@ test(
       expect(
         await page.getByTestId("toggle_bool_load_hidden").isChecked(),
       ).toBeFalsy();
-
     }
     await enableInspectPanel(page);
   },

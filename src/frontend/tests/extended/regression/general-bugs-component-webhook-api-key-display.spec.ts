@@ -2,7 +2,12 @@ import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { loginLangflow } from "../../utils/login-langflow";
-import { closeAdvancedOptions, disableInspectPanel, enableInspectPanel, openAdvancedOptions } from "../../utils/open-advanced-options";
+import {
+  closeAdvancedOptions,
+  disableInspectPanel,
+  enableInspectPanel,
+  openAdvancedOptions,
+} from "../../utils/open-advanced-options";
 
 test(
   "user must be able to see api key in webhook component when auto login is disabled",

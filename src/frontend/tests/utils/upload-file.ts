@@ -42,7 +42,10 @@ export async function uploadFile(page: Page, fileName: string) {
   await page.getByTestId("canvas_controls_dropdown").click({ force: true });
 
   try {
-    await page.getByText("File", { exact: true }).last().click({ timeout: 5000 });
+    await page
+      .getByText("File", { exact: true })
+      .last()
+      .click({ timeout: 5000 });
   } catch (error) {
     // do nothing, means that it's using file management v1
   }

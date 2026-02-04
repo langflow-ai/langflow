@@ -2,7 +2,12 @@ import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { closeAdvancedOptions, disableInspectPanel, enableInspectPanel, openAdvancedOptions } from "../../utils/open-advanced-options";
+import {
+  closeAdvancedOptions,
+  disableInspectPanel,
+  enableInspectPanel,
+  openAdvancedOptions,
+} from "../../utils/open-advanced-options";
 
 test(
   "user should be able to use nested component",
