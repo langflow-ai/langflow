@@ -1495,7 +1495,6 @@
                 "list_add_label": "Add More",
                 "model_type": "language",
                 "name": "model",
-                "options": [],
                 "override_skip": false,
                 "placeholder": "Setup Provider",
                 "real_time_refresh": true,
@@ -1507,7 +1506,7 @@
                 "trace_as_input": true,
                 "track_in_telemetry": false,
                 "type": "model",
-                "value": []
+                "value": ""
               },
               "n_messages": {
                 "_input_type": "IntInput",

@@ -101,7 +101,7 @@ const CanvasControlsDropdown = ({
           title="Canvas Controls"
         >
           <div className="flex items-center justify-center ">
-            <div className="text-sm pr-1 text-muted-foreground">
+            <div className="text-sm pr-1 text-muted-foreground w-10 text-right">
               {formatZoomPercentage(zoom)}
             </div>
             <IconComponent

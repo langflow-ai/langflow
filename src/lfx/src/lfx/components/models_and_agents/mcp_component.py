@@ -49,6 +49,7 @@ def resolve_mcp_config(
 
 
 class MCPToolsComponent(ComponentWithCache):
+    legacy = True
     schema_inputs: list = []
     tools: list[StructuredTool] = []
     _not_load_actions: bool = False

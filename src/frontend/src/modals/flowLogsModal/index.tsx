@@ -109,8 +109,8 @@ export default function FlowLogsModal({
               className="flex flex-col self-center overflow-hidden rounded-md border bg-muted text-center"
             >
               <TabsList>
-                <TabsTrigger value="logs">Component Logs</TabsTrigger>
-                <TabsTrigger value="trace">Trace View</TabsTrigger>
+                <TabsTrigger value="logs">Logs</TabsTrigger>
+                <TabsTrigger value="trace">Traces</TabsTrigger>
               </TabsList>
             </Tabs>
             <div className="w-24"></div>
@@ -119,28 +119,43 @@ export default function FlowLogsModal({
         <BaseModal.Content overflowHidden>
           {activeTab === "logs" ? (
             <div className="flex h-full flex-col overflow-auto">
-              <TableComponent
-                key={"Executions"}
-                readOnlyEdit
-                className="h-max-full h-full w-full"
-                pagination={false}
-                columnDefs={columns}
-                autoSizeStrategy={{ type: "fitGridWidth" }}
-                rowData={rows}
-                headerHeight={rows.length === 0 ? 0 : undefined}
-                onCellClicked={handleCellClicked}
-              ></TableComponent>
-              {!isLoading && (data?.pagination.total ?? 0) >= 10 && (
-                <div className="flex justify-end px-3 py-4">
-                  <PaginatorComponent
-                    pageIndex={data?.pagination.page ?? 1}
-                    pageSize={data?.pagination.size ?? 10}
-                    rowsCount={[12, 24, 48, 96]}
-                    totalRowsCount={data?.pagination.total ?? 0}
-                    paginate={handlePageChange}
-                    pages={data?.pagination.pages}
-                  />
+              {rows.length === 0 ? (
+                <div className="flex h-full items-center justify-center">
+                  <div className="flex flex-col items-center gap-3 text-muted-foreground">
+                    <IconComponent name="ScrollText" className="h-12 w-12 opacity-50" />
+                    <div className="text-center">
+                      <p className="text-sm font-medium">No logs available</p>
+                      <p className="mt-1 text-xs">
+                        Run your flow to see component logs here.
+                      </p>
+                    </div>
+                  </div>
                 </div>
+              ) : (
+                <>
+                  <TableComponent
+                    key={"Executions"}
+                    readOnlyEdit
+                    className="h-max-full h-full w-full"
+                    pagination={false}
+                    columnDefs={columns}
+                    autoSizeStrategy={{ type: "fitGridWidth" }}
+                    rowData={rows}
+                    onCellClicked={handleCellClicked}
+                  />
+                  {!isLoading && (data?.pagination.total ?? 0) >= 10 && (
+                    <div className="flex justify-end px-3 py-4">
+                      <PaginatorComponent
+                        pageIndex={data?.pagination.page ?? 1}
+                        pageSize={data?.pagination.size ?? 10}
+                        rowsCount={[12, 24, 48, 96]}
+                        totalRowsCount={data?.pagination.total ?? 0}
+                        paginate={handlePageChange}
+                        pages={data?.pagination.pages}
+                      />
+                    </div>
+                  )}
+                </>
               )}
             </div>
           ) : (

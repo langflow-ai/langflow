@@ -15,6 +15,7 @@ import { CustomNavigate } from "./customization/components/custom-navigate";
 import { BASENAME } from "./customization/config-constants";
 import {
   ENABLE_CUSTOM_PARAM,
+  ENABLE_DATASETS,
   ENABLE_FILE_MANAGEMENT,
   ENABLE_KNOWLEDGE_BASES,
 } from "./customization/feature-flags";
@@ -25,6 +26,8 @@ import { AppInitPage } from "./pages/AppInitPage";
 import { AppWrapperPage } from "./pages/AppWrapperPage";
 import FlowPage from "./pages/FlowPage";
 import LoginPage from "./pages/LoginPage";
+import DatasetDetailPage from "./pages/MainPage/pages/datasetDetailPage";
+import DatasetsPage from "./pages/MainPage/pages/datasetsPage";
 import FilesPage from "./pages/MainPage/pages/filesPage";
 import HomePage from "./pages/MainPage/pages/homePage";
 import KnowledgePage from "./pages/MainPage/pages/knowledgePage";
@@ -97,6 +100,15 @@ const router = createBrowserRouter(
                           path="knowledge-bases"
                           element={<KnowledgePage />}
                         />
+                      )}
+                      {ENABLE_DATASETS && (
+                        <>
+                          <Route path="datasets" element={<DatasetsPage />} />
+                          <Route
+                            path="datasets/:datasetId"
+                            element={<DatasetDetailPage />}
+                          />
+                        </>
                       )}
                     </Route>
                   )}

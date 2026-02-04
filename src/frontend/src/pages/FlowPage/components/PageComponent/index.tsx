@@ -78,7 +78,6 @@ import {
 import {
   MemoizedBackground,
   MemoizedCanvasControls,
-  MemoizedLogCanvasControls,
   MemoizedSidebarTrigger,
 } from "./MemoizedComponents";
 import getRandomName from "./utils/get-random-name";
@@ -751,14 +750,13 @@ export default function Page({
     (state) => state.inspectionPanelVisible,
   );
 
-  // Determine if InspectionPanel should be visible
-  const showInspectionPanel =
-    inspectionPanelVisible &&
+  // Determine if a valid node is selected for inspection
+  const hasValidSelection =
     lastSelection?.nodes?.length === 1 &&
     lastSelection.nodes[0].type === "genericNode";
 
   // Get the fresh node data from the store instead of using stale reference
-  const selectedNodeId = showInspectionPanel ? lastSelection.nodes[0].id : null;
+  const selectedNodeId = hasValidSelection ? lastSelection.nodes[0].id : null;
   const selectedNode = selectedNodeId
     ? (nodes.find((n) => n.id === selectedNodeId) as AllNodeType)
     : null;
@@ -780,18 +778,12 @@ export default function Page({
           <div id="react-flow-id" className="h-full w-full bg-canvas relative">
             {!view && (
               <>
-                <MemoizedLogCanvasControls />
-                <MemoizedCanvasControls
-                  selectedNode={selectedNode}
-                  setIsAddingNote={setIsAddingNote}
-                  shadowBoxWidth={shadowBoxWidth}
-                  shadowBoxHeight={shadowBoxHeight}
-                />
+                <MemoizedCanvasControls selectedNode={selectedNode} />
                 <FlowToolbar />
                 {ENABLE_INSPECTION_PANEL && (
                   <InspectionPanel
                     selectedNode={selectedNode}
-                    isVisible={showInspectionPanel}
+                    isVisible={inspectionPanelVisible}
                     onClose={handleCloseInspectionPanel}
                   />
                 )}

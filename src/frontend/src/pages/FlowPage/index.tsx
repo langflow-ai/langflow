@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useBlocker, useParams } from "react-router-dom";
-import { SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarProvider, useSidebar } from "@/components/ui/sidebar";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { useGetTypes } from "@/controllers/API/queries/flows/use-get-types";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
@@ -20,6 +20,70 @@ import {
   FlowSidebarComponent,
 } from "./components/flowSidebarComponent";
 import Page from "./components/PageComponent";
+import LogsMainContent from "./components/LogsMainContent";
+import MessagesMainContent from "./components/MessagesMainContent";
+
+type LogsTab = "logs" | "traces";
+
+/**
+ * Wrapper component that conditionally renders Page, LogsMainContent, or MessagesMainContent
+ * based on the active sidebar section
+ */
+function FlowMainContent({
+  view,
+  setIsLoading,
+  selectedSessionId,
+  logsActiveTab,
+  onLogsTabChange,
+  selectedRunId,
+  onSelectRun,
+}: {
+  view?: boolean;
+  setIsLoading: (isLoading: boolean) => void;
+  selectedSessionId: string | null;
+  logsActiveTab: LogsTab;
+  onLogsTabChange: (tab: LogsTab) => void;
+  selectedRunId: string | null;
+  onSelectRun: (runId: string | null) => void;
+}) {
+  const { activeSection } = useSidebar();
+
+  // Show logs main content when logs section is active
+  if (ENABLE_NEW_SIDEBAR && activeSection === "logs") {
+    return (
+      <main className="flex w-full overflow-hidden">
+        <div className="h-full w-full">
+          <LogsMainContent
+            activeTab={logsActiveTab}
+            onTabChange={onLogsTabChange}
+            selectedRunId={selectedRunId}
+            onSelectRun={onSelectRun}
+          />
+        </div>
+      </main>
+    );
+  }
+
+  // Show messages main content when messages section is active
+  if (ENABLE_NEW_SIDEBAR && activeSection === "messages") {
+    return (
+      <main className="flex w-full overflow-hidden">
+        <div className="h-full w-full">
+          <MessagesMainContent selectedSessionId={selectedSessionId} />
+        </div>
+      </main>
+    );
+  }
+
+  // Default: show the flow canvas
+  return (
+    <main className="flex w-full overflow-hidden">
+      <div className="h-full w-full">
+        <Page view={view} setIsLoading={setIsLoading} />
+      </div>
+    </main>
+  );
+}
 
 export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const types = useTypesStore((state) => state.types);
@@ -165,6 +229,11 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   };
 
   const isMobile = useIsMobile();
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+
+  // Logs state - lifted up for coordination between sidebar and main content
+  const [logsActiveTab, setLogsActiveTab] = useState<LogsTab>("logs");
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
 
   return (
     <>
@@ -177,12 +246,26 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
               segmentedSidebar={ENABLE_NEW_SIDEBAR}
             >
               <FlowSearchProvider>
-                {!view && <FlowSidebarComponent isLoading={isLoading} />}
-                <main className="flex w-full overflow-hidden">
-                  <div className="h-full w-full">
-                    <Page setIsLoading={setIsLoading} />
-                  </div>
-                </main>
+                {!view && (
+                  <FlowSidebarComponent
+                    isLoading={isLoading}
+                    selectedSessionId={selectedSessionId}
+                    onSelectSession={setSelectedSessionId}
+                    logsActiveTab={logsActiveTab}
+                    onLogsTabChange={setLogsActiveTab}
+                    selectedRunId={selectedRunId}
+                    onSelectRun={setSelectedRunId}
+                  />
+                )}
+                <FlowMainContent
+                  view={view}
+                  setIsLoading={setIsLoading}
+                  selectedSessionId={selectedSessionId}
+                  logsActiveTab={logsActiveTab}
+                  onLogsTabChange={setLogsActiveTab}
+                  selectedRunId={selectedRunId}
+                  onSelectRun={setSelectedRunId}
+                />
               </FlowSearchProvider>
             </SidebarProvider>
           </div>

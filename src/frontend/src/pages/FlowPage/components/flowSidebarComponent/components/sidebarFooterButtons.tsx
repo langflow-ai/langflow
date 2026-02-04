@@ -19,6 +19,10 @@ const SidebarMenuButtons = ({
     setAddMcpOpen(true);
   };
 
+  const handleAddNote = () => {
+    window.dispatchEvent(new Event("lf:start-add-note"));
+  };
+
   return ENABLE_NEW_SIDEBAR && activeSection === "mcp" ? (
     <>
       <SidebarMenuButton asChild>
@@ -60,27 +64,46 @@ const SidebarMenuButtons = ({
       <AddMcpServerModal open={addMcpOpen} setOpen={setAddMcpOpen} />
     </>
   ) : (
-    <SidebarMenuButton asChild className="group">
-      <Button
-        unstyled
-        disabled={isLoading}
-        onClick={() => {
-          if (customComponent) {
-            addComponent(customComponent, "CustomComponent");
-          }
-        }}
-        data-testid="sidebar-custom-component-button"
-        className="flex items-center w-full h-full gap-3 hover:bg-muted"
-      >
-        <ForwardedIconComponent
-          name="Plus"
-          className="h-4 w-4 text-muted-foreground"
-        />
-        <span className="group-data-[state=open]/collapsible:font-semibold">
-          New Custom Component
-        </span>
-      </Button>
-    </SidebarMenuButton>
+    <>
+      <SidebarMenuButton asChild className="group">
+        <Button
+          unstyled
+          disabled={isLoading}
+          onClick={handleAddNote}
+          data-testid="sidebar-add-note-button"
+          className="flex items-center w-full h-full gap-3 hover:bg-muted"
+        >
+          <ForwardedIconComponent
+            name="StickyNote"
+            className="h-4 w-4 text-muted-foreground"
+          />
+          <span className="group-data-[state=open]/collapsible:font-semibold">
+            Add Sticky Note
+          </span>
+        </Button>
+      </SidebarMenuButton>
+      <SidebarMenuButton asChild className="group">
+        <Button
+          unstyled
+          disabled={isLoading}
+          onClick={() => {
+            if (customComponent) {
+              addComponent(customComponent, "CustomComponent");
+            }
+          }}
+          data-testid="sidebar-custom-component-button"
+          className="flex items-center w-full h-full gap-3 hover:bg-muted"
+        >
+          <ForwardedIconComponent
+            name="Plus"
+            className="h-4 w-4 text-muted-foreground"
+          />
+          <span className="group-data-[state=open]/collapsible:font-semibold">
+            Create Component
+          </span>
+        </Button>
+      </SidebarMenuButton>
+    </>
   );
 };
 

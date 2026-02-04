@@ -1,6 +1,7 @@
 import { Panel } from "@xyflow/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { memo, useState, useEffect } from "react";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import type { AllNodeType } from "@/types/flow";
 import { cn } from "@/utils/utils";
 import InspectionPanelFields from "./components/InspectionPanelFields";
@@ -25,9 +26,12 @@ const InspectionPanel = memo(function InspectionPanel({
     setIsEditingFields(false);
   }, [selectedNode?.id, isVisible]);
 
+  const hasValidSelection =
+    selectedNode && selectedNode.type === "genericNode";
+
   return (
     <AnimatePresence mode="wait">
-      {isVisible && selectedNode && selectedNode.type === "genericNode" && (
+      {isVisible && (
         <Panel
           position="top-right"
           className={cn(
@@ -47,18 +51,32 @@ const InspectionPanel = memo(function InspectionPanel({
               "overflow-y-auto flex flex-col pointer-events-auto",
             )}
           >
-            <InspectionPanelHeader
-              data={selectedNode.data}
-              onClose={onClose}
-              isEditingFields={isEditingFields}
-              onToggleEditFields={() => setIsEditingFields(!isEditingFields)}
-            />
-            <Separator className="my-0.5" />
-            <InspectionPanelFields
-              data={selectedNode.data}
-              key={selectedNode.id}
-              isEditingFields={isEditingFields}
-            />
+            {hasValidSelection ? (
+              <>
+                <InspectionPanelHeader
+                  data={selectedNode.data}
+                  onClose={onClose}
+                  isEditingFields={isEditingFields}
+                  onToggleEditFields={() => setIsEditingFields(!isEditingFields)}
+                />
+                <Separator className="my-0.5" />
+                <InspectionPanelFields
+                  data={selectedNode.data}
+                  key={selectedNode.id}
+                  isEditingFields={isEditingFields}
+                />
+              </>
+            ) : (
+              <div className="flex flex-col items-center justify-center p-8 text-center h-full min-h-[200px]">
+                <ForwardedIconComponent
+                  name="MousePointerClick"
+                  className="h-12 w-12 text-muted-foreground/50 mb-4"
+                />
+                <p className="text-sm text-muted-foreground">
+                  Select a component to inspect its properties
+                </p>
+              </div>
+            )}
           </motion.div>
         </Panel>
       )}

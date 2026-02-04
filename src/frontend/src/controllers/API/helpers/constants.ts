@@ -5,6 +5,7 @@ export const URLs = {
   TRACES: `traces`,
   TRANSACTIONS: `monitor/transactions`,
   API_KEY: `api_key`,
+  DATASETS: `datasets`,
   FILES: `files`,
   FILE_MANAGEMENT: `files`,
   VERSION: `version`,
