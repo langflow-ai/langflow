@@ -181,7 +181,6 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         return gen_result
 
     async def generate(self):
-
         def in_recommended_models(model_name):
             return any(recommended in model_name for recommended in BUILDTIME_MODELS)
 
@@ -191,7 +190,10 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             (not any(self.policies), "policies cannot be empty!"),
             (not self.in_tools, "in_tools cannot be empty!"),
             (not self.model or not self.api_key, "model or api_key cannot be empty!"),
-            (not in_recommended_models(self.model[0]['name']), f"model {self.model[0]['name']} is not in recommended models: {BUILDTIME_MODELS}"),
+            (
+                not in_recommended_models(self.model[0]["name"]),
+                f"model {self.model[0]['name']} is not in recommended models: {BUILDTIME_MODELS}",
+            ),
         ]
 
         for condition, error_msg in validations:
