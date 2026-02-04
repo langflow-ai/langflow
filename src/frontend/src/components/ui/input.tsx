@@ -7,6 +7,7 @@ export interface InputProps
   icon?: string;
   inputClassName?: string;
   placeholder?: string;
+  placeholderClassName?: string;
   endIcon?: string;
   endIconClassName?: string;
 }
