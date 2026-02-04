@@ -125,7 +125,7 @@ export default function ImportCsvModal({
   if (!open) return <></>;
 
   return (
-    <BaseModal open={open} setOpen={handleClose} size="medium">
+    <BaseModal open={open} setOpen={handleClose} size="medium-h-full">
       <BaseModal.Header description="Upload a CSV file and map columns to input/expected output fields.">
         Import CSV
       </BaseModal.Header>
@@ -133,11 +133,11 @@ export default function ImportCsvModal({
         {/* File Upload */}
         <div
           onClick={handleSelectFile}
-          className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/25 p-8 transition-colors hover:border-primary/50"
+          className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/25 p-4 transition-colors hover:border-primary/50"
         >
           <ForwardedIconComponent
             name="Upload"
-            className="mb-4 h-10 w-10 text-muted-foreground"
+            className="mb-2 h-6 w-6 text-muted-foreground"
           />
           {file ? (
             <div className="text-center">
@@ -202,7 +202,7 @@ export default function ImportCsvModal({
         {preview.length > 0 && inputColumn && expectedOutputColumn && (
           <div className="flex flex-col gap-2">
             <h3 className="font-medium">Preview (first 5 rows)</h3>
-            <div className="max-h-48 overflow-auto rounded-md border">
+            <div className="overflow-auto rounded-md border">
               <table className="w-full text-sm">
                 <thead className="sticky top-0 bg-muted">
                   <tr>
@@ -239,6 +239,7 @@ export default function ImportCsvModal({
             !expectedOutputColumn ||
             importCsvMutation.isPending,
           dataTestId: "btn-import-csv",
+          onClick: handleSubmit,
         }}
       />
     </BaseModal>
