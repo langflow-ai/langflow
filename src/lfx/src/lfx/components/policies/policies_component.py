@@ -18,16 +18,16 @@ from lfx.base.models.unified_models import (
 )
 from lfx.components.policies.guarded_tool import GuardedTool
 from lfx.components.policies.llm_wrapper import LangchainModelWrapper
-from lfx.components.policies.models import BUILDTIME_MODELS
 from lfx.components.policies.module_utils import unload_module
 from lfx.field_typing import LanguageModel, Tool
-from lfx.io import BoolInput, HandleInput, MessageTextInput, ModelInput, Output, SecretStrInput, StrInput, TabInput
+from lfx.io import BoolInput, HandleInput, MultilineInput, ModelInput, Output, SecretStrInput, StrInput, TabInput
 from lfx.log.logger import logger
 
 if TYPE_CHECKING:
     from lfx.inputs.inputs import InputTypes
 
 
+BUILDTIME_MODELS = ["gpt-5.1", "claude-sonnet-4"]
 TOOLGUARD_WORK_DIR = Path("tmp_toolguard")
 STEP1 = "Step_1"
 STEP2 = "Step_2"
@@ -62,11 +62,12 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
                 real_time_refresh=True,
                 tool_mode=True,
             ),
-            MessageTextInput(
+            MultilineInput(
                 name="project",
                 display_name="ToolGuard Project",
                 info="Folder name of the generated code",
                 value="my_project",
+                #required=True,
             ),
             HandleInput(
                 name="in_tools",
@@ -89,9 +90,9 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             ModelInput(
                 name="model",
                 display_name="Language Model",
-                info="Select your model provider for Toolguard buildtime step",
-                options=BUILDTIME_MODELS,
-                required=False,
+                info="Select your model provider",
+                real_time_refresh=True,
+                required=True,
             ),
             SecretStrInput(
                 name="api_key",
@@ -173,6 +174,7 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             (not any(self.policies), "policies cannot be empty!"),
             (not self.in_tools, "in_tools cannot be empty!"),
             (not self.model or not self.api_key, "model or api_key cannot be empty!"),
+            (self.model[0]['name'] not in BUILDTIME_MODELS, f"model {self.model[0]['name']} is not in recommended models: {BUILDTIME_MODELS}"),
         ]
 
         for condition, error_msg in validations:
