@@ -28,6 +28,9 @@ export interface SessionMoreMenuProps {
   tooltipContent?: string;
   tooltipSide?: "top" | "right" | "bottom" | "left";
   dataTestid?: string;
+  // Controlled state props
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 const DEFAULT_SIDE_OFFSET = 4;
@@ -50,11 +53,17 @@ export function SessionMoreMenu({
   tooltipContent = "More options",
   tooltipSide = "left",
   dataTestid,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
 }: SessionMoreMenuProps) {
   const [selectValue, setSelectValue] = useState("");
+  const [internalOpen, setInternalOpen] = useState(false);
+  
+  // Use controlled state if provided, otherwise use internal state
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = controlledOnOpenChange || setInternalOpen;
 
   const handleValueChange = (value: string) => {
-    setSelectValue(value);
     // Execute the action immediately
     switch (value) {
       case "rename":
@@ -70,12 +79,13 @@ export function SessionMoreMenu({
         onDelete();
         break;
     }
+    setOpen(false);
     setSelectValue("");
   };
 
   return (
     <div className="relative">
-      <Select value={selectValue} onValueChange={handleValueChange}>
+      <Select value={selectValue} onValueChange={handleValueChange} open={open} onOpenChange={setOpen}>
         <ShadTooltip
           styleClasses="z-50"
           side={tooltipSide}
