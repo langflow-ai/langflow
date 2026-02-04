@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 
 import re
@@ -33,9 +32,7 @@ def create_tag(package_version: str, latest_released_version: str | None) -> str
 
 if __name__ == "__main__":
     if len(sys.argv) != ARGUMENT_NUMBER:
-        msg = (
-            "Specify package_version and latest_released_version (use empty string for none)."
-        )
+        msg = "Specify package_version and latest_released_version (use empty string for none)."
         raise ValueError(msg)
 
     package_version = sys.argv[1]
