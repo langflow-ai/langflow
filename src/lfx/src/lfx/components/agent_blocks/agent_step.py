@@ -28,7 +28,6 @@ from lfx.base.agents.message_utils import (
 )
 from lfx.base.models.model import LCModelComponent
 from lfx.base.models.unified_models import get_language_model_options, get_llm, update_model_options_in_build_config
-from lfx.components.agent_blocks.think_tool import ThinkToolComponent
 from lfx.field_typing import LanguageModel  # noqa: TC001
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.io import BoolInput, HandleInput, ModelInput, MultilineInput, Output, SecretStrInput, SliderInput
@@ -100,13 +99,6 @@ class AgentStepComponent(LCModelComponent):
             input_types=["Tool"],
             is_list=True,
             required=False,
-        ),
-        BoolInput(
-            name="include_think_tool",
-            display_name="Include Think Tool",
-            info="Add a 'think' tool that lets the model reason step-by-step before responding.",
-            value=False,
-            advanced=True,
         ),
         SliderInput(
             name="temperature",
@@ -202,11 +194,6 @@ class AgentStepComponent(LCModelComponent):
         tools_to_bind = []
         if self.tools:
             tools_to_bind = self.tools if isinstance(self.tools, list) else [self.tools]
-
-        # Add think tool if enabled
-        if getattr(self, "include_think_tool", False):
-            think_tool_component = ThinkToolComponent()
-            tools_to_bind.append(think_tool_component.build_tool())
 
         if tools_to_bind:
             return runnable.bind_tools(tools_to_bind)

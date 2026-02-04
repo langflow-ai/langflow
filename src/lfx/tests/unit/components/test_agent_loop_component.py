@@ -174,7 +174,6 @@ class TestAgentLoopComponentDirectExecution:
             agent_loop.input_value = Message(text="Hello!", sender="User")
             agent_loop.max_iterations = 5
             agent_loop.temperature = 0.1
-            agent_loop.include_think_tool = False
             agent_loop.tools = None
             agent_loop.initial_state = None
             agent_loop.api_key = None
@@ -213,7 +212,6 @@ class TestAgentLoopComponentDirectExecution:
             agent_loop.input_value = Message(text="Search for something", sender="User")
             agent_loop.max_iterations = 10
             agent_loop.temperature = 0.1
-            agent_loop.include_think_tool = False
             agent_loop.tools = tools
             agent_loop.initial_state = None
             agent_loop.api_key = None
@@ -259,7 +257,6 @@ class TestAgentLoopComponentGraphExecution:
             agent_loop.input_value = Message(text="Test", sender="User")
             agent_loop.max_iterations = 5
             agent_loop.temperature = 0.1
-            agent_loop.include_think_tool = False
             agent_loop.tools = None
             agent_loop.initial_state = None
             agent_loop.api_key = None
@@ -284,7 +281,6 @@ class TestAgentLoopComponentGraphExecution:
             agent_loop.input_value = Message(text="Call the LLM", sender="User")
             agent_loop.max_iterations = 5
             agent_loop.temperature = 0.1
-            agent_loop.include_think_tool = False
             agent_loop.tools = None
             agent_loop.initial_state = None
             agent_loop.api_key = None
@@ -431,7 +427,6 @@ class TestAgentStepToolNotificationStreaming:
             agent_step.messages = None
             agent_step.tools = None
             agent_step.temperature = 0.1
-            agent_step.include_think_tool = False
             agent_step.api_key = None
 
             # Set up streaming with parent message - this is the key!
@@ -504,7 +499,6 @@ class TestAgentStepToolNotificationStreaming:
             agent_step.messages = None
             agent_step.tools = None
             agent_step.temperature = 0.1
-            agent_step.include_think_tool = False
             agent_step.api_key = None
 
             # Set _stream_to_playground but NO _parent_message

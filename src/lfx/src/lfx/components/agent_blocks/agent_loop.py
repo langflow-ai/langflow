@@ -18,7 +18,6 @@ from lfx.base.models.unified_models import get_language_model_options, get_llm, 
 from lfx.custom.custom_component.component import Component
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.io import (
-    BoolInput,
     HandleInput,
     IntInput,
     MessageTextInput,
@@ -137,13 +136,6 @@ class AgentLoopComponent(Component):
             value=0.1,
             info="Controls randomness in responses. Lower = more focused, higher = more creative.",
             range_spec=RangeSpec(min=0, max=1, step=0.01),
-            advanced=True,
-        ),
-        BoolInput(
-            name="include_think_tool",
-            display_name="Include Think Tool",
-            info="Add a 'think' tool that lets the agent reason step-by-step before responding.",
-            value=False,
             advanced=True,
         ),
     ]
@@ -277,7 +269,6 @@ class AgentLoopComponent(Component):
         config = {
             "system_message": self.system_message,
             "temperature": self.temperature,
-            "include_think_tool": self.include_think_tool,
             "messages": while_loop.loop_output,
         }
         if self.model:

@@ -7,7 +7,6 @@ import pytest
 from lfx.components.agent_blocks import (
     AgentStepComponent,
     ExecuteToolComponent,
-    ThinkToolComponent,
 )
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
@@ -28,11 +27,6 @@ class TestComponentInstantiation:
         assert comp.display_name == "Execute Tool"
         assert "tool_calls_message" in [i.name for i in comp.inputs]
         assert "messages" in [o.name for o in comp.outputs]
-
-    def test_think_tool_builds(self):
-        comp = ThinkToolComponent()
-        tool = comp.build_tool()
-        assert tool.name == "think"
 
 
 class TestMessageConversion:
