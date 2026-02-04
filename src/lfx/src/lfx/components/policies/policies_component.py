@@ -56,7 +56,7 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             ),
             TabInput(
                 name="build_mode",
-                display_name="Policies Build Mode",
+                display_name="Build Mode",
                 options=[BUILD_MODE_GENERATE, BUILD_MODE_CACHE],
                 info="Indicates whether to invoke buildtime (Generate), or use a cached code (Use Cache)",
                 value=BUILD_MODE_GENERATE,
