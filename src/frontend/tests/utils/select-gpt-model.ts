@@ -13,8 +13,6 @@ export const selectGptModel = async (page: Page) => {
   for (let i = 0; i < gptModelDropdownCount; i++) {
     const node = nodes.nth(i);
 
-    await node.click();
-
     const model = (await node.getByTestId("model_model").last().isVisible())
       ? node.getByTestId("model_model").last()
       : page.getByTestId("model_model").last();
