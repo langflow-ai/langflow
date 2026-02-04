@@ -52,6 +52,7 @@ class ExecuteToolComponent(Component):
     description = "Execute tool calls and return AI message with tool results."
     icon = "play"
     category = "agent_blocks"
+    beta = True
 
     inputs = [
         MessageInput(

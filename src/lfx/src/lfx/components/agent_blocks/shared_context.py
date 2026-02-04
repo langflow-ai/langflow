@@ -68,6 +68,7 @@ class SharedContextComponent(Component):
     description = "Store and retrieve shared data for multi-agent collaboration."
     icon = "Database"
     category = "agent_blocks"
+    beta = True
 
     # Key for storing operation events in context
     EVENTS_KEY = "shared_ctx:_events"

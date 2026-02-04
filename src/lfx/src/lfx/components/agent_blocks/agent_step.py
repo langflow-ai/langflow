@@ -61,6 +61,7 @@ class AgentStepComponent(LCModelComponent):
     description = "Sends messages to an LLM. Outputs to Response (done) or Tool Calls (continue loop)."
     icon = "brain"
     category = "agent_blocks"
+    beta = True
 
     inputs = [
         ModelInput(

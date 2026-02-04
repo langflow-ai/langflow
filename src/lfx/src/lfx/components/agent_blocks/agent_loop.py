@@ -62,6 +62,7 @@ class AgentLoopComponent(Component):
     description = "A complete agent loop that processes messages and uses tools."
     icon = "Bot"
     category = "agent_blocks"
+    beta = True
 
     inputs = [
         ModelInput(
