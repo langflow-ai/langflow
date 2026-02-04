@@ -34,6 +34,7 @@ if TYPE_CHECKING:
     from lfx.inputs.inputs import InputTypes
 
 
+BUILDTIME_MODELS = ["gpt-5.1", "claude-sonnet-4"]
 TOOLGUARD_WORK_DIR = Path("tmp_toolguard")
 STEP1 = "Step_1"
 STEP2 = "Step_2"
@@ -182,6 +183,7 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             (not any(self.policies), "policies cannot be empty!"),
             (not self.in_tools, "in_tools cannot be empty!"),
             (not self.model or not self.api_key, "model or api_key cannot be empty!"),
+            (self.model[0]['name'] not in BUILDTIME_MODELS, f"model {self.model[0]['name']} is not in recommended models: {BUILDTIME_MODELS}"),
         ]
 
         for condition, error_msg in validations:
