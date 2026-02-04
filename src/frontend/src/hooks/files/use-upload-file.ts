@@ -1,6 +1,10 @@
 import { customPostUploadFileV2 } from "@/customization/hooks/use-custom-post-upload-file";
 import { createFileUpload } from "@/helpers/create-file-upload";
 import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
+import {
+  getRelativePathForServerPath,
+  setRelativePathForServerPath,
+} from "@/utils/file-relative-path-map";
 
 const useUploadFile = ({
   types,
@@ -71,6 +75,33 @@ const useUploadFile = ({
         const res = await uploadFileMutation({
           file,
         });
+
+        if (!webkitdirectory && res?.path) {
+          const existing = getRelativePathForServerPath(res.path);
+          if (existing && existing.includes("/")) {
+            const flatName = String(res.path).split("/").filter(Boolean).pop();
+            setRelativePathForServerPath(
+              res.path,
+              flatName ?? String(res.path),
+            );
+          }
+        }
+
+        if (webkitdirectory && file.webkitRelativePath) {
+          const relativeParts = file.webkitRelativePath
+            .split("/")
+            .filter(Boolean);
+          const serverLeaf = String(res.path ?? "")
+            .split("/")
+            .filter(Boolean)
+            .pop();
+          if (relativeParts.length > 0 && serverLeaf) {
+            relativeParts[relativeParts.length - 1] = serverLeaf;
+            setRelativePathForServerPath(res.path, relativeParts.join("/"));
+          } else {
+            setRelativePathForServerPath(res.path, file.webkitRelativePath);
+          }
+        }
         filesIds.push(res.path);
       }
       return filesIds;

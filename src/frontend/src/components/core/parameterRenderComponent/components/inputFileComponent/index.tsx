@@ -29,7 +29,6 @@ export default function InputFileComponent({
   isList,
   tempFile = true,
   editNode = false,
-  id,
   allowFolderSelection = false,
 }: InputProps<string, FileComponentType> & {
   allowFolderSelection?: boolean;

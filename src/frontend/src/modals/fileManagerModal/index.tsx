@@ -90,6 +90,7 @@ export default function FileManagerModal({
                 types={types}
                 isList={isList ?? false}
                 allowFolderSelection={allowFolderSelection}
+                existingFiles={files}
               />
             </div>
             <div className="flex flex-1 flex-col overflow-hidden">

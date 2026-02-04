@@ -87,6 +87,7 @@ export function createFileUpload(props?: {
             ".idea",
             "__pycache__",
             ".pytest_cache",
+            "node_modules",
           ];
           const hasHiddenPattern = hiddenPatterns.some((pattern) =>
             path.includes(pattern),
