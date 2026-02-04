@@ -47,6 +47,32 @@ _convert_type_to_field_type = {
 }
 
 
+def _create_safe_literal_type(options: list[Any]) -> type:  # type: ignore[return-value]
+    """Create a Literal type from options after validating they are safe.
+
+    Args:
+        options: List of option values to convert to a Literal type
+
+    Returns:
+        A Literal type containing the validated options
+
+    Raises:
+        ValueError: If any option is not a safe literal type (str, int, float, bool, None)
+    """
+    # Security: Validate that all options are safe literal types to prevent code execution
+    # IMPORTANT: We must validate BEFORE creating the tuple to prevent code execution
+    safe_types = (str, int, float, bool, type(None))
+
+    # Validate each option individually without evaluating the list as a whole
+    for opt in options:
+        if not isinstance(opt, safe_types):
+            msg = "Invalid option type provided."
+            raise TypeError(msg)
+
+    # Now safe to create the tuple since all elements are validated
+    return Literal[tuple(options)]  # type: ignore[return-value]
+
+
 def flatten_schema(root_schema: dict[str, Any]) -> dict[str, Any]:
     """Flatten a JSON RPC style schema into a single level JSON Schema.
 
@@ -229,7 +255,7 @@ def create_input_schema(inputs: list["InputTypes"]) -> type[BaseModel]:
             and input_model.options
             and len(input_model.options) <= MAX_OPTIONS_FOR_TOOL_ENUM
         ):
-            field_type = Literal[tuple(input_model.options)]
+            field_type = _create_safe_literal_type(input_model.options)
         if hasattr(input_model, "is_list") and input_model.is_list:
             field_type = list[field_type]  # type: ignore[valid-type]
         if input_model.name:
@@ -270,7 +296,7 @@ def create_input_schema_from_dict(inputs: list[dotdict], param_key: str | None =
             and input_model.options
             and len(input_model.options) <= MAX_OPTIONS_FOR_TOOL_ENUM
         ):
-            field_type = Literal[tuple(input_model.options)]
+            field_type = _create_safe_literal_type(input_model.options)
         if hasattr(input_model, "is_list") and input_model.is_list:
             field_type = list[field_type]  # type: ignore[valid-type]
         if input_model.name:

@@ -320,6 +320,58 @@ def _handle_module_attributes(imported_module, node, module_name, exec_globals):
             exec_globals[alias.name] = importlib.import_module(full_module_path)
 
 
+# Blacklist of dangerous built-in functions that should not be used in module/class-level assignments
+# These functions can be used to execute arbitrary code or access sensitive system resources
+DANGEROUS_BUILTINS = {
+    "__import__",  # Dynamic module imports
+    "eval",  # Evaluate arbitrary code
+    "exec",  # Execute arbitrary code
+    "compile",  # Compile code objects
+    "open",  # File system access
+    "input",  # User input (can be used for injection)
+    "__builtins__",  # Access to all built-ins
+    "globals",  # Access to global namespace
+    "locals",  # Access to local namespace
+    "vars",  # Access to object's __dict__
+    "dir",  # List object attributes
+    "getattr",  # Get arbitrary attributes
+    "setattr",  # Set arbitrary attributes
+    "delattr",  # Delete arbitrary attributes
+    "hasattr",  # Check for arbitrary attributes
+}
+
+
+def _contains_dangerous_builtin(node):
+    """Check if an AST node contains dangerous built-in function calls.
+
+    Uses the DANGEROUS_BUILTINS blacklist to detect potentially malicious code.
+    This does NOT block legitimate constructor calls like ModelInput(), DropdownInput(), etc.
+
+    Args:
+        node: AST node to check
+
+    Returns:
+        bool: True if dangerous built-ins are found, False otherwise
+    """
+    if node is None:
+        return False
+
+    # Check all Call nodes in the tree for dangerous built-ins or chained calls
+    for child in ast.walk(node):
+        if isinstance(child, ast.Call) and (
+            (isinstance(child.func, ast.Name) and child.func.id in DANGEROUS_BUILTINS)
+            or (
+                isinstance(child.func, ast.Attribute)
+                and isinstance(child.func.value, ast.Call)
+                and isinstance(child.func.value.func, ast.Name)
+                and child.func.value.func.id in DANGEROUS_BUILTINS
+            )
+        ):
+            return True
+
+    return False
+
+
 def prepare_global_scope(module):
     """Prepares the global scope with necessary imports from the provided code module.
 
@@ -331,6 +383,7 @@ def prepare_global_scope(module):
 
     Raises:
         ModuleNotFoundError: If a module is not found in the code
+        ValueError: If unsafe module-level assignments are detected
     """
     exec_globals = globals().copy()
     imports = []
@@ -342,7 +395,27 @@ def prepare_global_scope(module):
             imports.append(node)
         elif isinstance(node, ast.ImportFrom) and node.module is not None:
             import_froms.append(node)
-        elif isinstance(node, ast.ClassDef | ast.FunctionDef | ast.Assign):
+        elif isinstance(node, ast.ClassDef | ast.FunctionDef):
+            definitions.append(node)
+        elif isinstance(node, ast.Assign):
+            # Check if the assignment contains dangerous built-in calls
+            if _contains_dangerous_builtin(node.value):
+                target_names = []
+                for target in node.targets:
+                    if isinstance(target, ast.Name):
+                        target_names.append(target.id)
+                    elif isinstance(target, ast.Attribute):
+                        target_names.append(ast.unparse(target))
+
+                target_str = ", ".join(target_names) if target_names else "unknown"
+                msg = (
+                    f"Security Error: Module-level assignment to '{target_str}' contains dangerous built-in functions "
+                    f"like __import__, eval, or exec. This is not allowed for security reasons. "
+                    f"Please use safe alternatives or move initialization to __init__."
+                )
+                raise ValueError(msg)
+
+            # If the assignment is safe, include it
             definitions.append(node)
 
     for node in imports:
@@ -399,6 +472,52 @@ def prepare_global_scope(module):
     return exec_globals
 
 
+def _validate_class_assignments(class_node):
+    """Validate that class-level assignments don't contain dangerous code.
+
+    Args:
+        class_node: AST ClassDef node
+
+    Raises:
+        ValueError: If dangerous assignments are detected in the class
+    """
+    for node in class_node.body:
+        if isinstance(node, ast.Assign):
+            # Check if the assignment contains dangerous built-in calls
+            if _contains_dangerous_builtin(node.value):
+                target_names = []
+                for target in node.targets:
+                    if isinstance(target, ast.Name):
+                        target_names.append(target.id)
+                    elif isinstance(target, ast.Attribute):
+                        target_names.append(ast.unparse(target))
+
+                target_str = ", ".join(target_names) if target_names else "unknown"
+                msg = (
+                    f"Security Error: Class attribute '{target_str}' in class '{class_node.name}' "
+                    f"contains dangerous built-in functions like __import__, eval, or exec. "
+                    f"This is not allowed for security reasons. "
+                    f"Please use safe alternatives or move initialization to __init__."
+                )
+                raise ValueError(msg)
+        elif isinstance(node, ast.AnnAssign) and node.value is not None and _contains_dangerous_builtin(node.value):
+            # Check annotated assignments with values (e.g., name: str = value)
+            if isinstance(node.target, ast.Name):
+                target_str = node.target.id
+            elif isinstance(node.target, ast.Attribute):
+                target_str = ast.unparse(node.target)
+            else:
+                target_str = "unknown"
+
+            msg = (
+                f"Security Error: Class attribute '{target_str}' in class '{class_node.name}' "
+                f"contains dangerous built-in functions like __import__, eval, or exec. "
+                f"This is not allowed for security reasons. "
+                f"Please use safe alternatives or move initialization to __init__."
+            )
+            raise ValueError(msg)
+
+
 def extract_class_code(module, class_name):
     """Extracts the AST node for the specified class from the module.
 
@@ -408,8 +527,14 @@ def extract_class_code(module, class_name):
 
     Returns:
         AST node of the specified class
+
+    Raises:
+        ValueError: If the class contains dangerous code patterns
     """
     class_code = next(node for node in module.body if isinstance(node, ast.ClassDef) and node.name == class_name)
+
+    # Validate class-level assignments for security
+    _validate_class_assignments(class_code)
 
     class_code.parent = None
     return class_code
