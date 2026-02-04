@@ -82,19 +82,19 @@ jobs:
           echo "Base version from pyproject.toml: $version"
 
           if [ ${{inputs.pre_release}} == "true" ]; then
-            last_released_version=$(curl -s "https://registry.hub.docker.com/v2/repositories/langflowai/langflow/tags?page_size=100" | jq -r '.results[].name' | grep -E '\.rc[0-9]+' | sort -V | tail -n 1)
+            last_released_version=$(curl -s "https://registry.hub.docker.com/v2/repositories/langflowai/langflow-base/tags?page_size=100" | jq -r '.results[].name' | grep -E '\.rc[0-9]+' | sort -V | tail -n 1)
             version="$(uv run ./scripts/ci/langflow_pre_release_tag.py "$version" "$last_released_version")"
             echo "Latest base pre-release version: $last_released_version"
             echo "Base pre-release version to be released: $version"
           else
-            last_released_version=$(curl -s "https://registry.hub.docker.com/v2/repositories/langflowai/langflow/tags?page_size=100" | jq -r '.results[].name' | grep -v 'latest' | sort -V | tail -n 1)
+            last_released_version=$(curl -s "https://registry.hub.docker.com/v2/repositories/langflowai/langflow-base/tags?page_size=100" | jq -r '.results[].name' | grep -v 'latest' | sort -V | tail -n 1)
             echo "Latest base release version: $last_released_version"
           fi
 
           if [ "$version" = "$last_released_version" ]; then
             echo "Base docker version $version is already released. Skipping release."
             echo skipped=true >> $GITHUB_OUTPUT
-            exit 0
+            exit 1
           else
             echo version=$version >> $GITHUB_OUTPUT
             echo skipped=false >> $GITHUB_OUTPUT
@@ -140,7 +140,7 @@ jobs:
           if [ "$version" = "$last_released_version" ]; then
             echo "Main docker version $version is already released. Skipping release."
             echo skipped=true >> $GITHUB_OUTPUT
-            exit 0
+            exit 1
           else
             echo version=$version >> $GITHUB_OUTPUT
             echo skipped=false >> $GITHUB_OUTPUT

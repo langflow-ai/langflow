@@ -574,11 +574,7 @@ jobs:
             LFX_WHEEL=$(find ./lfx-dist -name "*.whl" -type f | head -1)
             if [ -n "$LFX_WHEEL" ]; then
               echo "Force reinstalling LFX: $LFX_WHEEL"
-              NO_DEPS="--no-deps"
-              if [ "${{ inputs.pre_release }}" = "true" ]; then
-                NO_DEPS=""
-              fi
-              uv pip install --force-reinstall $NO_DEPS --prerelease=allow --python ./test-env/Scripts/python.exe "$LFX_WHEEL"
+              uv pip install --force-reinstall --no-deps --prerelease=allow --python ./test-env/Scripts/python.exe "$LFX_WHEEL"
             fi
           fi
 
@@ -586,11 +582,7 @@ jobs:
           BASE_WHEEL=$(find ./base-dist -name "*.whl" -type f | head -1)
           if [ -n "$BASE_WHEEL" ]; then
             echo "Force reinstalling langflow-base: $BASE_WHEEL"
-            NO_DEPS="--no-deps"
-            if [ "${{ inputs.pre_release }}" = "true" ]; then
-              NO_DEPS=""
-            fi
-            uv pip install --force-reinstall $NO_DEPS --prerelease=allow --python ./test-env/Scripts/python.exe "$BASE_WHEEL"
+            uv pip install --force-reinstall --no-deps --prerelease=allow --python ./test-env/Scripts/python.exe "$BASE_WHEEL"
           fi
         shell: bash
 
@@ -602,11 +594,7 @@ jobs:
             LFX_WHEEL=$(find ./lfx-dist -name "*.whl" -type f | head -1)
             if [ -n "$LFX_WHEEL" ]; then
               echo "Force reinstalling LFX: $LFX_WHEEL"
-              NO_DEPS="--no-deps"
-              if [ "${{ inputs.pre_release }}" = "true" ]; then
-                NO_DEPS=""
-              fi
-              uv pip install --force-reinstall $NO_DEPS --prerelease=allow --python ./test-env/bin/python "$LFX_WHEEL"
+              uv pip install --force-reinstall --no-deps --prerelease=allow --python ./test-env/bin/python "$LFX_WHEEL"
             fi
           fi
 
@@ -614,11 +602,7 @@ jobs:
           BASE_WHEEL=$(find ./base-dist -name "*.whl" -type f | head -1)
           if [ -n "$BASE_WHEEL" ]; then
             echo "Force reinstalling langflow-base: $BASE_WHEEL"
-            NO_DEPS="--no-deps"
-            if [ "${{ inputs.pre_release }}" = "true" ]; then
-              NO_DEPS=""
-            fi
-            uv pip install --force-reinstall $NO_DEPS --prerelease=allow --python ./test-env/bin/python "$BASE_WHEEL"
+            uv pip install --force-reinstall --no-deps --prerelease=allow --python ./test-env/bin/python "$BASE_WHEEL"
           fi
         shell: bash
 
