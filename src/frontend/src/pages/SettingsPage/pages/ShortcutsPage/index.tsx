@@ -8,6 +8,7 @@ import { defaultShortcuts } from "../../../../constants/constants";
 import { useShortcutsStore } from "../../../../stores/shortcuts";
 import CellRenderShortcuts from "./CellRenderWrapper";
 import EditShortcutButton from "./EditShortcutButton";
+import useFlowStore from "@/stores/flowStore";
 
 export default function ShortcutsPage() {
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
@@ -46,9 +47,12 @@ export default function ShortcutsPage() {
     (state) => state.updateUniqueShortcut,
   );
 
+  const inspectionPanelVisible = useFlowStore((state) => state.inspectionPanelVisible);
+
   function handleRestore() {
-    setShortcuts(defaultShortcuts);
-    defaultShortcuts.forEach(({ name, shortcut }) => {
+    const filteredShortcuts = inspectionPanelVisible ? defaultShortcuts.filter((shortcut) => shortcut.name !== "Advanced Settings") : defaultShortcuts;
+    setShortcuts(filteredShortcuts);
+    filteredShortcuts.forEach(({ name, shortcut }) => {
       const fixedName = toCamelCase(name);
       updateUniqueShortcut(fixedName, shortcut);
     });

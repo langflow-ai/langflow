@@ -10,7 +10,6 @@ import {
   getCustomParameterTitle,
 } from "@/customization/components/custom-parameter";
 import {
-  ENABLE_INSPECTION_PANEL,
   LANGFLOW_AGENTIC_EXPERIENCE,
 } from "@/customization/feature-flags";
 import { useIsAutoLogin } from "@/hooks/use-is-auto-login";
@@ -114,9 +113,8 @@ export default function NodeInputField({
       colors={colors}
       setFilterEdge={setFilterEdge}
       showNode={showNode}
-      testIdComplement={`${data?.type?.toLowerCase()}-${
-        showNode ? "shownode" : "noshownode"
-      }`}
+      testIdComplement={`${data?.type?.toLowerCase()}-${showNode ? "shownode" : "noshownode"
+        }`}
       nodeId={data.id}
       colorName={colorName}
     />

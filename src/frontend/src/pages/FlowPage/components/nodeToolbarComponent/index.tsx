@@ -40,7 +40,6 @@ import ToolbarModals from "./components/toolbar-modals";
 import useShortcuts from "./hooks/use-shortcuts";
 import ShortcutDisplay from "./shortcutDisplay";
 import ToolbarSelectItem from "./toolbarSelectItem";
-import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
 
 const NodeToolbarComponent = memo(
   ({
@@ -151,10 +150,10 @@ const NodeToolbarComponent = memo(
       if (data.node?.tool_mode !== undefined) {
         setToolMode(
           data.node?.tool_mode ||
-            data.node?.outputs?.some(
-              (output) => output.name === "component_as_tool",
-            ) ||
-            false,
+          data.node?.outputs?.some(
+            (output) => output.name === "component_as_tool",
+          ) ||
+          false,
         );
       }
     }, [data.node?.tool_mode, data.node?.outputs]);
@@ -454,6 +453,8 @@ const NodeToolbarComponent = memo(
       handleOnNewValueHook({ value });
     };
 
+    const inspectionPanelVisible = useFlowStore((state) => state.inspectionPanelVisible);
+
     const selectTriggerRef = useRef(null);
 
     const handleButtonClick = () => {
@@ -474,7 +475,7 @@ const NodeToolbarComponent = memo(
 
     const isCustomComponent = useMemo(() => {
       const isCustom = data.type === "CustomComponent" && !data.node?.edited;
-      if (isCustom && !ENABLE_INSPECTION_PANEL) {
+      if (isCustom && !inspectionPanelVisible) {
         data.node.edited = true;
       }
       return isCustom;
@@ -483,7 +484,7 @@ const NodeToolbarComponent = memo(
     const renderToolbarButtons = useMemo(
       () => (
         <>
-          {hasCode && !ENABLE_INSPECTION_PANEL && (
+          {hasCode && !inspectionPanelVisible && (
             <ToolbarButton
               className={isCustomComponent ? "animate-pulse-pink" : ""}
               icon="Code"
@@ -495,7 +496,7 @@ const NodeToolbarComponent = memo(
               dataTestId="code-button-modal"
             />
           )}
-          {nodeLength > 0 && !ENABLE_INSPECTION_PANEL && (
+          {nodeLength > 0 && !inspectionPanelVisible && (
             <ToolbarButton
               icon="SlidersHorizontal"
               label="Controls"
@@ -506,7 +507,7 @@ const NodeToolbarComponent = memo(
               dataTestId="edit-button-modal"
             />
           )}
-          {(!hasToolMode || ENABLE_INSPECTION_PANEL) && (
+          {(!hasToolMode || inspectionPanelVisible) && (
             <ToolbarButton
               icon="FreezeAll"
               label="Freeze"
@@ -686,7 +687,7 @@ const NodeToolbarComponent = memo(
                   </SelectItem>
                 )}
 
-                {!ENABLE_INSPECTION_PANEL && (
+                {!inspectionPanelVisible && (
                   <SelectItem
                     value={"documentation"}
                     disabled={data.node?.documentation === ""}
@@ -705,9 +706,8 @@ const NodeToolbarComponent = memo(
                 {(isMinimal || !showNode) && (
                   <SelectItem
                     value={"show"}
-                    data-testid={`${
-                      showNode ? "minimize" : "expand"
-                    }-button-modal`}
+                    data-testid={`${showNode ? "minimize" : "expand"
+                      }-button-modal`}
                   >
                     <ToolbarSelectItem
                       shortcut={
@@ -731,7 +731,7 @@ const NodeToolbarComponent = memo(
                     />
                   </SelectItem>
                 )}
-                {hasToolMode && !ENABLE_INSPECTION_PANEL && (
+                {hasToolMode && !inspectionPanelVisible && (
                   <SelectItem
                     value="freezeAll"
                     data-testid="freeze-all-button-modal"

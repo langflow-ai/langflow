@@ -83,7 +83,6 @@ import {
 } from "./MemoizedComponents";
 import getRandomName from "./utils/get-random-name";
 import isWrappedWithClass from "./utils/is-wrapped-with-class";
-import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
 
 const nodeTypes = {
   genericNode: GenericNode,
@@ -773,6 +772,12 @@ export default function Page({
     );
   }, [setNodes]);
 
+  useEffect(() => {
+    if (inspectionPanelVisible) {
+      setSelectionMenuVisible(false);
+    }
+  }, [inspectionPanelVisible]);
+
   return (
     <div className="h-full w-full bg-canvas" ref={reactFlowWrapper}>
       {showCanvas ? (
@@ -788,10 +793,9 @@ export default function Page({
                   shadowBoxHeight={shadowBoxHeight}
                 />
                 <FlowToolbar />
-                {ENABLE_INSPECTION_PANEL && (
+                {inspectionPanelVisible && (
                   <InspectionPanel
                     selectedNode={selectedNode}
-                    isVisible={showInspectionPanel}
                     onClose={handleCloseInspectionPanel}
                   />
                 )}

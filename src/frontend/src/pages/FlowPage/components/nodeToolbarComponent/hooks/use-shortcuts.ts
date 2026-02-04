@@ -1,7 +1,7 @@
 import { useHotkeys } from "react-hotkeys-hook";
 import { useShortcutsStore } from "@/stores/shortcuts";
 import isWrappedWithClass from "../../PageComponent/utils/is-wrapped-with-class";
-import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
+import useFlowStore from "@/stores/flowStore";
 
 export default function useShortcuts({
   showOverrideModal,
@@ -46,6 +46,8 @@ export default function useShortcuts({
   const download = useShortcutsStore((state) => state.download);
   const freezeAll = useShortcutsStore((state) => state.freezePath);
   const toolMode = useShortcutsStore((state) => state.toolMode);
+
+  const inspectionPanelVisible = useFlowStore((state) => state.inspectionPanelVisible);
 
   function handleFreezeAll(e: KeyboardEvent) {
     if (isWrappedWithClass(e, "noflow") || !FreezeAllVertices) return;
@@ -124,7 +126,7 @@ export default function useShortcuts({
   useHotkeys(code, handleCodeWShortcut, { preventDefault: true });
   useHotkeys(
     advancedSettings,
-    !ENABLE_INSPECTION_PANEL ? handleAdvancedWShortcut : () => {},
+    !inspectionPanelVisible ? handleAdvancedWShortcut : () => { },
     {
       preventDefault: true,
     },

@@ -9,13 +9,11 @@ import { Separator } from "@/components/ui/separator";
 
 interface InspectionPanelProps {
   selectedNode: AllNodeType | null;
-  isVisible: boolean;
   onClose?: () => void;
 }
 
 const InspectionPanel = memo(function InspectionPanel({
   selectedNode,
-  isVisible,
   onClose,
 }: InspectionPanelProps) {
   const [isEditingFields, setIsEditingFields] = useState(false);
@@ -23,11 +21,11 @@ const InspectionPanel = memo(function InspectionPanel({
   // Reset edit mode when panel closes or node changes
   useEffect(() => {
     setIsEditingFields(false);
-  }, [selectedNode?.id, isVisible]);
+  }, [selectedNode?.id]);
 
   return (
     <AnimatePresence mode="wait">
-      {isVisible && selectedNode && selectedNode.type === "genericNode" && (
+      {selectedNode && selectedNode.type === "genericNode" && (
         <Panel
           position="top-right"
           className={cn(
