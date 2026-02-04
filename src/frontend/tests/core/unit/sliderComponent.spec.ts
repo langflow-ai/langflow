@@ -4,6 +4,8 @@ import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import {
   closeAdvancedOptions,
+  disableInspectPanel,
+  enableInspectPanel,
   openAdvancedOptions,
 } from "../../utils/open-advanced-options";
 
@@ -76,6 +78,8 @@ test(
     await page.waitForTimeout(500);
     await adjustScreenView(page, { numberOfZoomOut: 1 });
 
+    await disableInspectPanel(page);
+
     await openAdvancedOptions(page);
     await expect(
       page.getByTestId("default_slider_display_value_advanced"),
@@ -94,6 +98,8 @@ test(
     await expect(page.getByTestId("default_slider_display_value")).toHaveText(
       "14.00",
     );
+
+    await enableInspectPanel(page);
   },
 );
 

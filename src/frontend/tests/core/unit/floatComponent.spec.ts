@@ -3,6 +3,8 @@ import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import {
   closeAdvancedOptions,
+  disableInspectPanel,
+  enableInspectPanel,
   openAdvancedOptions,
 } from "../../utils/open-advanced-options";
 
@@ -39,6 +41,8 @@ test(
 
     //add
 
+    await disableInspectPanel(page);
+
     await page.getByTestId("title-NVIDIA").click();
 
     await openAdvancedOptions(page);
@@ -65,18 +69,12 @@ test(
 
     expect(value).toBe("-3");
 
-    await openAdvancedOptions(page);
-
-    await closeAdvancedOptions(page);
-
     const plusButtonLocator = page.locator('//*[@id="int_int_edit_seed"]');
     const elementCount = await plusButtonLocator?.count();
     if (elementCount === 0) {
       expect(true).toBeTruthy();
 
-      await openAdvancedOptions(page);
 
-      await closeAdvancedOptions(page);
       await page.locator('//*[@id="int_int_seed"]').click();
       await page.getByTestId("int_int_seed").fill("");
 
@@ -94,6 +92,9 @@ test(
       value = await page.locator('//*[@id="int_int_seed"]').inputValue();
 
       expect(value).toBe("-3");
+
     }
+
+    await enableInspectPanel(page);
   },
 );

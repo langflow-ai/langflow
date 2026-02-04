@@ -3,6 +3,8 @@ import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import {
   closeAdvancedOptions,
+  disableInspectPanel,
+  enableInspectPanel,
   openAdvancedOptions,
 } from "../../utils/open-advanced-options";
 
@@ -72,6 +74,8 @@ test(
     await page.getByTestId("div-generic-node").click();
 
     await adjustScreenView(page);
+
+    await disableInspectPanel(page);
 
     await openAdvancedOptions(page);
 
@@ -176,6 +180,8 @@ test(
       expect(
         await page.getByTestId("toggle_bool_load_hidden").isChecked(),
       ).toBeFalsy();
+
     }
+    await enableInspectPanel(page);
   },
 );

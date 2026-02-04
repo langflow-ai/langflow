@@ -3,6 +3,8 @@ import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import {
   closeAdvancedOptions,
+  disableInspectPanel,
+  enableInspectPanel,
   openAdvancedOptions,
 } from "../../utils/open-advanced-options";
 
@@ -54,6 +56,8 @@ test(
       expect(false).toBeTruthy();
     }
     await input.fill("collection_name_test_123123123!@#$&*(&%$@");
+
+    await disableInspectPanel(page);
 
     await page.getByTestId("div-generic-node").click();
 
@@ -122,7 +126,7 @@ test(
     ).toBeFalsy();
 
     const valueEditNode = await page
-      .getByTestId(/^popover-anchor-input-collection_name.*/)
+      .getByTestId("popover-anchor-input-collection_name-edit")
       .nth(0)
       .inputValue();
 
@@ -131,7 +135,7 @@ test(
     }
 
     await page
-      .getByTestId(/^popover-anchor-input-collection_name.*/)
+      .getByTestId("popover-anchor-input-collection_name-edit")
       .nth(0)
       .fill("NEW_collection_name_test_123123123!@#$&*(&%$@ÇÇÇÀõe");
 
@@ -156,5 +160,7 @@ test(
         expect(false).toBeTruthy();
       }
     }
+
+    await enableInspectPanel(page);
   },
 );
