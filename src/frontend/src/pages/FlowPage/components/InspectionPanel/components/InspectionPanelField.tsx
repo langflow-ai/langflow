@@ -184,6 +184,7 @@ export default function InspectionPanelField({
             handleNodeClass={handleNodeClass}
             nodeClass={data.node!}
             showParameter={true}
+            inspectionPanel={true}
             placeholder={
               isToolMode
                 ? DEFAULT_TOOLSET_PLACEHOLDER

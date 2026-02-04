@@ -40,10 +40,11 @@ const CustomInputPopoverObject = ({
   optionsButton,
   handleKeyDown,
   showOptions,
+  inspectionPanel,
 }) => {
   const [cursor, setCursor] = useState<number | null>(null);
 
-  const PopoverContentInput = editNode
+  const PopoverContentInput = editNode || inspectionPanel
     ? PopoverContent
     : PopoverContentWithoutPortal;
 
@@ -104,6 +105,7 @@ const CustomInputPopoverObject = ({
         className="noflow nowheel nopan nodelete nodrag p-0"
         style={{ minWidth: refInput?.current?.clientWidth ?? "200px" }}
         side="bottom"
+        avoidCollisions={inspectionPanel || editNode}
         align="center"
       >
         <Command

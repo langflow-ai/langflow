@@ -186,12 +186,13 @@ const CustomInputPopover = ({
   commandWidth,
   blockAddNewGlobalVariable,
   hasRefreshButton,
+  inspectionPanel,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
   const [cursor, setCursor] = useState<number | null>(null);
   const memoizedOptions = useMemo(() => new Set<string>(options), [options]);
 
-  const PopoverContentInput = editNode
+  const PopoverContentInput = editNode || inspectionPanel
     ? PopoverContent
     : PopoverContentWithoutPortal;
 
@@ -332,6 +333,7 @@ const CustomInputPopover = ({
           minWidth: refInput?.current?.clientWidth ?? "200px",
           width: popoverWidth ?? null,
         }}
+        avoidCollisions={inspectionPanel || editNode}
         side="bottom"
         align="start"
       >

@@ -32,6 +32,7 @@ export type BaseInputProps<valueType = any> = {
   buttonMetadata?: { variant?: string; icon?: string };
   connectionLink?: string;
   showParameter?: boolean;
+  inspectionPanel?: boolean;
 };
 
 // Generic type for composing input props
