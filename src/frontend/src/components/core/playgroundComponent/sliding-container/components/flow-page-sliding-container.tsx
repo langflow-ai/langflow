@@ -183,6 +183,7 @@ export function FlowPageSlidingContainerContent({
             onClose={handleClose}
             openLogsModal={openLogsModal}
             setOpenLogsModal={setOpenLogsModal}
+            renameLocalSession={renameLocalSession}
           />
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
             <StickToBottom
