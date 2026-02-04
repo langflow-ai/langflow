@@ -11,18 +11,18 @@ const createMockEdge = (
   const handleId = scapedJSONStringfy(
     template.proxy
       ? {
-        inputTypes: template.input_types,
-        type: template.type,
-        id: nodeId,
-        fieldName,
-        proxy: template.proxy,
-      }
+          inputTypes: template.input_types,
+          type: template.type,
+          id: nodeId,
+          fieldName,
+          proxy: template.proxy,
+        }
       : {
-        inputTypes: template.input_types,
-        type: template.type,
-        id: nodeId,
-        fieldName,
-      },
+          inputTypes: template.input_types,
+          type: template.type,
+          id: nodeId,
+          fieldName,
+        },
   );
 
   return {
