@@ -14,6 +14,7 @@ from toolguard.buildtime import (
     generate_guard_specs,
     generate_guards_code,
 )
+from toolguard.extra.langchain_to_oas import langchain_tools_to_openapi
 from toolguard.runtime import load_toolguards
 
 from lfx.base.models import LCModelComponent
@@ -157,8 +158,9 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
 
         toolguard_step1_dir = join(self.guard_code_path, STEP1)
         policy_text = "\n".join(self.policies)
+        open_api = langchain_tools_to_openapi(self.in_tools)
         specs = await generate_guard_specs(
-            policy_text=policy_text, tools=self.in_tools, llm=llm, work_dir=out_dir, short=True
+            policy_text=policy_text, tools=open_api, llm=llm, work_dir=out_dir, short=True
         )
         logger.info("🔒️ToolGuard: Step 1 Done")
         return specs
@@ -170,8 +172,10 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             shutil.rmtree(out_dir)
         llm = LangchainModelWrapper(self.build_model())
         app_name = _to_snake_case(self.project)
+        open_api = langchain_tools_to_openapi(self.in_tools)
+
         gen_result = await generate_guards_code(
-            tools=self.in_tools, tool_specs=specs, work_dir=out_dir, llm=llm, app_name=app_name
+            tools=open_api, tool_specs=specs, work_dir=out_dir, llm=llm, app_name=app_name
         )
         logger.info("🔒️ToolGuard: Step 2 Done")
         return gen_result
