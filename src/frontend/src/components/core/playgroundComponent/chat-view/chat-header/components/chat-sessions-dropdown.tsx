@@ -32,7 +32,7 @@ export function ChatSessionsDropdown({
   const currentFlowId = useGetFlowId();
   const hasSessions: boolean = sessions.length > 0;
   const [internalOpen, setInternalOpen] = useState(false);
-  
+
   // Use controlled state if provided, otherwise use internal state
   const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
   const setOpen = controlledOnOpenChange || setInternalOpen;

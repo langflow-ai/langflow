@@ -58,7 +58,7 @@ export function SessionMoreMenu({
 }: SessionMoreMenuProps) {
   const [selectValue, setSelectValue] = useState("");
   const [internalOpen, setInternalOpen] = useState(false);
-  
+
   // Use controlled state if provided, otherwise use internal state
   const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
   const setOpen = controlledOnOpenChange || setInternalOpen;
@@ -85,7 +85,12 @@ export function SessionMoreMenu({
 
   return (
     <div className="relative">
-      <Select value={selectValue} onValueChange={handleValueChange} open={open} onOpenChange={setOpen}>
+      <Select
+        value={selectValue}
+        onValueChange={handleValueChange}
+        open={open}
+        onOpenChange={setOpen}
+      >
         <ShadTooltip
           styleClasses="z-50"
           side={tooltipSide}
