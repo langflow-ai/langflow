@@ -200,27 +200,27 @@ export default function NodeInputField({
         </div>
 
         {data.node?.template[name] !== undefined && (
-            <CustomParameterComponent
-              handleOnNewValue={handleOnNewValue}
-              name={name}
-              nodeId={data.id}
-              inputId={id}
-              templateData={data.node?.template[name]!}
-              templateValue={data.node?.template[name].value ?? ""}
-              editNode={false}
-              handleNodeClass={handleNodeClass}
-              showParameter={true}
-              nodeClass={data.node!}
-              placeholder={
-                isToolMode
-                  ? DEFAULT_TOOLSET_PLACEHOLDER
-                  : data.node?.template[name].placeholder
-              }
-              isToolMode={isToolMode}
-              nodeInformationMetadata={nodeInformationMetadata}
-              proxy={proxy}
-            />
-          )}
+          <CustomParameterComponent
+            handleOnNewValue={handleOnNewValue}
+            name={name}
+            nodeId={data.id}
+            inputId={id}
+            templateData={data.node?.template[name]!}
+            templateValue={data.node?.template[name].value ?? ""}
+            editNode={false}
+            handleNodeClass={handleNodeClass}
+            showParameter={true}
+            nodeClass={data.node!}
+            placeholder={
+              isToolMode
+                ? DEFAULT_TOOLSET_PLACEHOLDER
+                : data.node?.template[name].placeholder
+            }
+            isToolMode={isToolMode}
+            nodeInformationMetadata={nodeInformationMetadata}
+            proxy={proxy}
+          />
+        )}
       </div>
     </div>
   );

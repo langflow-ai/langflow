@@ -523,7 +523,10 @@ function GenericNode({
 
         <div
           data-testid={`${data.id}-main-node`}
-          className={cn("grid text-wrap leading-5", showNode ? "border-b" : "relative")}
+          className={cn(
+            "grid text-wrap leading-5",
+            showNode ? "border-b" : "relative",
+          )}
         >
           <div
             data-testid={"div-generic-node"}
@@ -600,19 +603,19 @@ function GenericNode({
             />
           </div>
           {showNode && (hasDescription || editNameDescription) && (
-              <div className="px-4 pb-3">
-                <MemoizedNodeDescription
-                  description={data.node?.description}
-                  charLimit={1000}
-                  mdClassName={"dark:prose-invert"}
-                  nodeId={data.id}
-                  selected={selected}
-                  editNameDescription={editNameDescription}
-                  setEditNameDescription={set}
-                  setHasChangedNodeDescription={setHasChangedNodeDescription}
-                />
-              </div>
-            )}
+            <div className="px-4 pb-3">
+              <MemoizedNodeDescription
+                description={data.node?.description}
+                charLimit={1000}
+                mdClassName={"dark:prose-invert"}
+                nodeId={data.id}
+                selected={selected}
+                editNameDescription={editNameDescription}
+                setEditNameDescription={set}
+                setHasChangedNodeDescription={setHasChangedNodeDescription}
+              />
+            </div>
+          )}
         </div>
         {showNode && (
           <div
