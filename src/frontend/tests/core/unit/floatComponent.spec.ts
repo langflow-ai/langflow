@@ -1,7 +1,10 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { closeAdvancedOptions, openAdvancedOptions } from "../../utils/open-advanced-options";
+import {
+  closeAdvancedOptions,
+  openAdvancedOptions,
+} from "../../utils/open-advanced-options";
 
 test(
   "FloatComponent",

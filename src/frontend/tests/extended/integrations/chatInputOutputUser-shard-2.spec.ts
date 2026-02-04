@@ -3,8 +3,10 @@ import path from "path";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
-import { closeAdvancedOptions, openAdvancedOptions } from "../../utils/open-advanced-options";
-
+import {
+  closeAdvancedOptions,
+  openAdvancedOptions,
+} from "../../utils/open-advanced-options";
 
 test(
   "user must interact with chat with Input/Output",
