@@ -145,7 +145,7 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             type_=Tool,
             name="guard_code",
             method="build_guards",
-            group_outputs=True,
+            # group_outputs=True,
         ),
     ]
 
