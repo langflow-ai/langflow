@@ -302,7 +302,6 @@ export default function Page({
     }
   }
 
-  // Handle paste (files, flow JSON text, or copied nodes) via paste event so we get clipboardData.files.
   const handlePaste = useCallback(
     async (event: ClipboardEvent) => {
       const target = event.target as Element | null;
