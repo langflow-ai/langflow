@@ -6,7 +6,7 @@ from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, Any, cast
 
 from langchain_core.agents import AgentFinish
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, AIMessageChunk, HumanMessage
 from langchain_core.tools import StructuredTool
 
 from lfx.base.agents.agent import LCToolsAgentComponent
@@ -270,21 +270,93 @@ class CugaComponent(ToolCallingAgentComponent):
                 # Add the current user message
                 lc_messages.append(HumanMessage(content=current_input))
 
-                # Use invoke() for reliable answer extraction
-                logger.debug("[CUGA] Starting CugaAgent.invoke()")
-                result = await cuga_agent.invoke(
+                # Use stream() for real-time UI updates
+                logger.debug("[CUGA] Starting CugaAgent.stream()")
+                final_answer = None
+                active_tool_runs: dict[str, str] = {}  # Maps tool execution to run_id
+
+                def extract_from_nested_state(state_dict: dict) -> dict | None:
+                    """Extract the inner state from CUGA's nested dict format.
+
+                    CUGA returns states like {'call_model': {...actual_data...}} or
+                    {'CugaLiteSubgraph': {...actual_data...}}.
+                    """
+                    if not isinstance(state_dict, dict):
+                        return None
+                    # Get the first value if there's only one key (the node name)
+                    if len(state_dict) == 1:
+                        return next(iter(state_dict.values()))
+                    return state_dict
+
+                async for raw_state in cuga_agent.stream(
                     message=lc_messages,
                     thread_id=thread_id,
-                )
+                ):
+                    # LangGraph-style streams return (node_name_tuple, state_dict) tuples
+                    if isinstance(raw_state, tuple) and len(raw_state) == 2:
+                        node_name_tuple, state_dict = raw_state
+                        node_name = node_name_tuple[0] if node_name_tuple else "unknown"
+                        logger.debug(f"[CUGA] Stream node: {node_name}")
 
-                # Extract answer from InvokeResult
-                final_answer = result.answer if hasattr(result, "answer") else str(result)
-                logger.info(f"[CUGA] Got answer from invoke: {final_answer[:100] if final_answer else 'None'}...")
+                        # Extract the actual state from nested dict
+                        state = extract_from_nested_state(state_dict)
+                        if state is None:
+                            state = state_dict
+                    else:
+                        logger.debug(f"[CUGA] Stream state: {type(raw_state).__name__}")
+                        state = raw_state
 
-                # Check for errors
-                if hasattr(result, "error") and result.error:
-                    logger.warning(f"[CUGA] Agent returned error: {result.error}")
+                    # Process dict-based state from CUGA SDK
+                    if isinstance(state, dict):
+                        # Check for final_answer in the state
+                        if "final_answer" in state and state["final_answer"]:
+                            final_answer = state["final_answer"]
+                            logger.info(
+                                f"[CUGA] Got final answer: {final_answer[:100] if final_answer else 'None'}..."
+                            )
 
+                        # Check for script execution (shows what code is being run)
+                        if "script" in state and state["script"]:
+                            script = state["script"]
+                            logger.debug(f"[CUGA] Executing script: {script[:100]}...")
+                            yield {
+                                "event": "on_tool_start",
+                                "run_id": str(uuid.uuid4()),
+                                "name": "execute_code",
+                                "data": {"input": {"code": script}},
+                            }
+
+                        # Check for execution results in sandbox state
+                        if "variables_storage" in state and state.get("step_count", 0) > 0:
+                            # This indicates code execution completed
+                            variables = state.get("variables_storage", {})
+                            if variables:
+                                logger.debug(f"[CUGA] Code execution completed with {len(variables)} variables")
+                                yield {
+                                    "event": "on_tool_end",
+                                    "run_id": str(uuid.uuid4()),
+                                    "name": "execute_code",
+                                    "data": {"output": f"Created {len(variables)} variable(s)"},
+                                }
+
+                        # Check for chat_messages to stream AI responses
+                        if "chat_messages" in state:
+                            messages = state["chat_messages"]
+                            if messages:
+                                last_msg = messages[-1]
+                                # Check if it's an AI message with content
+                                if hasattr(last_msg, "content") and hasattr(last_msg, "type"):
+                                    if last_msg.type == "ai" and last_msg.content:
+                                        content = last_msg.content
+                                        # Don't stream code blocks, only final text
+                                        if not content.startswith("```"):
+                                            logger.debug(f"[CUGA] AI message: {content[:50]}...")
+                                elif isinstance(last_msg, dict) and last_msg.get("type") == "ai":
+                                    content = last_msg.get("content", "")
+                                    if content and not content.startswith("```"):
+                                        logger.debug(f"[CUGA] AI message (dict): {content[:50]}...")
+
+                # Ensure we have a final answer
                 if not final_answer:
                     final_answer = "Agent completed but no answer was returned."
 
@@ -297,7 +369,9 @@ class CugaComponent(ToolCallingAgentComponent):
                     "name": "CugaAgent",
                     "data": {"output": AgentFinish(return_values={"output": final_answer}, log="")},
                 }
-                logger.info(f"[CUGA] Yielding chain_end event with answer: {final_answer[:100] if final_answer else 'None'}...")
+                logger.info(
+                    f"[CUGA] Yielding chain_end event with answer: {final_answer[:100] if final_answer else 'None'}..."
+                )
                 yield end_event
 
             except (ValueError, TypeError, RuntimeError, ConnectionError) as e:
