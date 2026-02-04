@@ -407,6 +407,7 @@ export type ConfirmationModalType = {
     | "small-h-full"
     | "medium-h-full";
   onEscapeKeyDown?: (e: KeyboardEvent) => void;
+  onOpenAutoFocus?: (e: Event) => void;
 };
 
 export type UserManagementType = {
