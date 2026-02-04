@@ -2,7 +2,10 @@ import dotenv from "dotenv";
 import path from "path";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { closeAdvancedOptions, openAdvancedOptions } from "../../utils/open-advanced-options";
+import {
+  closeAdvancedOptions,
+  openAdvancedOptions,
+} from "../../utils/open-advanced-options";
 
 test(
   "user must not experience message duplication in mathematical expressions with agent component",

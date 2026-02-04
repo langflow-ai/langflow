@@ -4,7 +4,10 @@ import path from "path";
 import { test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
-import { closeAdvancedOptions, openAdvancedOptions } from "../../utils/open-advanced-options";
+import {
+  closeAdvancedOptions,
+  openAdvancedOptions,
+} from "../../utils/open-advanced-options";
 
 test(
   "user must be able to send an image on chat",
