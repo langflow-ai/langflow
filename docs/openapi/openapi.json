@@ -1370,19 +1370,8 @@
           "Users"
         ],
         "summary": "Add User",
-        "description": "Add a new user to the database.<br><br>Requires superuser authentication to prevent unauthorized account creation.",
+        "description": "Add a new user to the database.<br><br>This endpoint allows public user registration (sign up).<br>User activation is controlled by the NEW_USER_IS_ACTIVE setting.",
         "operationId": "add_user_api_v1_users__post",
-        "security": [
-          {
-            "OAuth2PasswordBearerCookie": []
-          },
-          {
-            "API key query": []
-          },
-          {
-            "API key header": []
-          }
-        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -3122,6 +3111,948 @@
         ]
       }
     },
+    "/api/v1/mcp/sse": {
+      "get": {
+        "tags": [
+          "mcp"
+        ],
+        "summary": "Handle Sse",
+        "operationId": "handle_sse_api_v1_mcp_sse_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ]
+      },
+      "head": {
+        "tags": [
+          "mcp"
+        ],
+        "summary": "Im Alive",
+        "operationId": "im_alive_api_v1_mcp_sse_head",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mcp/": {
+      "post": {
+        "tags": [
+          "mcp"
+        ],
+        "summary": "Handle Messages",
+        "operationId": "handle_messages_api_v1_mcp__post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mcp/streamable": {
+      "get": {
+        "tags": [
+          "mcp"
+        ],
+        "summary": "Handle Streamable Http",
+        "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
+        "operationId": "handle_streamable_http_api_v1_mcp_streamable_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "mcp"
+        ],
+        "summary": "Handle Streamable Http",
+        "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
+        "operationId": "handle_streamable_http_api_v1_mcp_streamable_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "mcp"
+        ],
+        "summary": "Handle Streamable Http",
+        "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
+        "operationId": "handle_streamable_http_api_v1_mcp_streamable_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ]
+      },
+      "head": {
+        "tags": [
+          "mcp"
+        ],
+        "summary": "Streamable Health",
+        "operationId": "streamable_health_api_v1_mcp_streamable_head",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mcp/streamable/": {
+      "get": {
+        "tags": [
+          "mcp"
+        ],
+        "summary": "Handle Streamable Http",
+        "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
+        "operationId": "handle_streamable_http_api_v1_mcp_streamable__post",
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "mcp"
+        ],
+        "summary": "Handle Streamable Http",
+        "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
+        "operationId": "handle_streamable_http_api_v1_mcp_streamable__post",
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "mcp"
+        ],
+        "summary": "Handle Streamable Http",
+        "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
+        "operationId": "handle_streamable_http_api_v1_mcp_streamable__post",
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ]
+      }
+    },
+    "/api/v1/mcp/project/{project_id}": {
+      "get": {
+        "tags": [
+          "mcp_projects"
+        ],
+        "summary": "List Project Tools",
+        "description": "List project MCP tools.",
+        "operationId": "list_project_tools_api_v1_mcp_project__project_id__get",
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "mcp_enabled",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Mcp Enabled"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "mcp_projects"
+        ],
+        "summary": "Handle Project Messages",
+        "description": "Handle POST messages for a project-specific MCP server.",
+        "operationId": "handle_project_messages_api_v1_mcp_project__project_id__post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "mcp_projects"
+        ],
+        "summary": "Update Project Mcp Settings",
+        "description": "Update the MCP settings of all flows in a project and project-level auth settings.<br><br>On MCP Composer failure, this endpoint should return with a 200 status code and an error message in<br>the body of the response to display to the user.",
+        "operationId": "update_project_mcp_settings_api_v1_mcp_project__project_id__patch",
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MCPProjectUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mcp/project/{project_id}/sse": {
+      "head": {
+        "tags": [
+          "mcp_projects"
+        ],
+        "summary": "Im Alive",
+        "operationId": "im_alive_api_v1_mcp_project__project_id__sse_head",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "mcp_projects"
+        ],
+        "summary": "Handle Project Sse",
+        "description": "Handle SSE connections for a specific project.",
+        "operationId": "handle_project_sse_api_v1_mcp_project__project_id__sse_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mcp/project/{project_id}/": {
+      "post": {
+        "tags": [
+          "mcp_projects"
+        ],
+        "summary": "Handle Project Messages",
+        "description": "Handle POST messages for a project-specific MCP server.",
+        "operationId": "handle_project_messages_api_v1_mcp_project__project_id___post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mcp/project/{project_id}/streamable": {
+      "head": {
+        "tags": [
+          "mcp_projects"
+        ],
+        "summary": "Streamable Health",
+        "operationId": "streamable_health_api_v1_mcp_project__project_id__streamable_head",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "mcp_projects"
+        ],
+        "summary": "Handle Project Streamable Http",
+        "description": "Handle Streamable HTTP connections for a specific project.",
+        "operationId": "handle_project_streamable_http_api_v1_mcp_project__project_id__streamable_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "mcp_projects"
+        ],
+        "summary": "Handle Project Streamable Http",
+        "description": "Handle Streamable HTTP connections for a specific project.",
+        "operationId": "handle_project_streamable_http_api_v1_mcp_project__project_id__streamable_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "mcp_projects"
+        ],
+        "summary": "Handle Project Streamable Http",
+        "description": "Handle Streamable HTTP connections for a specific project.",
+        "operationId": "handle_project_streamable_http_api_v1_mcp_project__project_id__streamable_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mcp/project/{project_id}/streamable/": {
+      "post": {
+        "tags": [
+          "mcp_projects"
+        ],
+        "summary": "Handle Project Streamable Http",
+        "description": "Handle Streamable HTTP connections for a specific project.",
+        "operationId": "handle_project_streamable_http_api_v1_mcp_project__project_id__streamable__post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "mcp_projects"
+        ],
+        "summary": "Handle Project Streamable Http",
+        "description": "Handle Streamable HTTP connections for a specific project.",
+        "operationId": "handle_project_streamable_http_api_v1_mcp_project__project_id__streamable__post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "mcp_projects"
+        ],
+        "summary": "Handle Project Streamable Http",
+        "description": "Handle Streamable HTTP connections for a specific project.",
+        "operationId": "handle_project_streamable_http_api_v1_mcp_project__project_id__streamable__post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mcp/project/{project_id}/install": {
+      "post": {
+        "tags": [
+          "mcp_projects"
+        ],
+        "summary": "Install Mcp Config",
+        "description": "Install MCP server configuration for Cursor, Windsurf, or Claude.",
+        "operationId": "install_mcp_config_api_v1_mcp_project__project_id__install_post",
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MCPInstallRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mcp/project/{project_id}/composer-url": {
+      "get": {
+        "tags": [
+          "mcp_projects"
+        ],
+        "summary": "Get Project Composer Url",
+        "description": "Get the MCP Composer URL for a specific project.<br><br>On failure, this endpoint should return with a 200 status code and an error message in<br>the body of the response to display to the user.",
+        "operationId": "get_project_composer_url_api_v1_mcp_project__project_id__composer_url_get",
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComposerUrlResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mcp/project/{project_id}/installed": {
+      "get": {
+        "tags": [
+          "mcp_projects"
+        ],
+        "summary": "Check Installed Mcp Servers",
+        "description": "Check if MCP server configuration is installed for this project in Cursor, Windsurf, or Claude.",
+        "operationId": "check_installed_mcp_servers_api_v1_mcp_project__project_id__installed_get",
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/responses": {
       "post": {
         "tags": [
@@ -3161,6 +4092,213 @@
           }
         },
         "security": [
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ]
+      }
+    },
+    "/api/v1/agentic/execute/{flow_name}": {
+      "post": {
+        "tags": [
+          "Agentic"
+        ],
+        "summary": "Execute Named Flow",
+        "description": "Execute a named flow from the flows directory.",
+        "operationId": "execute_named_flow_api_v1_agentic_execute__flow_name__post",
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "flow_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Flow Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssistantRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Execute Named Flow Api V1 Agentic Execute  Flow Name  Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/agentic/check-config": {
+      "get": {
+        "tags": [
+          "Agentic"
+        ],
+        "summary": "Check Assistant Config",
+        "description": "Check if the Langflow Assistant is properly configured.<br><br>Returns available providers with their configured status and available models.",
+        "operationId": "check_assistant_config_api_v1_agentic_check_config_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Check Assistant Config Api V1 Agentic Check Config Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ]
+      }
+    },
+    "/api/v1/agentic/assist": {
+      "post": {
+        "tags": [
+          "Agentic"
+        ],
+        "summary": "Assist",
+        "description": "Chat with the Langflow Assistant.",
+        "operationId": "assist_api_v1_agentic_assist_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssistantRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Assist Api V1 Agentic Assist Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ]
+      }
+    },
+    "/api/v1/agentic/assist/stream": {
+      "post": {
+        "tags": [
+          "Agentic"
+        ],
+        "summary": "Assist Stream",
+        "description": "Chat with the Langflow Assistant with streaming progress updates.",
+        "operationId": "assist_stream_api_v1_agentic_assist_stream_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssistantRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
           {
             "API key query": []
           },
@@ -3714,6 +4852,288 @@
         }
       }
     },
+    "/api/v2/mcp/servers": {
+      "get": {
+        "tags": [
+          "MCP"
+        ],
+        "summary": "Get Servers",
+        "description": "Get the list of available servers.",
+        "operationId": "get_servers_api_v2_mcp_servers_get",
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "action_count",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Action Count"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/mcp/servers/{server_name}": {
+      "get": {
+        "tags": [
+          "MCP"
+        ],
+        "summary": "Get Server Endpoint",
+        "description": "Get a specific server.",
+        "operationId": "get_server_endpoint_api_v2_mcp_servers__server_name__get",
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "server_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Server Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "MCP"
+        ],
+        "summary": "Add Server",
+        "operationId": "add_server_api_v2_mcp_servers__server_name__post",
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "server_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Server Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "title": "Server Config"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "MCP"
+        ],
+        "summary": "Update Server Endpoint",
+        "operationId": "update_server_endpoint_api_v2_mcp_servers__server_name__patch",
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "server_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Server Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "title": "Server Config"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "MCP"
+        ],
+        "summary": "Delete Server",
+        "operationId": "delete_server_api_v2_mcp_servers__server_name__delete",
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "server_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Server Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v2/workflows": {
       "post": {
         "tags": [
@@ -3748,119 +5168,10 @@
                 "schema": {
                   "oneOf": [
                     {
-                      "description": "Synchronous workflow execution response.",
-                      "properties": {
-                        "flow_id": {
-                          "title": "Flow Id",
-                          "type": "string"
-                        },
-                        "job_id": {
-                          "anyOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ],
-                          "title": "Job Id"
-                        },
-                        "object": {
-                          "const": "response",
-                          "default": "response",
-                          "title": "Object",
-                          "type": "string"
-                        },
-                        "created_timestamp": {
-                          "title": "Created Timestamp",
-                          "type": "string"
-                        },
-                        "status": {
-                          "$ref": "#/components/schemas/JobStatus"
-                        },
-                        "errors": {
-                          "default": [],
-                          "items": {
-                            "$ref": "#/components/schemas/ErrorDetail"
-                          },
-                          "title": "Errors",
-                          "type": "array"
-                        },
-                        "inputs": {
-                          "additionalProperties": true,
-                          "default": {},
-                          "title": "Inputs",
-                          "type": "object"
-                        },
-                        "outputs": {
-                          "additionalProperties": {
-                            "$ref": "#/components/schemas/ComponentOutput"
-                          },
-                          "default": {},
-                          "title": "Outputs",
-                          "type": "object"
-                        },
-                        "metadata": {
-                          "additionalProperties": true,
-                          "default": {},
-                          "title": "Metadata",
-                          "type": "object"
-                        }
-                      },
-                      "required": [
-                        "flow_id",
-                        "status"
-                      ],
-                      "title": "WorkflowExecutionResponse",
-                      "type": "object"
+                      "$ref": "#/components/schemas/WorkflowExecutionResponse"
                     },
                     {
-                      "description": "Background job response.",
-                      "properties": {
-                        "job_id": {
-                          "title": "Job Id",
-                          "type": "string"
-                        },
-                        "flow_id": {
-                          "title": "Flow Id",
-                          "type": "string"
-                        },
-                        "object": {
-                          "const": "job",
-                          "default": "job",
-                          "title": "Object",
-                          "type": "string"
-                        },
-                        "created_timestamp": {
-                          "title": "Created Timestamp",
-                          "type": "string"
-                        },
-                        "status": {
-                          "$ref": "#/components/schemas/JobStatus"
-                        },
-                        "links": {
-                          "additionalProperties": {
-                            "type": "string"
-                          },
-                          "title": "Links",
-                          "type": "object"
-                        },
-                        "errors": {
-                          "default": [],
-                          "items": {
-                            "$ref": "#/components/schemas/ErrorDetail"
-                          },
-                          "title": "Errors",
-                          "type": "array"
-                        }
-                      },
-                      "required": [
-                        "job_id",
-                        "flow_id",
-                        "status"
-                      ],
-                      "title": "WorkflowJobResponse",
-                      "type": "object"
+                      "$ref": "#/components/schemas/WorkflowJobResponse"
                     }
                   ],
                   "discriminator": {
@@ -3938,9 +5249,20 @@
           {
             "name": "job_id",
             "in": "query",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": "string",
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
               "description": "Job ID to query",
               "title": "Job Id"
             },
@@ -3965,6 +5287,10 @@
                           "type": "string"
                         },
                         {
+                          "format": "uuid",
+                          "type": "string"
+                        },
+                        {
                           "type": "null"
                         }
                       ],
@@ -3981,12 +5307,12 @@
                       "type": "string"
                     },
                     "status": {
-                      "$ref": "#/components/schemas/JobStatus"
+                      "$ref": "#/components/schemas/JobStatus_2"
                     },
                     "errors": {
                       "default": [],
                       "items": {
-                        "$ref": "#/components/schemas/ErrorDetail"
+                        "$ref": "#/components/schemas/ErrorDetail_2"
                       },
                       "title": "Errors",
                       "type": "array"
@@ -3999,16 +5325,10 @@
                     },
                     "outputs": {
                       "additionalProperties": {
-                        "$ref": "#/components/schemas/ComponentOutput"
+                        "$ref": "#/components/schemas/ComponentOutput_1"
                       },
                       "default": {},
                       "title": "Outputs",
-                      "type": "object"
-                    },
-                    "metadata": {
-                      "additionalProperties": true,
-                      "default": {},
-                      "title": "Metadata",
                       "type": "object"
                     }
                   },
@@ -4109,6 +5429,234 @@
           }
         },
         "security": [
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ]
+      }
+    },
+    "/api/mcp/sse": {
+      "get": {
+        "tags": [
+          "mcp"
+        ],
+        "summary": "Handle Sse",
+        "operationId": "handle_sse_api_mcp_sse_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ]
+      },
+      "head": {
+        "tags": [
+          "mcp"
+        ],
+        "summary": "Im Alive",
+        "operationId": "im_alive_api_mcp_sse_head",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/mcp/": {
+      "post": {
+        "tags": [
+          "mcp"
+        ],
+        "summary": "Handle Messages",
+        "operationId": "handle_messages_api_mcp__post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/mcp/streamable": {
+      "get": {
+        "tags": [
+          "mcp"
+        ],
+        "summary": "Handle Streamable Http",
+        "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
+        "operationId": "handle_streamable_http_api_mcp_streamable_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "mcp"
+        ],
+        "summary": "Handle Streamable Http",
+        "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
+        "operationId": "handle_streamable_http_api_mcp_streamable_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "mcp"
+        ],
+        "summary": "Handle Streamable Http",
+        "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
+        "operationId": "handle_streamable_http_api_mcp_streamable_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ]
+      },
+      "head": {
+        "tags": [
+          "mcp"
+        ],
+        "summary": "Streamable Health",
+        "operationId": "streamable_health_api_mcp_streamable_head",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/mcp/streamable/": {
+      "get": {
+        "tags": [
+          "mcp"
+        ],
+        "summary": "Handle Streamable Http",
+        "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
+        "operationId": "handle_streamable_http_api_mcp_streamable__post",
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "mcp"
+        ],
+        "summary": "Handle Streamable Http",
+        "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
+        "operationId": "handle_streamable_http_api_mcp_streamable__post",
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "mcp"
+        ],
+        "summary": "Handle Streamable Http",
+        "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
+        "operationId": "handle_streamable_http_api_mcp_streamable__post",
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
           {
             "API key query": []
           },
@@ -4259,6 +5807,237 @@
           "PUBLIC"
         ],
         "title": "AccessTypeEnum"
+      },
+      "AssistantRequest": {
+        "properties": {
+          "flow_id": {
+            "type": "string",
+            "title": "Flow Id"
+          },
+          "component_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Component Id"
+          },
+          "field_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field Name"
+          },
+          "input_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Value"
+          },
+          "max_retries": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Retries"
+          },
+          "model_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Name"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "flow_id"
+        ],
+        "title": "AssistantRequest",
+        "description": "Request model for assistant interactions."
+      },
+      "AuthSettings": {
+        "properties": {
+          "auth_type": {
+            "type": "string",
+            "enum": [
+              "none",
+              "apikey",
+              "oauth"
+            ],
+            "title": "Auth Type",
+            "default": "none"
+          },
+          "oauth_host": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oauth Host"
+          },
+          "oauth_port": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oauth Port"
+          },
+          "oauth_server_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oauth Server Url"
+          },
+          "oauth_callback_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oauth Callback Path"
+          },
+          "oauth_callback_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oauth Callback Url"
+          },
+          "oauth_client_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oauth Client Id"
+          },
+          "oauth_client_secret": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "password",
+                "writeOnly": true
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oauth Client Secret"
+          },
+          "oauth_auth_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oauth Auth Url"
+          },
+          "oauth_token_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oauth Token Url"
+          },
+          "oauth_mcp_scope": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oauth Mcp Scope"
+          },
+          "oauth_provider_scope": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oauth Provider Scope"
+          }
+        },
+        "type": "object",
+        "title": "AuthSettings",
+        "description": "Model representing authentication settings for MCP."
       },
       "Body_build_flow_api_v1_build__flow_id__flow_post": {
         "properties": {
@@ -4622,6 +6401,58 @@
       "CodeContent": {
         "additionalProperties": true,
         "type": "object"
+      },
+      "ComposerUrlResponse": {
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          },
+          "uses_composer": {
+            "type": "boolean",
+            "title": "Uses Composer"
+          },
+          "streamable_http_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Streamable Http Url"
+          },
+          "legacy_sse_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Legacy Sse Url"
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "project_id",
+          "uses_composer"
+        ],
+        "title": "ComposerUrlResponse",
+        "description": "Response model for MCP Composer connection details."
       },
       "ConfigResponse": {
         "properties": {
@@ -6340,6 +8171,131 @@
         "additionalProperties": true,
         "type": "object"
       },
+      "MCPInstallRequest": {
+        "properties": {
+          "client": {
+            "type": "string",
+            "title": "Client"
+          },
+          "transport": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "sse",
+                  "streamablehttp"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transport"
+          }
+        },
+        "type": "object",
+        "required": [
+          "client"
+        ],
+        "title": "MCPInstallRequest"
+      },
+      "MCPProjectUpdateRequest": {
+        "properties": {
+          "settings": {
+            "items": {
+              "$ref": "#/components/schemas/MCPSettings"
+            },
+            "type": "array",
+            "title": "Settings"
+          },
+          "auth_settings": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AuthSettings"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "settings"
+        ],
+        "title": "MCPProjectUpdateRequest",
+        "description": "Request model for updating MCP project settings including auth."
+      },
+      "MCPSettings": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "mcp_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mcp Enabled"
+          },
+          "action_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action Name"
+          },
+          "action_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action Description"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "MCPSettings",
+        "description": "Model representing MCP settings for a flow."
+      },
       "MediaContent": {
         "additionalProperties": true,
         "type": "object"
@@ -7700,6 +9656,18 @@
             "format": "uuid",
             "title": "Flow Id"
           },
+          "job_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          },
           "build_id": {
             "anyOf": [
               {
@@ -7815,14 +9783,16 @@
       "WorkflowStopRequest": {
         "properties": {
           "job_id": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "string",
+                "format": "uuid"
+              }
+            ],
             "title": "Job Id"
-          },
-          "force": {
-            "type": "boolean",
-            "title": "Force",
-            "description": "Force stop the workflow",
-            "default": false
           }
         },
         "type": "object",
@@ -7835,29 +9805,32 @@
       "WorkflowStopResponse": {
         "properties": {
           "job_id": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "string",
+                "format": "uuid"
+              }
+            ],
             "title": "Job Id"
           },
-          "status": {
-            "type": "string",
-            "enum": [
-              "stopped",
-              "stopping",
-              "not_found",
-              "error"
-            ],
-            "title": "Status"
-          },
           "message": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Message"
           }
         },
         "type": "object",
         "required": [
-          "job_id",
-          "status",
-          "message"
+          "job_id"
         ],
         "title": "WorkflowStopResponse",
         "description": "Response schema for stopping workflow."
@@ -7914,10 +9887,6 @@
             "title": "Type",
             "type": "string"
           },
-          "component_id": {
-            "title": "Component Id",
-            "type": "string"
-          },
           "status": {
             "$ref": "#/components/schemas/JobStatus"
           },
@@ -7945,7 +9914,6 @@
         },
         "required": [
           "type",
-          "component_id",
           "status"
         ],
         "title": "ComponentOutput",
@@ -7995,7 +9963,8 @@
           "in_progress",
           "completed",
           "failed",
-          "cancelled"
+          "cancelled",
+          "timed_out"
         ],
         "title": "JobStatus",
         "type": "string"
@@ -8044,7 +10013,8 @@
           "in_progress",
           "completed",
           "failed",
-          "cancelled"
+          "cancelled",
+          "timed_out"
         ],
         "title": "JobStatus",
         "type": "string"
@@ -8055,10 +10025,6 @@
           "type": {
             "description": "Type of the component output (e.g., 'message', 'data', 'tool', 'text')",
             "title": "Type",
-            "type": "string"
-          },
-          "component_id": {
-            "title": "Component Id",
             "type": "string"
           },
           "status": {
@@ -8088,7 +10054,6 @@
         },
         "required": [
           "type",
-          "component_id",
           "status"
         ],
         "title": "ComponentOutput",
@@ -8138,10 +10103,132 @@
           "in_progress",
           "completed",
           "failed",
-          "cancelled"
+          "cancelled",
+          "timed_out"
         ],
         "title": "JobStatus",
         "type": "string"
+      },
+      "WorkflowExecutionResponse": {
+        "description": "Synchronous workflow execution response.",
+        "properties": {
+          "flow_id": {
+            "title": "Flow Id",
+            "type": "string"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          },
+          "object": {
+            "const": "response",
+            "default": "response",
+            "title": "Object",
+            "type": "string"
+          },
+          "created_timestamp": {
+            "title": "Created Timestamp",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/JobStatus"
+          },
+          "errors": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ErrorDetail"
+            },
+            "title": "Errors",
+            "type": "array"
+          },
+          "inputs": {
+            "additionalProperties": true,
+            "default": {},
+            "title": "Inputs",
+            "type": "object"
+          },
+          "outputs": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ComponentOutput"
+            },
+            "default": {},
+            "title": "Outputs",
+            "type": "object"
+          }
+        },
+        "required": [
+          "flow_id",
+          "status"
+        ],
+        "title": "WorkflowExecutionResponse",
+        "type": "object"
+      },
+      "WorkflowJobResponse": {
+        "description": "Background job response.",
+        "properties": {
+          "job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "format": "uuid",
+                "type": "string"
+              }
+            ],
+            "title": "Job Id"
+          },
+          "flow_id": {
+            "title": "Flow Id",
+            "type": "string"
+          },
+          "object": {
+            "const": "job",
+            "default": "job",
+            "title": "Object",
+            "type": "string"
+          },
+          "created_timestamp": {
+            "title": "Created Timestamp",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/JobStatus_1"
+          },
+          "links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Links",
+            "type": "object"
+          },
+          "errors": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ErrorDetail_1"
+            },
+            "title": "Errors",
+            "type": "array"
+          }
+        },
+        "required": [
+          "job_id",
+          "flow_id",
+          "status"
+        ],
+        "title": "WorkflowJobResponse",
+        "type": "object"
       }
     },
     "securitySchemes": {

@@ -74,7 +74,7 @@ from langflow.services.deps import get_service
 # Constants
 ALL_INTERFACES_HOST = "0.0.0.0"  # noqa: S104
 
-router = APIRouter(prefix="/mcp/project", tags=["mcp_projects"], include_in_schema=False)
+router = APIRouter(prefix="/mcp/project", tags=["mcp_projects"])
 
 
 async def verify_project_auth(
@@ -312,7 +312,6 @@ async def list_project_tools(
 @router.head(
     "/{project_id}/sse",
     response_class=HTMLResponse,
-    include_in_schema=False,
     dependencies=[Depends(raise_error_if_astra_cloud_env)],
 )
 async def im_alive(project_id: str):  # noqa: ARG001
@@ -416,7 +415,7 @@ async def handle_project_messages(
 ########################################################
 
 
-@router.head("/{project_id}/streamable", include_in_schema=False)
+@router.head("/{project_id}/streamable")
 async def streamable_health(project_id: UUID):  # noqa: ARG001
     return Response()
 
