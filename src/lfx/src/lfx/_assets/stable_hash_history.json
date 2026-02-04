@@ -1778,5 +1778,10 @@
     "versions": {
       "0.3.0": "48a384dd6fbb"
     }
+  },
+  "CombineInputs": {
+    "versions": {
+      "0.3.0": "59971c95febc"
+    }
   }
 }
