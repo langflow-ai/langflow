@@ -524,9 +524,10 @@ export default function ModelInputComponent({
   );
 
   const renderPopoverContent = () => {
-    const PopoverContentInput = editNode || inspectionPanel
-      ? PopoverContent
-      : PopoverContentWithoutPortal;
+    const PopoverContentInput =
+      editNode || inspectionPanel
+        ? PopoverContent
+        : PopoverContentWithoutPortal;
     return (
       <PopoverContentInput
         side="bottom"
@@ -541,7 +542,7 @@ export default function ModelInputComponent({
           {renderManageProvidersButton()}
         </Command>
       </PopoverContentInput>
-    )
+    );
   };
 
   if (!showParameter) {
