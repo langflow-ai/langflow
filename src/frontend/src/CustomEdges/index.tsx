@@ -4,6 +4,7 @@ import {
   getBezierPath,
   Position,
 } from "@xyflow/react";
+import { memo } from "react";
 import IconComponent from "@/components/common/genericIconComponent";
 import {
   ContextMenu,
@@ -20,7 +21,7 @@ const UNRECOGNIZED_DOM_PROPS = [
   "pathOptions",
 ];
 
-export function DefaultEdge({
+export const DefaultEdge = memo(function DefaultEdge({
   sourceHandleId,
   source,
   sourceX,
@@ -124,4 +125,4 @@ export function DefaultEdge({
       </ContextMenu>
     </>
   );
-}
+});

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
 import { RECEIVING_INPUT_VALUE } from "@/constants/constants";
+import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import ModelProviderModal from "@/modals/modelProviderModal";
@@ -81,7 +82,12 @@ export default function ModelInputComponent({
       ? "llm"
       : "embeddings";
 
-  const { data: providersData = [] } = useGetModelProviders({});
+  const { data: providersData = [], isLoading: isLoadingProviders } =
+    useGetModelProviders({});
+  const { data: enabledModelsData, isLoading: isLoadingEnabledModels } =
+    useGetEnabledModels();
+
+  const isLoading = isLoadingProviders || isLoadingEnabledModels;
 
   // Determines if we should show the model selector or the "Setup Provider" button
   const hasEnabledProviders = useMemo(() => {
@@ -89,16 +95,26 @@ export default function ModelInputComponent({
   }, [providersData]);
 
   // Groups models by their provider name for sectioned display in dropdown.
-  // Filters out models from disabled providers.
+  // Filters out models from disabled providers AND disabled models.
   const groupedOptions = useMemo(() => {
     const grouped: Record<string, ModelOption[]> = {};
     for (const option of options) {
       if (option.metadata?.is_disabled_provider) continue;
       const provider = option.provider || "Unknown";
+
+      // Filter out disabled models using client-side enabled models data
+      // This provides a reliable fallback when backend filtering fails
+      if (enabledModelsData?.enabled_models) {
+        const providerModels = enabledModelsData.enabled_models[provider];
+        if (providerModels && providerModels[option.name] === false) {
+          continue; // Skip disabled models
+        }
+      }
+
       (grouped[provider] ??= []).push(option);
     }
     return grouped;
-  }, [options]);
+  }, [options, enabledModelsData]);
 
   // Flattened array of all enabled options for efficient lookups by name
   const flatOptions = useMemo(
@@ -191,38 +207,13 @@ export default function ModelInputComponent({
     [flatOptions, handleOnNewValue],
   );
 
-  /**
-   * Triggers a refresh of available model options from the backend.
-   * Shows loading state for 2 seconds to provide visual feedback.
-   */
-  const handleRefreshButtonPress = useCallback(async () => {
-    setRefreshOptions(true);
-    setOpen(false);
-
-    // mutateTemplate triggers a backend call to refresh the template options
-    await mutateTemplate(
-      value,
-      nodeId!,
-      nodeClass!,
-      handleNodeClass!,
-      postTemplateValue,
-      setErrorData,
-    );
-    // Brief delay before hiding loading state for better UX
-    setTimeout(() => setRefreshOptions(false), 2000);
-  }, [
-    value,
-    nodeId,
-    nodeClass,
-    handleNodeClass,
-    postTemplateValue,
-    setErrorData,
-  ]);
-
   const handleManageProvidersDialogClose = useCallback(() => {
     setOpenManageProvidersDialog(false);
-    handleRefreshButtonPress();
-  }, [handleRefreshButtonPress]);
+    // Note: Don't call handleRefreshButtonPress here - the cleanup effect in
+    // ModelProvidersContent triggers refreshAllModelInputs which properly validates
+    // model values against available options. Calling both causes a race condition
+    // where the debounced mutateTemplate overwrites the validated value.
+  }, []);
 
   const handleExternalOptions = useCallback(
     async (optionValue: string) => {
@@ -350,6 +341,7 @@ export default function ModelInputComponent({
     !hasEnabledProviders ? (
       <Button
         variant="default"
+        loading={isLoading}
         size="sm"
         className="w-full"
         onClick={() => setOpenManageProvidersDialog(true)}
@@ -476,29 +468,13 @@ export default function ModelInputComponent({
   );
 
   const renderManageProvidersButton = () => (
-    <div className="sticky bottom-0 bg-background">
-      {renderFooterButton(
-        "Refresh List",
-        "RefreshCw",
-        handleRefreshButtonPress,
-        "external-option-button",
-      )}
-
+    <div className="bottom-0 bg-background">
       {renderFooterButton(
         "Manage Model Providers",
         "Settings",
         () => setOpenManageProvidersDialog(true),
         "manage-model-providers",
       )}
-
-      {externalOptions?.fields?.data?.node &&
-        renderFooterButton(
-          externalOptions.fields.data.node.display_name,
-          externalOptions.fields.data.node.icon || "Box",
-          () =>
-            handleExternalOptions(externalOptions.fields.data.node.name || ""),
-          "external-option-button",
-        )}
     </div>
   );
 

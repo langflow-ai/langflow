@@ -67,6 +67,17 @@ export type APIClassType = {
     | Array<{ types: Array<string>; selected?: string }>;
 };
 
+export type ModelOptionType = {
+  name: string;
+  id?: string;
+  icon?: string;
+  provider?: string;
+  metadata?: {
+    is_disabled_provider?: boolean;
+    [key: string]: unknown;
+  };
+};
+
 export type InputFieldType = {
   type: string;
   required: boolean;

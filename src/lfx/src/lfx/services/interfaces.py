@@ -70,6 +70,19 @@ class VariableServiceProtocol(Protocol):
         """Set variable value."""
         ...
 
+    @abstractmethod
+    async def get_all_decrypted_variables(self, user_id: Any, session: Any) -> dict[str, str]:
+        """Get all variables for a user with decrypted values.
+
+        Args:
+            user_id: The user ID to get variables for
+            session: Database session
+
+        Returns:
+            Dictionary mapping variable names to decrypted values
+        """
+        ...
+
 
 class CacheServiceProtocol(Protocol):
     """Protocol for cache service."""

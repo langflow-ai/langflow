@@ -103,7 +103,7 @@ test(
       timeout: 30000,
     });
 
-    await page.getByTestId("copy-code-button").last().click();
+    await page.getByTestId("copy-code-button").first().click();
 
     const handle = await page.evaluateHandle(() =>
       navigator.clipboard.readText(),
