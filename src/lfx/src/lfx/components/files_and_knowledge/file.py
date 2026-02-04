@@ -109,6 +109,8 @@ class FileComponent(BaseFileComponent):
             options=_get_storage_location_options(),
             real_time_refresh=True,
             limit=1,
+            value=[{"name": "Local", "icon": "hard-drive"}],
+            advanced=True,
         ),
         *_base_inputs,
         StrInput(

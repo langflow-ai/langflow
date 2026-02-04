@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { AnimatedConditional } from "@/components/ui/animated-close";
 import { useDeleteSession } from "@/controllers/API/queries/messages/use-delete-sessions";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -29,7 +29,11 @@ export function ChatHeader({
   onClose,
   openLogsModal,
   setOpenLogsModal,
+  renameLocalSession,
 }: ChatHeaderProps & { sessions: string[] }) {
+  // State to coordinate menu open/close
+  const [sessionsDropdownOpen, setSessionsDropdownOpen] = useState(false);
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   // Determine the title based on the current session
   const sessionTitle = useMemo(
     () => getSessionTitle(currentSessionId, currentFlowId),
@@ -39,6 +43,7 @@ export function ChatHeader({
   // Session edit/delete logic
   const { handleRename, handleDelete } = useEditSessionInfo({
     flowId: currentFlowId,
+    renameLocalSession,
   });
 
   const { isEditing, handleEditStart, handleEditCancel, handleEditSave } =
@@ -130,6 +135,12 @@ export function ChatHeader({
         tooltipContent="More options"
         tooltipSide="left"
         dataTestid="chat-header-more-menu"
+        open={moreMenuOpen}
+        onOpenChange={(open) => {
+          setMoreMenuOpen(open);
+          // Close sessions dropdown when more menu opens
+          if (open) setSessionsDropdownOpen(false);
+        }}
       />
     </AnimatedConditional>
   );
@@ -150,6 +161,12 @@ export function ChatHeader({
               onNewChat={onNewChat}
               onSessionSelect={onSessionSelect}
               currentSessionId={currentSessionId}
+              open={sessionsDropdownOpen}
+              onOpenChange={(open) => {
+                setSessionsDropdownOpen(open);
+                // Close more menu when sessions dropdown opens
+                if (open) setMoreMenuOpen(false);
+              }}
             />
           </AnimatedConditional>
           <ChatHeaderTitle
