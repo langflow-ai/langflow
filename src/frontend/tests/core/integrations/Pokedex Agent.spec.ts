@@ -27,9 +27,10 @@ withEventDeliveryModes(
 
     await page.getByTestId("playground-btn-flow-io").click();
 
+    await page.getByTestId("input-chat-playground").isVisible();
+    await page.getByTestId("input-chat-playground").click();
     await page
       .getByTestId("input-chat-playground")
-      .last()
       .fill("Can I catch a Charizard in Pokemon Yellow?");
 
     await page.getByTestId("button-send").last().click();
