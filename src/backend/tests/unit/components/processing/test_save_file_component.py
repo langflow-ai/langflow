@@ -462,3 +462,28 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
         assert result["append_mode"]["show"] is False, "append_mode should be hidden for Google Drive storage"
         assert result["file_name"]["show"] is True
         assert result["gdrive_format"]["show"] is True
+
+    def test_storage_location_defaults_to_local(self, component_class):
+        """Test that storage_location input defaults to Local when component is dropped."""
+        storage_input = next(i for i in component_class.inputs if i.name == "storage_location")
+        assert storage_input.value == [{"name": "Local", "icon": "hard-drive"}]
+
+    def test_storage_location_hidden_when_toggle_off(self, component_class):
+        """Test that storage_location is hidden when show_storage_location toggle is off."""
+        component = component_class()
+        build_config = {
+            "show_storage_location": {"value": False},
+            "storage_location": {"show": True},
+        }
+        result = component.update_build_config(build_config, None, "other_field")
+        assert result["storage_location"]["show"] is False
+
+    def test_storage_location_visible_when_toggle_on(self, component_class):
+        """Test that storage_location is visible when show_storage_location toggle is on."""
+        component = component_class()
+        build_config = {
+            "show_storage_location": {"value": True},
+            "storage_location": {"show": False},
+        }
+        result = component.update_build_config(build_config, True, "show_storage_location")
+        assert result["storage_location"]["show"] is True
