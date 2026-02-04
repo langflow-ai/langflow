@@ -46,10 +46,7 @@ const InspectionPanel = memo(function InspectionPanel({
               "overflow-y-auto flex flex-col pointer-events-auto",
             )}
           >
-            <InspectionPanelHeader
-              data={selectedNode.data}
-              onClose={onClose}
-            />
+            <InspectionPanelHeader data={selectedNode.data} onClose={onClose} />
             <Separator className="my-0.5" />
             <Button
               size="node-toolbar"
