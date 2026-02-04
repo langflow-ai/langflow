@@ -11,18 +11,18 @@ const createMockEdge = (
   const handleId = scapedJSONStringfy(
     template.proxy
       ? {
-          inputTypes: template.input_types,
-          type: template.type,
-          id: nodeId,
-          fieldName,
-          proxy: template.proxy,
-        }
+        inputTypes: template.input_types,
+        type: template.type,
+        id: nodeId,
+        fieldName,
+        proxy: template.proxy,
+      }
       : {
-          inputTypes: template.input_types,
-          type: template.type,
-          id: nodeId,
-          fieldName,
-        },
+        inputTypes: template.input_types,
+        type: template.type,
+        id: nodeId,
+        fieldName,
+      },
   );
 
   return {
@@ -79,8 +79,8 @@ describe("Primary Input Identification", () => {
         edges,
       );
 
-      // Still has handles, but primary is null since nothing is connected
-      expect(result.primaryInputFieldName).toBeNull();
+      // Still has handles, primary falls back to first handle field when nothing is connected
+      expect(result.primaryInputFieldName).toBe("message_input");
       expect(result.displayHandleMap.get("message_input")).toBe(true);
       expect(result.displayHandleMap.get("data_input")).toBe(true);
     });
@@ -213,10 +213,10 @@ describe("Primary Input Identification", () => {
         edges,
       );
 
-      // model has refresh_button so no handle, input_value is connected
+      // model type always shows handle, input_value is connected
       expect(result.primaryInputFieldName).toBe("input_value");
       expect(result.displayHandleMap.get("model_name")).toBe(false);
-      expect(result.displayHandleMap.get("model")).toBe(false); // refresh_button = true
+      expect(result.displayHandleMap.get("model")).toBe(true); // model type always shows handle
       expect(result.displayHandleMap.get("input_value")).toBe(true);
     });
 
