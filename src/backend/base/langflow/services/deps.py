@@ -250,12 +250,12 @@ def get_queue_service() -> JobQueueService:
 def get_auth_service() -> AuthServiceBase:
     """Retrieve the authentication service."""
     # Cache the factory instance on the function to avoid recreating it on each call.
-    if not hasattr(get_auth_service, "_factory"):
+    if not hasattr(get_auth_service, "cached_factory"):
         from langflow.services.auth.factory import AuthServiceFactory
 
-        get_auth_service._factory = AuthServiceFactory()
+        get_auth_service.cached_factory = AuthServiceFactory()
 
-    return get_service(ServiceType.AUTH_SERVICE, get_auth_service._factory)
+    return get_service(ServiceType.AUTH_SERVICE, get_auth_service.cached_factory)
 
 
 def get_job_service():
