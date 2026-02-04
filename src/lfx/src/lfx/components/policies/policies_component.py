@@ -21,7 +21,7 @@ from lfx.components.policies.llm_wrapper import LangchainModelWrapper
 from lfx.components.policies.models import BUILDTIME_MODELS
 from lfx.components.policies.module_utils import unload_module
 from lfx.field_typing import LanguageModel, Tool
-from lfx.io import BoolInput, HandleInput, ModelInput, Output, SecretStrInput, StrInput, TabInput
+from lfx.io import BoolInput, HandleInput, MessageTextInput, ModelInput, Output, SecretStrInput, StrInput, TabInput
 from lfx.log.logger import logger
 
 if TYPE_CHECKING:
@@ -62,10 +62,10 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
                 real_time_refresh=True,
                 tool_mode=True,
             ),
-            StrInput(
+            MessageTextInput(
                 name="project",
                 display_name="ToolGuard Project",
-                info="Automatically generated ToolGuards code",
+                info="Folder name of the generated code",
                 value="my_project",
             ),
             HandleInput(
@@ -73,7 +73,7 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
                 display_name="Tools",
                 input_types=["Tool"],
                 is_list=True,
-                required=False,
+                required=True,
                 info="These are the tools that the agent can use to help with tasks.",
             ),
             StrInput(
@@ -84,14 +84,14 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
                 tool_mode=True,
                 placeholder="Add business policy...",
                 list_add_label="Add Policy",
-                input_types=[],
+                # input_types=[],
             ),
             ModelInput(
                 name="model",
                 display_name="Language Model",
-                info="Select your model provider",
+                info="Select your model provider for Toolguard buildtime step",
                 options=BUILDTIME_MODELS,
-                required=True,
+                required=False,
             ),
             SecretStrInput(
                 name="api_key",
@@ -108,7 +108,7 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             type_=Tool,
             name="guard_code",
             method="build_guards",
-            group_outputs=True,
+            # group_outputs=True,
         ),
     ]
 
