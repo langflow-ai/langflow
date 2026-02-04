@@ -56,7 +56,7 @@ To create an agent with agent blocks, do the following:
 2. Add a [**While Loop** component](/agent-blocks-while-loop) from the component library.
 The **While Loop** component manages conversation state and continues iterating until the agent signals completion.
 3. In the **While Loop** component, configure the following fields:
-   * **Initial State**: Leave this empty, or optionally provide initial conversation history as a DataFrame. For more information, see [State management](#state-management).
+   * **Initial State**: Leave this empty, or optionally provide initial conversation history as a DataFrame.
    * **Input Value**: Connect this to the [**Chat Input** component](/chat-input-and-output) in a later step.
    * **Max Iterations**: Set a limit to prevent infinite loops. For this example, enter `10`.
 4. Add an **Agent Step** component to your flow.
