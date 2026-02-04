@@ -59,7 +59,7 @@ describe("pasteFlowImport", () => {
       });
 
       it("should return a File for JSON wrapped in code fence", async () => {
-        const payload = "```json\n{\"nodes\":[],\"edges\":[]}\n```";
+        const payload = '```json\n{"nodes":[],"edges":[]}\n```';
         const result = getPastedFlowFile(payload);
         expect(result).not.toBeNull();
         expect(result).toBeInstanceOf(File);
@@ -111,11 +111,7 @@ describe("pasteFlowImport", () => {
     });
 
     it("should return and normalize a single .json file", () => {
-      const jsonFile = new File(
-        ['{"nodes":[]}'],
-        "flow.json",
-        { type: "" },
-      );
+      const jsonFile = new File(['{"nodes":[]}'], "flow.json", { type: "" });
       const dt = {
         files: {
           length: 1,
@@ -130,11 +126,9 @@ describe("pasteFlowImport", () => {
     });
 
     it("should return only JSON files when multiple file types are present", () => {
-      const jsonFile = new File(
-        ['{"nodes":[]}'],
-        "flow.json",
-        { type: "application/json" },
-      );
+      const jsonFile = new File(['{"nodes":[]}'], "flow.json", {
+        type: "application/json",
+      });
       const txtFile = new File(["x"], "x.txt", { type: "text/plain" });
       const dt = {
         files: {

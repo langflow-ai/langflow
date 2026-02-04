@@ -26,9 +26,7 @@ export function looksLikeFlowImportPayload(payload: unknown): boolean {
 }
 
 export function isFlowFile(file: File): boolean {
-  return (
-    file.type === JSON_MIME || file.name.toLowerCase().endsWith(".json")
-  );
+  return file.type === JSON_MIME || file.name.toLowerCase().endsWith(".json");
 }
 
 /**
