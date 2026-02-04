@@ -20,6 +20,7 @@ import {
   FlowSidebarComponent,
 } from "./components/flowSidebarComponent";
 import Page from "./components/PageComponent";
+import EvaluationsMainContent from "./components/EvaluationsMainContent";
 import LogsMainContent from "./components/LogsMainContent";
 import MessagesMainContent from "./components/MessagesMainContent";
 
@@ -37,6 +38,7 @@ function FlowMainContent({
   onLogsTabChange,
   selectedRunId,
   onSelectRun,
+  selectedEvaluationId,
 }: {
   view?: boolean;
   setIsLoading: (isLoading: boolean) => void;
@@ -45,6 +47,7 @@ function FlowMainContent({
   onLogsTabChange: (tab: LogsTab) => void;
   selectedRunId: string | null;
   onSelectRun: (runId: string | null) => void;
+  selectedEvaluationId: string | null;
 }) {
   const { activeSection } = useSidebar();
 
@@ -70,6 +73,17 @@ function FlowMainContent({
       <main className="flex w-full overflow-hidden">
         <div className="h-full w-full">
           <MessagesMainContent selectedSessionId={selectedSessionId} />
+        </div>
+      </main>
+    );
+  }
+
+  // Show evaluations main content when evaluations section is active
+  if (ENABLE_NEW_SIDEBAR && activeSection === "evaluations") {
+    return (
+      <main className="flex w-full overflow-hidden">
+        <div className="h-full w-full">
+          <EvaluationsMainContent selectedEvaluationId={selectedEvaluationId} />
         </div>
       </main>
     );
@@ -235,6 +249,9 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const [logsActiveTab, setLogsActiveTab] = useState<LogsTab>("logs");
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
 
+  // Evaluations state
+  const [selectedEvaluationId, setSelectedEvaluationId] = useState<string | null>(null);
+
   return (
     <>
       <div className="flow-page-positioning">
@@ -255,6 +272,8 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
                     onLogsTabChange={setLogsActiveTab}
                     selectedRunId={selectedRunId}
                     onSelectRun={setSelectedRunId}
+                    selectedEvaluationId={selectedEvaluationId}
+                    onSelectEvaluation={setSelectedEvaluationId}
                   />
                 )}
                 <FlowMainContent
@@ -265,6 +284,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
                   onLogsTabChange={setLogsActiveTab}
                   selectedRunId={selectedRunId}
                   onSelectRun={setSelectedRunId}
+                  selectedEvaluationId={selectedEvaluationId}
                 />
               </FlowSearchProvider>
             </SidebarProvider>

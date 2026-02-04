@@ -1,9 +1,9 @@
 import { useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
+import { useSidebar } from "@/components/ui/sidebar";
 import CreateEvaluationModal from "@/modals/createEvaluationModal";
 import useFlowStore from "@/stores/flowStore";
-import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 
 const EvaluateIcon = () => (
   <ForwardedIconComponent
@@ -19,13 +19,15 @@ const ButtonLabel = () => (
 
 const EvaluateButton = () => {
   const [open, setOpen] = useState(false);
-  const navigate = useCustomNavigate();
+  const { setActiveSection, setOpen: setSidebarOpen } = useSidebar();
   const currentFlow = useFlowStore((state) => state.currentFlow);
   const hasIO = useFlowStore((state) => state.hasIO);
 
-  const handleSuccess = (evaluationId: string) => {
-    // Navigate to evaluation results
-    navigate(`/evaluations/${evaluationId}`);
+  const handleSuccess = (_evaluationId: string) => {
+    // Switch to evaluations section in sidebar instead of navigating away
+    // The EvaluationsSidebarGroup will auto-select the first (newest) evaluation
+    setActiveSection("evaluations");
+    setSidebarOpen(true);
   };
 
   const isEnabled = hasIO && currentFlow?.id;

@@ -1,14 +1,17 @@
 import asyncio
+import logging
 import time
 from datetime import datetime, timezone
 from difflib import SequenceMatcher
 from http import HTTPStatus
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException
+from fastapi import APIRouter, HTTPException
 from sqlmodel import col, select
 
 from langflow.api.utils import CurrentActiveUser, DbSession
+
+logger = logging.getLogger(__name__)
 from langflow.processing.process import process_tweaks, run_graph
 from langflow.services.database.models.dataset.model import Dataset
 from langflow.services.database.models.evaluation.model import (
@@ -64,6 +67,8 @@ async def run_single_evaluation_item(
     actual_output = None
     error = None
 
+    logger.info(f"Running evaluation item: input='{input_value[:50]}...' flow_id={flow_id}")
+
     try:
         session_id = str(uuid4())
         graph = Graph.from_payload(
@@ -77,6 +82,8 @@ async def run_single_evaluation_item(
         graph.user_id = str(user_id)
         await graph.initialize_run()
 
+        logger.info(f"Graph initialized, running with input: {input_value}")
+
         result = await run_graph(
             graph=graph,
             session_id=session_id,
@@ -87,31 +94,55 @@ async def run_single_evaluation_item(
             stream=False,
         )
 
+        logger.warning(f"Graph run complete. Result type: {type(result)}, length: {len(result) if result else 0}")
+
         # Extract output from result
+        # Structure: list[RunOutputs] -> RunOutputs.outputs: list[ResultData] -> ResultData.messages: list[ChatOutputResponse]
         if result and len(result) > 0:
-            first_result = result[0]
-            if hasattr(first_result, "results") and first_result.results:
-                # Get the message from the first output
-                output_data = first_result.results.get("message", {})
-                if hasattr(output_data, "text"):
-                    actual_output = output_data.text
-                elif isinstance(output_data, dict) and "text" in output_data:
-                    actual_output = output_data["text"]
-                elif isinstance(output_data, str):
-                    actual_output = output_data
-                else:
-                    actual_output = str(output_data) if output_data else None
-            elif hasattr(first_result, "outputs") and first_result.outputs:
-                # Try to get from outputs
-                for output in first_result.outputs.values():
-                    if hasattr(output, "message") and output.message:
-                        if hasattr(output.message, "text"):
-                            actual_output = output.message.text
-                        else:
-                            actual_output = str(output.message)
-                        break
+            run_output = result[0]  # RunOutputs
+            logger.warning(f"RunOutput: inputs={run_output.inputs}, outputs_count={len(run_output.outputs) if run_output.outputs else 0}")
+
+            if run_output.outputs:
+                for result_data in run_output.outputs:
+                    if result_data is None:
+                        continue
+
+                    logger.warning(f"ResultData: messages={result_data.messages}, results={result_data.results}")
+
+                    # Try to get from messages (ChatOutputResponse)
+                    if result_data.messages:
+                        for msg in result_data.messages:
+                            if msg and msg.message:
+                                if isinstance(msg.message, str):
+                                    actual_output = msg.message
+                                elif isinstance(msg.message, list):
+                                    # Join list elements
+                                    actual_output = " ".join(str(m) for m in msg.message)
+                                else:
+                                    actual_output = str(msg.message)
+                                break
+                        if actual_output:
+                            break
+
+                    # Fallback: try results dict
+                    if not actual_output and result_data.results:
+                        for key, value in result_data.results.items():
+                            if hasattr(value, "text"):
+                                actual_output = value.text
+                                break
+                            elif hasattr(value, "message"):
+                                actual_output = str(value.message)
+                                break
+                            elif isinstance(value, str):
+                                actual_output = value
+                                break
+                        if actual_output:
+                            break
+
+        logger.warning(f"Extracted actual_output: {actual_output}")
 
     except Exception as e:
+        logger.exception(f"Error running evaluation item: {e}")
         error = str(e)
 
     duration_ms = int((time.time() - start_time) * 1000)
@@ -136,112 +167,126 @@ async def run_single_evaluation_item(
 
 async def run_evaluation_background(evaluation_id: UUID, user_id: UUID):
     """Background task to run the evaluation."""
-    async with session_scope() as session:
-        # Get the evaluation
-        statement = select(Evaluation).where(Evaluation.id == evaluation_id)
-        result = await session.exec(statement)
-        evaluation = result.first()
+    logger.info(f"Starting background evaluation task: evaluation_id={evaluation_id}, user_id={user_id}")
+    try:
+        async with session_scope() as session:
+            # Get the evaluation
+            statement = select(Evaluation).where(Evaluation.id == evaluation_id)
+            result = await session.exec(statement)
+            evaluation = result.first()
 
-        if not evaluation:
-            return
+            if not evaluation:
+                logger.warning(f"Evaluation {evaluation_id} not found")
+                return
 
-        # Update status to running
-        evaluation.status = EvaluationStatus.RUNNING.value
-        evaluation.started_at = datetime.now(timezone.utc)
-        evaluation.updated_at = datetime.now(timezone.utc)
-        session.add(evaluation)
-        await session.commit()
+            logger.info(f"Found evaluation {evaluation_id}, updating status to running")
 
-        try:
-            # Get the dataset
-            dataset_statement = select(Dataset).where(Dataset.id == evaluation.dataset_id)
-            dataset_result = await session.exec(dataset_statement)
-            dataset = dataset_result.first()
-
-            if not dataset:
-                raise ValueError("Dataset not found")
-
-            # Get the flow
-            flow_statement = select(Flow).where(Flow.id == evaluation.flow_id)
-            flow_result = await session.exec(flow_statement)
-            flow = flow_result.first()
-
-            if not flow:
-                raise ValueError("Flow not found")
-
-            # Sort items by order
-            sorted_items = sorted(dataset.items, key=lambda x: x.order) if dataset.items else []
-            evaluation.total_items = len(sorted_items)
+            # Update status to running
+            evaluation.status = EvaluationStatus.RUNNING.value
+            evaluation.started_at = datetime.now(timezone.utc)
+            evaluation.updated_at = datetime.now(timezone.utc)
             session.add(evaluation)
             await session.commit()
 
-            total_score = 0.0
-            total_duration = 0
-            passed_count = 0
+            try:
+                # Get the dataset
+                dataset_statement = select(Dataset).where(Dataset.id == evaluation.dataset_id)
+                dataset_result = await session.exec(dataset_statement)
+                dataset = dataset_result.first()
 
-            # Run each item
-            for idx, item in enumerate(sorted_items):
-                item_result = await run_single_evaluation_item(
-                    flow_data=flow.data,
-                    flow_id=flow.id,
-                    flow_name=flow.name,
-                    user_id=user_id,
-                    input_value=item.input,
-                    scoring_methods=evaluation.scoring_methods,
-                    expected_output=item.expected_output,
-                )
+                if not dataset:
+                    raise ValueError("Dataset not found")
 
-                # Create result record
-                db_result = EvaluationResult(
-                    evaluation_id=evaluation_id,
-                    dataset_item_id=item.id,
-                    input=item.input,
-                    expected_output=item.expected_output,
-                    actual_output=item_result["actual_output"],
-                    duration_ms=item_result["duration_ms"],
-                    scores=item_result["scores"],
-                    passed=item_result["passed"],
-                    error=item_result["error"],
-                    order=idx,
-                    created_at=datetime.now(timezone.utc),
-                )
-                session.add(db_result)
+                # Get the flow
+                flow_statement = select(Flow).where(Flow.id == evaluation.flow_id)
+                flow_result = await session.exec(flow_statement)
+                flow = flow_result.first()
 
-                # Update metrics
-                if item_result["scores"]:
-                    avg_score = sum(item_result["scores"].values()) / len(item_result["scores"])
-                    total_score += avg_score
-                if item_result["duration_ms"]:
-                    total_duration += item_result["duration_ms"]
-                if item_result["passed"]:
-                    passed_count += 1
+                if not flow:
+                    raise ValueError("Flow not found")
 
-                # Update progress
-                evaluation.completed_items = idx + 1
+                logger.info(f"Running evaluation with {len(dataset.items) if dataset.items else 0} items")
+
+                # Sort items by order
+                sorted_items = sorted(dataset.items, key=lambda x: x.order) if dataset.items else []
+                evaluation.total_items = len(sorted_items)
                 session.add(evaluation)
                 await session.commit()
 
-            # Update final metrics
-            evaluation.status = EvaluationStatus.COMPLETED.value
-            evaluation.completed_at = datetime.now(timezone.utc)
-            evaluation.updated_at = datetime.now(timezone.utc)
-            evaluation.passed_items = passed_count
-            evaluation.mean_score = total_score / len(sorted_items) if sorted_items else None
-            evaluation.mean_duration_ms = total_duration / len(sorted_items) if sorted_items else None
-            evaluation.total_runtime_ms = (
-                int((evaluation.completed_at - evaluation.started_at).total_seconds() * 1000)
-                if evaluation.started_at
-                else None
-            )
-            session.add(evaluation)
-            await session.commit()
+                total_score = 0.0
+                total_duration = 0
+                passed_count = 0
 
-        except Exception as e:
-            evaluation.status = EvaluationStatus.FAILED.value
-            evaluation.error_message = str(e)
-            evaluation.updated_at = datetime.now(timezone.utc)
-            session.add(evaluation)
-            await session.commit()
+                # Run each item
+                for idx, item in enumerate(sorted_items):
+                    logger.info(f"Running item {idx + 1}/{len(sorted_items)}: {item.input[:30]}...")
+                    item_result = await run_single_evaluation_item(
+                        flow_data=flow.data,
+                        flow_id=flow.id,
+                        flow_name=flow.name,
+                        user_id=user_id,
+                        input_value=item.input,
+                        scoring_methods=evaluation.scoring_methods,
+                        expected_output=item.expected_output,
+                    )
+
+                    logger.info(f"Item {idx + 1} result: actual_output={item_result['actual_output']}, error={item_result['error']}")
+
+                    # Create result record
+                    db_result = EvaluationResult(
+                        evaluation_id=evaluation_id,
+                        dataset_item_id=item.id,
+                        input=item.input,
+                        expected_output=item.expected_output,
+                        actual_output=item_result["actual_output"],
+                        duration_ms=item_result["duration_ms"],
+                        scores=item_result["scores"],
+                        passed=item_result["passed"],
+                        error=item_result["error"],
+                        order=idx,
+                        created_at=datetime.now(timezone.utc),
+                    )
+                    session.add(db_result)
+
+                    # Update metrics
+                    if item_result["scores"]:
+                        avg_score = sum(item_result["scores"].values()) / len(item_result["scores"])
+                        total_score += avg_score
+                    if item_result["duration_ms"]:
+                        total_duration += item_result["duration_ms"]
+                    if item_result["passed"]:
+                        passed_count += 1
+
+                    # Update progress
+                    evaluation.completed_items = idx + 1
+                    session.add(evaluation)
+                    await session.commit()
+
+                # Update final metrics
+                logger.info(f"Evaluation complete. Passed: {passed_count}/{len(sorted_items)}")
+                evaluation.status = EvaluationStatus.COMPLETED.value
+                evaluation.completed_at = datetime.now(timezone.utc)
+                evaluation.updated_at = datetime.now(timezone.utc)
+                evaluation.passed_items = passed_count
+                evaluation.mean_score = total_score / len(sorted_items) if sorted_items else None
+                evaluation.mean_duration_ms = total_duration / len(sorted_items) if sorted_items else None
+                evaluation.total_runtime_ms = (
+                    int((evaluation.completed_at - evaluation.started_at).total_seconds() * 1000)
+                    if evaluation.started_at
+                    else None
+                )
+                session.add(evaluation)
+                await session.commit()
+
+            except Exception as e:
+                logger.exception(f"Error running evaluation: {e}")
+                evaluation.status = EvaluationStatus.FAILED.value
+                evaluation.error_message = str(e)
+                evaluation.updated_at = datetime.now(timezone.utc)
+                session.add(evaluation)
+                await session.commit()
+    except Exception as e:
+        logger.exception(f"Fatal error in background evaluation task: {e}")
 
 
 @router.post("/", response_model=EvaluationRead, status_code=HTTPStatus.CREATED)
@@ -250,7 +295,6 @@ async def create_evaluation(
     session: DbSession,
     evaluation: EvaluationCreate,
     current_user: CurrentActiveUser,
-    background_tasks: BackgroundTasks,
     run_immediately: bool = False,
 ):
     """Create a new evaluation."""
@@ -290,7 +334,8 @@ async def create_evaluation(
     await session.refresh(db_evaluation)
 
     if run_immediately:
-        background_tasks.add_task(run_evaluation_background, db_evaluation.id, current_user.id)
+        # Use asyncio.create_task to properly schedule the async background task
+        asyncio.create_task(run_evaluation_background(db_evaluation.id, current_user.id))
 
     return EvaluationRead(
         id=db_evaluation.id,
@@ -451,7 +496,6 @@ async def run_evaluation(
     session: DbSession,
     evaluation_id: UUID,
     current_user: CurrentActiveUser,
-    background_tasks: BackgroundTasks,
 ):
     """Start or re-run an evaluation."""
     statement = select(Evaluation).where(Evaluation.id == evaluation_id, Evaluation.user_id == current_user.id)
@@ -484,8 +528,8 @@ async def run_evaluation(
     session.add(evaluation)
     await session.commit()
 
-    # Start background task
-    background_tasks.add_task(run_evaluation_background, evaluation_id, current_user.id)
+    # Use asyncio.create_task to properly schedule the async background task
+    asyncio.create_task(run_evaluation_background(evaluation_id, current_user.id))
 
     # Get names
     dataset_name = None

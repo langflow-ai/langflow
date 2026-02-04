@@ -30,7 +30,8 @@ export type SidebarSection =
   | "mcp"
   | "add_note"
   | "logs"
-  | "messages";
+  | "messages"
+  | "evaluations";
 
 // Helper function to get cookie value
 function getCookie(name: string): string | null {

@@ -51,6 +51,12 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Messages",
     tooltip: "Messages",
   },
+  {
+    id: "evaluations",
+    icon: "FlaskConical",
+    label: "Evaluations",
+    tooltip: "Evaluations",
+  },
 ];
 
 const SidebarSegmentedNav = () => {

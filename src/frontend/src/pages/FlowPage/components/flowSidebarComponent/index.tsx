@@ -41,6 +41,7 @@ import type { APIClassType } from "../../../../types/api";
 import isWrappedWithClass from "../PageComponent/utils/is-wrapped-with-class";
 import { CategoryGroup } from "./components/categoryGroup";
 import NoResultsMessage from "./components/emptySearchComponent";
+import EvaluationsSidebarGroup from "./components/EvaluationsSidebarGroup";
 import LogsSidebarGroup from "./components/LogsSidebarGroup";
 import McpSidebarGroup from "./components/McpSidebarGroup";
 import MessagesSidebarGroup from "./components/MessagesSidebarGroup";
@@ -159,6 +160,9 @@ interface FlowSidebarComponentProps {
   onLogsTabChange?: (tab: LogsTab) => void;
   selectedRunId?: string | null;
   onSelectRun?: (runId: string | null) => void;
+  // Evaluations state
+  selectedEvaluationId?: string | null;
+  onSelectEvaluation?: (id: string | null) => void;
 }
 
 export function FlowSidebarComponent({
@@ -169,6 +173,8 @@ export function FlowSidebarComponent({
   onLogsTabChange,
   selectedRunId,
   onSelectRun,
+  selectedEvaluationId,
+  onSelectEvaluation,
 }: FlowSidebarComponentProps) {
   const rawData = useTypesStore((state) => state.data);
 
@@ -618,6 +624,7 @@ export function FlowSidebarComponent({
     (hasSearchInput && hasMcpComponents && ENABLE_NEW_SIDEBAR);
   const showLogs = ENABLE_NEW_SIDEBAR && activeSection === "logs";
   const showMessages = ENABLE_NEW_SIDEBAR && activeSection === "messages";
+  const showEvaluations = ENABLE_NEW_SIDEBAR && activeSection === "evaluations";
 
   const [category, component] = getFilterComponent?.split(".") ?? ["", ""];
 
@@ -655,7 +662,7 @@ export function FlowSidebarComponent({
             ENABLE_NEW_SIDEBAR && "sidebar-segmented",
           )}
         >
-          {!showLogs && !showMessages && (
+          {!showLogs && !showMessages && !showEvaluations && (
             <SidebarHeaderComponent
               showConfig={showConfig}
               setShowConfig={setShowConfig}
@@ -690,6 +697,11 @@ export function FlowSidebarComponent({
               <MessagesSidebarGroup
                 selectedSessionId={selectedSessionId ?? null}
                 onSelectSession={onSelectSession ?? (() => {})}
+              />
+            ) : showEvaluations ? (
+              <EvaluationsSidebarGroup
+                selectedEvaluationId={selectedEvaluationId ?? null}
+                onSelectEvaluation={onSelectEvaluation ?? (() => {})}
               />
             ) : isLoading ? (
               <div className="flex flex-col gap-2">
@@ -791,7 +803,8 @@ export function FlowSidebarComponent({
           </SidebarContent>
           {(ENABLE_NEW_SIDEBAR && activeSection === "mcp" && !hasMcpServers) ||
           showLogs ||
-          showMessages ? null : (
+          showMessages ||
+          showEvaluations ? null : (
             <SidebarFooter className="border-t group-data-[collapsible=icon]:hidden p-1 gap-1">
               <SidebarMenuButtons
                 customComponent={customComponent}
