@@ -18,9 +18,13 @@ The Synchronous Workflows API provides programmatic access to execute Langflow w
 
 ## Execute workflows endpoint (synchronous)
 
-**Endpoint:** `POST /api/v2/workflows`
+**Endpoint:**
 
-**Description:** Execute a workflow synchronously and receive complete results immediately upon completion. Set `background=false` and `stream=false`.
+```
+POST /api/v2/workflows
+```
+
+**Description:** Execute a workflow synchronously and receive complete results immediately upon completion. Set `background=false`.
 
 ### Example request
 
@@ -41,7 +45,6 @@ headers = {
 payload = {
     "flow_id": "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
     "background": False,
-    "stream": False,
     "inputs": {
         "ChatInput-abc.input_type": "chat",
         "ChatInput-abc.input_value": "what is 2+2",
@@ -64,7 +67,6 @@ const url = `${LANGFLOW_SERVER_URL}/api/v2/workflows`;
 const payload = {
   flow_id: "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
   background: false,
-  stream: false,
   inputs: {
     "ChatInput-abc.input_type": "chat",
     "ChatInput-abc.input_value": "what is 2+2",
@@ -100,7 +102,6 @@ curl -X POST \
   -d '{
     "flow_id": "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
     "background": false,
-    "stream": false,
     "inputs": {
       "ChatInput-abc.input_type": "chat",
       "ChatInput-abc.input_value": "what is 2+2",
@@ -119,7 +120,6 @@ curl -X POST \
 | `flow_id` | `string` | Yes | - | The ID or endpoint name of the flow to execute. |
 | `flow_version` | `string` | No | - | Optional version hash to pin to a specific flow version. |
 | `background` | `boolean` | No | `false` | Must be `false` for synchronous execution. |
-| `stream` | `boolean` | No | `false` | Must be `false` for synchronous execution. |
 | `inputs` | `object` | No | `{}` | Inputs for the workflow execution. Uses component identifiers with dot notation (e.g., `ChatInput-abc.input_value`). See [Component identifiers and input structure](#component-identifiers-and-input-structure) for detailed information. |
 
 ### Example response
