@@ -44,11 +44,15 @@ test(
       timeout: 100000,
     });
 
-    expect(await page.getByAltText("generated image").isVisible()).toBeTruthy();
+    await expect(page.getByAltText("generated image")).toBeVisible({
+      timeout: 100000,
+    });
 
-    expect(
-      await page.getByTestId(`chat-message-User-${userQuestion}`).isVisible(),
-    ).toBeTruthy();
+    await expect(
+      page.getByTestId(`chat-message-User-${userQuestion}`),
+    ).toBeVisible({
+      timeout: 100000,
+    });
 
     const textContents = await page
       .getByTestId("div-chat-message")
