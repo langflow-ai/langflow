@@ -74,8 +74,6 @@ class AuthService(AuthServiceBase):
         """Framework-agnostic authentication method.
 
         This is the core authentication logic that validates credentials and returns a user.
-        It raises generic AuthenticationError exceptions that should be converted to
-        protocol-specific exceptions by the adapter layer.
 
 
         Args:
@@ -95,7 +93,7 @@ class AuthService(AuthServiceBase):
             TokenExpiredError: If token has expired
             InactiveUserError: If user account is inactive
         """
-        # Try token authentication first
+        # Try token authentication first (if token provided)
         if token:
             try:
                 return await self._authenticate_with_token(token, db)
@@ -103,7 +101,20 @@ class AuthService(AuthServiceBase):
                 # Re-raise our generic exceptions
                 raise
             except Exception as e:
-                # Convert any unexpected errors to InvalidTokenError
+                # Token auth failed; fall back to API key if provided
+                if api_key:
+                    try:
+                        user = await self._authenticate_with_api_key(api_key, db)
+                        if user:
+                            return user
+                        msg = "Invalid API key"
+                        raise InvalidCredentialsError(msg)
+                    except InvalidCredentialsError:
+                        raise
+                    except Exception as api_key_err:
+                        logger.error(f"Unexpected error during API key authentication: {api_key_err}")
+                        msg = "API key authentication failed"
+                        raise InvalidCredentialsError(msg) from api_key_err
                 logger.error(f"Unexpected error during token authentication: {e}")
                 msg = "Token authentication failed"
                 raise AuthInvalidTokenError(msg) from e
@@ -368,11 +379,7 @@ class AuthService(AuthServiceBase):
         api_key: str | None,
         db: AsyncSession,
     ) -> User | UserRead:
-        """DEPRECATED: Delegates to authenticate_with_credentials().
-
-        Kept for backward compatibility. Protocol-specific error handling
-        should be done in the adapter layer (utils.py).
-        """
+        """Delegates to authenticate_with_credentials()."""
         return await self.authenticate_with_credentials(token, api_key, db)
 
     async def get_current_user_for_sse(
@@ -381,26 +388,17 @@ class AuthService(AuthServiceBase):
         api_key: str | None,
         db: AsyncSession,
     ) -> User | UserRead:
-        """DEPRECATED: Delegates to authenticate_with_credentials().
-
-        Kept for backward compatibility. Protocol-specific error handling
-        should be done in the adapter layer (utils.py).
-        """
+        """Delegates to authenticate_with_credentials()."""
         return await self.authenticate_with_credentials(token, api_key, db)
 
-    async def get_current_active_user(self, current_user: User | UserRead) -> User | UserRead:
+    async def get_current_active_user(self, current_user: User | UserRead) -> User | UserRead | None:
         if not current_user.is_active:
-            msg = "User account is inactive"
-            raise InactiveUserError(msg)
+            return None
         return current_user
 
-    async def get_current_active_superuser(self, current_user: User | UserRead) -> User | UserRead:
-        if not current_user.is_active:
-            msg = "User account is inactive"
-            raise InactiveUserError(msg)
-        if not current_user.is_superuser:
-            msg = "User does not have superuser privileges"
-            raise InsufficientPermissionsError(msg)
+    async def get_current_active_superuser(self, current_user: User | UserRead) -> User | UserRead | None:
+        if not current_user.is_active or not current_user.is_superuser:
+            return None
         return current_user
 
     async def get_webhook_user(self, flow_id: str, request: Request) -> UserRead:

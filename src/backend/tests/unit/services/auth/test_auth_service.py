@@ -10,7 +10,6 @@ import pytest
 from fastapi import HTTPException, status
 from langflow.services.auth.exceptions import (
     InactiveUserError,
-    InsufficientPermissionsError,
     InvalidTokenError,
     TokenExpiredError,
 )
@@ -281,11 +280,11 @@ async def test_get_current_active_user_active(auth_service: AuthService):
 
 @pytest.mark.anyio
 async def test_get_current_active_user_inactive(auth_service: AuthService):
-    """Test inactive user raises exception."""
+    """Test inactive user returns None."""
     user = _dummy_user(uuid4(), active=False)
 
-    with pytest.raises(InactiveUserError):
-        await auth_service.get_current_active_user(user)
+    result = await auth_service.get_current_active_user(user)
+    assert result is None
 
 
 @pytest.mark.anyio
@@ -304,7 +303,7 @@ async def test_get_current_active_superuser_valid(auth_service: AuthService):
 
 @pytest.mark.anyio
 async def test_get_current_active_superuser_inactive(auth_service: AuthService):
-    """Test inactive superuser raises exception."""
+    """Test inactive superuser returns None."""
     user = User(
         id=uuid4(),
         username="admin",
@@ -313,17 +312,17 @@ async def test_get_current_active_superuser_inactive(auth_service: AuthService):
         is_superuser=True,
     )
 
-    with pytest.raises(InactiveUserError):
-        await auth_service.get_current_active_superuser(user)
+    result = await auth_service.get_current_active_superuser(user)
+    assert result is None
 
 
 @pytest.mark.anyio
 async def test_get_current_active_superuser_not_superuser(auth_service: AuthService):
-    """Test non-superuser raises forbidden."""
+    """Test non-superuser returns None."""
     user = _dummy_user(uuid4(), active=True)  # is_superuser=False by default
 
-    with pytest.raises(InsufficientPermissionsError):
-        await auth_service.get_current_active_superuser(user)
+    result = await auth_service.get_current_active_superuser(user)
+    assert result is None
 
 
 # =============================================================================

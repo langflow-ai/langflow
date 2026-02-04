@@ -10,14 +10,7 @@ from fastapi.security.utils import get_authorization_scheme_param
 from lfx.log.logger import logger
 from lfx.services.deps import injectable_session_scope
 
-from langflow.services.auth.exceptions import (
-    AuthenticationError,
-    InactiveUserError,
-    InvalidCredentialsError,
-    InvalidTokenError,
-    MissingCredentialsError,
-    TokenExpiredError,
-)
+from langflow.services.auth.exceptions import AuthenticationError
 from langflow.services.auth.service import (
     AUTO_LOGIN_ERROR as SERVICE_AUTO_LOGIN_ERROR,
 )
@@ -162,15 +155,14 @@ async def get_current_user_from_access_token(
     return await _auth_service().get_current_user_from_access_token(token, db)
 
 
+WS_AUTH_REASON = "Missing or invalid credentials (cookie, token or API key)."
+
+
 async def get_current_user_for_websocket(
     websocket: WebSocket,
     db: AsyncSession,
 ) -> User | UserRead:
-    """Adapter for WebSocket authentication - converts generic exceptions to WebSocketException.
-
-    Extracts credentials from WebSocket object and delegates to auth service.
-    Converts generic AuthenticationError exceptions to WebSocket-specific exceptions.
-    """
+    """Extracts credentials from WebSocket and delegates to auth service."""
     token = websocket.cookies.get("access_token_lf") or websocket.query_params.get("token")
     api_key = (
         websocket.query_params.get("x-api-key")
@@ -181,88 +173,48 @@ async def get_current_user_for_websocket(
 
     try:
         return await _auth_service().get_current_user_for_websocket(token, api_key, db)
-    except MissingCredentialsError as e:
-        raise WebSocketException(
-            code=status.WS_1008_POLICY_VIOLATION, reason="Missing or invalid credentials (cookie, token or API key)."
-        ) from e
-    except (InvalidCredentialsError, InvalidTokenError) as e:
-        raise WebSocketException(
-            code=status.WS_1008_POLICY_VIOLATION, reason="Missing or invalid credentials (cookie, token or API key)."
-        ) from e
-    except TokenExpiredError as e:
-        raise WebSocketException(
-            code=status.WS_1008_POLICY_VIOLATION, reason="Missing or invalid credentials (cookie, token or API key)."
-        ) from e
-    except InactiveUserError as e:
-        raise WebSocketException(
-            code=status.WS_1008_POLICY_VIOLATION, reason="Missing or invalid credentials (cookie, token or API key)."
-        ) from e
     except AuthenticationError as e:
-        # Catch-all for any other authentication errors
-        raise WebSocketException(
-            code=status.WS_1008_POLICY_VIOLATION, reason="Missing or invalid credentials (cookie, token or API key)."
-        ) from e
+        raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION, reason=WS_AUTH_REASON) from e
 
 
 async def get_current_user_for_sse(
     request: Request,
     db: AsyncSession = Depends(injectable_session_scope),
 ) -> User | UserRead:
-    """Adapter for SSE authentication - converts generic exceptions to HTTPException.
+    """Extracts credentials from request and delegates to auth service.
 
-    Similar to websocket authentication, accepts either:
-    - Cookie authentication (access_token_lf)
-    - API key authentication (x-api-key query param)
-
-    Args:
-        request: The FastAPI request object
-        db: Database session
-
-    Returns:
-        User or UserRead: The authenticated user
-
-    Raises:
-        HTTPException: If authentication fails
+    Accepts cookie (access_token_lf) or API key (x-api-key query param).
     """
     token = request.cookies.get("access_token_lf")
     api_key = request.query_params.get("x-api-key") or request.headers.get("x-api-key")
 
     try:
         return await _auth_service().get_current_user_for_sse(token, api_key, db)
-    except MissingCredentialsError as e:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Missing or invalid credentials (cookie or API key).",
-        ) from e
-    except (InvalidCredentialsError, InvalidTokenError) as e:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Missing or invalid credentials (cookie or API key).",
-        ) from e
-    except TokenExpiredError as e:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Missing or invalid credentials (cookie or API key).",
-        ) from e
-    except InactiveUserError as e:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Missing or invalid credentials (cookie or API key).",
-        ) from e
     except AuthenticationError as e:
-        # Catch-all for any other authentication errors
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Missing or invalid credentials (cookie or API key).",
         ) from e
 
 
-async def get_current_active_user(user: User = Depends(get_current_user)) -> User:
-    return await _auth_service().get_current_active_user(user)
+async def get_current_active_user(user: User = Depends(get_current_user)) -> User | UserRead:
+    result = await _auth_service().get_current_active_user(user)
+    if result is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User account is inactive",
+        )
+    return result
 
 
-async def get_current_active_superuser(user: User = Depends(get_current_user)) -> User:
-    return await _auth_service().get_current_active_superuser(user)
+async def get_current_active_superuser(user: User = Depends(get_current_user)) -> User | UserRead:
+    result = await _auth_service().get_current_active_superuser(user)
+    if result is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User does not have superuser privileges",
+        )
+    return result
 
 
 async def get_webhook_user(flow_id: str, request: Request) -> UserRead:

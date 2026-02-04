@@ -82,11 +82,6 @@ class AuthServiceBase(Service, abc.ABC):
         This is the core authentication method that validates credentials and returns
         a user. It is framework-agnostic and raises generic AuthenticationError exceptions.
 
-        The adapter layer (utils.py) is responsible for:
-        1. Extracting credentials from protocol-specific objects (Request, WebSocket, etc.)
-        2. Calling this method
-        3. Converting generic exceptions to protocol-specific ones (HTTPException, WebSocketException)
-
         Authentication flow:
         1. If token provided: Validate token and return user
         2. If api_key provided: Validate API key and return user
@@ -120,9 +115,6 @@ class AuthServiceBase(Service, abc.ABC):
     ) -> User | UserRead:
         """Get the current authenticated user from token or API key.
 
-        DEPRECATED: This method is kept for backward compatibility with existing code.
-        New code should use authenticate_with_credentials() directly.
-
         This method handles FastAPI-specific concerns (coroutine tokens, separate query/header params)
         and delegates to authenticate_with_credentials().
 
@@ -136,7 +128,7 @@ class AuthServiceBase(Service, abc.ABC):
             User or UserRead object representing the authenticated identity.
 
         Raises:
-            AuthenticationError subclasses (converted to HTTPException by caller)
+            AuthenticationError: If authentication fails
         """
 
     @abc.abstractmethod
@@ -148,9 +140,6 @@ class AuthServiceBase(Service, abc.ABC):
     ) -> User | UserRead:
         """Get the current user for WebSocket connections.
 
-        DEPRECATED: This method is kept for backward compatibility.
-        It delegates to authenticate_with_credentials().
-
         Args:
             token: Access token from cookie or query param
             api_key: API key from query param or header
@@ -160,7 +149,7 @@ class AuthServiceBase(Service, abc.ABC):
             User or UserRead object
 
         Raises:
-            AuthenticationError subclasses (converted to WebSocketException by caller)
+            AuthenticationError: If authentication fails
         """
 
     @abc.abstractmethod
@@ -172,9 +161,6 @@ class AuthServiceBase(Service, abc.ABC):
     ) -> User | UserRead:
         """Get the current user for SSE (Server-Sent Events) connections.
 
-        DEPRECATED: This method is kept for backward compatibility.
-        It delegates to authenticate_with_credentials().
-
         Args:
             token: Access token from cookie
             api_key: API key from query param or header
@@ -184,7 +170,7 @@ class AuthServiceBase(Service, abc.ABC):
             User or UserRead object
 
         Raises:
-            AuthenticationError subclasses (converted to HTTPException by caller)
+            AuthenticationError: If authentication fails
         """
 
     @abc.abstractmethod
@@ -214,32 +200,25 @@ class AuthServiceBase(Service, abc.ABC):
     # -------------------------------------------------------------------------
 
     @abc.abstractmethod
-    async def get_current_active_user(self, current_user: User | UserRead) -> User | UserRead:
+    async def get_current_active_user(self, current_user: User | UserRead) -> User | UserRead | None:
         """Validate that the current user is active.
 
         Args:
             current_user: The authenticated user (User or UserRead)
 
         Returns:
-            The same user object if active
-
-        Raises:
-            InactiveUserError: If user is inactive
+            The same user object if active, None if inactive
         """
 
     @abc.abstractmethod
-    async def get_current_active_superuser(self, current_user: User | UserRead) -> User | UserRead:
+    async def get_current_active_superuser(self, current_user: User | UserRead) -> User | UserRead | None:
         """Validate that the current user is an active superuser.
 
         Args:
             current_user: The authenticated user (User or UserRead)
 
         Returns:
-            The same user object if active and superuser
-
-        Raises:
-            InactiveUserError: If user is inactive
-            InsufficientPermissionsError: If user is not a superuser
+            The same user object if active and superuser, None otherwise
         """
 
     # -------------------------------------------------------------------------
@@ -319,9 +298,6 @@ class AuthServiceBase(Service, abc.ABC):
     @abc.abstractmethod
     async def ws_api_key_security(self, api_key: str | None) -> UserRead:
         """Validate API key for WebSocket connections.
-
-        DEPRECATED: This method is kept for backward compatibility.
-        New code should use api_key_security() directly.
 
         Args:
             api_key: The API key
