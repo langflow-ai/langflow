@@ -28,6 +28,8 @@ export const selectGptModel = async (page: Page) => {
 
     await expect(model).toBeVisible({ timeout: 10000 });
     await model.click();
+    await adjustScreenView(page);
+    await model.click();
     await page.waitForSelector('[role="listbox"]', { timeout: 10000 });
 
     const gptOMiniOption = await page.getByTestId("gpt-4o-mini-option").count();
