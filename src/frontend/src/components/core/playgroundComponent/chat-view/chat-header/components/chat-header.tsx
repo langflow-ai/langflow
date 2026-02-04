@@ -29,6 +29,7 @@ export function ChatHeader({
   onClose,
   openLogsModal,
   setOpenLogsModal,
+  renameLocalSession,
 }: ChatHeaderProps & { sessions: string[] }) {
   // Determine the title based on the current session
   const sessionTitle = useMemo(
@@ -39,6 +40,7 @@ export function ChatHeader({
   // Session edit/delete logic
   const { handleRename, handleDelete } = useEditSessionInfo({
     flowId: currentFlowId,
+    renameLocalSession,
   });
 
   const { isEditing, handleEditStart, handleEditCancel, handleEditSave } =

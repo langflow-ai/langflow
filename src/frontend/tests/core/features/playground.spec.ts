@@ -127,6 +127,13 @@ test(
     await expect(page.getByTitle("New Session 0")).toBeVisible();
 
     // check rename session
+    await page
+      .getByTestId("input-chat-playground")
+      .fill("session_after_delete");
+    await page.keyboard.press("Enter");
+    await page
+      .getByTestId("chat-message-User-session_after_delete")
+      .isVisible();
     await page.getByTestId("chat-header-more-menu").click();
     await page.getByTestId("rename-session-option").click();
     await page.getByTestId("session-rename-input").fill("my first session");
