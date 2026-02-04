@@ -12,7 +12,9 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useCreateKnowledgeBase } from '@/controllers/API/queries/knowledge-bases/use-create-knowledge-base';
 import { useGetModelProviders } from '@/controllers/API/queries/models/use-get-model-providers';
+import useAlertStore from '@/stores/alertStore';
 import BaseModal from '../baseModal';
 
 export interface KnowledgeBaseUploadModalProps {
@@ -75,6 +77,21 @@ export default function KnowledgeBaseUploadModal({
   const [selectedEmbeddingModel, setSelectedEmbeddingModel] = useState<
     ModelOption[]
   >([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [openManageProvidersDialog, setOpenManageProvidersDialog] =
+    useState(false);
+
+  // Check if any providers with embedding models are enabled
+  const hasEnabledEmbeddingProviders = useMemo(() => {
+    return embeddingModelOptions.length > 0;
+  }, [embeddingModelOptions]);
+
+  // Alert store for notifications
+  const setSuccessData = useAlertStore(state => state.setSuccessData);
+  const setErrorData = useAlertStore(state => state.setErrorData);
+
+  // Create knowledge base mutation
+  const createKnowledgeBase = useCreateKnowledgeBase();
 
   const resetForm = () => {
     setSourceName('');
@@ -82,19 +99,46 @@ export default function KnowledgeBaseUploadModal({
     setSelectedEmbeddingModel([]);
   };
 
-  const handleSubmit = () => {
-    const formData: KnowledgeBaseFormData = {
-      sourceName,
-      files,
-      embeddingModel: selectedEmbeddingModel,
-    };
+  const handleSubmit = async () => {
+    if (!selectedEmbeddingModel.length) {
+      setErrorData({ title: 'Please select an embedding model' });
+      return;
+    }
 
-    // TODO: Implement actual submission logic
-    console.log('Knowledge Base Form Data:', formData);
+    const selectedModel = selectedEmbeddingModel[0];
+    setIsSubmitting(true);
 
-    onSubmit?.(formData);
-    setOpen(false);
-    resetForm();
+    try {
+      // Create the knowledge base
+      await createKnowledgeBase.mutateAsync({
+        name: sourceName.trim().replace(/\s+/g, '_'),
+        embedding_provider: selectedModel.provider || 'Unknown',
+        embedding_model: selectedModel.id || selectedModel.name,
+      });
+
+      // Build form data for callback
+      const formData: KnowledgeBaseFormData = {
+        sourceName,
+        files,
+        embeddingModel: selectedEmbeddingModel,
+      };
+
+      setSuccessData({
+        title: `Knowledge base "${sourceName}" created successfully!`,
+      });
+
+      onSubmit?.(formData);
+      setOpen(false);
+      resetForm();
+    } catch (error: any) {
+      const errorMessage =
+        error?.response?.data?.detail ||
+        error?.message ||
+        'Failed to create knowledge base';
+      setErrorData({ title: errorMessage });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -311,6 +355,7 @@ export default function KnowledgeBaseUploadModal({
             <Label className="text-sm font-medium">
               Embedding Model <span className="text-destructive">*</span>
             </Label>
+
             <ModelInputComponent
               id="kb-embedding-model"
               value={selectedEmbeddingModel}
@@ -319,6 +364,7 @@ export default function KnowledgeBaseUploadModal({
               handleOnNewValue={({ value }) => setSelectedEmbeddingModel(value)}
               options={embeddingModelOptions}
               placeholder="Select embedding model"
+              showEmptyState
             />
           </div>
         </div>
@@ -327,7 +373,8 @@ export default function KnowledgeBaseUploadModal({
       <BaseModal.Footer
         submit={{
           label: 'Add Knowledge',
-          disabled: !isFormValid,
+          disabled: !isFormValid || isSubmitting,
+          loading: isSubmitting,
           dataTestId: 'kb-create-button',
         }}
       />
