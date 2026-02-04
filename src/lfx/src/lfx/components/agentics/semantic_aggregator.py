@@ -38,11 +38,11 @@ from lfx.schema.dataframe import DataFrame
 from lfx.schema.table import EditMode
 
 
-class SemanticMap(Component):
-    """Generates new columns in a DataFrame based on LLM instructions."""
+class SemanticAggregator(Component):
+    """Generate a single row with the required field based on the analysis of the entire dataframe"""
 
-    display_name = "SemanticMap"
-    description = "Reads each of the input rows and generates new columns"
+    display_name = "Semantic Aggregator"
+    description = "Generate a single row with the required field based on the analysis of the entire dataframe"
     documentation: str = "github.com/IBM/agentics/"
     icon = "Agentics"
 
@@ -63,7 +63,7 @@ class SemanticMap(Component):
         ),
         DropdownInput(
             name="base_url_ibm_watsonx",
-            display_name="watsonx API Endpoint",
+            display_name="Watsonx API Endpoint",
             info="The base URL of the API (IBM watsonx.ai only)",
             options=IBM_WATSONX_URLS,
             value=IBM_WATSONX_URLS[0],
@@ -72,7 +72,7 @@ class SemanticMap(Component):
         ),
         StrInput(
             name="project_id",
-            display_name="watsonx Project ID",
+            display_name="Watsonx Project ID",
             info="The project ID associated with the foundation model (IBM watsonx.ai only)",
             show=False,
             required=False,
@@ -90,6 +90,7 @@ class SemanticMap(Component):
             name="source",
             display_name="Source DataFrame",
             info="Accepts JSON (list of dicts) or DataFrame.",
+            required=True,
         ),
         TableInput(
             name="generated_fields",
@@ -144,14 +145,8 @@ class SemanticMap(Component):
             name="instructions",
             display_name="Instructions",
             info="Instructions for generating the new column values",
-            value="",
-        ),
-        BoolInput(
-            name="append_to_input_columns",
-            display_name="Append To Source Columns",
-            info="If false, returns only new columns, append to original data otherwise",
-            value=True,
             advanced=True,
+            value="",
         ),
     ]
 
@@ -159,7 +154,7 @@ class SemanticMap(Component):
         Output(
             name="states",
             display_name="Target DataFrame",
-            method="semantic_map",
+            method="semantic_aggregation",
             tool_mode=True,
         ),
     ]
@@ -181,7 +176,7 @@ class SemanticMap(Component):
         )
         return update_provider_fields_visibility(build_config, field_value, field_name)
 
-    async def semantic_map(self) -> DataFrame:
+    async def semantic_aggregation(self) -> DataFrame:
         """Generate new columns based on the provided instructions."""
         try:
             from agentics import AG
@@ -217,7 +212,7 @@ class SemanticMap(Component):
         ]
         atype = create_pydantic_model(schema_fields, name="Target")
 
-        transduction_type = TRANSDUCTION_AMAP
+        transduction_type = TRANSDUCTION_AREDUCE
         target = AG(
             atype=atype,
             transduction_type=transduction_type,
@@ -227,7 +222,5 @@ class SemanticMap(Component):
 
         output = await (target << source)
 
-        if self.append_to_input_columns:
-            output = source.merge_states(output)
 
         return output.to_dataframe().to_dict(orient="records")
