@@ -4,14 +4,11 @@
 
 The **Policies Component** is a powerful tool for building tool protection code from textual business policies and instructions. It leverages [ToolGuard](https://github.com/AgentToolkit/toolguard) to automatically generate guard code that validates tool execution against defined business policies.
 
-## Aim
-
 This component enables developers to:
-- Define business policies in natural language
+- Define business policies in natural language and seamlessly integrate policy enforcement into agent workflows
 - Automatically generate validation code for tools based on these policies
 - Protect tool execution by enforcing policy compliance at runtime
 - Cache generated guard code for improved performance
-- Seamlessly integrate policy enforcement into agent workflows
 
 The component operates in two modes:
 1. **Generate Mode**: Invokes ToolGuard's buildtime process to generate new guard code from policies
@@ -21,19 +18,19 @@ The component operates in two modes:
 
 | Parameter Name | Type | Description | Required In Mode |
 |----------------|------|-------------|------------------|
-| `active` | `bool` | If `true`, invokes ToolGuard code prior to tool execution. If `false`, skips policy validation. | Both |
-| `build_mode` | `Generate` or `Use Cache` | Indicates whether to invoke buildtime (Generate) or use cached code (Use Cache). | Both |
-| `project` | `str` | Name for the ToolGuard project. Used to organize automatically generated ToolGuards code. Default: "my_project" | Both |
-| `in_tools` | `List[Tool]` | List of tools that the agent can use. These tools will be wrapped with policy guards. | Both |
-| `policies` | `List[str]` | One or more clear, well-defined and self-contained business policies. Accepts multiple policy strings. | Generate |
-| `model` | `Model` | Language model provider selection for policy processing.| Generate |
-| `api_key` | `str` | API key for the selected model provider. | Generate |
+| `Active` | `bool` | If `true`, invokes ToolGuard code prior to tool execution. If `false`, skips policy validation. | Both |
+| `Build Mode` | `Generate` or `Use Cache` | Indicates whether to invoke buildtime (Generate) or use cached code (Use Cache). | Both |
+| `ToolGuard Project` | `str` | Name for the ToolGuard project. Used to organize automatically generated ToolGuards code. Default: "my_project" | Both |
+| `Tools` | `List[Tool]` | List of tools that the agent can use. These tools will be wrapped with policy guards. | Both |
+| `Policies` | `List[str]` | One or more clear, well-defined and self-contained business policies. Accepts multiple policy strings. | Generate |
+| `Language Model` | `Model` | Language model provider selection for policy processing.| Generate |
+| `API key` | `str` | API key for the selected model provider. | Generate |
 
 ## Output
 
 | Output Name | Type | Description |
 |-------------|------|-------------|
-| `guard_code` | `List[Tool]` | List of guarded tools with policy enforcement applied. Returns the original tools if policies are not activated. |
+| `Guarded Tools` | `List[Tool]` | List of guarded tools with policy enforcement applied. Returns the original tools if policies are not activated. |
 
 ## Usage Notes
 
@@ -42,12 +39,12 @@ The component operates in two modes:
 - The component performs a two-step process:
   1. **Step 1**: Generate guard specifications from policies
   2. **Step 2**: Generate executable guard code from specifications
-- When switching between Generate and Use Cache modes, ensure the cache directory contains valid guard code
+- When switching between `Generate` and `Use Cache` modes, ensure the cache directory contains valid guard code
 - The component automatically handles module caching and cleanup
 
 ## Technical Details
 
 - **Display Name**: Policies
-- **Status**: Beta
 - **Documentation**: [ToolGuard GitHub](https://github.com/AgentToolkit/toolguard)
+- **Status**: Beta
 
