@@ -4,12 +4,13 @@ import base64
 from typing import TYPE_CHECKING, Annotated, Final
 
 from cryptography.fernet import Fernet
-from fastapi import Depends, HTTPException, Request, Security, WebSocket, status
+from fastapi import Depends, HTTPException, Request, Security, WebSocket, WebSocketException, status
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
 from fastapi.security.utils import get_authorization_scheme_param
 from lfx.log.logger import logger
 from lfx.services.deps import injectable_session_scope
 
+from langflow.services.auth.exceptions import AuthenticationError
 from langflow.services.auth.service import (
     AUTO_LOGIN_ERROR as SERVICE_AUTO_LOGIN_ERROR,
 )
@@ -154,10 +155,14 @@ async def get_current_user_from_access_token(
     return await _auth_service().get_current_user_from_access_token(token, db)
 
 
+WS_AUTH_REASON = "Missing or invalid credentials (cookie, token or API key)."
+
+
 async def get_current_user_for_websocket(
     websocket: WebSocket,
     db: AsyncSession,
 ) -> User | UserRead:
+    """Extracts credentials from WebSocket and delegates to auth service."""
     token = websocket.cookies.get("access_token_lf") or websocket.query_params.get("token")
     api_key = (
         websocket.query_params.get("x-api-key")
@@ -165,40 +170,51 @@ async def get_current_user_for_websocket(
         or websocket.headers.get("x-api-key")
         or websocket.headers.get("api_key")
     )
-    return await _auth_service().get_current_user_for_websocket(token, api_key, db)
+
+    try:
+        return await _auth_service().get_current_user_for_websocket(token, api_key, db)
+    except AuthenticationError as e:
+        raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION, reason=WS_AUTH_REASON) from e
 
 
 async def get_current_user_for_sse(
     request: Request,
     db: AsyncSession = Depends(injectable_session_scope),
 ) -> User | UserRead:
-    """Authenticate user for SSE endpoints.
+    """Extracts credentials from request and delegates to auth service.
 
-    Similar to websocket authentication, accepts either:
-    - Cookie authentication (access_token_lf)
-    - API key authentication (x-api-key query param)
-
-    Args:
-        request: The FastAPI request object
-        db: Database session
-
-    Returns:
-        User or UserRead: The authenticated user
-
-    Raises:
-        HTTPException: If authentication fails
+    Accepts cookie (access_token_lf) or API key (x-api-key query param).
     """
     token = request.cookies.get("access_token_lf")
     api_key = request.query_params.get("x-api-key") or request.headers.get("x-api-key")
-    return await _auth_service().get_current_user_for_sse(token, api_key, db)
+
+    try:
+        return await _auth_service().get_current_user_for_sse(token, api_key, db)
+    except AuthenticationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Missing or invalid credentials (cookie or API key).",
+        ) from e
 
 
-async def get_current_active_user(user: User = Depends(get_current_user)) -> User:
-    return await _auth_service().get_current_active_user(user)
+async def get_current_active_user(user: User = Depends(get_current_user)) -> User | UserRead:
+    result = await _auth_service().get_current_active_user(user)
+    if result is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User account is inactive",
+        )
+    return result
 
 
-async def get_current_active_superuser(user: User = Depends(get_current_user)) -> User:
-    return await _auth_service().get_current_active_superuser(user)
+async def get_current_active_superuser(user: User = Depends(get_current_user)) -> User | UserRead:
+    result = await _auth_service().get_current_active_superuser(user)
+    if result is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User does not have superuser privileges",
+        )
+    return result
 
 
 async def get_webhook_user(flow_id: str, request: Request) -> UserRead:

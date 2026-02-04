@@ -17,6 +17,15 @@ from sqlalchemy.exc import IntegrityError
 
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.services.auth.base import AuthServiceBase
+from langflow.services.auth.exceptions import (
+    InactiveUserError,
+    InvalidCredentialsError,
+    MissingCredentialsError,
+    TokenExpiredError,
+)
+from langflow.services.auth.exceptions import (
+    InvalidTokenError as AuthInvalidTokenError,
+)
 from langflow.services.database.models.api_key.crud import check_key
 from langflow.services.database.models.user.crud import (
     get_user_by_id,
@@ -54,6 +63,158 @@ class AuthService(AuthServiceBase):
     @property
     def settings(self) -> SettingsService:
         return self.settings_service
+
+    async def authenticate_with_credentials(
+        self,
+        token: str | None,
+        api_key: str | None,
+        db: AsyncSession,
+    ) -> User | UserRead:
+        """Framework-agnostic authentication method.
+
+        This is the core authentication logic that validates credentials and returns a user.
+
+
+        Args:
+            token: Access token (JWT, OIDC token, etc.)
+            api_key: API key for authentication
+            db: Database session
+
+
+        Returns:
+            User or UserRead object
+
+
+        Raises:
+            MissingCredentialsError: If no credentials provided
+            InvalidCredentialsError: If credentials are invalid
+            InvalidTokenError: If token format/signature is invalid
+            TokenExpiredError: If token has expired
+            InactiveUserError: If user account is inactive
+        """
+        # Try token authentication first (if token provided)
+        if token:
+            try:
+                return await self._authenticate_with_token(token, db)
+            except (AuthInvalidTokenError, TokenExpiredError, InactiveUserError):
+                # Re-raise our generic exceptions
+                raise
+            except Exception as e:
+                # Token auth failed; fall back to API key if provided
+                if api_key:
+                    try:
+                        user = await self._authenticate_with_api_key(api_key, db)
+                        if user:
+                            return user
+                        msg = "Invalid API key"
+                        raise InvalidCredentialsError(msg)
+                    except InvalidCredentialsError:
+                        raise
+                    except Exception as api_key_err:
+                        logger.error(f"Unexpected error during API key authentication: {api_key_err}")
+                        msg = "API key authentication failed"
+                        raise InvalidCredentialsError(msg) from api_key_err
+                logger.error(f"Unexpected error during token authentication: {e}")
+                msg = "Token authentication failed"
+                raise AuthInvalidTokenError(msg) from e
+
+        # Try API key authentication
+        if api_key:
+            try:
+                user = await self._authenticate_with_api_key(api_key, db)
+                if user:
+                    return user
+                msg = "Invalid API key"
+                raise InvalidCredentialsError(msg)
+            except InvalidCredentialsError:
+                raise
+            except Exception as e:
+                logger.error(f"Unexpected error during API key authentication: {e}")
+                msg = "API key authentication failed"
+                raise InvalidCredentialsError(msg) from e
+
+        # No credentials provided
+        msg = "No authentication credentials provided"
+        raise MissingCredentialsError(msg)
+
+    async def _authenticate_with_token(self, token: str, db: AsyncSession) -> User:
+        """Internal method to authenticate with token (raises generic exceptions)."""
+        from langflow.services.auth.utils import ACCESS_TOKEN_TYPE, get_jwt_verification_key
+
+        settings_service = self.settings
+        algorithm = settings_service.auth_settings.ALGORITHM
+        verification_key = get_jwt_verification_key(settings_service)
+
+        try:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                payload = jwt.decode(token, verification_key, algorithms=[algorithm])
+            user_id: UUID = payload.get("sub")  # type: ignore[assignment]
+            token_type: str = payload.get("type")  # type: ignore[assignment]
+
+            # Validate token type
+            if token_type != ACCESS_TOKEN_TYPE:
+                logger.error(f"Token type is invalid: {token_type}. Expected: {ACCESS_TOKEN_TYPE}.")
+                msg = "Invalid token type"
+                raise AuthInvalidTokenError(msg)
+
+            # Check expiration
+            if expires := payload.get("exp", None):
+                expires_datetime = datetime.fromtimestamp(expires, timezone.utc)
+                if datetime.now(timezone.utc) > expires_datetime:
+                    logger.info("Token expired for user")
+                    msg = "Token has expired"
+                    raise TokenExpiredError(msg)
+
+            # Validate payload
+            if user_id is None or token_type is None:
+                logger.info(f"Invalid token payload. Token type: {token_type}")
+                msg = "Invalid token payload"
+                raise AuthInvalidTokenError(msg)
+
+        except (TokenExpiredError, AuthInvalidTokenError):
+            raise
+        except jwt.ExpiredSignatureError as e:
+            logger.info("Token signature has expired")
+            msg = "Token has expired"
+            raise TokenExpiredError(msg) from e
+        except InvalidTokenError as e:
+            logger.debug("JWT validation failed: Invalid token format or signature")
+            msg = "Could not validate token"
+            raise AuthInvalidTokenError(msg) from e
+        except Exception as e:
+            logger.error(f"Unexpected error decoding token: {e}")
+            msg = "Token validation failed"
+            raise AuthInvalidTokenError(msg) from e
+
+        # Get user from database
+        user = await get_user_by_id(db, user_id)
+        if user is None:
+            logger.info("User not found")
+            msg = "User not found"
+            raise InvalidCredentialsError(msg)
+
+        if not user.is_active:
+            logger.info("User is inactive")
+            msg = "User account is inactive"
+            raise InactiveUserError(msg)
+
+        return user
+
+    async def _authenticate_with_api_key(self, api_key: str, db: AsyncSession) -> UserRead | None:
+        """Internal method to authenticate with API key (raises generic exceptions)."""
+        result = await check_key(db, api_key)
+        if not result:
+            return None
+
+        if isinstance(result, User):
+            user_read = UserRead.model_validate(result, from_attributes=True)
+            if not user_read.is_active:
+                msg = "User account is inactive"
+                raise InactiveUserError(msg)
+            return user_read
+
+        return None
 
     async def api_key_security(
         self, query_param: str | None, header_param: str | None, db: AsyncSession | None = None
@@ -172,96 +333,44 @@ class AuthService(AuthServiceBase):
         header_param: str | None,
         db: AsyncSession,
     ) -> User | UserRead:
-        if token:
-            return await self.get_current_user_from_access_token(token, db)
-        # Pass db session to api_key_security for transactional consistency
-        user = await self.api_key_security(query_param, header_param, db)
-        if user:
-            return user
+        # Handle coroutine token (FastAPI dependency injection)
+        resolved_token: str | None = None
+        if isinstance(token, Coroutine):
+            resolved_token = await token
+        elif isinstance(token, str):
+            resolved_token = token
 
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Invalid or missing API key",
-        )
+        # Combine API key params
+        api_key = query_param or header_param
+
+        # Delegate to framework-agnostic method
+        return await self.authenticate_with_credentials(resolved_token, api_key, db)
 
     async def get_current_user_from_access_token(
         self,
         token: str | Coroutine | None,
         db: AsyncSession,
     ) -> User:
-        from langflow.services.auth.utils import ACCESS_TOKEN_TYPE, get_jwt_verification_key
+        """Get user from access token (raises generic exceptions).
 
+        This method now uses the framework-agnostic _authenticate_with_token() internally.
+        """
         if token is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Missing authentication token.",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
+            msg = "Missing authentication token"
+            raise MissingCredentialsError(msg)
 
-        settings_service = self.settings
-
+        # Handle coroutine token (FastAPI dependency injection)
+        resolved_token: str
         if isinstance(token, Coroutine):
-            token = await token
+            resolved_token = await token
+        elif isinstance(token, str):
+            resolved_token = token
+        else:
+            msg = "Invalid token format"
+            raise AuthInvalidTokenError(msg)
 
-        # At this point token should be a string (awaited if it was a coroutine)
-        if not isinstance(token, str):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token format.",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-
-        algorithm = settings_service.auth_settings.ALGORITHM
-        verification_key = get_jwt_verification_key(settings_service)
-
-        try:
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                payload = jwt.decode(token, verification_key, algorithms=[algorithm])
-            user_id: UUID = payload.get("sub")  # type: ignore[assignment]
-            token_type: str = payload.get("type")  # type: ignore[assignment]
-
-            # Order and messages aligned with main branch get_current_user_by_jwt
-            if token_type != ACCESS_TOKEN_TYPE:
-                logger.error(f"Token type is invalid: {token_type}. Expected: {ACCESS_TOKEN_TYPE}.")
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Token is invalid.",
-                    headers={"WWW-Authenticate": "Bearer"},
-                )
-            if expires := payload.get("exp", None):
-                expires_datetime = datetime.fromtimestamp(expires, timezone.utc)
-                if datetime.now(timezone.utc) > expires_datetime:
-                    logger.info("Token expired for user")
-                    raise HTTPException(
-                        status_code=status.HTTP_401_UNAUTHORIZED,
-                        detail="Token has expired.",
-                        headers={"WWW-Authenticate": "Bearer"},
-                    )
-            if user_id is None or token_type is None:
-                logger.info(f"Invalid token payload. Token type: {token_type}")
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Invalid token details.",
-                    headers={"WWW-Authenticate": "Bearer"},
-                )
-        except InvalidTokenError as e:
-            logger.debug("JWT validation failed: Invalid token format or signature")
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Could not validate credentials",
-                headers={"WWW-Authenticate": "Bearer"},
-            ) from e
-
-        user = await get_user_by_id(db, user_id)
-        if user is None or not user.is_active:
-            logger.info("User not found or inactive.")
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="User not found or is inactive.",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-        return user
+        # Use internal authentication method
+        return await self._authenticate_with_token(resolved_token, db)
 
     async def get_current_user_for_websocket(
         self,
@@ -269,19 +378,8 @@ class AuthService(AuthServiceBase):
         api_key: str | None,
         db: AsyncSession,
     ) -> User | UserRead:
-        if token:
-            user = await self.get_current_user_from_access_token(token, db)
-            if user:
-                return user
-
-        if api_key:
-            user_read = await self.ws_api_key_security(api_key)
-            if user_read:
-                return user_read
-
-        raise WebSocketException(
-            code=status.WS_1008_POLICY_VIOLATION, reason="Missing or invalid credentials (cookie, token or API key)."
-        )
+        """Delegates to authenticate_with_credentials()."""
+        return await self.authenticate_with_credentials(token, api_key, db)
 
     async def get_current_user_for_sse(
         self,
@@ -289,31 +387,17 @@ class AuthService(AuthServiceBase):
         api_key: str | None,
         db: AsyncSession,
     ) -> User | UserRead:
-        if token:
-            user = await self.get_current_user_from_access_token(token, db)
-            if user:
-                return user
+        """Delegates to authenticate_with_credentials()."""
+        return await self.authenticate_with_credentials(token, api_key, db)
 
-        if api_key:
-            user_read = await self.ws_api_key_security(api_key)
-            if user_read:
-                return user_read
-
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Missing or invalid credentials (cookie or API key).",
-        )
-
-    async def get_current_active_user(self, current_user: User | UserRead) -> User | UserRead:
+    async def get_current_active_user(self, current_user: User | UserRead) -> User | UserRead | None:
         if not current_user.is_active:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive user")
+            return None
         return current_user
 
-    async def get_current_active_superuser(self, current_user: User | UserRead) -> User | UserRead:
-        if not current_user.is_active:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive user")
-        if not current_user.is_superuser:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="The user doesn't have enough privileges")
+    async def get_current_active_superuser(self, current_user: User | UserRead) -> User | UserRead | None:
+        if not current_user.is_active or not current_user.is_superuser:
+            return None
         return current_user
 
     async def get_webhook_user(self, flow_id: str, request: Request) -> UserRead:

@@ -8,6 +8,11 @@ from uuid import UUID, uuid4
 import jwt
 import pytest
 from fastapi import HTTPException, status
+from langflow.services.auth.exceptions import (
+    InactiveUserError,
+    InvalidTokenError,
+    TokenExpiredError,
+)
 from langflow.services.auth.service import AuthService
 from langflow.services.database.models.user.model import User
 from lfx.services.settings.auth import AuthSettings
@@ -70,24 +75,21 @@ async def test_get_current_user_from_access_token_rejects_expired(
         algorithm=auth_settings.ALGORITHM,
     )
 
-    with pytest.raises(HTTPException) as exc:
+    with pytest.raises(TokenExpiredError):
         await auth_service.get_current_user_from_access_token(token, AsyncMock())
-
-    assert exc.value.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 @pytest.mark.anyio
 async def test_get_current_user_from_access_token_rejects_malformed_token(auth_service: AuthService):
-    """CT-010: Malformed Bearer token must return 401; jwt.decode rejects invalid tokens."""
+    """CT-010: Malformed Bearer token must raise InvalidTokenError; jwt.decode rejects invalid tokens."""
     db = AsyncMock()
     malformed_tokens = [
         "invalid.token.here",  # invalid signature / not a valid JWT
         "not-a-jwt",  # not 3 segments, jwt.decode raises
     ]
     for token in malformed_tokens:
-        with pytest.raises(HTTPException) as exc:
+        with pytest.raises(InvalidTokenError):
             await auth_service.get_current_user_from_access_token(token, db)
-        assert exc.value.status_code == status.HTTP_401_UNAUTHORIZED, f"Malformed token {token!r} should return 401"
 
 
 @pytest.mark.anyio
@@ -99,11 +101,9 @@ async def test_get_current_user_from_access_token_requires_active_user(auth_serv
 
     with (
         patch("langflow.services.auth.service.get_user_by_id", new=AsyncMock(return_value=inactive_user)),
-        pytest.raises(HTTPException) as exc,
+        pytest.raises(InactiveUserError),
     ):
         await auth_service.get_current_user_from_access_token(token, db)
-
-    assert exc.value.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 @pytest.mark.anyio
@@ -280,13 +280,11 @@ async def test_get_current_active_user_active(auth_service: AuthService):
 
 @pytest.mark.anyio
 async def test_get_current_active_user_inactive(auth_service: AuthService):
-    """Test inactive user raises exception."""
+    """Test inactive user returns None."""
     user = _dummy_user(uuid4(), active=False)
 
-    with pytest.raises(HTTPException) as exc:
-        await auth_service.get_current_active_user(user)
-
-    assert exc.value.status_code == status.HTTP_401_UNAUTHORIZED
+    result = await auth_service.get_current_active_user(user)
+    assert result is None
 
 
 @pytest.mark.anyio
@@ -305,7 +303,7 @@ async def test_get_current_active_superuser_valid(auth_service: AuthService):
 
 @pytest.mark.anyio
 async def test_get_current_active_superuser_inactive(auth_service: AuthService):
-    """Test inactive superuser raises exception."""
+    """Test inactive superuser returns None."""
     user = User(
         id=uuid4(),
         username="admin",
@@ -314,21 +312,17 @@ async def test_get_current_active_superuser_inactive(auth_service: AuthService):
         is_superuser=True,
     )
 
-    with pytest.raises(HTTPException) as exc:
-        await auth_service.get_current_active_superuser(user)
-
-    assert exc.value.status_code == status.HTTP_401_UNAUTHORIZED
+    result = await auth_service.get_current_active_superuser(user)
+    assert result is None
 
 
 @pytest.mark.anyio
 async def test_get_current_active_superuser_not_superuser(auth_service: AuthService):
-    """Test non-superuser raises forbidden."""
+    """Test non-superuser returns None."""
     user = _dummy_user(uuid4(), active=True)  # is_superuser=False by default
 
-    with pytest.raises(HTTPException) as exc:
-        await auth_service.get_current_active_superuser(user)
-
-    assert exc.value.status_code == status.HTTP_403_FORBIDDEN
+    result = await auth_service.get_current_active_superuser(user)
+    assert result is None
 
 
 # =============================================================================
