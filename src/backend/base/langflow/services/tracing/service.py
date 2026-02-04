@@ -59,6 +59,12 @@ def _get_traceloop_tracer():
     return TraceloopTracer
 
 
+def _get_native_tracer():
+    from langflow.services.tracing.native import NativeTracer
+
+    return NativeTracer
+
+
 trace_context_var: ContextVar[TraceContext | None] = ContextVar("trace_context", default=None)
 component_context_var: ContextVar[ComponentTraceContext | None] = ContextVar("component_trace_context", default=None)
 
@@ -220,6 +226,19 @@ class TracingService(Service):
             session_id=trace_context.session_id,
         )
 
+    def _initialize_native_tracer(self, trace_context: TraceContext) -> None:
+        if self.deactivated:
+            return
+        native_tracer = _get_native_tracer()
+        trace_context.tracers["native"] = native_tracer(
+            trace_name=trace_context.run_name,
+            trace_type="chain",
+            project_name=trace_context.project_name,
+            trace_id=trace_context.run_id,
+            user_id=trace_context.user_id,
+            session_id=trace_context.session_id,
+        )
+
     async def start_tracers(
         self,
         run_id: UUID,
@@ -247,6 +266,7 @@ class TracingService(Service):
             self._initialize_arize_phoenix_tracer(trace_context)
             self._initialize_opik_tracer(trace_context)
             self._initialize_traceloop_tracer(trace_context)
+            self._initialize_native_tracer(trace_context)
         except Exception as e:  # noqa: BLE001
             await logger.adebug(f"Error initializing tracers: {e}")
 
@@ -282,6 +302,7 @@ class TracingService(Service):
 
         - stop worker for current trace_context
         - call end for all the tracers
+        - wait for native tracer to flush to database
         """
         if self.deactivated:
             return
@@ -290,6 +311,11 @@ class TracingService(Service):
             return
         await self._stop(trace_context)
         self._end_all_tracers(trace_context, outputs, error)
+
+        # Wait for native tracer to flush to database
+        native_tracer = trace_context.tracers.get("native")
+        if native_tracer and hasattr(native_tracer, "wait_for_flush"):
+            await native_tracer.wait_for_flush()
 
     @staticmethod
     def _cleanup_inputs(inputs: dict[str, Any]):
