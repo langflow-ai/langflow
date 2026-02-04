@@ -409,7 +409,7 @@ class TestLoopComponentSubgraphExecution:
             patch.object(loop, "_get_loop_body_start_vertex", return_value="vertex1"),
             patch.object(loop.graph, "create_subgraph", mock_create_subgraph),
         ):
-            result = await loop.execute_loop_body(data_list, event_manager=mock_event_manager)
+            await loop.execute_loop_body(data_list, event_manager=mock_event_manager)
 
             # Should have processed all items (one call per item)
             assert len(event_manager_received) == 2

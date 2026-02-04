@@ -157,16 +157,21 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
         targetHandleObject.name &&
         targetNode.type === "genericNode"
       ) {
-        const dataType = targetNode.data.type;
-        const output = targetNode.data.node!.outputs?.find(
+        // Target is an output acting as loop input (allows_loop=true)
+        const targetOutput = targetNode.data.node!.outputs?.find(
           (output) => output.name === targetHandleObject.name,
         );
-        const baseTypes = output?.types ?? [];
-        // Include loop_types for loop inputs (allows_loop=true)
+        const dataType = targetNode.data.type;
+        // Match exactly how NodeOutputParameter builds the handle:
+        // - Regular outputs: [selectedType]
+        // - Loop outputs: [selectedType, ...loop_types]
+        const selectedType = targetOutput?.selected ?? targetOutput?.types[0];
         const outputTypes =
-          output?.allows_loop && output?.loop_types
-            ? [output.selected ?? baseTypes[0], ...output.loop_types]
-            : baseTypes;
+          targetOutput?.allows_loop && targetOutput?.loop_types
+            ? [selectedType, ...targetOutput.loop_types]
+            : selectedType
+              ? [selectedType]
+              : [];
 
         id = {
           dataType: dataType ?? "",
@@ -185,16 +190,10 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
           id.proxy = targetNode.data.node!.template[field]?.proxy;
         }
       }
-      // Check if target is an loop input (allows_loop=true)
-      const targetOutput = targetNode.data.node!.outputs?.find(
-        (output) => output.name === targetHandleObject.name,
-      );
-      const isLoopInput = targetOutput?.allows_loop === true;
 
       if (
-        (scapedJSONStringfy(id) !== targetHandle ||
-          (targetNode.data.node?.tool_mode && isToolMode)) &&
-        !isLoopInput
+        scapedJSONStringfy(id) !== targetHandle ||
+        (targetNode.data.node?.tool_mode && isToolMode)
       ) {
         newEdges = newEdges.filter((e) => e.id !== edge.id);
         brokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
@@ -205,22 +204,43 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
       const name = parsedSourceHandle.name;
 
       if (sourceNode.type == "genericNode") {
-        const output =
-          sourceNode.data.node!.outputs?.find(
-            (output) => output.name === sourceNode.data.selected_output,
-          ) ??
-          sourceNode.data.node!.outputs?.find(
-            (output) =>
-              (output.selected ||
-                (sourceNode.data.node!.outputs?.filter(
-                  (output) => !output.group_outputs,
-                )?.length ?? 0) <= 1) &&
-              output.name === name,
-          );
+        // Check if any output has group_outputs=true (means all outputs are shown independently)
+        const hasGroupOutputs = sourceNode.data.node!.outputs?.some(
+          (output) => output.group_outputs,
+        );
+
+        // For group_outputs components, each output has its own independent edge.
+        // We must find the output by the edge's stored name, not by selected_output.
+        // Otherwise, if selected_output points to a different output than the edge,
+        // we'd reconstruct the wrong handle and incorrectly remove the edge.
+        //
+        // For regular components (single output or dropdown selection), use selected_output
+        // or fallback to finding by name.
+        const output = hasGroupOutputs
+          ? sourceNode.data.node!.outputs?.find(
+              (output) => output.name === name,
+            )
+          : (sourceNode.data.node!.outputs?.find(
+              (output) => output.name === sourceNode.data.selected_output,
+            ) ??
+            sourceNode.data.node!.outputs?.find(
+              (output) =>
+                (output.selected ||
+                  (sourceNode.data.node!.outputs?.filter(
+                    (output) => !output.group_outputs,
+                  )?.length ?? 0) <= 1) &&
+                output.name === name,
+            ));
 
         if (output) {
+          // Match exactly how NodeOutputParameter builds the handle:
+          // - Regular outputs: [selectedType]
+          // - Loop outputs: [selectedType, ...loop_types]
+          const selectedType = output.selected ?? output.types[0];
           const outputTypes =
-            output!.types.length === 1 ? output!.types : [output!.selected!];
+            output.allows_loop && output.loop_types
+              ? [selectedType, ...output.loop_types]
+              : [selectedType];
 
           const id: sourceHandleType = {
             id: sourceNode.data.id,
@@ -229,9 +249,7 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
             dataType: sourceNode.data.type,
           };
 
-          // Skip edge cleanup for outputs with allows_loop=true
-          const hasAllowsLoop = output?.allows_loop === true;
-          if (scapedJSONStringfy(id) !== sourceHandle && !hasAllowsLoop) {
+          if (scapedJSONStringfy(id) !== sourceHandle) {
             newEdges = newEdges.filter((e) => e.id !== edge.id);
             brokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
           }
@@ -305,6 +323,118 @@ export function filterHiddenFieldsEdges(
     }
   }
   return newEdges;
+}
+
+export function detectBrokenEdgesEdges(nodes: AllNodeType[], edges: Edge[]) {
+  let newEdges = cloneDeep(edges);
+  const BrokenEdges: {
+    source: {
+      nodeDisplayName: string;
+      outputDisplayName?: string;
+    };
+    target: {
+      displayName: string;
+      field: string;
+    };
+  }[] = [];
+  edges.forEach((edge) => {
+    // check if the source and target node still exists
+    const sourceNode = nodes.find((node) => node.id === edge.source);
+    const targetNode = nodes.find((node) => node.id === edge.target);
+    if (!sourceNode || !targetNode) {
+      newEdges = newEdges.filter((edg) => edg.id !== edge.id);
+      return;
+    }
+    // check if the source and target handle still exists
+    const sourceHandle = edge.sourceHandle; //right
+    const targetHandle = edge.targetHandle; //left
+    if (targetHandle) {
+      const targetHandleObject: targetHandleType = scapeJSONParse(targetHandle);
+      const field = targetHandleObject.fieldName;
+      let id: sourceHandleType | targetHandleType;
+
+      const templateFieldType = targetNode.data.node!.template[field]?.type;
+      const inputTypes = targetNode.data.node!.template[field]?.input_types;
+      const hasProxy = targetNode.data.node!.template[field]?.proxy;
+
+      if (
+        !field &&
+        targetHandleObject.name &&
+        targetNode.type === "genericNode"
+      ) {
+        // Target is an output acting as loop input (allows_loop=true)
+        const targetOutput = targetNode.data.node!.outputs?.find(
+          (output) => output.name === targetHandleObject.name,
+        );
+        const dataType = targetNode.data.type;
+        // Match exactly how NodeOutputParameter builds the handle:
+        // - Regular outputs: [selectedType]
+        // - Loop outputs: [selectedType, ...loop_types]
+        const selectedType = targetOutput?.selected ?? targetOutput?.types[0];
+        const outputTypes =
+          targetOutput?.allows_loop && targetOutput?.loop_types
+            ? [selectedType, ...targetOutput.loop_types]
+            : selectedType
+              ? [selectedType]
+              : [];
+
+        id = {
+          dataType: dataType ?? "",
+          name: targetHandleObject.name,
+          id: targetNode.data.id,
+          output_types: outputTypes,
+        };
+      } else {
+        id = {
+          type: templateFieldType,
+          fieldName: field,
+          id: targetNode.data.id,
+          inputTypes: inputTypes,
+        };
+        if (hasProxy) {
+          id.proxy = targetNode.data.node!.template[field]?.proxy;
+        }
+      }
+      if (scapedJSONStringfy(id) !== targetHandle) {
+        newEdges = newEdges.filter((e) => e.id !== edge.id);
+        BrokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
+      }
+    }
+    if (sourceHandle) {
+      const parsedSourceHandle = scapeJSONParse(sourceHandle);
+      const name = parsedSourceHandle.name;
+      if (sourceNode.type == "genericNode") {
+        const output = sourceNode.data.node!.outputs?.find(
+          (output) => output.name === name,
+        );
+        if (output) {
+          // Match exactly how NodeOutputParameter builds the handle:
+          // - Regular outputs: [selectedType]
+          // - Loop outputs: [selectedType, ...loop_types]
+          const selectedType = output.selected ?? output.types[0];
+          const outputTypes =
+            output.allows_loop && output.loop_types
+              ? [selectedType, ...output.loop_types]
+              : [selectedType];
+
+          const id: sourceHandleType = {
+            id: sourceNode.data.id,
+            name: name,
+            output_types: outputTypes,
+            dataType: sourceNode.data.type,
+          };
+          if (scapedJSONStringfy(id) !== sourceHandle) {
+            newEdges = newEdges.filter((e) => e.id !== edge.id);
+            BrokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
+          }
+        } else {
+          newEdges = newEdges.filter((e) => e.id !== edge.id);
+          BrokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
+        }
+      }
+    }
+  });
+  return BrokenEdges;
 }
 
 export function unselectAllNodesEdges(nodes: Node[], edges: Edge[]) {
