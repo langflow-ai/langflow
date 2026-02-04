@@ -1,8 +1,8 @@
-import { useState } from 'react';
-import ForwardedIconComponent from '@/components/common/genericIconComponent';
-import { Button } from '@/components/ui/button';
-import KnowledgeBaseUploadModal from '@/modals/knowledgeBaseUploadModal';
-import useAlertStore from '@/stores/alertStore';
+import { useState } from "react";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { Button } from "@/components/ui/button";
+import KnowledgeBaseUploadModal from "@/modals/knowledgeBaseUploadModal";
+import useAlertStore from "@/stores/alertStore";
 
 const KnowledgeBaseEmptyState = ({
   handleCreateKnowledge,
@@ -10,7 +10,7 @@ const KnowledgeBaseEmptyState = ({
   handleCreateKnowledge: () => void;
 }) => {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const setSuccessData = useAlertStore(state => state.setSuccessData);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
   return (
     <div className="flex h-full w-full flex-col items-center justify-center gap-8 pb-8">
       <div className="flex flex-col items-center gap-2">
@@ -34,8 +34,8 @@ const KnowledgeBaseEmptyState = ({
         open={isUploadModalOpen}
         setOpen={setIsUploadModalOpen}
         onOpenExampleFlow={handleCreateKnowledge}
-        onSubmit={data => {
-          console.log('Creating knowledge base:', data);
+        onSubmit={(data) => {
+          console.log("Creating knowledge base:", data);
           setSuccessData({
             title: `Knowledge base "${data.sourceName}" created successfully!`,
           });
