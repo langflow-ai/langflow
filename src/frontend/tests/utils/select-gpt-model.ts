@@ -12,6 +12,14 @@ export const selectGptModel = async (page: Page) => {
 
   for (let i = 0; i < gptModelDropdownCount; i++) {
     const node = nodes.nth(i);
+    try {
+      await expect(node.getByTestId("model_model").last()).toBeVisible({
+        timeout: 10000,
+      });
+    } catch (error) {
+      console.log("Node model not visible, proceeding...", error);
+      node.click();
+    }
 
     const model = (await node.getByTestId("model_model").last().isVisible())
       ? node.getByTestId("model_model").last()
