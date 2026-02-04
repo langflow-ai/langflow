@@ -28,6 +28,7 @@ export function AppInitPage() {
   const setIsAuthenticated = useAuthStore((state) => state.setIsAuthenticated);
   const setIsAdmin = useAuthStore((state) => state.setIsAdmin);
   const autoLogin = useAuthStore((state) => state.autoLogin);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   const { isFetched: isLoaded } = useCustomPrimaryLoading();
 
@@ -37,11 +38,18 @@ export function AppInitPage() {
   });
 
   const { isFetched } = useGetAutoLogin({ enabled: isLoaded });
+
+  // Only fetch authenticated endpoints when user is authenticated
+  // (either via auto-login or manual login)
+  const isAuthReady = autoLogin === true || isAuthenticated;
+
   useGetVersionQuery({ enabled: isFetched });
-  const { isFetched: isConfigFetched } = useGetConfig({ enabled: isFetched });
-  useGetGlobalVariables({ enabled: isFetched });
-  useGetTagsQuery({ enabled: isFetched });
-  useGetFoldersQuery({ enabled: isFetched });
+  const { isFetched: isConfigFetched } = useGetConfig({
+    enabled: isFetched && isAuthReady,
+  });
+  useGetGlobalVariables({ enabled: isFetched && isAuthReady });
+  useGetTagsQuery({ enabled: isFetched && isAuthReady });
+  useGetFoldersQuery({ enabled: isFetched && isAuthReady });
   const { isFetched: isExamplesFetched, refetch: refetchExamples } =
     useGetBasicExamplesQuery();
 
@@ -71,17 +79,17 @@ export function AppInitPage() {
     }
   }, [isFetched, isConfigFetched]);
 
-  const isSessionReady = useMemo(() => {
-    if (autoLogin === true) {
-      return true;
-    }
-    if (autoLogin === false) {
-      return isSessionFetched;
-    }
-    return false;
-  }, [autoLogin, isSessionFetched]);
+  const isSessionReady = useMemo(
+    () => isAuthenticated || autoLogin || isSessionFetched,
+    [autoLogin, isSessionFetched, isAuthenticated],
+  );
 
-  const isReady = isFetched && isExamplesFetched && isSessionReady;
+  // Auto-login is "complete" if:
+  // - The query actually ran (isFetched), OR
+  // - We're already authenticated (so we skipped auto-login intentionally)
+  const isAutoLoginComplete = isFetched || isAuthenticated;
+
+  const isReady = isAutoLoginComplete && isExamplesFetched && isSessionReady;
 
   return (
     <>
