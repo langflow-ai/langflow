@@ -47,10 +47,16 @@ export default function ShortcutsPage() {
     (state) => state.updateUniqueShortcut,
   );
 
-  const inspectionPanelVisible = useFlowStore((state) => state.inspectionPanelVisible);
+  const inspectionPanelVisible = useFlowStore(
+    (state) => state.inspectionPanelVisible,
+  );
 
   function handleRestore() {
-    const filteredShortcuts = inspectionPanelVisible ? defaultShortcuts.filter((shortcut) => shortcut.name !== "Advanced Settings") : defaultShortcuts;
+    const filteredShortcuts = inspectionPanelVisible
+      ? defaultShortcuts.filter(
+          (shortcut) => shortcut.name !== "Advanced Settings",
+        )
+      : defaultShortcuts;
     setShortcuts(filteredShortcuts);
     filteredShortcuts.forEach(({ name, shortcut }) => {
       const fixedName = toCamelCase(name);

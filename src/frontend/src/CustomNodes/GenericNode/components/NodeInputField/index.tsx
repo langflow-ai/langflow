@@ -9,9 +9,7 @@ import {
   CustomParameterLabel,
   getCustomParameterTitle,
 } from "@/customization/components/custom-parameter";
-import {
-  LANGFLOW_AGENTIC_EXPERIENCE,
-} from "@/customization/feature-flags";
+import { LANGFLOW_AGENTIC_EXPERIENCE } from "@/customization/feature-flags";
 import { useIsAutoLogin } from "@/hooks/use-is-auto-login";
 import useAuthStore from "@/stores/authStore";
 import { cn } from "@/utils/utils";
@@ -113,8 +111,9 @@ export default function NodeInputField({
       colors={colors}
       setFilterEdge={setFilterEdge}
       showNode={showNode}
-      testIdComplement={`${data?.type?.toLowerCase()}-${showNode ? "shownode" : "noshownode"
-        }`}
+      testIdComplement={`${data?.type?.toLowerCase()}-${
+        showNode ? "shownode" : "noshownode"
+      }`}
       nodeId={data.id}
       colorName={colorName}
     />

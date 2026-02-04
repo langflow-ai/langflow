@@ -305,8 +305,9 @@ function NodeOutputField({
           colors={colors}
           setFilterEdge={setFilterEdge}
           showNode={showNode}
-          testIdComplement={`${data?.type?.toLowerCase()}-${showNode ? "shownode" : "noshownode"
-            }`}
+          testIdComplement={`${data?.type?.toLowerCase()}-${
+            showNode ? "shownode" : "noshownode"
+          }`}
           colorName={loopInputColorName}
         />
       );
@@ -336,8 +337,9 @@ function NodeOutputField({
         colors={colors}
         setFilterEdge={setFilterEdge}
         showNode={showNode}
-        testIdComplement={`${data?.type?.toLowerCase()}-${showNode ? "shownode" : "noshownode"
-          }`}
+        testIdComplement={`${data?.type?.toLowerCase()}-${
+          showNode ? "shownode" : "noshownode"
+        }`}
         colorName={
           data.node?.outputs?.[index].allows_loop
             ? loopInputColorName
@@ -441,7 +443,7 @@ function NodeOutputField({
                   errorOutput={errorOutput ?? false}
                   isToolMode={isToolMode}
                   title={title}
-                  onClick={() => { }}
+                  onClick={() => {}}
                   id={data?.type}
                 />
               </OutputModal>
