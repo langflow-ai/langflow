@@ -101,9 +101,7 @@ export default function InspectionPanelHeader({
     >
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <span className="font-semibold truncate">
-            {nameElement}
-          </span>
+          <span className="font-semibold truncate">{nameElement}</span>
           <ShadTooltip content="Click to copy full ID">
             <Badge
               variant="secondaryStatic"
@@ -116,7 +114,6 @@ export default function InspectionPanelHeader({
           </ShadTooltip>
         </div>
         <div className="flex items-center gap-1">
-
           {hasDocs && (
             <ToolbarButton
               icon="FileText"
@@ -186,8 +183,8 @@ export default function InspectionPanelHeader({
               className="h-4 w-4"
             />
           </Button>
-        </ShadTooltip></div>
-
+        </ShadTooltip>
+      </div>
     </div>
   );
 }

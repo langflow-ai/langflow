@@ -411,7 +411,7 @@ function GenericNode({
             openDropdownOnRightClick={isRightClicked}
           />
         </div>
-        {!inspectionPanelVisible &&
+        {!inspectionPanelVisible && (
           <div className="-z-10">
             <Button
               unstyled
@@ -446,7 +446,8 @@ function GenericNode({
                 )}
               />
             </Button>
-          </div>}
+          </div>
+        )}
       </>
     ) : (
       <></>
@@ -607,20 +608,22 @@ function GenericNode({
               getValidationStatus={getValidationStatus}
             />
           </div>
-          {showNode && (hasDescription || editNameDescription) && !inspectionPanelVisible && (
-            <div className="px-4 pb-3">
-              <MemoizedNodeDescription
-                description={data.node?.description}
-                charLimit={1000}
-                mdClassName={"dark:prose-invert"}
-                nodeId={data.id}
-                selected={selected}
-                editNameDescription={editNameDescription}
-                setEditNameDescription={set}
-                setHasChangedNodeDescription={setHasChangedNodeDescription}
-              />
-            </div>
-          )}
+          {showNode &&
+            (hasDescription || editNameDescription) &&
+            !inspectionPanelVisible && (
+              <div className="px-4 pb-3">
+                <MemoizedNodeDescription
+                  description={data.node?.description}
+                  charLimit={1000}
+                  mdClassName={"dark:prose-invert"}
+                  nodeId={data.id}
+                  selected={selected}
+                  editNameDescription={editNameDescription}
+                  setEditNameDescription={set}
+                  setHasChangedNodeDescription={setHasChangedNodeDescription}
+                />
+              </div>
+            )}
         </div>
         {showNode && (
           <div
