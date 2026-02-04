@@ -23,7 +23,7 @@ import {
 } from "../../../../ui/command";
 import {
   Popover,
-  PopoverContent,
+  PopoverContentWithoutPortal,
   PopoverTrigger,
 } from "../../../../ui/popover";
 import type { BaseInputProps } from "../../types";
@@ -521,7 +521,7 @@ export default function ModelInputComponent({
   );
 
   const renderPopoverContent = () => (
-    <PopoverContent
+    <PopoverContentWithoutPortal
       side="bottom"
       avoidCollisions={true}
       className="noflow nowheel nopan nodelete nodrag p-0"
@@ -533,7 +533,7 @@ export default function ModelInputComponent({
           : renderNoProviders()}
         {renderManageProvidersButton()}
       </Command>
-    </PopoverContent>
+    </PopoverContentWithoutPortal>
   );
 
   if (!showParameter) {
