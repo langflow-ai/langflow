@@ -21,7 +21,7 @@ from lfx.components.policies.guarded_tool import GuardedTool
 from lfx.components.policies.llm_wrapper import LangchainModelWrapper
 from lfx.components.policies.module_utils import unload_module
 from lfx.field_typing import LanguageModel, Tool
-from lfx.io import BoolInput, HandleInput, MultilineInput, ModelInput, Output, SecretStrInput, StrInput, TabInput
+from lfx.io import BoolInput, HandleInput, ModelInput, MultilineInput, Output, SecretStrInput, StrInput, TabInput
 from lfx.log.logger import logger
 
 if TYPE_CHECKING:
@@ -68,7 +68,7 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
                 display_name="ToolGuard Project",
                 info="Folder name of the generated code",
                 value="my_project",
-                #required=True,
+                # required=True,
             ),
             HandleInput(
                 name="in_tools",
@@ -172,7 +172,6 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         return gen_result
 
     async def generate(self):
-
         def in_recommended_models(model_name):
             return any(recommended in model_name for recommended in BUILDTIME_MODELS)
 
@@ -182,7 +181,10 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             (not any(self.policies), "policies cannot be empty!"),
             (not self.in_tools, "in_tools cannot be empty!"),
             (not self.model or not self.api_key, "model or api_key cannot be empty!"),
-            (not in_recommended_models(self.model[0]['name']), f"model {self.model[0]['name']} is not in recommended models: {BUILDTIME_MODELS}"),
+            (
+                not in_recommended_models(self.model[0]["name"]),
+                f"model {self.model[0]['name']} is not in recommended models: {BUILDTIME_MODELS}",
+            ),
         ]
 
         for condition, error_msg in validations:
