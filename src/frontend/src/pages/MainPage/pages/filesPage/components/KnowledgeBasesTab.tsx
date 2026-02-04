@@ -5,12 +5,6 @@ import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import Loading from "@/components/ui/loading";
 import { useDeleteKnowledgeBase } from "@/controllers/API/queries/knowledge-bases/use-delete-knowledge-base";
@@ -22,6 +16,7 @@ import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
 import useAddFlow from "@/hooks/flows/use-add-flow";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
+import KnowledgeBaseUploadModal from "@/modals/knowledgeBaseUploadModal";
 import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useFolderStore } from "@/stores/foldersStore";
@@ -68,6 +63,7 @@ const KnowledgeBasesTab = ({
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [knowledgeBaseToDelete, setKnowledgeBaseToDelete] =
     useState<KnowledgeBaseInfo | null>(null);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 
   const { data: knowledgeBases, isLoading, error } = useGetKnowledgeBases();
 
@@ -179,7 +175,7 @@ const KnowledgeBasesTab = ({
   }
 
   return (
-    <div className="flex h-full flex-col pb-4">
+    <div className="flex h-full flex-col">
       <div className="flex justify-between">
         <div className="flex w-full xl:w-5/12">
           <Input
@@ -192,25 +188,16 @@ const KnowledgeBasesTab = ({
             onChange={(event) => setQuickFilterText(event.target.value)}
           />
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button className="flex items-center gap-2 font-semibold">
-              Add Knowledge
-              <ForwardedIconComponent name="ChevronDown" className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={handleCreateKnowledge}>
-              File
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleCreateKnowledge}>
-              Folder
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <Button
+          className="flex items-center gap-2 font-semibold"
+          onClick={() => setIsUploadModalOpen(true)}
+        >
+          <ForwardedIconComponent name="Plus" className="h-4 w-4" />
+          Add Knowledge
+        </Button>
       </div>
 
-      <div className="flex h-full flex-col pt-4">
+      <div className="flex h-full flex-col py-4">
         <div className="relative h-full">
           <TableComponent
             rowHeight={45}
@@ -256,6 +243,18 @@ const KnowledgeBasesTab = ({
       >
         <></>
       </DeleteConfirmationModal>
+
+      <KnowledgeBaseUploadModal
+        open={isUploadModalOpen}
+        setOpen={setIsUploadModalOpen}
+        onSubmit={(data) => {
+          console.log("Creating knowledge base:", data);
+          setSuccessData({
+            title: `Knowledge base "${data.sourceName}" created successfully!`,
+          });
+        }}
+        onOpenExampleFlow={handleCreateKnowledge}
+      />
     </div>
   );
 };
