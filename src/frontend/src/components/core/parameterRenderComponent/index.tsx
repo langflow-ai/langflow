@@ -44,8 +44,8 @@ export function ParameterRenderComponent({
   nodeInformationMetadata,
 }: {
   handleOnNewValue:
-  | handleOnNewValueType
-  | ((value: string, key: string) => void);
+    | handleOnNewValueType
+    | ((value: string, key: string) => void);
   name: string;
   nodeId: string;
   templateData: Partial<InputFieldType>;

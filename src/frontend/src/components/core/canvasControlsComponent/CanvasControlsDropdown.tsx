@@ -34,7 +34,9 @@ const CanvasControlsDropdown = ({
     shallow,
   );
 
-  const inspectionPanelVisible = useFlowStore((state) => state.inspectionPanelVisible);
+  const inspectionPanelVisible = useFlowStore(
+    (state) => state.inspectionPanelVisible,
+  );
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {

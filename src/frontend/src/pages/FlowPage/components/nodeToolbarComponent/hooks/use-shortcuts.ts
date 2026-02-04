@@ -47,7 +47,9 @@ export default function useShortcuts({
   const freezeAll = useShortcutsStore((state) => state.freezePath);
   const toolMode = useShortcutsStore((state) => state.toolMode);
 
-  const inspectionPanelVisible = useFlowStore((state) => state.inspectionPanelVisible);
+  const inspectionPanelVisible = useFlowStore(
+    (state) => state.inspectionPanelVisible,
+  );
 
   function handleFreezeAll(e: KeyboardEvent) {
     if (isWrappedWithClass(e, "noflow") || !FreezeAllVertices) return;
@@ -126,7 +128,7 @@ export default function useShortcuts({
   useHotkeys(code, handleCodeWShortcut, { preventDefault: true });
   useHotkeys(
     advancedSettings,
-    !inspectionPanelVisible ? handleAdvancedWShortcut : () => { },
+    !inspectionPanelVisible ? handleAdvancedWShortcut : () => {},
     {
       preventDefault: true,
     },

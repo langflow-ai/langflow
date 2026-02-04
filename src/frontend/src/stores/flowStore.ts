@@ -457,9 +457,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     const insidePosition = position.paneX
       ? { x: position.paneX + position.x, y: position.paneY! + position.y }
       : get().reactFlowInstance!.screenToFlowPosition({
-        x: position.x,
-        y: position.y,
-      });
+          x: position.x,
+          y: position.y,
+        });
 
     let internalPostionDictionary = get().positionDictionary;
     if (Object.keys(internalPostionDictionary).length === 0) {
@@ -742,7 +742,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       throw new Error("Invalid components");
     }
 
-    function validateSubgraph() { }
+    function validateSubgraph() {}
     function handleBuildUpdate(
       vertexBuildData: VertexBuildTypeAPI,
       status: BuildStatus,
@@ -785,7 +785,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         // each layer is a list of vertexlayerelementtypes
         const lastLayer =
           get().verticesBuild!.verticesLayers[
-          get().verticesBuild!.verticesLayers.length - 1
+            get().verticesBuild!.verticesLayers.length - 1
           ];
 
         nextVertices = nextVertices.filter(
@@ -852,7 +852,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       flowId: currentFlow!.id,
       startNodeId,
       stopNodeId,
-      onGetOrderSuccess: () => { },
+      onGetOrderSuccess: () => {},
       onBuildComplete: (allNodesValid) => {
         if (!silent) {
           if (allNodesValid) {

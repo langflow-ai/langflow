@@ -52,7 +52,7 @@ const buttonVariants = cva(
 
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-  VariantProps<typeof buttonVariants> {
+    VariantProps<typeof buttonVariants> {
   asChild?: boolean;
   loading?: boolean;
   unstyled?: boolean;
@@ -92,16 +92,17 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     if (typeof children === "string") {
       newChildren = ignoreTitleCase ? children : toTitleCase(children);
     }
-    const shouldScaleButton = props["aria-haspopup"] !== "dialog" || shouldScale;
+    const shouldScaleButton =
+      props["aria-haspopup"] !== "dialog" || shouldScale;
     return (
       <>
         <Comp
           className={
             !unstyled
               ? cn(
-                buttonVariants({ variant, size, className }),
-                shouldScaleButton && "active:scale-[0.97]",
-              )
+                  buttonVariants({ variant, size, className }),
+                  shouldScaleButton && "active:scale-[0.97]",
+                )
               : cn(className)
           }
           disabled={loading || disabled}

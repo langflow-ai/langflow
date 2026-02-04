@@ -36,7 +36,6 @@ export const HelpDropdownView = ({
   openLink,
   urls,
 }: HelpDropdownViewProps) => {
-
   return (
     <DropdownMenu open={isOpen} onOpenChange={onOpenChange}>
       <DropdownMenuTrigger asChild>
