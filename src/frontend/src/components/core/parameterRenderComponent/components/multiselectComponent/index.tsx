@@ -28,13 +28,14 @@ export default function MultiselectComponent({
   editNode = false,
   id = "",
   showParameter = true,
+  inspectionPanel,
 }: InputProps<string[], MultiselectComponentType>): JSX.Element | null {
   const [open, setOpen] = useState(false);
   const treatedValue = typeof value === "string" ? [value] : value;
 
   const refButton = useRef<HTMLButtonElement>(null);
 
-  const PopoverContentDropdown = editNode
+  const PopoverContentDropdown = editNode || inspectionPanel
     ? PopoverContent
     : PopoverContentWithoutPortal;
 
@@ -123,7 +124,7 @@ export default function MultiselectComponent({
       >
         <span className="truncate" data-testid={`value-dropdown-${id}`}>
           {treatedValue.length > 0 &&
-          options.find((option) => treatedValue.includes(option))
+            options.find((option) => treatedValue.includes(option))
             ? treatedValue.join(", ")
             : "Choose an option..."}
         </span>
@@ -213,7 +214,7 @@ export default function MultiselectComponent({
       <PopoverContentDropdown
         onOpenAutoFocus={(event) => event.preventDefault()}
         side="bottom"
-        avoidCollisions={false}
+        avoidCollisions={inspectionPanel || editNode}
         className="noflow nowheel nopan nodelete nodrag p-0"
         style={{ minWidth: refButton?.current?.clientWidth ?? "200px" }}
       >

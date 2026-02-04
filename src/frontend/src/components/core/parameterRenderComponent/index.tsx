@@ -36,6 +36,7 @@ export function ParameterRenderComponent({
   templateValue,
   editNode,
   showParameter,
+  inspectionPanel = false,
   handleNodeClass,
   nodeClass,
   disabled,
@@ -44,14 +45,15 @@ export function ParameterRenderComponent({
   nodeInformationMetadata,
 }: {
   handleOnNewValue:
-    | handleOnNewValueType
-    | ((value: string, key: string) => void);
+  | handleOnNewValueType
+  | ((value: string, key: string) => void);
   name: string;
   nodeId: string;
   templateData: Partial<InputFieldType>;
   templateValue: any;
   editNode: boolean;
   showParameter: boolean;
+  inspectionPanel: boolean;
   handleNodeClass: (value: any, code?: string, type?: string) => void;
   nodeClass: APIClassType;
   disabled: boolean;
@@ -84,6 +86,7 @@ export function ParameterRenderComponent({
       nodeInformationMetadata,
       hasRefreshButton: templateData.refresh_button,
       showParameter,
+      inspectionPanel,
     };
 
     if (TEXT_FIELD_TYPES.includes(templateData.type ?? "")) {
