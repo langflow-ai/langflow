@@ -328,8 +328,6 @@ async def create_knowledge_base(
     """Create a new knowledge base with embedding configuration."""
     from datetime import datetime, timezone
 
-    from langflow.services.auth.utils import encrypt_api_key
-
     try:
         kb_root_path = get_kb_root_path()
         kb_user = current_user.username
@@ -494,8 +492,8 @@ async def ingest_files_to_knowledge_base(
 
 def _build_embeddings(provider: str, model: str, current_user):
     """Build embedding model based on provider configuration."""
-    from langflow.services.deps import get_variable_service
     from langflow.services.database.utils import session_scope
+    from langflow.services.deps import get_variable_service
 
     # Get API key from global variables based on provider
     provider_key_mapping = {
@@ -533,20 +531,19 @@ def _build_embeddings(provider: str, model: str, current_user):
             raise ValueError("OpenAI API key not configured. Please set up the provider in settings.")
         return OpenAIEmbeddings(model=model, api_key=api_key)
 
-    elif provider == "HuggingFace":
+    if provider == "HuggingFace":
         from langchain_huggingface import HuggingFaceEmbeddings
 
         return HuggingFaceEmbeddings(model_name=model)
 
-    elif provider == "Cohere":
+    if provider == "Cohere":
         from langchain_cohere import CohereEmbeddings
 
         if not api_key:
             raise ValueError("Cohere API key not configured. Please set up the provider in settings.")
         return CohereEmbeddings(model=model, cohere_api_key=api_key)
 
-    else:
-        raise ValueError(f"Unsupported embedding provider: {provider}")
+    raise ValueError(f"Unsupported embedding provider: {provider}")
 
 
 @router.get("", status_code=HTTPStatus.OK)
