@@ -1415,7 +1415,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.128.0"
+                    "version": "0.128.1"
                   },
                   {
                     "name": "lfx",
@@ -1697,7 +1697,7 @@
                   },
                   {
                     "name": "youtube_transcript_api",
-                    "version": "1.2.3"
+                    "version": "1.2.4"
                   },
                   {
                     "name": "lfx",
