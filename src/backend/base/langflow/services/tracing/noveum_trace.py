@@ -35,7 +35,7 @@ if TYPE_CHECKING:
 
 
 class NoveumTracer(BaseTracer):
-    """Tracer implementation for Noveum Trace SDK integration."""
+    """Tracer implementation for Noveum.ai Trace SDK integration."""
 
     flow_id: str
 
@@ -48,7 +48,7 @@ class NoveumTracer(BaseTracer):
         user_id: str | None = None,
         session_id: str | None = None,      
     ) -> None:
-        """Initialize the Noveum tracer.
+        """Initialize the Noveum.ai tracer.
 
         Args:
             trace_name: Name of the trace (flow name + flow id)
@@ -76,7 +76,7 @@ class NoveumTracer(BaseTracer):
         return self._ready
 
     def setup_noveum(self, config: dict) -> bool:
-        """Setup the Noveum Trace client and initialize the main trace.
+        """Setup the Noveum.ai Trace client and initialize the main trace.
 
         Args:
             config: Configuration dictionary with api_key, project, environment, endpoint
@@ -97,11 +97,8 @@ class NoveumTracer(BaseTracer):
                 endpoint=config.get("endpoint"),
             )
             
-            # Register the client so NoveumTraceCallbackHandler can find it via get_client()
             _register_client(self._client)
             
-            # Also set the module-level _client so get_client() and is_initialized() work
-            # This is needed because get_client() checks the module-level _client, not _global_client
             if hasattr(noveum_trace, "_client_lock"):
                 with noveum_trace._client_lock:
                     noveum_trace._client = self._client
@@ -136,7 +133,7 @@ class NoveumTracer(BaseTracer):
             # Create the callback handler and associate it with the trace
             self._callback_handler = NoveumTraceCallbackHandler()
 
-            logger.debug("Noveum Trace initialized successfully")
+            logger.debug("Noveum.ai Trace initialized successfully")
             logger.debug(f"Trace {self.trace.trace_id} set in context for callback handler")
             return True
 
@@ -147,7 +144,7 @@ class NoveumTracer(BaseTracer):
             return False
 
         except Exception as e:  # noqa: BLE001
-            logger.debug(f"Error setting up Noveum Trace: {e}")
+            logger.debug(f"Error setting up Noveum.ai Trace: {e}")
             return False
 
     @override

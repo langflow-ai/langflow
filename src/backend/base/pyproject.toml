@@ -323,6 +323,7 @@ langchain-mcp-adapters = ["langchain-mcp-adapters>=0.1.14,<0.2.0"]
 # Additional monitoring
 opik = ["opik>=1.6.3,<2.0.0"]
 traceloop = ["traceloop-sdk>=0.43.1,<1.0.0"]
+noveum = ["noveum-trace>=0.1.0"]
 
 # Document processing / OCR
 docling = [
@@ -450,6 +451,7 @@ complete = [
     # Additional monitoring
     "langflow-base[opik]",
     "langflow-base[traceloop]",
+    "langflow-base[noveum]",
     # Document processing / OCR
     "langflow-base[docling]",
     "langflow-base[easyocr]",
