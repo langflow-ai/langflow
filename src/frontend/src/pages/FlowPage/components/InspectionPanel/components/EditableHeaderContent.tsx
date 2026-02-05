@@ -163,22 +163,23 @@ export default function EditableHeaderContent({
       return "";
     }
     return (
-      <MemoizedMarkdown
-        className={cn(
-          "markdown prose !text-muted-foreground flex w-full flex-col text-xs leading-5 word-break-break-word [&_pre]:whitespace-break-spaces [&_pre]:!bg-code-description-background [&_pre_code]:!bg-code-description-background dark:prose-invert",
-        )}
-        components={{
-          a: ({ node, ...props }) => (
-            <a {...props} target="_blank" rel="noopener noreferrer">
-              {props.children}
-            </a>
-          ),
-        }}
-      >
-        {String(description)}
-      </MemoizedMarkdown>
+      <div className="mt-1">
+        <MemoizedMarkdown
+          className={cn(
+            "markdown prose !text-muted-foreground flex w-full flex-col text-xs leading-5 word-break-break-word [&_pre]:whitespace-break-spaces [&_pre]:!bg-code-description-background [&_pre_code]:!bg-code-description-background dark:prose-invert",
+          )}
+          components={{
+            a: ({ node, ...props }) => (
+              <a {...props} target="_blank" rel="noopener noreferrer">
+                {props.children}
+              </a>
+            ),
+          }}
+        >
+          {String(description)}
+        </MemoizedMarkdown></div>
     );
-  }, [data.node?.description]);
+  }, [data.node?.description, editMode]);
 
   return {
     containerRef,
@@ -203,12 +204,12 @@ export default function EditableHeaderContent({
         value={localDescription}
         onChange={handleDescriptionChange}
         onKeyDown={handleDescriptionKeyDown}
-        className="nowheel w-full text-muted-foreground !text-xs focus:border-primary focus:ring-0 px-2 py-0.5 min-h-[60px]"
+        className="nowheel w-full mt-1 text-muted-foreground !text-xs focus:border-primary focus:ring-0 px-2 py-0.5 min-h-[60px]"
         placeholder="Add a description..."
         data-testid="inspection-panel-description"
       />
     ) : (
-      <div>{renderedDescription}</div>
+      renderedDescription
     ),
   };
 }
