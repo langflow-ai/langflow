@@ -19,12 +19,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from langflow.agentic.api.schemas import AssistantRequest
 from langflow.agentic.services.assistant_service import (
-    LANGFLOW_ASSISTANT_FLOW,
-    MAX_VALIDATION_RETRIES,
     execute_flow_with_validation,
     execute_flow_with_validation_streaming,
 )
 from langflow.agentic.services.flow_executor import execute_flow_file
+from langflow.agentic.services.flow_types import (
+    LANGFLOW_ASSISTANT_FLOW,
+    MAX_VALIDATION_RETRIES,
+)
 from langflow.agentic.services.provider_service import (
     DEFAULT_MODELS,
     PREFERRED_PROVIDERS,
