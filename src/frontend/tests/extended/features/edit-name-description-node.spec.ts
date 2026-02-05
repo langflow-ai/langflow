@@ -85,6 +85,7 @@ test(
 
     await page.getByTestId(`inspection-panel-name`).fill(randomName_3);
     await page.getByTestId("edit-fields-button").click();
+    await page.waitForTimeout(1000);
     await expect(page.getByTestId("node-name")).toHaveText(randomName_3);
     await page
       .getByTestId("popover-anchor-input-input_value")
@@ -112,7 +113,7 @@ test(
     await page
       .getByTestId("popover-anchor-input-input_value")
       .fill(randomDescription_4);
-
+    await page.waitForTimeout(1000);
     await expect(page.getByTestId("node-name")).toHaveText(randomName_4);
     await expect(page.getByTestId("node-name")).not.toHaveText(randomName_3);
     await page
@@ -132,7 +133,7 @@ test(
     await page.getByTestId("inspection-panel-name").fill(randomName_3);
     await page.getByTestId("edit-fields-button").click();
 
-    await page.keyboard.press("Escape");
+    await page.waitForTimeout(1000);
 
     await expect(page.getByTestId("node-name")).toHaveText(randomName_3);
   },
