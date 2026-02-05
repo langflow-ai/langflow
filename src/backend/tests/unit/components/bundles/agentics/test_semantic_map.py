@@ -27,7 +27,7 @@ class TestSemanticMapComponent:
         assert "source" in input_names
         assert "generated_fields" in input_names
         assert "instructions" in input_names
-        assert "aggregate_rows" in input_names
+        assert "append_to_input_columns" in input_names
 
     def test_should_have_dataframe_output(self):
         """Test that component has DataFrame output."""
@@ -61,8 +61,8 @@ class TestSemanticMapComponent:
         assert "type" in field_names
         assert "multiple" in field_names
 
-    def test_should_have_aggregate_rows_as_boolean(self):
-        """Test that aggregate_rows input is a boolean."""
-        aggregate_input = next((i for i in SemanticMap.inputs if i.name == "aggregate_rows"), None)
-        assert aggregate_input is not None
-        assert aggregate_input.value is False
+    def test_should_have_append_to_input_columns_as_boolean(self):
+        """Test that append_to_input_columns input is a boolean."""
+        append_input = next((i for i in SemanticMap.inputs if i.name == "append_to_input_columns"), None)
+        assert append_input is not None
+        assert append_input.value is True
