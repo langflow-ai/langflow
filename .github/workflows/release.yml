@@ -136,11 +136,11 @@ jobs:
         id: version
         run: |
           version=$(python - <<'PY'
-import tomllib, pathlib
-data = tomllib.loads(pathlib.Path("src/backend/base/pyproject.toml").read_text())
-print(data["project"]["version"])
+  import tomllib, pathlib
+  data = tomllib.loads(pathlib.Path("src/backend/base/pyproject.toml").read_text())
+  print(data["project"]["version"])
 PY
-)
+          )
           echo "Base version from pyproject.toml: $version"
 
           if [ ${{inputs.pre_release}} == "true" ]; then
