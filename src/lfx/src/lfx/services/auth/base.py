@@ -154,7 +154,7 @@ class BaseAuthService(Service, abc.ABC):
 
     @abc.abstractmethod
     async def create_super_user(self, username: str, password: str, db: Any) -> Any:
-        """Create or get the superuser."""
+        """Create superuser."""
 
     @abc.abstractmethod
     async def create_user_longterm_token(self, db: Any) -> tuple[UUID, dict[str, Any]]:

@@ -134,9 +134,9 @@ class AuthService(BaseAuthService):
     ) -> Any:
         raise NotImplementedError("get_current_user_mcp not implemented")
 
-    async def get_current_active_user_mcp(self, current_user: Any) -> Any:
+    def get_or_create_super_user(self, current_user: Any) -> Any:
         """No user store; raise."""
-        raise NotImplementedError("get_current_active_user_mcp not implemented")
+        raise NotImplementedError("get_or_create_super_user not implemented")
 
     async def get_current_user_from_access_token(
         self,
