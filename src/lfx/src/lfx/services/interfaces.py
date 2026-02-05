@@ -3,10 +3,28 @@
 from __future__ import annotations
 
 from abc import abstractmethod
+from uuid import UUID
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
     import asyncio
+
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from lfx.services.settings.base import Settings
+
+
+class AuthUserProtocol(Protocol):
+    """Auhtenticated user object (id, username, is_active, is_superuser).
+
+    Implementations may use User or UserRead from the database layer; this protocol
+    describes the surface needed by consumers of the auth service.
+    """
+
+    id: UUID
+    username: str
+    is_active: bool
+    is_superuser: bool
 
 
 class AuthServiceProtocol(Protocol):
@@ -15,11 +33,11 @@ class AuthServiceProtocol(Protocol):
     @abstractmethod
     async def get_current_user(
         self,
-        token: Any,
+        token: str | None,
         query_param: str | None,
         header_param: str | None,
-        db: Any,
-    ) -> Any:
+        db: AsyncSession,
+    ) -> AuthUserProtocol:
         """Get the current authenticated user from token or API key."""
         ...
 
@@ -28,8 +46,8 @@ class AuthServiceProtocol(Protocol):
         self,
         query_param: str | None,
         header_param: str | None,
-        db: Any | None = None,
-    ) -> Any | None:
+        db: AsyncSession | None = None,
+    ) -> AuthUserProtocol | None:
         """Validate API key from query or header. Returns user or None."""
         ...
 
@@ -77,7 +95,7 @@ class SettingsServiceProtocol(Protocol):
 
     @property
     @abstractmethod
-    def settings(self) -> Any:
+    def settings(self) -> Settings:
         """Get settings object."""
         ...
 
