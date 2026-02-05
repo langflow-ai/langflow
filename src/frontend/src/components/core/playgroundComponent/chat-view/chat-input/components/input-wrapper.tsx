@@ -52,7 +52,9 @@ const InputWrapper = ({
 
   // Use public config for playground page (unauthenticated), otherwise use authenticated config
   const { data: authConfig } = useGetConfig({ enabled: !playgroundPage });
-  const { data: publicConfig } = useGetPublicConfig({ enabled: playgroundPage });
+  const { data: publicConfig } = useGetPublicConfig({
+    enabled: playgroundPage,
+  });
   const config = playgroundPage ? publicConfig : authConfig;
 
   const onClick = (e: React.MouseEvent<HTMLDivElement>) => {
