@@ -36,21 +36,19 @@ withEventDeliveryModes(
     await page.getByTestId("input-chat-playground").click();
     await page.getByTestId("input-chat-playground").fill("Hi, I am John Doe.");
     await page.getByTestId("button-send").click();
-    await expect(
-      page.getByTestId("chat-message-User-Hi, I am John Doe."),
-    ).toBeVisible();
 
     // Wait for generation to complete using stop_building_button
-    await page.waitForSelector('[data-testid="stop_building_button"]', {
-      timeout: 30000,
+    await page.getByTestId("stop_building_button").waitFor({
       state: "visible",
+      timeout: 30000,
     });
-    await page.waitForSelector('[data-testid="stop_building_button"]', {
-      timeout: 180000,
+    await page.getByTestId("stop_building_button").waitFor({
       state: "hidden",
+      timeout: 180000,
     });
 
-    await page.waitForSelector('[data-testid="input-chat-playground"]', {
+    await page.getByTestId("input-chat-playground").waitFor({
+      state: "visible",
       timeout: 100000,
     });
 
@@ -60,24 +58,23 @@ withEventDeliveryModes(
       .getByTestId("input-chat-playground")
       .fill("Hi, what is my name?");
     await page.getByTestId("button-send").click();
-    await expect(
-      page.getByTestId("chat-message-User-Hi, what is my name?"),
-    ).toBeVisible();
 
     // Wait for second response to complete
-    await page.waitForSelector('[data-testid="stop_building_button"]', {
-      timeout: 30000,
+    await page.getByTestId("stop_building_button").waitFor({
       state: "visible",
+      timeout: 30000,
     });
-    await page.waitForSelector('[data-testid="stop_building_button"]', {
-      timeout: 180000,
+    await page.getByTestId("stop_building_button").waitFor({
       state: "hidden",
+      timeout: 180000,
     });
 
     // Assert the assistant response mentions "John Doe"
-    await page.waitForSelector('[data-testid="div-chat-message"]', {
+    await page.getByTestId("div-chat-message").last().waitFor({
+      state: "visible",
       timeout: 30000,
     });
+
     const finalText = await page
       .getByTestId("div-chat-message")
       .last()

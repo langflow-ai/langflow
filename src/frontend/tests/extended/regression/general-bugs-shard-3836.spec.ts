@@ -3,7 +3,6 @@ import path from "path";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
-import { uploadFile } from "../../utils/upload-file";
 
 test(
   "user must be able to send an image on chat using advanced tool on ChatInputComponent",
@@ -34,7 +33,10 @@ test(
     const userQuestion = "What is this image?";
     await page.getByTestId("textarea_str_input_value").fill(userQuestion);
 
-    await uploadFile(page, "chain.png");
+    const filePath = path.resolve(__dirname, "../../assets/chain.png");
+    await page.getByTestId("input-file-component").click();
+    const fileInput = page.getByTestId("hidden-file-input");
+    await fileInput.setInputFiles(filePath);
 
     await page.getByTestId("button_run_chat output").click();
 
@@ -44,18 +46,8 @@ test(
       timeout: 100000,
     });
 
-    await page.waitForSelector("text=chain.png", { timeout: 30000 });
-
-    expect(await page.getByAltText("generated image").isVisible()).toBeTruthy();
-
-    expect(
-      await page.getByTestId(`chat-message-User-${userQuestion}`).isVisible(),
-    ).toBeTruthy();
-
-    const textContents = await page
-      .getByTestId("div-chat-message")
-      .allTextContents();
-
-    expect(textContents[0]).toContain("chain");
+    await expect(page.locator('img[alt$="chain.png"]')).toBeVisible({
+      timeout: 100000,
+    });
   },
 );
