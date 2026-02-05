@@ -138,6 +138,7 @@ module.exports = {
                 "Develop/integrations-langfuse",
                 "Develop/integrations-langsmith",
                 "Develop/integrations-langwatch",
+                "Develop/integrations-noveum",
                 "Develop/integrations-opik",
                 "Develop/integrations-instana-traceloop",
               ],
