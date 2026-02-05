@@ -28,34 +28,53 @@ withEventDeliveryModes(
     // Open Playground
     await page.getByTestId("playground-btn-flow-io").click();
 
-    // 1) First message: introduce the name
-    await page
-      .getByTestId("input-chat-playground")
-      .last()
-      .fill("Hi, I am John Doe.");
-    await page.getByTestId("button-send").last().click();
+    await page.waitForSelector('[data-testid="input-chat-playground"]', {
+      timeout: 100000,
+    });
 
-    // Wait for generation to complete
-    const stopButton = page.getByRole("button", { name: "Stop" });
-    await stopButton.waitFor({ state: "visible", timeout: 30000 });
-    if (await stopButton.isVisible()) {
-      await expect(stopButton).toBeHidden({ timeout: 120000 });
-    }
+    // 1) First message: introduce the name
+    await page.getByTestId("input-chat-playground").click();
+    await page.getByTestId("input-chat-playground").fill("Hi, I am John Doe.");
+    await page.getByTestId("button-send").click();
+
+    // Wait for generation to complete using stop_building_button
+    await page.getByTestId("stop_building_button").waitFor({
+      state: "visible",
+      timeout: 30000,
+    });
+    await page.getByTestId("stop_building_button").waitFor({
+      state: "hidden",
+      timeout: 180000,
+    });
+
+    await page.getByTestId("input-chat-playground").waitFor({
+      state: "visible",
+      timeout: 100000,
+    });
 
     // 2) Second message: ask for the name in the same session
+    await page.getByTestId("input-chat-playground").click();
     await page
       .getByTestId("input-chat-playground")
-      .last()
       .fill("Hi, what is my name?");
-    await page.getByTestId("button-send").last().click();
+    await page.getByTestId("button-send").click();
 
     // Wait for second response to complete
-    await stopButton.waitFor({ state: "visible", timeout: 30000 });
-    if (await stopButton.isVisible()) {
-      await expect(stopButton).toBeHidden({ timeout: 120000 });
-    }
+    await page.getByTestId("stop_building_button").waitFor({
+      state: "visible",
+      timeout: 30000,
+    });
+    await page.getByTestId("stop_building_button").waitFor({
+      state: "hidden",
+      timeout: 180000,
+    });
 
     // Assert the assistant response mentions "John Doe"
+    await page.getByTestId("div-chat-message").last().waitFor({
+      state: "visible",
+      timeout: 30000,
+    });
+
     const finalText = await page
       .getByTestId("div-chat-message")
       .last()

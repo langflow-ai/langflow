@@ -1,6 +1,13 @@
 import type { Edge, Node } from "@xyflow/react";
 import type { AxiosError } from "axios";
 import { flushSync } from "react-dom";
+import { handleMessageEvent } from "@/components/core/playgroundComponent/chat-view/utils/message-event-handler";
+import {
+  findLastBotMessage,
+  updateMessageProperties,
+} from "@/components/core/playgroundComponent/chat-view/utils/message-utils";
+import { api } from "@/controllers/API/api";
+import { getURL } from "@/controllers/API/helpers/constants";
 import { MISSED_ERROR_ALERT } from "@/constants/alerts_constants";
 import {
   BUILD_POLLING_INTERVAL,
@@ -14,7 +21,6 @@ import {
 } from "@/customization/utils/custom-buildUtils";
 import { customPollBuildEvents } from "@/customization/utils/custom-poll-build-events";
 import { getFetchCredentials } from "@/customization/utils/get-fetch-credentials";
-import { useMessagesStore } from "@/stores/messagesStore";
 import { BuildStatus, EventDeliveryType } from "../constants/enums";
 import { getVerticesOrder, postBuildVertex } from "../controllers/API";
 import useAlertStore from "../stores/alertStore";
@@ -22,6 +28,7 @@ import useFlowStore from "../stores/flowStore";
 import type { VertexBuildTypeAPI } from "../types/api";
 import { isErrorLogType } from "../types/utils/typeCheckingUtils";
 import type { VertexLayerElementType } from "../types/zustand/flow";
+import { isOutputType } from "./reactflowUtils";
 import { isStringArray, tryParseJson } from "./utils";
 
 type BuildVerticesParams = {
@@ -542,6 +549,41 @@ async function onEvent(
 
       await useFlowStore.getState().clearEdgesRunningByNodes();
 
+      // Check if this vertex is a ChatOutput - if so, save segment duration and reset timer
+      const flowState = useFlowStore.getState();
+      const node = flowState.nodes.find((n) => n.id === buildData.id);
+      const nodeType = node?.data?.type as string | undefined;
+
+      if (nodeType && isOutputType(nodeType) && flowState.buildStartTime) {
+        const segmentDurationMs = Date.now() - flowState.buildStartTime;
+
+        // Find and update the last bot message with this segment's duration
+        const found = findLastBotMessage();
+        if (found && !found.message.properties?.build_duration) {
+          updateMessageProperties(found.message.id!, found.queryKey, {
+            build_duration: segmentDurationMs,
+          });
+          // Persist to backend
+          api
+            .put(`${getURL("MESSAGES")}/${found.message.id}`, {
+              ...found.message,
+              properties: {
+                ...found.message.properties,
+                build_duration: segmentDurationMs,
+              },
+            })
+            .catch((err: unknown) => {
+              console.warn("Failed to persist build_duration", {
+                messageId: found.message.id,
+                error: err instanceof Error ? err.message : String(err),
+              });
+            });
+        }
+
+        // Reset timer for the next segment
+        flowState.setBuildStartTime(Date.now());
+      }
+
       if (buildData.next_vertices_ids) {
         if (isStringArray(buildData.next_vertices_ids)) {
           useFlowStore
@@ -555,46 +597,76 @@ async function onEvent(
       }
       return true;
     }
+    case "build_start": {
+      // There are two types of build_start events:
+      // 1. General build start (no data.id) - set the timer origin
+      // 2. Per-vertex build start (with data.id) - just update status
+      if (!data?.id) {
+        useFlowStore.getState().setBuildStartTime(Date.now());
+        return true;
+      }
+      // Per-vertex build_start - update status (handled by second case below)
+      useFlowStore
+        .getState()
+        .updateBuildStatus([data.id], BuildStatus.BUILDING);
+      return true;
+    }
     case "add_message": {
-      // Add a message to the messages store.
-      useMessagesStore.getState().addMessage(data);
-      return true;
+      // Handle message events through chat-view utilities
+      const handled = handleMessageEvent(type, data);
+      if (handled) return true;
+      break;
     }
-    case "token": {
-      // Use flushSync with a timeout to avoid React batching issues.
-      setTimeout(() => {
-        flushSync(() => {
-          useMessagesStore.getState().updateMessageText(data.id, data.chunk);
-        });
-      }, 10);
-      return true;
-    }
+    case "token":
     case "remove_message": {
-      useMessagesStore.getState().removeMessage(data);
-      return true;
+      // Handle message events through chat-view utilities
+      const handled = handleMessageEvent(type, data);
+      if (handled) return true;
+      break;
     }
     case "end": {
       const allNodesValid = buildResults.every((result) => result);
+      if (data?.build_duration != null) {
+        const durationMs = data.build_duration * 1000;
+        useFlowStore.getState().setBuildDuration(durationMs);
+
+        // Only set build_duration on last message if it doesn't already have one
+        // (nested agents set their own segment duration in add_message)
+        const found = findLastBotMessage();
+        if (found && !found.message.properties?.build_duration) {
+          updateMessageProperties(found.message.id!, found.queryKey, {
+            build_duration: durationMs,
+          });
+          api
+            .put(`${getURL("MESSAGES")}/${found.message.id}`, {
+              ...found.message,
+              properties: {
+                ...found.message.properties,
+                build_duration: durationMs,
+              },
+            })
+            .catch((err: unknown) => {
+              console.warn("Failed to persist build_duration", {
+                messageId: found.message.id,
+                error: err instanceof Error ? err.message : String(err),
+              });
+            });
+        }
+      }
       onBuildComplete && onBuildComplete(allNodesValid);
       useFlowStore.getState().setIsBuilding(false);
       return true;
     }
     case "error": {
-      if (data?.category === "error") {
-        useMessagesStore.getState().addMessage(data);
-        // Use a falsy check to correctly determine if the source ID is missing.
-        if (!data?.properties?.source?.id) {
-          onBuildError && onBuildError("Error Building Flow", [data.text]);
-        }
+      // Handle error message through chat-view utilities
+      handleMessageEvent(type, data);
+      // Use a falsy check to correctly determine if the source ID is missing.
+      if (data?.category === "error" && !data?.properties?.source?.id) {
+        onBuildError && onBuildError("Error Building Flow", [data.text]);
       }
       buildResults.push(false);
       return true;
     }
-    case "build_start":
-      useFlowStore
-        .getState()
-        .updateBuildStatus([data.id], BuildStatus.BUILDING);
-      break;
     case "build_end":
       useFlowStore.getState().updateBuildStatus([data.id], BuildStatus.BUILT);
       break;

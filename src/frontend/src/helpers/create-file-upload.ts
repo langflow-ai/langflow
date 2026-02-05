@@ -15,6 +15,7 @@ export function createFileUpload(props?: {
     input.style.pointerEvents = "none";
     input.accept = props?.accept ?? ".json";
     input.multiple = props?.multiple ?? true;
+    input.setAttribute("data-testid", "hidden-file-input");
 
     let isHandled = false;
 

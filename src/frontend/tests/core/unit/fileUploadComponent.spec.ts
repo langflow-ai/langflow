@@ -302,7 +302,7 @@ test(
       await expect(page.getByText('{"test":"content"}')).toBeVisible({
         timeout: 10000,
       });
-      await page.getByText("Close", { exact: true }).last().click();
+      await page.getByTestId("playground-btn-flow-io").click();
       await page.getByTestId("button_open_file_management").click();
       await page.getByTestId(`context-menu-button-${renamedJsonFile}`).click();
       await page.getByTestId("btn-delete-file").click();
@@ -365,14 +365,26 @@ test(
       await page
         .getByRole("button", { name: "Playground", exact: true })
         .click();
-      await page.getByTestId("icon-MoreHorizontal").last().click();
-      await page.getByText("Delete", { exact: true }).last().click();
+      await page.getByTestId("chat-header-more-menu").click();
+      await page.getByTestId("clear-chat-option").click();
+      // await page.getByTestId("icon-MoreHorizontal").last().click();
+      // await page.getByText("Delete", { exact: true }).last().click();
 
       await page.waitForSelector("text=Run Flow", {
         timeout: 30000,
       });
 
       await page.getByText("Run Flow", { exact: true }).last().click();
+
+      // wait the flow to run
+      await page.getByTestId("stop_building_button").waitFor({
+        state: "visible",
+        timeout: 30000,
+      });
+      await page.getByTestId("stop_building_button").waitFor({
+        state: "hidden",
+        timeout: 180000,
+      });
 
       await expect(page.getByText("this is a test file")).toBeHidden({
         timeout: 10000,

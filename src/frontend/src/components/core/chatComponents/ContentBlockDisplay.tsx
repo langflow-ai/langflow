@@ -1,15 +1,22 @@
 "use client";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
-import Markdown from "react-markdown";
-import rehypeMathjax from "rehype-mathjax/browser";
-import remarkGfm from "remark-gfm";
 import { BorderTrail } from "@/components/core/border-trail";
+import { useToolDurations } from "@/components/core/playgroundComponent/chat-view/chat-messages/hooks/use-tool-durations";
+import {
+  formatTime,
+  formatToolTitle,
+} from "@/components/core/playgroundComponent/chat-view/chat-messages/utils/format";
 import type { ContentBlock } from "@/types/chat";
 import { cn } from "@/utils/utils";
 import ForwardedIconComponent from "../../common/genericIconComponent";
-import { Separator } from "../../ui/separator";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "../../ui/accordion";
 import ContentDisplay from "./ContentDisplay";
 import DurationDisplay from "./DurationDisplay";
 
@@ -19,6 +26,7 @@ interface ContentBlockDisplayProps {
   state?: string;
   chatId: string;
   playgroundPage?: boolean;
+  hideHeader?: boolean;
 }
 
 export function ContentBlockDisplay({
@@ -27,28 +35,33 @@ export function ContentBlockDisplay({
   state,
   chatId,
   playgroundPage,
+  hideHeader = false,
 }: ContentBlockDisplayProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
+  // Use shared hook for tool duration tracking
+  const { toolElapsedTimes, toolItems } = useToolDurations(
+    contentBlocks,
+    isLoading ?? false,
+  );
+
+  if (!toolItems.length) {
+    return null;
+  }
+
   const totalDuration = isLoading
     ? undefined
-    : contentBlocks[0]?.contents.reduce((acc, curr) => {
-        return acc + (curr.duration || 0);
+    : toolItems.reduce((acc, { content, toolKey }) => {
+        const toolDuration = toolElapsedTimes[toolKey] ?? content.duration ?? 0;
+        return acc + toolDuration;
       }, 0);
 
   if (!contentBlocks?.length) {
     return null;
   }
 
-  const lastContent =
-    contentBlocks[0]?.contents[contentBlocks[0]?.contents.length - 1];
-  const headerIcon =
-    state === "partial" ? lastContent?.header?.icon || "Bot" : "Check";
-
-  const headerTitle =
-    state === "partial" ? (lastContent?.header?.title ?? "Steps") : "Finished";
-  // show the block title only if state === "partial"
-  const showBlockTitle = state === "partial";
+  const headerIcon = state === "partial" ? "Bot" : "Check";
+  const headerTitle = state === "partial" ? "Steps" : "Finished";
 
   return (
     <div className="relative py-3">
@@ -59,10 +72,7 @@ export function ContentBlockDisplay({
           duration: 0.2,
           ease: "easeOut",
         }}
-        className={cn(
-          "relative rounded-lg border border-border bg-background",
-          "overflow-hidden",
-        )}
+        className={cn("relative rounded-lg bg-transparent", "overflow-hidden")}
       >
         {isLoading && (
           <BorderTrail
@@ -74,145 +84,101 @@ export function ContentBlockDisplay({
             }}
           />
         )}
-        <div
-          className="flex cursor-pointer items-center justify-between p-4"
-          onClick={() => setIsExpanded(!isExpanded)}
-        >
-          <div className="flex items-center gap-2 align-baseline">
-            {headerIcon && (
-              <span data-testid="header-icon">
-                <ForwardedIconComponent
-                  name={headerIcon}
-                  className={cn(
-                    "h-4 w-4",
-                    state !== "partial" && "text-accent-emerald-foreground",
-                  )}
-                  strokeWidth={1.5}
-                />
-              </span>
-            )}
-            <div className="relative h-6 overflow-hidden">
+        {!hideHeader && (
+          <div className="flex items-center justify-between p-4">
+            <div className="flex items-center gap-2 align-baseline">
+              {headerIcon && (
+                <span data-testid="header-icon">
+                  <ForwardedIconComponent
+                    name={headerIcon}
+                    className={cn(
+                      "h-4 w-4",
+                      state !== "partial" && "text-accent-emerald-foreground",
+                    )}
+                    strokeWidth={1.5}
+                  />
+                </span>
+              )}
+              <p className="m-0 flex items-center gap-2 text-sm font-semibold text-primary">
+                {headerTitle}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {!playgroundPage && (
+                <DurationDisplay duration={totalDuration} chatId={chatId} />
+              )}
               <motion.div
-                key={headerTitle}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.2 }}
+                animate={{ rotate: isExpanded ? 180 : 0 }}
+                transition={{ duration: 0.2, ease: "easeInOut" }}
+                onClick={() => setIsExpanded((prev) => !prev)}
+                className="cursor-pointer"
               >
-                <Markdown
-                  remarkPlugins={[remarkGfm]}
-                  rehypePlugins={[rehypeMathjax]}
-                  className="inline-block w-fit max-w-full text-sm font-semibold text-primary"
-                >
-                  {headerTitle}
-                </Markdown>
+                <ChevronDown className="h-5 w-5" />
               </motion.div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            {!playgroundPage && (
-              <DurationDisplay duration={totalDuration} chatId={chatId} />
-            )}
-            <motion.div
-              animate={{ rotate: isExpanded ? 180 : 0 }}
-              transition={{ duration: 0.2, ease: "easeInOut" }}
-            >
-              <ChevronDown className="h-5 w-5" />
-            </motion.div>
-          </div>
-        </div>
+        )}
 
-        <AnimatePresence initial={false}>
-          {isExpanded && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{
-                height: "auto",
-                opacity: 1,
-                transition: {
-                  height: { duration: 0.2 },
-                  opacity: { duration: 0.1, delay: 0.1 },
-                },
-              }}
-              exit={{
-                height: 0,
-                opacity: 0,
-                transition: {
-                  height: { duration: 0.2 },
-                  opacity: { duration: 0.1 },
-                },
-              }}
-              className="relative border-t border-border"
+        {(hideHeader || isExpanded) && (
+          <div className="flex flex-col gap-2">
+            <Accordion
+              type="multiple"
+              className="w-full bg-transparent flex flex-col gap-2"
             >
-              {contentBlocks.map((block, index) => (
-                <motion.div
-                  key={`${block.title}-${index}`}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.2, delay: 0.1 }}
-                  className={cn(
-                    "relative",
-                    index !== contentBlocks.length - 1 &&
-                      "border-b border-border",
-                  )}
-                >
-                  <AnimatePresence>
-                    {showBlockTitle && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0, marginBottom: 0 }}
-                        animate={{
-                          opacity: 1,
-                          height: "auto",
-                          marginBottom: 8,
-                        }}
-                        exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="overflow-hidden pl-4 pt-[16px] font-medium"
-                      >
-                        <Markdown
-                          className="text-sm font-semibold text-foreground"
-                          remarkPlugins={[remarkGfm]}
-                          rehypePlugins={[rehypeMathjax]}
-                          components={{
-                            p({ node, ...props }) {
-                              return (
-                                <span className="inline">{props.children}</span>
-                              );
-                            },
-                          }}
-                        >
-                          {block.title}
-                        </Markdown>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                  <div className="text-sm text-muted-foreground">
-                    {block.contents.map((content, index) => (
-                      <motion.div key={index}>
-                        <AnimatePresence>
-                          {index !== 0 && (
-                            <motion.div
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: 1 }}
-                              exit={{ opacity: 0 }}
-                              transition={{ duration: 0.2 }}
-                            >
-                              <Separator orientation="horizontal" />
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                        <ContentDisplay
-                          playgroundPage={playgroundPage}
-                          content={content}
-                          chatId={`${chatId}-${index}`}
-                        />
-                      </motion.div>
-                    ))}
-                  </div>
-                </motion.div>
-              ))}
-            </motion.div>
-          )}
-        </AnimatePresence>
+              {toolItems.map(
+                ({ content, toolKey, blockIndex, contentIndex }, flatIdx) => {
+                  const rawTitle =
+                    content.header?.title ||
+                    content.name ||
+                    `Tool ${flatIdx + 1}`;
+                  const toolTitle =
+                    typeof rawTitle === "string"
+                      ? formatToolTitle(rawTitle)
+                      : rawTitle;
+                  const toolDuration =
+                    toolElapsedTimes[toolKey] ?? content.duration ?? 0;
+
+                  return (
+                    <AccordionItem
+                      key={toolKey}
+                      value={toolKey}
+                      className="border border-border rounded-lg overflow-hidden bg-background"
+                    >
+                      <AccordionTrigger className="hover:bg-muted hover:no-underline px-1 py-1.5">
+                        <div className="flex items-center justify-between w-full pr-2">
+                          <div className="flex items-center gap-1 text-sm font-normal min-w-0 flex-1 overflow-hidden">
+                            <div className="text-muted-foreground whitespace-nowrap flex-shrink-0">
+                              Called tool{" "}
+                            </div>
+                            <div className="truncate flex-1 muted-foreground bg-muted py-1 px-1.5 rounded-sm text-xs max-w-fit">
+                              <p className="truncate font-normal font-mono">
+                                {toolTitle}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-emerald-500">
+                              {formatTime(toolDuration, true)}
+                            </span>
+                          </div>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="pt-0">
+                        <div className="text-sm text-muted-foreground px-4 pb-4 max-h-96 overflow-auto">
+                          <ContentDisplay
+                            playgroundPage={playgroundPage}
+                            content={content}
+                            chatId={`${chatId}-${blockIndex}-${contentIndex}`}
+                          />
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  );
+                },
+              )}
+            </Accordion>
+          </div>
+        )}
       </motion.div>
     </div>
   );

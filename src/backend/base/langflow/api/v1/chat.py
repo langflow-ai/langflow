@@ -368,13 +368,6 @@ async def build_vertex(
 
         timedelta = time.perf_counter() - start_time
 
-        # Use client_request_time if available for accurate end-to-end duration
-        if inputs and inputs.client_request_time:
-            # Convert client timestamp (ms) to seconds and calculate elapsed time
-            client_start_seconds = inputs.client_request_time / 1000
-            current_time_seconds = time.time()
-            timedelta = current_time_seconds - client_start_seconds
-
         duration = format_elapsed_time(timedelta)
         result_data_response.duration = duration
         result_data_response.timedelta = timedelta

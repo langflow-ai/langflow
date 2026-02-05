@@ -410,7 +410,7 @@ export function extractColumnsFromRows(
     }
     for (const row of rows) {
       for (const key in columnsKeys) {
-        if (!row[key]) {
+        if (!(key in row)) {
           delete columnsKeys[key];
         }
       }

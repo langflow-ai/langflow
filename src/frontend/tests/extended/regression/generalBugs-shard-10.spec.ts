@@ -31,7 +31,7 @@ test(
 
     await adjustScreenView(page);
 
-    await page.getByText("openai").last().click();
+    await page.getByText("Language Model").last().click();
     await page.keyboard.press("Delete");
 
     //connection 1
@@ -77,7 +77,8 @@ test(
     // Ensure we captured a non-empty response
     expect(firstResponseText.length).toBeGreaterThan(0);
 
-    await page.getByText("Close").last().click();
+    // await page.getByText("Close").last().click();
+    await page.getByTestId("playground-btn-flow-io").click();
 
     // Freeze the Chat Output node (not Prompt) so the entire response is cached
     await page.getByText("Chat Output", { exact: true }).last().click();
