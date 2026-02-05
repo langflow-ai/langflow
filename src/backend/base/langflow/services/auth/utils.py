@@ -14,6 +14,8 @@ from langflow.services.auth.exceptions import (
     AuthenticationError,
     InactiveUserError,
     InsufficientPermissionsError,
+    InvalidCredentialsError,
+    MissingCredentialsError,
 )
 from langflow.services.deps import get_auth_service
 
@@ -139,8 +141,14 @@ async def ws_api_key_security(api_key: str | None) -> UserRead:
 
 
 def _auth_error_to_http(e: AuthenticationError) -> HTTPException:
-    """Map auth exceptions to 401 Unauthorized or 403 Forbidden."""
-    if isinstance(e, (InactiveUserError, InsufficientPermissionsError)):
+    """Map auth exceptions to 401 Unauthorized or 403 Forbidden.
+
+    Langflow returns 403 for missing/invalid credentials; 401 for invalid/expired tokens.
+    """
+    if isinstance(
+        e,
+        (MissingCredentialsError, InvalidCredentialsError, InactiveUserError, InsufficientPermissionsError),
+    ):
         return HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=e.message)
     return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=e.message)
 
