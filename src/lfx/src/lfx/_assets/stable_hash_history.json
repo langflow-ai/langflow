@@ -1381,7 +1381,7 @@
   },
   "DataFrameOperations": {
     "versions": {
-      "0.3.0": "4e4612f8cf41"
+      "0.3.0": "e2b4323d4ed5"
     }
   },
   "DynamicCreateData": {
