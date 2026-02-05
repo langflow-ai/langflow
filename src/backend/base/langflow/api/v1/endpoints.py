@@ -32,6 +32,7 @@ from langflow.api.v1.schemas import (
     ConfigResponse,
     CustomComponentRequest,
     CustomComponentResponse,
+    PublicConfigResponse,
     RunResponse,
     SimplifiedAPIRequest,
     TaskStatusResponse,
@@ -1104,6 +1105,28 @@ async def get_config() -> ConfigResponse:
     try:
         settings_service: SettingsService = get_settings_service()
         return ConfigResponse.from_settings(settings_service.settings, settings_service.auth_settings)
+
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@router.get("/public_config")
+async def get_public_config() -> PublicConfigResponse:
+    """Retrieve configuration settings for public/unauthenticated access.
+
+    This endpoint provides a limited subset of configuration values
+    that are safe to expose without authentication, primarily for
+    the public playground feature.
+
+    Returns:
+        PublicConfigResponse: The public-safe configuration settings.
+
+    Raises:
+        HTTPException: If an error occurs while retrieving the configuration.
+    """
+    try:
+        settings_service: SettingsService = get_settings_service()
+        return PublicConfigResponse.from_settings(settings_service.settings)
 
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc

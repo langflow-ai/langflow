@@ -1,5 +1,6 @@
 import type React from "react";
 import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
+import { useGetPublicConfig } from "@/controllers/API/queries/config/use-get-public-config";
 import {
   ENABLE_IMAGE_ON_PLAYGROUND,
   ENABLE_VOICE_ASSISTANT,
@@ -50,7 +51,10 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
   const classNameFilePreview = `flex w-full items-center gap-2 py-2 overflow-auto`;
 
   // Check if voice mode is available
-  const { data: config } = useGetConfig();
+  // Use public config for playground page (unauthenticated), otherwise use authenticated config
+  const { data: authConfig } = useGetConfig({ enabled: !playgroundPage });
+  const { data: publicConfig } = useGetPublicConfig({ enabled: playgroundPage });
+  const config = playgroundPage ? publicConfig : authConfig;
 
   const onClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;

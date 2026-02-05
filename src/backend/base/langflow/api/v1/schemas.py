@@ -359,6 +359,35 @@ class FlowDataRequest(BaseModel):
     viewport: dict | None = None
 
 
+class PublicConfigResponse(BaseModel):
+    """Configuration response for public/unauthenticated endpoints like the public playground.
+
+    Contains only the configuration values needed for public features, without sensitive data.
+    """
+
+    max_file_size_upload: int
+    event_delivery: Literal["polling", "streaming", "direct"]
+    voice_mode_available: bool
+    frontend_timeout: int
+
+    @classmethod
+    def from_settings(cls, settings: Settings) -> "PublicConfigResponse":
+        """Create a PublicConfigResponse instance using values from a Settings object.
+
+        Parameters:
+            settings (Settings): The Settings object containing configuration values.
+
+        Returns:
+            PublicConfigResponse: An instance populated with public-safe configuration values.
+        """
+        return cls(
+            max_file_size_upload=settings.max_file_size_upload,
+            event_delivery=settings.event_delivery,
+            voice_mode_available=settings.voice_mode_available,
+            frontend_timeout=settings.frontend_timeout,
+        )
+
+
 class ConfigResponse(BaseModel):
     feature_flags: FeatureFlags
     serialization_max_items_length: int

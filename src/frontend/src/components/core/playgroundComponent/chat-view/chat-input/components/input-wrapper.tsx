@@ -1,4 +1,5 @@
 import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
+import { useGetPublicConfig } from "@/controllers/API/queries/config/use-get-public-config";
 import { ENABLE_VOICE_ASSISTANT } from "@/customization/feature-flags";
 import type { FilePreviewType } from "@/types/components";
 import FilePreviewDisplay from "../../utils/file-preview-display";
@@ -25,6 +26,7 @@ interface InputWrapperProps {
   onStartRecording: () => void;
   onStopRecording: () => void;
   isAudioSupported: boolean;
+  playgroundPage?: boolean;
 }
 
 const InputWrapper = ({
@@ -44,10 +46,14 @@ const InputWrapper = ({
   onStartRecording,
   onStopRecording,
   isAudioSupported,
+  playgroundPage = false,
 }: InputWrapperProps) => {
   const classNameFilePreview = `flex w-full items-center gap-2 py-2 overflow-auto`;
 
-  const { data: config } = useGetConfig();
+  // Use public config for playground page (unauthenticated), otherwise use authenticated config
+  const { data: authConfig } = useGetConfig({ enabled: !playgroundPage });
+  const { data: publicConfig } = useGetPublicConfig({ enabled: playgroundPage });
+  const config = playgroundPage ? publicConfig : authConfig;
 
   const onClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
