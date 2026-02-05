@@ -104,7 +104,10 @@ export default function InspectionPanelFields({
   if (advancedFields.length === 0) {
     return (
       <div className="flex flex-col gap-2 items-center justify-center p-10 pb-12 text-sm text-muted-foreground">
-        <ForwardedIconComponent name="Settings2" className="text-input w-6 h-6" />
+        <ForwardedIconComponent
+          name="Settings2"
+          className="text-input w-6 h-6"
+        />
         No advanced settings
       </div>
     );

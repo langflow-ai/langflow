@@ -177,7 +177,8 @@ export default function EditableHeaderContent({
           }}
         >
           {String(description)}
-        </MemoizedMarkdown></div>
+        </MemoizedMarkdown>
+      </div>
     );
   }, [data.node?.description, editMode]);
 
