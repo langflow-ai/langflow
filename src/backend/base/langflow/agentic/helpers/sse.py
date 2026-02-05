@@ -56,3 +56,8 @@ def format_error_event(message: str) -> str:
 def format_token_event(chunk: str) -> str:
     """Format SSE token event for streaming LLM output."""
     return f"data: {json.dumps({'event': 'token', 'chunk': chunk})}\n\n"
+
+
+def format_cancelled_event() -> str:
+    """Format SSE cancelled event when client disconnects."""
+    return f"data: {json.dumps({'event': 'cancelled'})}\n\n"
