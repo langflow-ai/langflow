@@ -53,10 +53,7 @@ export default function MustachePromptAreaComponent({
         />
       ) : (
         <span className="text-sm text-muted-foreground">
-          {getPlaceholder(
-            disabled,
-            "Type your prompt here using {{variable}}...",
-          )}
+          {getPlaceholder(disabled, "Use {{variable}} as placeholder")}
         </span>
       )}
     </span>
