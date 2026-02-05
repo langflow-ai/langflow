@@ -221,7 +221,7 @@ class TestRefreshTokenSecurity:
         NOTE: Currently the code doesn't validate that the token type is 'refresh'.
         It only checks if the token_type is empty. This should be enhanced.
         """
-        from langflow.services.auth.utils import create_refresh_token
+        from langflow.services.deps import get_auth_service
 
         mock_db = MagicMock()
 
@@ -237,7 +237,7 @@ class TestRefreshTokenSecurity:
 
                 # This SHOULD raise an exception for wrong token type, but currently doesn't
                 with pytest.raises(HTTPException) as exc_info:
-                    await create_refresh_token("fake-token", mock_db)
+                    await get_auth_service().create_refresh_token("fake-token", mock_db)
 
                 assert exc_info.value.status_code == 401
                 assert "Invalid refresh token" in str(exc_info.value.detail)
@@ -250,7 +250,7 @@ class TestRefreshTokenSecurity:
         NOTE: This is a security enhancement that should be implemented.
         Currently, the system does not check if a user is active when refreshing tokens.
         """
-        from langflow.services.auth.utils import create_refresh_token
+        from langflow.services.deps import get_auth_service
 
         mock_db = MagicMock()
         mock_user = MagicMock()
@@ -270,7 +270,7 @@ class TestRefreshTokenSecurity:
 
                     # This SHOULD raise an exception for inactive users, but currently doesn't
                     with pytest.raises(HTTPException) as exc_info:
-                        await create_refresh_token("fake-token", mock_db)
+                        await get_auth_service().create_refresh_token("fake-token", mock_db)
 
                     assert exc_info.value.status_code == 401
                     assert "inactive" in str(exc_info.value.detail).lower()

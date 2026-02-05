@@ -325,7 +325,8 @@ class ServiceB(Service):
 
 See:
 - `lfx.toml.example` - Example configuration file showing Langflow service registration
-- `src/lfx/services/` - Minimal built-in service implementations
+- `src/lfx/services/` - Minimal built-in service implementations (auth, telemetry, tracing, variable, storage, etc.)
+  - Auth: `lfx.services.auth.base` (BaseAuthService) and `lfx.services.auth.service` (AuthService). Use `get_auth_service()` from `lfx.services.deps`. Override with `auth_service = "langflow.services.auth.service:AuthService"` in config for full JWT/API key auth.
 - `src/backend/base/langflow/services/` - Full-featured Langflow services
 
 ## Architecture Benefits

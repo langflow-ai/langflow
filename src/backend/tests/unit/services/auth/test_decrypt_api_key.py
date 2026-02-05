@@ -1,7 +1,33 @@
 """Test decrypt_api_key function with encrypted, plain text, and wrong key scenarios."""
 
+from types import SimpleNamespace
+from unittest.mock import patch
+
+import pytest
 from langflow.services.auth.mcp_encryption import is_encrypted
+from langflow.services.auth.service import AuthService
 from langflow.services.auth.utils import decrypt_api_key, encrypt_api_key
+from lfx.services.settings.auth import AuthSettings
+from pydantic import SecretStr
+
+
+@pytest.fixture
+def langflow_auth_service(tmp_path):
+    """Use Langflow AuthService for encrypt/decrypt so tests get real Fernet behavior."""
+    settings = AuthSettings(CONFIG_DIR=str(tmp_path))
+    settings.SECRET_KEY = SecretStr("unit-test-secret-for-encryption")
+    settings_service = SimpleNamespace(
+        auth_settings=settings,
+        settings=SimpleNamespace(config_dir=str(tmp_path)),
+    )
+    return AuthService(settings_service)
+
+
+@pytest.fixture(autouse=True)
+def use_langflow_auth_for_encryption(langflow_auth_service):
+    """Ensure utils use Langflow AuthService (real encrypt/decrypt), not LFX stub."""
+    with patch("langflow.services.auth.utils.get_auth_service", return_value=langflow_auth_service):
+        yield
 
 
 class TestDecryptApiKey:

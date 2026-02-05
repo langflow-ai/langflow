@@ -10,14 +10,10 @@ from sqlmodel.sql.expression import SelectOfScalar
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.schemas import UsersResponse
 from langflow.initial_setup.setup import get_or_create_default_folder
-from langflow.services.auth.utils import (
-    get_current_active_superuser,
-    get_password_hash,
-    verify_password,
-)
+from langflow.services.auth.utils import get_current_active_superuser
 from langflow.services.database.models.user.crud import get_user_by_id, update_user
 from langflow.services.database.models.user.model import User, UserCreate, UserRead, UserUpdate
-from langflow.services.deps import get_settings_service
+from langflow.services.deps import get_auth_service, get_settings_service
 
 router = APIRouter(tags=["Users"], prefix="/users")
 
@@ -34,7 +30,7 @@ async def add_user(
     """
     new_user = User.model_validate(user, from_attributes=True)
     try:
-        new_user.password = get_password_hash(user.password)
+        new_user.password = get_auth_service().get_password_hash(user.password)
         new_user.is_active = get_settings_service().auth_settings.NEW_USER_IS_ACTIVE
         session.add(new_user)
         await session.flush()
@@ -97,7 +93,7 @@ async def patch_user(
         # user_update.password is guaranteed to be truthy since update_password = bool(user_update.password)
         if user_update.password is None:  # pragma: no cover - guaranteed by update_password check
             raise HTTPException(status_code=400, detail="Password is required")
-        user_update.password = get_password_hash(user_update.password)
+        user_update.password = get_auth_service().get_password_hash(user_update.password)
 
     if user_db := await get_user_by_id(session, user_id):
         if not update_password:
@@ -123,10 +119,11 @@ async def reset_password(
     if user_update.password is None:
         raise HTTPException(status_code=400, detail="Password is required for password reset")
 
-    if verify_password(user_update.password, user.password):
+    auth = get_auth_service()
+    if auth.verify_password(user_update.password, user.password):
         raise HTTPException(status_code=400, detail="You can't use your current password")
 
-    new_password = get_password_hash(user_update.password)
+    new_password = auth.get_password_hash(user_update.password)
     user.password = new_password
 
     await session.flush()

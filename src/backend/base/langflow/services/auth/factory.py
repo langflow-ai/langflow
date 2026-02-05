@@ -1,29 +1,24 @@
 """Authentication service factory.
 
-This module implements a factory pattern for creating authentication service instances.
-Currently supports JWT-based authentication. Future authentication providers (OIDC, SAML, LDAP)
-can be added via plugins/extensions.
+Builds the Langflow auth implementation (JWT, DB users, etc.)
 """
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from lfx.services.auth.base import BaseAuthService  # noqa: TC002
+from lfx.services.settings.service import SettingsService  # noqa: TC002
+
 from langflow.services.factory import ServiceFactory
 from langflow.services.schema import ServiceType
 
 if TYPE_CHECKING:
-    from langflow.services.auth.base import AuthServiceBase
     from langflow.services.auth.service import AuthService
-    from langflow.services.settings.service import SettingsService
 
 
 class AuthServiceFactory(ServiceFactory):
-    """Factory for creating authentication service instances.
-
-    Currently returns JWT-based authentication service.
-    Future authentication providers can be added via plugins/extensions.
-    """
+    """Factory that creates the Langflow auth service (implements LFX BaseAuthService)."""
 
     name = ServiceType.AUTH_SERVICE.value
 
@@ -36,7 +31,7 @@ class AuthServiceFactory(ServiceFactory):
 
         super().__init__(AuthService)
 
-    def create(self, settings_service: SettingsService) -> AuthServiceBase:
+    def create(self, settings_service: SettingsService) -> BaseAuthService:
         """Create JWT authentication service.
 
         Args:

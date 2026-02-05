@@ -757,9 +757,10 @@ async def _create_superuser(username: str, password: str, auth_token: str | None
 
     # Auth complete, create the superuser
     async with session_scope() as session:
-        from langflow.services.auth.utils import create_super_user
+        from langflow.services.deps import get_auth_service
 
-        if await create_super_user(db=session, username=username, password=password):
+        auth = get_auth_service()
+        if await auth.create_super_user(username, password, db=session):
             # Verify that the superuser was created
             from langflow.services.database.models.user.model import User
 

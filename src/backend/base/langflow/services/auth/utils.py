@@ -10,19 +10,15 @@ from fastapi.security.utils import get_authorization_scheme_param
 from lfx.log.logger import logger
 from lfx.services.deps import injectable_session_scope
 
-from langflow.services.auth.exceptions import AuthenticationError
-from langflow.services.auth.service import (
-    AUTO_LOGIN_ERROR as SERVICE_AUTO_LOGIN_ERROR,
-)
-from langflow.services.auth.service import (
-    AUTO_LOGIN_WARNING as SERVICE_AUTO_LOGIN_WARNING,
+from langflow.services.auth.exceptions import (
+    AuthenticationError,
+    InactiveUserError,
+    InsufficientPermissionsError,
 )
 from langflow.services.deps import get_auth_service
 
 if TYPE_CHECKING:
     from collections.abc import Coroutine
-    from datetime import timedelta
-    from uuid import UUID
 
     from lfx.services.settings.service import SettingsService
     from sqlmodel.ext.asyncio.session import AsyncSession
@@ -64,11 +60,14 @@ api_key_header = APIKeyHeader(name=API_KEY_NAME, scheme_name="API key header", a
 
 
 def _auth_service():
+    """Return the currently configured auth service.
+
+    This is an internal helper to keep imports local to the auth services layer.
+    **New code should prefer calling `get_auth_service()` directly** instead of
+    using this helper or adding new thin wrapper functions here.
+    """
     return get_auth_service()
 
-
-AUTO_LOGIN_WARNING = SERVICE_AUTO_LOGIN_WARNING
-AUTO_LOGIN_ERROR = SERVICE_AUTO_LOGIN_ERROR
 
 REFRESH_TOKEN_TYPE: Final[str] = "refresh"  # noqa: S105
 ACCESS_TOKEN_TYPE: Final[str] = "access"  # noqa: S105
@@ -139,20 +138,42 @@ async def ws_api_key_security(api_key: str | None) -> UserRead:
     return await _auth_service().ws_api_key_security(api_key)
 
 
+def _auth_error_to_http(e: AuthenticationError) -> HTTPException:
+    """Map auth exceptions to 401 Unauthorized or 403 Forbidden."""
+    if isinstance(e, (InactiveUserError, InsufficientPermissionsError)):
+        return HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=e.message)
+    return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=e.message)
+
+
 async def get_current_user(
     token: Annotated[str | None, Security(oauth2_login)],
     query_param: Annotated[str | None, Security(api_key_query)],
     header_param: Annotated[str | None, Security(api_key_header)],
     db: AsyncSession = Depends(injectable_session_scope),
 ) -> User:
-    return await _auth_service().get_current_user(token, query_param, header_param, db)
+    try:
+        return await _auth_service().get_current_user(token, query_param, header_param, db)
+    except AuthenticationError as e:
+        raise _auth_error_to_http(e) from e
 
 
 async def get_current_user_from_access_token(
     token: str | Coroutine | None,
     db: AsyncSession,
 ) -> User:
-    return await _auth_service().get_current_user_from_access_token(token, db)
+    """Compatibility helper to resolve a user from an access token.
+
+    This simply delegates to the active auth service's
+    `get_current_user_from_access_token` implementation.
+
+    **For new code, prefer calling
+    `get_auth_service().get_current_user_from_access_token(...)` directly**
+    instead of importing this function.
+    """
+    try:
+        return await _auth_service().get_current_user_from_access_token(token, db)
+    except AuthenticationError as e:
+        raise _auth_error_to_http(e) from e
 
 
 WS_AUTH_REASON = "Missing or invalid credentials (cookie, token or API key)."
@@ -217,54 +238,6 @@ async def get_current_active_superuser(user: User = Depends(get_current_user)) -
     return result
 
 
-async def get_webhook_user(flow_id: str, request: Request) -> UserRead:
-    return await _auth_service().get_webhook_user(flow_id, request)
-
-
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return _auth_service().verify_password(plain_password, hashed_password)
-
-
-def get_password_hash(password: str) -> str:
-    return _auth_service().get_password_hash(password)
-
-
-def create_token(data: dict, expires_delta: timedelta) -> str:
-    return _auth_service().create_token(data, expires_delta)
-
-
-async def create_super_user(
-    username: str,
-    password: str,
-    db: AsyncSession,
-) -> User:
-    return await _auth_service().create_super_user(username, password, db)
-
-
-async def create_user_longterm_token(db: AsyncSession) -> tuple[UUID, dict]:
-    return await _auth_service().create_user_longterm_token(db)
-
-
-def create_user_api_key(user_id: UUID) -> dict:
-    return _auth_service().create_user_api_key(user_id)
-
-
-def get_user_id_from_token(token: str) -> UUID:
-    return _auth_service().get_user_id_from_token(token)
-
-
-async def create_user_tokens(user_id: UUID, db: AsyncSession, *, update_last_login: bool = False) -> dict:
-    return await _auth_service().create_user_tokens(user_id, db, update_last_login=update_last_login)
-
-
-async def create_refresh_token(refresh_token: str, db: AsyncSession) -> dict:
-    return await _auth_service().create_refresh_token(refresh_token, db)
-
-
-async def authenticate_user(username: str, password: str, db: AsyncSession) -> User | None:
-    return await _auth_service().authenticate_user(username, password, db)
-
-
 def get_fernet(settings_service: SettingsService) -> Fernet:
     """Get a Fernet instance for encryption/decryption.
 
@@ -297,12 +270,8 @@ def get_fernet(settings_service: SettingsService) -> Fernet:
 def encrypt_api_key(api_key: str, settings_service: SettingsService | None = None) -> str:  # noqa: ARG001
     """Encrypt an API key.
 
-    Args:
-        api_key: The API key to encrypt
-        settings_service: Settings service (unused, kept for backward compatibility)
-
-    Returns:
-        Encrypted API key string
+    This function exists for backwards compatibility with existing imports.
+    **New code should use `get_auth_service().encrypt_api_key()` directly.**
     """
     return _auth_service().encrypt_api_key(api_key)
 
@@ -314,13 +283,8 @@ def decrypt_api_key(
 ) -> str:
     """Decrypt an encrypted API key.
 
-    Args:
-        encrypted_api_key: The encrypted API key string
-        settings_service: Settings service (unused, kept for backward compatibility)
-        fernet_obj: Fernet object (unused, kept for backward compatibility)
-
-    Returns:
-        Decrypted API key string
+    This function exists for backwards compatibility with existing imports.
+    **New code should use `get_auth_service().decrypt_api_key()` directly.**
     """
     return _auth_service().decrypt_api_key(encrypted_api_key)
 
@@ -331,7 +295,10 @@ async def get_current_user_mcp(
     header_param: Annotated[str | None, Security(api_key_header)],
     db: AsyncSession = Depends(injectable_session_scope),
 ) -> User:
-    return await _auth_service().get_current_user_mcp(token, query_param, header_param, db)
+    try:
+        return await _auth_service().get_current_user_mcp(token, query_param, header_param, db)
+    except AuthenticationError as e:
+        raise _auth_error_to_http(e) from e
 
 
 async def get_current_active_user_mcp(user: User = Depends(get_current_user_mcp)) -> User:

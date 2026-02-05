@@ -10,7 +10,6 @@ if TYPE_CHECKING:
 
     from sqlmodel.ext.asyncio.session import AsyncSession
 
-    from langflow.services.auth.base import AuthServiceBase
     from langflow.services.cache.service import AsyncBaseCacheService, CacheService
     from langflow.services.chat.service import ChatService
     from langflow.services.database.service import DatabaseService
@@ -24,6 +23,7 @@ if TYPE_CHECKING:
 # These imports MUST be outside TYPE_CHECKING because FastAPI uses eval_str=True
 # to evaluate type annotations, and these types are used as return types for
 # dependency functions that FastAPI evaluates at module load time.
+from lfx.services.auth.base import BaseAuthService  # noqa: TC002
 from lfx.services.settings.service import SettingsService  # noqa: TC002
 
 from langflow.services.job_queue.service import JobQueueService  # noqa: TC001
@@ -247,7 +247,7 @@ def get_queue_service() -> JobQueueService:
     return get_service(ServiceType.JOB_QUEUE_SERVICE, JobQueueServiceFactory())
 
 
-def get_auth_service() -> AuthServiceBase:
+def get_auth_service() -> BaseAuthService:
     """Retrieve the authentication service."""
     from langflow.services.auth.factory import AuthServiceFactory
 

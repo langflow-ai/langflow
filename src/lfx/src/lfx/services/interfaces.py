@@ -9,6 +9,31 @@ if TYPE_CHECKING:
     import asyncio
 
 
+class AuthServiceProtocol(Protocol):
+    """Protocol for auth service (minimal surface for dependency injection)."""
+
+    @abstractmethod
+    async def get_current_user(
+        self,
+        token: Any,
+        query_param: str | None,
+        header_param: str | None,
+        db: Any,
+    ) -> Any:
+        """Get the current authenticated user from token or API key."""
+        ...
+
+    @abstractmethod
+    async def api_key_security(
+        self,
+        query_param: str | None,
+        header_param: str | None,
+        db: Any | None = None,
+    ) -> Any | None:
+        """Validate API key from query or header. Returns user or None."""
+        ...
+
+
 class DatabaseServiceProtocol(Protocol):
     """Protocol for database service."""
 

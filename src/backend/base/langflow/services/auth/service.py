@@ -13,10 +13,11 @@ from cryptography.fernet import Fernet
 from fastapi import HTTPException, Request, WebSocketException, status
 from jwt import InvalidTokenError
 from lfx.log.logger import logger
+from lfx.services.auth.base import BaseAuthService
 from sqlalchemy.exc import IntegrityError
 
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
-from langflow.services.auth.base import AuthServiceBase
+from langflow.services.auth.constants import AUTO_LOGIN_ERROR, AUTO_LOGIN_WARNING
 from langflow.services.auth.exceptions import (
     InactiveUserError,
     InvalidCredentialsError,
@@ -43,16 +44,10 @@ if TYPE_CHECKING:
     from langflow.services.database.models.api_key.model import ApiKey
 
 MINIMUM_KEY_LENGTH = 32
-AUTO_LOGIN_WARNING = "In v2.0, LANGFLOW_SKIP_AUTH_AUTO_LOGIN will be removed. Please update your authentication method."
-AUTO_LOGIN_ERROR = (
-    "Since v1.5, LANGFLOW_AUTO_LOGIN requires a valid API key. "
-    "Set LANGFLOW_SKIP_AUTH_AUTO_LOGIN=true to skip this check. "
-    "Please update your authentication method."
-)
 
 
-class AuthService(AuthServiceBase):
-    """Default Langflow authentication service."""
+class AuthService(BaseAuthService):
+    """Default Langflow authentication service (implements LFX BaseAuthService)."""
 
     name = ServiceType.AUTH_SERVICE.value
 
@@ -180,7 +175,7 @@ class AuthService(AuthServiceBase):
             raise TokenExpiredError(msg) from e
         except InvalidTokenError as e:
             logger.debug("JWT validation failed: Invalid token format or signature")
-            msg = "Could not validate token"
+            msg = "Invalid token"
             raise AuthInvalidTokenError(msg) from e
         except Exception as e:
             logger.error(f"Unexpected error decoding token: {e}")
@@ -779,3 +774,7 @@ class AuthService(AuthServiceBase):
         if not current_user.is_active:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive user")
         return current_user
+
+    async def teardown(self) -> None:
+        """Teardown the auth service (no-op for JWT auth)."""
+        logger.debug("Auth service teardown")
