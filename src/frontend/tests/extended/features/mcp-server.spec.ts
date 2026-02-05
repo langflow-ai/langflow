@@ -600,13 +600,17 @@ test(
     );
     // Header values use InputComponent with global variables, so we verify by placeholder
     expect(
-      await page.getByTestId("popover-anchor-http-headers-value-0").inputValue(),
+      await page
+        .getByTestId("popover-anchor-http-headers-value-0")
+        .inputValue(),
     ).toBe(testHeaderValue1);
     expect(await page.getByTestId("http-headers-key-1").inputValue()).toBe(
       testHeaderKey2,
     );
     expect(
-      await page.getByTestId("popover-anchor-http-headers-value-1").inputValue(),
+      await page
+        .getByTestId("popover-anchor-http-headers-value-1")
+        .inputValue(),
     ).toBe(testHeaderValue2);
     expect(await page.getByTestId("http-env-key-0").inputValue()).toBe(
       testEnvKey1,

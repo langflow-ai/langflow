@@ -1,6 +1,9 @@
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { disableInspectPanel, enableInspectPanel } from "../../utils/open-advanced-options";
+import {
+  disableInspectPanel,
+  enableInspectPanel,
+} from "../../utils/open-advanced-options";
 import { unselectNodes } from "../../utils/unselect-nodes";
 
 test(
@@ -44,7 +47,9 @@ test(
 
     await page.getByTestId("inspection-panel-name").fill(randomName);
 
-    await page.getByTestId("inspection-panel-description").fill(randomDescription);
+    await page
+      .getByTestId("inspection-panel-description")
+      .fill(randomDescription);
 
     await page.getByTestId("save-name-description-button").click();
 
@@ -57,7 +62,9 @@ test(
 
     await page.getByTestId(`inspection-panel-name`).fill(randomName_2);
 
-    await page.getByTestId("inspection-panel-description").fill(randomDescription_2);
+    await page
+      .getByTestId("inspection-panel-description")
+      .fill(randomDescription_2);
 
     await page.getByTestId("save-name-description-button").click();
 
@@ -80,7 +87,9 @@ test(
 
     await page.getByTestId(`inspection-panel-name`).fill(randomName_4);
 
-    await page.getByTestId("inspection-panel-description").fill(randomDescription_4);
+    await page
+      .getByTestId("inspection-panel-description")
+      .fill(randomDescription_4);
 
     await page.keyboard.press("Escape");
 
@@ -96,7 +105,9 @@ test(
 
     await page.getByTestId("edit-name-description-button").click();
 
-    await page.getByTestId("inspection-panel-description").fill(randomDescription_3);
+    await page
+      .getByTestId("inspection-panel-description")
+      .fill(randomDescription_3);
 
     await page.getByTestId(`inspection-panel-name`).fill(randomName_3);
 

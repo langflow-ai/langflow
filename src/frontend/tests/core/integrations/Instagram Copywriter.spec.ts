@@ -57,7 +57,9 @@ test(
 
     await unselectNodes(page);
     await page.getByTestId("button_run_chat output").click();
-    await page.waitForSelector("text=built successfully", { timeout: 30000 * 2 });
+    await page.waitForSelector("text=built successfully", {
+      timeout: 30000 * 2,
+    });
 
     await page.getByRole("button", { name: "Playground", exact: true }).click();
     await page
