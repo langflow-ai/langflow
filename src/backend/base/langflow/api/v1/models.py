@@ -288,15 +288,8 @@ async def _get_disabled_models(session: DbSession, current_user: CurrentActiveUs
                 logger.warning("Failed to parse disabled models for user %s", current_user.id, exc_info=True)
                 return set()
     except ValueError:
-        # Variable not found: treat as server error to surface storage bugs defensively
-        logger.exception(
-            "Disabled models variable not found for user %s; expected variable to exist.",
-            current_user.id,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Disabled models preference could not be loaded. Please try again.",
-        ) from None
+        # Variable not found, return empty set
+        pass
     return set()
 
 
