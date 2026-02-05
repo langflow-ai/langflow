@@ -468,7 +468,6 @@ class TestLangflowToolsProvider:
         tool.metadata = None
         return tool
 
-    @pytest.mark.asyncio
     async def test_group_by_server_name(self, mock_tool_with_server_name):
         """Test that tools are grouped by server_name metadata.
 
@@ -488,7 +487,6 @@ class TestLangflowToolsProvider:
         assert len(tools) == 1
         assert tools[0].name == "slack_send_message"
 
-    @pytest.mark.asyncio
     async def test_group_by_common_prefix(self, mock_tool_with_prefix):
         """Test that tools without server_name are grouped by prefix.
 
@@ -509,7 +507,6 @@ class TestLangflowToolsProvider:
         tool_names = {t.name for t in tools}
         assert tool_names == {"gmail_send", "gmail_read", "gmail_delete"}
 
-    @pytest.mark.asyncio
     async def test_default_app_for_ungrouped(self, mock_tool_without_prefix):
         """Test that remaining tools go to default_app.
 
@@ -529,7 +526,6 @@ class TestLangflowToolsProvider:
         assert len(tools) == 1
         assert tools[0].name == "calculator"
 
-    @pytest.mark.asyncio
     async def test_mixed_tools_grouping(
         self, mock_tool_with_server_name, mock_tool_with_prefix, mock_tool_without_prefix
     ):
@@ -551,7 +547,6 @@ class TestLangflowToolsProvider:
         all_tools_retrieved = await provider.get_all_tools()
         assert len(all_tools_retrieved) == 5
 
-    @pytest.mark.asyncio
     async def test_excluded_prefixes(self):
         """Test that HTTP method prefixes are excluded from grouping.
 

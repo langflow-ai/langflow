@@ -47,6 +47,7 @@ class TestLangfuseTracer:
 
         # Setup mock
         mock_client = MagicMock()
+        mock_client.auth_check.return_value = True
         mock_span = MagicMock()
         mock_span.trace_id = "test-trace-id"
         mock_client.start_span.return_value = mock_span
@@ -90,6 +91,7 @@ class TestLangfuseTracer:
         from langflow.services.tracing.langfuse import LangFuseTracer
 
         mock_client = MagicMock()
+        mock_client.auth_check.return_value = True
         mock_span = MagicMock()
         mock_span.trace_id = "test-trace-id"
         mock_client.start_span.return_value = mock_span
@@ -251,6 +253,62 @@ class TestLangfuseTracer:
 
         # Verify CallbackHandler was called with trace_context using the generated trace_id
         mock_callback_class.assert_called_once_with(trace_context={"trace_id": generated_trace_id})
+
+    @patch.dict(
+        "os.environ",
+        {
+            "LANGFUSE_SECRET_KEY": "test-secret",  # pragma: allowlist secret
+            "LANGFUSE_PUBLIC_KEY": "test-public",
+            "LANGFUSE_HOST": "https://test.langfuse.com",
+        },
+    )
+    @patch("langfuse.Langfuse")
+    @patch("langfuse.langchain.CallbackHandler")
+    def test_get_langchain_callback_with_parent_span(self, mock_callback_class, mock_langfuse_class):
+        """Test get_langchain_callback includes parent_span_id when spans exist.
+
+        Verifies that when component spans are active, the callback handler
+        receives both trace_id and parent_span_id for proper nesting.
+        """
+        from langflow.services.tracing.langfuse import LangFuseTracer
+
+        mock_client = MagicMock()
+        mock_root_span = MagicMock()
+        mock_root_span.id = "root-span-id"
+        mock_child_span = MagicMock()
+        mock_child_span.id = "child-span-id"
+        mock_root_span.start_span.return_value = mock_child_span
+        mock_client.start_span.return_value = mock_root_span
+        mock_client.auth_check.return_value = True
+        generated_trace_id = "generated-trace-id-12345678"
+        mock_langfuse_class.create_trace_id.return_value = generated_trace_id
+        mock_langfuse_class.return_value = mock_client
+
+        mock_handler = MagicMock()
+        mock_callback_class.return_value = mock_handler
+
+        trace_id = uuid4()
+        tracer = LangFuseTracer(
+            trace_name="Test - flow404",
+            trace_type="flow",
+            project_name="test-project",
+            trace_id=trace_id,
+        )
+
+        # Add a component trace so spans dict is non-empty
+        tracer.add_trace(
+            trace_id="component789",
+            trace_name="MyComponent (component789)",
+            trace_type="component",
+            inputs={"value": "test"},
+        )
+
+        tracer.get_langchain_callback()
+
+        # Verify CallbackHandler was called with both trace_id and parent_span_id
+        mock_callback_class.assert_called_once_with(
+            trace_context={"trace_id": generated_trace_id, "parent_span_id": "child-span-id"}
+        )
 
     def test_config_not_ready_without_env_vars(self):
         """Test tracer is not ready without environment variables.

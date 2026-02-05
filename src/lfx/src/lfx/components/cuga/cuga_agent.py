@@ -89,6 +89,10 @@ class LangflowToolsProvider:
         """
         from cuga.backend.cuga_graph.nodes.cuga_lite.tool_provider_interface import AppDefinition
 
+        # Reset state in case initialize() is called multiple times
+        self.apps.clear()
+        self.tools_by_app.clear()
+
         # Common prefixes to exclude (HTTP methods, etc.)
         excluded_prefixes = {"get", "post", "put", "delete", "patch", "head", "options", "trace"}
 
@@ -424,6 +428,7 @@ class CugaComponent(ToolCallingAgentComponent):
                 # Use stream() for real-time UI updates
                 logger.debug("[CUGA] Starting CugaAgent.stream()")
                 final_answer = None
+                last_ai_content = None
 
                 def extract_from_nested_state(state_dict: dict) -> dict | None:
                     """Extract the inner state from CUGA's nested dict format.
@@ -496,15 +501,20 @@ class CugaComponent(ToolCallingAgentComponent):
                                 if hasattr(last_msg, "content") and hasattr(last_msg, "type"):
                                     if last_msg.type == "ai" and last_msg.content:
                                         content = last_msg.content
-                                        # Don't stream code blocks, only final text
                                         if not content.startswith("```"):
+                                            last_ai_content = content
                                             logger.debug(f"[CUGA] AI message: {content[:50]}...")
                                 elif isinstance(last_msg, dict) and last_msg.get("type") == "ai":
                                     content = last_msg.get("content", "")
                                     if content and not content.startswith("```"):
+                                        last_ai_content = content
                                         logger.debug(f"[CUGA] AI message (dict): {content[:50]}...")
 
-                # Ensure we have a final answer
+                # Fall back to last AI chat message if no explicit final_answer
+                if not final_answer and last_ai_content:
+                    final_answer = last_ai_content
+                    logger.info("[CUGA] Using last AI chat message as final answer")
+
                 if not final_answer:
                     final_answer = "Agent completed but no answer was returned."
 
