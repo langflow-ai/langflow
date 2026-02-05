@@ -150,10 +150,10 @@ const NodeToolbarComponent = memo(
       if (data.node?.tool_mode !== undefined) {
         setToolMode(
           data.node?.tool_mode ||
-            data.node?.outputs?.some(
-              (output) => output.name === "component_as_tool",
-            ) ||
-            false,
+          data.node?.outputs?.some(
+            (output) => output.name === "component_as_tool",
+          ) ||
+          false,
         );
       }
     }, [data.node?.tool_mode, data.node?.outputs]);
@@ -486,7 +486,7 @@ const NodeToolbarComponent = memo(
     const renderToolbarButtons = useMemo(
       () => (
         <>
-          {hasCode && !inspectionPanelVisible && (
+          {hasCode && (
             <ToolbarButton
               className={isCustomComponent ? "animate-pulse-pink" : ""}
               icon="Code"
@@ -689,28 +689,25 @@ const NodeToolbarComponent = memo(
                   </SelectItem>
                 )}
 
-                {!inspectionPanelVisible && (
-                  <SelectItem
-                    value={"documentation"}
-                    disabled={data.node?.documentation === ""}
-                  >
-                    <ToolbarSelectItem
-                      shortcut={
-                        shortcuts.find((obj) => obj.name === "Docs")?.shortcut!
-                      }
-                      value={"Docs"}
-                      icon={"FileText"}
-                      dataTestId="docs-button-modal"
-                    />
-                  </SelectItem>
-                )}
+                <SelectItem
+                  value={"documentation"}
+                  disabled={data.node?.documentation === ""}
+                >
+                  <ToolbarSelectItem
+                    shortcut={
+                      shortcuts.find((obj) => obj.name === "Docs")?.shortcut!
+                    }
+                    value={"Docs"}
+                    icon={"FileText"}
+                    dataTestId="docs-button-modal"
+                  />
+                </SelectItem>
 
                 {(isMinimal || !showNode) && (
                   <SelectItem
                     value={"show"}
-                    data-testid={`${
-                      showNode ? "minimize" : "expand"
-                    }-button-modal`}
+                    data-testid={`${showNode ? "minimize" : "expand"
+                      }-button-modal`}
                   >
                     <ToolbarSelectItem
                       shortcut={
