@@ -670,7 +670,10 @@ describe("reactflowUtils edge validation", () => {
           targetHandle,
         );
 
-        const cleanedEdges = cleanEdges([sourceNode, targetNode], [edge]);
+        const { edges: cleanedEdges } = cleanEdges(
+          [sourceNode, targetNode],
+          [edge],
+        );
 
         expect(cleanedEdges).toHaveLength(1);
         expect(cleanedEdges[0].id).toBe("edge-1");
@@ -704,7 +707,7 @@ describe("reactflowUtils edge validation", () => {
           targetHandle,
         );
 
-        const cleanedEdges = cleanEdges([targetNode], [edge]);
+        const { edges: cleanedEdges } = cleanEdges([targetNode], [edge]);
 
         expect(cleanedEdges).toHaveLength(0);
       });
@@ -742,7 +745,10 @@ describe("reactflowUtils edge validation", () => {
           targetHandle,
         );
 
-        const cleanedEdges = cleanEdges([sourceNode, targetNode], [edge]);
+        const { edges: cleanedEdges } = cleanEdges(
+          [sourceNode, targetNode],
+          [edge],
+        );
 
         expect(cleanedEdges).toHaveLength(0);
       });
@@ -792,7 +798,10 @@ describe("reactflowUtils edge validation", () => {
           targetHandle,
         );
 
-        const cleanedEdges = cleanEdges([whileLoopNode, agentStepNode], [edge]);
+        const { edges: cleanedEdges } = cleanEdges(
+          [whileLoopNode, agentStepNode],
+          [edge],
+        );
 
         expect(cleanedEdges).toHaveLength(1);
       });
@@ -843,7 +852,7 @@ describe("reactflowUtils edge validation", () => {
           targetHandle,
         );
 
-        const cleanedEdges = cleanEdges(
+        const { edges: cleanedEdges } = cleanEdges(
           [executeToolNode, whileLoopNode],
           [edge],
         );
@@ -896,7 +905,10 @@ describe("reactflowUtils edge validation", () => {
           targetHandle: { fieldName: "hidden_field" },
         };
 
-        const cleanedEdges = cleanEdges([sourceNode, targetNode], [edge]);
+        const { edges: cleanedEdges } = cleanEdges(
+          [sourceNode, targetNode],
+          [edge],
+        );
 
         expect(cleanedEdges).toHaveLength(0);
       });
@@ -958,7 +970,7 @@ describe("reactflowUtils edge validation", () => {
           createTargetHandle("target-1", "input_b", "str", ["Data"]),
         );
 
-        const cleanedEdges = cleanEdges(
+        const { edges: cleanedEdges } = cleanEdges(
           [sourceNode, targetNode],
           [edge1, edge2],
         );
@@ -1010,7 +1022,7 @@ describe("reactflowUtils edge validation", () => {
           createTargetHandle("target-1", "input_b", "str", ["Data"]),
         );
 
-        const cleanedEdges = cleanEdges(
+        const { edges: cleanedEdges } = cleanEdges(
           [sourceNode, targetNode],
           [edge1, edge2],
         );
