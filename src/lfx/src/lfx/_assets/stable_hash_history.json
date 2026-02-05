@@ -766,7 +766,7 @@
   },
   "File": {
     "versions": {
-      "0.3.0": "5008cc086d7f"
+      "0.3.0": "12a5841f1a03"
     }
   },
   "KnowledgeIngestion": {
@@ -781,7 +781,7 @@
   },
   "SaveToFile": {
     "versions": {
-      "0.3.0": "6657b458359b"
+      "0.3.0": "6d0e4842271e"
     }
   },
   "FirecrawlCrawlApi": {
@@ -826,7 +826,7 @@
   },
   "LoopComponent": {
     "versions": {
-      "0.3.0": "e179036a232d"
+      "0.3.0": "9f88705635cd"
     }
   },
   "Notify": {
@@ -1226,7 +1226,7 @@
   },
   "Agent": {
     "versions": {
-      "0.3.0": "b60d28d2784f"
+      "0.3.0": "60401f4e0ff8"
     }
   },
   "EmbeddingModel": {
@@ -1236,7 +1236,7 @@
   },
   "LanguageModelComponent": {
     "versions": {
-      "0.3.0": "0fe0030cc0b3"
+      "0.3.0": "07d0ce9ea77e"
     }
   },
   "MCPTools": {
