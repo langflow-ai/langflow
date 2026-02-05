@@ -1,7 +1,1 @@
-"""Auth service base from LFX package."""
-
-from __future__ import annotations
-
-from lfx.services.auth.base import BaseAuthService
-
-__all__ = ["BaseAuthService"]
+"""Auth service base is defined in lfx.services.auth.base (BaseAuthService)."""

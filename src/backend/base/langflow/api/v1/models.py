@@ -321,15 +321,8 @@ async def _get_enabled_models(session: DbSession, current_user: CurrentActiveUse
                 logger.debug("Failed to parse enabled models for user %s: %s", current_user.id, var.value)
                 return set()
     except ValueError:
-        # Variable not found: treat as server error to surface storage bugs defensively
-        logger.exception(
-            "Enabled models variable not found for user %s; expected variable to exist.",
-            current_user.id,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Enabled models preference could not be loaded. Please try again.",
-        ) from None
+        # Variable not found, return empty set
+        pass
     return set()
 
 
