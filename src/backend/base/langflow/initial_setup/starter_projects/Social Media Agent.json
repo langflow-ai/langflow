@@ -149,7 +149,7 @@
                 "dependencies": [
                   {
                     "name": "apify_client",
-                    "version": "2.4.0"
+                    "version": "2.4.1"
                   },
                   {
                     "name": "langchain_community",
@@ -380,7 +380,7 @@
                 "dependencies": [
                   {
                     "name": "apify_client",
-                    "version": "2.4.0"
+                    "version": "2.4.1"
                   },
                   {
                     "name": "langchain_community",
@@ -980,7 +980,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.128.0"
+                    "version": "0.128.1"
                   },
                   {
                     "name": "lfx",
