@@ -24,12 +24,14 @@ test(
 
     await initialGPTsetup(page);
 
+    // Open Playground
     await page.getByRole("button", { name: "Playground", exact: true }).click();
 
     await page.waitForSelector('[data-testid="input-chat-playground"]', {
       timeout: 100000,
     });
 
+    await page.getByTestId("input-chat-playground").click();
     await page.getByTestId("input-chat-playground").fill("Hello, how are you?");
 
     await page.waitForSelector('[data-testid="button-send"]', {
@@ -37,33 +39,27 @@ test(
     });
 
     await page.getByTestId("button-send").click();
-    let valueUser = await page.getByTestId("sender_name_user").textContent();
 
-    await page.waitForSelector('[data-testid="sender_name_ai"]', {
-      timeout: 100000,
+    await page.getByTestId("stop_building_button").waitFor({
+      state: "visible",
+      timeout: 30000,
+    });
+    await page.getByTestId("stop_building_button").waitFor({
+      state: "hidden",
+      timeout: 180000,
     });
 
-    let valueAI = await page.getByTestId("sender_name_ai").textContent();
+    await expect(
+      page.locator('[data-testid^="chat-message-User"]').first(),
+    ).toHaveText("Hello, how are you?");
 
-    expect(valueUser).toBe("User");
-    expect(valueAI).toContain("AI");
+    await expect(
+      page.locator('[data-testid^="chat-message-AI"]').first(),
+    ).not.toBeEmpty();
 
-    await page.keyboard.press("Escape");
-
-    await page
-      .getByTestId("textarea_str_input_value")
-      .nth(0)
-      .fill(
-        "testtesttesttesttesttestte;.;.,;,.;,.;.,;,..,;;;;;;;;;;;;;;;;;;;;;,;.;,.;,.,;.,;.;.,~~çççççççççççççççççççççççççççççççççççççççisdajfdasiopjfaodisjhvoicxjiovjcxizopjviopasjioasfhjaiohf23432432432423423sttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttestççççççççççççççççççççççççççççççççç,.,.,.,.,.,.,.,.,.,.,.,.,.,.,.,.,!",
-      );
+    // close the playground
     await page.getByRole("button", { name: "Playground", exact: true }).click();
 
-    await page.waitForSelector('[data-testid="button-send"]', {
-      timeout: 100000,
-    });
-
-    await page.getByTestId("button-send").click();
-    await page.getByText("Close", { exact: true }).click();
     await page.getByText("Chat Input", { exact: true }).click();
     await page.getByTestId("edit-button-modal").click();
     await page.getByTestId("showsender_name").click();
@@ -76,11 +72,11 @@ test(
 
     await page
       .getByTestId("popover-anchor-input-sender_name")
-      .nth(1)
+      .nth(0)
       .fill("TestSenderNameUser");
     await page
       .getByTestId("popover-anchor-input-sender_name")
-      .nth(0)
+      .nth(1)
       .fill("TestSenderNameAI");
 
     await page.getByRole("button", { name: "Playground", exact: true }).click();
@@ -89,25 +85,26 @@ test(
       timeout: 100000,
     });
 
+    await page.getByTestId("input-chat-playground").click();
+    await page.getByTestId("input-chat-playground").fill("Are you doing ok?");
+
     await page.getByTestId("button-send").click();
 
-    valueUser = await page
-      .getByTestId("sender_name_testsendernameuser")
-      .textContent();
-    valueAI = await page
-      .getByTestId("sender_name_testsendernameai")
-      .textContent();
+    await page.getByTestId("stop_building_button").waitFor({
+      state: "visible",
+      timeout: 30000,
+    });
+    await page.getByTestId("stop_building_button").waitFor({
+      state: "hidden",
+      timeout: 180000,
+    });
 
-    expect(valueUser).toContain("TestSenderNameUser");
-    expect(valueAI).toContain("TestSenderNameAI");
+    await expect(
+      page.locator('[data-testid^="chat-message-TestSenderNameUser"]').first(),
+    ).toHaveText("Are you doing ok?");
 
-    expect(
-      await page
-        .getByText(
-          "testtesttesttesttesttestte;.;.,;,.;,.;.,;,..,;;;;;;;;;;;;;;;;;;;;;,;.;,.;,.,;.,;.;.,~~çççççççççççççççççççççççççççççççççççççççisdajfdasiopjfaodisjhvoicxjiovjcxizopjviopasjioasfhjaiohf23432432432423423sttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttestççççççççççççççççççççççççççççççççç,.,.,.,.,.,.,.,.,.,.,.,.,.,.,.,.,!",
-          { exact: true },
-        )
-        .isVisible(),
-    );
+    await expect(
+      page.locator('[data-testid^="chat-message-TestSenderNameAI"]').first(),
+    ).not.toBeEmpty();
   },
 );

@@ -10,11 +10,11 @@ export interface TextareaProps
 const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   ({ className, password, editNode, ...props }, ref) => {
     return (
-      <div className="h-full w-full">
+      <div className="w-full">
         <textarea
           data-testid="textarea"
           className={cn(
-            "nopan nodelete nodrag noflow textarea-primary nowheel",
+            "nopan nodelete nodrag noflow textarea-primary nowheel !max-h-fit resize-y",
             className,
             password ? "password" : "",
           )}
