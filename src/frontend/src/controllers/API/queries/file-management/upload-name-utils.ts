@@ -1,3 +1,5 @@
+export const SUFFIX_COUNTER_REGEX = /^(.*) \((\d+)\)$/;
+
 export function getUniqueFilename(
   originalName: string,
   existingNames: Set<string>,
@@ -11,7 +13,7 @@ export function getUniqueFilename(
 
   let counter = 2;
 
-  const match = base.match(/^(.*) \((\d+)\)$/);
+  const match = base.match(SUFFIX_COUNTER_REGEX);
   let rootBase = base;
   if (match) {
     rootBase = match[1];
