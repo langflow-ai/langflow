@@ -130,10 +130,16 @@ test(
     await page.getByTestId("panel-description").hover();
     await page.getByTestId("edit-name-description-button").click();
 
+    await page.waitForTimeout(1000);
     await page.getByTestId("inspection-panel-name").fill(randomName_3);
     await page.getByTestId("edit-fields-button").click();
-
-    await page.waitForTimeout(1000);
+    await page
+      .getByTestId("popover-anchor-input-input_value")
+      .fill(randomDescription_2);
+    await expect(
+      page.getByTestId("popover-anchor-input-input_value"),
+    ).toHaveValue(randomDescription_2);
+    await page.getByTestId("edit-fields-button").click();
 
     await expect(page.getByTestId("node-name")).toHaveText(randomName_3);
   },
