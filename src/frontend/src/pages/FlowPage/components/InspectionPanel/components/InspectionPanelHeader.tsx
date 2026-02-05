@@ -1,18 +1,18 @@
-import { useState, useCallback, useMemo } from "react";
-import { Badge } from "@/components/ui/badge";
-import ShadTooltip from "@/components/common/shadTooltipComponent";
-import CodeAreaModal from "@/modals/codeAreaModal";
-import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
+import { useCallback, useMemo, useState } from "react";
 import useHandleOnNewValue from "@/CustomNodes/hooks/use-handle-new-value";
-import type { NodeDataType } from "@/types/flow";
-import { ToolbarButton } from "../../nodeToolbarComponent/components/toolbar-button";
-import { useShortcutsStore } from "@/stores/shortcuts";
-import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
-import useAlertStore from "@/stores/alertStore";
-import { cn } from "@/utils/utils";
-import EditableHeaderContent from "./EditableHeaderContent";
-import { Button } from "@/components/ui/button";
+import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
+import CodeAreaModal from "@/modals/codeAreaModal";
+import useAlertStore from "@/stores/alertStore";
+import { useShortcutsStore } from "@/stores/shortcuts";
+import type { NodeDataType } from "@/types/flow";
+import { cn } from "@/utils/utils";
+import { ToolbarButton } from "../../nodeToolbarComponent/components/toolbar-button";
+import EditableHeaderContent from "./EditableHeaderContent";
 
 interface InspectionPanelHeaderProps {
   data: NodeDataType;
@@ -96,12 +96,15 @@ export default function InspectionPanelHeader({
     <div
       className="flex flex-col gap-2 py-3 px-4"
       ref={containerRef}
+      data-testid="panel-description"
       onMouseEnter={() => setIsHoveringContent(true)}
       onMouseLeave={() => setIsHoveringContent(false)}
     >
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <span className="font-semibold truncate">{nameElement}</span>
+          <span className="font-semibold truncate" data-testid="panel-name">
+            {nameElement}
+          </span>
           <ShadTooltip content="Click to copy full ID">
             <Badge
               variant="secondaryStatic"
@@ -172,7 +175,7 @@ export default function InspectionPanelHeader({
             )}
             size="node-toolbar"
             variant="ghost"
-            datatest-id={
+            data-testid={
               editMode
                 ? "save-name-description-button"
                 : "edit-name-description-button"
