@@ -74,7 +74,7 @@ test(
 
     await page.getByTestId("title-If-Else").click();
 
-    await page.getByTestId("code-button-modal").click();
+    await page.getByTestId("code-button-modal").last().click();
 
     await page.getByTestId("checkAndSaveBtn").last().click();
 

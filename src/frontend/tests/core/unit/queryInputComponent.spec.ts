@@ -37,7 +37,7 @@ test(
     await adjustScreenView(page);
 
     await page.getByTestId("title-OpenAI").click();
-    await page.getByTestId("code-button-modal").click();
+    await page.getByTestId("code-button-modal").last().click();
 
     const cleanCode = await extractAndCleanCode(page);
 

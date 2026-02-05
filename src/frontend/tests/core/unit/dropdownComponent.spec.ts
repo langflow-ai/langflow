@@ -140,7 +140,7 @@ test(
     if (value !== "cohere.command-r-plus-v1:0") {
       expect(false).toBeTruthy();
     }
-    await page.getByTestId("code-button-modal").click();
+    await page.getByTestId("code-button-modal").last().click();
 
     await page.locator("textarea").press("Control+a");
     const emptyOptionsCode = `from langchain_community.chat_models.bedrock import BedrockChat

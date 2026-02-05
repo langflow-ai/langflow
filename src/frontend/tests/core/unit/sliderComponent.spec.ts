@@ -37,7 +37,7 @@ test(
     await adjustScreenView(page, { numberOfZoomOut: 2 });
 
     await page.getByTestId("title-Ollama").click();
-    await page.getByTestId("code-button-modal").click();
+    await page.getByTestId("code-button-modal").last().click();
 
     const cleanCode = await extractAndCleanCode(page);
 
