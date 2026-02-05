@@ -12,6 +12,7 @@ import {
   isToolModeEnabled,
 } from "@/CustomNodes/helpers/parameter-filtering";
 import { cn } from "@/utils/utils";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
 
 interface InspectionPanelFieldsProps {
   data: NodeDataType;
@@ -102,7 +103,8 @@ export default function InspectionPanelFields({
   // Normal mode - show only advanced fields with full input UI
   if (advancedFields.length === 0) {
     return (
-      <div className="flex items-center justify-center p-8 text-sm text-muted-foreground">
+      <div className="flex flex-col gap-2 items-center justify-center p-10 pb-12 text-sm text-muted-foreground">
+        <ForwardedIconComponent name="Settings2" className="text-input w-6 h-6" />
         No advanced settings
       </div>
     );

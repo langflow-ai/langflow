@@ -13,6 +13,7 @@ import type { NodeDataType } from "@/types/flow";
 import { cn } from "@/utils/utils";
 import { ToolbarButton } from "../../nodeToolbarComponent/components/toolbar-button";
 import EditableHeaderContent from "./EditableHeaderContent";
+import { ICON_STROKE_WIDTH } from "@/constants/constants";
 
 interface InspectionPanelHeaderProps {
   data: NodeDataType;
@@ -97,13 +98,48 @@ export default function InspectionPanelHeader({
   }, [editMode, handleSave]);
 
   return (
-    <div
-      className="flex flex-col gap-2 py-3 px-4"
+    <><div
+      className="flex flex-col py-3 px-4"
       ref={containerRef}
       data-testid="panel-description"
       onMouseEnter={() => setIsHoveringContent(true)}
       onMouseLeave={() => setIsHoveringContent(false)}
     >
+      <div className="absolute -left-2 top-[18px] w-7 pr-2">
+        <ShadTooltip content={editMode ? "Save" : "Edit"} side="top">
+          <Button
+            unstyled
+            onClick={() => {
+              toggleEditMode();
+            }}
+            className={cn(
+              "nodrag z-50 flex h-5 w-5 ml-1 cursor-pointer items-center justify-center rounded-md",
+              "transform transition-all duration-300 ease-out",
+              editMode
+                ? "bg-accent-emerald"
+                : "bg-zinc-foreground",
+              isHoveringContent
+                ? "opacity-100"
+                : "opacity-0",
+            )}
+            data-testid={
+              editMode
+                ? "save-name-description-button"
+                : "edit-name-description-button"
+            }
+          >
+            <ForwardedIconComponent
+              name={editMode ? "Check" : "PencilLine"}
+              strokeWidth={ICON_STROKE_WIDTH}
+              className={cn(
+                editMode
+                  ? "text-accent-emerald-foreground"
+                  : "text-muted-foreground",
+                "w-4 h-4",
+              )}
+            />
+          </Button></ShadTooltip>
+      </div>
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2 overflow-hidden">
           <span className="font-semibold truncate" data-testid="panel-name">
@@ -120,7 +156,7 @@ export default function InspectionPanelHeader({
             </Badge>
           </ShadTooltip>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1" onMouseEnter={() => setIsHoveringContent(false)}>
           {hasDocs && (
             <ToolbarButton
               icon="FileText"
@@ -167,31 +203,8 @@ export default function InspectionPanelHeader({
           </CodeAreaModal>
         </div>
       )}
-      <div className="flex gap-1 items-end">
-        {descriptionElement}
-        <ShadTooltip content={editMode ? "Save" : "Edit"} side="top">
-          <Button
-            onClick={toggleEditMode}
-            className={cn(
-              editMode ? "bg-accent" : "",
-              "!text-muted-foreground transition-opacity duration-150",
-              isHoveringContent || editMode ? "opacity-100" : "opacity-0",
-            )}
-            size="node-toolbar"
-            variant="ghost"
-            data-testid={
-              editMode
-                ? "save-name-description-button"
-                : "edit-name-description-button"
-            }
-          >
-            <ForwardedIconComponent
-              name={editMode ? "Check" : "PencilLine"}
-              className="h-4 w-4"
-            />
-          </Button>
-        </ShadTooltip>
-      </div>
-    </div>
+      {descriptionElement}
+    </div></>
+
   );
 }
