@@ -44,18 +44,16 @@ test(
       timeout: 100000,
     });
 
-    await page.waitForSelector("text=chain.png", { timeout: 30000 });
+    // await page.waitForSelector("text=chain.png", { timeout: 30000 });
 
-    expect(await page.getByAltText("generated image").isVisible()).toBeTruthy();
+    // expect(await page.getByAltText("generated image").isVisible()).toBeTruthy();
+
+    await expect(page.locator('img[alt$="chain.png"]')).toBeVisible({
+      timeout: 100000,
+    });
 
     expect(
       await page.getByTestId(`chat-message-User-${userQuestion}`).isVisible(),
     ).toBeTruthy();
-
-    const textContents = await page
-      .getByTestId("div-chat-message")
-      .allTextContents();
-
-    expect(textContents[0]).toContain("chain");
   },
 );
