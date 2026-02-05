@@ -62,6 +62,10 @@ RUN useradd --uid 1000 --gid 0 --no-create-home --home-dir /app/data user
 COPY --from=builder --chown=1000:0 /app/.venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
 
+# Create home directory and ensure proper ownership
+# The user needs write access to /app/data (home) and /app (workdir)
+RUN mkdir -p /app/data && chown -R 1000:0 /app/data && chown -R 1000:0 /app
+
 LABEL org.opencontainers.image.title=langflow-backend
 LABEL org.opencontainers.image.authors=['Langflow']
 LABEL org.opencontainers.image.licenses=MIT
