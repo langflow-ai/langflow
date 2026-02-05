@@ -1,6 +1,6 @@
 ---
-title: Asynchronous workflow API (Beta)
-slug: /workflow-api-asynchronous
+title: Workflow API (Beta)
+slug: /workflow-api
 ---
 
 import Tabs from '@theme/Tabs';
@@ -12,23 +12,121 @@ The Workflow API is currently in **Beta**.
 The API endpoints and response formats may change in future releases.
 :::
 
-The Asynchronous Workflow API provides programmatic access to execute Langflow workflows asynchronously using background jobs or streaming execution modes. This API is part of the Langflow v2 API and offers enhanced workflow execution capabilities compared to the v1 `/run` endpoint.
+The Workflow API provides programmatic access to execute Langflow workflows synchronously or asynchronously.
+Synchronous requests receive complete results immediately upon completion.
+Asynchronous requests are queued in the background and will run until complete, or a request is issued to the [Stop Workflow endpoint](#stop-workflow-endpoint).
 
-For synchronous execution, see [Synchronous Workflow API endpoints](/workflows-api-synchronous).
+The Workflow API is part of the Langflow Developer v2 API and offers enhanced workflow execution capabilities compared to the v1 `/run` endpoint.
 
 <PartialAPISetup />
 
-## Execute workflow endpoint (asynchronous)
+## Execute workflows endpoint (synchronous or asynchronous)
 
-**Endpoint:** `POST /api/v2/workflows`
+**Endpoint:**
 
-**Description:** Execute a workflow asynchronously using background jobs or streaming execution modes.
+```
+POST /api/v2/workflows
+```
 
-### Background execution
+**Description:** Execute a workflow synchronously and receive complete results immediately upon completion.
+Set `background=false` to make the request synchronous.
 
-Start a job and receive a job ID immediately. Set `background=true` and `stream=false`.
+### Example synchronous request
 
-For long-running workflows, use `background=true` to get a `job_id` immediately, and then poll the status [using the GET endpoint](#get-workflow-status-endpoint).
+Execute a workflow synchronously and receive complete results immediately:
+
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+```python
+import requests
+
+url = f"{LANGFLOW_SERVER_URL}/api/v2/workflows"
+headers = {
+    "Content-Type": "application/json",
+    "x-api-key": LANGFLOW_API_KEY
+}
+
+payload = {
+    "flow_id": "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
+    "background": False,
+    "inputs": {
+        "ChatInput-abc.input_type": "chat",
+        "ChatInput-abc.input_value": "what is 2+2",
+        "ChatInput-abc.session_id": "session-123"
+    }
+}
+
+response = requests.post(url, json=payload, headers=headers)
+print(response.json())
+```
+
+</TabItem>
+<TabItem value="TypeScript" label="TypeScript">
+
+```typescript
+import axios from 'axios';
+
+const url = `${LANGFLOW_SERVER_URL}/api/v2/workflows`;
+
+const payload = {
+  flow_id: "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
+  background: false,
+  inputs: {
+    "ChatInput-abc.input_type": "chat",
+    "ChatInput-abc.input_value": "what is 2+2",
+    "ChatInput-abc.session_id": "session-123"
+  }
+};
+
+const runWorkflow = async () => {
+  try {
+    const response = await axios.post(url, payload, {
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': LANGFLOW_API_KEY
+      }
+    });
+    console.log(response.data);
+  } catch (error) {
+    console.error('Error triggering workflow:', error);
+  }
+};
+
+runWorkflow();
+```
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+```bash
+curl -X POST \
+  "$LANGFLOW_SERVER_URL/api/v2/workflows" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
+  -d '{
+    "flow_id": "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
+    "background": false,
+    "inputs": {
+      "ChatInput-abc.input_type": "chat",
+      "ChatInput-abc.input_value": "what is 2+2",
+      "ChatInput-abc.session_id": "session-123"
+    }
+  }'
+```
+
+</TabItem>
+</Tabs>
+
+### Example asynchronous request
+
+For long-running workflows, set `background=true` to get a `job_id` immediately, and then poll the status [using the GET endpoint](#get-workflow-status-endpoint) until the job is complete.
+
+To stop a job, send a POST request to the [Stop workflow endpoint](#stop-workflow-endpoint).
+
+:::tip
+The asynchronous request contains `stream` parameter, but streaming is not yet supported. The parameter is included for future compatibility.
+:::
 
 **Example request:**
 
@@ -129,11 +227,59 @@ curl -X POST \
 }
 ```
 
+### Request body
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `flow_id` | `string` | Yes | - | The ID or endpoint name of the flow to execute. |
+| `flow_version` | `string` | No | - | Optional version hash to pin to a specific flow version. |
+| `background` | `boolean` | No | `false` | Must be `false` for synchronous execution. |
+| `inputs` | `object` | No | `{}` | Inputs for the workflow execution. Uses component identifiers with dot notation (e.g., `ChatInput-abc.input_value`). See [Component identifiers and input structure](#component-identifiers-and-input-structure) for detailed information. |
+
+### Example response
+
+```json
+{
+  "flow_id": "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
+  "job_id": "job_id_1234567890",
+  "object": "response",
+  "created_at": 1741476542,
+  "status": "completed",
+  "errors": [],
+  "inputs": {
+    "ChatInput-abc.input_type": "chat",
+    "ChatInput-abc.input_value": "what is 2+2",
+    "ChatInput-abc.session_id": "session-123"
+  },
+  "outputs": {
+    "ChatOutput-xyz": {
+      "type": "message",
+      "component_id": "ChatOutput-xyz",
+      "status": "completed",
+      "content": "2 + 2 equals 4."
+    }
+  },
+  "metadata": {}
+}
+```
+
+### Response body
+
+The response includes an `outputs` field containing component-level results. Each output has a `type` field indicating the type of content:
+
+| Type | Description | Example |
+|------|-------------|---------|
+| `message` | Text message content. | Chat responses, summaries |
+| `image` | Image URL or data. | Generated images, processed images |
+| `sql` | SQL query results. | Database query outputs |
+| `data` | Structured data. | JSON objects, arrays |
+| `file` | File reference. | Generated documents, reports |
+
 ## Get workflow status endpoint
 
 **Endpoint:** `GET /api/v2/workflows`
 
-**Description:** Retrieve the status and results of a workflow execution by job ID. Can also be used to reconnect to a streaming execution after disconnection.
+**Description:** Retrieve the status and results of a workflow execution by job ID.
 
 ### Example request
 
@@ -341,10 +487,10 @@ curl -X POST \
 
 ## Component identifiers and input structure
 
-The Workflow API uses component identifiers with dot notation to specify inputs for individual components in your workflow. This allows you to pass values to specific components and override component parameters.
+The Workflows API uses component identifiers with dot notation to specify inputs for individual components in your workflow. This allows you to pass values to specific components and override component parameters.
 
 Component identifiers use the format `{component_id}.{parameter_name}`.
-When making requests to the Workflow API, include component identifiers in the `inputs` object.
+When making requests to the Workflows API, include component identifiers in the `inputs` object.
 For example, this demonstrates targeting multiple components and their parameters in a single request.
 
 ```json
@@ -372,7 +518,6 @@ The API uses standard HTTP status codes to indicate success or failure:
 | Status Code | Description |
 |-------------|-------------|
 | `200 OK` | Request successful. |
-| `202 Accepted` | Background job accepted. |
 | `400 Bad Request` | Invalid request parameters. |
 | `401 Unauthorized` | Invalid or missing API key. |
 | `404 Not Found` | Flow not found or developer API disabled. |

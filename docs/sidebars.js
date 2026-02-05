@@ -450,17 +450,12 @@ module.exports = {
           items: [
             {
               type: "doc",
-              id: "API-Reference/workflows-api-synchronous",
-              label: "Synchronous workflows API (Beta)",
-            },
-            {
-              type: "doc",
-              id: "API-Reference/workflows-api-asynchronous",
-              label: "Asynchronous workflows API (Beta)",
+              id: "API-Reference/workflows-api",
+              label: "Workflow API (Beta)",
             },
             {
               type: "link",
-              label: "Workflows API specification (Beta)",
+              label: "Workflow API specification (Beta)",
               href: "/api/workflow",
             },
           ],
