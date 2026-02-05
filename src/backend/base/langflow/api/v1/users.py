@@ -33,7 +33,7 @@ async def add_user(
     new_user = User.model_validate(user, from_attributes=True)
     try:
         new_user.password = get_auth_service().get_password_hash(user.password)
-        new_user.is_active = get_settings_service().auth_settings.NEW_USER_IS_ACTIVE
+        new_user.is_active = settings_service.auth_settings.NEW_USER_IS_ACTIVE
         session.add(new_user)
         await session.flush()
         await session.refresh(new_user)

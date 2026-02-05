@@ -268,11 +268,6 @@ def get_fernet(settings_service: SettingsService) -> Fernet:
 
 
 def encrypt_api_key(api_key: str, settings_service: SettingsService | None = None) -> str:  # noqa: ARG001
-    """Encrypt an API key.
-
-    This function exists for backwards compatibility with existing imports.
-    **New code should use `get_auth_service().encrypt_api_key()` directly.**
-    """
     return _auth_service().encrypt_api_key(api_key)
 
 
@@ -281,12 +276,23 @@ def decrypt_api_key(
     settings_service: SettingsService | None = None,  # noqa: ARG001
     fernet_obj=None,  # noqa: ARG001
 ) -> str:
-    """Decrypt an encrypted API key.
-
-    This function exists for backwards compatibility with existing imports.
-    **New code should use `get_auth_service().decrypt_api_key()` directly.**
-    """
     return _auth_service().decrypt_api_key(encrypted_api_key)
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return _auth_service().verify_password(plain_password, hashed_password)
+
+
+def get_password_hash(password: str) -> str:
+    return _auth_service().get_password_hash(password)
+
+
+async def create_super_user(username: str, password: str, db: AsyncSession) -> User:
+    return await _auth_service().create_super_user(username, password, db)
+
+
+async def create_user_longterm_token(db: AsyncSession) -> tuple:
+    return await _auth_service().create_user_longterm_token(db)
 
 
 async def get_current_user_mcp(
