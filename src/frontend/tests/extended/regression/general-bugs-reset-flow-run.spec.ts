@@ -71,7 +71,7 @@ test(
 
     await page.getByTestId("edit-name-description-button").click();
 
-    await page.getByTestId("input-title-Text Output").fill("textoutputfalse");
+    await page.getByTestId("inspection-panel-name").fill("textoutputfalse");
 
     await page.getByTestId("save-name-description-button").click();
 
