@@ -580,9 +580,7 @@ class TestMergeDynamicUI:
             "merge_how": {"show": False},
         }
 
-        updated_config = component.update_build_config(
-            build_config, [{"name": "Merge", "icon": "merge"}], "operation"
-        )
+        updated_config = component.update_build_config(build_config, [{"name": "Merge", "icon": "merge"}], "operation")
 
         assert updated_config["merge_on_column"]["show"] is True
         assert updated_config["merge_how"]["show"] is True
