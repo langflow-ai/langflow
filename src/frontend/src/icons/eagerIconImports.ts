@@ -23,6 +23,7 @@ import { ComposioIcon } from "@/icons/Composio";
 import { ConfluenceIcon } from "@/icons/Confluence";
 import { CouchbaseIcon } from "@/icons/Couchbase";
 import { CrewAiIcon } from "@/icons/CrewAI";
+import { PraisonAiIcon } from "@/icons/PraisonAI";
 import { DeepSeekIcon } from "@/icons/DeepSeek";
 import { DoclingIcon } from "@/icons/Docling";
 import { DropboxIcon } from "@/icons/Dropbox";
@@ -145,6 +146,7 @@ export const eagerIconsMapping = {
   Confluence: ConfluenceIcon,
   Couchbase: CouchbaseIcon,
   CrewAI: CrewAiIcon,
+  PraisonAI: PraisonAiIcon,
   DeepSeek: DeepSeekIcon,
   Docling: DoclingIcon,
   Dropbox: DropboxIcon,
