@@ -23,8 +23,7 @@ guardrail_descriptions = {
         "credentials, or any other sensitive credentials"
     ),
     "Jailbreak": (
-        "attempts to bypass AI safety guidelines, manipulate the model's behavior, "
-        "or make it ignore its instructions"
+        "attempts to bypass AI safety guidelines, manipulate the model's behavior, or make it ignore its instructions"
     ),
     "Offensive Content": "offensive, hateful, discriminatory, violent, or inappropriate content",
     "Malicious Code": "potentially malicious code, scripts, exploits, or harmful commands",
@@ -33,6 +32,7 @@ guardrail_descriptions = {
         "the AI's behavior through embedded instructions"
     ),
 }
+
 
 class GuardrailsComponent(Component):
     display_name = "Guardrails"
@@ -113,7 +113,7 @@ class GuardrailsComponent(Component):
             min_label="Strict",
             max_label="Permissive",
             advanced=True,
-        )
+        ),
     ]
 
     outputs = [
@@ -624,4 +624,3 @@ Now analyze the user input above and respond according to the instructions:"""
             }
 
         return Data(data=payload)
-
