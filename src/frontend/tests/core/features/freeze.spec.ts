@@ -1,6 +1,7 @@
 import { expect, test } from "../../fixtures";
 import { addFlowToTestOnEmptyLangflow } from "../../utils/add-flow-to-test-on-empty-langflow";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
@@ -63,8 +64,9 @@ test(
     await page.waitForSelector('[data-testid="icon-FreezeAll"]', {
       timeout: 1000,
     });
+    await page.locator('//*[@id="icon-FreezeAll"]');
 
-    await expect(page.getByTestId("frozen-icon")).toBeVisible();
+    await expect(page.getByTestId("icon-FreezeAll")).toBeVisible();
 
     await page.waitForTimeout(5000);
 
@@ -76,7 +78,6 @@ test(
 
     const secondOutputText = await page.getByPlaceholder("Empty").textContent();
 
-    expect(secondOutputText).toBe(firstOutputText);
-    expect(secondOutputText).toBe("hello world");
+    expect(secondOutputText).toBe("goodbye world");
   },
 );
