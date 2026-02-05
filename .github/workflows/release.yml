@@ -135,7 +135,12 @@ jobs:
       - name: Determine version
         id: version
         run: |
-          version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//' | head -n 2 | xargs)
+          version=$(python - <<'PY'
+import tomllib, pathlib
+data = tomllib.loads(pathlib.Path("src/backend/base/pyproject.toml").read_text())
+print(data["project"]["version"])
+PY
+)
           echo "Base version from pyproject.toml: $version"
 
           if [ ${{inputs.pre_release}} == "true" ]; then
