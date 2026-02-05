@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from uuid import UUID
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
+from uuid import UUID
 
 if TYPE_CHECKING:
     import asyncio
