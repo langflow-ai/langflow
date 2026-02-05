@@ -68,14 +68,6 @@ withEventDeliveryModes(
       state: "hidden",
       timeout: 180000,
     });
-    // await page.waitForSelector('[data-testid="stop_building_button"]', {
-    // 	timeout: 30000,
-    // 	state: "visible",
-    // });
-    // await page.waitForSelector('[data-testid="stop_building_button"]', {
-    // 	timeout: 180000,
-    // 	state: "hidden",
-    // });
 
     // Assert the assistant response mentions "John Doe"
     await page.getByTestId("div-chat-message").last().waitFor({
