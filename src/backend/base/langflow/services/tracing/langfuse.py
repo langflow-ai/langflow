@@ -182,11 +182,12 @@ class LangFuseTracer(BaseTracer):
             handler = CallbackHandler(
                 trace_context={"trace_id": trace_id_hex},
             )
-            logger.debug(f"[Langfuse] CallbackHandler created successfully: {type(handler).__name__}")
-            return handler
-        except Exception as e:
+        except (ImportError, ValueError, TypeError) as e:
             logger.error(f"[Langfuse] Error creating CallbackHandler: {e}")
             return None
+        else:
+            logger.debug(f"[Langfuse] CallbackHandler created successfully: {type(handler).__name__}")
+            return handler
 
     @staticmethod
     def _get_config() -> dict:

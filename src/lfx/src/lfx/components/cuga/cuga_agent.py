@@ -1,13 +1,11 @@
-import asyncio
-import json
 import traceback
 import uuid
 from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, Any, cast
 
 from langchain_core.agents import AgentFinish
-from langchain_core.messages import AIMessage, AIMessageChunk, HumanMessage
-from langchain_core.tools import StructuredTool
+from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.tools import BaseTool, StructuredTool
 
 from lfx.base.agents.agent import LCToolsAgentComponent
 from lfx.base.models.model_input_constants import (
@@ -32,6 +30,9 @@ from lfx.schema.message import Message
 if TYPE_CHECKING:
     from lfx.schema.log import SendMessageFunctionType
 
+# LangGraph streams return tuples of (node_name_tuple, state_dict)
+LANGGRAPH_TUPLE_LENGTH = 2
+
 
 def set_advanced_true(component_input):
     """Set the advanced flag to True for a component input.
@@ -44,6 +45,155 @@ def set_advanced_true(component_input):
     """
     component_input.advanced = True
     return component_input
+
+
+class LangflowToolsProvider:
+    """Tool provider that groups Langflow tools into apps for CUGA.
+
+    This provider implements the CUGA SDK's ToolProviderInterface pattern,
+    grouping tools using three strategies (in order of precedence):
+    1. By server_name metadata - tools from same MCP server
+    2. By common prefix - tools like gmail_*, slack_*
+    3. Default app - remaining tools with concatenated descriptions
+
+    Attributes:
+        tools: List of BaseTool instances to provide
+        apps: List of AppDefinition objects after grouping
+        tools_by_app: Mapping from app name to list of tools
+        initialized: Whether the provider has been initialized
+    """
+
+    # Inherit interface methods at runtime for duck typing with ToolProviderInterface
+    def __init__(self, tools: list[BaseTool]):
+        """Initialize the tool provider with a list of tools.
+
+        Args:
+            tools: List of LangChain BaseTool instances to group and provide
+        """
+        self.tools = tools
+        self.apps: list = []
+        self.tools_by_app: dict[str, list[BaseTool]] = {}
+        self.initialized = False
+
+    async def initialize(self) -> None:
+        """Initialize the provider by grouping tools into apps."""
+        self._group_tools()
+        self.initialized = True
+
+    def _group_tools(self) -> None:
+        """Group tools using three strategies from tracker.py:set_tools().
+
+        Strategy 1: Group by server_name metadata (MCP tools)
+        Strategy 2: Group remaining tools by common prefix (e.g., slack_*)
+        Strategy 3: Put remaining tools in default_app
+        """
+        from cuga.backend.cuga_graph.nodes.cuga_lite.tool_provider_interface import AppDefinition
+
+        # Common prefixes to exclude (HTTP methods, etc.)
+        excluded_prefixes = {"get", "post", "put", "delete", "patch", "head", "options", "trace"}
+
+        # Strategy 1: Group by server_name metadata
+        tools_without_server = []
+        for tool in self.tools:
+            server_name = None
+            if tool.metadata:
+                server_name = tool.metadata.get("server_name")
+
+            if server_name:
+                if server_name not in self.tools_by_app:
+                    self.tools_by_app[server_name] = []
+                self.tools_by_app[server_name].append(tool)
+            else:
+                tools_without_server.append(tool)
+
+        # Strategy 2: Group remaining tools by common prefix
+        prefix_candidates: dict[str, list[BaseTool]] = {}
+        for tool in tools_without_server:
+            if "_" in tool.name:
+                prefix = tool.name.split("_")[0].lower()
+                if prefix not in excluded_prefixes:
+                    if prefix not in prefix_candidates:
+                        prefix_candidates[prefix] = []
+                    prefix_candidates[prefix].append(tool)
+
+        # Only use prefixes that appear in multiple tools
+        default_tools = []
+        for tool in tools_without_server:
+            assigned = False
+            if "_" in tool.name:
+                prefix = tool.name.split("_")[0].lower()
+                if prefix in prefix_candidates and len(prefix_candidates[prefix]) > 1:
+                    app_name = prefix.upper()
+                    if app_name not in self.tools_by_app:
+                        self.tools_by_app[app_name] = []
+                    self.tools_by_app[app_name].append(tool)
+                    assigned = True
+            if not assigned:
+                default_tools.append(tool)
+
+        # Strategy 3: Default app for remaining tools
+        if default_tools:
+            self.tools_by_app["default_app"] = default_tools
+
+        # Create AppDefinition objects
+        for app_name, app_tools in self.tools_by_app.items():
+            # Try to get server description from metadata (hybrid approach)
+            app_description = None
+            for tool in app_tools:
+                if tool.metadata and tool.metadata.get("server_description"):
+                    app_description = tool.metadata["server_description"]
+                    break
+
+            # Generate description if not found in metadata
+            if not app_description:
+                if app_name == "default_app":
+                    app_description = "General purpose tools"
+                elif app_name.isupper():  # Prefix-based like "GMAIL", "SLACK"
+                    app_description = f"{app_name.title()} integration tools"
+                else:  # MCP server name
+                    app_description = f"Tools from {app_name} server"
+
+            # Append tool list with names and descriptions
+            tools_list = "\n".join(
+                f"- {t.name}: {t.description[:300] if t.description else 'No description'}"
+                for t in sorted(app_tools, key=lambda x: x.name)
+            )
+            full_description = f"{app_description}\n\nAvailable tools:\n{tools_list}"
+
+            self.apps.append(AppDefinition(name=app_name, description=full_description, type="langchain"))
+
+    async def get_apps(self) -> list:
+        """Get list of available applications/services.
+
+        Returns:
+            List of AppDefinition objects with app metadata
+        """
+        if not self.initialized:
+            await self.initialize()
+        return self.apps
+
+    async def get_tools(self, app_name: str) -> list[BaseTool]:
+        """Get tools for a specific application.
+
+        Args:
+            app_name: Name of the application
+
+        Returns:
+            List of LangChain BaseTool objects for the app
+        """
+        if not self.initialized:
+            await self.initialize()
+        return self.tools_by_app.get(app_name, [])
+
+    async def get_all_tools(self) -> list[BaseTool]:
+        """Get all available tools from all applications.
+
+        Returns:
+            List of all LangChain BaseTool objects
+        """
+        if not self.initialized:
+            await self.initialize()
+        return self.tools
 
 
 MODEL_PROVIDERS_LIST = ["OpenAI"]
@@ -137,21 +287,18 @@ class CugaComponent(ToolCallingAgentComponent):
             value="flexible",
             advanced=True,
         ),
+        IntInput(
+            name="shortlisting_tool_threshold",
+            display_name="Tool Shortlisting Threshold",
+            info="Enable find_tools if total number of tools exceeds this threshold.",
+            value=35,
+            advanced=True,
+        ),
         BoolInput(
             name="browser_enabled",
             display_name="Enable Browser",
             info="Toggle to enable a built-in browser tool for web scraping and searching.",
             value=False,
-            advanced=True,
-        ),
-        MultilineInput(
-            name="web_apps",
-            display_name="Web applications",
-            info=(
-                "Cuga will automatically start this web application when Enable Browser is true. "
-                "Currently only supports one web application. Example: https://example.com"
-            ),
-            value="",
             advanced=True,
         ),
     ]
@@ -199,6 +346,7 @@ class CugaComponent(ToolCallingAgentComponent):
             settings.advanced_features.lite_mode = self.lite_mode
             settings.advanced_features.lite_mode_tool_threshold = self.lite_mode_tool_threshold
             settings.advanced_features.decomposition_strategy = self.decomposition_strategy
+            settings.advanced_features.shortlisting_tool_threshold = self.shortlisting_tool_threshold
             # Disable tracker to avoid overhead
             settings.advanced_features.tracker_enabled = False
 
@@ -230,12 +378,16 @@ class CugaComponent(ToolCallingAgentComponent):
 
             # Get Langflow tracing callbacks (includes Langfuse, LangSmith, etc.)
             langchain_callbacks = self.get_langchain_callbacks()
-            logger.debug(f"[CUGA] Got {len(langchain_callbacks)} tracing callbacks: {[type(cb).__name__ for cb in langchain_callbacks]}")
+            callback_names = [type(cb).__name__ for cb in langchain_callbacks]
+            logger.debug(f"[CUGA] Got {len(langchain_callbacks)} tracing callbacks: {callback_names}")
 
-            # Create the CUGA SDK agent with tools directly (no tracking)
-            logger.debug(f"[CUGA] Creating CugaAgent with {len(tools)} tools")
+            # Create tool provider that groups tools into apps for CUGA
+            logger.debug(f"[CUGA] Creating LangflowToolsProvider with {len(tools)} tools")
+            tool_provider = LangflowToolsProvider(tools)
+
+            # Create the CUGA SDK agent with tool provider
             cuga_agent = CugaAgent(
-                tools=tools,
+                tool_provider=tool_provider,
                 model=llm,
                 special_instructions=instructions_to_use if instructions_to_use else None,
                 callbacks=langchain_callbacks if langchain_callbacks else None,
@@ -247,7 +399,6 @@ class CugaComponent(ToolCallingAgentComponent):
                 "name": "CUGA_processing",
                 "data": {"input": {"input": current_input, "chat_history": []}},
             }
-            logger.debug(f"[CUGA] current web apps are {self.web_apps}")
             logger.debug(f"[CUGA] Processing input: {current_input}")
 
             try:
@@ -273,7 +424,6 @@ class CugaComponent(ToolCallingAgentComponent):
                 # Use stream() for real-time UI updates
                 logger.debug("[CUGA] Starting CugaAgent.stream()")
                 final_answer = None
-                active_tool_runs: dict[str, str] = {}  # Maps tool execution to run_id
 
                 def extract_from_nested_state(state_dict: dict) -> dict | None:
                     """Extract the inner state from CUGA's nested dict format.
@@ -293,7 +443,7 @@ class CugaComponent(ToolCallingAgentComponent):
                     thread_id=thread_id,
                 ):
                     # LangGraph-style streams return (node_name_tuple, state_dict) tuples
-                    if isinstance(raw_state, tuple) and len(raw_state) == 2:
+                    if isinstance(raw_state, tuple) and len(raw_state) == LANGGRAPH_TUPLE_LENGTH:
                         node_name_tuple, state_dict = raw_state
                         node_name = node_name_tuple[0] if node_name_tuple else "unknown"
                         logger.debug(f"[CUGA] Stream node: {node_name}")
@@ -309,14 +459,12 @@ class CugaComponent(ToolCallingAgentComponent):
                     # Process dict-based state from CUGA SDK
                     if isinstance(state, dict):
                         # Check for final_answer in the state
-                        if "final_answer" in state and state["final_answer"]:
+                        if state.get("final_answer"):
                             final_answer = state["final_answer"]
-                            logger.info(
-                                f"[CUGA] Got final answer: {final_answer[:100] if final_answer else 'None'}..."
-                            )
+                            logger.info(f"[CUGA] Got final answer: {final_answer[:100] if final_answer else 'None'}...")
 
                         # Check for script execution (shows what code is being run)
-                        if "script" in state and state["script"]:
+                        if state.get("script"):
                             script = state["script"]
                             logger.debug(f"[CUGA] Executing script: {script[:100]}...")
                             yield {
