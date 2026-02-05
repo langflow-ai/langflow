@@ -81,16 +81,20 @@ export default function InspectionPanelHeader({
     return isCustom;
   }, [data.type, data.node]);
 
-  const toggleEditMode = useCallback(() => {
-    setEditMode((prev) => !prev);
-  }, []);
-
-  const { containerRef, nameElement, descriptionElement } =
+  const { containerRef, handleSave, nameElement, descriptionElement } =
     EditableHeaderContent({
       data,
       editMode,
       setEditMode,
     });
+
+  const toggleEditMode = useCallback(() => {
+    if (editMode) {
+      // Save changes when exiting edit mode
+      handleSave();
+    }
+    setEditMode((prev) => !prev);
+  }, [editMode, handleSave]);
 
   return (
     <div
@@ -101,7 +105,7 @@ export default function InspectionPanelHeader({
       onMouseLeave={() => setIsHoveringContent(false)}
     >
       <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 overflow-hidden">
           <span className="font-semibold truncate" data-testid="panel-name">
             {nameElement}
           </span>

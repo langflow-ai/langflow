@@ -532,9 +532,8 @@ test(
 
     // Add first header
     await page.getByTestId("http-headers-key-0").fill(testHeaderKey1);
-    // The value field uses InputComponent with global variables, so we need to find it by placeholder
     await page
-      .getByPlaceholder("Type a value...")
+      .getByTestId("popover-anchor-http-headers-value-0")
       .first()
       .fill(testHeaderValue1);
 
@@ -543,8 +542,8 @@ test(
     await page.getByTestId("http-headers-key-1").fill(testHeaderKey2);
     // Use nth(1) to get the second value field
     await page
-      .getByPlaceholder("Type a value...")
-      .nth(1)
+      .getByTestId("popover-anchor-http-headers-value-1")
+      .first()
       .fill(testHeaderValue2);
 
     // Add first environment variable
@@ -601,13 +600,13 @@ test(
     );
     // Header values use InputComponent with global variables, so we verify by placeholder
     expect(
-      await page.getByPlaceholder("Type a value...").first().inputValue(),
+      await page.getByTestId("popover-anchor-http-headers-value-0").inputValue(),
     ).toBe(testHeaderValue1);
     expect(await page.getByTestId("http-headers-key-1").inputValue()).toBe(
       testHeaderKey2,
     );
     expect(
-      await page.getByPlaceholder("Type a value...").nth(1).inputValue(),
+      await page.getByTestId("popover-anchor-http-headers-value-1").inputValue(),
     ).toBe(testHeaderValue2);
     expect(await page.getByTestId("http-env-key-0").inputValue()).toBe(
       testEnvKey1,

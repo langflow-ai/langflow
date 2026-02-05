@@ -40,6 +40,8 @@ export default function EditableHeaderContent({
   }, [data.node?.display_name, data.node?.description, data.type]);
 
   const handleSave = useCallback(() => {
+    if (!hasChangedRef.current) return;
+
     const trimmedName = localName.trim();
     const finalName =
       trimmedName !== "" ? trimmedName : (data.node?.display_name ?? data.type);
@@ -93,9 +95,7 @@ export default function EditableHeaderContent({
 
       // Check if click is outside the container
       if (containerRef.current && !containerRef.current.contains(target)) {
-        if (hasChangedRef.current) {
-          handleSave();
-        }
+        handleSave();
         setEditMode(false);
       }
     };
@@ -130,17 +130,16 @@ export default function EditableHeaderContent({
   const handleNameKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       e.preventDefault();
-      // Move focus to description
-      const descTextarea = document.querySelector(
-        '[data-testid="inspection-panel-description"]',
-      ) as HTMLTextAreaElement;
-      descTextarea?.focus();
+      // Save and exit edit mode
+      handleSave();
+      setEditMode(false);
     }
     if (e.key === "Escape") {
       setLocalName(data.node?.display_name ?? data.type);
       setLocalDescription(data.node?.description ?? "");
       hasChangedRef.current = false;
       nameInputRef.current?.blur();
+      setEditMode(false);
     }
   };
 
@@ -152,6 +151,7 @@ export default function EditableHeaderContent({
       setLocalDescription(data.node?.description ?? "");
       hasChangedRef.current = false;
       e.currentTarget.blur();
+      setEditMode(false);
     }
   };
 
@@ -182,6 +182,7 @@ export default function EditableHeaderContent({
 
   return {
     containerRef,
+    handleSave,
     nameElement: editMode ? (
       <Input
         ref={nameInputRef}
