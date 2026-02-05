@@ -126,7 +126,7 @@ export default function DragFilesComponent({
               ...Array.from(existingFolderRoots),
               ...Array.from(sessionUsedFolderRootsRef.current),
             ]),
-            renameOnCollision: false,
+            renameOnCollision: true,
           });
 
           const finalRootName = deduped.renamedRootName ?? deduped.rootName;
@@ -185,7 +185,7 @@ export default function DragFilesComponent({
           ...Array.from(existingFolderRoots),
           ...Array.from(sessionUsedFolderRootsRef.current),
         ]),
-        renameOnCollision: false,
+        renameOnCollision: true,
       });
 
       const finalRootName = deduped.renamedRootName ?? deduped.rootName;

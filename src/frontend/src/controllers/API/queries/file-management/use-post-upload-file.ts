@@ -50,9 +50,7 @@ export const usePostUploadFileV2: useMutationFunctionType<
             value: parts.join("/"),
             enumerable: true,
           });
-        } catch {
-          // Best-effort.
-        }
+        } catch {}
       }
     }
 

@@ -71,9 +71,7 @@ export async function getDroppedFilesFromDragEvent(
         value: relativePath,
         enumerable: true,
       });
-    } catch {
-      // Best-effort; if it fails, we still upload the file.
-    }
+    } catch {}
     return wrapped;
   };
 
@@ -215,9 +213,7 @@ function withWebkitRelativePath(file: File, webkitRelativePath: string): File {
       value: webkitRelativePath,
       enumerable: true,
     });
-  } catch {
-    // Best-effort; hierarchy will fall back to flat.
-  }
+  } catch {}
   return wrapped;
 }
 
