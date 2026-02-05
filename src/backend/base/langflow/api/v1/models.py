@@ -4,7 +4,7 @@ import json
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query
 from lfx.base.models.unified_models import (
     get_model_provider_variable_mapping,
     get_model_providers,
