@@ -1,0 +1,87 @@
+---
+title: Noveum
+slug: /integrations-noveum
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+[Noveum.ai](https://noveum.ai) is a platform for LLM observability and tracing. It provides tracing and monitoring capabilities for AI applications, helping developers debug, analyze, and optimize their AI systems. Noveum integrates with various tools and frameworks, including workflow builders and runtimes like Langflow.
+
+This guide explains how to configure Langflow to collect tracing data about your flow executions and automatically send the data to Noveum.ai.
+
+## Prerequisites
+
+- An account on [Noveum.ai](https://noveum.ai)
+- A [running Langflow server](/get-started-installation) with a [flow](/concepts-flows) that you want to trace
+
+:::tip
+If you need a flow to test the Noveum integration, see the [Langflow quickstart](/get-started-quickstart).
+:::
+
+## Set Noveum credentials as environment variables {#noveum-credentials}
+
+1. Create an account on [Noveum.ai](https://noveum.ai) if you haven't already.
+
+2. Get your API key from your Noveum.ai account dashboard.
+
+3. Set your Noveum project credentials as environment variables in the same environment where you run Langflow.
+
+    In the following examples, replace `API_KEY`, `ENVIRONMENT`, and `PROJECT` with your values from Noveum.ai.
+
+    <Tabs>
+    <TabItem value="linux-macos" label="Linux or macOS" default>
+
+    These commands set the environment variables in a Linux or macOS terminal session:
+
+    ```
+    export NOVEUM_API_KEY=API_KEY
+    export NOVEUM_ENVIRONMENT=ENVIRONMENT
+    export NOVEUM_PROJECT=PROJECT
+    ```
+
+    :::note
+    `NOVEUM_PROJECT` is optional but recommended. If not set, Langflow will use the project name from the flow configuration.
+    :::
+
+    </TabItem>
+    <TabItem value="windows" label="Windows">
+
+    These commands set the environment variables in a Windows command prompt session:
+
+    ```
+    set NOVEUM_API_KEY=API_KEY
+    set NOVEUM_ENVIRONMENT=ENVIRONMENT
+    set NOVEUM_PROJECT=PROJECT
+    ```
+
+    :::note
+    `NOVEUM_PROJECT` is optional but recommended. If not set, Langflow will use the project name from the flow configuration.
+    :::
+
+    </TabItem>
+    </Tabs>
+
+## Start Langflow and view traces in Noveum
+
+1. Start Langflow in the same environment where you set the Noveum environment variables:
+
+    ```bash
+    uv run langflow run
+    ```
+
+2. Run a flow.
+
+    Langflow automatically collects and sends tracing data about the flow execution to Noveum.ai.
+
+3. View the collected data in your [Noveum.ai dashboard](https://noveum.ai).
+
+    You can find your traces at [noveum.ai](https://noveum.ai) in your project dashboard.
+
+## Disable Noveum tracing
+
+To disable the Noveum integration, remove the [Noveum environment variables](#noveum-credentials), and then restart Langflow.
+
+## See also
+
+* [Noveum.ai website](https://noveum.ai)

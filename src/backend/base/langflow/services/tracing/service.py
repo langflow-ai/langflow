@@ -59,6 +59,12 @@ def _get_traceloop_tracer():
     return TraceloopTracer
 
 
+def _get_noveum_tracer():
+    from langflow.services.tracing.noveum_trace import NoveumTracer
+
+    return NoveumTracer
+
+
 trace_context_var: ContextVar[TraceContext | None] = ContextVar("trace_context", default=None)
 component_context_var: ContextVar[ComponentTraceContext | None] = ContextVar("component_trace_context", default=None)
 
@@ -220,6 +226,19 @@ class TracingService(Service):
             session_id=trace_context.session_id,
         )
 
+    def _initialize_noveum_trace_tracer(self, trace_context: TraceContext) -> None:
+        if self.deactivated:
+            return
+        noveum_tracer = _get_noveum_tracer()
+        trace_context.tracers["noveum_trace"] = noveum_tracer(
+            trace_name=trace_context.run_name,
+            trace_type="chain",
+            project_name=trace_context.project_name,
+            trace_id=trace_context.run_id,
+            user_id=trace_context.user_id,
+            session_id=trace_context.session_id,
+        )
+
     async def start_tracers(
         self,
         run_id: UUID,
@@ -247,6 +266,7 @@ class TracingService(Service):
             self._initialize_arize_phoenix_tracer(trace_context)
             self._initialize_opik_tracer(trace_context)
             self._initialize_traceloop_tracer(trace_context)
+            self._initialize_noveum_trace_tracer(trace_context)
         except Exception as e:  # noqa: BLE001
             await logger.adebug(f"Error initializing tracers: {e}")
 
