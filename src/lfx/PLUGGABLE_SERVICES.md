@@ -122,6 +122,7 @@ Service keys **must** match `ServiceType` enum values exactly:
 - `shared_component_cache_service`
 - `mcp_composer_service`
 - `transaction_service`
+- `deployment_service`
 
 **Important:** `settings_service` is **not pluggable** and cannot be overridden. It is always created using the built-in factory and provides the foundational configuration for all other services.
 

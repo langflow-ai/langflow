@@ -21,6 +21,7 @@ if TYPE_CHECKING:
         CacheServiceProtocol,
         ChatServiceProtocol,
         DatabaseServiceProtocol,
+        DeploymentServiceProtocol,
         SettingsServiceProtocol,
         StorageServiceProtocol,
         TracingServiceProtocol,
@@ -117,6 +118,13 @@ def get_tracing_service() -> TracingServiceProtocol | None:
     from lfx.services.schema import ServiceType
 
     return get_service(ServiceType.TRACING_SERVICE)
+
+
+def get_deployment_service() -> DeploymentServiceProtocol | None:
+    """Retrieves the deployment service instance."""
+    from lfx.services.schema import ServiceType
+
+    return get_service(ServiceType.DEPLOYMENT_SERVICE)
 
 
 def get_transaction_service() -> TransactionServiceProtocol | None:

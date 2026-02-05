@@ -1,10 +1,12 @@
 """LFX services module - pluggable service architecture for dependency injection."""
 
+from .deployment import DeploymentService
 from .interfaces import (
     AuthServiceProtocol,
     CacheServiceProtocol,
     ChatServiceProtocol,
     DatabaseServiceProtocol,
+    DeploymentServiceProtocol,
     SettingsServiceProtocol,
     StorageServiceProtocol,
     TracingServiceProtocol,
@@ -20,6 +22,8 @@ __all__ = [
     "CacheServiceProtocol",
     "ChatServiceProtocol",
     "DatabaseServiceProtocol",
+    "DeploymentService",
+    "DeploymentServiceProtocol",
     "MCPComposerService",
     "MCPComposerServiceFactory",
     "NoopSession",
