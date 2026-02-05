@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import base64
+import binascii
+import json
 import random
 import warnings
 from collections.abc import Coroutine
@@ -562,7 +564,27 @@ class AuthService(BaseAuthService):
             not verified as this is a utility function, not an authentication function.
         """
         try:
-            claims = jwt.decode(token, options={"verify_signature": False})
+            # Manually parse the JWT to avoid the overhead of jwt.decode when not verifying.
+            # JWTs are in the form header.payload.signature, we only need payload.
+            parts = token.split(".")
+            if len(parts) < 2:
+                # Invalid token structure
+                raise InvalidTokenError("Not enough segments")
+
+            payload_b64 = parts[1]
+            # Add padding to make base64 length a multiple of 4
+            rem = len(payload_b64) % 4
+            if rem:
+                payload_b64 += "=" * (4 - rem)
+
+            try:
+                payload_bytes = base64.urlsafe_b64decode(payload_b64)
+            except binascii.Error as e:
+                # Normalize low-level base64 errors to InvalidTokenError so behavior matches original
+                raise InvalidTokenError("Invalid base64 payload") from e
+
+            # Parse JSON claims
+            claims = json.loads(payload_bytes.decode("utf-8"))
             user_id = claims["sub"]
             return UUID(user_id)
         except (KeyError, InvalidTokenError, ValueError):
