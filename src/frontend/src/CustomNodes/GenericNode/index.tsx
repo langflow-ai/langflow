@@ -667,18 +667,29 @@ function GenericNode({
             </>
           </div>
         )}
-        {/* Progress Bar - only render when building with progress */}
+        {/* Progress Bar - thin line at bottom with step counter */}
         {nodeProgress && buildStatus === BuildStatus.BUILDING && (
-          <div
-            className="pointer-events-none absolute bottom-0 left-0 right-0 h-3 overflow-hidden"
-            style={{ borderRadius: "0 0 11px 11px" }}
-          >
-            <div
-              className="absolute bottom-0 left-0 right-0 h-full bg-accent-indigo-foreground transition-all duration-300 ease-out"
-              style={{
-                width: `${(nodeProgress.current / nodeProgress.total) * 100}%`,
-              }}
-            />
+          <div className="pointer-events-none absolute bottom-0 left-0 right-0 px-0.5 pb-0.5">
+            {/* Step counter badge - centered and aligned with Result text */}
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 pointer-events-auto">
+              <div className="flex items-center gap-1 rounded-full bg-background/95 px-2 py-0.5 text-[10px] font-medium text-foreground shadow-sm backdrop-blur-sm ring-1 ring-border/50">
+                <div className="h-1 w-1 animate-pulse rounded-full bg-accent-indigo-foreground" />
+                <span>{nodeProgress.message || `${nodeProgress.current}/${nodeProgress.total}`}</span>
+              </div>
+            </div>
+            {/* Thin progress bar container with rounded bottom corners and padding */}
+            <div className="relative h-1 overflow-hidden rounded-b-[10px]">
+              {/* Progress bar background */}
+              <div className="absolute inset-0 bg-muted/20" />
+              {/* Progress bar fill with rounded left corner */}
+              <div
+                className="absolute inset-y-0 left-0 bg-accent-indigo-foreground transition-all duration-300 ease-out"
+                style={{
+                  width: `${Math.min(100, (nodeProgress.current / nodeProgress.total) * 100)}%`,
+                  borderRadius: "0 0 0 10px",
+                }}
+              />
+            </div>
           </div>
         )}
       </div>
