@@ -222,14 +222,12 @@ class TestEdgeCases:
         assert list(result.columns) == list(sample_dataframe.columns)
 
     def test_invalid_operation_format(self, component, sample_dataframe):
-        """Test with invalid operation format."""
+        """Test with invalid operation format raises error."""
         component.df = sample_dataframe
         component.operation = "Invalid String"  # Not list format
 
-        result = component.perform_operation()
-
-        # Should return original DataFrame
-        assert len(result) == len(sample_dataframe)
+        with pytest.raises(ValueError, match="Unsupported operation"):
+            component.perform_operation()
 
     def test_empty_dataframe(self, component):
         """Test operations on empty DataFrame."""
@@ -537,9 +535,24 @@ class TestMergeOperation:
         assert len(result) == 3
         # Check no duplicate columns with _df2 suffix
         assert "value_df2" not in result.columns
-        # id=1 should have value "a" (from df1)
-        # id=2 should have value "b" (from df1, coalesced)
-        # id=3 should have value "y" (from df2)
+        # Verify coalesced values
+        assert result.loc[result["id"] == 1, "value"].iloc[0] == "a"  # from df1
+        assert result.loc[result["id"] == 2, "value"].iloc[0] == "b"  # from df1 (coalesced)
+        assert result.loc[result["id"] == 3, "value"].iloc[0] == "y"  # from df2
+
+    def test_merge_more_than_two_dataframes_raises_error(self, component):
+        """Test merge with more than 2 DataFrames raises ValueError."""
+        df1 = DataFrame(pd.DataFrame({"id": [1], "name": ["A"]}))
+        df2 = DataFrame(pd.DataFrame({"id": [2], "name": ["B"]}))
+        df3 = DataFrame(pd.DataFrame({"id": [3], "name": ["C"]}))
+
+        component.df = [df1, df2, df3]
+        component.operation = [{"name": "Merge", "icon": "merge"}]
+        component.merge_on_column = "id"
+        component.merge_how = "inner"
+
+        with pytest.raises(ValueError, match="Merge requires exactly"):
+            component.perform_operation()
 
 
 class TestListInputHandling:
@@ -580,9 +593,7 @@ class TestMergeDynamicUI:
             "merge_how": {"show": False},
         }
 
-        updated_config = component.update_build_config(
-            build_config, [{"name": "Merge", "icon": "merge"}], "operation"
-        )
+        updated_config = component.update_build_config(build_config, [{"name": "Merge", "icon": "merge"}], "operation")
 
         assert updated_config["merge_on_column"]["show"] is True
         assert updated_config["merge_how"]["show"] is True

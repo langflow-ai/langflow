@@ -33,7 +33,7 @@ class DataFrameOperationsComponent(Component):
         DataFrameInput(
             name="df",
             display_name="DataFrame",
-            info="The input DataFrame to operate on. Connect multiple DataFrames for merge operations.",
+            info="The input DataFrame to operate on. Connect multiple DataFrames for merge or concatenate operations.",
             required=True,
             is_list=True,
         ),
@@ -239,12 +239,12 @@ class DataFrameOperationsComponent(Component):
     def perform_operation(self) -> DataFrame:
         df_copy = self._get_primary_dataframe()
 
-        # Handle SortableListInput format for operation
+        # Handle SortableListInput format for operation (also supports legacy string format)
         operation_input = getattr(self, "operation", [])
-        if isinstance(operation_input, list) and len(operation_input) > 0:
-            op = operation_input[0].get("name", "")
+        if isinstance(operation_input, list):
+            op = operation_input[0].get("name", "") if operation_input else ""
         else:
-            op = ""
+            op = operation_input or ""
 
         # If no operation selected, return original DataFrame
         if not op:
@@ -369,6 +369,12 @@ class DataFrameOperationsComponent(Component):
         # If only one DataFrame, return it
         if len(self.df) == 1:
             return self.df[0].copy()
+
+        # Merge requires exactly two DataFrames
+        max_merge_inputs = 2
+        if len(self.df) > max_merge_inputs:
+            msg = f"Merge requires exactly {max_merge_inputs} DataFrames, got {len(self.df)}"
+            raise ValueError(msg)
 
         df1 = self.df[0].copy()
         df2 = self.df[1].copy()
