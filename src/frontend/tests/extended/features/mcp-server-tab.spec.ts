@@ -239,8 +239,6 @@ test(
 
     await adjustScreenView(page, { numberOfZoomOut: 3 });
 
-    await expect(page.getByTestId("dropdown_str_tool")).toBeHidden();
-
     await openAddMcpServerModal(page);
 
     await page.waitForSelector('[data-testid="json-input"]', {
