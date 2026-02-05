@@ -6,7 +6,6 @@ test(
   { tag: ["@release", "@workspace"] },
 
   async ({ page }) => {
-    const randomName = Math.random().toString(36).substring(2, 15);
     const randomDescription = Math.random().toString(36).substring(2, 15);
 
     const randomName_2 = Math.random().toString(36).substring(2, 15);
@@ -38,76 +37,103 @@ test(
 
     await page.getByTestId("div-generic-node").click();
 
-    await page.getByTestId("edit-name-description-button").click();
+    await page.getByTestId("edit-fields-button").click();
 
-    await page.getByTestId("input-title-Custom Component").fill(randomName);
+    await page.getByTestId("showinput_value").click();
 
-    await page.getByTestId("textarea").fill(randomDescription);
+    await expect(
+      page.locator(`//*[@id="popover-anchor-input-input_value"]`),
+    ).not.toBeVisible();
+
+    await page.getByTestId("showinput_value").click();
+
+    await expect(
+      page.locator(`//*[@id="popover-anchor-input-input_value"]`),
+    ).toBeVisible();
+
+    await page
+      .getByTestId("popover-anchor-input-input_value")
+      .fill(randomDescription);
 
     await page.getByTestId("publish-button").click();
 
     await page.keyboard.press("Escape");
-
-    expect(await page.getByText(randomName).count()).toBe(1);
-    expect(await page.getByText(randomDescription).count()).toBe(1);
+    await expect(page.getByTestId("title-Custom Component")).toBeVisible();
 
     await page.getByTestId("div-generic-node").click();
 
+    // Hover over the node to reveal the edit button
+    await page.getByTestId("panel-description").hover();
     await page.getByTestId("edit-name-description-button").click();
 
-    await page.getByTestId(`input-title-${randomName}`).fill(randomName_2);
+    await page.getByTestId("inspection-panel-name").fill(randomName_2);
+    await page.getByTestId("edit-fields-button").click();
+    await expect(page.getByTestId("node-name")).toHaveText(randomName_2);
 
-    await page.getByTestId("textarea").fill(randomDescription_2);
-
-    await page.getByTestId("save-name-description-button").click();
-
-    expect(await page.getByText(randomName_2).count()).toBe(1);
-    expect(await page.getByText(randomDescription_2).count()).toBe(1);
-
-    await page.getByTestId("div-generic-node").click();
-
-    await page.getByTestId("edit-name-description-button").click();
-
-    await page.getByTestId(`input-title-${randomName_2}`).fill(randomName_3);
-
+    await page
+      .getByTestId("popover-anchor-input-input_value")
+      .fill(randomDescription_2);
     await page.keyboard.press("Enter");
 
-    expect(await page.getByText(randomName_3).count()).toBe(1);
+    await expect(page.getByTestId("node-name")).toHaveText(randomName_2);
 
     await page.getByTestId("div-generic-node").click();
 
+    // Hover over the node to reveal the edit button
+    await page.getByTestId("panel-description").hover();
     await page.getByTestId("edit-name-description-button").click();
 
-    await page.getByTestId(`input-title-${randomName_3}`).fill(randomName_4);
+    await page.getByTestId(`inspection-panel-name`).fill(randomName_3);
+    await page.getByTestId("edit-fields-button").click();
+    await expect(page.getByTestId("node-name")).toHaveText(randomName_3);
+    await page
+      .getByTestId("popover-anchor-input-input_value")
+      .fill(randomDescription_3);
+    await page.getByTestId("div-generic-node").click();
+    await expect(
+      page.getByTestId("popover-anchor-input-input_value"),
+    ).toHaveValue(randomDescription_3);
+    await page.getByTestId("div-generic-node").click();
 
-    await page.getByTestId("textarea").fill(randomDescription_4);
-
-    await page.keyboard.press("Escape");
-
-    expect(await page.getByText(randomName_4).count()).toBe(1);
-
-    expect(await page.getByText(randomDescription_2).count()).toBe(1);
-
-    expect(await page.getByText(randomDescription_4).count()).toBe(0);
-
-    expect(await page.getByText(randomName_3).count()).toBe(0);
+    await expect(page.getByTestId("node-name")).not.toHaveText(randomName_2);
+    await expect(
+      page.getByTestId("popover-anchor-input-input_value"),
+    ).toHaveValue(randomDescription_3);
 
     await page.getByTestId("div-generic-node").click();
 
+    // Hover over the node to reveal the edit button
+    await page.getByTestId("panel-description").hover();
+    await page.getByTestId("edit-name-description-button").click();
+    await page.getByTestId(`inspection-panel-name`).fill(randomName_4);
+
+    await page.getByTestId("edit-fields-button").click();
+
+    await page
+      .getByTestId("popover-anchor-input-input_value")
+      .fill(randomDescription_4);
+
+    await expect(page.getByTestId("node-name")).toHaveText(randomName_4);
+    await expect(page.getByTestId("node-name")).not.toHaveText(randomName_3);
+    await page
+      .getByTestId("popover-anchor-input-input_value")
+      .fill(randomDescription_4);
+
+    await expect(
+      page.getByTestId("popover-anchor-input-input_value"),
+    ).toHaveValue(randomDescription_4);
+
+    await page.getByTestId("div-generic-node").click();
+
+    // Hover over the node to reveal the edit button
+    await page.getByTestId("panel-description").hover();
     await page.getByTestId("edit-name-description-button").click();
 
-    await page.getByTestId("textarea").fill(randomDescription_3);
-
-    await page.getByTestId(`input-title-${randomName_4}`).fill(randomName_3);
+    await page.getByTestId("inspection-panel-name").fill(randomName_3);
+    await page.getByTestId("edit-fields-button").click();
 
     await page.keyboard.press("Escape");
 
-    expect(await page.getByText(randomDescription_3).count()).toBe(1);
-
-    expect(await page.getByText(randomName_4).count()).toBe(1);
-
-    expect(await page.getByText(randomName_3).count()).toBe(0);
-
-    expect(await page.getByText(randomDescription_4).count()).toBe(0);
+    await expect(page.getByTestId("node-name")).toHaveText(randomName_3);
   },
 );
