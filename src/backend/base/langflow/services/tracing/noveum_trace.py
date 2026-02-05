@@ -236,7 +236,7 @@ class NoveumTracer(BaseTracer):
             output_data: dict = {}
             output_data |= serialize(outputs) if outputs else {}
             output_data |= {"error": str(error)} if error else {}
-            output_data |= {"logs": [serialize(log) if isinstance(log, dict) else log for log in logs]} if logs else {}
+            output_data |= {"logs": [serialize(log) for log in logs]} if logs else {}
 
             # Set span attributes for outputs
             if output_data:
