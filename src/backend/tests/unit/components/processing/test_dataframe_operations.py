@@ -280,6 +280,8 @@ class TestDynamicUI:
             "num_rows": {"show": False},
             "replace_value": {"show": False},
             "replacement_value": {"show": False},
+            "merge_on_column": {"show": False},
+            "merge_how": {"show": False},
         }
 
         # Select Filter operation
@@ -305,6 +307,8 @@ class TestDynamicUI:
             "num_rows": {"show": False},
             "replace_value": {"show": False},
             "replacement_value": {"show": False},
+            "merge_on_column": {"show": False},
+            "merge_how": {"show": False},
         }
 
         # Select Sort operation
@@ -330,6 +334,8 @@ class TestDynamicUI:
             "num_rows": {"show": True},
             "replace_value": {"show": True},
             "replacement_value": {"show": True},
+            "merge_on_column": {"show": True},
+            "merge_how": {"show": True},
         }
 
         # Deselect operation (empty list)
@@ -350,6 +356,8 @@ class TestDynamicUI:
         assert updated_config["num_rows"]["show"] is False
         assert updated_config["replace_value"]["show"] is False
         assert updated_config["replacement_value"]["show"] is False
+        assert updated_config["merge_on_column"]["show"] is False
+        assert updated_config["merge_how"]["show"] is False
 
 
 class TestDataTypes:
@@ -383,6 +391,228 @@ class TestDataTypes:
         result = component.perform_operation()
 
         assert len(result) == 2  # "text" and "more_text"
+
+
+class TestConcatenateOperation:
+    """Test concatenate operation for combining multiple DataFrames."""
+
+    def test_concatenate_two_dataframes(self, component):
+        """Test concatenating two DataFrames vertically."""
+        df1 = DataFrame(pd.DataFrame({"id": [1, 2], "name": ["Alice", "Bob"]}))
+        df2 = DataFrame(pd.DataFrame({"id": [3, 4], "name": ["Charlie", "Diana"]}))
+
+        component.df = [df1, df2]
+        component.operation = [{"name": "Concatenate", "icon": "combine"}]
+
+        result = component.perform_operation()
+
+        assert len(result) == 4
+        assert list(result["id"]) == [1, 2, 3, 4]
+        assert list(result["name"]) == ["Alice", "Bob", "Charlie", "Diana"]
+
+    def test_concatenate_single_dataframe(self, component):
+        """Test concatenate with only one DataFrame returns it unchanged."""
+        df1 = DataFrame(pd.DataFrame({"id": [1, 2], "name": ["Alice", "Bob"]}))
+
+        component.df = [df1]
+        component.operation = [{"name": "Concatenate", "icon": "combine"}]
+
+        result = component.perform_operation()
+
+        assert len(result) == 2
+        assert list(result["id"]) == [1, 2]
+
+    def test_concatenate_different_row_counts(self, component):
+        """Test concatenating DataFrames with different row counts."""
+        df1 = DataFrame(pd.DataFrame({"id": [1, 2, 3], "value": ["a", "b", "c"]}))
+        df2 = DataFrame(pd.DataFrame({"id": [4, 5], "value": ["d", "e"]}))
+
+        component.df = [df1, df2]
+        component.operation = [{"name": "Concatenate", "icon": "combine"}]
+
+        result = component.perform_operation()
+
+        assert len(result) == 5
+
+
+class TestMergeOperation:
+    """Test merge operation for joining DataFrames."""
+
+    def test_merge_inner_join(self, component):
+        """Test inner merge on common column."""
+        df1 = DataFrame(pd.DataFrame({"id": [1, 2, 3], "name": ["Alice", "Bob", "Charlie"]}))
+        df2 = DataFrame(pd.DataFrame({"id": [2, 3, 4], "city": ["NYC", "LA", "Chicago"]}))
+
+        component.df = [df1, df2]
+        component.operation = [{"name": "Merge", "icon": "merge"}]
+        component.merge_on_column = "id"
+        component.merge_how = "inner"
+
+        result = component.perform_operation()
+
+        assert len(result) == 2  # Only ids 2 and 3 exist in both
+        assert "name" in result.columns
+        assert "city" in result.columns
+
+    def test_merge_outer_join(self, component):
+        """Test outer merge includes all records."""
+        df1 = DataFrame(pd.DataFrame({"id": [1, 2], "name": ["Alice", "Bob"]}))
+        df2 = DataFrame(pd.DataFrame({"id": [2, 3], "city": ["NYC", "LA"]}))
+
+        component.df = [df1, df2]
+        component.operation = [{"name": "Merge", "icon": "merge"}]
+        component.merge_on_column = "id"
+        component.merge_how = "outer"
+
+        result = component.perform_operation()
+
+        assert len(result) == 3  # ids 1, 2, 3
+
+    def test_merge_left_join(self, component):
+        """Test left merge keeps all records from first DataFrame."""
+        df1 = DataFrame(pd.DataFrame({"id": [1, 2, 3], "name": ["Alice", "Bob", "Charlie"]}))
+        df2 = DataFrame(pd.DataFrame({"id": [2, 4], "city": ["NYC", "Chicago"]}))
+
+        component.df = [df1, df2]
+        component.operation = [{"name": "Merge", "icon": "merge"}]
+        component.merge_on_column = "id"
+        component.merge_how = "left"
+
+        result = component.perform_operation()
+
+        assert len(result) == 3  # All from df1
+
+    def test_merge_right_join(self, component):
+        """Test right merge keeps all records from second DataFrame."""
+        df1 = DataFrame(pd.DataFrame({"id": [1, 2], "name": ["Alice", "Bob"]}))
+        df2 = DataFrame(pd.DataFrame({"id": [2, 3, 4], "city": ["NYC", "LA", "Chicago"]}))
+
+        component.df = [df1, df2]
+        component.operation = [{"name": "Merge", "icon": "merge"}]
+        component.merge_on_column = "id"
+        component.merge_how = "right"
+
+        result = component.perform_operation()
+
+        assert len(result) == 3  # All from df2
+
+    def test_merge_single_dataframe_returns_original(self, component):
+        """Test merge with single DataFrame returns it unchanged."""
+        df1 = DataFrame(pd.DataFrame({"id": [1, 2], "name": ["Alice", "Bob"]}))
+
+        component.df = [df1]
+        component.operation = [{"name": "Merge", "icon": "merge"}]
+        component.merge_on_column = "id"
+        component.merge_how = "inner"
+
+        result = component.perform_operation()
+
+        assert len(result) == 2
+
+    def test_merge_invalid_column_raises_error(self, component):
+        """Test merge with non-existent column raises ValueError."""
+        df1 = DataFrame(pd.DataFrame({"id": [1, 2], "name": ["Alice", "Bob"]}))
+        df2 = DataFrame(pd.DataFrame({"id": [2, 3], "city": ["NYC", "LA"]}))
+
+        component.df = [df1, df2]
+        component.operation = [{"name": "Merge", "icon": "merge"}]
+        component.merge_on_column = "non_existent"
+        component.merge_how = "inner"
+
+        with pytest.raises(ValueError, match="not found in first DataFrame"):
+            component.perform_operation()
+
+    def test_merge_same_columns_coalesces_values(self, component):
+        """Test merge with same columns uses coalesce (df1 value or df2 value)."""
+        df1 = DataFrame(pd.DataFrame({"id": [1, 2], "value": ["a", "b"]}))
+        df2 = DataFrame(pd.DataFrame({"id": [2, 3], "value": ["x", "y"]}))
+
+        component.df = [df1, df2]
+        component.operation = [{"name": "Merge", "icon": "merge"}]
+        component.merge_on_column = "id"
+        component.merge_how = "outer"
+
+        result = component.perform_operation()
+
+        assert len(result) == 3
+        # Check no duplicate columns with _df2 suffix
+        assert "value_df2" not in result.columns
+        # id=1 should have value "a" (from df1)
+        # id=2 should have value "b" (from df1, coalesced)
+        # id=3 should have value "y" (from df2)
+
+
+class TestListInputHandling:
+    """Test that component handles list inputs correctly."""
+
+    def test_operations_use_first_dataframe_from_list(self, component):
+        """Test that non-merge operations use only the first DataFrame."""
+        df1 = DataFrame(pd.DataFrame({"id": [1, 2], "name": ["Alice", "Bob"]}))
+        df2 = DataFrame(pd.DataFrame({"id": [3, 4], "name": ["Charlie", "Diana"]}))
+
+        component.df = [df1, df2]
+        component.operation = [{"name": "Head", "icon": "arrow-up"}]
+        component.num_rows = 1
+
+        result = component.perform_operation()
+
+        assert len(result) == 1
+        assert result.iloc[0]["name"] == "Alice"  # From first DataFrame
+
+
+class TestMergeDynamicUI:
+    """Test dynamic UI for Merge and Concatenate operations."""
+
+    def test_merge_fields_show(self, component):
+        """Test that merge fields show when Merge is selected."""
+        build_config = {
+            "column_name": {"show": False},
+            "filter_value": {"show": False},
+            "filter_operator": {"show": False},
+            "ascending": {"show": False},
+            "new_column_name": {"show": False},
+            "new_column_value": {"show": False},
+            "columns_to_select": {"show": False},
+            "num_rows": {"show": False},
+            "replace_value": {"show": False},
+            "replacement_value": {"show": False},
+            "merge_on_column": {"show": False},
+            "merge_how": {"show": False},
+        }
+
+        updated_config = component.update_build_config(
+            build_config, [{"name": "Merge", "icon": "merge"}], "operation"
+        )
+
+        assert updated_config["merge_on_column"]["show"] is True
+        assert updated_config["merge_how"]["show"] is True
+        assert updated_config["column_name"]["show"] is False
+
+    def test_concatenate_hides_all_extra_fields(self, component):
+        """Test that Concatenate operation hides all extra fields."""
+        build_config = {
+            "column_name": {"show": True},
+            "filter_value": {"show": True},
+            "filter_operator": {"show": True},
+            "ascending": {"show": True},
+            "new_column_name": {"show": True},
+            "new_column_value": {"show": True},
+            "columns_to_select": {"show": True},
+            "num_rows": {"show": True},
+            "replace_value": {"show": True},
+            "replacement_value": {"show": True},
+            "merge_on_column": {"show": True},
+            "merge_how": {"show": True},
+        }
+
+        updated_config = component.update_build_config(
+            build_config, [{"name": "Concatenate", "icon": "combine"}], "operation"
+        )
+
+        # Concatenate doesn't need any extra fields
+        assert updated_config["column_name"]["show"] is False
+        assert updated_config["merge_on_column"]["show"] is False
+        assert updated_config["merge_how"]["show"] is False
 
 
 # Integration test to verify all operators work together
