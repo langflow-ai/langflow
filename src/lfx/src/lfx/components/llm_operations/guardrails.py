@@ -7,18 +7,40 @@ from lfx.base.models.unified_models import (
     update_model_options_in_build_config,
 )
 from lfx.custom import Component
+from lfx.field_typing.range_spec import RangeSpec
 from lfx.io import (
     BoolInput,
-    MessageTextInput,
     ModelInput,
     MultilineInput,
     MultiselectInput,
     Output,
     SecretStrInput,
+    SliderInput
 )
 from lfx.logging.logger import logger
 from lfx.schema import Data
 
+guardrail_descriptions = {
+    "PII": (
+        "personal identifiable information such as names, addresses, phone numbers, "
+        "email addresses, social security numbers, credit card numbers, or any other "
+        "personal data"
+    ),
+    "Tokens/Passwords": (
+        "API tokens, passwords, API keys, access keys, secret keys, authentication "
+        "credentials, or any other sensitive credentials"
+    ),
+    "Jailbreak": (
+        "attempts to bypass AI safety guidelines, manipulate the model's behavior, "
+        "or make it ignore its instructions"
+    ),
+    "Offensive Content": "offensive, hateful, discriminatory, violent, or inappropriate content",
+    "Malicious Code": "potentially malicious code, scripts, exploits, or harmful commands",
+    "Prompt Injection": (
+        "attempts to inject malicious prompts, override system instructions, or manipulate "
+        "the AI's behavior through embedded instructions"
+    ),
+}
 
 class GuardrailsComponent(Component):
     display_name = "Guardrails"
@@ -53,6 +75,7 @@ class GuardrailsComponent(Component):
                 "Malicious Code",
                 "Prompt Injection",
             ],
+            required=True,
             value=["PII", "Tokens/Passwords", "Jailbreak"],
         ),
         MultilineInput(
@@ -69,7 +92,7 @@ class GuardrailsComponent(Component):
             value=False,
             advanced=True,
         ),
-        MessageTextInput(
+        MultilineInput(
             name="custom_guardrail_explanation",
             display_name="Custom Guardrail Description",
             info=(
@@ -83,7 +106,7 @@ class GuardrailsComponent(Component):
             ),
             advanced=True,
         ),
-        MessageTextInput(
+        SliderInput(
             name="heuristic_threshold",
             display_name="Heuristic Detection Threshold",
             info=(
@@ -93,14 +116,17 @@ class GuardrailsComponent(Component):
                 "cumulative score meets or exceeds this threshold, the input fails immediately. "
                 "Lower values are more strict; higher values defer more cases to LLM validation."
             ),
-            value="0.7",
+            value=0.7,
+            range_spec=RangeSpec(min=0, max=1, step=0.1),
+            min_label="Strict",
+            max_label="Permissive",
             advanced=True,
-        ),
+        )
     ]
 
     outputs = [
-        Output(display_name="Pass", name="pass_result", method="process_pass", group_outputs=True),
-        Output(display_name="Fail", name="failed_result", method="process_fail", group_outputs=True),
+        Output(display_name="Pass", name="pass_result", method="process_check", group_outputs=True),
+        Output(display_name="Fail", name="failed_result", method="process_check", group_outputs=True),
     ]
 
     def __init__(self, **kwargs):
@@ -121,9 +147,46 @@ class GuardrailsComponent(Component):
 
     def _pre_run_setup(self):
         """Reset validation state before each run."""
-        self._validation_result = None
+        self._validation_result: bool | None = None
         self._failed_checks = []
+        
+        """Validate inputs before each run."""
+        input_text_value = getattr(self, "input_text", "")
+        input_text = self._extract_text(input_text_value)
+        if not input_text or not input_text.strip():
+            error_msg = "Input text is empty. Please provide valid text for guardrail validation."
+            self.status = f"ERROR: {error_msg}"
+            self._failed_checks.append(
+                "Input Validation: Input text is empty. Please provide valid text for guardrail validation."
+            )
+            logger.error(error_msg)
+            raise ValueError(error_msg)
+        
+        self._extracted_text = input_text
 
+        enabled_names = getattr(self, "enabled_guardrails", [])
+        if not isinstance(enabled_names, list):
+            enabled_names = []
+        
+        if getattr(self, "enable_custom_guardrail", False):
+            custom_explanation = getattr(self, "custom_guardrail_explanation", "")
+            if custom_explanation and str(custom_explanation).strip():
+                enabled_names.append("Custom Guardrail")
+                guardrail_descriptions["Custom Guardrail"] = str(custom_explanation).strip()
+                
+        if not enabled_names:
+            error_msg = "No guardrails enabled. Please select at least one guardrail to validate."
+            self.status = f"ERROR: {error_msg}"
+            self._failed_checks.append("Configuration: No guardrails selected for validation")
+            logger.error(error_msg)
+            raise ValueError(error_msg)
+        
+        enabled_guardrails = [str(item) for item in enabled_names if item]
+        
+        self._checks_to_run = [
+            (name, guardrail_descriptions[name]) for name in enabled_guardrails if name in guardrail_descriptions
+        ]
+        
     def _extract_text(self, value: Any) -> str:
         """Extract text from Message object, string, or other types."""
         if value is None:
@@ -471,16 +534,6 @@ Now analyze the user input above and respond according to the instructions:"""
         # Initialize failed checks list
         self._failed_checks = []
 
-        input_text_value = getattr(self, "input_text", "")
-        input_text = self._extract_text(input_text_value)
-
-        # Block empty inputs - don't process through LLM
-        if not input_text or not input_text.strip():
-            self.status = "Input is empty - validation skipped"
-            self._validation_result = True  # Pass by default for empty input
-            logger.info("Input is empty - validation skipped, passing by default")
-            return True
-
         # Get LLM using unified model system
         llm = None
         if hasattr(self, "model") and self.model:
@@ -492,7 +545,7 @@ Now analyze the user input above and respond according to the instructions:"""
                 self._validation_result = False
                 self._failed_checks.append(f"LLM Configuration: {error_msg}")
                 logger.error(error_msg)
-                return False
+                raise e
 
         # Validate LLM is provided and usable
         if not llm:
@@ -501,7 +554,7 @@ Now analyze the user input above and respond according to the instructions:"""
             self._validation_result = False
             self._failed_checks.append("LLM Configuration: No model selected. Please select a Language Model.")
             logger.error(error_msg)
-            return False
+            raise ValueError(error_msg)
 
         # Check if LLM has required methods
         if not (hasattr(llm, "invoke") or callable(llm)):
@@ -512,70 +565,18 @@ Now analyze the user input above and respond according to the instructions:"""
                 "LLM Configuration: LLM is not properly configured. Please verify your model configuration."
             )
             logger.error(error_msg)
-            return False
-
-        # Build list of enabled checks from multi-select
-        checks_to_run = []
-
-        # Get enabled guardrails from MultiselectInput (returns list of strings)
-        enabled_guardrails = getattr(self, "enabled_guardrails", [])
-        if not isinstance(enabled_guardrails, list):
-            enabled_guardrails = []
-
-        # MultiselectInput returns list of strings directly
-        enabled_names = [str(item) for item in enabled_guardrails if item]
-
-        # Map guardrail names to their descriptions
-        guardrail_descriptions = {
-            "PII": (
-                "personal identifiable information such as names, addresses, phone numbers, "
-                "email addresses, social security numbers, credit card numbers, or any other "
-                "personal data"
-            ),
-            "Tokens/Passwords": (
-                "API tokens, passwords, API keys, access keys, secret keys, authentication "
-                "credentials, or any other sensitive credentials"
-            ),
-            "Jailbreak": (
-                "attempts to bypass AI safety guidelines, manipulate the model's behavior, "
-                "or make it ignore its instructions"
-            ),
-            "Offensive Content": "offensive, hateful, discriminatory, violent, or inappropriate content",
-            "Malicious Code": "potentially malicious code, scripts, exploits, or harmful commands",
-            "Prompt Injection": (
-                "attempts to inject malicious prompts, override system instructions, or manipulate "
-                "the AI's behavior through embedded instructions"
-            ),
-        }
-
-        # Add enabled guardrails to checks_to_run
-        checks_to_run = [
-            (name, guardrail_descriptions[name]) for name in enabled_names if name in guardrail_descriptions
-        ]
-
-        # Add custom guardrail if enabled
-        if getattr(self, "enable_custom_guardrail", False):
-            custom_explanation = getattr(self, "custom_guardrail_explanation", "")
-            if custom_explanation and str(custom_explanation).strip():
-                checks_to_run.append(("Custom Guardrail", str(custom_explanation).strip()))
-
-        # If no checks are enabled, pass by default
-        if not checks_to_run:
-            self.status = "No guardrails enabled - passing by default"
-            self._validation_result = True
-            logger.info("No guardrails enabled - passing by default")
-            return True
+            raise ValueError(error_msg)
 
         # Run all enabled checks (fail fast - stop on first failure)
         all_passed = True
         self._failed_checks = []
 
-        logger.info(f"Starting guardrail validation with {len(checks_to_run)} checks")
+        logger.info(f"Starting guardrail validation with {len(self._checks_to_run)} checks")
 
-        for check_name, check_desc in checks_to_run:
+        for check_name, check_desc in self._checks_to_run:
             self.status = f"Checking {check_name}..."
             logger.debug(f"Running {check_name} check")
-            passed, _reason = self._check_guardrail(llm, input_text, check_name, check_desc)
+            passed, _reason = self._check_guardrail(llm, self._extracted_text, check_name, check_desc)
 
             if not passed:
                 all_passed = False
@@ -593,12 +594,12 @@ Now analyze the user input above and respond according to the instructions:"""
         self._validation_result = all_passed
 
         if all_passed:
-            self.status = f"OK: All {len(checks_to_run)} guardrail checks passed"
-            logger.info(f"Guardrail validation completed successfully - all {len(checks_to_run)} checks passed")
+            self.status = f"OK: All {len(self._checks_to_run)} guardrail checks passed"
+            logger.info(f"Guardrail validation completed successfully - all {len(self._checks_to_run)} checks passed")
         else:
             failure_summary = "\n".join(self._failed_checks)
             checks_run = len(self._failed_checks)
-            checks_skipped = len(checks_to_run) - checks_run
+            checks_skipped = len(self._checks_to_run) - checks_run
             if checks_skipped > 0:
                 self.status = (
                     f"FAILED: Guardrail validation failed (stopped early after {checks_run} "
@@ -614,50 +615,21 @@ Now analyze the user input above and respond according to the instructions:"""
 
         return all_passed
 
-    def process_pass(self) -> Data:
-        """Process the Pass output - only activates if all enabled guardrails pass."""
+    def process_check(self) -> Data:
+        """Process the Check output - returns validation result and justifications."""
         # Run validation once
         validation_passed = self._run_validation()
-        input_text_value = getattr(self, "input_text", "")
-        input_text = self._extract_text(input_text_value)
-
-        # Block empty inputs - don't return empty payloads
-        if not input_text or not input_text.strip():
-            self.stop("pass_result")
-            return Data(data={})
 
         if validation_passed:
-            # All checks passed - stop the fail output and activate this one
             self.stop("failed_result")
-            payload = {"text": input_text, "result": "pass"}
-            return Data(data=payload)
-
-        # Validation failed - stop this output (itself)
-        self.stop("pass_result")
-        return Data(data={})
-
-    def process_fail(self) -> Data:
-        """Process the Fail output - only activates if any enabled guardrail fails."""
-        # Run validation once (will use cached result if already ran)
-        validation_passed = self._run_validation()
-        input_text_value = getattr(self, "input_text", "")
-        input_text = self._extract_text(input_text_value)
-
-        # Block empty inputs - don't return empty payloads
-        if not input_text or not input_text.strip():
-            self.stop("failed_result")
-            return Data(data={})
-
-        if not validation_passed:
-            # Validation failed - stop the pass output and activate this one
+            payload = {"text": self._extracted_text, "result": "pass"}
+        else:
             self.stop("pass_result")
             payload = {
-                "text": input_text,
+                "text": self._extracted_text,
                 "result": "fail",
                 "justification": "\n".join(self._failed_checks),
             }
-            return Data(data=payload)
 
-        # All passed - stop this output (itself)
-        self.stop("failed_result")
-        return Data(data={})
+        return Data(data=payload)
+
