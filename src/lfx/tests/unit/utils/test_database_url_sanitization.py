@@ -68,14 +68,12 @@ class TestDatabaseUrlCredentialExposure:
         # Assert: Credentials MUST NOT appear in OUR error message
         for credential in credentials_that_must_not_appear:
             assert credential not in error_msg, (
-                f"SECURITY VULNERABILITY: Credential '{credential}' was exposed!\n"
-                f"Error message: {error_msg}"
+                f"SECURITY VULNERABILITY: Credential '{credential}' was exposed!\nError message: {error_msg}"
             )
 
         # Assert: Masked credentials MUST appear in our message
         assert "***" in error_msg, (
-            f"Sanitized credentials (***) not found in error message!\n"
-            f"Error message: {error_msg}"
+            f"Sanitized credentials (***) not found in error message!\nError message: {error_msg}"
         )
 
 
