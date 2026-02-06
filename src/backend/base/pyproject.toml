@@ -480,4 +480,4 @@ all = [
 ]
 
 [project.scripts]
-langflow-base = "langflow.__main__:main"
+langflow-base = "langflow.langflow_launcher:main"
