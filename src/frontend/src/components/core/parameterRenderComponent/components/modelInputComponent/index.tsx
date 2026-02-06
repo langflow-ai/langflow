@@ -8,11 +8,8 @@ import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-m
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import ModelProviderModal from "@/modals/modelProviderModal";
 import useAlertStore from "@/stores/alertStore";
-import useFlowStore from "@/stores/flowStore";
-import { useTypesStore } from "@/stores/typesStore";
 import type { APIClassType } from "@/types/api";
-import { scapedJSONStringfy } from "@/utils/reactflowUtils";
-import { cn, groupByFamily } from "@/utils/utils";
+import { cn } from "@/utils/utils";
 import ForwardedIconComponent from "../../../../common/genericIconComponent";
 import { Button } from "../../../../ui/button";
 import {
@@ -234,72 +231,6 @@ export default function ModelInputComponent({
         postTemplateValue,
         setErrorData,
         "model",
-        () => {
-          // Enable connection mode for connect_other_models AFTER mutation completes
-          try {
-            if (optionValue === "connect_other_models") {
-              const store = useFlowStore.getState();
-              const node = store.getNode(nodeId!);
-              const templateField = node?.data?.node?.template?.["model"];
-              if (!templateField) {
-                return;
-              }
-
-              const inputTypes: string[] =
-                (Array.isArray(templateField.input_types)
-                  ? templateField.input_types
-                  : []) || [];
-              const effectiveInputTypes =
-                inputTypes.length > 0 ? inputTypes : ["LanguageModel"];
-
-              const tooltipTitle: string =
-                (inputTypes && inputTypes.length > 0
-                  ? inputTypes.join("\n")
-                  : templateField.type) || "";
-
-              const myId = scapedJSONStringfy({
-                inputTypes: effectiveInputTypes,
-                type: templateField.type,
-                id: nodeId,
-                fieldName: "model",
-                proxy: templateField.proxy,
-              });
-
-              const typesData = useTypesStore.getState().data;
-              const grouped = groupByFamily(
-                typesData,
-                (effectiveInputTypes && effectiveInputTypes.length > 0
-                  ? effectiveInputTypes.join("\n")
-                  : tooltipTitle) || "",
-                true,
-                store.nodes,
-              );
-
-              // Build a pseudo source so compatible target handles (left side) glow
-              const pseudoSourceHandle = scapedJSONStringfy({
-                fieldName: "model",
-                id: nodeId,
-                inputTypes: effectiveInputTypes,
-                type: "str",
-              });
-
-              const filterObj = {
-                source: undefined,
-                sourceHandle: undefined,
-                target: nodeId,
-                targetHandle: pseudoSourceHandle,
-                type: "LanguageModel",
-                color: "datatype-fuchsia",
-              } as any;
-
-              // Show compatible handles glow
-              store.setFilterEdge(grouped);
-              store.setFilterType(filterObj);
-            }
-          } catch (error) {
-            console.warn("Error setting up connection mode:", error);
-          }
-        },
       );
     },
     [
