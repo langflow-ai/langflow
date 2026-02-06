@@ -43,7 +43,11 @@ const InspectionPanel = memo(function InspectionPanel({
               "overflow-y-auto overflow-x-visible flex flex-col pointer-events-auto",
             )}
           >
-            <InspectionPanelHeader data={selectedNode.data} isEditingFields={isEditingFields} setIsEditingFields={setIsEditingFields} />
+            <InspectionPanelHeader
+              data={selectedNode.data}
+              isEditingFields={isEditingFields}
+              setIsEditingFields={setIsEditingFields}
+            />
             <Separator className="my-0.5" />
             <InspectionPanelFields
               data={selectedNode.data}
