@@ -27,6 +27,18 @@ if TYPE_CHECKING:
 
     from langflow.services.database.models.user.model import User, UserRead
 
+_FORBIDDEN_EXCEPTIONS = frozenset(
+    {
+        MissingCredentialsError,
+        InvalidCredentialsError,
+        InsufficientPermissionsError,
+    }
+)
+
+_STATUS_FORBIDDEN = status.HTTP_403_FORBIDDEN
+
+_STATUS_UNAUTHORIZED = status.HTTP_401_UNAUTHORIZED
+
 
 class OAuth2PasswordBearerCookie(OAuth2PasswordBearer):
     """Custom OAuth2 scheme that checks Authorization header first, then cookies.
@@ -145,12 +157,9 @@ def _auth_error_to_http(e: AuthenticationError) -> HTTPException:
 
     Langflow returns 403 for missing/invalid credentials; 401 for invalid/expired tokens.
     """
-    if isinstance(
-        e,
-        (MissingCredentialsError, InvalidCredentialsError, InsufficientPermissionsError),
-    ):
-        return HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=e.message)
-    return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=e.message)
+    if type(e) in _FORBIDDEN_EXCEPTIONS:
+        return HTTPException(status_code=_STATUS_FORBIDDEN, detail=e.message)
+    return HTTPException(status_code=_STATUS_UNAUTHORIZED, detail=e.message)
 
 
 async def get_current_user(
