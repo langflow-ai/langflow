@@ -362,6 +362,15 @@ except (ImportError, ModuleNotFoundError):
             result = get_versioned_package_distributions("demo", version="1.2.3")
         assert result == ["demo-dist==1.2.3"]
 
+    def test_get_versioned_package_distributions_version_missing_returns_empty(self):
+        """Test that versioned lookup returns empty when missing."""
+        from lfx.custom.dependency_analyzer import get_versioned_package_distributions
+
+        get_versioned_package_distributions.cache_clear()
+        with patch("lfx.custom.dependency_analyzer._get_packages_distributions", return_value={}):
+            result = get_versioned_package_distributions("missing", version="1.2.3")
+        assert result == []
+
     def test_get_versioned_package_distributions_returns_all_versions(self):
         """Test that non-versioned lookup returns versions for all dists."""
         from lfx.custom.dependency_analyzer import get_versioned_package_distributions
