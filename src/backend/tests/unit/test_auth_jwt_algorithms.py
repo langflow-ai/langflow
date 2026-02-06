@@ -589,8 +589,8 @@ class TestAuthenticationFailures:
                 )
 
     @pytest.mark.asyncio
-    async def test_user_not_found_raises_401(self):
-        """Token for non-existent user should raise 401."""
+    async def test_user_not_found_raises_403(self):
+        """Token for non-existent user should raise 403 (InvalidCredentialsError)."""
         from uuid import uuid4
 
         from langflow.services.auth.service import AuthService
@@ -620,7 +620,7 @@ class TestAuthenticationFailures:
                 with pytest.raises(HTTPException) as exc_info:
                     await get_current_user_from_access_token(token, mock_db)
 
-                assert exc_info.value.status_code == 401
+                assert exc_info.value.status_code == 403
                 assert "User not found" in exc_info.value.detail or "inactive" in exc_info.value.detail.lower()
 
     @pytest.mark.asyncio
