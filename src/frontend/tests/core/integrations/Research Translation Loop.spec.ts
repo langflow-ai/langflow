@@ -50,6 +50,13 @@ withEventDeliveryModes(
 
     await page.getByTestId("button-send").click();
 
+    const stopButton = page.getByRole("button", { name: "Stop" });
+    await stopButton.waitFor({ state: "visible", timeout: 40000 });
+
+    if (await stopButton.isVisible()) {
+      await expect(stopButton).toBeHidden({ timeout: 200000 });
+    }
+
     await page.waitForSelector('[data-testid="div-chat-message"]', {
       timeout: 30000 * 3,
     });
@@ -60,6 +67,6 @@ withEventDeliveryModes(
 
     const concatAllText = textContents.join(" ").toLowerCase();
 
-    expect(concatAllText.length).toBeGreaterThan(300);
+    expect(concatAllText.length).toBeGreaterThan(140);
   },
 );

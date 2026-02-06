@@ -59,7 +59,8 @@ export default function CopyFieldAreaComponent({
   handleOnNewValue,
   editNode = false,
   id = "",
-}: InputProps<string, TextAreaComponentType>): JSX.Element {
+  showParameter = true,
+}: InputProps<string, TextAreaComponentType>): JSX.Element | null {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isFocused, setIsFocused] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
@@ -139,6 +140,10 @@ export default function CopyFieldAreaComponent({
       </div>
     </>
   );
+
+  if (!showParameter) {
+    return null;
+  }
 
   return (
     <div className={cn("w-full")}>

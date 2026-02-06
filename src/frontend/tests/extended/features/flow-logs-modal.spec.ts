@@ -151,7 +151,7 @@ class CustomComponent(Component):
       await page.getByTestId("title-Custom Component").click();
 
       // Open code editor and add error code
-      await page.getByTestId("code-button-modal").click();
+      await page.getByTestId("code-button-modal").last().click();
 
       await page.locator(".ace_content").click();
       await page.keyboard.press("ControlOrMeta+A");
