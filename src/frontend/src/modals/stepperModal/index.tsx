@@ -74,6 +74,9 @@ export interface StepperModalProps {
   size?: StepperModalSize;
   showProgress?: boolean;
   height?: string;
+  width?: string;
+  sidePanel?: ReactNode;
+  sidePanelOpen?: boolean;
 }
 
 export function StepperModal({
@@ -91,6 +94,9 @@ export function StepperModal({
   size = 'small-h-full',
   showProgress = true,
   height: customHeight,
+  width: customWidth,
+  sidePanel,
+  sidePanelOpen = false,
 }: StepperModalProps) {
   const { minWidth, height: sizeHeight } = switchCaseModalSize(size);
   const height = customHeight || sizeHeight;
@@ -102,46 +108,49 @@ export function StepperModal({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
           className={cn(
-            'flex max-h-[85vh] flex-col gap-0 overflow-hidden rounded-xl border bg-background p-0 shadow-lg px-2 pb-2 transition-all duration-300 ease-in-out',
-            minWidth,
+            'flex max-h-[85vh] flex-col gap-0 overflow-visible border bg-background p-0 shadow-lg transition-all duration-300 ease-in-out',
+            customWidth ? `${customWidth} !max-w-none` : minWidth,
             height,
+            sidePanel && sidePanelOpen
+              ? 'rounded-l-xl rounded-r-none border-r-0'
+              : 'rounded-xl',
             className
           )}
-          closeButtonClassName="top-7 right-4"
+          closeButtonClassName="top-4 right-4"
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-4 pt-4 pr-14">
-            <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1 px-4 pt-4 pr-14">
+            <div className="flex items-center justify-between">
               <DialogTitle className="flex items-center gap-2 text-base font-semibold">
                 <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
                   <ForwardedIconComponent name={icon} className="h-4 w-4" />
                 </div>
                 {title}
               </DialogTitle>
-              {description && (
-                <DialogDescription className="text-sm text-muted-foreground">
-                  {description}
-                </DialogDescription>
-              )}
+              <div
+                className={cn(
+                  'transition-all duration-300 ease-in-out',
+                  showProgress
+                    ? 'opacity-100 translate-x-0'
+                    : 'opacity-0 translate-x-4 pointer-events-none'
+                )}
+              >
+                <ProgressIndicator
+                  currentStep={currentStep}
+                  totalSteps={totalSteps}
+                />
+              </div>
             </div>
-            <div
-              className={cn(
-                'transition-all duration-300 ease-in-out',
-                showProgress
-                  ? 'opacity-100 translate-x-0'
-                  : 'opacity-0 translate-x-4 pointer-events-none'
-              )}
-            >
-              <ProgressIndicator
-                currentStep={currentStep}
-                totalSteps={totalSteps}
-              />
-            </div>
+            {description && (
+              <DialogDescription className="text-sm text-muted-foreground">
+                {description}
+              </DialogDescription>
+            )}
           </div>
 
           {/* Content */}
           <div
-            className={`flex-1 overflow-y-auto px-4 py-4 border border-border m-4 rounded-lg ${contentClassName}`}
+            className={`flex-1 min-h-0 overflow-hidden px-4 py-4 border border-border m-4 rounded-lg ${contentClassName}`}
           >
             {children}
           </div>
@@ -149,6 +158,31 @@ export function StepperModal({
           {/* Footer */}
           {footer && (
             <div className="flex items-center px-4 pb-4">{footer}</div>
+          )}
+          {/* Side Panel - slides out from right edge */}
+          {sidePanel && (
+            <div
+              className={cn(
+                'absolute left-full top-[-1px] bottom-[-1px] flex transition-opacity duration-150',
+                sidePanelOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+              )}
+            >
+              {/* Vertical separator line */}
+              <div className="w-[1px] shrink-0 bg-border" />
+              {/* Sliding panel content */}
+              <div className="overflow-hidden">
+                <div
+                  className={cn(
+                    'h-full transition-transform duration-300 ease-out',
+                    sidePanelOpen ? 'translate-x-0' : '-translate-x-full'
+                  )}
+                >
+                  <div className="flex h-full w-[300px] flex-col rounded-r-xl border-y border-r bg-background shadow-lg">
+                    {sidePanel}
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
         </DialogContent>
       </Dialog>
@@ -193,7 +227,7 @@ export function StepperModalFooter({
   const showHelp = helpHref || onHelp;
 
   return (
-    <div className="flex w-full items-center justify-between pt-2">
+    <div className="flex w-full items-center justify-between">
       <div>
         {showHelp &&
           (helpHref ? (

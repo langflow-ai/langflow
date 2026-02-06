@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ForwardedIconComponent from '@/components/common/genericIconComponent';
 import ModelInputComponent, {
   type ModelOption,
@@ -56,13 +56,13 @@ interface ChunkPreview {
 type WizardStep = 1 | 2;
 
 const STEP_TITLES: Record<WizardStep, string> = {
-  1: 'Configure Sources',
-  2: 'Review & Create',
+  1: 'Create Knowledge Base',
+  2: 'Review & Build',
 };
 
 const STEP_DESCRIPTIONS: Record<WizardStep, string> = {
-  1: 'Add files and configure chunking settings',
-  2: 'Review chunks and summary before creating',
+  1: 'Name your knowledge base, upload sources, and select an embedding model',
+  2: 'Preview how your files will be chunked and confirm your settings',
 };
 
 // Chunk preview card component
@@ -73,28 +73,29 @@ function ChunkPreviewCard({
   chunk: ChunkPreview;
   index: number;
 }) {
+  const isLong = chunk.content.length > 300;
+
   return (
-    <div className="rounded-lg border bg-muted/30 p-3">
-      <div className="mb-2 flex items-center justify-between">
+    <div className="flex flex-col rounded-lg border bg-muted/30 p-3 min-h-0 h-full">
+      <div className="mb-2 flex items-center justify-between shrink-0">
         <span className="text-xs font-medium text-muted-foreground">
           Chunk {index + 1}
         </span>
-        <span className="text-xs text-muted-foreground">
-          {chunk.content.length} chars
-        </span>
       </div>
-      <div className="max-h-[100px] overflow-y-auto rounded bg-background p-2 text-xs font-mono">
-        {chunk.content.slice(0, 300)}
-        {chunk.content.length > 300 && (
-          <span className="text-muted-foreground">...</span>
+      <div className="overflow-y-auto rounded bg-background p-2 text-xs font-mono flex-1 min-h-0">
+        {chunk.content}
+        {isLong && <span className="text-muted-foreground">...</span>}
+      </div>
+      <div className="mt-2 flex items-center justify-between shrink-0">
+        {chunk.metadata.source ? (
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <ForwardedIconComponent name="FileText" className="h-3 w-3" />
+            <span className="truncate">{chunk.metadata.source}</span>
+          </div>
+        ) : (
+          <div />
         )}
       </div>
-      {chunk.metadata.source && (
-        <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
-          <ForwardedIconComponent name="FileText" className="h-3 w-3" />
-          <span className="truncate">{chunk.metadata.source}</span>
-        </div>
-      )}
     </div>
   );
 }
@@ -170,10 +171,23 @@ export default function KnowledgeBaseUploadModal({
   >([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [isFilePanelOpen, setIsFilePanelOpen] = useState(false);
+
+  const toggleAdvanced = useCallback(() => {
+    setShowAdvanced(prev => {
+      if (prev) {
+        // Hiding advanced: close panel but keep files
+        setIsFilePanelOpen(false);
+      }
+      return !prev;
+    });
+  }, []);
 
   // Preview state - Step 2
   const [chunkPreviews, setChunkPreviews] = useState<ChunkPreview[]>([]);
   const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
+  const [currentChunkIndex, setCurrentChunkIndex] = useState(0);
+  const [selectedPreviewFileIndex, setSelectedPreviewFileIndex] = useState(0);
 
   // Alert store
   const setSuccessData = useAlertStore(state => state.setSuccessData);
@@ -205,7 +219,10 @@ export default function KnowledgeBaseUploadModal({
     setSeparator('\\n\\n');
     setSelectedEmbeddingModel([]);
     setChunkPreviews([]);
+    setCurrentChunkIndex(0);
+    setSelectedPreviewFileIndex(0);
     setCurrentStep(1);
+    setIsFilePanelOpen(false);
   }, []);
 
   // Generate chunk previews (client-side simulation)
@@ -223,8 +240,8 @@ export default function KnowledgeBaseUploadModal({
         .replace(/\\n/g, '\n')
         .replace(/\\t/g, '\t');
 
-      // Read first file for preview
-      const file = files[0];
+      // Read selected file for preview
+      const file = files[selectedPreviewFileIndex] || files[0];
       const text = await file.text();
 
       // Simple chunking simulation
@@ -265,7 +282,7 @@ export default function KnowledgeBaseUploadModal({
     } finally {
       setIsGeneratingPreview(false);
     }
-  }, [files, chunkSize, chunkOverlap, separator]);
+  }, [files, chunkSize, chunkOverlap, separator, selectedPreviewFileIndex]);
 
   // Generate previews when entering step 2
   useEffect(() => {
@@ -383,6 +400,7 @@ export default function KnowledgeBaseUploadModal({
     const selectedFiles = e.target.files;
     if (selectedFiles && selectedFiles.length > 0) {
       setFiles(prev => [...prev, ...Array.from(selectedFiles)]);
+      setIsFilePanelOpen(true);
     }
     e.target.value = '';
   };
@@ -391,6 +409,7 @@ export default function KnowledgeBaseUploadModal({
     const selectedFiles = e.target.files;
     if (selectedFiles && selectedFiles.length > 0) {
       setFiles(prev => [...prev, ...Array.from(selectedFiles)]);
+      setIsFilePanelOpen(true);
     }
     e.target.value = '';
   };
@@ -440,10 +459,10 @@ export default function KnowledgeBaseUploadModal({
     switch (currentStep) {
       case 1:
         return (
-          <div className="flex flex-col">
-            {/* Name and Sources - side by side */}
-            <div className="grid grid-cols-6 gap-4">
-              <div className="col-span-4 flex flex-col gap-2">
+          <div className="relative">
+            <div className="flex flex-col">
+              {/* Name */}
+              <div className="flex flex-col gap-2">
                 <Label htmlFor="source-name" className="text-sm font-medium">
                   Name <span className="text-destructive">*</span>
                 </Label>
@@ -457,290 +476,229 @@ export default function KnowledgeBaseUploadModal({
                 />
               </div>
 
-              <div className="col-span-2 flex flex-col gap-2 w-full">
-                <Label className="text-sm font-medium">Sources</Label>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="w-full">
-                      <span className="flex items-center gap-2 mx-auto">
-                        <ForwardedIconComponent
-                          name="Upload"
-                          className="h-4 w-4"
-                        />
-                        Add Sources
-                      </span>
-                      <ForwardedIconComponent
-                        name="ChevronDown"
-                        className="h-4 w-4"
-                      />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-[200px]">
-                    <DropdownMenuItem
-                      onClick={() =>
-                        document.getElementById('file-input')?.click()
-                      }
-                    >
-                      <ForwardedIconComponent
-                        name="FileText"
-                        className="mr-2 h-4 w-4"
-                      />
-                      Upload Files
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() =>
-                        document.getElementById('folder-input')?.click()
-                      }
-                    >
-                      <ForwardedIconComponent
-                        name="Folder"
-                        className="mr-2 h-4 w-4"
-                      />
-                      Upload Folder
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
-
-            {/* Model Selection */}
-            <div className="flex flex-col gap-2 pt-4">
-              <Label className="text-sm font-medium">
-                Embedding Model <span className="text-destructive">*</span>
-              </Label>
-              {isAddSourcesMode ? (
-                <div className="flex h-10 w-full items-center gap-2 rounded-md border border-input bg-muted px-3 py-2 text-sm">
-                  <ForwardedIconComponent
-                    name={selectedEmbeddingModel[0]?.icon || 'Cpu'}
-                    className="h-4 w-4 shrink-0"
+              {/* Model Selection */}
+              <div className="flex flex-col gap-2 pt-4">
+                <Label className="text-sm font-medium">
+                  Embedding Model <span className="text-destructive">*</span>
+                </Label>
+                {isAddSourcesMode ? (
+                  <div className="flex h-10 w-full items-center gap-2 rounded-md border border-input bg-muted px-3 py-2 text-sm">
+                    <ForwardedIconComponent
+                      name={selectedEmbeddingModel[0]?.icon || 'Cpu'}
+                      className="h-4 w-4 shrink-0"
+                    />
+                    <span className="text-muted-foreground">
+                      {existingKnowledgeBase?.embeddingModel || 'Unknown'}
+                    </span>
+                  </div>
+                ) : (
+                  <ModelInputComponent
+                    id="kb-embedding-model"
+                    value={selectedEmbeddingModel}
+                    editNode={false}
+                    disabled={false}
+                    handleOnNewValue={({ value }) =>
+                      setSelectedEmbeddingModel(value)
+                    }
+                    options={embeddingModelOptions}
+                    placeholder="Select embedding model"
+                    showEmptyState
                   />
-                  <span className="text-muted-foreground">
-                    {existingKnowledgeBase?.embeddingModel || 'Unknown'}
-                  </span>
-                </div>
-              ) : (
-                <ModelInputComponent
-                  id="kb-embedding-model"
-                  value={selectedEmbeddingModel}
-                  editNode={false}
-                  disabled={false}
-                  handleOnNewValue={({ value }) =>
-                    setSelectedEmbeddingModel(value)
-                  }
-                  options={embeddingModelOptions}
-                  placeholder="Select embedding model"
-                  showEmptyState
-                />
-              )}
-            </div>
+                )}
+              </div>
 
-            {/* Hidden file inputs */}
-            <input
-              id="file-input"
-              type="file"
-              multiple
-              className="hidden"
-              onChange={handleFileSelect}
-              accept=".pdf,.txt,.md,.docx,.doc,.csv,.json,.html,.xml"
-            />
-            <input
-              id="folder-input"
-              type="file"
-              className="hidden"
-              onChange={handleFolderSelect}
-              {...({ webkitdirectory: '', directory: '' } as any)}
-            />
+              {/* Hidden file inputs */}
+              <input
+                id="file-input"
+                type="file"
+                multiple
+                className="hidden"
+                onChange={handleFileSelect}
+                accept=".pdf,.txt,.md,.docx,.doc,.csv,.json,.html,.xml"
+              />
+              <input
+                id="folder-input"
+                type="file"
+                className="hidden"
+                onChange={handleFolderSelect}
+                {...({ webkitdirectory: '', directory: '' } as any)}
+              />
 
-            {/* Selected Files List - Animated */}
-            <div
-              className={cn(
-                'grid transition-all duration-300 ease-in-out',
-                files.length > 0
-                  ? 'grid-rows-[1fr] opacity-100'
-                  : 'grid-rows-[0fr] opacity-0'
-              )}
-            >
-              <div className="overflow-hidden">
-                <div className="rounded-md border bg-muted/30 p-3 mt-4">
-                  <div className="mb-2 flex items-center justify-between">
+              {/* Chunking Settings - Animated */}
+              <div
+                className={cn(
+                  'grid transition-all duration-300 ease-in-out',
+                  showAdvanced
+                    ? 'grid-rows-[1fr] opacity-100'
+                    : 'grid-rows-[0fr] opacity-0'
+                )}
+              >
+                <div className="overflow-hidden">
+                  <Separator className="my-4" />
+                  <div className="flex flex-col gap-4">
                     <div className="flex items-center gap-2">
                       <ForwardedIconComponent
-                        name="Files"
+                        name="Settings2"
                         className="h-4 w-4 text-muted-foreground"
                       />
                       <span className="text-sm font-medium">
-                        {files.length} file{files.length > 1 ? 's' : ''} (
-                        {totalFileSize})
+                        Chunking Settings
                       </span>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 px-2 text-xs hover:bg-background"
-                      onClick={() => setFiles([])}
-                    >
-                      <ForwardedIconComponent
-                        name="X"
-                        className="mr-1 h-3 w-3"
-                      />
-                      Clear
-                    </Button>
-                  </div>
-                  <div className="max-h-[100px] overflow-y-auto text-sm text-muted-foreground">
-                    {files.slice(0, 5).map((file, index) => (
-                      <div
-                        key={`${file.name}-${index}`}
-                        className="group flex items-center justify-between truncate py-0.5"
-                      >
-                        <div className="flex items-center gap-2 truncate">
-                          <ForwardedIconComponent
-                            name="FileText"
-                            className="h-3 w-3 shrink-0"
-                          />
-                          <span className="truncate">{file.name}</span>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-5 w-5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
-                          onClick={() => handleRemoveFile(index)}
+
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* Chunk Size */}
+                      <div className="flex flex-col gap-2">
+                        <Label
+                          htmlFor="chunk-size"
+                          className="text-xs text-muted-foreground"
                         >
-                          <ForwardedIconComponent
-                            name="X"
-                            className="h-3 w-3"
-                          />
+                          Chunk Size
+                        </Label>
+                        <Input
+                          id="chunk-size"
+                          type="number"
+                          value={chunkSize}
+                          onChange={e => setChunkSize(Number(e.target.value))}
+                          min={100}
+                          max={10000}
+                          data-testid="kb-chunk-size-input"
+                        />
+                      </div>
+
+                      {/* Chunk Overlap */}
+                      <div className="flex flex-col gap-2">
+                        <Label
+                          htmlFor="chunk-overlap"
+                          className="text-xs text-muted-foreground"
+                        >
+                          Chunk Overlap
+                        </Label>
+                        <Input
+                          id="chunk-overlap"
+                          type="number"
+                          value={chunkOverlap}
+                          onChange={e =>
+                            setChunkOverlap(Number(e.target.value))
+                          }
+                          min={0}
+                          max={chunkSize - 1}
+                          data-testid="kb-chunk-overlap-input"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Separator */}
+                    <div className="flex flex-col gap-2">
+                      <Label
+                        htmlFor="separator"
+                        className="text-xs text-muted-foreground"
+                      >
+                        Separator
+                      </Label>
+                      <Input
+                        id="separator"
+                        value={separator}
+                        onChange={e => setSeparator(e.target.value)}
+                        placeholder="\\n\\n"
+                        data-testid="kb-separator-input"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Table Configure - Animated */}
+              <div
+                className={cn(
+                  'grid transition-all duration-300 ease-in-out',
+                  showAdvanced
+                    ? 'grid-rows-[1fr] opacity-100'
+                    : 'grid-rows-[0fr] opacity-0'
+                )}
+              >
+                <div className="overflow-hidden">
+                  <Separator className="my-4" />
+                  <div className="flex flex-col gap-4">
+                    <div className="flex items-center gap-2">
+                      <ForwardedIconComponent
+                        name="LayoutGrid"
+                        className="h-4 w-4 text-muted-foreground"
+                      />
+                      <span className="text-sm font-medium">
+                        Configure Sources
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex flex-col gap-2">
+                        <Label className="text-xs text-muted-foreground">
+                          Sources
+                        </Label>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" className="w-full px-3">
+                              <span className="flex items-center gap-2 mr-auto">
+                                <ForwardedIconComponent
+                                  name="Upload"
+                                  className="h-4 w-4"
+                                />
+                                Add Sources
+                              </span>
+                              <ForwardedIconComponent
+                                name="ChevronDown"
+                                className="h-4 w-4"
+                              />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent
+                            align="start"
+                            className="w-[200px]"
+                          >
+                            <DropdownMenuItem
+                              onClick={() =>
+                                document.getElementById('file-input')?.click()
+                              }
+                            >
+                              <ForwardedIconComponent
+                                name="FileText"
+                                className="mr-2 h-4 w-4"
+                              />
+                              Upload Files
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                document.getElementById('folder-input')?.click()
+                              }
+                            >
+                              <ForwardedIconComponent
+                                name="Folder"
+                                className="mr-2 h-4 w-4"
+                              />
+                              Upload Folder
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <Label className="text-xs text-muted-foreground">
+                          Column Details
+                        </Label>
+                        <Button
+                          variant="outline"
+                          className="w-full justify-center"
+                          onClick={toggleAdvanced}
+                        >
+                          <span className="flex items-center gap-2">
+                            <ForwardedIconComponent
+                              name="Columns"
+                              className="h-4 w-4"
+                            />
+                            Open Table
+                          </span>
                         </Button>
                       </div>
-                    ))}
-                    {files.length > 5 && (
-                      <div className="py-0.5 text-xs">
-                        +{files.length - 5} more files
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Chunking Settings - Animated */}
-            <div
-              className={cn(
-                'grid transition-all duration-300 ease-in-out',
-                showAdvanced
-                  ? 'grid-rows-[1fr] opacity-100'
-                  : 'grid-rows-[0fr] opacity-0'
-              )}
-            >
-              <div className="overflow-hidden">
-                <Separator className="my-4" />
-                <div className="flex flex-col gap-4">
-                  <div className="flex items-center gap-2">
-                    <ForwardedIconComponent
-                      name="Settings2"
-                      className="h-4 w-4 text-muted-foreground"
-                    />
-                    <span className="text-sm font-medium">
-                      Chunking Settings
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    {/* Chunk Size */}
-                    <div className="flex flex-col gap-2">
-                      <Label
-                        htmlFor="chunk-size"
-                        className="text-xs text-muted-foreground"
-                      >
-                        Chunk Size
-                      </Label>
-                      <Input
-                        id="chunk-size"
-                        type="number"
-                        value={chunkSize}
-                        onChange={e => setChunkSize(Number(e.target.value))}
-                        min={100}
-                        max={10000}
-                        data-testid="kb-chunk-size-input"
-                      />
                     </div>
-
-                    {/* Chunk Overlap */}
-                    <div className="flex flex-col gap-2">
-                      <Label
-                        htmlFor="chunk-overlap"
-                        className="text-xs text-muted-foreground"
-                      >
-                        Chunk Overlap
-                      </Label>
-                      <Input
-                        id="chunk-overlap"
-                        type="number"
-                        value={chunkOverlap}
-                        onChange={e => setChunkOverlap(Number(e.target.value))}
-                        min={0}
-                        max={chunkSize - 1}
-                        data-testid="kb-chunk-overlap-input"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Separator */}
-                  <div className="flex flex-col gap-2">
-                    <Label
-                      htmlFor="separator"
-                      className="text-xs text-muted-foreground"
-                    >
-                      Separator
-                    </Label>
-                    <Input
-                      id="separator"
-                      value={separator}
-                      onChange={e => setSeparator(e.target.value)}
-                      placeholder="\\n\\n"
-                      data-testid="kb-separator-input"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Table Configure - Animated */}
-            <div
-              className={cn(
-                'grid transition-all duration-300 ease-in-out',
-                showAdvanced
-                  ? 'grid-rows-[1fr] opacity-100'
-                  : 'grid-rows-[0fr] opacity-0'
-              )}
-            >
-              <div className="overflow-hidden">
-                <Separator className="my-4" />
-                <div className="flex flex-col gap-4">
-                  <div className="flex items-center gap-2">
-                    <ForwardedIconComponent
-                      name="LayoutGrid"
-                      className="h-4 w-4 text-muted-foreground"
-                    />
-                    <span className="text-sm font-medium">Configure Table</span>
-                  </div>
-
-                  <div className="flex flex-col gap-2">
-                    <Label className="text-xs text-muted-foreground">
-                      Column Details
-                    </Label>
-                    <Button
-                      variant="outline"
-                      className="w-[50%] justify-center"
-                      onClick={() => setShowAdvanced(!showAdvanced)}
-                    >
-                      <span className="flex items-center gap-2">
-                        <ForwardedIconComponent
-                          name="Columns"
-                          className="h-4 w-4"
-                        />
-                        Open Table
-                      </span>
-                    </Button>
                   </div>
                 </div>
               </div>
@@ -750,60 +708,126 @@ export default function KnowledgeBaseUploadModal({
 
       case 2:
         return (
-          <div className="flex flex-col gap-4 h-full">
-            {/* Chunk Preview */}
-            <div className="flex items-center gap-2">
-              <ForwardedIconComponent
-                name="Layers"
-                className="h-4 w-4 text-muted-foreground"
-              />
-              <span className="text-sm font-medium">Chunk Preview</span>
+          <div className="flex flex-col gap-4 h-full min-h-0">
+            {/* Chunk Preview Header */}
+            <div className="flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2">
+                <ForwardedIconComponent
+                  name="Layers"
+                  className="h-4 w-4 text-muted-foreground"
+                />
+                <span className="text-sm font-medium">Chunk Preview</span>
+              </div>
+              <div className="flex items-center gap-1">
+                {files.length > 1 && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 max-w-[160px] text-xs"
+                      >
+                        <span className="truncate">
+                          {files[selectedPreviewFileIndex]?.name}
+                        </span>
+                        <ForwardedIconComponent
+                          name="ChevronDown"
+                          className="ml-1 h-3 w-3 shrink-0"
+                        />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      align="end"
+                      className="max-w-[160px] overflow-y-auto"
+                    >
+                      {files.map((file, idx) => (
+                        <DropdownMenuItem
+                          key={`${file.name}-${idx}`}
+                          onClick={() => {
+                            setSelectedPreviewFileIndex(idx);
+                            setCurrentChunkIndex(0);
+                          }}
+                        >
+                          <span className="truncate text-xs">{file.name}</span>
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  disabled={
+                    chunkPreviews.length === 0 || currentChunkIndex === 0
+                  }
+                  onClick={() => setCurrentChunkIndex(prev => prev - 1)}
+                >
+                  <ForwardedIconComponent
+                    name="ChevronLeft"
+                    className="h-4 w-4"
+                  />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  disabled={
+                    chunkPreviews.length === 0 ||
+                    currentChunkIndex === chunkPreviews.length - 1
+                  }
+                  onClick={() => setCurrentChunkIndex(prev => prev + 1)}
+                >
+                  <ForwardedIconComponent
+                    name="ChevronRight"
+                    className="h-4 w-4"
+                  />
+                </Button>
+              </div>
             </div>
 
-            {files.length === 0 ? (
-              <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center h-full">
-                <ForwardedIconComponent
-                  name="FileQuestion"
-                  className="mb-2 h-8 w-8 text-muted-foreground"
+            <div className="flex-1 min-h-0 flex flex-col">
+              {files.length === 0 ? (
+                <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center h-full">
+                  <ForwardedIconComponent
+                    name="FileQuestion"
+                    className="mb-2 h-8 w-8 text-muted-foreground"
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    No files selected. Go back to add files.
+                  </p>
+                </div>
+              ) : isGeneratingPreview ? (
+                <div className="flex flex-col items-center justify-center p-8">
+                  <ForwardedIconComponent
+                    name="Loader2"
+                    className="mb-2 h-8 w-8 animate-spin text-muted-foreground"
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Generating preview...
+                  </p>
+                </div>
+              ) : chunkPreviews.length > 0 ? (
+                <ChunkPreviewCard
+                  key={currentChunkIndex}
+                  chunk={chunkPreviews[currentChunkIndex]}
+                  index={currentChunkIndex}
                 />
-                <p className="text-sm text-muted-foreground">
-                  No files selected. Go back to add files.
-                </p>
-              </div>
-            ) : isGeneratingPreview ? (
-              <div className="flex flex-col items-center justify-center p-8">
-                <ForwardedIconComponent
-                  name="Loader2"
-                  className="mb-2 h-8 w-8 animate-spin text-muted-foreground"
-                />
-                <p className="text-sm text-muted-foreground">
-                  Generating preview...
-                </p>
-              </div>
-            ) : chunkPreviews.length > 0 ? (
-              <div className="flex flex-col gap-3">
-                {chunkPreviews.map((chunk, index) => (
-                  <ChunkPreviewCard key={index} chunk={chunk} index={index} />
-                ))}
-                <p className="text-center text-xs text-muted-foreground">
-                  Showing first {chunkPreviews.length} chunk
-                  {chunkPreviews.length > 1 ? 's' : ''} from "{files[0]?.name}"
-                </p>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
-                <ForwardedIconComponent
-                  name="AlertCircle"
-                  className="mb-2 h-8 w-8 text-muted-foreground"
-                />
-                <p className="text-sm text-muted-foreground">
-                  Could not generate preview. Try adjusting your settings.
-                </p>
-              </div>
-            )}
+              ) : (
+                <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
+                  <ForwardedIconComponent
+                    name="AlertCircle"
+                    className="mb-2 h-8 w-8 text-muted-foreground"
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Could not generate preview. Try adjusting your settings.
+                  </p>
+                </div>
+              )}
+            </div>
 
             {/* Summary Section */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 shrink-0">
               <ForwardedIconComponent
                 name="FileStack"
                 className="h-4 w-4 text-muted-foreground"
@@ -811,7 +835,7 @@ export default function KnowledgeBaseUploadModal({
               <span className="text-sm font-medium">Summary</span>
             </div>
 
-            <div>
+            <div className="shrink-0">
               <SummaryItem icon="Type" label="Name" value={sourceName} />
               <SummaryItem
                 icon="Files"
@@ -839,6 +863,45 @@ export default function KnowledgeBaseUploadModal({
     }
   };
 
+  // Files side panel content
+  const filesPanelContent = (
+    <>
+      {/* Panel Content - File List */}
+      <div className="flex-1 overflow-y-auto p-3">
+        <div className="flex items-center gap-2 text-base font-semibold my-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
+            <ForwardedIconComponent name="FileStack" className="h-4 w-4" />
+          </div>
+          Sources
+        </div>
+        <div className="flex flex-col gap-1">
+          {files.map((file, index) => (
+            <div
+              key={`${file.name}-${index}`}
+              className="group flex items-center justify-between rounded-md px-2 py-1.5 hover:bg-muted"
+            >
+              <div className="flex items-center gap-2 truncate">
+                <ForwardedIconComponent
+                  name="FileText"
+                  className="h-4 w-4 shrink-0 text-muted-foreground"
+                />
+                <span className="truncate text-sm">{file.name}</span>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+                onClick={() => handleRemoveFile(index)}
+              >
+                <ForwardedIconComponent name="X" className="h-3 w-3" />
+              </Button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+
   return (
     <StepperModal
       open={open}
@@ -853,8 +916,11 @@ export default function KnowledgeBaseUploadModal({
       title={isAddSourcesMode ? 'Add Sources' : STEP_TITLES[currentStep]}
       description={STEP_DESCRIPTIONS[currentStep]}
       icon="Database"
-      height={showAdvanced ? 'h-[710px]' : 'h-[365px]'}
+      height={showAdvanced ? 'h-[690px]' : 'h-[347px]'}
+      width="w-[700px]"
       showProgress={false}
+      sidePanel={filesPanelContent}
+      sidePanelOpen={showAdvanced && files.length > 0}
       footer={
         <StepperModalFooter
           currentStep={currentStep}
@@ -873,9 +939,7 @@ export default function KnowledgeBaseUploadModal({
                 : 'Advanced'
               : undefined
           }
-          onHelp={
-            currentStep === 1 ? () => setShowAdvanced(!showAdvanced) : undefined
-          }
+          onHelp={currentStep === 1 ? toggleAdvanced : undefined}
         />
       }
     >
