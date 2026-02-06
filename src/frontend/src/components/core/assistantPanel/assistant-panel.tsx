@@ -46,7 +46,7 @@ function AssistantInputWithScroll({
   );
 }
 
-export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
+export function AssistantPanel({ isOpen, onClose, embedded }: AssistantPanelProps) {
   const { viewMode, setViewMode } = useAssistantViewMode();
   const { hasEnabledModels } = useEnabledModels();
   const {
@@ -65,17 +65,24 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
 
   const hasMessages = messages.length > 0;
 
+  // When embedded, the panel fills its container (used with SimpleSidebar)
+  // When not embedded, it uses fixed positioning (overlay)
   const containerClasses = cn(
-    "fixed z-50 flex flex-col shadow-xl transition-all duration-300",
-    viewMode === "sidebar"
-      ? cn(
-          "left-0 top-12 h-[calc(100%-48px)] w-[500px]",
-          isOpen ? "translate-x-0" : "-translate-x-full",
-        )
+    "flex flex-col transition-all duration-300",
+    embedded
+      ? "h-full w-full"
       : cn(
-          "bottom-4 left-1/2 -translate-x-1/2 w-[650px] rounded-2xl border border-border",
-          hasMessages ? "h-[500px]" : "h-auto",
-          isOpen ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none",
+          "fixed z-50 shadow-xl",
+          viewMode === "sidebar"
+            ? cn(
+                "left-2 top-14 h-[calc(100%-64px)] w-[400px] rounded-xl",
+                isOpen ? "translate-x-0" : "-translate-x-full",
+              )
+            : cn(
+                "bottom-28 left-[calc(50%+140px)] -translate-x-1/2 w-[650px] rounded-2xl border border-border",
+                hasMessages ? "h-[500px]" : "h-auto",
+                isOpen ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none",
+              ),
         ),
   );
 
@@ -83,25 +90,11 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
     <div className={containerClasses}>
       <div
         className={cn(
-          "absolute inset-0 overflow-hidden bg-background",
-          viewMode === "floating" && "rounded-2xl",
+          "absolute inset-0 bg-background",
+          !embedded && viewMode === "floating" && "rounded-2xl",
+          !embedded && viewMode === "sidebar" && "rounded-xl",
         )}
-      >
-        <div
-          className="absolute -left-6 bottom-0 h-[505px] w-[936px] blur-[48px]"
-          style={{
-            background: "linear-gradient(89deg, #19F0A5 0%, #BA75FF 50%, #0FE3FF 100%)",
-            opacity: 0.18,
-            transform: "rotate(89.1deg)",
-          }}
-        />
-        <div
-          className="absolute inset-0 opacity-[0.03]"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
-          }}
-        />
-      </div>
+      />
 
       <div className="relative z-10 flex h-full min-h-0 flex-col overflow-hidden">
         <AssistantHeader

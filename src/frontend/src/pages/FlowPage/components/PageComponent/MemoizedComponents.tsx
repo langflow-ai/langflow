@@ -52,14 +52,14 @@ export const MemoizedCanvasControls = memo(
           unstyled
           size="icon"
           data-testid="lock-status"
-          className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted"
+          className="group flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted"
           title={isLocked ? "Unlock flow" : "Lock flow"}
           onClick={handleToggleLock}
         >
           <ForwardedIconComponent
             name={isLocked ? "Lock" : "Unlock"}
             className={cn(
-              "h-[18px] w-[18px] text-muted-foreground",
+              "h-[18px] w-[18px] text-muted-foreground group-hover:text-foreground",
               isLocked && "text-destructive",
             )}
           />

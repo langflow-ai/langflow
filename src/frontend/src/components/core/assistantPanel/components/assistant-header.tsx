@@ -74,7 +74,7 @@ export function AssistantHeader({
               />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end" className="z-[70]">
             <DropdownMenuItem onClick={onClearHistory}>
               <ForwardedIconComponent name="Trash2" className="mr-2 h-4 w-4" />
               Clear history

@@ -100,25 +100,25 @@ const CanvasControlsDropdown = ({
         <Button
           variant="ghost"
           data-testid="canvas_controls_dropdown"
-          className="group rounded-none px-2 py-2 hover:bg-muted"
+          className="group flex h-8 items-center justify-center rounded-md px-2 hover:bg-muted"
           unstyled
           title="Canvas Controls"
         >
-          <div className="flex items-center justify-center ">
-            <div className="text-sm pr-1 text-muted-foreground">
+          <div className="flex items-center justify-center">
+            <div className="text-sm pr-1 text-muted-foreground group-hover:text-foreground">
               {formatZoomPercentage(zoom)}
             </div>
             <IconComponent
               name={isOpen ? "ChevronDown" : "ChevronUp"}
               aria-hidden="true"
-              className="text-muted-foreground !h-5 !w-5"
+              className="text-muted-foreground group-hover:text-foreground !h-5 !w-5"
             />
           </div>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
         side="top"
-        align="end"
+        align="center"
         className="flex flex-col w-full"
       >
         <DropdownControlButton

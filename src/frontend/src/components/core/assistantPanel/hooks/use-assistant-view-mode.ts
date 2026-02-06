@@ -1,7 +1,5 @@
-import { useEffect, useState } from "react";
+import useAssistantManagerStore from "@/stores/assistantManagerStore";
 import type { AssistantViewMode } from "../assistant-panel.types";
-
-const ASSISTANT_VIEW_MODE_KEY = "langflow-assistant-view-mode";
 
 interface UseAssistantViewModeReturn {
   viewMode: AssistantViewMode;
@@ -9,19 +7,10 @@ interface UseAssistantViewModeReturn {
 }
 
 export function useAssistantViewMode(): UseAssistantViewModeReturn {
-  const [viewMode, setViewMode] = useState<AssistantViewMode>(() => {
-    try {
-      const saved = localStorage.getItem(ASSISTANT_VIEW_MODE_KEY);
-      return (saved as AssistantViewMode) || "floating";
-    } catch {
-      // localStorage may be unavailable (private browsing)
-      return "floating";
-    }
-  });
-
-  useEffect(() => {
-    localStorage.setItem(ASSISTANT_VIEW_MODE_KEY, viewMode);
-  }, [viewMode]);
+  const viewMode = useAssistantManagerStore((state) => state.assistantViewMode);
+  const setViewMode = useAssistantManagerStore(
+    (state) => state.setAssistantViewMode,
+  );
 
   return { viewMode, setViewMode };
 }

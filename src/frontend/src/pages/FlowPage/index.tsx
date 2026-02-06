@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
 import { useBlocker, useParams } from "react-router-dom";
+import {
+  AssistantPanel,
+  useAssistantViewMode,
+} from "@/components/core/assistantPanel";
 import { FlowPageSlidingContainerContent } from "@/components/core/playgroundComponent/sliding-container/components/flow-page-sliding-container";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import {
@@ -16,6 +20,7 @@ import { useRefreshModelInputs } from "@/hooks/use-refresh-model-inputs";
 import { useWebhookEvents } from "@/hooks/use-webhook-events";
 import { SaveChangesModal } from "@/modals/saveChangesModal";
 import useAlertStore from "@/stores/alertStore";
+import useAssistantManagerStore from "@/stores/assistantManagerStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { useTypesStore } from "@/stores/typesStore";
 import { customStringify } from "@/utils/reactflowUtils";
@@ -184,6 +189,15 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const inputs = useFlowStore((state) => state.inputs);
   const outputs = useFlowStore((state) => state.outputs);
 
+  // Assistant state
+  const assistantOpen = useAssistantManagerStore(
+    (state) => state.assistantSidebarOpen,
+  );
+  const setAssistantOpen = useAssistantManagerStore(
+    (state) => state.setAssistantSidebarOpen,
+  );
+  const { viewMode: assistantViewMode } = useAssistantViewMode();
+
   // Auto-close playground when all chat components are removed
   useEffect(() => {
     const hasChatInput = inputs.some((input) => input.type === "ChatInput");
@@ -229,36 +243,81 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
       </div>
       */}
 
-      <SimpleSidebarProvider
-        width="326px"
-        minWidth={0.15}
-        maxWidth={0.6}
-        open={isSlidingContainerOpen}
-        onOpenChange={(open) => {
-          setSlidingContainerOpen(open);
-        }}
-        fullscreen={isFullscreen}
-        onMaxWidth={() => {
-          setIsFullscreen(true);
-          setSlidingContainerOpen(true);
-        }}
-      >
-        <div className="flow-page-positioning">
-          {currentFlow && (
-            <div className="flex h-full overflow-hidden">
+      {/* Assistant Panel - floating mode: handles its own positioning */}
+      {assistantViewMode === "floating" && (
+        <AssistantPanel
+          isOpen={assistantOpen}
+          onClose={() => setAssistantOpen(false)}
+        />
+      )}
+
+      <div className="flow-page-positioning">
+        {currentFlow && (
+          <div className="flex h-full overflow-hidden">
+            {/* Assistant Panel - sidebar mode: fixed position overlay */}
+            {assistantViewMode === "sidebar" && (
+              <div
+                className={cn(
+                  "fixed left-0 top-[49px] z-[60] h-[calc(100%-49px)] w-[400px] transition-transform duration-300",
+                  assistantOpen ? "translate-x-0" : "-translate-x-full",
+                )}
+              >
+                <AssistantPanel
+                  isOpen={assistantOpen}
+                  onClose={() => setAssistantOpen(false)}
+                  embedded
+                />
+              </div>
+            )}
+
+            {/* Main content + Playground Sidebar (right) */}
+            <SimpleSidebarProvider
+              width="326px"
+              minWidth={0.15}
+              maxWidth={0.6}
+              open={isSlidingContainerOpen}
+              onOpenChange={setSlidingContainerOpen}
+              fullscreen={isFullscreen}
+              onMaxWidth={() => {
+                setIsFullscreen(true);
+                setSlidingContainerOpen(true);
+              }}
+            >
               <SidebarProvider
                 width="17.5rem"
                 defaultOpen={!isMobile}
                 segmentedSidebar={ENABLE_NEW_SIDEBAR}
               >
                 <FlowSearchProvider>
+                  {/* FlowSidebarComponent - stays in place */}
                   {!view && <FlowSidebarComponent isLoading={isLoading} />}
+
+                  {/* Spacer for Assistant (sidebar mode only) - pushes main when open */}
+                  {/* Uses negative margin to account for sidebar width (17.5rem = 280px) */}
+                  <div
+                    className="h-full shrink-0 transition-all duration-300"
+                    style={{
+                      width:
+                        assistantOpen && assistantViewMode === "sidebar"
+                          ? 400
+                          : 0,
+                      marginLeft:
+                        assistantOpen && assistantViewMode === "sidebar"
+                          ? "-17.5rem"
+                          : 0,
+                    }}
+                  />
+
                   <main
                     className={cn(
                       "flex flex-1 min-w-0 overflow-hidden transition-all duration-300",
-                      isSlidingContainerOpen &&
-                        !isFullscreen &&
-                        "rounded-xl m-2 mr-0",
+                      ((assistantOpen && assistantViewMode === "sidebar") ||
+                        (isSlidingContainerOpen && !isFullscreen)) &&
+                        "rounded-xl m-2",
+                      assistantOpen &&
+                        assistantViewMode === "sidebar" &&
+                        "ml-0",
+                      isSlidingContainerOpen && !isFullscreen && "mr-0",
                     )}
                   >
                     <div className="h-full w-full">
@@ -273,10 +332,10 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
                   setIsFullscreen={setIsFullscreen}
                 />
               </SimpleSidebar>
-            </div>
-          )}
-        </div>
-      </SimpleSidebarProvider>
+            </SimpleSidebarProvider>
+          </div>
+        )}
+      </div>
       {blocker.state === "blocked" && (
         <>
           {!isBuilding && currentSavedFlow && (
