@@ -166,8 +166,11 @@ async def test_read_variables__(client: AsyncClient, logged_in_headers):
     """When the variable service raises (e.g. DB error), the list endpoint returns 500."""
     generic_message = "Generic error message"
 
-    with mock.patch("sqlmodel.Session.exec") as m:
-        m.side_effect = Exception(generic_message)
+    with mock.patch(
+        "langflow.services.variable.service.DatabaseVariableService.get_all",
+        new_callable=mock.AsyncMock,
+        side_effect=Exception(generic_message),
+    ):
         response = await client.get("api/v1/variables/", headers=logged_in_headers)
 
     assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
