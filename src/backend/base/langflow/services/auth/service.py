@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import base64
+import binascii
+import json
 import random
 import warnings
 from collections.abc import Coroutine
@@ -562,10 +564,23 @@ class AuthService(BaseAuthService):
             not verified as this is a utility function, not an authentication function.
         """
         try:
-            claims = jwt.decode(token, options={"verify_signature": False})
+            # Manual lightweight, unverified extraction of the payload to avoid the overhead
+            # of full jwt.decode when only the 'sub' claim is needed.
+            # Expect token in "header.payload.signature" form.
+            parts = token.split(".", 2)
+            if len(parts) < 2:
+                # Mirror invalid token behavior by raising InvalidTokenError, caught below.
+                raise InvalidTokenError("Invalid JWT structure")
+
+            payload_b64 = parts[1]
+            # Pad base64 string to proper length (urlsafe_b64decode requires padding).
+            padding = "=" * (-len(payload_b64) % 4)
+            payload_bytes = base64.urlsafe_b64decode(payload_b64 + padding)
+            # Decode JSON and extract 'sub'. Keep variable names to preserve behavior.
+            claims = json.loads(payload_bytes.decode("utf-8"))
             user_id = claims["sub"]
             return UUID(user_id)
-        except (KeyError, InvalidTokenError, ValueError):
+        except (KeyError, InvalidTokenError, ValueError, binascii.Error):
             return UUID(int=0)
 
     async def create_user_tokens(self, user_id: UUID, db: AsyncSession, *, update_last_login: bool = False) -> dict:
