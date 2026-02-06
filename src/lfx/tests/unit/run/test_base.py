@@ -932,3 +932,120 @@ class TestRunFlowExecutionErrors:
                 await run_flow(script_path=script_path)
 
             assert "Failed to prepare graph" in str(exc_info.value)
+
+
+class TestRunFlowFilesDirParameter:
+    """Tests for run_flow files_dir parameter handling."""
+
+    @pytest.mark.asyncio
+    async def test_files_dir_injected_into_context(self, tmp_path):
+        """Test that files_dir is injected into graph context."""
+        script_path = tmp_path / "test.py"
+        script_path.write_text("graph = None")
+
+        files_dir = tmp_path / "files"
+        files_dir.mkdir()
+
+        mock_graph = MagicMock()
+        mock_graph.context = {}
+        mock_graph.vertices = []
+        mock_graph.edges = []
+        mock_graph.prepare = MagicMock()
+
+        async def mock_async_start(_inputs, **_kwargs):
+            yield
+
+        mock_graph.async_start = mock_async_start
+
+        with (
+            patch("lfx.run.base.find_graph_variable") as mock_find,
+            patch("lfx.run.base.load_graph_from_script") as mock_load,
+            patch("lfx.run.base.validate_global_variables_for_env") as mock_validate,
+            patch("lfx.run.base.extract_structured_result") as mock_extract,
+        ):
+            mock_find.return_value = {"line_number": 1, "type": "Graph", "source_line": "graph = ..."}
+            mock_load.return_value = mock_graph
+            mock_validate.return_value = []
+            mock_extract.return_value = {"success": True, "result": "test"}
+
+            await run_flow(script_path=script_path, files_dir=files_dir)
+
+            # Verify files_dir was injected into context
+            assert "files_dir" in mock_graph.context
+            assert mock_graph.context["files_dir"] == files_dir
+
+    @pytest.mark.asyncio
+    async def test_project_path_injected_into_context(self, tmp_path):
+        """Test that project_path is injected into graph context."""
+        script_path = tmp_path / "test.py"
+        script_path.write_text("graph = None")
+
+        project_path = tmp_path / "project"
+        project_path.mkdir()
+
+        mock_graph = MagicMock()
+        mock_graph.context = {}
+        mock_graph.vertices = []
+        mock_graph.edges = []
+        mock_graph.prepare = MagicMock()
+
+        async def mock_async_start(_inputs, **_kwargs):
+            yield
+
+        mock_graph.async_start = mock_async_start
+
+        with (
+            patch("lfx.run.base.find_graph_variable") as mock_find,
+            patch("lfx.run.base.load_graph_from_script") as mock_load,
+            patch("lfx.run.base.validate_global_variables_for_env") as mock_validate,
+            patch("lfx.run.base.extract_structured_result") as mock_extract,
+        ):
+            mock_find.return_value = {"line_number": 1, "type": "Graph", "source_line": "graph = ..."}
+            mock_load.return_value = mock_graph
+            mock_validate.return_value = []
+            mock_extract.return_value = {"success": True, "result": "test"}
+
+            await run_flow(script_path=script_path, project_path=project_path)
+
+            # Verify project_path was injected into context
+            assert "project_path" in mock_graph.context
+            assert mock_graph.context["project_path"] == project_path
+
+    @pytest.mark.asyncio
+    async def test_both_files_dir_and_project_path_injected(self, tmp_path):
+        """Test that both files_dir and project_path can be injected."""
+        script_path = tmp_path / "test.py"
+        script_path.write_text("graph = None")
+
+        project_path = tmp_path / "project"
+        project_path.mkdir()
+        files_dir = tmp_path / "files"
+        files_dir.mkdir()
+
+        mock_graph = MagicMock()
+        mock_graph.context = {}
+        mock_graph.vertices = []
+        mock_graph.edges = []
+        mock_graph.prepare = MagicMock()
+
+        async def mock_async_start(_inputs, **_kwargs):
+            yield
+
+        mock_graph.async_start = mock_async_start
+
+        with (
+            patch("lfx.run.base.find_graph_variable") as mock_find,
+            patch("lfx.run.base.load_graph_from_script") as mock_load,
+            patch("lfx.run.base.validate_global_variables_for_env") as mock_validate,
+            patch("lfx.run.base.extract_structured_result") as mock_extract,
+        ):
+            mock_find.return_value = {"line_number": 1, "type": "Graph", "source_line": "graph = ..."}
+            mock_load.return_value = mock_graph
+            mock_validate.return_value = []
+            mock_extract.return_value = {"success": True, "result": "test"}
+
+            await run_flow(script_path=script_path, project_path=project_path, files_dir=files_dir)
+
+            # Verify both were injected into context
+            assert mock_graph.context["project_path"] == project_path
+            assert mock_graph.context["files_dir"] == files_dir

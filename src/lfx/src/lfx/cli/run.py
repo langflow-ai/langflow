@@ -1,13 +1,35 @@
 """CLI wrapper for the run command."""
 
 import json
+import os
 from functools import partial
 from pathlib import Path
 
 import typer
 from asyncer import syncify
+from dotenv import dotenv_values
 
 from lfx.run.base import RunError, run_flow
+
+
+def _parse_env_vars(env_vars: list[str] | None) -> dict[str, str]:
+    """Parse KEY=VALUE pairs from CLI arguments."""
+    result = {}
+    if not env_vars:
+        return result
+    for item in env_vars:
+        if "=" in item:
+            key, value = item.split("=", 1)
+            result[key.strip()] = value.strip()
+    return result
+
+
+def _load_env_file(env_file: Path | None) -> dict[str, str]:
+    """Load environment variables from .env file."""
+    if not env_file or not env_file.exists():
+        return {}
+    return dict(dotenv_values(env_file))
+
 
 # Verbosity level constants
 VERBOSITY_DETAILED = 2
@@ -69,6 +91,29 @@ async def run(
         "--flow-json",
         help=("Inline JSON flow content as a string (alternative to script_path)"),
     ),
+    project_path: Path | None = typer.Option(
+        None,
+        "--project",
+        "-p",
+        help="Project folder containing subflows. Defaults to the directory of the flow file.",
+    ),
+    files_dir: Path | None = typer.Option(
+        None,
+        "--files-dir",
+        "--files",
+        help="Directory containing files referenced by the flow. Defaults to project path.",
+    ),
+    env_file: Path | None = typer.Option(
+        None,
+        "--env-file",
+        help="Path to .env file with environment variables (e.g., OPENAI_API_KEY=sk-xxx)",
+    ),
+    env_vars: list[str] | None = typer.Option(
+        None,
+        "--env",
+        "-e",
+        help="Set environment variable as KEY=VALUE. Can be used multiple times.",
+    ),
     *,
     stdin: bool | None = typer.Option(
         default=False,
@@ -121,9 +166,40 @@ async def run(
         stdin: Read JSON flow content from stdin
         check_variables: Check global variables for environment compatibility
         timing: Include detailed timing information in output
+        project_path: Directory to search for subflows (defaults to flow file's directory)
+        files_dir: Directory to resolve file paths (defaults to project_path)
+        env_file: Path to .env file to load environment variables from
+        env_vars: Environment variables in KEY=VALUE format
     """
     # Determine verbosity for output formatting
     verbosity = 3 if verbose_full else (2 if verbose_detailed else (1 if verbose else 0))
+
+    # Determine project path: use provided path, or default to flow file's directory
+    # Ensure project_path is a proper Path object (Typer may pass OptionInfo when None)
+    resolved_project_path: Path | None = None
+    if project_path is not None and isinstance(project_path, Path):
+        resolved_project_path = project_path
+    elif script_path is not None:
+        resolved_project_path = script_path.parent
+
+    # Determine files directory: use provided path, or default to project path
+    resolved_files_dir = files_dir if files_dir is not None and isinstance(files_dir, Path) else resolved_project_path
+
+    # Build global variables from env file and CLI args
+    # Also set them in os.environ so components can access them directly
+    global_variables: dict[str, str] = {}
+
+    # Load from .env file first
+    resolved_env_file = env_file if isinstance(env_file, Path) else None
+    if resolved_env_file:
+        global_variables.update(_load_env_file(resolved_env_file))
+
+    # Override with CLI --env arguments
+    global_variables.update(_parse_env_vars(env_vars))
+
+    # Also set in os.environ for components that read directly from env
+    for key, value in global_variables.items():
+        os.environ[key] = value
 
     try:
         result = await run_flow(
@@ -138,7 +214,9 @@ async def run(
             verbose_detailed=verbose_detailed,
             verbose_full=verbose_full,
             timing=timing,
-            global_variables=None,
+            global_variables=global_variables if global_variables else None,
+            project_path=resolved_project_path,
+            files_dir=resolved_files_dir,
         )
 
         # Output based on format

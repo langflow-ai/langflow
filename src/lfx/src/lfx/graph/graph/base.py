@@ -1452,6 +1452,9 @@ class Graph:
             async def set_cache_func(*args, **kwargs) -> bool:  # noqa: ARG001
                 return True
 
+        # Use graph-level fallback_to_env_vars setting if available
+        fallback_to_env_vars = getattr(self, "fallback_to_env_vars", False)
+
         vertex_build_result = await self.build_vertex(
             vertex_id=vertex_id,
             user_id=user_id,
@@ -1460,6 +1463,7 @@ class Graph:
             get_cache=get_cache_func,
             set_cache=set_cache_func,
             event_manager=event_manager,
+            fallback_to_env_vars=fallback_to_env_vars,
         )
 
         next_runnable_vertices = await self.get_next_runnable_vertices(

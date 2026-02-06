@@ -1,9 +1,14 @@
+import json
+import tempfile
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID, uuid4
 
 import pytest
 from lfx.graph.graph.base import Graph
 from lfx.helpers.flow import (
+    _find_flow_in_project,
+    _load_flow_from_file,
     build_schema_from_inputs,
     get_arg_names,
     get_flow_by_id_or_name,
@@ -181,12 +186,19 @@ class TestRunFlow:
     """Test run_flow function."""
 
     @pytest.mark.asyncio
-    async def test_run_flow_raises_error_without_user_id(self):
-        """Test that run_flow raises ValueError without user_id."""
-        mock_graph = MagicMock(spec=Graph)
+    async def test_should_allow_none_user_id_when_graph_provided(self):
+        """Test that run_flow allows None user_id when graph is provided (lfx mode).
 
-        with pytest.raises(ValueError, match="Session is invalid"):
-            await run_flow(user_id=None, graph=mock_graph)
+        In lfx standalone mode, user_id is optional when a graph is provided directly,
+        since lfx doesn't require database authentication.
+        """
+        mock_graph = MagicMock(spec=Graph)
+        mock_graph.vertices = []
+        mock_graph.arun = AsyncMock(return_value=[])
+
+        # Should NOT raise "Session is invalid" - user_id is optional with direct graph
+        result = await run_flow(user_id=None, graph=mock_graph)
+        assert result is not None
 
     @pytest.mark.asyncio
     async def test_run_flow_raises_error_without_graph(self):
@@ -258,3 +270,270 @@ class TestRunFlow:
 
         call_args = mock_graph.arun.call_args
         assert len(call_args[0][0]) == 1  # Converted to list with one element
+
+
+class TestLoadFlowFromFile:
+    """Test _load_flow_from_file function for local file loading."""
+
+    def test_should_return_none_when_file_does_not_exist(self):
+        """Test that function returns None for non-existent file."""
+        non_existent_path = Path("/non/existent/path/flow.json")
+
+        result = _load_flow_from_file(non_existent_path)
+
+        assert result is None
+
+    def test_should_return_data_when_valid_json_flow_provided(self):
+        """Test that function returns Data object for valid JSON flow."""
+        flow_content = {
+            "id": "test-flow-id",
+            "name": "Test Flow",
+            "description": "A test flow",
+            "data": {"nodes": [], "edges": []},
+        }
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            json.dump(flow_content, f)
+            temp_path = Path(f.name)
+
+        try:
+            result = _load_flow_from_file(temp_path)
+
+            assert result is not None
+            assert result.data["id"] == "test-flow-id"
+            assert result.data["name"] == "Test Flow"
+            assert result.data["description"] == "A test flow"
+        finally:
+            temp_path.unlink()
+
+    def test_should_use_filename_as_id_when_id_not_in_json(self):
+        """Test that function uses filename as ID when not provided in JSON."""
+        flow_content = {"data": {"nodes": []}}
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False, prefix="my_flow_") as f:
+            json.dump(flow_content, f)
+            temp_path = Path(f.name)
+
+        try:
+            result = _load_flow_from_file(temp_path)
+
+            assert result is not None
+            assert result.data["id"] == temp_path.stem
+            assert result.data["name"] == temp_path.stem
+        finally:
+            temp_path.unlink()
+
+    def test_should_return_none_when_invalid_json_provided(self):
+        """Test that function returns None for invalid JSON."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            f.write("not valid json {{{")
+            temp_path = Path(f.name)
+
+        try:
+            result = _load_flow_from_file(temp_path)
+
+            assert result is None
+        finally:
+            temp_path.unlink()
+
+
+class TestFindFlowInProject:
+    """Test _find_flow_in_project function for project directory search."""
+
+    def test_should_return_none_when_project_path_not_directory(self):
+        """Test that function returns None when project_path is not a directory."""
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
+            temp_file = Path(f.name)
+
+        try:
+            result = _find_flow_in_project(temp_file, flow_name="test")
+
+            assert result is None
+        finally:
+            temp_file.unlink()
+
+    def test_should_find_flow_when_filename_matches_flow_name(self):
+        """Test that function finds flow by direct filename match."""
+        flow_content = {
+            "id": "flow-123",
+            "name": "MyTestFlow",
+            "data": {"nodes": []},
+        }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            flow_path = Path(temp_dir) / "MyTestFlow.json"
+            flow_path.write_text(json.dumps(flow_content))
+
+            result = _find_flow_in_project(Path(temp_dir), flow_name="MyTestFlow")
+
+            assert result is not None
+            assert result.data["name"] == "MyTestFlow"
+
+    def test_should_find_flow_when_filename_matches_flow_id(self):
+        """Test that function finds flow by ID filename match."""
+        flow_id = str(uuid4())
+        flow_content = {
+            "id": flow_id,
+            "name": "Some Flow",
+            "data": {"nodes": []},
+        }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            flow_path = Path(temp_dir) / f"{flow_id}.json"
+            flow_path.write_text(json.dumps(flow_content))
+
+            result = _find_flow_in_project(Path(temp_dir), flow_id=flow_id)
+
+            assert result is not None
+            assert result.data["id"] == flow_id
+
+    def test_should_find_flow_when_content_matches_flow_name(self):
+        """Test that function finds flow by searching JSON content for name."""
+        flow_content = {
+            "id": "flow-abc",
+            "name": "HiddenFlow",
+            "data": {"nodes": []},
+        }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # File has different name than flow name inside
+            flow_path = Path(temp_dir) / "different_filename.json"
+            flow_path.write_text(json.dumps(flow_content))
+
+            result = _find_flow_in_project(Path(temp_dir), flow_name="HiddenFlow")
+
+            assert result is not None
+            assert result.data["name"] == "HiddenFlow"
+
+    def test_should_find_flow_when_content_matches_flow_id(self):
+        """Test that function finds flow by searching JSON content for ID."""
+        flow_id = "unique-flow-id-123"
+        flow_content = {
+            "id": flow_id,
+            "name": "Some Flow",
+            "data": {"nodes": []},
+        }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            flow_path = Path(temp_dir) / "random_name.json"
+            flow_path.write_text(json.dumps(flow_content))
+
+            result = _find_flow_in_project(Path(temp_dir), flow_id=flow_id)
+
+            assert result is not None
+            assert result.data["id"] == flow_id
+
+    def test_should_return_none_when_flow_not_found(self):
+        """Test that function returns None when flow not found."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Create some flows but not the one we're looking for
+            other_flow = Path(temp_dir) / "other_flow.json"
+            other_flow.write_text(json.dumps({"id": "other", "name": "Other"}))
+
+            result = _find_flow_in_project(Path(temp_dir), flow_name="NonExistent")
+
+            assert result is None
+
+
+class TestGetFlowByIdOrNameWithProjectPath:
+    """Test get_flow_by_id_or_name with project_path parameter (lfx local mode)."""
+
+    @pytest.mark.asyncio
+    async def test_should_find_flow_when_project_path_provided(self):
+        """Test that function finds flow in local project directory."""
+        flow_content = {
+            "id": "local-flow-id",
+            "name": "LocalFlow",
+            "description": "A local flow",
+            "data": {"nodes": [], "edges": []},
+        }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            flow_path = Path(temp_dir) / "LocalFlow.json"
+            flow_path.write_text(json.dumps(flow_content))
+
+            result = await get_flow_by_id_or_name(
+                flow_name="LocalFlow",
+                project_path=Path(temp_dir),
+            )
+
+            assert result is not None
+            assert result.data["name"] == "LocalFlow"
+            assert result.data["id"] == "local-flow-id"
+
+    @pytest.mark.asyncio
+    async def test_should_accept_string_project_path(self):
+        """Test that function accepts string project_path and converts to Path."""
+        flow_content = {
+            "id": "string-path-flow",
+            "name": "StringPathFlow",
+            "data": {"nodes": []},
+        }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            flow_path = Path(temp_dir) / "StringPathFlow.json"
+            flow_path.write_text(json.dumps(flow_content))
+
+            # Pass as string instead of Path
+            result = await get_flow_by_id_or_name(
+                flow_name="StringPathFlow",
+                project_path=temp_dir,  # String path
+            )
+
+            assert result is not None
+            assert result.data["name"] == "StringPathFlow"
+
+    @pytest.mark.asyncio
+    async def test_should_return_none_when_flow_not_found_in_project(self):
+        """Test that function returns None when flow not in project directory."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            result = await get_flow_by_id_or_name(
+                flow_name="NonExistentFlow",
+                project_path=Path(temp_dir),
+            )
+
+            assert result is None
+
+    @pytest.mark.asyncio
+    async def test_should_not_require_user_id_when_project_path_provided(self):
+        """Test that user_id is not required when using project_path."""
+        flow_content = {
+            "id": "no-user-flow",
+            "name": "NoUserFlow",
+            "data": {"nodes": []},
+        }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            flow_path = Path(temp_dir) / "NoUserFlow.json"
+            flow_path.write_text(json.dumps(flow_content))
+
+            # Should not raise "Session is invalid" error
+            result = await get_flow_by_id_or_name(
+                user_id=None,  # No user_id
+                flow_name="NoUserFlow",
+                project_path=Path(temp_dir),
+            )
+
+            assert result is not None
+
+    @pytest.mark.asyncio
+    async def test_should_find_flow_by_id_when_project_path_provided(self):
+        """Test that function finds flow by ID in local project directory."""
+        flow_id = str(uuid4())
+        flow_content = {
+            "id": flow_id,
+            "name": "FlowById",
+            "data": {"nodes": []},
+        }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            flow_path = Path(temp_dir) / f"{flow_id}.json"
+            flow_path.write_text(json.dumps(flow_content))
+
+            result = await get_flow_by_id_or_name(
+                flow_id=flow_id,
+                project_path=Path(temp_dir),
+            )
+
+            assert result is not None
+            assert result.data["id"] == flow_id

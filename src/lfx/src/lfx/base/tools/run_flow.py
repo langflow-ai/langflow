@@ -3,16 +3,12 @@ from datetime import datetime
 from types import MethodType  # near the imports
 from typing import TYPE_CHECKING, Any
 
-from langflow.helpers.flow import get_flow_by_id_or_name
-
 from lfx.base.tools.constants import TOOL_OUTPUT_NAME
 from lfx.custom.custom_component.component import Component, get_component_toolkit
 from lfx.field_typing import Tool
 from lfx.graph.graph.base import Graph
 from lfx.graph.vertex.base import Vertex
-
-# TODO: switch to lfx
-from lfx.helpers import get_flow_inputs, run_flow
+from lfx.helpers.flow import get_flow_by_id_or_name, get_flow_inputs, run_flow
 from lfx.inputs.inputs import BoolInput, DropdownInput, InputTypes, MessageTextInput, StrInput
 from lfx.log.logger import logger
 from lfx.schema.data import Data
@@ -105,6 +101,19 @@ class RunFlowBaseComponent(Component):
         super().map_outputs()
         self._ensure_flow_output_methods()
 
+    def _should_process_output(self, output) -> bool:
+        """Override to always process dynamic flow outputs.
+
+        Dynamic outputs added via _sync_flow_outputs won't be in the vertex's
+        original edge configuration, so we need to process them regardless.
+        Flow outputs are identified by containing the IOPUT_SEP in their name.
+        """
+        if output and output.name and self.IOPUT_SEP in output.name:
+            # This is a dynamic flow output - always process it
+            return True
+        # For other outputs (like tool_output), use the default behavior
+        return super()._should_process_output(output)
+
     def _ensure_flow_output_methods(self) -> None:
         self._clear_dynamic_flow_output_methods()
         for output in self._outputs_map.values():
@@ -119,12 +128,31 @@ class RunFlowBaseComponent(Component):
     ################################################################
     # Flow retrieval
     ################################################################
+    def _get_context_value(self, key: str):
+        """Get a value from graph context."""
+        if hasattr(self, "_vertex") and self._vertex is not None:
+            if hasattr(self._vertex, "graph") and self._vertex.graph is not None:
+                return self._vertex.graph.context.get(key)
+        elif hasattr(self, "graph") and self.graph is not None:
+            return self.graph.context.get(key)
+        return None
+
+    def _get_project_path(self):
+        """Get the project path from graph context for subflow resolution."""
+        return self._get_context_value("project_path")
+
+    def _get_files_dir(self):
+        """Get the files directory from graph context for file resolution."""
+        return self._get_context_value("files_dir")
+
     async def get_flow(self, flow_name_selected: str | None = None, flow_id_selected: str | None = None) -> Data:
         """Get a flow's data by name or id."""
+        project_path = self._get_project_path()
         flow = await get_flow_by_id_or_name(
             user_id=self.user_id,
             flow_id=flow_id_selected,
             flow_name=flow_name_selected,
+            project_path=project_path,
         )
         return flow or Data(data={})
 
@@ -156,6 +184,15 @@ class RunFlowBaseComponent(Component):
         )
         graph.description = flow.data.get("description", None)
         graph.updated_at = flow.data.get("updated_at", None)
+
+        # Propagate context from parent graph to subflow for file resolution
+        project_path = self._get_project_path()
+        if project_path:
+            graph.context["project_path"] = project_path
+
+        files_dir = self._get_files_dir()
+        if files_dir:
+            graph.context["files_dir"] = files_dir
 
         self._flow_cache_call("set", flow=graph)
 
@@ -600,6 +637,16 @@ class RunFlowBaseComponent(Component):
         )
         graph.description = cache_entry.get("description") or graph_dump.get("description")
         graph.updated_at = cache_entry.get("updated_at") or graph_dump.get("updated_at")
+
+        # Propagate context from parent graph to subflow for file resolution
+        project_path = self._get_project_path()
+        if project_path:
+            graph.context["project_path"] = project_path
+
+        files_dir = self._get_files_dir()
+        if files_dir:
+            graph.context["files_dir"] = files_dir
+
         return graph
 
     def _is_cached_flow_up_to_date(self, cached_flow: Graph, updated_at: str | None) -> bool:
@@ -720,12 +767,29 @@ class RunFlowBaseComponent(Component):
 
     def _pre_run_setup(self) -> None:  # Note: overrides the base pre_run_setup method
         """Reset the last run's outputs upon new flow execution."""
+        from lfx.utils.async_helpers import run_until_complete
+
         self._last_run_outputs = None
         self._cached_flow_updated_at = self._get_selected_flow_updated_at()
         if self._cached_flow_updated_at:
             self._attributes["flow_name_selected_updated_at"] = self._cached_flow_updated_at
         # remove stale data from previous toolmode run
         self._attributes.pop("flow_tweak_data", None)
+
+        # Set up dynamic outputs from the subflow before build_results iterates over outputs
+        # This ensures the subflow outputs are registered and can be processed
+        if self.flow_name_selected or self.flow_id_selected:
+            try:
+                graph = run_until_complete(
+                    self.get_graph(self.flow_name_selected, self.flow_id_selected, self._cached_flow_updated_at)
+                )
+                if graph:
+                    formatted_outputs = self._format_flow_outputs(graph)
+                    self._sync_flow_outputs(formatted_outputs)
+            except (ValueError, RuntimeError, OSError) as e:
+                # If we can't load the graph, continue without dynamic outputs
+                # The error will be raised later when trying to execute
+                logger.debug(f"_pre_run_setup: Exception loading graph: {e}")
 
     def _process_tweaks_on_graph(self, graph: Graph, tweaks: dict[str, dict[str, Any]]):
         # there is a bug with the lfx process_tweaks_on_graph function
