@@ -238,7 +238,7 @@ async def test_webhook_invalid_api_key(client, added_webhook_test):
     mock_auth_service.settings_service = mock_settings_service
     mock_auth_service.get_webhook_user = AsyncMock(side_effect=HTTPException(status_code=403, detail="Invalid API key"))
 
-    with patch("langflow.services.auth.utils._auth_service", return_value=mock_auth_service):
+    with patch("langflow.api.v1.endpoints.get_auth_service", return_value=mock_auth_service):
         endpoint_name = added_webhook_test["endpoint_name"]
         endpoint = f"api/v1/webhook/{endpoint_name}"
         payload = {"test": "data"}
@@ -269,7 +269,7 @@ async def test_webhook_missing_api_key_when_required(client, added_webhook_test)
         side_effect=HTTPException(status_code=403, detail="API key required when webhook authentication is enabled")
     )
 
-    with patch("langflow.services.auth.utils._auth_service", return_value=mock_auth_service):
+    with patch("langflow.api.v1.endpoints.get_auth_service", return_value=mock_auth_service):
         endpoint_name = added_webhook_test["endpoint_name"]
         endpoint = f"api/v1/webhook/{endpoint_name}"
         payload = {"test": "data"}
