@@ -52,12 +52,14 @@ export const usePatchJsonPatchFlow: useMutationFunctionType<
     IPatchJsonPatchFlow
   > = mutate(["usePatchJsonPatchFlow"], PatchJsonPatchFlowFn, {
     onSettled: (res) => {
-      queryClient.refetchQueries({
-        queryKey: ["useGetFolders", res?.folder_id],
-      }),
+      if (res) {
+        queryClient.refetchQueries({
+          queryKey: ["useGetFolders", res.folder_id],
+        });
         queryClient.refetchQueries({
           queryKey: ["useGetFolder"],
         });
+      }
     },
     ...options,
   });
