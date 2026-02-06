@@ -1,4 +1,3 @@
-import { usePlaygroundConfig } from "@/hooks/use-playground-config";
 import { ENABLE_VOICE_ASSISTANT } from "@/customization/feature-flags";
 import type { FilePreviewType } from "@/types/components";
 import FilePreviewDisplay from "../../utils/file-preview-display";
@@ -48,9 +47,6 @@ const InputWrapper = ({
   playgroundPage = false,
 }: InputWrapperProps) => {
   const classNameFilePreview = `flex w-full items-center gap-2 py-2 overflow-auto`;
-
-  // Use public config for playground page (unauthenticated), otherwise use authenticated config
-  const config = usePlaygroundConfig(playgroundPage);
 
   const onClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
