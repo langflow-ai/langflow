@@ -1,6 +1,12 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import {
+  closeAdvancedOptions,
+  disableInspectPanel,
+  enableInspectPanel,
+  openAdvancedOptions,
+} from "../../utils/open-advanced-options";
 
 test(
   "InputComponent",
@@ -51,9 +57,11 @@ test(
     }
     await input.fill("collection_name_test_123123123!@#$&*(&%$@");
 
+    await disableInspectPanel(page);
+
     await page.getByTestId("div-generic-node").click();
 
-    await page.getByTestId("edit-button-modal").last().click();
+    await openAdvancedOptions(page);
 
     await page
       .locator('//*[@id="showchroma_server_cors_allow_origins"]')
@@ -119,6 +127,7 @@ test(
 
     const valueEditNode = await page
       .getByTestId("popover-anchor-input-collection_name-edit")
+      .nth(0)
       .inputValue();
 
     if (valueEditNode != "collection_name_test_123123123!@#$&*(&%$@") {
@@ -127,9 +136,10 @@ test(
 
     await page
       .getByTestId("popover-anchor-input-collection_name-edit")
+      .nth(0)
       .fill("NEW_collection_name_test_123123123!@#$&*(&%$@ÇÇÇÀõe");
 
-    await page.getByText("Close").last().click();
+    await closeAdvancedOptions(page);
 
     const plusButtonLocator = page.getByTestId("input-collection_name");
     const elementCount = await plusButtonLocator?.count();
@@ -138,9 +148,9 @@ test(
 
       await page.getByTestId("div-generic-node").click();
 
-      await page.getByTestId("edit-button-modal").last().click();
+      await openAdvancedOptions(page);
 
-      await page.getByText("Close").last().click();
+      await closeAdvancedOptions(page);
 
       const value = await page
         .getByTestId("popover-anchor-input-collection_name")
@@ -150,5 +160,7 @@ test(
         expect(false).toBeTruthy();
       }
     }
+
+    await enableInspectPanel(page);
   },
 );
