@@ -60,7 +60,10 @@ const useAssistantManagerStore = create<AssistantManagerStoreType>(
     setAssistantSidebarOpen: (assistantSidebarOpen: boolean) => {
       set({ assistantSidebarOpen });
     },
-    assistantViewMode: (localStorage.getItem("langflow-assistant-view-mode") as "sidebar" | "floating") || "floating",
+    assistantViewMode:
+      (localStorage.getItem("langflow-assistant-view-mode") as
+        | "sidebar"
+        | "floating") || "floating",
     setAssistantViewMode: (mode: "sidebar" | "floating") => {
       localStorage.setItem("langflow-assistant-view-mode", mode);
       set({ assistantViewMode: mode });

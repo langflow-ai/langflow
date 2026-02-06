@@ -133,7 +133,10 @@ export function ModelSelector({
           />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="z-[70] max-h-96 w-72 overflow-y-auto p-2">
+      <DropdownMenuContent
+        align="start"
+        className="z-[70] max-h-96 w-72 overflow-y-auto p-2"
+      >
         {enabledProviders.map((provider, index) => (
           <div key={provider.provider}>
             {index > 0 && <DropdownMenuSeparator className="my-2" />}
@@ -164,7 +167,10 @@ export function ModelSelector({
                   >
                     <span className="text-sm">{model.model_name}</span>
                     {isSelected && (
-                      <ForwardedIconComponent name="Check" className="h-4 w-4" />
+                      <ForwardedIconComponent
+                        name="Check"
+                        className="h-4 w-4"
+                      />
                     )}
                   </DropdownMenuItem>
                 );
