@@ -114,7 +114,7 @@ test(
       page.locator('[data-testid^="chat-message-TestSenderNameAI"]').first(),
     ).not.toBeEmpty();
 
-    await page.getByText("Close", { exact: true }).last().click();
+    await page.getByTestId("playground-btn-flow-io").last().click();
     await enableInspectPanel(page);
   },
 );

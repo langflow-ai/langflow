@@ -1,4 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { isEqual } from "lodash";
 import { ReactSortable } from "react-sortablejs";
 import ListSelectionComponent from "@/CustomNodes/GenericNode/components/ListSelectionComponent";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
@@ -105,9 +106,21 @@ const SortableListComponent = ({
 
   const setListDataHandler = useCallback(
     (newList: any[]) => {
-      handleOnNewValue({ value: newList });
+      const sanitizedNewList = newList.map((item) => {
+        const { chosen, selected, ...rest } = item;
+        return rest;
+      });
+
+      const sanitizedListData = listData.map((item) => {
+        const { chosen, selected, ...rest } = item;
+        return rest;
+      });
+
+      if (!isEqual(sanitizedNewList, sanitizedListData)) {
+        handleOnNewValue({ value: sanitizedNewList });
+      }
     },
-    [handleOnNewValue],
+    [listData, handleOnNewValue],
   );
 
   const handleCloseListSelectionDialog = useCallback(() => {
