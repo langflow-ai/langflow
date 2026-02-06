@@ -241,7 +241,7 @@ async def get_current_active_superuser(user: User = Depends(get_current_user)) -
     if result is None:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="User does not have superuser privileges",
+            detail="The user doesn't have enough privileges",
         )
     return result
 
