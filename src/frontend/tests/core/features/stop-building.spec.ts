@@ -1,4 +1,4 @@
-import { test } from "../../fixtures";
+import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
@@ -102,11 +102,17 @@ test(
 
     await adjustScreenView(page);
 
+    await page.getByText("Text Input", { exact: true }).click();
+
     await page.getByTestId("textarea_str_input_value").first().fill(",");
+
+    await page.getByText("URL", { exact: true }).click();
 
     await page
       .getByTestId("inputlist_str_urls_0")
       .fill("https://www.nature.com/articles/d41586-023-02870-5");
+
+    await page.getByText("Split Text", { exact: true }).click();
 
     await page.getByTestId("int_int_chunk_size").fill("2");
     await page.getByTestId("int_int_chunk_overlap").fill("1");
@@ -145,11 +151,11 @@ class CustomComponent(Component):
 
     await page.getByTestId("title-Custom Component").first().click();
 
-    await page.waitForSelector('[data-testid="code-button-modal"]', {
+    await expect(page.getByTestId("code-button-modal").last()).toBeVisible({
       timeout: 3000,
     });
 
-    await page.getByTestId("code-button-modal").click();
+    await page.getByTestId("code-button-modal").last().click();
 
     await page.waitForSelector('[id="checkAndSaveBtn"]', {
       timeout: 3000,
