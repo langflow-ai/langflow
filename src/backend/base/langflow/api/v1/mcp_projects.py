@@ -62,8 +62,8 @@ from langflow.api.v1.schemas import (
     MCPProjectUpdateRequest,
     MCPSettings,
 )
+from langflow.services.auth.constants import AUTO_LOGIN_WARNING
 from langflow.services.auth.mcp_encryption import decrypt_auth_settings, encrypt_auth_settings
-from langflow.services.auth.utils import AUTO_LOGIN_WARNING
 from langflow.services.database.models import Flow, Folder
 from langflow.services.database.models.api_key.crud import check_key, create_api_key
 from langflow.services.database.models.api_key.model import ApiKey, ApiKeyCreate
@@ -135,7 +135,7 @@ async def verify_project_auth(
     # For MCP endpoints, always fall back to username lookup when no API key is provided
     result = await get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
     if result:
-        await logger.awarning(AUTO_LOGIN_WARNING)
+        logger.warning(AUTO_LOGIN_WARNING)
         return result
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
@@ -1297,7 +1297,7 @@ class ProjectTaskGroup:
     otherwise Asyncio will raise a RuntimeError.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._started = False
         self._start_stop_lock = anyio.Lock()
         self._task_group: TaskGroup | None = None
