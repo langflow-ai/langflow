@@ -793,9 +793,7 @@ export default function Page({
                 />
                 <FlowToolbar />
                 {inspectionPanelVisible && (
-                  <InspectionPanel
-                    selectedNode={selectedNode}
-                  />
+                  <InspectionPanel selectedNode={selectedNode} />
                 )}
               </>
             )}
