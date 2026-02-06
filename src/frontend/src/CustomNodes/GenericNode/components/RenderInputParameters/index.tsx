@@ -49,19 +49,14 @@ const RenderInputParameters = ({
     templateFields.forEach((templateField) => {
       const template = data.node?.template[templateField];
       if (template) {
-        // For model type fields, provide default input_types if not set
-        const isModelType = template.type === "model";
-        const effectiveInputTypes =
-          template.input_types && template.input_types.length > 0
-            ? template.input_types
-            : isModelType
-              ? ["LanguageModel"]
-              : template.input_types;
-
         colorMap.set(templateField, {
-          colors: getNodeInputColors(effectiveInputTypes, template.type, types),
+          colors: getNodeInputColors(
+            template.input_types,
+            template.type,
+            types,
+          ),
           colorsName: getNodeInputColorsName(
-            effectiveInputTypes,
+            template.input_types,
             template.type,
             types,
           ),
@@ -111,24 +106,11 @@ const RenderInputParameters = ({
       const memoizedColor = memoizedColors.get(templateField);
       const memoizedKey = memoizedKeys.get(templateField);
 
-      // Check if this field should be visually displayed
-      const shouldDisplay = shownTemplateFields.includes(templateField);
-
-      // For model type fields, provide default input_types if not set
-      const isModelType = template.type === "model";
-      const effectiveInputTypes =
-        template.input_types && template.input_types.length > 0
-          ? template.input_types
-          : isModelType
-            ? ["LanguageModel"]
-            : template.input_types;
-
       return (
         <NodeInputField
           lastInput={
             !(shownOutputs.length > 0 || showHiddenOutputs) &&
-            idx === shownTemplateFields.length - 1 &&
-            shouldDisplay
+            idx === shownTemplateFields.length - 1
           }
           key={memoizedKey}
           data={data}
@@ -136,18 +118,18 @@ const RenderInputParameters = ({
           title={getFieldTitle(data.node?.template!, templateField)}
           info={template.info!}
           name={templateField}
-          tooltipTitle={effectiveInputTypes?.join("\n") ?? template.type}
+          tooltipTitle={template.input_types?.join("\n") ?? template.type}
           required={template.required}
           id={{
-            inputTypes: effectiveInputTypes,
+            inputTypes: template.input_types,
             type: template.type,
             id: data.id,
             fieldName: templateField,
           }}
           type={template.type}
-          optionalHandle={effectiveInputTypes}
+          optionalHandle={template.input_types}
           proxy={template.proxy}
-          showNode={showNode && shouldDisplay}
+          showNode={showNode}
           colorName={memoizedColor.colorsName}
           isToolMode={isToolMode && template.tool_mode}
           isPrimaryInput={templateField === primaryInputFieldName}
