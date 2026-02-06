@@ -3,6 +3,10 @@ import path from "path";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import {
+  closeAdvancedOptions,
+  openAdvancedOptions,
+} from "../../utils/open-advanced-options";
 
 test(
   "user must be able to send an image on chat",
@@ -30,8 +34,8 @@ test(
     await page.waitForSelector("text=Chat Input", { timeout: 30000 });
 
     await page.getByText("Chat Input", { exact: true }).click();
-    await page.getByTestId("edit-button-modal").last().click();
-    await page.getByText("Close").last().click();
+    await openAdvancedOptions(page);
+    await closeAdvancedOptions(page);
     await page.getByRole("button", { name: "Playground", exact: true }).click();
 
     await page.waitForSelector('[data-testid="input-chat-playground"]', {
