@@ -257,7 +257,7 @@ export const DatasetDetailPage = () => {
 
   return (
     <div className="flex h-full w-full" data-testid="dataset-detail-wrapper">
-      <div className="flex h-full w-full flex-col overflow-y-auto transition-all duration-200">
+      <div className="flex h-full w-full flex-col overflow-y-auto">
         <div className="flex h-full w-full flex-col xl:container">
           <div className="flex flex-1 flex-col justify-start px-5 pt-10">
             <div className="flex h-full flex-col justify-start">

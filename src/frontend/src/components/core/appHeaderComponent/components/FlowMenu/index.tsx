@@ -21,6 +21,7 @@ import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useShortcutsStore } from "@/stores/shortcuts";
+import { Skeleton } from "@/components/ui/skeleton";
 import { swatchColors } from "@/utils/styleUtils";
 import { cn, getNumberFromString } from "@/utils/utils";
 
@@ -87,6 +88,8 @@ export const MenuBar = memo((): JSX.Element => {
       : getNumberFromString(currentFlowGradient ?? currentFlowId ?? "")) %
     swatchColors.length;
 
+  const isFlowLoading = onFlowPage && !currentFlowId;
+
   return onFlowPage ? (
     <Popover open={openSettings} onOpenChange={setOpenSettings}>
       <PopoverAnchor>
@@ -99,7 +102,9 @@ export const MenuBar = memo((): JSX.Element => {
             data-testid="menu_flow_bar"
             id="menu_flow_bar_navigation"
           >
-            {currentFolder?.name && (
+            {isFlowLoading ? (
+              <Skeleton className="h-4 w-24" />
+            ) : currentFolder?.name ? (
               <div className="hidden truncate md:flex">
                 <div
                   className="cursor-pointer truncate text-sm text-muted-foreground hover:text-primary"
@@ -114,7 +119,7 @@ export const MenuBar = memo((): JSX.Element => {
                   {currentFolder?.name}
                 </div>
               </div>
-            )}
+            ) : null}
           </div>
           <div
             className="hidden w-fit shrink-0 select-none font-normal text-muted-foreground md:flex"
@@ -122,35 +127,43 @@ export const MenuBar = memo((): JSX.Element => {
           >
             /
           </div>
-          <div className={cn(`flex rounded p-1`, swatchColors[swatchIndex])}>
-            <IconComponent
-              name={currentFlowIcon ?? "Workflow"}
-              className="h-3.5 w-3.5"
-            />
-          </div>
-          <PopoverTrigger asChild>
-            <div
-              className="group relative -mr-5 flex shrink-0 cursor-pointer items-center gap-2 text-sm sm:whitespace-normal"
-              data-testid="menu_bar_display"
-            >
-              <span
-                ref={measureRef}
-                className="w-fit max-w-[35vw] truncate whitespace-pre text-mmd font-semibold sm:max-w-full sm:text-sm"
-                aria-hidden="true"
-                data-testid="flow_name"
-              >
-                {currentFlowName || "Untitled Flow"}
-              </span>
+          {isFlowLoading ? (
+            <Skeleton className="h-5.5 w-5.5 rounded" />
+          ) : (
+            <div className={cn(`flex rounded p-1`, swatchColors[swatchIndex])}>
               <IconComponent
-                name="pencil"
-                className={cn(
-                  "h-5 w-3.5 -translate-x-2 opacity-0 transition-all",
-                  !openSettings &&
-                    "sm:group-hover:translate-x-0 sm:group-hover:opacity-100",
-                )}
+                name={currentFlowIcon ?? "Workflow"}
+                className="h-3.5 w-3.5"
               />
             </div>
-          </PopoverTrigger>
+          )}
+          {isFlowLoading ? (
+            <Skeleton className="h-4 w-32" />
+          ) : (
+            <PopoverTrigger asChild>
+              <div
+                className="group relative -mr-5 flex shrink-0 cursor-pointer items-center gap-2 text-sm sm:whitespace-normal"
+                data-testid="menu_bar_display"
+              >
+                <span
+                  ref={measureRef}
+                  className="w-fit max-w-[35vw] truncate whitespace-pre text-mmd font-semibold sm:max-w-full sm:text-sm"
+                  aria-hidden="true"
+                  data-testid="flow_name"
+                >
+                  {currentFlowName || "Untitled Flow"}
+                </span>
+                <IconComponent
+                  name="pencil"
+                  className={cn(
+                    "h-5 w-3.5 -translate-x-2 opacity-0 transition-all",
+                    !openSettings &&
+                      "sm:group-hover:translate-x-0 sm:group-hover:opacity-100",
+                  )}
+                />
+              </div>
+            </PopoverTrigger>
+          )}
           <div className={"ml-5 hidden shrink-0 items-center sm:flex"}>
             {!autoSaving && (
               <ShadTooltip

@@ -93,7 +93,7 @@ export const KnowledgePage = () => {
   return (
     <div className="flex h-full w-full" data-testid="cards-wrapper">
       <div
-        className={`flex h-full w-full flex-col overflow-y-auto transition-all duration-200 ${
+        className={`flex h-full w-full flex-col overflow-y-auto ${
           isDrawerOpen ? "mr-80" : ""
         }`}
       >
