@@ -4,6 +4,10 @@ import json
 
 from langflow.agentic.api.schemas import StepType
 
+# Precompute serialized payload to avoid repeated allocations per call
+_CANCELLED_PAYLOAD: str = json.dumps({"event": "cancelled", "message": "Generation cancelled by user"})
+_CANCELLED_EVENT: str = f"data: {_CANCELLED_PAYLOAD}\n\n"
+
 
 def format_progress_event(
     step: StepType,
@@ -60,4 +64,4 @@ def format_token_event(chunk: str) -> str:
 
 def format_cancelled_event() -> str:
     """Format SSE cancelled event when client disconnects."""
-    return f"data: {json.dumps({'event': 'cancelled', 'message': 'Generation cancelled by user'})}\n\n"
+    return _CANCELLED_EVENT
