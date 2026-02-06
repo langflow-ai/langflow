@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import base64
+import binascii
+import json
 import random
 import warnings
 from collections.abc import Coroutine
@@ -562,7 +564,7 @@ class AuthService(BaseAuthService):
             not verified as this is a utility function, not an authentication function.
         """
         try:
-            claims = jwt.decode(token, options={"verify_signature": False})
+            claims = self._get_unverified_claims(token)
             user_id = claims["sub"]
             return UUID(user_id)
         except (KeyError, InvalidTokenError, ValueError):
@@ -778,3 +780,19 @@ class AuthService(BaseAuthService):
     async def teardown(self) -> None:
         """Teardown the auth service (no-op for JWT auth)."""
         logger.debug("Auth service teardown")
+
+    def _get_unverified_claims(self, token: str) -> dict:
+        parts = token.split(".")
+        if len(parts) < 2:
+            raise InvalidTokenError("Not enough segments")
+        payload_b64 = parts[1]
+        try:
+            padded = payload_b64 + "=" * (-len(payload_b64) % 4)
+            payload_bytes = base64.urlsafe_b64decode(padded)
+            payload_text = payload_bytes.decode("utf-8")
+            claims = json.loads(payload_text)
+        except (binascii.Error, UnicodeDecodeError, json.JSONDecodeError, TypeError) as exc:
+            raise InvalidTokenError(str(exc))
+        if not isinstance(claims, dict):
+            raise InvalidTokenError("Invalid claims")
+        return claims
