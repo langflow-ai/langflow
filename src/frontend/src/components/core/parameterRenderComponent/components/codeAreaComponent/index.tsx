@@ -52,7 +52,8 @@ export default function CodeAreaComponent({
   handleNodeClass,
   id = "",
   placeholder,
-}: InputProps<string>) {
+  showParameter = true,
+}: InputProps<string>): JSX.Element | null {
   const renderCodeText = () => (
     <span
       id={id}
@@ -104,6 +105,10 @@ export default function CodeAreaComponent({
       />
     </>
   );
+
+  if (!showParameter) {
+    return null;
+  }
 
   return (
     <div className={cn("w-full", disabled && "pointer-events-none")}>
