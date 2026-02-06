@@ -19,7 +19,6 @@ class LanguageModelComponent(LCModelComponent):
     documentation: str = "https://docs.langflow.org/components-models"
     icon = "brain-circuit"
     category = "models"
-    priority = 0  # Set priority to 0 to make it appear first
 
     inputs = [
         ModelInput(
