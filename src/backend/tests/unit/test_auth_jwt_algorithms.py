@@ -529,9 +529,7 @@ class TestAuthenticationFailures:
 
                 assert exc_info.value.status_code == 401
                 # PyJWT library raises InvalidTokenError for expired tokens before our custom check
-                assert (
-                    "expired" in exc_info.value.detail.lower() or "invalid token" in exc_info.value.detail.lower()
-                )
+                assert "expired" in exc_info.value.detail.lower() or "invalid token" in exc_info.value.detail.lower()
 
     @pytest.mark.asyncio
     async def test_token_without_user_id_raises_401(self):
