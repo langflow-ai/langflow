@@ -183,6 +183,9 @@ def get_versioned_package_distributions(package_name: str, version: str | None =
     reverse_map = _get_packages_distributions()
     dist_names = reverse_map.get(package_name, [])
 
+    if not dist_names:
+        return []
+
     if version is not None:
         dist_name = dist_names[0]
         return [f"{dist_name}=={version}"]
