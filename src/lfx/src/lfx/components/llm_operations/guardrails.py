@@ -9,7 +9,6 @@ from lfx.base.models.unified_models import (
 from lfx.custom import Component
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.io import BoolInput, ModelInput, MultilineInput, MultiselectInput, Output, SecretStrInput, SliderInput
-from lfx.logging.logger import logger
 from lfx.schema import Data
 
 guardrail_descriptions = {
@@ -151,7 +150,6 @@ class GuardrailsComponent(Component):
             self._failed_checks.append(
                 "Input Validation: Input text is empty. Please provide valid text for guardrail validation."
             )
-            logger.error(error_msg)
             raise ValueError(error_msg)
 
         self._extracted_text = input_text
@@ -170,7 +168,6 @@ class GuardrailsComponent(Component):
             error_msg = "No guardrails enabled. Please select at least one guardrail to validate."
             self.status = f"ERROR: {error_msg}"
             self._failed_checks.append("Configuration: No guardrails selected for validation")
-            logger.error(error_msg)
             raise ValueError(error_msg)
 
         enabled_guardrails = [str(item) for item in enabled_names if item]
@@ -217,13 +214,9 @@ class GuardrailsComponent(Component):
         if check_type in ("Jailbreak", "Prompt Injection"):
             heuristic_result = self._heuristic_jailbreak_check(input_text)
             if heuristic_result:
-                score, matched_patterns = heuristic_result
+                score, _matched_patterns = heuristic_result
                 threshold = float(getattr(self, "heuristic_threshold", "0.7") or "0.7")
                 if score >= threshold:
-                    logger.debug(
-                        f"Heuristic jailbreak check failed: score={score:.2f}, "
-                        f"threshold={threshold}, patterns={matched_patterns}"
-                    )
                     return False, "Matched jailbreak or prompt injection pattern."
 
         # Create more specific prompts for different check types to reduce false positives
@@ -343,7 +336,6 @@ Now analyze the user input above and respond according to the instructions:"""
                 error_msg = (
                     f"LLM returned empty response for {check_type} check. Please verify your API key and credits."
                 )
-                logger.error(error_msg)
                 raise RuntimeError(error_msg)
 
             # Parse response more robustly
@@ -415,14 +407,12 @@ Now analyze the user input above and respond according to the instructions:"""
                         f"LLM API error detected for {check_type} check: {result[:150]}. "
                         "Please verify your API key and credits."
                     )
-                    logger.error(error_msg)
                     raise RuntimeError(error_msg)
 
             # Default to NO (pass) if we can't determine - be conservative
             if decision is None:
                 decision = "NO"
                 explanation = f"Could not parse LLM response, defaulting to pass. Response: {result[:100]}"
-                logger.warning(f"Could not parse LLM response for {check_type} check: {result[:100]}")
 
             # YES means the guardrail detected a violation (failed)
             # NO means it passed (no violation detected)
@@ -430,7 +420,6 @@ Now analyze the user input above and respond according to the instructions:"""
         except (KeyError, AttributeError) as e:
             # Handle data structure and attribute access errors (similar to batch_run.py)
             error_msg = f"Data processing error during {check_type} check: {e!s}"
-            logger.error(error_msg)
             raise ValueError(error_msg) from e
         else:
             return passed, explanation
@@ -536,7 +525,6 @@ Now analyze the user input above and respond according to the instructions:"""
                 self.status = f"ERROR: {error_msg}"
                 self._validation_result = False
                 self._failed_checks.append(f"LLM Configuration: {error_msg}")
-                logger.error(error_msg)
                 raise
 
         # Validate LLM is provided and usable
@@ -545,7 +533,6 @@ Now analyze the user input above and respond according to the instructions:"""
             self.status = f"ERROR: {error_msg}"
             self._validation_result = False
             self._failed_checks.append("LLM Configuration: No model selected. Please select a Language Model.")
-            logger.error(error_msg)
             raise ValueError(error_msg)
 
         # Check if LLM has required methods
@@ -556,18 +543,14 @@ Now analyze the user input above and respond according to the instructions:"""
             self._failed_checks.append(
                 "LLM Configuration: LLM is not properly configured. Please verify your model configuration."
             )
-            logger.error(error_msg)
             raise ValueError(error_msg)
 
         # Run all enabled checks (fail fast - stop on first failure)
         all_passed = True
         self._failed_checks = []
 
-        logger.info(f"Starting guardrail validation with {len(self._checks_to_run)} checks")
-
         for check_name, check_desc in self._checks_to_run:
             self.status = f"Checking {check_name}..."
-            logger.debug(f"Running {check_name} check")
             passed, _reason = self._check_guardrail(llm, self._extracted_text, check_name, check_desc)
 
             if not passed:
@@ -576,9 +559,6 @@ Now analyze the user input above and respond according to the instructions:"""
                 fixed_justification = self._get_fixed_justification(check_name)
                 self._failed_checks.append(f"{check_name}: {fixed_justification}")
                 self.status = f"FAILED: {check_name} check failed: {fixed_justification}"
-                logger.warning(
-                    f"{check_name} check failed: {fixed_justification}. Stopping validation early to save costs."
-                )
                 # Fail fast: stop checking remaining validators when one fails
                 break
 
@@ -587,7 +567,6 @@ Now analyze the user input above and respond according to the instructions:"""
 
         if all_passed:
             self.status = f"OK: All {len(self._checks_to_run)} guardrail checks passed"
-            logger.info(f"Guardrail validation completed successfully - all {len(self._checks_to_run)} checks passed")
         else:
             failure_summary = "\n".join(self._failed_checks)
             checks_run = len(self._failed_checks)
@@ -597,13 +576,8 @@ Now analyze the user input above and respond according to the instructions:"""
                     f"FAILED: Guardrail validation failed (stopped early after {checks_run} "
                     f"check(s), skipped {checks_skipped}):\n{failure_summary}"
                 )
-                logger.error(
-                    f"Guardrail validation failed after {checks_run} check(s) "
-                    f"(skipped {checks_skipped} remaining checks): {failure_summary}"
-                )
             else:
                 self.status = f"FAILED: Guardrail validation failed:\n{failure_summary}"
-                logger.error(f"Guardrail validation failed with {len(self._failed_checks)} failed checks")
 
         return all_passed
 
