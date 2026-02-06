@@ -252,9 +252,10 @@ async def test_get_public_config_returns_correct_field_types(client: AsyncClient
 
 async def test_get_public_config_returns_500_on_settings_error(client: AsyncClient, monkeypatch):
     """Test that public config endpoint returns 500 when settings retrieval fails."""
+    error_message = "Settings retrieval failed"
 
     def raise_settings_error():
-        raise RuntimeError("Settings retrieval failed")
+        raise RuntimeError(error_message)
 
     monkeypatch.setattr("langflow.api.v1.endpoints.get_settings_service", raise_settings_error)
 
@@ -262,4 +263,4 @@ async def test_get_public_config_returns_500_on_settings_error(client: AsyncClie
     result = response.json()
 
     assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
-    assert "Settings retrieval failed" in result["detail"]
+    assert error_message in result["detail"]
