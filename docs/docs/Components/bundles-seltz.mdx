@@ -1,0 +1,27 @@
+---
+title: Seltz
+slug: /bundles-seltz
+---
+
+import Icon from "@site/src/components/icon";
+
+<Icon name="Blocks" aria-hidden="true" />
+[**Bundles**](/components-bundle-components) contain custom components that
+support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Seltz** bundle.
+
+## Seltz Search
+
+This component provides fast, up-to-date web knowledge with sources for real-time AI reasoning via the [Seltz](https://seltz.ai?utm_source=langflow&utm_medium=docs&utm_campaign=integration) Web Knowledge API. Use it with a Langflow [**Agent** component](/agents) or [MCP client](/mcp-client) to give your agents context-engineered web content.
+
+The output is exclusively [`Tools`](/data-types#tool).
+
+### Seltz Search parameters
+
+| Name                            | Type         | Description                                                                                                         |
+| ------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------- |
+| Seltz API Key (`api_key`)       | SecretString | Input parameter. An API key for Seltz. Get one at [console.seltz.ai](https://console.seltz.ai?utm_source=langflow&utm_medium=referral&utm_campaign=integration).                     |
+| Max Documents (`max_documents`) | Integer      | Input parameter. Maximum number of documents to return per search. Default: `10`.                                   |
+| Search Context (`context`)      | String       | Advanced parameter. Additional context to improve search quality (e.g. "user is looking for Python documentation"). |
+| Search Profile (`profile`)      | String       | Advanced parameter. Search profile to use for different ranking algorithms or data source preferences.              |

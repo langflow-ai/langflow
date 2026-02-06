@@ -272,6 +272,7 @@ lark = ["lark==1.2.2"]
 huggingface = ["huggingface-hub[inference]>=0.23.2,<1.0.0"]
 metaphor = ["metaphor-python==0.1.23"]
 metal = ["metal_sdk==2.5.1"]
+seltz = ["seltz>=0.1.4,<1.0.0"]
 markup = ["MarkupSafe==3.0.2"]
 aws = ["boto3>=1.34.162,<2.0.0", "langchain-aws>=0.2.33,<1.0.0"]
 numexpr = ["numexpr==2.10.2"]
@@ -406,6 +407,7 @@ complete = [
     "langflow-base[huggingface]",
     "langflow-base[metaphor]",
     "langflow-base[metal]",
+    "langflow-base[seltz]",
     "langflow-base[markup]",
     "langflow-base[aws]",
     "langflow-base[numexpr]",

@@ -355,6 +355,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "DuckDuckGo", name: "duckduckgo", icon: "DuckDuckGo" },
   { display_name: "Elastic", name: "elastic", icon: "ElasticsearchStore" },
   { display_name: "Exa", name: "exa", icon: "Exa" },
+  { display_name: "Seltz", name: "seltz", icon: "Seltz" },
   { display_name: "FAISS", name: "FAISS", icon: "FAISS" },
   { display_name: "Firecrawl", name: "firecrawl", icon: "FirecrawlCrawlApi" },
   { display_name: "Git", name: "git", icon: "GitLoader" },
