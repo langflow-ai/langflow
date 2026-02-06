@@ -1,5 +1,6 @@
 """MCP Authentication encryption utilities for secure credential storage."""
 
+from functools import lru_cache
 from typing import Any
 
 from cryptography.fernet import InvalidToken
@@ -29,16 +30,17 @@ def encrypt_auth_settings(auth_settings: dict[str, Any] | None) -> dict[str, Any
     encrypted_settings = auth_settings.copy()
 
     for field in SENSITIVE_FIELDS:
-        if encrypted_settings.get(field):
+        # Avoid multiple lookups by saving the value locally
+        field_val = encrypted_settings.get(field)
+        if field_val:
             try:
-                field_to_encrypt = encrypted_settings[field]
                 # Only encrypt if the value is not already encrypted
                 # Check if it's already encrypted using is_encrypted helper
-                if is_encrypted(field_to_encrypt):
+                if is_encrypted(field_val):
                     logger.debug(f"Field {field} is already encrypted")
                 else:
                     # Not encrypted, encrypt it
-                    encrypted_value = auth_utils.encrypt_api_key(field_to_encrypt)
+                    encrypted_value = auth_utils.encrypt_api_key(field_val)
                     encrypted_settings[field] = encrypted_value
             except (ValueError, TypeError, KeyError) as e:
                 logger.error(f"Failed to encrypt field {field}: {e}")
@@ -88,7 +90,7 @@ def decrypt_auth_settings(auth_settings: dict[str, Any] | None) -> dict[str, Any
     return decrypted_settings
 
 
-def is_encrypted(value: str) -> bool:  # pragma: allowlist secret
+def is_encrypted(value: str) -> bool:
     """Check if a value appears to be encrypted.
 
     Args:
@@ -97,6 +99,13 @@ def is_encrypted(value: str) -> bool:  # pragma: allowlist secret
     Returns:
         True if the value appears to be encrypted (base64 Fernet token)
     """
+    # Delegate to a cached helper to avoid repeated expensive decrypts
+    return _is_encrypted_cached(value)
+
+
+@lru_cache(maxsize=1024)
+def _is_encrypted_cached(value: str) -> bool:
+    """Cached internal helper for is_encrypted to avoid repeated decrypt calls."""
     if not value:
         return False
 
