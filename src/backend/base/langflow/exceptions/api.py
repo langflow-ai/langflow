@@ -159,9 +159,7 @@ def classify_component_error(exc: BaseException) -> tuple[int, str]:
     # Plain ``TimeoutError`` / ``asyncio.TimeoutError`` are internal.
     if cls_names & _SDK_TIMEOUT_CLASSES:
         return HTTPStatus.GATEWAY_TIMEOUT, "upstream"
-    if any(p.search(all_messages) for p in _TIMEOUT_PATTERNS) and any(
-        _has_upstream_indicator(link) for link in chain
-    ):
+    if any(p.search(all_messages) for p in _TIMEOUT_PATTERNS) and any(_has_upstream_indicator(link) for link in chain):
         return HTTPStatus.GATEWAY_TIMEOUT, "upstream"
 
     if any(p.search(all_messages) for p in _CONNECTION_PATTERNS) or cls_names & {

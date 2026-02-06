@@ -534,9 +534,7 @@ async def _run_flow_internal(
         # upstream provider error (e.g. 429 rate-limit) rather than an
         # internal failure, and return the appropriate HTTP status code.
         upstream_status, _error_source = classify_component_error(exc)
-        raise APIException(
-            status_code=upstream_status, exception=exc, flow=flow
-        ) from exc
+        raise APIException(status_code=upstream_status, exception=exc, flow=flow) from exc
     except InvalidChatInputError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     except Exception as exc:
@@ -551,9 +549,7 @@ async def _run_flow_internal(
             ),
         )
         upstream_status, _error_source = classify_component_error(exc)
-        raise APIException(
-            status_code=upstream_status, exception=exc, flow=flow
-        ) from exc
+        raise APIException(status_code=upstream_status, exception=exc, flow=flow) from exc
 
     return result
 
