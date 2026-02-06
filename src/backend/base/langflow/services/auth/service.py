@@ -53,6 +53,13 @@ class AuthService(BaseAuthService):
 
     def __init__(self, settings_service: SettingsService):
         self.settings_service = settings_service
+        # Cache the verify callable to avoid repeated deep attribute lookups at call time.
+        # This preserves behavior while reducing per-call overhead.
+        try:
+            self._pwd_verify = settings_service.auth_settings.pwd_context.verify
+        except Exception:
+            # If for any reason the settings object isn't ready, fall back to resolving on each call.
+            self._pwd_verify = None
         self.set_ready()
 
     @property
@@ -450,6 +457,9 @@ class AuthService(BaseAuthService):
         return authenticated_user
 
     def verify_password(self, plain_password, hashed_password):
+        if self._pwd_verify is not None:
+            return self._pwd_verify(plain_password, hashed_password)
+        # Fallback to original lookup semantics to preserve behavior in edge cases.
         return self.settings.auth_settings.pwd_context.verify(plain_password, hashed_password)
 
     def get_password_hash(self, password):
