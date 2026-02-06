@@ -148,7 +148,7 @@ def _auth_error_to_http(e: AuthenticationError) -> HTTPException:
     """
     if isinstance(
         e,
-        (MissingCredentialsError, InvalidCredentialsError, InactiveUserError, InsufficientPermissionsError),
+        (MissingCredentialsError, InvalidCredentialsError, InsufficientPermissionsError),
     ):
         return HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=e.message)
     return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=e.message)
