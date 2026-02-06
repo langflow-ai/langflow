@@ -6,7 +6,7 @@ import toml  # type: ignore[import-untyped]
 
 from lfx.base.models.unified_models import (
     get_language_model_options,
-    get_model_classes,
+    get_model_class,
     update_model_options_in_build_config,
 )
 from lfx.custom.custom_component.component import Component
@@ -143,8 +143,8 @@ class BatchRunComponent(Component):
             provider = model_selection.get("provider")
             metadata = model_selection.get("metadata", {})
 
-            # Get model class and parameters from metadata
-            model_class = get_model_classes().get(metadata.get("model_class"))
+            # Get model class and parameters from metadata (lazy loading)
+            model_class = get_model_class(metadata.get("model_class"))
             if model_class is None:
                 msg = f"No model class defined for {model_name}"
                 raise ValueError(msg)

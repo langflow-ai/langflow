@@ -91,6 +91,23 @@ def run_command_wrapper(
         "--flow-json",
         help="Inline JSON flow content as a string (alternative to script_path)",
     ),
+    project_path: str | None = typer.Option(
+        None,
+        "--project",
+        "-p",
+        help="Project folder containing subflows. Defaults to the directory of the flow file.",
+    ),
+    env_file: str | None = typer.Option(
+        None,
+        "--env-file",
+        help="Path to .env file with environment variables (e.g., OPENAI_API_KEY=sk-xxx)",
+    ),
+    env_vars: list[str] | None = typer.Option(
+        None,
+        "--env",
+        "-e",
+        help="Set environment variable as KEY=VALUE. Can be used multiple times.",
+    ),
     *,
     stdin: bool = typer.Option(
         default=False,
@@ -132,12 +149,21 @@ def run_command_wrapper(
     # Convert script_path string to Path if provided
     script_path_obj = Path(script_path) if script_path else None
 
+    # Convert project_path string to Path if provided
+    project_path_obj = Path(project_path) if project_path else None
+
+    # Convert env_file string to Path if provided
+    env_file_obj = Path(env_file) if env_file else None
+
     return run(
         script_path=script_path_obj,
         input_value=input_value,
         input_value_option=input_value_option,
         output_format=output_format,
         flow_json=flow_json,
+        project_path=project_path_obj,
+        env_file=env_file_obj,
+        env_vars=env_vars,
         stdin=stdin,
         check_variables=check_variables,
         verbose=verbose,

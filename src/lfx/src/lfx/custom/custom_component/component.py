@@ -1158,7 +1158,9 @@ class Component(CustomComponent):
         self._pre_run_setup_if_needed()
         self._handle_tool_mode()
 
-        for output in self._get_outputs_to_process():
+        outputs_to_process = self._get_outputs_to_process()
+
+        for output in outputs_to_process:
             self._current_output = output.name
             result = await self._get_output_result(output)
             results[output.name] = result

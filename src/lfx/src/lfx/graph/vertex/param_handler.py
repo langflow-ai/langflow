@@ -137,10 +137,73 @@ class ParameterHandler:
             or (not field.get("show") and field_name != "code")
         )
 
+    def _resolve_file_with_fallback(self, logical_path: str) -> str:
+        """Resolve a file path with fallback to files directory or project directory.
+
+        First tries the storage service resolution. If the file doesn't exist,
+        falls back to looking for the file by name in:
+        1. files_dir (if specified via --files-dir CLI option)
+        2. project_path (the directory containing the flow JSON)
+
+        This is useful for lfx standalone mode where files are stored locally.
+
+        Args:
+            logical_path: Path in format "flow_id/filename" or absolute path
+
+        Returns:
+            str: Resolved path to an existing file, or the original resolved path
+        """
+        from pathlib import Path
+
+        # Extract filename from logical path (format: "flow_id/filename")
+        filename = logical_path.split("/")[-1] if "/" in logical_path else logical_path
+
+        # Try storage service resolution first
+        if self.storage_service is not None:
+            resolved_path = self.storage_service.resolve_component_path(logical_path)
+        else:
+            resolved_path = logical_path
+
+        # Check if the resolved file exists
+        if Path(resolved_path).exists():
+            return resolved_path
+
+        # File not found - try fallback directories
+        fallback_dirs = []
+        if hasattr(self.vertex, "graph") and self.vertex.graph is not None:
+            # Priority 1: files_dir (explicit --files-dir option)
+            files_dir = self.vertex.graph.context.get("files_dir")
+            if files_dir:
+                fallback_dirs.append(files_dir)
+
+            # Priority 2: project_path (flow JSON directory)
+            project_path = self.vertex.graph.context.get("project_path")
+            if project_path and project_path != files_dir:
+                fallback_dirs.append(project_path)
+
+        for fallback_dir in fallback_dirs:
+            # Try to find file by name in fallback directory
+            fallback_path = Path(fallback_dir) / filename
+            if fallback_path.exists():
+                logger.info(f"File '{filename}' not found at '{resolved_path}', using fallback: '{fallback_path}'")
+                return str(fallback_path)
+
+            # Also try just the base filename (in case logical path has subdirectories)
+            base_filename = Path(filename).name
+            if base_filename != filename:
+                fallback_path = Path(fallback_dir) / base_filename
+                if fallback_path.exists():
+                    logger.info(f"File '{filename}' not found at '{resolved_path}', using fallback: '{fallback_path}'")
+                    return str(fallback_path)
+
+        # No fallback found - return original resolved path (will fail later with clear error)
+        return resolved_path
+
     def process_file_field(self, field_name: str, field: dict, params: dict[str, Any]) -> dict[str, Any]:
         """Process file type fields.
 
         Converts logical paths (flow_id/filename) to component-ready paths.
+        Falls back to project directory if file not found in storage.
         """
         if file_path := field.get("file_path"):
             try:
@@ -150,10 +213,10 @@ class ParameterHandler:
                     if isinstance(file_path, str):
                         file_path = [file_path]
                     for p in file_path:
-                        resolved = self.storage_service.resolve_component_path(p)
+                        resolved = self._resolve_file_with_fallback(p)
                         full_path.append(resolved)
                 else:
-                    full_path = self.storage_service.resolve_component_path(file_path)
+                    full_path = self._resolve_file_with_fallback(file_path)
 
             except ValueError as e:
                 if "too many values to unpack" in str(e):

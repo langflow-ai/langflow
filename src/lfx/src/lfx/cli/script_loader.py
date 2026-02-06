@@ -7,7 +7,6 @@ containing LFX graph variables.
 import ast
 import importlib.util
 import inspect
-import json
 import sys
 from contextlib import contextmanager
 from pathlib import Path
@@ -15,9 +14,33 @@ from typing import TYPE_CHECKING, Any
 
 import typer
 
+# Re-export extraction functions for backward compatibility
+from lfx.cli.result_extraction import (
+    _extract_value,
+    _get_result_type,
+    _value_to_json_string,
+    _value_to_text_string,
+    extract_message_from_result,
+    extract_structured_result,
+    extract_text_from_result,
+)
+
 if TYPE_CHECKING:
     from lfx.graph import Graph
-    from lfx.schema.message import Message
+
+# Ensure re-exported functions are available in __all__
+__all__ = [
+    "_extract_value",
+    "_get_result_type",
+    "_value_to_json_string",
+    "_value_to_text_string",
+    "extract_message_from_result",
+    "extract_structured_result",
+    "extract_text_from_result",
+    "find_graph_variable",
+    "load_graph_from_script",
+    "temporary_sys_path",
+]
 
 
 @contextmanager
@@ -129,77 +152,6 @@ async def load_graph_from_script(script_path: Path) -> "Graph":
     ) as e:
         error_msg = f"Error executing script '{script_path}': {e}"
         raise RuntimeError(error_msg) from e
-
-
-def extract_message_from_result(results: list) -> str:
-    """Extract the message from the results."""
-    for result in results:
-        if (
-            hasattr(result, "vertex")
-            and result.vertex.custom_component
-            and result.vertex.custom_component.display_name == "Chat Output"
-        ):
-            message: Message = result.result_dict.results["message"]
-            try:
-                # Parse the JSON to get just the text content
-                return json.dumps(json.loads(message.model_dump_json()), ensure_ascii=False)
-            except (json.JSONDecodeError, AttributeError):
-                # Fallback to string representation
-                return str(message)
-    return "No response generated"
-
-
-def extract_text_from_result(results: list) -> str:
-    """Extract just the text content from the results."""
-    for result in results:
-        if (
-            hasattr(result, "vertex")
-            and result.vertex.custom_component
-            and result.vertex.custom_component.display_name == "Chat Output"
-        ):
-            message: dict | Message = result.result_dict.results.get("message")
-            try:
-                # Return just the text content
-                if isinstance(message, dict):
-                    text_content = message.get("text") if message.get("text") else str(message)
-                else:
-                    text_content = message.text
-                return str(text_content)
-            except AttributeError:
-                # Fallback to string representation
-                return str(message)
-    return "No response generated"
-
-
-def extract_structured_result(results: list, *, extract_text: bool = True) -> dict:
-    """Extract structured result data from the results."""
-    for result in results:
-        if (
-            hasattr(result, "vertex")
-            and result.vertex.custom_component
-            and result.vertex.custom_component.display_name == "Chat Output"
-        ):
-            message: Message = result.result_dict.results["message"]
-            try:
-                result_message = message.text if extract_text and hasattr(message, "text") else message
-            except (AttributeError, TypeError, ValueError) as e:
-                return {
-                    "text": str(message),
-                    "type": "message",
-                    "component": result.vertex.custom_component.display_name,
-                    "component_id": result.vertex.id,
-                    "success": True,
-                    "warning": f"Could not extract text properly: {e}",
-                }
-
-            return {
-                "result": result_message,
-                "type": "message",
-                "component": result.vertex.custom_component.display_name,
-                "component_id": result.vertex.id,
-                "success": True,
-            }
-    return {"text": "No response generated", "type": "error", "success": False}
 
 
 def find_graph_variable(script_path: Path) -> dict | None:

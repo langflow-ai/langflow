@@ -71,6 +71,8 @@ async def run_flow(
     user_id: str | None = None,
     session_id: str | None = None,
     event_manager: "EventManager | None" = None,
+    project_path: Path | None = None,
+    files_dir: Path | None = None,
 ) -> dict:
     """Execute a Langflow graph script or JSON flow and return the result.
 
@@ -93,6 +95,7 @@ async def run_flow(
         user_id: Optional user ID for tracking purposes
         session_id: Optional session ID for memory isolation
         event_manager: Optional EventManager for streaming token events
+        project_path: Optional project folder path for resolving subflows (RunFlow component)
 
     Returns:
         dict: Result data containing the execution results, logs, and optionally timing info
@@ -241,6 +244,23 @@ async def run_flow(
             if verbosity > 0:
                 # Log keys only to avoid leaking sensitive data
                 logger.info(f"Injected global variables: {list(global_variables.keys())}")
+
+        # Inject project_path into graph context for subflow resolution (RunFlow component)
+        if project_path:
+            graph.context["project_path"] = project_path
+            if verbosity > 0:
+                logger.info(f"Set project path for subflow resolution: {project_path}")
+
+        # Inject files_dir into graph context for file resolution
+        # This allows File components to find files in a custom directory
+        if files_dir:
+            graph.context["files_dir"] = files_dir
+            if verbosity > 0:
+                logger.info(f"Set files directory for file resolution: {files_dir}")
+
+        # Enable environment variable fallback for components (lfx mode)
+        # This allows components to read API keys from environment variables
+        graph.fallback_to_env_vars = True
 
     except Exception as e:
         error_type = type(e).__name__

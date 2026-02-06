@@ -9,6 +9,7 @@ if TYPE_CHECKING:
 
 import contextlib
 import json
+import os
 
 from lfx.base.models.anthropic_constants import ANTHROPIC_MODELS_DETAILED
 from lfx.base.models.google_generative_ai_constants import (
@@ -23,9 +24,49 @@ from lfx.services.deps import get_variable_service, session_scope
 from lfx.utils.async_helpers import run_until_complete
 
 
+def get_model_class(class_name: str) -> type | None:
+    """Lazily load a specific model class by name.
+
+    Only imports the specific provider's dependencies when needed,
+    avoiding ModuleNotFoundError for uninstalled optional packages.
+
+    Args:
+        class_name: The model class name (e.g., "ChatOpenAI", "ChatAnthropic")
+
+    Returns:
+        The model class, or None if not found
+    """
+    if class_name == "ChatOpenAI":
+        from langchain_openai import ChatOpenAI  # type: ignore  # noqa: PGH003
+
+        return ChatOpenAI
+    if class_name == "ChatAnthropic":
+        from langchain_anthropic import ChatAnthropic  # type: ignore  # noqa: PGH003
+
+        return ChatAnthropic
+    if class_name == "ChatGoogleGenerativeAIFixed":
+        from lfx.base.models.google_generative_ai_model import ChatGoogleGenerativeAIFixed
+
+        return ChatGoogleGenerativeAIFixed
+    if class_name == "ChatOllama":
+        from langchain_ollama import ChatOllama  # type: ignore  # noqa: PGH003
+
+        return ChatOllama
+    if class_name == "ChatWatsonx":
+        from langchain_ibm import ChatWatsonx  # type: ignore  # noqa: PGH003
+
+        return ChatWatsonx
+    return None
+
+
 @lru_cache(maxsize=1)
 def get_model_classes():
-    """Lazy load model classes to avoid importing optional dependencies at module level."""
+    """Load all model classes at once.
+
+    Warning: This imports ALL provider dependencies. Prefer get_model_class()
+    for lazy loading of specific classes to avoid ModuleNotFoundError
+    for uninstalled optional packages.
+    """
     from langchain_anthropic import ChatAnthropic  # type: ignore  # noqa: PGH003
     from langchain_ibm import ChatWatsonx  # type: ignore  # noqa: PGH003
     from langchain_ollama import ChatOllama  # type: ignore  # noqa: PGH003
@@ -273,7 +314,7 @@ def get_unified_models_detailed(
 
 
 def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key: str | None = None) -> str | None:
-    """Get API key from self.api_key or global variables.
+    """Get API key from self.api_key, global variables, or environment variables.
 
     Args:
         user_id: The user ID to look up global variables for
@@ -287,10 +328,6 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
     if api_key:
         return api_key
 
-    # If no user_id or user_id is the string "None", we can't look up global variables
-    if user_id is None or (isinstance(user_id, str) and user_id == "None"):
-        return None
-
     # Map provider to global variable name
     provider_variable_map = {
         "OpenAI": "OPENAI_API_KEY",
@@ -303,7 +340,14 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
     if not variable_name:
         return None
 
-    # Try to get from global variables
+    # If no user_id, fall back to environment variables directly (lfx standalone mode)
+    if user_id is None or (isinstance(user_id, str) and user_id == "None"):
+        env_key = os.environ.get(variable_name)
+        if env_key:
+            logger.debug(f"Using environment variable {variable_name} for {provider} provider (no user_id)")
+        return env_key
+
+    # Try to get from global variables (database)
     async def _get_variable():
         async with session_scope() as session:
             variable_service = get_variable_service()
@@ -316,7 +360,15 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
                 session=session,
             )
 
-    return run_until_complete(_get_variable())
+    key = run_until_complete(_get_variable())
+
+    # Fall back to environment variables if database lookup returns None
+    if key is None:
+        key = os.environ.get(variable_name)
+        if key:
+            logger.debug(f"Using environment variable {variable_name} for {provider} provider (fallback)")
+
+    return key
 
 
 def _validate_and_get_enabled_providers(
@@ -1011,8 +1063,8 @@ def get_llm(
         )
         raise ValueError(msg)
 
-    # Get model class from metadata
-    model_class = get_model_classes().get(metadata.get("model_class"))
+    # Get model class from metadata (lazy loading - only imports the specific provider)
+    model_class = get_model_class(metadata.get("model_class"))
     if model_class is None:
         msg = f"No model class defined for {model_name}"
         raise ValueError(msg)
