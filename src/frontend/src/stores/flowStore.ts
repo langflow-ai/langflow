@@ -11,7 +11,10 @@ import { create } from "zustand";
 import { checkCodeValidity } from "@/CustomNodes/helpers/check-code-validity";
 import { MISSED_ERROR_ALERT } from "@/constants/alerts_constants";
 import { BROKEN_EDGES_WARNING } from "@/constants/constants";
-import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
+import {
+  ENABLE_DATASTAX_LANGFLOW,
+  ENABLE_INSPECTION_PANEL,
+} from "@/customization/feature-flags";
 import {
   track,
   trackDataLoaded,
@@ -1129,6 +1132,16 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   helperLineEnabled: false,
   setHelperLineEnabled: (helperLineEnabled: boolean) => {
     set({ helperLineEnabled });
+  },
+  inspectionPanelVisible: ENABLE_INSPECTION_PANEL
+    ? localStorage.getItem("inspectionPanelVisible") !== null
+      ? localStorage.getItem("inspectionPanelVisible") === "true"
+      : true
+    : false,
+  setInspectionPanelVisible: (visible: boolean) => {
+    if (!ENABLE_INSPECTION_PANEL) return;
+    localStorage.setItem("inspectionPanelVisible", String(visible));
+    set({ inspectionPanelVisible: visible });
   },
   setNewChatOnPlayground: (newChat: boolean) => {
     set({ newChatOnPlayground: newChat });
