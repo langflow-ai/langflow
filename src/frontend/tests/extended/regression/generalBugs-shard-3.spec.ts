@@ -59,6 +59,13 @@ test(
     await initialGPTsetup(page);
     await adjustScreenView(page);
 
+    await page.getByText("OpenAI", { exact: true }).last().click();
+
+    await page.waitForTimeout(500);
+
+    if (await page.getByTestId("remove-icon-badge").isVisible()) {
+      await page.getByTestId("remove-icon-badge").click();
+    }
     await page
       .getByTestId("popover-anchor-input-api_key")
       .fill(process.env.OPENAI_API_KEY || "");

@@ -59,6 +59,7 @@ export default function Dropdown({
   externalOptions,
   handleOnNewValue,
   toggle,
+  inspectionPanel,
   ...baseInputProps
 }: BaseInputProps & DropDownComponent): JSX.Element {
   const validOptions = useMemo(
@@ -100,7 +101,9 @@ export default function Dropdown({
   const { firstWord } = formatName(name);
   const fuse = new Fuse(validOptions, { keys: ["name", "value"] });
   const PopoverContentDropdown =
-    children || editNode ? PopoverContent : PopoverContentWithoutPortal;
+    children || editNode || inspectionPanel
+      ? PopoverContent
+      : PopoverContentWithoutPortal;
   const { helperText, hasRefreshButton } = baseInputProps;
 
   // API and store hooks
@@ -617,7 +620,7 @@ export default function Dropdown({
   const renderPopoverContent = () => (
     <PopoverContentDropdown
       side="bottom"
-      avoidCollisions={!!children}
+      avoidCollisions={!!children || inspectionPanel}
       className="noflow nowheel nopan nodelete nodrag p-0"
       style={
         children ? {} : { minWidth: refButton?.current?.clientWidth ?? "200px" }
