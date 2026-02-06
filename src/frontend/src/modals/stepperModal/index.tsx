@@ -73,6 +73,7 @@ export interface StepperModalProps {
   contentClassName?: string;
   size?: StepperModalSize;
   showProgress?: boolean;
+  height?: string;
 }
 
 export function StepperModal({
@@ -89,8 +90,10 @@ export function StepperModal({
   contentClassName,
   size = 'small-h-full',
   showProgress = true,
+  height: customHeight,
 }: StepperModalProps) {
-  const { minWidth, height } = switchCaseModalSize(size);
+  const { minWidth, height: sizeHeight } = switchCaseModalSize(size);
+  const height = customHeight || sizeHeight;
 
   return (
     <StepperContext.Provider
@@ -99,7 +102,7 @@ export function StepperModal({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
           className={cn(
-            'flex max-h-[85vh] flex-col gap-0 overflow-hidden rounded-xl border bg-background p-0 shadow-lg px-2 pb-2',
+            'flex max-h-[85vh] flex-col gap-0 overflow-hidden rounded-xl border bg-background p-0 shadow-lg px-2 pb-2 transition-all duration-300 ease-in-out',
             minWidth,
             height,
             className

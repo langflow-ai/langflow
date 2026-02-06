@@ -53,18 +53,16 @@ interface ChunkPreview {
   };
 }
 
-type WizardStep = 1 | 2 | 3;
+type WizardStep = 1 | 2;
 
 const STEP_TITLES: Record<WizardStep, string> = {
   1: 'Configure Sources',
-  2: 'Preview Chunks',
-  3: 'Select Model & Create',
+  2: 'Review & Create',
 };
 
 const STEP_DESCRIPTIONS: Record<WizardStep, string> = {
   1: 'Add files and configure chunking settings',
-  2: 'Review how your documents will be split into chunks',
-  3: 'Choose an embedding model and create your knowledge base',
+  2: 'Review chunks and summary before creating',
 };
 
 // Chunk preview card component
@@ -405,8 +403,7 @@ export default function KnowledgeBaseUploadModal({
   const isStep1Valid =
     sourceName.trim() !== '' &&
     (isAddSourcesMode || selectedEmbeddingModel.length > 0);
-  const isStep2Valid = true; // Preview step is always valid
-  const isStep3Valid = true; // Summary step is always valid
+  const isStep2Valid = true; // Review step is always valid
 
   const canProceed = () => {
     switch (currentStep) {
@@ -414,15 +411,13 @@ export default function KnowledgeBaseUploadModal({
         return isStep1Valid;
       case 2:
         return isStep2Valid;
-      case 3:
-        return isStep3Valid;
       default:
         return false;
     }
   };
 
   const handleNext = () => {
-    if (currentStep < 3) {
+    if (currentStep < 2) {
       setCurrentStep((currentStep + 1) as WizardStep);
     }
   };
@@ -466,11 +461,8 @@ export default function KnowledgeBaseUploadModal({
                 <Label className="text-sm font-medium">Sources</Label>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-between"
-                    >
-                      <span className="flex items-center gap-2">
+                    <Button variant="outline" className="w-full">
+                      <span className="flex items-center gap-2 mx-auto">
                         <ForwardedIconComponent
                           name="Upload"
                           className="h-4 w-4"
@@ -659,7 +651,7 @@ export default function KnowledgeBaseUploadModal({
                         htmlFor="chunk-size"
                         className="text-xs text-muted-foreground"
                       >
-                        Chunk Size (characters)
+                        Chunk Size
                       </Label>
                       <Input
                         id="chunk-size"
@@ -678,7 +670,7 @@ export default function KnowledgeBaseUploadModal({
                         htmlFor="chunk-overlap"
                         className="text-xs text-muted-foreground"
                       >
-                        Chunk Overlap (characters)
+                        Chunk Overlap
                       </Label>
                       <Input
                         id="chunk-overlap"
@@ -698,7 +690,7 @@ export default function KnowledgeBaseUploadModal({
                       htmlFor="separator"
                       className="text-xs text-muted-foreground"
                     >
-                      Separator (use \n for newline, \t for tab)
+                      Separator
                     </Label>
                     <Input
                       id="separator"
@@ -711,39 +703,65 @@ export default function KnowledgeBaseUploadModal({
                 </div>
               </div>
             </div>
+
+            {/* Table Configure - Animated */}
+            <div
+              className={cn(
+                'grid transition-all duration-300 ease-in-out',
+                showAdvanced
+                  ? 'grid-rows-[1fr] opacity-100'
+                  : 'grid-rows-[0fr] opacity-0'
+              )}
+            >
+              <div className="overflow-hidden">
+                <Separator className="my-4" />
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center gap-2">
+                    <ForwardedIconComponent
+                      name="LayoutGrid"
+                      className="h-4 w-4 text-muted-foreground"
+                    />
+                    <span className="text-sm font-medium">Configure Table</span>
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <Label className="text-xs text-muted-foreground">
+                      Column Details
+                    </Label>
+                    <Button
+                      variant="outline"
+                      className="w-[50%] justify-center"
+                      onClick={() => setShowAdvanced(!showAdvanced)}
+                    >
+                      <span className="flex items-center gap-2">
+                        <ForwardedIconComponent
+                          name="Columns"
+                          className="h-4 w-4"
+                        />
+                        Open Table
+                      </span>
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         );
 
       case 2:
         return (
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <ForwardedIconComponent
-                  name="Layers"
-                  className="h-4 w-4 text-muted-foreground"
-                />
-                <span className="text-sm font-medium">Chunk Preview</span>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={generateChunkPreviews}
-                disabled={isGeneratingPreview || files.length === 0}
-              >
-                <ForwardedIconComponent
-                  name="RefreshCw"
-                  className={cn(
-                    'mr-1 h-3 w-3',
-                    isGeneratingPreview && 'animate-spin'
-                  )}
-                />
-                Refresh
-              </Button>
+          <div className="flex flex-col gap-4 h-full">
+            {/* Chunk Preview */}
+            <div className="flex items-center gap-2">
+              <ForwardedIconComponent
+                name="Layers"
+                className="h-4 w-4 text-muted-foreground"
+              />
+              <span className="text-sm font-medium">Chunk Preview</span>
             </div>
 
             {files.length === 0 ? (
-              <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
+              <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center h-full">
                 <ForwardedIconComponent
                   name="FileQuestion"
                   className="mb-2 h-8 w-8 text-muted-foreground"
@@ -784,67 +802,37 @@ export default function KnowledgeBaseUploadModal({
               </div>
             )}
 
-            {/* Settings Summary */}
-            <div className="rounded-lg bg-muted/50 p-3">
-              <span className="text-xs font-medium text-muted-foreground">
-                Current Settings
-              </span>
-              <div className="mt-2 flex gap-4 text-xs">
-                <span>
-                  Chunk Size: <strong>{chunkSize}</strong>
-                </span>
-                <span>
-                  Overlap: <strong>{chunkOverlap}</strong>
-                </span>
-                <span>
-                  Separator: <strong>{separator || '(none)'}</strong>
-                </span>
-              </div>
-            </div>
-          </div>
-        );
-
-      case 3:
-        return (
-          <div className="flex flex-col gap-4">
             {/* Summary Section */}
-            <div className="rounded-lg border p-4">
-              <div className="mb-3 flex items-center gap-2">
-                <ForwardedIconComponent
-                  name="FileStack"
-                  className="h-4 w-4 text-muted-foreground"
-                />
-                <span className="text-sm font-medium">Summary</span>
-              </div>
-              <Separator className="mb-3" />
-              <div className="space-y-1">
-                <SummaryItem icon="Type" label="Name" value={sourceName} />
-                <SummaryItem
-                  icon="Files"
-                  label="Files"
-                  value={`${files.length} file${files.length !== 1 ? 's' : ''} (${totalFileSize})`}
-                />
-                <SummaryItem
-                  icon="Ruler"
-                  label="Chunk Size"
-                  value={`${chunkSize} chars`}
-                />
-                <SummaryItem
-                  icon="Layers"
-                  label="Chunk Overlap"
-                  value={`${chunkOverlap} chars`}
-                />
-                <SummaryItem
-                  icon="SplitSquareHorizontal"
-                  label="Separator"
-                  value={separator || '(none)'}
-                />
-                <SummaryItem
-                  icon="Cpu"
-                  label="Embedding Model"
-                  value={selectedEmbeddingModel[0]?.name || 'Not selected'}
-                />
-              </div>
+            <div className="flex items-center gap-2">
+              <ForwardedIconComponent
+                name="FileStack"
+                className="h-4 w-4 text-muted-foreground"
+              />
+              <span className="text-sm font-medium">Summary</span>
+            </div>
+
+            <div>
+              <SummaryItem icon="Type" label="Name" value={sourceName} />
+              <SummaryItem
+                icon="Files"
+                label="Files"
+                value={`${files.length} file${files.length !== 1 ? 's' : ''} (${totalFileSize})`}
+              />
+              <SummaryItem
+                icon="Ruler"
+                label="Chunk Size"
+                value={`${chunkSize} chars`}
+              />
+              <SummaryItem
+                icon="Layers"
+                label="Chunk Overlap"
+                value={`${chunkOverlap} chars`}
+              />
+              <SummaryItem
+                icon="Cpu"
+                label="Embedding Model"
+                value={selectedEmbeddingModel[0]?.name || 'Not selected'}
+              />
             </div>
           </div>
         );
@@ -861,16 +849,16 @@ export default function KnowledgeBaseUploadModal({
       className="bg-background"
       contentClassName="bg-muted"
       currentStep={currentStep}
-      totalSteps={3}
+      totalSteps={2}
       title={isAddSourcesMode ? 'Add Sources' : STEP_TITLES[currentStep]}
       description={STEP_DESCRIPTIONS[currentStep]}
       icon="Database"
-      size="small-h-full"
-      showProgress={showAdvanced}
+      height={showAdvanced ? 'h-[710px]' : 'h-[365px]'}
+      showProgress={false}
       footer={
         <StepperModalFooter
           currentStep={currentStep}
-          totalSteps={showAdvanced ? 3 : 1}
+          totalSteps={showAdvanced ? 2 : 1}
           onBack={handleBack}
           onNext={handleNext}
           onSubmit={handleSubmit}
@@ -878,8 +866,16 @@ export default function KnowledgeBaseUploadModal({
           submitDisabled={!canProceed()}
           isSubmitting={isSubmitting}
           submitLabel={isAddSourcesMode ? 'Add Sources' : 'Create'}
-          helpLabel={showAdvanced ? 'Hide Advanced' : 'Advanced'}
-          onHelp={() => setShowAdvanced(!showAdvanced)}
+          helpLabel={
+            currentStep === 1
+              ? showAdvanced
+                ? 'Hide Advanced'
+                : 'Advanced'
+              : undefined
+          }
+          onHelp={
+            currentStep === 1 ? () => setShowAdvanced(!showAdvanced) : undefined
+          }
         />
       }
     >
