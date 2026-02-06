@@ -106,7 +106,7 @@ export default function DragFilesComponent({
         <h3 className="text-sm font-semibold">
           {isDragging ? "Drop files here" : "Click or drag files here"}
         </h3>
-        <p className="flex items-center gap-2 text-xs text-muted-foreground">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <div className="flex items-center gap-1">
             <span>{types.slice(0, 3).join(", ")}</span>
             {types.length > 3 && (
@@ -124,7 +124,7 @@ export default function DragFilesComponent({
           <span className="font-semibold">
             {formatFileSize(maxFileSizeUpload)} max
           </span>
-        </p>
+        </div>
         <div className="pointer-events-none absolute inset-0 h-full w-full">
           <svg
             width="100%"
