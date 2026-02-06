@@ -12,7 +12,6 @@ from lfx.services.deps import injectable_session_scope
 
 from langflow.services.auth.exceptions import (
     AuthenticationError,
-    InactiveUserError,
     InsufficientPermissionsError,
     InvalidCredentialsError,
     MissingCredentialsError,
