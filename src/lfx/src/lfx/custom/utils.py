@@ -881,8 +881,8 @@ def get_flow_dependencies(
     flow: dict,
     trusted_versions: dict[str, str] | None = None,
     trusted_packages: set[str] | None = None,
-    enable_unsafe_packages: bool = False, # noqa: FBT001, FBT002
-    ) -> set[str]:
+    enable_unsafe_packages: bool = False,  # noqa: FBT001, FBT002
+) -> set[str]:
     """Get the Python dependencies of a flow.
 
     Prioritizes installed packages.
@@ -990,13 +990,12 @@ def get_flow_dependencies(
 
     for component in flow.get("data", {}).get("nodes", []):
         deps = (
-            component
-            .get("data", {})
+            component.get("data", {})
             .get("node", {})
             .get("metadata", {})
             .get("dependencies", {})
             .get("dependencies", [])
-            )
+        )
 
         if not deps:
             continue
@@ -1007,14 +1006,10 @@ def get_flow_dependencies(
 
             if dep_version := dep.get("version"):
                 # first matching distribution with the provided version
-                versioned_names = get_versioned_package_distributions(
-                        package_name=dep_name, version=dep_version
-                        )
+                versioned_names = get_versioned_package_distributions(package_name=dep_name, version=dep_version)
             else:
                 # all matching distributions
-                versioned_names = get_versioned_package_distributions(
-                    dep_name, version=None
-                    )
+                versioned_names = get_versioned_package_distributions(dep_name, version=None)
             if not versioned_names:
                 logger.warning(f"Package {dep_name} has no matching distribution.")
 
@@ -1023,13 +1018,7 @@ def get_flow_dependencies(
                 elif dep_name in trusted_packages:
                     versioned_names = [dep_name]
                 elif enable_unsafe_packages:
-                    versioned_names = (
-                        [f"{dep_name}=={v}"]
-
-                        if (v := dep.get("version"))
-
-                        else [dep_name]
-                    )
+                    versioned_names = [f"{dep_name}=={v}"] if (v := dep.get("version")) else [dep_name]
 
             dependencies.update(versioned_names)
 

@@ -192,7 +192,7 @@ def get_versioned_package_distributions(package_name: str, version: str | None =
     for dist_name in dist_names:
         try:
             versioned_names.append(f"{dist_name}=={md.distribution(dist_name).version}")
-        except Exception: # noqa: BLE001
+        except Exception:  # noqa: BLE001
             versioned_names.append(dist_name)
 
     return versioned_names

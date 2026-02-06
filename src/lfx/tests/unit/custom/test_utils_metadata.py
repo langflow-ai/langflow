@@ -638,13 +638,7 @@ class TestGetFlowDependencies:
 
     @staticmethod
     def _flow_with_deps(deps):
-        return {
-            "data": {
-                "nodes": [
-                    {"data": {"node": {"metadata": {"dependencies": {"dependencies": deps}}}}}
-                ]
-            }
-        }
+        return {"data": {"nodes": [{"data": {"node": {"metadata": {"dependencies": {"dependencies": deps}}}}}]}}
 
     def test_empty_flow_returns_empty_set(self):
         assert get_flow_dependencies({}) == set()
@@ -702,25 +696,19 @@ class TestGetFlowDependencies:
     def test_trusted_versions_take_priority_over_trusted_packages(self):
         flow = self._flow_with_deps([{"name": "demo"}])
         with patch("lfx.custom.utils.get_versioned_package_distributions", return_value=[]):
-            result = get_flow_dependencies(
-                flow, trusted_versions={"demo": "9.9.9"}, trusted_packages={"demo"}
-            )
+            result = get_flow_dependencies(flow, trusted_versions={"demo": "9.9.9"}, trusted_packages={"demo"})
         assert result == {"demo==9.9.9"}
 
     def test_trusted_versions_take_priority_over_unsafe(self):
         flow = self._flow_with_deps([{"name": "demo", "version": "1.0.0"}])
         with patch("lfx.custom.utils.get_versioned_package_distributions", return_value=[]):
-            result = get_flow_dependencies(
-                flow, trusted_versions={"demo": "9.9.9"}, enable_unsafe_packages=True
-            )
+            result = get_flow_dependencies(flow, trusted_versions={"demo": "9.9.9"}, enable_unsafe_packages=True)
         assert result == {"demo==9.9.9"}
 
     def test_trusted_packages_take_priority_over_unsafe(self):
         flow = self._flow_with_deps([{"name": "demo", "version": "1.0.0"}])
         with patch("lfx.custom.utils.get_versioned_package_distributions", return_value=[]):
-            result = get_flow_dependencies(
-                flow, trusted_packages={"demo"}, enable_unsafe_packages=True
-            )
+            result = get_flow_dependencies(flow, trusted_packages={"demo"}, enable_unsafe_packages=True)
         assert result == {"demo"}
 
     def test_installed_distribution_overrides_trusted_versions(self):
