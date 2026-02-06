@@ -1,7 +1,10 @@
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
 import type { AgenticStepType } from "@/controllers/API/queries/agentic";
 import { cn } from "@/utils/utils";
-import type { AssistantModel, AssistantPanelProps } from "./assistant-panel.types";
+import type {
+  AssistantModel,
+  AssistantPanelProps,
+} from "./assistant-panel.types";
 import { AssistantEmptyState } from "./components/assistant-empty-state";
 import { AssistantHeader } from "./components/assistant-header";
 import { AssistantInput } from "./components/assistant-input";
@@ -76,7 +79,9 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
       : cn(
           "z-50 bottom-20 left-[calc(50%+140px)] -translate-x-1/2 w-[520px] rounded-2xl border border-border",
           hasMessages ? "h-[500px]" : "h-auto",
-          isOpen ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none",
+          isOpen
+            ? "opacity-100 translate-y-0"
+            : "opacity-0 translate-y-4 pointer-events-none",
         ),
   );
 

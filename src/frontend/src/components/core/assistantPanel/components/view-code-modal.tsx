@@ -104,9 +104,7 @@ export function ViewCodeModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="z-[100] flex h-[535px] w-[770px] max-w-[770px] flex-col gap-0 overflow-hidden rounded-[10px] border border-border bg-background p-0 shadow-xl"
-      >
+      <DialogContent className="z-[100] flex h-[535px] w-[770px] max-w-[770px] flex-col gap-0 overflow-hidden rounded-[10px] border border-border bg-background p-0 shadow-xl">
         {/* Header */}
         <div className="flex flex-col gap-1 px-4 py-3 bg-muted">
           <div className="flex items-center justify-between">
@@ -151,9 +149,7 @@ export function ViewCodeModal({
 
         {/* Footer */}
         <div className="flex justify-end px-6 py-4">
-          <Button onClick={() => onOpenChange(false)}>
-            Close
-          </Button>
+          <Button onClick={() => onOpenChange(false)}>Close</Button>
         </div>
       </DialogContent>
     </Dialog>

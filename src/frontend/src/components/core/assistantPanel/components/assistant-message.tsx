@@ -44,9 +44,12 @@ export function AssistantMessageItem({
   const { userData } = useContext(AuthContext);
   const isUser = message.role === "user";
   const isStreaming = message.status === "streaming";
-  const hasValidatedResult = message.result?.validated && message.result?.componentCode;
-  const hasValidationError = message.result?.validated === false && message.result?.validationError;
-  const [validationAnimationComplete, setValidationAnimationComplete] = useState(false);
+  const hasValidatedResult =
+    message.result?.validated && message.result?.componentCode;
+  const hasValidationError =
+    message.result?.validated === false && message.result?.validationError;
+  const [validationAnimationComplete, setValidationAnimationComplete] =
+    useState(false);
 
   // Generate randomized messages once per message
   const thinkingMessage = useMemo(() => getRandomThinkingMessage(), []);
@@ -78,7 +81,9 @@ export function AssistantMessageItem({
     // Keep showing it until validation animation completes
     const showLoadingState =
       (isGeneratingCode && message.progress) ||
-      ((hasValidatedResult || hasValidationError) && !validationAnimationComplete && message.progress);
+      ((hasValidatedResult || hasValidationError) &&
+        !validationAnimationComplete &&
+        message.progress);
 
     if (showLoadingState && message.progress) {
       return (
@@ -101,18 +106,16 @@ export function AssistantMessageItem({
     // Show cancelled state
     if (message.status === "cancelled") {
       return (
-        <span className="text-sm text-muted-foreground/60 italic">Cancelled</span>
+        <span className="text-sm text-muted-foreground/60 italic">
+          Cancelled
+        </span>
       );
     }
 
     // Show validation failure after all retries (only after animation completes)
     const canShowResult = validationAnimationComplete || !message.progress;
     if (hasValidationError && message.result && canShowResult) {
-      return (
-        <AssistantValidationFailed
-          result={message.result}
-        />
-      );
+      return <AssistantValidationFailed result={message.result} />;
     }
 
     // Show successful component result (only after validation animation completes, or if no animation was needed)
@@ -159,10 +162,7 @@ export function AssistantMessageItem({
               );
             }
             return (
-              <code
-                className="rounded bg-muted px-1 py-0.5 text-sm"
-                {...props}
-              >
+              <code className="rounded bg-muted px-1 py-0.5 text-sm" {...props}>
                 {children}
               </code>
             );
@@ -177,8 +177,7 @@ export function AssistantMessageItem({
   // Show simple thinking when:
   // 1. Streaming without content yet (both Q&A and component generation)
   // 2. Component generation in early phase (before extraction/validation)
-  const isSimpleThinking =
-    isStreaming && !isGeneratingCode && !message.content;
+  const isSimpleThinking = isStreaming && !isGeneratingCode && !message.content;
 
   if (isSimpleThinking && !isUser) {
     return (

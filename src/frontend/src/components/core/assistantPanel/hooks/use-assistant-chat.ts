@@ -7,7 +7,10 @@ import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/us
 import { useAddComponent } from "@/hooks/use-add-component";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { APIClassType } from "@/types/api";
-import type { AssistantMessage, AssistantModel } from "../assistant-panel.types";
+import type {
+  AssistantMessage,
+  AssistantModel,
+} from "../assistant-panel.types";
 
 interface UseAssistantChatReturn {
   messages: AssistantMessage[];
@@ -35,7 +38,9 @@ export function useAssistantChat(): UseAssistantChatReturn {
 
       // Validate model has required fields to prevent backend from using wrong provider
       if (!model?.provider || !model?.name) {
-        console.warn("AssistantChat: No model selected, request may use default provider");
+        console.warn(
+          "AssistantChat: No model selected, request may use default provider",
+        );
       }
 
       const userMessage: AssistantMessage = {
@@ -74,7 +79,9 @@ export function useAssistantChat(): UseAssistantChatReturn {
             onProgress: (event) => {
               if (event.step !== completedSteps[completedSteps.length - 1]) {
                 if (completedSteps.length > 0) {
-                  completedSteps.push(completedSteps[completedSteps.length - 1]);
+                  completedSteps.push(
+                    completedSteps[completedSteps.length - 1],
+                  );
                 }
               }
 

@@ -62,7 +62,8 @@ function AssistantLoadingStateComponent({
   // Get validation message for current step
   const getValidationMessage = (step: string) => {
     if (step === "validating") return validationMessages.validating;
-    if (step === "validation_failed") return validationMessages.validationFailed;
+    if (step === "validation_failed")
+      return validationMessages.validationFailed;
     if (step === "retrying") return validationMessages.retrying;
     return null;
   };
@@ -71,7 +72,10 @@ function AssistantLoadingStateComponent({
 
   // Queue validation messages as they arrive
   useEffect(() => {
-    if (currentValidationMessage && !queuedValidationStepsRef.current.has(progress.step)) {
+    if (
+      currentValidationMessage &&
+      !queuedValidationStepsRef.current.has(progress.step)
+    ) {
       queuedValidationStepsRef.current.add(progress.step);
       validationQueueRef.current.push(currentValidationMessage);
 

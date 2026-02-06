@@ -10,11 +10,19 @@ import { getRandomPlaceholderMessage } from "../helpers/messages";
 import { ModelSelector } from "./model-selector";
 
 // Steps where the "thinking" animation is showing in the message area
-const GENERATING_STEPS: AgenticStepType[] = ["generating", "generating_component"];
+const GENERATING_STEPS: AgenticStepType[] = [
+  "generating",
+  "generating_component",
+];
 
 // Hook for rotating placeholder messages during post-generation processing
-function useAnimatedPlaceholder(shouldAnimate: boolean, intervalMs = 2000): string {
-  const [currentMessage, setCurrentMessage] = useState(() => getRandomPlaceholderMessage());
+function useAnimatedPlaceholder(
+  shouldAnimate: boolean,
+  intervalMs = 2000,
+): string {
+  const [currentMessage, setCurrentMessage] = useState(() =>
+    getRandomPlaceholderMessage(),
+  );
 
   useEffect(() => {
     if (!shouldAnimate) {
@@ -57,34 +65,42 @@ export function AssistantInput({
   const [message, setMessage] = useState("");
 
   // Show animated placeholder only during post-generation steps (when thinking animation is done)
-  const isPostGenerationStep = isProcessing && currentStep !== null && !GENERATING_STEPS.includes(currentStep);
+  const isPostGenerationStep =
+    isProcessing &&
+    currentStep !== null &&
+    !GENERATING_STEPS.includes(currentStep);
   const animatedPlaceholder = useAnimatedPlaceholder(isPostGenerationStep);
-  const [selectedModel, setSelectedModel] = useState<AssistantModel | null>(() => {
-    // Load from localStorage on init
-    try {
-      const saved = localStorage.getItem(ASSISTANT_MODEL_STORAGE_KEY);
-      if (!saved) return null;
+  const [selectedModel, setSelectedModel] = useState<AssistantModel | null>(
+    () => {
+      // Load from localStorage on init
+      try {
+        const saved = localStorage.getItem(ASSISTANT_MODEL_STORAGE_KEY);
+        if (!saved) return null;
 
-      const parsed = JSON.parse(saved);
-      // Validate that model has required fields
-      if (parsed && parsed.provider && parsed.name) {
-        return parsed as AssistantModel;
+        const parsed = JSON.parse(saved);
+        // Validate that model has required fields
+        if (parsed && parsed.provider && parsed.name) {
+          return parsed as AssistantModel;
+        }
+        // Invalid model format, clear it
+        localStorage.removeItem(ASSISTANT_MODEL_STORAGE_KEY);
+        return null;
+      } catch {
+        // localStorage may be unavailable (private browsing) or corrupted
+        localStorage.removeItem(ASSISTANT_MODEL_STORAGE_KEY);
+        return null;
       }
-      // Invalid model format, clear it
-      localStorage.removeItem(ASSISTANT_MODEL_STORAGE_KEY);
-      return null;
-    } catch {
-      // localStorage may be unavailable (private browsing) or corrupted
-      localStorage.removeItem(ASSISTANT_MODEL_STORAGE_KEY);
-      return null;
-    }
-  });
+    },
+  );
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Save to localStorage when model changes
   useEffect(() => {
     if (selectedModel) {
-      localStorage.setItem(ASSISTANT_MODEL_STORAGE_KEY, JSON.stringify(selectedModel));
+      localStorage.setItem(
+        ASSISTANT_MODEL_STORAGE_KEY,
+        JSON.stringify(selectedModel),
+      );
     }
   }, [selectedModel]);
 
@@ -110,7 +126,8 @@ export function AssistantInput({
       <div
         className="pointer-events-none absolute -bottom-2 left-1/2 h-16 w-3/4 -translate-x-1/2 rounded-full opacity-60 blur-2xl"
         style={{
-          background: "linear-gradient(90deg, rgba(186,117,255,0.4) 0%, rgba(255,50,118,0.5) 50%, rgba(186,117,255,0.4) 100%)",
+          background:
+            "linear-gradient(90deg, rgba(186,117,255,0.4) 0%, rgba(255,50,118,0.5) 50%, rgba(186,117,255,0.4) 100%)",
         }}
       />
       <div className="relative flex flex-col gap-4 rounded-md border border-border bg-background pb-2.5 transition-colors focus-within:border-muted-foreground shadow-[0_0_15px_rgba(186,117,255,0.12),0_0_30px_rgba(255,50,118,0.08)]">
@@ -120,11 +137,13 @@ export function AssistantInput({
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={isPostGenerationStep ? "" : (placeholder ?? ASSISTANT_PLACEHOLDER)}
+            placeholder={
+              isPostGenerationStep ? "" : (placeholder ?? ASSISTANT_PLACEHOLDER)
+            }
             disabled={disabled || isProcessing}
             className={cn(
               "min-h-[60px] resize-none border-0 bg-transparent px-4 pt-3 text-sm focus-visible:ring-0 disabled:bg-transparent disabled:cursor-not-allowed",
-              isProcessing && !isPostGenerationStep && "placeholder:opacity-50"
+              isProcessing && !isPostGenerationStep && "placeholder:opacity-50",
             )}
             rows={2}
           />
@@ -152,7 +171,10 @@ export function AssistantInput({
               title="Stop generation"
               className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted-foreground/15 text-muted-foreground transition-colors hover:bg-muted-foreground/25"
             >
-              <ForwardedIconComponent name="Square" className="h-3 w-3 fill-current" />
+              <ForwardedIconComponent
+                name="Square"
+                className="h-3 w-3 fill-current"
+              />
             </button>
           ) : (
             <Button

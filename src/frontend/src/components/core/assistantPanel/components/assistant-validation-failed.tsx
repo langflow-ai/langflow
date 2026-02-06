@@ -35,7 +35,8 @@ export function AssistantValidationFailed({
         {/* Error message */}
         <div className="p-4">
           <p className="text-sm text-muted-foreground">
-            The generated component could not be validated after multiple attempts.
+            The generated component could not be validated after multiple
+            attempts.
           </p>
           {result.validationError && (
             <div className="mt-3 rounded-md bg-muted/50 p-3">

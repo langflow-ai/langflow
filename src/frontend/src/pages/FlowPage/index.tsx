@@ -252,7 +252,6 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
       <div className="flow-page-positioning">
         {currentFlow && (
           <div className="flex h-full overflow-hidden">
-
             {/* Main content + Playground Sidebar (right) */}
             <SimpleSidebarProvider
               width="326px"
