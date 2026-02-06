@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import base64
+import threading
+from collections import OrderedDict
 from datetime import timedelta
 from typing import TYPE_CHECKING, Annotated, Final
 
@@ -27,6 +29,10 @@ if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
 
     from langflow.services.database.models.user.model import User, UserRead
+
+_max_cache_size = 1024
+
+_cache_lock = threading.Lock()
 
 
 class OAuth2PasswordBearerCookie(OAuth2PasswordBearer):
@@ -258,6 +264,8 @@ def get_fernet(settings_service: SettingsService) -> Fernet:
     """
     import random
 
+    _decryption_cache: OrderedDict[str, str] = OrderedDict()
+
     secret_key: str = settings_service.auth_settings.SECRET_KEY.get_secret_value()
 
     # Replicate the original _ensure_valid_key logic from AuthService
@@ -285,7 +293,21 @@ def decrypt_api_key(
     settings_service: SettingsService | None = None,  # noqa: ARG001
     fernet_obj=None,  # noqa: ARG001
 ) -> str:
-    return _auth_service().decrypt_api_key(encrypted_api_key)
+    with _cache_lock:
+        cached = _decryption_cache.get(encrypted_api_key)
+        if cached is not None:
+            _decryption_cache.move_to_end(encrypted_api_key)
+            return cached
+
+    result = _auth_service().decrypt_api_key(encrypted_api_key)
+
+    with _cache_lock:
+        _decryption_cache[encrypted_api_key] = result
+        _decryption_cache.move_to_end(encrypted_api_key)
+        if len(_decryption_cache) > _max_cache_size:
+            _decryption_cache.popitem(last=False)
+
+    return result
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
