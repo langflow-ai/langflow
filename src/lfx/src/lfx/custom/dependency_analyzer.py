@@ -8,8 +8,6 @@ import sys
 from dataclasses import asdict, dataclass
 from functools import lru_cache
 
-from lfx.log.logger import logger
-
 try:
     STDLIB_MODULES: set[str] = set(sys.stdlib_module_names)  # 3.10+
 except AttributeError:
