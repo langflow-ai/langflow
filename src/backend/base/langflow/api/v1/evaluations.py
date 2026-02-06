@@ -158,6 +158,9 @@ async def run_single_evaluation_item(
     expected_output: str,
     llm_judge_prompt: str | None = None,
     llm_judge_model: dict | None = None,
+    session_id: str | None = None,
+    pass_metric: str | None = None,
+    pass_threshold: float = 0.5,
 ) -> dict:
     """Run a single evaluation item and return results."""
     start_time = time.time()
@@ -167,7 +170,8 @@ async def run_single_evaluation_item(
     logger.info(f"Running evaluation item: input='{input_value[:50]}...' flow_id={flow_id}")
 
     try:
-        session_id = str(uuid4())
+        if session_id is None:
+            session_id = str(uuid4())
         graph = Graph.from_payload(
             payload=flow_data,
             flow_id=str(flow_id),
@@ -282,10 +286,13 @@ async def run_single_evaluation_item(
         else:
             scores[method] = calculate_score(method, expected_output, actual_output or "")
 
-    # Determine if passed (average score > 0.5, ignoring None values)
-    valid_scores = [s for s in scores.values() if s is not None]
-    avg_score = sum(valid_scores) / len(valid_scores) if valid_scores else 0.0
-    passed = avg_score >= 0.5
+    # Determine if passed based on configured criteria
+    if pass_metric and pass_metric in scores and scores[pass_metric] is not None:
+        passed = scores[pass_metric] >= pass_threshold
+    else:
+        valid_scores = [s for s in scores.values() if s is not None]
+        avg_score = sum(valid_scores) / len(valid_scores) if valid_scores else 0.0
+        passed = avg_score >= pass_threshold
 
     return {
         "actual_output": actual_output,
@@ -352,62 +359,139 @@ async def run_evaluation_background(evaluation_id: UUID, user_id: UUID):
                 total_flow_tokens = 0
                 total_llm_judge_tokens = 0
 
-                # Run each item
-                for idx, item in enumerate(sorted_items):
-                    logger.info(f"Running item {idx + 1}/{len(sorted_items)}: {item.input[:30]}...")
-                    item_result = await run_single_evaluation_item(
-                        flow_data=flow.data,
-                        flow_id=flow.id,
-                        flow_name=flow.name,
-                        user_id=user_id,
-                        input_value=item.input,
-                        scoring_methods=evaluation.scoring_methods,
-                        expected_output=item.expected_output,
-                        llm_judge_prompt=evaluation.llm_judge_prompt,
-                        llm_judge_model=evaluation.llm_judge_model,
-                    )
+                if dataset.dataset_type == "multi_turn":
+                    # Group items by conversation_id, preserving order
+                    conversations: dict[str, list] = {}
+                    for item in sorted_items:
+                        conv_id = item.conversation_id or "default"
+                        conversations.setdefault(conv_id, []).append(item)
 
-                    logger.info(
-                        f"Item {idx + 1} result: actual_output={item_result['actual_output']}, error={item_result['error']}"
-                    )
+                    item_index = 0
+                    for conv_id, turns in conversations.items():
+                        conv_session_id = str(uuid4())  # One session per conversation
+                        for turn in turns:
+                            logger.info(
+                                f"Running item {item_index + 1}/{len(sorted_items)} "
+                                f"(conv={conv_id}): {turn.input[:30]}..."
+                            )
+                            item_result = await run_single_evaluation_item(
+                                flow_data=flow.data,
+                                flow_id=flow.id,
+                                flow_name=flow.name,
+                                user_id=user_id,
+                                input_value=turn.input,
+                                scoring_methods=evaluation.scoring_methods,
+                                expected_output=turn.expected_output,
+                                llm_judge_prompt=evaluation.llm_judge_prompt,
+                                llm_judge_model=evaluation.llm_judge_model,
+                                session_id=conv_session_id,
+                                pass_metric=evaluation.pass_metric,
+                                pass_threshold=evaluation.pass_threshold,
+                            )
 
-                    # Create result record
-                    db_result = EvaluationResult(
-                        evaluation_id=evaluation_id,
-                        dataset_item_id=item.id,
-                        input=item.input,
-                        expected_output=item.expected_output,
-                        actual_output=item_result["actual_output"],
-                        duration_ms=item_result["duration_ms"],
-                        scores=item_result["scores"],
-                        passed=item_result["passed"],
-                        error=item_result["error"],
-                        order=idx,
-                        flow_tokens=item_result["flow_tokens"],
-                        llm_judge_tokens=item_result["llm_judge_tokens"],
-                        created_at=datetime.now(timezone.utc),
-                    )
-                    session.add(db_result)
+                            logger.info(
+                                f"Item {item_index + 1} result: "
+                                f"actual_output={item_result['actual_output']}, error={item_result['error']}"
+                            )
 
-                    # Update metrics
-                    if item_result["scores"]:
-                        valid_scores = [s for s in item_result["scores"].values() if s is not None]
-                        if valid_scores:
-                            avg_score = sum(valid_scores) / len(valid_scores)
-                            total_score += avg_score
-                    if item_result["duration_ms"]:
-                        total_duration += item_result["duration_ms"]
-                    if item_result["passed"]:
-                        passed_count += 1
-                    if item_result["flow_tokens"]:
-                        total_flow_tokens += item_result["flow_tokens"]
-                    if item_result["llm_judge_tokens"]:
-                        total_llm_judge_tokens += item_result["llm_judge_tokens"]
+                            # Create result record with conversation_id
+                            db_result = EvaluationResult(
+                                evaluation_id=evaluation_id,
+                                dataset_item_id=turn.id,
+                                input=turn.input,
+                                expected_output=turn.expected_output,
+                                actual_output=item_result["actual_output"],
+                                duration_ms=item_result["duration_ms"],
+                                scores=item_result["scores"],
+                                passed=item_result["passed"],
+                                error=item_result["error"],
+                                order=item_index,
+                                conversation_id=turn.conversation_id,
+                                flow_tokens=item_result["flow_tokens"],
+                                llm_judge_tokens=item_result["llm_judge_tokens"],
+                                created_at=datetime.now(timezone.utc),
+                            )
+                            session.add(db_result)
 
-                    # Update progress
-                    evaluation.completed_items = idx + 1
-                    session.add(evaluation)
-                    await session.commit()
+                            # Update metrics
+                            if item_result["scores"]:
+                                valid_scores = [s for s in item_result["scores"].values() if s is not None]
+                                if valid_scores:
+                                    avg_score = sum(valid_scores) / len(valid_scores)
+                                    total_score += avg_score
+                            if item_result["duration_ms"]:
+                                total_duration += item_result["duration_ms"]
+                            if item_result["passed"]:
+                                passed_count += 1
+                            if item_result["flow_tokens"]:
+                                total_flow_tokens += item_result["flow_tokens"]
+                            if item_result["llm_judge_tokens"]:
+                                total_llm_judge_tokens += item_result["llm_judge_tokens"]
+
+                            # Update progress
+                            evaluation.completed_items = item_index + 1
+                            session.add(evaluation)
+                            await session.commit()
+                            item_index += 1
+                else:
+                    # Single-turn: current behavior unchanged
+                    for idx, item in enumerate(sorted_items):
+                        logger.info(f"Running item {idx + 1}/{len(sorted_items)}: {item.input[:30]}...")
+                        item_result = await run_single_evaluation_item(
+                            flow_data=flow.data,
+                            flow_id=flow.id,
+                            flow_name=flow.name,
+                            user_id=user_id,
+                            input_value=item.input,
+                            scoring_methods=evaluation.scoring_methods,
+                            expected_output=item.expected_output,
+                            llm_judge_prompt=evaluation.llm_judge_prompt,
+                            llm_judge_model=evaluation.llm_judge_model,
+                            pass_metric=evaluation.pass_metric,
+                            pass_threshold=evaluation.pass_threshold,
+                        )
+
+                        logger.info(
+                            f"Item {idx + 1} result: actual_output={item_result['actual_output']}, error={item_result['error']}"
+                        )
+
+                        # Create result record
+                        db_result = EvaluationResult(
+                            evaluation_id=evaluation_id,
+                            dataset_item_id=item.id,
+                            input=item.input,
+                            expected_output=item.expected_output,
+                            actual_output=item_result["actual_output"],
+                            duration_ms=item_result["duration_ms"],
+                            scores=item_result["scores"],
+                            passed=item_result["passed"],
+                            error=item_result["error"],
+                            order=idx,
+                            flow_tokens=item_result["flow_tokens"],
+                            llm_judge_tokens=item_result["llm_judge_tokens"],
+                            created_at=datetime.now(timezone.utc),
+                        )
+                        session.add(db_result)
+
+                        # Update metrics
+                        if item_result["scores"]:
+                            valid_scores = [s for s in item_result["scores"].values() if s is not None]
+                            if valid_scores:
+                                avg_score = sum(valid_scores) / len(valid_scores)
+                                total_score += avg_score
+                        if item_result["duration_ms"]:
+                            total_duration += item_result["duration_ms"]
+                        if item_result["passed"]:
+                            passed_count += 1
+                        if item_result["flow_tokens"]:
+                            total_flow_tokens += item_result["flow_tokens"]
+                        if item_result["llm_judge_tokens"]:
+                            total_llm_judge_tokens += item_result["llm_judge_tokens"]
+
+                        # Update progress
+                        evaluation.completed_items = idx + 1
+                        session.add(evaluation)
+                        await session.commit()
 
                 # Update final metrics
                 logger.info(f"Evaluation complete. Passed: {passed_count}/{len(sorted_items)}")
@@ -471,6 +555,8 @@ async def create_evaluation(
         scoring_methods=evaluation.scoring_methods,
         llm_judge_prompt=evaluation.llm_judge_prompt,
         llm_judge_model=evaluation.llm_judge_model,
+        pass_metric=evaluation.pass_metric,
+        pass_threshold=evaluation.pass_threshold,
         user_id=current_user.id,
         dataset_id=evaluation.dataset_id,
         flow_id=evaluation.flow_id,
@@ -501,6 +587,8 @@ async def create_evaluation(
         created_at=db_evaluation.created_at,
         updated_at=db_evaluation.updated_at,
         total_items=db_evaluation.total_items,
+        pass_metric=db_evaluation.pass_metric,
+        pass_threshold=db_evaluation.pass_threshold,
     )
 
 
@@ -562,6 +650,8 @@ async def list_evaluations(
                 total_runtime_ms=ev.total_runtime_ms,
                 total_flow_tokens=ev.total_flow_tokens,
                 total_llm_judge_tokens=ev.total_llm_judge_tokens,
+                pass_metric=ev.pass_metric,
+                pass_threshold=ev.pass_threshold,
             )
         )
 
@@ -625,6 +715,8 @@ async def get_evaluation(
         total_runtime_ms=evaluation.total_runtime_ms,
         total_flow_tokens=evaluation.total_flow_tokens,
         total_llm_judge_tokens=evaluation.total_llm_judge_tokens,
+        pass_metric=evaluation.pass_metric,
+        pass_threshold=evaluation.pass_threshold,
         results=[
             EvaluationResultRead(
                 id=r.id,
@@ -638,6 +730,7 @@ async def get_evaluation(
                 passed=r.passed,
                 error=r.error,
                 order=r.order,
+                conversation_id=r.conversation_id,
                 created_at=r.created_at,
                 flow_tokens=r.flow_tokens,
                 llm_judge_tokens=r.llm_judge_tokens,
@@ -716,6 +809,8 @@ async def run_evaluation(
         created_at=evaluation.created_at,
         updated_at=evaluation.updated_at,
         total_items=evaluation.total_items,
+        pass_metric=evaluation.pass_metric,
+        pass_threshold=evaluation.pass_threshold,
     )
 
 

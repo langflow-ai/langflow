@@ -14,7 +14,7 @@ import { useCreateEvaluation } from "@/controllers/API/queries/evaluations/use-c
 import { useGetLLMModels } from "@/controllers/API/queries/models/use-get-llm-models";
 import useAlertStore from "@/stores/alertStore";
 import BaseModal from "../baseModal";
-import MultiselectComponent from "@/components/core/parameterRenderComponent/components/multiselectComponent";
+import { Checkbox } from "@/components/ui/checkbox";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import {
@@ -40,10 +40,10 @@ interface CreateEvaluationModalProps {
 }
 
 const SCORING_METHOD_OPTIONS = [
-  "exact_match",
-  "contains",
-  "similarity",
-  "llm_judge",
+  { value: "exact_match", label: "Exact Match", icon: "Equal", description: "Output must match exactly" },
+  { value: "contains", label: "Contains", icon: "TextSearch", description: "Output must contain expected text" },
+  { value: "similarity", label: "Similarity", icon: "Percent", description: "Cosine similarity score" },
+  { value: "llm_judge", label: "LLM Judge", icon: "Brain", description: "AI-powered scoring" },
 ];
 
 const DEFAULT_LLM_JUDGE_PROMPT = `Rate how well the actual output matches the expected output on a scale from 0 to 1. Consider accuracy, completeness, and relevance. Return ONLY a decimal number between 0 and 1, nothing else.`;
@@ -235,7 +235,13 @@ export default function CreateEvaluationModal({
                 ) : datasets && datasets.length > 0 ? (
                   datasets.map((dataset) => (
                     <SelectItem key={dataset.id} value={dataset.id}>
-                      {dataset.name} ({dataset.item_count} items)
+                      <div className="flex items-center gap-2">
+                        <ForwardedIconComponent
+                          name={dataset.dataset_type === "multi_turn" ? "MessagesSquare" : "TableProperties"}
+                          className="h-4 w-4 shrink-0 text-muted-foreground"
+                        />
+                        {dataset.name} ({dataset.item_count} items)
+                      </div>
                     </SelectItem>
                   ))
                 ) : (
@@ -245,6 +251,11 @@ export default function CreateEvaluationModal({
                 )}
               </SelectContent>
             </Select>
+            {datasets?.find((d) => d.id === datasetId)?.dataset_type === "multi_turn" && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Multi-Turn dataset: turns within each conversation will share chat history
+              </p>
+            )}
           </div>
 
           {/* Scoring Methods */}
@@ -252,14 +263,39 @@ export default function CreateEvaluationModal({
             <Label>
               Scoring Methods <span className="text-destructive">*</span>
             </Label>
-            <MultiselectComponent
-              id="scoring-methods"
-              value={scoringMethods}
-              options={SCORING_METHOD_OPTIONS}
-              handleOnNewValue={({ value }) => setScoringMethods(value)}
-              disabled={false}
-              editNode={false}
-            />
+            <div className="grid grid-cols-2 gap-2">
+              {SCORING_METHOD_OPTIONS.map((method) => (
+                <label
+                  key={method.value}
+                  className={cn(
+                    "flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2.5 transition-colors",
+                    scoringMethods.includes(method.value)
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:bg-muted/50",
+                  )}
+                >
+                  <Checkbox
+                    checked={scoringMethods.includes(method.value)}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setScoringMethods([...scoringMethods, method.value]);
+                      } else {
+                        const updated = scoringMethods.filter((m) => m !== method.value);
+                        setScoringMethods(updated);
+                      }
+                    }}
+                  />
+                  <ForwardedIconComponent
+                    name={method.icon}
+                    className="h-4 w-4 text-muted-foreground"
+                  />
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium">{method.label}</span>
+                    <span className="text-xs text-muted-foreground">{method.description}</span>
+                  </div>
+                </label>
+              ))}
+            </div>
           </div>
 
           {/* LLM Judge Model - styled like Language Model component */}
@@ -420,6 +456,7 @@ export default function CreateEvaluationModal({
               disabled={!showLlmJudgeFields}
             />
           </div>
+
         </BaseModal.Content>
         <BaseModal.Footer
           submit={{

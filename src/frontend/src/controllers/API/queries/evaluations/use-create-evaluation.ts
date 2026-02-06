@@ -12,6 +12,8 @@ interface CreateEvaluationParams {
   scoring_methods: string[];
   llm_judge_prompt?: string;
   llm_judge_model?: Record<string, any>;
+  pass_metric?: string | null;
+  pass_threshold?: number;
   run_immediately?: boolean;
 }
 
@@ -33,6 +35,8 @@ export const useCreateEvaluation: useMutationFunctionType<
         scoring_methods: params.scoring_methods,
         llm_judge_prompt: params.llm_judge_prompt,
         llm_judge_model: params.llm_judge_model,
+        pass_metric: params.pass_metric,
+        pass_threshold: params.pass_threshold,
       },
     );
     queryClient.invalidateQueries({ queryKey: ["useGetEvaluations"] });

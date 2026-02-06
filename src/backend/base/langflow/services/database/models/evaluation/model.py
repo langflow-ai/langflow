@@ -43,6 +43,14 @@ class EvaluationBase(SQLModel):
         sa_column=Column(JSON),
         description="Model configuration for LLM Judge (unified model format)",
     )
+    pass_metric: str | None = Field(
+        default=None,
+        description="Scoring method for pass/fail. None = average all.",
+    )
+    pass_threshold: float = Field(
+        default=0.5,
+        description="Score threshold (>= = pass)",
+    )
 
 
 class Evaluation(EvaluationBase, table=True):  # type: ignore[call-arg]
@@ -108,6 +116,8 @@ class EvaluationCreate(SQLModel):
     scoring_methods: list[str] = ["exact_match"]
     llm_judge_prompt: str | None = None
     llm_judge_model: dict | None = None
+    pass_metric: str | None = None
+    pass_threshold: float = 0.5
 
 
 class EvaluationRead(SQLModel):
@@ -133,6 +143,8 @@ class EvaluationRead(SQLModel):
     total_runtime_ms: int | None = None
     total_flow_tokens: int | None = None
     total_llm_judge_tokens: int | None = None
+    pass_metric: str | None = None
+    pass_threshold: float = 0.5
 
 
 class EvaluationReadWithResults(EvaluationRead):
@@ -156,6 +168,7 @@ class EvaluationResultBase(SQLModel):
     order: int = Field(default=0, description="Order of the item in the dataset")
     flow_tokens: int | None = Field(default=None, description="Tokens used by the flow run")
     llm_judge_tokens: int | None = Field(default=None, description="Tokens used by LLM Judge")
+    conversation_id: str | None = Field(default=None, description="Conversation ID for multi-turn evals")
 
 
 class EvaluationResult(EvaluationResultBase, table=True):  # type: ignore[call-arg]
@@ -192,6 +205,7 @@ class EvaluationResultCreate(SQLModel):
     error: str | None = None
     order: int = 0
     dataset_item_id: UUID | None = None
+    conversation_id: str | None = None
 
 
 class EvaluationResultRead(SQLModel):
@@ -206,6 +220,7 @@ class EvaluationResultRead(SQLModel):
     passed: bool = False
     error: str | None = None
     order: int = 0
+    conversation_id: str | None = None
     created_at: datetime | None = None
     flow_tokens: int | None = None
     llm_judge_tokens: int | None = None

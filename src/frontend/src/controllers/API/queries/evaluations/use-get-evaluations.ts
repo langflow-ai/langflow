@@ -16,6 +16,7 @@ export interface EvaluationResultInfo {
   passed: boolean;
   error?: string;
   order: number;
+  conversation_id?: string;
   created_at?: string;
   flow_tokens?: number;
   llm_judge_tokens?: number;
@@ -44,6 +45,8 @@ export interface EvaluationInfo {
   total_runtime_ms?: number;
   total_flow_tokens?: number;
   total_llm_judge_tokens?: number;
+  pass_metric?: string | null;
+  pass_threshold?: number;
   results?: EvaluationResultInfo[];
 }
 

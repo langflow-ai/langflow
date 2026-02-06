@@ -128,6 +128,25 @@ export const DatasetDetailPage = () => {
     navigate("/assets/datasets");
   };
 
+  const isMultiTurn = dataset?.dataset_type === "multi_turn";
+
+  const conversationCount = isMultiTurn && dataset?.items
+    ? new Set(dataset.items.map((item) => item.conversation_id).filter(Boolean)).size
+    : 0;
+
+  // Pre-compute message range each turn sees: "0" for first, "0-2", "0-4", etc.
+  const msgRangeMap = new Map<string, string>();
+  if (isMultiTurn && dataset?.items) {
+    const convTurnCounters = new Map<string, number>();
+    for (const item of dataset.items) {
+      const convId = item.conversation_id || "default";
+      const turnNum = (convTurnCounters.get(convId) || 0) + 1;
+      convTurnCounters.set(convId, turnNum);
+      const lastIdx = (turnNum - 1) * 2;
+      msgRangeMap.set(item.id, lastIdx === 0 ? "0" : `0-${lastIdx}`);
+    }
+  }
+
   const columnDefs: ColDef[] = [
     {
       headerName: "#",
@@ -138,6 +157,31 @@ export const DatasetDetailPage = () => {
       cellClass: "text-muted-foreground",
       valueGetter: (params: any) => (params.node?.rowIndex ?? 0) + 1,
     },
+    ...(isMultiTurn
+      ? [
+          {
+            headerName: "Session",
+            field: "conversation_id",
+            width: 120,
+            sortable: false,
+            editable: false,
+            cellClass: "text-muted-foreground",
+            cellRenderer: (params: any) => {
+              const val = params.value || "-";
+              return val.length > 12 ? `${val.slice(0, 12)}...` : val;
+            },
+          } as ColDef,
+          {
+            headerName: "History",
+            field: "id",
+            width: 80,
+            sortable: false,
+            editable: false,
+            cellClass: "text-muted-foreground font-mono",
+            cellRenderer: (params: any) => msgRangeMap.get(params.data.id) ?? "-",
+          } as ColDef,
+        ]
+      : []),
     {
       headerName: "Input",
       field: "input",
@@ -238,16 +282,23 @@ export const DatasetDetailPage = () => {
                   >
                     <ForwardedIconComponent name="ArrowLeft" className="h-5 w-5" />
                   </Button>
-                  <div className="flex items-center gap-2">
-                    <ForwardedIconComponent
-                      name="Database"
-                      className="h-5 w-5 text-muted-foreground"
-                    />
-                    <h1 className="text-xl font-semibold">{dataset.name}</h1>
-                    {dataset.description && (
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-2">
+                      <ForwardedIconComponent
+                        name={isMultiTurn ? "MessagesSquare" : "TableProperties"}
+                        className="h-5 w-5 text-muted-foreground"
+                      />
+                      <h1 className="text-xl font-semibold">{dataset.name}</h1>
                       <span className="text-sm text-muted-foreground">
-                        - {dataset.description}
+                        {isMultiTurn
+                          ? `${dataset.item_count} items in ${conversationCount} conversations`
+                          : `${dataset.item_count} items`}
                       </span>
+                    </div>
+                    {dataset.description && (
+                      <p className="text-sm text-muted-foreground">
+                        {dataset.description}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -268,14 +319,6 @@ export const DatasetDetailPage = () => {
                     <ForwardedIconComponent name="Download" className="h-4 w-4" />
                     Export
                   </Button>
-                  <Button
-                    onClick={handleAddItem}
-                    className="flex items-center gap-2"
-                    disabled={createItemMutation.isPending}
-                  >
-                    <ForwardedIconComponent name="Plus" className="h-4 w-4" />
-                    Add Item
-                  </Button>
                 </div>
               </div>
 
@@ -285,7 +328,7 @@ export const DatasetDetailPage = () => {
                   {dataset.items.length === 0 ? (
                     <div className="flex h-full flex-col items-center justify-center gap-4 py-20">
                       <ForwardedIconComponent
-                        name="Database"
+                        name={isMultiTurn ? "TableProperties" : "TableProperties"}
                         className="h-12 w-12 text-muted-foreground"
                       />
                       <p className="text-lg text-muted-foreground">
@@ -316,9 +359,7 @@ export const DatasetDetailPage = () => {
                       rowHeight={60}
                       headerHeight={45}
                       cellSelection={false}
-                      tableOptions={{
-                        hide_options: true,
-                      }}
+                      addRow={handleAddItem}
                       columnDefs={columnDefs}
                       rowData={dataset.items}
                       className="ag-no-border ag-dataset-detail-table w-full"
@@ -333,11 +374,11 @@ export const DatasetDetailPage = () => {
                       }}
                     />
                   )}
-                </div>
               </div>
             </div>
           </div>
         </div>
+      </div>
       </div>
 
       <ImportCsvModal

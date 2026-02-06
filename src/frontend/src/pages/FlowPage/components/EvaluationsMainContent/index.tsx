@@ -1,7 +1,15 @@
+import { useMemo, useState } from "react";
 import IconComponent from "@/components/common/genericIconComponent";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import Loading from "@/components/ui/loading";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -19,22 +27,16 @@ interface EvaluationsMainContentProps {
   selectedEvaluationId?: string | null;
 }
 
-const getStatusBadge = (status: string) => {
-  const variants: Record<
-    string,
-    "default" | "secondary" | "destructive" | "outline"
-  > = {
-    pending: "secondary",
-    running: "default",
-    completed: "outline",
-    failed: "destructive",
-  };
-  return <Badge variant={variants[status] || "secondary"}>{status}</Badge>;
+const statusColors: Record<string, string> = {
+  pending: "text-muted-foreground",
+  running: "text-primary",
+  completed: "text-emerald-600",
+  failed: "text-destructive",
 };
 
 const formatDuration = (ms?: number) => {
   if (!ms) return "-";
-  if (ms < 1000) return `${ms}ms`;
+  if (ms < 1000) return `${Math.round(ms)}ms`;
   return `${(ms / 1000).toFixed(1)}s`;
 };
 
@@ -51,6 +53,31 @@ const formatRuntime = (ms?: number) => {
 const formatTokens = (tokens?: number) => {
   if (!tokens) return "-";
   return tokens.toLocaleString();
+};
+
+/**
+ * A cell that shows truncated text, expanding inline on click.
+ */
+const ExpandableCell = ({ text }: { text?: string | null }) => {
+  const [expanded, setExpanded] = useState(false);
+
+  if (!text) {
+    return <span className="text-muted-foreground">-</span>;
+  }
+
+  return (
+    <div
+      className={
+        expanded
+          ? "max-w-96 cursor-pointer whitespace-pre-wrap break-words py-1 text-sm"
+          : "max-w-48 cursor-pointer truncate"
+      }
+      onClick={() => setExpanded(!expanded)}
+      title={expanded ? "Click to collapse" : "Click to expand"}
+    >
+      {text}
+    </div>
+  );
 };
 
 /**
@@ -108,6 +135,42 @@ export default function EvaluationsMainContent({
     },
   });
 
+  // Interactive pass criteria — initialized from evaluation data
+  const [localPassMetric, setLocalPassMetric] = useState<string | null>(null);
+  const [localPassThreshold, setLocalPassThreshold] = useState(0.5);
+  const [criteriaInitialized, setCriteriaInitialized] = useState<string | null>(null);
+
+  // Sync local criteria when evaluation data loads / changes
+  if (evaluation && criteriaInitialized !== evaluation.id) {
+    setLocalPassMetric(evaluation.pass_metric ?? null);
+    setLocalPassThreshold(evaluation.pass_threshold ?? 0.5);
+    setCriteriaInitialized(evaluation.id);
+  }
+
+  // Recompute pass/fail per row based on local criteria
+  const recomputedResults = useMemo(() => {
+    if (!evaluation?.results) return [];
+    return evaluation.results.map((r) => {
+      let passed: boolean;
+      if (
+        localPassMetric &&
+        localPassMetric in r.scores &&
+        r.scores[localPassMetric] != null
+      ) {
+        passed = r.scores[localPassMetric] >= localPassThreshold;
+      } else {
+        const vals = Object.values(r.scores).filter(
+          (s): s is number => s != null,
+        );
+        const avg = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
+        passed = avg >= localPassThreshold;
+      }
+      return { ...r, passed };
+    });
+  }, [evaluation?.results, localPassMetric, localPassThreshold]);
+
+  const recomputedPassCount = recomputedResults.filter((r) => r.passed).length;
+
   const handleReRun = () => {
     if (selectedEvaluationId) {
       runEvaluationMutation.mutate({ evaluationId: selectedEvaluationId });
@@ -138,56 +201,120 @@ export default function EvaluationsMainContent({
     );
   }
 
+  const hasConversations = evaluation.results?.some((r) => r.conversation_id) ?? false;
+
+  // Pre-compute message range each turn sees: "0" for first, "0-2", "0-4", etc.
+  const msgRangeMap = new Map<string, string>();
+  if (hasConversations && evaluation.results) {
+    const convTurnCounters = new Map<string, number>();
+    for (const result of evaluation.results) {
+      const convId = result.conversation_id || "default";
+      const turnNum = (convTurnCounters.get(convId) || 0) + 1;
+      convTurnCounters.set(convId, turnNum);
+      const lastIdx = (turnNum - 1) * 2;
+      msgRangeMap.set(result.id, lastIdx === 0 ? "0" : `0-${lastIdx}`);
+    }
+  }
+
   const passRate =
     evaluation.total_items > 0
-      ? ((evaluation.passed_items / evaluation.total_items) * 100).toFixed(0)
+      ? ((recomputedPassCount / evaluation.total_items) * 100).toFixed(0)
       : "0";
 
+  const totalCols =
+    7 +
+    evaluation.scoring_methods.length +
+    (evaluation.scoring_methods.includes("llm_judge") ? 1 : 0) +
+    (hasConversations ? 2 : 0);
+
   return (
-    <div className="flex h-full w-full flex-col bg-background">
-      {/* Title bar */}
-      <div className="border-b border-border px-6 py-4">
-        <h2 className="text-lg font-medium">
-          {evaluation.name || `Evaluation ${evaluation.id.slice(0, 8)}`}
-        </h2>
+    <div className="flex h-full w-full flex-col bg-muted/30">
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-border bg-background px-6 py-3">
+        <div className="flex items-center gap-3">
+          <h2 className="text-sm font-semibold">
+            {evaluation.name || `Evaluation ${evaluation.id.slice(0, 8)}`}
+          </h2>
+          <span className="text-xs text-muted-foreground">&middot;</span>
+          <span className={`text-xs capitalize ${statusColors[evaluation.status] ?? "text-muted-foreground"}`}>
+            {evaluation.status}
+          </span>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleReRun}
+          disabled={
+            evaluation.status === "running" ||
+            runEvaluationMutation.isPending
+          }
+        >
+          <IconComponent name="Play" className="mr-1.5 h-3.5 w-3.5" />
+          Re-run
+        </Button>
       </div>
 
-      {/* Content area with padding */}
-      <div className="flex flex-1 flex-col gap-4 overflow-auto p-6">
-        {/* Header row with status, info, and actions */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            {getStatusBadge(evaluation.status)}
-            <span className="text-sm text-muted-foreground">
-              Dataset: <strong>{evaluation.dataset_name}</strong>
-            </span>
-            <span className="text-sm text-muted-foreground">
-              Flow: <strong>{evaluation.flow_name}</strong>
-            </span>
-            <span className="text-sm text-muted-foreground">
-              Items: <strong>{evaluation.total_items}</strong>
-            </span>
+      {/* Content */}
+      <div className="flex flex-1 flex-col gap-3 overflow-auto p-4">
+        {/* Summary cards row */}
+        <div className="flex items-stretch gap-3">
+          {/* Metadata card */}
+          <div className="flex items-center gap-6 rounded-lg border border-border bg-background px-5 py-3">
+            <div className="flex flex-col items-center">
+              <span className="text-[11px] text-muted-foreground">Dataset</span>
+              <span className="flex items-center gap-1.5 text-sm font-semibold">
+                <IconComponent name={hasConversations ? "MessagesSquare" : "TableProperties"} className="h-3.5 w-3.5 text-muted-foreground" />
+                {evaluation.dataset_name}
+              </span>
+            </div>
+            <div className="flex flex-col items-center">
+              <span className="text-[11px] text-muted-foreground">Items</span>
+              <span className="text-sm font-semibold">{evaluation.total_items}</span>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleReRun}
-              disabled={
-                evaluation.status === "running" ||
-                runEvaluationMutation.isPending
-              }
-            >
-              <IconComponent name="Play" className="mr-2 h-4 w-4" />
-              Re-run
-            </Button>
-          </div>
+
+          {/* Stats cards — only when completed */}
+          {evaluation.status === "completed" && (
+            <>
+              <div className="flex items-center gap-6 rounded-lg border border-border bg-background px-5 py-3">
+                <div className="flex flex-col items-center">
+                  <span className="text-[11px] text-muted-foreground">Mean Duration</span>
+                  <span className="text-sm font-semibold">{formatDuration(evaluation.mean_duration_ms)}</span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <span className="text-[11px] text-muted-foreground">Runtime</span>
+                  <span className="text-sm font-semibold">{formatRuntime(evaluation.total_runtime_ms)}</span>
+                </div>
+              </div>
+              {evaluation.total_flow_tokens != null && evaluation.total_flow_tokens > 0 && (
+                <div className="flex flex-col items-center justify-center rounded-lg border border-border bg-background px-5 py-3">
+                  <span className="text-[11px] text-muted-foreground">Flow Tokens</span>
+                  <span className="text-sm font-semibold">{evaluation.total_flow_tokens.toLocaleString()}</span>
+                </div>
+              )}
+              {evaluation.total_llm_judge_tokens != null && evaluation.total_llm_judge_tokens > 0 && (
+                <div className="flex flex-col items-center justify-center rounded-lg border border-border bg-background px-5 py-3">
+                  <span className="text-[11px] text-muted-foreground">Judge Tokens</span>
+                  <span className="text-sm font-semibold">{evaluation.total_llm_judge_tokens.toLocaleString()}</span>
+                </div>
+              )}
+              <div className="flex flex-col items-center justify-center rounded-lg border border-border bg-background px-5 py-3">
+                <span className="text-[11px] text-muted-foreground">Pass Rate</span>
+                <span className="text-sm font-semibold">
+                  {passRate}%
+                  <span className="ml-1 text-[11px] font-normal text-muted-foreground">
+                    ({recomputedPassCount}/{evaluation.total_items})
+                  </span>
+                </span>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Progress bar for running evaluations */}
         {evaluation.status === "running" && (
-          <div className="flex items-center gap-4">
-            <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+          <div className="flex items-center gap-3 rounded-lg border border-border bg-background px-4 py-3">
+            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
               <div
                 className="h-full bg-primary transition-all"
                 style={{
@@ -195,122 +322,159 @@ export default function EvaluationsMainContent({
                 }}
               />
             </div>
-            <span className="text-sm text-muted-foreground">
-              {evaluation.completed_items} / {evaluation.total_items}
+            <span className="text-xs text-muted-foreground">
+              {evaluation.completed_items}/{evaluation.total_items}
             </span>
-          </div>
-        )}
-
-        {/* Results Table */}
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-12">#</TableHead>
-                <TableHead>Input</TableHead>
-                <TableHead>Expected Output</TableHead>
-                <TableHead>Actual Output</TableHead>
-                <TableHead className="w-24">Duration</TableHead>
-                <TableHead className="w-28">Flow Tokens</TableHead>
-                {evaluation.scoring_methods.includes("llm_judge") && (
-                  <TableHead className="w-28">Judge Tokens</TableHead>
-                )}
-                {evaluation.scoring_methods.map((method) => (
-                  <TableHead key={method} className="w-24">
-                    {method.replace("_", " ")}
-                  </TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {evaluation.results && evaluation.results.length > 0 ? (
-                evaluation.results.map((result, idx) => (
-                  <TableRow key={result.id}>
-                    <TableCell>{idx + 1}</TableCell>
-                    <TableCell className="max-w-48 truncate">
-                      {result.input}
-                    </TableCell>
-                    <TableCell className="max-w-48 truncate">
-                      {result.expected_output}
-                    </TableCell>
-                    <TableCell className="max-w-48 truncate">
-                      {result.actual_output || (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell>{formatDuration(result.duration_ms)}</TableCell>
-                    <TableCell>{formatTokens(result.flow_tokens)}</TableCell>
-                    {evaluation.scoring_methods.includes("llm_judge") && (
-                      <TableCell>{formatTokens(result.llm_judge_tokens)}</TableCell>
-                    )}
-                    {evaluation.scoring_methods.map((method) => (
-                      <TableCell key={method}>
-                        {result.scores[method] != null
-                          ? result.scores[method].toFixed(2)
-                          : result.error
-                            ? <span className="text-destructive" title={result.error}>err</span>
-                            : "-"}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={6 + evaluation.scoring_methods.length + (evaluation.scoring_methods.includes("llm_judge") ? 1 : 0)}
-                    className="text-center text-muted-foreground"
-                  >
-                    {evaluation.status === "pending"
-                      ? "Evaluation not started yet"
-                      : evaluation.status === "running"
-                        ? "Running evaluation..."
-                        : "No results"}
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        {/* Summary Footer */}
-        {evaluation.status === "completed" && (
-          <div className="flex items-center gap-6 text-sm text-muted-foreground">
-            <span>
-              Pass Rate:{" "}
-              <strong>
-                {passRate}% ({evaluation.mean_score?.toFixed(2) || "0.00"} avg
-                score)
-              </strong>
-            </span>
-            <span>
-              Mean Duration:{" "}
-              <strong>{formatDuration(evaluation.mean_duration_ms)}</strong>
-            </span>
-            <span>
-              Runtime:{" "}
-              <strong>{formatRuntime(evaluation.total_runtime_ms)}</strong>
-            </span>
-            {evaluation.total_flow_tokens != null && evaluation.total_flow_tokens > 0 && (
-              <span>
-                Flow Tokens:{" "}
-                <strong>{evaluation.total_flow_tokens.toLocaleString()}</strong>
-              </span>
-            )}
-            {evaluation.total_llm_judge_tokens != null && evaluation.total_llm_judge_tokens > 0 && (
-              <span>
-                Judge Tokens:{" "}
-                <strong>{evaluation.total_llm_judge_tokens.toLocaleString()}</strong>
-              </span>
-            )}
           </div>
         )}
 
         {/* Error message */}
         {evaluation.error_message && (
-          <div className="rounded-md border border-destructive bg-destructive/10 p-4">
-            <p className="text-sm text-destructive">{evaluation.error_message}</p>
+          <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3">
+            <p className="text-xs text-destructive">{evaluation.error_message}</p>
           </div>
         )}
+
+        {/* Table card */}
+        <div className="flex flex-1 flex-col rounded-lg border border-border bg-background">
+          {/* Table toolbar — pass criteria */}
+          {evaluation.status === "completed" && (
+            <div className="flex items-center gap-2.5 border-b border-border px-4 py-2">
+              <span className="text-xs text-muted-foreground whitespace-nowrap">Pass when</span>
+              <Select
+                value={localPassMetric ?? "__average__"}
+                onValueChange={(v) =>
+                  setLocalPassMetric(v === "__average__" ? null : v)
+                }
+              >
+                <SelectTrigger className="h-7 w-36 text-xs focus:ring-0 focus:ring-offset-0">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__average__">Average All</SelectItem>
+                  {evaluation.scoring_methods.map((m) => (
+                    <SelectItem key={m} value={m}>
+                      {m.replace("_", " ")}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <span className="text-xs text-muted-foreground">&ge;</span>
+              <Input
+                type="number"
+                min={0}
+                max={1}
+                step={0.05}
+                value={localPassThreshold}
+                onChange={(e) =>
+                  setLocalPassThreshold(
+                    Math.min(1, Math.max(0, parseFloat(e.target.value) || 0)),
+                  )
+                }
+                className="h-7 w-16 text-xs focus:ring-0 focus:ring-offset-0 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              />
+            </div>
+          )}
+
+          {/* Table */}
+          <div className="flex-1 overflow-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="w-10 text-xs">#</TableHead>
+                  {hasConversations && (
+                    <>
+                      <TableHead className="w-24 text-xs">Session</TableHead>
+                      <TableHead className="w-16 text-xs">History</TableHead>
+                    </>
+                  )}
+                  <TableHead className="text-xs">Input</TableHead>
+                  <TableHead className="text-xs">Expected</TableHead>
+                  <TableHead className="text-xs">Actual</TableHead>
+                  <TableHead className="w-20 text-xs">Duration</TableHead>
+                  <TableHead className="w-24 text-xs">Flow Tokens</TableHead>
+                  {evaluation.scoring_methods.includes("llm_judge") && (
+                    <TableHead className="w-24 text-xs">Judge Tokens</TableHead>
+                  )}
+                  {evaluation.scoring_methods.map((method) => (
+                    <TableHead key={method} className="w-20 text-xs capitalize">
+                      {method.replace("_", " ")}
+                    </TableHead>
+                  ))}
+                  <TableHead className="w-16 text-xs">Result</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {recomputedResults.length > 0 ? (
+                  recomputedResults.map((result, idx) => {
+                    const prevConvId = idx > 0 ? recomputedResults[idx - 1].conversation_id : null;
+                    const isNewConversation = hasConversations && result.conversation_id !== prevConvId && idx > 0;
+                    return (
+                      <TableRow key={result.id} className={isNewConversation ? "border-t-2 border-border" : ""}>
+                        <TableCell className="text-xs text-muted-foreground">{idx + 1}</TableCell>
+                        {hasConversations && (
+                          <>
+                            <TableCell className="text-xs text-muted-foreground">
+                              {result.conversation_id
+                                ? result.conversation_id.length > 12
+                                  ? `${result.conversation_id.slice(0, 12)}...`
+                                  : result.conversation_id
+                                : "-"}
+                            </TableCell>
+                            <TableCell className="font-mono text-xs text-muted-foreground">
+                              {msgRangeMap.get(result.id) ?? "-"}
+                            </TableCell>
+                          </>
+                        )}
+                        <TableCell className="text-xs">
+                          <ExpandableCell text={result.input} />
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          <ExpandableCell text={result.expected_output} />
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          <ExpandableCell text={result.actual_output} />
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{formatDuration(result.duration_ms)}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{formatTokens(result.flow_tokens)}</TableCell>
+                        {evaluation.scoring_methods.includes("llm_judge") && (
+                          <TableCell className="text-xs text-muted-foreground">{formatTokens(result.llm_judge_tokens)}</TableCell>
+                        )}
+                        {evaluation.scoring_methods.map((method) => (
+                          <TableCell key={method} className="text-xs font-medium">
+                            {result.scores[method] != null
+                              ? result.scores[method].toFixed(2)
+                              : result.error
+                                ? <span className="text-destructive" title={result.error}>err</span>
+                                : "-"}
+                          </TableCell>
+                        ))}
+                        <TableCell>
+                          <span className={`text-xs font-medium ${result.passed ? "text-emerald-600" : "text-destructive"}`}>
+                            {result.passed ? "Pass" : "Fail"}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                ) : (
+                  <TableRow>
+                    <TableCell
+                      colSpan={totalCols}
+                      className="py-12 text-center text-xs text-muted-foreground"
+                    >
+                      {evaluation.status === "pending"
+                        ? "Evaluation not started yet"
+                        : evaluation.status === "running"
+                          ? "Running evaluation..."
+                          : "No results"}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
       </div>
     </div>
   );
