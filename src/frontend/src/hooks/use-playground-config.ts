@@ -7,6 +7,8 @@ import { useGetPublicConfig } from "@/controllers/API/queries/config/use-get-pub
  */
 export const usePlaygroundConfig = (playgroundPage: boolean) => {
   const { data: authConfig } = useGetConfig({ enabled: !playgroundPage });
-  const { data: publicConfig } = useGetPublicConfig({ enabled: playgroundPage });
+  const { data: publicConfig } = useGetPublicConfig({
+    enabled: playgroundPage,
+  });
   return playgroundPage ? publicConfig : authConfig;
 };
