@@ -1,9 +1,16 @@
+from __future__ import annotations
+
+import re
+from typing import TYPE_CHECKING
+
 from fastapi import HTTPException
 from pydantic import BaseModel
 
 from langflow.api.utils import get_suggestion_message
-from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.flow.utils import get_outdated_components
+
+if TYPE_CHECKING:
+    from langflow.services.database.models.flow.model import Flow
 
 
 class InvalidChatInputError(Exception):
@@ -34,13 +41,122 @@ class WorkflowServiceUnavailableError(WorkflowExecutionError):
     """Raised when the task queue service is unavailable (e.g., broker down)."""
 
 
-# create a pidantic documentation for this class
+# --------------------------------------------------------------------------- #
+# Upstream / provider error classification
+# --------------------------------------------------------------------------- #
+
+_RATE_LIMIT_PATTERNS: list[re.Pattern[str]] = [
+    re.compile(r"rate.?limit", re.IGNORECASE),
+    re.compile(r"too many requests", re.IGNORECASE),
+    re.compile(r"quota exceeded", re.IGNORECASE),
+    re.compile(r"tokens per min", re.IGNORECASE),
+    re.compile(r"requests per min", re.IGNORECASE),
+]
+
+_AUTH_PATTERNS: list[re.Pattern[str]] = [
+    re.compile(r"invalid.?api.?key", re.IGNORECASE),
+    re.compile(r"authentication", re.IGNORECASE),
+    re.compile(r"unauthorized", re.IGNORECASE),
+    re.compile(r"permission denied", re.IGNORECASE),
+    re.compile(r"access denied", re.IGNORECASE),
+    re.compile(r"Incorrect API key", re.IGNORECASE),
+]
+
+_TIMEOUT_PATTERNS: list[re.Pattern[str]] = [
+    re.compile(r"timed?\s*out", re.IGNORECASE),
+    re.compile(r"deadline.?exceeded", re.IGNORECASE),
+    re.compile(r"read timeout", re.IGNORECASE),
+    re.compile(r"connect timeout", re.IGNORECASE),
+]
+
+_CONNECTION_PATTERNS: list[re.Pattern[str]] = [
+    re.compile(r"connection.?(error|refused|reset|aborted)", re.IGNORECASE),
+    re.compile(r"name.?resolution", re.IGNORECASE),
+    re.compile(r"unreachable", re.IGNORECASE),
+]
+
+
+def _exc_status_code(exc: BaseException) -> int | None:
+    """Extract an HTTP status code from an exception if it carries one."""
+    for attr in ("status_code", "code", "http_status"):
+        val = getattr(exc, attr, None)
+        if isinstance(val, int):
+            return val
+    response = getattr(exc, "response", None)
+    if response is not None:
+        code = getattr(response, "status_code", None)
+        if isinstance(code, int):
+            return code
+    return None
+
+
+def _walk_cause_chain(exc: BaseException) -> list[BaseException]:
+    """Collect the full __cause__ / __context__ chain of an exception."""
+    chain: list[BaseException] = []
+    seen: set[int] = set()
+    current: BaseException | None = exc
+    while current is not None and id(current) not in seen:
+        chain.append(current)
+        seen.add(id(current))
+        current = current.__cause__ or current.__context__
+    return chain
+
+
+def classify_component_error(exc: BaseException) -> tuple[int, str]:
+    """Inspect an exception's cause chain and return (http_status, source).
+
+    Returns:
+        A tuple of (status_code, source) where *source* is one of:
+        ``"upstream"`` for errors originating from an external provider /
+        API, or ``"internal"`` for errors within Langflow itself.
+    """
+    chain = _walk_cause_chain(exc)
+
+    for link in chain:
+        code = _exc_status_code(link)
+        if code is not None and 400 <= code < 600:
+            if code == 429:
+                return 429, "upstream"
+            if code in {401, 403}:
+                return 502, "upstream"
+            if code == 408:
+                return 504, "upstream"
+            if 400 <= code < 500:
+                return 422, "upstream"
+            if 500 <= code < 600:
+                return 502, "upstream"
+
+    all_messages = " ".join(str(link) for link in chain)
+    cls_names = {type(link).__name__ for link in chain}
+
+    if any(p.search(all_messages) for p in _RATE_LIMIT_PATTERNS) or "RateLimitError" in cls_names:
+        return 429, "upstream"
+    if any(p.search(all_messages) for p in _AUTH_PATTERNS) or "AuthenticationError" in cls_names:
+        return 502, "upstream"
+    if any(p.search(all_messages) for p in _TIMEOUT_PATTERNS) or cls_names & {
+        "APITimeoutError",
+        "TimeoutError",
+        "ReadTimeout",
+        "ConnectTimeout",
+    }:
+        return 504, "upstream"
+    if any(p.search(all_messages) for p in _CONNECTION_PATTERNS) or cls_names & {
+        "APIConnectionError",
+        "ConnectionError",
+        "ConnectError",
+    }:
+        return 502, "upstream"
+
+    return 500, "internal"
+
+
 class ExceptionBody(BaseModel):
     message: str | list[str]
     traceback: str | list[str] | None = None
     description: str | list[str] | None = None
     code: str | None = None
     suggestion: str | list[str] | None = None
+    source: str | None = None
 
 
 class APIException(HTTPException):
@@ -49,8 +165,12 @@ class APIException(HTTPException):
         super().__init__(status_code=status_code, detail=body.model_dump_json())
 
     @staticmethod
-    def build_exception_body(exc: str | list[str] | Exception, flow: Flow | None) -> ExceptionBody:
-        body = {"message": str(exc)}
+    def build_exception_body(
+        exc: str | list[str] | Exception, flow: Flow | None, *, source: str | None = None
+    ) -> ExceptionBody:
+        body: dict = {"message": str(exc)}
+        if source is not None:
+            body["source"] = source
         if flow:
             outdated_components = get_outdated_components(flow)
             if outdated_components:

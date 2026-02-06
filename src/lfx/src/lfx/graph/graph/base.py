@@ -671,6 +671,15 @@ class Graph:
                 session_id=self.session_id,
             )
 
+    def _find_failed_vertex(self) -> str | None:
+        """Return the display name of the first vertex that failed to build."""
+        for vertex in self.vertices:
+            if vertex.built and hasattr(vertex, "result") and vertex.result is not None:
+                continue
+            if not vertex.built:
+                return vertex.display_name
+        return None
+
     def _end_all_traces_async(self, outputs: dict[str, Any] | None = None, error: Exception | None = None) -> None:
         # Subgraphs don't end traces - the parent graph owns the trace lifecycle
         if self._is_subgraph:
@@ -816,7 +825,12 @@ class Graph:
             self.increment_run_count()
         except Exception as exc:
             self._end_all_traces_async(error=exc)
-            msg = f"Error running graph: {exc}"
+            # Preserve the original exception via chaining so the API layer
+            # can inspect the root cause and return a meaningful HTTP status
+            # (e.g. 429 for rate-limit errors instead of a blanket 500).
+            failed_vertex = self._find_failed_vertex()
+            component_hint = f" (component: {failed_vertex})" if failed_vertex else ""
+            msg = f"Error running graph{component_hint}: {exc}"
             raise ValueError(msg) from exc
 
         self._end_all_traces_async()
