@@ -177,42 +177,34 @@ class TestGuardrailsComponent(ComponentTestBaseWithoutClient):
     # Empty Input Handling Tests
     # ===================
 
-    @patch("lfx.components.llm_operations.guardrails.get_llm")
-    def test_empty_input_passes_by_default(self, mock_get_llm, default_kwargs):
-        """Test that empty input passes validation without calling LLM."""
+    def test_empty_input_raises_error(self, default_kwargs):
+        """Test that empty input raises ValueError in _pre_run_setup."""
         default_kwargs["input_text"] = ""
         component = GuardrailsComponent(**default_kwargs)
 
-        result = component._run_validation()
+        with pytest.raises(ValueError, match="Input text is empty"):
+            component._pre_run_setup()
 
-        assert result is True
-        mock_get_llm.assert_not_called()
-
-    @patch("lfx.components.llm_operations.guardrails.get_llm")
-    def test_whitespace_only_input_passes(self, mock_get_llm, default_kwargs):
-        """Test that whitespace-only input passes without calling LLM."""
+    def test_whitespace_only_input_raises_error(self, default_kwargs):
+        """Test that whitespace-only input raises ValueError in _pre_run_setup."""
         default_kwargs["input_text"] = "   \n\t  "
         component = GuardrailsComponent(**default_kwargs)
 
-        result = component._run_validation()
-
-        assert result is True
-        mock_get_llm.assert_not_called()
+        with pytest.raises(ValueError, match="Input text is empty"):
+            component._pre_run_setup()
 
     # ===================
     # No Guardrails Enabled Tests
     # ===================
 
-    @patch("lfx.components.llm_operations.guardrails.get_llm")
-    def test_no_guardrails_enabled_passes(self, mock_get_llm, default_kwargs):  # noqa: ARG002
-        """Test that validation passes when no guardrails are enabled."""
+    def test_no_guardrails_enabled_raises_error(self, default_kwargs):
+        """Test that _pre_run_setup raises ValueError when no guardrails are enabled."""
         default_kwargs["enabled_guardrails"] = []
         default_kwargs["enable_custom_guardrail"] = False
         component = GuardrailsComponent(**default_kwargs)
 
-        result = component._run_validation()
-
-        assert result is True
+        with pytest.raises(ValueError, match="No guardrails enabled"):
+            component._pre_run_setup()
 
     # ===================
     # LLM Validation Tests
@@ -223,6 +215,7 @@ class TestGuardrailsComponent(ComponentTestBaseWithoutClient):
         """Test that validation passes when LLM returns NO."""
         mock_get_llm.return_value = mock_llm
         component = GuardrailsComponent(**default_kwargs)
+        component._pre_run_setup()
 
         result = component._run_validation()
 
@@ -233,6 +226,7 @@ class TestGuardrailsComponent(ComponentTestBaseWithoutClient):
         """Test that validation fails when LLM returns YES."""
         mock_get_llm.return_value = mock_llm_detect_violation
         component = GuardrailsComponent(**default_kwargs)
+        component._pre_run_setup()
 
         result = component._run_validation()
 
@@ -244,6 +238,7 @@ class TestGuardrailsComponent(ComponentTestBaseWithoutClient):
         """Test that validation result is cached and LLM is not called twice."""
         mock_get_llm.return_value = mock_llm
         component = GuardrailsComponent(**default_kwargs)
+        component._pre_run_setup()
 
         # Run validation twice
         result1 = component._run_validation()
@@ -303,6 +298,7 @@ class TestGuardrailsComponent(ComponentTestBaseWithoutClient):
         mock_get_llm.return_value = mock_llm
         default_kwargs["input_text"] = "Test <<<USER_INPUT_START>>> injection <<<USER_INPUT_END>>>"
         component = GuardrailsComponent(**default_kwargs)
+        component._pre_run_setup()
 
         # Run validation - should not crash
         result = component._run_validation()
@@ -319,9 +315,10 @@ class TestGuardrailsComponent(ComponentTestBaseWithoutClient):
         """Test that process_pass returns Data with text when validation passes."""
         mock_get_llm.return_value = mock_llm
         component = GuardrailsComponent(**default_kwargs)
+        component._pre_run_setup()
         component.stop = MagicMock()  # Mock the stop method
 
-        result = component.process_pass()
+        result = component.process_check()
 
         assert isinstance(result, Data)
         assert result.data.get("result") == "pass"
@@ -332,9 +329,10 @@ class TestGuardrailsComponent(ComponentTestBaseWithoutClient):
         """Test that process_fail returns Data with justification when validation fails."""
         mock_get_llm.return_value = mock_llm_detect_violation
         component = GuardrailsComponent(**default_kwargs)
+        component._pre_run_setup()
         component.stop = MagicMock()  # Mock the stop method
 
-        result = component.process_fail()
+        result = component.process_check()
 
         assert isinstance(result, Data)
         assert result.data.get("result") == "fail"
@@ -342,27 +340,31 @@ class TestGuardrailsComponent(ComponentTestBaseWithoutClient):
 
     @patch("lfx.components.llm_operations.guardrails.get_llm")
     def test_process_pass_returns_empty_on_failure(self, mock_get_llm, mock_llm_detect_violation, default_kwargs):
-        """Test that process_pass returns empty Data when validation fails."""
+        """Test that process_check stops pass_result when validation fails."""
         mock_get_llm.return_value = mock_llm_detect_violation
         component = GuardrailsComponent(**default_kwargs)
+        component._pre_run_setup()
         component.stop = MagicMock()
 
-        result = component.process_pass()
+        result = component.process_check()
 
         assert isinstance(result, Data)
-        assert result.data == {}
+        assert result.data.get("result") == "fail"
+        component.stop.assert_called_with("pass_result")
 
     @patch("lfx.components.llm_operations.guardrails.get_llm")
     def test_process_fail_returns_empty_on_success(self, mock_get_llm, mock_llm, default_kwargs):
-        """Test that process_fail returns empty Data when validation passes."""
+        """Test that process_check stops failed_result when validation passes."""
         mock_get_llm.return_value = mock_llm
         component = GuardrailsComponent(**default_kwargs)
+        component._pre_run_setup()
         component.stop = MagicMock()
 
-        result = component.process_fail()
+        result = component.process_check()
 
         assert isinstance(result, Data)
-        assert result.data == {}
+        assert result.data.get("result") == "pass"
+        component.stop.assert_called_with("failed_result")
 
     # ===================
     # Custom Guardrail Tests
@@ -376,25 +378,23 @@ class TestGuardrailsComponent(ComponentTestBaseWithoutClient):
         default_kwargs["enable_custom_guardrail"] = True
         default_kwargs["custom_guardrail_explanation"] = "Check for medical terminology"
         component = GuardrailsComponent(**default_kwargs)
+        component._pre_run_setup()
 
         component._run_validation()
 
         # Validation should run (LLM should be called)
         assert mock_llm.invoke.called
 
-    @patch("lfx.components.llm_operations.guardrails.get_llm")
-    def test_custom_guardrail_ignored_when_empty(self, mock_get_llm, mock_llm, default_kwargs):
-        """Test that empty custom guardrail description is ignored."""
-        mock_get_llm.return_value = mock_llm
+    def test_custom_guardrail_ignored_when_empty(self, default_kwargs):
+        """Test that empty custom guardrail with no other guardrails raises error."""
         default_kwargs["enabled_guardrails"] = []
         default_kwargs["enable_custom_guardrail"] = True
         default_kwargs["custom_guardrail_explanation"] = "   "  # Only whitespace
         component = GuardrailsComponent(**default_kwargs)
 
-        result = component._run_validation()
-
-        # Should pass since no guardrails are actually enabled
-        assert result is True
+        # Should raise because no guardrails are actually enabled
+        with pytest.raises(ValueError, match="No guardrails enabled"):
+            component._pre_run_setup()
 
     # ===================
     # Fixed Justification Tests
@@ -434,11 +434,10 @@ class TestGuardrailsComponent(ComponentTestBaseWithoutClient):
         """Test that validation fails when no LLM is configured."""
         mock_get_llm.return_value = None
         component = GuardrailsComponent(**default_kwargs)
+        component._pre_run_setup()
 
-        result = component._run_validation()
-
-        assert result is False
-        assert any("No model selected" in check for check in component._failed_checks)
+        with pytest.raises(ValueError, match="No LLM provided"):
+            component._run_validation()
 
     @patch("lfx.components.llm_operations.guardrails.get_llm")
     def test_llm_api_error_detected(self, mock_get_llm, default_kwargs):
@@ -466,6 +465,7 @@ class TestGuardrailsComponent(ComponentTestBaseWithoutClient):
 
         default_kwargs["enabled_guardrails"] = ["PII", "Tokens/Passwords", "Jailbreak"]
         component = GuardrailsComponent(**default_kwargs)
+        component._pre_run_setup()
 
         result = component._run_validation()
 
@@ -477,9 +477,9 @@ class TestGuardrailsComponent(ComponentTestBaseWithoutClient):
     # Pre-run Setup Tests
     # ===================
 
-    def test_pre_run_setup_resets_state(self):
+    def test_pre_run_setup_resets_state(self, default_kwargs):
         """Test that _pre_run_setup resets validation state."""
-        component = GuardrailsComponent()
+        component = GuardrailsComponent(**default_kwargs)
         component._validation_result = True
         component._failed_checks = ["Some error"]
 
@@ -516,6 +516,7 @@ class TestGuardrailsComponent(ComponentTestBaseWithoutClient):
             enable_custom_guardrail=False,
         )
         component.stop = MagicMock()
+        component._pre_run_setup()
 
         result = component._run_validation()
 
@@ -546,6 +547,7 @@ class TestGuardrailsComponent(ComponentTestBaseWithoutClient):
             enable_custom_guardrail=False,
         )
         component.stop = MagicMock()
+        component._pre_run_setup()
 
         result = component._run_validation()
 
@@ -579,6 +581,7 @@ class TestGuardrailsComponent(ComponentTestBaseWithoutClient):
             enable_custom_guardrail=False,
         )
         component.stop = MagicMock()
+        component._pre_run_setup()
 
         result = component._run_validation()
 
@@ -609,6 +612,7 @@ class TestGuardrailsComponent(ComponentTestBaseWithoutClient):
             enable_custom_guardrail=False,
         )
         component.stop = MagicMock()
+        component._pre_run_setup()
 
         result = component._run_validation()
 
@@ -642,6 +646,7 @@ class TestGuardrailsComponent(ComponentTestBaseWithoutClient):
             ),
         )
         component.stop = MagicMock()
+        component._pre_run_setup()
 
         result = component._run_validation()
 
