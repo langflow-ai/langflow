@@ -67,7 +67,7 @@ class SplitTextComponent(Component):
             name="clean_output",
             display_name="Clean Output",
             info="When enabled, only the text column is included in the output. Metadata columns are removed.",
-            value=True,
+            value=False,
             advanced=True,
         ),
     ]
