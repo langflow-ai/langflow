@@ -4,13 +4,21 @@ import { useShallow } from "zustand/react/shallow";
 import langflowAssistantIcon from "@/assets/langflow_assistant.svg";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
-import FlowLogsModal from "@/modals/flowLogsModal";
+import { Separator } from "@/components/ui/separator";
 import useAssistantManagerStore from "@/stores/assistantManagerStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
 import CanvasControlsDropdown from "./CanvasControlsDropdown";
+import HelpDropdown from "./HelpDropdown";
+import { AllNodeType } from "@/types/flow";
 
-const CanvasControls = ({ children }: { children?: ReactNode }) => {
+const CanvasControls = ({
+  children,
+  selectedNode,
+}: {
+  children?: ReactNode;
+  selectedNode: AllNodeType | null;
+}) => {
   const reactFlowStoreApi = useStoreApi();
   const isFlowLocked = useFlowStore(
     useShallow((state) => state.currentFlow?.locked),
@@ -60,19 +68,6 @@ const CanvasControls = ({ children }: { children?: ReactNode }) => {
           />
         </Button>
       </div>
-      <FlowLogsModal>
-        <Button
-          unstyled
-          size="icon"
-          className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted"
-          title="Logs"
-        >
-          <ForwardedIconComponent
-            name="Terminal"
-            className="h-[18px] w-[18px] text-muted-foreground"
-          />
-        </Button>
-      </FlowLogsModal>
       <Button
         unstyled
         size="icon"
@@ -97,7 +92,11 @@ const CanvasControls = ({ children }: { children?: ReactNode }) => {
           className="h-[18px] w-[18px] text-muted-foreground"
         />
       </Button>
-      <CanvasControlsDropdown />
+      <CanvasControlsDropdown selectedNode={selectedNode} />
+      <span>
+        <Separator orientation="vertical" />
+      </span>
+      <HelpDropdown />
       {children}
     </Panel>
   );

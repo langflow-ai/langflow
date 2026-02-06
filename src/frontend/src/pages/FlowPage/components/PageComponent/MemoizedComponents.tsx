@@ -13,6 +13,7 @@ import useFlowStore from "@/stores/flowStore";
 import { cn } from "@/utils/utils";
 import { useSearchContext } from "../flowSidebarComponent";
 import { NAV_ITEMS } from "../flowSidebarComponent/components/sidebarSegmentedNav";
+import { AllNodeType } from "@/types/flow";
 
 export const MemoizedBackground = memo(() => (
   <Background size={2} gap={20} className="" />
@@ -22,6 +23,7 @@ interface MemoizedCanvasControlsProps {
   setIsAddingNote: (value: boolean) => void;
   shadowBoxWidth: number;
   shadowBoxHeight: number;
+  selectedNode: AllNodeType | null;
 }
 
 export const MemoizedCanvasControls = memo(
@@ -29,6 +31,7 @@ export const MemoizedCanvasControls = memo(
     setIsAddingNote,
     shadowBoxWidth,
     shadowBoxHeight,
+    selectedNode,
   }: MemoizedCanvasControlsProps) => {
     const currentFlow = useFlowStore(useShallow((state) => state.currentFlow));
     const setCurrentFlow = useFlowStore((state) => state.setCurrentFlow);
@@ -44,7 +47,7 @@ export const MemoizedCanvasControls = memo(
     }, [currentFlow, isLocked, saveFlow, setCurrentFlow]);
 
     return (
-      <CanvasControls>
+      <CanvasControls selectedNode={selectedNode}>
         <Button
           unstyled
           size="icon"
