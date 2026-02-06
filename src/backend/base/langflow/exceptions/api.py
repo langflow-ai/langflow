@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from http import HTTPStatus
 from typing import TYPE_CHECKING
 
 from fastapi import HTTPException
@@ -102,6 +103,22 @@ def _walk_cause_chain(exc: BaseException) -> list[BaseException]:
     return chain
 
 
+# SDK-specific timeout class names that are unambiguously from an upstream
+# provider.  Built-in ``TimeoutError`` / ``asyncio.TimeoutError`` are
+# intentionally excluded because they can be raised by Langflow's own
+# internal task management and do not indicate an upstream failure.
+_SDK_TIMEOUT_CLASSES: set[str] = {"APITimeoutError", "ReadTimeout", "ConnectTimeout"}
+
+# Attributes that indicate an exception originated from an HTTP SDK rather
+# than from internal Python / asyncio code.
+_UPSTREAM_INDICATOR_ATTRS: tuple[str, ...] = ("response", "headers", "request", "metadata")
+
+
+def _has_upstream_indicator(exc: BaseException) -> bool:
+    """Return True if *exc* carries attributes typical of an HTTP SDK error."""
+    return any(getattr(exc, attr, None) is not None for attr in _UPSTREAM_INDICATOR_ATTRS)
+
+
 def classify_component_error(exc: BaseException) -> tuple[int, str]:
     """Inspect an exception's cause chain and return (http_status, source).
 
@@ -112,42 +129,49 @@ def classify_component_error(exc: BaseException) -> tuple[int, str]:
     """
     chain = _walk_cause_chain(exc)
 
+    # --- Phase 1: look for an explicit HTTP status code on the exception ---
     for link in chain:
         code = _exc_status_code(link)
-        if code is not None and 400 <= code < 600:
-            if code == 429:
-                return 429, "upstream"
-            if code in {401, 403}:
-                return 502, "upstream"
-            if code == 408:
-                return 504, "upstream"
-            if 400 <= code < 500:
-                return 422, "upstream"
-            if 500 <= code < 600:
-                return 502, "upstream"
+        if code is None:
+            continue
+        if code == HTTPStatus.TOO_MANY_REQUESTS:
+            return HTTPStatus.TOO_MANY_REQUESTS, "upstream"
+        if code in {HTTPStatus.UNAUTHORIZED, HTTPStatus.FORBIDDEN}:
+            return HTTPStatus.BAD_GATEWAY, "upstream"
+        if code == HTTPStatus.REQUEST_TIMEOUT:
+            return HTTPStatus.GATEWAY_TIMEOUT, "upstream"
+        if HTTPStatus.BAD_REQUEST <= code < HTTPStatus.INTERNAL_SERVER_ERROR:
+            return HTTPStatus.UNPROCESSABLE_ENTITY, "upstream"
+        if HTTPStatus.INTERNAL_SERVER_ERROR <= code < 600:  # noqa: PLR2004
+            return HTTPStatus.BAD_GATEWAY, "upstream"
 
+    # --- Phase 2: heuristic pattern / class-name matching -----------------
     all_messages = " ".join(str(link) for link in chain)
     cls_names = {type(link).__name__ for link in chain}
 
     if any(p.search(all_messages) for p in _RATE_LIMIT_PATTERNS) or "RateLimitError" in cls_names:
-        return 429, "upstream"
+        return HTTPStatus.TOO_MANY_REQUESTS, "upstream"
     if any(p.search(all_messages) for p in _AUTH_PATTERNS) or "AuthenticationError" in cls_names:
-        return 502, "upstream"
-    if any(p.search(all_messages) for p in _TIMEOUT_PATTERNS) or cls_names & {
-        "APITimeoutError",
-        "TimeoutError",
-        "ReadTimeout",
-        "ConnectTimeout",
-    }:
-        return 504, "upstream"
+        return HTTPStatus.BAD_GATEWAY, "upstream"
+
+    # Timeout: only classify as upstream when the exception is from an SDK
+    # (has response/request/headers) or uses an SDK-specific class name.
+    # Plain ``TimeoutError`` / ``asyncio.TimeoutError`` are internal.
+    if cls_names & _SDK_TIMEOUT_CLASSES:
+        return HTTPStatus.GATEWAY_TIMEOUT, "upstream"
+    if any(p.search(all_messages) for p in _TIMEOUT_PATTERNS) and any(
+        _has_upstream_indicator(link) for link in chain
+    ):
+        return HTTPStatus.GATEWAY_TIMEOUT, "upstream"
+
     if any(p.search(all_messages) for p in _CONNECTION_PATTERNS) or cls_names & {
         "APIConnectionError",
         "ConnectionError",
         "ConnectError",
     }:
-        return 502, "upstream"
+        return HTTPStatus.BAD_GATEWAY, "upstream"
 
-    return 500, "internal"
+    return HTTPStatus.INTERNAL_SERVER_ERROR, "internal"
 
 
 class ExceptionBody(BaseModel):

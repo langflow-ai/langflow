@@ -533,7 +533,7 @@ async def _run_flow_internal(
         # Inspect the exception cause chain to determine if this is an
         # upstream provider error (e.g. 429 rate-limit) rather than an
         # internal failure, and return the appropriate HTTP status code.
-        upstream_status, error_source = classify_component_error(exc)
+        upstream_status, _error_source = classify_component_error(exc)
         raise APIException(
             status_code=upstream_status, exception=exc, flow=flow
         ) from exc
@@ -550,7 +550,7 @@ async def _run_flow_internal(
                 run_id=run_id,
             ),
         )
-        upstream_status, error_source = classify_component_error(exc)
+        upstream_status, _error_source = classify_component_error(exc)
         raise APIException(
             status_code=upstream_status, exception=exc, flow=flow
         ) from exc
