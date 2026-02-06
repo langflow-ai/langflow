@@ -129,7 +129,7 @@ class CodeInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMix
 
 
 class ModelInput(BaseInputMixin, ModelInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMixin):
-    """Represents a model input field with optional LanguageModel connection support.
+    """Represents a model input field with optional model connection support.
 
     By default:
     - input_types=[] (no handle shown)
@@ -137,7 +137,9 @@ class ModelInput(BaseInputMixin, ModelInputMixin, ListableInputMixin, InputTrace
     - refresh_button=True
 
     When "Connect other models" is selected (value="connect_other_models"):
-    - input_types is set to ["LanguageModel"] to show the connection handle
+    - input_types is set based on model_type:
+      - "embedding" -> ["Embeddings"]
+      - "language" (default) -> ["LanguageModel"]
 
     Value format:
     - Can be a list of dicts: [{'name': 'gpt-4o', 'provider': 'OpenAI', ...}]
@@ -210,34 +212,17 @@ class ModelInput(BaseInputMixin, ModelInputMixin, ListableInputMixin, InputTrace
 
     @model_validator(mode="after")
     def set_defaults(self):
-        """Handle connection mode and set defaults.
+        """Set default input_types based on model_type.
 
-        When value is "connect_other_models", set input_types to ["LanguageModel"]
-        to enable the connection handle. Otherwise, keep input_types empty.
+        Always set input_types to enable connection handles:
+        - "embedding" -> ["Embeddings"]
+        - "language" (default) -> ["LanguageModel"]
         """
-        # Check if we're in connection mode (user selected "Connect other models")
-        if self.value == "connect_other_models" and not self.input_types:
-            # Enable connection handle by setting input_types
-            # Use object.__setattr__ to avoid triggering validation recursion
-            object.__setattr__(self, "input_types", ["LanguageModel"])
+        # Always set input_types based on model_type if not explicitly provided
+        if not self.input_types:
+            default_input_type = "Embeddings" if self.model_type == "embedding" else "LanguageModel"
+            object.__setattr__(self, "input_types", [default_input_type])
 
-        # Set external_options if not explicitly provided
-        if self.external_options is None or len(self.external_options) == 0:
-            object.__setattr__(
-                self,
-                "external_options",
-                {
-                    "fields": {
-                        "data": {
-                            "node": {
-                                "name": "connect_other_models",
-                                "display_name": "Connect other models",
-                                "icon": "CornerDownLeft",
-                            }
-                        }
-                    },
-                },
-            )
         return self
 
 

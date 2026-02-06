@@ -49,7 +49,7 @@ export default function OutputComponent({
   const singleOutput = displayProxy(
     <span
       className={cn(
-        "px-2 py-1 text-[13px] font-medium",
+        "px-2 py-1 text-sm font-medium",
         isToolMode && "text-secondary",
         frozen ? "text-ice" : "",
       )}
@@ -79,7 +79,7 @@ export default function OutputComponent({
               className="no-focus-visible group flex items-center gap-2"
               data-testid={`dropdown-output-${outputName?.toLowerCase()}`}
             >
-              <div className="flex items-center gap-1 truncate rounded-md px-2 py-1 text-[13px] font-medium group-hover:bg-primary/10">
+              <div className="flex items-center gap-1 truncate rounded-md px-2 py-1 text-sm font-medium group-hover:bg-primary/10">
                 {name}
                 <ForwardedIconComponent
                   name="ChevronDown"

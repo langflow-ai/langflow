@@ -29,14 +29,13 @@ withEventDeliveryModes(
       .last()
       .click();
 
-    await adjustScreenView(page);
-
     await initialGPTsetup(page);
 
     //* TODO: Remove these 3 steps once the template is updated *//
     await page
       .getByTestId("handle-structuredoutput-shownode-structured output-right")
       .click();
+
     await page
       .getByTestId("handle-parser-shownode-data or dataframe-left")
       .click();
