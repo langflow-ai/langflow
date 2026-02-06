@@ -44,6 +44,7 @@ import NoResultsMessage from "./components/emptySearchComponent";
 import EvaluationsSidebarGroup from "./components/EvaluationsSidebarGroup";
 import LogsSidebarGroup from "./components/LogsSidebarGroup";
 import McpSidebarGroup from "./components/McpSidebarGroup";
+import SavedComponentsSidebarGroup from "./components/SavedComponentsSidebarGroup";
 import MessagesSidebarGroup from "./components/MessagesSidebarGroup";
 import MemoizedSidebarGroup from "./components/sidebarBundles";
 import SidebarMenuButtons from "./components/sidebarFooterButtons";
@@ -160,6 +161,8 @@ interface FlowSidebarComponentProps {
   onLogsTabChange?: (tab: LogsTab) => void;
   selectedRunId?: string | null;
   onSelectRun?: (runId: string | null) => void;
+  selectedTraceId?: string | null;
+  onSelectTrace?: (traceId: string | null) => void;
   // Evaluations state
   selectedEvaluationId?: string | null;
   onSelectEvaluation?: (id: string | null) => void;
@@ -173,6 +176,8 @@ export function FlowSidebarComponent({
   onLogsTabChange,
   selectedRunId,
   onSelectRun,
+  selectedTraceId,
+  onSelectTrace,
   selectedEvaluationId,
   onSelectEvaluation,
 }: FlowSidebarComponentProps) {
@@ -625,6 +630,7 @@ export function FlowSidebarComponent({
   const showLogs = ENABLE_NEW_SIDEBAR && activeSection === "logs";
   const showMessages = ENABLE_NEW_SIDEBAR && activeSection === "messages";
   const showEvaluations = ENABLE_NEW_SIDEBAR && activeSection === "evaluations";
+  const showSaved = ENABLE_NEW_SIDEBAR && activeSection === "saved";
 
   const [category, component] = getFilterComponent?.split(".") ?? ["", ""];
 
@@ -692,6 +698,8 @@ export function FlowSidebarComponent({
                 onTabChange={onLogsTabChange ?? (() => {})}
                 selectedRunId={selectedRunId ?? null}
                 onSelectRun={onSelectRun ?? (() => {})}
+                selectedTraceId={selectedTraceId ?? null}
+                onSelectTrace={onSelectTrace ?? (() => {})}
               />
             ) : showMessages ? (
               <MessagesSidebarGroup
@@ -703,6 +711,8 @@ export function FlowSidebarComponent({
                 selectedEvaluationId={selectedEvaluationId ?? null}
                 onSelectEvaluation={onSelectEvaluation ?? (() => {})}
               />
+            ) : showSaved ? (
+              <SavedComponentsSidebarGroup onDragStart={onDragStart} />
             ) : isLoading ? (
               <div className="flex flex-col gap-2">
                 <div className="flex flex-col gap-1 p-3">
@@ -804,7 +814,8 @@ export function FlowSidebarComponent({
           {(ENABLE_NEW_SIDEBAR && activeSection === "mcp" && !hasMcpServers) ||
           showLogs ||
           showMessages ||
-          showEvaluations ? null : (
+          showEvaluations ||
+          showSaved ? null : (
             <SidebarFooter className="border-t group-data-[collapsible=icon]:hidden p-1 gap-1">
               <SidebarMenuButtons
                 customComponent={customComponent}

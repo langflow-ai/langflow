@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import IconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
+import { Loading } from "@/components/ui/loading";
 import { useGetTransactionsQuery } from "@/controllers/API/queries/transactions";
 import { useGetTracesQuery } from "@/controllers/API/queries/traces";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
@@ -10,6 +11,7 @@ import { TraceView } from "@/modals/flowLogsModal/components/TraceView";
 interface TracesDetailViewProps {
   flowId: string;
   initialRunId?: string | null;
+  initialTraceId?: string | null;
 }
 
 /**
@@ -74,7 +76,7 @@ function RunDetailsFallback({ runId }: { runId: string }) {
     return (
       <div className="flex h-full items-center justify-center">
         <div className="flex flex-col items-center gap-2 text-muted-foreground">
-          <IconComponent name="Loader2" className="h-8 w-8 animate-spin" />
+          <Loading size={32} className="text-primary" />
           <span className="text-sm">Loading...</span>
         </div>
       </div>
@@ -155,20 +157,30 @@ function RunDetailsFallback({ runId }: { runId: string }) {
 export function TracesDetailView({
   flowId,
   initialRunId,
+  initialTraceId,
 }: TracesDetailViewProps) {
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
 
-  // Check if traces API has data
+  // Check if traces API has data (only needed when no specific trace is selected)
   const { data: tracesData, isLoading, isError } = useGetTracesQuery(
     { flowId: currentFlowId ?? null, params: { page: 1, size: 10 } },
     {
-      enabled: !!currentFlowId,
+      enabled: !!currentFlowId && !initialTraceId,
       retry: 0, // Don't retry - backend has timeout handling
       staleTime: 30000, // Consider data stale after 30s
     },
   );
 
   const hasTraces = tracesData?.traces && tracesData.traces.length > 0;
+
+  // If a specific trace is selected, render TraceView directly
+  if (initialTraceId) {
+    return (
+      <div className="h-full w-full">
+        <TraceView flowId={currentFlowId} initialTraceId={initialTraceId} />
+      </div>
+    );
+  }
 
   // No run selected
   if (!initialRunId) {

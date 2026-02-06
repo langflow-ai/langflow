@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import IconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
+import { Loading } from "@/components/ui/loading";
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -9,7 +10,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useGetTransactionsQuery } from "@/controllers/API/queries/transactions";
+import { useGetTracesQuery } from "@/controllers/API/queries/traces";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { cn } from "@/utils/utils";
 
@@ -20,6 +21,8 @@ interface LogsSidebarGroupProps {
   onTabChange: (tab: LogsTab) => void;
   selectedRunId: string | null;
   onSelectRun: (runId: string | null) => void;
+  selectedTraceId: string | null;
+  onSelectTrace: (traceId: string | null) => void;
 }
 
 /**
@@ -44,31 +47,28 @@ const LogsSidebarGroup = ({
   onTabChange,
   selectedRunId,
   onSelectRun,
+  selectedTraceId,
+  onSelectTrace,
 }: LogsSidebarGroupProps) => {
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
 
-  // Fetch transactions for run list (only needed for Traces tab)
-  const { data: transactionsData, isLoading } = useGetTransactionsQuery({
-    id: currentFlowId,
-    params: { page: 1, size: 50 },
-    mode: "union",
-  });
+  // Fetch traces for Traces tab
+  const { data: tracesData, isLoading } = useGetTracesQuery(
+    { flowId: currentFlowId ?? null, params: { page: 1, size: 50 } },
+    { enabled: !!currentFlowId && activeTab === "traces" },
+  );
 
-  // Sort runs by timestamp (newest first)
-  const runs = useMemo(() => {
-    if (!transactionsData?.rows) return [];
-    return [...transactionsData.rows].sort(
-      (a, b) =>
-        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
-    );
-  }, [transactionsData]);
+  // Traces list (already sorted by backend - newest first)
+  const traces = useMemo(() => {
+    return tracesData?.traces ?? [];
+  }, [tracesData]);
 
-  // Auto-select first run when switching to Traces tab
+  // Auto-select first trace when switching to Traces tab
   useEffect(() => {
-    if (activeTab === "traces" && runs.length > 0 && !selectedRunId) {
-      onSelectRun(runs[0].id || runs[0].vertex_id);
+    if (activeTab === "traces" && traces.length > 0 && !selectedTraceId) {
+      onSelectTrace(traces[0].id);
     }
-  }, [activeTab, runs, selectedRunId, onSelectRun]);
+  }, [activeTab, traces, selectedTraceId, onSelectTrace]);
 
   return (
     <SidebarGroup className="flex h-full flex-col p-3 pr-2">
@@ -106,7 +106,7 @@ const LogsSidebarGroup = ({
             </p>
           </div>
         ) : (
-          // Traces tab: Show run selector
+          // Traces tab: Show trace selector
           <>
             <div className="mb-2 px-1 text-xs font-medium text-muted-foreground">
               Select a run
@@ -114,43 +114,39 @@ const LogsSidebarGroup = ({
 
             {isLoading && (
               <div className="flex items-center justify-center py-8">
-                <IconComponent
-                  name="Loader2"
-                  className="h-5 w-5 animate-spin text-muted-foreground"
-                />
+                <Loading size={20} className="text-muted-foreground" />
               </div>
             )}
 
-            {!isLoading && runs.length === 0 && (
+            {!isLoading && traces.length === 0 && (
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <IconComponent
                   name="Activity"
                   className="mb-2 h-8 w-8 text-muted-foreground opacity-50"
                 />
-                <p className="text-sm text-muted-foreground">No runs yet</p>
+                <p className="text-sm text-muted-foreground">No traces yet</p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   Run your flow to see traces
                 </p>
               </div>
             )}
 
-            {!isLoading && runs.length > 0 && (
+            {!isLoading && traces.length > 0 && (
               <SidebarMenu>
-                {runs.map((run, idx) => {
-                  const runId = run.id || run.vertex_id;
-                  const isSelected = selectedRunId === runId;
+                {traces.map((trace, idx) => {
+                  const isSelected = selectedTraceId === trace.id;
                   return (
-                    <SidebarMenuItem key={runId}>
+                    <SidebarMenuItem key={trace.id}>
                       <div
                         className={cn(
                           "flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors hover:bg-muted/50",
                           isSelected && "bg-muted",
                         )}
-                        onClick={() => onSelectRun(runId)}
+                        onClick={() => onSelectTrace(trace.id)}
                       >
                         <Badge
                           variant={
-                            run.status === "error"
+                            trace.status === "error"
                               ? "errorStatic"
                               : "successStatic"
                           }
@@ -158,15 +154,15 @@ const LogsSidebarGroup = ({
                           className="h-5 w-5 shrink-0 p-0"
                         >
                           <IconComponent
-                            name={run.status === "error" ? "X" : "Check"}
+                            name={trace.status === "error" ? "X" : "Check"}
                             className="h-3 w-3"
                           />
                         </Badge>
                         <span className="flex-1 font-mono text-xs">
-                          {runId.slice(0, 8)}
+                          {trace.id.slice(0, 8)}
                         </span>
                         <span className="text-xs text-muted-foreground">
-                          {formatTime(run.timestamp)}
+                          {formatTime(trace.startTime)}
                         </span>
                         {idx === 0 && (
                           <Badge variant="outline" size="xq" className="ml-1">

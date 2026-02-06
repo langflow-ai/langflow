@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import IconComponent from "@/components/common/genericIconComponent";
+import { Loading } from "@/components/ui/loading";
 import { cn } from "@/utils/utils";
 import type { Span, Trace } from "./types";
 import { SpanTree } from "./SpanTree";
@@ -8,6 +9,7 @@ import { useGetTracesQuery, useGetTraceQuery } from "@/controllers/API/queries/t
 
 interface TraceViewProps {
   flowId?: string | null;
+  initialTraceId?: string | null;
 }
 
 /**
@@ -31,22 +33,30 @@ function formatTotalLatency(ms: number): string {
  * Main TraceView component showing hierarchical execution traces
  * Split panel layout: span tree on left, detail panel on right
  */
-export function TraceView({ flowId }: TraceViewProps) {
-  const [selectedTraceId, setSelectedTraceId] = useState<string | null>(null);
+export function TraceView({ flowId, initialTraceId }: TraceViewProps) {
+  const [selectedTraceId, setSelectedTraceId] = useState<string | null>(initialTraceId ?? null);
   const [selectedSpan, setSelectedSpan] = useState<Span | null>(null);
 
-  // Fetch list of traces for this flow
+  // Sync selectedTraceId when initialTraceId changes (user clicks different trace in sidebar)
+  useEffect(() => {
+    if (initialTraceId) {
+      setSelectedTraceId(initialTraceId);
+      setSelectedSpan(null);
+    }
+  }, [initialTraceId]);
+
+  // Fetch list of traces for this flow (only needed as fallback if no initialTraceId)
   const { data: tracesData, isLoading: isLoadingTraces } = useGetTracesQuery(
     { flowId: flowId ?? null, params: { page: 1, size: 10 } },
-    { enabled: !!flowId },
+    { enabled: !!flowId && !initialTraceId },
   );
 
-  // Auto-select the first trace when data loads
+  // Auto-select the first trace only when no initialTraceId is provided
   useEffect(() => {
-    if (tracesData?.traces && tracesData.traces.length > 0 && !selectedTraceId) {
+    if (!initialTraceId && tracesData?.traces && tracesData.traces.length > 0 && !selectedTraceId) {
       setSelectedTraceId(tracesData.traces[0].id);
     }
-  }, [tracesData, selectedTraceId]);
+  }, [tracesData, selectedTraceId, initialTraceId]);
 
   // Fetch the selected trace with full span tree
   const { data: trace, isLoading: isLoadingTrace } = useGetTraceQuery(
@@ -72,7 +82,7 @@ export function TraceView({ flowId }: TraceViewProps) {
     return (
       <div className="flex h-full items-center justify-center">
         <div className="flex flex-col items-center gap-2 text-muted-foreground">
-          <IconComponent name="Loader2" className="h-8 w-8 animate-spin" />
+          <Loading size={32} className="text-primary" />
           <span className="text-sm">Loading traces...</span>
         </div>
       </div>

@@ -12,6 +12,7 @@ interface LogsMainContentProps {
   onTabChange: (tab: LogsTab) => void;
   selectedRunId: string | null;
   onSelectRun: (runId: string | null) => void;
+  selectedTraceId: string | null;
 }
 
 /**
@@ -24,6 +25,7 @@ export default function LogsMainContent({
   onTabChange,
   selectedRunId,
   onSelectRun,
+  selectedTraceId,
 }: LogsMainContentProps) {
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const [pageIndex, setPageIndex] = useState(1);
@@ -96,7 +98,7 @@ export default function LogsMainContent({
           hasMore={hasMore}
         />
       ) : (
-        <TracesDetailView flowId={currentFlowId} initialRunId={selectedRunId} />
+        <TracesDetailView flowId={currentFlowId} initialRunId={selectedRunId} initialTraceId={selectedTraceId} />
       )}
     </div>
   );

@@ -38,6 +38,7 @@ function FlowMainContent({
   onLogsTabChange,
   selectedRunId,
   onSelectRun,
+  selectedTraceId,
   selectedEvaluationId,
 }: {
   view?: boolean;
@@ -47,6 +48,7 @@ function FlowMainContent({
   onLogsTabChange: (tab: LogsTab) => void;
   selectedRunId: string | null;
   onSelectRun: (runId: string | null) => void;
+  selectedTraceId: string | null;
   selectedEvaluationId: string | null;
 }) {
   const { activeSection } = useSidebar();
@@ -61,6 +63,7 @@ function FlowMainContent({
             onTabChange={onLogsTabChange}
             selectedRunId={selectedRunId}
             onSelectRun={onSelectRun}
+            selectedTraceId={selectedTraceId}
           />
         </div>
       </main>
@@ -248,6 +251,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   // Logs state - lifted up for coordination between sidebar and main content
   const [logsActiveTab, setLogsActiveTab] = useState<LogsTab>("logs");
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+  const [selectedTraceId, setSelectedTraceId] = useState<string | null>(null);
 
   // Evaluations state
   const [selectedEvaluationId, setSelectedEvaluationId] = useState<string | null>(null);
@@ -272,6 +276,8 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
                     onLogsTabChange={setLogsActiveTab}
                     selectedRunId={selectedRunId}
                     onSelectRun={setSelectedRunId}
+                    selectedTraceId={selectedTraceId}
+                    onSelectTrace={setSelectedTraceId}
                     selectedEvaluationId={selectedEvaluationId}
                     onSelectEvaluation={setSelectedEvaluationId}
                   />
@@ -284,6 +290,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
                   onLogsTabChange={setLogsActiveTab}
                   selectedRunId={selectedRunId}
                   onSelectRun={setSelectedRunId}
+                  selectedTraceId={selectedTraceId}
                   selectedEvaluationId={selectedEvaluationId}
                 />
               </FlowSearchProvider>
