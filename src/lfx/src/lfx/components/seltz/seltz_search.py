@@ -49,7 +49,7 @@ class SeltzSearchToolkit(Component):
         Output(name="tools", display_name="Tools", method="build_toolkit"),
     ]
 
-    def build_toolkit(self) -> Tool:
+    def build_toolkit(self) -> list[Tool]:
         try:
             from seltz import Seltz
             from seltz.types import Includes
@@ -69,7 +69,11 @@ class SeltzSearchToolkit(Component):
 
             Returns a list of documents, each with a URL and content.
             """
-            response = client.search(query, includes=includes, context=context, profile=profile)
+            try:
+                response = client.search(query, includes=includes, context=context, profile=profile)
+            except Exception as e:
+                msg = f"Seltz search failed: {e}"
+                raise RuntimeError(msg) from e
             documents = response.documents[:max_documents]
             return [{"url": doc.url, "content": doc.content} for doc in documents]
 

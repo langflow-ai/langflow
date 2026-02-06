@@ -19,9 +19,9 @@ The output is exclusively [`Tools`](/data-types#tool).
 
 ### Seltz Search parameters
 
-| Name                            | Type         | Description                                                                                                         |
-| ------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------- |
-| Seltz API Key (`api_key`)       | SecretString | Input parameter. An API key for Seltz. Get one at [console.seltz.ai](https://console.seltz.ai?utm_source=langflow&utm_medium=referral&utm_campaign=integration).                     |
-| Max Documents (`max_documents`) | Integer      | Input parameter. Maximum number of documents to return per search. Default: `10`.                                   |
-| Search Context (`context`)      | String       | Advanced parameter. Additional context to improve search quality (e.g. "user is looking for Python documentation"). |
-| Search Profile (`profile`)      | String       | Advanced parameter. Search profile to use for different ranking algorithms or data source preferences.              |
+| Name                            | Type         | Required | Description                                                                                                         |
+| ------------------------------- | ------------ | -------- | ------------------------------------------------------------------------------------------------------------------- |
+| Seltz API Key (`api_key`)       | SecretString | Yes      | Input parameter. An API key for Seltz. Get one at [console.seltz.ai](https://console.seltz.ai?utm_source=langflow&utm_medium=referral&utm_campaign=integration).                     |
+| Max Documents (`max_documents`) | Integer      | No       | Input parameter. Maximum number of documents to return per search. Default: `10`.                                   |
+| Search Context (`context`)      | String       | No       | Advanced parameter. Additional context to improve search quality (e.g. "user is looking for Python documentation"). |
+| Search Profile (`profile`)      | String       | No       | Advanced parameter. Search profile to use for different ranking algorithms or data source preferences.              |

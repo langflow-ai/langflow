@@ -19,6 +19,8 @@ def _seltz_available():
 
 
 @pytest.mark.usefixtures("_seltz_available")
+@pytest.mark.api_key_required
+@pytest.mark.no_blockbuster
 class TestSeltzIntegration:
     """Integration tests for the Seltz Search component.
 
