@@ -14,15 +14,18 @@ import { cn } from "@/utils/utils";
 import { ToolbarButton } from "../../nodeToolbarComponent/components/toolbar-button";
 import EditableHeaderContent from "./EditableHeaderContent";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
+import { useHotkeys } from "react-hotkeys-hook";
 
 interface InspectionPanelHeaderProps {
   data: NodeDataType;
-  onClose?: () => void;
+  isEditingFields: boolean;
+  setIsEditingFields: (value: boolean) => void;
 }
 
 export default function InspectionPanelHeader({
   data,
-  onClose,
+  isEditingFields,
+  setIsEditingFields,
 }: InspectionPanelHeaderProps) {
   const [openCodeModal, setOpenCodeModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -97,115 +100,124 @@ export default function InspectionPanelHeader({
     setEditMode((prev) => !prev);
   }, [editMode, handleSave]);
 
+  const advancedSettings = useShortcutsStore((state) => state.advancedSettings);
+
+  useHotkeys(
+    advancedSettings,
+    () => setIsEditingFields(!isEditingFields),
+    {
+      preventDefault: true,
+    },
+  );
+
   return (
-    <>
-      <div
-        className="flex flex-col py-3 px-4"
-        ref={containerRef}
-        data-testid="panel-description"
-        onMouseEnter={() => setIsHoveringContent(true)}
-        onMouseLeave={() => setIsHoveringContent(false)}
-      >
-        <div className="absolute -left-2 top-[18px] w-7 pr-2">
-          <ShadTooltip content={editMode ? "Save" : "Edit"} side="top">
-            <Button
-              unstyled
-              onClick={() => {
-                toggleEditMode();
-              }}
+    <><div
+      className="flex flex-col py-3 px-4"
+      ref={containerRef}
+      data-testid="panel-description"
+      onMouseEnter={() => setIsHoveringContent(true)}
+      onMouseLeave={() => setIsHoveringContent(false)}
+    >
+      <div className="absolute -left-2 top-[18px] w-7 pr-2">
+        <ShadTooltip content={editMode ? "Save" : "Edit"} side="top">
+          <Button
+            unstyled
+            onClick={() => {
+              toggleEditMode();
+            }}
+            className={cn(
+              "nodrag z-50 flex h-5 w-5 ml-1 cursor-pointer items-center justify-center rounded-md",
+              "transform transition-all duration-300 ease-out",
+              editMode
+                ? "bg-accent-emerald"
+                : "bg-zinc-foreground",
+              isHoveringContent
+                ? "opacity-100"
+                : "opacity-0",
+            )}
+            data-testid={
+              editMode
+                ? "save-name-description-button"
+                : "edit-name-description-button"
+            }
+          >
+            <ForwardedIconComponent
+              name={editMode ? "Check" : "PencilLine"}
+              strokeWidth={ICON_STROKE_WIDTH}
               className={cn(
-                "nodrag z-50 flex h-5 w-5 ml-1 cursor-pointer items-center justify-center rounded-md",
-                "transform transition-all duration-300 ease-out",
-                editMode ? "bg-accent-emerald" : "bg-zinc-foreground",
-                isHoveringContent ? "opacity-100" : "opacity-0",
-              )}
-              data-testid={
                 editMode
-                  ? "save-name-description-button"
-                  : "edit-name-description-button"
-              }
+                  ? "text-accent-emerald-foreground"
+                  : "text-muted-foreground",
+                "w-4 h-4",
+              )}
+            />
+          </Button></ShadTooltip>
+      </div>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 overflow-hidden">
+          <span className="font-semibold truncate" data-testid="panel-name">
+            {nameElement}
+          </span>
+          <ShadTooltip content="Click to copy full ID">
+            <Badge
+              variant="secondaryStatic"
+              size="sm"
+              className="shrink-0 cursor-pointer rounded-full px-2 text-[10px] font-normal hover:bg-muted-foreground/20"
+              onClick={handleCopyId}
             >
-              <ForwardedIconComponent
-                name={editMode ? "Check" : "PencilLine"}
-                strokeWidth={ICON_STROKE_WIDTH}
-                className={cn(
-                  editMode
-                    ? "text-accent-emerald-foreground"
-                    : "text-muted-foreground",
-                  "w-4 h-4",
-                )}
-              />
-            </Button>
+              ID: {data.id.split("-").pop()}
+            </Badge>
           </ShadTooltip>
         </div>
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 overflow-hidden">
-            <span className="font-semibold truncate" data-testid="panel-name">
-              {nameElement}
-            </span>
-            <ShadTooltip content="Click to copy full ID">
-              <Badge
-                variant="secondaryStatic"
-                size="sm"
-                className="shrink-0 cursor-pointer rounded-full px-2 text-[10px] font-normal hover:bg-muted-foreground/20"
-                onClick={handleCopyId}
-              >
-                ID: {data.id.split("-").pop()}
-              </Badge>
-            </ShadTooltip>
-          </div>
-          <div
-            className="flex items-center gap-1"
-            onMouseEnter={() => setIsHoveringContent(false)}
-          >
-            {hasDocs && (
-              <ToolbarButton
-                icon="FileText"
-                onClick={openDocs}
-                shortcut={shortcuts.find((s) =>
-                  s.name.toLowerCase().startsWith("docs"),
-                )}
-                className="!text-muted-foreground"
-                dataTestId="docs-button-modal"
-              />
-            )}
-            {hasCode && (
-              <ToolbarButton
-                className={cn(
-                  isCustomComponent ? "animate-pulse-pink" : "",
-                  "!text-muted-foreground",
-                )}
-                icon="Code"
-                onClick={handleOpenCode}
-                shortcut={shortcuts.find((s) =>
-                  s.name.toLowerCase().startsWith("code"),
-                )}
-                dataTestId="code-button-modal"
-              />
-            )}
-          </div>
+        <div className="flex items-center gap-1" onMouseEnter={() => setIsHoveringContent(false)}>
+          {hasDocs && (
+            <ToolbarButton
+              icon="FileText"
+              onClick={openDocs}
+              shortcut={shortcuts.find((s) =>
+                s.name.toLowerCase().startsWith("docs"),
+              )}
+              className="!text-muted-foreground"
+              dataTestId="docs-button-modal"
+            />
+          )}
+          {hasCode && (
+            <ToolbarButton
+              icon="SlidersHorizontal"
+              onClick={() => setIsEditingFields(!isEditingFields)}
+              shortcut={shortcuts.find((s) =>
+                s.name.toLowerCase().startsWith("advanced"),
+              )}
+              className={cn(
+                "!text-muted-foreground",
+                isEditingFields && "!text-foreground !bg-muted",
+              )}
+              dataTestId="edit-button-modal"
+            />
+          )}
         </div>
-
-        {hasCode && openCodeModal && (
-          <div className="hidden">
-            <CodeAreaModal
-              setValue={handleSetValue}
-              open={openCodeModal}
-              setOpen={setOpenCodeModal}
-              dynamic={true}
-              setNodeClass={(apiClassType, type) => {
-                handleNodeClass(apiClassType, type);
-              }}
-              nodeClass={data.node}
-              value={data.node?.template?.code?.value ?? ""}
-              componentId={data.id}
-            >
-              <></>
-            </CodeAreaModal>
-          </div>
-        )}
-        {descriptionElement}
       </div>
+
+      {hasCode && openCodeModal && (
+        <div className="hidden">
+          <CodeAreaModal
+            setValue={handleSetValue}
+            open={openCodeModal}
+            setOpen={setOpenCodeModal}
+            dynamic={true}
+            setNodeClass={(apiClassType, type) => {
+              handleNodeClass(apiClassType, type);
+            }}
+            nodeClass={data.node}
+            value={data.node?.template?.code?.value ?? ""}
+            componentId={data.id}
+          >
+            <></>
+          </CodeAreaModal>
+        </div>
+      )}
+      {descriptionElement}
+    </div>
     </>
   );
 }

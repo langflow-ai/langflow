@@ -6,16 +6,13 @@ import { cn } from "@/utils/utils";
 import InspectionPanelFields from "./components/InspectionPanelFields";
 import InspectionPanelHeader from "./components/InspectionPanelHeader";
 import { Separator } from "@/components/ui/separator";
-import { Button } from "@/components/ui/button";
 
 interface InspectionPanelProps {
   selectedNode: AllNodeType | null;
-  onClose?: () => void;
 }
 
 const InspectionPanel = memo(function InspectionPanel({
   selectedNode,
-  onClose,
 }: InspectionPanelProps) {
   const [isEditingFields, setIsEditingFields] = useState(false);
 
@@ -46,22 +43,8 @@ const InspectionPanel = memo(function InspectionPanel({
               "overflow-y-auto overflow-x-visible flex flex-col pointer-events-auto",
             )}
           >
-            <InspectionPanelHeader data={selectedNode.data} onClose={onClose} />
+            <InspectionPanelHeader data={selectedNode.data} isEditingFields={isEditingFields} setIsEditingFields={setIsEditingFields} />
             <Separator className="my-0.5" />
-            <Button
-              data-testid="edit-fields-button"
-              size="node-toolbar"
-              variant="ghost"
-              onClick={() => setIsEditingFields(!isEditingFields)}
-              className={cn(
-                "shrink-0",
-                isEditingFields
-                  ? "text-primary hover:text-primary/80"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {isEditingFields ? "Done" : "Edit"}
-            </Button>
             <InspectionPanelFields
               data={selectedNode.data}
               key={selectedNode.id}

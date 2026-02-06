@@ -25,7 +25,6 @@ import FlowToolbar from "@/components/core/flowToolbarComponent";
 import InspectionPanel from "@/pages/FlowPage/components/InspectionPanel";
 import {
   COLOR_OPTIONS,
-  DEFAULT_NOTE_SIZE,
   NOTE_NODE_MIN_HEIGHT,
   NOTE_NODE_MIN_WIDTH,
 } from "@/constants/constants";
@@ -796,7 +795,6 @@ export default function Page({
                 {inspectionPanelVisible && (
                   <InspectionPanel
                     selectedNode={selectedNode}
-                    onClose={handleCloseInspectionPanel}
                   />
                 )}
               </>
