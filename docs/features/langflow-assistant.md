@@ -122,6 +122,15 @@ Configuration for available LLM providers.
   - API key must be valid and non-empty for provider to be enabled
   - Provider preference order: OpenAI > Anthropic > others
 
+#### Model Selection Behavior
+
+The frontend implements automatic model selection to ensure a valid model is always sent to the backend:
+
+- **Auto-selection**: When no model is explicitly selected, the first available model from enabled providers is automatically selected
+- **Persistence**: Selected model is stored in localStorage (`assistant_model`)
+- **Validation**: On load, persisted model is validated to ensure it has required fields (`provider`, `name`). Invalid entries are cleared
+- **Invariant**: A request must never be sent without a valid model selection to prevent backend fallback to unexpected providers
+
 ### 3.2 Domain Events
 
 | Event | Trigger | Payload | Consumers |
@@ -187,6 +196,21 @@ Configuration for available LLM providers.
 - **And** I click send
 - **Then** the generation should use the selected model
 - **And** I should see the model name in the request
+
+### Scenario: Auto-select first available model
+- **Given** the assistant panel is open
+- **And** I have not previously selected a model
+- **And** I have at least one model provider configured
+- **When** the model selector initializes
+- **Then** the first available model should be automatically selected
+- **And** the selected model should be persisted for future sessions
+
+### Scenario: Preserve chat history across view mode changes
+- **Given** I have messages in the assistant chat
+- **And** the assistant is in sidebar mode
+- **When** I switch to floating mode
+- **Then** all my chat history should be preserved
+- **And** the conversation should continue seamlessly
 
 ### Scenario: Multi-language support
 - **Given** the assistant panel is open
@@ -351,12 +375,16 @@ Different users have different workflows. Some prefer a focused chat experience,
 #### Decision
 Support two view modes: floating (centered modal) and sidebar (docked left). Persist user preference in local storage.
 
+#### Implementation Note
+The `AssistantPanel` component uses a **single-instance pattern** where the same component handles both view modes internally. This ensures chat history and state are preserved when users switch between floating and sidebar modes. The view mode is stored in a shared Zustand store (`useAssistantViewMode`) rather than conditionally rendering separate components.
+
 #### Consequences
 
 **Benefits:**
 - Flexible UI adapts to user preference
 - Sidebar mode enables continuous assistance while building
 - Floating mode provides focused interaction
+- Chat history preserved across view mode changes
 
 **Trade-offs:**
 - Additional UI complexity
