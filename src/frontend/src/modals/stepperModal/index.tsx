@@ -1,27 +1,27 @@
-import { createContext, type ReactNode, useContext } from "react";
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import { Button } from "@/components/ui/button";
+import { createContext, type ReactNode, useContext } from 'react';
+import ForwardedIconComponent from '@/components/common/genericIconComponent';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { cn } from "@/utils/utils";
-import { switchCaseModalSize } from "../baseModal/helpers/switch-case-size";
+} from '@/components/ui/dialog';
+import { cn } from '@/utils/utils';
+import { switchCaseModalSize } from '../baseModal/helpers/switch-case-size';
 
 export type StepperModalSize =
-  | "x-small"
-  | "smaller"
-  | "smaller-h-full"
-  | "small"
-  | "small-h-full"
-  | "medium"
-  | "medium-tall"
-  | "medium-h-full"
-  | "large"
-  | "large-h-full"
-  | "x-large";
+  | 'x-small'
+  | 'smaller'
+  | 'smaller-h-full'
+  | 'small'
+  | 'small-h-full'
+  | 'medium'
+  | 'medium-tall'
+  | 'medium-h-full'
+  | 'large'
+  | 'large-h-full'
+  | 'x-large';
 
 // Context for stepper state
 interface StepperContextValue {
@@ -72,6 +72,7 @@ export interface StepperModalProps {
   className?: string;
   contentClassName?: string;
   size?: StepperModalSize;
+  showProgress?: boolean;
 }
 
 export function StepperModal({
@@ -81,12 +82,13 @@ export function StepperModal({
   totalSteps,
   title,
   description,
-  icon = "Database",
+  icon = 'Database',
   children,
   footer,
   className,
   contentClassName,
-  size = "small-h-full",
+  size = 'small-h-full',
+  showProgress = true,
 }: StepperModalProps) {
   const { minWidth, height } = switchCaseModalSize(size);
 
@@ -97,10 +99,10 @@ export function StepperModal({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
           className={cn(
-            "flex max-h-[85vh] flex-col gap-0 overflow-hidden rounded-xl border bg-background p-0 shadow-lg",
+            'flex max-h-[85vh] flex-col gap-0 overflow-hidden rounded-xl border bg-background p-0 shadow-lg px-2 pb-2',
             minWidth,
             height,
-            className,
+            className
           )}
           closeButtonClassName="top-7 right-4"
         >
@@ -119,10 +121,19 @@ export function StepperModal({
                 </DialogDescription>
               )}
             </div>
-            <ProgressIndicator
-              currentStep={currentStep}
-              totalSteps={totalSteps}
-            />
+            <div
+              className={cn(
+                'transition-all duration-300 ease-in-out',
+                showProgress
+                  ? 'opacity-100 translate-x-0'
+                  : 'opacity-0 translate-x-4 pointer-events-none'
+              )}
+            >
+              <ProgressIndicator
+                currentStep={currentStep}
+                totalSteps={totalSteps}
+              />
+            </div>
           </div>
 
           {/* Content */}
@@ -134,9 +145,7 @@ export function StepperModal({
 
           {/* Footer */}
           {footer && (
-            <div className="flex items-center justify-end gap-3 px-4 pb-4">
-              {footer}
-            </div>
+            <div className="flex items-center px-4 pb-4">{footer}</div>
           )}
         </DialogContent>
       </Dialog>
@@ -157,6 +166,9 @@ export interface StepperModalFooterProps {
   submitLabel?: string;
   nextLabel?: string;
   backLabel?: string;
+  helpHref?: string;
+  onHelp?: () => void;
+  helpLabel?: string;
 }
 
 export function StepperModalFooter({
@@ -168,33 +180,67 @@ export function StepperModalFooter({
   nextDisabled = false,
   submitDisabled = false,
   isSubmitting = false,
-  submitLabel = "Create",
-  nextLabel = "Next Step",
-  backLabel = "Back",
+  submitLabel = 'Create',
+  nextLabel = 'Next Step',
+  backLabel = 'Back',
+  helpHref,
+  onHelp,
+  helpLabel = 'Need Help?',
 }: StepperModalFooterProps) {
+  const showHelp = helpHref || onHelp;
+
   return (
-    <>
-      {currentStep > 1 && onBack && (
-        <Button variant="outline" onClick={onBack}>
-          {backLabel}
-        </Button>
-      )}
-      {currentStep < totalSteps ? (
-        <Button onClick={onNext} disabled={nextDisabled}>
-          {nextLabel}
-        </Button>
-      ) : (
-        <Button onClick={onSubmit} disabled={submitDisabled || isSubmitting}>
-          {isSubmitting && (
-            <ForwardedIconComponent
-              name="Loader2"
-              className="mr-2 h-4 w-4 animate-spin"
-            />
-          )}
-          {submitLabel}
-        </Button>
-      )}
-    </>
+    <div className="flex w-full items-center justify-between pt-2">
+      <div>
+        {showHelp &&
+          (helpHref ? (
+            <Button
+              variant="link"
+              asChild
+              className="px-2 text-muted-foreground"
+            >
+              <a
+                href={helpHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline"
+              >
+                {helpLabel}
+                <ForwardedIconComponent
+                  name="ExternalLink"
+                  className="ml-1 h-4 w-4"
+                />
+              </a>
+            </Button>
+          ) : (
+            <Button variant="secondary" onClick={onHelp}>
+              {helpLabel}
+            </Button>
+          ))}
+      </div>
+      <div className="flex items-center gap-3">
+        {currentStep > 1 && onBack && (
+          <Button variant="outline" onClick={onBack}>
+            {backLabel}
+          </Button>
+        )}
+        {currentStep < totalSteps ? (
+          <Button onClick={onNext} disabled={nextDisabled}>
+            {nextLabel}
+          </Button>
+        ) : (
+          <Button onClick={onSubmit} disabled={submitDisabled || isSubmitting}>
+            {isSubmitting && (
+              <ForwardedIconComponent
+                name="Loader2"
+                className="mr-2 h-4 w-4 animate-spin"
+              />
+            )}
+            {submitLabel}
+          </Button>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -202,7 +248,7 @@ export function StepperModalFooter({
 export function useStepperContext() {
   const context = useContext(StepperContext);
   if (!context) {
-    throw new Error("useStepperContext must be used within a StepperModal");
+    throw new Error('useStepperContext must be used within a StepperModal');
   }
   return context;
 }

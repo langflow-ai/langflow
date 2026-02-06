@@ -1,31 +1,30 @@
-import type { RowClickedEvent, SelectionChangedEvent } from "ag-grid-community";
-import type { AgGridReact } from "ag-grid-react";
-import { useRef, useState } from "react";
-import { useParams } from "react-router-dom";
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import Loading from "@/components/ui/loading";
-import { useDeleteKnowledgeBase } from "@/controllers/API/queries/knowledge-bases/use-delete-knowledge-base";
-import { useDeleteKnowledgeBases } from "@/controllers/API/queries/knowledge-bases/use-delete-knowledge-bases";
+import type { RowClickedEvent, SelectionChangedEvent } from 'ag-grid-community';
+import type { AgGridReact } from 'ag-grid-react';
+import { useRef, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import ForwardedIconComponent from '@/components/common/genericIconComponent';
+import TableComponent from '@/components/core/parameterRenderComponent/components/tableComponent';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import Loading from '@/components/ui/loading';
+import { useDeleteKnowledgeBase } from '@/controllers/API/queries/knowledge-bases/use-delete-knowledge-base';
 import {
   type KnowledgeBaseInfo,
   useGetKnowledgeBases,
-} from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases";
-import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
-import { track } from "@/customization/utils/analytics";
-import useAddFlow from "@/hooks/flows/use-add-flow";
-import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
-import KnowledgeBaseUploadModal from "@/modals/knowledgeBaseUploadModal";
-import useAlertStore from "@/stores/alertStore";
-import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import { useFolderStore } from "@/stores/foldersStore";
-import { updateIds } from "@/utils/reactflowUtils";
-import { cn } from "@/utils/utils";
-import { createKnowledgeBaseColumns } from "../config/knowledgeBaseColumns";
-import KnowledgeBaseEmptyState from "./KnowledgeBaseEmptyState";
-import KnowledgeBaseSelectionOverlay from "./KnowledgeBaseSelectionOverlay";
+} from '@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases';
+import { useCustomNavigate } from '@/customization/hooks/use-custom-navigate';
+import { track } from '@/customization/utils/analytics';
+import useAddFlow from '@/hooks/flows/use-add-flow';
+import DeleteConfirmationModal from '@/modals/deleteConfirmationModal';
+import KnowledgeBaseUploadModal from '@/modals/knowledgeBaseUploadModal';
+import useAlertStore from '@/stores/alertStore';
+import useFlowsManagerStore from '@/stores/flowsManagerStore';
+import { useFolderStore } from '@/stores/foldersStore';
+import { updateIds } from '@/utils/reactflowUtils';
+import { cn } from '@/utils/utils';
+import { createKnowledgeBaseColumns } from '../config/knowledgeBaseColumns';
+import KnowledgeBaseEmptyState from './KnowledgeBaseEmptyState';
+import KnowledgeBaseSelectionOverlay from './KnowledgeBaseSelectionOverlay';
 
 interface KnowledgeBasesTabProps {
   quickFilterText: string;
@@ -49,16 +48,16 @@ const KnowledgeBasesTab = ({
   onRowClick,
 }: KnowledgeBasesTabProps) => {
   const tableRef = useRef<AgGridReact<any>>(null);
-  const { setErrorData, setSuccessData } = useAlertStore((state) => ({
+  const { setErrorData, setSuccessData } = useAlertStore(state => ({
     setErrorData: state.setErrorData,
     setSuccessData: state.setSuccessData,
   }));
 
-  const examples = useFlowsManagerStore((state) => state.examples);
+  const examples = useFlowsManagerStore(state => state.examples);
   const addFlow = useAddFlow();
   const navigate = useCustomNavigate();
   const { folderId } = useParams();
-  const myCollectionId = useFolderStore((state) => state.myCollectionId);
+  const myCollectionId = useFolderStore(state => state.myCollectionId);
   const folderIdUrl = folderId ?? myCollectionId;
 
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -80,18 +79,18 @@ const KnowledgeBasesTab = ({
     },
     onError: (error: any) => {
       setErrorData({
-        title: "Failed to delete knowledge base",
+        title: 'Failed to delete knowledge base',
         list: [
           error?.response?.data?.detail ||
             error?.message ||
-            "An unknown error occurred",
+            'An unknown error occurred',
         ],
       });
       resetDeleteState();
     },
   });
 
-  const deleteKnowledgeBasesMutation = useDeleteKnowledgeBases({
+  const deleteKnowledgeBasesMutation = useDeleteKnowledgeBase({
     onSuccess: () => {
       setSuccessData({
         title: `${selectedFiles.length} knowledge base(s) deleted successfully!`,
@@ -101,11 +100,11 @@ const KnowledgeBasesTab = ({
     },
     onError: (error: any) => {
       setErrorData({
-        title: "Failed to delete knowledge bases",
+        title: 'Failed to delete knowledge bases',
         list: [
           error?.response?.data?.detail ||
             error?.message ||
-            "An unknown error occurred",
+            'An unknown error occurred',
         ],
       });
       setIsBulkDeleteModalOpen(false);
@@ -115,14 +114,14 @@ const KnowledgeBasesTab = ({
   const confirmBulkDelete = () => {
     if (selectedFiles.length > 0 && !deleteKnowledgeBasesMutation.isPending) {
       const kb_names = selectedFiles.map((kb: KnowledgeBaseInfo) => kb.id);
-      deleteKnowledgeBasesMutation.mutate({ kb_names });
+      deleteKnowledgeBasesMutation.mutate({ kb_names: kb_names });
     }
   };
 
   if (error) {
     setErrorData({
-      title: "Failed to load knowledge bases",
-      list: [error?.message || "An unknown error occurred"],
+      title: 'Failed to load knowledge bases',
+      list: [error?.message || 'An unknown error occurred'],
     });
   }
 
@@ -138,7 +137,9 @@ const KnowledgeBasesTab = ({
 
   const confirmDelete = () => {
     if (knowledgeBaseToDelete && !deleteKnowledgeBaseMutation.isPending) {
-      deleteKnowledgeBaseMutation.mutate({ kb_name: knowledgeBaseToDelete.id });
+      deleteKnowledgeBaseMutation.mutate({
+        kb_names: knowledgeBaseToDelete.id,
+      });
     }
   };
 
@@ -156,15 +157,15 @@ const KnowledgeBasesTab = ({
 
   const handleCreateKnowledge = async () => {
     const knowledgeBasesExample = examples.find(
-      (example) => example.name === "Knowledge Ingestion",
+      example => example.name === 'Knowledge Ingestion'
     );
 
     if (knowledgeBasesExample && knowledgeBasesExample.data) {
       updateIds(knowledgeBasesExample.data);
-      addFlow({ flow: knowledgeBasesExample }).then((id) => {
+      addFlow({ flow: knowledgeBasesExample }).then(id => {
         navigate(`/flow/${id}/folder/${folderIdUrl}`);
       });
-      track("New Flow Created", {
+      track('New Flow Created', {
         template: `${knowledgeBasesExample.name} Template`,
       });
     }
@@ -177,7 +178,7 @@ const KnowledgeBasesTab = ({
 
   const handleRowClick = (event: RowClickedEvent) => {
     const clickedElement = event.event?.target as HTMLElement;
-    if (clickedElement && !clickedElement.closest("button") && onRowClick) {
+    if (clickedElement && !clickedElement.closest('button') && onRowClick) {
       onRowClick(event.data);
     }
   };
@@ -217,8 +218,8 @@ const KnowledgeBasesTab = ({
             type="text"
             placeholder="Search knowledge bases..."
             className="mr-2 w-full"
-            value={quickFilterText || ""}
-            onChange={(event) => setQuickFilterText(event.target.value)}
+            value={quickFilterText || ''}
+            onChange={event => setQuickFilterText(event.target.value)}
           />
         </div>
         {quantitySelected > 0 ? (
@@ -257,8 +258,8 @@ const KnowledgeBasesTab = ({
             columnDefs={columnDefs}
             rowData={knowledgeBases}
             className={cn(
-              "ag-no-border ag-knowledge-table group w-full",
-              isShiftPressed && quantitySelected > 0 && "no-select-cells",
+              'ag-no-border ag-knowledge-table group w-full',
+              isShiftPressed && quantitySelected > 0 && 'no-select-cells'
             )}
             pagination
             ref={tableRef}
@@ -266,7 +267,7 @@ const KnowledgeBasesTab = ({
             gridOptions={{
               stopEditingWhenCellsLoseFocus: true,
               ensureDomOrder: true,
-              colResizeDefault: "shift",
+              colResizeDefault: 'shift',
             }}
           />
         </div>
@@ -276,7 +277,7 @@ const KnowledgeBasesTab = ({
         open={isDeleteModalOpen}
         setOpen={setIsDeleteModalOpen}
         onConfirm={confirmDelete}
-        description={`knowledge base "${knowledgeBaseToDelete?.name || ""}"`}
+        description={`knowledge base "${knowledgeBaseToDelete?.name || ''}"`}
         note="This action cannot be undone"
       >
         <></>
@@ -294,14 +295,14 @@ const KnowledgeBasesTab = ({
 
       <KnowledgeBaseUploadModal
         open={isUploadModalOpen}
-        setOpen={(open) => {
+        setOpen={open => {
           setIsUploadModalOpen(open);
           if (!open) {
             setKnowledgeBaseForAddSources(null);
           }
         }}
-        onSubmit={(data) => {
-          console.log("Creating knowledge base:", data);
+        onSubmit={data => {
+          console.log('Creating knowledge base:', data);
           setSuccessData({
             title: `Knowledge base "${data.sourceName}" created successfully!`,
           });

@@ -1,25 +1,25 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import ForwardedIconComponent from '@/components/common/genericIconComponent';
 import ModelInputComponent, {
   type ModelOption,
-} from "@/components/core/parameterRenderComponent/components/modelInputComponent";
-import { Button } from "@/components/ui/button";
+} from '@/components/core/parameterRenderComponent/components/modelInputComponent';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { api } from "@/controllers/API/api";
-import { getURL } from "@/controllers/API/helpers/constants";
-import { useCreateKnowledgeBase } from "@/controllers/API/queries/knowledge-bases/use-create-knowledge-base";
-import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
-import useAlertStore from "@/stores/alertStore";
-import { cn } from "@/utils/utils";
-import { StepperModal, StepperModalFooter } from "../stepperModal";
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
+import { api } from '@/controllers/API/api';
+import { getURL } from '@/controllers/API/helpers/constants';
+import { useCreateKnowledgeBase } from '@/controllers/API/queries/knowledge-bases/use-create-knowledge-base';
+import { useGetModelProviders } from '@/controllers/API/queries/models/use-get-model-providers';
+import useAlertStore from '@/stores/alertStore';
+import { cn } from '@/utils/utils';
+import { StepperModal, StepperModalFooter } from '../stepperModal';
 
 // Types
 export interface KnowledgeBaseUploadModalProps {
@@ -56,15 +56,15 @@ interface ChunkPreview {
 type WizardStep = 1 | 2 | 3;
 
 const STEP_TITLES: Record<WizardStep, string> = {
-  1: "Configure Sources",
-  2: "Preview Chunks",
-  3: "Select Model & Create",
+  1: 'Configure Sources',
+  2: 'Preview Chunks',
+  3: 'Select Model & Create',
 };
 
 const STEP_DESCRIPTIONS: Record<WizardStep, string> = {
-  1: "Add files and configure chunking settings",
-  2: "Review how your documents will be split into chunks",
-  3: "Choose an embedding model and create your knowledge base",
+  1: 'Add files and configure chunking settings',
+  2: 'Review how your documents will be split into chunks',
+  3: 'Choose an embedding model and create your knowledge base',
 };
 
 // Chunk preview card component
@@ -146,11 +146,11 @@ export default function KnowledgeBaseUploadModal({
     for (const provider of modelProviders) {
       if (!provider.is_enabled) continue;
       for (const model of provider.models) {
-        if (model.metadata?.model_type !== "embeddings") continue;
+        if (model.metadata?.model_type !== 'embeddings') continue;
         options.push({
           id: model.model_name,
           name: model.model_name,
-          icon: provider.icon || "Bot",
+          icon: provider.icon || 'Bot',
           provider: provider.provider,
           metadata: model.metadata,
         });
@@ -160,25 +160,26 @@ export default function KnowledgeBaseUploadModal({
   }, [modelProviders]);
 
   // Form state - Step 1
-  const [sourceName, setSourceName] = useState("");
+  const [sourceName, setSourceName] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const [chunkSize, setChunkSize] = useState(1000);
   const [chunkOverlap, setChunkOverlap] = useState(200);
-  const [separator, setSeparator] = useState("\\n\\n");
+  const [separator, setSeparator] = useState('\\n\\n');
 
   // Form state - Step 3
   const [selectedEmbeddingModel, setSelectedEmbeddingModel] = useState<
     ModelOption[]
   >([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   // Preview state - Step 2
   const [chunkPreviews, setChunkPreviews] = useState<ChunkPreview[]>([]);
   const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
 
   // Alert store
-  const setSuccessData = useAlertStore((state) => state.setSuccessData);
-  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const setSuccessData = useAlertStore(state => state.setSuccessData);
+  const setErrorData = useAlertStore(state => state.setErrorData);
 
   // Create knowledge base mutation
   const createKnowledgeBase = useCreateKnowledgeBase();
@@ -189,7 +190,7 @@ export default function KnowledgeBaseUploadModal({
       setSourceName(existingKnowledgeBase.name);
       if (existingKnowledgeBase.embeddingModel) {
         const matchingModel = embeddingModelOptions.find(
-          (opt) => opt.id === existingKnowledgeBase.embeddingModel,
+          opt => opt.id === existingKnowledgeBase.embeddingModel
         );
         if (matchingModel) {
           setSelectedEmbeddingModel([matchingModel]);
@@ -199,11 +200,11 @@ export default function KnowledgeBaseUploadModal({
   }, [existingKnowledgeBase, open, embeddingModelOptions]);
 
   const resetForm = useCallback(() => {
-    setSourceName("");
+    setSourceName('');
     setFiles([]);
     setChunkSize(1000);
     setChunkOverlap(200);
-    setSeparator("\\n\\n");
+    setSeparator('\\n\\n');
     setSelectedEmbeddingModel([]);
     setChunkPreviews([]);
     setCurrentStep(1);
@@ -221,8 +222,8 @@ export default function KnowledgeBaseUploadModal({
     try {
       const previews: ChunkPreview[] = [];
       const actualSeparator = separator
-        .replace(/\\n/g, "\n")
-        .replace(/\\t/g, "\t");
+        .replace(/\\n/g, '\n')
+        .replace(/\\t/g, '\t');
 
       // Read first file for preview
       const file = files[0];
@@ -261,7 +262,7 @@ export default function KnowledgeBaseUploadModal({
 
       setChunkPreviews(previews);
     } catch (error) {
-      console.error("Error generating preview:", error);
+      console.error('Error generating preview:', error);
       setChunkPreviews([]);
     } finally {
       setIsGeneratingPreview(false);
@@ -277,12 +278,12 @@ export default function KnowledgeBaseUploadModal({
 
   const handleSubmit = async () => {
     if (!selectedEmbeddingModel.length) {
-      setErrorData({ title: "Please select an embedding model" });
+      setErrorData({ title: 'Please select an embedding model' });
       return;
     }
 
     const selectedModel = selectedEmbeddingModel[0];
-    const kbName = sourceName.trim().replace(/\s+/g, "_");
+    const kbName = sourceName.trim().replace(/\s+/g, '_');
     setIsSubmitting(true);
 
     try {
@@ -290,7 +291,7 @@ export default function KnowledgeBaseUploadModal({
       if (!isAddSourcesMode) {
         await createKnowledgeBase.mutateAsync({
           name: kbName,
-          embedding_provider: selectedModel.provider || "Unknown",
+          embedding_provider: selectedModel.provider || 'Unknown',
           embedding_model: selectedModel.id || selectedModel.name,
         });
       }
@@ -300,31 +301,31 @@ export default function KnowledgeBaseUploadModal({
       if (files.length > 0) {
         try {
           const formData = new FormData();
-          files.forEach((file) => {
-            formData.append("files", file);
+          files.forEach(file => {
+            formData.append('files', file);
           });
-          formData.append("source_name", sourceName);
-          formData.append("chunk_size", chunkSize.toString());
-          formData.append("chunk_overlap", chunkOverlap.toString());
-          formData.append("separator", separator);
+          formData.append('source_name', sourceName);
+          formData.append('chunk_size', chunkSize.toString());
+          formData.append('chunk_overlap', chunkOverlap.toString());
+          formData.append('separator', separator);
 
           const response = await api.post(
-            `${getURL("KNOWLEDGE_BASES")}/${kbName}/ingest`,
+            `${getURL('KNOWLEDGE_BASES')}/${kbName}/ingest`,
             formData,
             {
-              headers: { "Content-Type": "multipart/form-data" },
-            },
+              headers: { 'Content-Type': 'multipart/form-data' },
+            }
           );
           ingestResult = response.data;
         } catch (ingestError: any) {
-          console.warn("Failed to ingest files:", ingestError);
+          console.warn('Failed to ingest files:', ingestError);
           if (!isAddSourcesMode) {
             setSuccessData({
               title: `Knowledge base "${sourceName}" created, but file ingestion failed. You can add files later.`,
             });
           } else {
             setErrorData({
-              title: "Failed to add sources to knowledge base",
+              title: 'Failed to add sources to knowledge base',
             });
           }
           onSubmit?.({
@@ -373,7 +374,7 @@ export default function KnowledgeBaseUploadModal({
       const errorMessage =
         error?.response?.data?.detail ||
         error?.message ||
-        "Failed to create knowledge base";
+        'Failed to create knowledge base';
       setErrorData({ title: errorMessage });
     } finally {
       setIsSubmitting(false);
@@ -383,27 +384,29 @@ export default function KnowledgeBaseUploadModal({
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = e.target.files;
     if (selectedFiles && selectedFiles.length > 0) {
-      setFiles((prev) => [...prev, ...Array.from(selectedFiles)]);
+      setFiles(prev => [...prev, ...Array.from(selectedFiles)]);
     }
-    e.target.value = "";
+    e.target.value = '';
   };
 
   const handleFolderSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = e.target.files;
     if (selectedFiles && selectedFiles.length > 0) {
-      setFiles((prev) => [...prev, ...Array.from(selectedFiles)]);
+      setFiles(prev => [...prev, ...Array.from(selectedFiles)]);
     }
-    e.target.value = "";
+    e.target.value = '';
   };
 
   const handleRemoveFile = (index: number) => {
-    setFiles((prev) => prev.filter((_, i) => i !== index));
+    setFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   // Validation
-  const isStep1Valid = sourceName.trim() !== "";
+  const isStep1Valid =
+    sourceName.trim() !== '' &&
+    (isAddSourcesMode || selectedEmbeddingModel.length > 0);
   const isStep2Valid = true; // Preview step is always valid
-  const isStep3Valid = selectedEmbeddingModel.length > 0;
+  const isStep3Valid = true; // Summary step is always valid
 
   const canProceed = () => {
     switch (currentStep) {
@@ -442,7 +445,7 @@ export default function KnowledgeBaseUploadModal({
     switch (currentStep) {
       case 1:
         return (
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col">
             {/* Name and Sources - side by side */}
             <div className="grid grid-cols-6 gap-4">
               <div className="col-span-4 flex flex-col gap-2">
@@ -453,7 +456,7 @@ export default function KnowledgeBaseUploadModal({
                   id="source-name"
                   placeholder="Enter a name for this knowledge base"
                   value={sourceName}
-                  onChange={(e) => setSourceName(e.target.value)}
+                  onChange={e => setSourceName(e.target.value)}
                   data-testid="kb-source-name-input"
                   disabled={isAddSourcesMode}
                 />
@@ -483,7 +486,7 @@ export default function KnowledgeBaseUploadModal({
                   <DropdownMenuContent align="start" className="w-[200px]">
                     <DropdownMenuItem
                       onClick={() =>
-                        document.getElementById("file-input")?.click()
+                        document.getElementById('file-input')?.click()
                       }
                     >
                       <ForwardedIconComponent
@@ -494,7 +497,7 @@ export default function KnowledgeBaseUploadModal({
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() =>
-                        document.getElementById("folder-input")?.click()
+                        document.getElementById('folder-input')?.click()
                       }
                     >
                       <ForwardedIconComponent
@@ -506,6 +509,37 @@ export default function KnowledgeBaseUploadModal({
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
+            </div>
+
+            {/* Model Selection */}
+            <div className="flex flex-col gap-2 pt-4">
+              <Label className="text-sm font-medium">
+                Embedding Model <span className="text-destructive">*</span>
+              </Label>
+              {isAddSourcesMode ? (
+                <div className="flex h-10 w-full items-center gap-2 rounded-md border border-input bg-muted px-3 py-2 text-sm">
+                  <ForwardedIconComponent
+                    name={selectedEmbeddingModel[0]?.icon || 'Cpu'}
+                    className="h-4 w-4 shrink-0"
+                  />
+                  <span className="text-muted-foreground">
+                    {existingKnowledgeBase?.embeddingModel || 'Unknown'}
+                  </span>
+                </div>
+              ) : (
+                <ModelInputComponent
+                  id="kb-embedding-model"
+                  value={selectedEmbeddingModel}
+                  editNode={false}
+                  disabled={false}
+                  handleOnNewValue={({ value }) =>
+                    setSelectedEmbeddingModel(value)
+                  }
+                  options={embeddingModelOptions}
+                  placeholder="Select embedding model"
+                  showEmptyState
+                />
+              )}
             </div>
 
             {/* Hidden file inputs */}
@@ -522,132 +556,159 @@ export default function KnowledgeBaseUploadModal({
               type="file"
               className="hidden"
               onChange={handleFolderSelect}
-              {...({ webkitdirectory: "", directory: "" } as any)}
+              {...({ webkitdirectory: '', directory: '' } as any)}
             />
 
-            {/* Selected Files List */}
-            {files.length > 0 && (
-              <div className="rounded-md border bg-muted/30 p-3">
-                <div className="mb-2 flex items-center justify-between">
+            {/* Selected Files List - Animated */}
+            <div
+              className={cn(
+                'grid transition-all duration-300 ease-in-out',
+                files.length > 0
+                  ? 'grid-rows-[1fr] opacity-100'
+                  : 'grid-rows-[0fr] opacity-0'
+              )}
+            >
+              <div className="overflow-hidden">
+                <div className="rounded-md border bg-muted/30 p-3 mt-4">
+                  <div className="mb-2 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <ForwardedIconComponent
+                        name="Files"
+                        className="h-4 w-4 text-muted-foreground"
+                      />
+                      <span className="text-sm font-medium">
+                        {files.length} file{files.length > 1 ? 's' : ''} (
+                        {totalFileSize})
+                      </span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-xs hover:bg-background"
+                      onClick={() => setFiles([])}
+                    >
+                      <ForwardedIconComponent
+                        name="X"
+                        className="mr-1 h-3 w-3"
+                      />
+                      Clear
+                    </Button>
+                  </div>
+                  <div className="max-h-[100px] overflow-y-auto text-sm text-muted-foreground">
+                    {files.slice(0, 5).map((file, index) => (
+                      <div
+                        key={`${file.name}-${index}`}
+                        className="group flex items-center justify-between truncate py-0.5"
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          <ForwardedIconComponent
+                            name="FileText"
+                            className="h-3 w-3 shrink-0"
+                          />
+                          <span className="truncate">{file.name}</span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-5 w-5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+                          onClick={() => handleRemoveFile(index)}
+                        >
+                          <ForwardedIconComponent
+                            name="X"
+                            className="h-3 w-3"
+                          />
+                        </Button>
+                      </div>
+                    ))}
+                    {files.length > 5 && (
+                      <div className="py-0.5 text-xs">
+                        +{files.length - 5} more files
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Chunking Settings - Animated */}
+            <div
+              className={cn(
+                'grid transition-all duration-300 ease-in-out',
+                showAdvanced
+                  ? 'grid-rows-[1fr] opacity-100'
+                  : 'grid-rows-[0fr] opacity-0'
+              )}
+            >
+              <div className="overflow-hidden">
+                <Separator className="my-4" />
+                <div className="flex flex-col gap-4">
                   <div className="flex items-center gap-2">
                     <ForwardedIconComponent
-                      name="Files"
+                      name="Settings2"
                       className="h-4 w-4 text-muted-foreground"
                     />
                     <span className="text-sm font-medium">
-                      {files.length} file{files.length > 1 ? "s" : ""} (
-                      {totalFileSize})
+                      Chunking Settings
                     </span>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 px-2 text-xs"
-                    onClick={() => setFiles([])}
-                  >
-                    <ForwardedIconComponent name="X" className="mr-1 h-3 w-3" />
-                    Clear
-                  </Button>
-                </div>
-                <div className="max-h-[100px] overflow-y-auto text-sm text-muted-foreground">
-                  {files.slice(0, 5).map((file, index) => (
-                    <div
-                      key={`${file.name}-${index}`}
-                      className="group flex items-center justify-between truncate py-0.5"
-                    >
-                      <div className="flex items-center gap-2 truncate">
-                        <ForwardedIconComponent
-                          name="FileText"
-                          className="h-3 w-3 shrink-0"
-                        />
-                        <span className="truncate">{file.name}</span>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-5 w-5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
-                        onClick={() => handleRemoveFile(index)}
+
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Chunk Size */}
+                    <div className="flex flex-col gap-2">
+                      <Label
+                        htmlFor="chunk-size"
+                        className="text-xs text-muted-foreground"
                       >
-                        <ForwardedIconComponent name="X" className="h-3 w-3" />
-                      </Button>
+                        Chunk Size (characters)
+                      </Label>
+                      <Input
+                        id="chunk-size"
+                        type="number"
+                        value={chunkSize}
+                        onChange={e => setChunkSize(Number(e.target.value))}
+                        min={100}
+                        max={10000}
+                        data-testid="kb-chunk-size-input"
+                      />
                     </div>
-                  ))}
-                  {files.length > 5 && (
-                    <div className="py-0.5 text-xs">
-                      +{files.length - 5} more files
+
+                    {/* Chunk Overlap */}
+                    <div className="flex flex-col gap-2">
+                      <Label
+                        htmlFor="chunk-overlap"
+                        className="text-xs text-muted-foreground"
+                      >
+                        Chunk Overlap (characters)
+                      </Label>
+                      <Input
+                        id="chunk-overlap"
+                        type="number"
+                        value={chunkOverlap}
+                        onChange={e => setChunkOverlap(Number(e.target.value))}
+                        min={0}
+                        max={chunkSize - 1}
+                        data-testid="kb-chunk-overlap-input"
+                      />
                     </div>
-                  )}
+                  </div>
+
+                  {/* Separator */}
+                  <div className="flex flex-col gap-2">
+                    <Label
+                      htmlFor="separator"
+                      className="text-xs text-muted-foreground"
+                    >
+                      Separator (use \n for newline, \t for tab)
+                    </Label>
+                    <Input
+                      id="separator"
+                      value={separator}
+                      onChange={e => setSeparator(e.target.value)}
+                      placeholder="\\n\\n"
+                      data-testid="kb-separator-input"
+                    />
+                  </div>
                 </div>
-              </div>
-            )}
-
-            <Separator className="" />
-
-            {/* Chunking Settings */}
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center gap-2">
-                <ForwardedIconComponent
-                  name="Settings2"
-                  className="h-4 w-4 text-muted-foreground"
-                />
-                <span className="text-sm font-medium">Chunking Settings</span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                {/* Chunk Size */}
-                <div className="flex flex-col gap-2">
-                  <Label
-                    htmlFor="chunk-size"
-                    className="text-xs text-muted-foreground"
-                  >
-                    Chunk Size (characters)
-                  </Label>
-                  <Input
-                    id="chunk-size"
-                    type="number"
-                    value={chunkSize}
-                    onChange={(e) => setChunkSize(Number(e.target.value))}
-                    min={100}
-                    max={10000}
-                    data-testid="kb-chunk-size-input"
-                  />
-                </div>
-
-                {/* Chunk Overlap */}
-                <div className="flex flex-col gap-2">
-                  <Label
-                    htmlFor="chunk-overlap"
-                    className="text-xs text-muted-foreground"
-                  >
-                    Chunk Overlap (characters)
-                  </Label>
-                  <Input
-                    id="chunk-overlap"
-                    type="number"
-                    value={chunkOverlap}
-                    onChange={(e) => setChunkOverlap(Number(e.target.value))}
-                    min={0}
-                    max={chunkSize - 1}
-                    data-testid="kb-chunk-overlap-input"
-                  />
-                </div>
-              </div>
-
-              {/* Separator */}
-              <div className="flex flex-col gap-2">
-                <Label
-                  htmlFor="separator"
-                  className="text-xs text-muted-foreground"
-                >
-                  Separator (use \n for newline, \t for tab)
-                </Label>
-                <Input
-                  id="separator"
-                  value={separator}
-                  onChange={(e) => setSeparator(e.target.value)}
-                  placeholder="\\n\\n"
-                  data-testid="kb-separator-input"
-                />
               </div>
             </div>
           </div>
@@ -673,8 +734,8 @@ export default function KnowledgeBaseUploadModal({
                 <ForwardedIconComponent
                   name="RefreshCw"
                   className={cn(
-                    "mr-1 h-3 w-3",
-                    isGeneratingPreview && "animate-spin",
+                    'mr-1 h-3 w-3',
+                    isGeneratingPreview && 'animate-spin'
                   )}
                 />
                 Refresh
@@ -708,7 +769,7 @@ export default function KnowledgeBaseUploadModal({
                 ))}
                 <p className="text-center text-xs text-muted-foreground">
                   Showing first {chunkPreviews.length} chunk
-                  {chunkPreviews.length > 1 ? "s" : ""} from "{files[0]?.name}"
+                  {chunkPreviews.length > 1 ? 's' : ''} from "{files[0]?.name}"
                 </p>
               </div>
             ) : (
@@ -736,7 +797,7 @@ export default function KnowledgeBaseUploadModal({
                   Overlap: <strong>{chunkOverlap}</strong>
                 </span>
                 <span>
-                  Separator: <strong>{separator || "(none)"}</strong>
+                  Separator: <strong>{separator || '(none)'}</strong>
                 </span>
               </div>
             </div>
@@ -761,7 +822,7 @@ export default function KnowledgeBaseUploadModal({
                 <SummaryItem
                   icon="Files"
                   label="Files"
-                  value={`${files.length} file${files.length !== 1 ? "s" : ""} (${totalFileSize})`}
+                  value={`${files.length} file${files.length !== 1 ? 's' : ''} (${totalFileSize})`}
                 />
                 <SummaryItem
                   icon="Ruler"
@@ -776,44 +837,14 @@ export default function KnowledgeBaseUploadModal({
                 <SummaryItem
                   icon="SplitSquareHorizontal"
                   label="Separator"
-                  value={separator || "(none)"}
+                  value={separator || '(none)'}
+                />
+                <SummaryItem
+                  icon="Cpu"
+                  label="Embedding Model"
+                  value={selectedEmbeddingModel[0]?.name || 'Not selected'}
                 />
               </div>
-            </div>
-
-            {/* Model Selection */}
-            <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium">
-                Embedding Model <span className="text-destructive">*</span>
-              </Label>
-              {isAddSourcesMode ? (
-                <div className="flex h-10 w-full items-center gap-2 rounded-md border border-input bg-muted px-3 py-2 text-sm">
-                  <ForwardedIconComponent
-                    name={selectedEmbeddingModel[0]?.icon || "Cpu"}
-                    className="h-4 w-4 shrink-0"
-                  />
-                  <span className="text-muted-foreground">
-                    {existingKnowledgeBase?.embeddingModel || "Unknown"}
-                  </span>
-                </div>
-              ) : (
-                <ModelInputComponent
-                  id="kb-embedding-model"
-                  value={selectedEmbeddingModel}
-                  editNode={false}
-                  disabled={false}
-                  handleOnNewValue={({ value }) =>
-                    setSelectedEmbeddingModel(value)
-                  }
-                  options={embeddingModelOptions}
-                  placeholder="Select embedding model"
-                  showEmptyState
-                />
-              )}
-              <p className="text-xs text-muted-foreground">
-                The embedding model determines how your documents are converted
-                to vectors for semantic search.
-              </p>
             </div>
           </div>
         );
@@ -823,28 +854,32 @@ export default function KnowledgeBaseUploadModal({
   return (
     <StepperModal
       open={open}
-      onOpenChange={(isOpen) => {
+      onOpenChange={isOpen => {
         setOpen(isOpen);
         if (!isOpen) resetForm();
       }}
-      className="bg-secondary"
+      className="bg-background"
+      contentClassName="bg-muted"
       currentStep={currentStep}
       totalSteps={3}
-      title={isAddSourcesMode ? "Add Sources" : STEP_TITLES[currentStep]}
+      title={isAddSourcesMode ? 'Add Sources' : STEP_TITLES[currentStep]}
       description={STEP_DESCRIPTIONS[currentStep]}
       icon="Database"
       size="small-h-full"
+      showProgress={showAdvanced}
       footer={
         <StepperModalFooter
           currentStep={currentStep}
-          totalSteps={3}
+          totalSteps={showAdvanced ? 3 : 1}
           onBack={handleBack}
           onNext={handleNext}
           onSubmit={handleSubmit}
           nextDisabled={!canProceed()}
           submitDisabled={!canProceed()}
           isSubmitting={isSubmitting}
-          submitLabel={isAddSourcesMode ? "Add Sources" : "Create"}
+          submitLabel={isAddSourcesMode ? 'Add Sources' : 'Create'}
+          helpLabel={showAdvanced ? 'Hide Advanced' : 'Advanced'}
+          onHelp={() => setShowAdvanced(!showAdvanced)}
         />
       }
     >
