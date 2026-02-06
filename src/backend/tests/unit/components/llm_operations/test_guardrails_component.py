@@ -25,11 +25,11 @@ class TestGuardrailsComponent(ComponentTestBaseWithoutClient):
                     "metadata": {
                         "model_class": "MockLanguageModel",
                         "model_name_param": "model",
-                        "api_key_param": "api_key",
+                        "api_key_param": "api_key",  # pragma: allowlist secret
                     },
                 }
             ],
-            "api_key": "test-api-key",
+            "api_key": "test-api-key",  # pragma: allowlist secret
             "input_text": "Hello, this is a normal message.",
             "enabled_guardrails": ["PII", "Tokens/Passwords", "Jailbreak"],
             "enable_custom_guardrail": False,
@@ -506,7 +506,7 @@ class TestGuardrailsComponent(ComponentTestBaseWithoutClient):
                     "metadata": {
                         "model_class": "ChatOpenAI",
                         "model_name_param": "model",
-                        "api_key_param": "api_key",
+                        "api_key_param": "api_key",  # pragma: allowlist secret
                     },
                 }
             ],
@@ -537,7 +537,7 @@ class TestGuardrailsComponent(ComponentTestBaseWithoutClient):
                     "metadata": {
                         "model_class": "ChatOpenAI",
                         "model_name_param": "model",
-                        "api_key_param": "api_key",
+                        "api_key_param": "api_key",  # pragma: allowlist secret
                     },
                 }
             ],
@@ -569,7 +569,7 @@ class TestGuardrailsComponent(ComponentTestBaseWithoutClient):
                     "metadata": {
                         "model_class": "ChatOpenAI",
                         "model_name_param": "model",
-                        "api_key_param": "api_key",
+                        "api_key_param": "api_key",  # pragma: allowlist secret
                     },
                 }
             ],
@@ -602,7 +602,7 @@ class TestGuardrailsComponent(ComponentTestBaseWithoutClient):
                     "metadata": {
                         "model_class": "ChatOpenAI",
                         "model_name_param": "model",
-                        "api_key_param": "api_key",
+                        "api_key_param": "api_key",  # pragma: allowlist secret
                     },
                 }
             ],
@@ -633,7 +633,7 @@ class TestGuardrailsComponent(ComponentTestBaseWithoutClient):
                     "metadata": {
                         "model_class": "ChatOpenAI",
                         "model_name_param": "model",
-                        "api_key_param": "api_key",
+                        "api_key_param": "api_key",  # pragma: allowlist secret
                     },
                 }
             ],
