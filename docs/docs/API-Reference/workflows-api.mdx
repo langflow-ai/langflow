@@ -413,8 +413,7 @@ headers = {
     "x-api-key": LANGFLOW_API_KEY
 }
 payload = {
-    "job_id": "job_id_1234567890",
-    "force": False
+    "job_id": "job_id_1234567890"
 }
 
 response = requests.post(url, json=payload, headers=headers)
@@ -430,8 +429,7 @@ import axios from 'axios';
 const url = `${LANGFLOW_SERVER_URL}/api/v2/workflows/stop`;
 
 const payload = {
-  job_id: "job_id_1234567890",
-  force: false
+  job_id: "job_id_1234567890"
 };
 
 const stopWorkflow = async () => {
@@ -460,8 +458,7 @@ curl -X POST \
   -H "Content-Type: application/json" \
   -H "x-api-key: $LANGFLOW_API_KEY" \
   -d '{
-    "job_id": "job_id_1234567890",
-    "force": false
+    "job_id": "job_id_1234567890"
   }'
 ```
 
@@ -473,15 +470,13 @@ curl -X POST \
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `job_id` | `string` | Yes | - | The job ID of the workflow to stop. |
-| `force` | `boolean` | No | `false` | If `true`, force stops the workflow. |
 
 ### Example response
 
 ```json
 {
   "job_id": "job_id_1234567890",
-  "status": "stopped",
-  "message": "Workflow stopped successfully"
+  "message": "Job job_id_1234567890 cancelled successfully."
 }
 ```
 
