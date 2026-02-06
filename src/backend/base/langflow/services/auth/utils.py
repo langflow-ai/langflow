@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+from datetime import timedelta
 from typing import TYPE_CHECKING, Annotated, Final
 
 from cryptography.fernet import Fernet
@@ -293,6 +294,16 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 def get_password_hash(password: str) -> str:
     return _auth_service().get_password_hash(password)
+
+
+def create_token(data: dict, expires_delta: timedelta) -> str:
+    """Create a JWT token. Delegates to the active auth service."""
+    return _auth_service().create_token(data, expires_delta)
+
+
+async def create_refresh_token(refresh_token: str, db: AsyncSession) -> dict:
+    """Exchange a refresh token for new access/refresh tokens. Delegates to the active auth service."""
+    return await _auth_service().create_refresh_token(refresh_token, db)
 
 
 async def create_super_user(username: str, password: str, db: AsyncSession) -> User:
