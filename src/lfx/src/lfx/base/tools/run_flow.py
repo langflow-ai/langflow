@@ -786,7 +786,7 @@ class RunFlowBaseComponent(Component):
                 if graph:
                     formatted_outputs = self._format_flow_outputs(graph)
                     self._sync_flow_outputs(formatted_outputs)
-            except Exception as e:
+            except (ValueError, RuntimeError, OSError) as e:
                 # If we can't load the graph, continue without dynamic outputs
                 # The error will be raised later when trying to execute
                 logger.debug(f"_pre_run_setup: Exception loading graph: {e}")

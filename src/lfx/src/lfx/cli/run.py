@@ -165,6 +165,10 @@ async def run(
         stdin: Read JSON flow content from stdin
         check_variables: Check global variables for environment compatibility
         timing: Include detailed timing information in output
+        project_path: Directory to search for subflows (defaults to flow file's directory)
+        files_dir: Directory to resolve file paths (defaults to project_path)
+        env_file: Path to .env file to load environment variables from
+        env_vars: Environment variables in KEY=VALUE format
     """
     # Determine verbosity for output formatting
     verbosity = 3 if verbose_full else (2 if verbose_detailed else (1 if verbose else 0))
@@ -178,11 +182,7 @@ async def run(
         resolved_project_path = script_path.parent
 
     # Determine files directory: use provided path, or default to project path
-    resolved_files_dir: Path | None = None
-    if files_dir is not None and isinstance(files_dir, Path):
-        resolved_files_dir = files_dir
-    else:
-        resolved_files_dir = resolved_project_path
+    resolved_files_dir = files_dir if files_dir is not None and isinstance(files_dir, Path) else resolved_project_path
 
     # Build global variables from env file and CLI args
     # Also set them in os.environ so components can access them directly

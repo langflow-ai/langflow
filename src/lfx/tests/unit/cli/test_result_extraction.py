@@ -47,8 +47,8 @@ class TestValueToJsonString:
 
     def test_bool_value(self):
         """Test JSON serialization of bool."""
-        assert _value_to_json_string(True) == "true"
-        assert _value_to_json_string(False) == "false"
+        assert _value_to_json_string(value=True) == "true"
+        assert _value_to_json_string(value=False) == "false"
 
     def test_pydantic_model_with_model_dump_json(self):
         """Test JSON serialization of Pydantic model with model_dump_json."""
@@ -243,7 +243,7 @@ class TestExtractValue:
         assert _extract_value("string") == "string"
         assert _extract_value(42) == 42
         assert _extract_value(3.14) == 3.14
-        assert _extract_value(True) is True
+        assert _extract_value(value=True) is True
 
     def test_fallback_to_str(self):
         """Test fallback to string for unsupported types."""

@@ -441,7 +441,7 @@ class TestVertexGetBuiltResult:
         # the final return wraps it in {"result": ...}
         # Actually checking the code: built_result becomes "string result"
         # then isinstance check returns {"result": "string result"}
-        assert result == {"result": "string result"} or result == "string result"
+        assert result in ({"result": "string result"}, "string result")
 
     def test_get_built_result_with_unbuilt_result(self):
         """Test that get_built_result returns empty dict for unbuilt vertex."""

@@ -177,10 +177,8 @@ class Vertex:
             if not isinstance(result, dict | str) and hasattr(result, "content"):
                 return result.content
             return result
-        if isinstance(self.built_object, str):
-            self.built_result = self.built_object
-        # If built_object is a dict (e.g., results from build_results()), use it directly
-        elif isinstance(self.built_object, dict):
+        # If built_object is a str or dict, use it directly
+        if isinstance(self.built_object, str | dict):
             self.built_result = self.built_object
 
         if isinstance(self.built_result, UnbuiltResult):

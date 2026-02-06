@@ -96,6 +96,7 @@ async def run_flow(
         session_id: Optional session ID for memory isolation
         event_manager: Optional EventManager for streaming token events
         project_path: Optional project folder path for resolving subflows (RunFlow component)
+        files_dir: Optional directory path for resolving file paths in components
 
     Returns:
         dict: Result data containing the execution results, logs, and optionally timing info
