@@ -107,6 +107,7 @@ storage_service = "package.module:ClassName"
 Service keys **must** match `ServiceType` enum values exactly:
 
 - `database_service`
+- `auth_service`
 - `storage_service`
 - `cache_service`
 - `chat_service`
@@ -120,6 +121,7 @@ Service keys **must** match `ServiceType` enum values exactly:
 - `job_queue_service`
 - `shared_component_cache_service`
 - `mcp_composer_service`
+- `transaction_service`
 
 **Important:** `settings_service` is **not pluggable** and cannot be overridden. It is always created using the built-in factory and provides the foundational configuration for all other services.
 
@@ -323,7 +325,8 @@ class ServiceB(Service):
 
 See:
 - `lfx.toml.example` - Example configuration file showing Langflow service registration
-- `src/lfx/services/` - Minimal built-in service implementations
+- `src/lfx/services/` - Minimal built-in service implementations (auth, telemetry, tracing, variable, storage, etc.)
+  - Auth: `lfx.services.auth.base` (BaseAuthService) and `lfx.services.auth.service` (AuthService). Use `get_auth_service()` from `lfx.services.deps`. Override with `auth_service = "langflow.services.auth.service:AuthService"` in config for full JWT/API key auth.
 - `src/backend/base/langflow/services/` - Full-featured Langflow services
 
 ## Architecture Benefits

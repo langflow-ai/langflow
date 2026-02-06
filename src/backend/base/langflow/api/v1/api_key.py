@@ -67,7 +67,7 @@ async def save_store_api_key(
         api_key = api_key_request.api_key
 
         # Encrypt the API key
-        encrypted = auth_utils.encrypt_api_key(api_key, settings_service=settings_service)
+        encrypted = auth_utils.encrypt_api_key(api_key)
         current_user.store_api_key = encrypted
         db.add(current_user)
         await db.commit()
