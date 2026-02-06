@@ -59,6 +59,7 @@ export default function ModelInputComponent({
   showParameter = true,
   editNode,
   inspectionPanel,
+  showEmptyState = false,
 }: BaseInputProps<any> & ModelInputComponentType): JSX.Element | null {
   const { setErrorData } = useAlertStore();
   const refButton = useRef<HTMLButtonElement>(null);

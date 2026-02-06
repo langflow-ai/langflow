@@ -117,8 +117,8 @@ const TableComponent = forwardRef<
         if (props.rowSelection && props.onSelectionChanged && index === 0) {
           newCol = {
             ...newCol,
-            checkboxSelection: true,
-            headerCheckboxSelection: true,
+            checkboxSelection: col.checkboxSelection !== false,
+            headerCheckboxSelection: col.headerCheckboxSelection !== false,
             headerCheckboxSelectionFilteredOnly: true,
           };
         }

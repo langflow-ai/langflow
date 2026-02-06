@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Loading from "@/components/ui/loading";
 import { useDeleteKnowledgeBase } from "@/controllers/API/queries/knowledge-bases/use-delete-knowledge-base";
+import { useDeleteKnowledgeBases } from "@/controllers/API/queries/knowledge-bases/use-delete-knowledge-bases";
 import {
   type KnowledgeBaseInfo,
   useGetKnowledgeBases,
@@ -64,6 +65,9 @@ const KnowledgeBasesTab = ({
   const [knowledgeBaseToDelete, setKnowledgeBaseToDelete] =
     useState<KnowledgeBaseInfo | null>(null);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
+  const [knowledgeBaseForAddSources, setKnowledgeBaseForAddSources] =
+    useState<KnowledgeBaseInfo | null>(null);
 
   const { data: knowledgeBases, isLoading, error } = useGetKnowledgeBases();
 
@@ -86,6 +90,34 @@ const KnowledgeBasesTab = ({
       resetDeleteState();
     },
   });
+
+  const deleteKnowledgeBasesMutation = useDeleteKnowledgeBases({
+    onSuccess: () => {
+      setSuccessData({
+        title: `${selectedFiles.length} knowledge base(s) deleted successfully!`,
+      });
+      clearSelection();
+      setIsBulkDeleteModalOpen(false);
+    },
+    onError: (error: any) => {
+      setErrorData({
+        title: "Failed to delete knowledge bases",
+        list: [
+          error?.response?.data?.detail ||
+            error?.message ||
+            "An unknown error occurred",
+        ],
+      });
+      setIsBulkDeleteModalOpen(false);
+    },
+  });
+
+  const confirmBulkDelete = () => {
+    if (selectedFiles.length > 0 && !deleteKnowledgeBasesMutation.isPending) {
+      const kb_names = selectedFiles.map((kb: KnowledgeBaseInfo) => kb.id);
+      deleteKnowledgeBasesMutation.mutate({ kb_names });
+    }
+  };
 
   if (error) {
     setErrorData({
@@ -150,9 +182,15 @@ const KnowledgeBasesTab = ({
     }
   };
 
+  const handleAddSources = (knowledgeBase: KnowledgeBaseInfo) => {
+    setKnowledgeBaseForAddSources(knowledgeBase);
+    setIsUploadModalOpen(true);
+  };
+
   const columnDefs = createKnowledgeBaseColumns({
     onViewChunks: onRowClick,
     onDelete: handleDelete,
+    onAddSources: handleAddSources,
   });
 
   if (isLoading || !knowledgeBases || !Array.isArray(knowledgeBases)) {
@@ -183,13 +221,24 @@ const KnowledgeBasesTab = ({
             onChange={(event) => setQuickFilterText(event.target.value)}
           />
         </div>
-        <Button
-          className="flex items-center gap-2 font-semibold"
-          onClick={() => setIsUploadModalOpen(true)}
-        >
-          <ForwardedIconComponent name="Plus" className="h-4 w-4" />
-          Add Knowledge
-        </Button>
+        {quantitySelected > 0 ? (
+          <Button
+            variant="destructive"
+            className="flex items-center gap-2 font-semibold"
+            onClick={() => setIsBulkDeleteModalOpen(true)}
+          >
+            <ForwardedIconComponent name="Trash2" className="h-4 w-4" />
+            Delete Knowledge
+          </Button>
+        ) : (
+          <Button
+            className="flex items-center gap-2 font-semibold"
+            onClick={() => setIsUploadModalOpen(true)}
+          >
+            <ForwardedIconComponent name="Plus" className="h-4 w-4" />
+            Add Knowledge
+          </Button>
+        )}
       </div>
 
       <div className="flex h-full flex-col py-4">
@@ -220,12 +269,6 @@ const KnowledgeBasesTab = ({
               colResizeDefault: "shift",
             }}
           />
-
-          <KnowledgeBaseSelectionOverlay
-            selectedFiles={selectedFiles}
-            quantitySelected={quantitySelected}
-            onClearSelection={clearSelection}
-          />
         </div>
       </div>
 
@@ -239,9 +282,24 @@ const KnowledgeBasesTab = ({
         <></>
       </DeleteConfirmationModal>
 
+      <DeleteConfirmationModal
+        open={isBulkDeleteModalOpen}
+        setOpen={setIsBulkDeleteModalOpen}
+        onConfirm={confirmBulkDelete}
+        description={`${selectedFiles.length} knowledge base(s)`}
+        note="This action cannot be undone"
+      >
+        <></>
+      </DeleteConfirmationModal>
+
       <KnowledgeBaseUploadModal
         open={isUploadModalOpen}
-        setOpen={setIsUploadModalOpen}
+        setOpen={(open) => {
+          setIsUploadModalOpen(open);
+          if (!open) {
+            setKnowledgeBaseForAddSources(null);
+          }
+        }}
         onSubmit={(data) => {
           console.log("Creating knowledge base:", data);
           setSuccessData({
@@ -249,6 +307,16 @@ const KnowledgeBasesTab = ({
           });
         }}
         onOpenExampleFlow={handleCreateKnowledge}
+        existingKnowledgeBase={
+          knowledgeBaseForAddSources
+            ? {
+                name: knowledgeBaseForAddSources.name,
+                embeddingProvider:
+                  knowledgeBaseForAddSources.embedding_provider,
+                embeddingModel: knowledgeBaseForAddSources.embedding_model,
+              }
+            : undefined
+        }
       />
     </div>
   );

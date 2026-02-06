@@ -17,6 +17,7 @@ import {
 export interface KnowledgeBaseColumnsCallbacks {
   onViewChunks?: (knowledgeBase: KnowledgeBaseInfo) => void;
   onDelete?: (knowledgeBase: KnowledgeBaseInfo) => void;
+  onAddSources?: (knowledgeBase: KnowledgeBaseInfo) => void;
 }
 
 export const createKnowledgeBaseColumns = (
@@ -25,6 +26,8 @@ export const createKnowledgeBaseColumns = (
   const baseCellClass =
     "text-muted-foreground cursor-pointer select-text group-[.no-select-cells]:cursor-default group-[.no-select-cells]:select-none";
 
+  const secondaryCellClass = `text-primary group-[.no-select-cells]:cursor-pointer group-[.no-select-cells]:select-none`;
+
   return [
     {
       headerName: "Source",
@@ -32,9 +35,9 @@ export const createKnowledgeBaseColumns = (
       flex: 2,
       sortable: true,
       headerCheckboxSelection: true,
-      checkboxSelection: true,
+      checkboxSelection: false,
       editable: false,
-      cellClass: baseCellClass,
+      cellClass: secondaryCellClass,
       cellStyle: { textTransform: "none" },
     },
     {
@@ -47,13 +50,39 @@ export const createKnowledgeBaseColumns = (
       cellClass: baseCellClass,
     },
     {
-      headerName: "Type",
-      field: "type",
-      flex: 1,
+      headerName: "Embedding Model",
+      field: "embedding_model",
+      flex: 1.5,
       sortable: false,
       editable: false,
       cellClass: baseCellClass,
-      valueGetter: (params) => params.data.type || "—",
+      cellRenderer: (params: { data: KnowledgeBaseInfo }) => {
+        const model = params.data.embedding_model || "Unknown";
+        const provider = params.data.embedding_provider || "Unknown";
+
+        const providerIconMap: Record<string, string> = {
+          OpenAI: "OpenAI",
+          HuggingFace: "HuggingFace",
+          Cohere: "Cohere",
+          Google: "Google",
+          Chroma: "Chroma",
+          Mistral: "Mistral",
+          Ollama: "Ollama",
+          NVIDIA: "NVIDIA",
+        };
+
+        const iconName = providerIconMap[provider] || "Cpu";
+
+        return (
+          <div className="flex items-center gap-2">
+            <ForwardedIconComponent
+              name={iconName}
+              className="h-4 w-4 shrink-0"
+            />
+            <span className="truncate">{model}</span>
+          </div>
+        );
+      },
     },
     {
       headerName: "Chunks",
@@ -92,7 +121,7 @@ export const createKnowledgeBaseColumns = (
       editable: false,
       resizable: false,
       suppressMovable: true,
-      cellClass: "flex items-center justify-center",
+      cellClass: "flex items-center justify-center text-primary",
       cellRenderer: (params: { data: KnowledgeBaseInfo }) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -103,11 +132,20 @@ export const createKnowledgeBaseColumns = (
             >
               <ForwardedIconComponent
                 name="EllipsisVertical"
-                className="h-4 w-4 text-muted-foreground"
+                className="h-4 w-4 text-primary"
               />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                callbacks?.onAddSources?.(params.data);
+              }}
+            >
+              <ForwardedIconComponent name="Plus" className="mr-2 h-4 w-4" />
+              Add Sources
+            </DropdownMenuItem>
             <DropdownMenuItem
               onClick={(e) => {
                 e.stopPropagation();
