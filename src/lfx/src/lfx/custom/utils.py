@@ -8,6 +8,7 @@ import hashlib
 import inspect
 import re
 import traceback
+from collections import defaultdict
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -17,7 +18,10 @@ from pydantic import BaseModel
 from lfx.custom import validate
 from lfx.custom.custom_component.component import Component
 from lfx.custom.custom_component.custom_component import CustomComponent
-from lfx.custom.dependency_analyzer import analyze_component_dependencies
+from lfx.custom.dependency_analyzer import (
+    analyze_component_dependencies,
+    get_versioned_package_distributions,
+)
 from lfx.custom.directory_reader.utils import (
     abuild_custom_component_list_from_path,
     build_custom_component_list_from_path,
@@ -872,6 +876,165 @@ async def load_custom_component(component_name: str, components_paths: list[str]
     # If we get here, the component wasn't found in any of the paths
     await logger.awarning(f"Component {component_name} not found in any of the provided paths")
     return None
+
+
+def get_flow_dependencies(
+    flow: dict,
+    trusted_versions: dict[str, str] | None = None,
+    trusted_packages: set[str] | None = None,
+    enable_unsafe_packages: bool = False, # noqa: FBT001, FBT002
+    ) -> set[str]:
+    """Get the Python dependencies of a flow.
+
+    Prioritizes installed packages.
+
+    If the package is installed
+    and the flow specifies a version,
+    it will use the first matching
+    distribution found in the current environment
+    with the version specified in the flow.
+    If no version is specified, it will return
+    all matching distributions.
+
+    A valid distribution is guaranteed
+    to be returned for a given package name
+    if and only if the package is installed
+    in the current environment.
+    Otherwise, the package name will be used,
+    which is not guaranteed to be the name
+    of the corresponding distribution.
+
+    If a package is not installed,
+    it will prioritize the
+    trusted_versions mapping from
+    package names to versions,
+    followed by trusted_packages
+    consisting of package names,
+    and finally fall back to using the
+    package name and version
+    specified in the flow if
+    enable_unsafe_packages is True.
+
+    If the flow specifies multiple
+    versions of the same package,
+    it will return all the versions
+    in no particular order.
+    This may cause non-deterministic
+    behavior downstream, e.g., building
+    a requirements.txt file.
+    The caller is responsible
+    for deduplicating versions.
+
+    Args:
+        flow (dict): The flow to get the dependencies of
+        trusted_versions (dict[str, str]): A dictionary of trusted versions
+        trusted_packages (set[str]): A set of trusted packages
+        enable_unsafe_packages (bool): Whether to enable unsafe packages
+
+    Returns:
+        set[str]: A collection of dependency names with version if available.
+
+    Examples:
+        Mixed resolution paths with multiple deps:
+            >>> flow = {
+            ...     "data": {
+            ...         "nodes": [
+            ...             {"data": {"node": {"metadata": {"dependencies": {
+            ...                 "dependencies": [
+            ...                     {"name": "requests"},              # installed
+            ...                     {"name": "mypkg"},                 # trusted_versions
+            ...                     {"name": "trustedonly"}            # trusted_packages
+            ...                 ]
+            ...             }}}}}
+            ...         ]
+            ...     }
+            ... }
+            >>> get_flow_dependencies(
+            ...     flow,
+            ...     trusted_versions={"mypkg": "1.2.3"},
+            ...     trusted_packages={"trustedonly"},
+            ... )
+            {"requests==<installed_version>", "mypkg==1.2.3", "trustedonly"}
+
+        Prefer a trusted version when not installed:
+            >>> flow = {
+            ...     "data": {
+            ...         "nodes": [
+            ...             {"data": {"node": {"metadata": {"dependencies": {
+            ...                 "dependencies": [{"name": "mypkg"}]
+            ...             }}}}}
+            ...         ]
+            ...     }
+            ... }
+            >>> get_flow_dependencies(flow, trusted_versions={"mypkg": "1.2.3"})
+            {"mypkg==1.2.3"}
+
+        Allow unsafe packages if missing:
+            >>> flow = {
+            ...     "data": {
+            ...         "nodes": [
+            ...             {"data": {"node": {"metadata": {"dependencies": {
+            ...                 "dependencies": [{"name": "foo", "version": "0.1.0"}]
+            ...             }}}}}
+            ...         ]
+            ...     }
+            ... }
+            >>> get_flow_dependencies(flow, enable_unsafe_packages=True)
+            {"foo==0.1.0"}
+    """
+    if trusted_packages is None:
+        trusted_packages = set()
+    if trusted_versions is None:
+        trusted_versions = {}
+
+    dependencies = set()
+
+    for component in flow.get("data", {}).get("nodes", []):
+        deps = (
+            component
+            .get("data", {})
+            .get("node", {})
+            .get("metadata", {})
+            .get("dependencies", {})
+            .get("dependencies", [])
+            )
+
+        if not deps:
+            continue
+
+        for dep in deps:
+            if not (dep_name := dep.get("name")):
+                continue
+
+            if dep_version := dep.get("version"):
+                # first matching distribution with the provided version
+                versioned_names = get_versioned_package_distributions(
+                        package_name=dep_name, version=dep_version
+                        )
+            else:
+                # all matching distributions
+                versioned_names = get_versioned_package_distributions(
+                    dep_name, version=None
+                    )
+            if not versioned_names:
+                logger.warning(f"Package {dep_name} has no matching distribution.")
+
+                if trusted_version := trusted_versions.get(dep_name):
+                    versioned_names = [f"{dep_name}=={trusted_version}"]
+                elif dep_name in trusted_packages:
+                    versioned_names = [dep_name]
+                elif enable_unsafe_packages:
+                    versioned_names = (
+                        [f"{dep_name}=={v}"]
+
+                        if (v := dep.get("version"))
+
+                        else [dep_name]
+                    )
+
+            dependencies.update(versioned_names)
+
+    return dependencies
 
 
 _COMPONENT_TYPE_NAMES = {"Component", "CustomComponent"}

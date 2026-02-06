@@ -1,9 +1,15 @@
 """Test metadata functionality in custom utils."""
 
+from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 import pytest
-from lfx.custom.utils import _generate_code_hash, build_component_metadata, build_custom_component_template_from_inputs
+from lfx.custom.utils import (
+    _generate_code_hash,
+    build_component_metadata,
+    build_custom_component_template_from_inputs,
+    get_flow_dependencies,
+)
 
 
 class TestCodeHashGeneration:
@@ -335,6 +341,68 @@ except (ImportError, ModuleNotFoundError):
         for dep in deps:
             assert not dep["is_local"], f"Dependency {dep['name']} should not be local"
 
+    def test_get_versioned_package_distributions_returns_empty_when_missing(self):
+        """Test that missing packages return an empty list."""
+        from lfx.custom.dependency_analyzer import get_versioned_package_distributions
+
+        get_versioned_package_distributions.cache_clear()
+        with patch("lfx.custom.dependency_analyzer._get_packages_distributions", return_value={}):
+            result = get_versioned_package_distributions("missing")
+        assert result == []
+
+    def test_get_versioned_package_distributions_version_uses_first_dist(self):
+        """Test that versioned lookup uses first distribution name."""
+        from lfx.custom.dependency_analyzer import get_versioned_package_distributions
+
+        get_versioned_package_distributions.cache_clear()
+        with patch(
+            "lfx.custom.dependency_analyzer._get_packages_distributions",
+            return_value={"demo": ["demo-dist", "demo-alt"]},
+        ):
+            result = get_versioned_package_distributions("demo", version="1.2.3")
+        assert result == ["demo-dist==1.2.3"]
+
+    def test_get_versioned_package_distributions_returns_all_versions(self):
+        """Test that non-versioned lookup returns versions for all dists."""
+        from lfx.custom.dependency_analyzer import get_versioned_package_distributions
+
+        def fake_distribution(dist_name):
+            if dist_name == "demo-dist":
+                return SimpleNamespace(version="1.0.0")
+            return SimpleNamespace(version="2.0.0")
+
+        get_versioned_package_distributions.cache_clear()
+        with (
+            patch(
+                "lfx.custom.dependency_analyzer._get_packages_distributions",
+                return_value={"demo": ["demo-dist", "demo-alt"]},
+            ),
+            patch("lfx.custom.dependency_analyzer.md.distribution", side_effect=fake_distribution),
+        ):
+            result = get_versioned_package_distributions("demo")
+        assert result == ["demo-dist==1.0.0", "demo-alt==2.0.0"]
+
+    def test_get_versioned_package_distributions_falls_back_on_error(self):
+        """Test fallback to dist name when version lookup fails."""
+        from lfx.custom.dependency_analyzer import get_versioned_package_distributions
+
+        def fake_distribution(dist_name):
+            if dist_name == "demo-dist":
+                msg = "boom"
+                raise RuntimeError(msg)
+            return SimpleNamespace(version="2.0.0")
+
+        get_versioned_package_distributions.cache_clear()
+        with (
+            patch(
+                "lfx.custom.dependency_analyzer._get_packages_distributions",
+                return_value={"demo": ["demo-dist", "demo-alt"]},
+            ),
+            patch("lfx.custom.dependency_analyzer.md.distribution", side_effect=fake_distribution),
+        ):
+            result = get_versioned_package_distributions("demo")
+        assert result == ["demo-dist", "demo-alt==2.0.0"]
+
 
 class TestMetadataWithDependencies:
     """Test metadata functionality including dependencies."""
@@ -554,3 +622,192 @@ class LMStudioModelComponent(LCModelComponent):
         # assert mock_frontend.metadata["module"] == "custom_components.my_test_component"
         # assert "code_hash" in mock_frontend.metadata
         # assert len(mock_frontend.metadata["code_hash"]) == 12
+
+
+class TestGetFlowDependencies:
+    """Test get_flow_dependencies for flow dependency resolution."""
+
+    @staticmethod
+    def _flow_with_deps(deps):
+        return {
+            "data": {
+                "nodes": [
+                    {"data": {"node": {"metadata": {"dependencies": {"dependencies": deps}}}}}
+                ]
+            }
+        }
+
+    def test_empty_flow_returns_empty_set(self):
+        assert get_flow_dependencies({}) == set()
+
+    def test_missing_dependencies_in_nodes_ignored(self):
+        flow = {"data": {"nodes": [{"data": {"node": {"metadata": {}}}}]}}
+        assert get_flow_dependencies(flow) == set()
+
+    def test_empty_dependencies_list_ignored(self):
+        flow = self._flow_with_deps([])
+        assert get_flow_dependencies(flow) == set()
+
+    def test_skips_dependencies_without_name(self):
+        flow = self._flow_with_deps([{"version": "1.0.0"}, {"name": ""}, {"name": None}])
+        assert get_flow_dependencies(flow) == set()
+
+    def test_uses_versioned_distribution_when_version_provided(self):
+        flow = self._flow_with_deps([{"name": "demo", "version": "1.2.3"}])
+        with patch("lfx.custom.utils.get_versioned_package_distributions") as mock_get:
+            mock_get.return_value = ["demo==1.2.3"]
+            result = get_flow_dependencies(flow)
+        assert result == {"demo==1.2.3"}
+        mock_get.assert_called_once_with(package_name="demo", version="1.2.3")
+
+    def test_uses_all_distributions_when_no_version(self):
+        flow = self._flow_with_deps([{"name": "demo"}])
+        with patch("lfx.custom.utils.get_versioned_package_distributions") as mock_get:
+            mock_get.return_value = ["demo==1.0.0", "demo==2.0.0"]
+            result = get_flow_dependencies(flow)
+        assert result == {"demo==1.0.0", "demo==2.0.0"}
+        mock_get.assert_called_once_with("demo", version=None)
+
+    def test_warns_on_no_matching_distribution(self):
+        flow = self._flow_with_deps([{"name": "demo"}])
+        with (
+            patch("lfx.custom.utils.get_versioned_package_distributions", return_value=[]),
+            patch("lfx.custom.utils.logger") as mock_logger,
+        ):
+            result = get_flow_dependencies(flow)
+        assert result == set()
+        mock_logger.warning.assert_called_once_with("Package demo has no matching distribution.")
+
+    def test_trusted_versions_override_when_no_distribution(self):
+        flow = self._flow_with_deps([{"name": "demo"}])
+        with patch("lfx.custom.utils.get_versioned_package_distributions", return_value=[]):
+            result = get_flow_dependencies(flow, trusted_versions={"demo": "9.9.9"})
+        assert result == {"demo==9.9.9"}
+
+    def test_trusted_packages_used_when_no_trusted_version(self):
+        flow = self._flow_with_deps([{"name": "demo"}])
+        with patch("lfx.custom.utils.get_versioned_package_distributions", return_value=[]):
+            result = get_flow_dependencies(flow, trusted_packages={"demo"})
+        assert result == {"demo"}
+
+    def test_trusted_versions_take_priority_over_trusted_packages(self):
+        flow = self._flow_with_deps([{"name": "demo"}])
+        with patch("lfx.custom.utils.get_versioned_package_distributions", return_value=[]):
+            result = get_flow_dependencies(
+                flow, trusted_versions={"demo": "9.9.9"}, trusted_packages={"demo"}
+            )
+        assert result == {"demo==9.9.9"}
+
+    def test_trusted_versions_take_priority_over_unsafe(self):
+        flow = self._flow_with_deps([{"name": "demo", "version": "1.0.0"}])
+        with patch("lfx.custom.utils.get_versioned_package_distributions", return_value=[]):
+            result = get_flow_dependencies(
+                flow, trusted_versions={"demo": "9.9.9"}, enable_unsafe_packages=True
+            )
+        assert result == {"demo==9.9.9"}
+
+    def test_trusted_packages_take_priority_over_unsafe(self):
+        flow = self._flow_with_deps([{"name": "demo", "version": "1.0.0"}])
+        with patch("lfx.custom.utils.get_versioned_package_distributions", return_value=[]):
+            result = get_flow_dependencies(
+                flow, trusted_packages={"demo"}, enable_unsafe_packages=True
+            )
+        assert result == {"demo"}
+
+    def test_installed_distribution_overrides_trusted_versions(self):
+        flow = self._flow_with_deps([{"name": "demo", "version": "1.0.0"}])
+        with patch("lfx.custom.utils.get_versioned_package_distributions") as mock_get:
+            mock_get.return_value = ["demo==1.0.0"]
+            result = get_flow_dependencies(flow, trusted_versions={"demo": "9.9.9"})
+        assert result == {"demo==1.0.0"}
+
+    def test_installed_distribution_overrides_trusted_packages(self):
+        flow = self._flow_with_deps([{"name": "demo", "version": "1.0.0"}])
+        with patch("lfx.custom.utils.get_versioned_package_distributions") as mock_get:
+            mock_get.return_value = ["demo==1.0.0"]
+            result = get_flow_dependencies(flow, trusted_packages={"demo"})
+        assert result == {"demo==1.0.0"}
+
+    def test_enable_unsafe_packages_uses_flow_version(self):
+        flow = self._flow_with_deps([{"name": "demo", "version": "3.0.0"}])
+        with patch("lfx.custom.utils.get_versioned_package_distributions", return_value=[]):
+            result = get_flow_dependencies(flow, enable_unsafe_packages=True)
+        assert result == {"demo==3.0.0"}
+
+    def test_enable_unsafe_packages_without_version_uses_name(self):
+        flow = self._flow_with_deps([{"name": "demo"}])
+        with patch("lfx.custom.utils.get_versioned_package_distributions", return_value=[]):
+            result = get_flow_dependencies(flow, enable_unsafe_packages=True)
+        assert result == {"demo"}
+
+    def test_enable_unsafe_packages_ignored_when_distribution_found(self):
+        flow = self._flow_with_deps([{"name": "demo", "version": "3.0.0"}])
+        with patch("lfx.custom.utils.get_versioned_package_distributions") as mock_get:
+            mock_get.return_value = ["demo==1.0.0"]
+            result = get_flow_dependencies(
+                flow,
+                trusted_versions={"demo": "9.9.9"},
+                trusted_packages={"demo"},
+                enable_unsafe_packages=True,
+            )
+        assert result == {"demo==1.0.0"}
+
+    def test_multiple_nodes_deduplicate_dependencies(self):
+        flow = {
+            "data": {
+                "nodes": [
+                    {"data": {"node": {"metadata": {"dependencies": {"dependencies": [{"name": "demo"}]}}}}},
+                    {"data": {"node": {"metadata": {"dependencies": {"dependencies": [{"name": "demo"}]}}}}},
+                ]
+            }
+        }
+        with patch("lfx.custom.utils.get_versioned_package_distributions") as mock_get:
+            mock_get.return_value = ["demo==1.0.0"]
+            result = get_flow_dependencies(flow)
+        assert result == {"demo==1.0.0"}
+
+    def test_allows_multiple_versions_of_same_package(self):
+        flow = self._flow_with_deps(
+            [
+                {"name": "demo", "version": "1.0.0"},
+                {"name": "demo", "version": "2.0.0"},
+            ]
+        )
+        with patch("lfx.custom.utils.get_versioned_package_distributions") as mock_get:
+            mock_get.side_effect = [["demo==1.0.0"], ["demo==2.0.0"]]
+            result = get_flow_dependencies(flow)
+        assert result == {"demo==1.0.0", "demo==2.0.0"}
+
+    def test_mixed_resolution_paths_in_single_flow(self):
+        flow = self._flow_with_deps(
+            [
+                {"name": "installed"},
+                {"name": "trusted_version"},
+                {"name": "trusted_only"},
+                {"name": "unsafe", "version": "4.5.6"},
+            ]
+        )
+
+        def fake_get_versioned(package_name=None, version=None, *args, **kwargs):
+            if package_name is None and args:
+                package_name = args[0]
+            if version is None and "version" in kwargs:
+                version = kwargs["version"]
+            if package_name == "installed":
+                return ["installed==1.0.0"]
+            return []
+
+        with patch("lfx.custom.utils.get_versioned_package_distributions", side_effect=fake_get_versioned):
+            result = get_flow_dependencies(
+                flow,
+                trusted_versions={"trusted_version": "9.9.9"},
+                trusted_packages={"trusted_only"},
+                enable_unsafe_packages=True,
+            )
+
+        assert result == {
+            "installed==1.0.0",
+            "trusted_version==9.9.9",
+            "trusted_only",
+            "unsafe==4.5.6",
+        }

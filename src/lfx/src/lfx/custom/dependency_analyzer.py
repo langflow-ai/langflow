@@ -8,6 +8,8 @@ import sys
 from dataclasses import asdict, dataclass
 from functools import lru_cache
 
+from lfx.log.logger import logger
+
 try:
     STDLIB_MODULES: set[str] = set(sys.stdlib_module_names)  # 3.10+
 except AttributeError:
@@ -101,6 +103,7 @@ def analyze_dependencies(source: str, *, resolve_versions: bool = True) -> list[
     # Process and deduplicate dependencies by package name only
     unique_packages: dict[str, DependencyInfo] = {}
     for raw_dep in visitor.results:
+        print("[DEBUG] raw_dep:", raw_dep)
         processed_dep = _classify_dependency(raw_dep) if resolve_versions else raw_dep
 
         # Skip stdlib imports and local imports - we only care about external dependencies
@@ -163,3 +166,33 @@ def _get_distribution_version(import_name: str):
         return md.distribution(dist_name).version
     except (ImportError, AttributeError, OSError, ValueError):
         return None
+
+
+@lru_cache(maxsize=128)
+def get_versioned_package_distributions(package_name: str, version: str | None = None) -> list[str]:
+    """Get versioned package distributions for a given package name.
+
+    If a version is provided, it will return a list
+    containing the first matching distribution with the provided version.
+
+    If no version is provided, it will return a list
+    containing all matching distributions.
+
+    Note: The distributions are resolved from the current Python environment.
+    If the package is not installed, it will return an empty list.
+    """
+    reverse_map = _get_packages_distributions()
+    dist_names = reverse_map.get(package_name, [])
+
+    if version is not None:
+        dist_name = dist_names[0]
+        return [f"{dist_name}=={version}"]
+
+    versioned_names: list[str] = []
+    for dist_name in dist_names:
+        try:
+            versioned_names.append(f"{dist_name}=={md.distribution(dist_name).version}")
+        except Exception: # noqa: BLE001
+            versioned_names.append(dist_name)
+
+    return versioned_names
