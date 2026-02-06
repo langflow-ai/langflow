@@ -77,11 +77,6 @@ export interface JsonPatchResponse {
    * The folder ID of the flow (for refetching)
    */
   folder_id?: string;
-
-  /**
-   * The patch operations that were applied (for client-side merging using fast-json-patch)
-   */
-  operations: JsonPatchOperation[];
 }
 
 // Made with Bob

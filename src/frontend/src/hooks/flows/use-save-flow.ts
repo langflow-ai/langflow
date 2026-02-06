@@ -1,6 +1,5 @@
 import type { ReactFlowJsonObject } from "@xyflow/react";
 import type { Operation as JsonPatchOperation } from "fast-json-patch";
-import { applyPatch } from "fast-json-patch";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { usePatchJsonPatchFlow } from "@/controllers/API/queries/flows/use-patch-json-patch-flow";
 import useAlertStore from "@/stores/alertStore";
@@ -86,14 +85,12 @@ const useSaveFlow = () => {
                   const flows = useFlowsManagerStore.getState().flows;
                   setSaveLoading(false);
                   if (flows) {
-                    // Apply the patch operations to the current flow using fast-json-patch
-                    // This efficiently handles nested updates like /data/1/template/field
-                    const patchResult = applyPatch(
-                      structuredClone(flow!),
-                      patchResponse.operations,
-                    );
+                    // The local flow already has the user's changes applied.
+                    // We only need to merge server-controlled fields (id, updated_at).
+                    // Re-applying the same operations would corrupt array data
+                    // (e.g., removing wrong node when indices shift).
                     const mergedFlow = {
-                      ...patchResult.newDocument,
+                      ...structuredClone(flow!),
                       id: patchResponse.id,
                       updated_at: patchResponse.updated_at,
                     };

@@ -111,19 +111,6 @@ async def test_json_patch_vs_traditional_patch_comparison(client: AsyncClient, f
     assert "/description" in response_data["updated_fields"]
     assert "/data" in response_data["updated_fields"]
 
-    # Verify operations are returned for client-side merging
-    assert "operations" in response_data
-    assert len(response_data["operations"]) == 3
-    assert response_data["operations"][0]["op"] == "replace"
-    assert response_data["operations"][0]["path"] == "/name"
-    assert response_data["operations"][0]["value"] == new_name
-    assert response_data["operations"][1]["op"] == "replace"
-    assert response_data["operations"][1]["path"] == "/description"
-    assert response_data["operations"][1]["value"] == new_description
-    assert response_data["operations"][2]["op"] == "replace"
-    assert response_data["operations"][2]["path"] == "/data"
-    assert response_data["operations"][2]["value"] == new_data
-
     # Verify the flow was actually updated by fetching it
     verify_response = await client.get(
         f"api/v1/flows/{flow.id}",
@@ -149,11 +136,6 @@ async def test_json_patch_null_value_clears_field(client: AsyncClient, flow, log
     assert response_data["success"] is True
     assert response_data["operations_applied"] == 1
     assert "/endpoint_name" in response_data["updated_fields"]
-    assert "operations" in response_data
-    assert len(response_data["operations"]) == 1
-    assert response_data["operations"][0]["op"] == "replace"
-    assert response_data["operations"][0]["path"] == "/endpoint_name"
-    assert response_data["operations"][0]["value"] == "test-endpoint"
 
     # Verify the endpoint was set by fetching the flow
     verify_response = await client.get(
@@ -174,11 +156,6 @@ async def test_json_patch_null_value_clears_field(client: AsyncClient, flow, log
     assert response_data["success"] is True
     assert response_data["operations_applied"] == 1
     assert "/endpoint_name" in response_data["updated_fields"]
-    assert "operations" in response_data
-    assert len(response_data["operations"]) == 1
-    assert response_data["operations"][0]["op"] == "replace"
-    assert response_data["operations"][0]["path"] == "/endpoint_name"
-    assert response_data["operations"][0]["value"] is None
 
     # Verify the endpoint was cleared by fetching the flow
     verify_response = await client.get(
@@ -227,11 +204,6 @@ async def test_json_patch_partial_update_efficiency(client: AsyncClient, flow, l
     assert response_data["success"] is True
     assert response_data["operations_applied"] == 1
     assert "/name" in response_data["updated_fields"]
-    assert "operations" in response_data
-    assert len(response_data["operations"]) == 1
-    assert response_data["operations"][0]["op"] == "replace"
-    assert response_data["operations"][0]["path"] == "/name"
-    assert response_data["operations"][0]["value"] == "Just Name Change"
 
     # Verify the name was updated by fetching the flow
     verify_response = await client.get(
@@ -262,7 +234,7 @@ async def test_json_patch_partial_update_efficiency(client: AsyncClient, flow, l
 
 @pytest.mark.asyncio
 async def test_json_patch_remove_operation(client: AsyncClient, flow, logged_in_headers):
-    """Test that remove operations are returned so frontend can apply them using fast-json-patch."""
+    """Test that remove operations are applied correctly on the server."""
     # First, set an endpoint name
     response = await client.patch(
         f"api/v1/flows/{flow.id}/json-patch",
@@ -284,12 +256,6 @@ async def test_json_patch_remove_operation(client: AsyncClient, flow, logged_in_
     assert response_data["operations_applied"] == 1
     assert "/endpoint_name" in response_data["updated_fields"]
 
-    # Verify the remove operation is returned for frontend to apply
-    assert "operations" in response_data
-    assert len(response_data["operations"]) == 1
-    assert response_data["operations"][0]["op"] == "remove"
-    assert response_data["operations"][0]["path"] == "/endpoint_name"
-
     # Verify the field was actually removed in the database
     verify_response = await client.get(
         f"api/v1/flows/{flow.id}",
@@ -297,11 +263,7 @@ async def test_json_patch_remove_operation(client: AsyncClient, flow, logged_in_
     )
     assert verify_response.json()["endpoint_name"] is None
 
-    logger.info(
-        "\n✅ REMOVE OPERATION TEST PASSED:\n"
-        "   Verified that remove operations are returned in the response\n"
-        "   Frontend can apply these operations using fast-json-patch to update local state"
-    )
+    logger.info("\n✅ REMOVE OPERATION TEST PASSED:\n   Verified that remove operations are applied correctly")
 
 
 @pytest.mark.asyncio
@@ -355,12 +317,6 @@ async def test_json_patch_deep_nested_array_update_efficiency(client: AsyncClien
     response_data = response.json()
     assert response_data["success"] is True
     assert response_data["operations_applied"] == 1
-
-    # Verify the operations are returned
-    assert "operations" in response_data
-    assert len(response_data["operations"]) == 1
-    assert response_data["operations"][0]["path"] == "/data/nodes/1/data/template/field_2/load_from_db"
-    assert response_data["operations"][0]["value"] is True
 
     # Calculate what a full update would cost
     full_update_size = len(str(large_data))
