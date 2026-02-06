@@ -138,6 +138,52 @@ def _load_flow_from_file(file_path: Path) -> Data | None:
         return None
 
 
+def _sanitize_flow_identifier(identifier: str) -> str | None:
+    """Sanitize a flow identifier to prevent path traversal attacks.
+
+    Args:
+        identifier: The flow name or ID to sanitize.
+
+    Returns:
+        A safe identifier, or None if the identifier is invalid.
+    """
+    if not identifier:
+        return None
+
+    # Use Path.name to strip any directory components
+    safe_name = Path(identifier).name
+
+    # Reject if the identifier contained path separators (potential traversal attempt)
+    if safe_name != identifier:
+        logger.warning(f"Rejected flow identifier with path separators: '{identifier}'")
+        return None
+
+    # Reject identifiers that are special directory references
+    if safe_name in {".", "..", ""}:
+        logger.warning(f"Rejected invalid flow identifier: '{identifier}'")
+        return None
+
+    return safe_name
+
+
+def _is_path_within_directory(path: Path, directory: Path) -> bool:
+    """Check if a resolved path is within the allowed directory.
+
+    Args:
+        path: The path to check.
+        directory: The directory that should contain the path.
+
+    Returns:
+        True if the path is within the directory, False otherwise.
+    """
+    try:
+        resolved_path = path.resolve()
+        resolved_dir = directory.resolve()
+        return resolved_path.is_relative_to(resolved_dir)
+    except (ValueError, OSError):
+        return False
+
+
 def _find_flow_in_project(
     project_path: Path,
     flow_id: str | None = None,
@@ -162,16 +208,20 @@ def _find_flow_in_project(
         logger.warning(f"Project path is not a directory: {project_path}")
         return None
 
+    # Sanitize identifiers to prevent path traversal
+    safe_flow_name = _sanitize_flow_identifier(flow_name) if flow_name else None
+    safe_flow_id = _sanitize_flow_identifier(flow_id) if flow_id else None
+
     # Strategy 1: Direct file name match with flow_name
-    if flow_name:
-        direct_path = project_path / f"{flow_name}.json"
+    if safe_flow_name:
+        direct_path = project_path / f"{safe_flow_name}.json"
         if direct_path.exists():
             logger.debug(f"Found flow by name match: {direct_path}")
             return _load_flow_from_file(direct_path)
 
     # Strategy 2: Direct file name match with flow_id
-    if flow_id:
-        direct_path = project_path / f"{flow_id}.json"
+    if safe_flow_id:
+        direct_path = project_path / f"{safe_flow_id}.json"
         if direct_path.exists():
             logger.debug(f"Found flow by ID match: {direct_path}")
             return _load_flow_from_file(direct_path)

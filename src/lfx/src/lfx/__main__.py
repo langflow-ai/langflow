@@ -97,6 +97,12 @@ def run_command_wrapper(
         "-p",
         help="Project folder containing subflows. Defaults to the directory of the flow file.",
     ),
+    files_dir: str | None = typer.Option(
+        None,
+        "--files-dir",
+        "--files",
+        help="Directory containing files referenced by the flow. Defaults to project path.",
+    ),
     env_file: str | None = typer.Option(
         None,
         "--env-file",
@@ -152,6 +158,9 @@ def run_command_wrapper(
     # Convert project_path string to Path if provided
     project_path_obj = Path(project_path) if project_path else None
 
+    # Convert files_dir string to Path if provided
+    files_dir_obj = Path(files_dir) if files_dir else None
+
     # Convert env_file string to Path if provided
     env_file_obj = Path(env_file) if env_file else None
 
@@ -162,6 +171,7 @@ def run_command_wrapper(
         output_format=output_format,
         flow_json=flow_json,
         project_path=project_path_obj,
+        files_dir=files_dir_obj,
         env_file=env_file_obj,
         env_vars=env_vars,
         stdin=stdin,

@@ -937,7 +937,6 @@ class TestRunFlowExecutionErrors:
 class TestRunFlowFilesDirParameter:
     """Tests for run_flow files_dir parameter handling."""
 
-    @pytest.mark.asyncio
     async def test_files_dir_injected_into_context(self, tmp_path):
         """Test that files_dir is injected into graph context."""
         script_path = tmp_path / "test.py"
@@ -974,7 +973,6 @@ class TestRunFlowFilesDirParameter:
             assert "files_dir" in mock_graph.context
             assert mock_graph.context["files_dir"] == files_dir
 
-    @pytest.mark.asyncio
     async def test_project_path_injected_into_context(self, tmp_path):
         """Test that project_path is injected into graph context."""
         script_path = tmp_path / "test.py"
@@ -1011,7 +1009,6 @@ class TestRunFlowFilesDirParameter:
             assert "project_path" in mock_graph.context
             assert mock_graph.context["project_path"] == project_path
 
-    @pytest.mark.asyncio
     async def test_both_files_dir_and_project_path_injected(self, tmp_path):
         """Test that both files_dir and project_path can be injected."""
         script_path = tmp_path / "test.py"

@@ -145,16 +145,21 @@ class RunFlowBaseComponent(Component):
         """Get the files directory from graph context for file resolution."""
         return self._get_context_value("files_dir")
 
-    async def get_flow(self, flow_name_selected: str | None = None, flow_id_selected: str | None = None) -> Data:
+    async def get_flow(self, flow_name_selected: str | None = None, flow_id_selected: str | None = None) -> Data | None:
         """Get a flow's data by name or id."""
         project_path = self._get_project_path()
+        logger.debug(
+            f"get_flow: project_path={project_path}, flow_name={flow_name_selected}, flow_id={flow_id_selected}"
+        )
         flow = await get_flow_by_id_or_name(
             user_id=self.user_id,
             flow_id=flow_id_selected,
             flow_name=flow_name_selected,
             project_path=project_path,
         )
-        return flow or Data(data={})
+        if flow is None:
+            logger.warning(f"Flow not found: name={flow_name_selected}, id={flow_id_selected}, project={project_path}")
+        return flow
 
     async def get_graph(
         self,
@@ -173,12 +178,22 @@ class RunFlowBaseComponent(Component):
 
         # TODO: use flow id only
         flow = await self.get_flow(flow_name_selected=flow_name_selected, flow_id_selected=flow_id_selected)
-        if not flow:
-            msg = "Flow not found"
+        if not flow or not flow.data:
+            msg = f"Flow not found: name={flow_name_selected}, id={flow_id_selected}"
+            raise ValueError(msg)
+
+        # Ensure flow data has the required structure
+        flow_graph_data = flow.data.get("data", {})
+        if not flow_graph_data or "nodes" not in flow_graph_data:
+            msg = f"Invalid flow data structure for: name={flow_name_selected}, id={flow_id_selected}"
+            logger.error(
+                f"Flow data keys: {list(flow.data.keys())}, "
+                f"graph_data keys: {list(flow_graph_data.keys()) if flow_graph_data else 'empty'}"
+            )
             raise ValueError(msg)
 
         graph = Graph.from_payload(
-            payload=flow.data.get("data", {}),
+            payload=flow_graph_data,
             flow_id=flow_id_selected,
             flow_name=flow_name_selected,
         )

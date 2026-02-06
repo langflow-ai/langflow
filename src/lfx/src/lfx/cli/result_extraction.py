@@ -217,7 +217,9 @@ def extract_message_from_result(results: list) -> str:
 
         # Handle Chat Output component
         if display_name == "Chat Output":
-            message: Message = result.result_dict.results["message"]
+            message: Message | None = result.result_dict.results.get("message")
+            if message is None:
+                continue
             return _value_to_json_string(message)
 
         # Handle Run Flow component - extract message from subflow result
@@ -278,7 +280,9 @@ def extract_structured_result(results: list, *, extract_text: bool = True) -> di
 
         # Handle Chat Output component
         if display_name == "Chat Output":
-            message: Message = result.result_dict.results["message"]
+            message: Message | None = result.result_dict.results.get("message")
+            if message is None:
+                continue
             try:
                 result_message = _extract_value(message, extract_text=extract_text)
             except (AttributeError, TypeError, ValueError) as e:

@@ -15,6 +15,31 @@ if TYPE_CHECKING:
     from lfx.graph.schema import RunOutputs
 
 
+def _apply_tweaks_to_graph(graph: Graph, tweaks: dict) -> None:
+    """Apply tweaks to a graph's vertices.
+
+    Tweaks are a dictionary mapping component IDs to parameter overrides.
+
+    Args:
+        graph: The graph to apply tweaks to.
+        tweaks: Dictionary of {component_id: {param_name: value}}.
+    """
+    if not tweaks:
+        return
+
+    for vertex in graph.vertices:
+        # Check if there are tweaks for this vertex by ID or display name
+        vertex_tweaks = tweaks.get(vertex.id) or tweaks.get(vertex.display_name)
+        if not vertex_tweaks:
+            continue
+
+        # Apply tweaks to the vertex's template data
+        template = vertex.data.get("node", {}).get("template", {})
+        for param_name, param_value in vertex_tweaks.items():
+            if param_name in template:
+                template[param_name]["value"] = param_value
+
+
 async def run_flow(
     inputs: dict | list[dict] | None = None,
     tweaks: dict | None = None,
@@ -69,6 +94,10 @@ async def run_flow(
         raise ValueError(msg)
 
     # Direct graph execution mode (lfx) - user_id is optional
+
+    # Apply tweaks to the graph if provided
+    if tweaks:
+        _apply_tweaks_to_graph(graph, tweaks)
 
     # Enable environment variable fallback for subflow execution
     graph.fallback_to_env_vars = True

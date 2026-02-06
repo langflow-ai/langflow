@@ -137,6 +137,42 @@ class ParameterHandler:
             or (not field.get("show") and field_name != "code")
         )
 
+    def _sanitize_filename(self, filename: str) -> str:
+        """Sanitize a filename to prevent path traversal attacks.
+
+        Args:
+            filename: The filename to sanitize.
+
+        Returns:
+            A safe filename with only the base name component.
+        """
+        from pathlib import Path
+        from urllib.parse import unquote
+
+        # Decode any percent-encoded characters
+        decoded = unquote(filename)
+        # Extract only the base filename, stripping any directory components
+        return Path(decoded).name
+
+    def _is_path_within_directory(self, path: str, directory: str) -> bool:
+        """Check if a resolved path is within the allowed directory.
+
+        Args:
+            path: The path to check.
+            directory: The directory that should contain the path.
+
+        Returns:
+            True if the path is within the directory, False otherwise.
+        """
+        from pathlib import Path
+
+        try:
+            resolved_path = Path(path).resolve()
+            resolved_dir = Path(directory).resolve()
+            return resolved_path.is_relative_to(resolved_dir)
+        except (ValueError, OSError):
+            return False
+
     def _resolve_file_with_fallback(self, logical_path: str) -> str:
         """Resolve a file path with fallback to files directory or project directory.
 
@@ -155,8 +191,9 @@ class ParameterHandler:
         """
         from pathlib import Path
 
-        # Extract filename from logical path (format: "flow_id/filename")
-        filename = logical_path.split("/")[-1] if "/" in logical_path else logical_path
+        # Extract and sanitize filename from logical path (format: "flow_id/filename")
+        raw_filename = logical_path.split("/")[-1] if "/" in logical_path else logical_path
+        filename = self._sanitize_filename(raw_filename)
 
         # Try storage service resolution first
         if self.storage_service is not None:
@@ -182,19 +219,39 @@ class ParameterHandler:
                 fallback_dirs.append(project_path)
 
         for fallback_dir in fallback_dirs:
-            # Try to find file by name in fallback directory
+            # Try to find file by sanitized name in fallback directory
             fallback_path = Path(fallback_dir) / filename
+            resolved_fallback = str(fallback_path.resolve())
+
+            # Validate path containment to prevent path traversal
+            if not self._is_path_within_directory(resolved_fallback, fallback_dir):
+                logger.warning(
+                    f"Path traversal attempt detected for '{raw_filename}', "
+                    f"skipping fallback directory '{fallback_dir}'"
+                )
+                continue
+
             if fallback_path.exists():
                 logger.info(f"File '{filename}' not found at '{resolved_path}', using fallback: '{fallback_path}'")
-                return str(fallback_path)
+                return resolved_fallback
 
             # Also try just the base filename (in case logical path has subdirectories)
             base_filename = Path(filename).name
             if base_filename != filename:
                 fallback_path = Path(fallback_dir) / base_filename
+                resolved_fallback = str(fallback_path.resolve())
+
+                # Validate path containment
+                if not self._is_path_within_directory(resolved_fallback, fallback_dir):
+                    logger.warning(
+                        f"Path traversal attempt detected for '{base_filename}', "
+                        f"skipping fallback directory '{fallback_dir}'"
+                    )
+                    continue
+
                 if fallback_path.exists():
                     logger.info(f"File '{filename}' not found at '{resolved_path}', using fallback: '{fallback_path}'")
-                    return str(fallback_path)
+                    return resolved_fallback
 
         # No fallback found - return original resolved path (will fail later with clear error)
         return resolved_path

@@ -14,6 +14,8 @@ from lfx.run.base import RunError, run_flow
 
 def _parse_env_vars(env_vars: list[str] | None) -> dict[str, str]:
     """Parse KEY=VALUE pairs from CLI arguments."""
+    import sys
+
     result = {}
     if not env_vars:
         return result
@@ -21,14 +23,20 @@ def _parse_env_vars(env_vars: list[str] | None) -> dict[str, str]:
         if "=" in item:
             key, value = item.split("=", 1)
             result[key.strip()] = value.strip()
+        else:
+            sys.stderr.write(f"Warning: Ignoring malformed env var '{item}' (expected KEY=VALUE format)\n")
     return result
 
 
 def _load_env_file(env_file: Path | None) -> dict[str, str]:
-    """Load environment variables from .env file."""
+    """Load environment variables from .env file.
+
+    Filters out None values since os.environ only accepts str values.
+    """
     if not env_file or not env_file.exists():
         return {}
-    return dict(dotenv_values(env_file))
+    # Filter out None values - dotenv_values can return None for values
+    return {k: v for k, v in dotenv_values(env_file).items() if v is not None}
 
 
 # Verbosity level constants

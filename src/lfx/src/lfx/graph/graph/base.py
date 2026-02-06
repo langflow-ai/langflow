@@ -131,6 +131,7 @@ class Graph:
         self._snapshots: list[dict[str, Any]] = []
         self._end_trace_tasks: set[asyncio.Task] = set()
         self._is_subgraph = False
+        self.fallback_to_env_vars = False
 
         if context and not isinstance(context, dict):
             msg = "Context must be a dictionary"
@@ -1097,6 +1098,7 @@ class Graph:
             "_is_output_vertices": self._is_output_vertices,
             "has_session_id_vertices": self.has_session_id_vertices,
             "_sorted_vertices_layers": self._sorted_vertices_layers,
+            "fallback_to_env_vars": self.fallback_to_env_vars,
         }
 
     def __deepcopy__(self, memo):
