@@ -1,8 +1,7 @@
 """Tests for ModelInput fixes.
 
 This module tests the following bug fixes:
-1. Input port visibility issue (ff461bc089): ModelInput should not show connection handle by default,
-   only when "connect_other_models" is selected.
+1. Input port visibility: ModelInput should always show connection handle based on model_type.
 2. Model defaults (cb6208f0ab): The first 5 models from each provider should be marked as default.
 """
 
@@ -11,50 +10,32 @@ from lfx.inputs.inputs import ModelInput
 
 
 class TestModelInputPortVisibility:
-    """Test that ModelInput doesn't show connection handle by default (fix: ff461bc089)."""
+    """Test that ModelInput always shows connection handle based on model_type."""
 
-    def test_default_no_input_types(self):
-        """By default, ModelInput should have empty input_types (no connection handle)."""
+    def test_default_language_model_input_types(self):
+        """By default, ModelInput should have input_types=['LanguageModel'] for language models."""
         model_input = ModelInput(name="test_model")
-        assert model_input.input_types == []
-
-    def test_external_options_present(self):
-        """ModelInput should have external_options with 'Connect other models' button."""
-        model_input = ModelInput(name="test_model")
-        assert model_input.external_options is not None
-        assert "fields" in model_input.external_options
-        assert "data" in model_input.external_options["fields"]
-        assert "node" in model_input.external_options["fields"]["data"]
-        node = model_input.external_options["fields"]["data"]["node"]
-        assert node["name"] == "connect_other_models"
-        assert node["display_name"] == "Connect other models"
-        assert node["icon"] == "CornerDownLeft"
-
-    def test_connect_other_models_enables_handle(self):
-        """When value is 'connect_other_models', input_types should be set to ['LanguageModel']."""
-        model_input = ModelInput(name="test_model", value="connect_other_models")
         assert model_input.input_types == ["LanguageModel"]
 
-    def test_connect_other_models_string_preserved(self):
-        """The special value 'connect_other_models' should be preserved as a string."""
-        model_input = ModelInput(name="test_model", value="connect_other_models")
-        assert model_input.value == "connect_other_models"
+    def test_default_embedding_model_input_types(self):
+        """ModelInput with model_type='embedding' should have input_types=['Embeddings']."""
+        model_input = ModelInput(name="test_model", model_type="embedding")
+        assert model_input.input_types == ["Embeddings"]
 
-    def test_normal_model_value_no_handle(self):
-        """Setting a normal model value should not enable the connection handle."""
+    def test_input_types_with_model_value(self):
+        """Setting a model value should still have input_types set based on model_type."""
         model_input = ModelInput(name="test_model", value=[{"name": "gpt-4o"}])
-        # Should remain empty since we're not in connection mode
-        assert model_input.input_types == []
+        assert model_input.input_types == ["LanguageModel"]
 
     def test_string_value_normalization(self):
-        """String values should be normalized to dict format but not enable handle."""
+        """String values should be normalized to dict format and input_types should be set."""
         model_input = ModelInput(name="test_model", value="gpt-4o")
         # Value should be normalized
         assert isinstance(model_input.value, list)
         if model_input.value:  # May be normalized or fallback
             assert isinstance(model_input.value[0], dict)
-        # Should not enable connection handle
-        assert model_input.input_types == []
+        # Should have connection handle based on model_type
+        assert model_input.input_types == ["LanguageModel"]
 
 
 class TestModelInputValueNormalization:
@@ -191,3 +172,61 @@ class TestModelInputRefreshButton:
         """ModelInput should allow disabling refresh_button."""
         model_input = ModelInput(name="test_model", refresh_button=False)
         assert model_input.refresh_button is False
+
+
+class TestModelInputEmbeddingType:
+    """Test that ModelInput correctly handles embedding model_type (fix for LE-278).
+
+    input_types should always be set based on model_type:
+    - "embedding" -> ["Embeddings"]
+    - "language" (default) -> ["LanguageModel"]
+    """
+
+    def test_language_model_type_default(self):
+        """Default model_type should be 'language'."""
+        model_input = ModelInput(name="test_model")
+        assert model_input.model_type == "language"
+
+    def test_embedding_model_type_can_be_set(self):
+        """model_type can be set to 'embedding'."""
+        model_input = ModelInput(name="test_model", model_type="embedding")
+        assert model_input.model_type == "embedding"
+
+    def test_language_type_sets_language_model_input_types(self):
+        """When model_type='language', input_types should be ['LanguageModel']."""
+        model_input = ModelInput(name="test_model", model_type="language")
+        assert model_input.input_types == ["LanguageModel"]
+
+    def test_embedding_type_sets_embeddings_input_types(self):
+        """When model_type='embedding', input_types should be ['Embeddings']."""
+        model_input = ModelInput(name="test_model", model_type="embedding")
+        assert model_input.input_types == ["Embeddings"]
+
+    def test_embedding_type_with_value(self):
+        """Embedding model with value should still have input_types=['Embeddings']."""
+        model_input = ModelInput(
+            name="test_model",
+            model_type="embedding",
+            value=[{"name": "text-embedding-ada-002"}],
+        )
+        assert model_input.input_types == ["Embeddings"]
+
+    def test_explicit_input_types_preserved_for_embedding(self):
+        """If input_types is explicitly set, it should not be overwritten."""
+        model_input = ModelInput(
+            name="test_model",
+            model_type="embedding",
+            input_types=["Embeddings"],
+        )
+        # Should preserve the explicit input_types
+        assert model_input.input_types == ["Embeddings"]
+
+    def test_explicit_input_types_preserved_for_language(self):
+        """If input_types is explicitly set for language model, it should not be overwritten."""
+        model_input = ModelInput(
+            name="test_model",
+            model_type="language",
+            input_types=["LanguageModel"],
+        )
+        # Should preserve the explicit input_types
+        assert model_input.input_types == ["LanguageModel"]

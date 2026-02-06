@@ -141,13 +141,17 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
 
       const templateFieldType = targetNode.data.node!.template[field]?.type;
       const rawInputTypes = targetNode.data.node!.template[field]?.input_types;
-      // For ModelInput types, default to ["LanguageModel"] when input_types is empty
-      // This matches the behavior in RenderInputParameters
+      const modelType = targetNode.data.node!.template[field]?.model_type;
+      // For ModelInput types, default based on model_type:
+      // - "embedding" -> ["Embeddings"]
+      // - "language" (default) -> ["LanguageModel"]
       const isModelType = templateFieldType === "model";
+      const defaultModelInputType =
+        modelType === "embedding" ? "Embeddings" : "LanguageModel";
       const inputTypes = rawInputTypes?.length
         ? rawInputTypes
         : isModelType
-          ? ["LanguageModel"]
+          ? [defaultModelInputType]
           : rawInputTypes;
       const hasProxy = targetNode.data.node!.template[field]?.proxy;
       const isToolMode = targetNode.data.node!.template[field]?.tool_mode;

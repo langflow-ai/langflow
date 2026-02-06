@@ -1260,17 +1260,10 @@ def update_model_options_in_build_config(
             if default_model:
                 build_config["model"]["value"] = [default_model]
 
-    # Handle visibility logic:
-    # - Show handle ONLY when field_value is "connect_other_models"
-    # - Hide handle in all other cases (default, model selection, etc.)
-    if field_value == "connect_other_models":
-        # User explicitly selected "Connect other models", show the handle
-        if cache_key_prefix == "embedding_model_options":
-            build_config["model"]["input_types"] = ["Embeddings"]
-        else:
-            build_config["model"]["input_types"] = ["LanguageModel"]
+    # Always set input_types based on model type to enable connection handles
+    if cache_key_prefix == "embedding_model_options":
+        build_config["model"]["input_types"] = ["Embeddings"]
     else:
-        # Default case or model selection: hide the handle
-        build_config["model"]["input_types"] = []
+        build_config["model"]["input_types"] = ["LanguageModel"]
 
     return build_config
