@@ -32,6 +32,12 @@ export default function TableAdvancedToggleCellRender({
     setNode: isTweaks ? setNode : undefined,
   });
 
+  // For tweaks mode, use api_only field; otherwise use advanced field
+  // Default: if api_only not set, fields are exposed when visible (not advanced)
+  const isExposed = isTweaks
+    ? (parameter.api_only ?? !parameter.advanced)
+    : !parameter.advanced;
+
   return (
     parameter && (
       <ShadTooltip
@@ -49,10 +55,11 @@ export default function TableAdvancedToggleCellRender({
         <div className="flex h-full w-full items-center justify-center">
           <ToggleShadComponent
             disabled={disabled}
-            value={!parameter.advanced}
+            value={isExposed}
             handleOnNewValue={handleOnNewValue}
             editNode={true}
             showToogle
+            toggleField={isTweaks ? "api_only" : "advanced"}
             id={"show" + parameterId}
           />
         </div>

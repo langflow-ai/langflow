@@ -34,6 +34,15 @@ class EvaluationBase(SQLModel):
         sa_column=Column(JSON),
         description="List of scoring methods to use",
     )
+    llm_judge_prompt: str | None = Field(
+        default=None,
+        description="Prompt template for LLM Judge scoring method",
+    )
+    llm_judge_model: dict | None = Field(
+        default=None,
+        sa_column=Column(JSON),
+        description="Model configuration for LLM Judge (unified model format)",
+    )
 
 
 class Evaluation(EvaluationBase, table=True):  # type: ignore[call-arg]
@@ -74,6 +83,8 @@ class Evaluation(EvaluationBase, table=True):  # type: ignore[call-arg]
     mean_score: float | None = Field(default=None, description="Mean score across all items")
     mean_duration_ms: float | None = Field(default=None, description="Mean duration in milliseconds")
     total_runtime_ms: int | None = Field(default=None, description="Total runtime in milliseconds")
+    total_flow_tokens: int | None = Field(default=None, description="Total tokens used by flow runs")
+    total_llm_judge_tokens: int | None = Field(default=None, description="Total tokens used by LLM Judge")
 
     # Foreign keys
     user_id: UUID = Field(description="User ID who created this evaluation", foreign_key="user.id")
@@ -95,6 +106,8 @@ class EvaluationCreate(SQLModel):
     dataset_id: UUID
     flow_id: UUID
     scoring_methods: list[str] = ["exact_match"]
+    llm_judge_prompt: str | None = None
+    llm_judge_model: dict | None = None
 
 
 class EvaluationRead(SQLModel):
@@ -118,6 +131,8 @@ class EvaluationRead(SQLModel):
     mean_score: float | None = None
     mean_duration_ms: float | None = None
     total_runtime_ms: int | None = None
+    total_flow_tokens: int | None = None
+    total_llm_judge_tokens: int | None = None
 
 
 class EvaluationReadWithResults(EvaluationRead):
@@ -139,6 +154,8 @@ class EvaluationResultBase(SQLModel):
     passed: bool = Field(default=False, description="Whether the result passed based on threshold")
     error: str | None = Field(default=None, description="Error message if execution failed")
     order: int = Field(default=0, description="Order of the item in the dataset")
+    flow_tokens: int | None = Field(default=None, description="Tokens used by the flow run")
+    llm_judge_tokens: int | None = Field(default=None, description="Tokens used by LLM Judge")
 
 
 class EvaluationResult(EvaluationResultBase, table=True):  # type: ignore[call-arg]
@@ -190,3 +207,5 @@ class EvaluationResultRead(SQLModel):
     error: str | None = None
     order: int = 0
     created_at: datetime | None = None
+    flow_tokens: int | None = None
+    llm_judge_tokens: int | None = None

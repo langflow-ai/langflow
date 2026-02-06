@@ -86,7 +86,7 @@ export default function PdfViewer({ pdf }: { pdf: string }): JSX.Element {
         <Document
           loading={
             <div className="flex h-full w-full items-center justify-center align-middle">
-              <Loading />
+              <Loading size={64} className="text-primary" />
             </div>
           }
           onLoadSuccess={onDocumentLoadSuccess}

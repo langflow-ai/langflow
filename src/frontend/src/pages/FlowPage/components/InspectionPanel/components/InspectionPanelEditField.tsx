@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import IconComponent from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import useHandleOnNewValue from "@/CustomNodes/hooks/use-handle-new-value";
 import type { NodeDataType } from "@/types/flow";
 import { cn } from "@/utils/utils";
@@ -10,6 +11,7 @@ interface InspectionPanelEditFieldProps {
   title: string;
   description: string;
   isOnCanvas: boolean;
+  isExposedToApi: boolean;
 }
 
 export default function InspectionPanelEditField({
@@ -18,6 +20,7 @@ export default function InspectionPanelEditField({
   title,
   description,
   isOnCanvas,
+  isExposedToApi,
 }: InspectionPanelEditFieldProps) {
   const { handleOnNewValue } = useHandleOnNewValue({
     node: data.node!,
@@ -28,6 +31,10 @@ export default function InspectionPanelEditField({
   const handleToggleVisibility = useCallback(() => {
     handleOnNewValue({ advanced: isOnCanvas });
   }, [handleOnNewValue, isOnCanvas]);
+
+  const handleToggleApiExposure = useCallback(() => {
+    handleOnNewValue({ api_only: !isExposedToApi });
+  }, [handleOnNewValue, isExposedToApi]);
 
   return (
     <div
@@ -44,21 +51,45 @@ export default function InspectionPanelEditField({
           </span>
         )}
       </div>
-      <button
-        onClick={handleToggleVisibility}
-        className={cn(
-          "flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-colors",
-          isOnCanvas
-            ? "bg-primary/10 text-primary hover:bg-primary/20"
-            : "bg-muted text-muted-foreground hover:bg-muted-foreground/20 hover:text-foreground",
-        )}
-        data-testid={`toggle-${name}`}
-      >
-        <IconComponent
-          name={isOnCanvas ? "Minus" : "Plus"}
-          className="h-3.5 w-3.5"
-        />
-      </button>
+      <div className="flex items-center gap-2">
+        <ShadTooltip
+          content={isOnCanvas ? "Hide from node" : "Show on node"}
+          side="top"
+        >
+          <button
+            onClick={handleToggleVisibility}
+            className={cn(
+              "flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-colors",
+              isOnCanvas
+                ? "bg-primary/10 text-primary hover:bg-primary/20"
+                : "bg-muted text-muted-foreground hover:bg-muted-foreground/20 hover:text-foreground",
+            )}
+            data-testid={`toggle-${name}`}
+          >
+            <IconComponent
+              name={isOnCanvas ? "Minus" : "Plus"}
+              className="h-3.5 w-3.5"
+            />
+          </button>
+        </ShadTooltip>
+        <ShadTooltip
+          content={isExposedToApi ? "Remove from API schema" : "Expose in API schema"}
+          side="top"
+        >
+          <button
+            onClick={handleToggleApiExposure}
+            className={cn(
+              "flex h-4 w-4 shrink-0 items-center justify-center transition-colors",
+              isExposedToApi
+                ? "text-primary"
+                : "text-muted-foreground/50 hover:text-muted-foreground",
+            )}
+            data-testid={`toggle-api-${name}`}
+          >
+            <IconComponent name="Plug" className="h-3.5 w-3.5" />
+          </button>
+        </ShadTooltip>
+      </div>
     </div>
   );
 }

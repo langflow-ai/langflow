@@ -71,6 +71,7 @@ export type IntComponentType = {
 export type ToggleComponentType = {
   size?: "small" | "medium" | "large";
   showToogle?: boolean;
+  toggleField?: "advanced" | "api_only";
 };
 
 export type FileComponentType = {

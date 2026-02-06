@@ -59,7 +59,10 @@ export const useTweaksStore = create<TweaksStoreType>((set, get) => ({
       if (nodeTemplate && node.type === "genericNode") {
         const currentTweak = {};
         Object.keys(nodeTemplate).forEach((name) => {
-          if (!nodeTemplate[name].advanced) {
+          // If api_only is explicitly set, use it; otherwise default to visible fields (not advanced)
+          const isExposedToApi =
+            nodeTemplate[name].api_only ?? !nodeTemplate[name].advanced;
+          if (isExposedToApi) {
             currentTweak[name] = getChangesType(
               nodeTemplate[name].value,
               nodeTemplate[name],

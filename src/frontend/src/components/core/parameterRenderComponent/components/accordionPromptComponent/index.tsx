@@ -24,7 +24,7 @@ export default function AccordionPromptComponent({
   editNode = false,
   id = "",
   readonly = false,
-  showParameter = false,
+  showParameter = true,
 }: InputProps<string, PromptAreaComponentType>): JSX.Element {
   const [isOpen, setIsOpen] = useState(true);
   const [internalValue, setInternalValue] = useState(value);

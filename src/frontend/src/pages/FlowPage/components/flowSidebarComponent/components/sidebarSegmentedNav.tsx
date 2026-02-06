@@ -8,6 +8,7 @@ import {
   type SidebarSection,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { useTypesStore } from "@/stores/typesStore";
 import { cn } from "@/utils/utils";
 import { useSearchContext } from "../index";
 
@@ -40,6 +41,12 @@ export const NAV_ITEMS: NavItem[] = [
     tooltip: "MCP",
   },
   {
+    id: "saved",
+    icon: "Save",
+    label: "Saved",
+    tooltip: "Saved Components",
+  },
+  {
     id: "logs",
     icon: "ScrollText",
     label: "Logs",
@@ -62,13 +69,18 @@ export const NAV_ITEMS: NavItem[] = [
 const SidebarSegmentedNav = () => {
   const { activeSection, setActiveSection, toggleSidebar, open } = useSidebar();
   const { focusSearch, setSearch } = useSearchContext();
+  const hasSavedComponents = useTypesStore(
+    (state) =>
+      state.data?.saved_components &&
+      Object.keys(state.data.saved_components).length > 0,
+  );
 
   return (
     <div className="flex h-full flex-col border-r border-border bg-background">
       <SidebarMenu className="gap-2 py-1">
         {NAV_ITEMS.map((item) => (
           <div key={item.id}>
-            {item.id === "logs" && <Separator className="w-full" />}
+            {item.id === "logs" && <Separator className="mb-2 w-full" />}
             <SidebarMenuItem className="px-1">
               <ShadTooltip content={item.tooltip} side="right">
                 <SidebarMenuButton
@@ -85,8 +97,8 @@ const SidebarSegmentedNav = () => {
                       if (!open) {
                         toggleSidebar();
                       }
-                      // Auto-focus search when opening components, mcp, or bundles
-                      if (["components", "mcp", "bundles"].includes(item.id)) {
+                      // Auto-focus search when opening components, mcp, bundles, or saved
+                      if (["components", "mcp", "bundles", "saved"].includes(item.id)) {
                         setTimeout(() => focusSearch(), 100);
                       }
                     }
@@ -102,7 +114,13 @@ const SidebarSegmentedNav = () => {
                 >
                   <ForwardedIconComponent
                     name={item.icon}
-                    className="h-5 w-5"
+                    className={cn(
+                      "h-5 w-5",
+                      item.id === "saved" &&
+                        !hasSavedComponents &&
+                        activeSection !== "saved" &&
+                        "opacity-40",
+                    )}
                   />
                   <span className="sr-only">{item.label}</span>
                 </SidebarMenuButton>

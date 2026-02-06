@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo } from "react";
 import IconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
+import { Loading } from "@/components/ui/loading";
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -49,10 +50,7 @@ const SessionsEmptyState = () => {
 const SessionsLoadingState = () => {
   return (
     <div className="flex h-full min-h-[100px] w-full items-center justify-center">
-      <IconComponent
-        name="Loader2"
-        className="h-6 w-6 animate-spin text-muted-foreground"
-      />
+      <Loading size={24} className="text-muted-foreground" />
     </div>
   );
 };

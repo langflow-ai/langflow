@@ -158,7 +158,7 @@ const KnowledgeBasesTab = ({
   if (isLoading || !knowledgeBases || !Array.isArray(knowledgeBases)) {
     return (
       <div className="flex h-full w-full items-center justify-center">
-        <Loading />
+        <Loading size={64} className="text-primary" />
       </div>
     );
   }

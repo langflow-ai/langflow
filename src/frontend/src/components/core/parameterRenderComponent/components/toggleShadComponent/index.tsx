@@ -8,6 +8,7 @@ export default function ToggleShadComponent({
   disabled,
   size,
   showToogle,
+  toggleField = "advanced",
   id,
   showParameter = true,
 }: InputProps<boolean, ToggleComponentType>): JSX.Element | null {
@@ -52,10 +53,13 @@ export default function ToggleShadComponent({
         className=""
         checked={value}
         onCheckedChange={(isEnabled: boolean) => {
-          const data = showToogle
-            ? { advanced: !isEnabled }
-            : { value: isEnabled };
-          handleOnNewValue(data);
+          if (!showToogle) {
+            handleOnNewValue({ value: isEnabled });
+          } else if (toggleField === "api_only") {
+            handleOnNewValue({ api_only: isEnabled });
+          } else {
+            handleOnNewValue({ advanced: !isEnabled });
+          }
         }}
       />
     </div>

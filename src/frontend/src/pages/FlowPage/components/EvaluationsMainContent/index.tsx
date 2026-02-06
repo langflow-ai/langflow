@@ -48,6 +48,11 @@ const formatRuntime = (ms?: number) => {
   return `${seconds}s`;
 };
 
+const formatTokens = (tokens?: number) => {
+  if (!tokens) return "-";
+  return tokens.toLocaleString();
+};
+
 /**
  * Empty state when no evaluation is selected
  */
@@ -116,7 +121,7 @@ export default function EvaluationsMainContent({
   if (isLoading) {
     return (
       <div className="flex h-full w-full items-center justify-center">
-        <Loading />
+        <Loading size={64} className="text-primary" />
       </div>
     );
   }
@@ -206,7 +211,10 @@ export default function EvaluationsMainContent({
                 <TableHead>Expected Output</TableHead>
                 <TableHead>Actual Output</TableHead>
                 <TableHead className="w-24">Duration</TableHead>
-                <TableHead className="w-20">Passed</TableHead>
+                <TableHead className="w-28">Flow Tokens</TableHead>
+                {evaluation.scoring_methods.includes("llm_judge") && (
+                  <TableHead className="w-28">Judge Tokens</TableHead>
+                )}
                 {evaluation.scoring_methods.map((method) => (
                   <TableHead key={method} className="w-24">
                     {method.replace("_", " ")}
@@ -231,14 +239,17 @@ export default function EvaluationsMainContent({
                       )}
                     </TableCell>
                     <TableCell>{formatDuration(result.duration_ms)}</TableCell>
-                    <TableCell>
-                      <Badge variant={result.passed ? "outline" : "destructive"}>
-                        {result.passed ? "true" : "false"}
-                      </Badge>
-                    </TableCell>
+                    <TableCell>{formatTokens(result.flow_tokens)}</TableCell>
+                    {evaluation.scoring_methods.includes("llm_judge") && (
+                      <TableCell>{formatTokens(result.llm_judge_tokens)}</TableCell>
+                    )}
                     {evaluation.scoring_methods.map((method) => (
                       <TableCell key={method}>
-                        {result.scores[method]?.toFixed(2) || "-"}
+                        {result.scores[method] != null
+                          ? result.scores[method].toFixed(2)
+                          : result.error
+                            ? <span className="text-destructive" title={result.error}>err</span>
+                            : "-"}
                       </TableCell>
                     ))}
                   </TableRow>
@@ -246,7 +257,7 @@ export default function EvaluationsMainContent({
               ) : (
                 <TableRow>
                   <TableCell
-                    colSpan={6 + evaluation.scoring_methods.length}
+                    colSpan={6 + evaluation.scoring_methods.length + (evaluation.scoring_methods.includes("llm_judge") ? 1 : 0)}
                     className="text-center text-muted-foreground"
                   >
                     {evaluation.status === "pending"
@@ -279,6 +290,18 @@ export default function EvaluationsMainContent({
               Runtime:{" "}
               <strong>{formatRuntime(evaluation.total_runtime_ms)}</strong>
             </span>
+            {evaluation.total_flow_tokens != null && evaluation.total_flow_tokens > 0 && (
+              <span>
+                Flow Tokens:{" "}
+                <strong>{evaluation.total_flow_tokens.toLocaleString()}</strong>
+              </span>
+            )}
+            {evaluation.total_llm_judge_tokens != null && evaluation.total_llm_judge_tokens > 0 && (
+              <span>
+                Judge Tokens:{" "}
+                <strong>{evaluation.total_llm_judge_tokens.toLocaleString()}</strong>
+              </span>
+            )}
           </div>
         )}
 

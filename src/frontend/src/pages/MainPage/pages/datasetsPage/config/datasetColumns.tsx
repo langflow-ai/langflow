@@ -11,7 +11,9 @@ const formatDate = (dateString: string | null | undefined): string => {
   });
 };
 
-export const createDatasetColumns = (): ColDef[] => {
+export const createDatasetColumns = (
+  generatingDatasetIds?: Set<string>,
+): ColDef[] => {
   const baseCellClass =
     "text-muted-foreground cursor-pointer select-text group-[.no-select-cells]:cursor-default group-[.no-select-cells]:select-none";
 
@@ -55,6 +57,21 @@ export const createDatasetColumns = (): ColDef[] => {
       sortable: false,
       editable: false,
       cellClass: baseCellClass,
+      cellRenderer: (params: any) => {
+        const isGenerating = generatingDatasetIds?.has(params.data.id);
+        if (isGenerating) {
+          return (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <ForwardedIconComponent
+                name="Loader2"
+                className="h-3.5 w-3.5 animate-spin"
+              />
+              <span className="text-sm">Generating...</span>
+            </div>
+          );
+        }
+        return params.value;
+      },
     },
     {
       headerName: "Created",

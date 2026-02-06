@@ -379,6 +379,7 @@ const TableComponent = forwardRef<
             suppressColumnsToolPanel: true, // Don't show hidden columns in tool panel
           }}
           animateRows={false}
+          stopEditingWhenCellsLoseFocus={true}
           gridOptions={{
             colResizeDefault: "shift",
             suppressColumnVirtualisation: false, // Enable column virtualization for better performance

@@ -1,12 +1,16 @@
+import asyncio
 import csv
 import io
+import json
+import logging
+import re
 from datetime import datetime, timezone
 from http import HTTPStatus
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, select
 
@@ -520,3 +524,219 @@ async def preview_csv(
         preview_rows.append(dict(row))
 
     return {"columns": columns, "preview": preview_rows}
+
+
+# Dataset Generation with LLM
+logger = logging.getLogger(__name__)
+
+# In-memory storage for generation metadata (token usage, status).
+# Entries are removed when read via the status endpoint.
+_generation_metadata: dict[str, dict] = {}
+
+GENERATE_DATASET_TEMPLATE = """Generate exactly {num_items} input/expected_output pairs for the following topic:
+
+{topic}
+
+Return ONLY a valid JSON array with objects containing "input" and "expected_output" keys.
+Example format: [{{"input": "...", "expected_output": "..."}}]"""
+
+
+class DatasetGenerateRequest(BaseModel):
+    name: str
+    description: str | None = None
+    topic: str
+    num_items: int = Field(default=10, ge=1, le=50)
+    model: dict
+
+
+async def generate_dataset_items_background(
+    dataset_id: UUID,
+    user_id: UUID,
+    topic: str,
+    num_items: int,
+    model_config: dict,
+):
+    """Background task to generate dataset items using an LLM."""
+    from langflow.services.deps import session_scope
+    from lfx.base.models.unified_models import get_llm, normalize_model_names_to_dicts
+
+    logger.info(f"Starting background dataset generation: dataset_id={dataset_id}")
+    try:
+        # Enrich model config
+        model_name = model_config.get("name")
+        enriched_model = dict(model_config)
+        if not enriched_model.get("metadata", {}).get("model_class"):
+            enriched_models = normalize_model_names_to_dicts(model_name)
+            if enriched_models and enriched_models[0].get("metadata", {}).get("model_class"):
+                enriched_model = enriched_models[0]
+                if model_config.get("provider"):
+                    enriched_model["provider"] = model_config["provider"]
+            else:
+                logger.error(f"Could not find model class for {model_name}")
+                return
+
+        llm = get_llm(
+            model=[enriched_model],
+            user_id=user_id,
+            temperature=0.7,
+            stream=False,
+        )
+
+        prompt = GENERATE_DATASET_TEMPLATE.format(
+            num_items=num_items,
+            topic=topic,
+        )
+
+        response = await llm.ainvoke(prompt)
+        output_text = response.content if hasattr(response, "content") else str(response)
+
+        # Extract token usage from the LLM response
+        token_usage = {}
+        if hasattr(response, "usage_metadata") and response.usage_metadata:
+            token_usage = dict(response.usage_metadata)
+        elif hasattr(response, "response_metadata") and response.response_metadata:
+            rm = response.response_metadata
+            if "token_usage" in rm:
+                token_usage = dict(rm["token_usage"])
+            elif "usage" in rm:
+                token_usage = dict(rm["usage"])
+
+        # Parse JSON response
+        json_match = re.search(r"\[.*\]", output_text, re.DOTALL)
+        if not json_match:
+            logger.error(f"No JSON array found in LLM response: {output_text[:500]}")
+            _generation_metadata[str(dataset_id)] = {
+                "status": "failed",
+                "error": "No JSON array found in LLM response",
+                "token_usage": token_usage,
+            }
+            return
+        items_data = json.loads(json_match.group())
+        if not isinstance(items_data, list):
+            logger.error("LLM response is not a JSON array")
+            _generation_metadata[str(dataset_id)] = {
+                "status": "failed",
+                "error": "LLM response is not a JSON array",
+                "token_usage": token_usage,
+            }
+            return
+
+        # Insert items into the dataset
+        async with session_scope() as session:
+            for idx, item in enumerate(items_data):
+                input_val = item.get("input", "")
+                expected_val = item.get("expected_output", "")
+                if input_val or expected_val:
+                    db_item = DatasetItem(
+                        dataset_id=dataset_id,
+                        input=str(input_val),
+                        expected_output=str(expected_val),
+                        order=idx,
+                        created_at=datetime.now(timezone.utc),
+                    )
+                    session.add(db_item)
+
+            # Update dataset timestamp
+            statement = select(Dataset).where(Dataset.id == dataset_id)
+            result = await session.exec(statement)
+            dataset = result.first()
+            if dataset:
+                dataset.updated_at = datetime.now(timezone.utc)
+                session.add(dataset)
+
+            await session.commit()
+
+        item_count = len([i for i in items_data if i.get("input") or i.get("expected_output")])
+        _generation_metadata[str(dataset_id)] = {
+            "status": "completed",
+            "item_count": item_count,
+            "token_usage": token_usage,
+        }
+
+        logger.info(
+            f"Background dataset generation complete: dataset_id={dataset_id}, "
+            f"items={item_count}, tokens={token_usage}"
+        )
+
+    except Exception as e:
+        logger.exception(f"Error in background dataset generation: {e}")
+        _generation_metadata[str(dataset_id)] = {
+            "status": "failed",
+            "error": str(e),
+        }
+
+
+@router.post("/generate", response_model=DatasetRead, status_code=HTTPStatus.CREATED)
+async def generate_dataset(
+    *,
+    session: DbSession,
+    request: DatasetGenerateRequest,
+    current_user: CurrentActiveUser,
+):
+    """Create a dataset and generate items in the background using an LLM."""
+    model_config = request.model
+    model_name = model_config.get("name")
+    if not model_name:
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_REQUEST,
+            detail="No model name provided",
+        )
+
+    # Create dataset immediately (empty)
+    db_dataset = Dataset(
+        name=request.name,
+        description=request.description,
+        user_id=current_user.id,
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc),
+    )
+
+    try:
+        session.add(db_dataset)
+        await session.commit()
+        await session.refresh(db_dataset)
+    except IntegrityError as e:
+        await session.rollback()
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_REQUEST,
+            detail=f"A dataset with the name '{request.name}' already exists.",
+        ) from e
+
+    # Kick off background task to generate items
+    asyncio.create_task(
+        generate_dataset_items_background(
+            dataset_id=db_dataset.id,
+            user_id=current_user.id,
+            topic=request.topic,
+            num_items=request.num_items,
+            model_config=model_config,
+        )
+    )
+
+    return DatasetRead(
+        id=db_dataset.id,
+        name=db_dataset.name,
+        description=db_dataset.description,
+        user_id=db_dataset.user_id,
+        created_at=db_dataset.created_at,
+        updated_at=db_dataset.updated_at,
+        item_count=0,
+    )
+
+
+@router.get("/generate-status/{dataset_id}", status_code=HTTPStatus.OK)
+async def get_generate_status(
+    *,
+    dataset_id: UUID,
+    current_user: CurrentActiveUser,
+    consume: bool = True,
+) -> dict:
+    """Get the generation status and token usage for a dataset."""
+    key = str(dataset_id)
+    if consume:
+        meta = _generation_metadata.pop(key, None)
+    else:
+        meta = _generation_metadata.get(key)
+    if not meta:
+        return {"status": "unknown"}
+    return meta

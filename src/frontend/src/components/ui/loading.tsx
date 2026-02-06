@@ -4,41 +4,88 @@ export type LoadingProps = SVGProps<SVGSVGElement> & {
   size?: number;
 };
 
-// https://github.com/feathericons/feather/issues/695#issuecomment-1503699643
-export const Loading = ({ size = 24, ...props }: LoadingProps) => (
+/**
+ * LoadingIcon - Langflow branded loading spinner
+ * A simplified version of the Langflow logo with faster animation
+ * for inline/button use cases.
+ */
+export const Loading = ({ size = 24, className, ...props }: LoadingProps) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width={size}
     height={size}
-    viewBox="0 0 24 24"
+    viewBox="0 0 470 470"
     fill="none"
-    stroke="currentColor"
-    strokeWidth={2}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className="feather feather-circle"
+    className={className}
     {...props}
     data-testid="loading-icon"
   >
-    <circle cx={12} cy={12} r={10} strokeDasharray={63} strokeDashoffset={21}>
-      <animateTransform
-        attributeName="transform"
-        type="rotate"
-        from="0 12 12"
-        to="360 12 12"
-        dur="2s"
-        repeatCount="indefinite"
-      />
-      <animate
-        attributeName="stroke-dashoffset"
-        dur="8s"
-        repeatCount="indefinite"
-        keyTimes="0; 0.5; 1"
-        values="-16; -47; -16"
-        calcMode="spline"
-        keySplines="0.4 0 0.2 1; 0.4 0 0.2 1"
-      />
-    </circle>
+    <style>
+      {`
+        @keyframes lfDrawTop {
+          0% { stroke-dashoffset: 1000; }
+          25%, 100% { stroke-dashoffset: 0; }
+        }
+        @keyframes lfDrawMiddle {
+          0%, 25% { stroke-dashoffset: 1000; }
+          50%, 100% { stroke-dashoffset: 0; }
+        }
+        @keyframes lfDrawBottom {
+          0%, 50% { stroke-dashoffset: 1000; }
+          75%, 100% { stroke-dashoffset: 0; }
+        }
+        @keyframes lfFillIn {
+          0%, 75% { opacity: 0; }
+          80%, 100% { opacity: 1; }
+        }
+        .lf-icon-line {
+          fill: none;
+          stroke: currentColor;
+          stroke-width: 12;
+          stroke-linecap: round;
+          stroke-linejoin: round;
+          stroke-dasharray: 1000;
+        }
+        .lf-icon-fill {
+          fill: currentColor;
+          opacity: 0;
+          animation: lfFillIn 2s ease-in-out infinite;
+        }
+        .lf-icon-line1 { animation: lfDrawBottom 2s ease-in-out infinite; }
+        .lf-icon-line2 { animation: lfDrawTop 2s ease-in-out infinite; }
+        .lf-icon-line3 { animation: lfDrawMiddle 2s ease-in-out infinite; }
+      `}
+    </style>
+    {/* Filled paths (appear after outline is complete) */}
+    <path
+      className="lf-icon-fill"
+      d="M342.604 243.34H389.75C398.998 243.34 406.489 250.831 406.489 260.079V287.892C406.489 297.14 398.998 304.631 389.75 304.631H348.629C344.186 304.631 339.928 306.4 336.787 309.54L266.225 380.091C263.084 383.232 258.827 385 254.383 385H220.463C211.39 385 203.956 377.765 203.724 368.691L202.991 340.297C202.747 330.886 210.308 323.115 219.73 323.115H248.927C253.371 323.115 257.629 321.347 260.769 318.206L330.739 248.237C333.879 245.097 338.137 243.328 342.58 243.328L342.604 243.34Z"
+    />
+    <path
+      className="lf-icon-fill"
+      d="M202.619 85H249.765C259.013 85 266.504 92.4913 266.504 101.739V129.552C266.504 138.8 259.013 146.291 249.765 146.291H208.644C204.201 146.291 199.943 148.06 196.802 151.2L126.24 221.763C123.099 224.904 118.842 226.672 114.398 226.672H80.4777C71.4044 226.672 63.9712 219.436 63.7386 210.363L63.0058 181.968C62.7615 172.558 70.3226 164.799 79.7449 164.799H108.942C113.386 164.799 117.643 163.031 120.784 159.89L190.753 89.9205C193.894 86.7798 198.152 85.0116 202.595 85.0116L202.619 85Z"
+    />
+    <path
+      className="lf-icon-fill"
+      d="M342.603 120.829H389.75C398.997 120.829 406.489 128.32 406.489 137.568V165.381C406.489 174.629 398.997 182.12 389.75 182.12H348.629C344.185 182.12 339.928 183.888 336.787 187.029L266.225 257.591C263.084 260.732 258.826 262.5 254.383 262.5H213.169C208.853 262.5 204.701 264.164 201.583 267.153L122.366 343.067C119.248 346.056 115.096 347.72 110.78 347.72H81.9083C72.6605 347.72 65.1692 340.217 65.1692 330.981V302.4C65.1692 293.152 72.6605 285.661 81.9083 285.661H110.571C115.014 285.661 119.272 283.892 122.413 280.752L197.64 205.525C200.78 202.384 205.038 200.616 209.481 200.616H248.927C253.371 200.616 257.628 198.848 260.769 195.707L330.738 125.738C333.879 122.597 338.136 120.829 342.58 120.829H342.603Z"
+    />
+    {/* Outlined paths (draw animation) */}
+    {/* Bottom path */}
+    <path
+      className="lf-icon-line lf-icon-line1"
+      d="M342.604 243.34H389.75C398.998 243.34 406.489 250.831 406.489 260.079V287.892C406.489 297.14 398.998 304.631 389.75 304.631H348.629C344.186 304.631 339.928 306.4 336.787 309.54L266.225 380.091C263.084 383.232 258.827 385 254.383 385H220.463C211.39 385 203.956 377.765 203.724 368.691L202.991 340.297C202.747 330.886 210.308 323.115 219.73 323.115H248.927C253.371 323.115 257.629 321.347 260.769 318.206L330.739 248.237C333.879 245.097 338.137 243.328 342.58 243.328L342.604 243.34Z"
+    />
+    {/* Top path */}
+    <path
+      className="lf-icon-line lf-icon-line2"
+      d="M202.619 85H249.765C259.013 85 266.504 92.4913 266.504 101.739V129.552C266.504 138.8 259.013 146.291 249.765 146.291H208.644C204.201 146.291 199.943 148.06 196.802 151.2L126.24 221.763C123.099 224.904 118.842 226.672 114.398 226.672H80.4777C71.4044 226.672 63.9712 219.436 63.7386 210.363L63.0058 181.968C62.7615 172.558 70.3226 164.799 79.7449 164.799H108.942C113.386 164.799 117.643 163.031 120.784 159.89L190.753 89.9205C193.894 86.7798 198.152 85.0116 202.595 85.0116L202.619 85Z"
+    />
+    {/* Middle path (longest) */}
+    <path
+      className="lf-icon-line lf-icon-line3"
+      d="M342.603 120.829H389.75C398.997 120.829 406.489 128.32 406.489 137.568V165.381C406.489 174.629 398.997 182.12 389.75 182.12H348.629C344.185 182.12 339.928 183.888 336.787 187.029L266.225 257.591C263.084 260.732 258.826 262.5 254.383 262.5H213.169C208.853 262.5 204.701 264.164 201.583 267.153L122.366 343.067C119.248 346.056 115.096 347.72 110.78 347.72H81.9083C72.6605 347.72 65.1692 340.217 65.1692 330.981V302.4C65.1692 293.152 72.6605 285.661 81.9083 285.661H110.571C115.014 285.661 119.272 283.892 122.413 280.752L197.64 205.525C200.78 202.384 205.038 200.616 209.481 200.616H248.927C253.371 200.616 257.628 198.848 260.769 195.707L330.738 125.738C333.879 122.597 338.136 120.829 342.58 120.829H342.603Z"
+    />
   </svg>
 );
+
 export default Loading;

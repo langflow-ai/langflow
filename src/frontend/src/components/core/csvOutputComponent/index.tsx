@@ -126,7 +126,7 @@ function CsvOutputComponent({
       )}
       {status === "loading" && (
         <div className="flex h-full w-full items-center justify-center align-middle">
-          <Loading />
+          <Loading size={64} className="text-primary" />
         </div>
       )}
     </div>

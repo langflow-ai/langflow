@@ -84,6 +84,8 @@ export default function InspectionPanelFields({
         <div className="px-1">
           {allEditableFields.map((templateField) => {
             const template = data.node?.template[templateField];
+            // If api_only is explicitly set, use it; otherwise default to visible fields (not advanced)
+            const isExposedToApi = template.api_only ?? !template.advanced;
             return (
               <InspectionPanelEditField
                 key={`${data.id}-${templateField}-edit`}
@@ -92,6 +94,7 @@ export default function InspectionPanelFields({
                 title={getFieldTitle(data.node?.template!, templateField)}
                 description={template.info || ""}
                 isOnCanvas={!template.advanced}
+                isExposedToApi={isExposedToApi}
               />
             );
           })}

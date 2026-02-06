@@ -329,7 +329,7 @@ const FilesTab = ({
       <div className="flex h-full flex-col py-4">
         {!files || !Array.isArray(files) ? (
           <div className="flex h-full w-full items-center justify-center">
-            <Loading />
+            <Loading size={64} className="text-primary" />
           </div>
         ) : files.length > 0 ? (
           <DragWrapComponent onFileDrop={onFileDrop}>

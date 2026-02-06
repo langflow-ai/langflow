@@ -469,13 +469,21 @@ export default function ModelInputComponent({
   );
 
   const renderManageProvidersButton = () => (
-    <div className="bottom-0 bg-background">
-      {renderFooterButton(
-        "Manage Model Providers",
-        "Settings",
-        () => setOpenManageProvidersDialog(true),
-        "manage-model-providers",
-      )}
+    <div className="border-t bg-background">
+      <CommandItem
+        value="__manage_providers__"
+        onSelect={() => setOpenManageProvidersDialog(true)}
+        className="cursor-pointer rounded-none px-3 py-2 text-xs text-muted-foreground aria-selected:bg-accent group"
+        data-testid="manage-model-providers"
+      >
+        <div className="flex items-center gap-2 pl-1 group-hover:text-primary group-aria-selected:text-primary">
+          Manage Model Providers
+          <ForwardedIconComponent
+            name="Settings"
+            className="w-4 h-4 text-muted-foreground group-hover:text-primary group-aria-selected:text-primary"
+          />
+        </div>
+      </CommandItem>
     </div>
   );
 

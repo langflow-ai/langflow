@@ -3,7 +3,7 @@ import type {
   SelectionChangedEvent,
 } from "ag-grid-community";
 import type { AgGridReact } from "ag-grid-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,8 @@ interface DatasetsTabProps {
   setQuantitySelected: (quantity: number) => void;
   isShiftPressed: boolean;
   onCreateDataset: () => void;
+  onGenerateDataset: () => void;
+  generatingDatasetIds: Set<string>;
 }
 
 const DatasetsTab = ({
@@ -42,6 +44,8 @@ const DatasetsTab = ({
   setQuantitySelected,
   isShiftPressed,
   onCreateDataset,
+  onGenerateDataset,
+  generatingDatasetIds,
 }: DatasetsTabProps) => {
   const tableRef = useRef<AgGridReact<any>>(null);
   const { setErrorData, setSuccessData } = useAlertStore((state) => ({
@@ -130,18 +134,25 @@ const DatasetsTab = ({
     }
   };
 
-  const columnDefs = createDatasetColumns();
+  const columnDefs = createDatasetColumns(generatingDatasetIds);
+
+  // Force ag-grid to pick up new cellRenderer closures when generatingDatasetIds changes
+  useEffect(() => {
+    if (tableRef.current?.api) {
+      tableRef.current.api.setGridOption("columnDefs", createDatasetColumns(generatingDatasetIds));
+    }
+  }, [generatingDatasetIds]);
 
   if (isLoading || !datasets || !Array.isArray(datasets)) {
     return (
       <div className="flex h-full w-full items-center justify-center">
-        <Loading />
+        <Loading size={64} className="text-primary" />
       </div>
     );
   }
 
   if (datasets.length === 0) {
-    return <DatasetEmptyState onCreateDataset={onCreateDataset} />;
+    return <DatasetEmptyState onCreateDataset={onCreateDataset} onGenerateDataset={onGenerateDataset} />;
   }
 
   return (
@@ -158,12 +169,21 @@ const DatasetsTab = ({
             onChange={(event) => setQuickFilterText(event.target.value)}
           />
         </div>
-        <Button
-          className="flex items-center gap-2 font-semibold"
-          onClick={onCreateDataset}
-        >
-          <ForwardedIconComponent name="Plus" /> New Dataset
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="secondary"
+            className="flex items-center gap-2 font-semibold"
+            onClick={onGenerateDataset}
+          >
+            <ForwardedIconComponent name="Sparkles" className="h-4 w-4" /> Generate Dataset
+          </Button>
+          <Button
+            className="flex items-center gap-2 font-semibold"
+            onClick={onCreateDataset}
+          >
+            <ForwardedIconComponent name="Plus" /> New Dataset
+          </Button>
+        </div>
       </div>
 
       <div className="flex h-full flex-col pt-4">

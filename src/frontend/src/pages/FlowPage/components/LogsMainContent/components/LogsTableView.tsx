@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import IconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Loading } from "@/components/ui/loading";
 import {
   Select,
   SelectContent,
@@ -113,7 +114,7 @@ export function LogsTableView({
     return (
       <div className="flex h-full items-center justify-center">
         <div className="flex flex-col items-center gap-2 text-muted-foreground">
-          <IconComponent name="Loader2" className="h-8 w-8 animate-spin" />
+          <Loading size={32} className="text-primary" />
           <span className="text-sm">Loading runs...</span>
         </div>
       </div>

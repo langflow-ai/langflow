@@ -3,9 +3,10 @@ import { Button } from "@/components/ui/button";
 
 interface DatasetEmptyStateProps {
   onCreateDataset: () => void;
+  onGenerateDataset?: () => void;
 }
 
-const DatasetEmptyState = ({ onCreateDataset }: DatasetEmptyStateProps) => {
+const DatasetEmptyState = ({ onCreateDataset, onGenerateDataset }: DatasetEmptyStateProps) => {
   return (
     <div className="flex h-full w-full flex-col items-center justify-center gap-8 pb-8">
       <div className="flex flex-col items-center gap-2">
@@ -28,6 +29,22 @@ const DatasetEmptyState = ({ onCreateDataset }: DatasetEmptyStateProps) => {
             Create Dataset
           </span>
         </Button>
+        {onGenerateDataset && (
+          <Button
+            variant="secondary"
+            onClick={onGenerateDataset}
+            className="!px-3 md:!px-4 md:!pl-3.5"
+          >
+            <ForwardedIconComponent
+              name="Sparkles"
+              aria-hidden="true"
+              className="h-4 w-4"
+            />
+            <span className="whitespace-nowrap font-semibold">
+              Generate Dataset
+            </span>
+          </Button>
+        )}
       </div>
     </div>
   );

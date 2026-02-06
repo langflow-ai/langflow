@@ -60,8 +60,10 @@ class SaveToFileComponent(Component):
             placeholder="Select Location",
             info="Choose where to save the file.",
             options=_get_storage_location_options(),
+            value=[{"name": "Local", "icon": "hard-drive"}],
             real_time_refresh=True,
             limit=1,
+            advanced=True,
         ),
         # Common inputs
         HandleInput(

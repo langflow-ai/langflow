@@ -17,6 +17,8 @@ export interface EvaluationResultInfo {
   error?: string;
   order: number;
   created_at?: string;
+  flow_tokens?: number;
+  llm_judge_tokens?: number;
 }
 
 export interface EvaluationInfo {
@@ -40,6 +42,8 @@ export interface EvaluationInfo {
   mean_score?: number;
   mean_duration_ms?: number;
   total_runtime_ms?: number;
+  total_flow_tokens?: number;
+  total_llm_judge_tokens?: number;
   results?: EvaluationResultInfo[];
 }
 

@@ -145,7 +145,7 @@ export default function MessagesMainContent({
       <div className="flex-1 overflow-hidden">
         {isLoading || isFetching > 0 ? (
           <div className="flex h-full w-full items-center justify-center">
-            <Loading />
+            <Loading size={64} className="text-primary" />
           </div>
         ) : filteredMessages.length === 0 ? (
           <div className="flex h-full w-full flex-col items-center justify-center text-center">

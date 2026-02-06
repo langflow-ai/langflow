@@ -1,7 +1,6 @@
 import { truncate } from "lodash";
 import { useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import Loading from "@/components/ui/loading";
 import ConfirmationModal from "../confirmationModal";
 
 export function SaveChangesModal({
@@ -46,7 +45,7 @@ export function SaveChangesModal({
       <ConfirmationModal.Content>
         {autoSave ? (
           <div className="mb-4 flex w-full items-center gap-3 rounded-md bg-muted px-4 py-2 text-muted-foreground">
-            <Loading className="h-5 w-5" />
+            <ForwardedIconComponent name="Loader2" className="h-5 w-5 animate-spin" />
             Saving your changes...
           </div>
         ) : (

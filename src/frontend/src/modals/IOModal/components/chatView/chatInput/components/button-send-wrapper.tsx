@@ -1,4 +1,4 @@
-import Loading from "@/components/ui/loading";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import useFlowStore from "@/stores/flowStore";
 import { Button } from "../../../../../../components/ui/button";
 import { Case } from "../../../../../../shared/components/caseComponent";
@@ -63,7 +63,7 @@ const ButtonSendWrapper = ({
       <Case condition={showStopButton}>
         <div className="flex items-center gap-2 rounded-md text-sm font-medium">
           Stop
-          <Loading className="h-4 w-4" />
+          <ForwardedIconComponent name="Loader2" className="h-4 w-4 animate-spin" />
         </div>
       </Case>
 

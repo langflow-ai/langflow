@@ -1,7 +1,6 @@
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import Loading from "@/components/ui/loading";
 import IconComponent from "../../../../../../components/common/genericIconComponent";
 import { ICON_STROKE_WIDTH } from "../../../../../../constants/constants";
 import { cn } from "../../../../../../utils/utils";
@@ -41,7 +40,7 @@ const NoInputView: React.FC<NoInputViewProps> = ({
           >
             <div className="flex items-center gap-2 rounded-md text-sm font-medium">
               Stop
-              <Loading className="h-4 w-4" />
+              <IconComponent name="Loader2" className="h-4 w-4 animate-spin" />
             </div>
           </Button>
         )}

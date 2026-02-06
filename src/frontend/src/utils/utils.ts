@@ -579,7 +579,13 @@ export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
       },
     };
     if (!col.formatter) {
-      col.formatter = FormatterType.text;
+      // Map backend "type" field to formatter when formatter is not explicitly set
+      const backendType = (col as any).type;
+      if (backendType && backendType in FormatterType) {
+        col.formatter = FormatterType[backendType as keyof typeof FormatterType];
+      } else {
+        col.formatter = FormatterType.text;
+      }
     }
     if (basic_types.has(col.formatter)) {
       newCol.cellDataType = col.formatter;

@@ -27,6 +27,7 @@ export type SidebarSection =
   | "search"
   | "components"
   | "bundles"
+  | "saved"
   | "mcp"
   | "add_note"
   | "logs"
@@ -59,6 +60,7 @@ function getInitialSidebarSection(
     cookieValue === "search" ||
     cookieValue === "components" ||
     cookieValue === "bundles" ||
+    cookieValue === "saved" ||
     cookieValue === "mcp"
   ) {
     return cookieValue;

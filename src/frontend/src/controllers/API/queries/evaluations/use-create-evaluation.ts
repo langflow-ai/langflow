@@ -10,6 +10,8 @@ interface CreateEvaluationParams {
   dataset_id: string;
   flow_id: string;
   scoring_methods: string[];
+  llm_judge_prompt?: string;
+  llm_judge_model?: Record<string, any>;
   run_immediately?: boolean;
 }
 
@@ -29,6 +31,8 @@ export const useCreateEvaluation: useMutationFunctionType<
         dataset_id: params.dataset_id,
         flow_id: params.flow_id,
         scoring_methods: params.scoring_methods,
+        llm_judge_prompt: params.llm_judge_prompt,
+        llm_judge_model: params.llm_judge_model,
       },
     );
     queryClient.invalidateQueries({ queryKey: ["useGetEvaluations"] });

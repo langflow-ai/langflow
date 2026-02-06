@@ -101,7 +101,7 @@ export default function SessionView({
 
   return isFetching > 0 ? (
     <div className="flex h-full w-full items-center justify-center align-middle">
-      <Loading></Loading>
+      <Loading size={64} className="text-primary" />
     </div>
   ) : (
     <TableComponent

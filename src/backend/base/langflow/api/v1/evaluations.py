@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import re
 import time
 from datetime import datetime, timezone
 from difflib import SequenceMatcher
@@ -12,8 +13,9 @@ from sqlmodel import col, select
 from langflow.api.utils import CurrentActiveUser, DbSession
 
 logger = logging.getLogger(__name__)
-from langflow.processing.process import process_tweaks, run_graph
+from langflow.processing.process import run_graph
 from langflow.services.database.models.dataset.model import Dataset
+from langflow.services.database.models.traces.model import TraceTable
 from langflow.services.database.models.evaluation.model import (
     Evaluation,
     EvaluationCreate,
@@ -22,14 +24,24 @@ from langflow.services.database.models.evaluation.model import (
     EvaluationResult,
     EvaluationResultRead,
     EvaluationStatus,
-    EvaluationUpdate,
     ScoringMethod,
 )
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import session_scope
+from lfx.base.models.unified_models import get_llm, normalize_model_names_to_dicts
 from lfx.graph import Graph
 
 router = APIRouter(prefix="/evaluations", tags=["Evaluations"])
+
+# Default LLM Judge prompt template
+LLM_JUDGE_TEMPLATE = """You are evaluating an AI assistant's response.
+
+Input: {input}
+
+Expected Output: {expected_output}
+Actual Output: {actual_output}
+
+{custom_prompt}"""
 
 
 def calculate_score(method: str, expected: str, actual: str) -> float:
@@ -46,11 +58,94 @@ def calculate_score(method: str, expected: str, actual: str) -> float:
     if method == ScoringMethod.SIMILARITY.value:
         return SequenceMatcher(None, expected.strip().lower(), actual.strip().lower()).ratio()
 
-    # LLM_JUDGE would require an LLM call - for now return 0.5 as placeholder
-    if method == ScoringMethod.LLM_JUDGE.value:
-        return 0.5
-
     return 0.0
+
+
+def _extract_token_usage(response) -> int | None:
+    """Extract total token count from an LLM response."""
+    if hasattr(response, "usage_metadata") and response.usage_metadata:
+        usage = response.usage_metadata
+        total = getattr(usage, "total_tokens", None) or (
+            usage.get("total_tokens") if isinstance(usage, dict) else None
+        )
+        if total:
+            return int(total)
+    if hasattr(response, "response_metadata") and response.response_metadata:
+        rm = response.response_metadata
+        for key in ("token_usage", "usage"):
+            if key in rm and isinstance(rm[key], dict):
+                total = rm[key].get("total_tokens")
+                if total:
+                    return int(total)
+    return None
+
+
+async def run_llm_judge(
+    input_value: str,
+    expected_output: str,
+    actual_output: str,
+    custom_prompt: str,
+    model_config: dict | None,
+    user_id: UUID | str,
+) -> tuple[float | None, str | None, int | None]:
+    """Run the LLM Judge using the unified model provider and return a (score, error, tokens) tuple."""
+    try:
+        if not model_config:
+            return None, "No model configuration provided for LLM Judge", None
+
+        model_name = model_config.get("name")
+        if not model_name:
+            return None, "No model name in LLM Judge configuration", None
+
+        # Build the prompt
+        prompt = LLM_JUDGE_TEMPLATE.format(
+            input=input_value,
+            expected_output=expected_output,
+            actual_output=actual_output or "(no output)",
+            custom_prompt=custom_prompt,
+        )
+
+        # Use the model_config from the frontend directly — it already contains
+        # full metadata (model_class, api_key_param, etc.) from the model picker.
+        # Falling back to normalize_model_names_to_dicts only if metadata is missing,
+        # since that function can fail in background tasks due to DB session issues.
+        enriched_model = dict(model_config)
+        if not enriched_model.get("metadata", {}).get("model_class"):
+            enriched_models = normalize_model_names_to_dicts(model_name)
+            if enriched_models and enriched_models[0].get("metadata", {}).get("model_class"):
+                enriched_model = enriched_models[0]
+                if model_config.get("provider"):
+                    enriched_model["provider"] = model_config["provider"]
+            else:
+                return None, f"Could not find model class for {model_name}", None
+
+        # Create LLM using unified model provider
+        llm = get_llm(
+            model=[enriched_model],
+            user_id=user_id,
+            temperature=0,
+            stream=False,
+        )
+
+        response = await llm.ainvoke(prompt)
+        output_text = response.content if hasattr(response, "content") else str(response)
+        tokens = _extract_token_usage(response)
+
+        # Parse score from output
+        if output_text:
+            # Try to find a decimal number
+            match = re.search(r"(\d+\.?\d*)", output_text.strip())
+            if match:
+                score = float(match.group(1))
+                # Clamp to 0-1 range
+                return max(0.0, min(1.0, score)), None, tokens
+
+        logger.warning(f"Could not parse LLM Judge output: {output_text}")
+        return None, f"Could not parse score from LLM output: {output_text[:200]}", tokens
+
+    except Exception as e:
+        logger.exception(f"Error running LLM Judge: {e}")
+        return None, f"LLM Judge error: {e}", None
 
 
 async def run_single_evaluation_item(
@@ -61,6 +156,8 @@ async def run_single_evaluation_item(
     input_value: str,
     scoring_methods: list[str],
     expected_output: str,
+    llm_judge_prompt: str | None = None,
+    llm_judge_model: dict | None = None,
 ) -> dict:
     """Run a single evaluation item and return results."""
     start_time = time.time()
@@ -94,20 +191,21 @@ async def run_single_evaluation_item(
             stream=False,
         )
 
-        logger.warning(f"Graph run complete. Result type: {type(result)}, length: {len(result) if result else 0}")
+        logger.debug(f"Graph run complete. Result type: {type(result)}, length: {len(result) if result else 0}")
 
         # Extract output from result
-        # Structure: list[RunOutputs] -> RunOutputs.outputs: list[ResultData] -> ResultData.messages: list[ChatOutputResponse]
         if result and len(result) > 0:
-            run_output = result[0]  # RunOutputs
-            logger.warning(f"RunOutput: inputs={run_output.inputs}, outputs_count={len(run_output.outputs) if run_output.outputs else 0}")
+            run_output = result[0]
+            logger.debug(
+                f"RunOutput: inputs={run_output.inputs}, outputs_count={len(run_output.outputs) if run_output.outputs else 0}"
+            )
 
             if run_output.outputs:
                 for result_data in run_output.outputs:
                     if result_data is None:
                         continue
 
-                    logger.warning(f"ResultData: messages={result_data.messages}, results={result_data.results}")
+                    logger.debug(f"ResultData: messages={result_data.messages}, results={result_data.results}")
 
                     # Try to get from messages (ChatOutputResponse)
                     if result_data.messages:
@@ -116,7 +214,6 @@ async def run_single_evaluation_item(
                                 if isinstance(msg.message, str):
                                     actual_output = msg.message
                                 elif isinstance(msg.message, list):
-                                    # Join list elements
                                     actual_output = " ".join(str(m) for m in msg.message)
                                 else:
                                     actual_output = str(msg.message)
@@ -139,7 +236,7 @@ async def run_single_evaluation_item(
                         if actual_output:
                             break
 
-        logger.warning(f"Extracted actual_output: {actual_output}")
+        logger.debug(f"Extracted actual_output: {actual_output[:100] if actual_output else None}")
 
     except Exception as e:
         logger.exception(f"Error running evaluation item: {e}")
@@ -147,13 +244,47 @@ async def run_single_evaluation_item(
 
     duration_ms = int((time.time() - start_time) * 1000)
 
+    # Query flow token usage from the trace table
+    flow_tokens = None
+    try:
+        async with session_scope() as trace_session:
+            trace_stmt = select(TraceTable).where(TraceTable.session_id == session_id)
+            trace_result = await trace_session.exec(trace_stmt)
+            trace = trace_result.first()
+            if trace and trace.total_tokens:
+                flow_tokens = trace.total_tokens
+    except Exception as e:
+        logger.debug(f"Could not query flow tokens: {e}")
+
     # Calculate scores
     scores = {}
+    llm_judge_tokens = None
     for method in scoring_methods:
-        scores[method] = calculate_score(method, expected_output, actual_output or "")
+        if method == ScoringMethod.LLM_JUDGE.value:
+            # Run LLM Judge
+            if llm_judge_prompt and llm_judge_model:
+                score, llm_error, judge_tokens = await run_llm_judge(
+                    input_value=input_value,
+                    expected_output=expected_output,
+                    actual_output=actual_output or "",
+                    custom_prompt=llm_judge_prompt,
+                    model_config=llm_judge_model,
+                    user_id=user_id,
+                )
+                scores[method] = score
+                llm_judge_tokens = judge_tokens
+                if llm_error and not error:
+                    error = llm_error
+            else:
+                scores[method] = None
+                if not error:
+                    error = "LLM Judge requires a prompt and model configuration"
+        else:
+            scores[method] = calculate_score(method, expected_output, actual_output or "")
 
-    # Determine if passed (average score > 0.5)
-    avg_score = sum(scores.values()) / len(scores) if scores else 0.0
+    # Determine if passed (average score > 0.5, ignoring None values)
+    valid_scores = [s for s in scores.values() if s is not None]
+    avg_score = sum(valid_scores) / len(valid_scores) if valid_scores else 0.0
     passed = avg_score >= 0.5
 
     return {
@@ -162,6 +293,8 @@ async def run_single_evaluation_item(
         "scores": scores,
         "passed": passed,
         "error": error,
+        "flow_tokens": flow_tokens,
+        "llm_judge_tokens": llm_judge_tokens,
     }
 
 
@@ -216,6 +349,8 @@ async def run_evaluation_background(evaluation_id: UUID, user_id: UUID):
                 total_score = 0.0
                 total_duration = 0
                 passed_count = 0
+                total_flow_tokens = 0
+                total_llm_judge_tokens = 0
 
                 # Run each item
                 for idx, item in enumerate(sorted_items):
@@ -228,9 +363,13 @@ async def run_evaluation_background(evaluation_id: UUID, user_id: UUID):
                         input_value=item.input,
                         scoring_methods=evaluation.scoring_methods,
                         expected_output=item.expected_output,
+                        llm_judge_prompt=evaluation.llm_judge_prompt,
+                        llm_judge_model=evaluation.llm_judge_model,
                     )
 
-                    logger.info(f"Item {idx + 1} result: actual_output={item_result['actual_output']}, error={item_result['error']}")
+                    logger.info(
+                        f"Item {idx + 1} result: actual_output={item_result['actual_output']}, error={item_result['error']}"
+                    )
 
                     # Create result record
                     db_result = EvaluationResult(
@@ -244,18 +383,26 @@ async def run_evaluation_background(evaluation_id: UUID, user_id: UUID):
                         passed=item_result["passed"],
                         error=item_result["error"],
                         order=idx,
+                        flow_tokens=item_result["flow_tokens"],
+                        llm_judge_tokens=item_result["llm_judge_tokens"],
                         created_at=datetime.now(timezone.utc),
                     )
                     session.add(db_result)
 
                     # Update metrics
                     if item_result["scores"]:
-                        avg_score = sum(item_result["scores"].values()) / len(item_result["scores"])
-                        total_score += avg_score
+                        valid_scores = [s for s in item_result["scores"].values() if s is not None]
+                        if valid_scores:
+                            avg_score = sum(valid_scores) / len(valid_scores)
+                            total_score += avg_score
                     if item_result["duration_ms"]:
                         total_duration += item_result["duration_ms"]
                     if item_result["passed"]:
                         passed_count += 1
+                    if item_result["flow_tokens"]:
+                        total_flow_tokens += item_result["flow_tokens"]
+                    if item_result["llm_judge_tokens"]:
+                        total_llm_judge_tokens += item_result["llm_judge_tokens"]
 
                     # Update progress
                     evaluation.completed_items = idx + 1
@@ -275,6 +422,8 @@ async def run_evaluation_background(evaluation_id: UUID, user_id: UUID):
                     if evaluation.started_at
                     else None
                 )
+                evaluation.total_flow_tokens = total_flow_tokens or None
+                evaluation.total_llm_judge_tokens = total_llm_judge_tokens or None
                 session.add(evaluation)
                 await session.commit()
 
@@ -320,6 +469,8 @@ async def create_evaluation(
     db_evaluation = Evaluation(
         name=name,
         scoring_methods=evaluation.scoring_methods,
+        llm_judge_prompt=evaluation.llm_judge_prompt,
+        llm_judge_model=evaluation.llm_judge_model,
         user_id=current_user.id,
         dataset_id=evaluation.dataset_id,
         flow_id=evaluation.flow_id,
@@ -409,6 +560,8 @@ async def list_evaluations(
                 mean_score=ev.mean_score,
                 mean_duration_ms=ev.mean_duration_ms,
                 total_runtime_ms=ev.total_runtime_ms,
+                total_flow_tokens=ev.total_flow_tokens,
+                total_llm_judge_tokens=ev.total_llm_judge_tokens,
             )
         )
 
@@ -470,6 +623,8 @@ async def get_evaluation(
         mean_score=evaluation.mean_score,
         mean_duration_ms=evaluation.mean_duration_ms,
         total_runtime_ms=evaluation.total_runtime_ms,
+        total_flow_tokens=evaluation.total_flow_tokens,
+        total_llm_judge_tokens=evaluation.total_llm_judge_tokens,
         results=[
             EvaluationResultRead(
                 id=r.id,
@@ -484,6 +639,8 @@ async def get_evaluation(
                 error=r.error,
                 order=r.order,
                 created_at=r.created_at,
+                flow_tokens=r.flow_tokens,
+                llm_judge_tokens=r.llm_judge_tokens,
             )
             for r in sorted_results
         ],
