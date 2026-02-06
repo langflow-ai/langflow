@@ -106,10 +106,11 @@ test(
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 500, y: 100 },
       });
+
     await page
       .getByTestId("processingData to Message")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 650, y: 100 },
+        targetPosition: { x: 620, y: 100 },
       });
 
     //---------------------------------- PASS

@@ -209,6 +209,8 @@ test(
 
     await page.getByTestId("div-generic-node").click();
 
+    await page.waitForTimeout(500);
+
     await adjustScreenView(page);
 
     await page.getByTestId("div-generic-node").click();
