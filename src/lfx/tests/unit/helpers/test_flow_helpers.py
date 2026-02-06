@@ -310,9 +310,7 @@ class TestLoadFlowFromFile:
         """Test that function uses filename as ID when not provided in JSON."""
         flow_content = {"data": {"nodes": []}}
 
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".json", delete=False, prefix="my_flow_"
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False, prefix="my_flow_") as f:
             json.dump(flow_content, f)
             temp_path = Path(f.name)
 

@@ -30,6 +30,7 @@ def _load_env_file(env_file: Path | None) -> dict[str, str]:
         return {}
     return dict(dotenv_values(env_file))
 
+
 # Verbosity level constants
 VERBOSITY_DETAILED = 2
 VERBOSITY_FULL = 3
