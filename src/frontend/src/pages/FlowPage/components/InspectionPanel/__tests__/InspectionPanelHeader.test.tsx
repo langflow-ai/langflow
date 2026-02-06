@@ -220,8 +220,6 @@ describe("InspectionPanelHeader", () => {
     });
   });
 
-
-
   describe("Copy ID Functionality", () => {
     it("should display truncated ID", () => {
       const data = createMockData();
