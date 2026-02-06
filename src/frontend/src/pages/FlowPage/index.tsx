@@ -243,32 +243,15 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
       </div>
       */}
 
-      {/* Assistant Panel - floating mode: handles its own positioning */}
-      {assistantViewMode === "floating" && (
-        <AssistantPanel
-          isOpen={assistantOpen}
-          onClose={() => setAssistantOpen(false)}
-        />
-      )}
+      {/* Assistant Panel - single instance that handles both modes internally */}
+      <AssistantPanel
+        isOpen={assistantOpen}
+        onClose={() => setAssistantOpen(false)}
+      />
 
       <div className="flow-page-positioning">
         {currentFlow && (
           <div className="flex h-full overflow-hidden">
-            {/* Assistant Panel - sidebar mode: fixed position overlay */}
-            {assistantViewMode === "sidebar" && (
-              <div
-                className={cn(
-                  "fixed left-0 top-[49px] z-[60] h-[calc(100%-49px)] w-[400px] transition-transform duration-300",
-                  assistantOpen ? "translate-x-0" : "-translate-x-full",
-                )}
-              >
-                <AssistantPanel
-                  isOpen={assistantOpen}
-                  onClose={() => setAssistantOpen(false)}
-                  embedded
-                />
-              </div>
-            )}
 
             {/* Main content + Playground Sidebar (right) */}
             <SimpleSidebarProvider
@@ -299,7 +282,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
                     style={{
                       width:
                         assistantOpen && assistantViewMode === "sidebar"
-                          ? 400
+                          ? 500
                           : 0,
                       marginLeft:
                         assistantOpen && assistantViewMode === "sidebar"

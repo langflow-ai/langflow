@@ -39,7 +39,6 @@ export interface AssistantSuggestion {
 export interface AssistantPanelProps {
   isOpen: boolean;
   onClose: () => void;
-  embedded?: boolean;
 }
 
 export type AssistantViewMode = "sidebar" | "floating";

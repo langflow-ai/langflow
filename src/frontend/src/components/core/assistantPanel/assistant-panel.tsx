@@ -46,7 +46,7 @@ function AssistantInputWithScroll({
   );
 }
 
-export function AssistantPanel({ isOpen, onClose, embedded }: AssistantPanelProps) {
+export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
   const { viewMode, setViewMode } = useAssistantViewMode();
   const { hasEnabledModels } = useEnabledModels();
   const {
@@ -65,24 +65,18 @@ export function AssistantPanel({ isOpen, onClose, embedded }: AssistantPanelProp
 
   const hasMessages = messages.length > 0;
 
-  // When embedded, the panel fills its container (used with SimpleSidebar)
-  // When not embedded, it uses fixed positioning (overlay)
+  // Fixed positioning for both modes - always rendered, position changes based on viewMode
   const containerClasses = cn(
-    "flex flex-col transition-all duration-300",
-    embedded
-      ? "h-full w-full"
+    "flex flex-col transition-all duration-300 fixed shadow-xl",
+    viewMode === "sidebar"
+      ? cn(
+          "left-0 top-[49px] z-[60] h-[calc(100%-49px)] w-[500px]",
+          isOpen ? "translate-x-0" : "-translate-x-full",
+        )
       : cn(
-          "fixed z-50 shadow-xl",
-          viewMode === "sidebar"
-            ? cn(
-                "left-2 top-14 h-[calc(100%-64px)] w-[400px] rounded-xl",
-                isOpen ? "translate-x-0" : "-translate-x-full",
-              )
-            : cn(
-                "bottom-28 left-[calc(50%+140px)] -translate-x-1/2 w-[650px] rounded-2xl border border-border",
-                hasMessages ? "h-[500px]" : "h-auto",
-                isOpen ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none",
-              ),
+          "z-50 bottom-20 left-[calc(50%+140px)] -translate-x-1/2 w-[520px] rounded-2xl border border-border",
+          hasMessages ? "h-[500px]" : "h-auto",
+          isOpen ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none",
         ),
   );
 
@@ -91,8 +85,7 @@ export function AssistantPanel({ isOpen, onClose, embedded }: AssistantPanelProp
       <div
         className={cn(
           "absolute inset-0 bg-background",
-          !embedded && viewMode === "floating" && "rounded-2xl",
-          !embedded && viewMode === "sidebar" && "rounded-xl",
+          viewMode === "floating" && "rounded-2xl",
         )}
       />
 

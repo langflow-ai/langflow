@@ -33,6 +33,11 @@ export function useAssistantChat(): UseAssistantChatReturn {
     async (content: string, model: AssistantModel | null) => {
       if (isProcessing) return;
 
+      // Validate model has required fields to prevent backend from using wrong provider
+      if (!model?.provider || !model?.name) {
+        console.warn("AssistantChat: No model selected, request may use default provider");
+      }
+
       const userMessage: AssistantMessage = {
         id: crypto.randomUUID(),
         role: "user",

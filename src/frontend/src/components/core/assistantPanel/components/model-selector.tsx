@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import {
@@ -60,7 +60,20 @@ export function ModelSelector({
     );
   }, [enabledProviders]);
 
-  // Set default model if none selected
+  // Auto-select first available model if none selected
+  // This ensures the backend always receives a valid model
+  useEffect(() => {
+    if (!selectedModel && allModels.length > 0) {
+      const defaultModel = allModels[0];
+      onModelChange({
+        id: defaultModel.id,
+        name: defaultModel.name,
+        provider: defaultModel.provider,
+        displayName: defaultModel.displayName,
+      });
+    }
+  }, [selectedModel, allModels, onModelChange]);
+
   const currentModel = selectedModel || allModels[0] || null;
 
   const handleModelSelect = (model: (typeof allModels)[0]) => {

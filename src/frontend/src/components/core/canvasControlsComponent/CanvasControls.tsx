@@ -47,7 +47,7 @@ const CanvasControls = ({
   return (
     <Panel
       data-testid="main_canvas_controls"
-      className="react-flow__controls !bottom-8 flex !flex-row items-center gap-1 rounded-lg bg-background px-2 py-1 fill-foreground stroke-foreground text-primary [&>button]:border-0"
+      className="react-flow__controls !bottom-4 flex !flex-row items-center gap-1 rounded-lg bg-background px-2 py-1 fill-foreground stroke-foreground text-primary [&>button]:border-0"
       position="bottom-center"
     >
       <div className="group relative">

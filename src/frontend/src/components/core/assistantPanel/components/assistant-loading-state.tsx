@@ -174,7 +174,7 @@ function AssistantLoadingStateComponent({
   }, [typingIndex, isWaiting, currentValidationMessage, reasoningMessages]);
 
   return (
-    <div className="rounded-lg border border-border bg-background">
+    <div className="w-full max-w-[500px] rounded-lg border border-border bg-background">
       {/* Header */}
       <div className="flex items-center border-b border-border bg-muted/50 px-4 py-3">
         <div className="flex items-center gap-2 text-sm font-medium text-foreground">

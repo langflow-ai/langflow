@@ -63,9 +63,19 @@ export function AssistantInput({
     // Load from localStorage on init
     try {
       const saved = localStorage.getItem(ASSISTANT_MODEL_STORAGE_KEY);
-      return saved ? JSON.parse(saved) : null;
+      if (!saved) return null;
+
+      const parsed = JSON.parse(saved);
+      // Validate that model has required fields
+      if (parsed && parsed.provider && parsed.name) {
+        return parsed as AssistantModel;
+      }
+      // Invalid model format, clear it
+      localStorage.removeItem(ASSISTANT_MODEL_STORAGE_KEY);
+      return null;
     } catch {
       // localStorage may be unavailable (private browsing) or corrupted
+      localStorage.removeItem(ASSISTANT_MODEL_STORAGE_KEY);
       return null;
     }
   });
