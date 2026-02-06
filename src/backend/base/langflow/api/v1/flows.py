@@ -17,6 +17,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlmodel import apaginate
+from jsonpointer import JsonPointerException
 from lfx.log import logger
 from sqlmodel import and_, col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -616,6 +617,9 @@ async def apply_json_patch_to_flow(flow: Flow, patch: JsonPatch) -> Flow:
     except jsonpatch.JsonPatchException as e:
         msg = f"Invalid JSON Patch: {e!s}"
         raise HTTPException(status_code=400, detail=msg) from e
+    except JsonPointerException as e:
+        msg = f"Invalid JSON Pointer path: {e!s}"
+        raise HTTPException(status_code=400, detail=msg) from e
     except ValueError as e:
         msg = f"Error validating patched flow: {e!s}"
         raise HTTPException(status_code=400, detail=msg) from e
@@ -671,13 +675,12 @@ async def patch_flow(
         # Apply the patch operations
         patched_flow = await apply_json_patch_to_flow(db_flow, patch)
 
-        # Track which top-level fields had remove operations
-        removed_fields = {op.path.lstrip("/").split("/")[0] for op in patch.operations if op.op == "remove"}
+        # Track which top-level fields were targeted by patch operations
+        patched_fields = {op.path.lstrip("/").split("/")[0] for op in patch.operations}
 
-        # Update the existing db_flow object with values from patched_flow
-        # Use model_dump() without exclude_unset to include fields that were set to None
+        # Update only the fields that were actually targeted by patch operations
         for key, value in patched_flow.model_dump().items():
-            if key != "id" and (key in removed_fields or value is not None or hasattr(db_flow, key)):
+            if key in patched_fields and key != "id":
                 setattr(db_flow, key, value)
 
         # Apply API key removal if configured
@@ -721,8 +724,6 @@ async def patch_flow(
 
         raise HTTPException(status_code=500, detail=str(e)) from e
     else:
-        # Return the operations for client-side merging using fast-json-patch
-        # This is efficient for any level of nesting, including deep array updates
         updated_fields = [op.path for op in patch.operations]
 
         return JsonPatchResponse(
@@ -732,5 +733,4 @@ async def patch_flow(
             updated_fields=updated_fields,
             operations_applied=len(patch.operations),
             folder_id=db_flow.folder_id,
-            operations=patch.operations,
         )
