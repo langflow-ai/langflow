@@ -853,6 +853,26 @@
                 "type": "int",
                 "value": 1000
               },
+              "clean_output": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Clean Output",
+                "dynamic": false,
+                "info": "When enabled, only the text column is included in the output. Metadata columns are removed.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "clean_output",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": false
+              },
               "code": {
                 "advanced": true,
                 "dynamic": true,
