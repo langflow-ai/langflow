@@ -8,7 +8,6 @@ import hashlib
 import inspect
 import re
 import traceback
-from collections import defaultdict
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 

@@ -103,7 +103,6 @@ def analyze_dependencies(source: str, *, resolve_versions: bool = True) -> list[
     # Process and deduplicate dependencies by package name only
     unique_packages: dict[str, DependencyInfo] = {}
     for raw_dep in visitor.results:
-        print("[DEBUG] raw_dep:", raw_dep)
         processed_dep = _classify_dependency(raw_dep) if resolve_versions else raw_dep
 
         # Skip stdlib imports and local imports - we only care about external dependencies
