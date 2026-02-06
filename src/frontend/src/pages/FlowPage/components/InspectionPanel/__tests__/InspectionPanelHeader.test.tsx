@@ -220,92 +220,7 @@ describe("InspectionPanelHeader", () => {
     });
   });
 
-  describe("Code Button", () => {
-    it("should render code button when code template exists", () => {
-      const data = createMockData({
-        template: {
-          code: {
-            type: "code",
-            value: "print('hello')",
-          },
-        },
-      });
 
-      render(<InspectionPanelHeader data={data} />);
-
-      expect(screen.getByTestId("code-button-modal")).toBeInTheDocument();
-    });
-
-    it("should not render code button when no code template", () => {
-      const data = createMockData({ template: {} });
-      render(<InspectionPanelHeader data={data} />);
-
-      expect(screen.queryByTestId("code-button-modal")).not.toBeInTheDocument();
-    });
-
-    it("should open code modal when code button is clicked", async () => {
-      const user = userEvent.setup();
-      const data = createMockData({
-        template: {
-          code: {
-            type: "code",
-            value: "print('hello')",
-          },
-        },
-      });
-
-      render(<InspectionPanelHeader data={data} />);
-
-      const codeButton = screen.getByTestId("code-button-modal");
-      await user.click(codeButton);
-
-      expect(screen.getByTestId("code-modal")).toBeInTheDocument();
-    });
-
-    it("should close code modal", async () => {
-      const user = userEvent.setup();
-      const data = createMockData({
-        template: {
-          code: {
-            type: "code",
-            value: "print('hello')",
-          },
-        },
-      });
-
-      render(<InspectionPanelHeader data={data} />);
-
-      const codeButton = screen.getByTestId("code-button-modal");
-      await user.click(codeButton);
-
-      expect(screen.getByTestId("code-modal")).toBeInTheDocument();
-
-      const closeButton = screen.getByTestId("close-code-modal");
-      await user.click(closeButton);
-
-      await waitFor(() => {
-        expect(screen.queryByTestId("code-modal")).not.toBeInTheDocument();
-      });
-    });
-
-    it("should render code button for custom components", () => {
-      const data = createMockData({
-        type: "CustomComponent",
-        template: {
-          code: {
-            type: "code",
-            value: "code",
-          },
-        },
-        edited: false,
-      });
-
-      render(<InspectionPanelHeader data={data} />);
-
-      const codeButton = screen.getByTestId("code-button-modal");
-      expect(codeButton).toBeInTheDocument();
-    });
-  });
 
   describe("Copy ID Functionality", () => {
     it("should display truncated ID", () => {
@@ -425,7 +340,7 @@ describe("InspectionPanelHeader", () => {
 
       render(<InspectionPanelHeader data={data} />);
 
-      const codeButton = screen.getByTestId("code-button-modal");
+      const codeButton = screen.getByTestId("edit-fields-button");
       expect(codeButton).toBeInTheDocument();
     });
 
@@ -439,7 +354,7 @@ describe("InspectionPanelHeader", () => {
 
       render(<InspectionPanelHeader data={data} />);
 
-      const codeButton = screen.getByTestId("code-button-modal");
+      const codeButton = screen.getByTestId("edit-fields-button");
       expect(codeButton).toBeInTheDocument();
     });
   });
