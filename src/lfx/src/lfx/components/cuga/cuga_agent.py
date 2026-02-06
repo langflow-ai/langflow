@@ -139,32 +139,19 @@ class LangflowToolsProvider:
         if default_tools:
             self.tools_by_app["default_app"] = default_tools
 
-        # Create AppDefinition objects
+        # Create AppDefinition objects with descriptions per Sami's spec:
+        # - server_name/prefix apps: concatenation of tool names
+        # - default_app: concatenation of tool name + description[:300]
         for app_name, app_tools in self.tools_by_app.items():
-            # Try to get server description from metadata (hybrid approach)
-            app_description = None
-            for tool in app_tools:
-                if tool.metadata and tool.metadata.get("server_description"):
-                    app_description = tool.metadata["server_description"]
-                    break
+            sorted_tools = sorted(app_tools, key=lambda x: x.name)
+            if app_name == "default_app":
+                description = ", ".join(
+                    f"{t.name}: {t.description[:300]}" if t.description else t.name for t in sorted_tools
+                )
+            else:
+                description = ", ".join(t.name for t in sorted_tools)
 
-            # Generate description if not found in metadata
-            if not app_description:
-                if app_name == "default_app":
-                    app_description = "General purpose tools"
-                elif app_name.isupper():  # Prefix-based like "GMAIL", "SLACK"
-                    app_description = f"{app_name.title()} integration tools"
-                else:  # MCP server name
-                    app_description = f"Tools from {app_name} server"
-
-            # Append tool list with names and descriptions
-            tools_list = "\n".join(
-                f"- {t.name}: {t.description[:300] if t.description else 'No description'}"
-                for t in sorted(app_tools, key=lambda x: x.name)
-            )
-            full_description = f"{app_description}\n\nAvailable tools:\n{tools_list}"
-
-            self.apps.append(AppDefinition(name=app_name, description=full_description, type="langchain"))
+            self.apps.append(AppDefinition(name=app_name, description=description, type="langchain"))
 
     async def get_apps(self) -> list:
         """Get list of available applications/services.
