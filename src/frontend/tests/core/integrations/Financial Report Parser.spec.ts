@@ -32,6 +32,8 @@ withEventDeliveryModes(
 
     await initialGPTsetup(page);
 
+    await page.getByText("Parser", { exact: true }).last().click();
+
     await page.getByTestId("tab_1_stringify").click();
 
     await page.getByTestId("playground-btn-flow-io").click();

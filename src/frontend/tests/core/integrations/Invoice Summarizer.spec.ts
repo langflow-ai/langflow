@@ -3,6 +3,7 @@ import path from "path";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { unselectNodes } from "../../utils/unselect-nodes";
 
 test(
   "Invoice Summarizer",
@@ -26,13 +27,27 @@ test(
 
     await initialGPTsetup(page);
 
+    await page.getByText("Needle Retriever", { exact: true }).last().click();
+
     // Configure Needle Search Knowledge Base
     await page
-      .getByTestId("input_str_needle_api_key")
+      .getByTestId("popover-anchor-input-needle_api_key")
+      .last()
       .fill(process.env.NEEDLE_API_KEY || "");
     await page
-      .getByTestId("input_str_collection_id")
+      .getByTestId("popover-anchor-input-collection_id")
+      .last()
       .fill(process.env.NEEDLE_COLLECTION_ID || "");
+
+    await unselectNodes(page);
+
+    await page.waitForSelector('[data-testid="title-Chat Output"]', {
+      timeout: 3000,
+    });
+
+    await page.getByTestId("title-Chat Output").last().click();
+    await page.getByTestId("icon-MoreHorizontal").click();
+    await page.getByText("Expand").click();
 
     // Run the flow
     await page.getByTestId("button_run_chat output").click();
@@ -45,10 +60,7 @@ test(
 
     // Wait for the playground to be ready
     const inputPlaceholder = page
-      .getByPlaceholder(
-        "No chat input variables found. Click to run your flow.",
-        { exact: true },
-      )
+      .getByPlaceholder("Send a message...", { exact: true })
       .last();
 
     await expect(inputPlaceholder).toBeVisible({ timeout: 10000 });

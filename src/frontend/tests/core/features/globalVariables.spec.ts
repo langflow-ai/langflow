@@ -40,6 +40,8 @@ test(
     const genericName = Math.random().toString();
     const credentialName = Math.random().toString();
 
+    await page.getByText("OpenAI", { exact: true }).last().click();
+
     await page.getByTestId("icon-Globe").nth(0).click();
     await page.getByText("Add New Variable", { exact: true }).click();
     await page

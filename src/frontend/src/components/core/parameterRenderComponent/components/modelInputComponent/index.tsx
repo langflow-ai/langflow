@@ -20,6 +20,7 @@ import {
 } from "../../../../ui/command";
 import {
   Popover,
+  PopoverContent,
   PopoverContentWithoutPortal,
   PopoverTrigger,
 } from "../../../../ui/popover";
@@ -53,7 +54,10 @@ export default function ModelInputComponent({
   nodeClass,
   handleNodeClass,
   externalOptions,
-}: BaseInputProps<any> & ModelInputComponentType): JSX.Element {
+  showParameter = true,
+  editNode,
+  inspectionPanel,
+}: BaseInputProps<any> & ModelInputComponentType): JSX.Element | null {
   const { setErrorData } = useAlertStore();
   const refButton = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
@@ -420,21 +424,31 @@ export default function ModelInputComponent({
     </CommandList>
   );
 
-  const renderPopoverContent = () => (
-    <PopoverContentWithoutPortal
-      side="bottom"
-      avoidCollisions={true}
-      className="noflow nowheel nopan nodelete nodrag p-0"
-      style={{ minWidth: refButton?.current?.clientWidth ?? "200px" }}
-    >
-      <Command className="flex flex-col">
-        {Object.keys(groupedOptions).length > 0
-          ? renderOptionsList()
-          : renderNoProviders()}
-        {renderManageProvidersButton()}
-      </Command>
-    </PopoverContentWithoutPortal>
-  );
+  const renderPopoverContent = () => {
+    const PopoverContentInput =
+      editNode || inspectionPanel
+        ? PopoverContent
+        : PopoverContentWithoutPortal;
+    return (
+      <PopoverContentInput
+        side="bottom"
+        avoidCollisions={true}
+        className="noflow nowheel nopan nodelete nodrag p-0"
+        style={{ minWidth: refButton?.current?.clientWidth ?? "200px" }}
+      >
+        <Command className="flex flex-col">
+          {Object.keys(groupedOptions).length > 0
+            ? renderOptionsList()
+            : renderNoProviders()}
+          {renderManageProvidersButton()}
+        </Command>
+      </PopoverContentInput>
+    );
+  };
+
+  if (!showParameter) {
+    return null;
+  }
 
   // Loading state
   if (!options || options.length === 0 || refreshOptions) {

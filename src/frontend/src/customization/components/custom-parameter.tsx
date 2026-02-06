@@ -14,6 +14,8 @@ export function CustomParameterComponent({
   inputId,
   templateData,
   templateValue,
+  showParameter,
+  inspectionPanel = false,
   editNode,
   handleNodeClass,
   nodeClass,
@@ -28,6 +30,8 @@ export function CustomParameterComponent({
   inputId: targetHandleType;
   templateData: Partial<InputFieldType>;
   templateValue: any;
+  showParameter: boolean;
+  inspectionPanel: boolean;
   editNode: boolean;
   handleNodeClass: (value: any, code?: string, type?: string) => void;
   nodeClass: APIClassType;
@@ -53,6 +57,8 @@ export function CustomParameterComponent({
       templateData={templateData}
       templateValue={templateValue}
       editNode={editNode}
+      showParameter={showParameter}
+      inspectionPanel={inspectionPanel}
       handleNodeClass={handleNodeClass}
       nodeClass={nodeClass}
       disabled={disabled}
@@ -68,17 +74,23 @@ export function getCustomParameterTitle({
   nodeId,
   isFlexView,
   required,
+  inspectionPanel,
 }: {
   title: string;
   nodeId: string;
   isFlexView: boolean;
   required?: boolean;
+  inspectionPanel?: boolean;
 }) {
   return (
     <div className={cn(isFlexView && "max-w-56 truncate")}>
       <span
         data-testid={`title-${title.toLocaleLowerCase()}`}
-        className="text-mmd"
+        className={cn(
+          inspectionPanel
+            ? "text-xs font-medium"
+            : "text-sm text-secondary-foreground",
+        )}
       >
         {title}
       </span>

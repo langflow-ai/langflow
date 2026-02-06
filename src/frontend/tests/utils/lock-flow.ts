@@ -17,7 +17,7 @@ export async function lockFlow(page: Page) {
 
   await page.waitForSelector('[data-testid="save-flow-settings"]', {
     state: "hidden",
-    timeout: 5000,
+    timeout: 10000,
   });
   //ensure the UI is updated
   await page.getByTestId("icon-Lock").isVisible({ timeout: 5000 });

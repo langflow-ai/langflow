@@ -51,6 +51,7 @@ export type InputComponentType = {
   commandWidth?: string;
   blockAddNewGlobalVariable?: boolean;
   hasRefreshButton?: boolean;
+  inspectionPanel?: boolean;
 };
 export type DropDownComponent = {
   disabled?: boolean;

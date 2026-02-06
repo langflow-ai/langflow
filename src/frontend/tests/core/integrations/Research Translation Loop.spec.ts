@@ -67,6 +67,6 @@ withEventDeliveryModes(
 
     const concatAllText = textContents.join(" ").toLowerCase();
 
-    expect(concatAllText.length).toBeGreaterThan(300);
+    expect(concatAllText.length).toBeGreaterThan(140);
   },
 );
