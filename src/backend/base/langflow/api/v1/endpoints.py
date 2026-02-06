@@ -49,13 +49,12 @@ from langflow.services.auth.utils import (
     api_key_security,
     get_current_active_user,
     get_current_user_for_sse,
-    get_webhook_user,
 )
 from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
 from langflow.services.database.models.user.model import User, UserRead
-from langflow.services.deps import get_session_service, get_settings_service, get_telemetry_service
+from langflow.services.deps import get_auth_service, get_session_service, get_settings_service, get_telemetry_service
 from langflow.services.event_manager import create_webhook_event_manager, webhook_event_manager
 from langflow.services.telemetry.schema import RunPayload
 from langflow.utils.compression import compress_response
@@ -752,7 +751,7 @@ async def webhook_run_flow(
     error_msg = ""
 
     # Get the appropriate user for webhook execution based on auth settings
-    webhook_user = await get_webhook_user(flow_id_or_name, request)
+    webhook_user = await get_auth_service().get_webhook_user(flow_id_or_name, request)
 
     try:
         data = await request.body()

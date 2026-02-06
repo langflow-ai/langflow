@@ -9,15 +9,9 @@ from pydantic import BaseModel
 from langflow.api.utils import DbSession
 from langflow.api.v1.schemas import Token
 from langflow.initial_setup.setup import get_or_create_default_folder
-from langflow.services.auth.utils import (
-    authenticate_user,
-    create_refresh_token,
-    create_user_longterm_token,
-    create_user_tokens,
-)
 from langflow.services.database.models.user.crud import get_user_by_id
 from langflow.services.database.models.user.model import UserRead
-from langflow.services.deps import get_settings_service, get_variable_service
+from langflow.services.deps import get_auth_service, get_settings_service, get_variable_service
 
 router = APIRouter(tags=["Login"])
 
@@ -38,7 +32,8 @@ async def login_to_get_access_token(
 ):
     auth_settings = get_settings_service().auth_settings
     try:
-        user = await authenticate_user(form_data.username, form_data.password, db)
+        auth = get_auth_service()
+        user = await auth.authenticate_user(form_data.username, form_data.password, db)
     except Exception as exc:
         if isinstance(exc, HTTPException):
             raise
@@ -52,7 +47,7 @@ async def login_to_get_access_token(
         ) from exc
 
     if user:
-        tokens = await create_user_tokens(user_id=user.id, db=db, update_last_login=True)
+        tokens = await auth.create_user_tokens(user_id=user.id, db=db, update_last_login=True)
         response.set_cookie(
             "refresh_token_lf",
             tokens["refresh_token"],
@@ -103,7 +98,8 @@ async def auto_login(response: Response, db: DbSession):
     auth_settings = get_settings_service().auth_settings
 
     if auth_settings.AUTO_LOGIN:
-        user_id, tokens = await create_user_longterm_token(db)
+        auth = get_auth_service()
+        user_id, tokens = await auth.create_user_longterm_token(db)
         response.set_cookie(
             "access_token_lf",
             tokens["access_token"],
@@ -157,7 +153,8 @@ async def refresh_token(
     token = request.cookies.get("refresh_token_lf")
 
     if token:
-        tokens = await create_refresh_token(token, db)
+        auth = get_auth_service()
+        tokens = await auth.create_refresh_token(token, db)
         response.set_cookie(
             "refresh_token_lf",
             tokens["refresh_token"],
@@ -195,7 +192,7 @@ async def get_session(
     It does not raise an error if unauthenticated, allowing the frontend to gracefully
     handle the session state.
     """
-    from langflow.services.auth.utils import get_current_user_by_jwt, oauth2_login
+    from langflow.services.auth.utils import oauth2_login
 
     # Try to get the token from the request (cookie or Authorization header)
     try:
@@ -204,7 +201,7 @@ async def get_session(
             return SessionResponse(authenticated=False)
 
         # Validate the token and get user
-        user = await get_current_user_by_jwt(token, db)
+        user = await get_auth_service().get_current_user_from_access_token(token, db)
         if not user or not user.is_active:
             return SessionResponse(authenticated=False)
 

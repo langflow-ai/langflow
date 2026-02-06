@@ -13,11 +13,10 @@ from sqlmodel import delete, select, text
 from langflow.api.utils import cascade_delete_flow
 from langflow.load.utils import replace_tweaks_with_env
 from langflow.processing.process import process_tweaks, run_graph
-from langflow.services.auth.utils import get_password_hash
 from langflow.services.cache.service import AsyncBaseCacheService
 from langflow.services.database.models import Flow, User, Variable
 from langflow.services.database.utils import initialize_database
-from langflow.services.deps import get_cache_service, get_storage_service, session_scope
+from langflow.services.deps import get_auth_service, get_cache_service, get_storage_service, session_scope
 
 
 class LangflowRunnerExperimental:
@@ -167,7 +166,8 @@ class LangflowRunnerExperimental:
     async def generate_user(self) -> User:
         async with session_scope() as session:
             user_id = str(uuid4())
-            user = User(id=user_id, username=user_id, password=get_password_hash(str(uuid4())), is_active=True)
+            hashed = get_auth_service().get_password_hash(str(uuid4()))
+            user = User(id=user_id, username=user_id, password=hashed, is_active=True)
             session.add(user)
             await session.flush()
             await session.refresh(user)
