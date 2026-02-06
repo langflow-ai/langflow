@@ -479,7 +479,7 @@ class TestAuthenticationFailures:
                     await get_current_user_from_access_token("invalid-token-format", mock_db)
 
                 assert exc_info.value.status_code == 401
-                assert "Could not validate credentials" in exc_info.value.detail
+                assert "Invalid token" in exc_info.value.detail
 
     @pytest.mark.asyncio
     async def test_token_signed_with_wrong_key_raises_401(self):
@@ -530,7 +530,7 @@ class TestAuthenticationFailures:
                 assert exc_info.value.status_code == 401
                 # PyJWT library raises InvalidTokenError for expired tokens before our custom check
                 assert (
-                    "expired" in exc_info.value.detail.lower() or "could not validate" in exc_info.value.detail.lower()
+                    "expired" in exc_info.value.detail.lower() or "invalid token" in exc_info.value.detail.lower()
                 )
 
     @pytest.mark.asyncio

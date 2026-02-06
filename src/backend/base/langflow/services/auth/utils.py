@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import base64
-from datetime import timedelta
+
 from typing import TYPE_CHECKING, Annotated, Final
 
 from cryptography.fernet import Fernet
@@ -22,6 +22,7 @@ from langflow.services.deps import get_auth_service
 
 if TYPE_CHECKING:
     from collections.abc import Coroutine
+    from datetime import timedelta
 
     from lfx.services.settings.service import SettingsService
     from sqlmodel.ext.asyncio.session import AsyncSession
