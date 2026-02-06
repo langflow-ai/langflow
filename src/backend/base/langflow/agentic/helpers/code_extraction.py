@@ -2,6 +2,8 @@
 
 import re
 
+_COMPONENT_PATTERN = re.compile(r"class\s+\w+\s*\([^)]*(?:Component|CustomComponent|LCToolComponent)[^)]*\)")
+
 PYTHON_CODE_BLOCK_PATTERN = r"```python\s*([\s\S]*?)```"
 GENERIC_CODE_BLOCK_PATTERN = r"```\s*([\s\S]*?)```"
 UNCLOSED_PYTHON_BLOCK_PATTERN = r"```python\s*([\s\S]*)$"
@@ -36,8 +38,7 @@ def extract_component_code(text: str) -> str | None:
 def _is_complete_component(code: str) -> bool:
     """Check if code is a complete Langflow component with inputs/outputs."""
     # Must have a class inheriting from Component or similar
-    component_pattern = r"class\s+\w+\s*\([^)]*(?:Component|CustomComponent|LCToolComponent)[^)]*\)"
-    if not re.search(component_pattern, code):
+    if not _COMPONENT_PATTERN.search(code):
         return False
 
     # Must have inputs or outputs defined
