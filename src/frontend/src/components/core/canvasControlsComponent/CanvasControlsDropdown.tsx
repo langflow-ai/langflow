@@ -85,6 +85,7 @@ const CanvasControlsDropdown = ({
       padding: {
         left: "20px",
         right: inspectionPanelVisible && selectedNode ? "340px" : "20px",
+        top: "80px",
       },
     });
   }, [fitView, selectedNode]);
