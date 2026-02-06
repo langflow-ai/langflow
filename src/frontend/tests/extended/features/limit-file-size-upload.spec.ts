@@ -3,6 +3,12 @@ import path from "path";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import {
+  closeAdvancedOptions,
+  disableInspectPanel,
+  enableInspectPanel,
+  openAdvancedOptions,
+} from "../../utils/open-advanced-options";
 
 test(
   "user should not be able to upload a file larger than the limit",
@@ -39,9 +45,10 @@ test(
 
     await page.waitForSelector("text=Chat Input", { timeout: 30000 });
 
+    await disableInspectPanel(page);
     await page.getByText("Chat Input", { exact: true }).click();
-    await page.getByTestId("edit-button-modal").last().click();
-    await page.getByText("Close").last().click();
+    await openAdvancedOptions(page);
+    await closeAdvancedOptions(page);
 
     await page.getByRole("button", { name: "Playground", exact: true }).click();
 
@@ -65,5 +72,9 @@ test(
         ).toFixed(2)} KB`,
       ),
     ).toBeVisible();
+
+    await page.getByTestId("playground-btn-flow-io").last().click();
+
+    await enableInspectPanel(page);
   },
 );
