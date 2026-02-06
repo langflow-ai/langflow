@@ -4,6 +4,8 @@ import path from "path";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { lockFlow, unlockFlow } from "../../utils/lock-flow";
+import { unselectNodes } from "../../utils/unselect-nodes";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 
 test(
   "user must be able to lock a flow and it must be saved",
@@ -90,6 +92,12 @@ test(
     expect(numberOfEdges).toBe(0);
 
     await tryConnectNodes(page);
+
+    await unselectNodes(page);
+
+    await page.getByText("Chat Input", { exact: true }).click();
+
+    await adjustScreenView(page);
 
     await page.getByTestId("handle-prompt-shownode-prompt-right").click();
     await page
