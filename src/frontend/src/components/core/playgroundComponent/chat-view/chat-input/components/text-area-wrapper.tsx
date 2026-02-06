@@ -136,7 +136,7 @@ const TextAreaWrapper = ({
           resizeTextarea(
             textarea,
             chatValueRef.current,
-            previousScrollHeightRef
+            previousScrollHeightRef,
           );
         }
       }
