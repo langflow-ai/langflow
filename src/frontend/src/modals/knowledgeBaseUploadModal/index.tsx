@@ -73,8 +73,6 @@ function ChunkPreviewCard({
   chunk: ChunkPreview;
   index: number;
 }) {
-  const isLong = chunk.content.length > 300;
-
   return (
     <div className="flex flex-col rounded-lg border bg-muted/30 p-3 min-h-0 h-full">
       <div className="mb-2 flex items-center justify-between shrink-0">
@@ -82,19 +80,8 @@ function ChunkPreviewCard({
           Chunk {index + 1}
         </span>
       </div>
-      <div className="overflow-y-auto rounded bg-background p-2 text-xs font-mono flex-1 min-h-0">
+      <div className="overflow-y-auto rounded bg-background p-2 text-xs font-mono flex-1 min-h-0 whitespace-pre-wrap break-words">
         {chunk.content}
-        {isLong && <span className="text-muted-foreground">...</span>}
-      </div>
-      <div className="mt-2 flex items-center justify-between shrink-0">
-        {chunk.metadata.source ? (
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <ForwardedIconComponent name="FileText" className="h-3 w-3" />
-            <span className="truncate">{chunk.metadata.source}</span>
-          </div>
-        ) : (
-          <div />
-        )}
       </div>
     </div>
   );
@@ -111,7 +98,7 @@ function SummaryItem({
   value: string | number;
 }) {
   return (
-    <div className="flex items-center justify-between py-2">
+    <div className="flex items-center justify-between py-1.5">
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <ForwardedIconComponent name={icon} className="h-4 w-4" />
         <span>{label}</span>
@@ -225,7 +212,7 @@ export default function KnowledgeBaseUploadModal({
     setIsFilePanelOpen(false);
   }, []);
 
-  // Generate chunk previews (client-side simulation)
+  // Generate chunk previews (client-side simulation) - up to 3 chunks per file
   const generateChunkPreviews = useCallback(async () => {
     if (files.length === 0) {
       setChunkPreviews([]);
@@ -235,47 +222,54 @@ export default function KnowledgeBaseUploadModal({
     setIsGeneratingPreview(true);
 
     try {
-      const previews: ChunkPreview[] = [];
+      const allPreviews: ChunkPreview[] = [];
       const actualSeparator = separator
         .replace(/\\n/g, '\n')
         .replace(/\\t/g, '\t');
 
-      // Read selected file for preview
-      const file = files[selectedPreviewFileIndex] || files[0];
-      const text = await file.text();
+      const filesToProcess = [
+        files[selectedPreviewFileIndex] || files[0],
+      ].filter(Boolean);
 
-      // Simple chunking simulation
-      let chunks: string[] = [];
-      if (actualSeparator) {
-        chunks = text.split(actualSeparator);
-      } else {
-        // Character-based chunking
-        for (let i = 0; i < text.length; i += chunkSize - chunkOverlap) {
-          chunks.push(text.slice(i, i + chunkSize));
+      for (const file of filesToProcess) {
+        const text = await file.text();
+
+        // Simple chunking simulation
+        let chunks: string[] = [];
+        const separatorChunks = actualSeparator
+          ? text.split(actualSeparator).filter(c => c.trim())
+          : [];
+        if (separatorChunks.length > 1) {
+          chunks = separatorChunks;
+        } else {
+          const step = Math.max(1, chunkSize - chunkOverlap);
+          for (let i = 0; i < text.length; i += step) {
+            chunks.push(text.slice(i, i + chunkSize));
+          }
+        }
+
+        // Take up to 3 chunks per file
+        const previewChunks = chunks.slice(0, 3);
+        let position = 0;
+
+        for (let i = 0; i < previewChunks.length; i++) {
+          const chunk = previewChunks[i];
+          if (chunk.trim()) {
+            allPreviews.push({
+              content: chunk.trim().slice(0, chunkSize),
+              index: allPreviews.length,
+              metadata: {
+                source: file.name,
+                start: position,
+                end: position + chunk.length,
+              },
+            });
+          }
+          position += chunk.length + actualSeparator.length;
         }
       }
 
-      // Take first 3 chunks for preview
-      const previewChunks = chunks.slice(0, 3);
-      let position = 0;
-
-      for (let i = 0; i < previewChunks.length; i++) {
-        const chunk = previewChunks[i];
-        if (chunk.trim()) {
-          previews.push({
-            content: chunk.trim().slice(0, chunkSize),
-            index: i,
-            metadata: {
-              source: file.name,
-              start: position,
-              end: position + chunk.length,
-            },
-          });
-        }
-        position += chunk.length + actualSeparator.length;
-      }
-
-      setChunkPreviews(previews);
+      setChunkPreviews(allPreviews);
     } catch (error) {
       console.error('Error generating preview:', error);
       setChunkPreviews([]);
@@ -708,7 +702,7 @@ export default function KnowledgeBaseUploadModal({
 
       case 2:
         return (
-          <div className="flex flex-col gap-4 h-full min-h-0">
+          <div className="flex flex-col gap-3 h-full min-h-0">
             {/* Chunk Preview Header */}
             <div className="flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2">
@@ -728,7 +722,8 @@ export default function KnowledgeBaseUploadModal({
                         className="h-7 max-w-[160px] text-xs"
                       >
                         <span className="truncate">
-                          {files[selectedPreviewFileIndex]?.name}
+                          {files[selectedPreviewFileIndex]?.name ??
+                            files[0]?.name}
                         </span>
                         <ForwardedIconComponent
                           name="ChevronDown"
@@ -757,7 +752,7 @@ export default function KnowledgeBaseUploadModal({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7"
+                  className="h-7 w-7 rounded-md hover:bg-accent"
                   disabled={
                     chunkPreviews.length === 0 || currentChunkIndex === 0
                   }
@@ -765,13 +760,18 @@ export default function KnowledgeBaseUploadModal({
                 >
                   <ForwardedIconComponent
                     name="ChevronLeft"
-                    className="h-4 w-4"
+                    className={cn(
+                      'h-4 w-4',
+                      chunkPreviews.length === 0 || currentChunkIndex === 0
+                        ? 'text-muted-foreground/40'
+                        : 'text-foreground'
+                    )}
                   />
                 </Button>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7"
+                  className="h-7 w-7 rounded-md hover:bg-accent"
                   disabled={
                     chunkPreviews.length === 0 ||
                     currentChunkIndex === chunkPreviews.length - 1
@@ -780,7 +780,13 @@ export default function KnowledgeBaseUploadModal({
                 >
                   <ForwardedIconComponent
                     name="ChevronRight"
-                    className="h-4 w-4"
+                    className={cn(
+                      'h-4 w-4',
+                      chunkPreviews.length === 0 ||
+                        currentChunkIndex === chunkPreviews.length - 1
+                        ? 'text-muted-foreground/40'
+                        : 'text-foreground'
+                    )}
                   />
                 </Button>
               </div>
@@ -853,10 +859,27 @@ export default function KnowledgeBaseUploadModal({
                 value={`${chunkOverlap} chars`}
               />
               <SummaryItem
-                icon="Cpu"
-                label="Embedding Model"
-                value={selectedEmbeddingModel[0]?.name || 'Not selected'}
+                icon="SplitSquareHorizontal"
+                label="Separator"
+                value={separator || 'None'}
               />
+              <div className="flex items-center justify-between py-1.5">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <ForwardedIconComponent name="Cpu" className="h-4 w-4" />
+                  <span>Embedding Model</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {selectedEmbeddingModel[0]?.icon && (
+                    <ForwardedIconComponent
+                      name={selectedEmbeddingModel[0].icon}
+                      className="h-3.5 w-3.5"
+                    />
+                  )}
+                  <span className="text-sm font-medium">
+                    {selectedEmbeddingModel[0]?.name || 'Not selected'}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         );
