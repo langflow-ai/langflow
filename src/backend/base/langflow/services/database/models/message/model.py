@@ -26,6 +26,7 @@ def _sanitize_json_floats(obj):
         return None
     return obj
 
+
 if TYPE_CHECKING:
     from langflow.schema.message import Message
 
