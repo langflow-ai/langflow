@@ -174,10 +174,15 @@ def safe_cache_get(cache: CacheService, key, default=None):
 
 
 def safe_cache_set(cache: CacheService, key, value):
-    """Safely set a value in cache, handling potential errors."""
+    """Safely set a value in cache, handling potential errors.
+
+    Catches serialization failures (e.g. objects containing SSL contexts,
+    recursive Pydantic models, or other non-picklable state) so that cache
+    issues never interrupt flow execution.
+    """
     try:
         cache.set(key, value)
-    except (AttributeError, TypeError) as e:
+    except (AttributeError, TypeError, RecursionError, Exception) as e:  # noqa: BLE001
         logger.warning(f"Failed to set cache key '{key}': {e}")
 
 

@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from collections import defaultdict
 from threading import RLock
 from typing import Any
@@ -6,6 +7,8 @@ from typing import Any
 from langflow.services.base import Service
 from langflow.services.cache.base import AsyncBaseCacheService, CacheService
 from langflow.services.deps import get_cache_service
+
+logger = logging.getLogger(__name__)
 
 
 class ChatService(Service):
@@ -21,6 +24,9 @@ class ChatService(Service):
     async def set_cache(self, key: str, data: Any, lock: asyncio.Lock | None = None) -> bool:
         """Set the cache for a client.
 
+        Cache failures (e.g. serialization errors with Redis) are logged and
+        swallowed so they never interrupt flow execution.
+
         Args:
             key (str): The cache key.
             data (Any): The data to be cached.
@@ -33,13 +39,17 @@ class ChatService(Service):
             "result": data,
             "type": type(data),
         }
-        if isinstance(self.cache_service, AsyncBaseCacheService):
-            await self.cache_service.upsert(str(key), result_dict, lock=lock or self.async_cache_locks[key])
-            return await self.cache_service.contains(key)
-        await asyncio.to_thread(
-            self.cache_service.upsert, str(key), result_dict, lock=lock or self._sync_cache_locks[key]
-        )
-        return key in self.cache_service
+        try:
+            if isinstance(self.cache_service, AsyncBaseCacheService):
+                await self.cache_service.upsert(str(key), result_dict, lock=lock or self.async_cache_locks[key])
+                return await self.cache_service.contains(key)
+            await asyncio.to_thread(
+                self.cache_service.upsert, str(key), result_dict, lock=lock or self._sync_cache_locks[key]
+            )
+            return key in self.cache_service
+        except Exception:  # noqa: BLE001
+            logger.warning("Failed to set cache for key '%s' — flow execution will continue without caching.", key)
+            return False
 
     async def get_cache(self, key: str, lock: asyncio.Lock | None = None) -> Any:
         """Get the cache for a client.

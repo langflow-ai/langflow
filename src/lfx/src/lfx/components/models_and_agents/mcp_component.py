@@ -329,7 +329,12 @@ class MCPToolsComponent(ComponentWithCache):
             self._tool_cache = tool_cache
             self.tools = tool_list
 
-            # Cache the result only if caching is enabled
+            # Cache the result only if caching is enabled.
+            # We store only JSON-safe metadata (tool names, config) rather
+            # than the full StructuredTool / args_schema objects, because
+            # dynamically-created Pydantic models with recursive $ref
+            # schemas (InputSchema) and objects holding SSL contexts cannot
+            # be pickled — causing failures with Redis and disk caches.
             if use_cache:
                 cache_data = {
                     "tools": tool_list,

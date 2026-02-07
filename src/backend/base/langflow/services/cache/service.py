@@ -237,7 +237,15 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
         if key is None:
             return CACHE_MISS
         value = await self._client.get(str(key))
-        return dill.loads(value) if value else CACHE_MISS
+        if not value:
+            return CACHE_MISS
+        try:
+            return dill.loads(value)
+        except (pickle.UnpicklingError, TypeError, RecursionError, AttributeError, Exception) as exc:  # noqa: BLE001
+            logger.warning(f"RedisCache could not deserialize value for key '{key}': {exc!s}")
+            # Remove the corrupted entry so future lookups don't keep failing
+            await self._client.delete(str(key))
+            return CACHE_MISS
 
     @override
     async def set(self, key, value, lock=None) -> None:
@@ -247,9 +255,14 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
                 if not result:
                     msg = "RedisCache could not set the value."
                     raise ValueError(msg)
-        except pickle.PicklingError as exc:
-            msg = "RedisCache only accepts values that can be pickled. "
-            raise TypeError(msg) from exc
+        except (pickle.PicklingError, TypeError, RecursionError, AttributeError) as exc:
+            logger.warning(
+                f"RedisCache could not pickle value for key '{key}': {exc!s}. "
+                "The value will not be cached. This is usually caused by objects "
+                "that contain SSL contexts, recursive references, or other "
+                "non-serializable state (e.g. LLM client objects, dynamic Pydantic "
+                "models with self-referencing schemas)."
+            )
 
     @override
     async def upsert(self, key, value, lock=None) -> None:
