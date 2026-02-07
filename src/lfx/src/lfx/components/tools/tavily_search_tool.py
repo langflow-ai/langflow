@@ -1,3 +1,4 @@
+import math
 from enum import Enum
 
 import httpx
@@ -13,6 +14,13 @@ from lfx.schema.data import Data
 
 # Add at the top with other constants
 MAX_CHUNKS_PER_SOURCE = 3
+
+
+def _sanitize_nan(value):
+    """Replace float NaN / Infinity with None for JSON safety."""
+    if isinstance(value, float) and (math.isnan(value) or math.isinf(value)):
+        return None
+    return value
 
 
 class TavilySearchDepth(Enum):
@@ -312,7 +320,7 @@ Note: Check 'Advanced' for all options.
                         "title": result.get("title"),
                         "url": result.get("url"),
                         "content": result.get("content"),
-                        "score": result.get("score"),
+                        "score": _sanitize_nan(result.get("score")),
                         "raw_content": result.get("raw_content") if include_raw_content else None,
                     }
                 )

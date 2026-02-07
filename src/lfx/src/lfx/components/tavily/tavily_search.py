@@ -1,3 +1,5 @@
+import math
+
 import httpx
 
 from lfx.custom.custom_component.component import Component
@@ -6,6 +8,13 @@ from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.template.field.base import Output
+
+
+def _sanitize_nan(value):
+    """Replace float NaN / Infinity with None for JSON safety."""
+    if isinstance(value, float) and (math.isnan(value) or math.isinf(value)):
+        return None
+    return value
 
 
 class TavilySearchComponent(Component):
@@ -177,7 +186,7 @@ class TavilySearchComponent(Component):
                     "title": result.get("title"),
                     "url": result.get("url"),
                     "content": content,
-                    "score": result.get("score"),
+                    "score": _sanitize_nan(result.get("score")),
                 }
                 if self.include_raw_content:
                     result_data["raw_content"] = result.get("raw_content")

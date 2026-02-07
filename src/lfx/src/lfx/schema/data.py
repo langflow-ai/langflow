@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import json
+import math
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import TYPE_CHECKING, cast
@@ -289,11 +290,16 @@ class Data(CrossModuleModel):
 
 
 def custom_serializer(obj):
+    if isinstance(obj, float) and (math.isnan(obj) or math.isinf(obj)):
+        return None
     if isinstance(obj, datetime):
         utc_date = obj.replace(tzinfo=timezone.utc)
         return utc_date.strftime("%Y-%m-%d %H:%M:%S %Z")
     if isinstance(obj, Decimal):
-        return float(obj)
+        result = float(obj)
+        if math.isnan(result) or math.isinf(result):
+            return None
+        return result
     if isinstance(obj, UUID):
         return str(obj)
     if isinstance(obj, BaseModel):
