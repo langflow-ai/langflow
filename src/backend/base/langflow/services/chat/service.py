@@ -49,7 +49,11 @@ class ChatService(Service):
                 )
                 cached = key in self.cache_service
         except Exception:  # noqa: BLE001
-            logger.warning("Failed to set cache for key '%s' — flow execution will continue without caching.", key)
+            logger.warning(
+                "Failed to set cache for key '%s' — flow execution will continue without caching.",
+                key,
+                exc_info=True,
+            )
             return False
         else:
             return cached

@@ -241,7 +241,7 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
             return CACHE_MISS
         try:
             return dill.loads(value)
-        except (pickle.UnpicklingError, TypeError, RecursionError, AttributeError, Exception) as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
             logger.warning(f"RedisCache could not deserialize value for key '{key}': {exc!s}")
             # Remove the corrupted entry so future lookups don't keep failing
             await self._client.delete(str(key))
@@ -278,7 +278,7 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
         if key is None:
             return
         existing_value = await self.get(key)
-        if existing_value is not None and isinstance(existing_value, dict) and isinstance(value, dict):
+        if existing_value is not CACHE_MISS and isinstance(existing_value, dict) and isinstance(value, dict):
             existing_value.update(value)
             value = existing_value
 
