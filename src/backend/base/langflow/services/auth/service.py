@@ -53,6 +53,8 @@ class AuthService(BaseAuthService):
 
     def __init__(self, settings_service: SettingsService):
         self.settings_service = settings_service
+        self._fernet_cache: Fernet | None = None
+        self._cached_secret_key: str | None = None
         self.set_ready()
 
     @property
@@ -659,8 +661,14 @@ class AuthService(BaseAuthService):
 
     def _get_fernet(self) -> Fernet:
         secret_key: str = self.settings.auth_settings.SECRET_KEY.get_secret_value()
-        valid_key = self._ensure_valid_key(secret_key)
-        return Fernet(valid_key)
+
+        # Cache Fernet instance to avoid redundant key processing
+        if self._fernet_cache is None or self._cached_secret_key != secret_key:
+            valid_key = self._ensure_valid_key(secret_key)
+            self._fernet_cache = Fernet(valid_key)
+            self._cached_secret_key = secret_key
+
+        return self._fernet_cache
 
     def encrypt_api_key(self, api_key: str) -> str:
         fernet = self._get_fernet()
@@ -681,8 +689,8 @@ class AuthService(BaseAuthService):
             - Returns plaintext keys as-is (not starting with "gAAAAA")
             - Logs warnings on decryption failures for security monitoring
         """
-        if not isinstance(encrypted_api_key, str) or not encrypted_api_key:
-            logger.debug("decrypt_api_key called with invalid input (empty or non-string)")
+        # Fast path for invalid inputs - avoid expensive logging
+        if not encrypted_api_key or not isinstance(encrypted_api_key, str):
             return ""
 
         # Fernet tokens always start with "gAAAAA" - if not, return as-is (plain text)
