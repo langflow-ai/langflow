@@ -42,14 +42,17 @@ class ChatService(Service):
         try:
             if isinstance(self.cache_service, AsyncBaseCacheService):
                 await self.cache_service.upsert(str(key), result_dict, lock=lock or self.async_cache_locks[key])
-                return await self.cache_service.contains(key)
-            await asyncio.to_thread(
-                self.cache_service.upsert, str(key), result_dict, lock=lock or self._sync_cache_locks[key]
-            )
-            return key in self.cache_service
+                cached = await self.cache_service.contains(key)
+            else:
+                await asyncio.to_thread(
+                    self.cache_service.upsert, str(key), result_dict, lock=lock or self._sync_cache_locks[key]
+                )
+                cached = key in self.cache_service
         except Exception:  # noqa: BLE001
             logger.warning("Failed to set cache for key '%s' — flow execution will continue without caching.", key)
             return False
+        else:
+            return cached
 
     async def get_cache(self, key: str, lock: asyncio.Lock | None = None) -> Any:
         """Get the cache for a client.
