@@ -207,48 +207,36 @@ class TransactionServiceProtocol(Protocol):
 
 
 class DeploymentServiceProtocol(Protocol):
-    """Protocol for deployment provider services."""
+    """Protocol for deployment provider services.
+
+    This protocol is provider-only:
+    inputs/outputs represent provider state.
+    """
 
     @abstractmethod
     async def create_deployment(
         self,
         *,
-        user_id: str,
-        project_id: str,
-        snapshot_id: str,
+        snapshot_id: str | None = None,
         config_id: str | None = None,
-        tag: str | None = None,
+        snapshot: dict | None = None,
+        config: dict | None = None,
+        deployment_type: str,
     ) -> dict[str, Any]:
-        """Create a new deployment in the provider and track it in Langflow.
-
-        Must create the deployment in the provider and return the resulting
-        Langflow-tracked deployment record, including any provider-assigned IDs
-        or URLs recorded by Langflow.
-        """
+        """Create a new deployment in the provider."""
         ...
 
     @abstractmethod
     async def list_deployments(
         self,
-        *,
-        flow_id: str | None = None,
-        config_id: str | None = None,
-        snapshot_id: str | None = None,
+        deployment_type: str | None = None,
     ) -> list[dict[str, Any]]:
-        """List Langflow-tracked deployments visible to this adapter.
-
-        Must return Langflow-tracked records (not live provider truth). Optional
-        filters constrain results by related flow, config, or snapshot.
-        """
+        """List deployments visible to this adapter."""
         ...
 
     @abstractmethod
     async def get_deployment(self, deployment_id: str) -> dict[str, Any]:
-        """Return the Langflow-tracked deployment record by ID.
-
-        Must return Langflow-tracked metadata and may diverge from live provider
-        state.
-        """
+        """Return deployment metadata by provider ID."""
         ...
 
     @abstractmethod
@@ -258,88 +246,47 @@ class DeploymentServiceProtocol(Protocol):
         *,
         snapshot_id: str | None = None,
         config_id: str | None = None,
-        tag: str | None = None,
     ) -> dict[str, Any]:
-        """Update deployment inputs and apply changes in the provider.
-
-        Any provided snapshot/config/tag replaces the existing value. Must
-        apply the change in the provider and return the updated Langflow-tracked
-        deployment record after the provider update is applied.
-        """
+        """Update deployment inputs and apply changes in the provider."""
         ...
 
     @abstractmethod
     async def redeploy_deployment(self, deployment_id: str) -> dict[str, Any]:
-        """Re-apply current deployment inputs without changing them.
-
-        Intended to trigger a provider-side restart/rebuild using existing
-        snapshot/config/tag values. Must return the resulting Langflow-tracked
-        deployment record after the provider action completes.
-        """
+        """Re-apply current deployment inputs without changing them."""
         ...
 
     @abstractmethod
     async def clone_deployment(self, deployment_id: str) -> dict[str, Any]:
-        """Create a new deployment using the same inputs as the source.
-
-        Uses the source deployment's snapshot/config/tag to create a new
-        deployment identity. Must return the new Langflow-tracked deployment
-        record.
-        """
+        """Create a new deployment using the same inputs as the source."""
         ...
 
     @abstractmethod
     async def delete_deployment(self, deployment_id: str) -> None:
-        """Delete the deployment from the provider and Langflow tracking."""
+        """Delete the deployment from the provider."""
         ...
 
     @abstractmethod
     async def get_deployment_health(self, deployment_id: str) -> dict[str, Any]:
-        """Return provider-reported health/status for the deployment.
-
-        Must return provider-truth health/status, not a cached value.
-        """
-        ...
-
-    @abstractmethod
-    async def get_live_deployment(self, deployment_id: str) -> dict[str, Any]:
-        """Fetch live provider-truth state for this deployment.
-
-        Must return authoritative provider state (no Langflow caching), used
-        for drift detection against Langflow-tracked state.
-        """
-        ...
-
-    @abstractmethod
-    async def list_live_deployments(self) -> list[dict[str, Any]]:
-        """List live provider-truth deployments visible to this adapter.
-
-        Must return provider-truth data (no Langflow caching).
-        """
+        """Return provider-reported health/status for the deployment."""
         ...
 
     @abstractmethod
     async def create_deployment_config(
         self,
         *,
-        user_id: str,
         data: dict,
     ) -> dict[str, Any]:
-        """Create a provider-scoped deployment configuration.
-
-        The data payload is provider-specific JSON config. Must return the
-        newly created Langflow-tracked config record.
-        """
+        """Create a provider-scoped deployment configuration."""
         ...
 
     @abstractmethod
     async def list_deployment_configs(self) -> list[dict[str, Any]]:
-        """List Langflow-tracked deployment configurations for this provider."""
+        """List deployment configurations."""
         ...
 
     @abstractmethod
     async def get_deployment_config(self, config_id: str) -> dict[str, Any]:
-        """Return a Langflow-tracked deployment configuration by ID."""
+        """Return deployment configuration by provider ID."""
         ...
 
     @abstractmethod
@@ -349,42 +296,49 @@ class DeploymentServiceProtocol(Protocol):
         *,
         data: dict | None = None,
     ) -> dict[str, Any]:
-        """Update a deployment configuration's JSON data.
-
-        Must return the updated Langflow-tracked config record.
-        """
-        ...
-
-    @abstractmethod
-    async def clone_deployment_config(self, config_id: str) -> dict[str, Any]:
-        """Create a new Langflow-tracked config using the same data as the source."""
-        ...
-
-    @abstractmethod
-    async def export_deployment_config(self, config_id: str) -> dict:
-        """Return a portable JSON export of the Langflow-tracked configuration."""
-        ...
-
-    @abstractmethod
-    async def import_deployment_config(
-        self,
-        *,
-        user_id: str,
-        data: dict,
-    ) -> dict[str, Any]:
-        """Create a Langflow-tracked configuration from an exported JSON payload."""
+        """Update a deployment configuration's JSON data."""
         ...
 
     @abstractmethod
     async def delete_deployment_config(self, config_id: str) -> None:
-        """Delete a deployment configuration from Langflow tracking."""
+        """Delete a deployment configuration from the provider."""
         ...
 
     @abstractmethod
     async def get_provider_config_schema(self) -> dict:
-        """Return provider-specific configuration schema and defaults.
+        """Return provider-specific configuration schema and defaults."""
+        ...
 
-        Must return provider-truth schema/defaults used by UI or validation.
-        """
+    @abstractmethod
+    async def create_snapshot(
+        self,
+        *,
+        data: dict,
+        snapshot_type: str,
+    ) -> dict[str, Any]:
+        """Create a provider snapshot (deployed or not)."""
+        ...
+
+    @abstractmethod
+    async def list_snapshots(
+        self,
+        snapshot_type: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """List provider snapshots (deployed or not)."""
+        ...
+
+    @abstractmethod
+    async def get_snapshot(self, snapshot_id: str) -> dict[str, Any]:
+        """Return snapshot metadata by provider ID."""
+        ...
+
+    @abstractmethod
+    async def update_snapshot(self, snapshot_id: str, *, data: dict | None = None) -> dict[str, Any]:
+        """Update a provider snapshot's JSON data."""
+        ...
+
+    @abstractmethod
+    async def delete_snapshot(self, snapshot_id: str) -> None:
+        """Delete a provider snapshot."""
         ...
 
