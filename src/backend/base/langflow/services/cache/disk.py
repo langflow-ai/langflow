@@ -53,10 +53,7 @@ class AsyncDiskCache(AsyncBaseCacheService, Generic[AsyncLockType]):
         try:
             serialized = pickle.dumps(value) if not isinstance(value, str | bytes) else value
         except (pickle.PicklingError, TypeError, RecursionError, AttributeError) as exc:
-            logger.warning(
-                f"DiskCache could not pickle value for key '{key}': {exc!s}. "
-                "The value will not be cached."
-            )
+            logger.warning(f"DiskCache could not pickle value for key '{key}': {exc!s}. The value will not be cached.")
             return
         item = {"value": serialized, "time": time.time()}
         await asyncio.to_thread(self.cache.set, key, item)
