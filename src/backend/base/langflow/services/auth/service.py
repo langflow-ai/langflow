@@ -43,6 +43,8 @@ if TYPE_CHECKING:
 
     from langflow.services.database.models.api_key.model import ApiKey
 
+_PADS = ("", "=", "==", "===", "====")
+
 MINIMUM_KEY_LENGTH = 32
 
 
@@ -645,8 +647,8 @@ class AuthService(BaseAuthService):
         return user if self.verify_password(password, user.password) else None
 
     def _add_padding(self, value: str) -> str:
-        padding_needed = 4 - len(value) % 4
-        return value + "=" * padding_needed
+        padding_needed = 4 - (len(value) & 3)
+        return value + _PADS[padding_needed]
 
     def _ensure_valid_key(self, raw_key: str) -> bytes:
         if len(raw_key) < MINIMUM_KEY_LENGTH:
