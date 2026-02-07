@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import base64
-import random
 import warnings
 from collections.abc import Coroutine
 from datetime import datetime, timedelta, timezone
@@ -10,6 +9,8 @@ from uuid import UUID
 
 import jwt
 from cryptography.fernet import Fernet
+from cryptography.hazmat.primitives.hashes import SHA256
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from fastapi import HTTPException, Request, WebSocketException, status
 from jwt import InvalidTokenError
 from lfx.log.logger import logger
@@ -42,8 +43,6 @@ if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
 
     from langflow.services.database.models.api_key.model import ApiKey
-
-MINIMUM_KEY_LENGTH = 32
 
 
 class AuthService(BaseAuthService):
@@ -644,23 +643,19 @@ class AuthService(BaseAuthService):
 
         return user if self.verify_password(password, user.password) else None
 
-    def _add_padding(self, value: str) -> str:
-        padding_needed = 4 - len(value) % 4
-        return value + "=" * padding_needed
-
-    def _ensure_valid_key(self, raw_key: str) -> bytes:
-        if len(raw_key) < MINIMUM_KEY_LENGTH:
-            random.seed(raw_key)
-            key = bytes(random.getrandbits(8) for _ in range(32))
-            key = base64.urlsafe_b64encode(key)
-        else:
-            key = self._add_padding(raw_key).encode()
-        return key
+    @staticmethod
+    def _derive_fernet_key(raw_key: str) -> bytes:
+        derived = HKDF(
+            algorithm=SHA256(),
+            length=32,
+            salt=None,
+            info=b"langflow-fernet-key",
+        ).derive(raw_key.encode())
+        return base64.urlsafe_b64encode(derived)
 
     def _get_fernet(self) -> Fernet:
         secret_key: str = self.settings.auth_settings.SECRET_KEY.get_secret_value()
-        valid_key = self._ensure_valid_key(secret_key)
-        return Fernet(valid_key)
+        return Fernet(self._derive_fernet_key(secret_key))
 
     def encrypt_api_key(self, api_key: str) -> str:
         fernet = self._get_fernet()

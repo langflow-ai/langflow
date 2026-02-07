@@ -4,6 +4,8 @@ import base64
 from typing import TYPE_CHECKING, Annotated, Final
 
 from cryptography.fernet import Fernet
+from cryptography.hazmat.primitives.hashes import SHA256
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from fastapi import Depends, HTTPException, Request, Security, WebSocket, WebSocketException, status
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
 from fastapi.security.utils import get_authorization_scheme_param
@@ -246,6 +248,16 @@ async def get_current_active_superuser(user: User = Depends(get_current_user)) -
     return result
 
 
+def _derive_fernet_key(raw_key: str) -> bytes:
+    derived = HKDF(
+        algorithm=SHA256(),
+        length=32,
+        salt=None,
+        info=b"langflow-fernet-key",
+    ).derive(raw_key.encode())
+    return base64.urlsafe_b64encode(derived)
+
+
 def get_fernet(settings_service: SettingsService) -> Fernet:
     """Get a Fernet instance for encryption/decryption.
 
@@ -255,24 +267,8 @@ def get_fernet(settings_service: SettingsService) -> Fernet:
     Returns:
         Fernet instance for encryption/decryption
     """
-    import random
-
     secret_key: str = settings_service.auth_settings.SECRET_KEY.get_secret_value()
-
-    # Replicate the original _ensure_valid_key logic from AuthService
-    MINIMUM_KEY_LENGTH = 32  # noqa: N806
-    if len(secret_key) < MINIMUM_KEY_LENGTH:
-        # Generate deterministic key from seed for short keys
-        random.seed(secret_key)
-        key = bytes(random.getrandbits(8) for _ in range(32))
-        key = base64.urlsafe_b64encode(key)
-    else:
-        # Add padding for longer keys
-        padding_needed = 4 - len(secret_key) % 4
-        padded_key = secret_key + "=" * padding_needed
-        key = padded_key.encode()
-
-    return Fernet(key)
+    return Fernet(_derive_fernet_key(secret_key))
 
 
 def encrypt_api_key(api_key: str, settings_service: SettingsService | None = None) -> str:  # noqa: ARG001
