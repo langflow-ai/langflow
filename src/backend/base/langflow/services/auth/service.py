@@ -53,6 +53,8 @@ class AuthService(BaseAuthService):
 
     def __init__(self, settings_service: SettingsService):
         self.settings_service = settings_service
+        self._cached_secret_key: str | None = None
+        self._cached_fernet: Fernet | None = None
         self.set_ready()
 
     @property
@@ -659,8 +661,13 @@ class AuthService(BaseAuthService):
 
     def _get_fernet(self) -> Fernet:
         secret_key: str = self.settings.auth_settings.SECRET_KEY.get_secret_value()
+        if self._cached_fernet is not None and self._cached_secret_key == secret_key:
+            return self._cached_fernet
         valid_key = self._ensure_valid_key(secret_key)
-        return Fernet(valid_key)
+        fernet = Fernet(valid_key)
+        self._cached_secret_key = secret_key
+        self._cached_fernet = fernet
+        return fernet
 
     def encrypt_api_key(self, api_key: str) -> str:
         fernet = self._get_fernet()
