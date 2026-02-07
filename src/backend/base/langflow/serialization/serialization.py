@@ -71,9 +71,12 @@ def _serialize_datetime(obj: datetime, *_) -> str:
     return obj.replace(tzinfo=timezone.utc).isoformat()
 
 
-def _serialize_decimal(obj: Decimal, *_) -> float:
-    """Convert Decimal to float."""
-    return float(obj)
+def _serialize_decimal(obj: Decimal, *_) -> float | None:
+    """Convert Decimal to float, replacing NaN/Infinity with None."""
+    result = float(obj)
+    if math.isnan(result) or math.isinf(result):
+        return None
+    return result
 
 
 def _serialize_uuid(obj: UUID, *_) -> str:

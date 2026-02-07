@@ -1,4 +1,3 @@
-import math
 from enum import Enum
 
 import httpx
@@ -11,16 +10,10 @@ from lfx.field_typing import Tool
 from lfx.inputs.inputs import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput
 from lfx.log.logger import logger
 from lfx.schema.data import Data
+from lfx.utils.helpers import sanitize_nan
 
 # Add at the top with other constants
 MAX_CHUNKS_PER_SOURCE = 3
-
-
-def _sanitize_nan(value):
-    """Replace float NaN / Infinity with None for JSON safety."""
-    if isinstance(value, float) and (math.isnan(value) or math.isinf(value)):
-        return None
-    return value
 
 
 class TavilySearchDepth(Enum):
@@ -320,7 +313,7 @@ Note: Check 'Advanced' for all options.
                         "title": result.get("title"),
                         "url": result.get("url"),
                         "content": result.get("content"),
-                        "score": _sanitize_nan(result.get("score")),
+                        "score": sanitize_nan(result.get("score")),
                         "raw_content": result.get("raw_content") if include_raw_content else None,
                     }
                 )
