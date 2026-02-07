@@ -14,9 +14,11 @@ from langflow.schema.validators import str_to_timestamp_validator
 
 
 def _sanitize_json_floats(obj):
-    """Replace NaN / Infinity floats with ``None`` so the value can be stored
-    in a PostgreSQL ``JSON`` / ``JSONB`` column.  These special IEEE 754
-    values are not representable in standard JSON (RFC 7159).
+    """Replace NaN / Infinity floats with ``None`` for JSON safety.
+
+    These special IEEE 754 values are not representable in standard JSON
+    (RFC 7159) and will be rejected by PostgreSQL ``JSON`` / ``JSONB``
+    columns.
     """
     if isinstance(obj, dict):
         return {k: _sanitize_json_floats(v) for k, v in obj.items()}
