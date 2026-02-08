@@ -16,6 +16,7 @@ def utc_now():
 class DatasetBase(SQLModel):
     name: str = Field(description="Name of the dataset", index=True)
     description: str | None = Field(default=None, description="Description of the dataset")
+    dataset_type: str = Field(default="single_turn", description="Type: single_turn or multi_turn")
 
 
 class Dataset(DatasetBase, table=True):  # type: ignore[call-arg]
@@ -53,6 +54,7 @@ class DatasetRead(SQLModel):
     id: UUID
     name: str
     description: str | None = None
+    dataset_type: str = "single_turn"
     user_id: UUID
     created_at: datetime | None = None
     updated_at: datetime | None = None
@@ -73,6 +75,7 @@ class DatasetItemBase(SQLModel):
     input: str = Field(description="Input data as JSON string")
     expected_output: str = Field(description="Expected output data as JSON string")
     order: int = Field(default=0, description="Order of the item in the dataset")
+    conversation_id: str | None = Field(default=None, description="Groups turns in multi-turn datasets")
 
 
 class DatasetItem(DatasetItemBase, table=True):  # type: ignore[call-arg]
@@ -95,8 +98,11 @@ class DatasetItem(DatasetItemBase, table=True):  # type: ignore[call-arg]
     dataset: Dataset = Relationship(back_populates="items")
 
 
-class DatasetItemCreate(DatasetItemBase):
-    pass
+class DatasetItemCreate(SQLModel):
+    input: str = Field(description="Input data as JSON string")
+    expected_output: str = Field(description="Expected output data as JSON string")
+    order: int = Field(default=0, description="Order of the item in the dataset")
+    conversation_id: str | None = Field(default=None, description="Groups turns in multi-turn datasets")
 
 
 class DatasetItemRead(SQLModel):
@@ -105,6 +111,7 @@ class DatasetItemRead(SQLModel):
     input: str
     expected_output: str
     order: int
+    conversation_id: str | None = None
     created_at: datetime | None = None
 
 

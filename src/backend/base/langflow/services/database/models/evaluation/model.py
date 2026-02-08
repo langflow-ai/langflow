@@ -17,6 +17,7 @@ class EvaluationStatus(str, Enum):
     RUNNING = "running"
     COMPLETED = "completed"
     FAILED = "failed"
+    STOPPED = "stopped"
 
 
 class ScoringMethod(str, Enum):

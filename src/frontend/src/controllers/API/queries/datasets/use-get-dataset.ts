@@ -10,6 +10,7 @@ export interface DatasetItemInfo {
   input: string;
   expected_output: string;
   order: number;
+  conversation_id?: string;
   created_at: string;
 }
 
@@ -17,6 +18,7 @@ export interface DatasetWithItems {
   id: string;
   name: string;
   description?: string;
+  dataset_type?: string;
   user_id: string;
   created_at: string;
   updated_at: string;

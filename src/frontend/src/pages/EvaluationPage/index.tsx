@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useGetEvaluation } from "@/controllers/API/queries/evaluations/use-get-evaluation";
 import { useRunEvaluation } from "@/controllers/API/queries/evaluations/use-run-evaluation";
+import { useStopEvaluation } from "@/controllers/API/queries/evaluations/use-stop-evaluation";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useAlertStore from "@/stores/alertStore";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
@@ -24,6 +25,7 @@ const getStatusBadge = (status: string) => {
     running: "default",
     completed: "outline",
     failed: "destructive",
+    stopped: "secondary",
   };
   return <Badge variant={variants[status] || "secondary"}>{status}</Badge>;
 };
@@ -74,11 +76,32 @@ export default function EvaluationPage() {
     },
   });
 
+  const stopEvaluationMutation = useStopEvaluation({
+    onSuccess: () => {
+      setSuccessData({ title: "Evaluation stopped" });
+      refetch();
+    },
+    onError: (error: any) => {
+      setErrorData({
+        title: "Failed to stop evaluation",
+        list: [error?.response?.data?.detail || error?.message],
+      });
+    },
+  });
+
   const handleReRun = () => {
     if (evaluationId) {
       runEvaluationMutation.mutate({ evaluationId });
     }
   };
+
+  const handleStop = () => {
+    if (evaluationId) {
+      stopEvaluationMutation.mutate({ evaluationId });
+    }
+  };
+
+  const isRunning = evaluation?.status === "running" || evaluation?.status === "pending";
 
   if (isLoading) {
     return (
@@ -133,18 +156,27 @@ export default function EvaluationPage() {
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleReRun}
-              disabled={
-                evaluation.status === "running" ||
-                runEvaluationMutation.isPending
-              }
-            >
-              <ForwardedIconComponent name="Play" className="mr-2 h-4 w-4" />
-              Re-run
-            </Button>
+            {isRunning ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleStop}
+                disabled={stopEvaluationMutation.isPending}
+              >
+                <ForwardedIconComponent name="Square" className="mr-2 h-4 w-4" />
+                Stop
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleReRun}
+                disabled={runEvaluationMutation.isPending}
+              >
+                <ForwardedIconComponent name="Play" className="mr-2 h-4 w-4" />
+                Re-run
+              </Button>
+            )}
           </div>
         </div>
 
@@ -178,7 +210,7 @@ export default function EvaluationPage() {
                 <TableHead className="w-20">Passed</TableHead>
                 {evaluation.scoring_methods.map((method) => (
                   <TableHead key={method} className="w-24">
-                    {method.replace("_", " ")}
+                    {method.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase())}
                   </TableHead>
                 ))}
               </TableRow>
@@ -233,7 +265,7 @@ export default function EvaluationPage() {
         </div>
 
         {/* Summary Footer */}
-        {evaluation.status === "completed" && (
+        {(evaluation.status === "completed" || evaluation.status === "stopped") && (
           <div className="flex items-center gap-6 text-sm text-muted-foreground">
             <span>
               Pass Rate:{" "}

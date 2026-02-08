@@ -21,6 +21,7 @@ import {
 import { useGetEvaluation } from "@/controllers/API/queries/evaluations/use-get-evaluation";
 import type { EvaluationInfo } from "@/controllers/API/queries/evaluations/use-get-evaluations";
 import { useRunEvaluation } from "@/controllers/API/queries/evaluations/use-run-evaluation";
+import { useStopEvaluation } from "@/controllers/API/queries/evaluations/use-stop-evaluation";
 import useAlertStore from "@/stores/alertStore";
 
 interface EvaluationsMainContentProps {
@@ -32,6 +33,7 @@ const statusColors: Record<string, string> = {
   running: "text-primary",
   completed: "text-emerald-600",
   failed: "text-destructive",
+  stopped: "text-amber-500",
 };
 
 const formatDuration = (ms?: number) => {
@@ -135,6 +137,19 @@ export default function EvaluationsMainContent({
     },
   });
 
+  const stopEvaluationMutation = useStopEvaluation({
+    onSuccess: () => {
+      setSuccessData({ title: "Evaluation stopped" });
+      refetch();
+    },
+    onError: (error: any) => {
+      setErrorData({
+        title: "Failed to stop evaluation",
+        list: [error?.response?.data?.detail || error?.message],
+      });
+    },
+  });
+
   // Interactive pass criteria — initialized from evaluation data
   const [localPassMetric, setLocalPassMetric] = useState<string | null>(null);
   const [localPassThreshold, setLocalPassThreshold] = useState(0.5);
@@ -176,6 +191,14 @@ export default function EvaluationsMainContent({
       runEvaluationMutation.mutate({ evaluationId: selectedEvaluationId });
     }
   };
+
+  const handleStop = () => {
+    if (selectedEvaluationId) {
+      stopEvaluationMutation.mutate({ evaluationId: selectedEvaluationId });
+    }
+  };
+
+  const isRunning = evaluation?.status === "running" || evaluation?.status === "pending";
 
   if (!selectedEvaluationId) {
     return <NoEvaluationSelected />;
@@ -240,18 +263,27 @@ export default function EvaluationsMainContent({
             {evaluation.status}
           </span>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleReRun}
-          disabled={
-            evaluation.status === "running" ||
-            runEvaluationMutation.isPending
-          }
-        >
-          <IconComponent name="Play" className="mr-1.5 h-3.5 w-3.5" />
-          Re-run
-        </Button>
+        {isRunning ? (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleStop}
+            disabled={stopEvaluationMutation.isPending}
+          >
+            <IconComponent name="Square" className="mr-1.5 h-3.5 w-3.5" />
+            Stop
+          </Button>
+        ) : (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleReRun}
+            disabled={runEvaluationMutation.isPending}
+          >
+            <IconComponent name="Play" className="mr-1.5 h-3.5 w-3.5" />
+            Re-run
+          </Button>
+        )}
       </div>
 
       {/* Content */}
@@ -274,7 +306,7 @@ export default function EvaluationsMainContent({
           </div>
 
           {/* Stats cards — only when completed */}
-          {evaluation.status === "completed" && (
+          {(evaluation.status === "completed" || evaluation.status === "stopped") && (
             <>
               <div className="flex items-center gap-6 rounded-lg border border-border bg-background px-5 py-3">
                 <div className="flex flex-col items-center">
@@ -288,7 +320,7 @@ export default function EvaluationsMainContent({
               </div>
               {evaluation.total_flow_tokens != null && evaluation.total_flow_tokens > 0 && (
                 <div className="flex flex-col items-center justify-center rounded-lg border border-border bg-background px-5 py-3">
-                  <span className="text-[11px] text-muted-foreground">Flow Tokens</span>
+                  <span className="text-[11px] text-muted-foreground">Tokens</span>
                   <span className="text-sm font-semibold">{evaluation.total_flow_tokens.toLocaleString()}</span>
                 </div>
               )}
@@ -338,7 +370,7 @@ export default function EvaluationsMainContent({
         {/* Table card */}
         <div className="flex flex-1 flex-col rounded-lg border border-border bg-background">
           {/* Table toolbar — pass criteria */}
-          {evaluation.status === "completed" && (
+          {(evaluation.status === "completed" || evaluation.status === "stopped") && (
             <div className="flex items-center gap-2.5 border-b border-border px-4 py-2">
               <span className="text-xs text-muted-foreground whitespace-nowrap">Pass when</span>
               <Select
@@ -347,14 +379,14 @@ export default function EvaluationsMainContent({
                   setLocalPassMetric(v === "__average__" ? null : v)
                 }
               >
-                <SelectTrigger className="h-7 w-36 text-xs focus:ring-0 focus:ring-offset-0">
+                <SelectTrigger className="h-7 w-44 text-xs focus:ring-0 focus:ring-offset-0">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__average__">Average All</SelectItem>
                   {evaluation.scoring_methods.map((m) => (
                     <SelectItem key={m} value={m}>
-                      {m.replace("_", " ")}
+                      {m.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase())}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -392,13 +424,13 @@ export default function EvaluationsMainContent({
                   <TableHead className="text-xs">Expected</TableHead>
                   <TableHead className="text-xs">Actual</TableHead>
                   <TableHead className="w-20 text-xs">Duration</TableHead>
-                  <TableHead className="w-24 text-xs">Flow Tokens</TableHead>
+                  <TableHead className="w-24 text-xs">Tokens</TableHead>
                   {evaluation.scoring_methods.includes("llm_judge") && (
                     <TableHead className="w-24 text-xs">Judge Tokens</TableHead>
                   )}
                   {evaluation.scoring_methods.map((method) => (
-                    <TableHead key={method} className="w-20 text-xs capitalize">
-                      {method.replace("_", " ")}
+                    <TableHead key={method} className="w-20 text-xs">
+                      {method.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase())}
                     </TableHead>
                   ))}
                   <TableHead className="w-16 text-xs">Result</TableHead>

@@ -28,17 +28,20 @@ export const createDatasetColumns = (
       editable: false,
       filter: "agTextColumnFilter",
       cellClass: baseCellClass,
-      cellRenderer: (params: any) => (
-        <div className="flex items-center gap-3 font-medium">
-          <ForwardedIconComponent
-            name="Database"
-            className="h-4 w-4 text-muted-foreground"
-          />
-          <div className="flex flex-col">
-            <div className="text-sm font-medium">{params.value}</div>
+      cellRenderer: (params: any) => {
+        const isMultiTurn = params.data.dataset_type === "multi_turn";
+        return (
+          <div className="flex items-center gap-3 font-medium">
+            <ForwardedIconComponent
+              name={isMultiTurn ? "MessagesSquare" : "TableProperties"}
+              className="h-4 w-4 text-muted-foreground"
+            />
+            <div className="flex flex-col">
+              <div className="text-sm font-medium">{params.value}</div>
+            </div>
           </div>
-        </div>
-      ),
+        );
+      },
     },
     {
       headerName: "Description",
@@ -90,6 +93,22 @@ export const createDatasetColumns = (
       editable: false,
       cellClass: baseCellClass,
       valueFormatter: (params: any) => formatDate(params.value),
+    },
+    {
+      headerName: "Type",
+      field: "dataset_type",
+      flex: 0.8,
+      sortable: false,
+      editable: false,
+      cellClass: baseCellClass,
+      cellRenderer: (params: any) => {
+        if (params.value === "multi_turn") {
+          return (
+            <span className="text-xs text-muted-foreground">Multi-Turn</span>
+          );
+        }
+        return <span className="text-xs text-muted-foreground">Default</span>;
+      },
     },
   ];
 };

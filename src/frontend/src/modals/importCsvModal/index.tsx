@@ -156,6 +156,14 @@ export default function ImportCsvModal({
           )}
         </div>
 
+        {/* Multi-turn detection */}
+        {columns.includes("conversation_id") && (
+          <div className="flex items-center gap-2 rounded-md bg-blue-50 dark:bg-blue-950 px-3 py-2 text-sm text-blue-700 dark:text-blue-300">
+            <ForwardedIconComponent name="Info" className="h-4 w-4" />
+            Detected Multi-Turn dataset with conversation_id column
+          </div>
+        )}
+
         {/* Column Mapping */}
         {columns.length > 0 && (
           <div className="flex flex-col gap-4">

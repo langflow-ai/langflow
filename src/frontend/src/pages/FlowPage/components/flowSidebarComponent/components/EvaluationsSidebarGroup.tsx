@@ -107,6 +107,8 @@ const getStatusStyles = (status: EvaluationInfo["status"]) => {
       return "bg-warning-background text-warning";
     case "failed":
       return "bg-destructive/10 text-destructive";
+    case "stopped":
+      return "bg-amber-500/10 text-amber-500";
     default:
       return "bg-muted text-muted-foreground";
   }
@@ -160,10 +162,10 @@ const EvaluationListItem = ({
           {formatTimestamp(evaluation.created_at)}
         </span>
       </div>
-      {evaluation.status === "completed" && (
+      {(evaluation.status === "completed" || evaluation.status === "stopped") && (
         <div className="flex w-full items-center justify-between gap-2">
           <span className="text-xs text-muted-foreground">
-            {evaluation.passed_items}/{evaluation.total_items} passed
+            {evaluation.passed_items}/{evaluation.status === "stopped" ? evaluation.completed_items : evaluation.total_items} passed
           </span>
           <span
             className={cn(

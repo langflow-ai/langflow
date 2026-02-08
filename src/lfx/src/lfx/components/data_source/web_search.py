@@ -13,7 +13,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from lfx.custom import Component
-from lfx.io import IntInput, MessageTextInput, Output, TabInput
+from lfx.io import BoolInput, IntInput, MessageTextInput, Output, TabInput
 from lfx.schema import DataFrame
 from lfx.utils.request_utils import get_user_agent
 
@@ -88,6 +88,13 @@ class WebSearchComponent(Component):
             required=False,
             advanced=True,
         ),
+        BoolInput(
+            name="include_content",
+            display_name="Include Content",
+            info="When enabled, fetches the full page content for each search result. Disabling makes searches faster.",
+            value=True,
+            advanced=True,
+        ),
         IntInput(
             name="timeout",
             display_name="Timeout",
@@ -121,8 +128,8 @@ class WebSearchComponent(Component):
                 build_config["query"]["info"] = "Keywords to search for"
                 build_config["query"]["display_name"] = "Search Query"
 
-            # Keep news-specific fields as advanced (matching original News Search component)
-            # They remain advanced=True in all modes, just like in the original component
+            # Show "Include Content" only in Web mode
+            build_config["include_content"]["show"] = not is_news and not is_rss
 
         return build_config
 
@@ -187,14 +194,17 @@ class WebSearchComponent(Component):
                 uddg = parse_qs(parsed.query).get("uddg", [""])[0]
                 decoded_link = unquote(uddg) if uddg else raw_link
 
-                try:
-                    final_url = self.ensure_url(decoded_link)
-                    page = requests.get(final_url, headers=headers, timeout=self.timeout)
-                    page.raise_for_status()
-                    content = BeautifulSoup(page.text, "lxml").get_text(separator=" ", strip=True)
-                except requests.RequestException as e:
-                    final_url = decoded_link
-                    content = f"(Failed to fetch: {e!s}"
+                content = ""
+                final_url = decoded_link
+                if self.include_content:
+                    try:
+                        final_url = self.ensure_url(decoded_link)
+                        page = requests.get(final_url, headers=headers, timeout=self.timeout)
+                        page.raise_for_status()
+                        content = BeautifulSoup(page.text, "lxml").get_text(separator=" ", strip=True)
+                    except requests.RequestException as e:
+                        final_url = decoded_link
+                        content = f"(Failed to fetch: {e!s}"
 
                 results.append(
                     {

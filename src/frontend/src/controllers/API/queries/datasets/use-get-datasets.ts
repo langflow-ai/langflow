@@ -8,6 +8,7 @@ export interface DatasetInfo {
   id: string;
   name: string;
   description?: string;
+  dataset_type?: string;
   user_id: string;
   created_at: string;
   updated_at: string;

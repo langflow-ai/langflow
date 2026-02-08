@@ -15,6 +15,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, select
 
 from langflow.api.utils import CurrentActiveUser, DbSession
+from langflow.services.database.models.message.model import MessageTable
 from langflow.services.database.models.dataset.model import (
     Dataset,
     DatasetCreate,
@@ -62,6 +63,7 @@ async def create_dataset(
         id=db_dataset.id,
         name=db_dataset.name,
         description=db_dataset.description,
+        dataset_type=db_dataset.dataset_type,
         user_id=db_dataset.user_id,
         created_at=db_dataset.created_at,
         updated_at=db_dataset.updated_at,
@@ -85,6 +87,7 @@ async def list_datasets(
             id=ds.id,
             name=ds.name,
             description=ds.description,
+            dataset_type=ds.dataset_type,
             user_id=ds.user_id,
             created_at=ds.created_at,
             updated_at=ds.updated_at,
@@ -116,6 +119,7 @@ async def get_dataset(
         id=dataset.id,
         name=dataset.name,
         description=dataset.description,
+        dataset_type=dataset.dataset_type,
         user_id=dataset.user_id,
         created_at=dataset.created_at,
         updated_at=dataset.updated_at,
@@ -127,6 +131,7 @@ async def get_dataset(
                 input=item.input,
                 expected_output=item.expected_output,
                 order=item.order,
+                conversation_id=item.conversation_id,
                 created_at=item.created_at,
             )
             for item in sorted_items
@@ -172,6 +177,7 @@ async def update_dataset(
         id=dataset.id,
         name=dataset.name,
         description=dataset.description,
+        dataset_type=dataset.dataset_type,
         user_id=dataset.user_id,
         created_at=dataset.created_at,
         updated_at=dataset.updated_at,
@@ -249,6 +255,7 @@ async def create_dataset_item(
         input=item.input,
         expected_output=item.expected_output,
         order=item.order if item.order > 0 else max_order + 1,
+        conversation_id=item.conversation_id,
         created_at=datetime.now(timezone.utc),
     )
 
@@ -267,6 +274,7 @@ async def create_dataset_item(
         input=db_item.input,
         expected_output=db_item.expected_output,
         order=db_item.order,
+        conversation_id=db_item.conversation_id,
         created_at=db_item.created_at,
     )
 
@@ -319,6 +327,7 @@ async def update_dataset_item(
         input=db_item.input,
         expected_output=db_item.expected_output,
         order=db_item.order,
+        conversation_id=db_item.conversation_id,
         created_at=db_item.created_at,
     )
 
@@ -408,6 +417,11 @@ async def import_csv(
             detail=f"Column '{expected_output_column}' not found in CSV. Available columns: {', '.join(fieldnames)}",
         )
 
+    # Auto-detect multi-turn dataset
+    has_conversation_id = "conversation_id" in fieldnames
+    if has_conversation_id:
+        dataset.dataset_type = "multi_turn"
+
     # Get current max order
     max_order = max((i.order for i in dataset.items), default=-1) if dataset.items else -1
 
@@ -424,6 +438,7 @@ async def import_csv(
                 input=input_value,
                 expected_output=expected_output_value,
                 order=max_order,
+                conversation_id=row.get("conversation_id") if has_conversation_id else None,
                 created_at=datetime.now(timezone.utc),
             )
             session.add(db_item)
@@ -457,13 +472,21 @@ async def export_csv(
     # Create CSV content
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["input", "expected_output"])
+
+    is_multi_turn = dataset.dataset_type == "multi_turn"
+    if is_multi_turn:
+        writer.writerow(["conversation_id", "input", "expected_output"])
+    else:
+        writer.writerow(["input", "expected_output"])
 
     # Sort items by order
     sorted_items = sorted(dataset.items, key=lambda x: x.order) if dataset.items else []
 
     for item in sorted_items:
-        writer.writerow([item.input, item.expected_output])
+        if is_multi_turn:
+            writer.writerow([item.conversation_id or "", item.input, item.expected_output])
+        else:
+            writer.writerow([item.input, item.expected_output])
 
     output.seek(0)
 
@@ -717,6 +740,7 @@ async def generate_dataset(
         id=db_dataset.id,
         name=db_dataset.name,
         description=db_dataset.description,
+        dataset_type=db_dataset.dataset_type,
         user_id=db_dataset.user_id,
         created_at=db_dataset.created_at,
         updated_at=db_dataset.updated_at,
@@ -740,3 +764,87 @@ async def get_generate_status(
     if not meta:
         return {"status": "unknown"}
     return meta
+
+
+class CreateDatasetFromMessagesRequest(BaseModel):
+    name: str
+    description: str | None = None
+    session_ids: list[str]
+    flow_id: UUID
+
+
+@router.post("/from-messages", response_model=DatasetRead, status_code=HTTPStatus.CREATED)
+async def create_dataset_from_messages(
+    *,
+    session: DbSession,
+    request: CreateDatasetFromMessagesRequest,
+    current_user: CurrentActiveUser,
+):
+    """Create a multi-turn dataset from existing chat messages."""
+    # Create dataset
+    db_dataset = Dataset(
+        name=request.name,
+        description=request.description,
+        dataset_type="multi_turn",
+        user_id=current_user.id,
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc),
+    )
+
+    try:
+        session.add(db_dataset)
+        await session.commit()
+        await session.refresh(db_dataset)
+    except IntegrityError as e:
+        await session.rollback()
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_REQUEST,
+            detail=f"A dataset with the name '{request.name}' already exists.",
+        ) from e
+
+    # For each session_id, fetch messages and pair User→Machine turns
+    order = 0
+    for conv_idx, sid in enumerate(request.session_ids):
+        statement = (
+            select(MessageTable)
+            .where(
+                MessageTable.flow_id == request.flow_id,
+                MessageTable.session_id == sid,
+            )
+            .order_by(MessageTable.timestamp.asc())
+        )
+        result = await session.exec(statement)
+        messages = result.all()
+
+        pending_input = None
+
+        for msg in messages:
+            if msg.sender == "User":
+                pending_input = msg.text
+            elif msg.sender == "Machine" and pending_input is not None:
+                db_item = DatasetItem(
+                    dataset_id=db_dataset.id,
+                    input=pending_input,
+                    expected_output=msg.text,
+                    conversation_id=sid,
+                    order=order,
+                    created_at=datetime.now(timezone.utc),
+                )
+                session.add(db_item)
+                order += 1
+                pending_input = None
+
+    db_dataset.updated_at = datetime.now(timezone.utc)
+    session.add(db_dataset)
+    await session.commit()
+
+    return DatasetRead(
+        id=db_dataset.id,
+        name=db_dataset.name,
+        description=db_dataset.description,
+        dataset_type=db_dataset.dataset_type,
+        user_id=db_dataset.user_id,
+        created_at=db_dataset.created_at,
+        updated_at=db_dataset.updated_at,
+        item_count=order,
+    )

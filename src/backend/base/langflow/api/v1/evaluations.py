@@ -33,6 +33,9 @@ from lfx.graph import Graph
 
 router = APIRouter(prefix="/evaluations", tags=["Evaluations"])
 
+# Track running evaluation tasks so they can be cancelled
+_running_tasks: dict[UUID, asyncio.Task] = {}
+
 # Default LLM Judge prompt template
 LLM_JUDGE_TEMPLATE = """You are evaluating an AI assistant's response.
 
@@ -358,6 +361,7 @@ async def run_evaluation_background(evaluation_id: UUID, user_id: UUID):
                 passed_count = 0
                 total_flow_tokens = 0
                 total_llm_judge_tokens = 0
+                was_cancelled = False
 
                 if dataset.dataset_type == "multi_turn":
                     # Group items by conversation_id, preserving order
@@ -368,8 +372,15 @@ async def run_evaluation_background(evaluation_id: UUID, user_id: UUID):
 
                     item_index = 0
                     for conv_id, turns in conversations.items():
+                        if was_cancelled:
+                            break
                         conv_session_id = str(uuid4())  # One session per conversation
                         for turn in turns:
+                            # Check for cancellation before each item
+                            if asyncio.current_task().cancelled():
+                                was_cancelled = True
+                                break
+
                             logger.info(
                                 f"Running item {item_index + 1}/{len(sorted_items)} "
                                 f"(conv={conv_id}): {turn.input[:30]}..."
@@ -436,6 +447,11 @@ async def run_evaluation_background(evaluation_id: UUID, user_id: UUID):
                 else:
                     # Single-turn: current behavior unchanged
                     for idx, item in enumerate(sorted_items):
+                        # Check for cancellation before each item
+                        if asyncio.current_task().cancelled():
+                            was_cancelled = True
+                            break
+
                         logger.info(f"Running item {idx + 1}/{len(sorted_items)}: {item.input[:30]}...")
                         item_result = await run_single_evaluation_item(
                             flow_data=flow.data,
@@ -493,21 +509,47 @@ async def run_evaluation_background(evaluation_id: UUID, user_id: UUID):
                         session.add(evaluation)
                         await session.commit()
 
-                # Update final metrics
-                logger.info(f"Evaluation complete. Passed: {passed_count}/{len(sorted_items)}")
-                evaluation.status = EvaluationStatus.COMPLETED.value
-                evaluation.completed_at = datetime.now(timezone.utc)
+                if was_cancelled:
+                    logger.info(f"Evaluation {evaluation_id} was stopped by user at {evaluation.completed_items}/{len(sorted_items)} items")
+                    evaluation.status = EvaluationStatus.STOPPED.value
+                    evaluation.updated_at = datetime.now(timezone.utc)
+                    evaluation.passed_items = passed_count
+                    completed = evaluation.completed_items
+                    evaluation.mean_score = total_score / completed if completed else None
+                    evaluation.mean_duration_ms = total_duration / completed if completed else None
+                    evaluation.total_runtime_ms = (
+                        int((datetime.now(timezone.utc) - evaluation.started_at).total_seconds() * 1000)
+                        if evaluation.started_at
+                        else None
+                    )
+                    evaluation.total_flow_tokens = total_flow_tokens or None
+                    evaluation.total_llm_judge_tokens = total_llm_judge_tokens or None
+                    session.add(evaluation)
+                    await session.commit()
+                else:
+                    # Update final metrics
+                    logger.info(f"Evaluation complete. Passed: {passed_count}/{len(sorted_items)}")
+                    evaluation.status = EvaluationStatus.COMPLETED.value
+                    evaluation.completed_at = datetime.now(timezone.utc)
+                    evaluation.updated_at = datetime.now(timezone.utc)
+                    evaluation.passed_items = passed_count
+                    evaluation.mean_score = total_score / len(sorted_items) if sorted_items else None
+                    evaluation.mean_duration_ms = total_duration / len(sorted_items) if sorted_items else None
+                    evaluation.total_runtime_ms = (
+                        int((evaluation.completed_at - evaluation.started_at).total_seconds() * 1000)
+                        if evaluation.started_at
+                        else None
+                    )
+                    evaluation.total_flow_tokens = total_flow_tokens or None
+                    evaluation.total_llm_judge_tokens = total_llm_judge_tokens or None
+                    session.add(evaluation)
+                    await session.commit()
+
+            except asyncio.CancelledError:
+                logger.info(f"Evaluation {evaluation_id} cancelled")
+                evaluation.status = EvaluationStatus.STOPPED.value
                 evaluation.updated_at = datetime.now(timezone.utc)
-                evaluation.passed_items = passed_count
-                evaluation.mean_score = total_score / len(sorted_items) if sorted_items else None
-                evaluation.mean_duration_ms = total_duration / len(sorted_items) if sorted_items else None
-                evaluation.total_runtime_ms = (
-                    int((evaluation.completed_at - evaluation.started_at).total_seconds() * 1000)
-                    if evaluation.started_at
-                    else None
-                )
-                evaluation.total_flow_tokens = total_flow_tokens or None
-                evaluation.total_llm_judge_tokens = total_llm_judge_tokens or None
+                evaluation.passed_items = passed_count if "passed_count" in dir() else 0
                 session.add(evaluation)
                 await session.commit()
 
@@ -518,8 +560,24 @@ async def run_evaluation_background(evaluation_id: UUID, user_id: UUID):
                 evaluation.updated_at = datetime.now(timezone.utc)
                 session.add(evaluation)
                 await session.commit()
+    except asyncio.CancelledError:
+        logger.info(f"Evaluation {evaluation_id} cancelled (outer)")
+        try:
+            async with session_scope() as session:
+                statement = select(Evaluation).where(Evaluation.id == evaluation_id)
+                result = await session.exec(statement)
+                evaluation = result.first()
+                if evaluation:
+                    evaluation.status = EvaluationStatus.STOPPED.value
+                    evaluation.updated_at = datetime.now(timezone.utc)
+                    session.add(evaluation)
+                    await session.commit()
+        except Exception:
+            logger.exception(f"Failed to update stopped status for evaluation {evaluation_id}")
     except Exception as e:
         logger.exception(f"Fatal error in background evaluation task: {e}")
+    finally:
+        _running_tasks.pop(evaluation_id, None)
 
 
 @router.post("/", response_model=EvaluationRead, status_code=HTTPStatus.CREATED)
@@ -571,8 +629,8 @@ async def create_evaluation(
     await session.refresh(db_evaluation)
 
     if run_immediately:
-        # Use asyncio.create_task to properly schedule the async background task
-        asyncio.create_task(run_evaluation_background(db_evaluation.id, current_user.id))
+        task = asyncio.create_task(run_evaluation_background(db_evaluation.id, current_user.id))
+        _running_tasks[db_evaluation.id] = task
 
     return EvaluationRead(
         id=db_evaluation.id,
@@ -778,8 +836,8 @@ async def run_evaluation(
     session.add(evaluation)
     await session.commit()
 
-    # Use asyncio.create_task to properly schedule the async background task
-    asyncio.create_task(run_evaluation_background(evaluation_id, current_user.id))
+    task = asyncio.create_task(run_evaluation_background(evaluation_id, current_user.id))
+    _running_tasks[evaluation_id] = task
 
     # Get names
     dataset_name = None
@@ -809,6 +867,76 @@ async def run_evaluation(
         created_at=evaluation.created_at,
         updated_at=evaluation.updated_at,
         total_items=evaluation.total_items,
+        pass_metric=evaluation.pass_metric,
+        pass_threshold=evaluation.pass_threshold,
+    )
+
+
+@router.post("/{evaluation_id}/stop", response_model=EvaluationRead, status_code=HTTPStatus.OK)
+async def stop_evaluation(
+    *,
+    session: DbSession,
+    evaluation_id: UUID,
+    current_user: CurrentActiveUser,
+):
+    """Stop a running evaluation."""
+    statement = select(Evaluation).where(Evaluation.id == evaluation_id, Evaluation.user_id == current_user.id)
+    result = await session.exec(statement)
+    evaluation = result.first()
+
+    if not evaluation:
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Evaluation not found")
+
+    if evaluation.status != EvaluationStatus.RUNNING.value:
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="Evaluation is not running")
+
+    # Cancel the background task
+    task = _running_tasks.get(evaluation_id)
+    if task and not task.done():
+        task.cancel()
+
+    # Update status immediately so the UI reflects it
+    evaluation.status = EvaluationStatus.STOPPED.value
+    evaluation.updated_at = datetime.now(timezone.utc)
+    session.add(evaluation)
+    await session.commit()
+
+    # Get names
+    dataset_name = None
+    flow_name = None
+    ds_stmt = select(Dataset).where(Dataset.id == evaluation.dataset_id)
+    ds_result = await session.exec(ds_stmt)
+    ds = ds_result.first()
+    if ds:
+        dataset_name = ds.name
+
+    fl_stmt = select(Flow).where(Flow.id == evaluation.flow_id)
+    fl_result = await session.exec(fl_stmt)
+    fl = fl_result.first()
+    if fl:
+        flow_name = fl.name
+
+    return EvaluationRead(
+        id=evaluation.id,
+        name=evaluation.name,
+        status=evaluation.status,
+        scoring_methods=evaluation.scoring_methods,
+        user_id=evaluation.user_id,
+        dataset_id=evaluation.dataset_id,
+        flow_id=evaluation.flow_id,
+        dataset_name=dataset_name,
+        flow_name=flow_name,
+        created_at=evaluation.created_at,
+        updated_at=evaluation.updated_at,
+        started_at=evaluation.started_at,
+        total_items=evaluation.total_items,
+        completed_items=evaluation.completed_items,
+        passed_items=evaluation.passed_items,
+        mean_score=evaluation.mean_score,
+        mean_duration_ms=evaluation.mean_duration_ms,
+        total_runtime_ms=evaluation.total_runtime_ms,
+        total_flow_tokens=evaluation.total_flow_tokens,
+        total_llm_judge_tokens=evaluation.total_llm_judge_tokens,
         pass_metric=evaluation.pass_metric,
         pass_threshold=evaluation.pass_threshold,
     )

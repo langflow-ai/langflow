@@ -25,7 +25,7 @@ export interface EvaluationResultInfo {
 export interface EvaluationInfo {
   id: string;
   name?: string;
-  status: "pending" | "running" | "completed" | "failed";
+  status: "pending" | "running" | "completed" | "failed" | "stopped";
   scoring_methods: string[];
   user_id: string;
   dataset_id: string;
