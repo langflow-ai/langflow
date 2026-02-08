@@ -164,7 +164,10 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
     @patch("lfx.components.ollama.ollama.httpx.AsyncClient.post")
     @patch("lfx.components.ollama.ollama.httpx.AsyncClient.get")
     async def test_get_models_missing_capabilities_without_tool_model(self, mock_get, mock_post):
-        """Test backwards compatibility: models without capabilities field are included when tool_model_enabled=False."""
+        """Test backwards compatibility: models without capabilities field are included.
+
+        When tool_model_enabled=False, models should be included for backwards compatibility.
+        """
         component = ChatOllamaComponent()
         mock_get_response = AsyncMock()
         mock_get_response.raise_for_status.return_value = None
