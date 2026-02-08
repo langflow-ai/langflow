@@ -38,22 +38,23 @@ class GuardedTool(Tool):
     def args(self) -> dict:
         return self._orig_tool.args
 
+    def _parse_string_to_dict(self, value: str) -> dict:
+        """Parse a string as JSON, or wrap it in a dict if parsing fails."""
+        try:
+            return json.loads(value)
+        except json.JSONDecodeError:
+            return {"input": value}
+
     def parse_input(self, tool_input: str | dict | ToolCall) -> dict:
         # Handle string input - try to parse as JSON, fallback to wrapped input
         if isinstance(tool_input, str):
-            try:
-                return json.loads(tool_input)
-            except json.JSONDecodeError:
-                return {"input": tool_input}
+            return self._parse_string_to_dict(tool_input)
 
         # Handle ToolCall dict format - extract and parse args
         if isinstance(tool_input, dict) and "args" in tool_input:
             args = tool_input["args"]
             if isinstance(args, str):
-                try:
-                    return json.loads(args)
-                except json.JSONDecodeError:
-                    return {"input": args}
+                return self._parse_string_to_dict(args)
             return args if isinstance(args, dict) else {}
 
         # Return dict as-is or empty dict for None/other types
