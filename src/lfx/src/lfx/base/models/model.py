@@ -271,16 +271,24 @@ class LCModelComponent(Component):
     async def _handle_stream(self, runnable, inputs):
         """Handle streaming responses from the language model.
 
+        Creates a Message whose ``text`` is the async iterator returned by the
+        model's ``astream`` method and passes it to ``send_message``.  During
+        streaming the component emits *token* events (one per chunk) and a
+        single *add_message* event to initialise the message bubble in the
+        frontend.  The ``add_message`` event intentionally carries **empty**
+        text so that streamed content is delivered exclusively through token
+        events — this avoids duplication in API consumers that process both
+        event types (see #10719).
+
         Args:
-            runnable: The language model configured for streaming
-            inputs: The inputs to send to the model
+            runnable: The language model configured for streaming.
+            inputs: The inputs to send to the model.
 
         Returns:
             tuple: (Message object if connected to chat output, model result)
         """
         lf_message = None
         if self.is_connected_to_chat_output():
-            # Add a Message
             if hasattr(self, "graph"):
                 session_id = self.graph.session_id
             elif hasattr(self, "_session_id"):

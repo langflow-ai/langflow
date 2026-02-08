@@ -132,6 +132,7 @@ async def run_flow_for_openai_responses(
                 tool_call_counter = 0
                 processed_tools = set()  # Track processed tool calls to avoid duplicates
                 previous_content = ""  # Track content already sent to calculate deltas
+                has_token_events = False  # Track whether token events are being received
 
                 async for event_data in consume_and_yield(asyncio_queue, asyncio_queue_client_consumed):
                     if event_data is None:
@@ -161,6 +162,7 @@ async def run_flow_for_openai_responses(
                                 # Handle add_message events
                                 if event_type == "token":
                                     token_data = data.get("chunk", "")
+                                    has_token_events = True
                                     await logger.adebug(
                                         "[OpenAIResponses][stream] token: token_data=%s",
                                         token_data,
@@ -195,11 +197,18 @@ async def run_flow_for_openai_responses(
                                         message_state,
                                     )
 
-                                    # Skip processing text content if state is "complete"
-                                    # All content has already been streamed via token events
-                                    if message_state == "complete":
+                                    # Skip processing text content when token events are
+                                    # the authoritative source of streamed content.  The
+                                    # component emits both an add_message and a token
+                                    # event for the first chunk, so processing both would
+                                    # cause the same content to appear twice in the
+                                    # response stream (#10719).
+                                    if message_state == "complete" or has_token_events:
                                         await logger.adebug(
-                                            "[OpenAIResponses][stream] skipping add_message with state=complete"
+                                            "[OpenAIResponses][stream] skipping add_message text "
+                                            "(state=%s, has_token_events=%s)",
+                                            message_state,
+                                            has_token_events,
                                         )
                                         # Still process content_blocks for tool calls, but skip text content
                                         text = ""
