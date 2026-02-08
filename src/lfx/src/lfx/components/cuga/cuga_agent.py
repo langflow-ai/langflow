@@ -340,6 +340,8 @@ class CugaComponent(ToolCallingAgentComponent):
             settings.advanced_features.shortlisting_tool_threshold = self.shortlisting_tool_threshold
             # Disable tracker to avoid overhead
             settings.advanced_features.tracker_enabled = False
+            # Disable policy check until we can build in support for policies
+            settings.policy.enabled = False
 
             if self.browser_enabled:
                 logger.debug("[CUGA] browser_enabled is true, setting mode to hybrid")
