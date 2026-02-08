@@ -53,6 +53,12 @@ class AuthService(BaseAuthService):
 
     def __init__(self, settings_service: SettingsService):
         self.settings_service = settings_service
+        # Attempt to cache the verifier callable to avoid repeated attribute traversal.
+        # If any attribute is missing or an unexpected object is present, fall back to dynamic lookup.
+        try:
+            self._pwd_verify = settings_service.auth_settings.pwd_context.verify
+        except Exception:
+            self._pwd_verify = None
         self.set_ready()
 
     @property
@@ -450,7 +456,11 @@ class AuthService(BaseAuthService):
         return authenticated_user
 
     def verify_password(self, plain_password, hashed_password):
-        return self.settings.auth_settings.pwd_context.verify(plain_password, hashed_password)
+        pv = self._pwd_verify
+        if pv is not None:
+            return pv(plain_password, hashed_password)
+        # Fallback to dynamic lookup to preserve behavior if caching wasn't possible.
+        return self.settings_service.auth_settings.pwd_context.verify(plain_password, hashed_password)
 
     def get_password_hash(self, password):
         return self.settings.auth_settings.pwd_context.hash(password)
