@@ -407,7 +407,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.128.0"
+                    "version": "0.128.1"
                   },
                   {
                     "name": "lfx",
@@ -1207,7 +1207,9 @@
                   }
                 },
                 "info": "Select your model provider",
-                "input_types": [],
+                "input_types": [
+                  "LanguageModel"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "model_type": "language",

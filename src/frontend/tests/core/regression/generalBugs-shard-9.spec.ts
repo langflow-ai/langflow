@@ -118,10 +118,13 @@ AI:
 
     await page.getByTestId("button-send").click();
 
-    await page.waitForSelector("text=AI", { timeout: 30000 });
-
-    await page.waitForSelector('[data-testid="div-chat-message"]', {
-      timeout: 100000,
+    await page.getByTestId("stop_building_button").waitFor({
+      state: "visible",
+      timeout: 30000,
+    });
+    await page.getByTestId("stop_building_button").waitFor({
+      state: "hidden",
+      timeout: 180000,
     });
 
     // Wait for the first chat message element to be available
