@@ -109,7 +109,7 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             display_name="Guarded Tools",
             type_=Tool,
             name="guard_code",
-            method="build_guards",
+            method="guard_tools",
             # group_outputs=True,
         ),
     ]
@@ -174,24 +174,29 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
     def in_recommended_models(self, model_name: str):
         return any(recommended in model_name for recommended in BUILDTIME_MODELS)
 
+    def validate_before_generate(self) -> None:
+        """Validate required inputs before generating guard code."""
+        if not self.project:
+            msg = "🔒️ToolGuard: project cannot be empty!"
+            raise ValueError(msg)
+
+        if not any(self.policies):
+            msg = "🔒️ToolGuard: policies cannot be empty!"
+            raise ValueError(msg)
+
+        if not self.in_tools:
+            msg = "🔒️ToolGuard: in_tools cannot be empty!"
+            raise ValueError(msg)
+
+        if not self.model or not self.api_key:
+            msg = "🔒️ToolGuard: model or api_key cannot be empty!"
+            raise ValueError(msg)
+
+        if not self.in_recommended_models(self.model[0]["name"]):
+            msg = f"🔒️ToolGuard: model {self.model[0]['name']} is not in recommended models: {BUILDTIME_MODELS}"
+            raise ValueError(msg)
+
     async def generate(self):
-        # Validate required inputs
-        validations = [
-            (not self.project, "project cannot be empty!"),
-            (not any(self.policies), "policies cannot be empty!"),
-            (not self.in_tools, "in_tools cannot be empty!"),
-            (not self.model or not self.api_key, "model or api_key cannot be empty!"),
-            (
-                not self.in_recommended_models(self.model[0]["name"]),
-                f"model {self.model[0]['name']} is not in recommended models: {BUILDTIME_MODELS}",
-            ),
-        ]
-
-        for condition, error_msg in validations:
-            if condition:
-                msg = f"🔒️ToolGuard: {error_msg}"
-                raise ValueError(msg)
-
         self.log(
             f"🔒️ToolGuard: Start generating. Please review the generated guard code at {self.work_dir}", name="info"
         )
@@ -229,20 +234,28 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             )
             raise ValueError(msg) from exc
 
-    async def build_guards(self) -> list[Tool]:
+    def validate_before_using_cache(self, code_dir: Path) -> None:
+        if not self.in_tools:
+            msg = "🔒️ToolGuard: in_tools cannot be empty!"
+            raise ValueError(msg)
+
+        self._verify_cached_guards(code_dir)
+
+    async def guard_tools(self) -> list[Tool]:
         self.log("🔒️ToolGuard: starting building toolguards...", name="info")
         # self.log(f"🔒️ToolGuard: policies document: {self.policies}", name="info")
         # self.log(f"🔒️ToolGuard: input tools: {self.in_tools}", name="info")
         if self.active:
             build_mode = getattr(self, "build_mode", BUILD_MODE_GENERATE)
             if build_mode == BUILD_MODE_GENERATE:
+                self.validate_before_generate()
                 await self.generate()
                 self.log(f"🔒️ToolGuard code generation saved to {self.work_dir}", name="info")
             else:  # build_mode == "use cache"
                 self.log(f"🔒️ToolGuard: using cache from {self.work_dir}", name="info")
 
             code_dir = self.work_dir / STEP2
-            self._verify_cached_guards(code_dir)
+            self.validate_before_using_cache(code_dir)
             return cast("list[Tool]", [GuardedTool(tool, self.in_tools, code_dir) for tool in self.in_tools])
 
         return self.in_tools
