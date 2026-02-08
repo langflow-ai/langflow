@@ -16,6 +16,7 @@ from alembic import command, util
 from alembic.config import Config
 from lfx.log.logger import logger
 from lfx.services.deps import session_scope
+from lfx.utils.util_strings import redact_database_url
 from sqlalchemy import event, inspect
 from sqlalchemy.dialects import sqlite as dialect_sqlite
 from sqlalchemy.engine import Engine
@@ -49,6 +50,7 @@ class DatabaseService(Service):
             raise ValueError(msg)
         self.database_url: str = settings_service.settings.database_url
         self._sanitize_database_url()
+        self.redacted_url: str = redact_database_url(self.database_url)
 
         # This file is in langflow.services.database.manager.py
         # the ini is in langflow
@@ -93,6 +95,7 @@ class DatabaseService(Service):
 
     def reload_engine(self) -> None:
         self._sanitize_database_url()
+        self.redacted_url = redact_database_url(self.database_url)
         if self.settings_service.settings.database_connection_retry:
             self.engine = self._create_engine_with_retry()
         else:
