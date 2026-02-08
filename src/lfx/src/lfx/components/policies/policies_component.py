@@ -116,7 +116,7 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
 
     @property
     def work_dir(self) -> Path:
-        return TOOLGUARD_WORK_DIR / str(self.user_id) / _to_snake_case(self.project)
+        return TOOLGUARD_WORK_DIR / str(self.user_id) / self._to_snake_case(self.project)
 
     def build_model(self) -> LanguageModel:
         llm_model = get_llm(
@@ -162,7 +162,7 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         if out_dir.exists():
             shutil.rmtree(out_dir)
         llm = LangchainModelWrapper(self.build_model())
-        app_name = _to_snake_case(self.project)
+        app_name = self._to_snake_case(self.project)
         open_api = langchain_tools_to_openapi(self.in_tools)
 
         gen_result = await generate_guards_code(
@@ -171,10 +171,10 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         logger.info("🔒️ToolGuard: Step 2 Done")
         return gen_result
 
-    async def generate(self):
-        def in_recommended_models(model_name):
-            return any(recommended in model_name for recommended in BUILDTIME_MODELS)
+    def in_recommended_models(self, model_name: str):
+        return any(recommended in model_name for recommended in BUILDTIME_MODELS)
 
+    async def generate(self):
         # Validate required inputs
         validations = [
             (not self.project, "project cannot be empty!"),
@@ -182,7 +182,7 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             (not self.in_tools, "in_tools cannot be empty!"),
             (not self.model or not self.api_key, "model or api_key cannot be empty!"),
             (
-                not in_recommended_models(self.model[0]["name"]),
+                not self.in_recommended_models(self.model[0]["name"]),
                 f"model {self.model[0]['name']} is not in recommended models: {BUILDTIME_MODELS}",
             ),
         ]
@@ -247,13 +247,12 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
 
         return self.in_tools
 
-
-def _to_snake_case(human_name: str) -> str:
-    return (
-        human_name.lower()
-        .replace(" ", "_")
-        .replace("-", "_")
-        .replace("'", "_")
-        .replace(",", "_")  # ASCII apostrophe
-        .replace("’", "_")  # noqa: RUF001 Unicode right single quotation mark
-    )
+    @staticmethod
+    def _to_snake_case(human_name: str) -> str:
+        return (
+            human_name.lower()
+            .replace(" ", "_")
+            .replace("-", "_")
+            .replace("'", "_")
+            .replace(",", "_")  # ASCII apostrophe
+        )
