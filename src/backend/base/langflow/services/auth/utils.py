@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import random
 from typing import TYPE_CHECKING, Annotated, Final
 
 from cryptography.fernet import Fernet
@@ -255,16 +256,14 @@ def get_fernet(settings_service: SettingsService) -> Fernet:
     Returns:
         Fernet instance for encryption/decryption
     """
-    import random
-
     secret_key: str = settings_service.auth_settings.SECRET_KEY.get_secret_value()
 
     # Replicate the original _ensure_valid_key logic from AuthService
     MINIMUM_KEY_LENGTH = 32  # noqa: N806
     if len(secret_key) < MINIMUM_KEY_LENGTH:
         # Generate deterministic key from seed for short keys
-        random.seed(secret_key)
-        key = bytes(random.getrandbits(8) for _ in range(32))
+        rnd = random.Random(secret_key)
+        key = rnd.randbytes(32)
         key = base64.urlsafe_b64encode(key)
     else:
         # Add padding for longer keys
