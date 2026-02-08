@@ -146,7 +146,7 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             display_name="Guarded Tools",
             type_=Tool,
             name="guard_code",
-            method="build_guards",
+            method="guard_tools",
             # group_outputs=True,
         ),
     ]
@@ -183,24 +183,29 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
     def in_recommended_models(self, model_name: str):
         return any(recommended in model_name for recommended in BUILDTIME_MODELS)
 
+    def validate_before_generate(self) -> None:
+        """Validate required inputs before generating guard code."""
+        if not self.project:
+            msg = "🔒️ToolGuard: project cannot be empty!"
+            raise ValueError(msg)
+
+        if not any(self.policies):
+            msg = "🔒️ToolGuard: policies cannot be empty!"
+            raise ValueError(msg)
+
+        if not self.in_tools:
+            msg = "🔒️ToolGuard: in_tools cannot be empty!"
+            raise ValueError(msg)
+
+        if not self.model or not self.api_key:
+            msg = "🔒️ToolGuard: model or api_key cannot be empty!"
+            raise ValueError(msg)
+
+        if not self.in_recommended_models(self.model[0]["name"]):
+            msg = f"🔒️ToolGuard: model {self.model[0]['name']} is not in recommended models: {BUILDTIME_MODELS}"
+            raise ValueError(msg)
+
     async def generate(self):
-        # Validate required inputs
-        validations = [
-            (not self.project, "project cannot be empty!"),
-            (not any(self.policies), "policies cannot be empty!"),
-            (not self.in_tools, "in_tools cannot be empty!"),
-            (not self.model or not self.api_key, "model or api_key cannot be empty!"),
-            (
-                not self.in_recommended_models(self.model[0]["name"]),
-                f"model {self.model[0]['name']} is not in recommended models: {BUILDTIME_MODELS}",
-            ),
-        ]
-
-        for condition, error_msg in validations:
-            if condition:
-                msg = f"🔒️ToolGuard: {error_msg}"
-                raise ValueError(msg)
-
         self.log(
             f"🔒️ToolGuard: Start generating. Please review the generated guard code at {self.work_dir}", name="info"
         )
