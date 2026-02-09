@@ -129,8 +129,8 @@ class LangFuseTracer(BaseTracer):
         # Create child span under the root span
         span = self._root_span.start_span(
             name=name,
-            input=serialize(inputs),
-            metadata=serialize(metadata_),
+            input=dict(inputs) if _is_flat_primitive_dict(inputs) else serialize(inputs),
+            metadata=dict(metadata_) if _is_flat_primitive_dict(metadata_) else serialize(metadata_),
         )
 
         self.spans[trace_id] = span
@@ -228,3 +228,13 @@ class LangFuseTracer(BaseTracer):
         if secret_key and public_key and host:
             return {"secret_key": secret_key, "public_key": public_key, "host": host}
         return {}
+
+
+def _is_flat_primitive_dict(obj: dict[str, Any]) -> bool:
+    """Check if a dict has only primitive keys and values."""
+    for k, v in obj.items():
+        if not isinstance(k, (str, int, float, bool)):
+            return False
+        if v is not None and not isinstance(v, (str, int, float, bool)):
+            return False
+    return True
