@@ -379,6 +379,36 @@ async def get_current_active_user(current_user: Annotated[User, Depends(get_curr
     return current_user
 
 
+async def get_optional_user(
+    token: Annotated[str | None, Security(oauth2_login)],
+    query_param: Annotated[str | None, Security(api_key_query)],
+    header_param: Annotated[str | None, Security(api_key_header)],
+    db: Annotated[AsyncSession, Depends(injectable_session_scope)],
+) -> User | None:
+    """Get the current user if authenticated, otherwise return None.
+
+    This is useful for endpoints that need to behave differently for authenticated
+    vs unauthenticated users (e.g., returning different response types).
+
+    Returns:
+        User | None: The authenticated user if valid credentials are provided, None otherwise.
+    """
+    try:
+        if token:
+            user = await get_current_user_by_jwt(token, db)
+            if user and user.is_active:
+                return user
+            return None
+        if query_param or header_param:
+            user = await api_key_security(query_param, header_param)
+            if user and user.is_active:
+                return user
+            return None
+    except HTTPException:
+        return None
+    return None
+
+
 async def get_current_active_superuser(current_user: Annotated[User, Depends(get_current_user)]) -> User:
     if not current_user.is_active:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive user")

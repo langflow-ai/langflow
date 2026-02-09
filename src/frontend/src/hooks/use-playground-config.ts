@@ -1,14 +1,12 @@
 import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
-import { useGetPublicConfig } from "@/controllers/API/queries/config/use-get-public-config";
 
 /**
- * Hook to get the appropriate config based on whether we're on a playground page.
- * Uses public config for playground pages (unauthenticated), otherwise uses authenticated config.
+ * Hook to get the config for playground pages.
+ * The /config endpoint automatically returns the appropriate response based on auth status:
+ * - Authenticated users: Full ConfigResponse
+ * - Unauthenticated users: PublicConfigResponse (limited fields)
  */
-export const usePlaygroundConfig = (playgroundPage: boolean) => {
-  const { data: authConfig } = useGetConfig({ enabled: !playgroundPage });
-  const { data: publicConfig } = useGetPublicConfig({
-    enabled: playgroundPage,
-  });
-  return playgroundPage ? publicConfig : authConfig;
+export const usePlaygroundConfig = () => {
+  const { data: config } = useGetConfig({});
+  return config;
 };

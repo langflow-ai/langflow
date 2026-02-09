@@ -50,6 +50,7 @@ from langflow.services.auth.utils import (
     api_key_security,
     get_current_active_user,
     get_current_user_for_sse,
+    get_optional_user,
     get_webhook_user,
 )
 from langflow.services.cache.utils import save_uploaded_file
@@ -1090,43 +1091,32 @@ async def custom_component_update(
         raise SerializationError.from_exception(exc, data=component_node) from exc
 
 
-@router.get("/config", dependencies=[Depends(get_current_active_user)])
-async def get_config() -> ConfigResponse:
-    """Retrieve the current application configuration settings.
+@router.get("/config")
+async def get_config(
+    user: Annotated[User | None, Depends(get_optional_user)] = None,
+) -> ConfigResponse | PublicConfigResponse:
+    """Retrieve application configuration settings.
 
-    Requires authentication to prevent exposure of sensitive configuration details.
+    Returns different configuration based on authentication status:
+    - Authenticated users: Full ConfigResponse with all settings
+    - Unauthenticated users: PublicConfigResponse with limited, safe-to-expose settings
+
+    Args:
+        user: The authenticated user, or None if unauthenticated.
 
     Returns:
-        ConfigResponse: The configuration settings of the application.
+        ConfigResponse | PublicConfigResponse: Configuration settings appropriate for the user's auth status.
 
     Raises:
         HTTPException: If an error occurs while retrieving the configuration.
     """
     try:
         settings_service: SettingsService = get_settings_service()
+
+        if user is None:
+            return PublicConfigResponse.from_settings(settings_service.settings)
+
         return ConfigResponse.from_settings(settings_service.settings, settings_service.auth_settings)
-
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
-
-
-@router.get("/public_config")
-async def get_public_config() -> PublicConfigResponse:
-    """Retrieve configuration settings for public/unauthenticated access.
-
-    This endpoint provides a limited subset of configuration values
-    that are safe to expose without authentication, primarily for
-    the public playground feature.
-
-    Returns:
-        PublicConfigResponse: The public-safe configuration settings.
-
-    Raises:
-        HTTPException: If an error occurs while retrieving the configuration.
-    """
-    try:
-        settings_service: SettingsService = get_settings_service()
-        return PublicConfigResponse.from_settings(settings_service.settings)
 
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc

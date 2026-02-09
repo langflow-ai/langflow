@@ -50,8 +50,8 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
   const classNameFilePreview = `flex w-full items-center gap-2 py-2 overflow-auto`;
 
   // Check if voice mode is available
-  // Use public config for playground page (unauthenticated), otherwise use authenticated config
-  const config = usePlaygroundConfig(playgroundPage);
+  // The /config endpoint returns appropriate config based on auth status
+  const config = usePlaygroundConfig();
 
   const onClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
