@@ -3,13 +3,13 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import type { KnowledgeBaseInfo } from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
-import KnowledgeBaseDrawer from "../filesPage/components/KnowledgeBaseDrawer";
-import KnowledgeBasesTab from "../filesPage/components/KnowledgeBasesTab";
+import KnowledgeBaseDrawer from "./components/KnowledgeBaseDrawer";
+import KnowledgeBasesTab from "./components/KnowledgeBasesTab";
 
 export const KnowledgePage = () => {
-  const [selectedKnowledgeBases, setSelectedKnowledgeBases] = useState<any[]>(
-    [],
-  );
+  const [selectedKnowledgeBases, setSelectedKnowledgeBases] = useState<
+    KnowledgeBaseInfo[]
+  >([]);
   const [selectionCount, setSelectionCount] = useState(0);
   const [isShiftPressed, setIsShiftPressed] = useState(false);
   const [searchText, setSearchText] = useState("");

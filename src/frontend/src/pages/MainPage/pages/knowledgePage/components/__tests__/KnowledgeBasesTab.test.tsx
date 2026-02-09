@@ -11,7 +11,14 @@ jest.mock("../KnowledgeBasesTab", () => {
     quantitySelected,
     isShiftPressed,
     onRowClick,
-  }: any) => (
+  }: {
+    quickFilterText: string;
+    setQuickFilterText?: (text: string) => void;
+    selectedFiles?: { id: string }[];
+    quantitySelected: number;
+    isShiftPressed: boolean;
+    onRowClick?: (data: { id: string; name: string }) => void;
+  }) => (
     <div data-testid="knowledge-bases-tab">
       <input
         data-testid="search-kb-input"
