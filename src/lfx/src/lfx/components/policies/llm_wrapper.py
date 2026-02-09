@@ -2,7 +2,7 @@ from typing import Any
 
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import messages_from_dict
-from toolguard.buildtime.llm.tg_litellm import LanguageModelBase
+from toolguard.buildtime.llm import LanguageModelBase
 
 
 class LangchainModelWrapper(LanguageModelBase):
@@ -15,7 +15,7 @@ class LangchainModelWrapper(LanguageModelBase):
     """
 
     MAX_CONTINUATIONS = 5  # Prevent infinite recursion
-    DEFAULT_MAX_TOKENS = 10000
+    DEFAULT_MAX_OUT_TOKENS = 16000
 
     def __init__(self, langchain_model: BaseChatModel):
         """Initialize the wrapper with a Langchain chat model.
@@ -25,7 +25,7 @@ class LangchainModelWrapper(LanguageModelBase):
         """
         self.langchain_model = langchain_model
         if hasattr(self.langchain_model, "max_tokens") and getattr(self.langchain_model, "max_tokens", None) is None:
-            self.langchain_model.max_tokens = self.DEFAULT_MAX_TOKENS
+            self.langchain_model.max_tokens = self.DEFAULT_MAX_OUT_TOKENS
 
     def _convert_role(self, role: str) -> str:
         """Convert ToolGuard role to Langchain message type.
