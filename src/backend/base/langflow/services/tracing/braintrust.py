@@ -63,6 +63,22 @@ class BraintrustTracer(BaseTracer):
         user_id: str | None = None,
         session_id: str | None = None,
     ) -> None:
+        """Initialize the Braintrust tracer.
+
+        Reads configuration from environment variables and sets up a root span
+        for the current flow execution.  If ``BRAINTRUST_API_KEY`` is not set
+        or the ``braintrust`` package is not installed, the tracer silently
+        disables itself (``ready`` returns ``False``).
+
+        Args:
+            trace_name: Human-readable name for the trace (e.g. ``"My Flow - abc123"``).
+            trace_type: The type of trace (typically ``"chain"``).
+            project_name: Langflow project name, used as the Braintrust project
+                if ``BRAINTRUST_PROJECT`` is not set.
+            trace_id: Unique identifier for this flow execution.
+            user_id: Optional Langflow user ID attached as span metadata.
+            session_id: Optional Langflow session ID attached as span metadata.
+        """
         self.trace_name = trace_name
         self.trace_type = trace_type
         self.trace_id = trace_id
@@ -76,6 +92,7 @@ class BraintrustTracer(BaseTracer):
 
     @property
     def ready(self) -> bool:
+        """Return whether the tracer is configured and operational."""
         return self._ready
 
     # ------------------------------------------------------------------
@@ -83,6 +100,17 @@ class BraintrustTracer(BaseTracer):
     # ------------------------------------------------------------------
 
     def _setup_braintrust(self, config: dict[str, Any], project_name: str) -> bool:
+        """Initialize the Braintrust logger and create the root span.
+
+        Args:
+            config: Configuration dict from :meth:`_get_config` containing
+                ``api_key`` and optionally ``api_url`` and ``project``.
+            project_name: Fallback project name if ``BRAINTRUST_PROJECT`` is
+                not set in the environment.
+
+        Returns:
+            ``True`` if setup succeeded, ``False`` on import or SDK errors.
+        """
         try:
             from braintrust import init_logger
 
@@ -131,6 +159,19 @@ class BraintrustTracer(BaseTracer):
         metadata: dict[str, Any] | None = None,
         vertex: Vertex | None = None,
     ) -> None:
+        """Start a child span for a Langflow component execution.
+
+        Creates a new span under the root flow span.  The span remains open
+        until :meth:`end_trace` is called with the same *trace_id*.
+
+        Args:
+            trace_id: Unique component identifier (used to correlate with :meth:`end_trace`).
+            trace_name: Display name, typically ``"ComponentName (trace_id)"``.
+            trace_type: Component type (e.g. ``"llm"``, ``"tool"``, ``"retriever"``).
+            inputs: Component input data.
+            metadata: Additional metadata to attach to the span.
+            vertex: Optional Langflow vertex (unused, kept for interface compatibility).
+        """
         if not self._ready:
             return
 
@@ -160,6 +201,15 @@ class BraintrustTracer(BaseTracer):
         error: Exception | None = None,
         logs: Sequence[Log | dict] = (),
     ) -> None:
+        """End the child span for a component and log its outputs.
+
+        Args:
+            trace_id: The component identifier passed to :meth:`add_trace`.
+            trace_name: Display name of the component.
+            outputs: Component output data.
+            error: Exception raised during component execution, if any.
+            logs: Additional log entries to attach to the span.
+        """
         if not self._ready:
             return
 
@@ -187,6 +237,16 @@ class BraintrustTracer(BaseTracer):
         error: Exception | None = None,
         metadata: dict[str, Any] | None = None,
     ) -> None:
+        """End the root flow span and log aggregated inputs/outputs.
+
+        Called once when the entire flow execution completes.
+
+        Args:
+            inputs: Aggregated flow inputs.
+            outputs: Aggregated flow outputs.
+            error: Exception raised during flow execution, if any.
+            metadata: Additional metadata for the root span.
+        """
         if not self._ready:
             return
 
@@ -200,6 +260,18 @@ class BraintrustTracer(BaseTracer):
 
     @override
     def get_langchain_callback(self) -> BaseCallbackHandler | None:
+        """Return a LangChain callback handler for deep tracing.
+
+        If ``braintrust-langchain`` is installed, returns a
+        ``BraintrustCallbackHandler`` parented to the most recent open
+        component span (or the root span if no component span is active).
+        This provides token-level metrics, time-to-first-token, and model
+        name capture for LLM calls.
+
+        Returns:
+            A ``BraintrustCallbackHandler`` instance, or ``None`` if the
+            tracer is not ready or ``braintrust-langchain`` is not installed.
+        """
         if not self._ready:
             return None
 
