@@ -16,18 +16,8 @@ test(
       timeout: 30000,
     });
     await page.getByTestId("blank-flow").click();
-    await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("mcp tools");
-
-    await page.waitForSelector('[data-testid="models_and_agentsMCP Tools"]', {
-      timeout: 30000,
-    });
-
-    await page
-      .getByTestId("models_and_agentsMCP Tools")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 100, y: 100 },
-      });
+    await page.getByTestId("sidebar-nav-mcp").click();
+    await page.getByTestId("add-component-button-lf-starter_project").click();
 
     // See if the color matches
 
@@ -47,8 +37,6 @@ test(
     }
 
     await adjustScreenView(page, { numberOfZoomOut: 3 });
-
-    await expect(page.getByTestId("dropdown_str_tool")).toBeHidden();
 
     await openAddMcpServerModal(page);
 
@@ -337,18 +325,9 @@ test(
       timeout: 30000,
     });
     await page.getByTestId("blank-flow").click();
-    await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("mcp tools");
+    await page.getByTestId("sidebar-nav-mcp").click();
+    await page.getByTestId("add-component-button-lf-starter_project").click();
 
-    await page.waitForSelector('[data-testid="models_and_agentsMCP Tools"]', {
-      timeout: 30000,
-    });
-
-    await page
-      .getByTestId("models_and_agentsMCP Tools")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 100, y: 100 },
-      });
     await adjustScreenView(page, { numberOfZoomOut: 3 });
 
     await openAddMcpServerModal(page);
@@ -490,18 +469,9 @@ test(
       timeout: 30000,
     });
     await page.getByTestId("blank-flow").click();
-    await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("mcp tools");
+    await page.getByTestId("sidebar-nav-mcp").click();
+    await page.getByTestId("add-component-button-lf-starter_project").click();
 
-    await page.waitForSelector('[data-testid="models_and_agentsMCP Tools"]', {
-      timeout: 30000,
-    });
-
-    await page
-      .getByTestId("models_and_agentsMCP Tools")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 100, y: 100 },
-      });
     await adjustScreenView(page, { numberOfZoomOut: 3 });
 
     await openAddMcpServerModal(page);
@@ -532,9 +502,8 @@ test(
 
     // Add first header
     await page.getByTestId("http-headers-key-0").fill(testHeaderKey1);
-    // The value field uses InputComponent with global variables, so we need to find it by placeholder
     await page
-      .getByPlaceholder("Type a value...")
+      .getByTestId("popover-anchor-http-headers-value-0")
       .first()
       .fill(testHeaderValue1);
 
@@ -543,8 +512,8 @@ test(
     await page.getByTestId("http-headers-key-1").fill(testHeaderKey2);
     // Use nth(1) to get the second value field
     await page
-      .getByPlaceholder("Type a value...")
-      .nth(1)
+      .getByTestId("popover-anchor-http-headers-value-1")
+      .first()
       .fill(testHeaderValue2);
 
     // Add first environment variable
@@ -601,13 +570,17 @@ test(
     );
     // Header values use InputComponent with global variables, so we verify by placeholder
     expect(
-      await page.getByPlaceholder("Type a value...").first().inputValue(),
+      await page
+        .getByTestId("popover-anchor-http-headers-value-0")
+        .inputValue(),
     ).toBe(testHeaderValue1);
     expect(await page.getByTestId("http-headers-key-1").inputValue()).toBe(
       testHeaderKey2,
     );
     expect(
-      await page.getByPlaceholder("Type a value...").nth(1).inputValue(),
+      await page
+        .getByTestId("popover-anchor-http-headers-value-1")
+        .inputValue(),
     ).toBe(testHeaderValue2);
     expect(await page.getByTestId("http-env-key-0").inputValue()).toBe(
       testEnvKey1,
@@ -652,7 +625,7 @@ test(
   "mcp server tools should be refreshed when editing a server",
   { tag: ["@release", "@workspace", "@components"] },
   async ({ page }) => {
-    await page.waitForTimeout(10000);
+    await page.waitForTimeout(5000);
 
     await awaitBootstrapTest(page);
 
@@ -660,18 +633,8 @@ test(
       timeout: 30000,
     });
     await page.getByTestId("blank-flow").click();
-    await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("mcp tools");
-
-    await page.waitForSelector('[data-testid="models_and_agentsMCP Tools"]', {
-      timeout: 30000,
-    });
-
-    await page
-      .getByTestId("models_and_agentsMCP Tools")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 100, y: 100 },
-      });
+    await page.getByTestId("sidebar-nav-mcp").click();
+    await page.getByTestId("add-component-button-lf-starter_project").click();
 
     await page.getByTestId("canvas_controls_dropdown").click();
 
@@ -679,8 +642,6 @@ test(
 
     await zoomOut(page, 3);
     await page.getByTestId("canvas_controls_dropdown").click({ force: true });
-
-    await expect(page.getByTestId("dropdown_str_tool")).toBeHidden();
 
     await openAddMcpServerModal(page);
 
@@ -798,6 +759,8 @@ test(
 
     await page.getByTestId("add-mcp-server-button").click();
 
+    await page.waitForTimeout(5000);
+
     await awaitBootstrapTest(page, { skipModal: true });
 
     const newFlowDiv = page
@@ -806,6 +769,8 @@ test(
       .first();
     await newFlowDiv.click();
 
+    await page.getByText("MCP Tools", { exact: true }).last().click();
+    await adjustScreenView(page);
     // Re-select the server after returning to flow (server reference may be lost after editing)
     await page.waitForSelector('[data-testid="mcp-server-dropdown"]', {
       timeout: 10000,
@@ -903,6 +868,8 @@ test(
       .first();
     await newFlowDiv2.click();
 
+    await page.getByText("MCP Tools", { exact: true }).last().click();
+
     // Re-select the server after returning to flow (server reference may be lost after editing)
     await page.waitForSelector('[data-testid="mcp-server-dropdown"]', {
       timeout: 10000,
@@ -939,18 +906,8 @@ test(
       timeout: 30000,
     });
     await page.getByTestId("blank-flow").click();
-    await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("mcp tools");
-
-    await page.waitForSelector('[data-testid="models_and_agentsMCP Tools"]', {
-      timeout: 30000,
-    });
-
-    await page
-      .getByTestId("models_and_agentsMCP Tools")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 100, y: 100 },
-      });
+    await page.getByTestId("sidebar-nav-mcp").click();
+    await page.getByTestId("add-component-button-lf-starter_project").click();
 
     await adjustScreenView(page, { numberOfZoomOut: 3 });
 
