@@ -3,6 +3,7 @@ import path from "path";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { unselectNodes } from "../../utils/unselect-nodes";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
 withEventDeliveryModes(
@@ -46,7 +47,7 @@ withEventDeliveryModes(
     await page.getByTestId("title-Chat Output").last().click();
     await page.getByTestId("icon-MoreHorizontal").click();
     await page.getByText("Expand").click();
-
+    await unselectNodes(page);
     await page.getByTestId("button_run_chat output").last().click();
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 

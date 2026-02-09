@@ -160,7 +160,7 @@ async def handle_messages(request: Request):
 # Streamable HTTP Transport
 ################################################################################
 class StreamableHTTP:
-    def __init__(self):
+    def __init__(self) -> None:
         self.session_manager: StreamableHTTPSessionManager | None = None
         self._started = False
         self._start_stop_lock = asyncio.Lock()

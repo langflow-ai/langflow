@@ -1,9 +1,14 @@
 import * as dotenv from "dotenv";
-import { readFileSync } from "fs";
 import path from "path";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import {
+  closeAdvancedOptions,
+  disableInspectPanel,
+  enableInspectPanel,
+  openAdvancedOptions,
+} from "../../utils/open-advanced-options";
 
 test(
   "user should not be able to upload a file larger than the limit",
@@ -40,42 +45,21 @@ test(
 
     await page.waitForSelector("text=Chat Input", { timeout: 30000 });
 
+    await disableInspectPanel(page);
     await page.getByText("Chat Input", { exact: true }).click();
-    await page.getByTestId("edit-button-modal").last().click();
-    await page.getByText("Close").last().click();
+    await openAdvancedOptions(page);
+    await closeAdvancedOptions(page);
 
     await page.getByRole("button", { name: "Playground", exact: true }).click();
-
-    // Read the image file as a binary string
-    const filePath = "tests/assets/chain.png";
-    const fileContent = readFileSync(filePath, "base64");
-
-    // Create the DataTransfer and File objects within the browser context
-    const dataTransfer = await page.evaluateHandle(
-      ({ fileContent }) => {
-        const dt = new DataTransfer();
-        const byteCharacters = atob(fileContent);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        const file = new File([byteArray], "chain.png", { type: "image/png" });
-        dt.items.add(file);
-        return dt;
-      },
-      { fileContent },
-    );
 
     await page.waitForSelector('[data-testid="input-chat-playground"]', {
       timeout: 100000,
     });
 
-    // Locate the target element
-    const element = await page.getByTestId("input-chat-playground");
-
-    // Dispatch the drop event on the target element
-    await element.dispatchEvent("drop", { dataTransfer });
+    // Use Playwright's native setInputFiles() for reliable file upload
+    const filePath = path.resolve(__dirname, "../../assets/chain.png");
+    const fileInput = page.locator('input[type="file"]');
+    await fileInput.setInputFiles(filePath);
 
     await page.waitForSelector("text=The file size is too large", {
       timeout: 10000,
@@ -88,5 +72,9 @@ test(
         ).toFixed(2)} KB`,
       ),
     ).toBeVisible();
+
+    await page.getByTestId("playground-btn-flow-io").last().click();
+
+    await enableInspectPanel(page);
   },
 );
