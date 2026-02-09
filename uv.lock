@@ -6918,7 +6918,7 @@ requires-dist = [
     { name = "langflow-base", extras = ["zep"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langfuse", marker = "extra == 'langfuse'", specifier = "~=3.8" },
     { name = "langsmith", marker = "extra == 'langsmith'", specifier = ">=0.3.42,<1.0.0" },
-    { name = "langwatch", marker = "extra == 'langwatch'", specifier = ">=0.2.11,<0.3.0" },
+    { name = "langwatch", marker = "extra == 'langwatch'", specifier = "~=0.10.0" },
     { name = "lark", marker = "extra == 'lark'", specifier = "==1.2.2" },
     { name = "lfx", editable = "src/lfx" },
     { name = "litellm", marker = "extra == 'litellm'", specifier = ">=1.60.2,<2.0.0" },
@@ -7147,13 +7147,14 @@ wheels = [
 
 [[package]]
 name = "langwatch"
-version = "0.2.19"
+version = "0.10.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "attrs" },
     { name = "coolname" },
     { name = "deprecated" },
     { name = "httpx" },
+    { name = "langchain-core" },
     { name = "nanoid" },
     { name = "openinference-instrumentation-haystack" },
     { name = "openinference-instrumentation-langchain" },
@@ -7166,12 +7167,13 @@ dependencies = [
     { name = "pksuid" },
     { name = "pydantic" },
     { name = "python-liquid" },
+    { name = "pyyaml" },
     { name = "retry" },
     { name = "termcolor" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f5/8c/2bb59cfa693f6c5778e97207627bd4edc21124ae6dd3e15e3e588219e6f6/langwatch-0.2.19.tar.gz", hash = "sha256:3e0861a92a1e13b7362fc91c3c27cda8eec554b92cdf7be00c96805b6ec009a4", size = 1265063, upload-time = "2025-09-05T13:34:30.161Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/7e/52/359afd09f4054ab1c7dc4b349c6b65d4f32321ad758028c6f085cefa781a/langwatch-0.10.2.tar.gz", hash = "sha256:455b211d1e0b44fecb0a0240b7a5781349ecf52ce9d3fba33e23118a33b1e02b", size = 1365949, upload-time = "2026-02-05T06:54:48.456Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b0/af/5012ff10a2517db17450b17b27f820c08d7fbfe0c561dc6fc20163d81ea8/langwatch-0.2.19-py3-none-any.whl", hash = "sha256:1ba948d0e10eb83c9033c10b4d56737c035bcb14f2b4c162ba8ea8eb13131a5a", size = 456561, upload-time = "2025-09-05T13:34:28.454Z" },
+    { url = "https://files.pythonhosted.org/packages/8a/72/92848c62fd7085e623c040c5a28c97395d314bab49b22ea89992119b1739/langwatch-0.10.2-py3-none-any.whl", hash = "sha256:d3a7475502e209f36dfb5b8e51b01aa68748ffb59e2302768425124ef570066c", size = 479057, upload-time = "2026-02-05T06:54:46.907Z" },
 ]
 
 [[package]]
