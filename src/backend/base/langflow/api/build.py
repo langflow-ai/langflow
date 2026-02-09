@@ -505,6 +505,8 @@ async def generate_flow_events(
 
     vertex_timedeltas: list[float] = []
     event_manager.on_build_start(data={})
+    build_start_time = time.perf_counter()
+    await logger.ainfo(f"Flow build started for flow_id={flow_id} ({len(ids)} vertices)")
     tasks = []
     for vertex_id in ids:
         task = asyncio.create_task(build_vertices(vertex_id, graph, event_manager, vertex_timedeltas))
@@ -528,6 +530,11 @@ async def generate_flow_events(
         raise
 
     build_duration = sum(vertex_timedeltas)
+    build_elapsed = time.perf_counter() - build_start_time
+    await logger.ainfo(
+        f"Flow build completed for flow_id={flow_id} in {build_elapsed:.3f}s "
+        f"({len(ids)} vertices, sum of vertex times: {build_duration:.3f}s)"
+    )
     event_manager.on_end(data={"build_duration": build_duration})
     await graph.end_all_traces()
     await event_manager.queue.put((None, None, time.time()))

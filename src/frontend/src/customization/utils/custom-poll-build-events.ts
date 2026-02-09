@@ -1,7 +1,15 @@
 import { BUILD_POLLING_INTERVAL } from "@/constants/constants";
 import { BuildStatus, EventDeliveryType } from "@/constants/enums";
 import { getFetchCredentials } from "@/customization/utils/get-fetch-credentials";
+import useFlowStore from "@/stores/flowStore";
 import { VertexLayerElementType } from "@/types/zustand/flow";
+import { processEndVertexEvent } from "@/utils/buildUtils";
+
+const BATCH_YIELD_MS = 50;
+
+// Event types that can be processed synchronously (no await needed).
+// These are batched together so React commits them in a single render.
+const BATCHABLE_EVENTS = new Set(["end_vertex", "build_start", "build_end"]);
 
 export async function customPollBuildEvents(
   url: string,
@@ -32,7 +40,7 @@ export async function customPollBuildEvents(
           "Content-Type": "application/json",
           Accept: "application/x-ndjson",
         },
-        signal: abortController.signal, // Add abort signal to fetch
+        signal: abortController.signal,
         credentials: getFetchCredentials(),
       },
     );
@@ -45,50 +53,105 @@ export async function customPollBuildEvents(
       );
     }
 
-    // Get the response text - will be NDJSON format (one JSON per line)
     const responseText = await response.text();
 
-    // Skip if empty response
     if (!responseText.trim()) {
       await new Promise((resolve) => setTimeout(resolve, 100));
       continue;
     }
 
-    // Split by newlines to get individual JSON objects
     const eventLines = responseText.split("\n").filter((line) => line.trim());
 
-    // If no events, continue polling
     if (eventLines.length === 0) {
       await new Promise((resolve) => setTimeout(resolve, 100));
       continue;
     }
 
-    // Process all events in the NDJSON response
-    for (const eventStr of eventLines) {
-      // Process the event
-      const event = JSON.parse(eventStr);
-      const result = await onEvent(
-        event.event,
-        event.data,
-        buildResults,
-        verticesStartTimeMs,
-        callbacks,
-      );
+    const events = eventLines.map((line) => JSON.parse(line));
 
-      if (!result) {
-        isDone = true;
-        abortController.abort();
-        break;
-      }
+    console.log(
+      `[poll-batch] Received ${events.length} events:`,
+      events.map((e) => e.event),
+    );
 
-      // Check if this was the end event
-      if (event.event === "end") {
-        isDone = true;
-        break;
+    // Process events, batching consecutive batchable events (end_vertex,
+    // build_start, build_end) so all their Zustand set() calls happen
+    // synchronously — React 18 commits them in a single render.
+    let i = 0;
+    while (i < events.length) {
+      const event = events[i];
+
+      if (BATCHABLE_EVENTS.has(event.event)) {
+        // Collect consecutive batchable events and process synchronously.
+        // NO await in this loop — keeps everything in one synchronous
+        // execution context for React batching.
+        let batchCount = 0;
+        let batchFailed = false;
+        while (i < events.length && BATCHABLE_EVENTS.has(events[i].event)) {
+          const ev = events[i];
+          let result: boolean;
+
+          if (ev.event === "end_vertex") {
+            result = processEndVertexEvent(ev.data, buildResults, callbacks);
+          } else if (ev.event === "build_start") {
+            if (ev.data?.id) {
+              useFlowStore
+                .getState()
+                .updateBuildStatus([ev.data.id], BuildStatus.BUILDING);
+            }
+            result = true;
+          } else {
+            // build_end
+            if (ev.data?.id) {
+              useFlowStore
+                .getState()
+                .updateBuildStatus([ev.data.id], BuildStatus.BUILT);
+            }
+            result = true;
+          }
+
+          if (!result) {
+            batchFailed = true;
+            isDone = true;
+            abortController.abort();
+            break;
+          }
+          batchCount++;
+          i++;
+        }
+
+        console.log(
+          `[poll-batch] Processed batch of ${batchCount} batchable events, yielding once`,
+        );
+
+        if (batchFailed) break;
+        // Single yield for the entire batch
+        await new Promise((resolve) => setTimeout(resolve, BATCH_YIELD_MS));
+      } else {
+        // Non-batchable events (vertices_sorted, end, error, add_message, token, etc.)
+        console.log(
+          `[poll-batch] Processing non-batchable event: ${event.event}`,
+        );
+        const result = await onEvent(
+          event.event,
+          event.data,
+          buildResults,
+          verticesStartTimeMs,
+          callbacks,
+        );
+        if (!result) {
+          isDone = true;
+          abortController.abort();
+          break;
+        }
+        if (event.event === "end") {
+          isDone = true;
+          break;
+        }
+        i++;
       }
     }
 
-    // Add a small delay between polls
     await new Promise((resolve) => setTimeout(resolve, BUILD_POLLING_INTERVAL));
   }
 }
