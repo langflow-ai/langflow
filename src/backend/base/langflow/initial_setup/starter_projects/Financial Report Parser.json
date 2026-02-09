@@ -660,7 +660,7 @@
         "data": {
           "id": "note-khpnk",
           "node": {
-            "description": "### 💡 Add your OpenAI API key here",
+            "description": "### Configure your Model Provider",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -676,8 +676,8 @@
           "width": 324
         },
         "position": {
-          "x": 905.0310846743869,
-          "y": -389.43902326187924
+          "x": 1310.7603250848308,
+          "y": 101.01852966207571
         },
         "selected": false,
         "type": "noteNode"

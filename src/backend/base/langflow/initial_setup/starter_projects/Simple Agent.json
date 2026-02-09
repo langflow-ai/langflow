@@ -146,7 +146,7 @@
         "data": {
           "id": "note-2JuVK",
           "node": {
-            "description": "### 💡 Add your OpenAI API key here👇",
+            "description": "### Configure your Model Provider",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -161,8 +161,8 @@
           "width": 324
         },
         "position": {
-          "x": 1648.6876745095624,
-          "y": 253.8646618156497
+          "x": 1627.931389237968,
+          "y": 220.13569824930877
         },
         "selected": false,
         "type": "noteNode"
