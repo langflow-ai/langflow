@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useDurationStore } from "@/stores/durationStore";
 import { AnimatedNumber } from "../../common/animatedNumbers";
-import Loading from "../../ui/loading";
+import IconComponent from "../../common/genericIconComponent";
 
 interface DurationDisplayProps {
   duration?: number;
@@ -66,7 +66,7 @@ export default function DurationDisplay({
           : "text-muted-foreground"
       }`}
     >
-      {duration === undefined && <Loading className="h-3 w-3" />}
+      {duration === undefined && <IconComponent name="Loader2" className="h-3 w-3 animate-spin" />}
       <div className="w-fit">
         <AnimatedNumber
           value={secondsValue}

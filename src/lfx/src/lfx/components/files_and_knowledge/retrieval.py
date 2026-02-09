@@ -1,4 +1,5 @@
 import json
+from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -108,6 +109,13 @@ class KnowledgeRetrievalComponent(Component):
             display_name="Results",
             method="retrieve_data",
             info="Returns the data from the selected knowledge base.",
+        ),
+        Output(
+            name="get_kb_info",
+            display_name="Info",
+            method="get_kb_info",
+            info="Returns structure and statistics about the knowledge base.",
+            tool_mode=True,
         ),
     ]
 
@@ -369,3 +377,78 @@ class KnowledgeRetrievalComponent(Component):
 
         # Return the DataFrame containing the data
         return DataFrame(data=data_list)
+
+    async def get_kb_info(self) -> Data:
+        """Get structure and statistics about the selected knowledge base."""
+        raise_error_if_astra_cloud_disable_component(astra_error_msg)
+
+        async with session_scope() as db:
+            if not self.user_id:
+                msg = "User ID is required."
+                raise ValueError(msg)
+            current_user = await get_user_by_id(db, self.user_id)
+            if not current_user:
+                msg = f"User with ID {self.user_id} not found."
+                raise ValueError(msg)
+            kb_user = current_user.username
+
+        kb_path = _get_knowledge_bases_root_path() / kb_user / self.knowledge_base
+        kb_metadata = self._get_kb_metadata(kb_path)
+
+        chroma = Chroma(
+            persist_directory=str(kb_path),
+            collection_name=self.knowledge_base,
+        )
+        collection = chroma._collection  # noqa: SLF001
+        all_data = collection.get(include=["metadatas", "documents"])
+
+        total_documents = len(all_data.get("ids", []))
+        metadatas = all_data.get("metadatas", [])
+        documents = all_data.get("documents", [])
+
+        all_fields: set[str] = set()
+        for meta in metadatas:
+            if meta:
+                all_fields.update(meta.keys())
+
+        display_fields = sorted([f for f in all_fields if not f.startswith("_")])
+
+        # Analyze each field
+        describe: dict[str, Any] = {}
+        for field in all_fields:
+            values = [meta.get(field) if meta else None for meta in metadatas]
+            non_null = [v for v in values if v is not None]
+            if not non_null:
+                describe[field] = {"count": 0, "unique": 0}
+                continue
+            str_values = [str(v) for v in non_null]
+            counter = Counter(str_values)
+            describe[field] = {
+                "count": len(non_null),
+                "unique": len(counter),
+                "top_values": [{"value": val, "count": cnt} for val, cnt in counter.most_common(10)],
+            }
+
+        # Sample documents
+        sample_size = min(5, total_documents)
+        sample: list[dict[str, Any]] = []
+        for i in range(sample_size):
+            s: dict[str, Any] = {"content": documents[i] if documents and i < len(documents) else None}
+            if metadatas and i < len(metadatas) and metadatas[i]:
+                s["metadata"] = metadatas[i]
+            sample.append(s)
+
+        info_data: dict[str, Any] = {
+            "collection_name": self.knowledge_base,
+            "total_documents": total_documents,
+            "embedding_provider": kb_metadata.get("embedding_provider"),
+            "embedding_model": kb_metadata.get("embedding_model"),
+            "created_at": kb_metadata.get("created_at"),
+            "metadata_fields": display_fields,
+            "describe": describe,
+            "sample": sample,
+        }
+
+        self.status = f"KB '{self.knowledge_base}': {total_documents} documents, {len(display_fields)} metadata fields"
+
+        return Data(data=info_data)

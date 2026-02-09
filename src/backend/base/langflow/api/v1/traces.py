@@ -11,6 +11,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.exc import OperationalError, ProgrammingError
+from sqlalchemy import func
 from sqlmodel import col, select
 
 from langflow.services.auth.utils import get_current_active_user
@@ -53,19 +54,38 @@ async def _fetch_traces(
 
         traces = (await session.exec(stmt)).all()
 
+        # Get aggregated token counts per trace
+        trace_ids = [trace.id for trace in traces]
+        token_map: dict[str, int] = {}
+        if trace_ids:
+            token_stmt = (
+                select(
+                    SpanTable.trace_id,
+                    func.coalesce(func.sum(SpanTable.total_tokens), 0).label("sum_tokens"),
+                )
+                .where(col(SpanTable.trace_id).in_(trace_ids))
+                .group_by(SpanTable.trace_id)
+            )
+            token_rows = (await session.exec(token_stmt)).all()
+            for row in token_rows:
+                token_map[str(row.trace_id)] = int(row.sum_tokens)
+
         # Convert to response format
         trace_list = []
         for trace in traces:
+            tid = str(trace.id)
+            total_tokens = token_map.get(tid, trace.total_tokens)
             trace_list.append(
                 {
-                    "id": str(trace.id),
+                    "id": tid,
                     "name": trace.name,
                     "status": trace.status.value if trace.status else "success",
                     "startTime": trace.start_time.isoformat() if trace.start_time else "",
                     "totalLatencyMs": trace.total_latency_ms,
-                    "totalTokens": trace.total_tokens,
+                    "totalTokens": total_tokens,
                     "totalCost": trace.total_cost,
                     "flowId": str(trace.flow_id),
+                    "sessionId": trace.session_id,
                 }
             )
 
@@ -126,6 +146,9 @@ async def _fetch_single_trace(trace_id: UUID) -> dict[str, Any] | None:
         # Build hierarchical span tree
         span_tree = _build_span_tree(spans)
 
+        # Aggregate tokens from spans
+        total_tokens = sum(s.total_tokens or 0 for s in spans)
+
         # Return trace with span tree in frontend-compatible format
         return {
             "id": str(trace.id),
@@ -134,11 +157,11 @@ async def _fetch_single_trace(trace_id: UUID) -> dict[str, Any] | None:
             "startTime": trace.start_time.isoformat() if trace.start_time else "",
             "endTime": trace.end_time.isoformat() if trace.end_time else None,
             "totalLatencyMs": trace.total_latency_ms,
-            "totalTokens": trace.total_tokens,
+            "totalTokens": total_tokens or trace.total_tokens,
             "totalCost": trace.total_cost,
             "flowId": str(trace.flow_id),
             "sessionId": trace.session_id,
-            "spans": span_tree,  # Return all root spans as flat list
+            "spans": span_tree,
         }
 
 

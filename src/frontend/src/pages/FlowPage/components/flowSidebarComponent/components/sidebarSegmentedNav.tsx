@@ -47,12 +47,6 @@ export const NAV_ITEMS: NavItem[] = [
     tooltip: "Saved Components",
   },
   {
-    id: "logs",
-    icon: "ScrollText",
-    label: "Logs",
-    tooltip: "Logs",
-  },
-  {
     id: "messages",
     icon: "MessagesSquare",
     label: "Messages",
@@ -70,6 +64,18 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Memories",
     tooltip: "Memories",
   },
+  {
+    id: "logs",
+    icon: "ScrollText",
+    label: "Logs",
+    tooltip: "Logs",
+  },
+  {
+    id: "traces",
+    icon: "Activity",
+    label: "Traces",
+    tooltip: "Traces",
+  },
 ];
 
 const SidebarSegmentedNav = () => {
@@ -86,7 +92,9 @@ const SidebarSegmentedNav = () => {
       <SidebarMenu className="gap-2 py-1">
         {NAV_ITEMS.map((item) => (
           <div key={item.id}>
-            {item.id === "logs" && <Separator className="mb-2 w-full" />}
+            {(item.id === "messages" || item.id === "logs") && (
+              <Separator className="mb-2 w-full" />
+            )}
             <SidebarMenuItem className="px-1">
               <ShadTooltip content={item.tooltip} side="right">
                 <SidebarMenuButton
@@ -94,10 +102,9 @@ const SidebarSegmentedNav = () => {
                   disabled={item.id === "saved" && !hasSavedComponents}
                   onClick={() => {
                     setSearch?.("");
-                    const isMainContentSection = ["logs", "messages", "evaluations", "memories"].includes(item.id);
+                    const isMainContentSection = ["logs", "traces", "messages", "evaluations", "memories"].includes(item.id);
                     if (activeSection === item.id && open) {
                       if (isMainContentSection) {
-                        // Return to flow canvas without sidebar animation
                         setActiveSection("components");
                       } else {
                         toggleSidebar();
@@ -107,7 +114,6 @@ const SidebarSegmentedNav = () => {
                       if (!open) {
                         toggleSidebar();
                       }
-                      // Auto-focus search when opening components, mcp, bundles, or saved
                       if (["components", "mcp", "bundles", "saved"].includes(item.id)) {
                         setTimeout(() => focusSearch(), 100);
                       }

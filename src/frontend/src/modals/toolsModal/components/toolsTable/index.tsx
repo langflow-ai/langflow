@@ -6,17 +6,13 @@ import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-va
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  useSidebar,
 } from "@/components/ui/sidebar";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { parseString, sanitizeMcpName } from "@/utils/stringManipulation";
 
@@ -44,6 +40,8 @@ export default function ToolsTable({
   const [focusedRow, setFocusedRow] = useState<any | null>(null);
   const [sidebarName, setSidebarName] = useState<string>("");
   const [sidebarDescription, setSidebarDescription] = useState<string>("");
+  const [sidebarReturnDirect, setSidebarReturnDirect] = useState<boolean>(false);
+  const [sidebarDisabledParams, setSidebarDisabledParams] = useState<string[]>([]);
 
   const editedSelection = useRef<boolean>(false);
   const applyingSelection = useRef<boolean>(false);
@@ -51,7 +49,6 @@ export default function ToolsTable({
   const skipSelectionReapply = useRef<number>(0);
   const [isGridReady, setIsGridReady] = useState(false);
 
-  const { setOpen: setSidebarOpen } = useSidebar();
 
   const getRowId = useMemo(() => {
     return (params: any) =>
@@ -72,6 +69,9 @@ export default function ToolsTable({
     setData(initialData);
     const filter = initialData.filter((row) => row.status === true);
     setSelectedRows(filter);
+    if (initialData.length > 0) {
+      setFocusedRow(initialData[0]);
+    }
     editedSelection.current = false;
   }, [open]);
 
@@ -174,9 +174,13 @@ export default function ToolsTable({
     if (focusedRow) {
       setSidebarName(focusedRow.name);
       setSidebarDescription(focusedRow.description);
+      setSidebarReturnDirect(focusedRow.return_direct ?? false);
+      setSidebarDisabledParams(focusedRow.disabled_params ?? []);
     } else {
       setSidebarName("");
       setSidebarDescription("");
+      setSidebarReturnDirect(false);
+      setSidebarDisabledParams([]);
     }
   }, [focusedRow]);
 
@@ -237,8 +241,8 @@ export default function ToolsTable({
   };
 
   const handleSidebarInputChange = (
-    field: "name" | "description",
-    value: string,
+    field: "name" | "description" | "return_direct" | "disabled_params",
+    value: string | boolean | string[],
   ) => {
     if (!focusedRow) return;
 
@@ -297,6 +301,19 @@ export default function ToolsTable({
     handleSidebarInputChange("name", sanitizedValue);
   };
 
+  const handleReturnDirectChange = (checked: boolean) => {
+    setSidebarReturnDirect(checked);
+    handleSidebarInputChange("return_direct", checked);
+  };
+
+  const handleParamToggle = (paramName: string, enabled: boolean) => {
+    const updated = enabled
+      ? sidebarDisabledParams.filter((p) => p !== paramName)
+      : [...sidebarDisabledParams, paramName];
+    setSidebarDisabledParams(updated);
+    handleSidebarInputChange("disabled_params", updated);
+  };
+
   const handleSearchChange = (e) => setSearchQuery(e.target.value);
 
   const tableOptions = {
@@ -306,7 +323,6 @@ export default function ToolsTable({
 
   const handleRowClicked = (event) => {
     setFocusedRow(event.data);
-    setSidebarOpen(true);
   };
 
   const rowName = useMemo(() => {
@@ -314,10 +330,6 @@ export default function ToolsTable({
       "space_case",
     ]);
   }, [focusedRow]);
-
-  const handleClose = () => {
-    setSidebarOpen(false);
-  };
 
   const handleGridReady = () => {
     setIsGridReady(true);
@@ -364,14 +376,18 @@ export default function ToolsTable({
           {focusedRow &&
             (isAction || !focusedRow.readonly ? (
               <div className="flex flex-col gap-4 p-4">
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-1">
                   <label
                     className="text-mmd font-medium"
                     htmlFor="sidebar-name-input"
                   >
                     {isAction ? "Tool name" : "Slug"}
                   </label>
-
+                  <p className="text-xs text-muted-foreground">
+                    {isAction
+                      ? "Function name exposed to clients."
+                      : "Function name exposed to the agent."}
+                  </p>
                   <Input
                     id="sidebar-name-input"
                     value={sidebarName}
@@ -380,34 +396,51 @@ export default function ToolsTable({
                     placeholder="Edit name..."
                     data-testid="input_update_name"
                   />
-                  <div className="text-xs text-muted-foreground">
-                    {isAction
-                      ? "Used as the function name when this flow is exposed to clients."
-                      : "Used as the function name when this tool is exposed to the agent."}
-                  </div>
                 </div>
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-1">
                   <label
                     className="text-mmd font-medium"
                     htmlFor="sidebar-desc-input"
                   >
                     {isAction ? "Tool description" : "Description"}
                   </label>
-
+                  <p className="text-xs text-muted-foreground">
+                    {isAction
+                      ? "Description exposed to clients."
+                      : "Description exposed to the agent."}
+                  </p>
                   <Textarea
                     id="sidebar-desc-input"
                     value={sidebarDescription}
                     onChange={handleDescriptionChange}
                     placeholder="Edit description..."
-                    className="h-24"
+                    className="h-20"
                     data-testid="input_update_description"
                   />
-                  <div className="text-xs text-muted-foreground">
-                    {isAction
-                      ? "This is the description for the tool exposed to a client."
-                      : "This is the description for the tool exposed to the agents."}
-                  </div>
                 </div>
+                {!isAction && (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <div className="flex flex-col gap-0.5">
+                        <label
+                          className="text-sm font-medium"
+                          htmlFor="sidebar-return-direct-toggle"
+                        >
+                          Return Direct
+                        </label>
+                        <p className="text-xs text-muted-foreground">
+                          Bypass reasoning and output to user.
+                        </p>
+                      </div>
+                      <Switch
+                        id="sidebar-return-direct-toggle"
+                        checked={sidebarReturnDirect}
+                        onCheckedChange={handleReturnDirectChange}
+                        data-testid="toggle_return_direct"
+                      />
+                    </div>
+                  </>
+                )}
               </div>
             ) : (
               <div
@@ -429,61 +462,47 @@ export default function ToolsTable({
               </div>
             ))}
           {!isAction && actionArgs.length > 0 && <Separator />}
-          {focusedRow && (
-            <div className="flex h-full flex-col gap-4 p-2">
-              <SidebarGroup className="flex-1">
-                <SidebarGroupContent className="h-full">
-                  <div className="flex h-full flex-col gap-4">
-                    {actionArgs.length > 0 && (
-                      <div className="flex flex-col gap-1.5">
-                        <h3 className="text-base font-medium">Parameters</h3>
-                        <p className="text-mmd text-muted-foreground">
-                          Manage inputs for this tool
-                        </p>
-                      </div>
+          {focusedRow && actionArgs.length > 0 && (
+            <div className="flex flex-col gap-4 p-4">
+              <div className="flex flex-col gap-1.5">
+                <h3 className="text-base font-medium">Parameters</h3>
+                <p className="text-xs text-muted-foreground">
+                  Define which fields are available to the agent.
+                </p>
+              </div>
+              {actionArgs.map((field, index) => (
+                <div
+                  key={index}
+                  className="flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <label className="text-sm font-medium">
+                      {field.display_name}
+                    </label>
+                    {field.description && (
+                      <ShadTooltip content={field.description}>
+                        <div className="flex items-center hover:cursor-help">
+                          <ForwardedIconComponent
+                            name="info"
+                            className="h-3.5 w-3.5 text-muted-foreground"
+                            aria-hidden="true"
+                          />
+                        </div>
+                      </ShadTooltip>
                     )}
-                    {actionArgs.map((field, index) => (
-                      <div key={index} className="flex flex-col gap-2">
-                        <label className="flex text-sm font-medium">
-                          {field.display_name}
-                          {field.description && (
-                            <ShadTooltip content={field.description}>
-                              <div className="flex items-center text-sm font-medium hover:cursor-help">
-                                <ForwardedIconComponent
-                                  name="info"
-                                  className="ml-1.5 h-4 w-4 text-muted-foreground"
-                                  aria-hidden="true"
-                                />
-                              </div>
-                            </ShadTooltip>
-                          )}
-                        </label>
-                        <Input
-                          id="sidebar-desc-input"
-                          disabled
-                          placeholder="Input controlled by the agent"
-                          onChange={(e) => {}}
-                        />
-                      </div>
-                    ))}
                   </div>
-                </SidebarGroupContent>
-              </SidebarGroup>
+                  <Switch
+                    checked={!sidebarDisabledParams.includes(field.name)}
+                    onCheckedChange={(checked) =>
+                      handleParamToggle(field.name, checked)
+                    }
+                    data-testid={`toggle_param_${field.name}`}
+                  />
+                </div>
+              ))}
             </div>
           )}
         </SidebarContent>
-        <SidebarFooter>
-          <div className="flex justify-end w-full p-2">
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={handleClose}
-              data-testid="btn_close_tools_modal"
-            >
-              Close
-            </Button>
-          </div>
-        </SidebarFooter>
       </Sidebar>
     </>
   );

@@ -24,19 +24,17 @@ import EvaluationsMainContent from "./components/EvaluationsMainContent";
 import LogsMainContent from "./components/LogsMainContent";
 import MemoriesMainContent from "./components/MemoriesMainContent";
 import MessagesMainContent from "./components/MessagesMainContent";
-
-type LogsTab = "logs" | "traces";
+import TracesMainContent from "./components/TracesMainContent";
 
 /**
- * Wrapper component that conditionally renders Page, LogsMainContent, or MessagesMainContent
+ * Wrapper component that conditionally renders Page, LogsMainContent, TracesMainContent,
+ * MessagesMainContent, EvaluationsMainContent, or MemoriesMainContent
  * based on the active sidebar section
  */
 function FlowMainContent({
   view,
   setIsLoading,
   selectedSessionId,
-  logsActiveTab,
-  onLogsTabChange,
   selectedRunId,
   onSelectRun,
   selectedTraceId,
@@ -47,8 +45,6 @@ function FlowMainContent({
   view?: boolean;
   setIsLoading: (isLoading: boolean) => void;
   selectedSessionId: string | null;
-  logsActiveTab: LogsTab;
-  onLogsTabChange: (tab: LogsTab) => void;
   selectedRunId: string | null;
   onSelectRun: (runId: string | null) => void;
   selectedTraceId: string | null;
@@ -64,12 +60,20 @@ function FlowMainContent({
       <main className="flex w-full overflow-hidden">
         <div className="h-full w-full">
           <LogsMainContent
-            activeTab={logsActiveTab}
-            onTabChange={onLogsTabChange}
             selectedRunId={selectedRunId}
             onSelectRun={onSelectRun}
-            selectedTraceId={selectedTraceId}
           />
+        </div>
+      </main>
+    );
+  }
+
+  // Show traces main content when traces section is active
+  if (ENABLE_NEW_SIDEBAR && activeSection === "traces") {
+    return (
+      <main className="flex w-full overflow-hidden">
+        <div className="h-full w-full">
+          <TracesMainContent selectedTraceId={selectedTraceId} />
         </div>
       </main>
     );
@@ -264,8 +268,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const isMobile = useIsMobile();
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
 
-  // Logs state - lifted up for coordination between sidebar and main content
-  const [logsActiveTab, setLogsActiveTab] = useState<LogsTab>("logs");
+  // Logs state
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [selectedTraceId, setSelectedTraceId] = useState<string | null>(null);
 
@@ -291,8 +294,6 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
                     isLoading={isLoading}
                     selectedSessionId={selectedSessionId}
                     onSelectSession={setSelectedSessionId}
-                    logsActiveTab={logsActiveTab}
-                    onLogsTabChange={setLogsActiveTab}
                     selectedRunId={selectedRunId}
                     onSelectRun={setSelectedRunId}
                     selectedTraceId={selectedTraceId}
@@ -307,8 +308,6 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
                   view={view}
                   setIsLoading={setIsLoading}
                   selectedSessionId={selectedSessionId}
-                  logsActiveTab={logsActiveTab}
-                  onLogsTabChange={setLogsActiveTab}
                   selectedRunId={selectedRunId}
                   onSelectRun={setSelectedRunId}
                   selectedTraceId={selectedTraceId}

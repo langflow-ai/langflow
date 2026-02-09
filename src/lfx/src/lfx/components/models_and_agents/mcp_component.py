@@ -96,6 +96,7 @@ class MCPToolsComponent(ComponentWithCache):
     documentation: str = "https://docs.langflow.org/mcp-tools"
     icon = "Mcp"
     name = "MCPTools"
+    tool_mode = True
 
     inputs = [
         McpInput(

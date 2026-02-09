@@ -10,14 +10,17 @@ jest.mock("../../../common/animatedNumbers", () => ({
   ),
 }));
 
-// Mock Loading component
-jest.mock("../../../ui/loading", () => ({
+// Mock IconComponent (used for Loader2 spinner)
+jest.mock("../../../common/genericIconComponent", () => ({
   __esModule: true,
-  default: ({ className }: any) => (
-    <div data-testid="loading-spinner" className={className}>
-      Loading...
-    </div>
-  ),
+  default: ({ name, className }: any) =>
+    name === "Loader2" ? (
+      <div data-testid="loading-spinner" className={className}>
+        Loading...
+      </div>
+    ) : (
+      <div data-testid={`icon-${name}`} className={className} />
+    ),
 }));
 
 describe("DurationDisplay", () => {

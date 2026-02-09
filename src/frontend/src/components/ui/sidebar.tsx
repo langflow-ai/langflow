@@ -31,6 +31,7 @@ export type SidebarSection =
   | "mcp"
   | "add_note"
   | "logs"
+  | "traces"
   | "messages"
   | "evaluations"
   | "memories";

@@ -1,5 +1,7 @@
+import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import IconComponent from "@/components/common/genericIconComponent";
+import { useTypesStore } from "@/stores/typesStore";
 import { cn } from "@/utils/utils";
 import type { Span, SpanType } from "./types";
 
@@ -13,9 +15,9 @@ interface SpanNodeProps {
 }
 
 /**
- * Get the icon name for each span type
+ * Get the fallback icon name for each span type
  */
-function getSpanIcon(type: SpanType): string {
+function getSpanTypeIcon(type: SpanType): string {
   const iconMap: Record<SpanType, string> = {
     agent: "Bot",
     chain: "Link",
@@ -26,6 +28,24 @@ function getSpanIcon(type: SpanType): string {
     parser: "FileText",
   };
   return iconMap[type] || "Circle";
+}
+
+/**
+ * Hook to build a lookup from component display_name to its icon
+ */
+function useComponentIconMap(): Record<string, string> {
+  const data = useTypesStore((state) => state.data);
+  return useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const category of Object.values(data)) {
+      for (const component of Object.values(category)) {
+        if (component.display_name && component.icon) {
+          map[component.display_name] = component.icon;
+        }
+      }
+    }
+    return map;
+  }, [data]);
 }
 
 /**
@@ -77,6 +97,10 @@ export function SpanNode({
 }: SpanNodeProps) {
   const hasChildren = span.children.length > 0;
   const tokenStr = formatTokens(span.tokenUsage?.totalTokens);
+  const iconMap = useComponentIconMap();
+
+  // Use component icon if available, otherwise fall back to span type icon
+  const iconName = iconMap[span.name] || getSpanTypeIcon(span.type);
 
   return (
     <div
@@ -111,7 +135,7 @@ export function SpanNode({
         />
       </button>
 
-      {/* Span type icon */}
+      {/* Span icon — uses component icon when available */}
       <div
         className={cn(
           "flex h-5 w-5 items-center justify-center rounded",
@@ -120,7 +144,7 @@ export function SpanNode({
           span.status === "running" && "text-muted-foreground",
         )}
       >
-        <IconComponent name={getSpanIcon(span.type)} className="h-4 w-4" />
+        <IconComponent name={iconName} className="h-4 w-4" />
       </div>
 
       {/* Span name */}

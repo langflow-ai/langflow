@@ -21,8 +21,7 @@ export default function TimeoutErrorComponent({
         <BaseModal.Content>
           <div role="status" className="m-auto flex flex-col items-center">
             <Loading className={`h-16 w-16`} />
-            <br></br>
-            <span className="text-lg text-primary">{message}</span>
+            <span className="mt-2 text-lg text-primary">{message}</span>
             <span className="text-center text-lg text-primary">
               {description}
             </span>
