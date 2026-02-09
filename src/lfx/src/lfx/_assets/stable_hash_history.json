@@ -6,42 +6,42 @@
   },
   "AddContentToPage": {
     "versions": {
-      "0.3.0": "ffcd44201c09"
+      "0.3.0": "bd55241da847"
     }
   },
   "NotionPageCreator": {
     "versions": {
-      "0.3.0": "640438ed3d7b"
+      "0.3.0": "31d9c58f9362"
     }
   },
   "NotionDatabaseProperties": {
     "versions": {
-      "0.3.0": "adce99660f9e"
+      "0.3.0": "83b11f251e20"
     }
   },
   "NotionListPages": {
     "versions": {
-      "0.3.0": "373f9ad32937"
+      "0.3.0": "1d82c403b3ad"
     }
   },
   "NotionUserList": {
     "versions": {
-      "0.3.0": "8966397da1d5"
+      "0.3.0": "7f03aedc507d"
     }
   },
   "NotionPageContent": {
     "versions": {
-      "0.3.0": "ba15d6a01d04"
+      "0.3.0": "759c5b3cc969"
     }
   },
   "NotionSearch": {
     "versions": {
-      "0.3.0": "793b8818a3b4"
+      "0.3.0": "5cfaba329803"
     }
   },
   "NotionPageUpdate": {
     "versions": {
-      "0.3.0": "32ccdf34df73"
+      "0.3.0": "72aaad0ea8e7"
     }
   },
   "AgentQL": {
@@ -566,7 +566,7 @@
   },
   "Cuga": {
     "versions": {
-      "0.3.0": "35e838f89d13"
+      "0.3.0": "e8176c866e13"
     }
   },
   "CustomComponent": {
@@ -891,7 +891,7 @@
   },
   "Google Generative AI Embeddings": {
     "versions": {
-      "0.3.0": "7756ad70a221"
+      "0.3.0": "2501da3c221c"
     }
   },
   "GoogleOAuthToken": {
@@ -916,12 +916,12 @@
   },
   "HomeAssistantControl": {
     "versions": {
-      "0.3.0": "32b34baf3c7d"
+      "0.3.0": "9cdd3b449d6c"
     }
   },
   "ListHomeAssistantStates": {
     "versions": {
-      "0.3.0": "c7bb91632474"
+      "0.3.0": "b292d5203342"
     }
   },
   "HuggingFaceModel": {
@@ -1036,7 +1036,7 @@
   },
   "ConversationChain": {
     "versions": {
-      "0.3.0": "b0e4044d3f08"
+      "0.3.0": "65092d15af00"
     }
   },
   "CSVAgent": {
@@ -1056,7 +1056,7 @@
   },
   "JsonAgent": {
     "versions": {
-      "0.3.0": "117a41e142c6"
+      "0.3.0": "79b0a76358b4"
     }
   },
   "LangChain Hub Prompt": {
@@ -1071,17 +1071,17 @@
   },
   "SemanticTextSplitter": {
     "versions": {
-      "0.3.0": "e9178757dea0"
+      "0.3.0": "11b3a0afc7ca"
     }
   },
   "LLMCheckerChain": {
     "versions": {
-      "0.3.0": "81aa2c9910db"
+      "0.3.0": "c1a266d9c00b"
     }
   },
   "LLMMathChain": {
     "versions": {
-      "0.3.0": "422d8e0d4614"
+      "0.3.0": "56566b670677"
     }
   },
   "NaturalLanguageTextSplitter": {
@@ -1091,12 +1091,12 @@
   },
   "OpenAIToolsAgent": {
     "versions": {
-      "0.3.0": "b2ad248a3e6c"
+      "0.3.0": "ee6e566f86aa"
     }
   },
   "OpenAPIAgent": {
     "versions": {
-      "0.3.0": "3b817f0cd966"
+      "0.3.0": "43ed743d2103"
     }
   },
   "RecursiveCharacterTextSplitter": {
@@ -1106,17 +1106,17 @@
   },
   "RetrievalQA": {
     "versions": {
-      "0.3.0": "16c80b234abf"
+      "0.3.0": "af87f17d5b17"
     }
   },
   "RunnableExecutor": {
     "versions": {
-      "0.3.0": "32135f41efe5"
+      "0.3.0": "4bd833706499"
     }
   },
   "SelfQueryRetriever": {
     "versions": {
-      "0.3.0": "a18169f36371"
+      "0.3.0": "4384ff47fa44"
     }
   },
   "SpiderTool": {
@@ -1126,7 +1126,7 @@
   },
   "SQLAgent": {
     "versions": {
-      "0.3.0": "8d02598705fc"
+      "0.3.0": "2268074a89c4"
     }
   },
   "SQLDatabase": {
@@ -1136,27 +1136,27 @@
   },
   "SQLGenerator": {
     "versions": {
-      "0.3.0": "971a82407ec6"
+      "0.3.0": "e4bef68d3704"
     }
   },
   "ToolCallingAgent": {
     "versions": {
-      "0.3.0": "a5afe724de9c"
+      "0.3.0": "c98a52dbb2a3"
     }
   },
   "VectorStoreInfo": {
     "versions": {
-      "0.3.0": "62f06efeec2c"
+      "0.3.0": "e6cb937c21a1"
     }
   },
   "VectorStoreRouterAgent": {
     "versions": {
-      "0.3.0": "b16515f6e722"
+      "0.3.0": "b85860c29b3e"
     }
   },
   "XMLAgent": {
     "versions": {
-      "0.3.0": "338332984901"
+      "0.3.0": "8b5819863c31"
     }
   },
   "LangWatchEvaluator": {
@@ -1541,7 +1541,7 @@
   },
   "CalculatorTool": {
     "versions": {
-      "0.3.0": "30008a17eb27"
+      "0.3.0": "ce5b7bf595b4"
     }
   },
   "GoogleSearchAPI": {
@@ -1551,37 +1551,37 @@
   },
   "GoogleSerperAPI": {
     "versions": {
-      "0.3.0": "f51b15d26440"
+      "0.3.0": "1e549f2c5530"
     }
   },
   "PythonCodeStructuredTool": {
     "versions": {
-      "0.3.0": "99f294af525b"
+      "0.3.0": "8e4d6bb83f5d"
     }
   },
   "PythonREPLTool": {
     "versions": {
-      "0.3.0": "695ab612478d"
+      "0.3.0": "e5c7a6652f73"
     }
   },
   "SearchAPI": {
     "versions": {
-      "0.3.0": "4a9c8b914b68"
+      "0.3.0": "6d59a95b738c"
     }
   },
   "SearXNGTool": {
     "versions": {
-      "0.3.0": "154e292dad2b"
+      "0.3.0": "c2ae073e01d1"
     }
   },
   "SerpAPI": {
     "versions": {
-      "0.3.0": "882d7b35a9d7"
+      "0.3.0": "98e7102c5b0a"
     }
   },
   "TavilyAISearch": {
     "versions": {
-      "0.3.0": "70b5611e8fd6"
+      "0.3.0": "5e017bc777a3"
     }
   },
   "WikidataAPI": {
@@ -1596,7 +1596,7 @@
   },
   "YahooFinanceTool": {
     "versions": {
-      "0.3.0": "fda358f6395e"
+      "0.3.0": "a6131300c905"
     }
   },
   "ConvertAstraToTwelveLabs": {
