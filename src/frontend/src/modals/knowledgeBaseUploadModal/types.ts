@@ -8,6 +8,9 @@ export interface KnowledgeBaseUploadModalProps {
     name: string;
     embeddingProvider?: string;
     embeddingModel?: string;
+    chunkSize?: number;
+    chunkOverlap?: number;
+    separator?: string;
   };
 }
 
@@ -15,9 +18,9 @@ export interface KnowledgeBaseFormData {
   sourceName: string;
   files: File[];
   embeddingModel: ModelOption[] | null;
-  chunkSize: number;
-  chunkOverlap: number;
-  separator: string;
+  chunkSize?: number;
+  chunkOverlap?: number;
+  separator?: string;
 }
 
 export interface ChunkPreview {

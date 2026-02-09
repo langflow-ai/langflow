@@ -100,6 +100,15 @@ export function useKnowledgeBaseForm({
           setSelectedEmbeddingModel([matchingModel]);
         }
       }
+      if (existingKnowledgeBase.chunkSize !== undefined) {
+        setChunkSize(existingKnowledgeBase.chunkSize);
+      }
+      if (existingKnowledgeBase.chunkOverlap !== undefined) {
+        setChunkOverlap(existingKnowledgeBase.chunkOverlap);
+      }
+      if (existingKnowledgeBase.separator !== undefined) {
+        setSeparator(existingKnowledgeBase.separator);
+      }
     }
   }, [existingKnowledgeBase, open, embeddingModelOptions]);
 
@@ -229,7 +238,25 @@ export function useKnowledgeBaseForm({
         });
       }
 
-      // Upload and ingest files
+      // Simple mode: only name + embedding model, no files or chunk params
+      if (!showAdvanced) {
+        const callbackData: KnowledgeBaseFormData = {
+          sourceName,
+          files: [],
+          embeddingModel: selectedEmbeddingModel,
+        };
+
+        setSuccessData({
+          title: `Knowledge base "${sourceName}" created! You can add files later.`,
+        });
+
+        onSubmit?.(callbackData);
+        setOpen(false);
+        resetForm();
+        return;
+      }
+
+      // Advanced mode: upload and ingest files with chunk params
       let ingestResult: { chunks_created?: number } | null = null;
       if (files.length > 0) {
         try {

@@ -427,7 +427,7 @@ export default function ModelInputComponent({
     <CommandList className="max-h-[300px] overflow-y-auto">
       <CommandItem
         disabled
-        className="w-full px-4 py-2 text-[13px] text-muted-foreground"
+        className="w-full px-4 py-2 text-xs text-muted-foreground"
       >
         No Models Enabled
       </CommandItem>
