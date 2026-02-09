@@ -104,6 +104,26 @@ class TestParseReferences:
         assert refs[0].node_slug == "A"
         assert refs[1].node_slug == "B"
 
+    def test_parse_called_twice_consecutively(self):
+        """Calling parse_references twice should produce correct results both times."""
+        text = "@A.x"
+        refs1 = parse_references(text)
+        refs2 = parse_references(text)
+        assert len(refs1) == 1
+        assert len(refs2) == 1
+        assert refs1[0].node_slug == "A"
+        assert refs2[0].node_slug == "A"
+
+    def test_parse_direct_array_index_after_output(self):
+        """Array index directly after output name should be parsed correctly."""
+        text = "@Node.output[0]"
+        refs = parse_references(text)
+        assert len(refs) == 1
+        assert refs[0].node_slug == "Node"
+        assert refs[0].output_name == "output"
+        assert refs[0].dot_path == "[0]"
+        assert refs[0].full_path == "@Node.output[0]"
+
 
 class TestReferenceFullPath:
     def test_full_path_simple(self):
@@ -117,3 +137,16 @@ class TestReferenceFullPath:
     def test_full_path_with_array_index(self):
         ref = Reference(node_slug="Node", output_name="output", dot_path="items[0]")
         assert ref.full_path == "@Node.output.items[0]"
+
+    def test_full_path_with_direct_array_index(self):
+        """dot_path starting with '[' should not insert an extra dot."""
+        ref = Reference(node_slug="Node", output_name="output", dot_path="[0]")
+        assert ref.full_path == "@Node.output[0]"
+
+    def test_full_path_with_direct_array_then_dot(self):
+        ref = Reference(node_slug="Node", output_name="output", dot_path="[0].name")
+        assert ref.full_path == "@Node.output[0].name"
+
+    def test_full_path_with_multiple_array_indices(self):
+        ref = Reference(node_slug="Node", output_name="output", dot_path="[0][1]")
+        assert ref.full_path == "@Node.output[0][1]"

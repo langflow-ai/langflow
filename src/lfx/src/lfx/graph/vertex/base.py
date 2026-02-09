@@ -42,8 +42,9 @@ if TYPE_CHECKING:
 def generate_reference_slug(display_name: str) -> str:
     """Generate a reference slug from a display name.
 
-    Converts "HTTP Request" to "HttpRequest", removing spaces and special chars.
-    Note: Uses title case normalization, so acronyms become title-cased.
+    Converts "Chat Input" to "ChatInput", preserving existing case.
+    Only capitalizes the first letter of each word; acronyms like "HTTP", "API"
+    stay uppercase (e.g. "HTTP Request" → "HTTPRequest").
 
     Args:
         display_name: The display name to convert
@@ -54,8 +55,11 @@ def generate_reference_slug(display_name: str) -> str:
     if not display_name:
         return "Node"
 
-    # Remove all non-alphanumeric characters and capitalize each word
-    slug = re.sub(r"[^a-zA-Z0-9]", "", display_name.title().replace(" ", ""))
+    # Split on whitespace, capitalize first letter of each word (preserve rest)
+    words = display_name.split()
+    slug = "".join(word[0].upper() + word[1:] for word in words if word)
+    # Remove all non-alphanumeric characters
+    slug = re.sub(r"[^a-zA-Z0-9]", "", slug)
 
     return slug if slug else "Node"
 

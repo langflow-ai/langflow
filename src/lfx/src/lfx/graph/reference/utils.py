@@ -19,10 +19,14 @@ def traverse_dot_path(data: Any, path: str) -> Any:
         path: Dot-separated path with optional array indices
 
     Returns:
-        The value at the path, or None if not found
+        The value at the path
+
+    Raises:
+        ValueError: If the path cannot be traversed (missing key, index out of range, etc.)
     """
     if data is None:
-        return None
+        msg = f"Cannot traverse path '{path}' on None value"
+        raise ValueError(msg)
 
     if not path:
         return data
@@ -56,7 +60,8 @@ def traverse_dot_path(data: Any, path: str) -> Any:
     result = data
     for segment in segments:
         if result is None:
-            return None
+            msg = f"Cannot traverse '{segment}' on None value (remaining path: '{path}')"
+            raise ValueError(msg)
 
         # Check if this is an array index
         index_match = ARRAY_INDEX_PATTERN.match(segment)
@@ -65,14 +70,23 @@ def traverse_dot_path(data: Any, path: str) -> Any:
             if isinstance(result, (list, tuple)) and 0 <= index < len(result):
                 result = result[index]
             else:
-                return None
+                length = len(result) if isinstance(result, (list, tuple)) else "N/A"
+                msg = f"Index {index} out of range for {type(result).__name__} (length {length}) at path '{path}'"
+                raise ValueError(msg)
         elif isinstance(result, dict):
-            result = result.get(segment)
+            if segment not in result:
+                msg = f"Key '{segment}' not found in dict (available keys: {list(result.keys())}) at path '{path}'"
+                raise ValueError(msg)
+            result = result[segment]
         else:
             # Reject private/dunder attributes for security
             if segment.startswith("_"):
-                return None
+                msg = f"Access to private attribute '{segment}' is not allowed at path '{path}'"
+                raise ValueError(msg)
             # Try attribute access as fallback
-            result = getattr(result, segment, None)
+            if not hasattr(result, segment):
+                msg = f"Attribute '{segment}' not found on {type(result).__name__} at path '{path}'"
+                raise ValueError(msg)
+            result = getattr(result, segment)
 
     return result

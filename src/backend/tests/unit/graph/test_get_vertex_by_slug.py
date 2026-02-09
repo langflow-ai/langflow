@@ -79,8 +79,8 @@ def test_build_slug_index_handles_duplicates():
     assert mock_vertex1.reference_slug != mock_vertex2.reference_slug
     # One should be the base slug, the other should have a suffix
     slugs = {mock_vertex1.reference_slug, mock_vertex2.reference_slug}
-    assert "HttpRequest" in slugs
-    assert "HttpRequest_1" in slugs
+    assert "HTTPRequest" in slugs
+    assert "HTTPRequest_1" in slugs
 
 
 def test_get_vertex_by_slug_builds_index_if_missing():

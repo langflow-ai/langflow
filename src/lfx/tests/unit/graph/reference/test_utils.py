@@ -1,4 +1,5 @@
 # src/lfx/tests/unit/graph/reference/test_utils.py
+import pytest
 from lfx.graph.reference.utils import traverse_dot_path
 
 
@@ -26,16 +27,16 @@ def test_traverse_nested_array():
     assert result == "Jane"
 
 
-def test_traverse_missing_key_returns_none():
+def test_traverse_missing_key_raises():
     data = {"name": "John"}
-    result = traverse_dot_path(data, "age")
-    assert result is None
+    with pytest.raises(ValueError, match="Key 'age' not found in dict"):
+        traverse_dot_path(data, "age")
 
 
-def test_traverse_invalid_index_returns_none():
+def test_traverse_invalid_index_raises():
     data = {"items": ["a", "b"]}
-    result = traverse_dot_path(data, "items[10]")
-    assert result is None
+    with pytest.raises(ValueError, match="Index 10 out of range"):
+        traverse_dot_path(data, "items[10]")
 
 
 def test_traverse_empty_path():
@@ -44,9 +45,9 @@ def test_traverse_empty_path():
     assert result == data
 
 
-def test_traverse_none_data():
-    result = traverse_dot_path(None, "name")
-    assert result is None
+def test_traverse_none_data_raises():
+    with pytest.raises(ValueError, match="Cannot traverse path 'name' on None value"):
+        traverse_dot_path(None, "name")
 
 
 def test_traverse_deeply_nested():
@@ -62,11 +63,10 @@ def test_traverse_rejects_dunder_attributes():
         name = "test"
 
     obj = TestObj()
-    # Should return None for dunder attributes
-    result = traverse_dot_path(obj, "__class__")
-    assert result is None
-    result = traverse_dot_path(obj, "__dict__")
-    assert result is None
+    with pytest.raises(ValueError, match="private attribute"):
+        traverse_dot_path(obj, "__class__")
+    with pytest.raises(ValueError, match="private attribute"):
+        traverse_dot_path(obj, "__dict__")
 
 
 def test_traverse_rejects_private_attributes():
@@ -81,8 +81,8 @@ def test_traverse_rejects_private_attributes():
     result = traverse_dot_path(obj, "name")
     assert result == "public"
     # Private attribute is blocked
-    result = traverse_dot_path(obj, "_secret")
-    assert result is None
+    with pytest.raises(ValueError, match="private attribute"):
+        traverse_dot_path(obj, "_secret")
 
 
 def test_traverse_allows_underscore_in_dict_keys():
@@ -92,3 +92,28 @@ def test_traverse_allows_underscore_in_dict_keys():
     assert result == "value"
     result = traverse_dot_path(data, "__dunder_key__")
     assert result == "value2"
+
+
+def test_traverse_none_intermediate_raises():
+    """Traversing through an intermediate None value should raise."""
+    data = {"user": None}
+    with pytest.raises(ValueError, match="Cannot traverse 'name' on None value"):
+        traverse_dot_path(data, "user.name")
+
+
+def test_traverse_index_on_non_list_raises():
+    """Array index on a non-list should raise."""
+    data = {"value": "not a list"}
+    with pytest.raises(ValueError, match="Index 0 out of range"):
+        traverse_dot_path(data, "value[0]")
+
+
+def test_traverse_attribute_not_found_raises():
+    """Accessing a missing attribute on an object should raise."""
+
+    class TestObj:
+        name = "test"
+
+    obj = TestObj()
+    with pytest.raises(ValueError, match="Attribute 'missing' not found"):
+        traverse_dot_path(obj, "missing")
