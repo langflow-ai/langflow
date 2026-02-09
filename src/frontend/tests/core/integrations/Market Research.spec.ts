@@ -47,7 +47,6 @@ withEventDeliveryModes(
 
     await unselectNodes(page);
 
-
     await page
       .getByTestId("handle-parsercomponent-shownode-data or dataframe-left")
       .click();
