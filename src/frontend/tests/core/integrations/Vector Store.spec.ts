@@ -4,6 +4,7 @@ import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
+import { disableInspectionPanel } from "../../utils/disable-inspection-panel";
 
 // Add this line to declare Node.js global variables
 declare const process: any;
@@ -21,6 +22,8 @@ withEventDeliveryModes(
       !process?.env?.ASTRA_DB_APPLICATION_TOKEN,
       "ASTRA_DB_APPLICATION_TOKEN required to run this test",
     );
+
+
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
@@ -33,6 +36,8 @@ withEventDeliveryModes(
     });
 
     await initialGPTsetup(page);
+
+    await disableInspectionPanel(page);
 
     await page.waitForSelector('[data-testid="title-Astra DB"]', {
       timeout: 3000,

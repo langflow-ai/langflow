@@ -7,6 +7,7 @@ import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { waitForOpenModalWithChatInput } from "../../utils/wait-for-open-modal";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 import { unselectNodes } from "../../utils/unselect-nodes";
+import { disableInspectionPanel } from "../../utils/disable-inspection-panel";
 
 withEventDeliveryModes(
   "Market Research",
@@ -36,6 +37,9 @@ withEventDeliveryModes(
     });
 
     await initialGPTsetup(page);
+
+        await disableInspectionPanel(page);
+    
 
     await page.getByTestId("popover-anchor-input-api_key").fill(
       process.env.TAVILY_API_KEY || "",
