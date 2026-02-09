@@ -16,6 +16,12 @@ import type { ParsedReference } from "@/types/references";
  */
 export const REFERENCE_PATTERN = /(?<!\w)@(\w+)\.(\w+)((?:\.\w+|\[\d+\])*)/g;
 
+/** Reserved slug for global variable references (@Vars.variable_name). */
+export const VARS_SLUG = "Vars";
+
+/** Slugs reserved by the system — never assigned to real nodes. */
+export const RESERVED_SLUGS: readonly string[] = [VARS_SLUG];
+
 /**
  * Parse all @references from a text string.
  *
@@ -78,7 +84,7 @@ export function parseReferences(text: string): ParsedReference[] {
  *
  * @example
  * ```ts
- * generateBaseSlug("HTTP Request") // "HttpRequest"
+ * generateBaseSlug("HTTP Request") // "HTTPRequest"
  * generateBaseSlug("Chat Input") // "ChatInput"
  * generateBaseSlug("") // "Node"
  * ```
@@ -91,4 +97,23 @@ export function generateBaseSlug(displayName: string): string {
       .join("")
       .replace(/[^a-zA-Z0-9]/g, "") || "Node"
   );
+}
+
+/**
+ * Return a unique slug by appending _1, _2, etc. if baseSlug already exists.
+ *
+ * @param baseSlug - The desired slug before deduplication
+ * @param existingSlugs - Array of slugs already in use
+ * @returns A slug guaranteed to not collide with existingSlugs
+ */
+export function deduplicateSlug(
+  baseSlug: string,
+  existingSlugs: string[],
+): string {
+  if (!existingSlugs.includes(baseSlug)) return baseSlug;
+  let counter = 1;
+  while (existingSlugs.includes(`${baseSlug}_${counter}`)) {
+    counter++;
+  }
+  return `${baseSlug}_${counter}`;
 }

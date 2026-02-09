@@ -1,4 +1,11 @@
-import { parseReferences, REFERENCE_PATTERN } from "../referenceParser";
+import {
+  deduplicateSlug,
+  generateBaseSlug,
+  parseReferences,
+  REFERENCE_PATTERN,
+  RESERVED_SLUGS,
+  VARS_SLUG,
+} from "../referenceParser";
 
 describe("referenceParser", () => {
   describe("parseReferences", () => {
@@ -214,6 +221,116 @@ describe("referenceParser", () => {
       const refs = parseReferences("Hello ${@User.name}!");
       expect(refs).toHaveLength(1);
       expect(refs[0].nodeSlug).toBe("User");
+    });
+
+    it("should produce stable results when called consecutively", () => {
+      const text = "@A.x @B.y";
+      const refs1 = parseReferences(text);
+      const refs2 = parseReferences(text);
+      expect(refs1).toHaveLength(2);
+      expect(refs2).toHaveLength(2);
+      expect(refs1[0].nodeSlug).toBe("A");
+      expect(refs2[0].nodeSlug).toBe("A");
+    });
+  });
+
+  describe("generateBaseSlug", () => {
+    it("should convert display name to PascalCase slug", () => {
+      expect(generateBaseSlug("Chat Input")).toBe("ChatInput");
+    });
+
+    it("should handle single word", () => {
+      expect(generateBaseSlug("Agent")).toBe("Agent");
+    });
+
+    it("should remove non-alphanumeric characters", () => {
+      expect(generateBaseSlug("API (v2)")).toBe("APIv2");
+    });
+
+    it("should capitalize first letter of each word", () => {
+      expect(generateBaseSlug("http request")).toBe("HttpRequest");
+    });
+
+    it("should return Node for empty string", () => {
+      expect(generateBaseSlug("")).toBe("Node");
+    });
+
+    it("should handle leading/trailing whitespace", () => {
+      expect(generateBaseSlug("  Chat Input  ")).toBe("ChatInput");
+    });
+
+    it("should handle multiple consecutive spaces", () => {
+      expect(generateBaseSlug("Chat   Input")).toBe("ChatInput");
+    });
+
+    it("should preserve existing uppercase in non-first position", () => {
+      expect(generateBaseSlug("OpenAI LLM")).toBe("OpenAILLM");
+    });
+  });
+
+  describe("deduplicateSlug", () => {
+    it("should return baseSlug when no collision", () => {
+      expect(deduplicateSlug("ChatInput", [])).toBe("ChatInput");
+      expect(deduplicateSlug("ChatInput", ["Agent"])).toBe("ChatInput");
+    });
+
+    it("should append _1 on first collision", () => {
+      expect(deduplicateSlug("ChatInput", ["ChatInput"])).toBe("ChatInput_1");
+    });
+
+    it("should increment counter for sequential collisions", () => {
+      expect(deduplicateSlug("ChatInput", ["ChatInput", "ChatInput_1"])).toBe(
+        "ChatInput_2",
+      );
+    });
+
+    it("should fill gaps in numbering", () => {
+      expect(deduplicateSlug("ChatInput", ["ChatInput", "ChatInput_2"])).toBe(
+        "ChatInput_1",
+      );
+    });
+
+    it("should handle many collisions", () => {
+      const existing = ["Node", "Node_1", "Node_2", "Node_3", "Node_4"];
+      expect(deduplicateSlug("Node", existing)).toBe("Node_5");
+    });
+
+    it("should not collide with different base slugs", () => {
+      expect(deduplicateSlug("ChatInput", ["ChatOutput", "Agent"])).toBe(
+        "ChatInput",
+      );
+    });
+  });
+
+  describe("RESERVED_SLUGS and VARS_SLUG", () => {
+    it("should have Vars as the VARS_SLUG constant", () => {
+      expect(VARS_SLUG).toBe("Vars");
+    });
+
+    it("should include Vars in RESERVED_SLUGS", () => {
+      expect(RESERVED_SLUGS).toContain("Vars");
+    });
+
+    it("should prevent reserved slug from being used via deduplicateSlug", () => {
+      // When existing slugs include Vars, deduplicateSlug avoids it
+      const existing = [...RESERVED_SLUGS];
+      expect(existing).toContain("Vars");
+      expect(deduplicateSlug("Vars", existing)).toBe("Vars_1");
+    });
+
+    it("should parse @Vars.variable_name as a valid reference", () => {
+      const refs = parseReferences("@Vars.my_var");
+      expect(refs).toHaveLength(1);
+      expect(refs[0].nodeSlug).toBe("Vars");
+      expect(refs[0].outputName).toBe("my_var");
+    });
+
+    it("should parse @Vars.var alongside regular references", () => {
+      const refs = parseReferences("@ChatInput.message and @Vars.api_key");
+      expect(refs).toHaveLength(2);
+      expect(refs[0].nodeSlug).toBe("ChatInput");
+      expect(refs[1].nodeSlug).toBe("Vars");
+      expect(refs[1].outputName).toBe("api_key");
     });
   });
 });

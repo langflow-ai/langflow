@@ -1,5 +1,7 @@
 import type { Edge, Node } from "@xyflow/react";
+import type { GlobalVariable } from "@/types/global_variables";
 import type { UpstreamOutput } from "@/types/references";
+import { VARS_SLUG } from "@/utils/referenceParser";
 
 /**
  * Output types that can be meaningfully referenced as text content.
@@ -53,7 +55,8 @@ function isReferenceableType(type: string): boolean {
  * @param nodes - All nodes in the flow
  * @param edges - All edges in the flow
  * @param slugs - Map of node IDs to their reference slugs (e.g., "ChatInput", "TextSplitter")
- * @returns Array of upstream outputs that can be referenced using @NodeSlug.outputName syntax
+ * @param globalVariables - Optional array of global variables to include as virtual outputs under the "Vars" slug
+ * @returns Array of upstream outputs that can be referenced using @NodeSlug.outputName syntax, plus any global variables
  *
  * @example
  * ```ts
@@ -67,6 +70,7 @@ export function getUpstreamOutputs(
   nodes: Node[],
   edges: Edge[],
   slugs: Record<string, string>,
+  globalVariables?: GlobalVariable[],
 ): UpstreamOutput[] {
   const outputs: UpstreamOutput[] = [];
   const visited = new Set<string>();
@@ -127,6 +131,21 @@ export function getUpstreamOutputs(
         outputName: output.name,
         outputDisplayName: output.display_name || output.name,
         outputType,
+      });
+    }
+  }
+
+  // Append global variables as virtual outputs under the "Vars" slug
+  if (globalVariables) {
+    for (const gv of globalVariables) {
+      if (gv.type !== "Generic") continue;
+      outputs.push({
+        nodeId: "__vars__",
+        nodeSlug: VARS_SLUG,
+        nodeName: "Global Variables",
+        outputName: gv.name,
+        outputDisplayName: gv.name,
+        outputType: "str",
       });
     }
   }

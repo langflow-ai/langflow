@@ -1,5 +1,7 @@
-import type { Node, Edge } from "@xyflow/react";
+import type { Edge, Node } from "@xyflow/react";
+import type { GlobalVariable } from "@/types/global_variables";
 import { getUpstreamOutputs } from "../getUpstreamOutputs";
+import { VARS_SLUG } from "../referenceParser";
 
 describe("getUpstreamOutputs", () => {
   const createNode = (
@@ -278,6 +280,91 @@ describe("getUpstreamOutputs", () => {
 
       const outputs = getUpstreamOutputs("node2", nodes, edges, slugs);
       expect(outputs).toHaveLength(0);
+    });
+  });
+
+  describe("global variables", () => {
+    const makeGlobalVar = (
+      name: string,
+      type: "Generic" | "Credential" = "Generic",
+    ): GlobalVariable => ({
+      id: `gv-${name}`,
+      type,
+      default_fields: [],
+      name,
+    });
+
+    it("should include Generic global variables under Vars slug", () => {
+      const nodes = [createNode("node1", "Output", [])];
+      const slugs = { node1: "Output" };
+      const globalVars = [makeGlobalVar("api_key"), makeGlobalVar("model")];
+
+      const outputs = getUpstreamOutputs("node1", nodes, [], slugs, globalVars);
+      const varsOutputs = outputs.filter((o) => o.nodeSlug === VARS_SLUG);
+      expect(varsOutputs).toHaveLength(2);
+      expect(varsOutputs[0]).toEqual({
+        nodeId: "__vars__",
+        nodeSlug: VARS_SLUG,
+        nodeName: "Global Variables",
+        outputName: "api_key",
+        outputDisplayName: "api_key",
+        outputType: "str",
+      });
+    });
+
+    it("should exclude Credential type global variables", () => {
+      const nodes = [createNode("node1", "Output", [])];
+      const slugs = { node1: "Output" };
+      const globalVars = [
+        makeGlobalVar("api_key", "Generic"),
+        makeGlobalVar("secret", "Credential"),
+      ];
+
+      const outputs = getUpstreamOutputs("node1", nodes, [], slugs, globalVars);
+      const varsOutputs = outputs.filter((o) => o.nodeSlug === VARS_SLUG);
+      expect(varsOutputs).toHaveLength(1);
+      expect(varsOutputs[0].outputName).toBe("api_key");
+    });
+
+    it("should return no Vars outputs when globalVariables is undefined", () => {
+      const nodes = [createNode("node1", "Output", [])];
+      const slugs = { node1: "Output" };
+
+      const outputs = getUpstreamOutputs("node1", nodes, [], slugs);
+      const varsOutputs = outputs.filter((o) => o.nodeSlug === VARS_SLUG);
+      expect(varsOutputs).toHaveLength(0);
+    });
+
+    it("should return no Vars outputs when globalVariables is empty", () => {
+      const nodes = [createNode("node1", "Output", [])];
+      const slugs = { node1: "Output" };
+
+      const outputs = getUpstreamOutputs("node1", nodes, [], slugs, []);
+      const varsOutputs = outputs.filter((o) => o.nodeSlug === VARS_SLUG);
+      expect(varsOutputs).toHaveLength(0);
+    });
+
+    it("should combine upstream node outputs with global variables", () => {
+      const nodes = [
+        createNode("node1", "Chat Input", [
+          { name: "message", types: ["Message"] },
+        ]),
+        createNode("node2", "Prompt", []),
+      ];
+      const edges = [createEdge("node1", "node2")];
+      const slugs = { node1: "ChatInput", node2: "Prompt" };
+      const globalVars = [makeGlobalVar("model")];
+
+      const outputs = getUpstreamOutputs(
+        "node2",
+        nodes,
+        edges,
+        slugs,
+        globalVars,
+      );
+      expect(outputs).toHaveLength(2);
+      expect(outputs[0].nodeSlug).toBe("ChatInput");
+      expect(outputs[1].nodeSlug).toBe(VARS_SLUG);
     });
   });
 });

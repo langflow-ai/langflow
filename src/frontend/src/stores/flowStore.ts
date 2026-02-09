@@ -17,7 +17,11 @@ import {
   trackDataLoaded,
   trackFlowBuild,
 } from "@/customization/utils/analytics";
-import { generateBaseSlug } from "@/utils/referenceParser";
+import {
+  deduplicateSlug,
+  generateBaseSlug,
+  RESERVED_SLUGS,
+} from "@/utils/referenceParser";
 import { brokenEdgeMessage } from "@/utils/utils";
 import { BuildStatus, EventDeliveryType } from "../constants/enums";
 import type { LogsLogType, VertexBuildTypeAPI } from "../types/api";
@@ -237,22 +241,13 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
 
     // Generate reference slugs for all nodes
     const newSlugs: Record<string, string> = {};
-    const slugCounts: Record<string, number> = {};
-    const existingSlugs: string[] = [];
+    const existingSlugs: string[] = [...RESERVED_SLUGS];
 
     for (const node of nodes) {
       const nodeData = node.data as NodeDataType;
       const displayName = nodeData?.node?.display_name || "Node";
       const baseSlug = generateBaseSlug(displayName);
-
-      // Check for duplicates and assign appropriate slug
-      let slug = baseSlug;
-      if (slugCounts[baseSlug] !== undefined || existingSlugs.includes(slug)) {
-        slugCounts[baseSlug] = (slugCounts[baseSlug] || 0) + 1;
-        slug = `${baseSlug}_${slugCounts[baseSlug]}`;
-      } else {
-        slugCounts[baseSlug] = 0;
-      }
+      const slug = deduplicateSlug(baseSlug, existingSlugs);
 
       newSlugs[node.id] = slug;
       existingSlugs.push(slug);
@@ -309,36 +304,14 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     // Generate slugs for new nodes that don't have one
     const currentSlugs = get().nodeReferenceSlugs;
     const newSlugs = { ...currentSlugs };
-    const existingSlugs = Object.values(newSlugs);
-    const slugCounts: Record<string, number> = {};
-
-    // Count existing slug bases for proper numbering
-    for (const slug of existingSlugs) {
-      const match = slug.match(/^(.+?)(?:_(\d+))?$/);
-      if (match) {
-        const base = match[1];
-        const num = match[2] ? parseInt(match[2], 10) : 0;
-        slugCounts[base] = Math.max(slugCounts[base] || 0, num);
-      }
-    }
+    const existingSlugs = [...Object.values(newSlugs), ...RESERVED_SLUGS];
 
     for (const node of newChange) {
       if (!newSlugs[node.id]) {
         const nodeData = node.data as NodeDataType;
         const displayName = nodeData?.node?.display_name || "Node";
         const baseSlug = generateBaseSlug(displayName);
-
-        // Check for duplicates and assign appropriate slug
-        let slug = baseSlug;
-        if (
-          slugCounts[baseSlug] !== undefined ||
-          existingSlugs.includes(slug)
-        ) {
-          slugCounts[baseSlug] = (slugCounts[baseSlug] || 0) + 1;
-          slug = `${baseSlug}_${slugCounts[baseSlug]}`;
-        } else {
-          slugCounts[baseSlug] = 0;
-        }
+        const slug = deduplicateSlug(baseSlug, existingSlugs);
 
         newSlugs[node.id] = slug;
         existingSlugs.push(slug);
@@ -408,6 +381,25 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
 
     const { edges: newEdges } = cleanEdges(newNodes, get().edges);
 
+    // Update slug if display_name changed
+    const oldNode = get().nodes.find((node) => node.id === id);
+    let updatedSlugs = get().nodeReferenceSlugs;
+    if (oldNode) {
+      const oldName = (oldNode.data as NodeDataType)?.node?.display_name;
+      const newName = (newChange.data as NodeDataType)?.node?.display_name;
+      if (oldName !== newName && newName) {
+        const baseSlug = generateBaseSlug(newName);
+        const existingSlugs = [
+          ...Object.entries(updatedSlugs)
+            .filter(([nid]) => nid !== id)
+            .map(([, slug]) => slug),
+          ...RESERVED_SLUGS,
+        ];
+        const slug = deduplicateSlug(baseSlug, existingSlugs);
+        updatedSlugs = { ...updatedSlugs, [id]: slug };
+      }
+    }
+
     set((state) => {
       if (callback) {
         // Defer the callback execution to ensure it runs after state updates are fully applied.
@@ -417,6 +409,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         ...state,
         nodes: newNodes,
         edges: newEdges,
+        nodeReferenceSlugs: updatedSlugs,
       };
     });
     get().updateCurrentFlow({ nodes: newNodes, edges: newEdges });
@@ -650,6 +643,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       edges: [],
       flowState: undefined,
       getFilterEdge: [],
+      nodeReferenceSlugs: {},
     });
   },
   setFilterEdge: (newState) => {
@@ -1216,20 +1210,15 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     const displayName = nodeData?.node?.display_name || "Node";
     const baseSlug = generateBaseSlug(displayName);
 
-    // Check for duplicates
-    const existingSlugs = Object.values(state.nodeReferenceSlugs);
-    let slug = baseSlug;
-    let counter = 1;
+    // Exclude this node's own slug so it can keep its current one
+    const existingSlugs = [
+      ...Object.entries(state.nodeReferenceSlugs)
+        .filter(([nid]) => nid !== nodeId)
+        .map(([, slug]) => slug),
+      ...RESERVED_SLUGS,
+    ];
 
-    while (
-      existingSlugs.includes(slug) &&
-      state.nodeReferenceSlugs[nodeId] !== slug
-    ) {
-      slug = `${baseSlug}_${counter}`;
-      counter++;
-    }
-
-    return slug;
+    return deduplicateSlug(baseSlug, existingSlugs);
   },
 }));
 
