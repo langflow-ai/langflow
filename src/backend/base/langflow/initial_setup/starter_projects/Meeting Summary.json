@@ -2318,7 +2318,7 @@
         "data": {
           "id": "note-KeDpr",
           "node": {
-            "description": "### 💡 Add your Assembly AI API key and audio file here",
+            "description": "### Add your Assembly AI API key and audio file here",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -2335,8 +2335,8 @@
           "width": 456
         },
         "position": {
-          "x": 452.7834981529654,
-          "y": 186.89794978262478
+          "x": 507.4506341676323,
+          "y": 142.35435747437768
         },
         "resizing": false,
         "selected": false,
@@ -2347,7 +2347,7 @@
         "data": {
           "id": "note-59kOs",
           "node": {
-            "description": "### 💡 Add your Assembly AI API key here",
+            "description": "### Add your Assembly AI API key here",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -2364,8 +2364,8 @@
           "width": 365
         },
         "position": {
-          "x": 920.5426847894952,
-          "y": 231.76073203017918
+          "x": 936.7403547197667,
+          "y": 201.3901009109198
         },
         "resizing": false,
         "selected": false,
@@ -2376,7 +2376,7 @@
         "data": {
           "id": "note-KvTWl",
           "node": {
-            "description": "### 💡 Add your OpenAI API key here",
+            "description": "### Configure your Model Provider",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -2393,8 +2393,8 @@
           "width": 335
         },
         "position": {
-          "x": 2151.1746324575247,
-          "y": 500.2170739157981
+          "x": 2157.2487586813763,
+          "y": 528.5629962937735
         },
         "resizing": false,
         "selected": false,
@@ -2405,7 +2405,7 @@
         "data": {
           "id": "note-cvsjg",
           "node": {
-            "description": "### 💡 Add your OpenAI API key here",
+            "description": "### Configure your Model Provider",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -2421,8 +2421,8 @@
           "width": 324
         },
         "position": {
-          "x": 1665.156818365488,
-          "y": 1348.5600122190888
+          "x": 1675.2803620719078,
+          "y": 1391.078895786052
         },
         "selected": false,
         "type": "noteNode"

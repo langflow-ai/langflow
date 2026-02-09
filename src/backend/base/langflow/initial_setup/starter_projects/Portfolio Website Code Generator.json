@@ -661,35 +661,6 @@
       },
       {
         "data": {
-          "id": "note-1mSYT",
-          "node": {
-            "description": "### 💡 Add your OpenAI API key here",
-            "display_name": "",
-            "documentation": "",
-            "template": {
-              "backgroundColor": "transparent"
-            }
-          },
-          "type": "note"
-        },
-        "dragging": false,
-        "height": 324,
-        "id": "note-1mSYT",
-        "measured": {
-          "height": 324,
-          "width": 362
-        },
-        "position": {
-          "x": 924.6299565901533,
-          "y": 25.185126267136795
-        },
-        "resizing": false,
-        "selected": false,
-        "type": "noteNode",
-        "width": 362
-      },
-      {
-        "data": {
           "id": "note-tzsYo",
           "node": {
             "description": "### 💡 Add your Anthropic API key here",
@@ -1948,7 +1919,7 @@
         "data": {
           "id": "note-Sm9Ca",
           "node": {
-            "description": "### 💡 Add your OpenAI API key here",
+            "description": "### Configure your Model Provider",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -1964,8 +1935,8 @@
           "width": 324
         },
         "position": {
-          "x": 2177.24956539088,
-          "y": 384.73691533198325
+          "x": 2160.5782154912195,
+          "y": 362.93591930935014
         },
         "selected": false,
         "type": "noteNode"

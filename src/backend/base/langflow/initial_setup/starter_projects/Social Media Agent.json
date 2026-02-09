@@ -1226,7 +1226,7 @@
         "data": {
           "id": "note-1Ws1d",
           "node": {
-            "description": "### 💡 Add your OpenAI API key here ",
+            "description": "### Configure your Model Provider",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -1242,8 +1242,8 @@
           "width": 324
         },
         "position": {
-          "x": 1035.6043472316023,
-          "y": 238.36639317703757
+          "x": 1015.0969003266209,
+          "y": 206.1404051834952
         },
         "selected": false,
         "type": "noteNode"

@@ -1456,7 +1456,7 @@
         "data": {
           "id": "note-Dw2MZ",
           "node": {
-            "description": "### 💡 Add your OpenAI API key here",
+            "description": "### Configure your Model Provider",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -1472,8 +1472,8 @@
           "width": 324
         },
         "position": {
-          "x": 798.1532899902708,
-          "y": 48.63976452163034
+          "x": 766.1712523368794,
+          "y": 39.91739061615999
         },
         "selected": false,
         "type": "noteNode"

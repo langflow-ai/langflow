@@ -2265,7 +2265,7 @@
         "data": {
           "id": "note-nrMsA",
           "node": {
-            "description": "### 💡 Add your OpenAI API key here 👇",
+            "description": "### Configure your Model Provider",
             "display_name": "",
             "documentation": "",
             "template": {

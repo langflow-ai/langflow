@@ -869,7 +869,7 @@
         "data": {
           "id": "note-dikol",
           "node": {
-            "description": "### 💡 Add your OpenAI API key here",
+            "description": "### Configure your Model Provider",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -885,8 +885,8 @@
           "width": 324
         },
         "position": {
-          "x": 1208.3032428372405,
-          "y": 369.8385257208433
+          "x": 1197.492030626807,
+          "y": 348.2161012999763
         },
         "selected": false,
         "type": "noteNode"
