@@ -4,6 +4,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from lfx.graph.reference.resolver import (
+    VARS_SLUG,
     ReferenceResolutionError,
     _extract_text_value,
     resolve_references,
@@ -191,3 +192,145 @@ class TestResolveReferences:
         text = "@Node.direct"
         result = resolve_references(text, graph)
         assert result == "direct value"
+
+    def test_resolve_overlapping_references(self):
+        """Longer references should be resolved before shorter prefixes."""
+        data = {"user": {"name": "John"}}
+        output = self._create_mock_output(data)
+        vertex = self._create_mock_vertex({"data": output})
+        graph = self._create_mock_graph({"API": vertex})
+
+        # Both @API.data.user.name and @API.data appear — the longer one must be resolved first
+        text = "Raw: @API.data, Full: @API.data.user.name"
+        result = resolve_references(text, graph)
+        assert "John" in result
+        # @API.data resolves to the dict (str() representation)
+        assert "user" in result
+
+    def test_resolve_direct_array_index(self):
+        """References with direct array index after output should resolve."""
+        items = ["first", "second"]
+        output = self._create_mock_output(items)
+        vertex = self._create_mock_vertex({"items": output})
+        graph = self._create_mock_graph({"List": vertex})
+
+        text = "Item: @List.items[0]"
+        result = resolve_references(text, graph)
+        assert result == "Item: first"
+
+    def test_resolve_invalid_dot_path_raises(self):
+        """Invalid dot path should raise ReferenceResolutionError."""
+        data = {"user": {"name": "John"}}
+        output = self._create_mock_output(data)
+        vertex = self._create_mock_vertex({"data": output})
+        graph = self._create_mock_graph({"API": vertex})
+
+        text = "@API.data.user.nonexistent"
+        with pytest.raises(ReferenceResolutionError, match="Failed to resolve path"):
+            resolve_references(text, graph)
+
+    def test_resolve_invalid_array_index_raises(self):
+        """Out-of-range array index in dot path should raise ReferenceResolutionError."""
+        data = {"items": ["a", "b"]}
+        output = self._create_mock_output(data)
+        vertex = self._create_mock_vertex({"data": output})
+        graph = self._create_mock_graph({"API": vertex})
+
+        text = "@API.data.items[99]"
+        with pytest.raises(ReferenceResolutionError, match="Failed to resolve path"):
+            resolve_references(text, graph)
+
+
+class TestGlobalVariableReferences:
+    """Tests for @Vars.variable_name resolution."""
+
+    def _create_mock_graph(self, vertices_by_slug=None):
+        graph = MagicMock()
+        vertices_by_slug = vertices_by_slug or {}
+        graph.get_vertex_by_slug = lambda slug: vertices_by_slug.get(slug)
+        return graph
+
+    def _create_mock_output(self, value):
+        output = MagicMock()
+        output.value = value
+        return output
+
+    def _create_mock_vertex(self, outputs):
+        vertex = MagicMock()
+        vertex.outputs_map = outputs
+        return vertex
+
+    def test_globals_slug_constant(self):
+        assert VARS_SLUG == "Vars"
+
+    def test_resolve_global_variable(self):
+        graph = self._create_mock_graph()
+        global_vars = {"my_var": "test-value", "model": "gpt-4"}
+
+        text = "Using @Vars.model"
+        result = resolve_references(text, graph, global_variables=global_vars)
+        assert result == "Using gpt-4"
+
+    def test_resolve_global_variable_alone(self):
+        graph = self._create_mock_graph()
+        global_vars = {"greeting": "hello"}
+
+        result = resolve_references("@Vars.greeting", graph, global_variables=global_vars)
+        assert result == "hello"
+
+    def test_resolve_global_variable_missing(self):
+        graph = self._create_mock_graph()
+        global_vars = {"existing": "value"}
+
+        with pytest.raises(ReferenceResolutionError, match="Global variable 'missing'"):
+            resolve_references("@Vars.missing", graph, global_variables=global_vars)
+
+    def test_resolve_global_variable_no_dict(self):
+        """Should raise when global_variables is None."""
+        graph = self._create_mock_graph()
+
+        with pytest.raises(ReferenceResolutionError, match="Global variables are not available"):
+            resolve_references("@Vars.var", graph, global_variables=None)
+
+    def test_resolve_global_variable_empty_dict(self):
+        graph = self._create_mock_graph()
+
+        with pytest.raises(ReferenceResolutionError, match="Global variable"):
+            resolve_references("@Vars.var", graph, global_variables={})
+
+    def test_resolve_mixed_node_and_global(self):
+        """Both @Node.output and @Vars.var in same text."""
+        output = self._create_mock_output("Alice")
+        vertex = self._create_mock_vertex({"name": output})
+        graph = self._create_mock_graph({"User": vertex})
+        global_vars = {"greeting": "Hello"}
+
+        text = "@Vars.greeting, @User.name!"
+        result = resolve_references(text, graph, global_variables=global_vars)
+        assert result == "Hello, Alice!"
+
+    def test_resolve_multiple_global_variables(self):
+        graph = self._create_mock_graph()
+        global_vars = {"first": "A", "second": "B"}
+
+        text = "@Vars.first and @Vars.second"
+        result = resolve_references(text, graph, global_variables=global_vars)
+        assert result == "A and B"
+
+    def test_resolve_global_variable_with_dot_path(self):
+        """Global variable value is a dict, traversed via dot path."""
+        graph = self._create_mock_graph()
+        global_vars = {"config": {"model": "gpt-4", "temperature": 0.7}}
+
+        text = "Model: @Vars.config.model"
+        result = resolve_references(text, graph, global_variables=global_vars)
+        assert result == "Model: gpt-4"
+
+    def test_global_variable_does_not_go_through_vertex_lookup(self):
+        """@Vars.x should NOT call graph.get_vertex_by_slug."""
+        graph = MagicMock()
+        graph.get_vertex_by_slug = MagicMock(return_value=None)
+        global_vars = {"x": "value"}
+
+        resolve_references("@Vars.x", graph, global_variables=global_vars)
+        graph.get_vertex_by_slug.assert_not_called()

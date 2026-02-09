@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 
-from lfx.graph.reference import ReferenceResolutionError, resolve_references
+from lfx.graph.reference import resolve_references
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.services.deps import get_storage_service
@@ -195,10 +195,8 @@ class ParameterHandler:
         if self._should_resolve_references(field) and field_name in params:
             param_value = params[field_name]
             if isinstance(param_value, str):
-                try:
-                    params[field_name] = resolve_references(param_value, self.vertex.graph)
-                except ReferenceResolutionError as e:
-                    logger.warning("Failed to resolve references in field %s: %s", field_name, e)
+                global_vars = self.vertex.graph.context.get("global_variables", {})
+                params[field_name] = resolve_references(param_value, self.vertex.graph, global_variables=global_vars)
 
         if field.get("load_from_db"):
             load_from_db_fields.append(field_name)

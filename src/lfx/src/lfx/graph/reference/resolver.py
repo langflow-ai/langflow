@@ -1,11 +1,15 @@
 # src/lfx/src/lfx/graph/reference/resolver.py
 import json
+import logging
 from typing import TYPE_CHECKING, Any
 
 from lfx.graph.reference.parser import parse_references
+from lfx.graph.reference.schema import Reference
 from lfx.graph.reference.utils import traverse_dot_path
 from lfx.schema.data import Data
 from lfx.schema.message import Message
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from lfx.graph.graph.base import Graph
@@ -39,7 +43,11 @@ def _extract_text_value(value: Any) -> str:
         if isinstance(text, str):
             return text
         # If text is an iterator (async or sync), it hasn't been consumed yet
-        # Return empty string as we can't resolve iterators synchronously
+        logger.warning(
+            "Message text is a %s and cannot be resolved synchronously in @reference; "
+            "returning empty string. Consider awaiting the message before referencing it.",
+            type(text).__name__,
+        )
         return ""
 
     # Handle Data objects - JSON stringify the data property
@@ -56,12 +64,24 @@ def _extract_text_value(value: Any) -> str:
     return str(value)
 
 
-def resolve_references(text: str, graph: "Graph") -> str:
+VARS_SLUG = "Vars"
+
+
+def resolve_references(
+    text: str,
+    graph: "Graph",
+    global_variables: dict[str, Any] | None = None,
+) -> str:
     """Resolve all @references in text to actual values.
 
+    Supports two kinds of references:
+    - @NodeSlug.output — resolved from graph vertices
+    - @Vars.variable_name — resolved from global_variables dict
+
     Args:
-        text: Text containing @NodeSlug.output references
+        text: Text containing @references
         graph: The graph containing the vertices
+        global_variables: Optional dict of global variable name → value
 
     Returns:
         Text with references replaced by actual values
@@ -74,27 +94,26 @@ def resolve_references(text: str, graph: "Graph") -> str:
     if not references:
         return text
 
+    # Sort by full_path length descending so longer (more specific) references
+    # are replaced first, preventing shorter prefixes from corrupting longer ones
+    # e.g. @API.data.user.name must be replaced before @API.data
+    references.sort(key=lambda r: len(r.full_path), reverse=True)
+
     result = text
 
     for ref in references:
-        # Find the vertex by slug
-        vertex = graph.get_vertex_by_slug(ref.node_slug)
-        if vertex is None:
-            msg = f"Node '{ref.node_slug}' not found"
-            raise ReferenceResolutionError(msg)
-
-        # Get the output value
-        if ref.output_name not in vertex.outputs_map:
-            msg = f"Output '{ref.output_name}' not found on node '{ref.node_slug}' (vertex_id={vertex.id})"
-            raise ReferenceResolutionError(msg)
-
-        output = vertex.outputs_map[ref.output_name]
-        # Get the actual value from the Output object
-        value = output.value if hasattr(output, "value") else output
+        if ref.node_slug == VARS_SLUG:
+            value = _resolve_global_variable(ref, global_variables)
+        else:
+            value = _resolve_vertex_reference(ref, graph)
 
         # Traverse dot path if present
         if ref.dot_path:
-            value = traverse_dot_path(value, ref.dot_path)
+            try:
+                value = traverse_dot_path(value, ref.dot_path)
+            except ValueError as e:
+                msg = f"Failed to resolve path '{ref.full_path}': {e}"
+                raise ReferenceResolutionError(msg) from e
 
         # Extract text content from the value
         text_value = _extract_text_value(value)
@@ -103,3 +122,29 @@ def resolve_references(text: str, graph: "Graph") -> str:
         result = result.replace(ref.full_path, text_value)
 
     return result
+
+
+def _resolve_global_variable(ref: Reference, global_variables: dict[str, Any] | None) -> Any:
+    """Resolve a @Vars.variable_name reference."""
+    if global_variables is None:
+        msg = f"Global variables are not available; cannot resolve '@Vars.{ref.output_name}'"
+        raise ReferenceResolutionError(msg)
+    if ref.output_name not in global_variables:
+        msg = f"Global variable '{ref.output_name}' not found"
+        raise ReferenceResolutionError(msg)
+    return global_variables[ref.output_name]
+
+
+def _resolve_vertex_reference(ref: Reference, graph: "Graph") -> Any:
+    """Resolve a @NodeSlug.output reference from the graph."""
+    vertex = graph.get_vertex_by_slug(ref.node_slug)
+    if vertex is None:
+        msg = f"Node '{ref.node_slug}' not found"
+        raise ReferenceResolutionError(msg)
+
+    if ref.output_name not in vertex.outputs_map:
+        msg = f"Output '{ref.output_name}' not found on node '{ref.node_slug}' (vertex_id={vertex.id})"
+        raise ReferenceResolutionError(msg)
+
+    output = vertex.outputs_map[ref.output_name]
+    return output.value if hasattr(output, "value") else output

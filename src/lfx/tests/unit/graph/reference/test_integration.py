@@ -7,7 +7,8 @@ parameter processing, simulating the flow from frontend to backend.
 
 from unittest.mock import MagicMock
 
-from lfx.graph.reference import resolve_references
+import pytest
+from lfx.graph.reference import ReferenceResolutionError, resolve_references
 from lfx.graph.vertex.param_handler import ParameterHandler
 from lfx.schema.message import Message
 
@@ -153,8 +154,8 @@ class TestReferenceResolutionIntegration:
         # Value should remain unchanged (not resolved)
         assert params["raw_text"] == "@Node.output"
 
-    def test_param_handler_handles_missing_node(self):
-        """Test that missing node reference logs warning but doesn't crash."""
+    def test_param_handler_raises_on_missing_node(self):
+        """Test that missing node reference raises ReferenceResolutionError."""
         graph = self._create_mock_graph({})  # No vertices
 
         mock_vertex = MagicMock()
@@ -174,11 +175,8 @@ class TestReferenceResolutionIntegration:
         }
 
         handler = ParameterHandler(mock_vertex, storage_service=None)
-        # Should not raise, but should log warning
-        params, _ = handler.process_field_parameters()
-
-        # Value remains unchanged since resolution failed
-        assert params["text"] == "@NonExistent.output"
+        with pytest.raises(ReferenceResolutionError, match="NonExistent"):
+            handler.process_field_parameters()
 
     def test_param_handler_resolves_dot_path_reference(self):
         """Test resolving reference with dot path accessor."""
@@ -233,6 +231,32 @@ class TestReferenceResolutionIntegration:
         params, _ = handler.process_field_parameters()
 
         assert params["item"] == "Second item: second"
+
+    def test_param_handler_resolves_global_variable_reference(self):
+        """Test that @Vars.variable_name is resolved from graph context."""
+        graph = self._create_mock_graph({})  # No vertices needed
+        graph.context = {"global_variables": {"my_var": "test-key-123"}}
+
+        mock_vertex = MagicMock()
+        mock_vertex.graph = graph
+        mock_vertex.display_name = "TestComponent"
+        mock_vertex.data = {
+            "node": {
+                "template": {
+                    "key": {
+                        "type": "str",
+                        "value": "Key: @Vars.api_key",
+                        "has_references": True,
+                        "show": True,
+                    }
+                }
+            }
+        }
+
+        handler = ParameterHandler(mock_vertex, storage_service=None)
+        params, _ = handler.process_field_parameters()
+
+        assert params["key"] == "Key: sk-123"
 
 
 class TestEndToEndReferenceResolution:

@@ -32,6 +32,7 @@ from lfx.graph.graph.utils import (
     process_flow,
     should_continue,
 )
+from lfx.graph.reference.resolver import VARS_SLUG
 from lfx.graph.schema import InterfaceComponentTypes, RunOutputs
 from lfx.graph.utils import log_vertex_build
 from lfx.graph.vertex.base import Vertex, VertexStates, generate_reference_slug
@@ -1402,6 +1403,13 @@ class Graph:
         """
         self._slug_to_vertex: dict[str, Vertex] = {}
         slug_counts: dict[str, int] = {}
+
+        reserved_slugs = frozenset({VARS_SLUG})
+        # Pre-populate slug_counts with reserved slugs so they are treated
+        # as already-taken, producing "Vars_1", "Vars_2", etc. — matching
+        # the frontend's deduplicateSlug(baseSlug, [...RESERVED_SLUGS]).
+        for rs in reserved_slugs:
+            slug_counts[rs] = 0
 
         for vertex in self.vertices:
             display_name = vertex.display_name or "Node"

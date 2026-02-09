@@ -64,6 +64,36 @@ def generate_reference_slug(display_name: str) -> str:
     return slug if slug else "Node"
 
 
+async def _load_global_variables(user_id: str | UUID | None) -> dict[str, str]:
+    """Load global variables for @Vars references.
+
+    Fetches Generic-type variables from the variable service, returning
+    a dict of {name: value}. Returns empty dict on any failure.
+    """
+    if not user_id:
+        logger.debug("Cannot load global variables: no user_id on graph")
+        return {}
+
+    from lfx.services.deps import get_variable_service, session_scope_readonly
+
+    variable_service = get_variable_service()
+    if not variable_service:
+        logger.debug("Cannot load global variables: variable service not available")
+        return {}
+
+    try:
+        async with session_scope_readonly() as session:
+            all_variables = await variable_service.get_all(user_id=user_id, session=session)
+            return {
+                var.name: var.value
+                for var in all_variables
+                if var.name and var.value and getattr(var, "type", None) == "Generic"
+            }
+    except (OSError, RuntimeError):
+        logger.warning("Failed to load global variables for @Vars references", exc_info=True)
+        return {}
+
+
 class VertexStates(str, Enum):
     """Vertex are related to it being active, inactive, or in an error state."""
 
@@ -782,6 +812,10 @@ class Vertex:
                 # This means that the vertex has already been built
                 # and we are just getting the result for the requester
                 return await self.get_requester_result(requester)
+            # Ensure global variables are loaded for @Vars references
+            if "global_variables" not in self.graph.context:
+                self.graph.context["global_variables"] = await _load_global_variables(self.graph.user_id)
+
             self._reset()
             # inject session_id if it is not None
             if inputs is not None and "session" in inputs and inputs["session"] is not None and self.has_session_id:

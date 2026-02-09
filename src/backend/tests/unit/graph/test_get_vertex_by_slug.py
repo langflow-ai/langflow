@@ -83,6 +83,33 @@ def test_build_slug_index_handles_duplicates():
     assert "HTTPRequest_1" in slugs
 
 
+def test_build_slug_index_reserves_vars_slug():
+    """Test that _build_slug_index never assigns the reserved 'Vars' slug to a vertex."""
+    from lfx.graph.graph.base import Graph
+
+    graph = MagicMock(spec=Graph)
+
+    # A vertex whose display_name would generate "Vars" as its base slug
+    mock_vertex1 = MagicMock()
+    mock_vertex1.display_name = "Vars"
+    mock_vertex1.reference_slug = None
+
+    mock_vertex2 = MagicMock()
+    mock_vertex2.display_name = "Vars"
+    mock_vertex2.reference_slug = None
+
+    graph.vertices = [mock_vertex1, mock_vertex2]
+
+    Graph._build_slug_index(graph)
+
+    # Neither vertex should get the bare "Vars" slug
+    assert mock_vertex1.reference_slug != "Vars"
+    assert mock_vertex2.reference_slug != "Vars"
+    # Should produce "Vars_1" and "Vars_2" (matching frontend deduplicateSlug behavior)
+    slugs = {mock_vertex1.reference_slug, mock_vertex2.reference_slug}
+    assert slugs == {"Vars_1", "Vars_2"}
+
+
 def test_get_vertex_by_slug_builds_index_if_missing():
     """Test that get_vertex_by_slug builds the index if it doesn't exist."""
     from lfx.graph.graph.base import Graph
