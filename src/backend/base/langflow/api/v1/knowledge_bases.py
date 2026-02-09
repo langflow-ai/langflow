@@ -6,11 +6,11 @@ from pathlib import Path
 import pandas as pd
 from fastapi import APIRouter, HTTPException
 from langchain_chroma import Chroma
-from lfx.log import logger
-from pydantic import BaseModel
-
 from langflow.api.utils import CurrentActiveUser
 from langflow.services.deps import get_settings_service
+from pydantic import BaseModel
+
+from lfx.log import logger
 
 router = APIRouter(tags=["Knowledge Bases"], prefix="/knowledge_bases")
 
