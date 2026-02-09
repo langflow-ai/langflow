@@ -1,7 +1,7 @@
 import type { RowClickedEvent, SelectionChangedEvent } from "ag-grid-community";
 import type { AgGridReact } from "ag-grid-react";
 import type { AxiosError } from "axios";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
@@ -189,6 +189,18 @@ const KnowledgeBasesTab = ({
     setIsUploadModalOpen(true);
   };
 
+  const existingKnowledgeBaseData = useMemo(() => {
+    if (!knowledgeBaseForAddSources) return undefined;
+    return {
+      name: knowledgeBaseForAddSources.name,
+      embeddingProvider: knowledgeBaseForAddSources.embedding_provider,
+      embeddingModel: knowledgeBaseForAddSources.embedding_model,
+      chunkSize: knowledgeBaseForAddSources.chunk_size,
+      chunkOverlap: knowledgeBaseForAddSources.chunk_overlap,
+      separator: knowledgeBaseForAddSources.separator,
+    };
+  }, [knowledgeBaseForAddSources]);
+
   const columnDefs = createKnowledgeBaseColumns({
     onViewChunks: onRowClick,
     onDelete: handleDelete,
@@ -235,7 +247,9 @@ const KnowledgeBasesTab = ({
         ) : (
           <Button
             className="flex items-center gap-2 font-semibold"
-            onClick={() => setIsUploadModalOpen(true)}
+            onClick={() => {
+              setIsUploadModalOpen(true);
+            }}
           >
             <ForwardedIconComponent name="Plus" className="h-4 w-4" />
             Add Knowledge
@@ -308,16 +322,7 @@ const KnowledgeBasesTab = ({
             title: `Knowledge base "${data.sourceName}" created successfully!`,
           });
         }}
-        existingKnowledgeBase={
-          knowledgeBaseForAddSources
-            ? {
-                name: knowledgeBaseForAddSources.name,
-                embeddingProvider:
-                  knowledgeBaseForAddSources.embedding_provider,
-                embeddingModel: knowledgeBaseForAddSources.embedding_model,
-              }
-            : undefined
-        }
+        existingKnowledgeBase={existingKnowledgeBaseData}
       />
     </div>
   );

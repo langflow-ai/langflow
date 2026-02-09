@@ -111,7 +111,7 @@ export default function KnowledgeBaseUploadModal({
           nextDisabled={false}
           submitDisabled={false}
           isSubmitting={form.isSubmitting}
-          submitLabel={form.isAddSourcesMode ? "Add Sources" : "Create"}
+          submitLabel={form.isAddSourcesMode ? "Next Step" : "Create"}
           helpLabel={
             form.currentStep === 1
               ? form.showAdvanced

@@ -14,6 +14,9 @@ export interface KnowledgeBaseInfo {
   characters: number;
   chunks: number;
   avg_chunk_size: number;
+  chunk_size?: number;
+  chunk_overlap?: number;
+  separator?: string;
 }
 
 export const useGetKnowledgeBases: useQueryFunctionType<

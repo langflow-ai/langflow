@@ -109,6 +109,14 @@ export function useKnowledgeBaseForm({
       if (existingKnowledgeBase.separator !== undefined) {
         setSeparator(existingKnowledgeBase.separator);
       }
+      // Auto-enable advanced mode if the KB was created with advanced config
+      const hasAdvancedConfig =
+        existingKnowledgeBase.chunkSize !== undefined ||
+        existingKnowledgeBase.chunkOverlap !== undefined ||
+        existingKnowledgeBase.separator !== undefined;
+      if (hasAdvancedConfig) {
+        setShowAdvanced(true);
+      }
     }
   }, [existingKnowledgeBase, open, embeddingModelOptions]);
 
@@ -124,6 +132,7 @@ export function useKnowledgeBaseForm({
     setSelectedPreviewFileIndex(0);
     setCurrentStep(1);
     setIsFilePanelOpen(false);
+    setShowAdvanced(false);
     setValidationErrors({});
   }, []);
 
@@ -239,7 +248,7 @@ export function useKnowledgeBaseForm({
       }
 
       // Simple mode: only name + embedding model, no files or chunk params
-      if (!showAdvanced) {
+      if (!showAdvanced && !isAddSourcesMode) {
         const callbackData: KnowledgeBaseFormData = {
           sourceName,
           files: [],

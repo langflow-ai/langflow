@@ -30,7 +30,7 @@ export const createKnowledgeBaseColumns = (
 
   return [
     {
-      headerName: "Source",
+      headerName: "Name",
       field: "name",
       flex: 2,
       sortable: true,
@@ -143,8 +143,11 @@ export const createKnowledgeBaseColumns = (
                 callbacks?.onAddSources?.(params.data);
               }}
             >
-              <ForwardedIconComponent name="Plus" className="mr-2 h-4 w-4" />
-              Add Sources
+              <ForwardedIconComponent
+                name="RefreshCw"
+                className="mr-2 h-4 w-4"
+              />
+              Update Knowledge
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={(e) => {
