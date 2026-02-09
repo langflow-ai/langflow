@@ -107,8 +107,12 @@ export type FlowStoreType = {
   addDataToFlowPool: (data: VertexBuildTypeAPI, nodeId: string) => void;
   CleanFlowPool: () => void;
   isBuilding: boolean;
+  buildStartTime: number | null;
+  buildDuration: number | null;
   isPending: boolean;
   setIsBuilding: (isBuilding: boolean) => void;
+  setBuildStartTime: (time: number) => void;
+  setBuildDuration: (duration: number) => void;
   setPending: (isPending: boolean) => void;
   resetFlow: (flow: FlowType | undefined) => void;
   resetFlowState: () => void;
@@ -293,6 +297,8 @@ export type FlowStoreType = {
   updateToolMode: (nodeId: string, toolMode: boolean) => void;
   helperLineEnabled: boolean;
   setHelperLineEnabled: (helperLineEnabled: boolean) => void;
+  inspectionPanelVisible: boolean;
+  setInspectionPanelVisible: (visible: boolean) => void;
   newChatOnPlayground: boolean;
   setNewChatOnPlayground: (newChat: boolean) => void;
   stopNodeId: string | undefined;

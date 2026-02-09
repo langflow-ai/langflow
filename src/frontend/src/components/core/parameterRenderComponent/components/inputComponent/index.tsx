@@ -44,6 +44,7 @@ export default function InputComponent({
   commandWidth,
   blockAddNewGlobalVariable = false,
   hasRefreshButton = false,
+  inspectionPanel = false,
 }: InputComponentType): JSX.Element {
   const [pwdVisible, setPwdVisible] = useState(false);
   const [cursor, setCursor] = useState<number | null>(null);
@@ -136,6 +137,7 @@ export default function InputComponent({
               blurOnEnter={blurOnEnter}
               optionsPlaceholder={optionsPlaceholder}
               className={className}
+              inspectionPanel={inspectionPanel}
             />
           ) : (
             <CustomInputPopover
@@ -168,6 +170,7 @@ export default function InputComponent({
               commandWidth={commandWidth}
               blockAddNewGlobalVariable={blockAddNewGlobalVariable}
               hasRefreshButton={hasRefreshButton}
+              inspectionPanel={inspectionPanel}
             />
           )}
         </>

@@ -1,4 +1,5 @@
 import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
+import { useRefreshModelInputs } from "@/hooks/use-refresh-model-inputs";
 import ModelProvidersContent from "./components/ModelProvidersContent";
 
 interface ModelProviderModalProps {
@@ -12,8 +13,13 @@ const ModelProviderModal = ({
   onClose,
   modelType,
 }: ModelProviderModalProps) => {
+  const { refreshAllModelInputs } = useRefreshModelInputs();
+
   const handleClose = () => {
     onClose();
+    setTimeout(() => {
+      refreshAllModelInputs({ silent: true });
+    }, 1000);
   };
 
   return (
@@ -26,7 +32,7 @@ const ModelProviderModal = ({
         </DialogHeader>
 
         <div className="h-[513px] overflow-hidden">
-          <ModelProvidersContent modelType={modelType} onClose={handleClose} />
+          <ModelProvidersContent modelType={modelType} />
         </div>
       </DialogContent>
     </Dialog>

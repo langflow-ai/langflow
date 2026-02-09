@@ -101,13 +101,21 @@ When you package Langflow as a dependency of an application, you only want to in
 
 ### Components
 
-The <Icon name="Component" aria-hidden="true" /> **Core components** and <Icon name="Blocks" aria-hidden="true" /> [**Bundles**] that you see in the Langflow visual editor are automatically included in the base Langflow Docker image.
+The <Icon name="Component" aria-hidden="true" /> **Core components** and <Icon name="Blocks" aria-hidden="true" /> **Bundles** that you see in the Langflow visual editor are automatically included in the base Langflow Docker image.
 
-If you have any [custom components](/components-custom-components) that you created for your application, you must include these components in your application directory:
+
+If you have [custom components](/components-custom-components) for your application, include them in your application directory.
+Custom components must be placed inside category folders, not directly in the base directory:
 
 1. Create a `/components` folder in your application directory.
-2. Add your custom component files to the `/components` folder.
-3. Specify the path to `/components` in your `docker.env`.
+2. Inside `/components`, create category subfolders (for example, `/components/data`, `/components/tools`).
+3. Add your custom component files to the appropriate category folders.
+4. Copy the `/components` folder to your Docker image and set the `LANGFLOW_COMPONENTS_PATH` environment variable:
+
+    ```dockerfile
+    COPY components /app/components
+    ENV LANGFLOW_COMPONENTS_PATH=/app/components
+    ```
 
 ## Langflow Dockerfile {#dockerfile}
 

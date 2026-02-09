@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs-button";
+import { PROVIDER_VARIABLE_MAPPING } from "@/constants/providerConstants";
 import { useGetTypes } from "@/controllers/API/queries/flows/use-get-types";
 import {
   useGetGlobalVariables,
@@ -57,6 +58,15 @@ export default function GlobalVariableModal({
   const { data: globalVariables } = useGetGlobalVariables();
   const [availableFields, setAvailableFields] = useState<string[]>([]);
   useGetTypes({ checkCache: true, enabled: !!globalVariables });
+
+  useEffect(() => {
+    if (initialData) {
+      setKey(initialData.name ?? "");
+      setValue(initialData.value ?? "");
+      setType(initialData.type ?? "Credential");
+      setFields(initialData.default_fields ?? []);
+    }
+  }, [initialData]);
 
   useEffect(() => {
     if (globalVariables && componentFields.size > 0) {
@@ -128,13 +138,56 @@ export default function GlobalVariableModal({
     if (!initialData || !initialData.id) {
       handleSaveVariable();
     } else {
-      updateVariable({
+      // Check if this is a model provider variable based on the original variable name
+      // The backend validates based on the existing variable name, not the new name
+      const isModelProviderVariable = Object.values(
+        PROVIDER_VARIABLE_MAPPING,
+      ).includes(initialData.name);
+
+      // Only include value in update if it has been changed (not empty for credentials)
+      const updateData: {
+        id: string;
+        name: string;
+        value?: string;
+        default_fields?: string[];
+      } = {
         id: initialData.id,
         name: key,
-        value: value,
         default_fields: fields,
+      };
+
+      // Only include value if it's been provided (for credentials, empty means unchanged)
+      if (value) {
+        updateData.value = value;
+      }
+
+      updateVariable(updateData, {
+        onSuccess: (res) => {
+          const { name } = res;
+          setKey("");
+          setValue("");
+          setType("Credential");
+          setFields([]);
+          setOpen(false);
+
+          setSuccessData({
+            title: `Variable ${name} updated successfully`,
+          });
+        },
+        onError: (error) => {
+          const responseError = error as ResponseErrorDetailAPI;
+          const errorMessage =
+            responseError?.response?.data?.detail ??
+            "An unexpected error occurred while updating the variable. Please try again.";
+
+          setErrorData({
+            title: isModelProviderVariable
+              ? "Invalid API Key"
+              : "Error updating variable",
+            list: [errorMessage],
+          });
+        },
       });
-      setOpen(false);
     }
   }
 
@@ -235,7 +288,7 @@ export default function GlobalVariableModal({
         submit={{
           label: `${initialData ? "Update" : "Save"} Variable`,
           dataTestId: "save-variable-btn",
-          disabled: !key || !value,
+          disabled: !key || (!value && !(initialData && type === "Credential")),
         }}
       />
     </BaseModal>

@@ -1575,6 +1575,7 @@ class Component(CustomComponent):
         Messages are skipped when:
         - The component is not an input or output vertex
         - The component is not connected to a Chat Output
+        - The component does not have _stream_to_playground=True (set by parent for inner graphs)
         - The message is not an ErrorMessage
 
         This prevents intermediate components from cluttering the database with messages
@@ -1583,6 +1584,10 @@ class Component(CustomComponent):
         Returns:
             bool: True if the message should be skipped, False otherwise
         """
+        # If parent explicitly enabled streaming for this inner graph component
+        if getattr(self, "_stream_to_playground", False):
+            return False
+
         return (
             self._vertex is not None
             and not (self._vertex.is_output or self._vertex.is_input)
