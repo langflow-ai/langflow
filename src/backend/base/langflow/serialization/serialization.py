@@ -15,6 +15,8 @@ from pydantic.v1 import BaseModel as BaseModelV1
 from langflow.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
 from langflow.services.deps import get_settings_service
 
+_FAST_PATH_TYPES = (str, int, float, bool)
+
 
 # Sentinel variable to signal a failed serialization.
 # Using a helper class ensures that the sentinel is a unique object,
@@ -272,9 +274,9 @@ def serialize(
         return None
 
     # Fast-path common immutable primitives when no truncation/limits requested.
-    # This avoids the relatively expensive dispatcher for the common case.
-    if max_length is None and max_items is None and not to_str:
-        if isinstance(obj, (str, int, float, bool)):
+    # Reorder checks: to_str is least likely to be True, check it last for short-circuit
+    if max_length is None and max_items is None:
+        if not to_str and isinstance(obj, _FAST_PATH_TYPES):
             return obj
 
     try:
