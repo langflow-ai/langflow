@@ -209,7 +209,10 @@ export default function PromptModal({
       // Use caretPositionFromPoint to get the closest text position. Does not work on Safari.
       if ("caretPositionFromPoint" in document) {
         const caretDoc = document as Document & {
-          caretPositionFromPoint(x: number, y: number): { offset: number } | null;
+          caretPositionFromPoint(
+            x: number,
+            y: number,
+          ): { offset: number } | null;
         };
         const range = caretDoc.caretPositionFromPoint(x, y)?.offset ?? 0;
         if (range) {
