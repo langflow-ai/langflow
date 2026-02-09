@@ -294,7 +294,9 @@ class _BraintrustLangChainHandler(BaseCallbackHandler):
 
     # -- Agent -------------------------------------------------------------
 
-    def on_agent_action(self, action: AgentAction, *, run_id: PyUUID, parent_run_id: PyUUID | None = None, **kwargs: Any) -> None:
+    def on_agent_action(
+        self, action: AgentAction, *, run_id: PyUUID, parent_run_id: PyUUID | None = None, **kwargs: Any
+    ) -> None:
         self._start(run_id, parent_run_id, action.tool, span_type="tool", input=action)
 
     def on_agent_finish(self, finish: AgentFinish, *, run_id: PyUUID, **kwargs: Any) -> None:
@@ -522,11 +524,7 @@ class BraintrustTracer(BaseTracer):
 
         # Use the most recent open span as parent so LangChain traces
         # nest under the current component span.
-        parent_span = (
-            self.spans[next(reversed(self.spans))]
-            if self.spans
-            else self._root_span
-        )
+        parent_span = self.spans[next(reversed(self.spans))] if self.spans else self._root_span
         return _BraintrustLangChainHandler(parent_span)
 
     # ------------------------------------------------------------------
