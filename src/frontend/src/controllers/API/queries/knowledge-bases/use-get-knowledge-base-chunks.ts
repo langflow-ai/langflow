@@ -11,25 +11,45 @@ export interface ChunkInfo {
   metadata: Record<string, unknown> | null;
 }
 
+export interface PaginatedChunkResponse {
+  chunks: ChunkInfo[];
+  total: number;
+  page: number;
+  limit: number;
+  total_pages: number;
+}
+
 interface GetKnowledgeBaseChunksParams {
   kb_name: string;
+  page?: number;
+  limit?: number;
 }
 
 export const useGetKnowledgeBaseChunks: useQueryFunctionType<
   GetKnowledgeBaseChunksParams,
-  ChunkInfo[]
+  PaginatedChunkResponse
 > = (params, options?) => {
   const { query } = UseRequestProcessor();
 
-  const getChunksFn = async (): Promise<ChunkInfo[]> => {
-    const res = await api.get(
-      `${getURL("KNOWLEDGE_BASES")}/${params?.kb_name}/chunks`,
-    );
+  const getChunksFn = async (): Promise<PaginatedChunkResponse> => {
+    const queryParams = new URLSearchParams();
+    if (params?.page) {
+      queryParams.append("page", params.page.toString());
+    }
+    if (params?.limit) {
+      queryParams.append("limit", params.limit.toString());
+    }
+
+    const url = `${getURL("KNOWLEDGE_BASES")}/${params?.kb_name}/chunks${
+      queryParams.toString() ? `?${queryParams.toString()}` : ""
+    }`;
+
+    const res = await api.get(url);
     return res.data;
   };
 
-  const queryResult: UseQueryResult<ChunkInfo[], any> = query(
-    ["useGetKnowledgeBaseChunks", params?.kb_name],
+  const queryResult: UseQueryResult<PaginatedChunkResponse, any> = query(
+    ["useGetKnowledgeBaseChunks", params?.kb_name, params?.page, params?.limit],
     getChunksFn,
     {
       enabled: !!params?.kb_name,
