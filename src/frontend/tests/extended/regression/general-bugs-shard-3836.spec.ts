@@ -39,7 +39,7 @@ test(
 
     await uploadFile(page, "chain.png");
 
-    const uploadButton = page.getByTestId("button_upload_file")
+    const uploadButton = page.getByTestId("button_upload_file");
 
     await uploadButton.hover();
     await expect(uploadButton.getByTestId("icon-X")).toHaveCSS("opacity", "1");

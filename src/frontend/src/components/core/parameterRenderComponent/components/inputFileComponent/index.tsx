@@ -190,13 +190,13 @@ export default function InputFileComponent({
       handleOnNewValue({
         value: isList
           ? (files ?? [])
-            .filter((f) => selectedFiles.includes(f.path))
-            .map((f) => f.name)
+              .filter((f) => selectedFiles.includes(f.path))
+              .map((f) => f.name)
           : (files?.find((f) => selectedFiles.includes(f.path))?.name ?? ""),
         file_path: isList
           ? (files ?? [])
-            .filter((f) => selectedFiles.includes(f.path))
-            .map((f) => f.path)
+              .filter((f) => selectedFiles.includes(f.path))
+              .map((f) => f.path)
           : (files?.find((f) => selectedFiles.includes(f.path))?.path ?? ""),
       });
     }
@@ -221,13 +221,13 @@ export default function InputFileComponent({
                       handleOnNewValue({
                         value: isList
                           ? newSelectedFiles.map(
-                            (file) =>
-                              (files ?? []).find((f) => f.path === file)
-                                ?.name,
-                          )
+                              (file) =>
+                                (files ?? []).find((f) => f.path === file)
+                                  ?.name,
+                            )
                           : ((files ?? []).find(
-                            (f) => f.path === newSelectedFiles[0],
-                          )?.name ?? ""),
+                              (f) => f.path === newSelectedFiles[0],
+                            )?.name ?? ""),
                         file_path: isList
                           ? newSelectedFiles
                           : (newSelectedFiles[0] ?? ""),
@@ -242,12 +242,12 @@ export default function InputFileComponent({
                     handleOnNewValue({
                       value: isList
                         ? selectedFiles.map(
-                          (file) =>
-                            (files ?? []).find((f) => f.path === file)?.name,
-                        )
+                            (file) =>
+                              (files ?? []).find((f) => f.path === file)?.name,
+                          )
                         : ((files ?? []).find(
-                          (f) => f.path === selectedFiles[0],
-                        )?.name ?? ""),
+                            (f) => f.path === selectedFiles[0],
+                          )?.name ?? ""),
                       file_path: isList
                         ? selectedFiles
                         : (selectedFiles[0] ?? ""),
@@ -310,9 +310,9 @@ export default function InputFileComponent({
                   className={cn(
                     "h-9 w-9 rounded-l-none group relative",
                     value &&
-                    "bg-accent-emerald-foreground hover:bg-accent-red-foreground ring-accent-emerald-foreground hover:ring-accent-red-foreground",
+                      "bg-accent-emerald-foreground hover:bg-accent-red-foreground ring-accent-emerald-foreground hover:ring-accent-red-foreground",
                     isDisabled &&
-                    "relative top-[1px] h-9 ring-1 ring-border ring-offset-0 hover:ring-border",
+                      "relative top-[1px] h-9 ring-1 ring-border ring-offset-0 hover:ring-border",
                     editNode && "h-6",
                   )}
                   onClick={value ? handleDismissClick : handleButtonClick}
@@ -333,7 +333,7 @@ export default function InputFileComponent({
                     name={"X"}
                     className={cn(
                       "h-4 w-4 text-background opacity-0 absolute transition-opacity duration-200",
-                      value && "group-hover:opacity-100"
+                      value && "group-hover:opacity-100",
                     )}
                     strokeWidth={2}
                   />
