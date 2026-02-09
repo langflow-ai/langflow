@@ -33,7 +33,6 @@ const KnowledgeBaseEmptyState = ({
       <KnowledgeBaseUploadModal
         open={isUploadModalOpen}
         setOpen={setIsUploadModalOpen}
-        onOpenExampleFlow={handleCreateKnowledge}
         onSubmit={(data) => {
           console.log("Creating knowledge base:", data);
           setSuccessData({
