@@ -6,11 +6,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 from langchain_core.documents import Document
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
-
 from langflow.schema.data import Data
 from langflow.schema.message import Message
 from langflow.services.tracing.braintrust import BraintrustTracer
-
 
 # ------------------------------------------------------------------
 # Fixtures
@@ -248,8 +246,10 @@ class TestSpanLifecycle:
     def test_add_trace_no_op_when_not_ready(self, trace_id):
         with patch.dict("os.environ", {}, clear=True):
             t = BraintrustTracer(
-                trace_name="Test", trace_type="chain",
-                project_name="P", trace_id=trace_id,
+                trace_name="Test",
+                trace_type="chain",
+                project_name="P",
+                trace_id=trace_id,
             )
         t.add_trace(trace_id="c1", trace_name="X", trace_type="llm", inputs={})
         assert len(t.spans) == 0
@@ -257,8 +257,10 @@ class TestSpanLifecycle:
     def test_end_trace_logs_and_closes_span(self, tracer, mock_logger):
         _logger, _root_span, child_span = mock_logger
         tracer.add_trace(
-            trace_id="comp-1", trace_name="OpenAI (comp-1)",
-            trace_type="llm", inputs={"prompt": "hello"},
+            trace_id="comp-1",
+            trace_name="OpenAI (comp-1)",
+            trace_type="llm",
+            inputs={"prompt": "hello"},
         )
         tracer.end_trace(
             trace_id="comp-1",
@@ -274,12 +276,15 @@ class TestSpanLifecycle:
     def test_end_trace_with_error(self, tracer, mock_logger):
         _logger, _root_span, child_span = mock_logger
         tracer.add_trace(
-            trace_id="comp-1", trace_name="Fail (comp-1)",
-            trace_type="llm", inputs={},
+            trace_id="comp-1",
+            trace_name="Fail (comp-1)",
+            trace_type="llm",
+            inputs={},
         )
         error = ValueError("something went wrong")
         tracer.end_trace(
-            trace_id="comp-1", trace_name="Fail (comp-1)",
+            trace_id="comp-1",
+            trace_name="Fail (comp-1)",
             error=error,
         )
         assert child_span.log.call_args[1]["error"] == "something went wrong"
@@ -287,11 +292,14 @@ class TestSpanLifecycle:
     def test_end_trace_with_logs(self, tracer, mock_logger):
         _logger, _root_span, child_span = mock_logger
         tracer.add_trace(
-            trace_id="comp-1", trace_name="X (comp-1)",
-            trace_type="llm", inputs={},
+            trace_id="comp-1",
+            trace_name="X (comp-1)",
+            trace_type="llm",
+            inputs={},
         )
         tracer.end_trace(
-            trace_id="comp-1", trace_name="X (comp-1)",
+            trace_id="comp-1",
+            trace_name="X (comp-1)",
             outputs={"out": "value"},
             logs=[{"step": 1}, {"step": 2}],
         )
@@ -330,8 +338,10 @@ class TestSpanLifecycle:
     def test_end_no_op_when_not_ready(self, trace_id):
         with patch.dict("os.environ", {}, clear=True):
             t = BraintrustTracer(
-                trace_name="Test", trace_type="chain",
-                project_name="P", trace_id=trace_id,
+                trace_name="Test",
+                trace_type="chain",
+                project_name="P",
+                trace_id=trace_id,
             )
         # Should not raise
         t.end(inputs={}, outputs={})
@@ -348,8 +358,10 @@ class TestGetLangchainCallback:
     def test_returns_none_when_not_ready(self, trace_id):
         with patch.dict("os.environ", {}, clear=True):
             t = BraintrustTracer(
-                trace_name="Test", trace_type="chain",
-                project_name="P", trace_id=trace_id,
+                trace_name="Test",
+                trace_type="chain",
+                project_name="P",
+                trace_id=trace_id,
             )
         assert t.get_langchain_callback() is None
 
@@ -374,8 +386,10 @@ class TestGetLangchainCallback:
 
         # Add a component span
         tracer.add_trace(
-            trace_id="comp-1", trace_name="OpenAI (comp-1)",
-            trace_type="llm", inputs={},
+            trace_id="comp-1",
+            trace_name="OpenAI (comp-1)",
+            trace_type="llm",
+            inputs={},
         )
 
         mock_handler = MagicMock()
