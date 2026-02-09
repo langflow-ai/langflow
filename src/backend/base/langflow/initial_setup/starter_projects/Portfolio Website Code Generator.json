@@ -307,7 +307,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.128.0"
+                    "version": "0.128.5"
                   },
                   {
                     "name": "lfx",
