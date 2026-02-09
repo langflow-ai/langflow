@@ -37,7 +37,6 @@ function formatCost(cost: number | undefined): string {
  * Format latency in human-readable format
  */
 function formatLatency(ms: number): string {
-  if (ms === 0) return "Running...";
   if (ms < 1000) return `${ms}ms`;
   if (ms < 60000) return `${(ms / 1000).toFixed(2)}s`;
   return `${(ms / 60000).toFixed(2)}m`;
@@ -73,6 +72,7 @@ export function SpanDetail({ span }: SpanDetailProps) {
   const hasInputs = Object.keys(span.inputs).length > 0;
   const hasOutputs = Object.keys(span.outputs).length > 0;
   const hasTokenUsage = span.tokenUsage && span.tokenUsage.totalTokens > 0;
+  const isLlmSpan = span.type === "llm";
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -124,21 +124,21 @@ export function SpanDetail({ span }: SpanDetailProps) {
             value={formatLatency(span.latencyMs)}
             icon="Clock"
           />
-          {hasTokenUsage && (
+          {(hasTokenUsage || isLlmSpan) && (
             <>
               <MetricCard
                 label="Tokens"
-                value={span.tokenUsage!.totalTokens.toLocaleString()}
-                icon="Hash"
+                value={hasTokenUsage ? span.tokenUsage!.totalTokens.toLocaleString() : "\u2014"}
+                icon="Coins"
               />
               <MetricCard
                 label="Prompt"
-                value={span.tokenUsage!.promptTokens.toLocaleString()}
+                value={hasTokenUsage ? span.tokenUsage!.promptTokens.toLocaleString() : "\u2014"}
                 icon="ArrowUp"
               />
               <MetricCard
                 label="Completion"
-                value={span.tokenUsage!.completionTokens.toLocaleString()}
+                value={hasTokenUsage ? span.tokenUsage!.completionTokens.toLocaleString() : "\u2014"}
                 icon="ArrowDown"
               />
             </>

@@ -91,7 +91,7 @@ class NativeCallbackHandler(BaseCallbackHandler):
             name=name,
             span_type="llm",
             inputs={"prompts": prompts},
-            parent_span_id=self.parent_span_id or (self._get_span_id(parent_run_id) if parent_run_id else None),
+            parent_span_id=(self._get_span_id(parent_run_id) if parent_run_id else None) or self.parent_span_id,
             model_name=model_name,
         )
 
@@ -126,7 +126,7 @@ class NativeCallbackHandler(BaseCallbackHandler):
             name=name,
             span_type="llm",
             inputs={"messages": formatted_messages},
-            parent_span_id=self.parent_span_id or (self._get_span_id(parent_run_id) if parent_run_id else None),
+            parent_span_id=(self._get_span_id(parent_run_id) if parent_run_id else None) or self.parent_span_id,
             model_name=model_name,
         )
 
@@ -142,12 +142,52 @@ class NativeCallbackHandler(BaseCallbackHandler):
         span_id = self._get_span_id(run_id)
         latency_ms = self._calculate_latency(run_id)
 
-        # Extract token usage
+        # Extract token usage from llm_output (legacy format)
         llm_output = getattr(response, "llm_output", None) or {}
         token_usage = llm_output.get("token_usage", {}) if isinstance(llm_output, dict) else {}
         prompt_tokens = token_usage.get("prompt_tokens")
         completion_tokens = token_usage.get("completion_tokens")
         total_tokens = token_usage.get("total_tokens")
+
+        # Fallback: extract from generations (modern LangChain format)
+        if not total_tokens:
+            generations = getattr(response, "generations", []) or []
+            for gen_list in generations:
+                for gen in gen_list:
+                    # Try AIMessage.usage_metadata (langchain-core standardized)
+                    message = getattr(gen, "message", None)
+                    if message is not None:
+                        usage = getattr(message, "usage_metadata", None)
+                        if usage:
+                            _get = usage.get if isinstance(usage, dict) else lambda k, d=None: getattr(usage, k, d)
+                            prompt_tokens = _get("input_tokens") or prompt_tokens
+                            completion_tokens = _get("output_tokens") or completion_tokens
+                            total_tokens = _get("total_tokens") or total_tokens
+
+                        # Try AIMessage.response_metadata (provider-specific)
+                        if not total_tokens:
+                            resp_meta = getattr(message, "response_metadata", None) or {}
+                            if isinstance(resp_meta, dict):
+                                usage_dict = resp_meta.get("token_usage") or resp_meta.get("usage", {})
+                                if isinstance(usage_dict, dict):
+                                    prompt_tokens = usage_dict.get("prompt_tokens") or usage_dict.get("input_tokens") or prompt_tokens
+                                    completion_tokens = usage_dict.get("completion_tokens") or usage_dict.get("output_tokens") or completion_tokens
+                                    total_tokens = usage_dict.get("total_tokens") or total_tokens
+
+                    # Try generation_info (some providers put usage here)
+                    if not total_tokens:
+                        gen_info = getattr(gen, "generation_info", None) or {}
+                        if isinstance(gen_info, dict):
+                            usage_dict = gen_info.get("token_usage") or gen_info.get("usage", {})
+                            if isinstance(usage_dict, dict):
+                                prompt_tokens = usage_dict.get("prompt_tokens") or usage_dict.get("input_tokens") or prompt_tokens
+                                completion_tokens = usage_dict.get("completion_tokens") or usage_dict.get("output_tokens") or completion_tokens
+                                total_tokens = usage_dict.get("total_tokens") or total_tokens
+
+                    if total_tokens:
+                        break
+                if total_tokens:
+                    break
 
         # Extract generations
         generations = getattr(response, "generations", []) or []
@@ -212,7 +252,7 @@ class NativeCallbackHandler(BaseCallbackHandler):
             name=name,
             span_type="chain",
             inputs=inputs or {},
-            parent_span_id=self.parent_span_id or (self._get_span_id(parent_run_id) if parent_run_id else None),
+            parent_span_id=(self._get_span_id(parent_run_id) if parent_run_id else None) or self.parent_span_id,
         )
 
     def on_chain_end(
@@ -276,7 +316,7 @@ class NativeCallbackHandler(BaseCallbackHandler):
             name=name,
             span_type="tool",
             inputs=inputs or {"input": input_str},
-            parent_span_id=self.parent_span_id or (self._get_span_id(parent_run_id) if parent_run_id else None),
+            parent_span_id=(self._get_span_id(parent_run_id) if parent_run_id else None) or self.parent_span_id,
         )
 
     def on_tool_end(
@@ -364,7 +404,7 @@ class NativeCallbackHandler(BaseCallbackHandler):
             name=name,
             span_type="retriever",
             inputs={"query": query},
-            parent_span_id=self.parent_span_id or (self._get_span_id(parent_run_id) if parent_run_id else None),
+            parent_span_id=(self._get_span_id(parent_run_id) if parent_run_id else None) or self.parent_span_id,
         )
 
     def on_retriever_end(

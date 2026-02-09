@@ -79,6 +79,9 @@ class NativeTracer(BaseTracer):
         # Track the currently active component span ID (for parent-child linking)
         self._current_component_id: str | None = None
 
+        # Accumulate token usage from child LangChain spans per component
+        self._component_tokens: dict[str, dict[str, int]] = {}
+
         # Trace start time
         self._start_time = datetime.now(tz=timezone.utc)
 
@@ -177,6 +180,9 @@ class NativeTracer(BaseTracer):
         if logs:
             output_data["logs"] = [log if isinstance(log, dict) else log.model_dump() for log in logs]
 
+        # Get accumulated token usage from child LangChain spans
+        tokens = self._component_tokens.pop(trace_id, {})
+
         # Store completed span for batch write
         self.completed_spans.append(
             {
@@ -190,6 +196,9 @@ class NativeTracer(BaseTracer):
                 "latency_ms": latency_ms,
                 "status": SpanStatus.ERROR if error else SpanStatus.SUCCESS,
                 "error": str(error) if error else None,
+                "prompt_tokens": tokens.get("prompt_tokens") or None,
+                "completion_tokens": tokens.get("completion_tokens") or None,
+                "total_tokens": tokens.get("total_tokens") or None,
             }
         )
 
@@ -407,6 +416,15 @@ class NativeTracer(BaseTracer):
         end_time = datetime.now(tz=timezone.utc)
         start_time = span_info["start_time"]
         actual_latency = int((end_time - start_time).total_seconds() * 1000)
+
+        # Accumulate tokens to the parent component span
+        if total_tokens and self._current_component_id:
+            tokens = self._component_tokens.setdefault(self._current_component_id, {
+                "prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0,
+            })
+            tokens["prompt_tokens"] += prompt_tokens or 0
+            tokens["completion_tokens"] += completion_tokens or 0
+            tokens["total_tokens"] += total_tokens or 0
 
         # Store completed span for batch write
         self.completed_spans.append(

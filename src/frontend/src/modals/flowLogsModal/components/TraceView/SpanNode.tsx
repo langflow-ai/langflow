@@ -50,7 +50,6 @@ function getStatusVariant(
  * Format latency in a human-readable way
  */
 function formatLatency(ms: number): string {
-  if (ms === 0) return "...";
   if (ms < 1000) return `${ms}ms`;
   return `${(ms / 1000).toFixed(1)}s`;
 }
@@ -60,8 +59,8 @@ function formatLatency(ms: number): string {
  */
 function formatTokens(tokens: number | undefined): string | null {
   if (!tokens) return null;
-  if (tokens < 1000) return `${tokens} tok`;
-  return `${(tokens / 1000).toFixed(1)}k tok`;
+  if (tokens < 1000) return `${tokens}`;
+  return `${(tokens / 1000).toFixed(1)}k`;
 }
 
 /**
@@ -136,7 +135,10 @@ export function SpanNode({
 
       {/* Token count (if applicable) */}
       {tokenStr && (
-        <span className="text-xs text-muted-foreground">{tokenStr}</span>
+        <span className="flex items-center gap-0.5 text-xs text-muted-foreground">
+          <IconComponent name="Coins" className="h-3 w-3" />
+          {tokenStr}
+        </span>
       )}
 
       {/* Latency */}
