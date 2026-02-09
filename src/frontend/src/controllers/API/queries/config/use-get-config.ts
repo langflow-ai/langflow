@@ -11,16 +11,19 @@ import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
-// Public config fields (always present)
-export interface PublicConfigResponse {
+// Base config - common fields shared by all responses
+interface BaseConfig {
   frontend_timeout: number;
   max_file_size_upload: number;
   event_delivery: EventDeliveryType;
   voice_mode_available: boolean;
 }
 
-// Full config extends public config with authenticated-only fields
-export interface ConfigResponse extends PublicConfigResponse {
+// Public config = base config (unauthenticated users get only base fields)
+export type PublicConfigResponse = BaseConfig;
+
+// Full config = base + authenticated-only fields
+export interface ConfigResponse extends BaseConfig {
   auto_saving: boolean;
   auto_saving_interval: number;
   health_check_max_retries: number;
