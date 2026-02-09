@@ -19,6 +19,8 @@ export interface SessionSelectorProps {
   playgroundPage?: boolean;
   setActiveSession?: (session: string) => void;
   handleRename?: (oldSessionId: string, newSessionId: string) => Promise<void>;
+  menuOpen?: boolean;
+  onMenuOpenChange?: (open: boolean) => void;
 }
 
 export function SessionSelector({
@@ -34,6 +36,8 @@ export function SessionSelector({
   playgroundPage = false,
   setActiveSession,
   handleRename,
+  menuOpen,
+  onMenuOpenChange,
 }: SessionSelectorProps) {
   const [isEditing, setIsEditing] = useState(false);
   const { mutate: updateSessionName } = useUpdateSessionName();
@@ -140,6 +144,8 @@ export function SessionSelector({
           isVisible={true}
           tooltipContent="More options"
           tooltipSide="left"
+          open={menuOpen}
+          onOpenChange={onMenuOpenChange}
         />
       </div>
     </div>
