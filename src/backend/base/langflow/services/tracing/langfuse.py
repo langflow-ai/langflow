@@ -121,16 +121,31 @@ class LangFuseTracer(BaseTracer):
             return
 
         metadata_: dict = {"from_langflow_component": True, "component_id": trace_id}
-        metadata_ |= {"trace_type": trace_type} if trace_type else {}
-        metadata_ |= metadata or {}
+        if trace_type:
+            metadata_["trace_type"] = trace_type
+        if metadata:
+            metadata_.update(metadata)
 
         name = trace_name.removesuffix(f" ({trace_id})")
 
         # Create child span under the root span
+
+        # Pre-check whether inputs/metadata_ are shallow and avoid expensive serialize calls when possible.
+        if self._is_shallow_primitive_mapping(inputs):
+            input_serialized = inputs
+        else:
+            input_serialized = serialize(inputs)
+
+        if self._is_shallow_primitive_mapping(metadata_):
+            metadata_serialized = metadata_
+        else:
+            metadata_serialized = serialize(metadata_)
+
+        # Create child span under the root span
         span = self._root_span.start_span(
             name=name,
-            input=serialize(inputs),
-            metadata=serialize(metadata_),
+            input=input_serialized,
+            metadata=metadata_serialized,
         )
 
         self.spans[trace_id] = span
@@ -223,3 +238,14 @@ class LangFuseTracer(BaseTracer):
         if secret_key and public_key and host:
             return {"secret_key": secret_key, "public_key": public_key, "host": host}
         return {}
+
+    def _is_shallow_primitive_mapping(self, obj: Any) -> bool:
+        """Return True if obj is a dict with str keys and primitive values (fast-path)."""
+        if not isinstance(obj, dict):
+            return False
+        for k, v in obj.items():
+            if not isinstance(k, str):
+                return False
+            if not isinstance(v, (str, bytes, int, float, bool, type(None))):
+                return False
+        return True

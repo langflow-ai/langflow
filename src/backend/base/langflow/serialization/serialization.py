@@ -270,6 +270,38 @@ def serialize(
     """
     if obj is None:
         return None
+
+    # Fast-path checks: when no truncation/limits are requested, avoid the dispatcher for
+    # simple primitives and shallow containers composed solely of primitives.
+    # This eliminates expensive dispatch/recursion for the common case of already-serializable data.
+    if max_length is None and max_items is None:
+        # Primitive fast-path
+        if isinstance(obj, (str, bytes, int, float, bool, type(None))):
+            return obj
+
+        # Shallow mapping fast-path: dict with str keys and primitive values
+        if isinstance(obj, dict):
+            is_shallow = True
+            for k, v in obj.items():
+                if not isinstance(k, str):
+                    is_shallow = False
+                    break
+                if not isinstance(v, (str, bytes, int, float, bool, type(None))):
+                    is_shallow = False
+                    break
+            if is_shallow:
+                return obj
+
+        # Shallow sequence fast-path: list/tuple with only primitives
+        if isinstance(obj, (list, tuple)):
+            is_shallow = True
+            for v in obj:
+                if not isinstance(v, (str, bytes, int, float, bool, type(None))):
+                    is_shallow = False
+                    break
+            if is_shallow:
+                return obj
+
     try:
         # First try type-specific serialization
         result = _serialize_dispatcher(obj, max_length, max_items)
