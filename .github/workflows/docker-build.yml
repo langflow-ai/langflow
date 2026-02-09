@@ -234,7 +234,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.TEMP_GHCR_TOKEN}}
+          password: ${{ secrets.GITHUB_TOKEN}}
 
       - name: Build and push to Github Container Registry
         uses: Wandalen/wretry.action@master
@@ -302,7 +302,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.TEMP_GHCR_TOKEN}}
+          password: ${{ secrets.GITHUB_TOKEN}}
 
       - name: Wait for propagation (for backend)
         run: sleep 120
