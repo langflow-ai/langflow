@@ -175,6 +175,8 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
             # not actual errors. Don't log them - FastAPI's exception handlers will
             # take care of the HTTP response. Just rollback any uncommitted changes.
             if session.is_active:
+                from sqlalchemy.exc import InvalidRequestError
+
                 with suppress(InvalidRequestError):
                     await session.rollback()
             raise
