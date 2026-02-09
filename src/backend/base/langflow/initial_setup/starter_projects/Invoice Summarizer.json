@@ -593,7 +593,7 @@
         "data": {
           "id": "note-24qvs",
           "node": {
-            "description": "### 💡 Add your OpenAI API key here 👇",
+            "description": "### Configure your Model Provider",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -610,7 +610,7 @@
         },
         "position": {
           "x": 1084.4738832838511,
-          "y": -356.23959895639695
+          "y": -378.23959895639695
         },
         "selected": false,
         "type": "noteNode"
@@ -619,7 +619,7 @@
         "data": {
           "id": "note-jxdmT",
           "node": {
-            "description": "### 💡 Add your Needle Search API key here 👇",
+            "description": "### Add your Needle Search API key here 👇",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -636,8 +636,8 @@
           "width": 402
         },
         "position": {
-          "x": 500.88806568161635,
-          "y": -196.26232150672587
+          "x": 526.88806568161635,
+          "y": -229.26232150672587
         },
         "resizing": false,
         "selected": false,

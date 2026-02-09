@@ -2395,7 +2395,7 @@
         "data": {
           "id": "note-5qEgh",
           "node": {
-            "description": "### 💡 Add your OpenAI API key here 👇",
+            "description": "### Configure your Model Provider",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -2413,11 +2413,11 @@
         },
         "position": {
           "x": 1692.2322233423606,
-          "y": 1821.9077961087607
+          "y": 1800.9077961087607
         },
         "positionAbsolute": {
           "x": 1692.2322233423606,
-          "y": 1821.9077961087607
+          "y": 1800.9077961087607
         },
         "selected": false,
         "type": "noteNode",
@@ -2427,7 +2427,7 @@
         "data": {
           "id": "note-siZGp",
           "node": {
-            "description": "### 💡 Add your OpenAI API key here 👇",
+            "description": "### Configure your Model Provider",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -2444,8 +2444,8 @@
           "width": 324
         },
         "position": {
-          "x": 824.1003268813427,
-          "y": 698.6951695764802
+          "x": 812.6857046676182,
+          "y": 667.9634943856837
         },
         "positionAbsolute": {
           "x": 824.1003268813427,
@@ -2459,7 +2459,7 @@
         "data": {
           "id": "note-qKdBl",
           "node": {
-            "description": "### 💡 Add your OpenAI API key here 👇",
+            "description": "### Configure your Model Provider",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -2476,8 +2476,8 @@
           "width": 324
         },
         "position": {
-          "x": 2350.297636215281,
-          "y": 577.4592910079571
+          "x": 2346.7125890028847,
+          "y": 557.7415313397787
         },
         "positionAbsolute": {
           "x": 2350.297636215281,

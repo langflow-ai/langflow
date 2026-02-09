@@ -550,7 +550,7 @@
         "data": {
           "id": "note-QBrHy",
           "node": {
-            "description": "### 💡 Add your OpenAI API key here 👇",
+            "description": "### Configure your Model Provider",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -568,7 +568,7 @@
         },
         "position": {
           "x": 1080.9467591245357,
-          "y": 744.1979207661088
+          "y": 713.3918432814232
         },
         "positionAbsolute": {
           "x": 1075.829573520873,
