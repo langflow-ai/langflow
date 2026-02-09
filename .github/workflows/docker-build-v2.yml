@@ -54,17 +54,13 @@ env:
   PYTHON_VERSION: "3.13"
 
 jobs:
-  build-base:
-    name: Build Base Package
+  determine-base-version:
+    name: Determine Base Version
     if: ${{ inputs.release_type == 'base' }}
-    strategy:
-      matrix:
-        include:
-          - arch: amd64
-            runner: [Langflow-runner]
-          - arch: arm64
-            runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
-    runs-on: ${{ matrix.runner }}
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      skipped: ${{ steps.version.outputs.skipped }}
     steps:
       - name: Check out the code
         uses: actions/checkout@v6
@@ -79,18 +75,99 @@ jobs:
           python-version: "3.13"
           prune-cache: false
 
-      - name: Get version
+      - name: Determine version
         id: version
         run: |
-          echo "Extracting base version from pyproject.toml"
           version=$(uv tree 2>/dev/null | grep '^langflow-base' | cut -d' ' -f2 | sed 's/^v//')
-          echo "Using version: $version"
-          echo version=$version >> $GITHUB_OUTPUT
+          echo "Base version from pyproject.toml: $version"
+
+          if [ ${{inputs.pre_release}} == "true" ]; then
+            last_released_version=$(curl -s "https://registry.hub.docker.com/v2/repositories/langflowai/langflow/tags?page_size=100" | jq -r '.results[].name' | grep -E '\.rc[0-9]+' | sort -V | tail -n 1)
+            version="$(uv run ./scripts/ci/langflow_pre_release_tag.py "$version" "$last_released_version")"
+            echo "Latest base pre-release version: $last_released_version"
+            echo "Base pre-release version to be released: $version"
+          else
+            last_released_version=$(curl -s "https://registry.hub.docker.com/v2/repositories/langflowai/langflow/tags?page_size=100" | jq -r '.results[].name' | grep -v 'latest' | sort -V | tail -n 1)
+            echo "Latest base release version: $last_released_version"
+          fi
+
+          if [ "$version" = "$last_released_version" ]; then
+            echo "Base docker version $version is already released. Skipping release."
+            echo skipped=true >> $GITHUB_OUTPUT
+            exit 0
+          else
+            echo version=$version >> $GITHUB_OUTPUT
+            echo skipped=false >> $GITHUB_OUTPUT
+          fi
+
+  determine-main-version:
+    name: Determine Main Version
+    if: ${{ inputs.release_type != 'base' }}
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      skipped: ${{ steps.version.outputs.skipped }}
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Setup Environment
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: "3.13"
+          prune-cache: false
+
+      - name: Determine version
+        id: version
+        run: |
+          version=$(uv tree 2>/dev/null | grep '^langflow' | grep -v '^langflow-base' | cut -d' ' -f2 | sed 's/^v//')
+          echo "Main version from pyproject.toml: $version"
+
+          if [ ${{inputs.pre_release}} == "true" ]; then
+            last_released_version=$(curl -s "https://registry.hub.docker.com/v2/repositories/langflowai/langflow/tags?page_size=100" | jq -r '.results[].name' | grep -E '\.rc[0-9]+' | sort -V | tail -n 1)
+            version="$(uv run ./scripts/ci/langflow_pre_release_tag.py "$version" "$last_released_version")"
+            echo "Latest main pre-release version: $last_released_version"
+            echo "Main pre-release version to be released: $version"
+          else
+            last_released_version=$(curl -s "https://registry.hub.docker.com/v2/repositories/langflowai/langflow/tags?page_size=100" | jq -r '.results[].name' | grep -v 'latest' | sort -V | tail -n 1)
+            echo "Latest main release version: $last_released_version"
+          fi
+
+          if [ "$version" = "$last_released_version" ]; then
+            echo "Main docker version $version is already released. Skipping release."
+            echo skipped=true >> $GITHUB_OUTPUT
+            exit 0
+          else
+            echo version=$version >> $GITHUB_OUTPUT
+            echo skipped=false >> $GITHUB_OUTPUT
+          fi
+
+  build-base:
+    name: Build Base Package
+    needs: [determine-base-version]
+    if: ${{ inputs.release_type == 'base' && needs.determine-base-version.outputs.skipped == 'false' }}
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            runner: [Langflow-runner]
+          - arch: arm64
+            runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
 
       - name: Set tags
         id: tags
         run: |
-          version="${{ steps.version.outputs.version }}"
+          version="${{ needs.determine-base-version.outputs.version }}"
           echo "docker_tags=langflowai/langflow:base-${version}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
           echo "ghcr_tags=ghcr.io/langflow-ai/langflow:base-${version}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
 
@@ -141,7 +218,8 @@ jobs:
 
   build-main:
     name: Build Main Package
-    if: ${{ inputs.release_type == 'main' }}
+    needs: [determine-main-version]
+    if: ${{ inputs.release_type == 'main' && needs.determine-main-version.outputs.skipped == 'false' }}
     strategy:
       matrix:
         include:
@@ -156,26 +234,10 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
 
-      - name: Setup Environment
-        uses: astral-sh/setup-uv@v6
-        with:
-          enable-cache: true
-          cache-dependency-glob: "uv.lock"
-          python-version: "3.13"
-          prune-cache: false
-
-      - name: Get version
-        id: version
-        run: |
-          echo "Extracting main version from pyproject.toml"
-          version=$(uv tree 2>/dev/null | grep '^langflow' | grep -v '^langflow-base' | cut -d' ' -f2 | sed 's/^v//')
-          echo "Using version: $version"
-          echo version=$version >> $GITHUB_OUTPUT
-
       - name: Set tags
         id: tags
         run: |
-          version="${{ steps.version.outputs.version }}"
+          version="${{ needs.determine-main-version.outputs.version }}"
           echo "docker_tags=langflowai/langflow:${version}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
           echo "ghcr_tags=ghcr.io/langflow-ai/langflow:${version}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
 
@@ -226,25 +288,14 @@ jobs:
 
   build-main-backend:
     name: Build Main Backend Package
-    if: ${{ inputs.release_type == 'main-backend' }}
+    needs: [determine-main-version]
+    if: ${{ inputs.release_type == 'main-backend' && needs.determine-main-version.outputs.skipped == 'false' }}
     strategy:
       matrix:
-        component: [docker-backend, ghcr-backend]
         include:
-          - component: docker-backend
-            arch: amd64
-            runner: Langflow-runner
-
-          - component: docker-backend
-            arch: arm64
-            runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
-
-          - component: ghcr-backend
-            arch: amd64
-            runner: Langflow-runner
-
-          - component: ghcr-backend
-            arch: arm64
+          - arch: amd64
+            runner: [Langflow-runner]
+          - arch: arm64
             runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
     runs-on: ${{ matrix.runner }}
     steps:
@@ -253,26 +304,10 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
 
-      - name: Setup Environment
-        uses: astral-sh/setup-uv@v6
-        with:
-          enable-cache: true
-          cache-dependency-glob: "uv.lock"
-          python-version: "3.13"
-          prune-cache: false
-
-      - name: Get version
-        id: version
-        run: |
-          echo "Extracting main version from pyproject.toml"
-          version=$(uv tree 2>/dev/null | grep '^langflow' | grep -v '^langflow-base' | cut -d' ' -f2 | sed 's/^v//')
-          echo "Using version: $version"
-          echo version=$version >> $GITHUB_OUTPUT
-
       - name: Set tags
         id: tags
         run: |
-          version="${{ steps.version.outputs.version }}"
+          version="${{ needs.determine-main-version.outputs.version }}"
           echo "docker_tags=langflowai/langflow-backend:${version}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
           echo "ghcr_tags=ghcr.io/langflow-ai/langflow-backend:${version}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
 
@@ -285,14 +320,12 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Login to Docker Hub
-        if: ${{ matrix.component == 'docker-backend' }}
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build and push to Docker Hub
-        if: ${{ matrix.component == 'docker-backend' }}
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -307,7 +340,6 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Login to GitHub Container Registry
-        if: ${{ matrix.component == 'ghcr-backend' }}
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -315,7 +347,6 @@ jobs:
           password: ${{ secrets.TEMP_GHCR_TOKEN}}
 
       - name: Build and push to GitHub Container Registry
-        if: ${{ matrix.component == 'ghcr-backend' }}
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -331,108 +362,8 @@ jobs:
 
   build-main-frontend:
     name: Build Main Frontend Package
-    if: ${{ inputs.release_type == 'main-frontend' }}
-    strategy:
-      matrix:
-        component: [docker-frontend, ghcr-frontend]
-        include:
-          - component: docker-frontend
-            arch: amd64
-            runner: Langflow-runner
-
-          - component: docker-frontend
-            arch: arm64
-            runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
-
-          - component: ghcr-frontend
-            arch: amd64
-            runner: Langflow-runner
-
-          - component: ghcr-frontend
-            arch: arm64
-            runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
-    runs-on: ${{ matrix.runner }}
-    steps:
-      - name: Check out the code
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ inputs.ref }}
-
-      - name: Setup Environment
-        uses: astral-sh/setup-uv@v6
-        with:
-          enable-cache: true
-          cache-dependency-glob: "uv.lock"
-          python-version: "3.13"
-          prune-cache: false
-
-      - name: Get version
-        id: version
-        run: |
-          echo "Extracting main version from pyproject.toml"
-          version=$(uv tree 2>/dev/null | grep '^langflow' | grep -v '^langflow-base' | cut -d' ' -f2 | sed 's/^v//')
-          echo "Using version: $version"
-          echo version=$version >> $GITHUB_OUTPUT
-
-      - name: Set tags
-        id: tags
-        run: |
-          version="${{ steps.version.outputs.version }}"
-          echo "docker_tags=langflowai/langflow-frontend:${version}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
-          echo "ghcr_tags=ghcr.io/langflow-ai/langflow-frontend:${version}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
-
-      - name: Docker cleanup
-        run: |
-          docker system prune -af --volumes || true
-          docker buildx prune -af || true
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Docker Hub
-        if: ${{ matrix.component == 'docker-frontend' }}
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Build and push to Docker Hub
-        if: ${{ matrix.component == 'docker-frontend' }}
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: ${{ inputs.push_to_registry }}
-          file: ./docker/frontend/build_and_push_frontend.Dockerfile
-          tags: ${{ steps.tags.outputs.docker_tags }}
-          platforms: linux/${{ matrix.arch }}
-          provenance: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Login to GitHub Container Registry
-        if: ${{ matrix.component == 'ghcr-frontend' }}
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.TEMP_GHCR_TOKEN}}
-
-      - name: Build and push to GitHub Container Registry
-        if: ${{ matrix.component == 'ghcr-frontend' }}
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: ${{ inputs.push_to_registry }}
-          file: ./docker/frontend/build_and_push_frontend.Dockerfile
-          tags: ${{ steps.tags.outputs.ghcr_tags }}
-          platforms: linux/${{ matrix.arch }}
-          provenance: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-  build-main-ep:
-    name: Build Main EP Package
-    if: ${{ inputs.release_type == 'main-ep' }}
+    needs: [determine-main-version]
+    if: ${{ inputs.release_type == 'main-frontend' && needs.determine-main-version.outputs.skipped == 'false' }}
     strategy:
       matrix:
         include:
@@ -447,26 +378,80 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
 
-      - name: Setup Environment
-        uses: astral-sh/setup-uv@v6
-        with:
-          enable-cache: true
-          cache-dependency-glob: "uv.lock"
-          python-version: "3.13"
-          prune-cache: false
-
-      - name: Get version
-        id: version
+      - name: Set tags
+        id: tags
         run: |
-          echo "Extracting main version from pyproject.toml"
-          version=$(uv tree 2>/dev/null | grep '^langflow' | grep -v '^langflow-base' | cut -d' ' -f2 | sed 's/^v//')
-          echo "Using version: $version"
-          echo version=$version >> $GITHUB_OUTPUT
+          version="${{ needs.determine-main-version.outputs.version }}"
+          echo "docker_tags=langflowai/langflow-frontend:${version}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
+          echo "ghcr_tags=ghcr.io/langflow-ai/langflow-frontend:${version}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
+
+      - name: Docker cleanup
+        run: |
+          docker system prune -af --volumes || true
+          docker buildx prune -af || true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push to Docker Hub
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: ${{ inputs.push_to_registry }}
+          file: ./docker/frontend/build_and_push_frontend.Dockerfile
+          tags: ${{ steps.tags.outputs.docker_tags }}
+          platforms: linux/${{ matrix.arch }}
+          provenance: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.TEMP_GHCR_TOKEN}}
+
+      - name: Build and push to GitHub Container Registry
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: ${{ inputs.push_to_registry }}
+          file: ./docker/frontend/build_and_push_frontend.Dockerfile
+          tags: ${{ steps.tags.outputs.ghcr_tags }}
+          platforms: linux/${{ matrix.arch }}
+          provenance: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-main-ep:
+    name: Build Main EP Package
+    needs: [determine-main-version]
+    if: ${{ inputs.release_type == 'main-ep' && needs.determine-main-version.outputs.skipped == 'false' }}
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            runner: [Langflow-runner]
+          - arch: arm64
+            runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
 
       - name: Set tags
         id: tags
         run: |
-          version="${{ steps.version.outputs.version }}"
+          version="${{ needs.determine-main-version.outputs.version }}"
           echo "docker_tags=langflowai/langflow-ep:${version}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
           echo "ghcr_tags=ghcr.io/langflow-ai/langflow-ep:${version}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
 
@@ -517,7 +502,8 @@ jobs:
 
   build-main-all:
     name: Build Main All Package
-    if: ${{ inputs.release_type == 'main-all' }}
+    needs: [determine-main-version]
+    if: ${{ inputs.release_type == 'main-all' && needs.determine-main-version.outputs.skipped == 'false' }}
     strategy:
       matrix:
         include:
@@ -532,26 +518,10 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
 
-      - name: Setup Environment
-        uses: astral-sh/setup-uv@v6
-        with:
-          enable-cache: true
-          cache-dependency-glob: "uv.lock"
-          python-version: "3.13"
-          prune-cache: false
-
-      - name: Get version
-        id: version
-        run: |
-          echo "Extracting main version from pyproject.toml"
-          version=$(uv tree 2>/dev/null | grep '^langflow' | grep -v '^langflow-base' | cut -d' ' -f2 | sed 's/^v//')
-          echo "Using version: $version"
-          echo version=$version >> $GITHUB_OUTPUT
-
       - name: Set tags
         id: tags
         run: |
-          version="${{ steps.version.outputs.version }}"
+          version="${{ needs.determine-main-version.outputs.version }}"
           echo "docker_tags=langflowai/langflow-all:${version}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
           echo "ghcr_tags=ghcr.io/langflow-ai/langflow-all:${version}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
 
@@ -610,18 +580,12 @@ jobs:
         build-main-frontend,
         build-main-ep,
         build-main-all,
+        determine-base-version,
+        determine-main-version,
       ]
     runs-on: ubuntu-latest
     if: ${{ always() && inputs.push_to_registry && (needs.build-base.result == 'success' || needs.build-main.result == 'success' || needs.build-main-backend.result == 'success' || needs.build-main-frontend.result == 'success' || needs.build-main-ep.result == 'success' || needs.build-main-all.result == 'success') }}
     steps:
-      - name: Setup Environment
-        uses: astral-sh/setup-uv@v6
-        with:
-          enable-cache: true
-          cache-dependency-glob: "uv.lock"
-          python-version: "3.13"
-          prune-cache: false
-
       - name: Check out the code
         uses: actions/checkout@v6
         with:
@@ -631,7 +595,7 @@ jobs:
         id: version
         run: |
           if [[ "${{ inputs.release_type }}" == "base" ]]; then
-            version=$(uv tree 2>/dev/null | grep '^langflow-base' | cut -d' ' -f2 | sed 's/^v//')
+            version=$(uv tree 2>/dev/null | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//' | head -n 1)
           else
             version=$(uv tree 2>/dev/null | grep '^langflow' | grep -v '^langflow-base' | cut -d' ' -f2 | sed 's/^v//')
           fi
@@ -641,9 +605,10 @@ jobs:
       - name: Set tags
         id: tags
         run: |
-          version="${{ steps.version.outputs.version }}"
+          version="${{ needs.determine-main-version.outputs.version }}"
           case "${{ inputs.release_type }}" in
             "base")
+              version="${{ needs.determine-base-version.outputs.version }}"
               if [[ "${{ inputs.pre_release }}" == "true" ]]; then
                 echo "final_tags=langflowai/langflow:base-${version},ghcr.io/langflow-ai/langflow:base-${version}" >> $GITHUB_OUTPUT
               else
@@ -680,12 +645,20 @@ jobs:
               echo "ghcr_arch_base=ghcr.io/langflow-ai/langflow-frontend:${version}" >> $GITHUB_OUTPUT
               ;;
             "main-ep")
-              echo "final_tags=langflowai/langflow-ep:${version},langflowai/langflow-ep:latest,ghcr.io/langflow-ai/langflow-ep:${version},ghcr.io/langflow-ai/langflow-ep:latest" >> $GITHUB_OUTPUT
+              if [[ "${{ inputs.pre_release }}" == "true" ]]; then
+                echo "final_tags=langflowai/langflow-ep:${version},ghcr.io/langflow-ai/langflow-ep:${version}" >> $GITHUB_OUTPUT
+              else
+                echo "final_tags=langflowai/langflow-ep:${version},langflowai/langflow-ep:latest,ghcr.io/langflow-ai/langflow-ep:${version},ghcr.io/langflow-ai/langflow-ep:latest" >> $GITHUB_OUTPUT
+              fi
               echo "arch_base=langflowai/langflow-ep:${version}" >> $GITHUB_OUTPUT
               echo "ghcr_arch_base=ghcr.io/langflow-ai/langflow-ep:${version}" >> $GITHUB_OUTPUT
               ;;
             "main-all")
-              echo "final_tags=langflowai/langflow-all:${version},langflowai/langflow-all:latest,ghcr.io/langflow-ai/langflow-all:${version},ghcr.io/langflow-ai/langflow-all:latest" >> $GITHUB_OUTPUT
+              if [[ "${{ inputs.pre_release }}" == "true" ]]; then
+                echo "final_tags=langflowai/langflow-all:${version},ghcr.io/langflow-ai/langflow-all:${version}" >> $GITHUB_OUTPUT
+              else
+                echo "final_tags=langflowai/langflow-all:${version},langflowai/langflow-all:latest,ghcr.io/langflow-ai/langflow-all:${version},ghcr.io/langflow-ai/langflow-all:latest" >> $GITHUB_OUTPUT
+              fi
               echo "arch_base=langflowai/langflow-all:${version}" >> $GITHUB_OUTPUT
               echo "ghcr_arch_base=ghcr.io/langflow-ai/langflow-all:${version}" >> $GITHUB_OUTPUT
               ;;

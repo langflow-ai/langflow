@@ -1,0 +1,239 @@
+---
+title: Python Interpreter
+slug: /python-interpreter
+---
+
+import Icon from "@site/src/components/icon";
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+This component allows you to execute Python code with imported packages.
+
+The **Python Interpreter** component can only import packages that are already installed in your Langflow environment.
+If you encounter an `ImportError` when trying to use a package, you need to install it first.
+
+To install custom packages, see [Install custom dependencies](/install-custom-dependencies).
+
+## Use the Python Interpreter in a flow
+
+1. To use this component in a flow, in the **Global Imports** field, add the packages you want to import as a comma-separated list, such as `math,pandas`.
+At least one import is required.
+2. In the **Python Code** field, enter the Python code you want to execute. Use `print()` to see the output.
+3. Optional: Enable **Tool Mode**, and then connect the **Python Interpreter** component to an **Agent** component as a tool.
+For example, connect a **Python Interpreter** component and a [**Calculator** component](/calculator) as tools for an **Agent** component, and then test how it chooses different tools to solve math problems.
+![Python Interpreter and Calculator components connected to an Agent component](/img/component-python-interpreter.png)
+4. Ask the agent an easier math question.
+The **Calculator** tool can add, subtract, multiple, divide, or perform exponentiation.
+The agent executes the `evaluate_expression` tool to correctly answer the question.
+
+Result:
+```text
+Executed evaluate_expression
+Input:
+{
+  "expression": "2+5"
+}
+Output:
+{
+  "result": "7"
+}
+```
+
+5. Give the agent complete Python code.
+This example creates a Pandas DataFrame table with the imported `pandas` packages, and returns the square root of the mean squares.
+
+```python
+import pandas as pd
+import math
+
+# Create a simple DataFrame
+df = pd.DataFrame({
+    'numbers': [1, 2, 3, 4, 5],
+    'squares': [x**2 for x in range(1, 6)]
+})
+
+# Calculate the square root of the mean
+result = math.sqrt(df['squares'].mean())
+print(f"Square root of mean squares: {result}")
+```
+
+The agent correctly chooses the `run_python_repl` tool to solve the problem.
+
+Result:
+```text
+Executed run_python_repl
+
+Input:
+
+{
+  "python_code": "import pandas as pd\nimport math\n\n# Create a simple DataFrame\ndf = pd.DataFrame({\n    'numbers': [1, 2, 3, 4, 5],\n    'squares': [x**2 for x in range(1, 6)]\n})\n\n# Calculate the square root of the mean\nresult = math.sqrt(df['squares'].mean())\nprint(f\"Square root of mean squares: {result}\")"
+}
+Output:
+
+{
+  "result": "Square root of mean squares: 3.3166247903554"
+}
+```
+
+If you don't include the package imports in the chat, the agent can still create the table using `pd.DataFrame`, because the `pandas` package is imported globally by the **Python Interpreter** component in the **Global Imports** field.
+
+## Pass inputs to the Python Interpreter
+
+To pass inputs to the **Python Interpreter** component, you need to customize the component's code to add input fields.
+After the input field is added to the component code, the port becomes available for connections.
+For example, to connect a [**Text** component](/text-input-and-output) and pass a URL value to the **Python Interpreter** component, do the following:
+
+1. Add a **Python Interpreter** component to your flow.
+2. To modify the **Python Interpreter** component's code, click <Icon name="Code" aria-hidden="true"/> **Edit Code**.
+3. To pass a URL input to the **Python Interpreter** component, make the following changes to the code:
+
+   a. Add the URL input field to the `inputs` list. This creates the input port that other components can connect to.
+
+   b. Update the `get_globals` method to extract the URL value and add it to the globals dictionary.
+   This makes the `url` variable available in the component's Python code.
+
+   c. Update the default Python code value to use the `url` variable.
+
+   The following example demonstrates these modifications.
+
+    <details open>
+    <summary>Python code example</summary>
+
+    ```python
+    import importlib
+
+    from langchain_experimental.utilities import PythonREPL
+    from lfx.custom.custom_component.component import Component
+    from lfx.io import MultilineInput, Output, StrInput
+    from lfx.schema.data import Data
+    from lfx.schema.message import Message  # Needed to extract text from Message objects
+
+    class PythonREPLComponent(Component):
+        display_name = "Python Interpreter"
+        description = "Run Python code with optional imports. Use print() to see the output."
+        documentation: str = "https://docs.langflow.org/python-interpreter"
+        icon = "square-terminal"
+
+        inputs = [
+            StrInput(
+                name="global_imports",
+                display_name="Global Imports",
+                info="A comma-separated list of modules to import globally, e.g. 'math,numpy,pandas'.",
+                value="math,pandas",
+                required=True,
+            ),
+            MultilineInput(
+                name="python_code",
+                display_name="Python Code",
+                info="The Python code to execute. Only modules specified in Global Imports can be used. Use 'url' variable if URL input is connected.",
+                value="print(f'URL: {url}')",  # Updated to make the URL variable available to the Python code execution
+                input_types=["Message"],
+                tool_mode=True,
+                required=True,
+            ),
+            # Add the URL input field to inputs list
+            StrInput(
+                name="url",
+                display_name="URL",
+                info="URL variable that can be used in Python code. Connect a Text component or enter manually.",
+                value="",
+                input_types=["Text", "Message"],
+                required=False,
+            ),
+        ]
+
+        outputs = [
+            Output(
+                display_name="Results",
+                name="results",
+                type_=Data,
+                method="run_python_repl",
+            ),
+        ]
+
+        def get_globals(self, global_imports: str | list[str]) -> dict:
+            """Create a globals dictionary with only the specified allowed imports and input variables."""
+            global_dict = {}
+
+            try:
+                if isinstance(global_imports, str):
+                    modules = [module.strip() for module in global_imports.split(",")]
+                elif isinstance(global_imports, list):
+                    modules = global_imports
+                else:
+                    msg = "global_imports must be either a string or a list"
+                    raise TypeError(msg)
+
+                for module in modules:
+                    try:
+                        imported_module = importlib.import_module(module)
+                        global_dict[imported_module.__name__] = imported_module
+                    except ImportError as e:
+                        msg = f"Could not import module {module}: {e!s}"
+                        raise ImportError(msg) from e
+
+                # Add the URL variable to the component's globals dictionary
+                # Extract from Message object or use the string directly
+                if hasattr(self, "url") and self.url:
+                    url_value = self.url.text if isinstance(self.url, Message) else str(self.url)
+                    if url_value:
+                        global_dict["url"] = url_value  # Makes 'url' available in Python code
+                        self.log(f"URL variable set: {url_value}")
+
+            except Exception as e:
+                self.log(f"Error in global imports: {e!s}")
+                raise
+            else:
+                self.log(f"Successfully imported modules: {list(global_dict.keys())}")
+                return global_dict
+
+        def run_python_repl(self) -> Data:
+            try:
+                # Extract Python code text if it's a Message object
+                python_code_text = self.python_code
+                if isinstance(python_code_text, Message):
+                    python_code_text = python_code_text.text if python_code_text.text else ""
+                elif not isinstance(python_code_text, str):
+                    python_code_text = str(python_code_text)
+
+                globals_ = self.get_globals(self.global_imports)
+                python_repl = PythonREPL(_globals=globals_)
+                result = python_repl.run(python_code_text)
+                result = result.strip() if result else ""
+
+                self.log("Code execution completed successfully")
+                return Data(data={"result": result})
+
+            except ImportError as e:
+                error_message = f"Import Error: {e!s}"
+                self.log(error_message)
+                return Data(data={"error": error_message})
+
+            except SyntaxError as e:
+                error_message = f"Syntax Error: {e!s}"
+                self.log(error_message)
+                return Data(data={"error": error_message})
+
+            except (NameError, TypeError, ValueError) as e:
+                error_message = f"Error during execution: {e!s}"
+                self.log(error_message)
+                return Data(data={"error": error_message})
+
+        def build(self):
+            return self.run_python_repl
+    ```
+    </details>
+
+4. To save the modifications, click **Check & Save**.
+5. Add a **Text** component to your flow and set its value, such as `google.com`.
+6. Connect the **Text** component's output to the new **URL** input field on your customized **Python Interpreter** component.
+
+The **Python Interpreter** component can now use the `url` variable in the Python code that it executes.
+
+## Python Interpreter parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| global_imports | String | Input parameter. A comma-separated list of modules to import globally, such as `math,pandas,numpy`. |
+| python_code | Code | Input parameter. The Python code to execute. Only modules specified in Global Imports can be used. |
+| results | Data | Output parameter. The output of the executed Python code, including any printed results or errors. |

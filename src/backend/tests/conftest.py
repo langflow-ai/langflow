@@ -19,14 +19,13 @@ from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.main import create_app
-from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.api_key.model import ApiKey, UnmaskedApiKeyRead
 from langflow.services.database.models.flow.model import Flow, FlowCreate, FlowRead
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.user.model import User, UserCreate, UserRead
 from langflow.services.database.models.vertex_builds.crud import delete_vertex_builds_by_flow_id
-from langflow.services.deps import get_db_service, session_scope
+from langflow.services.deps import get_auth_service, get_db_service, session_scope
 from lfx.components.input_output import ChatInput
 from lfx.graph import Graph
 from lfx.log.logger import logger
@@ -184,14 +183,23 @@ async def delete_transactions_by_flow_id(db: AsyncSession, flow_id: UUID):
 
 
 async def _delete_transactions_and_vertex_builds(session, flows: list[Flow]):
+    from langflow.services.database.models.jobs.model import Job
+
     flow_ids = [flow.id for flow in flows]
     for flow_id in flow_ids:
         if not flow_id:
             continue
         try:
+            # Delete associated jobs first due to foreign keys
+            stmt = select(Job).where(Job.flow_id == flow_id)
+            jobs = (await session.exec(stmt)).all()
+            for job in jobs:
+                await session.delete(job)
+            await session.flush()
+
             await delete_vertex_builds_by_flow_id(session, flow_id)
         except Exception as e:
-            logger.debug(f"Error deleting vertex builds for flow {flow_id}: {e}")
+            logger.debug(f"Error deleting jobs/vertex builds for flow {flow_id}: {e}")
         try:
             await delete_transactions_by_flow_id(session, flow_id)
         except Exception as e:
@@ -201,7 +209,10 @@ async def _delete_transactions_and_vertex_builds(session, flows: list[Flow]):
 @pytest.fixture
 async def async_client() -> AsyncGenerator:
     app = create_app()
-    async with AsyncClient(app=app, base_url="http://testserver", http2=True) as client:
+    async with (
+        LifespanManager(app, startup_timeout=None, shutdown_timeout=None) as manager,
+        AsyncClient(transport=ASGITransport(app=manager.app), base_url="http://testserver", http2=True) as client,
+    ):
         yield client
 
 
@@ -212,6 +223,15 @@ def session_fixture():
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
+    # Ensure foreign keys are enabled for the in-memory session engine
+    from sqlalchemy import event
+
+    @event.listens_for(engine, "connect")
+    def set_sqlite_pragma(dbapi_connection, connection_record):  # noqa: ARG001
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+
     try:
         SQLModel.metadata.create_all(engine)
         with Session(engine) as session:
@@ -224,12 +244,15 @@ def session_fixture():
 @pytest.fixture
 async def async_session():
     engine = create_async_engine("sqlite+aiosqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
-    async with AsyncSession(engine, expire_on_commit=False) as session:
-        yield session
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.drop_all)
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(SQLModel.metadata.create_all)
+        async with AsyncSession(engine, expire_on_commit=False) as session:
+            yield session
+        async with engine.begin() as conn:
+            await conn.run_sync(SQLModel.metadata.drop_all)
+    finally:
+        await engine.dispose()
 
 
 class Config:
@@ -469,7 +492,7 @@ async def active_user(client):  # noqa: ARG001
     async with session_scope() as session:
         user = User(
             username="activeuser",
-            password=get_password_hash("testpassword"),
+            password=get_auth_service().get_password_hash("testpassword"),
             is_active=True,
             is_superuser=False,
         )
@@ -514,7 +537,7 @@ async def active_super_user(client):  # noqa: ARG001
     async with session_scope() as session:
         user = User(
             username="activeuser",
-            password=get_password_hash("testpassword"),
+            password=get_auth_service().get_password_hash("testpassword"),
             is_active=True,
             is_superuser=True,
         )
@@ -660,7 +683,7 @@ async def flow_component(client: AsyncClient, logged_in_headers):
 
 @pytest.fixture
 async def created_api_key(active_user):
-    hashed = get_password_hash("random_key")
+    hashed = get_auth_service().get_password_hash("random_key")
     api_key = ApiKey(
         name="test_api_key",
         user_id=active_user.id,
@@ -702,7 +725,7 @@ async def user_two(
         user = User(
             id=user_id,
             username=f"test_user_two_{user_id}",
-            password=get_password_hash("hashed_password"),
+            password=get_auth_service().get_password_hash("hashed_password"),
             is_active=True,
         )
         session.add(user)
@@ -728,7 +751,7 @@ async def user_two(
 async def created_user_two_api_key(user_two: User) -> AsyncGenerator[ApiKey, None]:
     """Creates and yields an API key for the second user."""
     raw_key = f"user-two-key-{uuid4()}"
-    hashed_key = get_password_hash(raw_key)
+    hashed_key = get_auth_service().get_password_hash(raw_key)
     api_key = ApiKey(
         user_id=user_two.id,
         name="Test API Key for User Two",

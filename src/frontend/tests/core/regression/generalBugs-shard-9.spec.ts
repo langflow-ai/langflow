@@ -23,10 +23,6 @@ test(
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
-    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
-      timeout: 2000,
-    });
-
     await adjustScreenView(page);
 
     await page.getByTestId("sidebar-search-input").click();
@@ -83,7 +79,7 @@ User: {user_input}
 AI:
   `;
 
-    await page.getByTestId("title-Prompt").last().click();
+    await page.getByTestId("title-Prompt Template").last().click();
     await page.getByTestId("button_open_prompt_modal").nth(0).click();
 
     await page.getByTestId("modal-promptarea_prompt_template").fill(prompt);
@@ -122,10 +118,13 @@ AI:
 
     await page.getByTestId("button-send").click();
 
-    await page.waitForSelector("text=AI", { timeout: 30000 });
-
-    await page.waitForSelector('[data-testid="div-chat-message"]', {
-      timeout: 100000,
+    await page.getByTestId("stop_building_button").waitFor({
+      state: "visible",
+      timeout: 30000,
+    });
+    await page.getByTestId("stop_building_button").waitFor({
+      state: "hidden",
+      timeout: 180000,
     });
 
     // Wait for the first chat message element to be available

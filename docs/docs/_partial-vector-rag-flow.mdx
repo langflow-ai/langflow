@@ -38,7 +38,7 @@ Make sure the components connect to the same vector store, and that the componen
     Mixing embedding models in the same vector store can produce inaccurate search results.
     :::
 
-4. Recommended: In the [**Split Text** component](/components-processing#split-text), optimize the chunking settings for your embedding model.
+4. Recommended: In the [**Split Text** component](/split-text), optimize the chunking settings for your embedding model.
 For example, if your embedding model has a token limit of 512, then the **Chunk Size** parameter must not exceed that limit.
 
     Additionally, because the **Retriever** subflow passes the chat input directly to the vector store component for vector search, make sure that your chat input string doesn't exceed your embedding model's limits.
@@ -48,7 +48,7 @@ For example, if your embedding model has a token limit of 512, then the **Chunk 
 5. In the **Language Model** component, enter your OpenAI API key, or select a different provider and model to use for the chat portion of the flow.
 
 6. Run the **Load Data** subflow to populate your vector store.
-In the **File** component, select one or more files, and then click <Icon name="Play" aria-hidden="true" /> **Run component** on the vector store component in the **Load Data** subflow.
+In the **Read File** component, select one or more files, and then click <Icon name="Play" aria-hidden="true" /> **Run component** on the vector store component in the **Load Data** subflow.
 
     The **Load Data** subflow loads files from your local machine, chunks them, generates embeddings for the chunks, and then stores the chunks and their embeddings in the vector database.
 

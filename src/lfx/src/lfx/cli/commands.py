@@ -303,13 +303,18 @@ async def serve_command(
         console.print()
 
         # Start the server
+        # Use uvicorn.Server to properly handle async context
+        # uvicorn.run() uses asyncio.run() internally which fails when
+        # an event loop is already running (due to syncify decorator)
         try:
-            uvicorn.run(
+            config = uvicorn.Config(
                 serve_app,
                 host=host,
                 port=port,
                 log_level=log_level,
             )
+            server = uvicorn.Server(config)
+            await server.serve()
         except KeyboardInterrupt:
             verbose_print("\n👋 Server stopped")
             raise typer.Exit(0) from None

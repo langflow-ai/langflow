@@ -51,7 +51,7 @@ export type InputComponentType = {
   commandWidth?: string;
   blockAddNewGlobalVariable?: boolean;
   hasRefreshButton?: boolean;
-  allowCustomValue?: boolean;
+  inspectionPanel?: boolean;
 };
 export type DropDownComponent = {
   disabled?: boolean;
@@ -105,6 +105,7 @@ export type NodeOutputFieldComponentType = {
   data: NodeDataType;
   title: string;
   id: sourceHandleType;
+  loopInputId?: sourceHandleType;
   colors: string[];
   tooltipTitle: string | undefined;
   showNode: boolean;
@@ -137,6 +138,8 @@ export type NodeInputFieldComponentType = {
   showNode: boolean;
   colorName?: string[];
   isToolMode?: boolean;
+  isPrimaryInput?: boolean;
+  displayHandle?: boolean;
 };
 
 export type IOJSONInputComponentType = {
@@ -296,6 +299,7 @@ export type TextHighlightType = {
 
 export interface IVarHighlightType {
   name: string;
+  addCurlyBraces?: boolean;
 }
 
 export type IconComponentProps = {
@@ -404,6 +408,7 @@ export type ConfirmationModalType = {
     | "small-h-full"
     | "medium-h-full";
   onEscapeKeyDown?: (e: KeyboardEvent) => void;
+  onOpenAutoFocus?: (e: Event) => void;
 };
 
 export type UserManagementType = {
@@ -639,13 +644,15 @@ export type codeAreaModalPropsType = {
 export type chatMessagePropsType = {
   chat: ChatMessageType;
   lastMessage: boolean;
-  updateChat: (
+  updateChat?: (
     chat: ChatMessageType,
     message: string,
     stream_url?: string,
   ) => void;
   closeChat?: () => void;
   playgroundPage?: boolean;
+  isThinking?: boolean;
+  thinkingDuration?: number | null;
 };
 
 export type genericModalPropsType = {

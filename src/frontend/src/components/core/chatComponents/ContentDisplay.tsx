@@ -2,7 +2,8 @@ import type { ReactNode } from "react";
 import Markdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax/browser";
 import remarkGfm from "remark-gfm";
-import type { ContentType } from "@/types/chat";
+import type { ContentType, JSONValue } from "@/types/chat";
+import { extractLanguage, isCodeBlock } from "@/utils/codeBlockUtils";
 import ForwardedIconComponent from "../../common/genericIconComponent";
 import SimplifiedCodeTabComponent from "../codeTabsComponent";
 import DurationDisplay from "./DurationDisplay";
@@ -16,31 +17,6 @@ export default function ContentDisplay({
   chatId: string;
   playgroundPage?: boolean;
 }) {
-  // First render the common BaseContent elements if they exist
-  const renderHeader = content.header && (
-    <>
-      <div className="flex items-center gap-2 pb-[12px]">
-        {content.header.icon && (
-          <ForwardedIconComponent
-            name={content.header.icon}
-            className="h-4 w-4"
-            strokeWidth={1.5}
-          />
-        )}
-        {content.header.title && (
-          <>
-            <Markdown
-              remarkPlugins={[remarkGfm]}
-              rehypePlugins={[rehypeMathjax]}
-              className="inline-block w-fit max-w-full text-sm font-semibold text-foreground"
-            >
-              {content.header.title}
-            </Markdown>
-          </>
-        )}
-      </div>
-    </>
-  );
   const renderDuration = content.duration !== undefined && !playgroundPage && (
     <div className="absolute right-2 top-4">
       <DurationDisplay duration={content.duration} chatId={chatId} />
@@ -55,10 +31,14 @@ export default function ContentDisplay({
         <div className="ml-1 pr-20">
           <Markdown
             remarkPlugins={[remarkGfm]}
-            linkTarget="_blank"
             rehypePlugins={[rehypeMathjax]}
             className="markdown prose max-w-full text-sm font-normal dark:prose-invert"
             components={{
+              a: ({ node, ...props }) => (
+                <a {...props} target="_blank" rel="noopener noreferrer">
+                  {props.children}
+                </a>
+              ),
               p({ node, ...props }) {
                 return (
                   <span className="block w-fit max-w-full">
@@ -69,7 +49,7 @@ export default function ContentDisplay({
               pre({ node, ...props }) {
                 return <>{props.children}</>;
               },
-              code: ({ node, inline, className, children, ...props }) => {
+              code: ({ node, className, children, ...props }) => {
                 let content = children as string;
                 if (
                   Array.isArray(children) &&
@@ -85,14 +65,16 @@ export default function ContentDisplay({
                     }
                   }
 
-                  const match = /language-(\w+)/.exec(className || "");
+                  if (isCodeBlock(className, props, content)) {
+                    return (
+                      <SimplifiedCodeTabComponent
+                        language={extractLanguage(className)}
+                        code={String(content).replace(/\n$/, "")}
+                      />
+                    );
+                  }
 
-                  return !inline ? (
-                    <SimplifiedCodeTabComponent
-                      language={(match && match[1]) || ""}
-                      code={String(content).replace(/\n$/, "")}
-                    />
-                  ) : (
+                  return (
                     <code className={className} {...props}>
                       {content}
                     </code>
@@ -145,7 +127,7 @@ export default function ContentDisplay({
       break;
 
     case "tool_use": {
-      const formatToolOutput = (output: any) => {
+      const formatToolOutput = (output: JSONValue) => {
         if (output === null || output === undefined) return "";
 
         // If it's a string, render as markdown
@@ -165,14 +147,17 @@ export default function ContentDisplay({
                 ul({ node, ...props }) {
                   return <ul className="max-w-full">{props.children}</ul>;
                 },
-                code: ({ node, inline, className, children, ...props }) => {
-                  const match = /language-(\w+)/.exec(className || "");
-                  return !inline ? (
-                    <SimplifiedCodeTabComponent
-                      language={(match && match[1]) || ""}
-                      code={String(children).replace(/\n$/, "")}
-                    />
-                  ) : (
+                code: ({ node, className, children, ...props }) => {
+                  const content = String(children);
+                  if (isCodeBlock(className, props, content)) {
+                    return (
+                      <SimplifiedCodeTabComponent
+                        language={extractLanguage(className)}
+                        code={content.replace(/\n$/, "")}
+                      />
+                    );
+                  }
+                  return (
                     <code className={className} {...props}>
                       {children}
                     </code>
@@ -211,7 +196,7 @@ export default function ContentDisplay({
             language="json"
             code={JSON.stringify(content.tool_input, null, 2)}
           />
-          {content.output && (
+          {content.output !== undefined && (
             <>
               <Markdown
                 remarkPlugins={[remarkGfm]}
@@ -223,7 +208,7 @@ export default function ContentDisplay({
               <div className="mt-1">{formatToolOutput(content.output)}</div>
             </>
           )}
-          {content.error && (
+          {content.error !== undefined && (
             <div className="text-red-500">
               <Markdown
                 remarkPlugins={[remarkGfm]}
@@ -261,7 +246,6 @@ export default function ContentDisplay({
 
   return (
     <div className="relative p-[16px]">
-      {renderHeader}
       {renderDuration}
       {contentData}
     </div>

@@ -1,17 +1,17 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from lfx.base.prompts.api_utils import process_prompt_template
 from lfx.custom.validate import validate_code
 from lfx.log.logger import logger
 
-from langflow.api.utils import CurrentActiveUser
 from langflow.api.v1.base import Code, CodeValidationResponse, PromptValidationResponse, ValidatePromptRequest
+from langflow.services.auth.utils import get_current_active_user
 
 # build router
 router = APIRouter(prefix="/validate", tags=["Validate"])
 
 
-@router.post("/code", status_code=200)
-async def post_validate_code(code: Code, _current_user: CurrentActiveUser) -> CodeValidationResponse:
+@router.post("/code", status_code=200, dependencies=[Depends(get_current_active_user)])
+async def post_validate_code(code: Code) -> CodeValidationResponse:
     try:
         errors = validate_code(code.code)
         return CodeValidationResponse(
@@ -23,8 +23,10 @@ async def post_validate_code(code: Code, _current_user: CurrentActiveUser) -> Co
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.post("/prompt", status_code=200)
-async def post_validate_prompt(prompt_request: ValidatePromptRequest) -> PromptValidationResponse:
+@router.post("/prompt", status_code=200, dependencies=[Depends(get_current_active_user)])
+async def post_validate_prompt(
+    prompt_request: ValidatePromptRequest,
+) -> PromptValidationResponse:
     try:
         if not prompt_request.frontend_node:
             return PromptValidationResponse(
@@ -38,6 +40,7 @@ async def post_validate_prompt(prompt_request: ValidatePromptRequest) -> PromptV
             name=prompt_request.name,
             custom_fields=prompt_request.frontend_node.custom_fields,
             frontend_node_template=prompt_request.frontend_node.template,
+            is_mustache=prompt_request.mustache,
         )
 
         return PromptValidationResponse(

@@ -56,14 +56,36 @@ const Trigger: React.FC<TriggerProps> = ({
   disable,
   className,
 }) => {
+  const childCount = React.Children.count(children);
+  const isEmptyFragment =
+    React.isValidElement(children) &&
+    children.type === React.Fragment &&
+    React.Children.count(
+      // children.props is unknown by default; narrow with a type guard
+      (children.props as { children?: React.ReactNode }).children,
+    ) === 0;
+
+  // Only show the trigger as “visible” when there is usable child content
+  const hasUsableChild = childCount > 0 && !isEmptyFragment;
+
+  // Ensure a valid element for Radix asChild (fragments can't receive props)
+  const triggerChild =
+    hasUsableChild &&
+    React.isValidElement(children) &&
+    children.type !== React.Fragment ? (
+      children
+    ) : (
+      <span />
+    );
+
   return (
     <DialogTrigger
       className={asChild ? "" : cn("w-full", className)}
-      hidden={children ? false : true}
+      hidden={!hasUsableChild}
       disabled={disable}
       asChild={asChild}
     >
-      {children}
+      {triggerChild}
     </DialogTrigger>
   );
 };
@@ -195,6 +217,7 @@ interface BaseModalProps {
   type?: "modal" | "dialog" | "full-screen";
   onSubmit?: () => void;
   onEscapeKeyDown?: (e: KeyboardEvent) => void;
+  onOpenAutoFocus?: (e: Event) => void;
   closeButtonClassName?: string;
   dialogContentWithouFixed?: boolean;
 }
@@ -208,6 +231,7 @@ function BaseModal({
   type = "dialog",
   onSubmit,
   onEscapeKeyDown,
+  onOpenAutoFocus,
   closeButtonClassName,
   dialogContentWithouFixed = false,
 }: BaseModalProps) {
@@ -267,8 +291,8 @@ function BaseModal({
           {dialogContentWithouFixed ? (
             <DialogContentWithouFixed
               onClick={(e) => e.stopPropagation()}
-              onOpenAutoFocus={(event) => event.preventDefault()}
               onEscapeKeyDown={onEscapeKeyDown}
+              onOpenAutoFocus={onOpenAutoFocus}
               className={contentClasses}
               closeButtonClassName={closeButtonClassName}
             >
@@ -289,8 +313,8 @@ function BaseModal({
           ) : (
             <DialogContent
               onClick={(e) => e.stopPropagation()}
-              onOpenAutoFocus={(event) => event.preventDefault()}
               onEscapeKeyDown={onEscapeKeyDown}
+              onOpenAutoFocus={onOpenAutoFocus}
               className={contentClasses}
               closeButtonClassName={closeButtonClassName}
             >

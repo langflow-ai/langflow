@@ -1,3 +1,4 @@
+import { getFetchCredentials } from "@/customization/utils/get-fetch-credentials";
 import type { useMutationFunctionType } from "../../../../types/api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -23,6 +24,7 @@ export const useGetDownloadFilesV2: useMutationFunctionType<
           headers: {
             Accept: "*/*",
           },
+          credentials: getFetchCredentials(),
         },
       );
     } else {
@@ -35,6 +37,7 @@ export const useGetDownloadFilesV2: useMutationFunctionType<
             "Content-Type": "application/json",
             Accept: "application/x-zip-compressed",
           },
+          credentials: getFetchCredentials(),
         },
       );
     }

@@ -283,9 +283,8 @@ class TestStoragePathResolution:
         simple_file = "simple_file.png"
         assert "/" not in simple_file
 
-    @pytest.mark.xfail(reason="Storage path resolution needs to be fixed - currently not using get_full_path correctly")
-    @patch("lfx.services.deps.get_storage_service")
-    @patch("lfx.services.deps.get_settings_service")
+    @patch("lfx.custom.custom_component.custom_component.get_storage_service")
+    @patch("lfx.base.data.base_file.get_settings_service")
     def test_validate_and_resolve_paths_uses_storage_service(self, mock_settings, mock_storage, tmp_path):
         """Test that storage paths are resolved using storage service.
 
@@ -420,7 +419,10 @@ class TestProcessFilesEdgeCases:
         with pytest.raises(ValueError, match="No files to process"):
             component.process_files([])
 
-    def test_process_files_docling_only_extension_without_advanced_mode(self, tmp_path):
+    def test_process_files_docling_only_extension_without_advanced_mode(
+        self,
+        tmp_path,
+    ):
         """Test that Docling-only extensions require advanced mode."""
         test_image = tmp_path / "test.png"
         test_image.write_bytes(b"\x89PNG\r\n\x1a\n" + b"\x00" * 100)

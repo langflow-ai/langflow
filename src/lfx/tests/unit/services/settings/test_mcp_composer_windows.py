@@ -224,7 +224,7 @@ class TestWindowsTempFileHandling:
                         project_id=project_id,
                         host="localhost",
                         port=port,
-                        sse_url="http://test",
+                        streamable_http_url="http://test",
                         auth_config=auth_config,
                         max_startup_checks=1,
                         startup_delay=0.1,
@@ -315,7 +315,7 @@ class TestWindowsTempFileHandling:
                                 project_id=project_id,
                                 host="localhost",
                                 port=port,
-                                sse_url="http://test",
+                                streamable_http_url="http://test",
                                 auth_config=auth_config,
                                 max_startup_checks=2,
                                 startup_delay=0.1,
@@ -361,7 +361,7 @@ class TestWindowsTempFileHandling:
                         project_id=project_id,
                         host="localhost",
                         port=port,
-                        sse_url="http://test",
+                        streamable_http_url="http://test",
                         auth_config=auth_config,
                         max_startup_checks=1,
                         startup_delay=0.1,
@@ -416,7 +416,7 @@ class TestIncreasedStartupTimeout:
                     with contextlib.suppress(Exception):
                         await mcp_service._do_start_project_composer(
                             project_id=project_id,
-                            sse_url="http://test",
+                            streamable_http_url="http://test",
                             auth_config=auth_config,
                             max_retries=3,
                         )
@@ -511,7 +511,7 @@ class TestRetryRobustness:
                     # Should succeed on second attempt despite zombie cleanup failure
                     await mcp_service._do_start_project_composer(
                         project_id=project_id,
-                        sse_url="http://test",
+                        streamable_http_url="http://test",
                         auth_config=auth_config,
                         max_retries=2,
                         max_startup_checks=1,
@@ -521,3 +521,73 @@ class TestRetryRobustness:
                     # Verify it retried successfully
                     assert call_count == 2
                     assert project_id in mcp_service.project_composers
+
+
+@pytest.mark.asyncio
+async def test_windows_legacy_sse_url_passthrough(mcp_service):
+    """Ensure Windows composer starts propagate explicit legacy SSE URLs."""
+    project_id = "windows-legacy"
+    auth_config = {
+        "auth_type": "oauth",
+        "oauth_host": "localhost",
+        "oauth_port": "9300",
+        "oauth_server_url": "http://localhost:9300",
+        "oauth_client_id": "legacy",
+        "oauth_client_secret": "secret",
+        "oauth_auth_url": "http://auth",
+        "oauth_token_url": "http://token",
+    }
+    mcp_service._start_locks[project_id] = asyncio.Lock()
+    mock_process = MagicMock(pid=2468)
+
+    with patch.object(
+        mcp_service,
+        "_start_project_composer_process",
+        new=AsyncMock(return_value=mock_process),
+    ) as mock_start:
+        await mcp_service._do_start_project_composer(
+            project_id=project_id,
+            streamable_http_url="http://windows/streamable",
+            auth_config=auth_config,
+            legacy_sse_url="http://windows/sse",
+            max_retries=1,
+            max_startup_checks=1,
+        )
+
+    mock_start.assert_awaited()
+    assert mock_start.call_args.kwargs["legacy_sse_url"] == "http://windows/sse"
+
+
+@pytest.mark.asyncio
+async def test_windows_legacy_sse_url_defaults(mcp_service):
+    """Ensure default legacy SSE URLs are derived when none supplied on Windows."""
+    project_id = "windows-legacy-default"
+    streamable_url = "http://windows/default"
+    auth_config = {
+        "auth_type": "oauth",
+        "oauth_host": "localhost",
+        "oauth_port": "9400",
+        "oauth_server_url": "http://localhost:9400",
+        "oauth_client_id": "legacy",
+        "oauth_client_secret": "secret",
+        "oauth_auth_url": "http://auth",
+        "oauth_token_url": "http://token",
+    }
+    mcp_service._start_locks[project_id] = asyncio.Lock()
+    mock_process = MagicMock(pid=1357)
+
+    with patch.object(
+        mcp_service,
+        "_start_project_composer_process",
+        new=AsyncMock(return_value=mock_process),
+    ) as mock_start:
+        await mcp_service._do_start_project_composer(
+            project_id=project_id,
+            streamable_http_url=streamable_url,
+            auth_config=auth_config,
+            max_retries=1,
+            max_startup_checks=1,
+        )
+
+    mock_start.assert_awaited()
+    assert mock_start.call_args.kwargs["legacy_sse_url"] == f"{streamable_url}/sse"

@@ -53,7 +53,7 @@ class CugaComponent(ToolCallingAgentComponent):
     """Cuga Agent Component for advanced AI task execution.
 
     The Cuga component is an advanced AI agent that can execute complex tasks using
-    various tools and browser automation. It supports custom policies, web applications,
+    various tools and browser automation. It supports custom instructions, web applications,
     and API interactions.
 
     Attributes:
@@ -65,7 +65,7 @@ class CugaComponent(ToolCallingAgentComponent):
     """
 
     display_name: str = "Cuga"
-    description: str = "Define the Cuga agent's policies, then assign it a task."
+    description: str = "Define the Cuga agent's instructions, then assign it a task."
     documentation: str = "https://docs.langflow.org/bundles-cuga"
     icon = "bot"
     name = "Cuga"
@@ -85,10 +85,10 @@ class CugaComponent(ToolCallingAgentComponent):
         ),
         *MODEL_PROVIDERS_DICT["OpenAI"]["inputs"],
         MultilineInput(
-            name="policies",
-            display_name="Policies",
+            name="instructions",
+            display_name="Instructions",
             info=(
-                "Custom instructions or policies for the agent to adhere to during its operation.\n"
+                "Custom instructions for the agent to adhere to during its operation.\n"
                 "Example:\n"
                 "## Plan\n"
                 "< planning instructions e.g. which tools and when to use>\n"
@@ -117,16 +117,16 @@ class CugaComponent(ToolCallingAgentComponent):
         BoolInput(
             name="lite_mode",
             display_name="Enable CugaLite",
-            info="Enable CugaLite for simple API tasks (faster execution).",
+            info="Faster reasoning for simple tasks. Enable CugaLite for simple API tasks.",
             value=True,
-            advanced=False,
+            advanced=True,
         ),
         IntInput(
             name="lite_mode_tool_threshold",
             display_name="CugaLite Tool Threshold",
             info="Route to CugaLite if app has fewer than this many tools.",
             value=25,
-            advanced=False,
+            advanced=True,
         ),
         DropdownInput(
             name="decomposition_strategy",
@@ -142,17 +142,17 @@ class CugaComponent(ToolCallingAgentComponent):
             display_name="Enable Browser",
             info="Toggle to enable a built-in browser tool for web scraping and searching.",
             value=False,
-            advanced=False,
+            advanced=True,
         ),
         MultilineInput(
             name="web_apps",
             display_name="Web applications",
             info=(
-                "Define a list of web applications that cuga will open when enable browser is true. "
+                "Cuga will automatically start this web application when Enable Browser is true. "
                 "Currently only supports one web application. Example: https://example.com"
             ),
             value="",
-            advanced=False,
+            advanced=True,
         ),
     ]
     outputs = [
@@ -211,7 +211,6 @@ class CugaComponent(ToolCallingAgentComponent):
                 settings.advanced_features.mode = "api"
 
             from cuga.backend.activity_tracker.tracker import ActivityTracker
-            from cuga.backend.cuga_graph.nodes.api.variables_manager.manager import VariablesManager
             from cuga.backend.cuga_graph.utils.agent_loop import StreamEvent
             from cuga.backend.cuga_graph.utils.controller import (
                 AgentRunner as CugaAgent,
@@ -222,13 +221,10 @@ class CugaComponent(ToolCallingAgentComponent):
             from cuga.backend.llm.models import LLMManager
             from cuga.configurations.instructions_manager import InstructionsManager
 
-            var_manager = VariablesManager()
-
             # Reset var_manager if this is the first message in history
             logger.debug(f"[CUGA] Checking history_messages: count={len(history_messages) if history_messages else 0}")
             if not history_messages or len(history_messages) == 0:
                 logger.debug("[CUGA] First message in history detected, resetting var_manager")
-                var_manager.reset()
             else:
                 logger.debug(f"[CUGA] Continuing conversation with {len(history_messages)} previous messages")
 
@@ -236,12 +232,14 @@ class CugaComponent(ToolCallingAgentComponent):
             llm_manager.set_llm(llm)
             instructions_manager = InstructionsManager()
 
-            policies_to_use = self.policies or ""
-            logger.debug(f"[CUGA] policies are: {policies_to_use}")
-            instructions_manager.set_instructions_from_one_file(policies_to_use)
+            instructions_to_use = self.instructions or ""
+            logger.debug(f"[CUGA] instructions are: {instructions_to_use}")
+            instructions_manager.set_instructions_from_one_file(instructions_to_use)
             tracker = ActivityTracker()
             tracker.set_tools(tools)
-            cuga_agent = CugaAgent(browser_enabled=self.browser_enabled)
+            thread_id = self.graph.session_id
+            logger.debug(f"[CUGA] Using thread_id (session_id): {thread_id}")
+            cuga_agent = CugaAgent(browser_enabled=self.browser_enabled, thread_id=thread_id)
             if self.browser_enabled:
                 await cuga_agent.initialize_freemode_env(start_url=self.web_apps.strip(), interface_mode="browser_only")
             else:
@@ -257,13 +255,20 @@ class CugaComponent(ToolCallingAgentComponent):
             logger.debug(f"[CUGA] Processing input: {current_input}")
             try:
                 # Convert history to LangChain format for the event
+                logger.debug(f"[CUGA] Converting {len(history_messages)} history messages to LangChain format")
                 lc_messages = []
-                for msg in history_messages:
+                for i, msg in enumerate(history_messages):
+                    msg_text = getattr(msg, "text", "N/A")[:50] if hasattr(msg, "text") else "N/A"
+                    logger.debug(
+                        f"[CUGA] Message {i}: type={type(msg)}, sender={getattr(msg, 'sender', 'N/A')}, "
+                        f"text={msg_text}..."
+                    )
                     if hasattr(msg, "sender") and msg.sender == "Human":
                         lc_messages.append(HumanMessage(content=msg.text))
                     else:
                         lc_messages.append(AIMessage(content=msg.text))
 
+                logger.debug(f"[CUGA] Converted to {len(lc_messages)} LangChain messages")
                 await asyncio.sleep(0.5)
 
                 # 2. Build final response
@@ -274,7 +279,9 @@ class CugaComponent(ToolCallingAgentComponent):
                 last_event: StreamEvent | None = None
                 tool_run_id: str | None = None
                 # 3. Chain end event with AgentFinish
-                async for event in cuga_agent.run_task_generic_yield(eval_mode=False, goal=current_input):
+                async for event in cuga_agent.run_task_generic_yield(
+                    eval_mode=False, goal=current_input, chat_messages=lc_messages
+                ):
                     logger.debug(f"[CUGA] recieved event {event}")
                     if last_event is not None and tool_run_id is not None:
                         logger.debug(f"[CUGA] last event {last_event}")
@@ -350,12 +357,12 @@ class CugaComponent(ToolCallingAgentComponent):
             raise ValueError(msg)
 
         try:
-            llm_model, self.chat_history, self.tools = await self.get_agent_requirements()
-
-            # Create agent message for event processing
             from lfx.schema.content_block import ContentBlock
             from lfx.schema.message import MESSAGE_SENDER_AI
 
+            llm_model, self.chat_history, self.tools = await self.get_agent_requirements()
+
+            # Create agent message for event processing
             agent_message = Message(
                 sender=MESSAGE_SENDER_AI,
                 sender_name="Cuga",
@@ -368,7 +375,7 @@ class CugaComponent(ToolCallingAgentComponent):
             # This ensures streaming works even when not connected to ChatOutput
             if not self.is_connected_to_chat_output():
                 # When not connected to ChatOutput, assign ID upfront for streaming support
-                agent_message.data["id"] = str(uuid.uuid4())
+                agent_message.data["id"] = uuid.uuid4()
 
             # Get input text
             input_text = self.input_value.text if hasattr(self.input_value, "text") else str(self.input_value)
@@ -476,9 +483,14 @@ class CugaComponent(ToolCallingAgentComponent):
         """
         logger.debug("[CUGA] Retrieving chat history messages.")
         logger.debug(f"[CUGA] Session ID: {self.graph.session_id}")
+        logger.debug(f"[CUGA] n_messages: {self.n_messages}")
+        logger.debug(f"[CUGA] input_value: {self.input_value}")
+        logger.debug(f"[CUGA] input_value type: {type(self.input_value)}")
+        logger.debug(f"[CUGA] input_value id: {getattr(self.input_value, 'id', None)}")
+
         messages = (
             await MemoryComponent(**self.get_base_args())
-            .set(session_id=self.graph.session_id, order="Ascending", n_messages=self.n_messages)
+            .set(session_id=str(self.graph.session_id), order="Ascending", n_messages=self.n_messages)
             .retrieve_messages()
         )
         logger.debug(f"[CUGA] Retrieved {len(messages)} messages from memory")
@@ -678,7 +690,7 @@ class CugaComponent(ToolCallingAgentComponent):
                 "tools",
                 "input_value",
                 "add_current_date_tool",
-                "policies",
+                "instructions",
                 "agent_description",
                 "max_iterations",
                 "handle_parsing_errors",

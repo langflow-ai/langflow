@@ -1,5 +1,6 @@
 import { BUILD_POLLING_INTERVAL } from "@/constants/constants";
 import { BuildStatus, EventDeliveryType } from "@/constants/enums";
+import { getFetchCredentials } from "@/customization/utils/get-fetch-credentials";
 import { VertexLayerElementType } from "@/types/zustand/flow";
 
 export async function customPollBuildEvents(
@@ -32,6 +33,7 @@ export async function customPollBuildEvents(
           Accept: "application/x-ndjson",
         },
         signal: abortController.signal, // Add abort signal to fetch
+        credentials: getFetchCredentials(),
       },
     );
 

@@ -227,6 +227,290 @@ class TestMCPComponentErrorHandling:
             assert stdio_client._connected is False
 
 
+class TestMCPComponentHeaders:
+    """Test the headers functionality in MCP component."""
+
+    @pytest.fixture
+    def component(self):
+        """Create a component for testing."""
+        return MCPToolsComponent()
+
+    def test_headers_input_exists(self, component):
+        """Test that headers input field exists in the component."""
+        input_names = [inp.name for inp in component.inputs]
+        assert "headers" in input_names
+
+    def test_headers_in_default_keys(self, component):
+        """Test that headers is included in default_keys."""
+        assert "headers" in component.default_keys
+
+    def test_headers_input_is_list_type(self, component):
+        """Test that headers input is configured as a list (is_list=True)."""
+        headers_input = next((inp for inp in component.inputs if inp.name == "headers"), None)
+        assert headers_input is not None
+        assert headers_input.is_list is True
+
+    def test_headers_input_is_advanced(self, component):
+        """Test that headers input is marked as advanced."""
+        headers_input = next((inp for inp in component.inputs if inp.name == "headers"), None)
+        assert headers_input is not None
+        assert headers_input.advanced is True
+
+    @pytest.mark.asyncio
+    async def test_headers_merge_list_format(self, component):
+        """Test merging headers in list format [{"key": k, "value": v}]."""
+        # Setup component with headers in list format
+        component.headers = [
+            {"key": "Authorization", "value": "Bearer test-token"},
+            {"key": "X-Custom-Header", "value": "custom-value"},
+        ]
+
+        server_config = {"url": "http://test.url", "mode": "Streamable_HTTP"}
+
+        # Simulate the merge logic from update_tool_list
+        component_headers = getattr(component, "headers", None) or []
+        component_headers_dict = {}
+        if isinstance(component_headers, list):
+            for item in component_headers:
+                if isinstance(item, dict) and "key" in item and "value" in item:
+                    component_headers_dict[item["key"]] = item["value"]
+
+        if component_headers_dict:
+            existing_headers = server_config.get("headers", {}) or {}
+            merged_headers = {**existing_headers, **component_headers_dict}
+            server_config["headers"] = merged_headers
+
+        assert server_config["headers"] == {
+            "Authorization": "Bearer test-token",
+            "X-Custom-Header": "custom-value",
+        }
+
+    @pytest.mark.asyncio
+    async def test_headers_merge_with_existing_headers(self, component):
+        """Test that component headers override existing server config headers."""
+        component.headers = [
+            {"key": "Authorization", "value": "Bearer new-token"},
+        ]
+
+        server_config = {
+            "url": "http://test.url",
+            "mode": "Streamable_HTTP",
+            "headers": {"Authorization": "Bearer old-token", "X-Existing": "existing-value"},
+        }
+
+        # Simulate the merge logic
+        component_headers = getattr(component, "headers", None) or []
+        component_headers_dict = {}
+        if isinstance(component_headers, list):
+            for item in component_headers:
+                if isinstance(item, dict) and "key" in item and "value" in item:
+                    component_headers_dict[item["key"]] = item["value"]
+
+        if component_headers_dict:
+            existing_headers = server_config.get("headers", {}) or {}
+            merged_headers = {**existing_headers, **component_headers_dict}
+            server_config["headers"] = merged_headers
+
+        # Component headers should override existing
+        assert server_config["headers"]["Authorization"] == "Bearer new-token"
+        # Existing headers should be preserved
+        assert server_config["headers"]["X-Existing"] == "existing-value"
+
+    @pytest.mark.asyncio
+    async def test_headers_merge_empty_list(self, component):
+        """Test that empty headers list doesn't modify server config."""
+        component.headers = []
+
+        server_config = {
+            "url": "http://test.url",
+            "headers": {"X-Existing": "value"},
+        }
+
+        component_headers = getattr(component, "headers", None) or []
+        component_headers_dict = {}
+        if isinstance(component_headers, list):
+            for item in component_headers:
+                if isinstance(item, dict) and "key" in item and "value" in item:
+                    component_headers_dict[item["key"]] = item["value"]
+
+        if component_headers_dict:
+            existing_headers = server_config.get("headers", {}) or {}
+            merged_headers = {**existing_headers, **component_headers_dict}
+            server_config["headers"] = merged_headers
+
+        # Should remain unchanged
+        assert server_config["headers"] == {"X-Existing": "value"}
+
+    @pytest.mark.asyncio
+    async def test_headers_merge_none_headers(self, component):
+        """Test that None headers doesn't cause errors."""
+        component.headers = None
+
+        server_config = {"url": "http://test.url"}
+
+        component_headers = getattr(component, "headers", None) or []
+        component_headers_dict = {}
+        if isinstance(component_headers, list):
+            for item in component_headers:
+                if isinstance(item, dict) and "key" in item and "value" in item:
+                    component_headers_dict[item["key"]] = item["value"]
+
+        if component_headers_dict:
+            existing_headers = server_config.get("headers", {}) or {}
+            merged_headers = {**existing_headers, **component_headers_dict}
+            server_config["headers"] = merged_headers
+
+        # Should not have headers key added
+        assert "headers" not in server_config
+
+    @pytest.mark.asyncio
+    async def test_headers_merge_malformed_list_items(self, component):
+        """Test that malformed list items are skipped."""
+        component.headers = [
+            {"key": "Valid-Header", "value": "valid-value"},
+            {"key": "Missing-Value"},  # Missing "value"
+            {"value": "Missing-Key"},  # Missing "key"
+            "not-a-dict",  # Wrong type
+            None,  # None item
+            {"key": "Another-Valid", "value": "another-value"},
+        ]
+
+        server_config = {"url": "http://test.url"}
+
+        component_headers = getattr(component, "headers", None) or []
+        component_headers_dict = {}
+        if isinstance(component_headers, list):
+            for item in component_headers:
+                if isinstance(item, dict) and "key" in item and "value" in item:
+                    component_headers_dict[item["key"]] = item["value"]
+
+        if component_headers_dict:
+            existing_headers = server_config.get("headers", {}) or {}
+            merged_headers = {**existing_headers, **component_headers_dict}
+            server_config["headers"] = merged_headers
+
+        # Only valid items should be included
+        assert server_config["headers"] == {
+            "Valid-Header": "valid-value",
+            "Another-Valid": "another-value",
+        }
+
+    @pytest.mark.asyncio
+    async def test_headers_merge_dict_format_fallback(self, component):
+        """Test that dict format still works as fallback."""
+        # Even though we use is_list=True, the code also supports dict format
+        component.headers = {
+            "Authorization": "Bearer dict-token",
+            "X-Dict-Header": "dict-value",
+        }
+
+        server_config = {"url": "http://test.url"}
+
+        component_headers = getattr(component, "headers", None) or []
+        component_headers_dict = {}
+        if isinstance(component_headers, list):
+            for item in component_headers:
+                if isinstance(item, dict) and "key" in item and "value" in item:
+                    component_headers_dict[item["key"]] = item["value"]
+        elif isinstance(component_headers, dict):
+            component_headers_dict = component_headers
+
+        if component_headers_dict:
+            existing_headers = server_config.get("headers", {}) or {}
+            merged_headers = {**existing_headers, **component_headers_dict}
+            server_config["headers"] = merged_headers
+
+        assert server_config["headers"] == {
+            "Authorization": "Bearer dict-token",
+            "X-Dict-Header": "dict-value",
+        }
+
+    @pytest.mark.asyncio
+    async def test_headers_merge_existing_headers_as_list(self, component):
+        """Test merging when existing headers are also in list format."""
+        component.headers = [
+            {"key": "New-Header", "value": "new-value"},
+        ]
+
+        server_config = {
+            "url": "http://test.url",
+            "headers": [
+                {"key": "Existing-Header", "value": "existing-value"},
+            ],
+        }
+
+        component_headers = getattr(component, "headers", None) or []
+        component_headers_dict = {}
+        if isinstance(component_headers, list):
+            for item in component_headers:
+                if isinstance(item, dict) and "key" in item and "value" in item:
+                    component_headers_dict[item["key"]] = item["value"]
+
+        if component_headers_dict:
+            existing_headers = server_config.get("headers", {}) or {}
+            # Convert existing headers from list to dict if needed
+            if isinstance(existing_headers, list):
+                existing_dict = {}
+                for item in existing_headers:
+                    if isinstance(item, dict) and "key" in item and "value" in item:
+                        existing_dict[item["key"]] = item["value"]
+                existing_headers = existing_dict
+            merged_headers = {**existing_headers, **component_headers_dict}
+            server_config["headers"] = merged_headers
+
+        assert server_config["headers"] == {
+            "Existing-Header": "existing-value",
+            "New-Header": "new-value",
+        }
+
+    @pytest.mark.asyncio
+    async def test_headers_with_special_characters(self, component):
+        """Test headers with special characters in values."""
+        component.headers = [
+            {"key": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test"},
+            {"key": "X-Special", "value": "value with spaces and !@#$%"},
+        ]
+
+        server_config = {"url": "http://test.url"}
+
+        component_headers = getattr(component, "headers", None) or []
+        component_headers_dict = {}
+        if isinstance(component_headers, list):
+            for item in component_headers:
+                if isinstance(item, dict) and "key" in item and "value" in item:
+                    component_headers_dict[item["key"]] = item["value"]
+
+        if component_headers_dict:
+            server_config["headers"] = component_headers_dict
+
+        assert server_config["headers"]["Authorization"] == "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test"
+        assert server_config["headers"]["X-Special"] == "value with spaces and !@#$%"
+
+    @pytest.mark.asyncio
+    async def test_headers_empty_string_values(self, component):
+        """Test headers with empty string values."""
+        component.headers = [
+            {"key": "X-Empty", "value": ""},
+            {"key": "X-Valid", "value": "valid"},
+        ]
+
+        server_config = {"url": "http://test.url"}
+
+        component_headers = getattr(component, "headers", None) or []
+        component_headers_dict = {}
+        if isinstance(component_headers, list):
+            for item in component_headers:
+                if isinstance(item, dict) and "key" in item and "value" in item:
+                    component_headers_dict[item["key"]] = item["value"]
+
+        if component_headers_dict:
+            server_config["headers"] = component_headers_dict
+
+        # Empty string is still a valid value
+        assert server_config["headers"]["X-Empty"] == ""
+        assert server_config["headers"]["X-Valid"] == "valid"
+
+
 class TestMCPComponentConfigPriority:
     """Test configuration priority in MCP component - database over tweaks/value."""
 

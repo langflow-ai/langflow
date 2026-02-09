@@ -75,7 +75,13 @@ class TestRunUntilComplete:
         with patch("asyncio.run") as mock_run:
             mock_run.return_value = "no_loop"
 
-            result = run_until_complete(simple_coro())
+            coro = simple_coro()
+            try:
+                result = run_until_complete(coro)
+            finally:
+                # Close the coroutine to avoid "coroutine was never awaited" warning
+                # since the mocked asyncio.run doesn't actually run it
+                coro.close()
 
             mock_run.assert_called_once()
             assert result == "no_loop"
@@ -97,7 +103,13 @@ class TestRunUntilComplete:
         async def simple_coro():
             return "thread_result"
 
-        result = run_until_complete(simple_coro())
+        coro = simple_coro()
+        try:
+            result = run_until_complete(coro)
+        finally:
+            # Close the coroutine to avoid "coroutine was never awaited" warning
+            # since the mocked executor doesn't actually run it
+            coro.close()
 
         # Verify ThreadPoolExecutor was used
         mock_executor_class.assert_called_once()
@@ -121,8 +133,14 @@ class TestRunUntilComplete:
         mock_executor.submit.return_value = mock_future
         mock_executor_class.return_value.__enter__.return_value = mock_executor
 
-        with pytest.raises(ValueError, match="Thread pool test error"):
-            run_until_complete(failing_coro())
+        coro = failing_coro()
+        try:
+            with pytest.raises(ValueError, match="Thread pool test error"):
+                run_until_complete(coro)
+        finally:
+            # Close the coroutine to avoid "coroutine was never awaited" warning
+            # since the mocked executor doesn't actually run it
+            coro.close()
 
     @patch("asyncio.get_running_loop")
     @patch("concurrent.futures.ThreadPoolExecutor")
@@ -145,7 +163,13 @@ class TestRunUntilComplete:
         async def simple_coro():
             return "cleanup_test"
 
-        result = run_until_complete(simple_coro())
+        coro = simple_coro()
+        try:
+            result = run_until_complete(coro)
+        finally:
+            # Close the coroutine to avoid "coroutine was never awaited" warning
+            # since the mocked executor doesn't actually run it
+            coro.close()
 
         # Verify the loop operations happened in the thread
         assert result == "cleanup_test"
@@ -175,8 +199,14 @@ class TestRunUntilComplete:
         mock_executor.submit.return_value = mock_future
         mock_executor_class.return_value.__enter__.return_value = mock_executor
 
-        with pytest.raises(RuntimeError, match="Loop exception test"):
-            run_until_complete(failing_coro())
+        coro = failing_coro()
+        try:
+            with pytest.raises(RuntimeError, match="Loop exception test"):
+                run_until_complete(coro)
+        finally:
+            # Close the coroutine to avoid "coroutine was never awaited" warning
+            # since the mocked executor doesn't actually run it
+            coro.close()
 
         # Verify executor was still called
         mock_executor.submit.assert_called_once()

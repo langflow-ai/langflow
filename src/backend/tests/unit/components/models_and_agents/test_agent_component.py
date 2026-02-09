@@ -1,13 +1,11 @@
 import os
 from typing import Any
+from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
 from langflow.custom import Component
 from lfx.base.models.anthropic_constants import ANTHROPIC_MODELS
-from lfx.base.models.model_input_constants import (
-    MODEL_PROVIDERS,
-)
 from lfx.base.models.openai_constants import (
     OPENAI_CHAT_MODEL_NAMES,
     OPENAI_REASONING_MODEL_NAMES,
@@ -42,7 +40,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
             "_type": "Agent",
             "add_current_date_tool": True,
             "agent_description": "A helpful agent",
-            "agent_llm": MockLanguageModel(),
+            "model": MockLanguageModel(),
             "handle_parsing_errors": True,
             "input_value": "",
             "max_iterations": 10,
@@ -53,61 +51,6 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
             "format_instructions": "You are an AI that extracts structured JSON objects from unstructured text.",
             "output_schema": [],
         }
-
-    async def test_build_config_update(self, component_class, default_kwargs):
-        component = await self.component_setup(component_class, default_kwargs)
-        frontend_node = component.to_frontend_node()
-        build_config = frontend_node["data"]["node"]["template"]
-        # Test updating build config for OpenAI
-        component.set(agent_llm="OpenAI")
-        updated_config = await component.update_build_config(build_config, "OpenAI", "agent_llm")
-        assert "agent_llm" in updated_config
-        assert updated_config["agent_llm"]["value"] == "OpenAI"
-        assert isinstance(updated_config["agent_llm"]["options"], list)
-        assert len(updated_config["agent_llm"]["options"]) > 0
-        assert all(provider in updated_config["agent_llm"]["options"] for provider in MODEL_PROVIDERS)
-        assert (
-            updated_config["agent_llm"]["external_options"]["fields"]["data"]["node"]["name"] == "connect_other_models"
-        )
-
-        # Verify model_name field is populated for OpenAI
-
-        assert "model_name" in updated_config
-        model_name_dict = updated_config["model_name"]
-        assert isinstance(model_name_dict["options"], list)
-        assert len(model_name_dict["options"]) > 0  # OpenAI should have available models
-        assert "gpt-4o" in model_name_dict["options"]
-
-        # Test Anthropic
-        component.set(agent_llm="Anthropic")
-        updated_config = await component.update_build_config(build_config, "Anthropic", "agent_llm")
-        assert "agent_llm" in updated_config
-        assert updated_config["agent_llm"]["value"] == "Anthropic"
-        assert isinstance(updated_config["agent_llm"]["options"], list)
-        assert len(updated_config["agent_llm"]["options"]) > 0
-        assert all(provider in updated_config["agent_llm"]["options"] for provider in MODEL_PROVIDERS)
-        assert "Anthropic" in updated_config["agent_llm"]["options"]
-        assert updated_config["agent_llm"]["input_types"] == []
-        options = updated_config["model_name"]["options"]
-        assert any("sonnet" in option.lower() for option in options), f"Options: {options}"
-
-        # Test updating build config for Custom
-        updated_config = await component.update_build_config(
-            build_config, field_value="connect_other_models", field_name="agent_llm"
-        )
-        assert "agent_llm" in updated_config
-        # NOTE: update this when external options are available as values in options.
-        # assert updated_config["agent_llm"]["value"] == "connect_other_models"
-        assert isinstance(updated_config["agent_llm"]["options"], list)
-        assert len(updated_config["agent_llm"]["options"]) > 0
-        assert all(provider in updated_config["agent_llm"]["options"] for provider in MODEL_PROVIDERS)
-        assert (
-            updated_config["agent_llm"]["external_options"]["fields"]["data"]["node"]["name"] == "connect_other_models"
-        )
-        assert updated_config["agent_llm"]["input_types"] == ["LanguageModel"]
-
-        # Verify model_name field is cleared for Custom
-        assert "model_name" not in updated_config
 
     @pytest.mark.skip(reason="Test marked as skipped, agent dual output removed")
     async def test_agent_has_dual_outputs(self, component_class, default_kwargs):
@@ -133,10 +76,9 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         input_names = [inp.name for inp in component.inputs if hasattr(inp, "name")]
         assert "json_mode" not in input_names
 
-        # Verify other OpenAI inputs are still present
-        assert "model_name" in input_names
+        # Verify other inputs are still present
+        assert "model" in input_names
         assert "api_key" in input_names
-        assert "temperature" in input_names
 
     @pytest.mark.skip(reason="Test marked as skipped, agent dual output removed")
     async def test_json_response_parsing_valid_json(self, component_class, default_kwargs):
@@ -200,7 +142,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
     async def test_model_building_without_json_mode(self, component_class, default_kwargs):
         """Test that model building works without json_mode attribute."""
         component = await self.component_setup(component_class, default_kwargs)
-        component.agent_llm = "OpenAI"
+        component.model = "OpenAI"
 
         # Mock component for testing
         from unittest.mock import Mock
@@ -262,7 +204,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert "json_mode" not in build_config
 
         # Verify other expected fields are present
-        assert "agent_llm" in build_config
+        assert "model" in build_config
         assert "system_prompt" in build_config
         assert "add_current_date_tool" in build_config
 
@@ -343,6 +285,18 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert hasattr(component, "output_schema")
         assert hasattr(component, "n_messages")
         assert component.n_messages == 100
+
+    async def test_max_tokens_input_field_present(self, component_class, default_kwargs):
+        """Test that max_tokens input field is present in the agent component."""
+        component = await self.component_setup(component_class, default_kwargs)
+
+        input_names = [inp.name for inp in component.inputs if hasattr(inp, "name")]
+
+        # Verify max_tokens field exists
+        assert "max_tokens" in input_names, "max_tokens input field should be present"
+
+        # Verify the component has the attribute
+        assert hasattr(component, "max_tokens"), "Component should have max_tokens attribute"
 
     @pytest.mark.skip(reason="Test marked as skipped, agent dual output removed")
     async def test_agent_has_correct_outputs(self, component_class, default_kwargs):
@@ -456,6 +410,233 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
                 assert "additional_kwargs" not in extracted_text
                 assert "response_metadata" not in extracted_text
 
+    async def test_watsonx_input_fields_present(self, component_class, default_kwargs):
+        """Test that IBM WatsonX input fields are present in the component."""
+        component = await self.component_setup(component_class, default_kwargs)
+
+        input_names = [inp.name for inp in component.inputs if hasattr(inp, "name")]
+
+        # Test for WatsonX fields
+        assert "base_url_ibm_watsonx" in input_names
+        assert "project_id" in input_names
+
+    async def test_watsonx_fields_hidden_by_default(self, component_class, default_kwargs):
+        """Test that WatsonX fields are hidden by default."""
+        component = await self.component_setup(component_class, default_kwargs)
+
+        # Find the WatsonX input fields
+        watsonx_url_input = next(
+            (inp for inp in component.inputs if hasattr(inp, "name") and inp.name == "base_url_ibm_watsonx"), None
+        )
+        project_id_input = next(
+            (inp for inp in component.inputs if hasattr(inp, "name") and inp.name == "project_id"), None
+        )
+
+        assert watsonx_url_input is not None
+        assert project_id_input is not None
+        assert watsonx_url_input.show is False
+        assert project_id_input.show is False
+
+    async def test_update_build_config_shows_watsonx_fields(self, component_class, default_kwargs):
+        """Test that update_build_config shows WatsonX fields when IBM WatsonX is selected."""
+        from lfx.schema.dotdict import dotdict
+
+        component = await self.component_setup(component_class, default_kwargs)
+
+        # Get the frontend node to get the build_config
+        frontend_node = component.to_frontend_node()
+        build_config = frontend_node["data"]["node"]["template"]
+
+        # Simulate selecting an IBM WatsonX model
+        watsonx_model_value = [
+            {
+                "name": "ibm/granite-13b-chat-v2",
+                "provider": "IBM WatsonX",
+                "icon": "IBM",
+                "metadata": {
+                    "model_class": "ChatWatsonx",
+                    "model_name_param": "model_id",
+                    "api_key_param": "apikey",
+                },
+            }
+        ]
+
+        # Call update_build_config with WatsonX model selected
+        updated_config = await component.update_build_config(
+            dotdict(build_config), watsonx_model_value, field_name="model"
+        )
+
+        # Verify WatsonX fields are now shown
+        assert updated_config["base_url_ibm_watsonx"]["show"] is True
+        assert updated_config["project_id"]["show"] is True
+        assert updated_config["base_url_ibm_watsonx"]["required"] is True
+        assert updated_config["project_id"]["required"] is True
+
+    async def test_update_build_config_hides_watsonx_fields_for_other_providers(self, component_class, default_kwargs):
+        """Test that update_build_config hides WatsonX fields when other providers are selected."""
+        from lfx.schema.dotdict import dotdict
+
+        component = await self.component_setup(component_class, default_kwargs)
+
+        # Get the frontend node to get the build_config
+        frontend_node = component.to_frontend_node()
+        build_config = frontend_node["data"]["node"]["template"]
+
+        # Simulate selecting an OpenAI model
+        openai_model_value = [
+            {
+                "name": "gpt-4o",
+                "provider": "OpenAI",
+                "icon": "OpenAI",
+                "metadata": {
+                    "model_class": "ChatOpenAI",
+                    "model_name_param": "model",
+                    "api_key_param": "api_key",
+                },
+            }
+        ]
+
+        # Call update_build_config with OpenAI model selected
+        updated_config = await component.update_build_config(
+            dotdict(build_config), openai_model_value, field_name="model"
+        )
+
+        # Verify WatsonX fields are hidden
+        assert updated_config["base_url_ibm_watsonx"]["show"] is False
+        assert updated_config["project_id"]["show"] is False
+
+    async def test_get_agent_requirements_passes_watsonx_params(self, component_class, default_kwargs):
+        """Test that get_agent_requirements passes WatsonX URL and project_id to get_llm()."""
+        from unittest.mock import AsyncMock, patch
+
+        component = await self.component_setup(component_class, default_kwargs)
+
+        # Set WatsonX-specific attributes
+        component.base_url_ibm_watsonx = "https://us-south.ml.cloud.ibm.com"
+        component.project_id = "test-project-id"
+        component.model = [
+            {
+                "name": "ibm/granite-13b-chat-v2",
+                "provider": "IBM WatsonX",
+                "metadata": {
+                    "model_class": "ChatWatsonx",
+                    "model_name_param": "model_id",
+                    "api_key_param": "apikey",
+                },
+            }
+        ]
+        component.api_key = "test-api-key"
+
+        # Mock get_llm to capture the arguments
+        with patch("lfx.components.models_and_agents.agent.get_llm") as mock_get_llm:
+            mock_get_llm.return_value = MockLanguageModel()
+
+            # Mock other required methods
+            component.get_memory_data = AsyncMock(return_value=[])
+            component._get_shared_callbacks = list
+            component.set_tools_callbacks = lambda *_: None
+
+            await component.get_agent_requirements()
+
+            # Verify get_llm was called with WatsonX parameters
+            mock_get_llm.assert_called_once()
+            call_kwargs = mock_get_llm.call_args.kwargs
+            assert call_kwargs.get("watsonx_url") == "https://us-south.ml.cloud.ibm.com"
+            assert call_kwargs.get("watsonx_project_id") == "test-project-id"
+
+    @patch("lfx.components.models_and_agents.agent.AgentComponent.get_memory_data")
+    @patch("lfx.components.models_and_agents.agent.get_llm")
+    async def test_agent_passes_max_tokens_to_get_llm(
+        self, mock_get_llm, mock_get_memory_data, component_class, default_kwargs
+    ):
+        """Test that agent component passes max_tokens parameter to get_llm function."""
+        from unittest.mock import AsyncMock, MagicMock
+
+        mock_get_memory_data.return_value = AsyncMock(return_value=[])
+
+        # Setup mock
+        mock_llm = MagicMock()
+        mock_get_llm.return_value = mock_llm
+
+        # Set max_tokens in default_kwargs
+        default_kwargs["max_tokens"] = 500
+
+        component = await self.component_setup(component_class, default_kwargs)
+
+        # Call get_agent_requirements which internally calls get_llm
+        await component.get_agent_requirements()
+
+        # Verify get_llm was called with max_tokens
+        mock_get_llm.assert_called_once()
+        call_kwargs = mock_get_llm.call_args.kwargs
+
+        assert "max_tokens" in call_kwargs, "max_tokens should be passed to get_llm"
+        assert call_kwargs["max_tokens"] == 500
+
+    @patch("lfx.components.models_and_agents.agent.AgentComponent.get_memory_data")
+    @patch("lfx.components.models_and_agents.agent.get_llm")
+    async def test_agent_passes_none_max_tokens_when_not_set(
+        self, mock_get_llm, mock_get_memory_data, component_class, default_kwargs
+    ):
+        """Test that agent component passes None for max_tokens when not set."""
+        from unittest.mock import AsyncMock, MagicMock
+
+        mock_get_memory_data.return_value = AsyncMock(return_value=[])
+
+        # Setup mock
+        mock_llm = MagicMock()
+        mock_get_llm.return_value = mock_llm
+
+        # Don't set max_tokens in default_kwargs - ensure it's not present
+        if "max_tokens" in default_kwargs:
+            del default_kwargs["max_tokens"]
+
+        component = await self.component_setup(component_class, default_kwargs)
+
+        # Call get_agent_requirements which internally calls get_llm
+        await component.get_agent_requirements()
+
+        # Verify get_llm was called
+        mock_get_llm.assert_called_once()
+
+        # Access kwargs using the .kwargs attribute (more reliable than indexing)
+        call_kwargs = mock_get_llm.call_args.kwargs
+
+        # max_tokens should be passed as None when not set
+        assert "max_tokens" in call_kwargs, "max_tokens should be passed to get_llm even when None"
+        assert call_kwargs["max_tokens"] is None
+
+    @patch("lfx.components.models_and_agents.agent.AgentComponent.get_memory_data")
+    @patch("lfx.components.models_and_agents.agent.get_llm")
+    async def test_agent_max_tokens_with_provider_specific_field_name(
+        self, mock_get_llm, mock_get_memory_data, component_class, default_kwargs
+    ):
+        """Test that agent component passes max_tokens which will be handled by provider-specific field names."""
+        from unittest.mock import AsyncMock, MagicMock
+
+        mock_get_memory_data.return_value = AsyncMock(return_value=[])
+
+        # Setup mock
+        mock_llm = MagicMock()
+        mock_get_llm.return_value = mock_llm
+
+        # Set max_tokens; get_llm uses model metadata for provider-specific field names (e.g. max_output_tokens)
+        default_kwargs["max_tokens"] = 1000
+
+        component = await self.component_setup(component_class, default_kwargs)
+
+        # Call get_agent_requirements which internally calls get_llm
+        await component.get_agent_requirements()
+
+        # Verify get_llm was called with max_tokens
+        mock_get_llm.assert_called_once()
+        call_kwargs = mock_get_llm.call_args.kwargs
+
+        assert "max_tokens" in call_kwargs, "max_tokens should be passed to get_llm"
+        assert call_kwargs["max_tokens"] == 1000
+        # Note: The provider-specific field name mapping happens inside get_llm,
+        # so we just verify max_tokens is passed correctly
+
 
 class TestAgentComponentWithClient(ComponentTestBaseWithClient):
     @pytest.fixture
@@ -483,8 +664,18 @@ class TestAgentComponentWithClient(ComponentTestBaseWithClient):
             tools=tools,
             input_value=input_value,
             api_key=api_key,
-            model_name="gpt-4o",
-            agent_llm="OpenAI",
+            model=[
+                {
+                    "name": "gpt-4o",
+                    "provider": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                        "model_class": "ChatOpenAI",
+                        "model_name_param": "model",
+                        "api_key_param": "api_key",
+                    },
+                }
+            ],
             temperature=temperature,
             _session_id=str(uuid4()),
         )
@@ -510,8 +701,18 @@ class TestAgentComponentWithClient(ComponentTestBaseWithClient):
                 tools=tools,
                 input_value=input_value,
                 api_key=api_key,
-                model_name=model_name,
-                agent_llm="OpenAI",
+                model=[
+                    {
+                        "name": model_name,
+                        "provider": "OpenAI",
+                        "icon": "OpenAI",
+                        "metadata": {
+                            "model_class": "ChatOpenAI",
+                            "model_name_param": "model",
+                            "api_key_param": "api_key",
+                        },
+                    }
+                ],
                 _session_id=str(uuid4()),
             )
 
@@ -539,8 +740,18 @@ class TestAgentComponentWithClient(ComponentTestBaseWithClient):
                     tools=tools,
                     input_value=input_value,
                     api_key=api_key,
-                    model_name=model_name,
-                    agent_llm="Anthropic",
+                    model=[
+                        {
+                            "name": model_name,
+                            "provider": "Anthropic",
+                            "icon": "Anthropic",
+                            "metadata": {
+                                "model_class": "ChatAnthropic",
+                                "model_name_param": "model",
+                                "api_key_param": "api_key",
+                            },
+                        }
+                    ],
                     _session_id=str(uuid4()),
                 )
 
@@ -559,8 +770,18 @@ class TestAgentComponentWithClient(ComponentTestBaseWithClient):
                     tools=tools,
                     input_value=" ",
                     api_key=api_key,
-                    model_name=model_name,
-                    agent_llm="Anthropic",
+                    model=[
+                        {
+                            "name": model_name,
+                            "provider": "Anthropic",
+                            "icon": "Anthropic",
+                            "metadata": {
+                                "model_class": "ChatAnthropic",
+                                "model_name_param": "model",
+                                "api_key_param": "api_key",
+                            },
+                        }
+                    ],
                     _session_id=str(uuid4()),
                 )
 
@@ -586,8 +807,18 @@ class TestAgentComponentWithClient(ComponentTestBaseWithClient):
             tools=tools,
             input_value="",
             api_key=api_key,
-            model_name="gpt-4o",
-            agent_llm="OpenAI",
+            model=[
+                {
+                    "name": "gpt-4o",
+                    "provider": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                        "model_class": "ChatOpenAI",
+                        "model_name_param": "model",
+                        "api_key_param": "api_key",
+                    },
+                }
+            ],
             temperature=0.1,
             _session_id=str(uuid4()),
         )
@@ -609,8 +840,18 @@ class TestAgentComponentWithClient(ComponentTestBaseWithClient):
             tools=tools,
             input_value="   \n\t  ",
             api_key=api_key,
-            model_name="gpt-4o",
-            agent_llm="OpenAI",
+            model=[
+                {
+                    "name": "gpt-4o",
+                    "provider": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                        "model_class": "ChatOpenAI",
+                        "model_name_param": "model",
+                        "api_key_param": "api_key",
+                    },
+                }
+            ],
             temperature=0.1,
             _session_id=str(uuid4()),
         )
@@ -693,8 +934,18 @@ class TestAgentComponentWithClient(ComponentTestBaseWithClient):
             tools=tools,
             input_value="",
             api_key=api_key,
-            model_name="claude-3-5-sonnet-20241022",
-            agent_llm="Anthropic",
+            model=[
+                {
+                    "name": "claude-3-5-sonnet-20241022",
+                    "provider": "Anthropic",
+                    "icon": "Anthropic",
+                    "metadata": {
+                        "model_class": "ChatAnthropic",
+                        "model_name_param": "model",
+                        "api_key_param": "api_key",
+                    },
+                }
+            ],
             _session_id=str(uuid4()),
         )
 
@@ -726,8 +977,18 @@ class TestAgentComponentWithClient(ComponentTestBaseWithClient):
             tools=tools,
             input_value="   \n\t  ",
             api_key=api_key,
-            model_name=ANTHROPIC_MODELS_DETAILED[0]["name"],
-            agent_llm="Anthropic",
+            model=[
+                {
+                    "name": ANTHROPIC_MODELS_DETAILED[0]["name"],
+                    "provider": "Anthropic",
+                    "icon": "Anthropic",
+                    "metadata": {
+                        "model_class": "ChatAnthropic",
+                        "model_name_param": "model",
+                        "api_key_param": "api_key",
+                    },
+                }
+            ],
             _session_id=str(uuid4()),
         )
 

@@ -209,7 +209,7 @@ class Data(CrossModuleModel):
         """
         if key in {"data", "text_key"} or key.startswith("_"):
             super().__setattr__(key, value)
-        elif key in self.model_fields:
+        elif key in type(self).model_fields:
             self.data[key] = value
             super().__setattr__(key, value)
         else:

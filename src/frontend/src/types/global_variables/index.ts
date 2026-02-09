@@ -6,4 +6,7 @@ export type GlobalVariable = {
   default_fields: string[];
   name: string;
   value?: string;
+  category?: string;
+  is_valid?: boolean | null;
+  validation_error?: string | null;
 };

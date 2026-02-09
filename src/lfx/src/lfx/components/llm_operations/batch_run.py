@@ -4,8 +4,13 @@ from typing import TYPE_CHECKING, Any, cast
 
 import toml  # type: ignore[import-untyped]
 
+from lfx.base.models.unified_models import (
+    get_language_model_options,
+    get_model_classes,
+    update_model_options_in_build_config,
+)
 from lfx.custom.custom_component.component import Component
-from lfx.io import BoolInput, DataFrameInput, HandleInput, MessageTextInput, MultilineInput, Output
+from lfx.io import BoolInput, DataFrameInput, MessageTextInput, ModelInput, MultilineInput, Output, SecretStrInput
 from lfx.log.logger import logger
 from lfx.schema.dataframe import DataFrame
 
@@ -20,12 +25,19 @@ class BatchRunComponent(Component):
     icon = "List"
 
     inputs = [
-        HandleInput(
+        ModelInput(
             name="model",
             display_name="Language Model",
-            info="Connect the 'Language Model' output from your LLM component here.",
-            input_types=["LanguageModel"],
+            info="Select your model provider",
+            real_time_refresh=True,
             required=True,
+        ),
+        SecretStrInput(
+            name="api_key",
+            display_name="API Key",
+            info="Model Provider API key",
+            real_time_refresh=True,
+            advanced=True,
         ),
         MultilineInput(
             name="system_message",
@@ -76,6 +88,17 @@ class BatchRunComponent(Component):
         ),
     ]
 
+    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
+        """Dynamically update build config with user-filtered model options."""
+        return update_model_options_in_build_config(
+            component=self,
+            build_config=build_config,
+            cache_key_prefix="language_model_options",
+            get_options_func=get_language_model_options,
+            field_name=field_name,
+            field_value=field_value,
+        )
+
     def _format_row_as_toml(self, row: dict[str, Any]) -> str:
         """Convert a dictionary (row) into a TOML-formatted string."""
         formatted_dict = {str(col): {"value": str(val)} for col, val in row.items()}
@@ -111,20 +134,43 @@ class BatchRunComponent(Component):
             }
 
     async def run_batch(self) -> DataFrame:
-        """Process each row in df[column_name] with the language model asynchronously.
+        """Process each row in df[column_name] with the language model asynchronously."""
+        # Check if model is already an instance (for testing) or needs to be instantiated
+        if isinstance(self.model, list):
+            # Extract model configuration
+            model_selection = self.model[0]
+            model_name = model_selection.get("name")
+            provider = model_selection.get("provider")
+            metadata = model_selection.get("metadata", {})
 
-        Returns:
-            DataFrame: A new DataFrame containing:
-                - All original columns
-                - The model's response column (customizable name)
-                - 'batch_index' column for processing order
-                - 'metadata' (optional)
+            # Get model class and parameters from metadata
+            model_class = get_model_classes().get(metadata.get("model_class"))
+            if model_class is None:
+                msg = f"No model class defined for {model_name}"
+                raise ValueError(msg)
 
-        Raises:
-            ValueError: If the specified column is not found in the DataFrame
-            TypeError: If the model is not compatible or input types are wrong
-        """
-        model: Runnable = self.model
+            api_key_param = metadata.get("api_key_param", "api_key")
+            model_name_param = metadata.get("model_name_param", "model")
+
+            # Get API key from global variables
+            from lfx.base.models.unified_models import get_api_key_for_provider
+
+            api_key = get_api_key_for_provider(self.user_id, provider, self.api_key)
+
+            if not api_key and provider != "Ollama":
+                msg = f"{provider} API key is required. Please configure it globally."
+                raise ValueError(msg)
+
+            # Instantiate the model
+            kwargs = {
+                model_name_param: model_name,
+                api_key_param: api_key,
+            }
+            model: Runnable = model_class(**kwargs)
+        else:
+            # Model is already an instance (typically in tests)
+            model = self.model
+
         system_msg = self.system_message or ""
         df: DataFrame = self.df
         col_name = self.column_name or ""
@@ -159,13 +205,22 @@ class BatchRunComponent(Component):
             ]
 
             # Configure the model with project info and callbacks
-            model = model.with_config(
-                {
-                    "run_name": self.display_name,
-                    "project_name": self.get_project_name(),
-                    "callbacks": self.get_langchain_callbacks(),
-                }
-            )
+            # Some models (e.g., ChatWatsonx) may have serialization issues with with_config()
+            # due to SecretStr or other non-serializable attributes
+            try:
+                model = model.with_config(
+                    {
+                        "run_name": self.display_name,
+                        "project_name": self.get_project_name(),
+                        "callbacks": self.get_langchain_callbacks(),
+                    }
+                )
+            except (TypeError, ValueError, AttributeError) as e:
+                # Log warning and continue without configuration
+                await logger.awarning(
+                    f"Could not configure model with callbacks and project info: {e!s}. "
+                    "Proceeding with batch processing without configuration."
+                )
             # Process batches and track progress
             responses_with_idx = list(
                 zip(

@@ -15,14 +15,20 @@ def update_base_dep(pyproject_path: str, new_version: str) -> None:
     filepath = BASE_DIR / pyproject_path
     content = filepath.read_text(encoding="utf-8")
 
-    # Updated pattern to handle PEP 440 version suffixes and both ~= and == version specifiers
-    pattern = re.compile(r'("langflow-base(?:~=|==)[\d.]+(?:\.(?:post|dev|a|b|rc)\d+)*")')
-    replacement = f'"langflow-base-nightly=={new_version}"'
+    # Updated pattern to handle PEP 440 version suffixes, extras (e.g., [complete]),
+    # both ~= and == version specifiers, and both langflow-base and langflow-base-nightly names
+    # Captures extras in group 2 to preserve them in the replacement
+    pattern = re.compile(r'("langflow-base(?:-nightly)?((?:\[[^\]]+\])?)(?:~=|==)[\d.]+(?:\.(?:post|dev|a|b|rc)\d+)*")')
 
     # Check if the pattern is found
-    if not pattern.search(content):
+    match = pattern.search(content)
+    if not match:
         msg = f'langflow-base dependency not found in "{filepath}"'
         raise ValueError(msg)
+
+    # Extract extras if present (e.g., "[complete]")
+    extras = match.group(2) if match.group(2) else ""
+    replacement = f'"langflow-base-nightly{extras}=={new_version}"'
 
     # Replace the matched pattern with the new one
     content = pattern.sub(replacement, content)
@@ -34,8 +40,9 @@ def update_lfx_dep_in_base(pyproject_path: str, lfx_version: str) -> None:
     filepath = BASE_DIR / pyproject_path
     content = filepath.read_text(encoding="utf-8")
 
-    # Updated pattern to handle PEP 440 version suffixes and both ~= and == version specifiers
-    pattern = re.compile(r'("lfx(?:~=|==)[\d.]+(?:\.(?:post|dev|a|b|rc)\d+)*")')
+    # Updated pattern to handle PEP 440 version suffixes, both ~= and == version specifiers,
+    # and both lfx and lfx-nightly names
+    pattern = re.compile(r'("lfx(?:-nightly)?(?:~=|==)[\d.]+(?:\.(?:post|dev|a|b|rc)\d+)*")')
     replacement = f'"lfx-nightly=={lfx_version}"'
 
     # Check if the pattern is found

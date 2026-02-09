@@ -40,7 +40,6 @@ from langflow.initial_setup.constants import (
     STARTER_FOLDER_DESCRIPTION,
     STARTER_FOLDER_NAME,
 )
-from langflow.services.auth.utils import create_super_user
 from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.database.models.folder.constants import (
     DEFAULT_FOLDER_DESCRIPTION,
@@ -48,7 +47,13 @@ from langflow.services.database.models.folder.constants import (
     LEGACY_FOLDER_NAMES,
 )
 from langflow.services.database.models.folder.model import Folder, FolderCreate, FolderRead
-from langflow.services.deps import get_settings_service, get_storage_service, get_variable_service, session_scope
+from langflow.services.deps import (
+    get_auth_service,
+    get_settings_service,
+    get_storage_service,
+    get_variable_service,
+    session_scope,
+)
 
 # In the folder ./starter_projects we have a few JSON files that represent
 # starter projects. We want to load these into the database so that users
@@ -60,7 +65,12 @@ def update_projects_components_with_latest_component_versions(project_data, all_
     all_types_dict_flat = {}
     for category in all_types_dict.values():
         for key, component in category.items():
-            all_types_dict_flat[key] = component  # noqa: PERF403
+            # Strip hash_history from component metadata before using in flows
+            # hash_history is internal metadata for tracking component evolution
+            # and should only exist in component_index.json, not in saved flows
+            if "metadata" in component and "hash_history" in component["metadata"]:
+                del component["metadata"]["hash_history"]
+            all_types_dict_flat[key] = component
 
     node_changes_log = defaultdict(list)
     project_data_copy = deepcopy(project_data)
@@ -1191,7 +1201,7 @@ async def initialize_auto_login_default_superuser() -> None:
         raise ValueError(msg)
 
     async with session_scope() as async_session:
-        super_user = await create_super_user(db=async_session, username=username, password=password)
+        super_user = await get_auth_service().create_super_user(username, password, db=async_session)
         await get_variable_service().initialize_user_variables(super_user.id, async_session)
         # Initialize agentic variables if agentic experience is enabled
         from langflow.api.utils.mcp.agentic_mcp import initialize_agentic_user_variables
@@ -1274,6 +1284,7 @@ async def get_or_create_default_folder(session: AsyncSession, user_id: UUID) -> 
 async def sync_flows_from_fs():
     flow_mtimes = {}
     fs_flows_polling_interval = get_settings_service().settings.fs_flows_polling_interval / 1000
+    storage_service = get_storage_service()
     try:
         while True:
             try:
@@ -1282,7 +1293,14 @@ async def sync_flows_from_fs():
                     flows = (await session.exec(stmt)).all()
                     for flow in flows:
                         mtime = flow_mtimes.setdefault(flow.id, 0)
-                        path = anyio.Path(flow.fs_path)
+                        # Resolve path: if relative, construct full path using user's flows directory
+                        fs_path_str = flow.fs_path
+                        if not Path(fs_path_str).is_absolute():
+                            # Relative path - construct full path
+                            path = storage_service.data_dir / "flows" / str(flow.user_id) / fs_path_str
+                        else:
+                            # Absolute path - use as-is
+                            path = anyio.Path(fs_path_str)
                         try:
                             if await path.exists():
                                 new_mtime = (await path.stat()).st_mtime

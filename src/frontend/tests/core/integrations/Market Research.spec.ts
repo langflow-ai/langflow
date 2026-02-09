@@ -6,6 +6,7 @@ import { getAllResponseMessage } from "../../utils/get-all-response-message";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { waitForOpenModalWithChatInput } from "../../utils/wait-for-open-modal";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
+import { unselectNodes } from "../../utils/unselect-nodes";
 
 withEventDeliveryModes(
   "Market Research",
@@ -35,11 +36,23 @@ withEventDeliveryModes(
     });
 
     await initialGPTsetup(page);
-    await page
+
+    // Approach 1: Direct fill like Instagram Copywriter (most reliable)
+    const tavily = page
       .getByTestId(/rf__node-TavilySearchComponent-[A-Za-z0-9]{5}/)
-      .getByTestId("popover-anchor-input-api_key")
-      .nth(0)
-      .fill(process.env.TAVILY_API_KEY ?? "");
+      .getByTestId("popover-anchor-input-api_key");
+
+    await page.getByText("Tavily AI Search", { exact: true }).last().click();
+
+    if ((await tavily.count()) > 0) {
+      await tavily.nth(0).fill(process.env.TAVILY_API_KEY ?? "");
+    } else {
+      await page
+        .getByTestId("popover-anchor-input-api_key")
+        .fill(process.env.TAVILY_API_KEY ?? "");
+    }
+
+    await unselectNodes(page);
 
     await page
       .getByTestId("handle-parsercomponent-shownode-data or dataframe-left")

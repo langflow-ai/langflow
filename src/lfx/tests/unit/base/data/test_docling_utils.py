@@ -1,5 +1,8 @@
 """Tests for docling_utils module."""
 
+import time
+from unittest.mock import MagicMock, patch
+
 import pytest
 
 try:
@@ -134,3 +137,236 @@ class TestExtractDoclingDocuments:
         """Test extracting from None raises error."""
         with pytest.raises(TypeError, match="No data inputs provided"):
             extract_docling_documents(None, "doc")
+
+
+class TestDocumentConverterCaching:
+    """Test DocumentConverter caching functionality."""
+
+    def test_cached_converter_function_exists(self):
+        """Test that _get_cached_converter function exists and is properly decorated."""
+        from lfx.base.data.docling_utils import _get_cached_converter
+
+        # Verify function exists
+        assert callable(_get_cached_converter)
+
+        # Verify it has cache_info method (indicates lru_cache decorator)
+        assert hasattr(_get_cached_converter, "cache_info")
+        assert callable(_get_cached_converter.cache_info)
+
+    def test_cached_converter_cache_key(self):
+        """Test that cache uses correct parameters as key."""
+        from lfx.base.data.docling_utils import _get_cached_converter
+
+        # Clear cache before test
+        _get_cached_converter.cache_clear()
+
+        # Mock the DocumentConverter creation to avoid heavy imports
+        # Patch at import source since DocumentConverter is imported inside _get_cached_converter
+        with patch("docling.document_converter.DocumentConverter") as mock_converter:
+            mock_instance1 = MagicMock()
+            mock_instance2 = MagicMock()
+            mock_converter.side_effect = [mock_instance1, mock_instance2]
+
+            # First call with specific parameters
+            result1 = _get_cached_converter(
+                pipeline="standard",
+                ocr_engine="None",
+                do_picture_classification=False,
+                pic_desc_config_hash=None,
+            )
+
+            # Second call with same parameters should return cached result
+            result2 = _get_cached_converter(
+                pipeline="standard",
+                ocr_engine="None",
+                do_picture_classification=False,
+                pic_desc_config_hash=None,
+            )
+
+            # Third call with different parameters should create new instance
+            result3 = _get_cached_converter(
+                pipeline="vlm",
+                ocr_engine="None",
+                do_picture_classification=False,
+                pic_desc_config_hash=None,
+            )
+
+            # Verify caching behavior
+            assert result1 is result2, "Same parameters should return cached instance"
+            assert result1 is not result3, "Different parameters should return new instance"
+
+            # Verify DocumentConverter was only called twice (not three times)
+            assert mock_converter.call_count == 2
+
+            # Verify cache statistics
+            cache_info = _get_cached_converter.cache_info()
+            assert cache_info.hits >= 1, "Should have at least one cache hit"
+            assert cache_info.misses == 2, "Should have exactly two cache misses"
+
+    def test_cached_converter_lru_eviction(self):
+        """Test that LRU cache properly evicts old entries when maxsize is reached."""
+        from lfx.base.data.docling_utils import _get_cached_converter
+
+        # Clear cache before test
+        _get_cached_converter.cache_clear()
+
+        # Patch at import source since DocumentConverter is imported inside _get_cached_converter
+        with patch("docling.document_converter.DocumentConverter") as mock_converter:
+            mock_instances = [MagicMock() for _ in range(5)]
+            mock_converter.side_effect = mock_instances
+
+            # Create 5 different cache entries (maxsize=4, so one should be evicted)
+            configs = [
+                ("standard", "None", False, None),
+                ("standard", "easyocr", False, None),
+                ("vlm", "None", False, None),
+                ("standard", "None", True, None),
+                ("vlm", "easyocr", False, None),
+            ]
+
+            for pipeline, ocr, pic_class, pic_hash in configs:
+                _get_cached_converter(
+                    pipeline=pipeline,
+                    ocr_engine=ocr,
+                    do_picture_classification=pic_class,
+                    pic_desc_config_hash=pic_hash,
+                )
+
+            # Cache size should be at most 4 (maxsize)
+            cache_info = _get_cached_converter.cache_info()
+            assert cache_info.currsize <= 4, "Cache size should not exceed maxsize"
+
+    def test_cached_converter_performance_improvement(self):
+        """Test that caching provides performance improvement."""
+        from lfx.base.data.docling_utils import _get_cached_converter
+
+        # Clear cache before test
+        _get_cached_converter.cache_clear()
+
+        # Patch at import source since DocumentConverter is imported inside _get_cached_converter
+        with patch("docling.document_converter.DocumentConverter") as mock_converter:
+            # Simulate slow converter creation
+            def slow_creation(*args, **kwargs):  # noqa: ARG001
+                time.sleep(0.05)  # 50ms delay
+                return MagicMock()
+
+            mock_converter.side_effect = slow_creation
+
+            # First call (cache miss - should be slow)
+            start_time = time.time()
+            _get_cached_converter(
+                pipeline="standard",
+                ocr_engine="None",
+                do_picture_classification=False,
+                pic_desc_config_hash=None,
+            )
+            first_call_duration = time.time() - start_time
+
+            # Second call (cache hit - should be fast)
+            start_time = time.time()
+            _get_cached_converter(
+                pipeline="standard",
+                ocr_engine="None",
+                do_picture_classification=False,
+                pic_desc_config_hash=None,
+            )
+            second_call_duration = time.time() - start_time
+
+            # Cache hit should be significantly faster (at least 10x)
+            assert second_call_duration < first_call_duration / 10, (
+                f"Cache hit should be much faster: first={first_call_duration:.4f}s, second={second_call_duration:.4f}s"
+            )
+
+    def test_cache_clear(self):
+        """Test that cache can be cleared."""
+        from lfx.base.data.docling_utils import _get_cached_converter
+
+        # Clear cache
+        _get_cached_converter.cache_clear()
+
+        # Patch at import source since DocumentConverter is imported inside _get_cached_converter
+        with patch("docling.document_converter.DocumentConverter"):
+            # Add something to cache
+            _get_cached_converter(
+                pipeline="standard",
+                ocr_engine="None",
+                do_picture_classification=False,
+                pic_desc_config_hash=None,
+            )
+
+            # Verify cache has content
+            cache_info = _get_cached_converter.cache_info()
+            assert cache_info.currsize > 0
+
+            # Clear cache
+            _get_cached_converter.cache_clear()
+
+            # Verify cache is empty
+            cache_info = _get_cached_converter.cache_info()
+            assert cache_info.currsize == 0
+            assert cache_info.hits == 0
+            assert cache_info.misses == 0
+
+    def test_different_ocr_engines_create_different_caches(self):
+        """Test that different OCR engines result in different cached converters."""
+        from lfx.base.data.docling_utils import _get_cached_converter
+
+        _get_cached_converter.cache_clear()
+
+        # Patch at import source since DocumentConverter is imported inside _get_cached_converter
+        with patch("docling.document_converter.DocumentConverter") as mock_converter:
+            mock_instance1 = MagicMock()
+            mock_instance2 = MagicMock()
+            mock_converter.side_effect = [mock_instance1, mock_instance2]
+
+            # Create converter with no OCR
+            result1 = _get_cached_converter(
+                pipeline="standard",
+                ocr_engine="None",
+                do_picture_classification=False,
+                pic_desc_config_hash=None,
+            )
+
+            # Create converter with EasyOCR
+            result2 = _get_cached_converter(
+                pipeline="standard",
+                ocr_engine="easyocr",
+                do_picture_classification=False,
+                pic_desc_config_hash=None,
+            )
+
+            # Should be different instances
+            assert result1 is not result2
+            assert mock_converter.call_count == 2
+
+    def test_different_pipelines_create_different_caches(self):
+        """Test that different pipelines result in different cached converters."""
+        from lfx.base.data.docling_utils import _get_cached_converter
+
+        _get_cached_converter.cache_clear()
+
+        # Patch at import source since DocumentConverter is imported inside _get_cached_converter
+        with patch("docling.document_converter.DocumentConverter") as mock_converter:
+            mock_instance1 = MagicMock()
+            mock_instance2 = MagicMock()
+            mock_converter.side_effect = [mock_instance1, mock_instance2]
+
+            # Create converter with standard pipeline
+            result1 = _get_cached_converter(
+                pipeline="standard",
+                ocr_engine="None",
+                do_picture_classification=False,
+                pic_desc_config_hash=None,
+            )
+
+            # Create converter with VLM pipeline
+            result2 = _get_cached_converter(
+                pipeline="vlm",
+                ocr_engine="None",
+                do_picture_classification=False,
+                pic_desc_config_hash=None,
+            )
+
+            # Should be different instances
+            assert result1 is not result2
+            assert mock_converter.call_count == 2

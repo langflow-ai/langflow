@@ -26,7 +26,8 @@ from pydantic import PydanticDeprecatedSince20
 from pydantic_core import PydanticSerializationError
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
-from langflow.api import health_check_router, log_router, router
+from langflow.api import health_check_router, log_router
+from langflow.api.router import router
 from langflow.api.v1.mcp_projects import init_mcp_servers
 from langflow.initial_setup.setup import (
     copy_profile_pictures,
@@ -46,6 +47,7 @@ from langflow.services.deps import (
 )
 from langflow.services.schema import ServiceType
 from langflow.services.utils import initialize_services, initialize_settings_service, teardown_services
+from langflow.utils.mcp_cleanup import cleanup_mcp_sessions
 
 if TYPE_CHECKING:
     from tempfile import TemporaryDirectory
@@ -136,18 +138,8 @@ def warn_about_future_cors_changes(settings):
 
     if using_defaults:
         logger.warning(
-            "DEPRECATION NOTICE: Starting in v2.0, CORS will be more restrictive by default. "
-            "Current behavior allows all origins (*) with credentials enabled. "
-            "Consider setting LANGFLOW_CORS_ORIGINS for production deployments. "
-            "See documentation for secure CORS configuration."
-        )
-
-    # Additional warning for potentially insecure configuration
-    if settings.cors_origins == "*" and settings.cors_allow_credentials:
-        logger.warning(
-            "SECURITY NOTICE: Current CORS configuration allows all origins with credentials. "
-            "In v2.0, credentials will be automatically disabled when using wildcard origins. "
-            "Specify exact origins in LANGFLOW_CORS_ORIGINS to use credentials securely."
+            "CORS: Using permissive defaults (all origins + credentials). "
+            "Set LANGFLOW_CORS_ORIGINS for production. Stricter defaults in v2.0."
         )
 
 
@@ -313,8 +305,14 @@ def get_lifespan(*, fix_migration=False, version=None):
             # Allows the server to start first to avoid race conditions with MCP Server startup
             mcp_init_task = asyncio.create_task(delayed_init_mcp_servers())
 
-            yield
+            # v1 and project MCP server context managers
+            from langflow.api.v1.mcp import start_streamable_http_manager
+            from langflow.api.v1.mcp_projects import start_project_task_group
 
+            await start_streamable_http_manager()
+            await start_project_task_group()
+
+            yield
         except asyncio.CancelledError:
             await logger.adebug("Lifespan received cancellation signal")
         except Exception as exc:
@@ -324,6 +322,10 @@ def get_lifespan(*, fix_migration=False, version=None):
                 await log_exception_to_telemetry(exc, "lifespan")
             raise
         finally:
+            # CRITICAL: Cleanup MCP sessions FIRST, before any other shutdown logic.
+            # This ensures MCP subprocesses are killed even if shutdown is interrupted.
+            await cleanup_mcp_sessions()
+
             # Clean shutdown with progress indicator
             # Create shutdown progress (show verbose timing if log level is DEBUG)
             from langflow.__main__ import get_number_of_workers
@@ -344,6 +346,20 @@ def get_lifespan(*, fix_migration=False, version=None):
 
                 # Step 1: Cancelling Background Tasks
                 with shutdown_progress.step(1):
+                    from langflow.api.v1.mcp import stop_streamable_http_manager
+                    from langflow.api.v1.mcp_projects import stop_project_task_group
+
+                    # Shutdown MCP project servers
+                    try:
+                        await stop_project_task_group()
+                    except Exception as e:  # noqa: BLE001
+                        await logger.aerror(f"Failed to stop MCP Project servers: {e}")
+                    # Close MCP server streamable-http session manager .run() context manager
+                    try:
+                        await stop_streamable_http_manager()
+                    except Exception as e:  # noqa: BLE001
+                        await logger.aerror(f"Failed to stop MCP server streamable-http session manager: {e}")
+                    # Cancel background tasks
                     tasks_to_cancel = []
                     if sync_flows_from_fs_task:
                         sync_flows_from_fs_task.cancel()
@@ -555,6 +571,15 @@ def setup_static_files(app: FastAPI, static_files_dir: Path) -> None:
 
     @app.exception_handler(404)
     async def custom_404_handler(_request, _exc):
+        # Return JSON for workflow API endpoints to prevent HTML responses
+        if _request.url.path.startswith("/api/v2/workflows"):
+            # Extract detail from HTTPException if available
+            detail = _exc.detail if isinstance(_exc, HTTPException) else "Not Found"
+            return JSONResponse(
+                status_code=404,
+                content=detail if isinstance(detail, dict) else {"detail": detail},
+            )
+
         path = anyio.Path(static_files_dir) / "index.html"
 
         if not await path.exists():

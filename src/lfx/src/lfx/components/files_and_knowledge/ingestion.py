@@ -38,6 +38,7 @@ from lfx.services.deps import (
     get_variable_service,
     session_scope,
 )
+from lfx.utils.validate_cloud import raise_error_if_astra_cloud_disable_component
 
 if TYPE_CHECKING:
     from lfx.schema.dataframe import DataFrame
@@ -49,6 +50,9 @@ HUGGINGFACE_MODEL_NAMES = [
 COHERE_MODEL_NAMES = ["embed-english-v3.0", "embed-multilingual-v3.0"]
 
 _KNOWLEDGE_BASES_ROOT_PATH: Path | None = None
+
+# Error message to raise if we're in Astra cloud environment and the component is not supported.
+astra_error_msg = "Knowledge ingestion is not supported in Astra cloud environment."
 
 
 def _get_knowledge_bases_root_path() -> Path:
@@ -540,6 +544,8 @@ class KnowledgeIngestionComponent(Component):
     # ---------------------------------------------------------------------
     async def build_kb_info(self) -> Data:
         """Main ingestion routine → returns a dict with KB metadata."""
+        # Check if we're in Astra cloud environment and raise an error if we are.
+        raise_error_if_astra_cloud_disable_component(astra_error_msg)
         try:
             input_value = self.input_df[0] if isinstance(self.input_df, list) else self.input_df
             df_source: DataFrame = convert_to_dataframe(input_value, auto_parse=False)
@@ -626,6 +632,8 @@ class KnowledgeIngestionComponent(Component):
         field_name: str | None = None,
     ):
         """Update build configuration based on provider selection."""
+        # Check if we're in Astra cloud environment and raise an error if we are.
+        raise_error_if_astra_cloud_disable_component(astra_error_msg)
         # Create a new knowledge base
         if field_name == "knowledge_base":
             async with session_scope() as db:

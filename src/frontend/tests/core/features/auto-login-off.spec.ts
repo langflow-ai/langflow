@@ -147,12 +147,12 @@ test(
 
     await renameFlow(page, { flowName: randomFlowName });
 
-    await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+    await page.waitForSelector('[data-testid="sidebar-search-input"]', {
       timeout: 100000,
       state: "visible",
     });
 
-    await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+    await page.waitForSelector('[data-testid="sidebar-search-input"]', {
       timeout: 1500,
     });
 
@@ -217,7 +217,7 @@ test(
 
     await renameFlow(page, { flowName: secondRandomFlowName });
 
-    await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+    await page.waitForSelector('[data-testid="sidebar-search-input"]', {
       timeout: 100000,
     });
 

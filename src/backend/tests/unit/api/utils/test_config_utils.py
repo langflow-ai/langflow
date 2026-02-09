@@ -16,6 +16,17 @@ from langflow.services.deps import session_scope
 from sqlmodel import select
 
 
+def _build_server_config(base_url: str, project_id, transport: str):
+    """Return URL and server config for a given transport."""
+    suffix = "streamable" if transport == "streamable" else "sse"
+    url = f"{base_url}/api/v1/mcp/project/{project_id}/{suffix}"
+    if transport == "streamable":  # noqa: SIM108
+        args = ["mcp-proxy", "--transport", "streamablehttp", url]
+    else:
+        args = ["mcp-proxy", url]
+    return url, {"command": "uvx", "args": args}
+
+
 class TestMCPServerValidationResult:
     """Test the MCPServerValidationResult class and its properties."""
 
@@ -129,15 +140,12 @@ class TestValidateMcpServerForProject:
             assert result.conflict_message == ""
 
     @pytest.mark.asyncio
+    @pytest.mark.parametrize("transport", ["streamable", "sse"])
     async def test_validate_server_exists_project_matches(
-        self, active_user, test_project, created_api_key, client: AsyncClient
+        self, active_user, test_project, created_api_key, client: AsyncClient, transport
     ):
         """Test validation when server exists and project ID matches."""
-        sse_url = f"{client.base_url}/api/v1/mcp/project/{test_project.id}/sse"
-        server_config = {
-            "command": "uvx",
-            "args": ["mcp-proxy", sse_url],
-        }
+        _, server_config = _build_server_config(client.base_url, test_project.id, transport)
 
         # Create MCP server via API
         response = await client.post(
@@ -165,18 +173,14 @@ class TestValidateMcpServerForProject:
         await client.delete("/api/v2/mcp/servers/lf-test_project", headers={"x-api-key": created_api_key.api_key})
 
     @pytest.mark.asyncio
+    @pytest.mark.parametrize("transport", ["streamable", "sse"])
     async def test_validate_server_exists_project_doesnt_match(
-        self, active_user, test_project, created_api_key, client: AsyncClient
+        self, active_user, test_project, created_api_key, client: AsyncClient, transport
     ):
         """Test validation when server exists but project ID doesn't match."""
         other_project_id = uuid4()
         server_name = "lf-test_project"
-        sse_url = f"{client.base_url}/api/v1/mcp/project/{other_project_id}/sse"
-
-        server_config = {
-            "command": "uvx",
-            "args": ["mcp-proxy", sse_url],
-        }
+        _, server_config = _build_server_config(client.base_url, other_project_id, transport)
 
         # Create MCP server with different project ID via API
         response = await client.post(
@@ -205,18 +209,14 @@ class TestValidateMcpServerForProject:
         await client.delete(f"/api/v2/mcp/servers/{server_name}", headers={"x-api-key": created_api_key.api_key})
 
     @pytest.mark.asyncio
+    @pytest.mark.parametrize("transport", ["streamable", "sse"])
     async def test_validate_server_different_operations_messages(
-        self, active_user, test_project, created_api_key, client: AsyncClient
+        self, active_user, test_project, created_api_key, client: AsyncClient, transport
     ):
         """Test different conflict messages for different operations."""
         other_project_id = uuid4()
         server_name = "lf-test_project"
-        sse_url = f"{client.base_url}/api/v1/mcp/project/{other_project_id}/sse"
-
-        server_config = {
-            "command": "uvx",
-            "args": ["mcp-proxy", sse_url],
-        }
+        _, server_config = _build_server_config(client.base_url, other_project_id, transport)
 
         # Create MCP server with different project ID via API
         response = await client.post(
@@ -453,16 +453,33 @@ class TestMultiUserMCPServerAccess:
     """Test multi-user access control for MCP servers."""
 
     @pytest.mark.asyncio
+    @pytest.mark.parametrize("transport", ["streamable", "sse"])
     async def test_cross_user_mcp_server_access_prevention(
         self,
         client: AsyncClient,
         user_one_api_key: str,
         user_two_api_key: str,
+        transport,
     ):
         """Verify that users cannot access or modify each other's MCP servers,even if they have the same name."""
         server_name = f"shared-server-name-{uuid4()}"
-        config_one = {"command": "uvx", "args": ["mcp-proxy", f"url-one-{uuid4()}"]}
-        config_two = {"command": "uvx", "args": ["mcp-proxy", f"url-two-{uuid4()}"]}
+        if transport == "streamable":
+            config_one = {
+                "command": "uvx",
+                "args": ["mcp-proxy", "--transport", "streamablehttp", f"url-one-{uuid4()}"],
+            }
+            config_two = {
+                "command": "uvx",
+                "args": ["mcp-proxy", "--transport", "streamablehttp", f"url-two-{uuid4()}"],
+            }
+            updated_config_one = {
+                "command": "uvx",
+                "args": ["mcp-proxy", "--transport", "streamablehttp", f"updated-url-one-{uuid4()}"],
+            }
+        else:
+            config_one = {"command": "uvx", "args": ["mcp-proxy", f"url-one-{uuid4()}"]}
+            config_two = {"command": "uvx", "args": ["mcp-proxy", f"url-two-{uuid4()}"]}
+            updated_config_one = {"command": "uvx", "args": ["mcp-proxy", f"updated-url-one-{uuid4()}"]}
 
         # User One creates a server
         response = await client.post(
@@ -492,7 +509,6 @@ class TestMultiUserMCPServerAccess:
         assert response_two.json() == config_two
 
         # User One updates their server
-        updated_config_one = {"command": "uvx", "args": ["mcp-proxy", f"updated-url-one-{uuid4()}"]}
         response = await client.patch(
             f"/api/v2/mcp/servers/{server_name}",
             json=updated_config_one,
