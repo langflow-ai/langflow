@@ -51,7 +51,7 @@ COPY ./src/lfx/pyproject.toml /app/src/lfx/pyproject.toml
 
 RUN --mount=type=cache,target=/root/.cache/uv \
     RUSTFLAGS='--cfg reqwest_unstable' \
-    uv sync --frozen --no-install-project --no-editable --extra postgresql
+    uv sync --frozen --no-install-project --no-editable --no-dev --extra postgresql
 
 COPY ./src /app/src
 
@@ -67,7 +67,26 @@ WORKDIR /app
 
 RUN --mount=type=cache,target=/root/.cache/uv \
     RUSTFLAGS='--cfg reqwest_unstable' \
-    uv sync --frozen --no-editable --extra postgresql
+    uv sync --frozen --no-editable --no-dev --extra postgresql
+
+# Clean up build artifacts and unnecessary files before copying to runtime
+# This is critical: cleanup must happen BEFORE COPY to avoid creating layers with whiteout markers
+RUN cd /app/.venv && \
+    # Remove test directories and files
+    find . -type d -name "tests" -exec rm -rf {} + 2>/dev/null || true && \
+    find . -type d -name "test" -exec rm -rf {} + 2>/dev/null || true && \
+    find . -type d -name ".pytest_cache" -exec rm -rf {} + 2>/dev/null || true && \
+    # Remove documentation files
+    find . -type f \( -name "*.md" -o -name "*.rst" \) -delete 2>/dev/null || true && \
+    find . -path '*/.dist-info' -prune -o -type f \( -name "*.txt" -o -name "*.TXT" \) -print -delete 2>/dev/null || true && \
+    # Remove C/C++ source and headers (not needed after compilation)
+    find . -type f \( -name "*.c" -o -name "*.h" -o -name "*.cpp" -o -name "*.hpp" -o -name "*.cc" \) -delete 2>/dev/null || true && \
+    # Remove Cython source files
+    find . -type f \( -name "*.pyx" -o -name "*.pxd" -o -name "*.pxi" \) -delete 2>/dev/null || true && \
+    # Strip debug symbols from shared libraries
+    find . -name "*.so" -exec strip --strip-unneeded {} \; 2>/dev/null || true && \
+    # Remove man pages and docs
+    rm -rf share/man man 2>/dev/null || true
 
 ################################
 # RUNTIME
@@ -75,12 +94,43 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 ################################
 FROM python:3.12.12-slim-trixie AS runtime
 
-
+# Install only essential runtime dependencies:
+# - libpq5: PostgreSQL client library (for database connections)
+# - curl: Required for Node.js installation
+# - Chromium dependencies for Playwright (minimal set for headless operation)
 RUN apt-get update \
     && apt-get upgrade -y \
-    && apt-get install --no-install-recommends -y curl git libpq5 gnupg xz-utils \
+    && apt-get install --no-install-recommends -y \
+    libpq5 \
+    curl \
+    xz-utils \
+    # Chromium dependencies
+    libnss3 \
+    libnspr4 \
+    libatk1.0-0t64 \
+    libatk-bridge2.0-0t64 \
+    libcups2t64 \
+    libdrm2 \
+    libdbus-1-3 \
+    libxkbcommon0 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxfixes3 \
+    libxrandr2 \
+    libgbm1 \
+    libpango-1.0-0 \
+    libcairo2 \
+    libasound2t64 \
+    libatspi2.0-0t64 \
+    libxshmfence1 \
+    # Fonts (using Debian Trixie package names)
+    fonts-liberation \
+    fonts-noto-color-emoji \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# Install Node.js (needed for MCP servers that use npx)
+# Use minimal installation: download pre-built binaries directly
 RUN ARCH=$(dpkg --print-architecture) \
     && if [ "$ARCH" = "amd64" ]; then NODE_ARCH="x64"; \
        elif [ "$ARCH" = "arm64" ]; then NODE_ARCH="arm64"; \
@@ -90,14 +140,19 @@ RUN ARCH=$(dpkg --print-architecture) \
                     | head -1) \
     && curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${NODE_ARCH}.tar.xz" \
     | tar -xJ -C /usr/local --strip-components=1 \
-    && npm install -g npm@latest \
-    && npm cache clean --force
+    && npm cache clean --force \
+    && rm -rf /usr/local/lib/node_modules/npm/docs \
+    && rm -rf /usr/local/lib/node_modules/npm/man
+
 RUN useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data
 
 COPY --from=builder --chown=1000 /app/.venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
-RUN /app/.venv/bin/pip install --upgrade playwright \
-    && /app/.venv/bin/playwright install
+
+# Install only Chromium browser for Playwright (not all browsers)
+# This saves ~1.5GB compared to installing all browsers
+# Install without --with-deps since we manually installed dependencies above
+RUN /app/.venv/bin/playwright install chromium
 
 LABEL org.opencontainers.image.title=langflow
 LABEL org.opencontainers.image.authors=['Langflow']
