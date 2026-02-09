@@ -60,7 +60,16 @@ export default function InspectionPanelEditField({
           </span>
         )}
       </div>
-      <ShadTooltip content={isConnected ? "Cannot change visibility of connected handles" : isOnCanvas ? "Hide" : "Show"} avoidCollisions>
+      <ShadTooltip
+        content={
+          isConnected
+            ? "Cannot change visibility of connected handles"
+            : isOnCanvas
+              ? "Hide"
+              : "Show"
+        }
+        avoidCollisions
+      >
         <button
           onClick={handleToggleVisibility}
           disabled={isConnected}
@@ -69,7 +78,9 @@ export default function InspectionPanelEditField({
             isOnCanvas
               ? "bg-primary/10 text-primary hover:bg-primary/20"
               : "bg-muted text-muted-foreground hover:bg-muted-foreground/20 hover:text-foreground",
-            isConnected ? "cursor-not-allowed opacity-50 hover:bg-primary/10" : "",
+            isConnected
+              ? "cursor-not-allowed opacity-50 hover:bg-primary/10"
+              : "",
           )}
           data-testid={`show${name}`}
           id={`show${name}`}
@@ -80,7 +91,8 @@ export default function InspectionPanelEditField({
             name={isOnCanvas ? "Minus" : "Plus"}
             className="h-3.5 w-3.5"
           />
-        </button></ShadTooltip>
+        </button>
+      </ShadTooltip>
     </div>
   );
 }
