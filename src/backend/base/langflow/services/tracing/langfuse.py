@@ -220,11 +220,12 @@ class LangFuseTracer(BaseTracer):
 
     @staticmethod
     def _get_config() -> dict:
-        secret_key = os.getenv("LANGFUSE_SECRET_KEY", None)
-        public_key = os.getenv("LANGFUSE_PUBLIC_KEY", None)
-        host = os.getenv(
-            "LANGFUSE_BASE_URL", os.getenv("LANGFUSE_HOST", None)
-        )  # support legacy env var for backward compatibility
+        environ = os.environ
+        secret_key = environ.get("LANGFUSE_SECRET_KEY")
+        public_key = environ.get("LANGFUSE_PUBLIC_KEY")
+        host = environ.get("LANGFUSE_BASE_URL")
+        if host is None:
+            host = environ.get("LANGFUSE_HOST")
         if secret_key and public_key and host:
             return {"secret_key": secret_key, "public_key": public_key, "host": host}
         return {}
