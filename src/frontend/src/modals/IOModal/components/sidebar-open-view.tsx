@@ -18,7 +18,7 @@ export const SidebarOpenView = ({
   setActiveSession,
 }: SidebarOpenViewProps) => {
   const [openMenuSession, setOpenMenuSession] = useState<string | null>(null);
-  
+
   const setNewSessionCloseVoiceAssistant = useVoiceStore(
     (state) => state.setNewSessionCloseVoiceAssistant,
   );
