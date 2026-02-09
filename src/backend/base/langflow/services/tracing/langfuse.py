@@ -202,13 +202,16 @@ class LangFuseTracer(BaseTracer):
                     "trace_id": self._trace_context["trace_id"],
                     "parent_span_id": current_span.id,
                 }
-                return CallbackHandler(trace_context=trace_ctx)
-            # Fall back to root trace context
-            return CallbackHandler(trace_context=self._trace_context)
+                handler = CallbackHandler(trace_context=trace_ctx)
+            else:
+                # Fall back to root trace context
+                handler = CallbackHandler(trace_context=self._trace_context)
 
-        except Exception as e:  # noqa: BLE001
+        except (ImportError, ValueError, TypeError) as e:
             logger.debug(f"Error creating LangChain callback handler: {e}")
             return None
+        else:
+            return handler
 
     @staticmethod
     def _get_config() -> dict:
