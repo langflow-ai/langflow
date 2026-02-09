@@ -264,9 +264,7 @@ withEventDeliveryModes(
       .getByText("This is a test file.", { exact: true })
       .last()
       .isVisible();
-    await page.getByText("Chat", { exact: true }).last().click();
-    await page.getByText("Default Session").last().click();
-    await page.getByRole("combobox").click();
+    await page.getByTestId("chat-header-more-menu").last().click();
     await page.getByLabel("Message logs").click();
     await page.getByText("timestamp", { exact: true }).last().isVisible();
     await page.getByText("text", { exact: true }).last().isVisible();
@@ -275,8 +273,11 @@ withEventDeliveryModes(
     await page.getByText("session_id", { exact: true }).last().isVisible();
     await page.getByText("files", { exact: true }).last().isVisible();
     await page.getByRole("gridcell").last().isVisible();
-    await page.getByRole("combobox").click();
-    await page.getByLabel("Delete").click();
+    await page.getByRole("checkbox").first().click();
+    await page.getByTestId("delete-row-button").last().click();
+    await page.getByText("No Data Available", { exact: true }).last().isVisible();
+        await page.getByText("Close").last().click();
+
     await page.waitForSelector('[data-testid="input-chat-playground"]', {
       timeout: 60000,
     });
