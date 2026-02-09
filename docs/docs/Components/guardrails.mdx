@@ -20,12 +20,14 @@ The following guardrails can be validated against:
 When validation passes, the input continues through the **Pass** output.
 When validation fails, the input is blocked and sent through the **Fail** output with a justification explaining why it failed.
 
+The **Jailbreak** and **Prompt Injection** guardrails include additional heuristic detection first, and then fall back to LLM validation if needed. This additional stage identifies obvious patterns quickly and reduces API costs by avoiding unnecessary LLM calls for clear violations.
+
 ## Use the Guardrails component in a flow
 
 1. Connect a **Chat Input** or other text source to the **Guardrails** component's **Input Text** port.
 2. Select a **Language Model** to use for validation. The component uses the connected LLM to analyze the input text against the enabled guardrails.
 3. From the **Guardrails** dropdown, select one or more guardrails to enable.
-For example, select **
+   For example, select **Tokens/Passwords** to block API keys and credentials.
 4. Connect the **Pass** output to components to receive validated input.
 5. Optionally, connect the **Fail** output to handle blocked inputs, such as a [**Chat Output** component](/chat-input-and-output) or [**Write File** component](/write-file).
 
