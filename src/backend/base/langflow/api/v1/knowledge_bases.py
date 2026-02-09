@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Annotated
 
 import pandas as pd
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -67,6 +67,14 @@ class ChunkInfo(BaseModel):
     content: str
     char_count: int
     metadata: dict | None = None
+
+
+class PaginatedChunkResponse(BaseModel):
+    chunks: list[ChunkInfo]
+    total: int
+    page: int
+    limit: int
+    total_pages: int
 
 
 def get_kb_root_path() -> Path:
@@ -667,6 +675,7 @@ async def list_knowledge_bases(current_user: CurrentActiveUser) -> list[Knowledg
 
                 # Get metadata from KB files
                 metadata = get_kb_metadata(kb_dir)
+                print(metadata)
 
                 kb_info = KnowledgeBaseInfo(
                     id=kb_dir.name,
@@ -679,7 +688,6 @@ async def list_knowledge_bases(current_user: CurrentActiveUser) -> list[Knowledg
                     chunks=metadata["chunks"],
                     avg_chunk_size=metadata["avg_chunk_size"],
                 )
-
                 knowledge_bases.append(kb_info)
 
             except OSError as _:
@@ -732,8 +740,13 @@ async def get_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -> K
 
 
 @router.get("/{kb_name}/chunks", status_code=HTTPStatus.OK)
-async def get_knowledge_base_chunks(kb_name: str, current_user: CurrentActiveUser) -> list[ChunkInfo]:
-    """Get all chunks from a specific knowledge base."""
+async def get_knowledge_base_chunks(
+    kb_name: str,
+    current_user: CurrentActiveUser,
+    page: int = Query(1, ge=1),
+    limit: int = Query(50, ge=1, le=100),
+) -> PaginatedChunkResponse:
+    """Get chunks from a specific knowledge base with pagination."""
     try:
         kb_root_path = get_kb_root_path()
         kb_user = current_user.username
@@ -743,6 +756,8 @@ async def get_knowledge_base_chunks(kb_name: str, current_user: CurrentActiveUse
             raise HTTPException(status_code=404, detail=f"Knowledge base '{kb_name}' not found")
 
         # Create vector store
+        # Optimization: We could use a cache here, but Chroma's persistent client
+        # handles its own internal caching and re-opening is relatively fast.
         chroma = Chroma(
             persist_directory=str(kb_path),
             collection_name=kb_name,
@@ -751,13 +766,21 @@ async def get_knowledge_base_chunks(kb_name: str, current_user: CurrentActiveUse
         # Access the raw collection
         collection = chroma._collection  # noqa: SLF001
 
-        # Fetch all documents and metadata
-        results = collection.get(include=["documents", "metadatas"])
+        # Get total count for pagination metadata
+        total_count = collection.count()
+
+        # Calculate index for pagination
+        offset = (page - 1) * limit
+
+        # Fetch documents and metadata with limit and offset
+        results = collection.get(
+            include=["documents", "metadatas"],
+            limit=limit,
+            offset=offset,
+        )
 
         chunks = []
-        for i, (doc_id, document, metadata) in enumerate(
-            zip(results["ids"], results["documents"], results["metadatas"], strict=False)
-        ):
+        for doc_id, document, metadata in zip(results["ids"], results["documents"], results["metadatas"], strict=False):
             content = document or ""
             chunks.append(
                 ChunkInfo(
@@ -767,8 +790,13 @@ async def get_knowledge_base_chunks(kb_name: str, current_user: CurrentActiveUse
                     metadata=metadata,
                 )
             )
-
-        return chunks
+        return PaginatedChunkResponse(
+            chunks=chunks,
+            total=total_count,
+            page=page,
+            limit=limit,
+            total_pages=(total_count + limit - 1) // limit,
+        )
 
     except HTTPException:
         raise
