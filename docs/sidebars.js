@@ -280,8 +280,7 @@ module.exports = {
               type: "category",
               label: "Processing",
               items: [
-                "Components/data-operations",
-                "Components/dataframe-operations",
+                "Components/operations",
                 "Components/dynamic-create-data",
                 "Components/parser",
                 "Components/split-text",

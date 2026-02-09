@@ -1,0 +1,245 @@
+---
+title: Operations
+slug: /operations
+---
+
+import Icon from "@site/src/components/icon";
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialCurlyBraces from '@site/docs/_partial-escape-curly-braces.mdx';
+
+The **Operations** component performs operations on [`Text`](/data-types#message), [`Data`](/data-types#data), or [`DataFrame`](/data-types#dataframe) inputs.
+
+## Use the Operations component in a flow
+
+This example demonstrates a complete data transformation pipeline using the **Operations** component with multiple data types.
+
+Send a sample JSON message to the webhook, and the pipeline extracts the `products` array, filters products with stock greater than zero, sorts them by price, and displays the filtered results.
+
+![A data transformation flow using Operations component with Webhook, Type Convert, and Chat Output components](/img/component-operations.png)
+
+1. Add a [**Webhook** component](/webhook) to receive JSON data.
+2. Add an **Operations** component to select keys.
+Set **Input Type** to `Data`, Set **Operation** to `Select Keys`, and enter the key `products` to extract the products array.
+3.Add a [**Type Convert** component](/type-convert) to convert Data to DataFrame.
+Set **Input Type** to `Data` and **Output Type** to `DataFrame`.
+4. Add another **Operations** component to filter rows.
+Set **Input Type** to `DataFrame`, set **Operation** to `Filter Rows`, set **Column Name** to `stock`, set **Filter Operator** to `>`, and set **Filter Value** to `0`.
+5. Add another **Operations** component to sort the results.
+Set **Input Type** to `DataFrame`, select **Operation**: `Sort`, set **Column Name** to `price`, and **Sort Ascending** to `true`.
+6. **Add a Chat Output component** to display the results.
+7. To test your flow, send the following JSON to your webhook endpoint.
+Replace **YOUR_FLOW_ID** with the UUID of your flow.
+
+    ```bash
+    curl -X POST "http://localhost:7860/api/v1/webhook/YOUR_FLOW_ID" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "store": "Electronics Warehouse",
+        "location": "New York",
+        "products": [
+          {
+            "name": "Widget A",
+            "price": 29.99,
+            "stock": 10,
+            "category": "Electronics"
+          },
+          {
+            "name": "Widget B",
+            "price": 49.99,
+            "stock": 5,
+            "category": "Electronics"
+          },
+          {
+            "name": "Widget C",
+            "price": 19.99,
+            "stock": 0,
+            "category": "Electronics"
+          },
+          {
+            "name": "Widget D",
+            "price": 39.99,
+            "stock": 15,
+            "category": "Electronics"
+          },
+          {
+            "name": "Widget E",
+            "price": 59.99,
+            "stock": 3,
+            "category": "Electronics"
+          }
+        ]
+      }'
+    ```
+
+The result should be a `DataFrame` of in-stock products sorted by price in the **Playground**.
+To inspect each **Operations** component's transformation step in the pipeline, click <Icon name="TextSearch" aria-hidden="true" /> **Inspect**.
+
+## Operations parameters
+
+<PartialParams />
+
+<Tabs>
+<TabItem value="text" label="Text Operations" default>
+
+Available when **Input Type** is set to `Text`:
+
+| Operation | Description | Key Parameters |
+|-----------|-------------|----------------|
+| Word Count | Count words, characters, and lines in text | `count_words`, `count_characters`, `count_lines` |
+| Case Conversion | Convert text to uppercase, lowercase, title case, etc. | `case_type` (uppercase, lowercase, title, capitalize, swapcase) |
+| Text Replace | Replace text patterns (supports regex) | `search_pattern`, `replacement_text`, `use_regex` |
+| Text Extract | Extract text matching patterns | `extract_pattern`, `max_matches` |
+| Text Head | Get first N characters | `head_characters` |
+| Text Tail | Get last N characters | `tail_characters` |
+| Text Strip | Remove whitespace or specific characters | `strip_mode`, `strip_characters` |
+| Text Join | Join two text inputs | `text_input_2` |
+| Text Clean | Clean text (remove extra spaces, special chars, empty lines) | `remove_extra_spaces`, `remove_special_chars`, `remove_empty_lines` |
+| Text to DataFrame | Convert markdown-style table text to DataFrame | `table_separator`, `has_header` |
+
+</TabItem>
+<TabItem value="data" label="Data Operations">
+
+Available when **Input Type** is set to `Data`:
+
+| Operation | Description | Key Parameters |
+|-----------|-------------|----------------|
+| Select Keys | Extract specific keys from the data object | `select_keys_input` (list of keys) |
+| Literal Eval | Parse and evaluate JSON strings in the data | None (automatically detects and parses JSON strings) |
+| Combine | Merge multiple data objects into one | None |
+| Filter Values | Filter list values based on conditions | `filter_key`, `operator`, `filter_values` |
+| Append or Update | Add or update key-value pairs | `append_update_data` |
+| Remove Keys | Remove specified keys from data | `remove_keys_input` (list of keys) |
+| Rename Keys | Rename keys in the data object | `rename_keys_input` (mapping of old → new names) |
+| Path Selection | Extract data using JSON path expressions | `selected_key` (JQ path expression) |
+| JQ Expression | Advanced JSON querying using JQ | `query` (JQ expression) |
+
+</TabItem>
+<TabItem value="dataframe" label="DataFrame Operations">
+
+Available when **Input Type** is set to `DataFrame`:
+
+| Operation | Description | Key Parameters |
+|-----------|-------------|----------------|
+| Add Column | Add a new column with a constant value | `new_column_name`, `new_column_value` |
+| Drop Column | Remove a column from the DataFrame | `column_name` |
+| Filter Rows | Filter rows based on column values | `column_name`, `filter_value`, `filter_operator` |
+| Head Rows | Get first N rows | `number_of_rows` |
+| Rename Column | Rename a column | `column_name`, `new_column_name` |
+| Replace Value | Replace values in a column | `column_name`, `replace_value`, `replacement_value` |
+| Select Columns | Select specific columns | `columns_to_select` (list of column names) |
+| Sort | Sort rows by a column | `column_name`, `sort_ascending` |
+| Tail Rows | Get last N rows | `number_of_rows` |
+| Drop Duplicates | Remove duplicate rows | None |
+
+</TabItem>
+</Tabs>
+
+## Additional examples
+
+<details>
+<summary>Data Operations: Path Selection example</summary>
+
+Use the Path Selection operation to extract values from nested JSON structures with dot notation paths.
+
+1. In the **Operations** dropdown, select **Path Selection**.
+2. In the **JSON to Map** field, enter your JSON structure.
+
+    This example uses the following JSON structure.
+    ```json
+    {
+      "user": {
+        "profile": {
+          "name": "John Doe",
+          "email": "john@example.com"
+        },
+        "settings": {
+          "theme": "dark"
+        }
+      }
+    }
+    ```
+    The **Select Path** dropdown auto-populates with available paths.
+3. In the **Select Paths** dropdown, select the path.
+    You can select paths such as `.user.profile.name` to extract "John Doe", or select `.user.settings.theme` to extract "dark".
+
+</details>
+
+<details>
+<summary>Data Operations: JQ Expression example</summary>
+
+Use the **JQ Expression** operation to use the [jq](https://jqlang.org/) query language to perform more advanced JSON filtering.
+
+1. In the **Operations** dropdown, select **JQ Expression**.
+2. In the **JQ Expression** field, enter a `jq` filter to query against the **Operations** component's Data input.
+
+    For this example JSON structure, enter expressions like `.user.profile.name` to extract "John Doe", `.user.profile | {name, email}` to project fields to a new object, or `.user.profile | tostring` to convert the field to a string.
+    ```json
+    {
+      "user": {
+        "profile": {
+          "name": "John Doe",
+          "email": "john@example.com"
+        },
+        "settings": {
+          "theme": "dark"
+        }
+      }
+    }
+    ```
+
+</details>
+
+<details>
+<summary>DataFrame Operations: API response extraction flow</summary>
+
+The following example flow uses five components to extract `Data` from an API response, transform it to a `DataFrame`, and then perform further processing on the tabular data using an **Operations** component.
+The sixth component, **Chat Output**, is optional in this example.
+It only serves as a convenient way for you to view the final output in the **Playground**, rather than inspecting the component logs.
+
+![A flow that ingests an API response, extracts it to a DataFrame with a Smart Transform component, and the processes it through a DataFrame Operations component](/img/component-dataframe-operations.png)
+
+If you want to use this example to test the **Operations** component, do the following:
+
+1. Create a flow with the following components:
+
+    * **API Request**
+    * **Language Model**
+    * **Smart Transform**
+    * **Type Convert**
+
+2. Configure the [**Smart Transform** component](/smart-transform) and its dependencies:
+
+    * **API Request**: Configure the [**API Request** component](/api-request) to get JSON data from an endpoint of your choice, and then connect the **API Response** output to the **Smart Transform** component's **Data** input.
+    * **Language Model**: Select your preferred provider and model, and then enter a valid API key.
+    Change the output to **Language Model**, and then connect the `LanguageModel` output to the **Smart Transform** component's **Language Model** input.
+    * **Smart Transform**: In the **Instructions** field, enter natural language instructions to extract data from the API response.
+    Your instructions depend on the response content and desired outcome.
+    For example, if the response contains a large `result` field, you might provide instructions like `explode the result field out into a Data object`.
+
+3. Convert the **Smart Transform** component's `Data` output to `DataFrame`:
+
+    1. Connect the **Filtered Data** output to the **Type Convert** component's **Data** input.
+    2. Set the **Type Convert** component's **Output Type** to **DataFrame**.
+
+4. Add an **Operations** component (DataFrame mode) to the flow, and then connect `DataFrame` output from the **Type Convert** component to the **DataFrame** input.
+
+5. In the **Operations** field, select the operation you want to perform on the incoming `DataFrame`.
+For example, the **Filter Rows** operation filters the rows based on a specified column and value.
+
+    :::tip
+    You can select only one operation.
+    If you need to perform multiple operations on the data, you can chain multiple **Operations** components together to execute each operation in sequence.
+    For more complex multi-step operations, like dramatic schema changes or pivots, consider using an LLM-powered component, like the [**Structured Output** component](/structured-output) or [**Smart Transform** component](/smart-transform), as a replacement or preparation for the **Operations** component.
+    :::
+
+6. Configure the operation's parameters.
+The specific parameters depend on the selected operation.
+For example, if you select the **Filter Rows** operation, you must define a filter condition using the **Column Name**, **Filter Value**, and **Filter Operator** parameters.
+
+7. To test the flow, click <Icon name="Play" aria-hidden="true" /> **Run component** on the **Operations** component, and then click <Icon name="TextSearch" aria-hidden="true" /> **Inspect output** to view the new `DataFrame` created from the operation.
+
+   If you want to view the output in the **Playground**, connect the **Operations** component's output to a **Chat Output** component, rerun the **Operations** component, and then click **Playground**.
+
+</details>

@@ -373,6 +373,13 @@ const config = {
               "/integrations-nvidia-g-assist",
               "/integrations-nvidia-system-assist",
             ]
+          },
+          {
+            to: "/legacy-core-components",
+            from: [
+              "/data-operations",
+              "/dataframe-operations",
+            ],
           }
           // add more redirects like this
           // {
