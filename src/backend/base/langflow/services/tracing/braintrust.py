@@ -282,11 +282,7 @@ class BraintrustTracer(BaseTracer):
 
         # Use the most recent open span as parent so LangChain traces
         # nest under the current Langflow component span.
-        parent_span = (
-            self.spans[next(reversed(self.spans))]
-            if self.spans
-            else self._root_span
-        )
+        parent_span = self.spans[next(reversed(self.spans))] if self.spans else self._root_span
         return BraintrustCallbackHandler(logger=parent_span)
 
     # ------------------------------------------------------------------
