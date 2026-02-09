@@ -323,16 +323,17 @@ export default function InputFileComponent({
                   <IconComponent
                     name={value ? "CircleCheckBig" : "Upload"}
                     className={cn(
-                      value && "text-background",
+                      value && "text-background group-hover:opacity-0",
                       isDisabled && "text-muted-foreground",
-                      "h-4 w-4 group-hover:opacity-0 absolute transition-opacity duration-200",
+                      "h-4 w-4 absolute transition-opacity duration-200",
                     )}
                     strokeWidth={2}
                   />
                   <IconComponent
                     name={"X"}
                     className={cn(
-                      "h-4 w-4 text-background group-hover:opacity-100 opacity-0 absolute transition-opacity duration-200",
+                      "h-4 w-4 text-background opacity-0 absolute transition-opacity duration-200",
+                      value && "group-hover:opacity-100"
                     )}
                     strokeWidth={2}
                   />
