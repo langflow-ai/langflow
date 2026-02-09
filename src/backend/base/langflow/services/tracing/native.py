@@ -272,6 +272,9 @@ class NativeTracer(BaseTracer):
             has_span_errors = any(span.get("status") == SpanStatus.ERROR for span in self.completed_spans)
             trace_status = SpanStatus.ERROR if (error or has_span_errors) else SpanStatus.SUCCESS
 
+            # Calculate total tokens from all spans
+            total_tokens = sum(span.get("total_tokens") or 0 for span in self.completed_spans)
+
             async with session_scope() as session:
                 # Create trace record
                 trace = TraceTable(
@@ -283,6 +286,7 @@ class NativeTracer(BaseTracer):
                     start_time=self._start_time,
                     end_time=end_time,
                     total_latency_ms=total_latency_ms,
+                    total_tokens=total_tokens,
                 )
                 session.add(trace)
 

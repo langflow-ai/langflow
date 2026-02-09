@@ -147,7 +147,7 @@ function TraceAccordionItem({
             </span>
             {totalTokens > 0 && (
               <span className="flex items-center gap-1">
-                <IconComponent name="Hash" className="h-3 w-3" />
+                <IconComponent name="Coins" className="h-3 w-3" />
                 {totalTokens.toLocaleString()} tokens
               </span>
             )}
@@ -390,7 +390,7 @@ export function TraceView({ flowId, initialTraceId }: TraceViewProps) {
                   }}
                   className="h-8 w-32 text-xs"
                 >
-                  <IconComponent name="Hash" className="mr-1 h-3 w-3" />
+                  <IconComponent name="Coins" className="mr-1 h-3 w-3" />
                   {minTokens || maxTokens ? "Active" : "Token Range"}
                 </Button>
               </div>
