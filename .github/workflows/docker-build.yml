@@ -229,25 +229,6 @@ jobs:
             image=moby/buildkit:v0.22.0
             network=host
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Build and Push to Docker Hub
-        uses: Wandalen/wretry.action@master
-        with:
-          action: docker/build-push-action@v6
-          with: |
-            context: .
-            push: true
-            file: ${{ needs.setup.outputs.file }}
-            tags: ${{ needs.setup.outputs.docker_tags }}
-            platforms: linux/amd64,linux/arm64
-            cache-from: type=gha
-            cache-to: type=gha,mode=max
-
       - name: Login to Github Container Registry
         uses: docker/login-action@v3
         with:
@@ -276,16 +257,8 @@ jobs:
     needs: [build, get-version]
     strategy:
       matrix:
-        component: [docker-backend, docker-frontend, ghcr-backend, ghcr-frontend]
+        component: [ghcr-backend, ghcr-frontend]
         include:
-          - component: docker-backend
-            dockerfile: ./docker/build_and_push_backend.Dockerfile
-            tags: langflowai/langflow-backend:${{ needs.get-version.outputs.version }},langflowai/langflow-backend:latest
-            langflow_image: langflowai/langflow:${{ needs.get-version.outputs.version }}
-          - component: docker-frontend
-            dockerfile: ./docker/frontend/build_and_push_frontend.Dockerfile
-            tags: langflowai/langflow-frontend:${{ needs.get-version.outputs.version }},langflowai/langflow-frontend:latest
-            langflow_image: langflowai/langflow:${{ needs.get-version.outputs.version }}
           - component: ghcr-backend
             dockerfile: ./docker/build_and_push_backend.Dockerfile
             tags: ghcr.io/langflow-ai/langflow-backend:${{ needs.get-version.outputs.version }},ghcr.io/langflow-ai/langflow-backend:latest
@@ -322,14 +295,6 @@ jobs:
           driver-opts: |
             image=moby/buildkit:v0.22.0
             network=host
-
-
-      - name: Login to Docker Hub
-        if: ${{ matrix.component == 'docker-backend' }} || ${{ matrix.component == 'docker-frontend' }}
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Login to Github Container Registry
         if: ${{ matrix.component == 'ghcr-backend' }} || ${{ matrix.component == 'ghcr-frontend' }}
