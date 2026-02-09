@@ -191,7 +191,7 @@ export function FlowPageSlidingContainerContent({
               resize="smooth"
               initial="instant"
             >
-              <StickToBottom.Content className="flex flex-col min-h-full overflow-x-hidden p-4">
+              <StickToBottom.Content className="flex flex-col min-h-full overflow-x-hidden">
                 <div className="flex flex-col w-full">
                   <Messages
                     visibleSession={currentSessionId ?? currentFlowId ?? null}
