@@ -52,6 +52,8 @@ export default function KnowledgeBaseUploadModal({
             toggleAdvanced={form.toggleAdvanced}
             onFileSelect={form.handleFileSelect}
             onFolderSelect={form.handleFolderSelect}
+            validationErrors={form.validationErrors}
+            onFieldChange={form.clearValidationErrors}
           />
         );
 
@@ -106,8 +108,8 @@ export default function KnowledgeBaseUploadModal({
           onBack={form.handleBack}
           onNext={form.handleNext}
           onSubmit={form.handleSubmit}
-          nextDisabled={!form.canProceed()}
-          submitDisabled={!form.canProceed()}
+          nextDisabled={false}
+          submitDisabled={false}
           isSubmitting={form.isSubmitting}
           submitLabel={form.isAddSourcesMode ? "Add Sources" : "Create"}
           helpLabel={

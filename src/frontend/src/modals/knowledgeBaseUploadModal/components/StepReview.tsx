@@ -22,9 +22,9 @@ interface StepReviewProps {
   onSelectedPreviewFileIndexChange: (index: number) => void;
   sourceName: string;
   totalFileSize: string;
-  chunkSize: number;
-  chunkOverlap: number;
-  separator: string;
+  chunkSize: number | undefined;
+  chunkOverlap: number | undefined;
+  separator: string | undefined;
   selectedEmbeddingModel: ModelOption[];
 }
 
@@ -190,12 +190,12 @@ export function StepReview({
         <SummaryItem
           icon="Ruler"
           label="Chunk Size"
-          value={`${chunkSize} chars`}
+          value={`${chunkSize ?? 1000} chars`}
         />
         <SummaryItem
           icon="Layers"
           label="Chunk Overlap"
-          value={`${chunkOverlap} chars`}
+          value={`${chunkOverlap ?? 200} chars`}
         />
         <SummaryItem
           icon="SplitSquareHorizontal"

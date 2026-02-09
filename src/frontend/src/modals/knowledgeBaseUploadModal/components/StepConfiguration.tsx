@@ -24,16 +24,18 @@ interface StepConfigurationProps {
   embeddingModelOptions: ModelOption[];
   existingEmbeddingModel?: string;
   existingEmbeddingIcon?: string;
-  chunkSize: number;
-  onChunkSizeChange: (value: number) => void;
-  chunkOverlap: number;
-  onChunkOverlapChange: (value: number) => void;
-  separator: string;
-  onSeparatorChange: (value: string) => void;
+  chunkSize: number | undefined;
+  onChunkSizeChange: (value: number | undefined) => void;
+  chunkOverlap: number | undefined;
+  onChunkOverlapChange: (value: number | undefined) => void;
+  separator: string | undefined;
+  onSeparatorChange: (value: string | undefined) => void;
   showAdvanced: boolean;
   toggleAdvanced: () => void;
   onFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onFolderSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  validationErrors?: Record<string, string>;
+  onFieldChange?: () => void;
 }
 
 export function StepConfiguration({
@@ -55,6 +57,8 @@ export function StepConfiguration({
   toggleAdvanced,
   onFileSelect,
   onFolderSelect,
+  validationErrors = {},
+  onFieldChange,
 }: StepConfigurationProps) {
   return (
     <div className="relative">
@@ -68,9 +72,13 @@ export function StepConfiguration({
             id="source-name"
             placeholder="Enter a name for this knowledge base"
             value={sourceName}
-            onChange={(e) => onSourceNameChange(e.target.value)}
+            onChange={(e) => {
+              onSourceNameChange(e.target.value);
+              onFieldChange?.();
+            }}
             data-testid="kb-source-name-input"
             disabled={isAddSourcesMode}
+            className={validationErrors.sourceName ? "border-destructive" : ""}
           />
         </div>
 
@@ -95,7 +103,10 @@ export function StepConfiguration({
               value={selectedEmbeddingModel}
               editNode={false}
               disabled={false}
-              handleOnNewValue={({ value }) => onEmbeddingModelChange(value)}
+              handleOnNewValue={({ value }) => {
+                onEmbeddingModelChange(value);
+                onFieldChange?.();
+              }}
               options={embeddingModelOptions}
               placeholder="Select embedding model"
               showEmptyState
@@ -155,8 +166,12 @@ export function StepConfiguration({
                   <Input
                     id="chunk-size"
                     type="number"
-                    value={chunkSize}
-                    onChange={(e) => onChunkSizeChange(Number(e.target.value))}
+                    value={chunkSize ?? ""}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      onChunkSizeChange(val === "" ? undefined : Number(val));
+                    }}
+                    placeholder="1000"
                     min={100}
                     max={10000}
                     data-testid="kb-chunk-size-input"
@@ -174,12 +189,16 @@ export function StepConfiguration({
                   <Input
                     id="chunk-overlap"
                     type="number"
-                    value={chunkOverlap}
-                    onChange={(e) =>
-                      onChunkOverlapChange(Number(e.target.value))
-                    }
+                    value={chunkOverlap ?? ""}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      onChunkOverlapChange(
+                        val === "" ? undefined : Number(val),
+                      );
+                    }}
+                    placeholder="200"
                     min={0}
-                    max={chunkSize - 1}
+                    max={(chunkSize ?? 1000) - 1}
                     data-testid="kb-chunk-overlap-input"
                   />
                 </div>
@@ -195,8 +214,11 @@ export function StepConfiguration({
                 </Label>
                 <Input
                   id="separator"
-                  value={separator}
-                  onChange={(e) => onSeparatorChange(e.target.value)}
+                  value={separator ?? ""}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    onSeparatorChange(val === "" ? undefined : val);
+                  }}
                   placeholder="\\n\\n"
                   data-testid="kb-separator-input"
                 />

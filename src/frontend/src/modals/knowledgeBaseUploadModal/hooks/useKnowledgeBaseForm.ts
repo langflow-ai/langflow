@@ -17,7 +17,7 @@ import type {
   KnowledgeBaseUploadModalProps,
   WizardStep,
 } from "../types";
-import { formatFileSize, generateChunkPreviewsFromFiles } from "../utils";
+import { formatFileSize } from "../utils";
 
 export function useKnowledgeBaseForm({
   open,
@@ -56,9 +56,16 @@ export function useKnowledgeBaseForm({
   // Form state - Step 1
   const [sourceName, setSourceName] = useState("");
   const [files, setFiles] = useState<File[]>([]);
-  const [chunkSize, setChunkSize] = useState(DEFAULT_CHUNK_SIZE);
-  const [chunkOverlap, setChunkOverlap] = useState(DEFAULT_CHUNK_OVERLAP);
-  const [separator, setSeparator] = useState(DEFAULT_SEPARATOR);
+  const [chunkSize, setChunkSize] = useState<number | undefined>(undefined);
+  const [chunkOverlap, setChunkOverlap] = useState<number | undefined>(
+    undefined,
+  );
+  const [separator, setSeparator] = useState<string | undefined>(undefined);
+
+  // Validation state
+  const [validationErrors, setValidationErrors] = useState<
+    Record<string, string>
+  >({});
 
   // Form state - Step 2
   const [selectedEmbeddingModel, setSelectedEmbeddingModel] = useState<
@@ -99,15 +106,16 @@ export function useKnowledgeBaseForm({
   const resetForm = useCallback(() => {
     setSourceName("");
     setFiles([]);
-    setChunkSize(DEFAULT_CHUNK_SIZE);
-    setChunkOverlap(DEFAULT_CHUNK_OVERLAP);
-    setSeparator(DEFAULT_SEPARATOR);
+    setChunkSize(undefined);
+    setChunkOverlap(undefined);
+    setSeparator(undefined);
     setSelectedEmbeddingModel([]);
     setChunkPreviews([]);
     setCurrentChunkIndex(0);
     setSelectedPreviewFileIndex(0);
     setCurrentStep(1);
     setIsFilePanelOpen(false);
+    setValidationErrors({});
   }, []);
 
   const toggleAdvanced = useCallback(() => {
@@ -120,7 +128,7 @@ export function useKnowledgeBaseForm({
     });
   }, []);
 
-  // Generate chunk previews
+  // Generate chunk previews via backend API
   const generateChunkPreviews = useCallback(async () => {
     if (files.length === 0) {
       setChunkPreviews([]);
@@ -129,13 +137,46 @@ export function useKnowledgeBaseForm({
 
     setIsGeneratingPreview(true);
     try {
-      const previews = await generateChunkPreviewsFromFiles(
-        files,
-        selectedPreviewFileIndex,
-        chunkSize,
-        chunkOverlap,
-        separator,
+      const selectedFile = files[selectedPreviewFileIndex] || files[0];
+      const formData = new FormData();
+      formData.append("files", selectedFile);
+      formData.append(
+        "chunk_size",
+        (chunkSize ?? DEFAULT_CHUNK_SIZE).toString(),
       );
+      formData.append(
+        "chunk_overlap",
+        (chunkOverlap ?? DEFAULT_CHUNK_OVERLAP).toString(),
+      );
+      formData.append("separator", separator ?? DEFAULT_SEPARATOR);
+
+      const response = await api.post(
+        `${getURL("KNOWLEDGE_BASES")}/preview-chunks`,
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } },
+      );
+
+      const filePreview = response.data?.files?.[0];
+      const previews: ChunkPreview[] =
+        filePreview?.preview_chunks?.map(
+          (
+            chunk: {
+              content: string;
+              char_count: number;
+              start: number;
+              end: number;
+            },
+            i: number,
+          ) => ({
+            content: chunk.content,
+            index: i,
+            metadata: {
+              source: selectedFile.name,
+              start: chunk.start,
+              end: chunk.end,
+            },
+          }),
+        ) ?? [];
       setChunkPreviews(previews);
     } catch (error) {
       console.error("Error generating preview:", error);
@@ -152,9 +193,25 @@ export function useKnowledgeBaseForm({
     }
   }, [currentStep, generateChunkPreviews]);
 
+  const getValidationErrors = useCallback((): Record<string, string> => {
+    const errors: Record<string, string> = {};
+    if (!sourceName.trim()) {
+      errors.sourceName = "Name is required";
+    }
+    if (!isAddSourcesMode && selectedEmbeddingModel.length === 0) {
+      errors.embeddingModel = "Embedding model is required";
+    }
+    return errors;
+  }, [sourceName, isAddSourcesMode, selectedEmbeddingModel]);
+
+  const clearValidationErrors = useCallback(() => {
+    setValidationErrors({});
+  }, []);
+
   const handleSubmit = async () => {
-    if (!selectedEmbeddingModel.length) {
-      setErrorData({ title: "Please select an embedding model" });
+    const errors = getValidationErrors();
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
       return;
     }
 
@@ -181,9 +238,15 @@ export function useKnowledgeBaseForm({
             formData.append("files", file);
           });
           formData.append("source_name", sourceName);
-          formData.append("chunk_size", chunkSize.toString());
-          formData.append("chunk_overlap", chunkOverlap.toString());
-          formData.append("separator", separator);
+          formData.append(
+            "chunk_size",
+            (chunkSize ?? DEFAULT_CHUNK_SIZE).toString(),
+          );
+          formData.append(
+            "chunk_overlap",
+            (chunkOverlap ?? DEFAULT_CHUNK_OVERLAP).toString(),
+          );
+          formData.append("separator", separator ?? DEFAULT_SEPARATOR);
 
           const response = await api.post(
             `${getURL("KNOWLEDGE_BASES")}/${kbName}/ingest`,
@@ -209,9 +272,9 @@ export function useKnowledgeBaseForm({
             sourceName,
             files,
             embeddingModel: selectedEmbeddingModel,
-            chunkSize,
-            chunkOverlap,
-            separator,
+            chunkSize: chunkSize ?? DEFAULT_CHUNK_SIZE,
+            chunkOverlap: chunkOverlap ?? DEFAULT_CHUNK_OVERLAP,
+            separator: separator ?? DEFAULT_SEPARATOR,
           });
           setOpen(false);
           resetForm();
@@ -223,9 +286,9 @@ export function useKnowledgeBaseForm({
         sourceName,
         files,
         embeddingModel: selectedEmbeddingModel,
-        chunkSize,
-        chunkOverlap,
-        separator,
+        chunkSize: chunkSize ?? DEFAULT_CHUNK_SIZE,
+        chunkOverlap: chunkOverlap ?? DEFAULT_CHUNK_OVERLAP,
+        separator: separator ?? DEFAULT_SEPARATOR,
       };
 
       if (isAddSourcesMode) {
@@ -281,23 +344,13 @@ export function useKnowledgeBaseForm({
     setFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // Validation
-  const isStep1Valid =
-    sourceName.trim() !== "" &&
-    (isAddSourcesMode || selectedEmbeddingModel.length > 0);
-
-  const canProceed = () => {
-    switch (currentStep) {
-      case 1:
-        return isStep1Valid;
-      case 2:
-        return true; // Review step is always valid
-      default:
-        return false;
-    }
-  };
-
   const handleNext = () => {
+    const errors = getValidationErrors();
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+    setValidationErrors({});
     if (currentStep < 2) {
       setCurrentStep((currentStep + 1) as WizardStep);
     }
@@ -319,7 +372,6 @@ export function useKnowledgeBaseForm({
     currentStep,
     handleNext,
     handleBack,
-    canProceed,
 
     // Form fields
     sourceName,
@@ -334,6 +386,10 @@ export function useKnowledgeBaseForm({
     selectedEmbeddingModel,
     setSelectedEmbeddingModel,
     embeddingModelOptions,
+
+    // Validation
+    validationErrors,
+    clearValidationErrors,
 
     // UI state
     showAdvanced,
