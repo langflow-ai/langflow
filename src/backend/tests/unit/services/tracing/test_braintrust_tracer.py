@@ -6,9 +6,11 @@ from unittest.mock import MagicMock, patch
 import pytest
 from langchain_core.documents import Document
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+
 from langflow.schema.data import Data
 from langflow.schema.message import Message
 from langflow.services.tracing.braintrust import BraintrustTracer
+
 
 # ------------------------------------------------------------------
 # Fixtures
@@ -34,17 +36,19 @@ def mock_logger():
 @pytest.fixture
 def tracer(mock_logger, trace_id):
     """Create a BraintrustTracer with mocked Braintrust SDK."""
-    logger, root_span, _child_span = mock_logger
-    with patch.dict("os.environ", {"BRAINTRUST_API_KEY": "sk-test-key"}):
-        with patch("braintrust.init_logger", return_value=logger):
-            t = BraintrustTracer(
-                trace_name="Test Flow - flow-123",
-                trace_type="chain",
-                project_name="TestProject",
-                trace_id=trace_id,
-                user_id="user-1",
-                session_id="session-1",
-            )
+    logger, _root_span, _child_span = mock_logger
+    with (
+        patch.dict("os.environ", {"BRAINTRUST_API_KEY": "sk-test-key"}),
+        patch("braintrust.init_logger", return_value=logger),
+    ):
+        t = BraintrustTracer(
+            trace_name="Test Flow - flow-123",
+            trace_type="chain",
+            project_name="TestProject",
+            trace_id=trace_id,
+            user_id="user-1",
+            session_id="session-1",
+        )
     return t
 
 
@@ -106,25 +110,29 @@ class TestInitialization:
         assert t.ready is False
 
     def test_not_ready_when_import_fails(self, trace_id):
-        with patch.dict("os.environ", {"BRAINTRUST_API_KEY": "sk-test"}):
-            with patch("builtins.__import__", side_effect=ImportError("no braintrust")):
-                t = BraintrustTracer(
-                    trace_name="Test",
-                    trace_type="chain",
-                    project_name="TestProject",
-                    trace_id=trace_id,
-                )
+        with (
+            patch.dict("os.environ", {"BRAINTRUST_API_KEY": "sk-test"}),
+            patch("builtins.__import__", side_effect=ImportError("no braintrust")),
+        ):
+            t = BraintrustTracer(
+                trace_name="Test",
+                trace_type="chain",
+                project_name="TestProject",
+                trace_id=trace_id,
+            )
         assert t.ready is False
 
     def test_not_ready_when_sdk_raises(self, trace_id):
-        with patch.dict("os.environ", {"BRAINTRUST_API_KEY": "sk-test"}):
-            with patch("braintrust.init_logger", side_effect=RuntimeError("connection failed")):
-                t = BraintrustTracer(
-                    trace_name="Test",
-                    trace_type="chain",
-                    project_name="TestProject",
-                    trace_id=trace_id,
-                )
+        with (
+            patch.dict("os.environ", {"BRAINTRUST_API_KEY": "sk-test"}),
+            patch("braintrust.init_logger", side_effect=RuntimeError("connection failed")),
+        ):
+            t = BraintrustTracer(
+                trace_name="Test",
+                trace_type="chain",
+                project_name="TestProject",
+                trace_id=trace_id,
+            )
         assert t.ready is False
 
     def test_flow_id_extracted_from_trace_name(self, tracer):
@@ -132,28 +140,32 @@ class TestInitialization:
 
     def test_flow_id_when_no_separator(self, mock_logger, trace_id):
         logger, _root_span, _child_span = mock_logger
-        with patch.dict("os.environ", {"BRAINTRUST_API_KEY": "sk-test"}):
-            with patch("braintrust.init_logger", return_value=logger):
-                t = BraintrustTracer(
-                    trace_name="simple-name",
-                    trace_type="chain",
-                    project_name="TestProject",
-                    trace_id=trace_id,
-                )
+        with (
+            patch.dict("os.environ", {"BRAINTRUST_API_KEY": "sk-test"}),
+            patch("braintrust.init_logger", return_value=logger),
+        ):
+            t = BraintrustTracer(
+                trace_name="simple-name",
+                trace_type="chain",
+                project_name="TestProject",
+                trace_id=trace_id,
+            )
         assert t.flow_id == "simple-name"
 
     def test_root_span_created_with_metadata(self, mock_logger, trace_id):
         logger, _root_span, _child_span = mock_logger
-        with patch.dict("os.environ", {"BRAINTRUST_API_KEY": "sk-test"}):
-            with patch("braintrust.init_logger", return_value=logger):
-                BraintrustTracer(
-                    trace_name="Test Flow - flow-123",
-                    trace_type="chain",
-                    project_name="TestProject",
-                    trace_id=trace_id,
-                    user_id="user-1",
-                    session_id="session-1",
-                )
+        with (
+            patch.dict("os.environ", {"BRAINTRUST_API_KEY": "sk-test"}),
+            patch("braintrust.init_logger", return_value=logger),
+        ):
+            BraintrustTracer(
+                trace_name="Test Flow - flow-123",
+                trace_type="chain",
+                project_name="TestProject",
+                trace_id=trace_id,
+                user_id="user-1",
+                session_id="session-1",
+            )
         logger.start_span.assert_called_once()
         call_kwargs = logger.start_span.call_args[1]
         assert call_kwargs["name"] == "flow-123"
@@ -165,7 +177,10 @@ class TestInitialization:
     def test_uses_env_project_over_param(self, mock_logger, trace_id):
         logger, _root_span, _child_span = mock_logger
         env = {"BRAINTRUST_API_KEY": "sk-test", "BRAINTRUST_PROJECT": "EnvProject"}
-        with patch.dict("os.environ", env), patch("braintrust.init_logger", return_value=logger) as mock_init:
+        with (
+            patch.dict("os.environ", env),
+            patch("braintrust.init_logger", return_value=logger) as mock_init,
+        ):
             BraintrustTracer(
                 trace_name="Test",
                 trace_type="chain",
@@ -177,26 +192,30 @@ class TestInitialization:
 
     def test_falls_back_to_param_project(self, mock_logger, trace_id):
         logger, _root_span, _child_span = mock_logger
-        with patch.dict("os.environ", {"BRAINTRUST_API_KEY": "sk-test"}):
-            with patch("braintrust.init_logger", return_value=logger) as mock_init:
-                BraintrustTracer(
-                    trace_name="Test",
-                    trace_type="chain",
-                    project_name="ParamProject",
-                    trace_id=trace_id,
-                )
+        with (
+            patch.dict("os.environ", {"BRAINTRUST_API_KEY": "sk-test"}),
+            patch("braintrust.init_logger", return_value=logger) as mock_init,
+        ):
+            BraintrustTracer(
+                trace_name="Test",
+                trace_type="chain",
+                project_name="ParamProject",
+                trace_id=trace_id,
+            )
         assert mock_init.call_args[1]["project"] == "ParamProject"
 
     def test_falls_back_to_langflow_default_project(self, mock_logger, trace_id):
         logger, _root_span, _child_span = mock_logger
-        with patch.dict("os.environ", {"BRAINTRUST_API_KEY": "sk-test"}):
-            with patch("braintrust.init_logger", return_value=logger) as mock_init:
-                BraintrustTracer(
-                    trace_name="Test",
-                    trace_type="chain",
-                    project_name="",
-                    trace_id=trace_id,
-                )
+        with (
+            patch.dict("os.environ", {"BRAINTRUST_API_KEY": "sk-test"}),
+            patch("braintrust.init_logger", return_value=logger) as mock_init,
+        ):
+            BraintrustTracer(
+                trace_name="Test",
+                trace_type="chain",
+                project_name="",
+                trace_id=trace_id,
+            )
         assert mock_init.call_args[1]["project"] == "Langflow"
 
 
@@ -229,10 +248,8 @@ class TestSpanLifecycle:
     def test_add_trace_no_op_when_not_ready(self, trace_id):
         with patch.dict("os.environ", {}, clear=True):
             t = BraintrustTracer(
-                trace_name="Test",
-                trace_type="chain",
-                project_name="P",
-                trace_id=trace_id,
+                trace_name="Test", trace_type="chain",
+                project_name="P", trace_id=trace_id,
             )
         t.add_trace(trace_id="c1", trace_name="X", trace_type="llm", inputs={})
         assert len(t.spans) == 0
@@ -240,10 +257,8 @@ class TestSpanLifecycle:
     def test_end_trace_logs_and_closes_span(self, tracer, mock_logger):
         _logger, _root_span, child_span = mock_logger
         tracer.add_trace(
-            trace_id="comp-1",
-            trace_name="OpenAI (comp-1)",
-            trace_type="llm",
-            inputs={"prompt": "hello"},
+            trace_id="comp-1", trace_name="OpenAI (comp-1)",
+            trace_type="llm", inputs={"prompt": "hello"},
         )
         tracer.end_trace(
             trace_id="comp-1",
@@ -259,15 +274,12 @@ class TestSpanLifecycle:
     def test_end_trace_with_error(self, tracer, mock_logger):
         _logger, _root_span, child_span = mock_logger
         tracer.add_trace(
-            trace_id="comp-1",
-            trace_name="Fail (comp-1)",
-            trace_type="llm",
-            inputs={},
+            trace_id="comp-1", trace_name="Fail (comp-1)",
+            trace_type="llm", inputs={},
         )
         error = ValueError("something went wrong")
         tracer.end_trace(
-            trace_id="comp-1",
-            trace_name="Fail (comp-1)",
+            trace_id="comp-1", trace_name="Fail (comp-1)",
             error=error,
         )
         assert child_span.log.call_args[1]["error"] == "something went wrong"
@@ -275,14 +287,11 @@ class TestSpanLifecycle:
     def test_end_trace_with_logs(self, tracer, mock_logger):
         _logger, _root_span, child_span = mock_logger
         tracer.add_trace(
-            trace_id="comp-1",
-            trace_name="X (comp-1)",
-            trace_type="llm",
-            inputs={},
+            trace_id="comp-1", trace_name="X (comp-1)",
+            trace_type="llm", inputs={},
         )
         tracer.end_trace(
-            trace_id="comp-1",
-            trace_name="X (comp-1)",
+            trace_id="comp-1", trace_name="X (comp-1)",
             outputs={"out": "value"},
             logs=[{"step": 1}, {"step": 2}],
         )
@@ -321,10 +330,8 @@ class TestSpanLifecycle:
     def test_end_no_op_when_not_ready(self, trace_id):
         with patch.dict("os.environ", {}, clear=True):
             t = BraintrustTracer(
-                trace_name="Test",
-                trace_type="chain",
-                project_name="P",
-                trace_id=trace_id,
+                trace_name="Test", trace_type="chain",
+                project_name="P", trace_id=trace_id,
             )
         # Should not raise
         t.end(inputs={}, outputs={})
@@ -341,17 +348,17 @@ class TestGetLangchainCallback:
     def test_returns_none_when_not_ready(self, trace_id):
         with patch.dict("os.environ", {}, clear=True):
             t = BraintrustTracer(
-                trace_name="Test",
-                trace_type="chain",
-                project_name="P",
-                trace_id=trace_id,
+                trace_name="Test", trace_type="chain",
+                project_name="P", trace_id=trace_id,
             )
         assert t.get_langchain_callback() is None
 
     def test_returns_none_when_import_fails(self, tracer):
-        with patch.dict("sys.modules", {"braintrust_langchain": None}):
-            with patch("builtins.__import__", side_effect=ImportError("no braintrust_langchain")):
-                result = tracer.get_langchain_callback()
+        with (
+            patch.dict("sys.modules", {"braintrust_langchain": None}),
+            patch("builtins.__import__", side_effect=ImportError("no braintrust_langchain")),
+        ):
+            result = tracer.get_langchain_callback()
         assert result is None
 
     def test_returns_handler_with_root_span_when_no_component_spans(self, tracer, mock_logger):
@@ -363,14 +370,12 @@ class TestGetLangchainCallback:
         mock_cls.assert_called_once_with(logger=root_span)
 
     def test_returns_handler_with_most_recent_component_span(self, tracer, mock_logger):
-        _logger, root_span, child_span = mock_logger
+        _logger, _root_span, child_span = mock_logger
 
         # Add a component span
         tracer.add_trace(
-            trace_id="comp-1",
-            trace_name="OpenAI (comp-1)",
-            trace_type="llm",
-            inputs={},
+            trace_id="comp-1", trace_name="OpenAI (comp-1)",
+            trace_type="llm", inputs={},
         )
 
         mock_handler = MagicMock()
@@ -438,7 +443,7 @@ class TestConvertToLoggable:
         assert tracer._convert_to_loggable(42) == 42
         assert tracer._convert_to_loggable(3.14) == 3.14
         assert tracer._convert_to_loggable("string") == "string"
-        assert tracer._convert_to_loggable(True) is True
+        assert tracer._convert_to_loggable(True) is True  # noqa: FBT003
 
     def test_dict_with_none_keys_excluded(self, tracer):
         data = {"valid": "value", None: "excluded"}
