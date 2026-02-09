@@ -1,9 +1,13 @@
 """Braintrust tracer for Langflow.
 
-Implements Langflow's BaseTracer interface to send component-level
-traces to Braintrust.
+Implements Langflow's BaseTracer interface to send component-level and
+LangChain-level traces to Braintrust.
 
-Only depends on the ``braintrust`` package.
+Dependencies:
+- ``braintrust`` (required) -- core SDK for span creation and logging.
+- ``braintrust-langchain`` (optional) -- provides deep LangChain tracing
+  with token metrics, time-to-first-token, and streaming support.
+  Install with ``pip install braintrust-langchain``.
 
 Activation: set the BRAINTRUST_API_KEY environment variable.
 Optional: BRAINTRUST_API_URL, BRAINTRUST_PROJECT.
@@ -42,7 +46,10 @@ class BraintrustTracer(BaseTracer):
     tool, retriever, etc.) is captured as a span with its inputs, outputs,
     metadata, and any errors.
 
-    Only depends on the ``braintrust`` package.
+    If ``braintrust-langchain`` is installed, ``get_langchain_callback``
+    returns a ``BraintrustCallbackHandler`` that provides deeper tracing
+    of LangChain operations (LLM calls with token metrics,
+    time-to-first-token, tool usage, retriever queries, etc.).
     """
 
     flow_id: str
@@ -193,7 +200,22 @@ class BraintrustTracer(BaseTracer):
 
     @override
     def get_langchain_callback(self) -> BaseCallbackHandler | None:
-        return None
+        if not self._ready:
+            return None
+
+        try:
+            from braintrust_langchain import BraintrustCallbackHandler
+        except ImportError:
+            return None
+
+        # Use the most recent open span as parent so LangChain traces
+        # nest under the current Langflow component span.
+        parent_span = (
+            self.spans[next(reversed(self.spans))]
+            if self.spans
+            else self._root_span
+        )
+        return BraintrustCallbackHandler(logger=parent_span)
 
     # ------------------------------------------------------------------
     # Helpers
