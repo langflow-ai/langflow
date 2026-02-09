@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { UpstreamOutput } from "@/types/references";
 import { cn } from "@/utils/utils";
@@ -8,7 +8,6 @@ interface ReferenceAutocompleteProps {
   options: UpstreamOutput[];
   onSelect: (option: UpstreamOutput) => void;
   onClose: () => void;
-  onHighlightChange?: (option: UpstreamOutput | null) => void;
   filter: string;
   position: { top: number; left: number };
   anchorRef?: React.RefObject<HTMLElement | null>;
@@ -21,7 +20,6 @@ export function ReferenceAutocomplete({
   options,
   onSelect,
   onClose,
-  onHighlightChange,
   filter,
   position,
   anchorRef,
@@ -48,31 +46,33 @@ export function ReferenceAutocomplete({
     }
   }, [isOpen, anchorRef, inputRef, position]);
 
-  // Filter options based on input
-  const filteredOptions = options.filter((opt) => {
-    const searchText = `${opt.nodeName} ${opt.outputName}`.toLowerCase();
-    return searchText.includes(filter.toLowerCase());
-  });
+  // Memoize filtered options to avoid new array reference on every render
+  const filteredOptions = useMemo(() => {
+    const lowerFilter = filter.toLowerCase();
+    return options.filter((opt) => {
+      const searchText =
+        `${opt.nodeName} ${opt.outputName} ${opt.nodeSlug}`.toLowerCase();
+      return searchText.includes(lowerFilter);
+    });
+  }, [options, filter]);
 
   // Reset selection when filter changes
   useEffect(() => {
     setSelectedIndex(0);
   }, [filter]);
 
-  // Notify parent of highlighted option changes
+  // Scroll selected item into view
   useEffect(() => {
-    if (!isOpen || filteredOptions.length === 0) {
-      onHighlightChange?.(null);
-    } else {
-      onHighlightChange?.(filteredOptions[selectedIndex] ?? null);
-    }
-  }, [isOpen, selectedIndex, filteredOptions, onHighlightChange]);
+    if (!isOpen || !listRef.current) return;
+    const selectedEl = listRef.current.children[selectedIndex] as
+      | HTMLElement
+      | undefined;
+    selectedEl?.scrollIntoView?.({ block: "nearest" });
+  }, [isOpen, selectedIndex]);
 
-  // Keyboard navigation
+  // Keyboard navigation — only register when open
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      if (!isOpen) return;
-
       switch (e.key) {
         case "ArrowDown":
           e.preventDefault();
@@ -94,13 +94,14 @@ export function ReferenceAutocomplete({
           break;
       }
     },
-    [isOpen, filteredOptions, selectedIndex, onSelect, onClose],
+    [filteredOptions, selectedIndex, onSelect, onClose],
   );
 
   useEffect(() => {
+    if (!isOpen) return;
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [handleKeyDown]);
+  }, [isOpen, handleKeyDown]);
 
   if (!isOpen || filteredOptions.length === 0) return null;
 
@@ -121,6 +122,8 @@ export function ReferenceAutocomplete({
   const dropdown = (
     <div
       ref={listRef}
+      role="listbox"
+      aria-label="Reference suggestions"
       data-testid="reference-autocomplete-dropdown"
       className={cn(
         "z-[9999] w-64 max-h-48 overflow-auto bg-background border border-border rounded-md shadow-lg",
@@ -132,6 +135,8 @@ export function ReferenceAutocomplete({
         <button
           key={`${option.nodeId}-${option.outputName}`}
           type="button"
+          role="option"
+          aria-selected={index === selectedIndex}
           data-testid={`reference-option-${option.nodeSlug}-${option.outputName}`}
           className={cn(
             "w-full px-3 py-2 text-left text-sm cursor-pointer",

@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
@@ -6,7 +7,7 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
  * Helper to set up a flow with Chat Input connected to Chat Output.
  * Chat Output has a text input that should support references.
  */
-async function setupFlowWithConnection(page: any) {
+async function setupFlowWithConnection(page: Page) {
   await awaitBootstrapTest(page);
 
   await page.waitForSelector('[data-testid="blank-flow"]', {
@@ -58,14 +59,12 @@ async function setupFlowWithConnection(page: any) {
     .click();
 
   // Click on the prompt template input handle (template input)
-  // Try to find and click a suitable input handle
   const promptHandles = page.locator(
     '[data-testid*="handle-prompt template"][data-testid*="left"]',
   );
   const handleCount = await promptHandles.count();
-  if (handleCount > 0) {
-    await promptHandles.first().click();
-  }
+  expect(handleCount).toBeGreaterThan(0);
+  await promptHandles.first().click();
 
   return {
     page,
@@ -75,7 +74,7 @@ async function setupFlowWithConnection(page: any) {
 /**
  * Helper to set up a flow with only Prompt Template (no upstream connections).
  */
-async function setupFlowWithoutUpstream(page: any) {
+async function setupFlowWithoutUpstream(page: Page) {
   await awaitBootstrapTest(page);
 
   await page.waitForSelector('[data-testid="blank-flow"]', {
@@ -109,49 +108,40 @@ async function setupFlowWithoutUpstream(page: any) {
   return { page };
 }
 
+/**
+ * Helper to find and focus the text input on the Prompt Template node.
+ */
+async function focusPromptTextInput(page: Page) {
+  const promptNode = page.locator('[data-testid="title-Prompt Template"]');
+  expect(await promptNode.count()).toBeGreaterThan(0);
+  await promptNode.first().click();
+
+  const textInput = page.locator('[data-testid^="textarea_str_"]').first();
+  await expect(textInput).toBeVisible({ timeout: 3000 });
+  await textInput.click();
+  return textInput;
+}
+
 test(
   "ReferenceAutocomplete - typing @ shows autocomplete when upstream connected",
   { tag: ["@release", "@workspace"] },
   async ({ page }) => {
     await setupFlowWithConnection(page);
 
-    // Find and click on the text input in Prompt Template
-    // First, click on the prompt template node to select it
-    const promptNode = page.locator('[data-testid="title-Prompt Template"]');
-    if ((await promptNode.count()) > 0) {
-      await promptNode.first().click();
-    }
+    const textInput = await focusPromptTextInput(page);
+    await textInput.fill("Hello ");
 
-    // Look for a textarea in the prompt template
-    const textInput = page.locator('[data-testid^="textarea_str_"]').first();
-    const inputVisible = await textInput.isVisible().catch(() => false);
+    // Type @ to trigger autocomplete
+    await page.keyboard.type("@");
 
-    if (inputVisible) {
-      await textInput.click();
-      await textInput.fill("Hello ");
+    // Check if autocomplete appears
+    const autocomplete = page.getByTestId("reference-autocomplete-dropdown");
+    await expect(autocomplete).toBeVisible({ timeout: 3000 });
 
-      // Type @ to trigger autocomplete
-      await page.keyboard.type("@");
-
-      // Check if autocomplete appears
-      const autocomplete = page.getByTestId("reference-autocomplete-dropdown");
-      const autocompleteVisible = await autocomplete
-        .isVisible({ timeout: 3000 })
-        .catch(() => false);
-
-      if (autocompleteVisible) {
-        // Verify options are shown
-        const options = autocomplete.locator("button");
-        const optionCount = await options.count();
-        expect(optionCount).toBeGreaterThan(0);
-      } else {
-        // If autocomplete doesn't show, it means references aren't supported for this field yet
-        // This is acceptable - the feature may not be fully integrated
-        console.log(
-          "Autocomplete not visible - references may not be enabled for this field",
-        );
-      }
-    }
+    // Verify options are shown
+    const options = autocomplete.locator("button");
+    const optionCount = await options.count();
+    expect(optionCount).toBeGreaterThan(0);
   },
 );
 
@@ -161,41 +151,27 @@ test(
   async ({ page }) => {
     await setupFlowWithConnection(page);
 
-    const promptNode = page.locator('[data-testid="title-Prompt Template"]');
-    if ((await promptNode.count()) > 0) {
-      await promptNode.first().click();
-    }
+    const textInput = await focusPromptTextInput(page);
+    await textInput.fill("Test ");
+    await page.keyboard.type("@");
 
-    const textInput = page.locator('[data-testid^="textarea_str_"]').first();
-    const inputVisible = await textInput.isVisible().catch(() => false);
+    const autocomplete = page.getByTestId("reference-autocomplete-dropdown");
+    await expect(autocomplete).toBeVisible({ timeout: 3000 });
 
-    if (inputVisible) {
-      await textInput.click();
-      await textInput.fill("Test ");
-      await page.keyboard.type("@");
+    // Get value before selection
+    const valueBefore = await textInput.inputValue();
 
-      const autocomplete = page.getByTestId("reference-autocomplete-dropdown");
-      const autocompleteVisible = await autocomplete
-        .isVisible({ timeout: 3000 })
-        .catch(() => false);
+    // Click on the first option
+    const options = autocomplete.locator("button");
+    await options.first().dispatchEvent("mousedown");
 
-      if (autocompleteVisible) {
-        // Get value before selection
-        const valueBefore = await textInput.inputValue();
+    // Wait for autocomplete to close
+    await expect(autocomplete).not.toBeVisible({ timeout: 2000 });
 
-        // Click on the first option
-        const options = autocomplete.locator("button");
-        await options.first().dispatchEvent("mousedown");
-
-        // Wait for autocomplete to close
-        await expect(autocomplete).not.toBeVisible({ timeout: 2000 });
-
-        // Verify reference was inserted
-        const valueAfter = await textInput.inputValue();
-        expect(valueAfter).not.toBe(valueBefore);
-        expect(valueAfter).toMatch(/@\w+\.\w+/);
-      }
-    }
+    // Verify reference was inserted
+    const valueAfter = await textInput.inputValue();
+    expect(valueAfter).not.toBe(valueBefore);
+    expect(valueAfter).toMatch(/@\w+\.\w+/);
   },
 );
 
@@ -205,35 +181,21 @@ test(
   async ({ page }) => {
     await setupFlowWithConnection(page);
 
-    const promptNode = page.locator('[data-testid="title-Prompt Template"]');
-    if ((await promptNode.count()) > 0) {
-      await promptNode.first().click();
-    }
+    const textInput = await focusPromptTextInput(page);
+    await page.keyboard.type("@");
 
-    const textInput = page.locator('[data-testid^="textarea_str_"]').first();
-    const inputVisible = await textInput.isVisible().catch(() => false);
+    const autocomplete = page.getByTestId("reference-autocomplete-dropdown");
+    await expect(autocomplete).toBeVisible({ timeout: 3000 });
 
-    if (inputVisible) {
-      await textInput.click();
-      await page.keyboard.type("@");
+    // Press Enter to select first option
+    await page.keyboard.press("Enter");
 
-      const autocomplete = page.getByTestId("reference-autocomplete-dropdown");
-      const autocompleteVisible = await autocomplete
-        .isVisible({ timeout: 3000 })
-        .catch(() => false);
+    // Autocomplete should close
+    await expect(autocomplete).not.toBeVisible({ timeout: 2000 });
 
-      if (autocompleteVisible) {
-        // Press Enter to select first option
-        await page.keyboard.press("Enter");
-
-        // Autocomplete should close
-        await expect(autocomplete).not.toBeVisible({ timeout: 2000 });
-
-        // Value should contain reference
-        const value = await textInput.inputValue();
-        expect(value).toMatch(/@\w+\.\w+/);
-      }
-    }
+    // Value should contain reference
+    const value = await textInput.inputValue();
+    expect(value).toMatch(/@\w+\.\w+/);
   },
 );
 
@@ -243,36 +205,22 @@ test(
   async ({ page }) => {
     await setupFlowWithConnection(page);
 
-    const promptNode = page.locator('[data-testid="title-Prompt Template"]');
-    if ((await promptNode.count()) > 0) {
-      await promptNode.first().click();
-    }
+    const textInput = await focusPromptTextInput(page);
+    await textInput.fill("Before ");
+    await page.keyboard.type("@");
 
-    const textInput = page.locator('[data-testid^="textarea_str_"]').first();
-    const inputVisible = await textInput.isVisible().catch(() => false);
+    const autocomplete = page.getByTestId("reference-autocomplete-dropdown");
+    await expect(autocomplete).toBeVisible({ timeout: 3000 });
 
-    if (inputVisible) {
-      await textInput.click();
-      await textInput.fill("Before ");
-      await page.keyboard.type("@");
+    // Press Escape to close without selecting
+    await page.keyboard.press("Escape");
 
-      const autocomplete = page.getByTestId("reference-autocomplete-dropdown");
-      const autocompleteVisible = await autocomplete
-        .isVisible({ timeout: 3000 })
-        .catch(() => false);
+    // Autocomplete should close
+    await expect(autocomplete).not.toBeVisible({ timeout: 2000 });
 
-      if (autocompleteVisible) {
-        // Press Escape to close without selecting
-        await page.keyboard.press("Escape");
-
-        // Autocomplete should close
-        await expect(autocomplete).not.toBeVisible({ timeout: 2000 });
-
-        // Value should still have @ but no full reference
-        const value = await textInput.inputValue();
-        expect(value).toBe("Before @");
-      }
-    }
+    // Value should still have @ but no full reference
+    const value = await textInput.inputValue();
+    expect(value).toBe("Before @");
   },
 );
 
@@ -282,39 +230,25 @@ test(
   async ({ page }) => {
     await setupFlowWithConnection(page);
 
-    const promptNode = page.locator('[data-testid="title-Prompt Template"]');
-    if ((await promptNode.count()) > 0) {
-      await promptNode.first().click();
-    }
+    const textInput = await focusPromptTextInput(page);
+    await page.keyboard.type("@");
 
-    const textInput = page.locator('[data-testid^="textarea_str_"]').first();
-    const inputVisible = await textInput.isVisible().catch(() => false);
+    const autocomplete = page.getByTestId("reference-autocomplete-dropdown");
+    await expect(autocomplete).toBeVisible({ timeout: 3000 });
 
-    if (inputVisible) {
-      await textInput.click();
-      await page.keyboard.type("@");
+    // Type filter text
+    await page.keyboard.type("Chat");
 
-      const autocomplete = page.getByTestId("reference-autocomplete-dropdown");
-      const autocompleteVisible = await autocomplete
-        .isVisible({ timeout: 3000 })
-        .catch(() => false);
+    // Autocomplete should stay open while filtering
+    await expect(autocomplete).toBeVisible();
 
-      if (autocompleteVisible) {
-        // Type filter text
-        await page.keyboard.type("Chat");
+    // Select filtered option
+    await page.keyboard.press("Enter");
 
-        // Autocomplete should stay open while filtering
-        await expect(autocomplete).toBeVisible();
-
-        // Select filtered option
-        await page.keyboard.press("Enter");
-
-        // Should contain the filtered reference
-        const value = await textInput.inputValue();
-        expect(value).toContain("@");
-        expect(value.toLowerCase()).toContain("chat");
-      }
-    }
+    // Should contain the filtered reference
+    const value = await textInput.inputValue();
+    expect(value).toContain("@");
+    expect(value.toLowerCase()).toContain("chat");
   },
 );
 
@@ -324,31 +258,20 @@ test(
   async ({ page }) => {
     await setupFlowWithoutUpstream(page);
 
-    const promptNode = page.locator('[data-testid="title-Prompt Template"]');
-    if ((await promptNode.count()) > 0) {
-      await promptNode.first().click();
-    }
+    const textInput = await focusPromptTextInput(page);
+    await textInput.fill("Test ");
+    await page.keyboard.type("@");
 
-    const textInput = page.locator('[data-testid^="textarea_str_"]').first();
-    const inputVisible = await textInput.isVisible().catch(() => false);
+    // Give autocomplete time to potentially appear
+    await page.waitForTimeout(500);
 
-    if (inputVisible) {
-      await textInput.click();
-      await textInput.fill("Test ");
-      await page.keyboard.type("@");
+    // Autocomplete should NOT be visible (no upstream nodes)
+    const autocomplete = page.getByTestId("reference-autocomplete-dropdown");
+    await expect(autocomplete).not.toBeVisible({ timeout: 1000 });
 
-      // Give autocomplete time to potentially appear
-      await page.waitForTimeout(500);
-
-      // Autocomplete should NOT be visible (no upstream nodes)
-      const autocomplete = page.getByTestId("reference-autocomplete-dropdown");
-      const isVisible = await autocomplete.isVisible().catch(() => false);
-      expect(isVisible).toBe(false);
-
-      // Value should just have the @
-      const value = await textInput.inputValue();
-      expect(value).toBe("Test @");
-    }
+    // Value should just have the @
+    const value = await textInput.inputValue();
+    expect(value).toBe("Test @");
   },
 );
 
@@ -358,30 +281,16 @@ test(
   async ({ page }) => {
     await setupFlowWithConnection(page);
 
-    const promptNode = page.locator('[data-testid="title-Prompt Template"]');
-    if ((await promptNode.count()) > 0) {
-      await promptNode.first().click();
-    }
+    const textInput = await focusPromptTextInput(page);
+    await page.keyboard.type("@");
 
-    const textInput = page.locator('[data-testid^="textarea_str_"]').first();
-    const inputVisible = await textInput.isVisible().catch(() => false);
+    const autocomplete = page.getByTestId("reference-autocomplete-dropdown");
+    await expect(autocomplete).toBeVisible({ timeout: 3000 });
 
-    if (inputVisible) {
-      await textInput.click();
-      await page.keyboard.type("@");
+    // Type space - should close autocomplete
+    await page.keyboard.type(" ");
 
-      const autocomplete = page.getByTestId("reference-autocomplete-dropdown");
-      const autocompleteVisible = await autocomplete
-        .isVisible({ timeout: 3000 })
-        .catch(() => false);
-
-      if (autocompleteVisible) {
-        // Type space - should close autocomplete
-        await page.keyboard.type(" ");
-
-        // Autocomplete should close
-        await expect(autocomplete).not.toBeVisible({ timeout: 2000 });
-      }
-    }
+    // Autocomplete should close
+    await expect(autocomplete).not.toBeVisible({ timeout: 2000 });
   },
 );

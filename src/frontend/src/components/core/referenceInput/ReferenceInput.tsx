@@ -7,7 +7,7 @@ import {
   useState,
 } from "react";
 import useFlowStore from "@/stores/flowStore";
-import type { UpstreamOutput } from "@/types/references";
+import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
 import { getCaretCoordinates } from "@/utils/getCaretCoordinates";
 import { getUpstreamOutputs } from "@/utils/getUpstreamOutputs";
 import { parseReferences } from "@/utils/referenceParser";
@@ -21,16 +21,11 @@ interface ReferenceInputProps {
   className?: string;
   usePortal?: boolean;
   children: (props: {
-    /** The current value to display (includes preview when navigating autocomplete) */
     value: string;
-    /** The actual stored value (without preview) */
-    actualValue: string;
     onChange: (
       e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
     ) => void;
-    onKeyDown: (
-      e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>,
-    ) => void;
+    onKeyDown: (e: React.KeyboardEvent) => void;
     ref: React.RefObject<HTMLInputElement | HTMLTextAreaElement>;
   }) => ReactNode;
 }
@@ -51,10 +46,6 @@ export function ReferenceInput({
   });
   const [triggerIndex, setTriggerIndex] = useState<number | null>(null);
   const [isTextarea, setIsTextarea] = useState(false);
-  // Track the currently highlighted option for preview
-  const [previewOption, setPreviewOption] = useState<UpstreamOutput | null>(
-    null,
-  );
 
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -74,12 +65,20 @@ export function ReferenceInput({
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
   const nodeReferenceSlugs = useFlowStore((state) => state.nodeReferenceSlugs);
+  const globalVariables = useGlobalVariablesStore(
+    (state) => state.globalVariablesEntities,
+  );
 
-  const upstreamOutputs = getUpstreamOutputs(
-    nodeId,
-    nodes,
-    edges,
-    nodeReferenceSlugs,
+  const upstreamOutputs = useMemo(
+    () =>
+      getUpstreamOutputs(
+        nodeId,
+        nodes,
+        edges,
+        nodeReferenceSlugs,
+        globalVariables ?? undefined,
+      ),
+    [nodeId, nodes, edges, nodeReferenceSlugs, globalVariables],
   );
 
   // Close autocomplete if upstream outputs become empty
@@ -103,7 +102,6 @@ export function ReferenceInput({
           // Close if space typed or cursor moved before @
           setIsAutocompleteOpen(false);
           setTriggerIndex(null);
-          setPreviewOption(null);
         } else {
           setAutocompleteFilter(filterText);
         }
@@ -117,7 +115,7 @@ export function ReferenceInput({
   );
 
   const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    (e: React.KeyboardEvent) => {
       // Detect @ key press to open autocomplete
       if (e.key === "@" && !isAutocompleteOpen && upstreamOutputs.length > 0) {
         const target = e.target as HTMLInputElement | HTMLTextAreaElement;
@@ -193,38 +191,12 @@ export function ReferenceInput({
   const handleCloseAutocomplete = useCallback(() => {
     setIsAutocompleteOpen(false);
     setTriggerIndex(null);
-    setPreviewOption(null);
   }, []);
-
-  // Callback when the highlighted option changes in autocomplete
-  const handleHighlightChange = useCallback((option: UpstreamOutput | null) => {
-    setPreviewOption(option);
-  }, []);
-
-  // Calculate the display value with preview
-  const displayValue = useMemo(() => {
-    if (!isAutocompleteOpen || !previewOption || triggerIndex === null) {
-      return value;
-    }
-    // Show preview: replace @filter with @nodeSlug.outputName
-    const before = value.slice(0, triggerIndex);
-    const cursorPos = triggerIndex + 1 + autocompleteFilter.length;
-    const after = value.slice(cursorPos);
-    const preview = `@${previewOption.nodeSlug}.${previewOption.outputName}`;
-    return before + preview + after;
-  }, [
-    isAutocompleteOpen,
-    previewOption,
-    triggerIndex,
-    value,
-    autocompleteFilter,
-  ]);
 
   return (
     <div ref={containerRef} className={cn("relative", className)}>
       {children({
-        value: displayValue,
-        actualValue: value,
+        value,
         onChange: handleInputChange,
         onKeyDown: handleKeyDown,
         ref: inputRef as React.RefObject<
@@ -236,7 +208,6 @@ export function ReferenceInput({
         options={upstreamOutputs}
         onSelect={handleSelectReference}
         onClose={handleCloseAutocomplete}
-        onHighlightChange={handleHighlightChange}
         filter={autocompleteFilter}
         position={autocompletePosition}
         anchorRef={usePortal ? containerRef : undefined}

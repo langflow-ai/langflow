@@ -1,6 +1,6 @@
-import { render, screen, fireEvent } from "@testing-library/react";
-import { ReferenceInput } from "../ReferenceInput";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { UpstreamOutput } from "@/types/references";
+import { ReferenceInput } from "../ReferenceInput";
 
 // Mock useFlowStore
 const mockUpstreamOutputs: UpstreamOutput[] = [
@@ -53,13 +53,11 @@ jest.mock("../ReferenceAutocomplete", () => ({
     isOpen,
     options,
     onSelect,
-    onHighlightChange,
     filter,
   }: {
     isOpen: boolean;
     options: UpstreamOutput[];
     onSelect: (option: UpstreamOutput) => void;
-    onHighlightChange?: (option: UpstreamOutput | null) => void;
     filter: string;
   }) => {
     if (!isOpen) return null;
@@ -70,11 +68,6 @@ jest.mock("../ReferenceAutocomplete", () => ({
             o.outputName.toLowerCase().includes(filter.toLowerCase()),
         )
       : options;
-    // Call onHighlightChange with first option when open
-    if (onHighlightChange && filteredOptions.length > 0) {
-      // Use setTimeout to avoid calling during render
-      setTimeout(() => onHighlightChange(filteredOptions[0]), 0);
-    }
     return (
       <div data-testid="autocomplete-dropdown">
         {filteredOptions.map((option) => (
@@ -409,36 +402,13 @@ describe("ReferenceInput", () => {
     });
   });
 
-  describe("preview functionality", () => {
-    it("should provide actualValue separate from display value", () => {
-      const onChange = jest.fn();
-      let capturedActualValue: string | undefined;
-
-      render(
-        <ReferenceInput {...defaultProps} value="test" onChange={onChange}>
-          {(props) => {
-            capturedActualValue = props.actualValue;
-            return (
-              <input
-                data-testid="test-input"
-                value={props.value}
-                onChange={props.onChange}
-                onKeyDown={props.onKeyDown}
-              />
-            );
-          }}
-        </ReferenceInput>,
-      );
-
-      expect(capturedActualValue).toBe("test");
-    });
-
-    it("should show preview value when navigating options", async () => {
+  describe("value passthrough", () => {
+    it("should pass value directly to children", () => {
       const onChange = jest.fn();
       let capturedValue: string | undefined;
 
       render(
-        <ReferenceInput {...defaultProps} value="" onChange={onChange}>
+        <ReferenceInput {...defaultProps} value="test" onChange={onChange}>
           {(props) => {
             capturedValue = props.value;
             return (
@@ -453,20 +423,7 @@ describe("ReferenceInput", () => {
         </ReferenceInput>,
       );
 
-      const input = screen.getByTestId("test-input") as HTMLInputElement;
-
-      // Type @ to open autocomplete
-      input.setSelectionRange(0, 0);
-      fireEvent.keyDown(input, { key: "@" });
-      fireEvent.change(input, { target: { value: "@", selectionStart: 1 } });
-
-      // The mock calls onHighlightChange with first option
-      // Wait for the setTimeout in the mock
-      await new Promise((resolve) => setTimeout(resolve, 10));
-
-      // The preview should show the full reference
-      // Note: This depends on the mock calling onHighlightChange
-      expect(screen.getByTestId("autocomplete-dropdown")).toBeInTheDocument();
+      expect(capturedValue).toBe("test");
     });
   });
 

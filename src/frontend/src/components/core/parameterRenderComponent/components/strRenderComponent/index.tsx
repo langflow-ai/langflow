@@ -27,8 +27,10 @@ export function StrRenderComponent({
   const hasOptions = !!templateData.options;
   const isWebhook = nodeInformationMetadata?.nodeType === "webhook";
 
-  // Check if this field supports references (has_references is defined, not undefined)
-  const supportsReferences = templateData.has_references !== undefined;
+  // All str-type fields support references (StrInput has ReferenceMixin).
+  // has_references tracks whether the value currently contains references,
+  // not whether the field supports them.
+  const supportsReferences = true;
 
   // Helper to extract string value from various input formats
   const extractStringValue = useCallback((newValue: unknown): string | null => {
@@ -65,7 +67,7 @@ export function StrRenderComponent({
 
   // Wrap handleOnNewValue to also update has_references when value changes
   const handleOnNewValueWithReferences = useCallback(
-    (newValue: any, options?: { skipSnapshot?: boolean }) => {
+    (newValue: unknown, options?: { skipSnapshot?: boolean }) => {
       if (supportsReferences) {
         const stringValue = extractStringValue(newValue);
         if (stringValue !== null) {
@@ -135,18 +137,13 @@ export function StrRenderComponent({
             value={(value as string) ?? ""}
             onChange={handleReferenceInputChange}
           >
-            {({
-              value: inputValue,
-              actualValue: storedValue,
-              onChange,
-              onKeyDown,
-            }) => (
+            {({ value: inputValue, onChange, onKeyDown }) => (
               <TextAreaComponent
                 {...baseInputProps}
                 value={inputValue}
                 nodeId={nodeId}
                 onKeyDown={onKeyDown}
-                handleOnNewValue={(newVal: any) => {
+                handleOnNewValue={(newVal: unknown) => {
                   // Extract the actual value and cursor position
                   const extractedValue =
                     typeof newVal === "object" &&

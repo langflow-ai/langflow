@@ -37,7 +37,10 @@ export default function ComponentTextModal({
     }
   }, [modalOpen]);
 
-  const handleReferenceInputChange = (newValue: string) => {
+  const handleReferenceInputChange = (
+    newValue: string,
+    _hasReferences: boolean,
+  ) => {
     setInputValue(newValue);
   };
 
