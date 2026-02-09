@@ -38,7 +38,7 @@ class TestInitialization:
 
         wrapper = LangchainModelWrapper(mock_langchain_model)
 
-        assert getattr(wrapper.langchain_model, "max_tokens", None) == LangchainModelWrapper.DEFAULT_MAX_TOKENS
+        assert getattr(wrapper.langchain_model, "max_tokens", None) == LangchainModelWrapper.DEFAULT_MAX_OUT_TOKENS
 
     @pytest.mark.asyncio
     async def test_init_preserves_existing_max_tokens(self):
