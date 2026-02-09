@@ -23,7 +23,6 @@ withEventDeliveryModes(
       "ASTRA_DB_APPLICATION_TOKEN required to run this test",
     );
 
-
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
