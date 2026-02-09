@@ -624,6 +624,7 @@ class Component(CustomComponent):
             elif "template" in frontend_node:
                 frontend_node["template"].pop(TOOLS_METADATA_INPUT_NAME, None)
         self.tools_metadata = frontend_node.get("template", {}).get(TOOLS_METADATA_INPUT_NAME, {}).get("value")
+
         return self._validate_frontend_node(frontend_node)
 
     def _validate_frontend_node(self, frontend_node: dict):
@@ -1418,6 +1419,9 @@ class Component(CustomComponent):
     def _update_tools_with_metadata(self, tools: list[Tool], metadata: DataFrame | None) -> list[Tool]:
         """Update tools with provided metadata."""
         component_toolkit: type[ComponentToolkit] = get_component_toolkit()
+        # Convert list of dicts to DataFrame if needed — ComponentToolkit expects pd.DataFrame
+        if isinstance(metadata, list):
+            metadata = pd.DataFrame(metadata)
         return component_toolkit(component=self, metadata=metadata).update_tools_metadata(tools=tools)
 
     def check_for_tool_tag_change(self, old_tags: list[str], new_tags: list[str]) -> bool:
@@ -1469,6 +1473,8 @@ class Component(CustomComponent):
             "description": tool.description,
             "tags": tool.tags if hasattr(tool, "tags") and tool.tags else [tool.name],
             "status": True,  # Initialize all tools with status True
+            "return_direct": False,  # Initialize return_direct as False
+            "disabled_params": [],  # Initialize with no disabled params
             "display_name": tool.metadata.get("display_name", tool.name),
             "display_description": tool.metadata.get("display_description", tool.description),
             "readonly": tool.metadata.get("readonly", False),
@@ -1511,10 +1517,18 @@ class Component(CustomComponent):
                         item["status"] = any(enabled_name in [item["name"], *item["tags"]] for enabled_name in enabled)
                 self.tools_metadata = tool_data
             else:
-                # Preserve existing status values
+                # Preserve existing status, return_direct, and disabled_params values
                 existing_status = {item["name"]: item.get("status", True) for item in self.tools_metadata}
+                existing_return_direct = {
+                    item["name"]: item.get("return_direct", False) for item in self.tools_metadata
+                }
+                existing_disabled_params = {
+                    item["name"]: item.get("disabled_params", []) for item in self.tools_metadata
+                }
                 for item in tool_data:
                     item["status"] = existing_status.get(item["name"], True)
+                    item["return_direct"] = existing_return_direct.get(item["name"], False)
+                    item["disabled_params"] = existing_disabled_params.get(item["name"], [])
                 tool_data = self.tools_metadata
         else:
             # If enabled tools are set, update status based on them

@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 import pandas as pd
 from langchain_core.tools import BaseTool, ToolException
 from langchain_core.tools.structured import StructuredTool
+from pydantic import Field, create_model
 
 from lfx.base.tools.constants import TOOL_OUTPUT_NAME
 from lfx.schema.data import Data
@@ -82,7 +83,12 @@ def _patch_send_message_decorator(component, func):
     return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
 
 
-def _build_output_function(component: Component, output_method: Callable, event_manager: EventManager | None = None):
+def _build_output_function(
+    component: Component,
+    output_method: Callable,
+    event_manager: EventManager | None = None,
+    tool_tag: str | None = None,  # noqa: ARG001
+):
     def output_function(*args, **kwargs):
         try:
             if event_manager:
@@ -105,7 +111,10 @@ def _build_output_function(component: Component, output_method: Callable, event_
 
 
 def _build_output_async_function(
-    component: Component, output_method: Callable, event_manager: EventManager | None = None
+    component: Component,
+    output_method: Callable,
+    event_manager: EventManager | None = None,
+    tool_tag: str | None = None,  # noqa: ARG001
 ):
     async def output_function(*args, **kwargs):
         try:
@@ -117,6 +126,7 @@ def _build_output_async_function(
                 await asyncio.to_thread(event_manager.on_build_end, data={"id": component.get_id()})
         except Exception as e:
             raise ToolException(e) from e
+
         if isinstance(result, Message):
             return result.get_text()
         if isinstance(result, Data):
@@ -225,7 +235,9 @@ class ComponentToolkit:
                     StructuredTool(
                         name=formatted_name,
                         description=build_description(self.component),
-                        coroutine=_build_output_async_function(self.component, output_method, event_manager),
+                        coroutine=_build_output_async_function(
+                            self.component, output_method, event_manager, tool_tag=formatted_name
+                        ),
                         args_schema=args_schema,
                         handle_tool_error=True,
                         callbacks=callbacks,
@@ -241,7 +253,9 @@ class ComponentToolkit:
                     StructuredTool(
                         name=formatted_name,
                         description=build_description(self.component),
-                        func=_build_output_function(self.component, output_method, event_manager),
+                        func=_build_output_function(
+                            self.component, output_method, event_manager, tool_tag=formatted_name
+                        ),
                         args_schema=args_schema,
                         handle_tool_error=True,
                         callbacks=callbacks,
@@ -310,6 +324,27 @@ class ComponentToolkit:
                                 tool.description = _add_commands_to_tool_description(
                                     tool.description, tool_metadata.get("commands")
                                 )
+                            # Set per-tool return_direct (LangChain handles this natively —
+                            # the agent executor returns the tool output directly without
+                            # passing it back through the LLM)
+                            tool.return_direct = bool(tool_metadata.get("return_direct", False))
+                            # Filter args_schema based on disabled_params
+                            disabled_params = tool_metadata.get("disabled_params", [])
+                            if disabled_params and tool.args_schema:
+                                disabled_set = set(disabled_params)
+                                fields = {}
+                                for name, field_info in tool.args_schema.model_fields.items():
+                                    if name not in disabled_set:
+                                        fields[name] = (
+                                            field_info.annotation,
+                                            Field(
+                                                title=field_info.title,
+                                                description=field_info.description,
+                                                default=field_info.default,
+                                            ),
+                                        )
+                                tool.args_schema = create_model("InputSchema", **fields)
+                                tool.args_schema.model_rebuild()
                             filtered_tools.append(tool)
                 else:
                     msg = f"Expected a StructuredTool or BaseTool, got {type(tool)}"

@@ -7,10 +7,8 @@ from lfx.components._importing import import_mod
 if TYPE_CHECKING:
     from lfx.components.files_and_knowledge.directory import DirectoryComponent
     from lfx.components.files_and_knowledge.file import FileComponent
-    from lfx.components.files_and_knowledge.info import KnowledgeInfoComponent
     from lfx.components.files_and_knowledge.ingestion import KnowledgeIngestionComponent
-    from lfx.components.files_and_knowledge.memory_info import MemoryInfoComponent
-    from lfx.components.files_and_knowledge.memory_retrieval import MemoryRetrievalComponent
+    from lfx.components.files_and_knowledge.memory import MemoryComponent
     from lfx.components.files_and_knowledge.retrieval import KnowledgeRetrievalComponent
     from lfx.components.files_and_knowledge.save_file import SaveToFileComponent
 
@@ -18,10 +16,8 @@ if TYPE_CHECKING:
 _dynamic_imports = {
     "DirectoryComponent": "directory",
     "FileComponent": "file",
-    "KnowledgeInfoComponent": "info",
     "KnowledgeIngestionComponent": "ingestion",
-    "MemoryInfoComponent": "memory_info",
-    "MemoryRetrievalComponent": "memory_retrieval",
+    "MemoryComponent": "memory",
     "KnowledgeRetrievalComponent": "retrieval",
     "SaveToFileComponent": "save_file",
 }
@@ -29,10 +25,8 @@ _dynamic_imports = {
 __all__ = [
     "DirectoryComponent",
     "FileComponent",
-    "KnowledgeInfoComponent",
     "KnowledgeIngestionComponent",
-    "MemoryInfoComponent",
-    "MemoryRetrievalComponent",
+    "MemoryComponent",
     "KnowledgeRetrievalComponent",
     "SaveToFileComponent",
 ]

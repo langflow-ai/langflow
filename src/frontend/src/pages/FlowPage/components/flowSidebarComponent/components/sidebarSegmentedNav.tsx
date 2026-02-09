@@ -91,11 +91,15 @@ const SidebarSegmentedNav = () => {
               <ShadTooltip content={item.tooltip} side="right">
                 <SidebarMenuButton
                   size="md"
+                  disabled={item.id === "saved" && !hasSavedComponents}
                   onClick={() => {
                     setSearch?.("");
+                    const isMainContentSection = ["logs", "messages", "evaluations", "memories"].includes(item.id);
                     if (activeSection === item.id && open) {
-                      // For logs and messages, don't toggle sidebar - they control main content
-                      if (item.id !== "logs" && item.id !== "messages") {
+                      if (isMainContentSection) {
+                        // Return to flow canvas without sidebar animation
+                        setActiveSection("components");
+                      } else {
                         toggleSidebar();
                       }
                     } else {
