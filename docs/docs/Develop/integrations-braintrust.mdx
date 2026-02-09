@@ -1,0 +1,92 @@
+---
+title: Braintrust
+slug: /integrations-braintrust
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+[Braintrust](https://www.braintrust.com) is an end-to-end platform for building AI applications, providing logging, tracing, evaluation, and prompt management. Braintrust helps developers debug, analyze, and optimize their AI systems with detailed span trees, token metrics, and scoring.
+
+This guide explains how to configure Langflow to collect tracing data about your flow executions and automatically send the data to Braintrust.
+
+## Prerequisites
+
+- A [Braintrust account](https://www.braintrust.com) and [API key](https://www.braintrust.com/docs/reference/api-keys)
+- A [running Langflow server](/get-started-installation) with a [flow](/concepts-flows) that you want to trace
+
+:::tip
+If you need a flow to test the Braintrust integration, see the [Langflow quickstart](/get-started-quickstart).
+:::
+
+## Set Braintrust credentials as environment variables {#braintrust-credentials}
+
+1. Get your API key from your [Braintrust settings](https://www.braintrust.com/app/settings/api-keys).
+
+2. Set your Braintrust API key as an environment variable in the same environment where you run Langflow.
+
+   <Tabs>
+   <TabItem value="linux" label="Linux/macOS" default>
+
+   ```bash
+   export BRAINTRUST_API_KEY=YOUR_API_KEY
+   ```
+
+   </TabItem>
+   <TabItem value="windows" label="Windows">
+
+   ```bash
+   set BRAINTRUST_API_KEY=YOUR_API_KEY
+   ```
+
+   </TabItem>
+   </Tabs>
+
+   Replace `YOUR_API_KEY` with your Braintrust API key.
+
+3. Optionally, set additional configuration:
+
+   <Tabs>
+   <TabItem value="linux" label="Linux/macOS" default>
+
+   ```bash
+   # Override the default Braintrust API URL (defaults to https://api.braintrust.dev)
+   export BRAINTRUST_API_URL=https://api.braintrust.dev
+
+   # Set a project name (defaults to "Langflow")
+   export BRAINTRUST_PROJECT=my-langflow-project
+   ```
+
+   </TabItem>
+   <TabItem value="windows" label="Windows">
+
+   ```bash
+   set BRAINTRUST_API_URL=https://api.braintrust.dev
+   set BRAINTRUST_PROJECT=my-langflow-project
+   ```
+
+   </TabItem>
+   </Tabs>
+
+## Start Langflow and view traces in Braintrust
+
+1. Start Langflow in the same environment where you set the Braintrust environment variables:
+
+   ```bash
+   uv run langflow run
+   ```
+
+2. Run a flow.
+
+   Langflow automatically collects and sends tracing data about the flow execution to Braintrust. Each flow run creates a trace with nested spans for every component execution and LangChain operation, including LLM calls with token usage metrics.
+
+3. View the collected data in your [Braintrust dashboard](https://www.braintrust.com/app).
+
+## Disable Braintrust tracing
+
+To disable the Braintrust integration, remove the [Braintrust environment variables](#braintrust-credentials), and then restart Langflow.
+
+## See also
+
+* [Braintrust documentation](https://www.braintrust.com/docs)
+* [Braintrust GitHub repository](https://github.com/braintrustdata/braintrust-sdk)
