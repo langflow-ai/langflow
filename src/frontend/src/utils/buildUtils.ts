@@ -1,6 +1,5 @@
 import type { Edge, Node } from "@xyflow/react";
 import type { AxiosError } from "axios";
-import { flushSync } from "react-dom";
 import { handleMessageEvent } from "@/components/core/playgroundComponent/chat-view/utils/message-event-handler";
 import {
   findLastBotMessage,
@@ -9,10 +8,7 @@ import {
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
 import { MISSED_ERROR_ALERT } from "@/constants/alerts_constants";
-import {
-  BUILD_POLLING_INTERVAL,
-  POLLING_MESSAGES,
-} from "@/constants/constants";
+import { POLLING_MESSAGES } from "@/constants/constants";
 import { performStreamingRequest } from "@/controllers/API/api";
 import {
   customBuildUrl,
@@ -58,9 +54,13 @@ type BuildVerticesParams = {
 
 // Events that can be processed synchronously (no await). These are batched
 // together so React 18 commits all their Zustand state updates in one render.
-const BATCHABLE_EVENTS = new Set(["end_vertex", "build_start", "build_end"]);
+export const BATCHABLE_EVENTS = new Set([
+  "end_vertex",
+  "build_start",
+  "build_end",
+]);
 
-const BATCH_YIELD_MS = 50;
+export const BATCH_YIELD_MS = 50;
 
 function getInactiveVertexData(vertexId: string): VertexBuildTypeAPI {
   // Build VertexBuildTypeAPI
@@ -175,12 +175,9 @@ export async function buildFlowVerticesWithFallback(
   }
 }
 
-const MIN_VISUAL_BUILD_TIME_MS = 300;
-
 async function pollBuildEvents(
   url: string,
   buildResults: Array<boolean>,
-  verticesStartTimeMs: Map<string, number>,
   callbacks: {
     onBuildStart?: (idList: VertexLayerElementType[]) => void;
     onBuildUpdate?: (data: any, status: BuildStatus, buildId: string) => void;
@@ -198,7 +195,6 @@ async function pollBuildEvents(
   return customPollBuildEvents(
     url,
     buildResults,
-    verticesStartTimeMs,
     callbacks,
     abortController,
     onEvent,
@@ -272,12 +268,9 @@ export async function buildFlowVertices({
     postData["inputs"] = inputs;
   }
 
-  console.log(`[build-trace] eventDelivery=${eventDelivery}`);
-
   try {
     // If event_delivery is direct, we'll stream from the build endpoint directly
     if (eventDelivery === EventDeliveryType.DIRECT) {
-      console.log("[build-trace] Using DIRECT streaming path");
       const buildController = new AbortController();
       buildController.signal.addEventListener("abort", () => {
         onBuildStopped && onBuildStopped();
@@ -285,7 +278,6 @@ export async function buildFlowVertices({
       useFlowStore.getState().setBuildController(buildController);
 
       const buildResults: Array<boolean> = [];
-      const verticesStartTimeMs: Map<string, number> = new Map();
 
       const eventCallbacks = {
         onBuildStart,
@@ -307,7 +299,6 @@ export async function buildFlowVertices({
             type,
             data,
             buildResults,
-            verticesStartTimeMs,
             eventCallbacks,
           );
         },
@@ -338,7 +329,7 @@ export async function buildFlowVertices({
               hadBatchable = true;
             } else {
               // Non-batchable events need async processing
-              const result = await onEvent(type, data, buildResults, verticesStartTimeMs, eventCallbacks);
+              const result = await onEvent(type, data, buildResults, eventCallbacks);
               if (!result) return false;
             }
           }
@@ -412,10 +403,8 @@ export async function buildFlowVertices({
     // Then stream the events
     const eventsUrl = customEventsUrl(job_id);
     const buildResults: Array<boolean> = [];
-    const verticesStartTimeMs: Map<string, number> = new Map();
 
     if (eventDelivery === EventDeliveryType.STREAMING) {
-      console.log("[build-trace] Using STREAMING path");
       const eventCallbacks = {
         onBuildStart,
         onBuildUpdate,
@@ -435,7 +424,6 @@ export async function buildFlowVertices({
             type,
             data,
             buildResults,
-            verticesStartTimeMs,
             eventCallbacks,
           );
         },
@@ -463,7 +451,7 @@ export async function buildFlowVertices({
               if (!result) return false;
               hadBatchable = true;
             } else {
-              const result = await onEvent(type, data, buildResults, verticesStartTimeMs, eventCallbacks);
+              const result = await onEvent(type, data, buildResults, eventCallbacks);
               if (!result) return false;
             }
           }
@@ -490,7 +478,6 @@ export async function buildFlowVertices({
         buildController,
       });
     } else {
-      console.log("[build-trace] Using POLLING path");
       const callbacks = {
         onBuildStart,
         onBuildUpdate,
@@ -502,7 +489,6 @@ export async function buildFlowVertices({
       return await pollBuildEvents(
         eventsUrl,
         buildResults,
-        verticesStartTimeMs,
         callbacks,
         buildController,
       );
@@ -637,7 +623,6 @@ export function processEndVertexEvent(
  * @param {string} type - The event type.
  * @param {any} data - The event data.
  * @param {boolean[]} buildResults - Array tracking build results.
- * @param {Map<string, number>} verticesStartTimeMs - Map tracking start times for vertices.
  * @param {Object} callbacks - Object containing callback functions.
  * @param {(idList: VertexLayerElementType[]) => void} [callbacks.onBuildStart] - Callback when vertices start building.
  * @param {(data: any, status: BuildStatus, buildId: string) => void} [callbacks.onBuildUpdate] - Callback for build updates.
@@ -652,7 +637,6 @@ async function onEvent(
   type: string,
   data: any,
   buildResults: boolean[],
-  verticesStartTimeMs: Map<string, number>,
   callbacks: {
     onBuildStart?: (idList: VertexLayerElementType[]) => void;
     onBuildUpdate?: (data: any, status: BuildStatus, buildId: string) => void;
@@ -675,13 +659,11 @@ async function onEvent(
     onValidateNodes,
   } = callbacks;
 
-  // Helper to update status and register start times for an array of vertex IDs.
   const onStartVertices = (ids: Array<string>) => {
     useFlowStore.getState().updateBuildStatus(ids, BuildStatus.TO_BUILD);
     if (onBuildStart) {
       onBuildStart(ids.map((id) => ({ id: id, reference: id })));
     }
-    ids.forEach((id) => verticesStartTimeMs.set(id, Date.now()));
   };
 
   switch (type) {
