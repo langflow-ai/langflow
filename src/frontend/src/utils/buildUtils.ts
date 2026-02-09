@@ -295,12 +295,7 @@ export async function buildFlowVertices({
         onData: async (event) => {
           const type = event["event"];
           const data = event["data"];
-          return onEvent(
-            type,
-            data,
-            buildResults,
-            eventCallbacks,
-          );
+          return onEvent(type, data, buildResults, eventCallbacks);
         },
         onDataBatch: async (events) => {
           let hadBatchable = false;
@@ -312,16 +307,24 @@ export async function buildFlowVertices({
               // Process synchronously — no await — so React batches state updates
               let result: boolean;
               if (type === "end_vertex") {
-                result = processEndVertexEvent(data, buildResults, eventCallbacks);
+                result = processEndVertexEvent(
+                  data,
+                  buildResults,
+                  eventCallbacks,
+                );
               } else if (type === "build_start") {
                 if (data?.id) {
-                  useFlowStore.getState().updateBuildStatus([data.id], BuildStatus.BUILDING);
+                  useFlowStore
+                    .getState()
+                    .updateBuildStatus([data.id], BuildStatus.BUILDING);
                 }
                 result = true;
               } else {
                 // build_end
                 if (data?.id) {
-                  useFlowStore.getState().updateBuildStatus([data.id], BuildStatus.BUILT);
+                  useFlowStore
+                    .getState()
+                    .updateBuildStatus([data.id], BuildStatus.BUILT);
                 }
                 result = true;
               }
@@ -329,7 +332,12 @@ export async function buildFlowVertices({
               hadBatchable = true;
             } else {
               // Non-batchable events need async processing
-              const result = await onEvent(type, data, buildResults, eventCallbacks);
+              const result = await onEvent(
+                type,
+                data,
+                buildResults,
+                eventCallbacks,
+              );
               if (!result) return false;
             }
           }
@@ -420,12 +428,7 @@ export async function buildFlowVertices({
         onData: async (event) => {
           const type = event["event"];
           const data = event["data"];
-          return onEvent(
-            type,
-            data,
-            buildResults,
-            eventCallbacks,
-          );
+          return onEvent(type, data, buildResults, eventCallbacks);
         },
         onDataBatch: async (events) => {
           let hadBatchable = false;
@@ -436,22 +439,35 @@ export async function buildFlowVertices({
             if (BATCHABLE_EVENTS.has(type)) {
               let result: boolean;
               if (type === "end_vertex") {
-                result = processEndVertexEvent(data, buildResults, eventCallbacks);
+                result = processEndVertexEvent(
+                  data,
+                  buildResults,
+                  eventCallbacks,
+                );
               } else if (type === "build_start") {
                 if (data?.id) {
-                  useFlowStore.getState().updateBuildStatus([data.id], BuildStatus.BUILDING);
+                  useFlowStore
+                    .getState()
+                    .updateBuildStatus([data.id], BuildStatus.BUILDING);
                 }
                 result = true;
               } else {
                 if (data?.id) {
-                  useFlowStore.getState().updateBuildStatus([data.id], BuildStatus.BUILT);
+                  useFlowStore
+                    .getState()
+                    .updateBuildStatus([data.id], BuildStatus.BUILT);
                 }
                 result = true;
               }
               if (!result) return false;
               hadBatchable = true;
             } else {
-              const result = await onEvent(type, data, buildResults, eventCallbacks);
+              const result = await onEvent(
+                type,
+                data,
+                buildResults,
+                eventCallbacks,
+              );
               if (!result) return false;
             }
           }
