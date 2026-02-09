@@ -169,18 +169,23 @@ class LangFuseTracer(BaseTracer):
         if not self._ready:
             return
 
+        # Serialize once and reuse to avoid duplicate work
+        inputs_ser = serialize(inputs)
+        outputs_ser = serialize(outputs)
+        metadata_ser = serialize(metadata) if metadata else None
+
         # Update the root span with final input/output
         self._root_span.update(
-            input=serialize(inputs),
-            output=serialize(outputs),
-            metadata=serialize(metadata) if metadata else None,
+            input=inputs_ser,
+            output=outputs_ser,
+            metadata=metadata_ser,
         )
 
         # Update trace-level data
         self._root_span.update_trace(
-            input=serialize(inputs),
-            output=serialize(outputs),
-            metadata=serialize(metadata) if metadata else None,
+            input=inputs_ser,
+            output=outputs_ser,
+            metadata=metadata_ser,
         )
 
         # End the root span
