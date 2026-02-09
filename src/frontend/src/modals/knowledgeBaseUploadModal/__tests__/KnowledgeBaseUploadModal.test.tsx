@@ -186,7 +186,6 @@ describe("KnowledgeBaseUploadModal", () => {
       expect(screen.getByText("Embedding Model")).toBeInTheDocument();
     });
 
-<<<<<<< Updated upstream
     it("renders with trigger children", () => {
       render(
         <KnowledgeBaseUploadModal>
@@ -198,14 +197,12 @@ describe("KnowledgeBaseUploadModal", () => {
       );
 
       expect(screen.getByTestId("trigger-btn")).toBeInTheDocument();
-=======
     it("renders modal when open", () => {
       render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
         wrapper: createTestWrapper(),
       });
 
       expect(screen.getByText("Configure Sources")).toBeInTheDocument();
->>>>>>> Stashed changes
     });
 
     it("shows Knowledge Ingestion link when onOpenExampleFlow is provided", () => {
