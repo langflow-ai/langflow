@@ -59,6 +59,12 @@ def _get_traceloop_tracer():
     return TraceloopTracer
 
 
+def _get_native_tracer():
+    from langflow.services.tracing.native import NativeTracer
+
+    return NativeTracer
+
+
 trace_context_var: ContextVar[TraceContext | None] = ContextVar("trace_context", default=None)
 component_context_var: ContextVar[ComponentTraceContext | None] = ContextVar("component_trace_context", default=None)
 
@@ -71,12 +77,14 @@ class TraceContext:
         project_name: str | None,
         user_id: str | None,
         session_id: str | None,
+        flow_id: str | None = None,
     ):
         self.run_id: UUID | None = run_id
         self.run_name: str | None = run_name
         self.project_name: str | None = project_name
         self.user_id: str | None = user_id
         self.session_id: str | None = session_id
+        self.flow_id: str | None = flow_id
         self.tracers: dict[str, BaseTracer] = {}
         self.all_inputs: dict[str, dict] = defaultdict(dict)
         self.all_outputs: dict[str, dict] = defaultdict(dict)
@@ -220,6 +228,20 @@ class TracingService(Service):
             session_id=trace_context.session_id,
         )
 
+    def _initialize_native_tracer(self, trace_context: TraceContext) -> None:
+        if self.deactivated:
+            return
+        native_tracer = _get_native_tracer()
+        trace_context.tracers["native"] = native_tracer(
+            trace_name=trace_context.run_name,
+            trace_type="chain",
+            project_name=trace_context.project_name,
+            trace_id=trace_context.run_id,
+            flow_id=trace_context.flow_id,
+            user_id=trace_context.user_id,
+            session_id=trace_context.session_id,
+        )
+
     async def start_tracers(
         self,
         run_id: UUID,
@@ -227,6 +249,7 @@ class TracingService(Service):
         user_id: str | None,
         session_id: str | None,
         project_name: str | None = None,
+        flow_id: str | None = None,
     ) -> None:
         """Start a trace for a graph run.
 
@@ -238,7 +261,7 @@ class TracingService(Service):
             return
         try:
             project_name = project_name or os.getenv("LANGCHAIN_PROJECT", "Langflow")
-            trace_context = TraceContext(run_id, run_name, project_name, user_id, session_id)
+            trace_context = TraceContext(run_id, run_name, project_name, user_id, session_id, flow_id)
             trace_context_var.set(trace_context)
             await self._start(trace_context)
             self._initialize_langsmith_tracer(trace_context)
@@ -247,6 +270,7 @@ class TracingService(Service):
             self._initialize_arize_phoenix_tracer(trace_context)
             self._initialize_opik_tracer(trace_context)
             self._initialize_traceloop_tracer(trace_context)
+            self._initialize_native_tracer(trace_context)
         except Exception as e:  # noqa: BLE001
             await logger.adebug(f"Error initializing tracers: {e}")
 
@@ -282,6 +306,7 @@ class TracingService(Service):
 
         - stop worker for current trace_context
         - call end for all the tracers
+        - wait for native tracer to flush to database
         """
         if self.deactivated:
             return
@@ -290,6 +315,15 @@ class TracingService(Service):
             return
         await self._stop(trace_context)
         self._end_all_tracers(trace_context, outputs, error)
+
+        # Wait for native tracer to flush to database
+        native_tracer = trace_context.tracers.get("native")
+        if native_tracer:
+            # Import here to avoid circular dependency
+            from langflow.services.tracing.native import NativeTracer
+
+            if isinstance(native_tracer, NativeTracer):
+                await native_tracer.wait_for_flush()
 
     @staticmethod
     def _cleanup_inputs(inputs: dict[str, Any]):

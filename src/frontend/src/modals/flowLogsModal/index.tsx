@@ -4,12 +4,14 @@ import { useSearchParams } from "react-router-dom";
 import IconComponent from "@/components/common/genericIconComponent";
 import PaginatorComponent from "@/components/common/paginatorComponent";
 import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useGetTransactionsQuery } from "@/controllers/API/queries/transactions";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { TransactionLogsRow } from "@/types/api";
 import { convertUTCToLocalTimezone } from "@/utils/utils";
 import BaseModal from "../baseModal";
 import { LogDetailViewer } from "./components/LogDetailViewer";
+import { TraceView } from "./components/TraceView";
 import { createFlowLogsColumns } from "./config/flowLogsColumns";
 
 interface DetailViewState {
@@ -25,6 +27,7 @@ export default function FlowLogsModal({
 }): JSX.Element {
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const [open, setOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("logs");
 
   const [pageIndex, setPageIndex] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -110,7 +113,7 @@ export default function FlowLogsModal({
         onOpenAutoFocus={handleOpenAutoFocus}
       >
         <BaseModal.Trigger asChild>{children}</BaseModal.Trigger>
-        <BaseModal.Header description="Inspect component executions.">
+        <BaseModal.Header description="Inspect component executions and traces.">
           <div className="flex w-full justify-between">
             <div className="flex h-fit w-32 items-center">
               <span className="pr-2">Logs</span>
@@ -120,29 +123,52 @@ export default function FlowLogsModal({
           </div>
         </BaseModal.Header>
         <BaseModal.Content>
-          <TableComponent
-            key={"Executions"}
-            readOnlyEdit
-            className="h-max-full h-full w-full"
-            pagination={false}
-            columnDefs={columns}
-            autoSizeStrategy={{ type: "fitGridWidth" }}
-            rowData={rows}
-            headerHeight={rows.length === 0 ? 0 : undefined}
-            onCellClicked={handleCellClicked}
-          ></TableComponent>
-          {!isLoading && (data?.pagination.total ?? 0) >= 10 && (
-            <div className="flex justify-end px-3 py-4">
-              <PaginatorComponent
-                pageIndex={data?.pagination.page ?? 1}
-                pageSize={data?.pagination.size ?? 10}
-                rowsCount={[12, 24, 48, 96]}
-                totalRowsCount={data?.pagination.total ?? 0}
-                paginate={handlePageChange}
-                pages={data?.pagination.pages}
-              />
-            </div>
-          )}
+          <Tabs
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className="flex h-full flex-col"
+          >
+            <TabsList className="mx-4 mt-2 w-fit">
+              <TabsTrigger value="logs" className="gap-2">
+                <IconComponent name="ScrollText" className="h-4 w-4" />
+                Logs
+              </TabsTrigger>
+              <TabsTrigger value="traces" className="gap-2">
+                <IconComponent name="Activity" className="h-4 w-4" />
+                Traces
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="logs" className="flex-1 overflow-hidden">
+              <TableComponent
+                key={"Executions"}
+                readOnlyEdit
+                className="h-max-full h-full w-full"
+                pagination={false}
+                columnDefs={columns}
+                autoSizeStrategy={{ type: "fitGridWidth" }}
+                rowData={rows}
+                headerHeight={rows.length === 0 ? 0 : undefined}
+                onCellClicked={handleCellClicked}
+              ></TableComponent>
+              {!isLoading && (data?.pagination.total ?? 0) >= 10 && (
+                <div className="flex justify-end px-3 py-4">
+                  <PaginatorComponent
+                    pageIndex={data?.pagination.page ?? 1}
+                    pageSize={data?.pagination.size ?? 10}
+                    rowsCount={[12, 24, 48, 96]}
+                    totalRowsCount={data?.pagination.total ?? 0}
+                    paginate={handlePageChange}
+                    pages={data?.pagination.pages}
+                  />
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="traces" className="flex-1 overflow-hidden">
+              <TraceView flowId={currentFlowId ?? flowIdFromUrl} />
+            </TabsContent>
+          </Tabs>
         </BaseModal.Content>
       </BaseModal>
 
