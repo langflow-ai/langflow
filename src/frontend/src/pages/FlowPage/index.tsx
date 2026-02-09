@@ -22,6 +22,7 @@ import {
 import Page from "./components/PageComponent";
 import EvaluationsMainContent from "./components/EvaluationsMainContent";
 import LogsMainContent from "./components/LogsMainContent";
+import MemoriesMainContent from "./components/MemoriesMainContent";
 import MessagesMainContent from "./components/MessagesMainContent";
 
 type LogsTab = "logs" | "traces";
@@ -40,6 +41,8 @@ function FlowMainContent({
   onSelectRun,
   selectedTraceId,
   selectedEvaluationId,
+  selectedMemoryId,
+  onSelectMemory,
 }: {
   view?: boolean;
   setIsLoading: (isLoading: boolean) => void;
@@ -50,6 +53,8 @@ function FlowMainContent({
   onSelectRun: (runId: string | null) => void;
   selectedTraceId: string | null;
   selectedEvaluationId: string | null;
+  selectedMemoryId: string | null;
+  onSelectMemory: (id: string | null) => void;
 }) {
   const { activeSection } = useSidebar();
 
@@ -87,6 +92,17 @@ function FlowMainContent({
       <main className="flex w-full overflow-hidden">
         <div className="h-full w-full">
           <EvaluationsMainContent selectedEvaluationId={selectedEvaluationId} />
+        </div>
+      </main>
+    );
+  }
+
+  // Show memories main content when memories section is active
+  if (ENABLE_NEW_SIDEBAR && activeSection === "memories") {
+    return (
+      <main className="flex w-full overflow-hidden">
+        <div className="h-full w-full">
+          <MemoriesMainContent selectedMemoryId={selectedMemoryId} onSelectMemory={onSelectMemory} />
         </div>
       </main>
     );
@@ -256,6 +272,9 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   // Evaluations state
   const [selectedEvaluationId, setSelectedEvaluationId] = useState<string | null>(null);
 
+  // Memories state
+  const [selectedMemoryId, setSelectedMemoryId] = useState<string | null>(null);
+
   return (
     <>
       <div className="flow-page-positioning">
@@ -280,6 +299,8 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
                     onSelectTrace={setSelectedTraceId}
                     selectedEvaluationId={selectedEvaluationId}
                     onSelectEvaluation={setSelectedEvaluationId}
+                    selectedMemoryId={selectedMemoryId}
+                    onSelectMemory={setSelectedMemoryId}
                   />
                 )}
                 <FlowMainContent
@@ -292,6 +313,8 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
                   onSelectRun={setSelectedRunId}
                   selectedTraceId={selectedTraceId}
                   selectedEvaluationId={selectedEvaluationId}
+                  selectedMemoryId={selectedMemoryId}
+                  onSelectMemory={setSelectedMemoryId}
                 />
               </FlowSearchProvider>
             </SidebarProvider>

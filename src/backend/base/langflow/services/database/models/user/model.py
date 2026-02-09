@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from langflow.services.database.models.dataset.model import Dataset
     from langflow.services.database.models.evaluation.model import Evaluation
     from langflow.services.database.models.flow.model import Flow
+    from langflow.services.database.models.memory.model import Memory
     from langflow.services.database.models.folder.model import Folder
     from langflow.services.database.models.variable.model import Variable
 
@@ -53,6 +54,10 @@ class User(SQLModel, table=True):  # type: ignore[call-arg]
         sa_relationship_kwargs={"cascade": "delete"},
     )
     evaluations: list["Evaluation"] = Relationship(
+        back_populates="user",
+        sa_relationship_kwargs={"cascade": "delete"},
+    )
+    memories: list["Memory"] = Relationship(
         back_populates="user",
         sa_relationship_kwargs={"cascade": "delete"},
     )

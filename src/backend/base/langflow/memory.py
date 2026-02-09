@@ -153,6 +153,16 @@ async def aadd_messages(messages: Message | list[Message], flow_id: str | UUID |
         messages_models = [MessageTable.from_message(msg, flow_id=flow_id) for msg in messages]
         async with session_scope() as session:
             messages_models = await aadd_messagetables(messages_models, session)
+
+        # Fire-and-forget: auto-capture into any active memories for this flow
+        if flow_id:
+            try:
+                from langflow.api.v1.memories import auto_capture_messages
+
+                asyncio.create_task(auto_capture_messages(messages_models, flow_id))
+            except Exception:
+                pass  # Never block message creation
+
         return [await Message.create(**message.model_dump()) for message in messages_models]
     except Exception as e:
         await logger.aexception(e)

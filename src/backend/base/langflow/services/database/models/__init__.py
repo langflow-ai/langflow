@@ -5,6 +5,7 @@ from .file import File
 from .flow import Flow
 from .folder import Folder
 from .jobs import Job
+from .memory import Memory, MemoryProcessedMessage
 from .message import MessageTable
 from .traces import SpanTable, TraceTable
 from .transactions import TransactionTable
@@ -21,6 +22,8 @@ __all__ = [
     "Flow",
     "Folder",
     "Job",
+    "Memory",
+    "MemoryProcessedMessage",
     "MessageTable",
     "SpanTable",
     "TraceTable",

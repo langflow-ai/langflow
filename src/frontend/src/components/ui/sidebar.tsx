@@ -32,7 +32,8 @@ export type SidebarSection =
   | "add_note"
   | "logs"
   | "messages"
-  | "evaluations";
+  | "evaluations"
+  | "memories";
 
 // Helper function to get cookie value
 function getCookie(name: string): string | null {

@@ -43,6 +43,7 @@ import { CategoryGroup } from "./components/categoryGroup";
 import NoResultsMessage from "./components/emptySearchComponent";
 import EvaluationsSidebarGroup from "./components/EvaluationsSidebarGroup";
 import LogsSidebarGroup from "./components/LogsSidebarGroup";
+import MemoriesSidebarGroup from "./components/MemoriesSidebarGroup";
 import McpSidebarGroup from "./components/McpSidebarGroup";
 import SavedComponentsSidebarGroup from "./components/SavedComponentsSidebarGroup";
 import MessagesSidebarGroup from "./components/MessagesSidebarGroup";
@@ -166,6 +167,9 @@ interface FlowSidebarComponentProps {
   // Evaluations state
   selectedEvaluationId?: string | null;
   onSelectEvaluation?: (id: string | null) => void;
+  // Memories state
+  selectedMemoryId?: string | null;
+  onSelectMemory?: (id: string | null) => void;
 }
 
 export function FlowSidebarComponent({
@@ -180,6 +184,8 @@ export function FlowSidebarComponent({
   onSelectTrace,
   selectedEvaluationId,
   onSelectEvaluation,
+  selectedMemoryId,
+  onSelectMemory,
 }: FlowSidebarComponentProps) {
   const rawData = useTypesStore((state) => state.data);
 
@@ -630,6 +636,7 @@ export function FlowSidebarComponent({
   const showLogs = ENABLE_NEW_SIDEBAR && activeSection === "logs";
   const showMessages = ENABLE_NEW_SIDEBAR && activeSection === "messages";
   const showEvaluations = ENABLE_NEW_SIDEBAR && activeSection === "evaluations";
+  const showMemories = ENABLE_NEW_SIDEBAR && activeSection === "memories";
   const showSaved = ENABLE_NEW_SIDEBAR && activeSection === "saved";
 
   const [category, component] = getFilterComponent?.split(".") ?? ["", ""];
@@ -668,7 +675,7 @@ export function FlowSidebarComponent({
             ENABLE_NEW_SIDEBAR && "sidebar-segmented",
           )}
         >
-          {!showLogs && !showMessages && !showEvaluations && (
+          {!showLogs && !showMessages && !showEvaluations && !showMemories && (
             <SidebarHeaderComponent
               showConfig={showConfig}
               setShowConfig={setShowConfig}
@@ -710,6 +717,11 @@ export function FlowSidebarComponent({
               <EvaluationsSidebarGroup
                 selectedEvaluationId={selectedEvaluationId ?? null}
                 onSelectEvaluation={onSelectEvaluation ?? (() => {})}
+              />
+            ) : showMemories ? (
+              <MemoriesSidebarGroup
+                selectedMemoryId={selectedMemoryId ?? null}
+                onSelectMemory={onSelectMemory ?? (() => {})}
               />
             ) : showSaved ? (
               <SavedComponentsSidebarGroup onDragStart={onDragStart} />
@@ -815,6 +827,7 @@ export function FlowSidebarComponent({
           showLogs ||
           showMessages ||
           showEvaluations ||
+          showMemories ||
           showSaved ? null : (
             <SidebarFooter className="border-t group-data-[collapsible=icon]:hidden p-1 gap-1">
               <SidebarMenuButtons

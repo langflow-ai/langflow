@@ -64,6 +64,12 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Evaluations",
     tooltip: "Evaluations",
   },
+  {
+    id: "memories",
+    icon: "Brain",
+    label: "Memories",
+    tooltip: "Memories",
+  },
 ];
 
 const SidebarSegmentedNav = () => {

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import type { KnowledgeBaseInfo } from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases";
@@ -6,12 +7,13 @@ import KnowledgeBaseDrawer from "../filesPage/components/KnowledgeBaseDrawer";
 import KnowledgeBasesTab from "../filesPage/components/KnowledgeBasesTab";
 
 export const KnowledgePage = () => {
+  const [searchParams] = useSearchParams();
   const [selectedKnowledgeBases, setSelectedKnowledgeBases] = useState<any[]>(
     [],
   );
   const [selectionCount, setSelectionCount] = useState(0);
   const [isShiftPressed, setIsShiftPressed] = useState(false);
-  const [searchText, setSearchText] = useState("");
+  const [searchText, setSearchText] = useState(searchParams.get("kb") ?? "");
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedKnowledgeBase, setSelectedKnowledgeBase] =
     useState<KnowledgeBaseInfo | null>(null);

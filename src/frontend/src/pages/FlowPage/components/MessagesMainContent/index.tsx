@@ -20,6 +20,8 @@ import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useMessagesStore } from "@/stores/messagesStore";
 import CreateDatasetFromMessagesModal from "@/modals/createDatasetFromMessagesModal";
+import AddToMemoryModal from "@/modals/addToMemoryModal";
+import { useGetMemories } from "@/controllers/API/queries/memories/use-get-memories";
 
 interface MessagesMainContentProps {
   selectedSessionId?: string | null;
@@ -76,6 +78,13 @@ export default function MessagesMainContent({
   const deleteMessagesStore = useMessagesStore((state) => state.removeMessages);
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [createDatasetModalOpen, setCreateDatasetModalOpen] = useState(false);
+  const [addToMemoryModalOpen, setAddToMemoryModalOpen] = useState(false);
+
+  const { data: memories } = useGetMemories(
+    { flowId: currentFlowId ?? undefined },
+    { enabled: !!currentFlowId },
+  );
+  const hasMemories = (memories?.length ?? 0) > 0;
 
   const { isLoading } = useGetMessagesQuery(
     { id: currentFlowId ?? undefined, mode: "union" },
@@ -191,6 +200,16 @@ export default function MessagesMainContent({
               Delete ({selectedRows.size})
             </Button>
           )}
+          {selectedRows.size > 0 && hasMemories && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setAddToMemoryModalOpen(true)}
+            >
+              <IconComponent name="Brain" className="mr-1.5 h-3.5 w-3.5" />
+              Add to Memory ({selectedRows.size})
+            </Button>
+          )}
           {sessionsForModal.length > 0 && (
             <Button
               variant="outline"
@@ -289,6 +308,13 @@ export default function MessagesMainContent({
         flowId={currentFlowId || ""}
         sessions={sessionsForModal}
         selectedSessionId={selectedSessionId}
+      />
+
+      <AddToMemoryModal
+        open={addToMemoryModalOpen}
+        setOpen={setAddToMemoryModalOpen}
+        messageIds={Array.from(selectedRows)}
+        onSuccess={() => setSelectedRows(new Set())}
       />
     </div>
   );
