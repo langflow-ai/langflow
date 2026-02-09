@@ -3,6 +3,8 @@
 Implements Langflow's BaseTracer interface to send component-level and
 LangChain-level traces to Braintrust.
 
+Only depends on the ``braintrust`` package.
+
 Activation: set the BRAINTRUST_API_KEY environment variable.
 Optional: BRAINTRUST_API_URL, BRAINTRUST_PROJECT.
 """
@@ -10,11 +12,15 @@ Optional: BRAINTRUST_API_URL, BRAINTRUST_PROJECT.
 from __future__ import annotations
 
 import os
+import time
 import types
 from typing import TYPE_CHECKING, Any
+from uuid import UUID as PyUUID
 
+from langchain_core.callbacks.base import BaseCallbackHandler
 from langchain_core.documents import Document
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
+from langchain_core.outputs.llm_result import LLMResult
 from lfx.log.logger import logger
 from typing_extensions import override
 
@@ -24,22 +30,343 @@ from langflow.services.tracing.base import BaseTracer
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-    from uuid import UUID
 
-    from langchain.callbacks.base import BaseCallbackHandler
+    from langchain_core.agents import AgentAction, AgentFinish
     from lfx.graph.vertex.base import Vertex
 
     from langflow.services.tracing.schema import Log
+
+
+# ---------------------------------------------------------------------------
+# Inline LangChain callback handler (braintrust SDK only, no braintrust-langchain)
+# ---------------------------------------------------------------------------
+
+
+class _BraintrustLangChainHandler(BaseCallbackHandler):
+    """Minimal LangChain callback handler that logs spans via the braintrust SDK.
+
+    This is intentionally kept lightweight.  It traces LLM / chat-model calls,
+    chains, tools, and retrievers — capturing inputs, outputs, token metrics
+    and time-to-first-token — using only ``braintrust.Span.start_span``,
+    ``Span.log``, and ``Span.end``.
+    """
+
+    def __init__(self, parent_span: Any) -> None:
+        self._parent_span = parent_span
+        self._spans: dict[PyUUID, Any] = {}
+        self._start_times: dict[PyUUID, float] = {}
+        self._first_token_times: dict[PyUUID, float] = {}
+
+    # -- helpers -----------------------------------------------------------
+
+    def _start(
+        self,
+        run_id: PyUUID,
+        parent_run_id: PyUUID | None,
+        name: str,
+        span_type: str | None = None,
+        *,
+        input: Any = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> None:
+        from braintrust import SpanTypeAttribute
+
+        parent = self._spans.get(parent_run_id) if parent_run_id else None  # type: ignore[arg-type]
+        parent = parent or self._parent_span
+
+        type_attr = None
+        if span_type == "llm":
+            type_attr = SpanTypeAttribute.LLM
+        elif span_type == "tool":
+            type_attr = SpanTypeAttribute.TOOL
+        elif span_type == "function":
+            type_attr = SpanTypeAttribute.FUNCTION
+        elif span_type == "task":
+            type_attr = SpanTypeAttribute.TASK
+
+        span = parent.start_span(
+            name=name,
+            type=type_attr,
+            input=input,
+            metadata=metadata or {},
+        )
+        self._spans[run_id] = span
+
+    def _end(
+        self,
+        run_id: PyUUID,
+        *,
+        output: Any = None,
+        error: str | None = None,
+        metadata: dict[str, Any] | None = None,
+        metrics: dict[str, Any] | None = None,
+    ) -> None:
+        span = self._spans.pop(run_id, None)
+        if span is None:
+            return
+        span.log(
+            output=output,
+            error=error,
+            metadata=metadata or {},
+            metrics=metrics or {},
+        )
+        span.end()
+
+    # -- LLM / Chat Model -------------------------------------------------
+
+    def on_llm_start(
+        self,
+        serialized: dict[str, Any],
+        prompts: list[str],
+        *,
+        run_id: PyUUID,
+        parent_run_id: PyUUID | None = None,
+        tags: list[str] | None = None,
+        metadata: dict[str, Any] | None = None,
+        name: str | None = None,
+        **kwargs: Any,
+    ) -> None:
+        self._start_times[run_id] = time.perf_counter()
+        resolved_name = name or serialized.get("name") or _last(serialized.get("id")) or "LLM"
+        self._start(
+            run_id,
+            parent_run_id,
+            resolved_name,
+            span_type="llm",
+            input=prompts,
+            metadata={"serialized": serialized, "name": name, "metadata": metadata, **(kwargs or {})},
+        )
+
+    def on_chat_model_start(
+        self,
+        serialized: dict[str, Any],
+        messages: list[list[BaseMessage]],
+        *,
+        run_id: PyUUID,
+        parent_run_id: PyUUID | None = None,
+        tags: list[str] | None = None,
+        metadata: dict[str, Any] | None = None,
+        name: str | None = None,
+        **kwargs: Any,
+    ) -> None:
+        self._start_times[run_id] = time.perf_counter()
+        resolved_name = name or serialized.get("name") or _last(serialized.get("id")) or "Chat Model"
+        self._start(
+            run_id,
+            parent_run_id,
+            resolved_name,
+            span_type="llm",
+            input=messages,
+            metadata={"serialized": serialized, "name": name, "metadata": metadata, **(kwargs or {})},
+        )
+
+    def on_llm_end(
+        self,
+        response: LLMResult,
+        *,
+        run_id: PyUUID,
+        parent_run_id: PyUUID | None = None,
+        **kwargs: Any,
+    ) -> None:
+        metrics = _extract_token_metrics(response)
+
+        # Time-to-first-token
+        first_token_time = self._first_token_times.pop(run_id, None)
+        start_time = self._start_times.pop(run_id, None)
+        if first_token_time is not None and start_time is not None:
+            metrics["time_to_first_token"] = first_token_time - start_time
+
+        model_name = _extract_model_name(response)
+        self._end(
+            run_id,
+            output=response,
+            metadata={"model": model_name, **kwargs} if model_name else kwargs,
+            metrics=metrics,
+        )
+
+    def on_llm_error(self, error: BaseException, *, run_id: PyUUID, **kwargs: Any) -> None:
+        self._start_times.pop(run_id, None)
+        self._first_token_times.pop(run_id, None)
+        self._end(run_id, error=str(error))
+
+    def on_llm_new_token(self, token: str, *, run_id: PyUUID, **kwargs: Any) -> None:
+        if run_id not in self._first_token_times:
+            self._first_token_times[run_id] = time.perf_counter()
+
+    # -- Chains ------------------------------------------------------------
+
+    def on_chain_start(
+        self,
+        serialized: dict[str, Any],
+        inputs: dict[str, Any],
+        *,
+        run_id: PyUUID,
+        parent_run_id: PyUUID | None = None,
+        tags: list[str] | None = None,
+        name: str | None = None,
+        metadata: dict[str, Any] | None = None,
+        **kwargs: Any,
+    ) -> None:
+        if tags and "langsmith:hidden" in tags:
+            return
+        resolved_name = (
+            name
+            or (metadata or {}).get("langgraph_node")
+            or serialized.get("name")
+            or _last(serialized.get("id"))
+            or "Chain"
+        )
+        self._start(
+            run_id,
+            parent_run_id,
+            resolved_name,
+            span_type="task",
+            input=inputs,
+            metadata={"serialized": serialized, "name": name, "metadata": metadata, **(kwargs or {})},
+        )
+
+    def on_chain_end(self, outputs: dict[str, Any], *, run_id: PyUUID, **kwargs: Any) -> None:
+        self._end(run_id, output=outputs)
+
+    def on_chain_error(self, error: BaseException, *, run_id: PyUUID, **kwargs: Any) -> None:
+        self._end(run_id, error=str(error))
+
+    # -- Tools -------------------------------------------------------------
+
+    def on_tool_start(
+        self,
+        serialized: dict[str, Any],
+        input_str: str,
+        *,
+        run_id: PyUUID,
+        parent_run_id: PyUUID | None = None,
+        tags: list[str] | None = None,
+        metadata: dict[str, Any] | None = None,
+        name: str | None = None,
+        inputs: dict[str, Any] | None = None,
+        **kwargs: Any,
+    ) -> None:
+        resolved_name = name or serialized.get("name") or _last(serialized.get("id")) or "Tool"
+        self._start(
+            run_id,
+            parent_run_id,
+            resolved_name,
+            span_type="tool",
+            input=inputs or input_str,
+            metadata={"serialized": serialized, "name": name, "metadata": metadata, **(kwargs or {})},
+        )
+
+    def on_tool_end(self, output: Any, *, run_id: PyUUID, **kwargs: Any) -> None:
+        self._end(run_id, output=output)
+
+    def on_tool_error(self, error: BaseException, *, run_id: PyUUID, **kwargs: Any) -> None:
+        self._end(run_id, error=str(error))
+
+    # -- Retriever ---------------------------------------------------------
+
+    def on_retriever_start(
+        self,
+        serialized: dict[str, Any],
+        query: str,
+        *,
+        run_id: PyUUID,
+        parent_run_id: PyUUID | None = None,
+        tags: list[str] | None = None,
+        metadata: dict[str, Any] | None = None,
+        name: str | None = None,
+        **kwargs: Any,
+    ) -> None:
+        resolved_name = name or serialized.get("name") or _last(serialized.get("id")) or "Retriever"
+        self._start(
+            run_id,
+            parent_run_id,
+            resolved_name,
+            span_type="function",
+            input=query,
+            metadata={"serialized": serialized, "name": name, "metadata": metadata, **(kwargs or {})},
+        )
+
+    def on_retriever_end(self, documents: Sequence[Document], *, run_id: PyUUID, **kwargs: Any) -> None:
+        self._end(run_id, output=documents)
+
+    def on_retriever_error(self, error: BaseException, *, run_id: PyUUID, **kwargs: Any) -> None:
+        self._end(run_id, error=str(error))
+
+    # -- Agent -------------------------------------------------------------
+
+    def on_agent_action(self, action: AgentAction, *, run_id: PyUUID, parent_run_id: PyUUID | None = None, **kwargs: Any) -> None:
+        self._start(run_id, parent_run_id, action.tool, span_type="tool", input=action)
+
+    def on_agent_finish(self, finish: AgentFinish, *, run_id: PyUUID, **kwargs: Any) -> None:
+        self._end(run_id, output=finish)
+
+
+# ---------------------------------------------------------------------------
+# Utility helpers
+# ---------------------------------------------------------------------------
+
+
+def _last(items: list[Any] | None) -> Any:
+    return items[-1] if items else None
+
+
+def _extract_token_metrics(response: LLMResult) -> dict[str, Any]:
+    """Pull token usage out of an LLMResult."""
+    metrics: dict[str, Any] = {}
+    for generations in response.generations or []:
+        for generation in generations or []:
+            message = getattr(generation, "message", None)
+            if not message:
+                continue
+            usage = getattr(message, "usage_metadata", None)
+            if usage and isinstance(usage, dict):
+                metrics.update(
+                    {
+                        k: v
+                        for k, v in {
+                            "total_tokens": usage.get("total_tokens"),
+                            "prompt_tokens": usage.get("input_tokens"),
+                            "completion_tokens": usage.get("output_tokens"),
+                        }.items()
+                        if v is not None
+                    }
+                )
+    if not metrics:
+        llm_output: dict[str, Any] = response.llm_output or {}
+        metrics = llm_output.get("token_usage") or llm_output.get("estimatedTokens") or {}
+    return metrics
+
+
+def _extract_model_name(response: LLMResult) -> str | None:
+    for generations in response.generations or []:
+        for generation in generations or []:
+            message = getattr(generation, "message", None)
+            if not message:
+                continue
+            resp_meta = getattr(message, "response_metadata", None)
+            if resp_meta and isinstance(resp_meta, dict):
+                name = resp_meta.get("model_name")
+                if name:
+                    return name
+    llm_output: dict[str, Any] = response.llm_output or {}
+    return llm_output.get("model_name") or llm_output.get("model") or None
+
+
+# ---------------------------------------------------------------------------
+# Main tracer
+# ---------------------------------------------------------------------------
 
 
 class BraintrustTracer(BaseTracer):
     """Traces Langflow flow executions to Braintrust.
 
     This tracer creates a root span for each flow run and child spans for
-    each component execution.  It also returns a ``BraintrustCallbackHandler``
+    each component execution.  It also returns a LangChain callback handler
     from ``get_langchain_callback`` so that LangChain-level operations (LLM
     calls, tool usage, retriever queries) are traced with full detail
     including token metrics and time-to-first-token.
+
+    Only depends on the ``braintrust`` package (no ``braintrust-langchain``).
     """
 
     flow_id: str
@@ -49,7 +376,7 @@ class BraintrustTracer(BaseTracer):
         trace_name: str,
         trace_type: str,
         project_name: str,
-        trace_id: UUID,
+        trace_id: PyUUID,
         user_id: str | None = None,
         session_id: str | None = None,
     ) -> None:
@@ -193,24 +520,14 @@ class BraintrustTracer(BaseTracer):
         if not self._ready:
             return None
 
-        try:
-            from braintrust_langchain import BraintrustCallbackHandler
-
-            # Use the most recent open span as parent so LangChain traces
-            # nest under the current component span.
-            parent_span = (
-                self.spans[next(reversed(self.spans))]
-                if self.spans
-                else self._root_span
-            )
-            return BraintrustCallbackHandler(logger=parent_span)
-        except ImportError:
-            logger.debug(
-                "braintrust-langchain is not installed. "
-                "Install it with `pip install braintrust-langchain` "
-                "to enable deep LangChain tracing."
-            )
-            return None
+        # Use the most recent open span as parent so LangChain traces
+        # nest under the current component span.
+        parent_span = (
+            self.spans[next(reversed(self.spans))]
+            if self.spans
+            else self._root_span
+        )
+        return _BraintrustLangChainHandler(parent_span)
 
     # ------------------------------------------------------------------
     # Helpers
