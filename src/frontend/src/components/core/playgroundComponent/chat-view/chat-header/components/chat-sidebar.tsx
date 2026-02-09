@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,7 @@ export function ChatSidebar({
   onOpenLogs,
   renameLocalSession,
 }: ChatSidebarProps) {
+  const [openMenuSession, setOpenMenuSession] = useState<string | null>(null);
   const currentFlowId = useGetFlowId();
   const { handleDelete, handleRename } = useEditSessionInfo({
     flowId: currentFlowId,
@@ -93,6 +94,10 @@ export function ChatSidebar({
               selectedView={undefined}
               setSelectedView={() => {}}
               playgroundPage={true}
+              menuOpen={openMenuSession === session}
+              onMenuOpenChange={(open) => {
+                setOpenMenuSession(open ? session : null);
+              }}
             />
           ))}
         </div>
