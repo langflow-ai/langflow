@@ -274,8 +274,11 @@ withEventDeliveryModes(
     await page.getByRole("gridcell").last().isVisible();
     await page.getByRole("checkbox").first().click();
     await page.getByTestId("delete-row-button").last().click();
-    await page.getByText("No Data Available", { exact: true }).last().isVisible();
-        await page.getByText("Close").last().click();
+    await page
+      .getByText("No Data Available", { exact: true })
+      .last()
+      .isVisible();
+    await page.getByText("Close").last().click();
 
     await page.waitForSelector('[data-testid="input-chat-playground"]', {
       timeout: 60000,
