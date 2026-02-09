@@ -1,0 +1,58 @@
+---
+title: Guardrails
+slug: /guardrails
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+The **Guardrails** component validates input text against security and safety guardrails by issuing prompts to a language model (LLM) to check for violations.
+
+The following guardrails can be validated against:
+
+- **PII**: Detects personal identifiable information such as names, addresses, phone numbers, email addresses, social security numbers, credit card numbers, or other personal data.
+- **Tokens/Passwords**: Detects API tokens, passwords, API keys, access keys, secret keys, authentication credentials, or other sensitive credentials.
+- **Jailbreak**: Detects attempts to bypass AI safety guidelines, manipulate the model's behavior, or make it ignore its instructions.
+- **Offensive Content**: Detects offensive, hateful, discriminatory, violent, or inappropriate content.
+- **Malicious Code**: Detects potentially malicious code, scripts, exploits, or harmful commands.
+- **Prompt Injection**: Detects attempts to inject malicious prompts, override system instructions, or manipulate the AI's behavior through embedded instructions.
+
+When validation passes, the input continues through the **Pass** output.
+When validation fails, the input is blocked and sent through the **Fail** output with a justification explaining why it failed.
+
+## Use the Guardrails component in a flow
+
+1. Connect a **Chat Input** or other text source to the **Guardrails** component's **Input Text** port.
+2. Select a **Language Model** to use for validation. The component uses the connected LLM to analyze the input text against the enabled guardrails.
+3. From the **Guardrails** dropdown, select one or more guardrails to enable.
+For example, select **
+4. Connect the **Pass** output to components to receive validated input.
+5. Optionally, connect the **Fail** output to handle blocked inputs, such as a [**Chat Output** component](/chat-input-and-output) or [**Write File** component](/write-file).
+
+## Create custom guardrails
+
+You can create custom guardrails by enabling **Enable Custom Guardrail** and providing a description of what to detect in the **Custom Guardrail Description** field.
+
+Custom guardrails can work simultaneously with the built-in guardrails, and follow the same validation process.
+
+For example, to block inputs that mention competitor names or products, enter the following in the **Custom Guardrail Description** field:
+
+```
+competitor company names, competitor product names, or references to competing services
+```
+
+When this custom guardrail is enabled, the LLM analyzes the input text against your criteria. If it detects content matching your description, such as mentions of competitors, validation fails and the input is blocked. Otherwise, validation passes and the input continues through the **Pass** output.
+
+## Guardrails parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| Language Model (`model`) | `LanguageModel` | Input parameter. The [`LanguageModel`](/data-types#languagemodel) output from a **Language Model** component that defines the LLM to use for validation. |
+| API Key (`api_key`) | Secret String | Input parameter. Model provider API key. Required if the model provider needs authentication. |
+| Guardrails (`enabled_guardrails`) | Multiselect | Input parameter. Select one or more security guardrails to validate the input against. Options: `PII`, `Tokens/Passwords`, `Jailbreak`, `Offensive Content`, `Malicious Code`, `Prompt Injection`. Default: `["PII", "Tokens/Passwords", "Jailbreak"]`. |
+| Input Text (`input_text`) | Multiline String | Input parameter. The text to validate against guardrails. Accepts `Message` input types. |
+| Enable Custom Guardrail (`enable_custom_guardrail`) | Boolean | Input parameter. Enable a custom guardrail with your own validation criteria. Default: `false`. |
+| Custom Guardrail Description (`custom_guardrail_explanation`) | Multiline String | Input parameter. Describe what the custom guardrail should check for. This description is used by the LLM to validate the input. Be specific and clear about what you want to detect. Only used when `enable_custom_guardrail` is `true`. |
+| Heuristic Detection Threshold (`heuristic_threshold`) | Slider | Input parameter. Score threshold (0.0-1.0) for heuristic jailbreak/prompt injection detection. Strong patterns (e.g., "ignore instructions", "jailbreak") have high weights, while weak patterns (e.g., "bypass", "act as") have low weights. If the cumulative score meets or exceeds this threshold, the input fails immediately. Lower values are more strict; higher values defer more cases to LLM validation. Default: `0.7`. |
