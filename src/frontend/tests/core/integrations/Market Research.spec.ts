@@ -38,12 +38,11 @@ withEventDeliveryModes(
 
     await initialGPTsetup(page);
 
-        await disableInspectionPanel(page);
-    
+    await disableInspectionPanel(page);
 
-    await page.getByTestId("popover-anchor-input-api_key").fill(
-      process.env.TAVILY_API_KEY || "",
-    );
+    await page
+      .getByTestId("popover-anchor-input-api_key")
+      .fill(process.env.TAVILY_API_KEY || "");
 
     await unselectNodes(page);
 
