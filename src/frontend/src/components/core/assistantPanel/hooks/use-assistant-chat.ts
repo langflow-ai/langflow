@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from "react";
+import ShortUniqueId from "short-unique-id";
 import {
   postAssistStream,
   type AgenticStepType,
@@ -11,6 +12,8 @@ import type {
   AssistantMessage,
   AssistantModel,
 } from "../assistant-panel.types";
+
+const uid = new ShortUniqueId();
 
 interface UseAssistantChatReturn {
   messages: AssistantMessage[];
@@ -44,14 +47,14 @@ export function useAssistantChat(): UseAssistantChatReturn {
       }
 
       const userMessage: AssistantMessage = {
-        id: crypto.randomUUID(),
+        id: uid.randomUUID(10),
         role: "user",
         content,
         timestamp: new Date(),
         status: "complete",
       };
 
-      const assistantMessageId = crypto.randomUUID();
+      const assistantMessageId = uid.randomUUID(10);
       const assistantMessage: AssistantMessage = {
         id: assistantMessageId,
         role: "assistant",
