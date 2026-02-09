@@ -3,6 +3,8 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING, Union
 
+from lfx.services.manager import get_service_manager as _get_service_manager
+
 from langflow.services.schema import ServiceType
 
 if TYPE_CHECKING:
@@ -43,9 +45,7 @@ def get_service(service_type: ServiceType, default=None):
         Any: The service instance.
 
     """
-    from lfx.services.manager import get_service_manager
-
-    service_manager = get_service_manager()
+    service_manager = _get_service_manager()
 
     if not service_manager.are_factories_registered():
         # ! This is a workaround to ensure that the service manager is initialized
@@ -249,6 +249,13 @@ def get_queue_service() -> JobQueueService:
 
 def get_auth_service() -> BaseAuthService:
     """Retrieve the authentication service."""
+    # Avoid creating a default factory object if the service already exists.
+    service_manager = _get_service_manager()
+    existing = service_manager.get(ServiceType.AUTH_SERVICE)
+    if existing is not None:
+        return existing
+
+    # Only import and instantiate the default factory when necessary.
     from langflow.services.auth.factory import AuthServiceFactory
 
     return get_service(ServiceType.AUTH_SERVICE, AuthServiceFactory())
