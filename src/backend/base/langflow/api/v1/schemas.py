@@ -363,8 +363,10 @@ class PublicConfigResponse(BaseModel):
     """Configuration response for public/unauthenticated endpoints like the public playground.
 
     Contains only the configuration values needed for public features, without sensitive data.
+    The 'type' field is a discriminator to distinguish from full ConfigResponse.
     """
 
+    type: Literal["public"] = "public"
     max_file_size_upload: int
     event_delivery: Literal["polling", "streaming", "direct"]
     voice_mode_available: bool
@@ -389,6 +391,12 @@ class PublicConfigResponse(BaseModel):
 
 
 class ConfigResponse(BaseModel):
+    """Full configuration response for authenticated users.
+
+    The 'type' field is a discriminator to distinguish from PublicConfigResponse.
+    """
+
+    type: Literal["full"] = "full"
     feature_flags: FeatureFlags
     serialization_max_items_length: int
     serialization_max_text_length: int

@@ -13,6 +13,7 @@ import { UseRequestProcessor } from "../../services/request-processor";
 
 // Base config - common fields shared by all responses
 interface BaseConfig {
+  type: "public" | "full";
   frontend_timeout: number;
   max_file_size_upload: number;
   event_delivery: EventDeliveryType;
@@ -38,11 +39,11 @@ export interface ConfigResponse extends BaseConfig {
 // Union type for the response (can be either public or full config)
 export type ConfigResponseType = PublicConfigResponse | ConfigResponse;
 
-// Type guard to check if response is full config
+// Type guard to check if response is full config (uses type discriminator)
 export const isFullConfig = (
   config: ConfigResponseType,
 ): config is ConfigResponse => {
-  return "auto_saving" in config;
+  return config.type === "full";
 };
 
 export const useGetConfig: useQueryFunctionType<
