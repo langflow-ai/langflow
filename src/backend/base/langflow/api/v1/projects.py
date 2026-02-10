@@ -1,5 +1,6 @@
 import io
 import json
+import re
 import zipfile
 from datetime import datetime, timezone
 from typing import Annotated, cast
@@ -636,6 +637,26 @@ async def download_file(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
+def _extract_project_name_from_zip_filename(filename: str | None) -> str:
+    """Extract the project name from a zip filename produced by download_file.
+
+    The download endpoint uses the format: ``{YYYYMMDD_HHMMSS}_{project_name}_flows.zip``
+    """
+    if not filename:
+        return "Imported Project"
+
+    name = filename
+    # Strip the .zip extension
+    if name.lower().endswith(".zip"):
+        name = name[:-4]
+    # Strip the ``_flows`` suffix added by download_file
+    if name.endswith("_flows"):
+        name = name[: -len("_flows")]
+    # Strip the leading timestamp (``YYYYMMDD_HHMMSS_``)
+    name = re.sub(r"^\d{8}_\d{6}_", "", name)
+    return name or "Imported Project"
+
+
 @router.post("/upload/", response_model=list[FlowRead], status_code=201)
 async def upload_file(
     *,
@@ -643,9 +664,52 @@ async def upload_file(
     file: Annotated[UploadFile, File(...)],
     current_user: CurrentActiveUser,
 ):
-    """Upload flows from a file."""
+    """Upload flows from a file.
+
+    Accepts either a JSON file with the structure
+    ``{"folder_name": "...", "folder_description": "...", "flows": [...]}``
+    or a ``.zip`` archive exported by the ``/download/`` endpoint (containing
+    individual flow JSON files).
+    """
     contents = await file.read()
-    data = orjson.loads(contents)
+
+    if not contents:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty")
+
+    # Detect whether the uploaded file is a zip archive.
+    # ZIP files start with the magic bytes ``PK\x03\x04``.
+    if contents[:4] == b"PK\x03\x04":
+        try:
+            zip_buffer = io.BytesIO(contents)
+            with zipfile.ZipFile(zip_buffer, "r") as zf:
+                flow_dicts: list[dict] = []
+                for entry_name in zf.namelist():
+                    if not entry_name.lower().endswith(".json"):
+                        continue
+                    raw = zf.read(entry_name)
+                    flow_dicts.append(orjson.loads(raw))
+
+            if not flow_dicts:
+                raise HTTPException(status_code=400, detail="No flow JSON files found inside the zip archive")
+
+            # Derive a project name from the uploaded filename
+            folder_name = _extract_project_name_from_zip_filename(file.filename)
+            data = {
+                "folder_name": folder_name,
+                "folder_description": "",
+                "flows": flow_dicts,
+            }
+        except zipfile.BadZipFile as exc:
+            raise HTTPException(status_code=400, detail="Uploaded file appears to be a zip but is corrupted") from exc
+    else:
+        try:
+            data = orjson.loads(contents)
+        except Exception as exc:
+            raise HTTPException(
+                status_code=400,
+                detail="Uploaded file is not valid JSON. If you exported a project as a zip, "
+                "make sure the file was not corrupted during transfer.",
+            ) from exc
 
     if not data:
         raise HTTPException(status_code=400, detail="No flows found in the file")
@@ -654,7 +718,7 @@ async def upload_file(
 
     data["folder_name"] = project_name
 
-    project = FolderCreate(name=data["folder_name"], description=data["folder_description"])
+    project = FolderCreate(name=data["folder_name"], description=data.get("folder_description", ""))
 
     new_project = Folder.model_validate(project, from_attributes=True)
     new_project.id = None
@@ -675,7 +739,7 @@ async def upload_file(
     await session.flush()
     await session.refresh(new_project)
     del data["folder_name"]
-    del data["folder_description"]
+    data.pop("folder_description", None)
 
     if "flows" in data:
         flow_list = FlowListCreate(flows=[FlowCreate(**flow) for flow in data["flows"]])
