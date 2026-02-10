@@ -2,17 +2,16 @@
 
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from typing import Any
 
-from lfx.services.base import Service
 from lfx.services.deployment.base import BaseDeploymentService
 from lfx.services.registry import register_service
 from lfx.services.schema import ServiceType
 
 
 @register_service(ServiceType.DEPLOYMENT_SERVICE)
-class DeploymentService(Service, BaseDeploymentService, ABC):
+class DeploymentService(BaseDeploymentService):
     """Minimal deployment service implementation for LFX.
 
     This is a stub that exposes
@@ -147,10 +146,6 @@ class DeploymentService(Service, BaseDeploymentService, ABC):
         """Return snapshot metadata by provider ID."""
         raise NotImplementedError
 
-    @abstractmethod
-    async def update_snapshot(self, snapshot_id: str, *, data: dict | None = None) -> dict[str, Any]:
-        """Update a provider snapshot's JSON data."""
-        raise NotImplementedError
 
     @abstractmethod
     async def delete_snapshot(self, snapshot_id: str) -> None:

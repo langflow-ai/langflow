@@ -333,11 +333,6 @@ class DeploymentServiceProtocol(Protocol):
         ...
 
     @abstractmethod
-    async def update_snapshot(self, snapshot_id: str, *, data: dict | None = None) -> dict[str, Any]:
-        """Update a provider snapshot's JSON data."""
-        ...
-
-    @abstractmethod
     async def delete_snapshot(self, snapshot_id: str) -> None:
         """Delete a provider snapshot."""
         ...

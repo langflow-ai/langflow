@@ -1,4 +1,4 @@
-"""Deployment service scaffolding for LFX."""
+"""Deployment service implementations for LFX."""
 
 from .service import DeploymentService
 

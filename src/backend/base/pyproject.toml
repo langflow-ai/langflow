@@ -361,6 +361,11 @@ astrapy = ["astrapy>=2.1.0,<3.0.0"]
 # Windows-specific
 gassist = ["gassist>=0.0.1; sys_platform == 'win32'"]
 
+# SDKs for IBM watsonx integration
+ibm-watsonx = [
+    "ibm-cloud-sdk-core~=3.24.4",
+]
+
 # Complete installation
 complete = [
     "langflow-base[couchbase]",
@@ -473,6 +478,7 @@ complete = [
     "langflow-base[astrapy]",
     # Windows-specific
     "langflow-base[gassist]",
+    "langflow-base[ibm-watsonx]
 ]
 
 all = [

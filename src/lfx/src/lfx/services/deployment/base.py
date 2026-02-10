@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from typing import Any
 
 from lfx.services.base import Service
-from lfx.services.interfaces import DeploymentServiceProtocol
 
 
-class BaseDeploymentService(Service, DeploymentServiceProtocol, ABC):
+class BaseDeploymentService(Service):
     """Abstract base class for deployment provider services.
 
     Defines the minimal interface that all deployment service implementations
@@ -125,10 +124,6 @@ class BaseDeploymentService(Service, DeploymentServiceProtocol, ABC):
     @abstractmethod
     async def get_snapshot(self, snapshot_id: str) -> dict[str, Any]:
         """Return snapshot metadata by provider ID."""\
-
-    @abstractmethod
-    async def update_snapshot(self, snapshot_id: str, *, data: dict | None = None) -> dict[str, Any]:
-        """Update a provider snapshot's JSON data."""
 
     @abstractmethod
     async def delete_snapshot(self, snapshot_id: str) -> None:
