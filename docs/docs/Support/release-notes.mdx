@@ -79,7 +79,7 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
        ```
 
     For more information about available optional dependency groups, see [Install optional dependency groups for `langflow-base`](/install-custom-dependencies#install-optional-dependency-groups-for-langflow-base).
-    
+
 ### New features and enhancements
 
 - Global model provider configuration
@@ -87,6 +87,11 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
     Model providers for language models, embedding models, and agents are now configured globally in the **Model providers** pane, instead of within individual components.
     For more information, see the [Language Model component](/components-models).
 
+- Component inspection panel
+
+    The component inspection panel replaces the component header menu for managing component parameters and settings.
+    For more information, see [Component inspection panel](/concepts-components#component-inspection-panel).
+    
 - Mustache templating support for Prompt Template component
 
     The **Prompt Template** component now supports Mustache templating syntax.
@@ -102,6 +107,14 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
     The Developer API now includes `/v2/workflow` endpoints for executing flows with enhanced error handling, timeout protection, and structured responses.
     The synchronous execution endpoint is available at `POST /api/v2/workflows`.
     For more information, see [Workflow API (Beta)](/workflow-api).
+    
+- Playground moved
+
+    Moved the <Icon name="PanelRightOpen" aria-hidden="true"/> **Playground** to the right side of the visual builder for a more integrated testing experience. For the original full screen view, click <Icon name="Fullscreen" aria-hidden="true"/> **Fullscreen** within the **Playground** panel. For more information, see [Test flows in the Playground](/concepts-playground).
+
+- More configuration options for JWT-based session authentication
+
+    Langflow 1.8 offers additional configuration options for JWT algorithms, including support for RS256/RS512 algorithms, configurable keys, and token lifetimes. For more information, see [JWT authentication](/jwt-authentication).
 
 ## 1.7.x
 
