@@ -890,7 +890,7 @@ def get_flow_dependencies(
     trusted_packages: set[str] | None = None,
     *,
     enable_unsafe_packages: bool = False,
-    ) -> set[str]:
+) -> set[str]:
     """Get the Python dependencies of a flow.
 
     Prioritizes installed packages.
@@ -997,14 +997,7 @@ def get_flow_dependencies(
     dependencies = set()
 
     for component in flow.get("data", {}).get("nodes", []):
-        code_value = (
-            component
-            .get("data", {})
-            .get("node", {})
-            .get("template", {})
-            .get("code", {})
-            .get("value", "")
-        )
+        code_value = component.get("data", {}).get("node", {}).get("template", {}).get("code", {}).get("value", "")
         if not isinstance(code_value, str):
             continue
         deps = analyze_dependencies(code_value)
@@ -1018,14 +1011,10 @@ def get_flow_dependencies(
 
             if dep_version := dep.get("version"):
                 # first matching distribution with the provided version
-                versioned_names = get_versioned_package_distributions(
-                        package_name=dep_name, version=dep_version
-                        )
+                versioned_names = get_versioned_package_distributions(package_name=dep_name, version=dep_version)
             else:
                 # all matching distributions
-                versioned_names = get_versioned_package_distributions(
-                    dep_name, version=None
-                    )
+                versioned_names = get_versioned_package_distributions(dep_name, version=None)
             if not versioned_names:
                 logger.warning(f"Package {dep_name} has no matching distribution.")
 
@@ -1034,13 +1023,7 @@ def get_flow_dependencies(
                 elif dep_name in trusted_packages:
                     versioned_names = [dep_name]
                 elif enable_unsafe_packages:
-                    versioned_names = (
-                        [f"{dep_name}=={v}"]
-
-                        if (v := dep.get("version"))
-
-                        else [dep_name]
-                    )
+                    versioned_names = [f"{dep_name}=={v}"] if (v := dep.get("version")) else [dep_name]
 
             dependencies.update(versioned_names)
 
@@ -1074,21 +1057,8 @@ def get_flow_import_graph_dependencies(
     for component in flow.get("data", {}).get("nodes", []):
         deps = []
 
-        code_value = (
-            component
-            .get("data", {})
-            .get("node", {})
-            .get("template", {})
-            .get("code", {})
-            .get("value", "")
-        )
-        module_path = (
-            component
-            .get("data", {})
-            .get("node", {})
-            .get("metadata", {})
-            .get("module")
-        )
+        code_value = component.get("data", {}).get("node", {}).get("template", {}).get("code", {}).get("value", "")
+        module_path = component.get("data", {}).get("node", {}).get("metadata", {}).get("module")
         module_name = _module_path_from_component_module(module_path)
         if module_name:
             deps.extend(analyze_module_import_graph(module_name))
@@ -1113,14 +1083,10 @@ def get_flow_import_graph_dependencies(
     for dep_name, dep_version in collected_deps.items():
         if dep_version:
             # First matching distribution with the provided version.
-            versioned_names = get_versioned_package_distributions(
-                package_name=dep_name, version=dep_version
-            )
+            versioned_names = get_versioned_package_distributions(package_name=dep_name, version=dep_version)
         else:
             # All matching distributions.
-            versioned_names = get_versioned_package_distributions(
-                dep_name, version=None
-            )
+            versioned_names = get_versioned_package_distributions(dep_name, version=None)
 
         if not versioned_names:
             logger.warning(f"Package {dep_name} has no matching distribution.")
@@ -1130,11 +1096,7 @@ def get_flow_import_graph_dependencies(
             elif dep_name in trusted_packages:
                 versioned_names = [dep_name]
             elif enable_unsafe_packages:
-                versioned_names = (
-                    [f"{dep_name}=={v}"]
-                    if (v := dep_version)
-                    else [dep_name]
-                )
+                versioned_names = [f"{dep_name}=={v}"] if (v := dep_version) else [dep_name]
 
         dependencies.update(versioned_names)
 
@@ -1143,6 +1105,7 @@ def get_flow_import_graph_dependencies(
 
 def _norm(name: str) -> str:
     return name.lower().replace("_", "-")
+
 
 @lru_cache(maxsize=32)
 def core_distribution_deps(dist_name: str) -> set[str]:
@@ -1163,6 +1126,7 @@ def core_distribution_deps(dist_name: str) -> set[str]:
         deps.add(_norm(req.name))
     return deps
 
+
 def filter_deps(flow_deps: set[str], packages: set[str]) -> set[str]:
     """Remove packages already provided by the given packages."""
     result = set()
@@ -1181,10 +1145,12 @@ _COMPONENT_TYPE_NAMES = {"Component", "CustomComponent"}
 
 if __name__ == "__main__":
     import json
+
     path = Path("/workspace/src/backend/base/langflow/initial_setup/starter_projects/Basic Prompting.json")
     with path.open() as f:
         flow = json.load(f)
     import time
+
     start_time = time.time()
     deps = get_flow_import_graph_dependencies(flow)
     end_time = time.time()
