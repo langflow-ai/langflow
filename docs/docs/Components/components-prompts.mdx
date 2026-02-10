@@ -103,6 +103,9 @@ To enable Mustache templating, do the following:
     The component lints the template code and returns **Prompt is ready** if there are no errors.
     Your prompt is now ready to use in a flow.
 
+Langflow supports variable replacement with double brackets, but does not support the full Mustache engine.
+The prompt component validation rejects syntax for other Mustache features such as loops and conditionals.
+
 ## See also
 
 * [**LangChain Prompt Hub** component](/bundles-langchain#prompt-hub)
