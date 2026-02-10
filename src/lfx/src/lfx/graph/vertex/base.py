@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import inspect
+import re
 import traceback
 import types
 from collections.abc import AsyncIterator, Callable, Iterator, Mapping
@@ -36,6 +37,61 @@ if TYPE_CHECKING:
 
     # Simple log type for tracing
     Log = dict
+
+
+def generate_reference_slug(display_name: str) -> str:
+    """Generate a reference slug from a display name.
+
+    Converts "Chat Input" to "ChatInput", preserving existing case.
+    Only capitalizes the first letter of each word; acronyms like "HTTP", "API"
+    stay uppercase (e.g. "HTTP Request" → "HTTPRequest").
+
+    Args:
+        display_name: The display name to convert
+
+    Returns:
+        A valid slug for use in @references
+    """
+    if not display_name:
+        return "Node"
+
+    # Split on whitespace, capitalize first letter of each word (preserve rest)
+    words = display_name.split()
+    slug = "".join(word[0].upper() + word[1:] for word in words if word)
+    # Remove all non-alphanumeric characters
+    slug = re.sub(r"[^a-zA-Z0-9]", "", slug)
+
+    return slug if slug else "Node"
+
+
+async def _load_global_variables(user_id: str | UUID | None) -> dict[str, str]:
+    """Load global variables for @Vars references.
+
+    Fetches Generic-type variables from the variable service, returning
+    a dict of {name: value}. Returns empty dict on any failure.
+    """
+    if not user_id:
+        logger.debug("Cannot load global variables: no user_id on graph")
+        return {}
+
+    from lfx.services.deps import get_variable_service, session_scope_readonly
+
+    variable_service = get_variable_service()
+    if not variable_service:
+        logger.debug("Cannot load global variables: variable service not available")
+        return {}
+
+    try:
+        async with session_scope_readonly() as session:
+            all_variables = await variable_service.get_all(user_id=user_id, session=session)
+            return {
+                var.name: var.value
+                for var in all_variables
+                if var.name and var.value and getattr(var, "type", None) == "Generic"
+            }
+    except (OSError, RuntimeError):
+        logger.warning("Failed to load global variables for @Vars references", exc_info=True)
+        return {}
 
 
 class VertexStates(str, Enum):
@@ -79,6 +135,7 @@ class Vertex:
         self.base_type: str | None = base_type
         self.outputs: list[dict] = []
         self.parse_data()
+        self.reference_slug: str | None = None
         self.built_object: Any = UnbuiltObject()
         self.built_result: Any = None
         self.built = False
@@ -223,6 +280,17 @@ class Vertex:
     @property
     def successors_ids(self) -> list[str]:
         return self.graph.successor_map.get(self.id, [])
+
+    @property
+    def outputs_map(self) -> dict[str, Any]:
+        """Get the outputs map from the custom component.
+
+        Returns:
+            A dictionary mapping output names to their values.
+        """
+        if self.custom_component is None:
+            return {}
+        return self.custom_component.get_outputs_map()
 
     def __getstate__(self):
         state = self.__dict__.copy()
@@ -749,6 +817,10 @@ class Vertex:
                 # This means that the vertex has already been built
                 # and we are just getting the result for the requester
                 return await self.get_requester_result(requester)
+            # Ensure global variables are loaded for @Vars references
+            if "global_variables" not in self.graph.context:
+                self.graph.context["global_variables"] = await _load_global_variables(self.graph.user_id)
+
             self._reset()
 
             # Emit build_start event for webhook real-time feedback

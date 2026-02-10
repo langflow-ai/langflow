@@ -13,6 +13,7 @@ import CustomInputPopoverObject from "./components/popoverObject";
 export default function InputComponent({
   autoFocus = false,
   onBlur,
+  onKeyDown: customOnKeyDown,
   value = "",
   onChange,
   disabled,
@@ -102,6 +103,7 @@ export default function InputComponent({
               e.preventDefault();
             }}
             onKeyDown={(e) => {
+              customOnKeyDown?.(e);
               handleKeyDown(e, value, "");
               if (blurOnEnter && e.key === "Enter") refInput.current?.blur();
             }}
