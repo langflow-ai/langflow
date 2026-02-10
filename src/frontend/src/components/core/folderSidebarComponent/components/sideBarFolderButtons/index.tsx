@@ -23,6 +23,7 @@ import { useGetDownloadFolders } from "@/controllers/API/queries/folders/use-get
 import { CustomStoreButton } from "@/customization/components/custom-store-button";
 import {
   ENABLE_CUSTOM_PARAM,
+  ENABLE_DATASETS,
   ENABLE_DATASTAX_LANGFLOW,
   ENABLE_FILE_MANAGEMENT,
   ENABLE_KNOWLEDGE_BASES,
@@ -358,6 +359,10 @@ const SideBarFoldersButtonsComponent = ({
     _navigate("/assets/knowledge-bases");
   };
 
+  const handleDatasetsNavigation = () => {
+    _navigate("/assets/datasets");
+  };
+
   return (
     <Sidebar
       collapsible={isMobile ? "offcanvas" : "none"}
@@ -487,6 +492,16 @@ const SideBarFoldersButtonsComponent = ({
               >
                 <ForwardedIconComponent name="Library" className="h-4 w-4" />
                 Knowledge
+              </SidebarMenuButton>
+            )}
+            {ENABLE_DATASETS && (
+              <SidebarMenuButton
+                onClick={handleDatasetsNavigation}
+                size="md"
+                className="text-sm"
+              >
+                <ForwardedIconComponent name="TableProperties" className="h-4 w-4" />
+                Datasets
               </SidebarMenuButton>
             )}
             <SidebarMenuButton

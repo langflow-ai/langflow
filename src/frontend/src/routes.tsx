@@ -15,6 +15,7 @@ import { CustomNavigate } from "./customization/components/custom-navigate";
 import { BASENAME } from "./customization/config-constants";
 import {
   ENABLE_CUSTOM_PARAM,
+  ENABLE_DATASETS,
   ENABLE_FILE_MANAGEMENT,
   ENABLE_KNOWLEDGE_BASES,
 } from "./customization/feature-flags";
@@ -27,6 +28,8 @@ import FlowPage from "./pages/FlowPage";
 import LoginPage from "./pages/LoginPage";
 import FilesPage from "./pages/MainPage/pages/filesPage";
 import HomePage from "./pages/MainPage/pages/homePage";
+import DatasetsPage from "./pages/MainPage/pages/datasetsPage";
+import DatasetDetailPage from "./pages/MainPage/pages/datasetDetailPage";
 import KnowledgePage from "./pages/MainPage/pages/knowledgePage";
 import CollectionPage from "./pages/MainPage/pages/main-page";
 import SettingsPage from "./pages/SettingsPage";
@@ -43,6 +46,7 @@ const AdminPage = lazy(() => import("./pages/AdminPage"));
 const LoginAdminPage = lazy(() => import("./pages/AdminPage/LoginPage"));
 const DeleteAccountPage = lazy(() => import("./pages/DeleteAccountPage"));
 
+const EvaluationPage = lazy(() => import("./pages/EvaluationPage"));
 const PlaygroundPage = lazy(() => import("./pages/Playground"));
 
 const SignUp = lazy(() => import("./pages/SignUpPage"));
@@ -96,6 +100,15 @@ const router = createBrowserRouter(
                           path="knowledge-bases"
                           element={<KnowledgePage />}
                         />
+                      )}
+                      {ENABLE_DATASETS && (
+                        <Route path="datasets">
+                          <Route index element={<DatasetsPage />} />
+                          <Route
+                            path=":datasetId"
+                            element={<DatasetDetailPage />}
+                          />
+                        </Route>
                       )}
                     </Route>
                   )}
@@ -179,6 +192,14 @@ const router = createBrowserRouter(
                 </Route>
                 <Route path="view" element={<ViewPage />} />
               </Route>
+              <Route
+                path="evaluations/:evaluationId"
+                element={
+                  <CustomDashboardWrapperPage>
+                    <EvaluationPage />
+                  </CustomDashboardWrapperPage>
+                }
+              />
             </Route>
           </Route>
           <Route

@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { useBlocker, useParams } from "react-router-dom";
+import EvaluationsMainContent from "./components/EvaluationsMainContent";
+import MessagesMainContent from "./components/MessagesMainContent";
 import { FlowPageSlidingContainerContent } from "@/components/core/playgroundComponent/sliding-container/components/flow-page-sliding-container";
-import { SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarProvider, useSidebar } from "@/components/ui/sidebar";
 import {
   SimpleSidebar,
   SimpleSidebarProvider,
@@ -27,6 +29,60 @@ import {
   FlowSidebarComponent,
 } from "./components/flowSidebarComponent";
 import Page from "./components/PageComponent";
+
+function FlowMainContent({
+  isSlidingContainerOpen,
+  isFullscreen,
+  setIsLoading,
+  selectedSessionId,
+  selectedEvaluationId,
+  onSelectEvaluation,
+}: {
+  isSlidingContainerOpen: boolean;
+  isFullscreen: boolean;
+  setIsLoading: (v: boolean) => void;
+  selectedSessionId: string | null;
+  selectedEvaluationId: string | null;
+  onSelectEvaluation: (id: string | null) => void;
+}) {
+  const { activeSection } = useSidebar();
+
+  if (activeSection === "messages") {
+    return (
+      <main className="flex flex-1 min-w-0 overflow-hidden transition-all duration-300">
+        <div className="h-full w-full">
+          <MessagesMainContent selectedSessionId={selectedSessionId} />
+        </div>
+      </main>
+    );
+  }
+
+  if (activeSection === "evaluations") {
+    return (
+      <main className="flex flex-1 min-w-0 overflow-hidden transition-all duration-300">
+        <div className="h-full w-full">
+          <EvaluationsMainContent
+            selectedEvaluationId={selectedEvaluationId}
+            onSelectEvaluation={onSelectEvaluation}
+          />
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main
+      className={cn(
+        "flex flex-1 min-w-0 overflow-hidden transition-all duration-300",
+        isSlidingContainerOpen && !isFullscreen && "rounded-xl m-2 mr-0",
+      )}
+    >
+      <div className="h-full w-full">
+        <Page setIsLoading={setIsLoading} />
+      </div>
+    </main>
+  );
+}
 
 export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const types = useTypesStore((state) => state.types);
@@ -174,6 +230,9 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
     refreshAllModelInputs({ silent: true });
   };
 
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  const [selectedEvaluationId, setSelectedEvaluationId] = useState<string | null>(null);
+
   const isMobile = useIsMobile();
   const isSlidingContainerOpen = usePlaygroundStore((state) => state.isOpen);
   const setSlidingContainerOpen = usePlaygroundStore(
@@ -252,19 +311,23 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
                 segmentedSidebar={ENABLE_NEW_SIDEBAR}
               >
                 <FlowSearchProvider>
-                  {!view && <FlowSidebarComponent isLoading={isLoading} />}
-                  <main
-                    className={cn(
-                      "flex flex-1 min-w-0 overflow-hidden transition-all duration-300",
-                      isSlidingContainerOpen &&
-                        !isFullscreen &&
-                        "rounded-xl m-2 mr-0",
-                    )}
-                  >
-                    <div className="h-full w-full">
-                      <Page setIsLoading={setIsLoading} />
-                    </div>
-                  </main>
+                  {!view && (
+                    <FlowSidebarComponent
+                      isLoading={isLoading}
+                      selectedSessionId={selectedSessionId}
+                      onSelectSession={setSelectedSessionId}
+                      selectedEvaluationId={selectedEvaluationId}
+                      onSelectEvaluation={setSelectedEvaluationId}
+                    />
+                  )}
+                  <FlowMainContent
+                    isSlidingContainerOpen={isSlidingContainerOpen}
+                    isFullscreen={isFullscreen}
+                    setIsLoading={setIsLoading}
+                    selectedSessionId={selectedSessionId}
+                    selectedEvaluationId={selectedEvaluationId}
+                    onSelectEvaluation={setSelectedEvaluationId}
+                  />
                 </FlowSearchProvider>
               </SidebarProvider>
               <SimpleSidebar resizable={!isFullscreen} className="h-full">

@@ -28,7 +28,9 @@ export type SidebarSection =
   | "components"
   | "bundles"
   | "mcp"
-  | "add_note";
+  | "add_note"
+  | "messages"
+  | "evaluations";
 
 // Helper function to get cookie value
 function getCookie(name: string): string | null {
@@ -56,7 +58,9 @@ function getInitialSidebarSection(
     cookieValue === "search" ||
     cookieValue === "components" ||
     cookieValue === "bundles" ||
-    cookieValue === "mcp"
+    cookieValue === "mcp" ||
+    cookieValue === "messages" ||
+    cookieValue === "evaluations"
   ) {
     return cookieValue;
   }

@@ -41,7 +41,9 @@ import type { APIClassType } from "../../../../types/api";
 import isWrappedWithClass from "../PageComponent/utils/is-wrapped-with-class";
 import { CategoryGroup } from "./components/categoryGroup";
 import NoResultsMessage from "./components/emptySearchComponent";
+import EvaluationsSidebarGroup from "./components/EvaluationsSidebarGroup";
 import McpSidebarGroup from "./components/McpSidebarGroup";
+import MessagesSidebarGroup from "./components/MessagesSidebarGroup";
 import MemoizedSidebarGroup from "./components/sidebarBundles";
 import SidebarMenuButtons from "./components/sidebarFooterButtons";
 import { SidebarHeaderComponent } from "./components/sidebarHeader";
@@ -147,9 +149,19 @@ interface FlowSidebarComponentProps {
   isLoading?: boolean;
   showLegacy?: boolean;
   setShowLegacy?: (value: boolean) => void;
+  selectedSessionId?: string | null;
+  onSelectSession?: (id: string | null) => void;
+  selectedEvaluationId?: string | null;
+  onSelectEvaluation?: (id: string | null) => void;
 }
 
-export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
+export function FlowSidebarComponent({
+  isLoading,
+  selectedSessionId,
+  onSelectSession,
+  selectedEvaluationId,
+  onSelectEvaluation,
+}: FlowSidebarComponentProps) {
   const rawData = useTypesStore((state) => state.data);
 
   // Filter out knowledge components from files_and_knowledge category when ENABLE_KNOWLEDGE_BASES is OFF
@@ -595,6 +607,8 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
   const showMcp =
     (ENABLE_NEW_SIDEBAR && activeSection === "mcp") ||
     (hasSearchInput && hasMcpComponents && ENABLE_NEW_SIDEBAR);
+  const showMessages = ENABLE_NEW_SIDEBAR && activeSection === "messages";
+  const showEvaluations = ENABLE_NEW_SIDEBAR && activeSection === "evaluations";
 
   const [category, component] = getFilterComponent?.split(".") ?? ["", ""];
 
@@ -632,23 +646,25 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
             ENABLE_NEW_SIDEBAR && "sidebar-segmented",
           )}
         >
-          <SidebarHeaderComponent
-            showConfig={showConfig}
-            setShowConfig={setShowConfig}
-            showBeta={showBeta}
-            setShowBeta={handleSetShowBeta}
-            showLegacy={showLegacy}
-            setShowLegacy={handleSetShowLegacy}
-            searchInputRef={searchInputRef}
-            isInputFocused={isSearchFocused}
-            search={search}
-            handleInputFocus={handleInputFocus}
-            handleInputBlur={handleInputBlur}
-            handleInputChange={handleInputChange}
-            filterName={filterName}
-            filterDescription={filterDescription}
-            resetFilters={resetFilters}
-          />
+          {!showMessages && !showEvaluations && (
+            <SidebarHeaderComponent
+              showConfig={showConfig}
+              setShowConfig={setShowConfig}
+              showBeta={showBeta}
+              setShowBeta={handleSetShowBeta}
+              showLegacy={showLegacy}
+              setShowLegacy={handleSetShowLegacy}
+              searchInputRef={searchInputRef}
+              isInputFocused={isSearchFocused}
+              search={search}
+              handleInputFocus={handleInputFocus}
+              handleInputBlur={handleInputBlur}
+              handleInputChange={handleInputChange}
+              filterName={filterName}
+              filterDescription={filterDescription}
+              resetFilters={resetFilters}
+            />
+          )}
 
           <SidebarContent
             segmentedSidebar={ENABLE_NEW_SIDEBAR}
@@ -751,10 +767,22 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
                 )}
               </>
             )}
+            {showMessages && (
+              <MessagesSidebarGroup
+                selectedSessionId={selectedSessionId ?? null}
+                onSelectSession={onSelectSession ?? (() => {})}
+              />
+            )}
+            {showEvaluations && (
+              <EvaluationsSidebarGroup
+                selectedEvaluationId={selectedEvaluationId ?? null}
+                onSelectEvaluation={onSelectEvaluation ?? (() => {})}
+              />
+            )}
           </SidebarContent>
-          {ENABLE_NEW_SIDEBAR &&
-          activeSection === "mcp" &&
-          !hasMcpServers ? null : (
+          {!showMessages &&
+          !showEvaluations &&
+          !(ENABLE_NEW_SIDEBAR && activeSection === "mcp" && !hasMcpServers) && (
             <SidebarFooter className="border-t group-data-[collapsible=icon]:hidden p-1 gap-1">
               <SidebarMenuButtons
                 customComponent={customComponent}
@@ -779,7 +807,11 @@ export default memo(
   ) => {
     return (
       prevProps.showLegacy === nextProps.showLegacy &&
-      prevProps.setShowLegacy === nextProps.setShowLegacy
+      prevProps.setShowLegacy === nextProps.setShowLegacy &&
+      prevProps.selectedSessionId === nextProps.selectedSessionId &&
+      prevProps.onSelectSession === nextProps.onSelectSession &&
+      prevProps.selectedEvaluationId === nextProps.selectedEvaluationId &&
+      prevProps.onSelectEvaluation === nextProps.onSelectEvaluation
     );
   },
 );

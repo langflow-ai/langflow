@@ -1,5 +1,6 @@
 import useFlowStore from "@/stores/flowStore";
 import PublishDropdown from "./deploy-dropdown";
+import EvaluateButton from "./evaluate-button";
 import PlaygroundButton from "./playground-button";
 
 type FlowToolbarOptionsProps = {
@@ -15,6 +16,7 @@ const FlowToolbarOptions = ({
   return (
     <div className="flex items-center gap-1">
       <PlaygroundButton hasIO={hasIO} />
+      <EvaluateButton />
       <PublishDropdown
         openApiModal={openApiModal}
         setOpenApiModal={setOpenApiModal}
