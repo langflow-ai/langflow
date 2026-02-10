@@ -33,6 +33,8 @@ const ExportModal = forwardRef(
     const currentFlowOnPage = useFlowStore((state) => state.currentFlow);
     const currentFlow = props.flowData ?? currentFlowOnPage;
     const isBuilding = useFlowStore((state) => state.isBuilding);
+    const [locked, setLocked] = useState<boolean>(currentFlow?.locked ?? false);
+
     useEffect(() => {
       setName(currentFlow?.name ?? "");
       setDescription(currentFlow?.description ?? "");
@@ -118,6 +120,8 @@ const ExportModal = forwardRef(
             description={description}
             setName={setName}
             setDescription={setDescription}
+            locked={locked}
+            setLocked={setLocked}
           />
           <div className="mt-3 flex items-center space-x-2">
             <Checkbox
