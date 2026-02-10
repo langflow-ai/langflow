@@ -61,6 +61,8 @@ test(
           .click();
         await page.getByText("Rename", { exact: true }).last().click();
         await page.getByTestId("input-project").last().fill("renamed_project");
+        await page.keyboard.press("Enter");
+        await page.waitForTimeout(1000);
       });
 
     await navigateSettingsPages(page, "Settings", "MCP Servers");
@@ -86,6 +88,7 @@ test(
           .click();
         await page.getByText("Delete", { exact: true }).last().click();
         await page.getByText("Delete", { exact: true }).last().click();
+        await page.waitForTimeout(1000);
       });
 
     await navigateSettingsPages(page, "Settings", "MCP Servers");

@@ -59,6 +59,16 @@ async def test_read_flows(client: AsyncClient, logged_in_headers):
     assert isinstance(result, list), "The result must be a list"
 
 
+async def test_get_flows_with_malformed_bearer_token_returns_401(client: AsyncClient):
+    """CT-010: GET /api/v1/flows with malformed Bearer token must return 401 Unauthorized."""
+    headers = {"Authorization": "Bearer invalid.token.here"}
+    response = await client.get("api/v1/flows/", headers=headers)
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    data = response.json()
+    assert "detail" in data
+    assert "token" in data["detail"].lower() or "credential" in data["detail"].lower()
+
+
 async def test_read_flow(client: AsyncClient, logged_in_headers):
     basic_case = {
         "name": "string",

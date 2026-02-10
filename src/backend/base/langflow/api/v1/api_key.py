@@ -14,21 +14,20 @@ from langflow.services.deps import get_settings_service
 router = APIRouter(tags=["APIKey"], prefix="/api_key")
 
 
-@router.get("/")
+@router.get("/", include_in_schema=False)
 async def get_api_keys_route(
     db: DbSession,
     current_user: CurrentActiveUser,
 ) -> ApiKeysResponse:
     try:
         user_id = current_user.id
-        keys = await get_api_keys(db, user_id)
-
-        return ApiKeysResponse(total_count=len(keys), user_id=user_id, api_keys=keys)
+        api_keys = await get_api_keys(db, user_id)
+        return ApiKeysResponse(total_count=len(api_keys), user_id=user_id, api_keys=api_keys)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@router.post("/")
+@router.post("/", include_in_schema=False)
 async def create_api_key_route(
     req: ApiKeyCreate,
     current_user: CurrentActiveUser,
@@ -41,7 +40,7 @@ async def create_api_key_route(
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
-@router.delete("/{api_key_id}")
+@router.delete("/{api_key_id}", include_in_schema=False)
 async def delete_api_key_route(
     api_key_id: UUID,
     db: DbSession,
@@ -54,7 +53,7 @@ async def delete_api_key_route(
     return {"detail": "API Key deleted"}
 
 
-@router.post("/store")
+@router.post("/store", include_in_schema=False)
 async def save_store_api_key(
     api_key_request: ApiKeyCreateRequest,
     response: Response,
@@ -68,7 +67,7 @@ async def save_store_api_key(
         api_key = api_key_request.api_key
 
         # Encrypt the API key
-        encrypted = auth_utils.encrypt_api_key(api_key, settings_service=settings_service)
+        encrypted = auth_utils.encrypt_api_key(api_key)
         current_user.store_api_key = encrypted
         db.add(current_user)
         await db.commit()
