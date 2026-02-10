@@ -260,7 +260,7 @@ async def test_get_config_returns_500_on_settings_error(client: AsyncClient, mon
 
     async def mock_get_optional_user():
         """Mock get_optional_user to return None without triggering real auth logic."""
-        return
+        return None
 
     # Mock get_optional_user to bypass its dependency chain (which might interact with settings)
     monkeypatch.setattr("langflow.api.v1.endpoints.get_optional_user", mock_get_optional_user)
