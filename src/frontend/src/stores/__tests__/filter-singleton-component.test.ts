@@ -80,12 +80,7 @@ describe("filterSingletonComponent", () => {
       edges: [createEdge("edge-1", "node-1", "node-2")],
     };
 
-    filterSingletonComponent(
-      selection,
-      "ChatInput",
-      true,
-      "Only one allowed.",
-    );
+    filterSingletonComponent(selection, "ChatInput", true, "Only one allowed.");
 
     expect(selection.nodes).toHaveLength(1);
     expect(selection.nodes[0].id).toBe("node-2");
@@ -105,12 +100,7 @@ describe("filterSingletonComponent", () => {
       ],
     };
 
-    filterSingletonComponent(
-      selection,
-      "Webhook",
-      true,
-      "Only one allowed.",
-    );
+    filterSingletonComponent(selection, "Webhook", true, "Only one allowed.");
 
     expect(selection.nodes).toHaveLength(2);
     expect(selection.edges).toHaveLength(1);
