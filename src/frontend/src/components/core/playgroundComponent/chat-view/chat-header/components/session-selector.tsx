@@ -3,6 +3,7 @@ import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { useUpdateSessionName } from "@/controllers/API/queries/messages/use-rename-session";
 import { useVoiceStore } from "@/stores/voiceStore";
 import { cn } from "@/utils/utils";
+import { useSessionHasMessages } from "../hooks/use-session-has-messages";
 import { SessionMoreMenu } from "./session-more-menu";
 import { SessionRename } from "./session-rename";
 
@@ -88,7 +89,14 @@ export function SessionSelector({
 
   // Default session (flowId) cannot be renamed or deleted
   const isDefaultSession = session === currentFlowId;
+  
+  const hasMessages = useSessionHasMessages({
+    sessionId: session,
+    flowId: currentFlowId,
+  });
+  
   const canModifySession = !isDefaultSession;
+  const canRenameSession = canModifySession && hasMessages;
 
   return (
     <div
@@ -135,7 +143,7 @@ export function SessionSelector({
           onRename={handleEditClick}
           onMessageLogs={() => inspectSession?.(session)}
           onDelete={() => deleteSession(session)}
-          showRename={canModifySession}
+          showRename={canRenameSession}
           showDelete={canModifySession}
           side="bottom"
           align="end"
