@@ -13,9 +13,7 @@ const EvaluateIcon = () => (
   />
 );
 
-const ButtonLabel = () => (
-  <span className="hidden md:block">Evaluate</span>
-);
+const ButtonLabel = () => <span className="hidden md:block">Evaluate</span>;
 
 const EvaluateButton = () => {
   const [open, setOpen] = useState(false);

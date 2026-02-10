@@ -64,7 +64,10 @@ const EvaluationsEmptyState = ({
 const EvaluationsLoadingState = () => {
   return (
     <div className="flex h-full min-h-[100px] w-full items-center justify-center">
-      <IconComponent name="Loader2" className="h-6 w-6 animate-spin text-muted-foreground" />
+      <IconComponent
+        name="Loader2"
+        className="h-6 w-6 animate-spin text-muted-foreground"
+      />
     </div>
   );
 };
@@ -161,10 +164,15 @@ const EvaluationListItem = ({
           {formatTimestamp(evaluation.created_at)}
         </span>
       </div>
-      {(evaluation.status === "completed" || evaluation.status === "stopped") && (
+      {(evaluation.status === "completed" ||
+        evaluation.status === "stopped") && (
         <div className="flex w-full items-center justify-between gap-2">
           <span className="text-xs text-muted-foreground">
-            {evaluation.passed_items}/{evaluation.status === "stopped" ? evaluation.completed_items : evaluation.total_items} passed
+            {evaluation.passed_items}/
+            {evaluation.status === "stopped"
+              ? evaluation.completed_items
+              : evaluation.total_items}{" "}
+            passed
           </span>
           <span
             className={cn(

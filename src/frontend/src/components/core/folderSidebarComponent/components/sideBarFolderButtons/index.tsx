@@ -500,7 +500,10 @@ const SideBarFoldersButtonsComponent = ({
                 size="md"
                 className="text-sm"
               >
-                <ForwardedIconComponent name="TableProperties" className="h-4 w-4" />
+                <ForwardedIconComponent
+                  name="TableProperties"
+                  className="h-4 w-4"
+                />
                 Datasets
               </SidebarMenuButton>
             )}

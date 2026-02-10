@@ -40,10 +40,30 @@ interface CreateEvaluationModalProps {
 }
 
 const SCORING_METHOD_OPTIONS = [
-  { value: "exact_match", label: "Exact Match", icon: "Equal", description: "Output must match exactly" },
-  { value: "contains", label: "Contains", icon: "TextSearch", description: "Output must contain expected text" },
-  { value: "similarity", label: "Similarity", icon: "Percent", description: "Cosine similarity score" },
-  { value: "llm_judge", label: "LLM Judge", icon: "Brain", description: "AI-powered scoring" },
+  {
+    value: "exact_match",
+    label: "Exact Match",
+    icon: "Equal",
+    description: "Output must match exactly",
+  },
+  {
+    value: "contains",
+    label: "Contains",
+    icon: "TextSearch",
+    description: "Output must contain expected text",
+  },
+  {
+    value: "similarity",
+    label: "Similarity",
+    icon: "Percent",
+    description: "Cosine similarity score",
+  },
+  {
+    value: "llm_judge",
+    label: "LLM Judge",
+    icon: "Brain",
+    description: "AI-powered scoring",
+  },
 ];
 
 const DEFAULT_LLM_JUDGE_PROMPT = `Rate how well the actual output matches the expected output on a scale from 0 to 1. Consider accuracy, completeness, and relevance. Return ONLY a decimal number between 0 and 1, nothing else.`;
@@ -60,7 +80,9 @@ export default function CreateEvaluationModal({
   const [scoringMethods, setScoringMethods] = useState<string[]>([
     "exact_match",
   ]);
-  const [llmJudgePrompt, setLlmJudgePrompt] = useState(DEFAULT_LLM_JUDGE_PROMPT);
+  const [llmJudgePrompt, setLlmJudgePrompt] = useState(
+    DEFAULT_LLM_JUDGE_PROMPT,
+  );
   const [selectedModel, setSelectedModel] = useState<{
     name: string;
     provider: string;
@@ -72,7 +94,11 @@ export default function CreateEvaluationModal({
   const modelButtonRef = useRef<HTMLButtonElement>(null);
 
   const { data: datasets, isLoading: datasetsLoading } = useGetDatasets();
-  const { data: llmModelsData, isLoading: modelsLoading, refetch: refetchModels } = useGetLLMModels({});
+  const {
+    data: llmModelsData,
+    isLoading: modelsLoading,
+    refetch: refetchModels,
+  } = useGetLLMModels({});
 
   const { setErrorData, setSuccessData } = useAlertStore((state) => ({
     setErrorData: state.setErrorData,
@@ -108,7 +134,8 @@ export default function CreateEvaluationModal({
     return grouped;
   }, [llmModelsData]);
 
-  const hasEnabledProviders = (llmModelsData?.enabledProviders?.length ?? 0) > 0;
+  const hasEnabledProviders =
+    (llmModelsData?.enabledProviders?.length ?? 0) > 0;
 
   const resetForm = () => {
     setName("");
@@ -237,7 +264,11 @@ export default function CreateEvaluationModal({
                     <SelectItem key={dataset.id} value={dataset.id}>
                       <div className="flex items-center gap-2">
                         <ForwardedIconComponent
-                          name={dataset.dataset_type === "multi_turn" ? "MessagesSquare" : "TableProperties"}
+                          name={
+                            dataset.dataset_type === "multi_turn"
+                              ? "MessagesSquare"
+                              : "TableProperties"
+                          }
                           className="h-4 w-4 shrink-0 text-muted-foreground"
                         />
                         {dataset.name} ({dataset.item_count} items)
@@ -251,9 +282,11 @@ export default function CreateEvaluationModal({
                 )}
               </SelectContent>
             </Select>
-            {datasets?.find((d) => d.id === datasetId)?.dataset_type === "multi_turn" && (
+            {datasets?.find((d) => d.id === datasetId)?.dataset_type ===
+              "multi_turn" && (
               <p className="text-xs text-muted-foreground mt-1">
-                Multi-Turn dataset: turns within each conversation will share chat history
+                Multi-Turn dataset: turns within each conversation will share
+                chat history
               </p>
             )}
           </div>
@@ -280,7 +313,9 @@ export default function CreateEvaluationModal({
                       if (checked) {
                         setScoringMethods([...scoringMethods, method.value]);
                       } else {
-                        const updated = scoringMethods.filter((m) => m !== method.value);
+                        const updated = scoringMethods.filter(
+                          (m) => m !== method.value,
+                        );
                         setScoringMethods(updated);
                       }
                     }}
@@ -291,7 +326,9 @@ export default function CreateEvaluationModal({
                   />
                   <div className="flex flex-col">
                     <span className="text-sm font-medium">{method.label}</span>
-                    <span className="text-xs text-muted-foreground">{method.description}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {method.description}
+                    </span>
                   </div>
                 </label>
               ))}
@@ -311,7 +348,10 @@ export default function CreateEvaluationModal({
                 <span className="text-destructive">*</span>
               )}
             </Label>
-            <Popover open={modelDropdownOpen} onOpenChange={setModelDropdownOpen}>
+            <Popover
+              open={modelDropdownOpen}
+              onOpenChange={setModelDropdownOpen}
+            >
               {!hasEnabledProviders && !modelsLoading ? (
                 <Button
                   variant="default"
@@ -456,7 +496,6 @@ export default function CreateEvaluationModal({
               disabled={!showLlmJudgeFields}
             />
           </div>
-
         </BaseModal.Content>
         <BaseModal.Footer
           submit={{

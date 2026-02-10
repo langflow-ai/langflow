@@ -153,9 +153,17 @@ export default function CreateDatasetFromMessagesModal({
   if (!open) return <></>;
 
   return (
-    <BaseModal open={open} setOpen={handleClose} size="small-h-full" onSubmit={handleSubmit}>
+    <BaseModal
+      open={open}
+      setOpen={handleClose}
+      size="small-h-full"
+      onSubmit={handleSubmit}
+    >
       <BaseModal.Header description="Create a Multi-Turn dataset from existing chat messages">
-        <ForwardedIconComponent name="MessagesSquare" className="mr-2 h-4 w-4" />
+        <ForwardedIconComponent
+          name="MessagesSquare"
+          className="mr-2 h-4 w-4"
+        />
         Create Dataset from Messages
       </BaseModal.Header>
       <BaseModal.Content className="flex flex-col gap-6 px-6 py-4">
@@ -196,7 +204,10 @@ export default function CreateDatasetFromMessagesModal({
                     onClick={() => setShowAllSessions(true)}
                     className="flex w-full items-center justify-center gap-1.5 px-3 py-2 text-xs text-muted-foreground hover:bg-accent/50 hover:text-foreground transition-colors"
                   >
-                    <ForwardedIconComponent name="ChevronDown" className="h-3 w-3" />
+                    <ForwardedIconComponent
+                      name="ChevronDown"
+                      className="h-3 w-3"
+                    />
                     Include more sessions ({otherSessions.length})
                   </button>
                 )}
@@ -212,7 +223,10 @@ export default function CreateDatasetFromMessagesModal({
                   onClick={() => setShowAllSessions(false)}
                   className="flex w-full items-center justify-center gap-1.5 border-t px-3 py-2 text-xs text-muted-foreground hover:bg-accent/50 hover:text-foreground transition-colors"
                 >
-                  <ForwardedIconComponent name="ChevronUp" className="h-3 w-3" />
+                  <ForwardedIconComponent
+                    name="ChevronUp"
+                    className="h-3 w-3"
+                  />
                   Show less
                 </button>
               </>
@@ -222,7 +236,8 @@ export default function CreateDatasetFromMessagesModal({
 
         {/* Preview */}
         <div className="rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">
-          Will create ~{estimatedTurns} turns from {selectedSessions.size} conversation{selectedSessions.size !== 1 ? "s" : ""}
+          Will create ~{estimatedTurns} turns from {selectedSessions.size}{" "}
+          conversation{selectedSessions.size !== 1 ? "s" : ""}
         </div>
       </BaseModal.Content>
       <BaseModal.Footer

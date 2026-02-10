@@ -781,16 +781,20 @@ export function FlowSidebarComponent({
             )}
           </SidebarContent>
           {!showMessages &&
-          !showEvaluations &&
-          !(ENABLE_NEW_SIDEBAR && activeSection === "mcp" && !hasMcpServers) && (
-            <SidebarFooter className="border-t group-data-[collapsible=icon]:hidden p-1 gap-1">
-              <SidebarMenuButtons
-                customComponent={customComponent}
-                addComponent={addComponent}
-                isLoading={isLoading}
-              />
-            </SidebarFooter>
-          )}
+            !showEvaluations &&
+            !(
+              ENABLE_NEW_SIDEBAR &&
+              activeSection === "mcp" &&
+              !hasMcpServers
+            ) && (
+              <SidebarFooter className="border-t group-data-[collapsible=icon]:hidden p-1 gap-1">
+                <SidebarMenuButtons
+                  customComponent={customComponent}
+                  addComponent={addComponent}
+                  isLoading={isLoading}
+                />
+              </SidebarFooter>
+            )}
         </div>
       </div>
     </Sidebar>

@@ -20,7 +20,10 @@ import PageLayout from "@/components/common/pageLayout";
 import LoadingComponent from "@/components/ui/loading";
 
 const getStatusBadge = (status: string) => {
-  const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  const variants: Record<
+    string,
+    "default" | "secondary" | "destructive" | "outline"
+  > = {
     pending: "secondary",
     running: "default",
     completed: "outline",
@@ -41,7 +44,8 @@ const formatRuntime = (ms?: number) => {
   const seconds = Math.floor(ms / 1000);
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = seconds % 60;
-  if (minutes > 0) return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
+  if (minutes > 0)
+    return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
   return `${seconds}s`;
 };
 
@@ -101,14 +105,12 @@ export default function EvaluationPage() {
     }
   };
 
-  const isRunning = evaluation?.status === "running" || evaluation?.status === "pending";
+  const isRunning =
+    evaluation?.status === "running" || evaluation?.status === "pending";
 
   if (isLoading) {
     return (
-      <PageLayout
-        title="Evaluation Results"
-        backTo="/"
-      >
+      <PageLayout title="Evaluation Results" backTo="/">
         <div className="flex h-64 items-center justify-center">
           <LoadingComponent remSize={24} />
         </div>
@@ -118,10 +120,7 @@ export default function EvaluationPage() {
 
   if (!evaluation) {
     return (
-      <PageLayout
-        title="Evaluation Results"
-        backTo="/"
-      >
+      <PageLayout title="Evaluation Results" backTo="/">
         <div className="flex h-64 items-center justify-center">
           <p className="text-muted-foreground">Evaluation not found</p>
         </div>
@@ -163,7 +162,10 @@ export default function EvaluationPage() {
                 onClick={handleStop}
                 disabled={stopEvaluationMutation.isPending}
               >
-                <ForwardedIconComponent name="Square" className="mr-2 h-4 w-4" />
+                <ForwardedIconComponent
+                  name="Square"
+                  className="mr-2 h-4 w-4"
+                />
                 Stop
               </Button>
             ) : (
@@ -210,7 +212,9 @@ export default function EvaluationPage() {
                 <TableHead className="w-20">Passed</TableHead>
                 {evaluation.scoring_methods.map((method) => (
                   <TableHead key={method} className="w-24">
-                    {method.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                    {method
+                      .replace("_", " ")
+                      .replace(/\b\w/g, (c) => c.toUpperCase())}
                   </TableHead>
                 ))}
               </TableRow>
@@ -265,7 +269,8 @@ export default function EvaluationPage() {
         </div>
 
         {/* Summary Footer */}
-        {(evaluation.status === "completed" || evaluation.status === "stopped") && (
+        {(evaluation.status === "completed" ||
+          evaluation.status === "stopped") && (
           <div className="flex items-center gap-6 text-sm text-muted-foreground">
             <span>
               Pass Rate:{" "}
@@ -288,7 +293,9 @@ export default function EvaluationPage() {
         {/* Error message */}
         {evaluation.error_message && (
           <div className="rounded-md border border-destructive bg-destructive/10 p-4">
-            <p className="text-sm text-destructive">{evaluation.error_message}</p>
+            <p className="text-sm text-destructive">
+              {evaluation.error_message}
+            </p>
           </div>
         )}
       </div>

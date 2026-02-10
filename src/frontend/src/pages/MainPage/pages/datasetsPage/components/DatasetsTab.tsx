@@ -1,7 +1,4 @@
-import type {
-  RowClickedEvent,
-  SelectionChangedEvent,
-} from "ag-grid-community";
+import type { RowClickedEvent, SelectionChangedEvent } from "ag-grid-community";
 import type { AgGridReact } from "ag-grid-react";
 import { useEffect, useRef, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
@@ -139,7 +136,10 @@ const DatasetsTab = ({
   // Force ag-grid to pick up new cellRenderer closures when generatingDatasetIds changes
   useEffect(() => {
     if (tableRef.current?.api) {
-      tableRef.current.api.setGridOption("columnDefs", createDatasetColumns(generatingDatasetIds));
+      tableRef.current.api.setGridOption(
+        "columnDefs",
+        createDatasetColumns(generatingDatasetIds),
+      );
     }
   }, [generatingDatasetIds]);
 
@@ -152,7 +152,12 @@ const DatasetsTab = ({
   }
 
   if (datasets.length === 0) {
-    return <DatasetEmptyState onCreateDataset={onCreateDataset} onGenerateDataset={onGenerateDataset} />;
+    return (
+      <DatasetEmptyState
+        onCreateDataset={onCreateDataset}
+        onGenerateDataset={onGenerateDataset}
+      />
+    );
   }
 
   return (
@@ -175,7 +180,8 @@ const DatasetsTab = ({
             className="flex items-center gap-2 font-semibold"
             onClick={onGenerateDataset}
           >
-            <ForwardedIconComponent name="Sparkles" className="h-4 w-4" /> Generate Dataset
+            <ForwardedIconComponent name="Sparkles" className="h-4 w-4" />{" "}
+            Generate Dataset
           </Button>
           <Button
             className="flex items-center gap-2 font-semibold"

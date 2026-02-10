@@ -114,7 +114,10 @@ export default function MessagesMainContent({
     const allFlowMessages = currentFlowId
       ? messages.filter((m) => m.flow_id === currentFlowId)
       : messages;
-    const sessionMap = new Map<string, { count: number; lastTimestamp: string }>();
+    const sessionMap = new Map<
+      string,
+      { count: number; lastTimestamp: string }
+    >();
     for (const msg of allFlowMessages) {
       const sid = msg.session_id || "";
       const existing = sessionMap.get(sid);
@@ -180,7 +183,8 @@ export default function MessagesMainContent({
           <span className="text-xs text-muted-foreground">{sessionLabel}</span>
           <span className="text-xs text-muted-foreground">&middot;</span>
           <span className="text-xs text-muted-foreground">
-            {filteredMessages.length} message{filteredMessages.length !== 1 ? "s" : ""}
+            {filteredMessages.length} message
+            {filteredMessages.length !== 1 ? "s" : ""}
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -196,7 +200,10 @@ export default function MessagesMainContent({
               size="sm"
               onClick={() => setCreateDatasetModalOpen(true)}
             >
-              <IconComponent name="TableProperties" className="mr-1.5 h-3.5 w-3.5" />
+              <IconComponent
+                name="TableProperties"
+                className="mr-1.5 h-3.5 w-3.5"
+              />
               Create Dataset
             </Button>
           )}
@@ -264,14 +271,18 @@ export default function MessagesMainContent({
                         {msg.sender_name || "-"}
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
-                        {Array.isArray(msg.files) && msg.files.length > 0
-                          ? <ExpandableCell text={msg.files.join(", ")} />
-                          : "-"}
+                        {Array.isArray(msg.files) && msg.files.length > 0 ? (
+                          <ExpandableCell text={msg.files.join(", ")} />
+                        ) : (
+                          "-"
+                        )}
                       </TableCell>
                       <TableCell className="text-xs">
-                        {msg.error
-                          ? <span className="text-destructive">Yes</span>
-                          : <span className="text-muted-foreground">-</span>}
+                        {msg.error ? (
+                          <span className="text-destructive">Yes</span>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -289,7 +300,6 @@ export default function MessagesMainContent({
         sessions={sessionsForModal}
         selectedSessionId={selectedSessionId}
       />
-
     </div>
   );
 }

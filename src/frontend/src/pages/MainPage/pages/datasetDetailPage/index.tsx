@@ -130,9 +130,12 @@ export const DatasetDetailPage = () => {
 
   const isMultiTurn = dataset?.dataset_type === "multi_turn";
 
-  const conversationCount = isMultiTurn && dataset?.items
-    ? new Set(dataset.items.map((item) => item.conversation_id).filter(Boolean)).size
-    : 0;
+  const conversationCount =
+    isMultiTurn && dataset?.items
+      ? new Set(
+          dataset.items.map((item) => item.conversation_id).filter(Boolean),
+        ).size
+      : 0;
 
   // Pre-compute message range each turn sees: "0" for first, "0-2", "0-4", etc.
   const msgRangeMap = new Map<string, string>();
@@ -178,7 +181,8 @@ export const DatasetDetailPage = () => {
             sortable: false,
             editable: false,
             cellClass: "text-muted-foreground font-mono",
-            cellRenderer: (params: any) => msgRangeMap.get(params.data.id) ?? "-",
+            cellRenderer: (params: any) =>
+              msgRangeMap.get(params.data.id) ?? "-",
           } as ColDef,
         ]
       : []),
@@ -280,12 +284,17 @@ export const DatasetDetailPage = () => {
                     onClick={handleBack}
                     className="mr-2"
                   >
-                    <ForwardedIconComponent name="ArrowLeft" className="h-5 w-5" />
+                    <ForwardedIconComponent
+                      name="ArrowLeft"
+                      className="h-5 w-5"
+                    />
                   </Button>
                   <div className="flex flex-col">
                     <div className="flex items-center gap-2">
                       <ForwardedIconComponent
-                        name={isMultiTurn ? "MessagesSquare" : "TableProperties"}
+                        name={
+                          isMultiTurn ? "MessagesSquare" : "TableProperties"
+                        }
                         className="h-5 w-5 text-muted-foreground"
                       />
                       <h1 className="text-xl font-semibold">{dataset.name}</h1>
@@ -316,7 +325,10 @@ export const DatasetDetailPage = () => {
                     onClick={handleExport}
                     className="flex items-center gap-2"
                   >
-                    <ForwardedIconComponent name="Download" className="h-4 w-4" />
+                    <ForwardedIconComponent
+                      name="Download"
+                      className="h-4 w-4"
+                    />
                     Export
                   </Button>
                 </div>
@@ -328,7 +340,9 @@ export const DatasetDetailPage = () => {
                   {dataset.items.length === 0 ? (
                     <div className="flex h-full flex-col items-center justify-center gap-4 py-20">
                       <ForwardedIconComponent
-                        name={isMultiTurn ? "TableProperties" : "TableProperties"}
+                        name={
+                          isMultiTurn ? "TableProperties" : "TableProperties"
+                        }
                         className="h-12 w-12 text-muted-foreground"
                       />
                       <p className="text-lg text-muted-foreground">
@@ -374,11 +388,11 @@ export const DatasetDetailPage = () => {
                       }}
                     />
                   )}
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
       </div>
 
       <ImportCsvModal

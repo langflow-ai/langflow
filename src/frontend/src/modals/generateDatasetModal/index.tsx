@@ -46,7 +46,11 @@ export default function GenerateDatasetModal({
   const [modelProviderModalOpen, setModelProviderModalOpen] = useState(false);
   const modelButtonRef = useRef<HTMLButtonElement>(null);
 
-  const { data: llmModelsData, isLoading: modelsLoading, refetch: refetchModels } = useGetLLMModels({});
+  const {
+    data: llmModelsData,
+    isLoading: modelsLoading,
+    refetch: refetchModels,
+  } = useGetLLMModels({});
 
   const { setErrorData, setSuccessData } = useAlertStore((state) => ({
     setErrorData: state.setErrorData,
@@ -81,7 +85,8 @@ export default function GenerateDatasetModal({
     return grouped;
   }, [llmModelsData]);
 
-  const hasEnabledProviders = (llmModelsData?.enabledProviders?.length ?? 0) > 0;
+  const hasEnabledProviders =
+    (llmModelsData?.enabledProviders?.length ?? 0) > 0;
 
   const resetForm = () => {
     setName("");
@@ -152,10 +157,7 @@ export default function GenerateDatasetModal({
         onSubmit={handleSubmit}
       >
         <BaseModal.Header description="Use an LLM to generate input/expected_output pairs for your dataset.">
-          <ForwardedIconComponent
-            name="Sparkles"
-            className="mr-2 h-4 w-4"
-          />
+          <ForwardedIconComponent name="Sparkles" className="mr-2 h-4 w-4" />
           Generate Dataset
         </BaseModal.Header>
         <BaseModal.Content className="flex flex-col gap-6 px-6 py-4">
@@ -192,9 +194,7 @@ export default function GenerateDatasetModal({
 
           {/* Number of items */}
           <div className="flex flex-col gap-2">
-            <Label htmlFor="generate-dataset-num-items">
-              Number of items
-            </Label>
+            <Label htmlFor="generate-dataset-num-items">Number of items</Label>
             <Input
               id="generate-dataset-num-items"
               type="number"
@@ -218,7 +218,10 @@ export default function GenerateDatasetModal({
             <Label>
               Model <span className="text-destructive">*</span>
             </Label>
-            <Popover open={modelDropdownOpen} onOpenChange={setModelDropdownOpen}>
+            <Popover
+              open={modelDropdownOpen}
+              onOpenChange={setModelDropdownOpen}
+            >
               {!hasEnabledProviders && !modelsLoading ? (
                 <Button
                   variant="default"

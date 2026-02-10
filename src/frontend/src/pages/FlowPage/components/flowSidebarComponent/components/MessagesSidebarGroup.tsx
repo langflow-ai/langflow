@@ -49,7 +49,10 @@ const SessionsEmptyState = () => {
 const SessionsLoadingState = () => {
   return (
     <div className="flex h-full min-h-[100px] w-full items-center justify-center">
-      <IconComponent name="Loader2" className="h-6 w-6 animate-spin text-muted-foreground" />
+      <IconComponent
+        name="Loader2"
+        className="h-6 w-6 animate-spin text-muted-foreground"
+      />
     </div>
   );
 };

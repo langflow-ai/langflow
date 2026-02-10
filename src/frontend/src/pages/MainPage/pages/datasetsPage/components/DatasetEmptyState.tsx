@@ -6,7 +6,10 @@ interface DatasetEmptyStateProps {
   onGenerateDataset?: () => void;
 }
 
-const DatasetEmptyState = ({ onCreateDataset, onGenerateDataset }: DatasetEmptyStateProps) => {
+const DatasetEmptyState = ({
+  onCreateDataset,
+  onGenerateDataset,
+}: DatasetEmptyStateProps) => {
   return (
     <div className="flex h-full w-full flex-col items-center justify-center gap-8 pb-8">
       <div className="flex flex-col items-center gap-2">
@@ -16,10 +19,7 @@ const DatasetEmptyState = ({ onCreateDataset, onGenerateDataset }: DatasetEmptyS
         </p>
       </div>
       <div className="flex items-center gap-2">
-        <Button
-          onClick={onCreateDataset}
-          className="!px-3 md:!px-4 md:!pl-3.5"
-        >
+        <Button onClick={onCreateDataset} className="!px-3 md:!px-4 md:!pl-3.5">
           <ForwardedIconComponent
             name="Plus"
             aria-hidden="true"

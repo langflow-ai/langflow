@@ -230,8 +230,12 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
     refreshAllModelInputs({ silent: true });
   };
 
-  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
-  const [selectedEvaluationId, setSelectedEvaluationId] = useState<string | null>(null);
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(
+    null,
+  );
+  const [selectedEvaluationId, setSelectedEvaluationId] = useState<
+    string | null
+  >(null);
 
   const isMobile = useIsMobile();
   const isSlidingContainerOpen = usePlaygroundStore((state) => state.isOpen);

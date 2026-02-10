@@ -142,16 +142,12 @@ export default function ImportCsvModal({
           {file ? (
             <div className="text-center">
               <p className="font-medium">{file.name}</p>
-              <p className="text-sm text-muted-foreground">
-                Click to replace
-              </p>
+              <p className="text-sm text-muted-foreground">Click to replace</p>
             </div>
           ) : (
             <div className="text-center">
               <p className="font-medium">Click to select CSV file</p>
-              <p className="text-sm text-muted-foreground">
-                or drag and drop
-              </p>
+              <p className="text-sm text-muted-foreground">or drag and drop</p>
             </div>
           )}
         </div>

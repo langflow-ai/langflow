@@ -153,7 +153,9 @@ export default function EvaluationsMainContent({
   // Interactive pass criteria — initialized from evaluation data
   const [localPassMetric, setLocalPassMetric] = useState<string | null>(null);
   const [localPassThreshold, setLocalPassThreshold] = useState(0.5);
-  const [criteriaInitialized, setCriteriaInitialized] = useState<string | null>(null);
+  const [criteriaInitialized, setCriteriaInitialized] = useState<string | null>(
+    null,
+  );
 
   // Sync local criteria when evaluation data loads / changes
   if (evaluation && criteriaInitialized !== evaluation.id) {
@@ -177,7 +179,9 @@ export default function EvaluationsMainContent({
         const vals = Object.values(r.scores).filter(
           (s): s is number => s != null,
         );
-        const avg = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
+        const avg = vals.length
+          ? vals.reduce((a, b) => a + b, 0) / vals.length
+          : 0;
         passed = avg >= localPassThreshold;
       }
       return { ...r, passed };
@@ -198,7 +202,8 @@ export default function EvaluationsMainContent({
     }
   };
 
-  const isRunning = evaluation?.status === "running" || evaluation?.status === "pending";
+  const isRunning =
+    evaluation?.status === "running" || evaluation?.status === "pending";
 
   if (!selectedEvaluationId) {
     return <NoEvaluationSelected />;
@@ -224,7 +229,8 @@ export default function EvaluationsMainContent({
     );
   }
 
-  const hasConversations = evaluation.results?.some((r) => r.conversation_id) ?? false;
+  const hasConversations =
+    evaluation.results?.some((r) => r.conversation_id) ?? false;
 
   // Pre-compute message range each turn sees: "0" for first, "0-2", "0-4", etc.
   const msgRangeMap = new Map<string, string>();
@@ -259,7 +265,9 @@ export default function EvaluationsMainContent({
             {evaluation.name || `Evaluation ${evaluation.id.slice(0, 8)}`}
           </h2>
           <span className="text-xs text-muted-foreground">&middot;</span>
-          <span className={`text-xs capitalize ${statusColors[evaluation.status] ?? "text-muted-foreground"}`}>
+          <span
+            className={`text-xs capitalize ${statusColors[evaluation.status] ?? "text-muted-foreground"}`}
+          >
             {evaluation.status}
           </span>
         </div>
@@ -295,43 +303,69 @@ export default function EvaluationsMainContent({
             <div className="flex flex-col items-center">
               <span className="text-[11px] text-muted-foreground">Dataset</span>
               <span className="flex items-center gap-1.5 text-sm font-semibold">
-                <IconComponent name={hasConversations ? "MessagesSquare" : "TableProperties"} className="h-3.5 w-3.5 text-muted-foreground" />
+                <IconComponent
+                  name={hasConversations ? "MessagesSquare" : "TableProperties"}
+                  className="h-3.5 w-3.5 text-muted-foreground"
+                />
                 {evaluation.dataset_name}
               </span>
             </div>
             <div className="flex flex-col items-center">
               <span className="text-[11px] text-muted-foreground">Items</span>
-              <span className="text-sm font-semibold">{evaluation.total_items}</span>
+              <span className="text-sm font-semibold">
+                {evaluation.total_items}
+              </span>
             </div>
           </div>
 
           {/* Stats cards — only when completed */}
-          {(evaluation.status === "completed" || evaluation.status === "stopped") && (
+          {(evaluation.status === "completed" ||
+            evaluation.status === "stopped") && (
             <>
               <div className="flex items-center gap-6 rounded-lg border border-border bg-background px-5 py-3">
                 <div className="flex flex-col items-center">
-                  <span className="text-[11px] text-muted-foreground">Mean Duration</span>
-                  <span className="text-sm font-semibold">{formatDuration(evaluation.mean_duration_ms)}</span>
+                  <span className="text-[11px] text-muted-foreground">
+                    Mean Duration
+                  </span>
+                  <span className="text-sm font-semibold">
+                    {formatDuration(evaluation.mean_duration_ms)}
+                  </span>
                 </div>
                 <div className="flex flex-col items-center">
-                  <span className="text-[11px] text-muted-foreground">Runtime</span>
-                  <span className="text-sm font-semibold">{formatRuntime(evaluation.total_runtime_ms)}</span>
+                  <span className="text-[11px] text-muted-foreground">
+                    Runtime
+                  </span>
+                  <span className="text-sm font-semibold">
+                    {formatRuntime(evaluation.total_runtime_ms)}
+                  </span>
                 </div>
               </div>
-              {evaluation.total_flow_tokens != null && evaluation.total_flow_tokens > 0 && (
-                <div className="flex flex-col items-center justify-center rounded-lg border border-border bg-background px-5 py-3">
-                  <span className="text-[11px] text-muted-foreground">Tokens</span>
-                  <span className="text-sm font-semibold">{evaluation.total_flow_tokens.toLocaleString()}</span>
-                </div>
-              )}
-              {evaluation.total_llm_judge_tokens != null && evaluation.total_llm_judge_tokens > 0 && (
-                <div className="flex flex-col items-center justify-center rounded-lg border border-border bg-background px-5 py-3">
-                  <span className="text-[11px] text-muted-foreground">Judge Tokens</span>
-                  <span className="text-sm font-semibold">{evaluation.total_llm_judge_tokens.toLocaleString()}</span>
-                </div>
-              )}
+              {evaluation.total_flow_tokens != null &&
+                evaluation.total_flow_tokens > 0 && (
+                  <div className="flex flex-col items-center justify-center rounded-lg border border-border bg-background px-5 py-3">
+                    <span className="text-[11px] text-muted-foreground">
+                      Tokens
+                    </span>
+                    <span className="text-sm font-semibold">
+                      {evaluation.total_flow_tokens.toLocaleString()}
+                    </span>
+                  </div>
+                )}
+              {evaluation.total_llm_judge_tokens != null &&
+                evaluation.total_llm_judge_tokens > 0 && (
+                  <div className="flex flex-col items-center justify-center rounded-lg border border-border bg-background px-5 py-3">
+                    <span className="text-[11px] text-muted-foreground">
+                      Judge Tokens
+                    </span>
+                    <span className="text-sm font-semibold">
+                      {evaluation.total_llm_judge_tokens.toLocaleString()}
+                    </span>
+                  </div>
+                )}
               <div className="flex flex-col items-center justify-center rounded-lg border border-border bg-background px-5 py-3">
-                <span className="text-[11px] text-muted-foreground">Pass Rate</span>
+                <span className="text-[11px] text-muted-foreground">
+                  Pass Rate
+                </span>
                 <span className="text-sm font-semibold">
                   {passRate}%
                   <span className="ml-1 text-[11px] font-normal text-muted-foreground">
@@ -363,16 +397,21 @@ export default function EvaluationsMainContent({
         {/* Error message */}
         {evaluation.error_message && (
           <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3">
-            <p className="text-xs text-destructive">{evaluation.error_message}</p>
+            <p className="text-xs text-destructive">
+              {evaluation.error_message}
+            </p>
           </div>
         )}
 
         {/* Table card */}
         <div className="flex flex-1 flex-col rounded-lg border border-border bg-background">
           {/* Table toolbar — pass criteria */}
-          {(evaluation.status === "completed" || evaluation.status === "stopped") && (
+          {(evaluation.status === "completed" ||
+            evaluation.status === "stopped") && (
             <div className="flex items-center gap-2.5 border-b border-border px-4 py-2">
-              <span className="text-xs text-muted-foreground whitespace-nowrap">Pass when</span>
+              <span className="text-xs text-muted-foreground whitespace-nowrap">
+                Pass when
+              </span>
               <Select
                 value={localPassMetric ?? "__average__"}
                 onValueChange={(v) =>
@@ -386,7 +425,9 @@ export default function EvaluationsMainContent({
                   <SelectItem value="__average__">Average All</SelectItem>
                   {evaluation.scoring_methods.map((m) => (
                     <SelectItem key={m} value={m}>
-                      {m.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                      {m
+                        .replace("_", " ")
+                        .replace(/\b\w/g, (c) => c.toUpperCase())}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -430,7 +471,9 @@ export default function EvaluationsMainContent({
                   )}
                   {evaluation.scoring_methods.map((method) => (
                     <TableHead key={method} className="w-20 text-xs">
-                      {method.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                      {method
+                        .replace("_", " ")
+                        .replace(/\b\w/g, (c) => c.toUpperCase())}
                     </TableHead>
                   ))}
                   <TableHead className="w-16 text-xs">Result</TableHead>
@@ -439,11 +482,24 @@ export default function EvaluationsMainContent({
               <TableBody>
                 {recomputedResults.length > 0 ? (
                   recomputedResults.map((result, idx) => {
-                    const prevConvId = idx > 0 ? recomputedResults[idx - 1].conversation_id : null;
-                    const isNewConversation = hasConversations && result.conversation_id !== prevConvId && idx > 0;
+                    const prevConvId =
+                      idx > 0
+                        ? recomputedResults[idx - 1].conversation_id
+                        : null;
+                    const isNewConversation =
+                      hasConversations &&
+                      result.conversation_id !== prevConvId &&
+                      idx > 0;
                     return (
-                      <TableRow key={result.id} className={isNewConversation ? "border-t-2 border-border" : ""}>
-                        <TableCell className="text-xs text-muted-foreground">{idx + 1}</TableCell>
+                      <TableRow
+                        key={result.id}
+                        className={
+                          isNewConversation ? "border-t-2 border-border" : ""
+                        }
+                      >
+                        <TableCell className="text-xs text-muted-foreground">
+                          {idx + 1}
+                        </TableCell>
                         {hasConversations && (
                           <>
                             <TableCell className="text-xs text-muted-foreground">
@@ -467,22 +523,40 @@ export default function EvaluationsMainContent({
                         <TableCell className="text-xs">
                           <ExpandableCell text={result.actual_output} />
                         </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">{formatDuration(result.duration_ms)}</TableCell>
-                        <TableCell className="text-xs text-muted-foreground">{formatTokens(result.flow_tokens)}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {formatDuration(result.duration_ms)}
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {formatTokens(result.flow_tokens)}
+                        </TableCell>
                         {evaluation.scoring_methods.includes("llm_judge") && (
-                          <TableCell className="text-xs text-muted-foreground">{formatTokens(result.llm_judge_tokens)}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {formatTokens(result.llm_judge_tokens)}
+                          </TableCell>
                         )}
                         {evaluation.scoring_methods.map((method) => (
-                          <TableCell key={method} className="text-xs font-medium">
-                            {result.scores[method] != null
-                              ? result.scores[method].toFixed(2)
-                              : result.error
-                                ? <span className="text-destructive" title={result.error}>err</span>
-                                : "-"}
+                          <TableCell
+                            key={method}
+                            className="text-xs font-medium"
+                          >
+                            {result.scores[method] != null ? (
+                              result.scores[method].toFixed(2)
+                            ) : result.error ? (
+                              <span
+                                className="text-destructive"
+                                title={result.error}
+                              >
+                                err
+                              </span>
+                            ) : (
+                              "-"
+                            )}
                           </TableCell>
                         ))}
                         <TableCell>
-                          <span className={`text-xs font-medium ${result.passed ? "text-emerald-600" : "text-destructive"}`}>
+                          <span
+                            className={`text-xs font-medium ${result.passed ? "text-emerald-600" : "text-destructive"}`}
+                          >
                             {result.passed ? "Pass" : "Fail"}
                           </span>
                         </TableCell>

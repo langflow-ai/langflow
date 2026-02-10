@@ -58,11 +58,8 @@ export const useGenerateDataset: useMutationFunctionType<
     return response.data;
   };
 
-  const mutation: UseMutationResult<
-    DatasetInfo,
-    any,
-    GenerateDatasetParams
-  > = mutate(["useGenerateDataset"], generateDatasetFn, options);
+  const mutation: UseMutationResult<DatasetInfo, any, GenerateDatasetParams> =
+    mutate(["useGenerateDataset"], generateDatasetFn, options);
 
   return mutation;
 };
