@@ -380,7 +380,9 @@ export default function AccordionPromptComponent({
     if (disabled || readonly || !contentEditableRef.current) return;
 
     isTypingRef.current = true;
-    const variableText = isDoubleBrackets ? "{{variable_name}}" : "{variable_name}";
+    const variableText = isDoubleBrackets
+      ? "{{variable_name}}"
+      : "{variable_name}";
 
     // Get current cursor position or end of text
     let insertPosition = internalValue.length;
@@ -427,7 +429,9 @@ export default function AccordionPromptComponent({
             className="h-6 w-6 p-0 text-muted-foreground"
             title="Add variable"
           >
-            <span className="text-xs">{isDoubleBrackets ? "{{+}}" : "{+}"}</span>
+            <span className="text-xs">
+              {isDoubleBrackets ? "{{+}}" : "{+}"}
+            </span>
           </Button>
           <DisclosureTrigger className="group/collapsible">
             <div
