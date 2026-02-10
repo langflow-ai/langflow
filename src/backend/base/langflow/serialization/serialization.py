@@ -15,6 +15,10 @@ from pydantic.v1 import BaseModel as BaseModelV1
 from langflow.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
 from langflow.services.deps import get_settings_service
 
+_PRIMITIVE_TYPES = (str, int, float, bool)
+
+_PRIMITIVE_WITH_NONE = _PRIMITIVE_TYPES + (type(None),)
+
 
 # Sentinel variable to signal a failed serialization.
 # Using a helper class ensures that the sentinel is a unique object,
@@ -274,21 +278,58 @@ def serialize(
     # Fast-path common immutable primitives when no truncation/limits requested.
     # This avoids the relatively expensive dispatcher for the common case.
     no_limits = max_length is None and max_items is None
-    is_simple_primitive = isinstance(obj, (str, int, float, bool))
+    is_simple_primitive = isinstance(obj, _PRIMITIVE_TYPES)
 
     if no_limits and not to_str and is_simple_primitive:
         return obj
 
+    # Fast-path for homogeneous container types containing only simple primitives.
+    # Returning the original container is safe because the values are immutable primitives,
+    # and this avoids allocating a new structure and iterating with the dispatcher.
+    if no_limits and not to_str:
+        if isinstance(obj, dict):
+            all_primitive = True
+            for k, v in obj.items():
+                # Keys in typical serializable dicts are primitives (often str)
+                if not isinstance(k, _PRIMITIVE_TYPES):
+                    all_primitive = False
+                    break
+                if not isinstance(v, _PRIMITIVE_WITH_NONE):
+                    all_primitive = False
+                    break
+            if all_primitive:
+                return obj
+        elif isinstance(obj, (list, tuple)):
+            all_primitive = True
+            for v in obj:
+                if not isinstance(v, _PRIMITIVE_WITH_NONE):
+                    all_primitive = False
+                    break
+            if all_primitive:
+                return obj
+
     try:
-        # First try type-specific serialization
-        result = _serialize_dispatcher(obj, max_length, max_items)
-        if result is not UNSERIALIZABLE_SENTINEL:  # Special check for None since it's a valid result
-            return result
+        # If a module-level dispatcher and sentinel exist, prefer it for full-featured
+        # serialization; however, avoid assuming they exist in every runtime to be robust.
+        dispatcher = globals().get("_serialize_dispatcher")
+        sentinel_present = "UNSERIALIZABLE_SENTINEL" in globals()
+        if dispatcher is not None and sentinel_present:
+            result = dispatcher(obj, max_length, max_items)
+            # Special check for sentinel; result may legitimately be None
+            if result is not globals()["UNSERIALIZABLE_SENTINEL"]:
+                return result
+
+        # Handle class-based Pydantic types and other types
 
         # Handle class-based Pydantic types and other types
         if isinstance(obj, type):
-            if issubclass(obj, BaseModel | BaseModelV1):
-                return repr(obj)
+            try:
+                # Use tuple for issubclass to handle either BaseModel type
+                if issubclass(obj, (BaseModel, BaseModelV1)):  # type: ignore[arg-type]
+                    return repr(obj)
+            except Exception:
+                # If issubclass fails (e.g., for certain dynamic types), fall back to str
+                pass
             return str(obj)  # Handle other class types
 
         # Handle type aliases and generic types
