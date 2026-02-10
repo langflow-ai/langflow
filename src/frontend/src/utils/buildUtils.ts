@@ -297,56 +297,8 @@ export async function buildFlowVertices({
           const data = event["data"];
           return onEvent(type, data, buildResults, eventCallbacks);
         },
-        onDataBatch: async (events) => {
-          let hadBatchable = false;
-          for (const event of events) {
-            const type = event["event"] as string;
-            const data = event["data"];
-
-            if (BATCHABLE_EVENTS.has(type)) {
-              // Process synchronously — no await — so React batches state updates
-              let result: boolean;
-              if (type === "end_vertex") {
-                result = processEndVertexEvent(
-                  data,
-                  buildResults,
-                  eventCallbacks,
-                );
-              } else if (type === "build_start") {
-                if (data?.id) {
-                  useFlowStore
-                    .getState()
-                    .updateBuildStatus([data.id], BuildStatus.BUILDING);
-                }
-                result = true;
-              } else {
-                // build_end
-                if (data?.id) {
-                  useFlowStore
-                    .getState()
-                    .updateBuildStatus([data.id], BuildStatus.BUILT);
-                }
-                result = true;
-              }
-              if (!result) return false;
-              hadBatchable = true;
-            } else {
-              // Non-batchable events need async processing
-              const result = await onEvent(
-                type,
-                data,
-                buildResults,
-                eventCallbacks,
-              );
-              if (!result) return false;
-            }
-          }
-          // Single yield after the entire batch so React can paint
-          if (hadBatchable) {
-            await new Promise((resolve) => setTimeout(resolve, BATCH_YIELD_MS));
-          }
-          return true;
-        },
+        onDataBatch: (events) =>
+          processBatchedEvents(events, buildResults, eventCallbacks, onEvent),
         onError: (statusCode) => {
           if (statusCode === 404) {
             throw new Error("Flow not found");
@@ -430,52 +382,8 @@ export async function buildFlowVertices({
           const data = event["data"];
           return onEvent(type, data, buildResults, eventCallbacks);
         },
-        onDataBatch: async (events) => {
-          let hadBatchable = false;
-          for (const event of events) {
-            const type = event["event"] as string;
-            const data = event["data"];
-
-            if (BATCHABLE_EVENTS.has(type)) {
-              let result: boolean;
-              if (type === "end_vertex") {
-                result = processEndVertexEvent(
-                  data,
-                  buildResults,
-                  eventCallbacks,
-                );
-              } else if (type === "build_start") {
-                if (data?.id) {
-                  useFlowStore
-                    .getState()
-                    .updateBuildStatus([data.id], BuildStatus.BUILDING);
-                }
-                result = true;
-              } else {
-                if (data?.id) {
-                  useFlowStore
-                    .getState()
-                    .updateBuildStatus([data.id], BuildStatus.BUILT);
-                }
-                result = true;
-              }
-              if (!result) return false;
-              hadBatchable = true;
-            } else {
-              const result = await onEvent(
-                type,
-                data,
-                buildResults,
-                eventCallbacks,
-              );
-              if (!result) return false;
-            }
-          }
-          if (hadBatchable) {
-            await new Promise((resolve) => setTimeout(resolve, BATCH_YIELD_MS));
-          }
-          return true;
-        },
+        onDataBatch: (events) =>
+          processBatchedEvents(events, buildResults, eventCallbacks, onEvent),
         onError: (statusCode) => {
           if (statusCode === 404) {
             throw new Error("Build job not found");
@@ -630,6 +538,81 @@ export function processEndVertexEvent(
     }
   }
 
+  return true;
+}
+
+/**
+ * Processes a batch of events, handling batchable events (end_vertex,
+ * build_start, build_end) synchronously so React 18 batches all Zustand
+ * state updates into a single render. Non-batchable events are processed
+ * with await for their async side-effects.
+ *
+ * @returns true if all events succeeded, false if processing should stop.
+ */
+export async function processBatchedEvents(
+  events: object[],
+  buildResults: boolean[],
+  callbacks: {
+    onBuildStart?: (idList: VertexLayerElementType[]) => void;
+    onBuildUpdate?: (data: any, status: BuildStatus, buildId: string) => void;
+    onBuildComplete?: (allNodesValid: boolean) => void;
+    onBuildError?: (
+      title: string,
+      list: string[],
+      idList?: VertexLayerElementType[],
+    ) => void;
+    onGetOrderSuccess?: () => void;
+    onValidateNodes?: (nodes: string[]) => void;
+  },
+  onEventFallback: (
+    type: string,
+    data: any,
+    buildResults: boolean[],
+    callbacks: object,
+  ) => Promise<boolean>,
+): Promise<boolean> {
+  let hadBatchable = false;
+  for (const event of events) {
+    const type = event["event"] as string;
+    const data = event["data"];
+
+    if (BATCHABLE_EVENTS.has(type)) {
+      let result: boolean;
+      if (type === "end_vertex") {
+        result = processEndVertexEvent(data, buildResults, callbacks);
+      } else if (type === "build_start") {
+        if (data?.id) {
+          useFlowStore
+            .getState()
+            .updateBuildStatus([data.id], BuildStatus.BUILDING);
+        } else {
+          useFlowStore.getState().setBuildStartTime(Date.now());
+        }
+        result = true;
+      } else {
+        // build_end
+        if (data?.id) {
+          useFlowStore
+            .getState()
+            .updateBuildStatus([data.id], BuildStatus.BUILT);
+        }
+        result = true;
+      }
+      if (!result) return false;
+      hadBatchable = true;
+    } else {
+      const result = await onEventFallback(
+        type,
+        data,
+        buildResults,
+        callbacks,
+      );
+      if (!result) return false;
+    }
+  }
+  if (hadBatchable) {
+    await new Promise((resolve) => setTimeout(resolve, BATCH_YIELD_MS));
+  }
   return true;
 }
 

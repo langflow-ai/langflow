@@ -1,13 +1,8 @@
 import { BUILD_POLLING_INTERVAL } from "@/constants/constants";
 import { BuildStatus, EventDeliveryType } from "@/constants/enums";
 import { getFetchCredentials } from "@/customization/utils/get-fetch-credentials";
-import useFlowStore from "@/stores/flowStore";
 import { VertexLayerElementType } from "@/types/zustand/flow";
-import {
-  BATCH_YIELD_MS,
-  BATCHABLE_EVENTS,
-  processEndVertexEvent,
-} from "@/utils/buildUtils";
+import { processBatchedEvents } from "@/utils/buildUtils";
 
 export async function customPollBuildEvents(
   url: string,
@@ -64,74 +59,41 @@ export async function customPollBuildEvents(
       continue;
     }
 
-    const events = eventLines.map((line) => JSON.parse(line));
-
-    // Process events, batching consecutive batchable events (end_vertex,
-    // build_start, build_end) so all their Zustand set() calls happen
-    // synchronously — React 18 commits them in a single render.
-    let i = 0;
-    while (i < events.length) {
-      const event = events[i];
-
-      if (BATCHABLE_EVENTS.has(event.event)) {
-        // Collect consecutive batchable events and process synchronously.
-        // NO await in this loop — keeps everything in one synchronous
-        // execution context for React batching.
-        let batchFailed = false;
-        while (i < events.length && BATCHABLE_EVENTS.has(events[i].event)) {
-          const ev = events[i];
-          let result: boolean;
-
-          if (ev.event === "end_vertex") {
-            result = processEndVertexEvent(ev.data, buildResults, callbacks);
-          } else if (ev.event === "build_start") {
-            if (ev.data?.id) {
-              useFlowStore
-                .getState()
-                .updateBuildStatus([ev.data.id], BuildStatus.BUILDING);
-            }
-            result = true;
-          } else {
-            // build_end
-            if (ev.data?.id) {
-              useFlowStore
-                .getState()
-                .updateBuildStatus([ev.data.id], BuildStatus.BUILT);
-            }
-            result = true;
-          }
-
-          if (!result) {
-            batchFailed = true;
-            isDone = true;
-            abortController.abort();
-            break;
-          }
-          i++;
-        }
-
-        if (batchFailed) break;
-        // Single yield for the entire batch
-        await new Promise((resolve) => setTimeout(resolve, BATCH_YIELD_MS));
-      } else {
-        // Non-batchable events (vertices_sorted, end, error, add_message, token, etc.)
-        const result = await onEvent(
-          event.event,
-          event.data,
-          buildResults,
-          callbacks,
-        );
-        if (!result) {
-          isDone = true;
-          abortController.abort();
-          break;
-        }
-        if (event.event === "end") {
-          isDone = true;
-          break;
-        }
-        i++;
+    const events: object[] = [];
+    for (const line of eventLines) {
+      try {
+        events.push(JSON.parse(line));
+      } catch (_e) {
+        // Skip malformed JSON lines to avoid aborting the entire poll cycle
       }
+    }
+
+    if (events.length === 0) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      continue;
+    }
+
+    // Check if any event is the "end" event
+    const hasEndEvent = events.some(
+      (ev) => (ev as { event?: string }).event === "end",
+    );
+
+    const result = await processBatchedEvents(
+      events,
+      buildResults,
+      callbacks,
+      onEvent,
+    );
+
+    if (!result) {
+      isDone = true;
+      abortController.abort();
+      break;
+    }
+
+    if (hasEndEvent) {
+      isDone = true;
+      break;
     }
 
     await new Promise((resolve) => setTimeout(resolve, BUILD_POLLING_INTERVAL));
