@@ -1,3 +1,4 @@
+import { useState } from "react";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import useFlowStore from "@/stores/flowStore";
@@ -16,6 +17,8 @@ export const SidebarOpenView = ({
   playgroundPage,
   setActiveSession,
 }: SidebarOpenViewProps) => {
+  const [openMenuSession, setOpenMenuSession] = useState<string | null>(null);
+
   const setNewSessionCloseVoiceAssistant = useVoiceStore(
     (state) => state.setNewSessionCloseVoiceAssistant,
   );
@@ -87,6 +90,10 @@ export const SidebarOpenView = ({
               }}
               setActiveSession={(session) => {
                 setActiveSession(session);
+              }}
+              menuOpen={openMenuSession === session}
+              onMenuOpenChange={(open) => {
+                setOpenMenuSession(open ? session : null);
               }}
             />
           ))}
