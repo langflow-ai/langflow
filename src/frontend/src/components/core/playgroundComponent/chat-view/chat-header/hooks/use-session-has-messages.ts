@@ -41,13 +41,15 @@ export const useSessionHasMessages = ({
   });
 
   const hasMessages = sessionMessages.some((message: Message) => {
-
     const isCurrentFlow = message.flow_id === flowId;
-    
-        if (sessionId === flowId) {
-      return isCurrentFlow && (message.session_id === sessionId || !message.session_id);
+
+    if (sessionId === flowId) {
+      return (
+        isCurrentFlow &&
+        (message.session_id === sessionId || !message.session_id)
+      );
     }
-    
+
     return isCurrentFlow && message.session_id === sessionId;
   });
 
