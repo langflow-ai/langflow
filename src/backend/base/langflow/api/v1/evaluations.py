@@ -13,9 +13,11 @@ from sqlmodel import col, select
 from langflow.api.utils import CurrentActiveUser, DbSession
 
 logger = logging.getLogger(__name__)
+from lfx.base.models.unified_models import get_llm, normalize_model_names_to_dicts
+from lfx.graph import Graph
+
 from langflow.processing.process import run_graph
 from langflow.services.database.models.dataset.model import Dataset
-from langflow.services.database.models.traces.model import TraceTable
 from langflow.services.database.models.evaluation.model import (
     Evaluation,
     EvaluationCreate,
@@ -27,9 +29,8 @@ from langflow.services.database.models.evaluation.model import (
     ScoringMethod,
 )
 from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.traces.model import TraceTable
 from langflow.services.deps import session_scope
-from lfx.base.models.unified_models import get_llm, normalize_model_names_to_dicts
-from lfx.graph import Graph
 
 router = APIRouter(prefix="/evaluations", tags=["Evaluations"])
 
@@ -68,9 +69,7 @@ def _extract_token_usage(response) -> int | None:
     """Extract total token count from an LLM response."""
     if hasattr(response, "usage_metadata") and response.usage_metadata:
         usage = response.usage_metadata
-        total = getattr(usage, "total_tokens", None) or (
-            usage.get("total_tokens") if isinstance(usage, dict) else None
-        )
+        total = getattr(usage, "total_tokens", None) or (usage.get("total_tokens") if isinstance(usage, dict) else None)
         if total:
             return int(total)
     if hasattr(response, "response_metadata") and response.response_metadata:
@@ -234,10 +233,10 @@ async def run_single_evaluation_item(
                             if hasattr(value, "text"):
                                 actual_output = value.text
                                 break
-                            elif hasattr(value, "message"):
+                            if hasattr(value, "message"):
                                 actual_output = str(value.message)
                                 break
-                            elif isinstance(value, str):
+                            if isinstance(value, str):
                                 actual_output = value
                                 break
                         if actual_output:
@@ -510,7 +509,9 @@ async def run_evaluation_background(evaluation_id: UUID, user_id: UUID):
                         await session.commit()
 
                 if was_cancelled:
-                    logger.info(f"Evaluation {evaluation_id} was stopped by user at {evaluation.completed_items}/{len(sorted_items)} items")
+                    logger.info(
+                        f"Evaluation {evaluation_id} was stopped by user at {evaluation.completed_items}/{len(sorted_items)} items"
+                    )
                     evaluation.status = EvaluationStatus.STOPPED.value
                     evaluation.updated_at = datetime.now(timezone.utc)
                     evaluation.passed_items = passed_count

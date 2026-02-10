@@ -15,7 +15,6 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, select
 
 from langflow.api.utils import CurrentActiveUser, DbSession
-from langflow.services.database.models.message.model import MessageTable
 from langflow.services.database.models.dataset.model import (
     Dataset,
     DatasetCreate,
@@ -27,6 +26,7 @@ from langflow.services.database.models.dataset.model import (
     DatasetReadWithItems,
     DatasetUpdate,
 )
+from langflow.services.database.models.message.model import MessageTable
 
 router = APIRouter(prefix="/datasets", tags=["Datasets"])
 
@@ -580,8 +580,9 @@ async def generate_dataset_items_background(
     model_config: dict,
 ):
     """Background task to generate dataset items using an LLM."""
-    from langflow.services.deps import session_scope
     from lfx.base.models.unified_models import get_llm, normalize_model_names_to_dicts
+
+    from langflow.services.deps import session_scope
 
     logger.info(f"Starting background dataset generation: dataset_id={dataset_id}")
     try:
@@ -677,8 +678,7 @@ async def generate_dataset_items_background(
         }
 
         logger.info(
-            f"Background dataset generation complete: dataset_id={dataset_id}, "
-            f"items={item_count}, tokens={token_usage}"
+            f"Background dataset generation complete: dataset_id={dataset_id}, items={item_count}, tokens={token_usage}"
         )
 
     except Exception as e:
