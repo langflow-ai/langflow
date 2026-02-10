@@ -131,7 +131,7 @@ export function ChatHeader({
         onClearChat={handleClearChat}
         onDelete={handleDeleteSessionInternal}
         showRename={!isDefaultSession && hasMessages}
-        showClearChat={isDefaultSession}
+        showClearChat={isDefaultSession && hasMessages}
         showDelete={!isDefaultSession}
         side="bottom"
         align="end"

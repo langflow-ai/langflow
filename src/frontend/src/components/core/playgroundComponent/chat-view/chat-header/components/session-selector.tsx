@@ -168,7 +168,7 @@ export function SessionSelector({
         </div>
 
         <SessionMoreMenu
-          showClearChat={isDefaultSession}
+          showClearChat={isDefaultSession && hasMessages}
           onClearChat={handleClearChat}
           onRename={handleEditClick}
           onMessageLogs={() => inspectSession?.(session)}
