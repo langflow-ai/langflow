@@ -1,5 +1,6 @@
 import copy
 import json
+import keyword
 import re
 from contextlib import suppress
 from typing import Any
@@ -675,9 +676,10 @@ class ComposioBaseComponent(Component):
                                 attachment_related_found = True
                                 continue  # Skip individual attachment fields
 
-                            # Handle reserved attribute name conflicts
+                            # Handle reserved attribute name conflicts and Python keywords
                             # Prefix with app name to prevent clashes with component attributes
-                            if clean_field in self.RESERVED_ATTRIBUTES:
+                            # or syntax errors from Python reserved words (e.g. "from")
+                            if clean_field in self.RESERVED_ATTRIBUTES or keyword.iskeyword(clean_field):
                                 clean_field = f"{self.app_name}_{clean_field}"
 
                             action_fields.append(clean_field)
@@ -843,8 +845,8 @@ class ComposioBaseComponent(Component):
                     # Don't add individual attachment sub-fields to the schema
                     continue
 
-                # Handle reserved attribute name conflicts
-                if clean_field_name in self.RESERVED_ATTRIBUTES:
+                # Handle reserved attribute name conflicts and Python keywords
+                if clean_field_name in self.RESERVED_ATTRIBUTES or keyword.iskeyword(clean_field_name):
                     original_name = clean_field_name
                     clean_field_name = f"{self.app_name}_{clean_field_name}"
                     # Update the field schema description to reflect the name change
@@ -878,7 +880,7 @@ class ComposioBaseComponent(Component):
                 cleaned_required = []
                 for field in flat_schema["required"]:
                     base = field.replace("[0]", "")
-                    if base in self.RESERVED_ATTRIBUTES:
+                    if base in self.RESERVED_ATTRIBUTES or keyword.iskeyword(base):
                         cleaned_required.append(f"{self.app_name}_{base}")
                     else:
                         cleaned_required.append(base)
@@ -2455,10 +2457,10 @@ class ComposioBaseComponent(Component):
 
                 # Handle renamed fields - map back to original names for API execution
                 final_field_name = field
-                # Check if this is a renamed reserved attribute
+                # Check if this is a renamed reserved attribute or Python keyword
                 if field.startswith(f"{self.app_name}_"):
                     potential_original = field[len(self.app_name) + 1 :]  # Remove app_name prefix
-                    if potential_original in self.RESERVED_ATTRIBUTES:
+                    if potential_original in self.RESERVED_ATTRIBUTES or keyword.iskeyword(potential_original):
                         final_field_name = potential_original
 
                 arguments[final_field_name] = value
