@@ -22,6 +22,9 @@ When validation fails, the input is blocked and sent through the **Fail** output
 
 The **Jailbreak** and **Prompt Injection** guardrails include additional heuristic detection first, and then fall back to LLM validation if needed. This additional stage identifies obvious patterns quickly and reduces API costs by avoiding unnecessary LLM calls for clear violations.
 
+The **Guardrails** component uses a language model to analyze input and can produce false positives or miss some violations.
+Use this component **in addition to** other data-sanitization best practices, such as personnel training and scripts that check for literal values or regex patterns, rather than as a sole safeguard.
+
 ## Use the Guardrails component in a flow
 
 1. Connect a **Chat Input** or other text source to the **Guardrails** component's **Input Text** port.
