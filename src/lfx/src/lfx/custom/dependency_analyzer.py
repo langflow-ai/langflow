@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import ast
 import importlib.metadata as md
+import importlib.util
 import sys
 from dataclasses import asdict, dataclass
 from functools import lru_cache
+from pathlib import Path
 
 try:
     STDLIB_MODULES: set[str] = set(sys.stdlib_module_names)  # 3.10+
@@ -22,6 +24,14 @@ class DependencyInfo:
     name: str  # package name (e.g. "numpy", "requests")
     version: str | None  # package version if available
     is_local: bool  # True for relative imports (from .module import ...)
+
+
+@dataclass(frozen=True)
+class ImportRef:
+    """Represents a parsed import statement."""
+
+    module: str | None
+    level: int  # 0 for absolute, >0 for relative
 
 
 def _top_level(pkg: str) -> str:
@@ -66,6 +76,175 @@ class _ImportVisitor(ast.NodeVisitor):
                 is_local=_is_relative(full_module),  # Check if it's a relative import
             )
             self.results.append(dep)
+
+
+class _ImportRefVisitor(ast.NodeVisitor):
+    """AST visitor to extract import references for graph scanning."""
+
+    def __init__(self):
+        self.results: list[ImportRef] = []
+
+    def visit_Import(self, node: ast.Import):
+        for alias in node.names:
+            self.results.append(ImportRef(module=alias.name, level=0))
+
+    def visit_ImportFrom(self, node: ast.ImportFrom):
+        self.results.append(ImportRef(module=node.module, level=node.level))
+
+
+def _get_package_root(package_name: str) -> Path | None:
+    """Resolve a package root using importlib, works for source or pip installs."""
+    spec = importlib.util.find_spec(package_name)
+    if spec is None:
+        return None
+    if spec.submodule_search_locations:
+        return Path(next(iter(spec.submodule_search_locations)))
+    if spec.origin:
+        return Path(spec.origin).parent
+    return None
+
+
+@lru_cache(maxsize=1)
+def _get_internal_package_names() -> set[str]:
+    """Return internal package names available for scanning."""
+    packages: set[str] = set()
+    for package_name in ("lfx", "langflow"):
+        if _get_package_root(package_name) is not None:
+            packages.add(package_name)
+    return packages
+
+
+def _get_module_source(module: str) -> str | None:
+    """Return module source without importing it."""
+    try:
+        spec = importlib.util.find_spec(module)
+    except ValueError:
+        return None
+    if spec is None or spec.loader is None:
+        return None
+    try:
+        source = spec.loader.get_source(module)
+    except Exception:  # noqa: BLE001
+        source = None
+    return source
+
+
+def _resolve_relative_import(current_module: str, module: str | None, level: int) -> str | None:
+    """Resolve a relative import to an absolute module name."""
+    if level <= 0:
+        return None
+    parts = current_module.split(".")
+    if level > len(parts):
+        return None
+    base_parts = parts[: -level]
+    if module:
+        base_parts.extend(module.split("."))
+    if not base_parts:
+        return None
+    return ".".join(base_parts)
+
+
+def analyze_module_import_graph(module: str, *, resolve_versions: bool = True) -> list[dict]:
+    """Analyze dependencies by walking a module's import graph.
+
+    Args:
+        module: Fully-qualified module path (e.g., "lfx.components.models_and_agents.language_model")
+        resolve_versions: Whether to resolve version information
+
+    Returns:
+        List of dependency dictionaries
+    """
+    internal_packages = _get_internal_package_names()
+    if not module:
+        return []
+    entry_source = _get_module_source(module)
+    if entry_source is None:
+        return []
+
+    visited: set[str] = set()
+    external_deps: dict[str, DependencyInfo] = {}
+    stack: list[str] = [module]
+
+    while stack:
+        current_module = stack.pop()
+        if current_module in visited:
+            continue
+        visited.add(current_module)
+
+        source = _get_module_source(current_module)
+        if not source:
+            continue
+
+        try:
+            tree = ast.parse(source)
+        except SyntaxError:
+            continue
+
+        visitor = _ImportRefVisitor()
+        visitor.visit(tree)
+
+        for imp in visitor.results:
+            if imp.level > 0:
+                resolved_module = _resolve_relative_import(current_module, imp.module, imp.level)
+                if resolved_module:
+                    stack.append(resolved_module)
+                continue
+
+            module_name = imp.module or ""
+            top_level = _top_level(module_name)
+            if not top_level or top_level in STDLIB_MODULES:
+                continue
+
+            if top_level in internal_packages:
+                stack.append(module_name)
+                continue
+
+            if top_level not in external_deps:
+                dep = DependencyInfo(name=top_level, version=None, is_local=False)
+                external_deps[top_level] = _classify_dependency(dep) if resolve_versions else dep
+
+    return [asdict(d) for d in external_deps.values()]
+
+
+def analyze_code_import_graph(source: str, *, resolve_versions: bool = True) -> list[dict]:
+    """Analyze dependencies by scanning code and traversing internal imports."""
+    internal_packages = _get_internal_package_names()
+    external_deps: dict[str, DependencyInfo] = {}
+
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return []
+
+    visitor = _ImportRefVisitor()
+    visitor.visit(tree)
+
+    for imp in visitor.results:
+        if imp.level > 0:
+            # Relative imports in embedded code are treated as local.
+            continue
+
+        module_name = imp.module or ""
+        top_level = _top_level(module_name)
+        if not top_level or top_level in STDLIB_MODULES:
+            continue
+
+        if top_level in internal_packages:
+            for dep in analyze_module_import_graph(module_name, resolve_versions=resolve_versions):
+                dep_name = dep.get("name")
+                if dep_name and dep_name not in external_deps:
+                    external_deps[dep_name] = DependencyInfo(
+                        name=dep_name,
+                        version=dep.get("version"),
+                        is_local=False,
+                    )
+            continue
+
+        if top_level not in external_deps:
+            dep = DependencyInfo(name=top_level, version=None, is_local=False)
+            external_deps[top_level] = _classify_dependency(dep) if resolve_versions else dep
+
+    return [asdict(d) for d in external_deps.values()]
 
 
 def _classify_dependency(dep: DependencyInfo) -> DependencyInfo:

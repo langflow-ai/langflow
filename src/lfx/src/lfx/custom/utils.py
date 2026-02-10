@@ -8,17 +8,24 @@ import hashlib
 import inspect
 import re
 import traceback
+from functools import lru_cache
+from importlib import metadata
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException
+from packaging.markers import default_environment
+from packaging.requirements import Requirement
 from pydantic import BaseModel
 
 from lfx.custom import validate
 from lfx.custom.custom_component.component import Component
 from lfx.custom.custom_component.custom_component import CustomComponent
 from lfx.custom.dependency_analyzer import (
+    analyze_code_import_graph,
     analyze_component_dependencies,
+    analyze_dependencies,
+    analyze_module_import_graph,
     get_versioned_package_distributions,
 )
 from lfx.custom.directory_reader.utils import (
@@ -881,7 +888,8 @@ def get_flow_dependencies(
     flow: dict,
     trusted_versions: dict[str, str] | None = None,
     trusted_packages: set[str] | None = None,
-    enable_unsafe_packages: bool = False, # noqa: FBT001, FBT002
+    *,
+    enable_unsafe_packages: bool = False,
     ) -> set[str]:
     """Get the Python dependencies of a flow.
 
@@ -989,14 +997,17 @@ def get_flow_dependencies(
     dependencies = set()
 
     for component in flow.get("data", {}).get("nodes", []):
-        deps = (
+        code_value = (
             component
             .get("data", {})
             .get("node", {})
-            .get("metadata", {})
-            .get("dependencies", {})
-            .get("dependencies", [])
-            )
+            .get("template", {})
+            .get("code", {})
+            .get("value", "")
+        )
+        if not isinstance(code_value, str):
+            continue
+        deps = analyze_dependencies(code_value)
 
         if not deps:
             continue
@@ -1036,4 +1047,137 @@ def get_flow_dependencies(
     return dependencies
 
 
+def _module_path_from_component_module(module_path: str | None) -> str | None:
+    if not module_path:
+        return None
+    if "." not in module_path:
+        return module_path
+    return module_path.rsplit(".", 1)[0]
+
+
+def get_flow_import_graph_dependencies(
+    flow: dict,
+    trusted_versions: dict[str, str] | None = None,
+    trusted_packages: set[str] | None = None,
+    *,
+    enable_unsafe_packages: bool = False,
+) -> set[str]:
+    """Return flow dependencies by scanning component code or import graphs."""
+    if trusted_packages is None:
+        trusted_packages = set()
+    if trusted_versions is None:
+        trusted_versions = {}
+
+    dependencies = set()
+
+    for component in flow.get("data", {}).get("nodes", []):
+        deps = []
+
+        code_value = (
+            component
+            .get("data", {})
+            .get("node", {})
+            .get("template", {})
+            .get("code", {})
+            .get("value", "")
+        )
+        if isinstance(code_value, str) and code_value.strip():
+            deps.extend(analyze_code_import_graph(code_value))
+
+        module_path = (
+            component
+            .get("data", {})
+            .get("node", {})
+            .get("metadata", {})
+            .get("module")
+        )
+        module_name = _module_path_from_component_module(module_path)
+        if module_name:
+            deps.extend(analyze_module_import_graph(module_name))
+
+        if not deps:
+            continue
+
+        if not deps:
+            continue
+
+        for dep in deps:
+            if not (dep_name := dep.get("name")):
+                continue
+
+            if dep_version := dep.get("version"):
+                # first matching distribution with the provided version
+                versioned_names = get_versioned_package_distributions(
+                    package_name=dep_name, version=dep_version
+                )
+            else:
+                # all matching distributions
+                versioned_names = get_versioned_package_distributions(
+                    dep_name, version=None
+                )
+            if not versioned_names:
+                logger.warning(f"Package {dep_name} has no matching distribution.")
+
+                if trusted_version := trusted_versions.get(dep_name):
+                    versioned_names = [f"{dep_name}=={trusted_version}"]
+                elif dep_name in trusted_packages:
+                    versioned_names = [dep_name]
+                elif enable_unsafe_packages:
+                    versioned_names = (
+                        [f"{dep_name}=={v}"]
+                        if (v := dep.get("version"))
+                        else [dep_name]
+                    )
+
+            dependencies.update(versioned_names)
+
+    return dependencies
+
+
+def _norm(name: str) -> str:
+    return name.lower().replace("_", "-")
+
+@lru_cache(maxsize=32)
+def core_distribution_deps(dist_name: str) -> set[str]:
+    """Return normalized names of direct, non-extra deps for a distribution."""
+    deps: set[str] = set()
+    try:
+        dist = metadata.distribution(dist_name)
+    except metadata.PackageNotFoundError:
+        return deps
+
+    env = default_environment()
+    for req_str in dist.requires or []:
+        req = Requirement(req_str)
+        if req.marker and "extra" in str(req.marker):
+            continue
+        if req.marker and not req.marker.evaluate(env):
+            continue
+        deps.add(_norm(req.name))
+    return deps
+
+def filter_deps(flow_deps: set[str], packages: set[str]) -> set[str]:
+    """Remove packages already provided by the given packages."""
+    result = set()
+    exclude_deps = set()
+    for package in packages:
+        exclude_deps.update(core_distribution_deps(package))
+    for dep in flow_deps:
+        name = dep.split("==", 1)[0]
+        if _norm(name) not in exclude_deps:
+            result.add(dep)
+    return result
+
+
 _COMPONENT_TYPE_NAMES = {"Component", "CustomComponent"}
+
+
+if __name__ == "__main__":
+    import json
+    path = Path("/workspace/src/backend/base/langflow/initial_setup/starter_projects/Basic Prompting.json")
+    with path.open() as f:
+        flow = json.load(f)
+    deps = get_flow_import_graph_dependencies(flow)
+    filtered_deps = filter_deps(deps, {"lfx"})
+    print("Deps: %s", deps)
+    print("Filtered deps: %s", filtered_deps)
