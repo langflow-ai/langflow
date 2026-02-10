@@ -92,19 +92,6 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
     The component inspection panel replaces the component header menu for managing component parameters and settings.
     For more information, see [Component inspection panel](/concepts-components#component-inspection-panel).
 
-- Mustache templating support for Prompt Template component
-
-    The **Prompt Template** component now supports Mustache templating syntax.
-    Mustache templating eliminates the need to escape curly braces when including JSON structures in your prompts. For more information, see [Prompt Template](/components-prompts#use-mustache-templating-in-prompt-templates).
-
-- Global variables in MCP server headers
-
-    You can now use [global variables](/configuration-global-variables) in MCP server header values to securely store and reference sensitive values. For more information, see [Use global variables in MCP server headers](/mcp-client#use-global-variables-in-mcp-server-headers).
-
-- Pass environment variables to flows in API headers and CLI
-
-    The ability to pass environment variables in HTTP headers (previously available for the [`/responses` endpoint](/api-openai-responses#global-var)) is now also available for the [`/run` endpoint](/api-flows-run#pass-global-variables-in-headers).
-
 - Developer API: `/workflow` synchronous endpoints (Beta)
 
     The Developer API is part of a larger effort to improve Langflow's APIs with enhanced capabilities and better developer experience.
@@ -116,14 +103,32 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
     Moved the <Icon name="PanelRightOpen" aria-hidden="true"/> **Playground** to the right side of the visual builder for a more integrated testing experience. For the original full screen view, click <Icon name="Fullscreen" aria-hidden="true"/> **Fullscreen** within the **Playground** panel. For more information, see [Test flows in the Playground](/concepts-playground).
 
+- Mustache templating support for Prompt Template component
+
+    The **Prompt Template** component now supports Mustache templating syntax.
+    Mustache templating eliminates the need to escape curly braces when including JSON structures in your prompts. For more information, see [Prompt Template](/components-prompts#use-mustache-templating-in-prompt-templates).
+
 - More configuration options for JWT-based session authentication
 
     Langflow 1.8 offers additional configuration options for JWT algorithms, including support for RS256/RS512 algorithms, configurable keys, and token lifetimes. For more information, see [JWT authentication](/jwt-authentication).
+
+- Global variables in MCP server headers
+
+    You can now use [global variables](/configuration-global-variables) in MCP server header values to securely store and reference sensitive values. For more information, see [Use global variables in MCP server headers](/mcp-client#use-global-variables-in-mcp-server-headers).
+
+- Pass environment variables to flows in API headers and CLI
+
+    The ability to pass environment variables in HTTP headers (previously available for the [`/responses` endpoint](/api-openai-responses#global-var)) is now also available for the [`/run` endpoint](/api-flows-run#pass-global-variables-in-headers).
 
 - Guardrails component
 
     The **Guardrails** component validates input text against security and safety guardrails by using a connected language model to check for content such as PII, tokens/passwords, or offensive content. For more information, see [Guardrails](/guardrails).
 
+- Token usage tracking for OpenAI Responses API
+
+    The OpenAI Responses API endpoint now tracks and returns token usage statistics when your flow uses language model APIs that provide token usage information.
+    For more information, see [Token usage tracking](/api-openai-responses#token-usage-tracking).
+    
 ## 1.7.x
 
 :::warning Version yanked
