@@ -22,12 +22,21 @@ interface DetailViewState {
 
 export default function FlowLogsModal({
   children,
+  defaultTab = "logs",
 }: {
   children: React.ReactNode;
+  defaultTab?: "logs" | "traces";
 }): JSX.Element {
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const [open, setOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("logs");
+  const [activeTab, setActiveTab] = useState(defaultTab);
+
+  // Reset to default tab when modal opens
+  useEffect(() => {
+    if (open) {
+      setActiveTab(defaultTab);
+    }
+  }, [open, defaultTab]);
 
   const [pageIndex, setPageIndex] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -116,8 +125,8 @@ export default function FlowLogsModal({
         <BaseModal.Header description="Inspect component executions and traces.">
           <div className="flex w-full justify-between">
             <div className="flex h-fit w-32 items-center">
-              <span className="pr-2">Logs</span>
-              <IconComponent name="ScrollText" className="mr-2 h-4 w-4" />
+              <span className="pr-2">Flow Insights</span>
+              <IconComponent name="Table" className="mr-2 h-4 w-4" />
             </div>
             <div className="flex h-fit w-32 items-center"></div>
           </div>
@@ -125,7 +134,7 @@ export default function FlowLogsModal({
         <BaseModal.Content>
           <Tabs
             value={activeTab}
-            onValueChange={setActiveTab}
+            onValueChange={(value) => setActiveTab(value as "logs" | "traces")}
             className="flex h-full flex-col"
           >
             <TabsList className="mx-4 mt-2 w-fit">

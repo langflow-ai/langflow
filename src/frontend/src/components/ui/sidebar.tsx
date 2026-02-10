@@ -28,7 +28,9 @@ export type SidebarSection =
   | "components"
   | "bundles"
   | "mcp"
-  | "add_note";
+  | "add_note"
+  | "logs"
+  | "traces";
 
 // Helper function to get cookie value
 function getCookie(name: string): string | null {

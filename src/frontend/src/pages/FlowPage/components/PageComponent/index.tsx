@@ -22,7 +22,6 @@ import { useShallow } from "zustand/react/shallow";
 import { DefaultEdge } from "@/CustomEdges";
 import NoteNode from "@/CustomNodes/NoteNode";
 import FlowToolbar from "@/components/core/flowToolbarComponent";
-import InspectionPanel from "@/pages/FlowPage/components/InspectionPanel";
 import {
   COLOR_OPTIONS,
   NOTE_NODE_MIN_HEIGHT,
@@ -34,6 +33,7 @@ import { track } from "@/customization/utils/analytics";
 import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { useAddComponent } from "@/hooks/use-add-component";
+import InspectionPanel from "@/pages/FlowPage/components/InspectionPanel";
 import { nodeColorsName } from "@/utils/styleUtils";
 import { isSupportedNodeTypes } from "@/utils/utils";
 import GenericNode from "../../../../CustomNodes/GenericNode";
@@ -77,7 +77,6 @@ import {
 import {
   MemoizedBackground,
   MemoizedCanvasControls,
-  MemoizedLogCanvasControls,
   MemoizedSidebarTrigger,
 } from "./MemoizedComponents";
 import getRandomName from "./utils/get-random-name";
@@ -784,7 +783,6 @@ export default function Page({
           <div id="react-flow-id" className="h-full w-full bg-canvas relative">
             {!view && (
               <>
-                <MemoizedLogCanvasControls />
                 <MemoizedCanvasControls
                   selectedNode={selectedNode}
                   setIsAddingNote={setIsAddingNote}

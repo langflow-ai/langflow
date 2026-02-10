@@ -9,6 +9,7 @@ import {
   type SidebarSection,
   useSidebar,
 } from "@/components/ui/sidebar";
+import FlowLogsModal from "@/modals/flowLogsModal";
 import { cn } from "@/utils/utils";
 import { useSearchContext } from "../index";
 
@@ -52,6 +53,18 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Sticky Notes",
     tooltip: "Add Sticky Notes",
   },
+  {
+    id: "logs",
+    icon: "ScrollText",
+    label: "Logs",
+    tooltip: "Logs",
+  },
+  {
+    id: "traces",
+    icon: "Activity",
+    label: "Traces",
+    tooltip: "Traces",
+  },
 ];
 
 const SidebarSegmentedNav = () => {
@@ -86,6 +99,11 @@ const SidebarSegmentedNav = () => {
                       return;
                     }
 
+                    // Skip activeSection logic for logs and traces
+                    if (item.id === "logs" || item.id === "traces") {
+                      return;
+                    }
+
                     setSearch?.("");
                     if (activeSection === item.id && open) {
                       toggleSidebar();
@@ -116,11 +134,35 @@ const SidebarSegmentedNav = () => {
                   )}
                   data-testid={`sidebar-nav-${item.id}`}
                 >
-                  <ForwardedIconComponent
-                    name={item.icon}
-                    className="h-5 w-5"
-                  />
-                  <span className="sr-only">{item.label}</span>
+                  {item.id === "logs" ? (
+                    <FlowLogsModal>
+                      <button className="flex h-full w-full items-center justify-center">
+                        <ForwardedIconComponent
+                          name={item.icon}
+                          className="h-5 w-5"
+                        />
+                        <span className="sr-only">{item.label}</span>
+                      </button>
+                    </FlowLogsModal>
+                  ) : item.id === "traces" ? (
+                    <FlowLogsModal defaultTab="traces">
+                      <button className="flex h-full w-full items-center justify-center">
+                        <ForwardedIconComponent
+                          name={item.icon}
+                          className="h-5 w-5"
+                        />
+                        <span className="sr-only">{item.label}</span>
+                      </button>
+                    </FlowLogsModal>
+                  ) : (
+                    <>
+                      <ForwardedIconComponent
+                        name={item.icon}
+                        className="h-5 w-5"
+                      />
+                      <span className="sr-only">{item.label}</span>
+                    </>
+                  )}
                 </SidebarMenuButton>
               </ShadTooltip>
             </SidebarMenuItem>
