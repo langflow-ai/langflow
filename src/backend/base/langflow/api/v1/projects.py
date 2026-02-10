@@ -650,8 +650,7 @@ def _extract_project_name_from_zip_filename(filename: str | None) -> str:
     if name.lower().endswith(".zip"):
         name = name[:-4]
     # Strip the ``_flows`` suffix added by download_file
-    if name.endswith("_flows"):
-        name = name[: -len("_flows")]
+    name = name.removesuffix("_flows")
     # Strip the leading timestamp (``YYYYMMDD_HHMMSS_``)
     name = re.sub(r"^\d{8}_\d{6}_", "", name)
     return name or "Imported Project"
