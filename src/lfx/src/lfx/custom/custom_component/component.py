@@ -1538,6 +1538,7 @@ class Component(CustomComponent):
             data["output"] = self._current_output
             data["component_id"] = self._id
             self._event_manager.on_log(data=data)
+
     def set_progress(self, current: int, total: int, message: str | None = None) -> None:
         """Set progress for long-running operations (like batch processing).
 
@@ -1556,7 +1557,6 @@ class Component(CustomComponent):
                 "message": message or f"Step {current}/{total}",
             }
             self._event_manager.on_progress(data=progress_data)
-
 
     def _append_tool_output(self) -> None:
         if next((output for output in self.outputs if output.name == TOOL_OUTPUT_NAME), None) is None:

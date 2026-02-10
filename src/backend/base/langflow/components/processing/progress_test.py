@@ -9,8 +9,9 @@ from lfx.schema.data import Data
 
 class ProgressTestComponent(Component):
     """Test component to demonstrate progress bar functionality.
-    
-    This component simulates a long-running task with progress updates."""
+
+    This component simulates a long-running task with progress updates.
+    """
 
     display_name = "Progress Test"
     description = "Test component that simulates a long-running task with progress."
@@ -63,6 +64,6 @@ class ProgressTestComponent(Component):
                 "completed_steps": total_steps,
                 "status": "done",
                 "steps": steps_completed,
-                "total_time_seconds": total_steps * delay_seconds
+                "total_time_seconds": total_steps * delay_seconds,
             }
         )
