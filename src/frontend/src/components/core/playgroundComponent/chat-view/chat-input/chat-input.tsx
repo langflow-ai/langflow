@@ -32,7 +32,6 @@ export default function ChatInput({
   setFiles,
   isDragging,
   sendMessage,
-  playgroundPage = false,
 }: ChatInputProps): JSX.Element {
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -255,7 +254,6 @@ export default function ChatInput({
           onStartRecording={startRecording}
           onStopRecording={stopRecording}
           isAudioSupported={isAudioSupported}
-          playgroundPage={playgroundPage}
         />
       </motion.div>
     </AnimatePresence>

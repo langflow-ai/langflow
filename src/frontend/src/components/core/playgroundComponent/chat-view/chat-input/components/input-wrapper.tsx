@@ -24,7 +24,6 @@ interface InputWrapperProps {
   onStartRecording: () => void;
   onStopRecording: () => void;
   isAudioSupported: boolean;
-  playgroundPage?: boolean;
 }
 
 const InputWrapper = ({
@@ -44,7 +43,6 @@ const InputWrapper = ({
   onStartRecording,
   onStopRecording,
   isAudioSupported,
-  playgroundPage = false,
 }: InputWrapperProps) => {
   const classNameFilePreview = `flex w-full items-center gap-2 py-2 overflow-auto`;
 
