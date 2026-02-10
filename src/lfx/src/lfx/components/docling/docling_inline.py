@@ -1,6 +1,10 @@
+import multiprocessing
 import queue
+import sys
 import threading
 import time
+from multiprocessing import get_context
+from typing import Union
 
 from lfx.base.data import BaseFileComponent
 from lfx.base.data.docling_utils import _serialize_pydantic_model, docling_worker
@@ -15,6 +19,7 @@ class DoclingInlineComponent(BaseFileComponent):
     trace_type = "tool"
     icon = "Docling"
     name = "DoclingInline"
+    _DEFAULT_WORKER_TIMEOUT_SECONDS = 300
 
     # https://docling-project.github.io/docling/usage/supported_formats/
     VALID_EXTENSIONS = [
@@ -92,57 +97,84 @@ class DoclingInlineComponent(BaseFileComponent):
         *BaseFileComponent.get_base_outputs(),
     ]
 
-    def _wait_for_result_with_thread_monitoring(
-        self, result_queue: queue.Queue, thread: threading.Thread, timeout: int = 300
+    def _wait_for_result_with_worker_monitoring(
+        self, result_queue: Union[queue.Queue, "multiprocessing.Queue"], worker, timeout: int = 300
     ):
-        """Wait for result from queue while monitoring thread health.
+        """Wait for result from queue while monitoring worker health.
 
-        Handles cases where thread crashes without sending result.
+        Works with both threading.Thread and multiprocessing.Process.
+        Handles cases where worker crashes without sending result.
         """
         start_time = time.time()
 
         while time.time() - start_time < timeout:
-            # Check if thread is still alive
-            if not thread.is_alive():
-                # Thread finished, try to get any result it might have sent
-                try:
-                    result = result_queue.get_nowait()
-                except queue.Empty:
-                    # Thread finished without sending result
-                    msg = "Worker thread crashed unexpectedly without producing result."
-                    raise RuntimeError(msg) from None
-                else:
-                    self.log("Thread completed and result retrieved")
-                    return result
-
-            # Poll the queue instead of blocking
+            # 1. Standard path: try to get result first
             try:
+                # Poll with short timeout to keep the loop responsive
                 result = result_queue.get(timeout=1)
             except queue.Empty:
-                # No result yet, continue monitoring
-                continue
+                # 2. If no result yet, check if worker is still alive
+                if not worker.is_alive():
+                    # Worker died, try one last check with a small timeout to allow for flush/latency.
+                    # This eliminates the race between worker exit and data arrival in the queue.
+                    try:
+                        result = result_queue.get(timeout=2)
+                        self.log("Worker completed and result retrieved (post-exit check)")
+                        return result
+                    except queue.Empty:
+                        # Worker died without producing result
+                        if hasattr(worker, "exitcode"):
+                            msg = (
+                                f"Worker process crashed unexpectedly without producing result. "
+                                f"Exit code: {worker.exitcode}"
+                            )
+                        else:
+                            msg = "Worker thread completed without producing result"
+                        raise RuntimeError(msg) from None
+                    else:
+                        self.log("Worker completed and result retrieved (post-exit check)")
+                        return result
             else:
-                self.log("Result received from worker thread")
+                self.log("Result received from worker")
                 return result
 
         # Overall timeout reached
-        msg = f"Thread timed out after {timeout} seconds"
+        msg = f"Worker timed out after {timeout} seconds"
         raise TimeoutError(msg)
 
-    def _stop_thread_gracefully(self, thread: threading.Thread, timeout: int = 10):
-        """Wait for thread to complete gracefully.
+    def _terminate_worker_gracefully(self, worker, timeout_terminate: int = 10, timeout_kill: int = 5):
+        """Terminate worker gracefully (works for both Thread and Process).
 
-        Note: Python threads cannot be forcefully killed, so we just wait.
-        The thread should respond to shutdown signals via the queue.
+        For processes: tries SIGTERM, then SIGKILL if needed.
+        For threads: waits for completion (threads can't be forcefully terminated).
         """
-        if not thread.is_alive():
+        if not worker.is_alive():
             return
 
-        self.log("Waiting for thread to complete gracefully")
-        thread.join(timeout=timeout)
+        if isinstance(worker, threading.Thread):
+            # Threads can't be forcefully terminated, just wait
+            self.log("Waiting for thread to complete")
+            worker.join(timeout=timeout_terminate)
+            if worker.is_alive():
+                self.log(
+                    "Warning: Thread still alive after timeout; it will continue running "
+                    "in the background and cannot be forcefully terminated. "
+                    "This may indicate a stuck operation and can require manual intervention "
+                    "(for example, restarting the process)."
+                )
+        else:
+            # Process termination
+            self.log("Attempting graceful process termination with SIGTERM")
+            worker.terminate()  # Send SIGTERM
+            worker.join(timeout=timeout_terminate)
 
-        if thread.is_alive():
-            self.log("Warning: Thread still alive after timeout")
+            if worker.is_alive():
+                self.log("Process didn't respond to SIGTERM, using SIGKILL")
+                worker.kill()  # Send SIGKILL
+                worker.join(timeout=timeout_kill)
+
+                if worker.is_alive():
+                    self.log("Warning: Process still alive after SIGKILL")
 
     def process_files(self, file_list: list[BaseFileComponent.BaseFile]) -> list[BaseFileComponent.BaseFile]:
         try:
@@ -153,9 +185,7 @@ class DoclingInlineComponent(BaseFileComponent):
                 "documentation on how to install optional dependencies."
             )
             raise ImportError(msg) from e
-
         file_paths = [file.path for file in file_list if file.path]
-
         if not file_paths:
             self.log("No files to process.")
             return file_list
@@ -163,38 +193,59 @@ class DoclingInlineComponent(BaseFileComponent):
         pic_desc_config: dict | None = None
         if self.pic_desc_llm is not None:
             pic_desc_config = _serialize_pydantic_model(self.pic_desc_llm)
-
-        # Use threading instead of multiprocessing for memory sharing
-        # This enables the global DocumentConverter cache to work across runs
-        result_queue: queue.Queue = queue.Queue()
-        thread = threading.Thread(
-            target=docling_worker,
-            kwargs={
-                "file_paths": file_paths,
-                "queue": result_queue,
-                "pipeline": self.pipeline,
-                "ocr_engine": self.ocr_engine,
-                "do_picture_classification": self.do_picture_classification,
-                "pic_desc_config": pic_desc_config,
-                "pic_desc_prompt": self.pic_desc_prompt,
-            },
-            daemon=False,  # Allow thread to complete even if main thread exits
-        )
+        # Use threading on macOS to avoid CoreFoundation fork safety issues
+        # Use multiprocessing on Linux/Windows for better performance
+        worker_kwargs = {
+            "file_paths": file_paths,
+            "pipeline": self.pipeline,
+            "ocr_engine": self.ocr_engine,
+            "do_picture_classification": self.do_picture_classification,
+            "pic_desc_config": pic_desc_config,
+            "pic_desc_prompt": self.pic_desc_prompt,
+        }
+        if sys.platform == "darwin":  # macOS
+            result_queue = queue.Queue()
+            worker = threading.Thread(
+                target=docling_worker,
+                kwargs={**worker_kwargs, "queue": result_queue},
+                daemon=False,
+            )
+        else:
+            ctx = get_context("spawn")
+            result_queue = ctx.Queue()
+            worker = ctx.Process(
+                target=docling_worker,
+                kwargs={**worker_kwargs, "queue": result_queue},
+            )
 
         result = None
-        thread.start()
+        worker.start()
 
         try:
-            result = self._wait_for_result_with_thread_monitoring(result_queue, thread, timeout=300)
+            result = self._wait_for_result_with_worker_monitoring(
+                result_queue, worker, timeout=self._DEFAULT_WORKER_TIMEOUT_SECONDS
+            )
         except KeyboardInterrupt:
-            self.log("Docling thread cancelled by user")
+            self.log("Docling worker cancelled by user")
             result = []
         except Exception as e:
             self.log(f"Error during processing: {e}")
             raise
         finally:
-            # Wait for thread to complete gracefully
-            self._stop_thread_gracefully(thread)
+            # Improved cleanup with graceful termination
+            try:
+                self._terminate_worker_gracefully(worker)
+            finally:
+                # Always close and cleanup queue resources (only for multiprocessing queues)
+                if hasattr(result_queue, "close"):
+                    try:
+                        # Use cancel_join_thread to avoid hanging on join_thread during teardown
+                        if hasattr(result_queue, "cancel_join_thread"):
+                            result_queue.cancel_join_thread()
+                        result_queue.close()
+                    except Exception as e:  # noqa: BLE001
+                        # Ignore cleanup errors, but log them
+                        self.log(f"Warning: Error during queue cleanup - {e}")
 
         # Enhanced error checking with dependency-specific handling
         if isinstance(result, dict) and "error" in result:
