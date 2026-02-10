@@ -652,8 +652,12 @@ class MCPToolsComponent(ComponentWithCache):
                 tool_content = []
                 for item in output.content:
                     item_dict = item.model_dump()
-                    item_dict = self.process_output_item(item_dict)
-                    tool_content.append(item_dict)
+                    result = self.process_output_item(item_dict)
+                    # Flatten list results (e.g., from JSON array responses) into individual rows
+                    if isinstance(result, list):
+                        tool_content.extend(result)
+                    else:
+                        tool_content.append(result)
 
                 if isinstance(tool_content, list) and all(isinstance(x, dict) for x in tool_content):
                     return DataFrame(tool_content)
@@ -673,7 +677,10 @@ class MCPToolsComponent(ComponentWithCache):
                 # Ensure we always return a dictionary for DataFrame compatibility
                 if isinstance(parsed, dict):
                     return parsed
-                # Wrap non-dict parsed values in a dictionary
+                # Handle JSON arrays: return list of dicts for flattening in build_output
+                if isinstance(parsed, list) and parsed and all(isinstance(x, dict) for x in parsed):
+                    return parsed
+                # Wrap non-dict/non-list-of-dict parsed values in a dictionary
                 return {"text": text, "parsed_value": parsed, "type": "text"}  # noqa: TRY300
             except json.JSONDecodeError:
                 return item_dict
