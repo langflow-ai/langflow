@@ -270,6 +270,13 @@ def serialize(
     """
     if obj is None:
         return None
+
+    # Fast-path common immutable primitives when no truncation/limits requested.
+    # This avoids the relatively expensive dispatcher for the common case.
+    if max_length is None and max_items is None and not to_str:
+        if isinstance(obj, (str, int, float, bool)):
+            return obj
+
     try:
         # First try type-specific serialization
         result = _serialize_dispatcher(obj, max_length, max_items)

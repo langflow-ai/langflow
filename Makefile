@@ -328,6 +328,12 @@ ifdef main
 	make build_langflow args="$(args)"
 endif
 
+ifdef pre
+	make install_frontendci
+	make build_frontend
+	make build_langflow args="$(args)"
+endif
+
 build_langflow_base:
 	cd src/backend/base && uv build $(args)
 
@@ -443,6 +449,7 @@ build_component_index: ## build the component index with dynamic loading
 	@make install_backend
 	@echo 'Building component index'
 	LFX_DEV=1 uv run python scripts/build_component_index.py
+	LFX_DEV=1 uv run python scripts/build_hash_history.py
 
 lfx_build: ## build the LFX package
 	@echo 'Building LFX package'
