@@ -6,14 +6,13 @@ import {
   findLastBotMessage,
   updateMessageProperties,
 } from "@/components/core/playgroundComponent/chat-view/utils/message-utils";
-import { api } from "@/controllers/API/api";
-import { getURL } from "@/controllers/API/helpers/constants";
 import { MISSED_ERROR_ALERT } from "@/constants/alerts_constants";
 import {
   BUILD_POLLING_INTERVAL,
   POLLING_MESSAGES,
 } from "@/constants/constants";
-import { performStreamingRequest } from "@/controllers/API/api";
+import { api, performStreamingRequest } from "@/controllers/API/api";
+import { getURL } from "@/controllers/API/helpers/constants";
 import {
   customBuildUrl,
   customCancelBuildUrl,
