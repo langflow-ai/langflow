@@ -82,15 +82,6 @@ class ChunkDoclingDocumentComponent(Component):
             advanced=True,
             dynamic=True,
         ),
-        BoolInput(
-            name="always_emit_headings",
-            display_name="Always emit headings",
-            info="Emit headings even for empty sections.",
-            value=False,
-            show=True,
-            advanced=True,
-            dynamic=True,
-        ),
         MessageTextInput(
             name="doc_key",
             display_name="Doc Key",
@@ -183,7 +174,6 @@ class ChunkDoclingDocumentComponent(Component):
             chunker = HybridChunker(
                 tokenizer=tokenizer,
                 merge_peers=bool(self.merge_peers),
-                always_emit_headings=bool(self.always_emit_headings),
             )
         elif self.chunker == "HierarchicalChunker":
             chunker = HierarchicalChunker()
