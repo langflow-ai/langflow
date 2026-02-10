@@ -4,6 +4,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useShallow } from "zustand/react/shallow";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { BuildStatus } from "@/constants/enums";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 import { CustomNodeStatus } from "@/customization/components/custom-NodeStatus";
 import UpdateComponentModal from "@/modals/updateComponentModal";
@@ -32,7 +33,6 @@ import NodeUpdateComponent from "./components/NodeUpdateComponent";
 import { NodeIcon } from "./components/nodeIcon";
 import RenderInputParameters from "./components/RenderInputParameters";
 import { useBuildStatus } from "./hooks/use-get-build-status";
-import { BuildStatus } from "@/constants/enums";
 
 const MemoizedRenderInputParameters = memo(RenderInputParameters);
 const MemoizedNodeIcon = memo(NodeIcon);
@@ -680,19 +680,31 @@ function GenericNode({
           </div>
         )}
         {/* Progress bar - only render when building with progress */}
-        {buildStatus === BuildStatus.BUILDING && nodeProgress && (
-          <div
-            className="pointer-events-none absolute bottom-0 left-0 right-0 h-3 overflow-hidden"
-            style={{ borderRadius: "0 0 11px 11px" }}
-          >
-            <div
-              className="absolute bottom-0 left-0 h-1 bg-accent-indigo-foreground transition-all duration-300 ease-out"
-              style={{
-                width: `${(nodeProgress.current / nodeProgress.total) * 100}%`,
-              }}
-            />
-          </div>
-        )}
+        {buildStatus === BuildStatus.BUILDING &&
+          nodeProgress &&
+          (() => {
+            const percent =
+              nodeProgress.total > 0
+                ? Math.min(
+                    Math.max(
+                      (nodeProgress.current / nodeProgress.total) * 100,
+                      0,
+                    ),
+                    100,
+                  )
+                : 0;
+            return (
+              <div
+                className="pointer-events-none absolute bottom-0 left-0 right-0 h-3 overflow-hidden"
+                style={{ borderRadius: "0 0 11px 11px" }}
+              >
+                <div
+                  className="absolute bottom-0 left-0 h-1 bg-accent-indigo-foreground transition-all duration-300 ease-out"
+                  style={{ width: `${percent}%` }}
+                />
+              </div>
+            );
+          })()}
       </div>
     </div>
   );

@@ -1549,14 +1549,18 @@ class Component(CustomComponent):
             total: Total number of steps.
             message: Optional message to display (e.g., "Processing batch 3/10").
         """
-        if self._event_manager is not None:
-            progress_data = {
-                "id": self._id,
-                "current": current,
-                "total": total,
-                "message": message or f"Step {current}/{total}",
-            }
-            self._event_manager.on_progress(data=progress_data)
+        if self._event_manager is None:
+            return
+        if total <= 0:
+            total = 1
+        current = max(0, min(current, total))
+        progress_data = {
+            "id": self._id,
+            "current": current,
+            "total": total,
+            "message": message or f"Step {current}/{total}",
+        }
+        self._event_manager.on_progress(data=progress_data)
 
     def _append_tool_output(self) -> None:
         if next((output for output in self.outputs if output.name == TOOL_OUTPUT_NAME), None) is None:
