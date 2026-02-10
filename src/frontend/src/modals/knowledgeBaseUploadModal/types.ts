@@ -14,6 +14,12 @@ export interface KnowledgeBaseUploadModalProps {
   };
 }
 
+export interface ColumnConfigRow {
+  column_name: string;
+  vectorize: boolean;
+  identifier: boolean;
+}
+
 export interface KnowledgeBaseFormData {
   sourceName: string;
   files: File[];
@@ -21,6 +27,7 @@ export interface KnowledgeBaseFormData {
   chunkSize?: number;
   chunkOverlap?: number;
   separator?: string;
+  columnConfig?: ColumnConfigRow[];
 }
 
 export interface ChunkPreview {

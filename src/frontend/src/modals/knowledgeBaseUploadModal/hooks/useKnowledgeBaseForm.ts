@@ -13,6 +13,7 @@ import {
 } from "../constants";
 import type {
   ChunkPreview,
+  ColumnConfigRow,
   KnowledgeBaseFormData,
   KnowledgeBaseUploadModalProps,
   WizardStep,
@@ -61,6 +62,9 @@ export function useKnowledgeBaseForm({
     undefined,
   );
   const [separator, setSeparator] = useState<string | undefined>(undefined);
+  const [columnConfig, setColumnConfig] = useState<ColumnConfigRow[]>([
+    { column_name: "text", vectorize: true, identifier: true },
+  ]);
 
   // Validation state
   const [validationErrors, setValidationErrors] = useState<
@@ -126,6 +130,9 @@ export function useKnowledgeBaseForm({
     setChunkSize(undefined);
     setChunkOverlap(undefined);
     setSeparator(undefined);
+    setColumnConfig([
+      { column_name: "text", vectorize: true, identifier: true },
+    ]);
     setSelectedEmbeddingModel([]);
     setChunkPreviews([]);
     setCurrentChunkIndex(0);
@@ -253,6 +260,7 @@ export function useKnowledgeBaseForm({
           sourceName,
           files: [],
           embeddingModel: selectedEmbeddingModel,
+          columnConfig,
         };
 
         setSuccessData({
@@ -283,6 +291,7 @@ export function useKnowledgeBaseForm({
             (chunkOverlap ?? DEFAULT_CHUNK_OVERLAP).toString(),
           );
           formData.append("separator", separator ?? DEFAULT_SEPARATOR);
+          formData.append("column_config", JSON.stringify(columnConfig));
 
           const response = await api.post(
             `${getURL("KNOWLEDGE_BASES")}/${kbName}/ingest`,
@@ -311,6 +320,7 @@ export function useKnowledgeBaseForm({
             chunkSize: chunkSize ?? DEFAULT_CHUNK_SIZE,
             chunkOverlap: chunkOverlap ?? DEFAULT_CHUNK_OVERLAP,
             separator: separator ?? DEFAULT_SEPARATOR,
+            columnConfig,
           });
           setOpen(false);
           resetForm();
@@ -325,6 +335,7 @@ export function useKnowledgeBaseForm({
         chunkSize: chunkSize ?? DEFAULT_CHUNK_SIZE,
         chunkOverlap: chunkOverlap ?? DEFAULT_CHUNK_OVERLAP,
         separator: separator ?? DEFAULT_SEPARATOR,
+        columnConfig,
       };
 
       if (isAddSourcesMode) {
@@ -432,6 +443,10 @@ export function useKnowledgeBaseForm({
     toggleAdvanced,
     isFilePanelOpen,
     isSubmitting,
+
+    // Column config
+    columnConfig,
+    setColumnConfig,
 
     // Preview
     chunkPreviews,

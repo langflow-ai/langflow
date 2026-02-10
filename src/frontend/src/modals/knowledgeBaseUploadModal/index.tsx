@@ -54,6 +54,8 @@ export default function KnowledgeBaseUploadModal({
             onFolderSelect={form.handleFolderSelect}
             validationErrors={form.validationErrors}
             onFieldChange={form.clearValidationErrors}
+            columnConfig={form.columnConfig}
+            onColumnConfigChange={form.setColumnConfig}
           />
         );
 
