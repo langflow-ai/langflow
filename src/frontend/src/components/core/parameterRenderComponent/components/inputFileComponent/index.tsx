@@ -141,6 +141,13 @@ export default function InputFileComponent({
     );
   };
 
+  const handleDismissClick = () => {
+    handleOnNewValue({
+      value: "",
+      file_path: "",
+    });
+  };
+
   const isDisabled = disabled || isPending;
 
   const { data: files } = useGetFilesV2({
@@ -301,14 +308,14 @@ export default function InputFileComponent({
               <div>
                 <Button
                   className={cn(
-                    "h-9 w-9 rounded-l-none",
+                    "h-9 w-9 rounded-l-none group relative",
                     value &&
-                      "bg-accent-emerald-foreground ring-accent-emerald-foreground hover:bg-accent-emerald-foreground",
+                      "bg-accent-emerald-foreground hover:bg-accent-red-foreground ring-accent-emerald-foreground hover:ring-accent-red-foreground",
                     isDisabled &&
                       "relative top-[1px] h-9 ring-1 ring-border ring-offset-0 hover:ring-border",
                     editNode && "h-6",
                   )}
-                  onClick={handleButtonClick}
+                  onClick={value ? handleDismissClick : handleButtonClick}
                   disabled={isDisabled}
                   size="icon"
                   data-testid="button_upload_file"
@@ -316,9 +323,17 @@ export default function InputFileComponent({
                   <IconComponent
                     name={value ? "CircleCheckBig" : "Upload"}
                     className={cn(
-                      value && "text-background",
+                      value && "text-background group-hover:opacity-0",
                       isDisabled && "text-muted-foreground",
-                      "h-4 w-4",
+                      "h-4 w-4 absolute transition-opacity duration-200",
+                    )}
+                    strokeWidth={2}
+                  />
+                  <IconComponent
+                    name={"X"}
+                    className={cn(
+                      "h-4 w-4 text-background opacity-0 absolute transition-opacity duration-200",
+                      value && "group-hover:opacity-100",
                     )}
                     strokeWidth={2}
                   />
