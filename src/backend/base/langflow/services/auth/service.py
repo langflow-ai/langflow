@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import base64
 import warnings
 from collections.abc import Coroutine
 from datetime import datetime, timedelta, timezone
@@ -9,8 +8,6 @@ from uuid import UUID
 
 import jwt
 from cryptography.fernet import Fernet
-from cryptography.hazmat.primitives.hashes import SHA256
-from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from fastapi import HTTPException, Request, WebSocketException, status
 from jwt import InvalidTokenError
 from lfx.log.logger import logger
@@ -643,19 +640,11 @@ class AuthService(BaseAuthService):
 
         return user if self.verify_password(password, user.password) else None
 
-    @staticmethod
-    def _derive_fernet_key(raw_key: str) -> bytes:
-        derived = HKDF(
-            algorithm=SHA256(),
-            length=32,
-            salt=None,
-            info=b"langflow-fernet-key",
-        ).derive(raw_key.encode())
-        return base64.urlsafe_b64encode(derived)
-
     def _get_fernet(self) -> Fernet:
+        from langflow.services.auth.utils import _derive_fernet_key
+
         secret_key: str = self.settings.auth_settings.SECRET_KEY.get_secret_value()
-        return Fernet(self._derive_fernet_key(secret_key))
+        return Fernet(_derive_fernet_key(secret_key))
 
     def encrypt_api_key(self, api_key: str) -> str:
         fernet = self._get_fernet()
