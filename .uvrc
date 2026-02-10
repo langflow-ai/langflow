@@ -1,0 +1,15 @@
+# UV Configuration for Langflow
+# This file configures uv package manager settings
+
+[pip]
+# Add IBM Power (ppc64le) wheel repository as extra index
+# This is automatically used when installing on ppc64le systems
+extra-index-url = [
+    "https://wheels.developerfirst.ibm.com/ppc64le/linux"
+]
+
+# Enable pre-release packages if needed for ppc64le
+# prerelease = "allow"
+
+# Increase timeout for slower connections or large packages
+# timeout = 300

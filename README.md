@@ -75,6 +75,9 @@ Start a Langflow container with default settings:
 docker run -p 7860:7860 langflowai/langflow:latest
 ```
 Langflow is available at http://localhost:7860/.
+
+**Multi-Architecture Support:** Docker images support `linux/amd64`, `linux/arm64`, and `linux/ppc64le` (IBM Power Systems).
+
 For configuration options, see the [Docker deployment guide](https://docs.langflow.org/deployment-docker).
 
 > [!CAUTION]

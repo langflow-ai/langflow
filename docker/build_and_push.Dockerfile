@@ -43,6 +43,7 @@ RUN apt-get update \
 COPY ./uv.lock /app/uv.lock
 COPY ./README.md /app/README.md
 COPY ./pyproject.toml /app/pyproject.toml
+COPY ./.uvrc /app/.uvrc
 COPY ./src/backend/base/README.md /app/src/backend/base/README.md
 COPY ./src/backend/base/uv.lock /app/src/backend/base/uv.lock
 COPY ./src/backend/base/pyproject.toml /app/src/backend/base/pyproject.toml
@@ -51,6 +52,7 @@ COPY ./src/lfx/pyproject.toml /app/src/lfx/pyproject.toml
 
 RUN --mount=type=cache,target=/root/.cache/uv \
     RUSTFLAGS='--cfg reqwest_unstable' \
+    UV_EXTRA_INDEX_URL="https://wheels.developerfirst.ibm.com/ppc64le/linux" \
     uv sync --frozen --no-install-project --no-editable --extra postgresql
 
 COPY ./src /app/src
@@ -67,6 +69,7 @@ WORKDIR /app
 
 RUN --mount=type=cache,target=/root/.cache/uv \
     RUSTFLAGS='--cfg reqwest_unstable' \
+    UV_EXTRA_INDEX_URL="https://wheels.developerfirst.ibm.com/ppc64le/linux" \
     uv sync --frozen --no-editable --extra postgresql
 
 ################################
@@ -84,6 +87,7 @@ RUN apt-get update \
 RUN ARCH=$(dpkg --print-architecture) \
     && if [ "$ARCH" = "amd64" ]; then NODE_ARCH="x64"; \
        elif [ "$ARCH" = "arm64" ]; then NODE_ARCH="arm64"; \
+       elif [ "$ARCH" = "ppc64el" ]; then NODE_ARCH="ppc64le"; \
        else NODE_ARCH="$ARCH"; fi \
     && NODE_VERSION=$(curl -fsSL https://nodejs.org/dist/latest-v22.x/ \
                     | grep -oP "node-v\K[0-9]+\.[0-9]+\.[0-9]+(?=-linux-${NODE_ARCH}\.tar\.xz)" \

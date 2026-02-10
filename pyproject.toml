@@ -94,8 +94,8 @@ Documentation = "https://docs.langflow.org"
 [project.optional-dependencies]
 docling = [
     "langchain-docling>=1.1.0",
-    "tesserocr>=2.8.0",
-    "rapidocr-onnxruntime>=1.4.4",
+    "tesserocr>=2.8.0; platform_machine != 'ppc64le'",
+    "rapidocr-onnxruntime>=1.4.4; platform_machine != 'ppc64le'",
     "ocrmac>=1.0.0; sys_platform == 'darwin'",
 ]
 
@@ -111,9 +111,9 @@ cassio = [
     "cassio>=0.1.7"
 ]
 local = [
-    "llama-cpp-python~=0.2.0",
+    "llama-cpp-python~=0.2.0; platform_machine != 'ppc64le'",
     "sentence-transformers>=2.3.1",
-    "ctransformers>=0.2.10"
+    "ctransformers>=0.2.10; platform_machine != 'ppc64le'"
 ]
 clickhouse-connect = [
     "clickhouse-connect==0.7.19"

@@ -18,6 +18,8 @@ maintainers = [
 
 dependencies = [
     "lfx~=0.3.0",
+    # IBM Power (ppc64le) wheel repository for packages without official wheels
+    "--extra-index-url https://wheels.developerfirst.ibm.com/ppc64le/linux; platform_machine == 'ppc64le'",
     "fastapi>=0.115.2,<1.0.0",
     "httpx[http2]>=0.27,<1.0.0",
     "aiofile>=3.9.0,<4.0.0",
@@ -189,9 +191,9 @@ postgresql = [
 ]
 
 local = [
-    "llama-cpp-python>=0.2.0",
+    "llama-cpp-python>=0.2.0; platform_machine != 'ppc64le'",
     "sentence-transformers>=2.0.0",
-    "ctransformers>=0.2"
+    "ctransformers>=0.2.10; platform_machine != 'ppc64le'"
 ]
 
 # Individual database providers
@@ -206,7 +208,7 @@ redis = ["redis>=5.2.1,<6.0.0"]
 elasticsearch = ["elasticsearch==8.16.0", "langchain-elasticsearch>=0.3.0,<1.0.0"]
 
 # Individual vector store providers
-faiss = ["faiss-cpu==1.9.0.post1"]
+faiss = ["faiss-cpu==1.9.0.post1; platform_machine != 'ppc64le'"]
 qdrant = ["qdrant-client==1.9.2"]
 weaviate = ["weaviate-client>=4.10.2,<5.0.0"]
 chroma = [
@@ -236,9 +238,9 @@ sambanova = ["langchain-sambanova==0.1.0"]
 groq = ["langchain-groq==0.2.1"]
 
 # Individual local LLM providers
-llama-cpp = ["llama-cpp-python~=0.2.0"]
+llama-cpp = ["llama-cpp-python~=0.2.0; platform_machine != 'ppc64le'"]
 sentence-transformers = ["sentence-transformers>=2.3.1"]
-ctransformers = ["ctransformers>=0.2.10"]
+ctransformers = ["ctransformers>=0.2.10; platform_machine != 'ppc64le'"]
 
 # Individual monitoring providers
 langfuse = ["langfuse==2.53.9"]
@@ -327,9 +329,9 @@ traceloop = ["traceloop-sdk>=0.43.1,<1.0.0"]
 # Document processing / OCR
 docling = [
     "docling-core>=2.36.1,<3.0.0",
-    "docling>=2.36.1,<3.0.0; sys_platform != 'darwin' or platform_machine != 'x86_64'",
+    "docling>=2.36.1,<3.0.0; sys_platform != 'darwin' or platform_machine != 'x86_64' and platform_machine != 'ppc64le'",
 ]
-easyocr = ["easyocr>=1.7.2,<2.0.0; sys_platform != 'darwin' or platform_machine != 'x86_64'"]
+easyocr = ["easyocr>=1.7.2,<2.0.0; (sys_platform != 'darwin' or platform_machine != 'x86_64') and platform_machine != 'ppc64le'"]
 
 # Additional tools
 cleanlab = ["cleanlab-tlm>=1.1.2,<2.0.0"]

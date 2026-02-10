@@ -60,6 +60,7 @@ RUN apt-get update \
 RUN ARCH=$(dpkg --print-architecture) \
     && if [ "$ARCH" = "amd64" ]; then NODE_ARCH="x64"; \
        elif [ "$ARCH" = "arm64" ]; then NODE_ARCH="arm64"; \
+       elif [ "$ARCH" = "ppc64el" ]; then NODE_ARCH="ppc64le"; \
        else NODE_ARCH="$ARCH"; fi \
     && NODE_VERSION=$(curl -fsSL https://nodejs.org/dist/latest-v22.x/ \
                     | grep -oP "node-v\K[0-9]+\.[0-9]+\.[0-9]+(?=-linux-${NODE_ARCH}\.tar\.xz)" \
