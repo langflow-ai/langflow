@@ -10,9 +10,9 @@ export const STEP_DESCRIPTIONS: Record<WizardStep, string> = {
   2: "Preview how your files will be chunked and confirm your settings",
 };
 
-export const DEFAULT_CHUNK_SIZE = 1000;
-export const DEFAULT_CHUNK_OVERLAP = 200;
-export const DEFAULT_SEPARATOR = "\\n\\n";
+export const DEFAULT_CHUNK_SIZE = 100;
+export const DEFAULT_CHUNK_OVERLAP = 0;
+export const DEFAULT_SEPARATOR = "";
 
 export const ACCEPTED_FILE_TYPES =
   ".pdf,.txt,.md,.docx,.doc,.csv,.json,.html,.xml";

@@ -57,11 +57,9 @@ export function useKnowledgeBaseForm({
   // Form state - Step 1
   const [sourceName, setSourceName] = useState("");
   const [files, setFiles] = useState<File[]>([]);
-  const [chunkSize, setChunkSize] = useState<number | undefined>(undefined);
-  const [chunkOverlap, setChunkOverlap] = useState<number | undefined>(
-    undefined,
-  );
-  const [separator, setSeparator] = useState<string | undefined>(undefined);
+  const [chunkSize, setChunkSize] = useState(0);
+  const [chunkOverlap, setChunkOverlap] = useState(0);
+  const [separator, setSeparator] = useState("");
   const [columnConfig, setColumnConfig] = useState<ColumnConfigRow[]>([
     { column_name: "text", vectorize: true, identifier: true },
   ]);
@@ -127,9 +125,9 @@ export function useKnowledgeBaseForm({
   const resetForm = useCallback(() => {
     setSourceName("");
     setFiles([]);
-    setChunkSize(undefined);
-    setChunkOverlap(undefined);
-    setSeparator(undefined);
+    setChunkSize(0);
+    setChunkOverlap(0);
+    setSeparator("");
     setColumnConfig([
       { column_name: "text", vectorize: true, identifier: true },
     ]);
@@ -146,8 +144,16 @@ export function useKnowledgeBaseForm({
   const toggleAdvanced = useCallback(() => {
     setShowAdvanced((prev) => {
       if (prev) {
-        // Hiding advanced: close panel but keep files
+        // Hiding advanced: reset chunk settings and close panel
+        setChunkSize(0);
+        setChunkOverlap(0);
+        setSeparator("");
         setIsFilePanelOpen(false);
+      } else {
+        // Showing advanced: apply defaults
+        setChunkSize(DEFAULT_CHUNK_SIZE);
+        setChunkOverlap(DEFAULT_CHUNK_OVERLAP);
+        setSeparator(DEFAULT_SEPARATOR);
       }
       return !prev;
     });
@@ -165,15 +171,9 @@ export function useKnowledgeBaseForm({
       const selectedFile = files[selectedPreviewFileIndex] || files[0];
       const formData = new FormData();
       formData.append("files", selectedFile);
-      formData.append(
-        "chunk_size",
-        (chunkSize ?? DEFAULT_CHUNK_SIZE).toString(),
-      );
-      formData.append(
-        "chunk_overlap",
-        (chunkOverlap ?? DEFAULT_CHUNK_OVERLAP).toString(),
-      );
-      formData.append("separator", separator ?? DEFAULT_SEPARATOR);
+      formData.append("chunk_size", chunkSize.toString());
+      formData.append("chunk_overlap", chunkOverlap.toString());
+      formData.append("separator", separator);
 
       const response = await api.post(
         `${getURL("KNOWLEDGE_BASES")}/preview-chunks`,
@@ -282,15 +282,9 @@ export function useKnowledgeBaseForm({
             formData.append("files", file);
           });
           formData.append("source_name", sourceName);
-          formData.append(
-            "chunk_size",
-            (chunkSize ?? DEFAULT_CHUNK_SIZE).toString(),
-          );
-          formData.append(
-            "chunk_overlap",
-            (chunkOverlap ?? DEFAULT_CHUNK_OVERLAP).toString(),
-          );
-          formData.append("separator", separator ?? DEFAULT_SEPARATOR);
+          formData.append("chunk_size", chunkSize.toString());
+          formData.append("chunk_overlap", chunkOverlap.toString());
+          formData.append("separator", separator);
           formData.append("column_config", JSON.stringify(columnConfig));
 
           const response = await api.post(
@@ -317,9 +311,9 @@ export function useKnowledgeBaseForm({
             sourceName,
             files,
             embeddingModel: selectedEmbeddingModel,
-            chunkSize: chunkSize ?? DEFAULT_CHUNK_SIZE,
-            chunkOverlap: chunkOverlap ?? DEFAULT_CHUNK_OVERLAP,
-            separator: separator ?? DEFAULT_SEPARATOR,
+            chunkSize,
+            chunkOverlap,
+            separator,
             columnConfig,
           });
           setOpen(false);
@@ -332,9 +326,9 @@ export function useKnowledgeBaseForm({
         sourceName,
         files,
         embeddingModel: selectedEmbeddingModel,
-        chunkSize: chunkSize ?? DEFAULT_CHUNK_SIZE,
-        chunkOverlap: chunkOverlap ?? DEFAULT_CHUNK_OVERLAP,
-        separator: separator ?? DEFAULT_SEPARATOR,
+        chunkSize,
+        chunkOverlap,
+        separator,
         columnConfig,
       };
 

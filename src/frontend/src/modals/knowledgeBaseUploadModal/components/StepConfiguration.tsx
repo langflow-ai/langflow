@@ -1,6 +1,3 @@
-import type { AgGridReact } from "ag-grid-react";
-import { cloneDeep } from "lodash";
-import { useRef, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ModelInputComponent, {
   type ModelOption,
@@ -15,12 +12,16 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import TableModal from "@/modals/tableModal";
-import type { ColumnField } from "@/types/utils/functions";
-import { FormatterType } from "@/types/utils/functions";
-import { cn, FormatColumns } from "@/utils/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { cn } from "@/utils/utils";
 import { ACCEPTED_FILE_TYPES } from "../constants";
 import type { ColumnConfigRow } from "../types";
+import { ColumnConfig } from "./columnConfig";
 
 interface StepConfigurationProps {
   isAddSourcesMode: boolean;
@@ -31,12 +32,12 @@ interface StepConfigurationProps {
   embeddingModelOptions: ModelOption[];
   existingEmbeddingModel?: string;
   existingEmbeddingIcon?: string;
-  chunkSize: number | undefined;
-  onChunkSizeChange: (value: number | undefined) => void;
-  chunkOverlap: number | undefined;
-  onChunkOverlapChange: (value: number | undefined) => void;
-  separator: string | undefined;
-  onSeparatorChange: (value: string | undefined) => void;
+  chunkSize: number;
+  onChunkSizeChange: (value: number) => void;
+  chunkOverlap: number;
+  onChunkOverlapChange: (value: number) => void;
+  separator: string;
+  onSeparatorChange: (value: string) => void;
   showAdvanced: boolean;
   toggleAdvanced: () => void;
   onFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -71,105 +72,6 @@ export function StepConfiguration({
   columnConfig,
   onColumnConfigChange,
 }: StepConfigurationProps) {
-  const COLUMN_CONFIG_COLUMNS: ColumnField[] = [
-    {
-      name: "column_name",
-      display_name: "Column Name",
-      sortable: true,
-      filterable: true,
-      formatter: FormatterType.text,
-      description: "Name of the column in the source DataFrame",
-      edit_mode: "inline",
-    },
-    {
-      name: "vectorize",
-      display_name: "Vectorize",
-      sortable: false,
-      filterable: false,
-      formatter: FormatterType.boolean,
-      description: "Create embeddings for this column",
-      default: false,
-      edit_mode: "inline",
-    },
-    {
-      name: "identifier",
-      display_name: "Identifier",
-      sortable: false,
-      filterable: false,
-      formatter: FormatterType.boolean,
-      description: "Use this column as unique identifier",
-      default: false,
-      edit_mode: "inline",
-    },
-  ];
-
-  const AgColumns = FormatColumns(COLUMN_CONFIG_COLUMNS);
-  const agGrid = useRef<AgGridReact>(null);
-  const [isTableModalOpen, setIsTableModalOpen] = useState(false);
-  const [tempColumnConfig, setTempColumnConfig] = useState<ColumnConfigRow[]>(
-    cloneDeep(columnConfig),
-  );
-
-  function setAllRows() {
-    if (agGrid.current && !agGrid.current.api.isDestroyed()) {
-      const rows: ColumnConfigRow[] = [];
-      agGrid.current.api.forEachNode((node) => rows.push(node.data));
-      setTempColumnConfig(rows);
-    }
-  }
-
-  function addRow() {
-    setTempColumnConfig([
-      ...tempColumnConfig,
-      { column_name: "", vectorize: false, identifier: false },
-    ]);
-  }
-
-  function deleteRow() {
-    if (agGrid.current) {
-      const selectedNodes = agGrid.current.api.getSelectedNodes();
-      if (selectedNodes.length > 0) {
-        agGrid.current.api.applyTransaction({
-          remove: selectedNodes.map((node) => node.data),
-        });
-        setAllRows();
-      }
-    }
-  }
-
-  function duplicateRow() {
-    if (agGrid.current) {
-      const selectedNodes = agGrid.current.api.getSelectedNodes();
-      if (selectedNodes.length > 0) {
-        const toDuplicate = selectedNodes.map((node) => cloneDeep(node.data));
-        setTempColumnConfig([...tempColumnConfig, ...toDuplicate]);
-      }
-    }
-  }
-
-  function handleTableSave() {
-    setAllRows();
-    if (agGrid.current && !agGrid.current.api.isDestroyed()) {
-      const rows: ColumnConfigRow[] = [];
-      agGrid.current.api.forEachNode((node) => rows.push(node.data));
-      onColumnConfigChange(rows);
-    } else {
-      onColumnConfigChange(tempColumnConfig);
-    }
-    setIsTableModalOpen(false);
-  }
-
-  function handleTableCancel() {
-    setTempColumnConfig(cloneDeep(columnConfig));
-    setIsTableModalOpen(false);
-  }
-
-  const editable = COLUMN_CONFIG_COLUMNS.map((column) => ({
-    field: column.name,
-    onUpdate: () => setAllRows(),
-    editableCell: true,
-  }));
-
   return (
     <div className="relative">
       <div className="flex flex-col">
@@ -244,100 +146,7 @@ export function StepConfiguration({
           } as React.HTMLAttributes<HTMLInputElement>)}
         />
 
-        {/* Chunking Settings - Animated */}
-        <div
-          className={cn(
-            "grid transition-all duration-300 ease-in-out",
-            showAdvanced
-              ? "grid-rows-[1fr] opacity-100"
-              : "grid-rows-[0fr] opacity-0",
-          )}
-        >
-          <div className="overflow-hidden">
-            <Separator className="my-4" />
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center gap-2">
-                <ForwardedIconComponent
-                  name="Settings2"
-                  className="h-4 w-4 text-muted-foreground"
-                />
-                <span className="text-sm font-medium">Chunking Settings</span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                {/* Chunk Size */}
-                <div className="flex flex-col gap-2">
-                  <Label
-                    htmlFor="chunk-size"
-                    className="text-xs text-muted-foreground"
-                  >
-                    Chunk Size
-                  </Label>
-                  <Input
-                    id="chunk-size"
-                    type="number"
-                    value={chunkSize ?? ""}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      onChunkSizeChange(val === "" ? undefined : Number(val));
-                    }}
-                    placeholder="1000"
-                    min={100}
-                    max={10000}
-                    data-testid="kb-chunk-size-input"
-                  />
-                </div>
-
-                {/* Chunk Overlap */}
-                <div className="flex flex-col gap-2">
-                  <Label
-                    htmlFor="chunk-overlap"
-                    className="text-xs text-muted-foreground"
-                  >
-                    Chunk Overlap
-                  </Label>
-                  <Input
-                    id="chunk-overlap"
-                    type="number"
-                    value={chunkOverlap ?? ""}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      onChunkOverlapChange(
-                        val === "" ? undefined : Number(val),
-                      );
-                    }}
-                    placeholder="200"
-                    min={0}
-                    max={(chunkSize ?? 1000) - 1}
-                    data-testid="kb-chunk-overlap-input"
-                  />
-                </div>
-              </div>
-
-              {/* Separator */}
-              <div className="flex flex-col gap-2">
-                <Label
-                  htmlFor="separator"
-                  className="text-xs text-muted-foreground"
-                >
-                  Separator
-                </Label>
-                <Input
-                  id="separator"
-                  value={separator ?? ""}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    onSeparatorChange(val === "" ? undefined : val);
-                  }}
-                  placeholder="\\n\\n"
-                  data-testid="kb-separator-input"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Table Configure - Animated */}
+        {/* Configure Sources - Animated */}
         <div
           className={cn(
             "grid transition-all duration-300 ease-in-out",
@@ -405,50 +214,160 @@ export function StepConfiguration({
                   </DropdownMenu>
                 </div>
                 <div className="flex flex-col gap-2">
-                  <Label className="text-xs text-muted-foreground">
+                  <Label className="text-xs text-muted-foreground flex items-center gap-1">
                     Column Details
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="cursor-help">
+                            <ForwardedIconComponent
+                              name="Info"
+                              className="h-3.5 w-3.5 text-muted-foreground"
+                            />
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-[260px]">
+                          Configure column behavior for the knowledge base.
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </Label>
-                  <TableModal
-                    open={isTableModalOpen}
-                    setOpen={(open) => {
-                      if (open) {
-                        setTempColumnConfig(cloneDeep(columnConfig));
-                      }
-                      setIsTableModalOpen(open);
-                    }}
-                    tableTitle="Column Configuration"
-                    description="Configure column behavior for the knowledge base."
-                    ref={agGrid}
-                    onSelectionChanged={() => {}}
-                    rowSelection="multiple"
-                    editable={editable}
-                    pagination={true}
-                    addRow={addRow}
-                    onDelete={deleteRow}
-                    onDuplicate={duplicateRow}
-                    displayEmptyAlert={false}
-                    className="h-full w-full"
-                    columnDefs={AgColumns}
-                    rowData={tempColumnConfig}
-                    stopEditingWhenCellsLoseFocus={true}
-                    autoSizeStrategy={{
-                      type: "fitGridWidth",
-                      defaultMinWidth: 100,
-                    }}
-                    onSave={handleTableSave}
-                    onCancel={handleTableCancel}
-                  >
-                    <Button variant="outline" className="w-full justify-center">
-                      <span className="flex items-center gap-2">
-                        <ForwardedIconComponent
-                          name="Columns"
-                          className="h-4 w-4"
-                        />
-                        Open Table
-                      </span>
-                    </Button>
-                  </TableModal>
+                  <ColumnConfig
+                    columnConfig={columnConfig}
+                    onColumnConfigChange={onColumnConfigChange}
+                  />
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Chunking Settings - Animated */}
+        <div
+          className={cn(
+            "grid transition-all duration-300 ease-in-out",
+            showAdvanced
+              ? "grid-rows-[1fr] opacity-100"
+              : "grid-rows-[0fr] opacity-0",
+          )}
+        >
+          <div className="overflow-hidden">
+            <Separator className="my-4" />
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center gap-2">
+                <ForwardedIconComponent
+                  name="Settings2"
+                  className="h-4 w-4 text-muted-foreground"
+                />
+                <span className="text-sm font-medium">Chunking Settings</span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                {/* Chunk Size */}
+                <div className="flex flex-col gap-2">
+                  <Label
+                    htmlFor="chunk-size"
+                    className="flex items-center gap-1 text-xs text-muted-foreground"
+                  >
+                    Chunk Size
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="cursor-help">
+                            <ForwardedIconComponent
+                              name="Info"
+                              className="h-3.5 w-3.5 text-muted-foreground"
+                            />
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-[260px]">
+                          The maximum length of each chunk. Text is first split
+                          by separator, then chunks are merged up to this size.
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </Label>
+                  <Input
+                    id="chunk-size"
+                    type="number"
+                    value={chunkSize}
+                    onChange={(e) =>
+                      onChunkSizeChange(Number(e.target.value) || 0)
+                    }
+                    min={1}
+                    max={10000}
+                    data-testid="kb-chunk-size-input"
+                  />
+                </div>
+
+                {/* Chunk Overlap */}
+                <div className="flex flex-col gap-2">
+                  <Label
+                    htmlFor="chunk-overlap"
+                    className="flex items-center gap-1 text-xs text-muted-foreground"
+                  >
+                    Chunk Overlap
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="cursor-help">
+                            <ForwardedIconComponent
+                              name="Info"
+                              className="h-3.5 w-3.5 text-muted-foreground"
+                            />
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-[260px]">
+                          Number of characters to overlap between chunks.
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </Label>
+                  <Input
+                    id="chunk-overlap"
+                    type="number"
+                    value={chunkOverlap}
+                    onChange={(e) =>
+                      onChunkOverlapChange(Number(e.target.value) || 0)
+                    }
+                    min={0}
+                    max={chunkSize - 1}
+                    data-testid="kb-chunk-overlap-input"
+                  />
+                </div>
+              </div>
+
+              {/* Separator */}
+              <div className="flex flex-col gap-2">
+                <Label
+                  htmlFor="separator"
+                  className="flex items-center gap-1 text-xs text-muted-foreground"
+                >
+                  Separator
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="cursor-help">
+                          <ForwardedIconComponent
+                            name="Info"
+                            className="h-3.5 w-3.5 text-muted-foreground"
+                          />
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-[260px]">
+                        The character to split on. Use \n for newline. Examples:
+                        \n\n for paragraphs, \n for lines, . for sentences.
+                        Leave blank for no separator.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </Label>
+                <Input
+                  id="separator"
+                  value={separator}
+                  onChange={(e) => onSeparatorChange(e.target.value)}
+                  data-testid="kb-separator-input"
+                />
               </div>
             </div>
           </div>
