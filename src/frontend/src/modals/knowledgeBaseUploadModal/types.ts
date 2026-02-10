@@ -12,6 +12,7 @@ export interface KnowledgeBaseUploadModalProps {
     chunkOverlap?: number;
     separator?: string;
   };
+  hideAdvanced?: boolean;
 }
 
 export interface ColumnConfigRow {

@@ -17,6 +17,7 @@ export default function KnowledgeBaseUploadModal({
   setOpen: controlledSetOpen,
   onSubmit,
   existingKnowledgeBase,
+  hideAdvanced,
 }: KnowledgeBaseUploadModalProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const open = controlledOpen ?? internalOpen;
@@ -27,6 +28,7 @@ export default function KnowledgeBaseUploadModal({
     setOpen,
     onSubmit,
     existingKnowledgeBase,
+    hideAdvanced,
   });
 
   const renderStepContent = () => {
@@ -96,7 +98,7 @@ export default function KnowledgeBaseUploadModal({
       }
       description={STEP_DESCRIPTIONS[form.currentStep]}
       icon="Database"
-      height={form.showAdvanced ? "h-[690px]" : "h-[347px]"}
+      height={!hideAdvanced && form.showAdvanced ? "h-[690px]" : "h-[347px]"}
       width="w-[700px]"
       showProgress={false}
       sidePanel={
@@ -106,7 +108,7 @@ export default function KnowledgeBaseUploadModal({
       footer={
         <StepperModalFooter
           currentStep={form.currentStep}
-          totalSteps={form.showAdvanced ? 2 : 1}
+          totalSteps={!hideAdvanced && form.showAdvanced ? 2 : 1}
           onBack={form.handleBack}
           onNext={form.handleNext}
           onSubmit={form.handleSubmit}
@@ -115,13 +117,17 @@ export default function KnowledgeBaseUploadModal({
           isSubmitting={form.isSubmitting}
           submitLabel={form.isAddSourcesMode ? "Next Step" : "Create"}
           helpLabel={
-            form.currentStep === 1
+            !hideAdvanced && form.currentStep === 1
               ? form.showAdvanced
-                ? "Hide Advanced"
-                : "Advanced"
+                ? "Hide Sources"
+                : "Configure Sources"
               : undefined
           }
-          onHelp={form.currentStep === 1 ? form.toggleAdvanced : undefined}
+          onHelp={
+            !hideAdvanced && form.currentStep === 1
+              ? form.toggleAdvanced
+              : undefined
+          }
         />
       }
     >

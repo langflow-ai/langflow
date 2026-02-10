@@ -2,11 +2,11 @@ import { PopoverAnchor } from "@radix-ui/react-popover";
 import Fuse from "fuse.js";
 import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import NodeDialog from "@/CustomNodes/GenericNode/components/NodeDialogComponent";
-import KnowledgeBaseUploadModal from "@/modals/knowledgeBaseUploadModal";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
 import { RECEIVING_INPUT_VALUE, SELECT_AN_OPTION } from "@/constants/constants";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
+import KnowledgeBaseUploadModal from "@/modals/knowledgeBaseUploadModal";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import { useTypesStore } from "@/stores/typesStore";
@@ -617,6 +617,7 @@ export default function Dropdown({
                 // Refresh dropdown options to show the new KB
                 handleRefreshButtonPress();
               }}
+              hideAdvanced
             />
           ) : (
             <NodeDialog

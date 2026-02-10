@@ -25,8 +25,12 @@ export function useKnowledgeBaseForm({
   setOpen,
   onSubmit,
   existingKnowledgeBase,
+  hideAdvanced,
 }: Pick<Required<KnowledgeBaseUploadModalProps>, "open" | "setOpen"> &
-  Pick<KnowledgeBaseUploadModalProps, "onSubmit" | "existingKnowledgeBase">) {
+  Pick<
+    KnowledgeBaseUploadModalProps,
+    "onSubmit" | "existingKnowledgeBase" | "hideAdvanced"
+  >) {
   const isAddSourcesMode = !!existingKnowledgeBase;
 
   // Wizard state
