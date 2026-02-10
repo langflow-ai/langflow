@@ -391,6 +391,14 @@ export default function AccordionPromptComponent({
     contentEditableRef.current.innerHTML = getHighlightedHTML(newValue);
   };
 
+  const handlePromptModalSetValue = (newValue: string) => {
+    setInternalValue(newValue);
+    handleOnNewValue({ value: newValue });
+    if (contentEditableRef.current) {
+      contentEditableRef.current.innerHTML = getHighlightedHTML(newValue);
+    }
+  };
+
   if (!showParameter) return <></>;
 
   return (
@@ -459,7 +467,7 @@ export default function AccordionPromptComponent({
                   field_name={field_name}
                   readonly={readonly}
                   value={value}
-                  setValue={(newValue) => handleOnNewValue({ value: newValue })}
+                  setValue={handlePromptModalSetValue}
                   nodeClass={nodeClass}
                   setNodeClass={handleNodeClass}
                 >
