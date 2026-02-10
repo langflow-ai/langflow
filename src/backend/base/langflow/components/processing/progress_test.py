@@ -66,5 +66,3 @@ class ProgressTestComponent(Component):
                 "total_time_seconds": total_steps * delay_seconds
             }
         )
-
-# Made with Bob
