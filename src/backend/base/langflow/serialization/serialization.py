@@ -279,6 +279,14 @@ def serialize(
     if no_limits and not to_str and is_simple_primitive:
         return obj
 
+    # Quick shallow return for common container cases when no truncation requested.
+    # Avoids the expensive dispatcher + recursion for trivial containers.
+    if no_limits and not to_str:
+        if isinstance(obj, dict) and _is_shallow_simple(obj):
+            return obj
+        if isinstance(obj, (list, tuple)) and _is_shallow_simple(obj):
+            return obj
+
     try:
         # First try type-specific serialization
         result = _serialize_dispatcher(obj, max_length, max_items)
@@ -327,3 +335,25 @@ def serialize_or_str(
         max_items: Maximum items in list-like structures, None for no truncation
     """
     return serialize(obj, max_length, max_items, to_str=True)
+
+
+def _is_shallow_simple(obj: Any) -> bool:
+    """Check if object is a shallow container of only simple primitives.
+
+    Returns True for dicts/lists/tuples containing only primitives (str, int, float, bool, None).
+    This is intentionally shallow to be cheap; it identifies cases where serialization
+    would produce the same structure unchanged.
+    """
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            if not isinstance(k, (str, int, float, bool)):
+                return False
+            if not (isinstance(v, (str, int, float, bool)) or v is None):
+                return False
+        return True
+    if isinstance(obj, (list, tuple)):
+        for v in obj:
+            if not (isinstance(v, (str, int, float, bool)) or v is None):
+                return False
+        return True
+    return False

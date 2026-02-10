@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 from lfx.log.logger import logger
 from typing_extensions import override
 
-from langflow.serialization.serialization import serialize
+from langflow.serialization.serialization import _is_shallow_simple, serialize
 from langflow.services.tracing.base import BaseTracer
 
 if TYPE_CHECKING:
@@ -129,8 +129,8 @@ class LangFuseTracer(BaseTracer):
         # Create child span under the root span
         span = self._root_span.start_span(
             name=name,
-            input=serialize(inputs),
-            metadata=serialize(metadata_),
+            input=inputs if _is_shallow_simple(inputs) else serialize(inputs),
+            metadata=metadata_ if _is_shallow_simple(metadata_) else serialize(metadata_),
         )
 
         self.spans[trace_id] = span
