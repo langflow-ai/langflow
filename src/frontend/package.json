@@ -45,7 +45,7 @@
     "ag-grid-community": "^32.3.9",
     "ag-grid-react": "^32.3.9",
     "ansi-to-html": "^0.7.2",
-    "axios": "^1.7.4",
+    "axios": "^1.13.5",
     "base64-js": "^1.5.1",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
