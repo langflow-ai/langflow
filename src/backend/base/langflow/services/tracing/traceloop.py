@@ -8,6 +8,8 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
+from langchain_core.documents import Document
+from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from lfx.log.logger import logger
 from opentelemetry import trace
 from opentelemetry.trace import Span, use_span
@@ -16,6 +18,7 @@ from traceloop.sdk import Traceloop
 from traceloop.sdk.instruments import Instruments
 from typing_extensions import override
 
+from langflow.schema.message import Message
 from langflow.services.tracing.base import BaseTracer
 
 if TYPE_CHECKING:
@@ -28,6 +31,24 @@ if TYPE_CHECKING:
 
     from langflow.graph.vertex.base import Vertex
     from langflow.services.tracing.schema import Log
+
+_LANGCHAIN_AVAILABLE = False
+
+Document = None
+
+BaseMessage = None
+
+HumanMessage = None
+
+SystemMessage = None
+
+_MESSAGE_AVAILABLE = False
+
+Message = None
+
+_LANGCHAIN_MESSAGE_TYPES = (BaseMessage, HumanMessage, SystemMessage) if _LANGCHAIN_AVAILABLE else ()
+
+_GENERATOR_NONE_TYPES = (types.GeneratorType, types.NoneType)
 
 
 class TraceloopTracer(BaseTracer):
@@ -99,11 +120,6 @@ class TraceloopTracer(BaseTracer):
 
     def _convert_to_traceloop_type(self, value):
         """Recursively converts a value to a Traceloop compatible type."""
-        from langchain_core.documents import Document
-        from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
-
-        from langflow.schema.message import Message
-
         try:
             if isinstance(value, dict):
                 value = {key: self._convert_to_traceloop_type(val) for key, val in value.items()}
@@ -111,16 +127,16 @@ class TraceloopTracer(BaseTracer):
             elif isinstance(value, list):
                 value = [self._convert_to_traceloop_type(v) for v in value]
 
-            elif isinstance(value, Message):
+            elif _MESSAGE_AVAILABLE and Message is not None and isinstance(value, Message):
                 value = value.text
 
-            elif isinstance(value, (BaseMessage | HumanMessage | SystemMessage)):
+            elif _LANGCHAIN_AVAILABLE and _LANGCHAIN_MESSAGE_TYPES and isinstance(value, _LANGCHAIN_MESSAGE_TYPES):
                 value = str(value.content) if value.content is not None else ""
 
-            elif isinstance(value, Document):
+            elif _LANGCHAIN_AVAILABLE and Document is not None and isinstance(value, Document):
                 value = value.page_content
 
-            elif isinstance(value, (types.GeneratorType | types.NoneType)):
+            elif isinstance(value, _GENERATOR_NONE_TYPES):
                 value = str(value)
 
             elif isinstance(value, float) and not math.isfinite(value):
