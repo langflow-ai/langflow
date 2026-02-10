@@ -266,18 +266,22 @@ export default function AccordionPromptComponent({
       nodeClass
     ) {
       validateTimeoutRef.current = setTimeout(() => {
-        lastValidatedValueRef.current = internalValue;
+        const valueToValidate = internalValue;
         postValidatePrompt(
           {
             name: field_name || "",
-            template: internalValue,
+            template: valueToValidate,
             frontend_node: nodeClass,
             mustache: isDoubleBrackets,
           },
           {
             onSuccess: (apiReturn) => {
-              if (apiReturn?.frontend_node) {
-                apiReturn.frontend_node.template.template.value = internalValue;
+              if (
+                apiReturn?.frontend_node &&
+                valueToValidate === lastValidatedValueRef.current
+              ) {
+                lastValidatedValueRef.current = valueToValidate; // Redundant but safe
+                apiReturn.frontend_node.template.template.value = valueToValidate;
                 if (handleNodeClass) {
                   handleNodeClass(apiReturn.frontend_node);
                 }
@@ -288,6 +292,7 @@ export default function AccordionPromptComponent({
             },
           },
         );
+        lastValidatedValueRef.current = valueToValidate;
       }, 1000); // 1 second debounce
     }
 
@@ -297,7 +302,7 @@ export default function AccordionPromptComponent({
         clearTimeout(validateTimeoutRef.current);
       }
     };
-  }, [internalValue]);
+  }, [internalValue, isDoubleBrackets, field_name]);
 
   const handleInput = (e: React.FormEvent<HTMLDivElement>) => {
     if (!contentEditableRef.current) return;
@@ -405,6 +410,7 @@ export default function AccordionPromptComponent({
   };
 
   const handlePromptModalSetValue = (newValue: string) => {
+    lastValidatedValueRef.current = newValue;
     setInternalValue(newValue);
     handleOnNewValue({ value: newValue });
     if (contentEditableRef.current) {
@@ -494,7 +500,7 @@ export default function AccordionPromptComponent({
                     size="sm"
                     className="h-6 w-6 p-0 text-muted-foreground"
                     title="Fullscreen"
-                    data-testid="button_open_prompt_modal"
+                    data-testid={isDoubleBrackets ? "button_open_mustache_prompt_modal" : "button_open_prompt_modal"}
                   >
                     <ForwardedIconComponent
                       name="Maximize"

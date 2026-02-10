@@ -663,10 +663,10 @@ test(
       timeout: 5000,
     });
 
-    await page.waitForSelector('[data-testid="button_open_prompt_modal"]', {
+    await page.waitForSelector('[data-testid="button_open_mustache_prompt_modal"]', {
       timeout: 5000,
     });
-    await page.getByTestId("button_open_prompt_modal").click();
+    await page.getByTestId("button_open_mustache_prompt_modal").click();
 
     // Wait for the prompt modal textarea
     const mustacheTextareaId = "modal-mustachepromptarea_mustache_template";
@@ -720,7 +720,7 @@ test(
     await page.waitForTimeout(500);
 
     // Open the modal again
-    await page.getByTestId("button_open_prompt_modal").click();
+    await page.getByTestId("button_open_mustache_prompt_modal").click();
 
     await page.getByTestId("edit-prompt-sanitized").click();
 
