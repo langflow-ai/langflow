@@ -61,6 +61,24 @@ import { useTypesStore } from "./typesStore";
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
 const useFlowStore = create<FlowStoreType>((set, get) => ({
+  nodeProgress: {},
+  setNodeProgress: (nodeId, progress) => {
+    if (progress === null) {
+      const newProgress = { ...get().nodeProgress };
+      delete newProgress[nodeId];
+      set({ nodeProgress: newProgress });
+    } else {
+      set({
+        nodeProgress: {
+          ...get().nodeProgress,
+          [nodeId]: progress,
+        },
+      });
+    }
+  },
+  clearAllNodeProgress: () => {
+    set({ nodeProgress: {} });
+  },
   playgroundPage: false,
   setPlaygroundPage: (playgroundPage) => {
     set({ playgroundPage });
@@ -1095,6 +1113,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       positionDictionary: {},
       componentsToUpdate: [],
       rightClickedNodeId: null,
+      nodeProgress: {},
     });
   },
   dismissedNodes: [],

@@ -32,6 +32,7 @@ import NodeUpdateComponent from "./components/NodeUpdateComponent";
 import { NodeIcon } from "./components/nodeIcon";
 import RenderInputParameters from "./components/RenderInputParameters";
 import { useBuildStatus } from "./hooks/use-get-build-status";
+import { BuildStatus } from "@/constants/enums";
 
 const MemoizedRenderInputParameters = memo(RenderInputParameters);
 const MemoizedNodeIcon = memo(NodeIcon);
@@ -88,6 +89,7 @@ function GenericNode({
   const setEdges = useFlowStore((state) => state.setEdges);
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
   const buildStatus = useBuildStatus(data, data.id);
+  const nodeProgress = useFlowStore((state) => state.nodeProgress[data.id]);
   const dismissedNodes = useFlowStore((state) => state.dismissedNodes);
   const addDismissedNodes = useFlowStore((state) => state.addDismissedNodes);
   const removeDismissedNodes = useFlowStore(
@@ -675,6 +677,20 @@ function GenericNode({
                 handleSelectOutput={handleSelectOutput}
               />
             </>
+          </div>
+        )}
+        {/* Progress bar - only render when building with progress */}
+        {buildStatus === BuildStatus.BUILDING && nodeProgress && (
+          <div
+            className="pointer-events-none absolute bottom-0 left-0 right-0 h-3 overflow-hidden"
+            style={{ borderRadius: "0 0 11px 11px" }}
+          >
+            <div
+              className="absolute bottom-0 left-0 h-1 bg-accent-indigo-foreground transition-all duration-300 ease-out"
+              style={{
+                width: `${(nodeProgress.current / nodeProgress.total) * 100}%`,
+              }}
+            />
           </div>
         )}
       </div>
