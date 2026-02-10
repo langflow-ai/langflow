@@ -683,11 +683,13 @@ function GenericNode({
         {buildStatus === BuildStatus.BUILDING && nodeProgress && (
           <div
             className="pointer-events-none absolute bottom-0 left-0 right-0 h-3 overflow-hidden"
-            style={{ borderRadius: '0 0 11px 11px' }}
+            style={{ borderRadius: "0 0 11px 11px" }}
           >
             <div
               className="absolute bottom-0 left-0 h-1 bg-accent-indigo-foreground transition-all duration-300 ease-out"
-              style={{ width: `${(nodeProgress.current / nodeProgress.total) * 100}%` }}
+              style={{
+                width: `${(nodeProgress.current / nodeProgress.total) * 100}%`,
+              }}
             />
           </div>
         )}

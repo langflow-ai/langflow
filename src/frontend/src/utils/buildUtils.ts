@@ -679,7 +679,9 @@ async function onEvent(
       // Handle progress events from components (e.g., batch processing)
       const { id, current, total, message } = data;
       if (id && typeof current === "number" && typeof total === "number") {
-        useFlowStore.getState().setNodeProgress(id, { current, total, message });
+        useFlowStore
+          .getState()
+          .setNodeProgress(id, { current, total, message });
       }
       return true;
     }
