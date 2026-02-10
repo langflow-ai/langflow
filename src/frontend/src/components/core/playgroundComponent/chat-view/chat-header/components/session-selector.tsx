@@ -1,8 +1,11 @@
 import { useState } from "react";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
+import { useDeleteSession } from "@/controllers/API/queries/messages/use-delete-sessions";
 import { useUpdateSessionName } from "@/controllers/API/queries/messages/use-rename-session";
+import useAlertStore from "@/stores/alertStore";
 import { useVoiceStore } from "@/stores/voiceStore";
 import { cn } from "@/utils/utils";
+import { clearSessionMessages } from "../../utils/message-utils";
 import { useSessionHasMessages } from "../hooks/use-session-has-messages";
 import { SessionMoreMenu } from "./session-more-menu";
 import { SessionRename } from "./session-rename";
@@ -42,12 +45,37 @@ export function SessionSelector({
 }: SessionSelectorProps) {
   const [isEditing, setIsEditing] = useState(false);
   const { mutate: updateSessionName } = useUpdateSessionName();
+  const deleteSessionMutation = useDeleteSession({});
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setNewSessionCloseVoiceAssistant = useVoiceStore(
     (state) => state.setNewSessionCloseVoiceAssistant,
   );
 
   const handleEditClick = () => {
     setIsEditing(true);
+  };
+
+  const handleClearChat = () => {
+    if (!session || !isDefaultSession || !currentFlowId) return;
+
+    deleteSessionMutation.mutate(
+      { sessionId: session },
+      {
+        onSuccess: () => {
+          // Clear messages from React Query cache
+          clearSessionMessages(session, currentFlowId);
+          setSuccessData({
+            title: "Chat cleared successfully.",
+          });
+        },
+        onError: () => {
+          setErrorData({
+            title: "Error clearing chat.",
+          });
+        },
+      },
+    );
   };
 
   const handleRenameSave = async (newSessionId: string) => {
@@ -140,6 +168,8 @@ export function SessionSelector({
         </div>
 
         <SessionMoreMenu
+          showClearChat={isDefaultSession}
+          onClearChat={handleClearChat}
           onRename={handleEditClick}
           onMessageLogs={() => inspectSession?.(session)}
           onDelete={() => deleteSession(session)}
