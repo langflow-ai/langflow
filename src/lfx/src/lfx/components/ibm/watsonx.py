@@ -14,6 +14,8 @@ from lfx.schema.dotdict import dotdict
 
 
 class WatsonxAIComponent(LCModelComponent):
+    """LFX component for IBM watsonx.ai text/chat generation."""
+
     display_name = "IBM watsonx.ai"
     description = "Generate text using IBM watsonx.ai foundation models."
     icon = "WatsonxAI"
@@ -200,6 +202,7 @@ class WatsonxAIComponent(LCModelComponent):
         return build_config
 
     def build_model(self) -> LanguageModel:
+        """Construct a ChatWatsonx model using current config and parameters."""
         # Parse logit_bias from JSON string if provided
         logit_bias = None
         if hasattr(self, "logit_bias") and self.logit_bias:
