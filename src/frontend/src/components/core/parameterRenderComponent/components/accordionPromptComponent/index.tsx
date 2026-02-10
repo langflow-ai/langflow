@@ -281,7 +281,8 @@ export default function AccordionPromptComponent({
                 valueToValidate === lastValidatedValueRef.current
               ) {
                 lastValidatedValueRef.current = valueToValidate; // Redundant but safe
-                apiReturn.frontend_node.template.template.value = valueToValidate;
+                apiReturn.frontend_node.template.template.value =
+                  valueToValidate;
                 if (handleNodeClass) {
                   handleNodeClass(apiReturn.frontend_node);
                 }
@@ -500,7 +501,11 @@ export default function AccordionPromptComponent({
                     size="sm"
                     className="h-6 w-6 p-0 text-muted-foreground"
                     title="Fullscreen"
-                    data-testid={isDoubleBrackets ? "button_open_mustache_prompt_modal" : "button_open_prompt_modal"}
+                    data-testid={
+                      isDoubleBrackets
+                        ? "button_open_mustache_prompt_modal"
+                        : "button_open_prompt_modal"
+                    }
                   >
                     <ForwardedIconComponent
                       name="Maximize"

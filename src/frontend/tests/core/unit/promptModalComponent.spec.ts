@@ -663,9 +663,12 @@ test(
       timeout: 5000,
     });
 
-    await page.waitForSelector('[data-testid="button_open_mustache_prompt_modal"]', {
-      timeout: 5000,
-    });
+    await page.waitForSelector(
+      '[data-testid="button_open_mustache_prompt_modal"]',
+      {
+        timeout: 5000,
+      },
+    );
     await page.getByTestId("button_open_mustache_prompt_modal").click();
 
     // Wait for the prompt modal textarea
