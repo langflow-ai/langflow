@@ -162,7 +162,8 @@
             "documentation": "",
             "edited": false,
             "field_order": [
-              "input_value"
+              "input_value",
+              "use_global_variable"
             ],
             "frozen": false,
             "icon": "type",
@@ -308,10 +309,9 @@
               "sender",
               "sender_name",
               "session_id",
+              "context_id",
               "data_template",
-              "background_color",
-              "chat_icon",
-              "text_color"
+              "clean_data"
             ],
             "frozen": false,
             "icon": "MessagesSquare",
@@ -904,19 +904,28 @@
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Loads and returns the content from uploaded files.",
-            "display_name": "File",
+            "display_name": "Read File",
             "documentation": "",
             "edited": false,
             "field_order": [
-              "path",
-              "file_path",
-              "separator",
-              "silent_errors",
-              "delete_server_file_after_processing",
-              "ignore_unsupported_extensions",
-              "ignore_unspecified_files",
+              "storage_location",
+              "file_path_str",
+              "aws_access_key_id",
+              "aws_secret_access_key",
+              "bucket_name",
+              "aws_region",
+              "s3_file_key",
+              "service_account_key",
+              "file_id",
+              "advanced_mode",
+              "pipeline",
+              "ocr_engine",
+              "md_image_placeholder",
+              "md_page_break_placeholder",
+              "doc_key",
               "use_multithreading",
-              "concurrency_multithreading"
+              "concurrency_multithreading",
+              "markdown"
             ],
             "frozen": false,
             "icon": "file-text",
@@ -1591,7 +1600,8 @@
               "input_value",
               "system_message",
               "stream",
-              "temperature"
+              "temperature",
+              "max_tokens"
             ],
             "frozen": false,
             "icon": "brain-circuit",
@@ -1986,7 +1996,8 @@
             "documentation": "https://docs.langflow.org/components-processing#structured-output",
             "edited": false,
             "field_order": [
-              "llm",
+              "model",
+              "api_key",
               "input_value",
               "system_prompt",
               "schema_name",
