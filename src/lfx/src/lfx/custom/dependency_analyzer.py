@@ -114,6 +114,7 @@ def _get_internal_package_names() -> set[str]:
     return packages
 
 
+@lru_cache(maxsize=4096)
 def _get_module_source(module: str) -> str | None:
     """Return module source without importing it."""
     try:
@@ -144,22 +145,18 @@ def _resolve_relative_import(current_module: str, module: str | None, level: int
     return ".".join(base_parts)
 
 
-def analyze_module_import_graph(module: str, *, resolve_versions: bool = True) -> list[dict]:
-    """Analyze dependencies by walking a module's import graph.
+@lru_cache(maxsize=2048)
+def _analyze_module_import_graph_cached(module: str, *, resolve_versions: bool) -> tuple[DependencyInfo, ...]:
+    """Cached module graph analysis result.
 
-    Args:
-        module: Fully-qualified module path (e.g., "lfx.components.models_and_agents.language_model")
-        resolve_versions: Whether to resolve version information
-
-    Returns:
-        List of dependency dictionaries
+    Returns immutable dependency tuples so callers can safely consume cached data.
     """
     internal_packages = _get_internal_package_names()
     if not module:
-        return []
+        return ()
     entry_source = _get_module_source(module)
     if entry_source is None:
-        return []
+        return ()
 
     visited: set[str] = set()
     external_deps: dict[str, DependencyInfo] = {}
@@ -203,7 +200,20 @@ def analyze_module_import_graph(module: str, *, resolve_versions: bool = True) -
                 dep = DependencyInfo(name=top_level, version=None, is_local=False)
                 external_deps[top_level] = _classify_dependency(dep) if resolve_versions else dep
 
-    return [asdict(d) for d in external_deps.values()]
+    return tuple(external_deps.values())
+
+
+def analyze_module_import_graph(module: str, *, resolve_versions: bool = True) -> list[dict]:
+    """Analyze dependencies by walking a module's import graph.
+
+    Args:
+        module: Fully-qualified module path (e.g., "lfx.components.models_and_agents.language_model")
+        resolve_versions: Whether to resolve version information
+
+    Returns:
+        List of dependency dictionaries
+    """
+    return [asdict(d) for d in _analyze_module_import_graph_cached(module, resolve_versions=resolve_versions)]
 
 
 def analyze_code_import_graph(source: str, *, resolve_versions: bool = True) -> list[dict]:
@@ -219,6 +229,8 @@ def analyze_code_import_graph(source: str, *, resolve_versions: bool = True) -> 
     visitor = _ImportRefVisitor()
     visitor.visit(tree)
 
+    internal_modules_to_scan: set[str] = set()
+
     for imp in visitor.results:
         if imp.level > 0:
             # Relative imports in embedded code are treated as local.
@@ -230,19 +242,22 @@ def analyze_code_import_graph(source: str, *, resolve_versions: bool = True) -> 
             continue
 
         if top_level in internal_packages:
-            for dep in analyze_module_import_graph(module_name, resolve_versions=resolve_versions):
-                dep_name = dep.get("name")
-                if dep_name and dep_name not in external_deps:
-                    external_deps[dep_name] = DependencyInfo(
-                        name=dep_name,
-                        version=dep.get("version"),
-                        is_local=False,
-                    )
+            internal_modules_to_scan.add(module_name)
             continue
 
         if top_level not in external_deps:
             dep = DependencyInfo(name=top_level, version=None, is_local=False)
             external_deps[top_level] = _classify_dependency(dep) if resolve_versions else dep
+
+    for module_name in internal_modules_to_scan:
+        for dep in analyze_module_import_graph(module_name, resolve_versions=resolve_versions):
+            dep_name = dep.get("name")
+            if dep_name and dep_name not in external_deps:
+                external_deps[dep_name] = DependencyInfo(
+                    name=dep_name,
+                    version=dep.get("version"),
+                    is_local=False,
+                )
 
     return [asdict(d) for d in external_deps.values()]
 

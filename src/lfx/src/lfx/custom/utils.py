@@ -1069,6 +1069,7 @@ def get_flow_import_graph_dependencies(
         trusted_versions = {}
 
     dependencies = set()
+    collected_deps: dict[str, str | None] = {}
 
     for component in flow.get("data", {}).get("nodes", []):
         deps = []
@@ -1081,9 +1082,6 @@ def get_flow_import_graph_dependencies(
             .get("code", {})
             .get("value", "")
         )
-        if isinstance(code_value, str) and code_value.strip():
-            deps.extend(analyze_code_import_graph(code_value))
-
         module_path = (
             component
             .get("data", {})
@@ -1094,9 +1092,9 @@ def get_flow_import_graph_dependencies(
         module_name = _module_path_from_component_module(module_path)
         if module_name:
             deps.extend(analyze_module_import_graph(module_name))
-
-        if not deps:
-            continue
+        elif isinstance(code_value, str) and code_value.strip():
+            # Prefer module graph analysis when metadata module exists.
+            deps.extend(analyze_code_import_graph(code_value))
 
         if not deps:
             continue
@@ -1105,31 +1103,40 @@ def get_flow_import_graph_dependencies(
             if not (dep_name := dep.get("name")):
                 continue
 
-            if dep_version := dep.get("version"):
-                # first matching distribution with the provided version
-                versioned_names = get_versioned_package_distributions(
-                    package_name=dep_name, version=dep_version
-                )
-            else:
-                # all matching distributions
-                versioned_names = get_versioned_package_distributions(
-                    dep_name, version=None
-                )
-            if not versioned_names:
-                logger.warning(f"Package {dep_name} has no matching distribution.")
+            dep_version = dep.get("version")
+            if dep_name not in collected_deps:
+                collected_deps[dep_name] = dep_version
+            elif collected_deps[dep_name] is None and dep_version is not None:
+                # Prefer a known version if we first saw this dep unversioned.
+                collected_deps[dep_name] = dep_version
 
-                if trusted_version := trusted_versions.get(dep_name):
-                    versioned_names = [f"{dep_name}=={trusted_version}"]
-                elif dep_name in trusted_packages:
-                    versioned_names = [dep_name]
-                elif enable_unsafe_packages:
-                    versioned_names = (
-                        [f"{dep_name}=={v}"]
-                        if (v := dep.get("version"))
-                        else [dep_name]
-                    )
+    for dep_name, dep_version in collected_deps.items():
+        if dep_version:
+            # First matching distribution with the provided version.
+            versioned_names = get_versioned_package_distributions(
+                package_name=dep_name, version=dep_version
+            )
+        else:
+            # All matching distributions.
+            versioned_names = get_versioned_package_distributions(
+                dep_name, version=None
+            )
 
-            dependencies.update(versioned_names)
+        if not versioned_names:
+            logger.warning(f"Package {dep_name} has no matching distribution.")
+
+            if trusted_version := trusted_versions.get(dep_name):
+                versioned_names = [f"{dep_name}=={trusted_version}"]
+            elif dep_name in trusted_packages:
+                versioned_names = [dep_name]
+            elif enable_unsafe_packages:
+                versioned_names = (
+                    [f"{dep_name}=={v}"]
+                    if (v := dep_version)
+                    else [dep_name]
+                )
+
+        dependencies.update(versioned_names)
 
     return dependencies
 
@@ -1177,7 +1184,14 @@ if __name__ == "__main__":
     path = Path("/workspace/src/backend/base/langflow/initial_setup/starter_projects/Basic Prompting.json")
     with path.open() as f:
         flow = json.load(f)
+    import time
+    start_time = time.time()
     deps = get_flow_import_graph_dependencies(flow)
-    filtered_deps = filter_deps(deps, {"lfx"})
+    end_time = time.time()
     print("Deps: %s", deps)
+    print("Time taken: %s seconds", end_time - start_time)
+    start_time = time.time()
+    filtered_deps = filter_deps(deps, {"lfx"})
     print("Filtered deps: %s", filtered_deps)
+    end_time = time.time()
+    print("Time taken: %s seconds", end_time - start_time)
