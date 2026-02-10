@@ -230,13 +230,12 @@ class WatsonxAIComponent(LCModelComponent):
         if isinstance(api_key_value, SecretStr):
             api_key_value = api_key_value.get_secret_value()
 
-        project_id = None
-        space_id = None
+        if self.container_scope not in ("SpaceID", "ProjectID"):
+            error_msg = "Please select a Container Scope (SpaceID or ProjectID)."
+            raise ValueError(error_msg)
 
-        if self.container_scope == "SpaceID":
-            space_id = self.space_id
-        elif self.container_scope == "ProjectID":
-            project_id = self.project_id
+        project_id = self.project_id if self.container_scope == "ProjectID" else None
+        space_id = self.space_id if self.container_scope == "SpaceID" else None
 
         return ChatWatsonx(
             apikey=api_key_value,
