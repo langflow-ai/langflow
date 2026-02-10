@@ -189,7 +189,7 @@ class WebSearchComponent(Component):
                 uddg = parse_qs(parsed.query).get("uddg", [""])[0]
                 decoded_link = unquote(uddg) if uddg else raw_link
 
-                self.set_progress(idx, total_results, f"Fetching result {idx + 1}/{total_results}")
+                self.set_progress(idx + 1, total_results, f"Fetching result {idx + 1}/{total_results}")
 
                 try:
                     final_url = self.ensure_url(decoded_link)

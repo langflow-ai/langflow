@@ -261,3 +261,65 @@ async def test_component_streaming_message():
             tokens.append(event)
 
     assert len(tokens) > 0
+
+
+@pytest.mark.asyncio
+async def test_component_set_progress():
+    """Test component's set_progress functionality."""
+    queue = asyncio.Queue()
+    event_manager = EventManager(queue)
+
+    # Register on_progress event
+    event_manager.register_event("on_progress", "progress")
+
+    component = ComponentForTesting()
+    component.set_event_manager(event_manager)
+    component._id = "test_component_id"
+
+    # Call set_progress and verify event is queued
+    await asyncio.to_thread(component.set_progress, 3, 10, "Processing batch 3/10")
+
+    event_id, event_data, _ = queue.get_nowait()
+    event = event_data.decode("utf-8")
+
+    assert event_id.startswith("progress-")
+    assert '"current": 3' in event
+    assert '"total": 10' in event
+    assert "test_component_id" in event
+
+
+@pytest.mark.asyncio
+async def test_component_set_progress_input_validation():
+    """Test set_progress clamps invalid inputs."""
+    queue = asyncio.Queue()
+    event_manager = EventManager(queue)
+    event_manager.register_event("on_progress", "progress")
+
+    component = ComponentForTesting()
+    component.set_event_manager(event_manager)
+    component._id = "test_component_id"
+
+    # total <= 0 should be clamped to 1
+    await asyncio.to_thread(component.set_progress, 1, 0)
+    _event_id, event_data, _ = queue.get_nowait()
+    event = event_data.decode("utf-8")
+    assert '"total": 1' in event
+
+    # current out of bounds should be clamped
+    await asyncio.to_thread(component.set_progress, -5, 10)
+    _, event_data, _ = queue.get_nowait()
+    event = event_data.decode("utf-8")
+    assert '"current": 0' in event
+
+    await asyncio.to_thread(component.set_progress, 15, 10)
+    _, event_data, _ = queue.get_nowait()
+    event = event_data.decode("utf-8")
+    assert '"current": 10' in event
+
+
+@pytest.mark.asyncio
+async def test_component_set_progress_no_event_manager():
+    """Test set_progress is a no-op when event manager is None."""
+    component = ComponentForTesting()
+    # No event manager set - should not raise
+    component.set_progress(1, 10)

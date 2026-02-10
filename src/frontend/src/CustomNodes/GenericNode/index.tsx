@@ -89,7 +89,16 @@ function GenericNode({
   const setEdges = useFlowStore((state) => state.setEdges);
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
   const buildStatus = useBuildStatus(data, data.id);
-  const nodeProgress = useFlowStore((state) => state.nodeProgress[data.id]);
+  const nodeProgress = useFlowStore(
+    useShallow((state) => state.nodeProgress[data.id]),
+  );
+  const progressPercent = useMemo(() => {
+    if (!nodeProgress || nodeProgress.total <= 0) return 0;
+    return Math.min(
+      Math.max((nodeProgress.current / nodeProgress.total) * 100, 0),
+      100,
+    );
+  }, [nodeProgress]);
   const dismissedNodes = useFlowStore((state) => state.dismissedNodes);
   const addDismissedNodes = useFlowStore((state) => state.addDismissedNodes);
   const removeDismissedNodes = useFlowStore(
@@ -682,29 +691,14 @@ function GenericNode({
         {/* Progress bar - only render when building with progress */}
         {buildStatus === BuildStatus.BUILDING &&
           nodeProgress &&
-          (() => {
-            const percent =
-              nodeProgress.total > 0
-                ? Math.min(
-                    Math.max(
-                      (nodeProgress.current / nodeProgress.total) * 100,
-                      0,
-                    ),
-                    100,
-                  )
-                : 0;
-            return (
+          progressPercent != null && (
+            <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-3 overflow-hidden rounded-b-[11px]">
               <div
-                className="pointer-events-none absolute bottom-0 left-0 right-0 h-3 overflow-hidden"
-                style={{ borderRadius: "0 0 11px 11px" }}
-              >
-                <div
-                  className="absolute bottom-0 left-0 h-1 bg-accent-indigo-foreground transition-all duration-300 ease-out"
-                  style={{ width: `${percent}%` }}
-                />
-              </div>
-            );
-          })()}
+                className="absolute bottom-0 left-0 h-1 bg-accent-indigo-foreground transition-all duration-300 ease-out"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+          )}
       </div>
     </div>
   );

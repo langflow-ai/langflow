@@ -668,6 +668,8 @@ async function onEvent(
       if (data?.category === "error" && !data?.properties?.source?.id) {
         onBuildError && onBuildError("Error Building Flow", [data.text]);
       }
+      // Clear stale progress bars on error
+      useFlowStore.getState().clearAllNodeProgress();
       buildResults.push(false);
       return true;
     }
@@ -676,11 +678,9 @@ async function onEvent(
       break;
     case "progress": {
       // Handle progress events from components (e.g., batch processing)
-      const { id, current, total, message } = data;
+      const { id, current, total } = data;
       if (id && typeof current === "number" && typeof total === "number") {
-        useFlowStore
-          .getState()
-          .setNodeProgress(id, { current, total, message });
+        useFlowStore.getState().setNodeProgress(id, { current, total });
       }
       return true;
     }
