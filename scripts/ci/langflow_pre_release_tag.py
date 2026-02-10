@@ -18,14 +18,13 @@ def create_tag(package_version: str, latest_released_version: str | None) -> str
     new_pre_release_version = f"{pkg}.rc0"
 
     if latest:
-        # match either exact pkg or pkg.rcN
-        m = re.match(rf"^{re.escape(pkg)}(?:\.rc(\d+))?$", latest)
+        # match either exact pkg or pkg.rcN (with or without dot before rc, per PEP 440 normalization)
+        m = re.match(rf"^{re.escape(pkg)}\.?rc(\d+)$", latest)
         if m:
-            if m.group(1):
-                rc_number = int(m.group(1)) + 1
-                new_pre_release_version = f"{pkg}.rc{rc_number}"
-            else:
-                new_pre_release_version = f"{pkg}.rc1"
+            rc_number = int(m.group(1)) + 1
+            new_pre_release_version = f"{pkg}.rc{rc_number}"
+        elif latest == pkg:
+            new_pre_release_version = f"{pkg}.rc1"
 
     return new_pre_release_version
 
