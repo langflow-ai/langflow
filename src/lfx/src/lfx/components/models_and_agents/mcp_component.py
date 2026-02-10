@@ -329,7 +329,12 @@ class MCPToolsComponent(ComponentWithCache):
             self._tool_cache = tool_cache
             self.tools = tool_list
 
-            # Cache the result only if caching is enabled
+            # Cache the result only if caching is enabled.
+            # Note: cache_data includes full StructuredTool objects which may
+            # not be picklable (e.g. dynamic Pydantic models with recursive
+            # $ref schemas, or objects holding SSL contexts).  safe_cache_set
+            # handles serialization failures gracefully — a failed write
+            # simply degrades to a cache miss on the next read.
             if use_cache:
                 cache_data = {
                     "tools": tool_list,
