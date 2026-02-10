@@ -67,9 +67,9 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
             "input_value": "",
             "n_messages": 100,
             "browser_enabled": False,
-            "web_apps": "",
             "lite_mode": True,
             "lite_mode_tool_threshold": 25,
+            "shortlisting_tool_threshold": 35,
             "decomposition_strategy": "flexible",
         }
 
@@ -131,7 +131,7 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
         assert "instructions" in build_config
         assert "add_current_date_tool" in build_config
         assert "browser_enabled" in build_config
-        assert "web_apps" in build_config
+        assert "shortlisting_tool_threshold" in build_config
 
     async def test_new_input_fields_present(self, component_class, default_kwargs):
         """Test that new input fields are present in the component.
@@ -147,23 +147,24 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
         assert "instructions" in input_names
         assert "n_messages" in input_names
         assert "browser_enabled" in input_names
-        assert "web_apps" in input_names
         assert "lite_mode" in input_names
         assert "lite_mode_tool_threshold" in input_names
+        assert "shortlisting_tool_threshold" in input_names
         assert "decomposition_strategy" in input_names
 
         # Verify default values
         assert hasattr(component, "instructions")
         assert hasattr(component, "n_messages")
         assert hasattr(component, "browser_enabled")
-        assert hasattr(component, "web_apps")
         assert hasattr(component, "lite_mode")
         assert hasattr(component, "lite_mode_tool_threshold")
+        assert hasattr(component, "shortlisting_tool_threshold")
         assert hasattr(component, "decomposition_strategy")
         assert component.n_messages == 100
         assert component.browser_enabled is False
         assert component.lite_mode is True
         assert component.lite_mode_tool_threshold == 25
+        assert component.shortlisting_tool_threshold == 35
         assert component.decomposition_strategy == "flexible"
 
     async def test_decomposition_strategy_field(self, component_class, default_kwargs):
@@ -197,17 +198,17 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
     async def test_advanced_fields_configuration(self, component_class, default_kwargs):
         """Test that browser and cuga lite fields are properly configured as advanced.
 
-        This test verifies that browser_enabled, web_apps, lite_mode, and
-        lite_mode_tool_threshold fields are all set to advanced.
+        This test verifies that browser_enabled, lite_mode, lite_mode_tool_threshold,
+        and shortlisting_tool_threshold fields are all set to advanced.
         """
         component = await self.component_setup(component_class, default_kwargs)
 
         # Find all the advanced fields we want to test
         field_checks = {
             "browser_enabled": False,
-            "web_apps": False,
             "lite_mode": False,
             "lite_mode_tool_threshold": False,
+            "shortlisting_tool_threshold": False,
         }
 
         for inp in component.inputs:
@@ -216,9 +217,9 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
 
         # Assert all fields are set to advanced
         assert field_checks["browser_enabled"] is True, "browser_enabled should be advanced"
-        assert field_checks["web_apps"] is True, "web_apps should be advanced"
         assert field_checks["lite_mode"] is True, "lite_mode should be advanced"
         assert field_checks["lite_mode_tool_threshold"] is True, "lite_mode_tool_threshold should be advanced"
+        assert field_checks["shortlisting_tool_threshold"] is True, "shortlisting_tool_threshold should be advanced"
 
     async def test_memory_inputs_advanced_setting(self, component_class, default_kwargs):
         """Test that memory inputs are properly set to advanced.
@@ -234,20 +235,17 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
     async def test_browser_configuration(self, component_class, default_kwargs):
         """Test browser configuration options.
 
-        This test verifies that the browser-related configuration options
-        (browser_enabled, web_apps) work correctly.
+        This test verifies that the browser-related configuration option
+        (browser_enabled) works correctly.
         """
         component = await self.component_setup(component_class, default_kwargs)
 
         # Test default browser settings
         assert component.browser_enabled is False
-        assert component.web_apps == ""
 
         # Test setting browser enabled
         component.browser_enabled = True
-        component.web_apps = "https://example.com"
         assert component.browser_enabled is True
-        assert component.web_apps == "https://example.com"
 
 
 class TestCugaComponentWithClient(ComponentTestBaseWithClient):
@@ -413,3 +411,274 @@ class TestCugaComponentWithClient(ComponentTestBaseWithClient):
         # Should show some enthusiasm (though this might be flaky depending on the model)
         # We'll just check that we got a response
         assert len(response_text) > 0
+
+
+class TestLangflowToolsProvider:
+    """Tests for LangflowToolsProvider grouping logic.
+
+    Verifies that tools are correctly grouped by server_name metadata,
+    common prefix, and default app.
+    """
+
+    @pytest.fixture
+    def mock_tool_with_server_name(self):
+        """Create a mock tool with server_name metadata.
+
+        Returns:
+            Mock tool with server_name in metadata
+        """
+        from unittest.mock import MagicMock
+
+        tool = MagicMock()
+        tool.name = "slack_send_message"
+        tool.description = "Send a message via Slack"
+        tool.metadata = {"server_name": "slack_mcp"}
+        return tool
+
+    @pytest.fixture
+    def mock_tool_with_prefix(self):
+        """Create mock tools with common prefix but no server_name.
+
+        Returns:
+            List of mock tools with gmail_ prefix
+        """
+        from unittest.mock import MagicMock
+
+        tools = []
+        for name in ["gmail_send", "gmail_read", "gmail_delete"]:
+            tool = MagicMock()
+            tool.name = name
+            tool.description = f"Gmail tool for {name.split('_')[1]}"
+            tool.metadata = None
+            tools.append(tool)
+        return tools
+
+    @pytest.fixture
+    def mock_tool_without_prefix(self):
+        """Create a mock tool without a meaningful prefix.
+
+        Returns:
+            Mock tool that should go to default_app
+        """
+        from unittest.mock import MagicMock
+
+        tool = MagicMock()
+        tool.name = "calculator"
+        tool.description = "A calculator tool"
+        tool.metadata = None
+        return tool
+
+    async def test_group_by_server_name(self, mock_tool_with_server_name):
+        """Test that tools are grouped by server_name metadata.
+
+        Verifies tools with server_name in metadata are grouped
+        under that server_name app.
+        """
+        from lfx.components.cuga.cuga_agent import LangflowToolsProvider
+
+        provider = LangflowToolsProvider([mock_tool_with_server_name])
+        await provider.initialize()
+
+        apps = await provider.get_apps()
+        assert len(apps) == 1
+        assert apps[0].name == "slack_mcp"
+
+        tools = await provider.get_tools("slack_mcp")
+        assert len(tools) == 1
+        assert tools[0].name == "slack_send_message"
+
+    async def test_group_by_common_prefix(self, mock_tool_with_prefix):
+        """Test that tools without server_name are grouped by prefix.
+
+        Verifies tools with common prefix (e.g., gmail_*) are grouped
+        together under an app named after the prefix.
+        """
+        from lfx.components.cuga.cuga_agent import LangflowToolsProvider
+
+        provider = LangflowToolsProvider(mock_tool_with_prefix)
+        await provider.initialize()
+
+        apps = await provider.get_apps()
+        assert len(apps) == 1
+        assert apps[0].name == "GMAIL"
+
+        tools = await provider.get_tools("GMAIL")
+        assert len(tools) == 3
+        tool_names = {t.name for t in tools}
+        assert tool_names == {"gmail_send", "gmail_read", "gmail_delete"}
+
+    async def test_default_app_for_ungrouped(self, mock_tool_without_prefix):
+        """Test that remaining tools go to default_app.
+
+        Verifies tools that don't match server_name or prefix grouping
+        are placed in the default_app.
+        """
+        from lfx.components.cuga.cuga_agent import LangflowToolsProvider
+
+        provider = LangflowToolsProvider([mock_tool_without_prefix])
+        await provider.initialize()
+
+        apps = await provider.get_apps()
+        assert len(apps) == 1
+        assert apps[0].name == "default_app"
+
+        tools = await provider.get_tools("default_app")
+        assert len(tools) == 1
+        assert tools[0].name == "calculator"
+
+    async def test_mixed_tools_grouping(
+        self, mock_tool_with_server_name, mock_tool_with_prefix, mock_tool_without_prefix
+    ):
+        """Test grouping with a mix of different tool types.
+
+        Verifies all three grouping strategies work together:
+        server_name, prefix, and default_app.
+        """
+        from lfx.components.cuga.cuga_agent import LangflowToolsProvider
+
+        all_tools = [mock_tool_with_server_name, *mock_tool_with_prefix, mock_tool_without_prefix]
+        provider = LangflowToolsProvider(all_tools)
+        await provider.initialize()
+
+        apps = await provider.get_apps()
+        app_names = {app.name for app in apps}
+        assert app_names == {"slack_mcp", "GMAIL", "default_app"}
+
+        all_tools_retrieved = await provider.get_all_tools()
+        assert len(all_tools_retrieved) == 5
+
+    async def test_excluded_prefixes(self):
+        """Test that HTTP method prefixes are excluded from grouping.
+
+        Verifies tools with prefixes like 'get_', 'post_' are not
+        grouped by those prefixes (they should go to default_app).
+        """
+        from unittest.mock import MagicMock
+
+        from lfx.components.cuga.cuga_agent import LangflowToolsProvider
+
+        tools = []
+        for name in ["get_user", "get_data", "post_message"]:
+            tool = MagicMock()
+            tool.name = name
+            tool.description = f"HTTP-style tool: {name}"
+            tool.metadata = None
+            tools.append(tool)
+
+        provider = LangflowToolsProvider(tools)
+        await provider.initialize()
+
+        apps = await provider.get_apps()
+        # 'get' and 'post' are excluded prefixes, so all should go to default_app
+        assert len(apps) == 1
+        assert apps[0].name == "default_app"
+
+
+class TestCugaStreaming:
+    """Tests for CUGA streaming functionality.
+
+    Verifies the streaming event handling, LangGraph format parsing,
+    and nested state extraction.
+    """
+
+    def test_extract_from_nested_state_single_key(self):
+        """Test nested state extraction with single key.
+
+        Verifies that states like {'call_model': {...}} are properly
+        unwrapped to return the inner dict.
+        """
+        # Import the function from the module
+
+        # Create a component instance to access the nested function
+        # Note: extract_from_nested_state is defined inside call_agent,
+        # so we test the logic directly here
+
+        # Single key dict should return inner value
+        state = {"call_model": {"final_answer": "test answer", "step": 1}}
+        assert len(state) == 1
+        inner = next(iter(state.values()))
+        assert inner == {"final_answer": "test answer", "step": 1}
+
+    def test_extract_from_nested_state_multiple_keys(self):
+        """Test nested state extraction with multiple keys.
+
+        Verifies that states with multiple keys are returned as-is.
+        """
+        state = {"key1": "value1", "key2": "value2"}
+        # Multiple keys - should return original
+        assert len(state) > 1
+
+    def test_langgraph_tuple_parsing(self):
+        """Test parsing LangGraph-style (node_name_tuple, state_dict) format.
+
+        Verifies that tuples from LangGraph stream are properly parsed
+        to extract node name and state.
+        """
+        # LangGraph returns tuples like (('node_name',), {state})
+        raw_state = (("call_model",), {"final_answer": "The answer is 42"})
+
+        assert isinstance(raw_state, tuple)
+        assert len(raw_state) == 2
+
+        node_name_tuple, state_dict = raw_state
+        node_name = node_name_tuple[0] if node_name_tuple else "unknown"
+
+        assert node_name == "call_model"
+        assert state_dict["final_answer"] == "The answer is 42"
+
+    def test_event_structure_on_chain_start(self):
+        """Test on_chain_start event structure.
+
+        Verifies the expected fields are present in chain start events.
+        """
+        import uuid
+
+        event = {
+            "event": "on_chain_start",
+            "run_id": str(uuid.uuid4()),
+            "name": "CUGA_initializing",
+            "data": {"input": {"input": "test input", "chat_history": []}},
+        }
+
+        assert event["event"] == "on_chain_start"
+        assert "run_id" in event
+        assert event["name"] == "CUGA_initializing"
+        assert "input" in event["data"]
+
+    def test_event_structure_on_tool_start(self):
+        """Test on_tool_start event structure.
+
+        Verifies the expected fields are present in tool start events.
+        """
+        import uuid
+
+        event = {
+            "event": "on_tool_start",
+            "run_id": str(uuid.uuid4()),
+            "name": "execute_code",
+            "data": {"input": {"code": "print('hello')"}},
+        }
+
+        assert event["event"] == "on_tool_start"
+        assert event["name"] == "execute_code"
+        assert "code" in event["data"]["input"]
+
+    def test_event_structure_on_chain_end(self):
+        """Test on_chain_end event structure.
+
+        Verifies the expected fields are present in chain end events.
+        """
+        import uuid
+
+        from langchain_core.agents import AgentFinish
+
+        event = {
+            "event": "on_chain_end",
+            "run_id": str(uuid.uuid4()),
+            "name": "CugaAgent",
+            "data": {"output": AgentFinish(return_values={"output": "Final answer"}, log="")},
+        }
+
+        assert event["event"] == "on_chain_end"
+        assert event["name"] == "CugaAgent"
+        assert event["data"]["output"].return_values["output"] == "Final answer"

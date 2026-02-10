@@ -1,5 +1,3 @@
-import asyncio
-import json
 import traceback
 import uuid
 from collections.abc import AsyncIterator
@@ -7,7 +5,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 from langchain_core.agents import AgentFinish
 from langchain_core.messages import AIMessage, HumanMessage
-from langchain_core.tools import StructuredTool
+from langchain_core.tools import BaseTool, StructuredTool
 
 from lfx.base.agents.agent import LCToolsAgentComponent
 from lfx.base.models.model_input_constants import (
@@ -32,6 +30,9 @@ from lfx.schema.message import Message
 if TYPE_CHECKING:
     from lfx.schema.log import SendMessageFunctionType
 
+# LangGraph streams return tuples of (node_name_tuple, state_dict)
+LANGGRAPH_TUPLE_LENGTH = 2
+
 
 def set_advanced_true(component_input):
     """Set the advanced flag to True for a component input.
@@ -44,6 +45,146 @@ def set_advanced_true(component_input):
     """
     component_input.advanced = True
     return component_input
+
+
+class LangflowToolsProvider:
+    """Tool provider that groups Langflow tools into apps for CUGA.
+
+    This provider implements the CUGA SDK's ToolProviderInterface pattern,
+    grouping tools using three strategies (in order of precedence):
+    1. By server_name metadata - tools from same MCP server
+    2. By common prefix - tools like gmail_*, slack_*
+    3. Default app - remaining tools with concatenated descriptions
+
+    Attributes:
+        tools: List of BaseTool instances to provide
+        apps: List of AppDefinition objects after grouping
+        tools_by_app: Mapping from app name to list of tools
+        initialized: Whether the provider has been initialized
+    """
+
+    # Inherit interface methods at runtime for duck typing with ToolProviderInterface
+    def __init__(self, tools: list[BaseTool]):
+        """Initialize the tool provider with a list of tools.
+
+        Args:
+            tools: List of LangChain BaseTool instances to group and provide
+        """
+        self.tools = tools
+        self.apps: list = []
+        self.tools_by_app: dict[str, list[BaseTool]] = {}
+        self.initialized = False
+
+    async def initialize(self) -> None:
+        """Initialize the provider by grouping tools into apps."""
+        self._group_tools()
+        self.initialized = True
+
+    def _group_tools(self) -> None:
+        """Group tools using three strategies from tracker.py:set_tools().
+
+        Strategy 1: Group by server_name metadata (MCP tools)
+        Strategy 2: Group remaining tools by common prefix (e.g., slack_*)
+        Strategy 3: Put remaining tools in default_app
+        """
+        from cuga.backend.cuga_graph.nodes.cuga_lite.tool_provider_interface import AppDefinition
+
+        # Reset state in case initialize() is called multiple times
+        self.apps.clear()
+        self.tools_by_app.clear()
+
+        # Common prefixes to exclude (HTTP methods, etc.)
+        excluded_prefixes = {"get", "post", "put", "delete", "patch", "head", "options", "trace"}
+
+        # Strategy 1: Group by server_name metadata
+        tools_without_server = []
+        for tool in self.tools:
+            server_name = None
+            if tool.metadata:
+                server_name = tool.metadata.get("server_name")
+
+            if server_name:
+                if server_name not in self.tools_by_app:
+                    self.tools_by_app[server_name] = []
+                self.tools_by_app[server_name].append(tool)
+            else:
+                tools_without_server.append(tool)
+
+        # Strategy 2: Group remaining tools by common prefix
+        prefix_candidates: dict[str, list[BaseTool]] = {}
+        for tool in tools_without_server:
+            if "_" in tool.name:
+                prefix = tool.name.split("_")[0].lower()
+                if prefix not in excluded_prefixes:
+                    if prefix not in prefix_candidates:
+                        prefix_candidates[prefix] = []
+                    prefix_candidates[prefix].append(tool)
+
+        # Only use prefixes that appear in multiple tools
+        default_tools = []
+        for tool in tools_without_server:
+            assigned = False
+            if "_" in tool.name:
+                prefix = tool.name.split("_")[0].lower()
+                if prefix in prefix_candidates and len(prefix_candidates[prefix]) > 1:
+                    app_name = prefix.upper()
+                    if app_name not in self.tools_by_app:
+                        self.tools_by_app[app_name] = []
+                    self.tools_by_app[app_name].append(tool)
+                    assigned = True
+            if not assigned:
+                default_tools.append(tool)
+
+        # Strategy 3: Default app for remaining tools
+        if default_tools:
+            self.tools_by_app["default_app"] = default_tools
+
+        # Create AppDefinition objects with descriptions per Sami's spec:
+        # - server_name/prefix apps: concatenation of tool names
+        # - default_app: concatenation of tool name + description[:300]
+        for app_name, app_tools in self.tools_by_app.items():
+            sorted_tools = sorted(app_tools, key=lambda x: x.name)
+            if app_name == "default_app":
+                description = ", ".join(
+                    f"{t.name}: {t.description[:300]}" if t.description else t.name for t in sorted_tools
+                )
+            else:
+                description = ", ".join(t.name for t in sorted_tools)
+
+            self.apps.append(AppDefinition(name=app_name, description=description, type="langchain"))
+
+    async def get_apps(self) -> list:
+        """Get list of available applications/services.
+
+        Returns:
+            List of AppDefinition objects with app metadata
+        """
+        if not self.initialized:
+            await self.initialize()
+        return self.apps
+
+    async def get_tools(self, app_name: str) -> list[BaseTool]:
+        """Get tools for a specific application.
+
+        Args:
+            app_name: Name of the application
+
+        Returns:
+            List of LangChain BaseTool objects for the app
+        """
+        if not self.initialized:
+            await self.initialize()
+        return self.tools_by_app.get(app_name, [])
+
+    async def get_all_tools(self) -> list[BaseTool]:
+        """Get all available tools from all applications.
+
+        Returns:
+            List of all LangChain BaseTool objects
+        """
+        if not self.initialized:
+            await self.initialize()
+        return self.tools
 
 
 MODEL_PROVIDERS_LIST = ["OpenAI"]
@@ -137,21 +278,18 @@ class CugaComponent(ToolCallingAgentComponent):
             value="flexible",
             advanced=True,
         ),
+        IntInput(
+            name="shortlisting_tool_threshold",
+            display_name="Tool Shortlisting Threshold",
+            info="Enable find_tools if total number of tools exceeds this threshold.",
+            value=35,
+            advanced=True,
+        ),
         BoolInput(
             name="browser_enabled",
             display_name="Enable Browser",
             info="Toggle to enable a built-in browser tool for web scraping and searching.",
             value=False,
-            advanced=True,
-        ),
-        MultilineInput(
-            name="web_apps",
-            display_name="Web applications",
-            info=(
-                "Cuga will automatically start this web application when Enable Browser is true. "
-                "Currently only supports one web application. Example: https://example.com"
-            ),
-            value="",
             advanced=True,
         ),
     ]
@@ -162,10 +300,10 @@ class CugaComponent(ToolCallingAgentComponent):
     async def call_agent(
         self, current_input: str, tools: list[Tool], history_messages: list[Message], llm
     ) -> AsyncIterator[dict[str, Any]]:
-        """Execute the Cuga agent with the given input and tools.
+        """Execute the Cuga agent with the given input and tools using streaming.
 
-        This method initializes and runs the Cuga agent, processing the input through
-        the agent's workflow and yielding events for real-time monitoring.
+        This method initializes and runs the Cuga agent using the SDK's stream() method,
+        processing the input and yielding events for real-time monitoring.
 
         Args:
             current_input: The user input to process
@@ -190,17 +328,20 @@ class CugaComponent(ToolCallingAgentComponent):
         }
         logger.debug(f"[CUGA] LLM MODEL TYPE: {type(llm)}")
         if current_input:
-            # Import settings first
+            # Import and configure CUGA settings
             from cuga.config import settings
 
-            # Use Dynaconf's set() method to update settings dynamically
-            # This properly updates the settings object without corruption
             logger.debug("[CUGA] Updating CUGA settings via Dynaconf set() method")
 
             settings.advanced_features.registry = False
             settings.advanced_features.lite_mode = self.lite_mode
             settings.advanced_features.lite_mode_tool_threshold = self.lite_mode_tool_threshold
             settings.advanced_features.decomposition_strategy = self.decomposition_strategy
+            settings.advanced_features.shortlisting_tool_threshold = self.shortlisting_tool_threshold
+            # Disable tracker to avoid overhead
+            settings.advanced_features.tracker_enabled = False
+            # Disable policy check until we can build in support for policies
+            settings.policy.enabled = False
 
             if self.browser_enabled:
                 logger.debug("[CUGA] browser_enabled is true, setting mode to hybrid")
@@ -210,51 +351,51 @@ class CugaComponent(ToolCallingAgentComponent):
                 logger.debug("[CUGA] browser_enabled is false, setting mode to api")
                 settings.advanced_features.mode = "api"
 
-            from cuga.backend.activity_tracker.tracker import ActivityTracker
-            from cuga.backend.cuga_graph.utils.agent_loop import StreamEvent
-            from cuga.backend.cuga_graph.utils.controller import (
-                AgentRunner as CugaAgent,
-            )
-            from cuga.backend.cuga_graph.utils.controller import (
-                ExperimentResult as AgentResult,
-            )
-            from cuga.backend.llm.models import LLMManager
-            from cuga.configurations.instructions_manager import InstructionsManager
+            # Import SDK components
+            from cuga.sdk import CugaAgent
 
-            # Reset var_manager if this is the first message in history
+            # Get thread_id for conversation tracking
+            thread_id = self.graph.session_id
+            logger.debug(f"[CUGA] Using thread_id (session_id): {thread_id}")
+
+            # Check history for reset decision
             logger.debug(f"[CUGA] Checking history_messages: count={len(history_messages) if history_messages else 0}")
             if not history_messages or len(history_messages) == 0:
-                logger.debug("[CUGA] First message in history detected, resetting var_manager")
+                logger.debug("[CUGA] First message in history detected")
             else:
                 logger.debug(f"[CUGA] Continuing conversation with {len(history_messages)} previous messages")
 
-            llm_manager = LLMManager()
-            llm_manager.set_llm(llm)
-            instructions_manager = InstructionsManager()
-
+            # Get instructions
             instructions_to_use = self.instructions or ""
             logger.debug(f"[CUGA] instructions are: {instructions_to_use}")
-            instructions_manager.set_instructions_from_one_file(instructions_to_use)
-            tracker = ActivityTracker()
-            tracker.set_tools(tools)
-            thread_id = self.graph.session_id
-            logger.debug(f"[CUGA] Using thread_id (session_id): {thread_id}")
-            cuga_agent = CugaAgent(browser_enabled=self.browser_enabled, thread_id=thread_id)
-            if self.browser_enabled:
-                await cuga_agent.initialize_freemode_env(start_url=self.web_apps.strip(), interface_mode="browser_only")
-            else:
-                await cuga_agent.initialize_appworld_env()
+
+            # Get Langflow tracing callbacks (includes Langfuse, LangSmith, etc.)
+            langchain_callbacks = self.get_langchain_callbacks()
+            callback_names = [type(cb).__name__ for cb in langchain_callbacks]
+            logger.debug(f"[CUGA] Got {len(langchain_callbacks)} tracing callbacks: {callback_names}")
+
+            # Create tool provider that groups tools into apps for CUGA
+            logger.debug(f"[CUGA] Creating LangflowToolsProvider with {len(tools)} tools")
+            tool_provider = LangflowToolsProvider(tools)
+
+            # Create the CUGA SDK agent with tool provider
+            cuga_agent = CugaAgent(
+                tool_provider=tool_provider,
+                model=llm,
+                special_instructions=instructions_to_use if instructions_to_use else None,
+                callbacks=langchain_callbacks if langchain_callbacks else None,
+            )
 
             yield {
                 "event": "on_chain_start",
                 "run_id": str(uuid.uuid4()),
-                "name": "CUGA_thinking...",
+                "name": "CUGA_processing",
                 "data": {"input": {"input": current_input, "chat_history": []}},
             }
-            logger.debug(f"[CUGA] current web apps are {self.web_apps}")
             logger.debug(f"[CUGA] Processing input: {current_input}")
+
             try:
-                # Convert history to LangChain format for the event
+                # Convert history to LangChain format
                 logger.debug(f"[CUGA] Converting {len(history_messages)} history messages to LangChain format")
                 lc_messages = []
                 for i, msg in enumerate(history_messages):
@@ -269,58 +410,116 @@ class CugaComponent(ToolCallingAgentComponent):
                         lc_messages.append(AIMessage(content=msg.text))
 
                 logger.debug(f"[CUGA] Converted to {len(lc_messages)} LangChain messages")
-                await asyncio.sleep(0.5)
 
-                # 2. Build final response
-                response_parts = []
+                # Add the current user message
+                lc_messages.append(HumanMessage(content=current_input))
 
-                response_parts.append(f"Processed input: '{current_input}'")
-                response_parts.append(f"Available tools: {len(tools)}")
-                last_event: StreamEvent | None = None
-                tool_run_id: str | None = None
-                # 3. Chain end event with AgentFinish
-                async for event in cuga_agent.run_task_generic_yield(
-                    eval_mode=False, goal=current_input, chat_messages=lc_messages
+                # Use stream() for real-time UI updates
+                logger.debug("[CUGA] Starting CugaAgent.stream()")
+                final_answer = None
+                last_ai_content = None
+
+                def extract_from_nested_state(state_dict: dict) -> dict | None:
+                    """Extract the inner state from CUGA's nested dict format.
+
+                    CUGA returns states like {'call_model': {...actual_data...}} or
+                    {'CugaLiteSubgraph': {...actual_data...}}.
+                    """
+                    if not isinstance(state_dict, dict):
+                        return None
+                    # Get the first value if there's only one key (the node name)
+                    if len(state_dict) == 1:
+                        return next(iter(state_dict.values()))
+                    return state_dict
+
+                async for raw_state in cuga_agent.stream(
+                    message=lc_messages,
+                    thread_id=thread_id,
                 ):
-                    logger.debug(f"[CUGA] recieved event {event}")
-                    if last_event is not None and tool_run_id is not None:
-                        logger.debug(f"[CUGA] last event {last_event}")
-                        try:
-                            # TODO: Extract data
-                            data_dict = json.loads(last_event.data)
-                        except json.JSONDecodeError:
-                            data_dict = last_event.data
-                        if last_event.name == "CodeAgent" and "code" in data_dict:
-                            data_dict = data_dict["code"]
-                        yield {
-                            "event": "on_tool_end",
-                            "run_id": tool_run_id,
-                            "name": last_event.name,
-                            "data": {"output": data_dict},
-                        }
-                    if isinstance(event, StreamEvent):
-                        tool_run_id = str(uuid.uuid4())
-                        last_event = StreamEvent(name=event.name, data=event.data)
-                        tool_event = {
-                            "event": "on_tool_start",
-                            "run_id": tool_run_id,
-                            "name": event.name,
-                            "data": {"input": {}},
-                        }
-                        logger.debug(f"[CUGA] Yielding tool_start event: {event.name}")
-                        yield tool_event
+                    # LangGraph-style streams return (node_name_tuple, state_dict) tuples
+                    if isinstance(raw_state, tuple) and len(raw_state) == LANGGRAPH_TUPLE_LENGTH:
+                        node_name_tuple, state_dict = raw_state
+                        node_name = node_name_tuple[0] if node_name_tuple else "unknown"
+                        logger.debug(f"[CUGA] Stream node: {node_name}")
 
-                    if isinstance(event, AgentResult):
-                        task_result = event
-                        end_event = {
-                            "event": "on_chain_end",
-                            "run_id": str(uuid.uuid4()),
-                            "name": "CugaAgent",
-                            "data": {"output": AgentFinish(return_values={"output": task_result.answer}, log="")},
-                        }
-                        answer_preview = task_result.answer[:100] if task_result.answer else "None"
-                        logger.info(f"[CUGA] Yielding chain_end event with answer: {answer_preview}...")
-                        yield end_event
+                        # Extract the actual state from nested dict
+                        state = extract_from_nested_state(state_dict)
+                        if state is None:
+                            state = state_dict
+                    else:
+                        logger.debug(f"[CUGA] Stream state: {type(raw_state).__name__}")
+                        state = raw_state
+
+                    # Process dict-based state from CUGA SDK
+                    if isinstance(state, dict):
+                        # Check for final_answer in the state
+                        if state.get("final_answer"):
+                            final_answer = state["final_answer"]
+                            logger.info(f"[CUGA] Got final answer: {final_answer[:100] if final_answer else 'None'}...")
+
+                        # Check for script execution (shows what code is being run)
+                        if state.get("script"):
+                            script = state["script"]
+                            logger.debug(f"[CUGA] Executing script: {script[:100]}...")
+                            yield {
+                                "event": "on_tool_start",
+                                "run_id": str(uuid.uuid4()),
+                                "name": "execute_code",
+                                "data": {"input": {"code": script}},
+                            }
+
+                        # Check for execution results in sandbox state
+                        if "variables_storage" in state and state.get("step_count", 0) > 0:
+                            # This indicates code execution completed
+                            variables = state.get("variables_storage", {})
+                            if variables:
+                                logger.debug(f"[CUGA] Code execution completed with {len(variables)} variables")
+                                yield {
+                                    "event": "on_tool_end",
+                                    "run_id": str(uuid.uuid4()),
+                                    "name": "execute_code",
+                                    "data": {"output": f"Created {len(variables)} variable(s)"},
+                                }
+
+                        # Check for chat_messages to stream AI responses
+                        if "chat_messages" in state:
+                            messages = state["chat_messages"]
+                            if messages:
+                                last_msg = messages[-1]
+                                # Check if it's an AI message with content
+                                if hasattr(last_msg, "content") and hasattr(last_msg, "type"):
+                                    if last_msg.type == "ai" and last_msg.content:
+                                        content = last_msg.content
+                                        if not content.startswith("```"):
+                                            last_ai_content = content
+                                            logger.debug(f"[CUGA] AI message: {content[:50]}...")
+                                elif isinstance(last_msg, dict) and last_msg.get("type") == "ai":
+                                    content = last_msg.get("content", "")
+                                    if content and not content.startswith("```"):
+                                        last_ai_content = content
+                                        logger.debug(f"[CUGA] AI message (dict): {content[:50]}...")
+
+                # Fall back to last AI chat message if no explicit final_answer
+                if not final_answer and last_ai_content:
+                    final_answer = last_ai_content
+                    logger.info("[CUGA] Using last AI chat message as final answer")
+
+                if not final_answer:
+                    final_answer = "Agent completed but no answer was returned."
+
+                logger.info(f"[CUGA] Agent answer: {final_answer[:100] if final_answer else 'None'}...")
+
+                # Emit chain end event with the answer
+                end_event = {
+                    "event": "on_chain_end",
+                    "run_id": str(uuid.uuid4()),
+                    "name": "CugaAgent",
+                    "data": {"output": AgentFinish(return_values={"output": final_answer}, log="")},
+                }
+                logger.info(
+                    f"[CUGA] Yielding chain_end event with answer: {final_answer[:100] if final_answer else 'None'}..."
+                )
+                yield end_event
 
             except (ValueError, TypeError, RuntimeError, ConnectionError) as e:
                 logger.error(f"[CUGA] An error occurred: {e!s}")
