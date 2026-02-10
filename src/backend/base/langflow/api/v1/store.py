@@ -17,7 +17,7 @@ from langflow.services.store.schema import (
     UsersLikesResponse,
 )
 
-router = APIRouter(prefix="/store", tags=["Components Store"])
+router = APIRouter(prefix="/store", tags=["Components Store"], include_in_schema=False)
 
 
 def get_user_store_api_key(user: CurrentActiveUser):
