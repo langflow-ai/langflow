@@ -67,7 +67,7 @@ export type SearchContextType = {
   // Additional properties for the sidebar to use
   search?: string;
   setSearch?: (value: string) => void;
-  searchInputRef?: React.RefObject<HTMLInputElement>;
+  searchInputRef?: React.RefObject<HTMLInputElement | null>;
   handleInputFocus?: () => void;
   handleInputBlur?: () => void;
   handleInputChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
@@ -668,7 +668,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
               <>
                 {hasResults ? (
                   <>
-                    {showComponents && (
+                    {showComponents && !showMcp && (
                       <CategoryGroup
                         dataFilter={dataFilter}
                         sortedCategories={sortedCategories}
