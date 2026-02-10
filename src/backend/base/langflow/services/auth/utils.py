@@ -216,21 +216,14 @@ async def get_current_user_for_sse(
     """
     token = request.cookies.get("access_token_lf")
     api_key = request.query_params.get("x-api-key") or request.headers.get("x-api-key")
-    if api_key:
-        user_read = await ws_api_key_security(api_key)
-        if user_read:
-            return user_read
 
-    raise HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail="Missing or invalid credentials (cookie or API key).",
-    )
-
-
-async def get_current_active_user(current_user: Annotated[User, Depends(get_current_user)]):
-    if not current_user.is_active:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive user")
-    return current_user
+    try:
+        return await _auth_service().get_current_user_for_sse(token, api_key, db)
+    except AuthenticationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Missing or invalid credentials (cookie or API key).",
+        ) from e
 
 
 async def get_optional_user(
@@ -248,27 +241,13 @@ async def get_optional_user(
         User | None: The authenticated user if valid credentials are provided, None otherwise.
     """
     try:
-        if token:
-            user = await get_current_user_by_jwt(token, db)
-            if user and user.is_active:
-                return user
-            return None
-        if query_param or header_param:
-            user = await api_key_security(query_param, header_param)
-            if user and user.is_active:
-                return user
-            return None
-    except HTTPException:
+        user = await _auth_service().get_current_user(token, query_param, header_param, db)
+    except (AuthenticationError, HTTPException):
         return None
-    return None
-
-
-async def get_current_active_superuser(current_user: Annotated[User, Depends(get_current_user)]) -> User:
-    if not current_user.is_active:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive user")
-    if not current_user.is_superuser:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="The user doesn't have enough privileges")
-    return current_user
+    else:
+        if user and user.is_active:
+            return user
+        return None
 
 
 async def get_webhook_user(flow_id: str, request: Request) -> UserRead:
@@ -287,38 +266,7 @@ async def get_webhook_user(flow_id: str, request: Request) -> UserRead:
     Raises:
         HTTPException: If authentication fails or user doesn't have permission
     """
-    settings_service = get_settings_service()
-
-    if not settings_service.auth_settings.WEBHOOK_AUTH_ENABLE:
-        # When webhook auth is disabled, run webhook as the flow owner without requiring API key
-        try:
-            flow_owner = await get_user_by_flow_id_or_endpoint_name(flow_id)
-            if flow_owner is None:
-                raise HTTPException(status_code=404, detail="Flow not found")
-            return flow_owner  # noqa: TRY300
-        except HTTPException:
-            raise
-        except Exception as exc:
-            raise HTTPException(status_code=404, detail="Flow not found") from exc
-
-    # When webhook auth is enabled, require API key authentication
-    api_key_header_val = request.headers.get("x-api-key")
-    api_key_query_val = request.query_params.get("x-api-key")
-
-    # Check if API key is provided
-    if not api_key_header_val and not api_key_query_val:
-        raise HTTPException(status_code=403, detail="API key required when webhook authentication is enabled")
-
-    # Use the provided API key (prefer header over query param)
-    api_key = api_key_header_val or api_key_query_val
-
-    try:
-        return await _auth_service().get_current_user_for_sse(token, api_key, db)
-    except AuthenticationError as e:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Missing or invalid credentials (cookie or API key).",
-        ) from e
+    return await _auth_service().get_webhook_user(flow_id, request)
 
 
 async def get_current_active_user(user: User = Depends(get_current_user)) -> User | UserRead:
