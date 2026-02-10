@@ -532,6 +532,82 @@ describe("useFlowStore", () => {
     });
   });
 
+  describe("node progress management", () => {
+    it("should set progress for a node", () => {
+      const { result } = renderHook(() => useFlowStore());
+
+      act(() => {
+        result.current.setNodeProgress("node-1", { current: 3, total: 10 });
+      });
+
+      expect(result.current.nodeProgress["node-1"]).toEqual({
+        current: 3,
+        total: 10,
+      });
+    });
+
+    it("should clear a specific node's progress when set to null", () => {
+      const { result } = renderHook(() => useFlowStore());
+
+      act(() => {
+        result.current.setNodeProgress("node-1", { current: 5, total: 10 });
+      });
+      expect(result.current.nodeProgress["node-1"]).toBeDefined();
+
+      act(() => {
+        result.current.setNodeProgress("node-1", null);
+      });
+      expect(result.current.nodeProgress["node-1"]).toBeUndefined();
+    });
+
+    it("should clear all node progress", () => {
+      const { result } = renderHook(() => useFlowStore());
+
+      act(() => {
+        result.current.setNodeProgress("node-1", { current: 3, total: 10 });
+        result.current.setNodeProgress("node-2", { current: 7, total: 20 });
+      });
+      expect(Object.keys(result.current.nodeProgress)).toHaveLength(2);
+
+      act(() => {
+        result.current.clearAllNodeProgress();
+      });
+      expect(result.current.nodeProgress).toEqual({});
+    });
+
+    it("should track independent progress for multiple nodes", () => {
+      const { result } = renderHook(() => useFlowStore());
+
+      act(() => {
+        result.current.setNodeProgress("node-1", { current: 1, total: 5 });
+        result.current.setNodeProgress("node-2", { current: 8, total: 10 });
+      });
+
+      expect(result.current.nodeProgress["node-1"]).toEqual({
+        current: 1,
+        total: 5,
+      });
+      expect(result.current.nodeProgress["node-2"]).toEqual({
+        current: 8,
+        total: 10,
+      });
+
+      // Update one without affecting the other
+      act(() => {
+        result.current.setNodeProgress("node-1", { current: 3, total: 5 });
+      });
+
+      expect(result.current.nodeProgress["node-1"]).toEqual({
+        current: 3,
+        total: 5,
+      });
+      expect(result.current.nodeProgress["node-2"]).toEqual({
+        current: 8,
+        total: 10,
+      });
+    });
+  });
+
   describe("complex state management", () => {
     it("should maintain state consistency during concurrent operations", () => {
       const { result } = renderHook(() => useFlowStore());

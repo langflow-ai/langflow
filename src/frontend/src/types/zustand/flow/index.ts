@@ -64,7 +64,6 @@ export type ComponentsToUpdateType = {
 export type NodeProgressType = {
   current: number;
   total: number;
-  message?: string;
 };
 
 export type FlowStoreType = {
