@@ -369,7 +369,27 @@ export default function AccordionPromptComponent({
     if (disabled || readonly || !contentEditableRef.current) return;
 
     isTypingRef.current = true;
-    const variableText = "{variable_name}";
+
+    // Find all existing variables in the template
+    const variableRegex = /\{([^{}]+)\}/g;
+    const existingVariables = new Set<string>();
+    let match: RegExpExecArray | null;
+    while ((match = variableRegex.exec(internalValue)) !== null) {
+      existingVariables.add(match[1]);
+    }
+
+    // Generate a unique variable name
+    let variableName = "variable_name";
+    if (existingVariables.has(variableName)) {
+      // Find the next available number
+      let counter = 1;
+      while (existingVariables.has(`variable_name_${counter}`)) {
+        counter++;
+      }
+      variableName = `variable_name_${counter}`;
+    }
+
+    const variableText = `{${variableName}}`;
 
     // Get current cursor position or end of text
     let insertPosition = internalValue.length;
