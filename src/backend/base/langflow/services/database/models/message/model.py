@@ -1,4 +1,5 @@
 import json
+import math
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Annotated
 from uuid import UUID, uuid4
@@ -10,6 +11,23 @@ from sqlmodel import JSON, Column, Field, SQLModel
 from langflow.schema.content_block import ContentBlock
 from langflow.schema.properties import Properties
 from langflow.schema.validators import str_to_timestamp_validator
+
+
+def _sanitize_json_floats(obj):
+    """Replace NaN / Infinity floats with ``None`` for JSON safety.
+
+    These special IEEE 754 values are not representable in standard JSON
+    (RFC 7159) and will be rejected by PostgreSQL ``JSON`` / ``JSONB``
+    columns.
+    """
+    if isinstance(obj, dict):
+        return {k: _sanitize_json_floats(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_sanitize_json_floats(v) for v in obj]
+    if isinstance(obj, float) and (math.isnan(obj) or math.isinf(obj)):
+        return None
+    return obj
+
 
 if TYPE_CHECKING:
     from langflow.schema.message import Message
@@ -158,9 +176,11 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
         if isinstance(value, list):
             return [cls.validate_properties_or_content_blocks(item) for item in value]
         if hasattr(value, "model_dump"):
-            return value.model_dump()
+            return _sanitize_json_floats(value.model_dump())
         if isinstance(value, str):
-            return json.loads(value)
+            return _sanitize_json_floats(json.loads(value))
+        if isinstance(value, dict):
+            return _sanitize_json_floats(value)
         return value
 
     @field_serializer("properties", "content_blocks")
@@ -169,9 +189,11 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
         if isinstance(value, list):
             return [cls.serialize_properties_or_content_blocks(item) for item in value]
         if hasattr(value, "model_dump"):
-            return value.model_dump()
+            return _sanitize_json_floats(value.model_dump())
         if isinstance(value, str):
-            return json.loads(value)
+            return _sanitize_json_floats(json.loads(value))
+        if isinstance(value, dict):
+            return _sanitize_json_floats(value)
         return value
 
 

@@ -1536,7 +1536,7 @@
   },
   "TavilySearchComponent": {
     "versions": {
-      "0.3.0": "e602eaec8316"
+      "0.3.0": "668e19faad31"
     }
   },
   "CalculatorTool": {
@@ -1581,7 +1581,7 @@
   },
   "TavilyAISearch": {
     "versions": {
-      "0.3.0": "70b5611e8fd6"
+      "0.3.0": "dd266fa04468"
     }
   },
   "WikidataAPI": {

@@ -1,3 +1,4 @@
+import math
 from collections.abc import AsyncIterator, Generator, Iterator
 from datetime import datetime, timezone
 from decimal import Decimal
@@ -66,9 +67,12 @@ def _serialize_datetime(obj: datetime, *_) -> str:
     return obj.replace(tzinfo=timezone.utc).isoformat()
 
 
-def _serialize_decimal(obj: Decimal, *_) -> float:
-    """Convert Decimal to float."""
-    return float(obj)
+def _serialize_decimal(obj: Decimal, *_) -> float | None:
+    """Convert Decimal to float, replacing NaN/Infinity with None."""
+    result = float(obj)
+    if math.isnan(result) or math.isinf(result):
+        return None
+    return result
 
 
 def _serialize_uuid(obj: UUID, *_) -> str:
@@ -114,8 +118,19 @@ def _serialize_list_tuple(obj: list | tuple, max_length: int | None, max_items: 
 
 
 def _serialize_primitive(obj: Any, *_) -> Any:
-    """Handle primitive types without conversion."""
-    if obj is None or isinstance(obj, int | float | bool | complex):
+    """Handle primitive types without conversion.
+
+    NaN and Infinity floats are replaced with ``None`` because they are not
+    representable in JSON (RFC 7159) and will be rejected by PostgreSQL's
+    ``JSON`` / ``JSONB`` column types.
+    """
+    if obj is None or isinstance(obj, bool):
+        return obj
+    if isinstance(obj, float):
+        if math.isnan(obj) or math.isinf(obj):
+            return None
+        return obj
+    if isinstance(obj, int | complex):
         return obj
     return UNSERIALIZABLE_SENTINEL
 

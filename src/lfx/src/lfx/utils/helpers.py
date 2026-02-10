@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import mimetypes
 from typing import TYPE_CHECKING
 
@@ -32,3 +33,15 @@ def get_mime_type(file_path: str | Path) -> str:
 
 def build_content_type_from_extension(extension: str):
     return EXTENSION_TO_CONTENT_TYPE.get(extension.lower(), "application/octet-stream")
+
+
+def sanitize_nan(value):
+    """Replace float NaN / Infinity with ``None`` for JSON safety.
+
+    NaN and Infinity are valid IEEE 754 values but are not representable in
+    standard JSON (RFC 7159). PostgreSQL ``JSON`` / ``JSONB`` columns will
+    reject them.
+    """
+    if isinstance(value, float) and (math.isnan(value) or math.isinf(value)):
+        return None
+    return value
