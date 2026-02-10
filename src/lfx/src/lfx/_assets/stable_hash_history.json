@@ -741,7 +741,7 @@
   },
   "OpenSearchVectorStoreComponentMultimodalMultiEmbedding": {
     "versions": {
-      "0.3.0": "a52b7daaae16"
+      "0.3.0": "89f34f2ad64e"
     }
   },
   "EmbeddingSimilarityComponent": {
@@ -766,7 +766,7 @@
   },
   "File": {
     "versions": {
-      "0.3.0": "fccb3ab047f1"
+      "0.3.0": "12a5841f1a03"
     }
   },
   "KnowledgeIngestion": {
@@ -781,7 +781,7 @@
   },
   "SaveToFile": {
     "versions": {
-      "0.3.0": "6657b458359b"
+      "0.3.0": "6d0e4842271e"
     }
   },
   "FirecrawlCrawlApi": {
@@ -826,7 +826,7 @@
   },
   "LoopComponent": {
     "versions": {
-      "0.3.0": "e179036a232d"
+      "0.3.0": "9f88705635cd"
     }
   },
   "Notify": {
@@ -841,7 +841,7 @@
   },
   "RunFlow": {
     "versions": {
-      "0.3.0": "0ab9e9a36313"
+      "0.3.0": "9e5eefa14766"
     }
   },
   "SubFlow": {
@@ -1236,7 +1236,7 @@
   },
   "LanguageModelComponent": {
     "versions": {
-      "0.3.0": "07d0ce9ea77e"
+      "0.3.0": "a2006b90cbd1"
     }
   },
   "MCPTools": {
@@ -1251,7 +1251,7 @@
   },
   "Prompt Template": {
     "versions": {
-      "0.3.0": "595f7c9c8463"
+      "0.3.0": "5b3e6730923e"
     }
   },
   "MongoDBAtlasVector": {
@@ -1306,7 +1306,7 @@
   },
   "OllamaModel": {
     "versions": {
-      "0.3.0": "12e5c1954fe1"
+      "0.3.0": "4fac4a29daff"
     }
   },
   "OllamaEmbeddings": {
@@ -1772,6 +1772,11 @@
   "ZepChatMemory": {
     "versions": {
       "0.3.0": "ec825c33caf6"
+    }
+  },
+  "GuardrailValidator": {
+    "versions": {
+      "0.3.0": "675232be19cc"
     }
   }
 }

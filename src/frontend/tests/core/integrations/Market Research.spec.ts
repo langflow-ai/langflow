@@ -6,6 +6,8 @@ import { getAllResponseMessage } from "../../utils/get-all-response-message";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { waitForOpenModalWithChatInput } from "../../utils/wait-for-open-modal";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
+import { unselectNodes } from "../../utils/unselect-nodes";
+import { disableInspectPanel } from "../../utils/open-advanced-options";
 
 withEventDeliveryModes(
   "Market Research",
@@ -36,40 +38,13 @@ withEventDeliveryModes(
 
     await initialGPTsetup(page);
 
-    // Fill Tavily API key - try multiple approaches for robustness
-    const tavilyApiKey = process.env.TAVILY_API_KEY ?? "";
+    await disableInspectPanel(page);
 
-    // Approach 1: Direct fill like Instagram Copywriter (most reliable)
-    try {
-      await page
-        .getByTestId(/rf__node-TavilySearchComponent-[A-Za-z0-9]{5}/)
-        .getByTestId("popover-anchor-input-api_key")
-        .nth(0)
-        .fill(tavilyApiKey, { timeout: 10000 });
-    } catch {
-      // Approach 2: Try without the node prefix, by index
-      try {
-        const apiKeyInputs = page.getByTestId("popover-anchor-input-api_key");
-        const count = await apiKeyInputs.count();
-        for (let i = 0; i < count; i++) {
-          const input = apiKeyInputs.nth(i);
-          const placeholder = await input.getAttribute("placeholder");
-          if (
-            placeholder?.toLowerCase().includes("tavily") ||
-            i === count - 1
-          ) {
-            await input.fill(tavilyApiKey);
-            break;
-          }
-        }
-      } catch {
-        // Approach 3: Last resort - fill all api_key inputs with Tavily key
-        await page
-          .getByTestId("popover-anchor-input-api_key")
-          .last()
-          .fill(tavilyApiKey);
-      }
-    }
+    await page
+      .getByTestId("popover-anchor-input-api_key")
+      .fill(process.env.TAVILY_API_KEY || "");
+
+    await unselectNodes(page);
 
     await page
       .getByTestId("handle-parsercomponent-shownode-data or dataframe-left")

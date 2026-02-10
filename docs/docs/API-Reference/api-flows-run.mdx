@@ -3,6 +3,9 @@ title: Flow trigger endpoints
 slug: /api-flows-run
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
 Use the `/run` and `/webhook` endpoints to run flows.
 
 To create, read, update, and delete flows, see [Flow management endpoints](/api-flows).
@@ -20,6 +23,67 @@ Flow IDs can be found on the code snippets on the [**API access** pane](/concept
 The following example runs the **Basic Prompting** template flow with flow parameters passed in the request body.
 This flow requires a chat input string (`input_value`), and uses default values for all other parameters.
 
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+```python
+import requests
+
+url = "http://LANGFLOW_SERVER_URL/api/v1/run/FLOW_ID"
+
+# Request payload
+payload = {
+    "input_value": "Tell me about something interesting!",
+    "session_id": "chat-123",
+    "input_type": "chat",
+    "output_type": "chat",
+    "output_component": ""
+}
+
+# Request headers
+headers = {
+    "Content-Type": "application/json",
+    "x-api-key": "LANGFLOW_API_KEY"
+}
+
+try:
+    response = requests.post(url, json=payload, headers=headers)
+    response.raise_for_status()
+    print(response.json())
+except requests.exceptions.RequestException as e:
+    print(f"Error making API request: {e}")
+```
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+```js
+const payload = {
+  input_value: "Tell me about something interesting!",
+  session_id: "chat-123",
+  input_type: "chat",
+  output_type: "chat",
+  output_component: ""
+};
+
+const options = {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'x-api-key': 'LANGFLOW_API_KEY'
+  },
+  body: JSON.stringify(payload)
+};
+
+fetch('http://LANGFLOW_SERVER_URL/api/v1/run/FLOW_ID', options)
+  .then(response => response.json())
+  .then(data => console.log(data))
+  .catch(err => console.error(err));
+```
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
 ```bash
 curl -X POST \
   "$LANGFLOW_SERVER_URL/api/v1/run/$FLOW_ID" \
@@ -30,10 +94,12 @@ curl -X POST \
     "session_id": "chat-123",
     "input_type": "chat",
     "output_type": "chat",
-    "output_component": "",
-    "tweaks": null
+    "output_component": ""
   }'
 ```
+
+</TabItem>
+</Tabs>
 
 The response from `/v1/run/$FLOW_ID` includes metadata, inputs, and outputs for the run.
 
@@ -84,6 +150,77 @@ With `/v1/run/$FLOW_ID`, the flow is executed as a batch with optional LLM token
 
 To stream LLM token responses, append the `?stream=true` query parameter to the request:
 
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+```python
+import requests
+
+url = "http://LANGFLOW_SERVER_URL/api/v1/run/FLOW_ID?stream=true"
+
+# Request payload
+payload = {
+    "message": "Tell me something interesting!",
+    "session_id": "chat-123"
+}
+
+# Request headers
+headers = {
+    "accept": "application/json",
+    "Content-Type": "application/json",
+    "x-api-key": "LANGFLOW_API_KEY"
+}
+
+try:
+    response = requests.post(url, json=payload, headers=headers, stream=True)
+    response.raise_for_status()
+
+    # Process streaming response
+    for line in response.iter_lines():
+        if line:
+            print(line.decode('utf-8'))
+except requests.exceptions.RequestException as e:
+    print(f"Error making API request: {e}")
+```
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+```js
+const payload = {
+  message: "Tell me something interesting!",
+  session_id: "chat-123"
+};
+
+const options = {
+  method: 'POST',
+  headers: {
+    'accept': 'application/json',
+    'Content-Type': 'application/json',
+    'x-api-key': 'LANGFLOW_API_KEY'
+  },
+  body: JSON.stringify(payload)
+};
+
+fetch('http://LANGFLOW_SERVER_URL/api/v1/run/FLOW_ID?stream=true', options)
+  .then(async response => {
+    const reader = response.body?.getReader();
+    const decoder = new TextDecoder();
+
+    if (reader) {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        console.log(decoder.decode(value));
+      }
+    }
+  })
+  .catch(err => console.error(err));
+```
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
 ```bash
 curl -X POST \
   "$LANGFLOW_SERVER_URL/api/v1/run/$FLOW_ID?stream=true" \
@@ -95,6 +232,9 @@ curl -X POST \
     "session_id": "chat-123"
   }'
 ```
+
+</TabItem>
+</Tabs>
 
 LLM chat responses are streamed back as `token` events, culminating in a final `end` event that closes the connection.
 
@@ -132,8 +272,9 @@ The following example is truncated to illustrate a series of `token` events as w
 | Header | Info | Example |
 |--------|------|---------|
 | Content-Type | Required. Specifies the JSON format. | "application/json" |
-| accept | Optional. Specifies the response format. | "application/json" |
-| x-api-key | Optional. Required only if authentication is enabled. | "sk-..." |
+| accept | Optional. Specifies the response format. Defaults to JSON if not specified. | "application/json" |
+| x-api-key | Required. Your Langflow API key for authentication. Can be passed as a header or query parameter. | "sk-..." |
+| `X-LANGFLOW-GLOBAL-VAR-*` | Optional. Pass global variables to the flow. Variable names are automatically converted to uppercase. These variables take precedence over OS environment variables and are only available during this specific request execution. | `"X-LANGFLOW-GLOBAL-VAR-API_KEY: sk-..."` |
 
 ### Run endpoint parameters
 
@@ -149,6 +290,93 @@ The following example is truncated to illustrate a series of `token` events as w
 | session_id | string | Optional. JSON body field. Conversation context ID. See [Session ID](/session-id). Default: `null` |
 
 ### Request example with all headers and parameters
+
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+```python
+import requests
+
+url = "http://LANGFLOW_SERVER_URL/api/v1/run/FLOW_ID?stream=true"
+
+# Request payload with tweaks
+payload = {
+    "input_value": "Tell me a story",
+    "input_type": "chat",
+    "output_type": "chat",
+    "output_component": "chat_output",
+    "session_id": "chat-123",
+    "tweaks": {
+        "component_id": {
+            "parameter_name": "value"
+        }
+    }
+}
+
+# Request headers
+headers = {
+    "Content-Type": "application/json",
+    "accept": "application/json",
+    "x-api-key": "LANGFLOW_API_KEY"
+}
+
+try:
+    response = requests.post(url, json=payload, headers=headers, stream=True)
+    response.raise_for_status()
+
+    # Process streaming response
+    for line in response.iter_lines():
+        if line:
+            print(line.decode('utf-8'))
+except requests.exceptions.RequestException as e:
+    print(f"Error making API request: {e}")
+```
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+```js
+const payload = {
+  input_value: "Tell me a story",
+  input_type: "chat",
+  output_type: "chat",
+  output_component: "chat_output",
+  session_id: "chat-123",
+  tweaks: {
+    component_id: {
+      parameter_name: "value"
+    }
+  }
+};
+
+const options = {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'accept': 'application/json',
+    'x-api-key': 'LANGFLOW_API_KEY'
+  },
+  body: JSON.stringify(payload)
+};
+
+fetch('http://LANGFLOW_SERVER_URL/api/v1/run/FLOW_ID?stream=true', options)
+  .then(async response => {
+    const reader = response.body?.getReader();
+    const decoder = new TextDecoder();
+
+    if (reader) {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        console.log(decoder.decode(value));
+      }
+    }
+  })
+  .catch(err => console.error(err));
+```
+
+</TabItem>
+<TabItem value="curl" label="curl">
 
 ```bash
 curl -X POST \
@@ -169,6 +397,103 @@ curl -X POST \
     }
   }'
 ```
+
+</TabItem>
+</Tabs>
+
+### Pass global variables in request headers {#pass-global-variables-in-headers}
+
+You can pass global variables to your flow using HTTP headers with the format `X-LANGFLOW-GLOBAL-VAR-{VARIABLE_NAME}`.
+
+Variables passed in headers take precedence over OS environment variables. If a variable is provided in both a header and an environment variable, the header value is used. Variables are only available during this specific request execution and aren't persisted.
+
+Variable names are automatically converted to uppercase. For example, `X-LANGFLOW-GLOBAL-VAR-api-key` becomes `API_KEY` in your flow.
+
+You don't need to create these variables in Langflow's Global Variables section first. Pass any variable name using this header format.
+
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+```python
+import requests
+
+url = "http://LANGFLOW_SERVER_URL/api/v1/run/FLOW_ID"
+
+# Request payload
+payload = {
+    "input_value": "Tell me about something interesting!",
+    "input_type": "chat",
+    "output_type": "chat"
+}
+
+# Request headers with global variables
+headers = {
+    "Content-Type": "application/json",
+    "x-api-key": "LANGFLOW_API_KEY",
+    "X-LANGFLOW-GLOBAL-VAR-OPENAI_API_KEY": "sk-...",
+    "X-LANGFLOW-GLOBAL-VAR-USER_ID": "user123",
+    "X-LANGFLOW-GLOBAL-VAR-ENVIRONMENT": "production"
+}
+
+try:
+    response = requests.post(url, json=payload, headers=headers)
+    response.raise_for_status()
+    print(response.json())
+except requests.exceptions.RequestException as e:
+    print(f"Error making API request: {e}")
+```
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+```js
+const payload = {
+  input_value: "Tell me about something interesting!",
+  input_type: "chat",
+  output_type: "chat"
+};
+
+const options = {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'x-api-key': 'LANGFLOW_API_KEY',
+    'X-LANGFLOW-GLOBAL-VAR-OPENAI_API_KEY': 'sk-...',
+    'X-LANGFLOW-GLOBAL-VAR-USER_ID': 'user123',
+    'X-LANGFLOW-GLOBAL-VAR-ENVIRONMENT': 'production'
+  },
+  body: JSON.stringify(payload)
+};
+
+fetch('http://LANGFLOW_SERVER_URL/api/v1/run/FLOW_ID', options)
+  .then(response => response.json())
+  .then(data => console.log(data))
+  .catch(err => console.error(err));
+```
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+```bash
+curl -X POST \
+  "$LANGFLOW_SERVER_URL/api/v1/run/$FLOW_ID" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
+  -H "X-LANGFLOW-GLOBAL-VAR-OPENAI_API_KEY: sk-..." \
+  -H "X-LANGFLOW-GLOBAL-VAR-USER_ID: user123" \
+  -H "X-LANGFLOW-GLOBAL-VAR-ENVIRONMENT: production" \
+  -d '{
+    "input_value": "Tell me about something interesting!",
+    "input_type": "chat",
+    "output_type": "chat"
+  }'
+```
+
+</TabItem>
+</Tabs>
+
+If your flow components reference variables that aren't provided in headers or your Langflow database, the flow fails by default. To avoid this, you can set `LANGFLOW_FALLBACK_TO_ENV_VAR=True` in your `.env` file, which allows the flow to use values from OS environment variables if they aren't otherwise specified.
+
 
 ## Webhook run flow
 
