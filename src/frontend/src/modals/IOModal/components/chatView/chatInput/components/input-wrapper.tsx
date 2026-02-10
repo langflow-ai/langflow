@@ -1,5 +1,5 @@
 import type React from "react";
-import { usePlaygroundConfig } from "@/hooks/use-playground-config";
+import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
 import {
   ENABLE_IMAGE_ON_PLAYGROUND,
   ENABLE_VOICE_ASSISTANT,
@@ -51,7 +51,7 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
 
   // Check if voice mode is available
   // The /config endpoint returns appropriate config based on auth status
-  const config = usePlaygroundConfig();
+  const { data: config } = useGetConfig({});
 
   const onClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
