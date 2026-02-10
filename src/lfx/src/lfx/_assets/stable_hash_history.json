@@ -1306,7 +1306,7 @@
   },
   "OllamaModel": {
     "versions": {
-      "0.3.0": "12e5c1954fe1"
+      "0.3.0": "4fac4a29daff"
     }
   },
   "OllamaEmbeddings": {
