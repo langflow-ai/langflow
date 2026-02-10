@@ -663,12 +663,9 @@ test(
       timeout: 5000,
     });
 
-    await page.waitForSelector(
-      '[data-testid="button_open_prompt_modal"]',
-      {
-        timeout: 5000,
-      },
-    );
+    await page.waitForSelector('[data-testid="button_open_prompt_modal"]', {
+      timeout: 5000,
+    });
     await page.getByTestId("button_open_prompt_modal").click();
 
     // Wait for the prompt modal textarea
@@ -686,7 +683,10 @@ test(
     await page.waitForTimeout(500);
 
     // Verify the accordion prompt component text content
-    await page.waitForSelector('[data-testid="mustachepromptarea_mustache_template"]', { timeout: 5000 });
+    await page.waitForSelector(
+      '[data-testid="mustachepromptarea_mustache_template"]',
+      { timeout: 5000 },
+    );
     const accordionContent = await page
       .getByTestId("mustachepromptarea_mustache_template")
       .innerText();
@@ -702,7 +702,9 @@ test(
     // Also verify that the variable highlighting span exists in the accordion
     // Note: The structure might be complex inside the contenteditable
     const highlightedSpan = await page.evaluate(() => {
-      const span = document.querySelector('[data-testid="mustachepromptarea_mustache_template"] span.chat-message-highlight');
+      const span = document.querySelector(
+        '[data-testid="mustachepromptarea_mustache_template"] span.chat-message-highlight',
+      );
       return span ? span.textContent : null;
     });
     expect(highlightedSpan).toBe("{{name}}");
