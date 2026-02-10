@@ -66,7 +66,8 @@ jest.mock("@/utils/reactflowUtils", () => ({
 }));
 
 jest.mock("@/utils/utils", () => ({
-  isStringArray: (arr: any) => Array.isArray(arr) && arr.every((v: any) => typeof v === "string"),
+  isStringArray: (arr: any) =>
+    Array.isArray(arr) && arr.every((v: any) => typeof v === "string"),
   tryParseJson: jest.fn((s: string) => null),
 }));
 
@@ -325,9 +326,7 @@ describe("processEndVertexEvent", () => {
   it("should track build duration for output type nodes", () => {
     mockIsOutputType.mockReturnValue(true);
     mockFlowStoreState.buildStartTime = Date.now() - 500;
-    mockFlowStoreState.nodes = [
-      { id: "node-1", data: { type: "ChatOutput" } },
-    ];
+    mockFlowStoreState.nodes = [{ id: "node-1", data: { type: "ChatOutput" } }];
     mockFindLastBotMessage.mockReturnValue({
       message: { id: "msg-1", properties: {} },
       queryKey: ["messages"],
@@ -347,9 +346,7 @@ describe("processEndVertexEvent", () => {
   it("should not track duration when buildStartTime is null", () => {
     mockIsOutputType.mockReturnValue(true);
     mockFlowStoreState.buildStartTime = null;
-    mockFlowStoreState.nodes = [
-      { id: "node-1", data: { type: "ChatOutput" } },
-    ];
+    mockFlowStoreState.nodes = [{ id: "node-1", data: { type: "ChatOutput" } }];
 
     const data = createValidBuildData("node-1");
     processEndVertexEvent(data, buildResults, {

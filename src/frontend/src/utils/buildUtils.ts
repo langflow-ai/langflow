@@ -601,12 +601,7 @@ export async function processBatchedEvents(
       if (!result) return false;
       hadBatchable = true;
     } else {
-      const result = await onEventFallback(
-        type,
-        data,
-        buildResults,
-        callbacks,
-      );
+      const result = await onEventFallback(type, data, buildResults, callbacks);
       if (!result) return false;
     }
   }
