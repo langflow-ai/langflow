@@ -14,6 +14,31 @@ import type { InputProps, PromptAreaComponentType } from "../../types";
 import useAlertStore from "@/stores/alertStore";
 import { usePostValidatePrompt } from "@/controllers/API/queries/nodes/use-post-validate-prompt";
 
+/**
+ * Generates a unique variable name for the prompt template.
+ * If "variable_name" doesn't exist, returns it.
+ * Otherwise, returns "variable_name_1", "variable_name_2", etc.
+ */
+export const generateUniqueVariableName = (templateValue: string): string => {
+  const variableRegex = /\{([^{}]+)\}/g;
+  const existingVariables = new Set<string>();
+  let match: RegExpExecArray | null;
+  while ((match = variableRegex.exec(templateValue)) !== null) {
+    existingVariables.add(match[1]);
+  }
+
+  let variableName = "variable_name";
+  if (existingVariables.has(variableName)) {
+    let counter = 1;
+    while (existingVariables.has(`variable_name_${counter}`)) {
+      counter++;
+    }
+    variableName = `variable_name_${counter}`;
+  }
+
+  return variableName;
+};
+
 export default function AccordionPromptComponent({
   field_name,
   nodeClass,
@@ -370,25 +395,7 @@ export default function AccordionPromptComponent({
 
     isTypingRef.current = true;
 
-    // Find all existing variables in the template
-    const variableRegex = /\{([^{}]+)\}/g;
-    const existingVariables = new Set<string>();
-    let match: RegExpExecArray | null;
-    while ((match = variableRegex.exec(internalValue)) !== null) {
-      existingVariables.add(match[1]);
-    }
-
-    // Generate a unique variable name
-    let variableName = "variable_name";
-    if (existingVariables.has(variableName)) {
-      // Find the next available number
-      let counter = 1;
-      while (existingVariables.has(`variable_name_${counter}`)) {
-        counter++;
-      }
-      variableName = `variable_name_${counter}`;
-    }
-
+    const variableName = generateUniqueVariableName(internalValue);
     const variableText = `{${variableName}}`;
 
     // Get current cursor position or end of text

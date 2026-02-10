@@ -1,32 +1,10 @@
 // Tests for AccordionPromptComponent functionality
-// Focus on testing the unique variable name generation logic
+// Testing the actual generateUniqueVariableName function from the component
+
+import { generateUniqueVariableName } from "./index";
 
 describe("AccordionPromptComponent", () => {
-  describe("unique variable name generation", () => {
-    // Extract the core logic from handleAddVariable for testing
-    const generateUniqueVariableName = (templateValue: string): string => {
-      // Find all existing variables in the template
-      const variableRegex = /\{([^{}]+)\}/g;
-      const existingVariables = new Set<string>();
-      let match: RegExpExecArray | null;
-      while ((match = variableRegex.exec(templateValue)) !== null) {
-        existingVariables.add(match[1]);
-      }
-
-      // Generate a unique variable name
-      let variableName = "variable_name";
-      if (existingVariables.has(variableName)) {
-        // Find the next available number
-        let counter = 1;
-        while (existingVariables.has(`variable_name_${counter}`)) {
-          counter++;
-        }
-        variableName = `variable_name_${counter}`;
-      }
-
-      return variableName;
-    };
-
+  describe("generateUniqueVariableName", () => {
     it("should return 'variable_name' when template is empty", () => {
       const result = generateUniqueVariableName("");
       expect(result).toBe("variable_name");
@@ -78,7 +56,6 @@ describe("AccordionPromptComponent", () => {
     });
 
     it("should handle variables with similar names but not exact match", () => {
-      // 'variable_name_extra' should not affect 'variable_name' check
       const result = generateUniqueVariableName("Hello {variable_name_extra}!");
       expect(result).toBe("variable_name");
     });
@@ -107,50 +84,6 @@ describe("AccordionPromptComponent", () => {
       `;
       const result = generateUniqueVariableName(template);
       expect(result).toBe("variable_name_2");
-    });
-  });
-
-  describe("variable extraction regex", () => {
-    const extractVariables = (templateValue: string): string[] => {
-      const variableRegex = /\{([^{}]+)\}/g;
-      const variables: string[] = [];
-      let match: RegExpExecArray | null;
-      while ((match = variableRegex.exec(templateValue)) !== null) {
-        variables.push(match[1]);
-      }
-      return variables;
-    };
-
-    it("should extract single variable", () => {
-      const result = extractVariables("Hello {name}!");
-      expect(result).toEqual(["name"]);
-    });
-
-    it("should extract multiple variables", () => {
-      const result = extractVariables(
-        "{greeting} {name}, your {item} is ready",
-      );
-      expect(result).toEqual(["greeting", "name", "item"]);
-    });
-
-    it("should return empty array for no variables", () => {
-      const result = extractVariables("Hello world!");
-      expect(result).toEqual([]);
-    });
-
-    it("should handle adjacent variables", () => {
-      const result = extractVariables("{a}{b}{c}");
-      expect(result).toEqual(["a", "b", "c"]);
-    });
-
-    it("should handle variables with underscores and numbers", () => {
-      const result = extractVariables("{var_1} {var_2} {my_variable_123}");
-      expect(result).toEqual(["var_1", "var_2", "my_variable_123"]);
-    });
-
-    it("should handle empty template", () => {
-      const result = extractVariables("");
-      expect(result).toEqual([]);
     });
   });
 });
