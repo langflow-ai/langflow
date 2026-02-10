@@ -674,7 +674,10 @@ function GenericNode({
             <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 pointer-events-auto">
               <div className="flex items-center gap-1 rounded-full bg-background/95 px-2 py-0.5 text-[10px] font-medium text-foreground shadow-sm backdrop-blur-sm ring-1 ring-border/50">
                 <div className="h-1 w-1 animate-pulse rounded-full bg-accent-indigo-foreground" />
-                <span>{nodeProgress.message || `${nodeProgress.current}/${nodeProgress.total}`}</span>
+                <span>
+                  {nodeProgress.message ||
+                    `${nodeProgress.current}/${nodeProgress.total}`}
+                </span>
               </div>
             </div>
             {/* Thin progress bar container with rounded bottom corners and padding */}
