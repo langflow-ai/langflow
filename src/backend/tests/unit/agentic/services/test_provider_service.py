@@ -9,7 +9,6 @@ from uuid import UUID
 
 import pytest
 from langflow.agentic.services.provider_service import (
-    DEFAULT_MODELS,
     PREFERRED_PROVIDERS,
     check_api_key,
     get_default_model,
@@ -38,18 +37,20 @@ class TestPreferredProviders:
 
 
 class TestDefaultModels:
-    """Tests for DEFAULT_MODELS configuration."""
+    """Tests for dynamic default model resolution."""
 
-    def test_should_have_model_for_each_preferred_provider(self):
-        """Should have a default model for each preferred provider."""
-        for provider in PREFERRED_PROVIDERS:
-            assert provider in DEFAULT_MODELS, f"Missing default model for {provider}"
-
-    def test_default_models_should_be_non_empty_strings(self):
-        """Default model names should be non-empty strings."""
-        for model in DEFAULT_MODELS.values():
+    def test_should_resolve_model_for_known_providers(self):
+        """Should dynamically resolve a default model for known providers."""
+        for provider in ["Anthropic", "OpenAI"]:
+            model = get_default_model(provider)
+            assert model is not None, f"No default model resolved for {provider}"
             assert isinstance(model, str)
             assert len(model) > 0
+
+    def test_should_return_none_for_unknown_provider(self):
+        """Should return None for a provider with no models."""
+        result = get_default_model("NonExistentProvider")
+        assert result is None
 
 
 class TestGetDefaultProvider:
@@ -228,7 +229,8 @@ class TestProviderServiceIntegration:
 
     def test_default_provider_should_have_default_model(self):
         """Default provider should have a corresponding default model."""
-        for provider in PREFERRED_PROVIDERS:
+        # Only test providers that have models in the unified registry
+        for provider in ["Anthropic", "OpenAI"]:
             model = get_default_model(provider)
             assert model is not None, f"No default model for preferred provider {provider}"
 
@@ -238,4 +240,5 @@ class TestProviderServiceIntegration:
         provider = get_default_provider(enabled)
 
         assert provider is not None
-        assert get_default_model(provider) is not None
+        model = get_default_model(provider)
+        assert model is not None

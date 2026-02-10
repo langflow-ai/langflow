@@ -28,9 +28,9 @@ from langflow.agentic.services.flow_types import (
     MAX_VALIDATION_RETRIES,
 )
 from langflow.agentic.services.provider_service import (
-    DEFAULT_MODELS,
     PREFERRED_PROVIDERS,
     check_api_key,
+    get_default_model,
     get_enabled_providers_for_user,
 )
 from langflow.api.utils.core import CurrentActiveUser, DbSession
@@ -89,7 +89,7 @@ async def _resolve_assistant_context(
     if not api_key_name:
         raise HTTPException(status_code=400, detail=f"Unknown provider: {provider}")
 
-    model_name = request.model_name or DEFAULT_MODELS.get(provider) or ""
+    model_name = request.model_name or get_default_model(provider) or ""
 
     variable_service = get_variable_service()
     api_key = await check_api_key(variable_service, user_id, api_key_name, session)
@@ -207,7 +207,7 @@ async def check_assistant_config(
                         }
                     )
 
-            default_model = DEFAULT_MODELS.get(provider_name)
+            default_model = get_default_model(provider_name)
             if not default_model and model_list:
                 default_model = model_list[0]["name"]
 

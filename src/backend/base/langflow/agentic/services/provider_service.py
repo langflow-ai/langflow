@@ -3,7 +3,7 @@
 import os
 from uuid import UUID
 
-from lfx.base.models.unified_models import get_model_provider_variable_mapping
+from lfx.base.models.unified_models import get_model_provider_variable_mapping, get_unified_models_detailed
 from lfx.log.logger import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,14 +13,6 @@ from langflow.services.variable.service import DatabaseVariableService, Variable
 
 # Preferred providers in order of priority
 PREFERRED_PROVIDERS = ["Anthropic", "OpenAI", "Google Generative AI", "Groq"]
-
-# Default models per provider
-DEFAULT_MODELS: dict[str, str] = {
-    "Anthropic": "claude-sonnet-4-5-20250514",
-    "OpenAI": "gpt-5.2",
-    "Google Generative AI": "gemini-2.0-flash",
-    "Groq": "llama-3.3-70b-versatile",
-}
 
 
 async def get_enabled_providers_for_user(
@@ -85,5 +77,15 @@ def get_default_provider(enabled_providers: list[str]) -> str | None:
 
 
 def get_default_model(provider: str) -> str | None:
-    """Get the default model for a provider."""
-    return DEFAULT_MODELS.get(provider)
+    """Get the default model for a provider dynamically from the unified models registry."""
+    models_by_provider = get_unified_models_detailed(
+        providers=[provider],
+        include_unsupported=False,
+        include_deprecated=False,
+        only_defaults=True,
+    )
+    for provider_dict in models_by_provider:
+        models = provider_dict.get("models", [])
+        if models:
+            return models[0].get("model_name")
+    return None
