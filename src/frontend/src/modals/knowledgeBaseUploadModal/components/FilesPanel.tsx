@@ -8,15 +8,16 @@ interface FilesPanelProps {
 
 export function FilesPanel({ files, onRemoveFile }: FilesPanelProps) {
   return (
-    <>
-      {/* Panel Content - File List */}
-      <div className="flex-1 overflow-y-auto p-3">
-        <div className="flex items-center gap-2 text-base font-semibold my-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
-            <ForwardedIconComponent name="FileStack" className="h-4 w-4" />
-          </div>
-          Sources
+    <div className="flex h-full flex-col">
+      {/* Sticky header */}
+      <div className="flex items-center gap-2 text-base font-semibold p-3 pb-1">
+        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
+          <ForwardedIconComponent name="FileStack" className="h-4 w-4" />
         </div>
+        Sources
+      </div>
+      {/* Scrollable file list */}
+      <div className="flex-1 overflow-y-auto px-3 pb-3">
         <div className="flex flex-col gap-1">
           {files.map((file, index) => (
             <div
@@ -42,6 +43,6 @@ export function FilesPanel({ files, onRemoveFile }: FilesPanelProps) {
           ))}
         </div>
       </div>
-    </>
+    </div>
   );
 }

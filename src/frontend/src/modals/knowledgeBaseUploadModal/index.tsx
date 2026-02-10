@@ -102,7 +102,7 @@ export default function KnowledgeBaseUploadModal({
       sidePanel={
         <FilesPanel files={form.files} onRemoveFile={form.handleRemoveFile} />
       }
-      sidePanelOpen={form.showAdvanced && form.files.length > 0}
+      sidePanelOpen={form.files.length > 0}
       footer={
         <StepperModalFooter
           currentStep={form.currentStep}
