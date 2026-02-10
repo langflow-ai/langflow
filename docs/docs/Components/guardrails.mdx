@@ -33,7 +33,8 @@ The **Jailbreak** and **Prompt Injection** guardrails include additional heurist
 
 ## Create custom guardrails
 
-You can create custom guardrails by enabling **Enable Custom Guardrail** and providing a description of what to detect in the **Custom Guardrail Description** field.
+Use the **Enable Custom Guardrail** parameter to create your own, specific guardrail validations.
+In the *Custom Guardrail Description** field, enter a natural language guardrail description of disallowed data that you want to detect.
 
 Custom guardrails can work simultaneously with the built-in guardrails, and follow the same validation process.
 
@@ -51,7 +52,7 @@ When this custom guardrail is enabled, the LLM analyzes the input text against y
 
 | Name | Type | Description |
 |------|------|-------------|
-| Language Model (`model`) | `LanguageModel` | Input parameter. The [`LanguageModel`](/data-types#languagemodel) output from a **Language Model** component that defines the LLM to use for validation. |
+| Language Model (`model`) | `LanguageModel` | Input parameter. Connect a **Language Model** component to use as the driver for this component. The model reviews the data, compares it against the guardrails, and determines if any data is in violation of the guardrails. |
 | API Key (`api_key`) | Secret String | Input parameter. Model provider API key. Required if the model provider needs authentication. |
 | Guardrails (`enabled_guardrails`) | Multiselect | Input parameter. Select one or more security guardrails to validate the input against. Options: `PII`, `Tokens/Passwords`, `Jailbreak`, `Offensive Content`, `Malicious Code`, `Prompt Injection`. Default: `["PII", "Tokens/Passwords", "Jailbreak"]`. |
 | Input Text (`input_text`) | Multiline String | Input parameter. The text to validate against guardrails. Accepts `Message` input types. |
