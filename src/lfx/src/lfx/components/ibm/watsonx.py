@@ -28,6 +28,7 @@ class WatsonxAIComponent(LCModelComponent):
         "https://au-syd.ml.cloud.ibm.com",
         "https://jp-tok.ml.cloud.ibm.com",
         "https://ca-tor.ml.cloud.ibm.com",
+        "https://ap-south-1.aws.wxai.ibm.com",
     ]
     inputs = [
         *LCModelComponent.get_base_inputs(),
@@ -40,11 +41,26 @@ class WatsonxAIComponent(LCModelComponent):
             real_time_refresh=True,
             required=True,
         ),
+        DropdownInput(
+            name="container_scope",
+            display_name="Container Scope",
+            options=["SpaceID", "ProjectID"],
+            real_time_refresh=True,
+            required=True,
+        ),
         StrInput(
             name="project_id",
             display_name="watsonx Project ID",
-            required=True,
-            info="The project ID or deployment space ID that is associated with the foundation model.",
+            required=False,
+            info="The project ID associated with the foundation model.",
+            advanced=True,
+        ),
+        StrInput(
+            name="space_id",
+            display_name="watsonx Space ID",
+            required=False,
+            info="The deployment space ID associated with the foundation model.",
+            advanced=True,
         ),
         SecretStrInput(
             name="api_key",
@@ -161,15 +177,26 @@ class WatsonxAIComponent(LCModelComponent):
             try:
                 models = self.fetch_models(base_url=field_value)
                 build_config["model_name"]["options"] = models
-                if build_config["model_name"]["value"]:
-                    build_config["model_name"]["value"] = models[0]
-                info_message = f"Updated model options: {len(models)} models found in {field_value}"
-                logger.info(info_message)
+                if build_config["model_name"].get("value") not in models:
+                    build_config["model_name"]["value"] = models[0] if models else None
+                logger.info(f"Updated model options: {len(models)} models found in {field_value}")
             except Exception:  # noqa: BLE001
                 logger.exception("Error updating model options.")
-        if field_name == "model_name" and field_value and field_value in WatsonxAIComponent._urls:
-            build_config["model_name"]["options"] = self.fetch_models(base_url=field_value)
-            build_config["model_name"]["value"] = ""
+
+        if field_name == "container_scope":
+            is_space = field_value == "SpaceID"
+            is_project = field_value == "ProjectID"
+
+            build_config["space_id"]["advanced"] = not is_space
+            build_config["project_id"]["advanced"] = not is_project
+
+            build_config["space_id"]["required"] = is_space
+            build_config["project_id"]["required"] = is_project
+
+            if is_space:
+                build_config["project_id"]["value"] = None
+            elif is_project:
+                build_config["space_id"]["value"] = None
         return build_config
 
     def build_model(self) -> LanguageModel:
@@ -203,10 +230,19 @@ class WatsonxAIComponent(LCModelComponent):
         if isinstance(api_key_value, SecretStr):
             api_key_value = api_key_value.get_secret_value()
 
+        project_id = None
+        space_id = None
+
+        if self.container_scope == "SpaceID":
+            space_id = self.space_id
+        elif self.container_scope == "ProjectID":
+            project_id = self.project_id
+
         return ChatWatsonx(
             apikey=api_key_value,
             url=self.base_url,
-            project_id=self.project_id,
+            project_id=project_id,
+            space_id=space_id,
             model_id=self.model_name,
             params=chat_params,
             streaming=self.stream,
