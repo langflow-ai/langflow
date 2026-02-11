@@ -27,7 +27,6 @@ class TestWatsonxAIComponent:
     @pytest.fixture
     def wx_component(self):
         """Create a WatsonxAIComponent instance for testing."""
-        # Import here to ensure mocks are in place
         from lfx.components.ibm.watsonx import WatsonxAIComponent
 
         return WatsonxAIComponent()
