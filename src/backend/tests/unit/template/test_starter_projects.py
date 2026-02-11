@@ -10,6 +10,7 @@ Validates that templates work correctly and prevent unexpected breakage.
 """
 
 import json
+from importlib import import_module
 from pathlib import Path
 
 import pytest
@@ -114,6 +115,59 @@ class TestStarterProjects:
 
         except (ValueError, TypeError, KeyError, AttributeError, OSError, json.JSONDecodeError) as e:
             pytest.fail(f"{template_file.name}: Unexpected error during validation: {e!s}")
+
+    @pytest.mark.parametrize("template_file", get_template_files(), ids=lambda x: x.name)
+    def test_template_field_order_matches_component(self, template_file):
+        """Test that field_order in starter project JSON matches the actual component's input order."""
+        with template_file.open(encoding="utf-8") as f:
+            template_data = json.load(f)
+
+        errors = []
+        for node in template_data.get("data", {}).get("nodes", []):
+            node_data = node.get("data", {})
+            node_info = node_data.get("node", {})
+            metadata = node_info.get("metadata", {})
+            module_path = metadata.get("module", "")
+            json_field_order = node_info.get("field_order")
+
+            if not module_path or json_field_order is None:
+                continue
+
+            # Parse module path: "lfx.components.foo.bar.ClassName"
+            parts = module_path.rsplit(".", 1)
+            if len(parts) != 2:
+                continue
+
+            module_name, class_name = parts
+
+            try:
+                mod = import_module(module_name)
+                cls = getattr(mod, class_name)
+                instance = cls()
+                component_field_order = instance._get_field_order()
+            except Exception as e:
+                errors.append(
+                    f"  Node '{node_data.get('display_name', node_data.get('type', '?'))}' "
+                    f"({class_name}): Could not instantiate component: {e}"
+                )
+                continue
+
+            # The JSON field_order may be a subset of the component's full field order.
+            # Verify that the fields listed maintain the same relative order as the component.
+            json_fields_set = set(json_field_order)
+            expected_field_order = [f for f in component_field_order if f in json_fields_set]
+
+            if json_field_order != expected_field_order:
+                display = node_data.get("display_name") or node_data.get("type", "?")
+                errors.append(
+                    f"  Node '{display}' ({class_name}):\n"
+                    f"    JSON field_order:     {json_field_order}\n"
+                    f"    Expected (component): {expected_field_order}"
+                )
+
+        if errors:
+            error_msg = "\n".join(errors)
+            pytest.fail(f"field_order mismatches in {template_file.name}:\n{error_msg}")
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("template_file", get_basic_template_files(), ids=lambda x: x.name)
