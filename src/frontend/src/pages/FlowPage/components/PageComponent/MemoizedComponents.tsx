@@ -8,10 +8,10 @@ import { Button } from "@/components/ui/button";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import useFlowStore from "@/stores/flowStore";
+import type { AllNodeType } from "@/types/flow";
 import { cn } from "@/utils/utils";
 import { useSearchContext } from "../flowSidebarComponent";
 import { NAV_ITEMS } from "../flowSidebarComponent/components/sidebarSegmentedNav";
-import { AllNodeType } from "@/types/flow";
 
 export const MemoizedBackground = memo(() => (
   <Background size={2} gap={20} className="" />
@@ -47,7 +47,8 @@ export const MemoizedSidebarTrigger = memo(() => {
       <Panel
         className={cn(
           "react-flow__controls !top-auto !m-2 flex gap-1.5 rounded-md border border-secondary-hover bg-background p-0.5 text-primary shadow transition-[opacity,transform] duration-300 ease-in-out [&>button]:border-0 [&>button]:bg-background hover:[&>button]:bg-accent",
-          "pointer-events-auto opacity-100 group-data-[open=true]/sidebar-wrapper:pointer-events-none group-data-[open=true]/sidebar-wrapper:-translate-x-full group-data-[open=true]/sidebar-wrapper:opacity-0",
+          "pointer-events-auto opacity-100 group-data-[open=true]/sidebar-wrapper:pointer-events-none",
+          "group-data-[open=true]/sidebar-wrapper:-translate-x-80 group-data-[open=true]/sidebar-wrapper:opacity-0",
         )}
         position="top-left"
       >
