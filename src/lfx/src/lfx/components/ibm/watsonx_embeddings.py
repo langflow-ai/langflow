@@ -1,7 +1,6 @@
 from typing import Any
 
 import requests
-from ibm_watsonx_ai import APIClient, Credentials
 from ibm_watsonx_ai.metanames import EmbedTextParamsMetaNames
 from langchain_ibm import WatsonxEmbeddings
 from pydantic.v1 import SecretStr
@@ -14,6 +13,8 @@ from lfx.schema.dotdict import dotdict
 
 
 class WatsonxEmbeddingsComponent(LCEmbeddingsModel):
+    """LFX component for IBM watsonx.ai embeddings."""
+
     display_name = "IBM watsonx.ai Embeddings"
     description = "Generate embeddings using IBM watsonx.ai models."
     icon = "WatsonxAI"
@@ -40,14 +41,30 @@ class WatsonxEmbeddingsComponent(LCEmbeddingsModel):
                 "https://au-syd.ml.cloud.ibm.com",
                 "https://jp-tok.ml.cloud.ibm.com",
                 "https://ca-tor.ml.cloud.ibm.com",
+                "https://ap-south-1.aws.wxai.ibm.com",
             ],
             real_time_refresh=True,
         ),
+        DropdownInput(
+            name="container_scope",
+            display_name="Container Scope",
+            options=["ProjectID", "SpaceID"],
+            real_time_refresh=True,
+            required=True,
+        ),
         StrInput(
             name="project_id",
-            display_name="watsonx project id",
-            info="The project ID or deployment space ID that is associated with the foundation model.",
-            required=True,
+            display_name="watsonx Project ID",
+            required=False,
+            info="The project ID associated with the embedding model.",
+            advanced=True,
+        ),
+        StrInput(
+            name="space_id",
+            display_name="watsonx Space ID",
+            required=False,
+            info="The deployment space ID associated with the embedding model.",
+            advanced=True,
         ),
         SecretStrInput(
             name="api_key",
@@ -114,22 +131,45 @@ class WatsonxEmbeddingsComponent(LCEmbeddingsModel):
             except Exception:  # noqa: BLE001
                 logger.exception("Error updating model options.")
 
+        if field_name == "container_scope":
+            is_project = field_value == "ProjectID"
+            is_space = field_value == "SpaceID"
+
+            build_config["project_id"]["advanced"] = not is_project
+            build_config["space_id"]["advanced"] = not is_space
+
+            build_config["project_id"]["required"] = is_project
+            build_config["space_id"]["required"] = is_space
+
+            if is_project:
+                build_config["space_id"]["value"] = None
+            elif is_space:
+                build_config["project_id"]["value"] = None
+
+        return build_config
+
     def build_embeddings(self) -> Embeddings:
-        credentials = Credentials(
-            api_key=SecretStr(self.api_key).get_secret_value(),
-            url=self.url,
-        )
-
-        api_client = APIClient(credentials)
-
         params = {
             EmbedTextParamsMetaNames.TRUNCATE_INPUT_TOKENS: self.truncate_input_tokens,
             EmbedTextParamsMetaNames.RETURN_OPTIONS: {"input_text": self.input_text},
         }
 
+        api_key_value = self.api_key
+        if isinstance(api_key_value, SecretStr):
+            api_key_value = api_key_value.get_secret_value()
+
+        if self.container_scope not in ("ProjectID", "SpaceID"):
+            error_msg = "Please select a Container Scope (ProjectID or SpaceID)."
+            raise ValueError(error_msg)
+
+        project_id = self.project_id if self.container_scope == "ProjectID" else None
+        space_id = self.space_id if self.container_scope == "SpaceID" else None
+
         return WatsonxEmbeddings(
+            apikey=api_key_value,
+            url=self.url,
+            project_id=project_id,
+            space_id=space_id,
             model_id=self.model_name,
             params=params,
-            watsonx_client=api_client,
-            project_id=self.project_id,
         )
