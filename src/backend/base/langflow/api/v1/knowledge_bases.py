@@ -209,9 +209,12 @@ def calculate_text_metrics(df: pd.DataFrame, text_columns: list[str]) -> tuple[i
         if col not in df.columns:
             continue
 
-        text_series = df[col].astype(str).fillna("")
-        total_characters += _to_int(text_series.str.len().sum())
-        total_words += _to_int(text_series.str.split().str.len().sum())
+        # Convert to list once and use native Python string operations
+        text_list = df[col].astype(str).fillna("").tolist()
+
+        for text in text_list:
+            total_characters += len(text)
+            total_words += len(text.split())
 
     return total_words, total_characters
 
