@@ -6,13 +6,16 @@ from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
     from .mongodb_atlas import MongoVectorStoreComponent
+    from .mongodb_nosql import MongoDBQueryComponent
 
 _dynamic_imports = {
     "MongoVectorStoreComponent": "mongodb_atlas",
+    "MongoDBQueryComponent": "mongodb_nosql",
 }
 
 __all__ = [
     "MongoVectorStoreComponent",
+    "MongoDBQueryComponent",
 ]
 
 
