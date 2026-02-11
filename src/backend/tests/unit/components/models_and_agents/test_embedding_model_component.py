@@ -48,9 +48,9 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithoutClient):
 
     @patch("lfx.components.models_and_agents.embedding_model.get_unified_models_detailed")
     @patch("lfx.components.models_and_agents.embedding_model.get_api_key_for_provider")
-    @patch("lfx.components.models_and_agents.embedding_model.get_embedding_classes")
+    @patch("lfx.components.models_and_agents.embedding_model.get_embedding_class")
     def test_build_embeddings_openai(
-        self, mock_get_embedding_classes, mock_get_api_key, mock_get_unified_models, component_class, default_kwargs
+        self, mock_get_embedding_class, mock_get_api_key, mock_get_unified_models, component_class, default_kwargs
     ):
         # Setup mock for get_api_key_for_provider
         mock_get_api_key.return_value = "test-key"
@@ -60,9 +60,7 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithoutClient):
         mock_openai_class = MagicMock()
         mock_instance = MagicMock()
         mock_openai_class.return_value = mock_instance
-        mock_embedding_classes_dict = MagicMock()
-        mock_embedding_classes_dict.get.return_value = mock_openai_class
-        mock_get_embedding_classes.return_value = mock_embedding_classes_dict
+        mock_get_embedding_class.return_value = mock_openai_class
 
         # Create and configure the component
         component = component_class(**default_kwargs)
@@ -80,7 +78,7 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithoutClient):
         embeddings = component.build_embeddings()
 
         # Verify the embedding class getter was called
-        mock_embedding_classes_dict.get.assert_called_once_with("OpenAIEmbeddings")
+        mock_get_embedding_class.assert_called_once_with("OpenAIEmbeddings")
 
         # Verify the OpenAIEmbeddings was called with the correct parameters
         mock_openai_class.assert_called_once_with(
@@ -116,16 +114,14 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithoutClient):
             component.build_embeddings()
 
     @patch("lfx.components.models_and_agents.embedding_model.get_api_key_for_provider")
-    @patch("lfx.components.models_and_agents.embedding_model.get_embedding_classes")
+    @patch("lfx.components.models_and_agents.embedding_model.get_embedding_class")
     def test_build_embeddings_unknown_embedding_class(
-        self, mock_get_embedding_classes, mock_get_api_key, component_class, default_kwargs
+        self, mock_get_embedding_class, mock_get_api_key, component_class, default_kwargs
     ):
         # Setup mock for get_api_key_for_provider
         mock_get_api_key.return_value = "test-key"
-        # Setup mock to return None for unknown class
-        mock_embedding_classes_dict = MagicMock()
-        mock_embedding_classes_dict.get.return_value = None
-        mock_get_embedding_classes.return_value = mock_embedding_classes_dict
+        # Setup mock to raise ValueError for unknown class
+        mock_get_embedding_class.side_effect = ValueError("Unknown embedding class: UnknownEmbeddingClass")
 
         component = component_class(**default_kwargs)
         component._user_id = "test-user-id"
@@ -145,9 +141,9 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithoutClient):
 
     @patch("lfx.components.models_and_agents.embedding_model.get_unified_models_detailed")
     @patch("lfx.components.models_and_agents.embedding_model.get_api_key_for_provider")
-    @patch("lfx.components.models_and_agents.embedding_model.get_embedding_classes")
+    @patch("lfx.components.models_and_agents.embedding_model.get_embedding_class")
     def test_build_embeddings_google(
-        self, mock_get_embedding_classes, mock_get_api_key, mock_get_unified_models, component_class
+        self, mock_get_embedding_class, mock_get_api_key, mock_get_unified_models, component_class
     ):
         # Setup mock for get_api_key_for_provider
         mock_get_api_key.return_value = "test-google-key"
@@ -158,9 +154,7 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithoutClient):
         mock_google_class = MagicMock()
         mock_instance = MagicMock()
         mock_google_class.return_value = mock_instance
-        mock_embedding_classes_dict = MagicMock()
-        mock_embedding_classes_dict.get.return_value = mock_google_class
-        mock_get_embedding_classes.return_value = mock_embedding_classes_dict
+        mock_get_embedding_class.return_value = mock_google_class
 
         # Create component with Google Generative AI configuration
         component = component_class(
@@ -194,7 +188,7 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithoutClient):
         embeddings = component.build_embeddings()
 
         # Verify the embedding class getter was called
-        mock_embedding_classes_dict.get.assert_called_once_with("GoogleGenerativeAIEmbeddings")
+        mock_get_embedding_class.assert_called_once_with("GoogleGenerativeAIEmbeddings")
 
         # Verify the GoogleGenerativeAIEmbeddings was called with the correct parameters
         mock_google_class.assert_called_once_with(
@@ -209,9 +203,9 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithoutClient):
 
     @patch("lfx.components.models_and_agents.embedding_model.get_unified_models_detailed")
     @patch("lfx.components.models_and_agents.embedding_model.get_api_key_for_provider")
-    @patch("lfx.components.models_and_agents.embedding_model.get_embedding_classes")
+    @patch("lfx.components.models_and_agents.embedding_model.get_embedding_class")
     def test_build_embeddings_with_available_models(
-        self, mock_get_embedding_classes, mock_get_api_key, mock_get_unified_models, component_class, default_kwargs
+        self, mock_get_embedding_class, mock_get_api_key, mock_get_unified_models, component_class, default_kwargs
     ):
         """Test that available_models dict is populated from unified models."""
         # Setup mock for get_api_key_for_provider
@@ -238,9 +232,7 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithoutClient):
             "text-embedding-ada-002": MagicMock(name="ada"),
         }
         mock_openai_class.side_effect = lambda **kwargs: mock_instances.get(kwargs.get("model"), MagicMock())
-        mock_embedding_classes_dict = MagicMock()
-        mock_embedding_classes_dict.get.return_value = mock_openai_class
-        mock_get_embedding_classes.return_value = mock_embedding_classes_dict
+        mock_get_embedding_class.return_value = mock_openai_class
 
         # Create and configure the component
         component = component_class(**default_kwargs)
