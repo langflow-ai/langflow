@@ -198,6 +198,35 @@
         "sourceHandle": "{œdataTypeœ: œYouTubeCommentsComponentœ, œidœ: œYouTubeCommentsComponent-ZkD9Xœ, œnameœ: œcommentsœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "BatchRunComponent-hJ8qJ",
         "targetHandle": "{œfieldNameœ: œdfœ, œidœ: œBatchRunComponent-hJ8qJœ, œinputTypesœ: [œDataFrameœ], œtypeœ: œotherœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "BatchRunComponent",
+            "id": "BatchRunComponent-hJ8qJ",
+            "name": "batch_results",
+            "output_types": [
+              "DataFrame"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_data",
+            "id": "parser-ogxGV",
+            "inputTypes": [
+              "DataFrame",
+              "Data"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-BatchRunComponent-hJ8qJ{œdataTypeœ:œBatchRunComponentœ,œidœ:œBatchRunComponent-hJ8qJœ,œnameœ:œbatch_resultsœ,œoutput_typesœ:[œDataFrameœ]}-parser-ogxGV{œfieldNameœ:œinput_dataœ,œidœ:œparser-ogxGVœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "BatchRunComponent-hJ8qJ",
+        "sourceHandle": "{œdataTypeœ: œBatchRunComponentœ, œidœ: œBatchRunComponent-hJ8qJœ, œnameœ: œbatch_resultsœ, œoutput_typesœ: [œDataFrameœ]}",
+        "target": "parser-ogxGV",
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-ogxGVœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
