@@ -84,6 +84,24 @@ def get_embedding_class(class_name: str) -> type:
     return cls
 
 
+def get_model_classes() -> dict[str, type]:
+    """Return all model classes, importing every provider package.
+
+    .. deprecated::
+        Use :func:`get_model_class` instead to import only the provider you need.
+    """
+    return {name: get_model_class(name) for name in _MODEL_CLASS_IMPORTS}
+
+
+def get_embedding_classes() -> dict[str, type]:
+    """Return all embedding classes, importing every provider package.
+
+    .. deprecated::
+        Use :func:`get_embedding_class` instead to import only the provider you need.
+    """
+    return {name: get_embedding_class(name) for name in _EMBEDDING_CLASS_IMPORTS}
+
+
 @lru_cache(maxsize=1)
 def get_model_provider_metadata():
     """Get complete provider metadata including model class, API key param, and extra params."""
