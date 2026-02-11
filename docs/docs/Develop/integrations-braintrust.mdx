@@ -1,6 +1,8 @@
 ---
 title: Braintrust
 slug: /integrations-braintrust
+description: Configure Langflow to send tracing data to Braintrust for debugging and analyzing flow executions.
+sidebar_position: 1
 ---
 
 import Tabs from '@theme/Tabs';
@@ -28,14 +30,14 @@ If you need a flow to test the Braintrust integration, see the [Langflow quickst
    <Tabs>
    <TabItem value="linux" label="Linux/macOS" default>
 
-   ```bash
+   ```bash title="Terminal"
    export BRAINTRUST_API_KEY=YOUR_API_KEY
    ```
 
    </TabItem>
    <TabItem value="windows" label="Windows">
 
-   ```bash
+   ```bash title="Terminal"
    set BRAINTRUST_API_KEY=YOUR_API_KEY
    ```
 
@@ -49,7 +51,7 @@ If you need a flow to test the Braintrust integration, see the [Langflow quickst
    <Tabs>
    <TabItem value="linux" label="Linux/macOS" default>
 
-   ```bash
+   ```bash title="Terminal"
    # Override the default Braintrust API URL (defaults to https://api.braintrust.dev)
    export BRAINTRUST_API_URL=https://api.braintrust.dev
 
@@ -60,7 +62,7 @@ If you need a flow to test the Braintrust integration, see the [Langflow quickst
    </TabItem>
    <TabItem value="windows" label="Windows">
 
-   ```bash
+   ```bash title="Terminal"
    set BRAINTRUST_API_URL=https://api.braintrust.dev
    set BRAINTRUST_PROJECT=my-langflow-project
    ```
@@ -72,7 +74,7 @@ If you need a flow to test the Braintrust integration, see the [Langflow quickst
 
 1. Start Langflow in the same environment where you set the Braintrust environment variables:
 
-   ```bash
+   ```bash title="Terminal"
    uv run langflow run
    ```
 
