@@ -77,7 +77,6 @@ class TestWatsonxAIComponent:
 
         # Check for required inputs
         assert "base_url" in input_names
-        assert "container_scope" in input_names
         assert "project_id" in input_names
         assert "space_id" in input_names
         assert "api_key" in input_names
@@ -158,46 +157,11 @@ class TestWatsonxAIComponent:
         # model2 is in the new list, so it should be preserved
         assert result["model_name"]["value"] == "model2"
 
-    def test_update_build_config_container_scope_space(self, wx_component):
-        """Test update_build_config when container_scope is SpaceID."""
-        build_config = dotdict(
-            {
-                "space_id": {"advanced": True, "required": False, "value": None},
-                "project_id": {"advanced": False, "required": True, "value": "proj123"},
-            }
-        )
-
-        result = wx_component.update_build_config(build_config, field_value="SpaceID", field_name="container_scope")
-
-        assert result["space_id"]["advanced"] is False
-        assert result["space_id"]["required"] is True
-        assert result["project_id"]["advanced"] is True
-        assert result["project_id"]["required"] is False
-        assert result["project_id"]["value"] is None
-
-    def test_update_build_config_container_scope_project(self, wx_component):
-        """Test update_build_config when container_scope is ProjectID."""
-        build_config = dotdict(
-            {
-                "space_id": {"advanced": False, "required": True, "value": "space123"},
-                "project_id": {"advanced": True, "required": False, "value": None},
-            }
-        )
-
-        result = wx_component.update_build_config(build_config, field_value="ProjectID", field_name="container_scope")
-
-        assert result["project_id"]["advanced"] is False
-        assert result["project_id"]["required"] is True
-        assert result["space_id"]["advanced"] is True
-        assert result["space_id"]["required"] is False
-        assert result["space_id"]["value"] is None
-
     @patch("lfx.components.ibm.watsonx.ChatWatsonx")
     def test_build_model_with_project_id(self, mock_chatwatsonx, wx_component):
         """Test building model with ProjectID container scope."""
         wx_component.api_key = "test-api-key"  # pragma: allowlist secret
         wx_component.base_url = "https://us-south.ml.cloud.ibm.com"
-        wx_component.container_scope = "ProjectID"
         wx_component.project_id = "test-project-id"
         wx_component.space_id = None
         wx_component.model_name = "ibm/granite-3-8b-instruct"
@@ -230,7 +194,6 @@ class TestWatsonxAIComponent:
         """Test building model with SpaceID container scope."""
         wx_component.api_key = "test-api-key"  # pragma: allowlist secret
         wx_component.base_url = "https://us-south.ml.cloud.ibm.com"
-        wx_component.container_scope = "SpaceID"
         wx_component.project_id = None
         wx_component.space_id = "test-space-id"
         wx_component.model_name = "ibm/granite-3-8b-instruct"
@@ -265,7 +228,6 @@ class TestWatsonxAIComponent:
         """Test that SecretStr API key is properly converted to string."""
         wx_component.api_key = MockSecretStr("secret-api-key")
         wx_component.base_url = "https://us-south.ml.cloud.ibm.com"
-        wx_component.container_scope = "ProjectID"
         wx_component.project_id = "test-project-id"
         wx_component.space_id = None
         wx_component.model_name = "ibm/granite-3-8b-instruct"
@@ -286,36 +248,6 @@ class TestWatsonxAIComponent:
         call_kwargs = mock_chatwatsonx.call_args[1]
         assert call_kwargs["apikey"] == "secret-api-key"  # pragma: allowlist secret
         assert isinstance(call_kwargs["apikey"], str)
-
-    def test_build_model_invalid_container_scope(self, wx_component):
-        """Test that invalid container scope raises ValueError."""
-        wx_component.api_key = "test-api-key"  # pragma: allowlist secret
-        wx_component.base_url = "https://us-south.ml.cloud.ibm.com"
-        wx_component.container_scope = "InvalidScope"
-        wx_component.model_name = "ibm/granite-3-8b-instruct"
-
-        with pytest.raises(ValueError, match="Please select a Container Scope"):
-            wx_component.build_model()
-
-    def test_build_model_none_container_scope(self, wx_component):
-        """Test that None container scope raises ValueError."""
-        wx_component.api_key = "test-api-key"  # pragma: allowlist secret
-        wx_component.base_url = "https://us-south.ml.cloud.ibm.com"
-        wx_component.container_scope = None
-        wx_component.model_name = "ibm/granite-3-8b-instruct"
-
-        with pytest.raises(ValueError, match="Please select a Container Scope"):
-            wx_component.build_model()
-
-    def test_build_model_empty_container_scope(self, wx_component):
-        """Test that empty string container scope raises ValueError."""
-        wx_component.api_key = "test-api-key"  # pragma: allowlist secret
-        wx_component.base_url = "https://us-south.ml.cloud.ibm.com"
-        wx_component.container_scope = ""
-        wx_component.model_name = "ibm/granite-3-8b-instruct"
-
-        with pytest.raises(ValueError, match="Please select a Container Scope"):
-            wx_component.build_model()
 
     @patch("lfx.components.ibm.watsonx.WatsonxAIComponent.fetch_models")
     @patch("lfx.components.ibm.watsonx.logger")
@@ -422,18 +354,9 @@ class TestWatsonxAIComponent:
         """Test building model with logit_bias as JSON string."""
         wx_component.api_key = "test-api-key"  # pragma: allowlist secret
         wx_component.base_url = "https://us-south.ml.cloud.ibm.com"
-        wx_component.container_scope = "ProjectID"
         wx_component.project_id = "test-project-id"
         wx_component.space_id = None
         wx_component.model_name = "ibm/granite-3-8b-instruct"
-        wx_component.stream = False
-        wx_component.max_tokens = 1000
-        wx_component.temperature = 0.7
-        wx_component.top_p = 0.9
-        wx_component.frequency_penalty = 0.5
-        wx_component.presence_penalty = 0.3
-        wx_component.seed = 8
-        wx_component.stop_sequence = None
         wx_component.logprobs = True
         wx_component.top_logprobs = 3
         wx_component.logit_bias = '{"1003": -100, "1004": 100}'
@@ -449,18 +372,9 @@ class TestWatsonxAIComponent:
         """Test that invalid logit_bias JSON uses default value."""
         wx_component.api_key = "test-api-key"  # pragma: allowlist secret
         wx_component.base_url = "https://us-south.ml.cloud.ibm.com"
-        wx_component.container_scope = "ProjectID"
         wx_component.project_id = "test-project-id"
         wx_component.space_id = None
         wx_component.model_name = "ibm/granite-3-8b-instruct"
-        wx_component.stream = False
-        wx_component.max_tokens = 1000
-        wx_component.temperature = 0.7
-        wx_component.top_p = 0.9
-        wx_component.frequency_penalty = 0.5
-        wx_component.presence_penalty = 0.3
-        wx_component.seed = 8
-        wx_component.stop_sequence = None
         wx_component.logprobs = True
         wx_component.top_logprobs = 3
         wx_component.logit_bias = "invalid json"
@@ -476,7 +390,6 @@ class TestWatsonxAIComponent:
         """Test that model params are structured correctly."""
         wx_component.api_key = "test-api-key"  # pragma: allowlist secret
         wx_component.base_url = "https://us-south.ml.cloud.ibm.com"
-        wx_component.container_scope = "ProjectID"
         wx_component.project_id = "test-project-id"
         wx_component.space_id = None
         wx_component.model_name = "ibm/granite-3-8b-instruct"
@@ -509,3 +422,48 @@ class TestWatsonxAIComponent:
         assert params["top_logprobs"] == 10
         assert params["time_limit"] == 600000
         assert params["logit_bias"] is None
+
+    @patch("lfx.components.ibm.watsonx.ChatWatsonx")
+    def test_build_model_with_both_project_and_space_id_raises_error(self, mock_chatwatsonx, wx_component):
+        """Test that providing both project_id and space_id raises ValueError."""
+        wx_component.api_key = "test-api-key"  # pragma: allowlist secret
+        wx_component.base_url = "https://us-south.ml.cloud.ibm.com"
+        wx_component.project_id = "test-project-id"
+        wx_component.space_id = "test-space-id"
+        wx_component.model_name = "ibm/granite-3-8b-instruct"
+
+        with pytest.raises(ValueError, match="Exactly one of Project_ID or Space_ID must be selected"):
+            wx_component.build_model()
+
+        # Ensure ChatWatsonx was not called
+        mock_chatwatsonx.assert_not_called()
+
+    @patch("lfx.components.ibm.watsonx.ChatWatsonx")
+    def test_build_model_with_neither_project_nor_space_id_raises_error(self, mock_chatwatsonx, wx_component):
+        """Test that providing neither project_id nor space_id raises ValueError."""
+        wx_component.api_key = "test-api-key"  # pragma: allowlist secret
+        wx_component.base_url = "https://us-south.ml.cloud.ibm.com"
+        wx_component.project_id = None
+        wx_component.space_id = None
+        wx_component.model_name = "ibm/granite-3-8b-instruct"
+
+        with pytest.raises(ValueError, match="Exactly one of Project_ID or Space_ID must be selected"):
+            wx_component.build_model()
+
+        # Ensure ChatWatsonx was not called
+        mock_chatwatsonx.assert_not_called()
+
+    @patch("lfx.components.ibm.watsonx.ChatWatsonx")
+    def test_build_model_with_empty_string_project_and_space_id_raises_error(self, mock_chatwatsonx, wx_component):
+        """Test that providing empty strings for both project_id and space_id raises ValueError."""
+        wx_component.api_key = "test-api-key"  # pragma: allowlist secret
+        wx_component.base_url = "https://us-south.ml.cloud.ibm.com"
+        wx_component.project_id = ""
+        wx_component.space_id = ""
+        wx_component.model_name = "ibm/granite-3-8b-instruct"
+
+        with pytest.raises(ValueError, match="Exactly one of Project_ID or Space_ID must be selected"):
+            wx_component.build_model()
+
+        # Ensure ChatWatsonx was not called
+        mock_chatwatsonx.assert_not_called()

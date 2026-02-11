@@ -43,26 +43,17 @@ class WatsonxAIComponent(LCModelComponent):
             real_time_refresh=True,
             required=True,
         ),
-        DropdownInput(
-            name="container_scope",
-            display_name="Container Scope",
-            options=["ProjectID", "SpaceID"],
-            real_time_refresh=True,
-            required=True,
-        ),
         StrInput(
             name="project_id",
-            display_name="watsonx Project ID",
+            display_name="watsonx Project_ID",
             required=False,
             info="The project ID associated with the foundation model.",
-            advanced=True,
         ),
         StrInput(
             name="space_id",
-            display_name="watsonx Space ID",
+            display_name="watsonx Space_ID",
             required=False,
             info="The deployment space ID associated with the foundation model.",
-            advanced=True,
         ),
         SecretStrInput(
             name="api_key",
@@ -185,20 +176,6 @@ class WatsonxAIComponent(LCModelComponent):
                 logger.info(info_message)
             except Exception:  # noqa: BLE001
                 logger.exception("Error updating model options.")
-        if field_name == "container_scope":
-            is_project = field_value == "ProjectID"
-            is_space = field_value == "SpaceID"
-
-            build_config["project_id"]["advanced"] = not is_project
-            build_config["space_id"]["advanced"] = not is_space
-
-            build_config["project_id"]["required"] = is_project
-            build_config["space_id"]["required"] = is_space
-
-            if is_project:
-                build_config["space_id"]["value"] = None
-            elif is_space:
-                build_config["project_id"]["value"] = None
 
         return build_config
 
@@ -233,18 +210,15 @@ class WatsonxAIComponent(LCModelComponent):
         if isinstance(api_key_value, SecretStr):
             api_key_value = api_key_value.get_secret_value()
 
-        if self.container_scope not in ("ProjectID", "SpaceID"):
-            error_msg = "Please select a Container Scope (ProjectID or SpaceID)."
-            raise ValueError(error_msg)
-
-        project_id = self.project_id if self.container_scope == "ProjectID" else None
-        space_id = self.space_id if self.container_scope == "SpaceID" else None
+        if bool(self.space_id) == bool(self.project_id):
+            msg = "Exactly one of Project_ID or Space_ID must be selected"
+            raise ValueError(msg)
 
         return ChatWatsonx(
             apikey=api_key_value,
             url=self.base_url,
-            project_id=project_id,
-            space_id=space_id,
+            project_id=self.project_id,
+            space_id=self.space_id,
             model_id=self.model_name,
             params=chat_params,
             streaming=self.stream,
