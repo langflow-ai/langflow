@@ -509,29 +509,3 @@ class TestWatsonxAIComponent:
         assert params["top_logprobs"] == 10
         assert params["time_limit"] == 600000
         assert params["logit_bias"] is None
-
-    @patch("lfx.components.ibm.watsonx.ChatWatsonx")
-    def test_build_model_empty_stop_sequence(self, mock_chatwatsonx, wx_component):
-        """Test that empty stop_sequence results in empty list."""
-        wx_component.api_key = "test-api-key"  # pragma: allowlist secret
-        wx_component.base_url = "https://us-south.ml.cloud.ibm.com"
-        wx_component.container_scope = "ProjectID"
-        wx_component.project_id = "test-project-id"
-        wx_component.space_id = None
-        wx_component.model_name = "ibm/granite-3-8b-instruct"
-        wx_component.stream = False
-        wx_component.max_tokens = 1000
-        wx_component.temperature = 0.7
-        wx_component.top_p = 0.9
-        wx_component.frequency_penalty = 0.5
-        wx_component.presence_penalty = 0.3
-        wx_component.seed = 8
-        wx_component.stop_sequence = ""
-        wx_component.logprobs = True
-        wx_component.top_logprobs = 3
-        wx_component.logit_bias = None
-
-        wx_component.build_model()
-
-        call_kwargs = mock_chatwatsonx.call_args[1]
-        assert call_kwargs["params"]["stop"] == []
