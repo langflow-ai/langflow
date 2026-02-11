@@ -21,10 +21,7 @@ interface TextAreaWrapperProps {
 }
 
 //Resizes a textarea element to fit its content, with a minimum and maximum height constraint.
-const resizeTextarea = (
-  textarea: HTMLTextAreaElement,
-  value: string,
-): void => {
+const resizeTextarea = (textarea: HTMLTextAreaElement, value: string): void => {
   // Collapse to 0 so scrollHeight reflects only the content, not the container
   textarea.style.height = "0px";
   const scrollHeight = textarea.scrollHeight;

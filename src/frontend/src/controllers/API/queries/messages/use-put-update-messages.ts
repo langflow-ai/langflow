@@ -71,7 +71,12 @@ export const useUpdateMessage: useMutationFunctionType<
               if (existingIndex !== -1) {
                 return old.map((m, idx) =>
                   idx === existingIndex
-                    ? { ...m, text: message.text, edit: true, properties: message.properties ?? m.properties }
+                    ? {
+                        ...m,
+                        text: message.text,
+                        edit: true,
+                        properties: message.properties ?? m.properties,
+                      }
                     : m,
                 );
               }
