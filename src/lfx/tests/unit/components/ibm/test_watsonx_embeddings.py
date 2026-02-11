@@ -202,8 +202,8 @@ class TestWatsonxEmbeddingsComponent:
         mock_fetch.assert_called_once_with(base_url="https://us-south.ml.cloud.ibm.com")
 
     @patch("lfx.components.ibm.watsonx_embeddings.WatsonxEmbeddingsComponent.fetch_models")
-    def test_update_build_config_url_preserves_valid_model(self, mock_fetch, wx_embeddings_component):
-        """Test that valid model selection is preserved when updating url."""
+    def test_update_build_config_url_resets_model_on_url_change(self, mock_fetch, wx_embeddings_component):
+        """Test that model selection is reset to the first available model when URL changes."""
         mock_fetch.return_value = ["model1", "model2", "model3"]
 
         build_config = dotdict(
