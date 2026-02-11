@@ -49,20 +49,21 @@ GOOGLE_GENERATIVE_AI_MODELS_DETAILED = [
         name="gemini-2.0-flash",
         icon="GoogleGenerativeAI",
         tool_calling=True,
-        preview=True,
+        deprecated=True,
     ),
     create_model_metadata(
         provider="Google Generative AI",
         name="gemini-2.0-flash-lite",
         icon="GoogleGenerativeAI",
         tool_calling=True,
+        deprecated=True,
     ),
     create_model_metadata(
         provider="Google Generative AI",
         name="gemini-2.0-flash-preview-image-generation",
         icon="GoogleGenerativeAI",
         tool_calling=True,
-        preview=True,
+        deprecated=True,
     ),
     # GEMINI 3.0 (preview)
     create_model_metadata(
