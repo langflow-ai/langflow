@@ -3,6 +3,7 @@ from .file import File
 from .flow import Flow
 from .folder import Folder
 from .jobs import Job
+from .memory import Memory, MemoryProcessedMessage
 from .message import MessageTable
 from .transactions import TransactionTable
 from .user import User
@@ -14,6 +15,8 @@ __all__ = [
     "Flow",
     "Folder",
     "Job",
+    "Memory",
+    "MemoryProcessedMessage",
     "MessageTable",
     "TransactionTable",
     "User",

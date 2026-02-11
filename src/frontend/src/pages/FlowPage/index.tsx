@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useBlocker, useParams } from "react-router-dom";
 import { FlowPageSlidingContainerContent } from "@/components/core/playgroundComponent/sliding-container/components/flow-page-sliding-container";
-import { SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarProvider, useSidebar } from "@/components/ui/sidebar";
+import MemoriesMainContent from "./components/MemoriesMainContent";
 import {
   SimpleSidebar,
   SimpleSidebarProvider,
@@ -28,6 +29,29 @@ import {
 } from "./components/flowSidebarComponent";
 import Page from "./components/PageComponent";
 
+function FlowMainContent({
+  setIsLoading,
+  selectedMemoryId,
+  onSelectMemory,
+}: {
+  setIsLoading: (loading: boolean) => void;
+  selectedMemoryId: string | null;
+  onSelectMemory: (id: string | null) => void;
+}) {
+  const { activeSection } = useSidebar();
+
+  if (activeSection === "memories") {
+    return (
+      <MemoriesMainContent
+        selectedMemoryId={selectedMemoryId}
+        onSelectMemory={onSelectMemory}
+      />
+    );
+  }
+
+  return <Page setIsLoading={setIsLoading} />;
+}
+
 export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const types = useTypesStore((state) => state.types);
 
@@ -40,6 +64,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const currentSavedFlow = useFlowsManagerStore((state) => state.currentFlow);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedMemoryId, setSelectedMemoryId] = useState<string | null>(null);
 
   const changesNotSaved =
     customStringify(currentFlow) !== customStringify(currentSavedFlow) &&
@@ -252,7 +277,13 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
                 segmentedSidebar={ENABLE_NEW_SIDEBAR}
               >
                 <FlowSearchProvider>
-                  {!view && <FlowSidebarComponent isLoading={isLoading} />}
+                  {!view && (
+                    <FlowSidebarComponent
+                      isLoading={isLoading}
+                      selectedMemoryId={selectedMemoryId}
+                      onSelectMemory={setSelectedMemoryId}
+                    />
+                  )}
                   <main
                     className={cn(
                       "flex flex-1 min-w-0 overflow-hidden transition-all duration-300",
@@ -262,7 +293,11 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
                     )}
                   >
                     <div className="h-full w-full">
-                      <Page setIsLoading={setIsLoading} />
+                      <FlowMainContent
+                        setIsLoading={setIsLoading}
+                        selectedMemoryId={selectedMemoryId}
+                        onSelectMemory={setSelectedMemoryId}
+                      />
                     </div>
                   </main>
                 </FlowSearchProvider>

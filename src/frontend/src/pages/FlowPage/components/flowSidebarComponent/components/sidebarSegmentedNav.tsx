@@ -47,6 +47,12 @@ export const NAV_ITEMS: NavItem[] = [
     tooltip: "Bundles",
   },
   {
+    id: "memories",
+    icon: "Brain",
+    label: "Memories",
+    tooltip: "Memories",
+  },
+  {
     id: "add_note",
     icon: "sticky-note",
     label: "Sticky Notes",
@@ -74,7 +80,7 @@ const SidebarSegmentedNav = () => {
       <SidebarMenu className="gap-2 py-1">
         {NAV_ITEMS.map((item) => (
           <div key={item.id}>
-            {item.id === "add_note" && <Separator className="w-full" />}
+            {(item.id === "memories" || item.id === "add_note") && <Separator className="w-full" />}
             <SidebarMenuItem className="px-1">
               <ShadTooltip content={item.tooltip} side="right">
                 <SidebarMenuButton
@@ -86,9 +92,16 @@ const SidebarSegmentedNav = () => {
                       return;
                     }
 
+                    const isMainContentSection = item.id === "memories";
+
                     setSearch?.("");
                     if (activeSection === item.id && open) {
-                      toggleSidebar();
+                      if (isMainContentSection) {
+                        // Toggle back to components for main content sections
+                        setActiveSection("components");
+                      } else {
+                        toggleSidebar();
+                      }
                     } else {
                       setActiveSection(item.id);
                       if (!open) {

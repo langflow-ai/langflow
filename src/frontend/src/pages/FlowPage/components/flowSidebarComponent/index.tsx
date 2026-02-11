@@ -26,6 +26,7 @@ import {
   ENABLE_KNOWLEDGE_BASES,
   ENABLE_NEW_SIDEBAR,
 } from "@/customization/feature-flags";
+import MemoriesSidebarGroup from "./components/MemoriesSidebarGroup";
 import { useAddComponent } from "@/hooks/use-add-component";
 import { useShortcutsStore } from "@/stores/shortcuts";
 import { setLocalStorage } from "@/utils/local-storage-util";
@@ -147,9 +148,11 @@ interface FlowSidebarComponentProps {
   isLoading?: boolean;
   showLegacy?: boolean;
   setShowLegacy?: (value: boolean) => void;
+  selectedMemoryId?: string | null;
+  onSelectMemory?: (id: string | null) => void;
 }
 
-export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
+export function FlowSidebarComponent({ isLoading, selectedMemoryId, onSelectMemory }: FlowSidebarComponentProps) {
   const rawData = useTypesStore((state) => state.data);
 
   // Filter out knowledge components from files_and_knowledge category when ENABLE_KNOWLEDGE_BASES is OFF
@@ -595,6 +598,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
   const showMcp =
     (ENABLE_NEW_SIDEBAR && activeSection === "mcp") ||
     (hasSearchInput && hasMcpComponents && ENABLE_NEW_SIDEBAR);
+  const showMemories = ENABLE_NEW_SIDEBAR && activeSection === "memories";
 
   const [category, component] = getFilterComponent?.split(".") ?? ["", ""];
 
@@ -632,7 +636,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
             ENABLE_NEW_SIDEBAR && "sidebar-segmented",
           )}
         >
-          <SidebarHeaderComponent
+          {!showMemories && <SidebarHeaderComponent
             showConfig={showConfig}
             setShowConfig={setShowConfig}
             showBeta={showBeta}
@@ -648,13 +652,18 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
             filterName={filterName}
             filterDescription={filterDescription}
             resetFilters={resetFilters}
-          />
+          />}
 
           <SidebarContent
             segmentedSidebar={ENABLE_NEW_SIDEBAR}
             className="flex-1 group-data-[collapsible=icon]:hidden gutter-stable"
           >
-            {isLoading ? (
+            {showMemories ? (
+              <MemoriesSidebarGroup
+                selectedMemoryId={selectedMemoryId ?? null}
+                onSelectMemory={onSelectMemory ?? (() => {})}
+              />
+            ) : isLoading ? (
               <div className="flex flex-col gap-2">
                 <div className="flex flex-col gap-1 p-3">
                   <SkeletonGroup count={13} className="my-0.5 h-7" />
@@ -752,9 +761,9 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
               </>
             )}
           </SidebarContent>
-          {ENABLE_NEW_SIDEBAR &&
+          {showMemories ? null : (ENABLE_NEW_SIDEBAR &&
           activeSection === "mcp" &&
-          !hasMcpServers ? null : (
+          !hasMcpServers) ? null : (
             <SidebarFooter className="border-t group-data-[collapsible=icon]:hidden p-1 gap-1">
               <SidebarMenuButtons
                 customComponent={customComponent}
