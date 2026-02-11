@@ -741,7 +741,7 @@
   },
   "OpenSearchVectorStoreComponentMultimodalMultiEmbedding": {
     "versions": {
-      "0.3.0": "a52b7daaae16"
+      "0.3.0": "89f34f2ad64e"
     }
   },
   "EmbeddingSimilarityComponent": {
@@ -941,7 +941,7 @@
   },
   "WatsonxEmbeddingsComponent": {
     "versions": {
-      "0.3.0": "ffded413ea90"
+      "0.3.0": "9a8d03daf8f6"
     }
   },
   "Combinatorial Reasoner": {
