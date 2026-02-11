@@ -1166,7 +1166,7 @@
   },
   "BatchRunComponent": {
     "versions": {
-      "0.3.0": "53935e54dfe7"
+      "0.3.0": "8b1ec3b03475"
     }
   },
   "Smart Transform": {
@@ -1231,7 +1231,7 @@
   },
   "EmbeddingModel": {
     "versions": {
-      "0.3.0": "3e0b64afc9a2"
+      "0.3.0": "c5ce0982da48"
     }
   },
   "LanguageModelComponent": {
