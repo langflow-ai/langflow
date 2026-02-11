@@ -44,9 +44,7 @@ withEventDeliveryModes(
     // environment (see VARIABLES_TO_GET_FROM_ENVIRONMENT in constants.py).
     // When loaded, the input is replaced by a badge and fill() would fail.
     // Only fill manually when the input is still present.
-    const tavilyApiKeyInput = page.getByTestId(
-      "popover-anchor-input-api_key",
-    );
+    const tavilyApiKeyInput = page.getByTestId("popover-anchor-input-api_key");
     if ((await tavilyApiKeyInput.count()) > 0) {
       await tavilyApiKeyInput.fill(process.env.TAVILY_API_KEY || "");
     }
