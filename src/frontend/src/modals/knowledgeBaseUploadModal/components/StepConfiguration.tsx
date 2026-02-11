@@ -181,7 +181,12 @@ export function StepConfiguration({
                   name="LayoutGrid"
                   className="h-4 w-4 text-muted-foreground"
                 />
-                <span className="text-sm font-medium">Configure Sources</span>
+                <span className="text-sm font-medium">
+                  Configure Sources
+                  <span className="text-xs text-muted-foreground ml-1">
+                    (1 GB max upload)
+                  </span>
+                </span>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -237,13 +242,9 @@ export function StepConfiguration({
                     </DropdownMenuContent>
                   </DropdownMenu>
 
-                  {validationErrors.files ? (
+                  {validationErrors.files && (
                     <span className="text-xs text-destructive">
                       {validationErrors.files}
-                    </span>
-                  ) : (
-                    <span className="text-xs text-muted-foreground">
-                      Limited to 1 GB
                     </span>
                   )}
                 </div>
