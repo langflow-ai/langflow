@@ -14,8 +14,8 @@ _dynamic_imports = {
 }
 
 __all__ = [
-    "MongoVectorStoreComponent",
     "MongoDBQueryComponent",
+    "MongoVectorStoreComponent",
 ]
 
 

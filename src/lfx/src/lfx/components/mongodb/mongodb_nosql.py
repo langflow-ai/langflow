@@ -1,6 +1,5 @@
 import json
 import re
-from typing import Union
 
 from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, Field
@@ -109,7 +108,7 @@ class MongoDBQueryComponent(Component):
     class MongoDBQuerySchema(BaseModel):
         """Schema for MongoDB query tool."""
 
-        filter: Union[str, dict] = Field(
+        filter: str | dict = Field(
             ...,
             description="MongoDB filter query as JSON string or dict. Examples: "
             '{"title": "Movie Name"} or {"year": {"$gt": 2020}} or {} for all documents.',
@@ -118,21 +117,20 @@ class MongoDBQueryComponent(Component):
     class MongoDBInsertSchema(BaseModel):
         """Schema for MongoDB insert tool."""
 
-        document: Union[str, dict] = Field(
+        document: str | dict = Field(
             ...,
-            description="Document(s) to insert as JSON. Examples: "
-            '{"title": "New Movie", "runtime": 120}',
+            description='Document(s) to insert as JSON. Examples: {"title": "New Movie", "runtime": 120}',
         )
 
     class MongoDBUpdateSchema(BaseModel):
         """Schema for MongoDB update tool."""
 
-        filter: Union[str, dict] = Field(
+        filter: str | dict = Field(
             ...,
             description="MongoDB filter to find documents to update. Examples: "
             '{"title": "Movie Name"} or {"session_id": "uuid-123456789"}',
         )
-        update: Union[str, dict] = Field(
+        update: str | dict = Field(
             ...,
             description='Data to update as JSON. Examples: {"runtime": 120} or {"$set": {"sinais_vitais.temperatura": 40}}',
         )
@@ -140,21 +138,20 @@ class MongoDBQueryComponent(Component):
     class MongoDBReplaceSchema(BaseModel):
         """Schema for MongoDB replace tool."""
 
-        filter: Union[str, dict] = Field(
+        filter: str | dict = Field(
             ...,
             description="MongoDB filter to find document to replace. Examples: "
             '{"title": "Movie Name"} or {"session_id": "uuid-123456789"}',
         )
-        replacement: Union[str, dict] = Field(
+        replacement: str | dict = Field(
             ...,
-            description="New document to replace with as JSON. Examples: "
-            '{"title": "Updated Movie", "runtime": 150}',
+            description='New document to replace with as JSON. Examples: {"title": "Updated Movie", "runtime": 150}',
         )
 
     class MongoDBDeleteSchema(BaseModel):
         """Schema for MongoDB delete tool."""
 
-        filter: Union[str, dict] = Field(
+        filter: str | dict = Field(
             ...,
             description="MongoDB filter to find documents to delete. Examples: "
             '{"title": "Movie Name"} or {"session_id": "uuid-123456789"}',
@@ -180,9 +177,7 @@ class MongoDBQueryComponent(Component):
                 fixed_json = json_string.replace("'", '"')
 
                 # Add quotes around unquoted keys
-                fixed_json = re.sub(
-                    r"(\{|,)\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*:", r'\1"\2":', fixed_json
-                )
+                fixed_json = re.sub(r"(\{|,)\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*:", r'\1"\2":', fixed_json)
 
                 return json.loads(fixed_json)
             except json.JSONDecodeError as e:
@@ -238,9 +233,7 @@ class MongoDBQueryComponent(Component):
         if self.ingest_data:
             for _input in self.ingest_data:
                 if isinstance(_input, Data):
-                    doc_dict = (
-                        _input.data if hasattr(_input, "data") else _input.__dict__
-                    )
+                    doc_dict = _input.data if hasattr(_input, "data") else _input.__dict__
                     documents.append(doc_dict)
                 elif isinstance(_input, dict):
                     documents.append(_input)
@@ -296,16 +289,12 @@ class MongoDBQueryComponent(Component):
         self.log(f"Update operation: {update_data}")
 
         if self.update_many:
-            result = collection.update_many(
-                query_filter, update_data, upsert=self.upsert
-            )
+            result = collection.update_many(query_filter, update_data, upsert=self.upsert)
             self.log(
                 f"Matched: {result.matched_count}, Modified: {result.modified_count}, Upserted: {result.upserted_id}"
             )
         else:
-            result = collection.update_one(
-                query_filter, update_data, upsert=self.upsert
-            )
+            result = collection.update_one(query_filter, update_data, upsert=self.upsert)
             self.log(
                 f"Matched: {result.matched_count}, Modified: {result.modified_count}, Upserted: {result.upserted_id}"
             )
@@ -316,9 +305,7 @@ class MongoDBQueryComponent(Component):
                     "operation": "update",
                     "matched_count": result.matched_count,
                     "modified_count": result.modified_count,
-                    "upserted_id": (
-                        str(result.upserted_id) if result.upserted_id else None
-                    ),
+                    "upserted_id": (str(result.upserted_id) if result.upserted_id else None),
                 }
             )
         ]
@@ -334,12 +321,8 @@ class MongoDBQueryComponent(Component):
 
         self.log(f"Replacing document matching: {query_filter}")
 
-        result = collection.replace_one(
-            query_filter, replacement_doc, upsert=self.upsert
-        )
-        self.log(
-            f"Matched: {result.matched_count}, Modified: {result.modified_count}, Upserted: {result.upserted_id}"
-        )
+        result = collection.replace_one(query_filter, replacement_doc, upsert=self.upsert)
+        self.log(f"Matched: {result.matched_count}, Modified: {result.modified_count}, Upserted: {result.upserted_id}")
 
         return [
             Data(
@@ -347,9 +330,7 @@ class MongoDBQueryComponent(Component):
                     "operation": "replace",
                     "matched_count": result.matched_count,
                     "modified_count": result.modified_count,
-                    "upserted_id": (
-                        str(result.upserted_id) if result.upserted_id else None
-                    ),
+                    "upserted_id": (str(result.upserted_id) if result.upserted_id else None),
                 }
             )
         ]
@@ -371,9 +352,7 @@ class MongoDBQueryComponent(Component):
             result = collection.delete_one(query_filter)
             self.log(f"Deleted {result.deleted_count} document")
 
-        return [
-            Data(data={"operation": "delete", "deleted_count": result.deleted_count})
-        ]
+        return [Data(data={"operation": "delete", "deleted_count": result.deleted_count})]
 
     def query_mongodb(self) -> list[Data]:
         """Execute the selected MongoDB operation."""
@@ -397,7 +376,7 @@ class MongoDBQueryComponent(Component):
 
         return results
 
-    def _query_with_filter(self, filter: Union[str, dict]) -> list[dict]:
+    def _query_with_filter(self, filter: str | dict) -> list[dict]:
         """Execute query operation with filter for tool mode.
 
         Args:
@@ -425,7 +404,7 @@ class MongoDBQueryComponent(Component):
         self.log(f"Tool Mode - Found {len(results)} documents")
         return results
 
-    def _insert_with_data(self, document: Union[str, dict]) -> dict:
+    def _insert_with_data(self, document: str | dict) -> dict:
         """Execute insert operation for tool mode.
 
         Args:
@@ -447,7 +426,7 @@ class MongoDBQueryComponent(Component):
         self.log(f"Tool Mode - Inserted document with _id: {result.inserted_id}")
         return {"operation": "insert", "inserted_id": str(result.inserted_id)}
 
-    def _update_with_filter(self, filter: Union[str, dict], update: Union[str, dict]) -> dict:
+    def _update_with_filter(self, filter: str | dict, update: str | dict) -> dict:
         """Execute update operation for tool mode.
 
         Args:
@@ -487,7 +466,7 @@ class MongoDBQueryComponent(Component):
             "upserted_id": str(result.upserted_id) if result.upserted_id else None,
         }
 
-    def _replace_with_filter(self, filter: Union[str, dict], replacement: Union[str, dict]) -> dict:
+    def _replace_with_filter(self, filter: str | dict, replacement: str | dict) -> dict:
         """Execute replace operation for tool mode.
 
         Args:
@@ -522,7 +501,7 @@ class MongoDBQueryComponent(Component):
             "upserted_id": str(result.upserted_id) if result.upserted_id else None,
         }
 
-    def _delete_with_filter(self, filter: Union[str, dict]) -> dict:
+    def _delete_with_filter(self, filter: str | dict) -> dict:
         """Execute delete operation for tool mode.
 
         Args:
@@ -576,8 +555,7 @@ class MongoDBQueryComponent(Component):
             tool = StructuredTool.from_function(
                 name="mongodb_insert",
                 description=(
-                    f"Insert document(s) into MongoDB collection '{self.collection_name}' "
-                    f"in database '{self.db_name}'."
+                    f"Insert document(s) into MongoDB collection '{self.collection_name}' in database '{self.db_name}'."
                 ),
                 func=self._insert_with_data,
                 args_schema=self.MongoDBInsertSchema,
