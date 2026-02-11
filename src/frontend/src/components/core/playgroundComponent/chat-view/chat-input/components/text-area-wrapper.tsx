@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import {
   CHAT_INPUT_MIN_HEIGHT,
   CHAT_INPUT_MAX_HEIGHT,
@@ -102,11 +102,7 @@ const TextAreaWrapper = ({
       for (const entry of entries) {
         if (entry.contentRect.width !== previousWidthRef.current) {
           previousWidthRef.current = entry.contentRect.width;
-          resizeTextarea(
-            textarea,
-            chatValueRef.current,
-            previousScrollHeightRef,
-          );
+          resizeTextarea(textarea, chatValueRef.current);
         }
       }
     });

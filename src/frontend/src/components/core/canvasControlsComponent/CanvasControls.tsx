@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
 import useFlowStore from "@/stores/flowStore";
+import { AllNodeType } from "@/types/flow";
 import CanvasControlsDropdown from "./CanvasControlsDropdown";
 import HelpDropdown from "./HelpDropdown";
-import { AllNodeType } from "@/types/flow";
 
 const CanvasControls = ({
   children,
@@ -66,7 +66,11 @@ const CanvasControls = ({
             size="icon"
             data-testid="canvas_controls_toggle_inspector"
             className="group rounded-none px-2 py-2 hover:bg-muted flex items-center justify-center"
-            title={inspectionPanelVisible ? "Hide Inspector Panel" : "Show Inspector Panel"}
+            title={
+              inspectionPanelVisible
+                ? "Hide Inspector Panel"
+                : "Show Inspector Panel"
+            }
             onClick={() => setInspectionPanelVisible(!inspectionPanelVisible)}
           >
             <ForwardedIconComponent

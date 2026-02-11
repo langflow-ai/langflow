@@ -2,15 +2,23 @@ import { useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { SidebarMenuButton, useSidebar } from "@/components/ui/sidebar";
+import { LF_START_ADD_NOTE_EVENT } from "@/constants/constants";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import AddMcpServerModal from "@/modals/addMcpServerModal";
+import type { APIClassType } from "@/types/api";
+
+interface SidebarMenuButtonsProps {
+  customComponent: APIClassType | null;
+  addComponent: (component: APIClassType, type: string) => void;
+  isLoading?: boolean;
+}
 
 const SidebarMenuButtons = ({
   customComponent,
   addComponent,
   isLoading = false,
-}) => {
+}: SidebarMenuButtonsProps) => {
   const { activeSection } = useSidebar();
   const [addMcpOpen, setAddMcpOpen] = useState(false);
   const navigate = useCustomNavigate();
@@ -66,7 +74,7 @@ const SidebarMenuButtons = ({
           unstyled
           disabled={isLoading}
           onClick={() => {
-            window.dispatchEvent(new Event("lf:start-add-note"));
+            window.dispatchEvent(new Event(LF_START_ADD_NOTE_EVENT));
           }}
           data-testid="sidebar-add-sticky-note-button"
           className="flex items-center w-full h-full gap-3 hover:bg-muted"

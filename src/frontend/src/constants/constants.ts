@@ -899,6 +899,14 @@ export const NOTE_NODE_MIN_HEIGHT = 140;
 export const DEFAULT_NOTE_SIZE = 324;
 export const CHAT_INPUT_MIN_HEIGHT = 24;
 export const CHAT_INPUT_MAX_HEIGHT = 200;
+export const CHAT_CONTENT_MAX_WIDTH = "744px";
+export const SESSION_SIDEBAR_WIDTH = "236px";
+export const INSPECTION_PANEL_OUTER_WIDTH = "340px";
+export const INSPECTION_PANEL_INNER_WIDTH = "320px";
+export const INSPECTION_PANEL_EMPTY_MIN_HEIGHT = "200px";
+export const FOCUS_DELAY_MS = 100;
+export const LF_START_ADD_NOTE_EVENT = "lf:start-add-note";
+export const LF_END_ADD_NOTE_EVENT = "lf:end-add-note";
 
 export const COLOR_OPTIONS = {
   amber: "hsl(var(--note-amber))",

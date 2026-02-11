@@ -13,13 +13,12 @@ import type { chatMessagePropsType } from "@/types/components";
 import { cn } from "@/utils/utils";
 import { useMessageDuration } from "../hooks/use-message-duration";
 import { useStreamingMessage } from "../hooks/use-streaming-message";
-import { useToolDurations } from "../hooks/use-tool-durations";
 import {
   getContentBlockLoadingState,
   getContentBlockState,
 } from "../utils/content-blocks";
 import { convertFiles } from "../utils/convert-files";
-import { formatSeconds, formatTime } from "../utils/format";
+import { formatSeconds } from "../utils/format";
 import EditMessageField from "./edit-message-field";
 import { EditMessageButton } from "./message-options";
 
@@ -85,6 +84,10 @@ export const BotMessage = memo(
             session_id: chat.session ?? "",
             properties: {
               ...chat.properties,
+              state: chat.properties?.state as
+                | "complete"
+                | "partial"
+                | undefined,
               positive_feedback: evaluation,
             },
           },
@@ -101,12 +104,10 @@ export const BotMessage = memo(
     };
 
     const editedFlag = chat.edit ? (
-      <div className="mt-2 text-xs text-muted-foreground text-right">(Edited)</div>
+      <div className="mt-2 text-xs text-muted-foreground text-right">
+        (Edited)
+      </div>
     ) : null;
-
-    const isEmoji = chat.properties?.icon?.match(
-      /[\u2600-\u27BF\uD83C-\uDBFF\uDC00-\uDFFF]/,
-    );
 
     const thinkingActive = Boolean(isBuilding && lastMessage);
 
@@ -125,24 +126,6 @@ export const BotMessage = memo(
         ? persistedDuration
         : liveDisplayTime;
 
-    // Use shared hook for tool duration tracking
-    const { totalToolDuration } = useToolDurations(
-      chat.content_blocks,
-      thinkingActive,
-    );
-
-    // Check if message has tools
-    const messageHasTools = Boolean(
-      chat.content_blocks?.some((block) =>
-        block.contents.some((content) => content.type === "tool_use"),
-      ),
-    );
-
-    // The total tool duration green ms ALWAYS shows the sum of backend tool durations when tools exist
-    // It will be 0 until backend provides durations, then show the sum
-    // For messages without tools, it shows the same as displayTime
-    const greenMsTime = messageHasTools ? totalToolDuration : displayTime;
-
     return (
       <>
         <div className="w-full word-break-break-word mt-2">
@@ -152,7 +135,6 @@ export const BotMessage = memo(
               editMessage ? "" : "hover:bg-muted",
             )}
           >
-            {/* Avatar + all content side by side */}
             <div className="flex w-full items-start gap-3">
               {(thinkingActive || displayTime > 0 || chatMessage !== "") && (
                 <div
@@ -188,7 +170,6 @@ export const BotMessage = memo(
                   </span>
                 </div>
 
-                {/* Show content blocks if they exist OR if we're building the last message */}
                 {((chat.content_blocks && chat.content_blocks.length > 0) ||
                   (isBuilding && lastMessage)) && (
                   <ContentBlockDisplay
@@ -253,7 +234,6 @@ export const BotMessage = memo(
               </div>
             </div>
 
-            {/* Actions */}
             {!editMessage && (
               <div className="invisible absolute -top-4 right-0 group-hover:visible">
                 <EditMessageButton

@@ -22,9 +22,10 @@ import { useShallow } from "zustand/react/shallow";
 import { DefaultEdge } from "@/CustomEdges";
 import NoteNode from "@/CustomNodes/NoteNode";
 import FlowToolbar from "@/components/core/flowToolbarComponent";
-import InspectionPanel from "@/pages/FlowPage/components/InspectionPanel";
 import {
   COLOR_OPTIONS,
+  LF_END_ADD_NOTE_EVENT,
+  LF_START_ADD_NOTE_EVENT,
   NOTE_NODE_MIN_HEIGHT,
   NOTE_NODE_MIN_WIDTH,
 } from "@/constants/constants";
@@ -34,6 +35,7 @@ import { track } from "@/customization/utils/analytics";
 import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { useAddComponent } from "@/hooks/use-add-component";
+import InspectionPanel from "@/pages/FlowPage/components/InspectionPanel";
 import { nodeColorsName } from "@/utils/styleUtils";
 import { isSupportedNodeTypes } from "@/utils/utils";
 import GenericNode from "../../../../CustomNodes/GenericNode";
@@ -675,8 +677,7 @@ export default function Page({
         };
         setNodes((nds) => nds.concat(newNode));
         setIsAddingNote(false);
-        // Signal sidebar to revert add_note active state
-        window.dispatchEvent(new Event("lf:end-add-note"));
+        window.dispatchEvent(new Event(LF_END_ADD_NOTE_EVENT));
       }
     },
     [
@@ -740,9 +741,9 @@ export default function Page({
       }
     };
 
-    window.addEventListener("lf:start-add-note", handleStartAddNote);
+    window.addEventListener(LF_START_ADD_NOTE_EVENT, handleStartAddNote);
     return () => {
-      window.removeEventListener("lf:start-add-note", handleStartAddNote);
+      window.removeEventListener(LF_START_ADD_NOTE_EVENT, handleStartAddNote);
     };
   }, [shadowBoxWidth, shadowBoxHeight]);
 
@@ -765,20 +766,12 @@ export default function Page({
   const hasSingleNodeSelected =
     lastSelection?.nodes?.length === 1 &&
     lastSelection.nodes[0].type === "genericNode";
-  const selectedNodeId = hasSingleNodeSelected ? lastSelection.nodes[0].id : null;
+  const selectedNodeId = hasSingleNodeSelected
+    ? lastSelection.nodes[0].id
+    : null;
   const selectedNode = selectedNodeId
     ? (nodes.find((n) => n.id === selectedNodeId) as AllNodeType)
     : null;
-
-  // Handler to close the inspection panel by deselecting all nodes
-  const handleCloseInspectionPanel = useCallback(() => {
-    setNodes((nds) =>
-      nds.map((node) => ({
-        ...node,
-        selected: false,
-      })),
-    );
-  }, [setNodes]);
 
   useEffect(() => {
     if (inspectionPanelVisible) {
