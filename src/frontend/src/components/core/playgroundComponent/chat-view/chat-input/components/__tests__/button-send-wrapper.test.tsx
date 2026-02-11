@@ -127,7 +127,11 @@ describe("ButtonSendWrapper", () => {
   it("calls stopBuilding when stop button is clicked", () => {
     const stopBuilding = jest.fn();
     render(
-      <ButtonSendWrapper {...defaultProps} isBuilding={true} stopBuilding={stopBuilding} />,
+      <ButtonSendWrapper
+        {...defaultProps}
+        isBuilding={true}
+        stopBuilding={stopBuilding}
+      />,
     );
     fireEvent.click(screen.getByTestId("button-stop"));
     expect(stopBuilding).toHaveBeenCalledTimes(1);
@@ -135,7 +139,9 @@ describe("ButtonSendWrapper", () => {
 
   it("does not call send when building", () => {
     const send = jest.fn();
-    render(<ButtonSendWrapper {...defaultProps} send={send} isBuilding={true} />);
+    render(
+      <ButtonSendWrapper {...defaultProps} send={send} isBuilding={true} />,
+    );
     fireEvent.click(screen.getByTestId("button-stop"));
     expect(send).not.toHaveBeenCalled();
   });
