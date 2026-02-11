@@ -36,15 +36,7 @@ test(
 
     await adjustScreenView(page);
 
-    await disableInspectPanel(page);
-
     await page.getByTestId("div-generic-node").click();
-
-    await openAdvancedOptions(page);
-
-    await page.getByTestId("showmodel_kwargs").click();
-    expect(await page.getByTestId("showmodel_kwargs").isChecked()).toBeTruthy();
-    await closeAdvancedOptions(page);
 
     await page.locator('//*[@id="keypair0"]').click();
     await page.locator('//*[@id="keypair0"]').fill("testtesttesttest");
@@ -82,28 +74,21 @@ test(
       expect(false).toBeTruthy();
     }
 
-    await openAdvancedOptions(page);
-
-    await closeAdvancedOptions(page);
-
     const plusButtonLocator = page.locator('//*[@id="plusbtn0"]');
     const elementCount = await plusButtonLocator?.count();
     if (elementCount === 1) {
       expect(true).toBeTruthy();
       await page.getByTestId("div-generic-node").click();
 
-      await openAdvancedOptions(page);
-
-      await page.locator('//*[@id="editNodekeypair0"]').click();
+      await page.locator('//*[@id="keypair0"]').click();
       await page
-        .locator('//*[@id="editNodekeypair0"]')
+        .locator('//*[@id="keypair0"]')
         .fill("testtesttesttest");
 
-      const keyPairVerification = page.locator('//*[@id="editNodekeypair0"]');
+      const keyPairVerification = page.locator('//*[@id="keypair0"]');
       const elementKeyCount = await keyPairVerification?.count();
 
       if (elementKeyCount === 1) {
-        await closeAdvancedOptions(page);
 
         await page.getByTestId("div-generic-node").click();
 
@@ -125,7 +110,5 @@ test(
     } else {
       expect(false).toBeTruthy();
     }
-
-    await enableInspectPanel(page);
   },
 );

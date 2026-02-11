@@ -65,7 +65,7 @@ test(
 
     await openAdvancedOptions(page);
 
-    await page.getByTestId("edit_dict_nesteddict_edit_metadata").last().click();
+    await page.getByTestId("edit_dict_nesteddict_metadata").last().click();
     await page.getByTitle("Switch to tree mode (current mode: text)").click();
     await page.waitForSelector(".jse-bracket", {
       timeout: 3000,

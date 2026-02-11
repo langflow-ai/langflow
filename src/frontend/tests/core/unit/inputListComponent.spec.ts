@@ -61,7 +61,6 @@ test(
     await disableInspectPanel(page);
 
     await page.getByTestId("div-generic-node").click();
-    await openAdvancedOptions(page);
 
     const value0 = await page.getByTestId("inputlist_str_urls_0").inputValue();
     const value1 = await page.getByTestId("inputlist_str_urls_1").inputValue();
@@ -76,19 +75,17 @@ test(
       expect(false).toBeTruthy();
     }
 
-    await page.getByTestId("input-list-delete-btn-edit_urls-0").click();
+    await page.getByTestId("input-list-delete-btn_urls-0").click();
 
     expect(
-      await page.getByTestId("input-list-delete-btn-edit_urls-2").count(),
+      await page.getByTestId("input-list-delete-btn_urls-2").count(),
     ).toBe(0);
 
-    await page.getByTestId("input-list-delete-btn-edit_urls-1").click();
+    await page.getByTestId("input-list-delete-btn_urls-1").click();
 
     expect(
-      await page.getByTestId("input-list-delete-btn-edit_urls-1").count(),
+      await page.getByTestId("input-list-delete-btn_urls-1").count(),
     ).toBe(0);
-
-    await closeAdvancedOptions(page);
 
     await page.getByTestId("input-list-plus-btn_urls-0").click();
     await page.getByTestId("input-list-plus-btn_urls-0").click();
@@ -122,17 +119,13 @@ test(
       "",
     );
 
-    await openAdvancedOptions(page);
-
     expect(
-      await page.getByTestId("inputlist_str_edit_urls_0").inputValue(),
+      await page.getByTestId("inputlist_str_urls_0").inputValue(),
     ).toBe("test1 test1 test1 test1");
 
     expect(
-      await page.getByTestId("inputlist_str_edit_urls_1").inputValue(),
+      await page.getByTestId("inputlist_str_urls_1").inputValue(),
     ).toBe("");
-
-    await closeAdvancedOptions(page);
 
     await enableInspectPanel(page);
   },

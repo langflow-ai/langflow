@@ -113,10 +113,7 @@ test(
     ).not.toBeVisible();
     await expect(page.getByTestId("logicCondition")).not.toBeVisible();
 
-    await openAdvancedOptions(page);
-
     await page.getByTestId("showheaders").click();
-    await closeAdvancedOptions(page);
     await page.getByTestId("handle-apirequest-shownode-headers-left").click();
 
     await expect(page.getByTestId("disclosure-data sources")).toBeVisible();

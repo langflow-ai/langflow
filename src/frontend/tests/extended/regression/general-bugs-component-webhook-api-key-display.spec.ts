@@ -69,7 +69,7 @@ test(
     await openAdvancedOptions(page);
 
     await page
-      .getByTestId("button_open_text_area_modal_str_edit_curl_advanced")
+      .getByTestId("button_open_text_area_modal_str_curl_advanced")
       .click();
 
     const curl = await page.getByTestId("text-area-modal").inputValue();
@@ -132,7 +132,7 @@ test(
     await openAdvancedOptions(page);
 
     await page
-      .getByTestId("button_open_text_area_modal_str_edit_curl_advanced")
+      .getByTestId("button_open_text_area_modal_str_curl_advanced")
       .click();
 
     const curl = await page.getByTestId("text-area-modal").inputValue();

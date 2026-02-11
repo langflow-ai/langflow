@@ -50,12 +50,10 @@ test(
     await page.getByTestId("btn_copy_str_endpoint").click();
     await page.waitForSelector("text=Endpoint URL copied", { timeout: 30000 });
 
-    await disableInspectPanel(page);
     await page.getByTestId("title-Webhook").click();
-    await openAdvancedOptions(page);
 
     await page
-      .getByTestId("button_open_text_area_modal_str_edit_curl_advanced")
+      .getByTestId("button_open_text_area_modal_str_curl")
       .click();
 
     const curl = await page.getByTestId("text-area-modal").inputValue();
@@ -67,8 +65,6 @@ test(
     expect(curl).toContain(flowId);
 
     await page.getByText("Close", { exact: true }).last().click();
-    await closeAdvancedOptions(page);
-    await enableInspectPanel(page);
   },
 );
 
@@ -89,10 +85,6 @@ test(
         },
       });
     });
-
-    const _randomApiKeyDescription =
-      Math.random().toString(36).substring(2, 15) +
-      Math.random().toString(36).substring(2, 15);
 
     await awaitBootstrapTest(page);
 

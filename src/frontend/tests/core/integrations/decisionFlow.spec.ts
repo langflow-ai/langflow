@@ -317,7 +317,6 @@ test(
       .getByTestId(/^popover-anchor-input-input_message.*/)
       .nth(0)
       .fill("You're Happy! 🤪");
-    await openAdvancedOptions(page);
     await page.getByTestId("showignored_message").last().click();
     await closeAdvancedOptions(page);
     await page.getByTestId("title-Pass").nth(0).click();
@@ -325,7 +324,6 @@ test(
       .getByTestId(/^popover-anchor-input-input_message.*/)
       .nth(0)
       .fill("You're Sad! 🥲");
-    await openAdvancedOptions(page);
     await page.getByTestId("showignored_message").last().click();
     await closeAdvancedOptions(page);
 

@@ -203,7 +203,7 @@ export function ChatHeader({
         <ChatHeaderActions
           isFullscreen={isFullscreen}
           onClose={onClose}
-          renderPrefix={!isFullscreen ? () => moreMenu : undefined}
+          renderPrefix={() => moreMenu}
         />
       </div>
       {currentSessionId && (

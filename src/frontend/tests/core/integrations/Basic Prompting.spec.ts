@@ -23,6 +23,8 @@ withEventDeliveryModes(
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
+
+
     await initialGPTsetup(page);
 
     await page.getByTestId("button_run_chat output").click();
@@ -35,8 +37,7 @@ withEventDeliveryModes(
       .isVisible();
 
     //create a new session - default session can not be deleted
-    await page.getByTestId("session-selector-trigger").click();
-    await page.getByText("New Session").click();
+    await page.getByTestId("new-chat").click();
     await page.keyboard.press("Escape");
     await page.getByTitle("New Session 0").isVisible();
 

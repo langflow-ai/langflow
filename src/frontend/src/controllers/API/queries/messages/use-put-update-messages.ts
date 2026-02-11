@@ -71,7 +71,16 @@ export const useUpdateMessage: useMutationFunctionType<
             { id: flowId, session_id: sessionId },
           ];
           queryClient.setQueryData(sessionCacheKey, (old: Message[] = []) => {
-            const existingIndex = old.findIndex((m) => m.id === message.id);
+            let existingIndex = old.findIndex((m) => m.id === message.id);
+            // Handle placeholder messages whose id is still null
+            // (chatHistory maps null → "" so message.id arrives as "")
+            if (existingIndex === -1 && !message.id) {
+              existingIndex = old.findIndex(
+                (m) =>
+                  m.id === null &&
+                  m.sender === message.sender,
+              );
+            }
             if (existingIndex !== -1) {
               return old.map((m, idx) => {
                 if (idx !== existingIndex) return m;
