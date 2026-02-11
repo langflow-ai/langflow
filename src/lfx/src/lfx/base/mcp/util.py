@@ -5,7 +5,9 @@ import json
 import os
 import platform
 import re
+import shlex
 import shutil
+import subprocess
 import unicodedata
 from collections.abc import Awaitable, Callable
 from typing import Any
@@ -1056,7 +1058,7 @@ class MCPStdioClient:
         """Connect to MCP server using stdio transport (SDK style)."""
         from mcp import StdioServerParameters
 
-        command = command_str.split(" ")
+        command = shlex.split(command_str)
         env_data: dict[str, str] = {"DEBUG": "true", "PATH": os.environ["PATH"], **(env or {})}
 
         if platform.system() == "Windows":
@@ -1064,7 +1066,7 @@ class MCPStdioClient:
                 command="cmd",
                 args=[
                     "/c",
-                    f"{command[0]} {' '.join(command[1:])} || echo Command failed with exit code %errorlevel% 1>&2",
+                    f"{subprocess.list2cmdline(command)} || echo Command failed with exit code %errorlevel% 1>&2",
                 ],
                 env=env_data,
             )
@@ -1607,7 +1609,7 @@ async def update_tools(
                 args = args[:-1] + extra_args + [args[-1]]
             else:
                 args.extend(extra_args)
-        full_command = " ".join([command, *args])
+        full_command = shlex.join([command, *args])
         tools = await mcp_stdio_client.connect_to_server(full_command, env)
         client = mcp_stdio_client
     elif mode in ["Streamable_HTTP", "SSE"]:

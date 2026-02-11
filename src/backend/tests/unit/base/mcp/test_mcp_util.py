@@ -410,7 +410,7 @@ class TestUpdateToolsStdioHeaders:
         full_command = mock_stdio.connect_to_server.call_args[0][0]
 
         # The injected --headers should appear before the existing --headers
-        assert "--headers authorization Bearer token123 --headers x-api-key sk-existing" in full_command
+        assert "--headers authorization 'Bearer token123' --headers x-api-key sk-existing" in full_command
         # URL should still be at the end
         assert full_command.endswith("http://localhost:7860/api/v1/mcp/project/test/streamable")
 
@@ -503,7 +503,7 @@ class TestUpdateToolsStdioHeaders:
         await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
 
         full_command = mock_stdio.connect_to_server.call_args[0][0]
-        assert full_command == "some-tool --verbose --debug --headers authorization Bearer tok"
+        assert full_command == "some-tool --verbose --debug --headers authorization 'Bearer tok'"
 
     @pytest.mark.asyncio
     async def test_stdio_does_not_mutate_original_config(self):
