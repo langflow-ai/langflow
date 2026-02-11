@@ -58,7 +58,14 @@ def get_model_class(class_name: str) -> type:
         raise ValueError(msg)
 
     module_path, attr_name = import_info
-    module = importlib.import_module(module_path)
+    try:
+        module = importlib.import_module(module_path)
+    except ImportError as exc:
+        msg = (
+            f"Could not import '{module_path}' for model class '{class_name}'. "
+            f"Install the missing package (e.g. uv pip install {module_path.replace('.', '-')})."
+        )
+        raise ImportError(msg) from exc
     cls = getattr(module, attr_name)
     _model_class_cache[class_name] = cls
     return cls
@@ -78,7 +85,14 @@ def get_embedding_class(class_name: str) -> type:
         raise ValueError(msg)
 
     module_path, attr_name = import_info
-    module = importlib.import_module(module_path)
+    try:
+        module = importlib.import_module(module_path)
+    except ImportError as exc:
+        msg = (
+            f"Could not import '{module_path}' for embedding class '{class_name}'. "
+            f"Install the missing package (e.g. uv pip install {module_path.replace('.', '-')})."
+        )
+        raise ImportError(msg) from exc
     cls = getattr(module, attr_name)
     _embedding_class_cache[class_name] = cls
     return cls
