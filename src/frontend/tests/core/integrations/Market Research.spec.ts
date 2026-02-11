@@ -40,9 +40,14 @@ withEventDeliveryModes(
 
     await disableInspectPanel(page);
 
-    await page
-      .getByTestId("popover-anchor-input-api_key")
-      .fill(process.env.TAVILY_API_KEY || "");
+    // TAVILY_API_KEY is auto-loaded as a global variable from the
+    // environment (see VARIABLES_TO_GET_FROM_ENVIRONMENT in constants.py).
+    // When loaded, the input is replaced by a badge and fill() would fail.
+    // Only fill manually when the input is still present.
+    const tavilyApiKeyInput = page.getByTestId("popover-anchor-input-api_key");
+    if ((await tavilyApiKeyInput.count()) > 0) {
+      await tavilyApiKeyInput.fill(process.env.TAVILY_API_KEY || "");
+    }
 
     await unselectNodes(page);
 
