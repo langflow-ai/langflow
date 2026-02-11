@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from langflow.api.utils import CurrentActiveUser
 from langflow.services.deps import get_settings_service
 
-router = APIRouter(tags=["Knowledge Bases"], prefix="/knowledge_bases")
+router = APIRouter(tags=["Knowledge Bases"], prefix="/knowledge_bases", include_in_schema=False)
 
 
 def _to_int(value) -> int:
