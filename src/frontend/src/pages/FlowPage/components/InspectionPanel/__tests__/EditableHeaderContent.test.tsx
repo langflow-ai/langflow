@@ -292,7 +292,7 @@ describe("EditableHeaderContent", () => {
           node: {
             display_name: "Test Node",
             description: "Test description",
-      documentation: "",
+            documentation: "",
           },
         },
       };
@@ -333,7 +333,7 @@ describe("EditableHeaderContent", () => {
           node: {
             display_name: "Test Node",
             description: "Test description",
-      documentation: "",
+            documentation: "",
           },
         },
       };
@@ -479,7 +479,7 @@ describe("EditableHeaderContent", () => {
           node: {
             display_name: "Test Node",
             description: "Test description",
-      documentation: "",
+            documentation: "",
           },
         },
       };

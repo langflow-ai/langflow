@@ -35,9 +35,7 @@ export const MemoizedCanvasControls = memo(
       useShallow((state) => state.currentFlow?.locked),
     );
 
-    return (
-      <CanvasControls selectedNode={selectedNode} />
-    );
+    return <CanvasControls selectedNode={selectedNode} />;
   },
 );
 

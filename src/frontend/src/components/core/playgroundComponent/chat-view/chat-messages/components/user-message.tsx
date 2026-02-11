@@ -89,7 +89,9 @@ export const UserMessage = memo(
     };
 
     const editedFlag = chat.edit ? (
-      <div className="mt-2 text-xs text-muted-foreground text-right">(Edited)</div>
+      <div className="mt-2 text-xs text-muted-foreground text-right">
+        (Edited)
+      </div>
     ) : null;
 
     const isEmoji = chat.properties?.icon?.match(

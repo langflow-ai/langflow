@@ -197,7 +197,9 @@ describe("CanvasControlsDropdown", () => {
 
   describe("Event listener management", () => {
     it("removes keydown event listener on unmount", () => {
-      const { unmount } = render(<CanvasControlsDropdown selectedNode={null} />);
+      const { unmount } = render(
+        <CanvasControlsDropdown selectedNode={null} />,
+      );
 
       unmount();
 
