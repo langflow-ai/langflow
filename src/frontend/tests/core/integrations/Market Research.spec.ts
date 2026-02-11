@@ -42,9 +42,9 @@ withEventDeliveryModes(
 
     await page.getByText("Tavily AI Search", { exact: true }).last().click();
 
-    const tavilyInput = page.getByTestId("popover-anchor-input-api_key");
-    if ((await tavilyInput.count()) > 0) {
-      await tavilyInput.fill(process.env.TAVILY_API_KEY ?? "");
+    const tavilyApiKeyInput = page.getByTestId("popover-anchor-input-api_key");
+    if ((await tavilyApiKeyInput.count()) > 0) {
+      await tavilyApiKeyInput.fill(process.env.TAVILY_API_KEY ?? "");
     }
 
     await unselectNodes(page);
