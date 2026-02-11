@@ -262,7 +262,6 @@ async def test_get_config_returns_500_on_settings_error(client: AsyncClient, mon
 
     async def mock_get_optional_user():
         """Mock get_optional_user to return None without triggering real auth logic."""
-        return None
 
     # Get the app from the client's transport to use dependency_overrides
     app = client._transport.app  # type: ignore[union-attr]
