@@ -69,10 +69,9 @@ export const useUpdateMessage: useMutationFunctionType<
             queryClient.setQueryData(sessionCacheKey, (old: Message[] = []) => {
               const existingIndex = old.findIndex((m) => m.id === message.id);
               if (existingIndex !== -1) {
-                // Update existing message with new text and mark as edited
                 return old.map((m, idx) =>
                   idx === existingIndex
-                    ? { ...m, text: message.text, edit: true }
+                    ? { ...m, text: message.text, edit: true, properties: message.properties ?? m.properties }
                     : m,
                 );
               }

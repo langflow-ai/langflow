@@ -137,6 +137,11 @@ export const customDefaultShortcuts = [
     name: "Toggle Sidebar",
     shortcut: "mod+b",
   },
+  {
+    display_name: "Toggle Inspector",
+    name: "Toggle Inspector",
+    shortcut: "i",
+  },
 ];
 export const customCodeTabsClass = {
   step: "w-full overflow-scroll !rounded-b-md border border-border text-left !custom-scroll",

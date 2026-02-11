@@ -89,7 +89,7 @@ export const UserMessage = memo(
     };
 
     const editedFlag = chat.edit ? (
-      <div className="text-sm text-muted-foreground">(Edited)</div>
+      <div className="mt-2 text-xs text-muted-foreground text-right">(Edited)</div>
     ) : null;
 
     const isEmoji = chat.properties?.icon?.match(
@@ -98,10 +98,10 @@ export const UserMessage = memo(
 
     return (
       <>
-        <div className="w-full py-4 word-break-break-word">
+        <div className="w-full word-break-break-word mt-2">
           <div
             className={cn(
-              "group relative flex w-full gap-4 rounded-md p-2 bg-muted @[45rem]/chat-panel:bg-transparent @[45rem]/chat-panel:p-2",
+              "group relative flex w-full gap-4 rounded-md px-2 py-3 bg-muted @[45rem]/chat-panel:bg-transparent @[45rem]/chat-panel:px-2 @[45rem]/chat-panel:py-3",
               editMessage ? "" : "hover:bg-muted",
             )}
           >

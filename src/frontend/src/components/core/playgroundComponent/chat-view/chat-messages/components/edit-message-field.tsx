@@ -17,7 +17,7 @@ export default function EditMessageField({
   const [_isButtonClicked, setIsButtonClicked] = useState(false);
   const adjustTextareaHeight = () => {
     if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = "0px";
       textareaRef.current.style.height = `${textareaRef.current.scrollHeight + 3}px`;
     }
   };

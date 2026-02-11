@@ -144,7 +144,7 @@ export function ContentBlockDisplay({
                       value={toolKey}
                       className="border border-border rounded-lg overflow-hidden bg-background"
                     >
-                      <AccordionTrigger className="hover:bg-muted hover:no-underline px-1 py-1.5">
+                      <AccordionTrigger className="hover:bg-muted hover:no-underline px-3 py-2.5">
                         <div className="flex items-center justify-between w-full pr-2">
                           <div className="flex items-center gap-1 text-sm font-normal min-w-0 flex-1 overflow-hidden">
                             <div className="text-muted-foreground whitespace-nowrap flex-shrink-0">

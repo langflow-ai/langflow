@@ -77,7 +77,6 @@ import {
 import {
   MemoizedBackground,
   MemoizedCanvasControls,
-  MemoizedLogCanvasControls,
   MemoizedSidebarTrigger,
 } from "./MemoizedComponents";
 import getRandomName from "./utils/get-random-name";
@@ -357,6 +356,9 @@ export default function Page({
   const cutAction = useShortcutsStore((state) => state.cut);
   const pasteAction = useShortcutsStore((state) => state.paste);
   const downloadAction = useShortcutsStore((state) => state.download);
+  const toggleInspectorAction = useShortcutsStore(
+    (state) => state.toggleInspector,
+  );
   //@ts-ignore
   useHotkeys(undoAction, handleUndo);
   //@ts-ignore
@@ -381,6 +383,13 @@ export default function Page({
   useHotkeys("delete", handleDelete);
   //@ts-ignore
   useHotkeys("escape", handleEscape);
+  //@ts-ignore
+  useHotkeys(toggleInspectorAction, (e: KeyboardEvent) => {
+    if (!isWrappedWithClass(e, "noflow")) {
+      e.preventDefault();
+      setInspectionPanelVisible(!inspectionPanelVisible);
+    }
+  });
 
   const onConnectMod = useCallback(
     (params: Connection) => {
@@ -748,15 +757,15 @@ export default function Page({
   const inspectionPanelVisible = useFlowStore(
     (state) => state.inspectionPanelVisible,
   );
+  const setInspectionPanelVisible = useFlowStore(
+    (state) => state.setInspectionPanelVisible,
+  );
 
-  // Determine if InspectionPanel should be visible
-  const showInspectionPanel =
-    inspectionPanelVisible &&
+  // Get the selected node for the inspection panel (single genericNode selection)
+  const hasSingleNodeSelected =
     lastSelection?.nodes?.length === 1 &&
     lastSelection.nodes[0].type === "genericNode";
-
-  // Get the fresh node data from the store instead of using stale reference
-  const selectedNodeId = showInspectionPanel ? lastSelection.nodes[0].id : null;
+  const selectedNodeId = hasSingleNodeSelected ? lastSelection.nodes[0].id : null;
   const selectedNode = selectedNodeId
     ? (nodes.find((n) => n.id === selectedNodeId) as AllNodeType)
     : null;
@@ -784,7 +793,6 @@ export default function Page({
           <div id="react-flow-id" className="h-full w-full bg-canvas relative">
             {!view && (
               <>
-                <MemoizedLogCanvasControls />
                 <MemoizedCanvasControls
                   selectedNode={selectedNode}
                   setIsAddingNote={setIsAddingNote}
@@ -792,9 +800,10 @@ export default function Page({
                   shadowBoxHeight={shadowBoxHeight}
                 />
                 <FlowToolbar />
-                {inspectionPanelVisible && (
-                  <InspectionPanel selectedNode={selectedNode} />
-                )}
+                <InspectionPanel
+                  selectedNode={selectedNode}
+                  isVisible={inspectionPanelVisible}
+                />
               </>
             )}
             <MemoizedSidebarTrigger />

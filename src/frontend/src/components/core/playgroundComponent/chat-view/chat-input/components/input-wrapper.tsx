@@ -74,12 +74,12 @@ const InputWrapper = ({
       {/* Input container */}
       <div
         data-testid="input-wrapper"
-        className="flex w-full flex-col gap-2 rounded-md border border-input bg-background p-3 hover:border-muted-foreground focus-within:border-primary"
+        className="flex w-full flex-col rounded-md border border-input bg-background p-3 cursor-text hover:border-muted-foreground focus-within:border-primary"
         onClick={onClick}
         onMouseDown={onMouseDown}
       >
         {/* Text input area */}
-        <div className="w-full pb-3">
+        <div className="w-full">
           <TextAreaWrapper
             CHAT_INPUT_PLACEHOLDER={"Send a message"}
             isBuilding={isBuilding}

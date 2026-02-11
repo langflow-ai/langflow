@@ -26,7 +26,7 @@ export function FlowPageSlidingContainerContent({
   setIsFullscreen,
 }: FlowPageSlidingContainerContentProps) {
   const currentFlowId = useGetFlowId();
-  const { setOpen, setWidth } = useSimpleSidebar();
+  const { setOpen } = useSimpleSidebar();
   const inputs = useFlowStore((state) => state.inputs);
   const nodes = useFlowStore((state) => state.nodes);
   const isBuilding = useFlowStore((state) => state.isBuilding);
@@ -106,18 +106,8 @@ export function FlowPageSlidingContainerContent({
     setSidebarOpen(isFullscreen);
   }, [isFullscreen]);
 
-  const handleExitFullscreen = () => {
-    setIsFullscreen(false);
-    setOpen(true);
-    setWidth(218);
-  };
-
   const handleClose = () => {
     setOpen(false);
-  };
-
-  const handleEnterFullscreen = () => {
-    setIsFullscreen(true);
   };
 
   const handleSessionSelect = (sessionId: string) => {
@@ -128,6 +118,13 @@ export function FlowPageSlidingContainerContent({
     // Pass all sessions (including currentSessionId) to ensure unique IDs
     const newId = addNewSession(orderedSessions);
     setCurrentSessionId(newId);
+    // Focus the chat input after session switch renders
+    setTimeout(() => {
+      const textarea = document.querySelector<HTMLTextAreaElement>(
+        '[data-testid="input-wrapper"] textarea',
+      );
+      textarea?.focus();
+    }, 100);
   };
 
   const handleDeleteSession = (sessionId: string) => {
@@ -153,8 +150,8 @@ export function FlowPageSlidingContainerContent({
       onDrop={onDrop}
     >
       <div className="flex-1 flex overflow-hidden">
-        <AnimatedConditional isOpen={sidebarOpen} width="218px">
-          <div className="h-full overflow-y-auto border-r border-border w-218">
+        <AnimatedConditional isOpen={sidebarOpen} width="236px">
+          <div className="h-full overflow-y-auto border-r border-border w-[236px] bg-black/10 dark:bg-black/20">
             <div className="p-4">
               <ChatSidebar
                 sessions={orderedSessions}
@@ -175,9 +172,6 @@ export function FlowPageSlidingContainerContent({
             onSessionSelect={handleSessionSelect}
             currentSessionId={currentSessionId}
             currentFlowId={currentFlowId}
-            onToggleFullscreen={
-              isFullscreen ? handleExitFullscreen : handleEnterFullscreen
-            }
             isFullscreen={isFullscreen}
             onDeleteSession={handleDeleteSession}
             onClose={handleClose}
