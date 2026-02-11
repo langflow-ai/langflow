@@ -3,6 +3,7 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { regexHighlight } from "@/constants/constants";
 import PromptModal from "@/modals/promptModal";
 import { cn } from "@/utils/utils";
+import MustachePromptModal from "@/modals/mustachePromptModal";
 import { Button } from "@/components/ui/button";
 import {
   Disclosure,
@@ -50,6 +51,7 @@ export default function AccordionPromptComponent({
   id = "",
   readonly = false,
   showParameter = false,
+  isDoubleBrackets = false,
 }: InputProps<string, PromptAreaComponentType>): JSX.Element {
   const [isOpen, setIsOpen] = useState(true);
   const [internalValue, setInternalValue] = useState(value);
@@ -64,6 +66,14 @@ export default function AccordionPromptComponent({
 
   // Apply highlighting to the content
   const getHighlightedHTML = (text: string) => {
+    if (isDoubleBrackets) {
+      return text
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}/g, (match) => {
+          return `<span class="chat-message-highlight">${match}</span>`;
+        });
+    }
     return text
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
@@ -281,17 +291,23 @@ export default function AccordionPromptComponent({
       nodeClass
     ) {
       validateTimeoutRef.current = setTimeout(() => {
-        lastValidatedValueRef.current = internalValue;
+        const valueToValidate = internalValue;
         postValidatePrompt(
           {
             name: field_name || "",
-            template: internalValue,
+            template: valueToValidate,
             frontend_node: nodeClass,
+            mustache: isDoubleBrackets,
           },
           {
             onSuccess: (apiReturn) => {
-              if (apiReturn?.frontend_node) {
-                apiReturn.frontend_node.template.template.value = internalValue;
+              if (
+                apiReturn?.frontend_node &&
+                valueToValidate === lastValidatedValueRef.current
+              ) {
+                lastValidatedValueRef.current = valueToValidate; // Redundant but safe
+                apiReturn.frontend_node.template.template.value =
+                  valueToValidate;
                 if (handleNodeClass) {
                   handleNodeClass(apiReturn.frontend_node);
                 }
@@ -302,6 +318,7 @@ export default function AccordionPromptComponent({
             },
           },
         );
+        lastValidatedValueRef.current = valueToValidate;
       }, 1000); // 1 second debounce
     }
 
@@ -311,7 +328,7 @@ export default function AccordionPromptComponent({
         clearTimeout(validateTimeoutRef.current);
       }
     };
-  }, [internalValue]);
+  }, [internalValue, isDoubleBrackets, field_name]);
 
   const handleInput = (e: React.FormEvent<HTMLDivElement>) => {
     if (!contentEditableRef.current) return;
@@ -396,7 +413,9 @@ export default function AccordionPromptComponent({
     isTypingRef.current = true;
 
     const variableName = generateUniqueVariableName(internalValue);
-    const variableText = `{${variableName}}`;
+    const variableText = isDoubleBrackets
+      ? `{{${variableName}}}`
+      : `{${variableName}}`;
 
     // Get current cursor position or end of text
     let insertPosition = internalValue.length;
@@ -418,6 +437,17 @@ export default function AccordionPromptComponent({
     contentEditableRef.current.innerHTML = getHighlightedHTML(newValue);
   };
 
+  const handlePromptModalSetValue = (newValue: string) => {
+    lastValidatedValueRef.current = newValue;
+    setInternalValue(newValue);
+    handleOnNewValue({ value: newValue });
+    if (contentEditableRef.current) {
+      contentEditableRef.current.innerHTML = getHighlightedHTML(newValue);
+    }
+  };
+
+  const ModalComponent = isDoubleBrackets ? MustachePromptModal : PromptModal;
+
   if (!showParameter) return <></>;
 
   return (
@@ -433,7 +463,9 @@ export default function AccordionPromptComponent({
             className="h-6 w-6 p-0 text-muted-foreground"
             title="Add variable"
           >
-            <span className="text-xs">{"{+}"}</span>
+            <span className="text-xs">
+              {isDoubleBrackets ? "{{+}}" : "{+}"}
+            </span>
           </Button>
           <DisclosureTrigger className="group/collapsible">
             <div
@@ -481,12 +513,12 @@ export default function AccordionPromptComponent({
                   isScrollable ? "right-3" : "right-1",
                 )}
               >
-                <PromptModal
+                <ModalComponent
                   id={id}
                   field_name={field_name}
                   readonly={readonly}
                   value={value}
-                  setValue={(newValue) => handleOnNewValue({ value: newValue })}
+                  setValue={handlePromptModalSetValue}
                   nodeClass={nodeClass}
                   setNodeClass={handleNodeClass}
                 >
@@ -496,14 +528,18 @@ export default function AccordionPromptComponent({
                     size="sm"
                     className="h-6 w-6 p-0 text-muted-foreground"
                     title="Fullscreen"
-                    data-testid="button_open_prompt_modal"
+                    data-testid={
+                      isDoubleBrackets
+                        ? "button_open_mustache_prompt_modal"
+                        : "button_open_prompt_modal"
+                    }
                   >
                     <ForwardedIconComponent
                       name="Maximize"
                       className="h-3.5 w-3.5"
                     />
                   </Button>
-                </PromptModal>
+                </ModalComponent>
               </div>
             )}
           </div>
