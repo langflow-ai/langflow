@@ -1586,9 +1586,27 @@ async def update_tools(
     # Determine connection type and parameters
     client: MCPStdioClient | MCPStreamableHttpClient | None = None
     if mode == "Stdio":
-        # Stdio connection
-        args = server_config.get("args", [])
+        args = list(server_config.get("args", []))
         env = server_config.get("env", {})
+        # For stdio mode, inject component headers as --headers CLI args.
+        # This enables passing headers through proxy tools like mcp-proxy
+        # that forward them to the upstream HTTP server.
+        if headers:
+            extra_args = []
+            for key, value in headers.items():
+                extra_args.extend(["--headers", key, str(value)])
+            if "--headers" in args:
+                # Insert before the existing --headers flag so all header
+                # flags are grouped together
+                idx = args.index("--headers")
+                for i, arg in enumerate(extra_args):
+                    args.insert(idx + i, arg)
+            elif args and not args[-1].startswith("-"):
+                # No existing --headers flag; insert before the last positional arg
+                # (typically the URL in mcp-proxy commands)
+                args = args[:-1] + extra_args + [args[-1]]
+            else:
+                args.extend(extra_args)
         full_command = " ".join([command, *args])
         tools = await mcp_stdio_client.connect_to_server(full_command, env)
         client = mcp_stdio_client
