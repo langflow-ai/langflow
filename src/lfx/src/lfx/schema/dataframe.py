@@ -146,6 +146,43 @@ class DataFrame(pandas_DataFrame):
 
     __hash__ = None  # DataFrames are mutable and shouldn't be hashable
 
+    _CONTENT_COLUMNS = frozenset(
+        {
+            "text",
+            "content",
+            "output",
+            "summary",
+            "result",
+            "answer",
+            "response",
+        }
+    )
+    _SYSTEM_COLUMNS = frozenset(
+        {
+            "timestamp",
+            "sender",
+            "sender_name",
+            "session_id",
+            "context_id",
+            "flow_id",
+            "files",
+            "error",
+            "edit",
+        }
+    )
+
+    def smart_column_order(self) -> "DataFrame":
+        """Reorder columns: content-like columns first, system metadata last."""
+        if self.empty:
+            return self
+
+        content_cols = [c for c in self.columns if c.lower() in self._CONTENT_COLUMNS]
+        system_cols = [c for c in self.columns if c.lower() in self._SYSTEM_COLUMNS or c.startswith("_")]
+        regular_cols = [c for c in self.columns if c not in content_cols and c not in system_cols]
+
+        new_order = content_cols + regular_cols + system_cols
+        return self[new_order]
+
     def to_lc_documents(self) -> list[Document]:
         """Converts the DataFrame to a list of Documents.
 
