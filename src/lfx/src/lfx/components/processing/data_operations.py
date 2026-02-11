@@ -41,6 +41,8 @@ class DataOperationsComponent(Component):
     description = "Perform various operations on a Data object."
     icon = "file-json"
     name = "DataOperations"
+    legacy = True
+    replacement = ["processing.Operations"]
     default_keys = ["operations", "data"]
     metadata = {
         "keywords": [

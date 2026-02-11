@@ -15,6 +15,7 @@ from lfx.io import MessageTextInput, Output
 
 
 class MCPStdio(Component):
+    tool_mode = True
     client = MCPStdioClient()
     tools = types.ListToolsResult
     tool_names = [str]
