@@ -72,22 +72,21 @@ test(
     await page.waitForTimeout(500);
     await adjustScreenView(page, { numberOfZoomOut: 1 });
 
-    await expect(
-      page.getByTestId("default_slider_display_value"),
-    ).toHaveText("19.00");
+    await expect(page.getByTestId("default_slider_display_value")).toHaveText(
+      "19.00",
+    );
 
     await moveSlider(page, "left", true);
     // Wait for any potential updates
     await page.waitForTimeout(500);
 
-    await expect(
-      page.getByTestId("default_slider_display_value"),
-    ).toHaveText("14.00");
-
     await expect(page.getByTestId("default_slider_display_value")).toHaveText(
       "14.00",
     );
 
+    await expect(page.getByTestId("default_slider_display_value")).toHaveText(
+      "14.00",
+    );
   },
 );
 

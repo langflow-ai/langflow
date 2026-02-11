@@ -69,6 +69,5 @@ test(
         ).toFixed(2)} KB`,
       ),
     ).toBeVisible();
-
   },
 );

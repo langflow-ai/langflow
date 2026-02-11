@@ -52,9 +52,7 @@ test(
 
     await page.getByTestId("title-Webhook").click();
 
-    await page
-      .getByTestId("button_open_text_area_modal_str_curl")
-      .click();
+    await page.getByTestId("button_open_text_area_modal_str_curl").click();
 
     const curl = await page.getByTestId("text-area-modal").inputValue();
 

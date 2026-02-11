@@ -76,9 +76,7 @@ export const useUpdateMessage: useMutationFunctionType<
             // (chatHistory maps null → "" so message.id arrives as "")
             if (existingIndex === -1 && !message.id) {
               existingIndex = old.findIndex(
-                (m) =>
-                  m.id === null &&
-                  m.sender === message.sender,
+                (m) => m.id === null && m.sender === message.sender,
               );
             }
             if (existingIndex !== -1) {

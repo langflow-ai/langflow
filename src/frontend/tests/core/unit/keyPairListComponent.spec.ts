@@ -81,15 +81,12 @@ test(
       await page.getByTestId("div-generic-node").click();
 
       await page.locator('//*[@id="keypair0"]').click();
-      await page
-        .locator('//*[@id="keypair0"]')
-        .fill("testtesttesttest");
+      await page.locator('//*[@id="keypair0"]').fill("testtesttesttest");
 
       const keyPairVerification = page.locator('//*[@id="keypair0"]');
       const elementKeyCount = await keyPairVerification?.count();
 
       if (elementKeyCount === 1) {
-
         await page.getByTestId("div-generic-node").click();
 
         const key1 = await page.locator('//*[@id="keypair0"]').inputValue();
