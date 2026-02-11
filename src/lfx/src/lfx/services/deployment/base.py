@@ -110,10 +110,6 @@ class BaseDeploymentService(Service):
         """Delete a deployment configuration from the provider."""
 
     @abstractmethod
-    async def get_provider_config_schema(self) -> dict:
-        """Return provider-specific configuration schema and defaults."""
-
-    @abstractmethod
     async def create_snapshot(self, *, data: dict, snapshot_type: str) -> dict[str, Any]:
         """Create a provider snapshot (deployed or not)."""
 

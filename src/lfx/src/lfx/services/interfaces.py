@@ -305,11 +305,6 @@ class DeploymentServiceProtocol(Protocol):
         ...
 
     @abstractmethod
-    async def get_provider_config_schema(self) -> dict:
-        """Return provider-specific configuration schema and defaults."""
-        ...
-
-    @abstractmethod
     async def create_snapshot(
         self,
         *,

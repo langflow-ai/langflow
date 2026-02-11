@@ -172,7 +172,14 @@ pytest-cmd = "pytest -p no:profiling -p no:sugar -p no:xdist -p no:cov -p no:spl
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[[tool.uv.index]]
+name = "testpypi"
+url = "https://test.pypi.org/simple"
+explicit = true
 
+[tool.uv.sources]
+ibm-watsonx-orchestrate-core = [{ index = "testpypi" }]
+ibm-watsonx-orchestrate-clients = [{ index = "testpypi" }]
 
 [project.urls]
 Repository = "https://github.com/langflow-ai/langflow"
@@ -364,6 +371,8 @@ gassist = ["gassist>=0.0.1; sys_platform == 'win32'"]
 # SDKs for IBM watsonx integration
 ibm-watsonx = [
     "ibm-cloud-sdk-core~=3.24.4",
+    "ibm-watsonx-orchestrate-clients==2.3.2.dev5117; python_version >= '3.11'",
+    "ibm-watsonx-orchestrate-core==2.3.2.dev5117; python_version >= '3.11'",
 ]
 
 # Complete installation
@@ -478,7 +487,7 @@ complete = [
     "langflow-base[astrapy]",
     # Windows-specific
     "langflow-base[gassist]",
-    "langflow-base[ibm-watsonx]
+    "langflow-base[ibm-watsonx]",
 ]
 
 all = [
