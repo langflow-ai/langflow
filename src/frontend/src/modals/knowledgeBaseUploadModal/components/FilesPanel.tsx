@@ -1,5 +1,6 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
+import { formatFileSize } from "../utils";
 
 interface FilesPanelProps {
   files: File[];
@@ -15,6 +16,12 @@ export function FilesPanel({ files, onRemoveFile }: FilesPanelProps) {
           <ForwardedIconComponent name="FileStack" className="h-4 w-4" />
         </div>
         Sources
+        {files.length > 0 && (
+          <span className="text-xs font-normal text-muted-foreground">
+            ({files.length} {files.length === 1 ? "file" : "files"},{" "}
+            {formatFileSize(files)})
+          </span>
+        )}
       </div>
       {/* Scrollable file list */}
       <div className="flex-1 overflow-y-auto px-3 pb-3">

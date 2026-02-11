@@ -11,6 +11,7 @@ import {
   DEFAULT_CHUNK_SIZE,
   DEFAULT_SEPARATOR,
   KB_NAME_REGEX,
+  MAX_TOTAL_FILE_SIZE,
 } from "../constants";
 import type {
   ChunkPreview,
@@ -237,8 +238,12 @@ export function useKnowledgeBaseForm({
     if (!isAddSourcesMode && selectedEmbeddingModel.length === 0) {
       errors.embeddingModel = "Embedding model is required";
     }
+    const totalBytes = files.reduce((acc, file) => acc + file.size, 0);
+    if (totalBytes > MAX_TOTAL_FILE_SIZE) {
+      errors.files = "Total file size exceeds the 1 GB limit";
+    }
     return errors;
-  }, [sourceName, isAddSourcesMode, selectedEmbeddingModel]);
+  }, [sourceName, isAddSourcesMode, selectedEmbeddingModel, files]);
 
   const clearValidationErrors = useCallback(() => {
     setValidationErrors({});

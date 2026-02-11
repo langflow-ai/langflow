@@ -18,3 +18,5 @@ export const ACCEPTED_FILE_TYPES =
   ".pdf,.txt,.md,.docx,.doc,.csv,.json,.html,.xml";
 
 export const KB_NAME_REGEX = /^[a-zA-Z0-9][a-zA-Z0-9._-]*[a-zA-Z0-9]$/;
+
+export const MAX_TOTAL_FILE_SIZE = 1024 * 1024 * 1024; // 1 GB

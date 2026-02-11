@@ -191,7 +191,13 @@ export function StepConfiguration({
                   </Label>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="outline" className="w-full px-3">
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full px-3",
+                          validationErrors.files && "border-destructive",
+                        )}
+                      >
                         <span className="flex items-center gap-2 mr-auto">
                           <ForwardedIconComponent
                             name="Upload"
@@ -230,6 +236,16 @@ export function StepConfiguration({
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
+
+                  {validationErrors.files ? (
+                    <span className="text-xs text-destructive">
+                      {validationErrors.files}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">
+                      Limited to 1 GB
+                    </span>
+                  )}
                 </div>
                 <div className="flex flex-col gap-2">
                   <Label className="text-xs text-muted-foreground flex items-center gap-1">
