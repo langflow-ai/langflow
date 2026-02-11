@@ -12,6 +12,10 @@ interface CreateMemoryParams {
   embedding_model: string;
   embedding_provider: string;
   is_active?: boolean;
+  batch_size?: number;
+  preprocessing_enabled?: boolean;
+  preprocessing_model?: string;
+  preprocessing_prompt?: string;
 }
 
 export const useCreateMemory: useMutationFunctionType<
@@ -32,6 +36,10 @@ export const useCreateMemory: useMutationFunctionType<
         embedding_model: params.embedding_model,
         embedding_provider: params.embedding_provider,
         is_active: params.is_active ?? false,
+        batch_size: params.batch_size,
+        preprocessing_enabled: params.preprocessing_enabled,
+        preprocessing_model: params.preprocessing_model,
+        preprocessing_prompt: params.preprocessing_prompt,
       },
     );
     queryClient.invalidateQueries({ queryKey: ["useGetMemories"] });

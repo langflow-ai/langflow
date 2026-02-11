@@ -31,6 +31,20 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/memories", tags=["Memories"])
 
+PREPROCESSING_SYSTEM_PREAMBLE = (
+    "You are a memory preprocessor. You will receive one or more raw conversation "
+    "messages between a user and an AI assistant. Your output will be stored in a "
+    "vector database for later retrieval.\n\n"
+    "Follow ONLY the instructions below. Output nothing else — no commentary, "
+    "no metadata, no formatting unless the instructions ask for it.\n"
+    "If the instructions cannot be fulfilled from the given messages "
+    "(e.g. the requested information is not present), output exactly: SKIP"
+)
+
+DEFAULT_PREPROCESSING_INSTRUCTIONS = (
+    "Extract the key facts, decisions, and context from the messages."
+)
+
 # Track running memory tasks so they can be cancelled
 _running_tasks: dict[UUID, asyncio.Task] = {}
 
@@ -72,6 +86,11 @@ def _to_read(m: Memory) -> MemoryRead:
         total_messages_processed=m.total_messages_processed,
         total_chunks=m.total_chunks,
         sessions_count=m.sessions_count,
+        batch_size=m.batch_size,
+        preprocessing_enabled=m.preprocessing_enabled,
+        preprocessing_model=m.preprocessing_model,
+        preprocessing_prompt=m.preprocessing_prompt,
+        pending_messages_count=m.pending_messages_count,
         user_id=m.user_id,
         flow_id=m.flow_id,
         created_at=m.created_at,
@@ -130,6 +149,10 @@ async def create_memory(
         embedding_model=memory_data.embedding_model,
         embedding_provider=memory_data.embedding_provider,
         is_active=memory_data.is_active,
+        batch_size=memory_data.batch_size,
+        preprocessing_enabled=memory_data.preprocessing_enabled,
+        preprocessing_model=memory_data.preprocessing_model,
+        preprocessing_prompt=memory_data.preprocessing_prompt,
         status="idle",
         user_id=current_user.id,
         flow_id=memory_data.flow_id,
@@ -224,6 +247,14 @@ async def update_memory(
         memory.description = memory_update.description
     if memory_update.is_active is not None:
         memory.is_active = memory_update.is_active
+    if memory_update.batch_size is not None:
+        memory.batch_size = memory_update.batch_size
+    if memory_update.preprocessing_enabled is not None:
+        memory.preprocessing_enabled = memory_update.preprocessing_enabled
+    if memory_update.preprocessing_model is not None:
+        memory.preprocessing_model = memory_update.preprocessing_model
+    if memory_update.preprocessing_prompt is not None:
+        memory.preprocessing_prompt = memory_update.preprocessing_prompt
     memory.updated_at = datetime.now(timezone.utc)
 
     session.add(memory)
@@ -450,6 +481,108 @@ async def _vectorize_messages(
                     )
                     documents.append(doc)
 
+                # LLM preprocessing: process documents in batch_size chunks
+                if memory.preprocessing_enabled and memory.preprocessing_model and documents:
+                    try:
+                        import json
+
+                        from langchain_core.messages import HumanMessage, SystemMessage
+                        from lfx.base.models.unified_models import get_llm, normalize_model_names_to_dicts
+
+                        model_config = json.loads(memory.preprocessing_model)
+                        model_name = model_config.get("name")
+                        if model_name:
+                            enriched_model = dict(model_config)
+                            if not enriched_model.get("metadata", {}).get("model_class"):
+                                enriched_models = normalize_model_names_to_dicts(model_name)
+                                if enriched_models and enriched_models[0].get("metadata", {}).get("model_class"):
+                                    enriched_model = enriched_models[0]
+                                    if model_config.get("provider"):
+                                        enriched_model["provider"] = model_config["provider"]
+
+                            llm = get_llm(
+                                model=[enriched_model],
+                                user_id=user_id,
+                                temperature=0,
+                                stream=False,
+                            )
+
+                            user_instructions = memory.preprocessing_prompt or DEFAULT_PREPROCESSING_INSTRUCTIONS
+                            system_prompt = f"{PREPROCESSING_SYSTEM_PREAMBLE}\n{user_instructions}"
+
+                            # Group documents by session, then chunk within each session
+                            preprocess_batch = max(1, memory.batch_size)
+                            preprocessed_docs: list[Document] = []
+                            raw_fallback_docs: list[Document] = []
+
+                            # Group by session_id to avoid mixing sessions
+                            from collections import defaultdict
+
+                            docs_by_session: dict[str, list[Document]] = defaultdict(list)
+                            for doc in documents:
+                                sid = doc.metadata.get("session_id", "")
+                                docs_by_session[sid].append(doc)
+
+                            for session_docs in docs_by_session.values():
+                                for i in range(0, len(session_docs), preprocess_batch):
+                                    chunk = session_docs[i : i + preprocess_batch]
+                                    try:
+                                        messages_text = "\n".join(d.page_content for d in chunk)
+                                        llm_messages = [
+                                            SystemMessage(content=system_prompt),
+                                            HumanMessage(content=messages_text),
+                                        ]
+
+                                        response = await llm.ainvoke(llm_messages)
+                                        summary = response.content if hasattr(response, "content") else str(response)
+                                        summary = summary.strip() if summary else ""
+
+                                        if summary.upper() == "SKIP":
+                                            logger.info(
+                                                f"Memory {memory_id}: LLM preprocessing returned SKIP "
+                                                f"for chunk {i // preprocess_batch + 1}, dropping {len(chunk)} messages"
+                                            )
+                                        elif summary:
+                                            summary_hash = hashlib.sha256(summary.encode()).hexdigest()
+                                            chunk_session_ids = {d.metadata.get("session_id", "") for d in chunk}
+                                            chunk_msg_ids = [d.metadata.get("message_id", "") for d in chunk]
+                                            preprocessed_docs.append(
+                                                Document(
+                                                    page_content=summary,
+                                                    metadata={
+                                                        "message_id": ",".join(chunk_msg_ids),
+                                                        "sender": "preprocessed_summary",
+                                                        "session_id": ",".join(s for s in chunk_session_ids if s),
+                                                        "timestamp": str(datetime.now(timezone.utc)),
+                                                        "_id": summary_hash,
+                                                        "source_message_count": len(chunk_msg_ids),
+                                                    },
+                                                )
+                                            )
+                                        else:
+                                            logger.warning(
+                                                f"Memory {memory_id}: LLM returned empty for chunk "
+                                                f"{i // preprocess_batch + 1}, keeping raw messages"
+                                            )
+                                            raw_fallback_docs.extend(chunk)
+                                    except Exception as chunk_err:
+                                        logger.warning(
+                                            f"Memory {memory_id}: LLM preprocessing failed for chunk "
+                                            f"{i // preprocess_batch + 1} ({chunk_err}), keeping raw messages"
+                                        )
+                                        raw_fallback_docs.extend(chunk)
+
+                            documents = preprocessed_docs + raw_fallback_docs
+                            logger.info(
+                                f"Memory {memory_id}: preprocessing produced {len(preprocessed_docs)} "
+                                f"summaries + {len(raw_fallback_docs)} raw fallback docs"
+                            )
+                    except Exception as e:
+                        logger.warning(
+                            f"Memory {memory_id}: LLM preprocessing failed ({e}), "
+                            f"falling back to raw message vectorization"
+                        )
+
                 # Build embeddings
                 kb_root = _get_knowledge_bases_dir()
                 kb_path = kb_root / username / memory.kb_name
@@ -510,6 +643,7 @@ async def _vectorize_messages(
                 memory.total_messages_processed = len(memory.processed_messages) + len(messages_to_process)
                 memory.total_chunks = total_in_store
                 memory.sessions_count = len(session_ids_seen)
+                memory.pending_messages_count = 0
                 memory.status = "idle"
                 memory.last_generated_at = datetime.now(timezone.utc)
                 memory.updated_at = datetime.now(timezone.utc)
@@ -656,7 +790,9 @@ async def add_messages_to_memory(
 async def auto_capture_messages(messages: list, flow_id: UUID | str | None):
     """Called after messages are persisted. Vectorizes into any active memories for this flow.
 
-    This is a fire-and-forget operation — errors are logged but never raised.
+    When batch_size > 1, messages are accumulated and only vectorized once the
+    batch threshold is reached. This is a fire-and-forget operation — errors are
+    logged but never raised.
     """
     if not flow_id:
         return
@@ -704,17 +840,90 @@ async def auto_capture_messages(messages: list, flow_id: UUID | str | None):
                 if not user:
                     continue
 
-                task = asyncio.create_task(
-                    _vectorize_messages(
-                        memory_id=memory.id,
-                        user_id=memory.user_id,
-                        username=user.username,
-                        only_new=True,
-                        message_ids=msg_ids,
+                batch_size = max(1, memory.batch_size)
+
+                if batch_size <= 1:
+                    # Immediate vectorization (original behavior)
+                    task = asyncio.create_task(
+                        _vectorize_messages(
+                            memory_id=memory.id,
+                            user_id=memory.user_id,
+                            username=user.username,
+                            only_new=True,
+                            message_ids=msg_ids,
+                        )
                     )
-                )
-                _running_tasks[memory.id] = task
-                logger.info(f"Auto-capture: queued {len(msg_ids)} messages for memory {memory.id}")
+                    _running_tasks[memory.id] = task
+                    logger.info(f"Auto-capture: queued {len(msg_ids)} messages for memory {memory.id}")
+                else:
+                    # Batch buffering per session: get unprocessed messages with their session_id
+                    unprocessed_stmt = (
+                        select(MessageTable.id, MessageTable.session_id)
+                        .where(MessageTable.flow_id == memory.flow_id)
+                    )
+                    unprocessed_result = await session.exec(unprocessed_stmt)
+                    all_flow_msgs = unprocessed_result.all()
+
+                    processed_stmt = (
+                        select(MemoryProcessedMessage.message_id)
+                        .where(MemoryProcessedMessage.memory_id == memory.id)
+                    )
+                    processed_result = await session.exec(processed_stmt)
+                    processed_ids = set(processed_result.all())
+
+                    # Group unprocessed by session
+                    from collections import defaultdict
+
+                    unprocessed_by_session: dict[str, int] = defaultdict(int)
+                    total_unprocessed = 0
+                    for mid, sid in all_flow_msgs:
+                        if mid not in processed_ids:
+                            unprocessed_by_session[sid or ""] += 1
+                            total_unprocessed += 1
+
+                    # Detect the current session from incoming messages
+                    current_session = getattr(messages[0], "session_id", None) if messages else None
+
+                    # Check if any session hit the threshold, or if a new session
+                    # started while older sessions have leftover pending messages
+                    should_vectorize = False
+                    for sid, count in unprocessed_by_session.items():
+                        if count >= batch_size:
+                            should_vectorize = True
+                            break
+                    # Flush older sessions when a new session starts
+                    if not should_vectorize and current_session and len(unprocessed_by_session) > 1:
+                        for sid in unprocessed_by_session:
+                            if sid != (current_session or "") and unprocessed_by_session[sid] > 0:
+                                should_vectorize = True
+                                break
+
+                    if should_vectorize:
+                        task = asyncio.create_task(
+                            _vectorize_messages(
+                                memory_id=memory.id,
+                                user_id=memory.user_id,
+                                username=user.username,
+                                only_new=True,
+                            )
+                        )
+                        _running_tasks[memory.id] = task
+                        logger.info(
+                            f"Auto-capture: vectorizing {total_unprocessed} unprocessed messages "
+                            f"for memory {memory.id}"
+                        )
+                        memory.pending_messages_count = 0
+                    else:
+                        memory.pending_messages_count = total_unprocessed
+                        logger.info(
+                            f"Auto-capture: buffering ({total_unprocessed}/{batch_size}) "
+                            f"for memory {memory.id}"
+                        )
+
+                    memory.updated_at = datetime.now(timezone.utc)
+                    session.add(memory)
+
+            await session.commit()
 
     except Exception as e:
         logger.warning(f"Auto-capture failed for flow {flow_id}: {e}")

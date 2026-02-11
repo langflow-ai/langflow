@@ -17,6 +17,11 @@ export interface MemoryInfo {
   total_messages_processed: number;
   total_chunks: number;
   sessions_count: number;
+  batch_size: number;
+  preprocessing_enabled: boolean;
+  preprocessing_model?: string;
+  preprocessing_prompt?: string;
+  pending_messages_count: number;
   user_id: string;
   flow_id: string;
   created_at?: string;

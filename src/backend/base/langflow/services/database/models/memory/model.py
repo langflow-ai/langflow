@@ -25,6 +25,11 @@ class MemoryBase(SQLModel):
     total_messages_processed: int = Field(default=0, description="Total messages vectorized")
     total_chunks: int = Field(default=0, description="Total chunks in the KB")
     sessions_count: int = Field(default=0, description="Distinct sessions captured")
+    batch_size: int = Field(default=1, description="Messages to accumulate before auto-capture triggers")
+    preprocessing_enabled: bool = Field(default=False, description="Toggle LLM preprocessing before vectorization")
+    preprocessing_model: str | None = Field(default=None, description="JSON-serialized LLM config for preprocessing")
+    preprocessing_prompt: str | None = Field(default=None, description="Custom prompt for LLM preprocessing")
+    pending_messages_count: int = Field(default=0, description="Messages waiting for batch threshold")
 
 
 class Memory(MemoryBase, table=True):  # type: ignore[call-arg]
@@ -88,6 +93,10 @@ class MemoryCreate(SQLModel):
     embedding_model: str
     embedding_provider: str
     is_active: bool = False
+    batch_size: int = 1
+    preprocessing_enabled: bool = False
+    preprocessing_model: str | None = None
+    preprocessing_prompt: str | None = None
 
 
 class MemoryRead(SQLModel):
@@ -103,6 +112,11 @@ class MemoryRead(SQLModel):
     total_messages_processed: int = 0
     total_chunks: int = 0
     sessions_count: int = 0
+    batch_size: int = 1
+    preprocessing_enabled: bool = False
+    preprocessing_model: str | None = None
+    preprocessing_prompt: str | None = None
+    pending_messages_count: int = 0
     user_id: UUID
     flow_id: UUID
     created_at: datetime | None = None
@@ -114,3 +128,7 @@ class MemoryUpdate(SQLModel):
     name: str | None = None
     description: str | None = None
     is_active: bool | None = None
+    batch_size: int | None = None
+    preprocessing_enabled: bool | None = None
+    preprocessing_model: str | None = None
+    preprocessing_prompt: str | None = None

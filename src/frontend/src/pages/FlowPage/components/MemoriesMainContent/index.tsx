@@ -119,6 +119,7 @@ export default function MemoriesMainContent({
   const [searchQuery, setSearchQuery] = useState("");
   const [activeSearch, setActiveSearch] = useState("");
   const [selectedSession, setSelectedSession] = useState<string | null>(null);
+  const [showPreprocessingPrompt, setShowPreprocessingPrompt] = useState(false);
 
   // Reset search/filter state when switching memories
   const prevMemoryIdRef = useRef(selectedMemoryId);
@@ -353,7 +354,9 @@ export default function MemoriesMainContent({
                     : "Updating memory..."}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Vectorizing messages into the knowledge base.
+                  {memory.preprocessing_enabled
+                    ? "Preprocessing and vectorizing messages into the knowledge base."
+                    : "Vectorizing messages into the knowledge base."}
                 </p>
               </div>
             </div>
@@ -381,7 +384,7 @@ export default function MemoriesMainContent({
         )}
 
         {/* Summary cards */}
-        <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-5">
           <SummaryCard
             label="Messages Processed"
             value={memory.total_messages_processed}
@@ -398,6 +401,15 @@ export default function MemoriesMainContent({
             icon="Users"
           />
           <SummaryCard
+            label="Pending Messages"
+            value={
+              memory.batch_size > 1
+                ? `${memory.pending_messages_count}/${memory.batch_size}`
+                : memory.pending_messages_count
+            }
+            icon="Timer"
+          />
+          <SummaryCard
             label="Last Generated"
             value={formatDate(memory.last_generated_at)}
             icon="Clock"
@@ -405,7 +417,7 @@ export default function MemoriesMainContent({
         </div>
 
         {/* Model info row */}
-        <div className="mb-4 flex items-center gap-4 text-xs text-muted-foreground">
+        <div className="mb-4 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
           <span>
             <span className="font-medium text-foreground">KB:</span>{" "}
             <a
@@ -427,7 +439,48 @@ export default function MemoriesMainContent({
             <span className="font-medium text-foreground">Provider:</span>{" "}
             {memory.embedding_provider}
           </span>
+          {memory.batch_size > 1 && (
+            <>
+              <span>&middot;</span>
+              <span>
+                <span className="font-medium text-foreground">Batch Size:</span>{" "}
+                {memory.batch_size}
+              </span>
+            </>
+          )}
+          {memory.preprocessing_enabled && (
+            <>
+              <span>&middot;</span>
+              <span>
+                <span className="font-medium text-foreground">Preprocessing:</span>{" "}
+                {(() => {
+                  try {
+                    const model = JSON.parse(memory.preprocessing_model || "{}");
+                    return model.name || "Enabled";
+                  } catch {
+                    return "Enabled";
+                  }
+                })()}
+                {memory.preprocessing_prompt && (
+                  <button
+                    onClick={() => setShowPreprocessingPrompt(!showPreprocessingPrompt)}
+                    className="ml-1.5 text-muted-foreground underline decoration-muted-foreground/50 underline-offset-2 hover:text-foreground"
+                  >
+                    {showPreprocessingPrompt ? "hide instructions" : "see instructions"}
+                  </button>
+                )}
+              </span>
+            </>
+          )}
         </div>
+
+        {/* Preprocessing instructions — inline expandable */}
+        {showPreprocessingPrompt && memory.preprocessing_prompt && (
+          <div className="mb-4 rounded-lg border border-border bg-background px-3 py-2 text-xs">
+            <span className="font-medium text-foreground">Instructions: </span>
+            <span className="whitespace-pre-wrap text-muted-foreground">{memory.preprocessing_prompt}</span>
+          </div>
+        )}
 
         {/* Documents section */}
         <div className="flex flex-1 flex-col overflow-hidden rounded-lg border border-border bg-background">
