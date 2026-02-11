@@ -253,6 +253,8 @@ async def test_get_config_unauthenticated_returns_correct_field_types(client: As
 
 async def test_get_config_returns_500_on_settings_error(client: AsyncClient, monkeypatch):
     """Test that /config endpoint returns 500 when settings retrieval fails."""
+    from langflow.services.auth.utils import get_optional_user
+
     error_message = "Settings retrieval failed"
 
     def raise_settings_error():
@@ -260,17 +262,24 @@ async def test_get_config_returns_500_on_settings_error(client: AsyncClient, mon
 
     async def mock_get_optional_user():
         """Mock get_optional_user to return None without triggering real auth logic."""
-        return
+        return None
 
-    # Mock get_optional_user to bypass its dependency chain (which might interact with settings)
-    monkeypatch.setattr("langflow.api.v1.endpoints.get_optional_user", mock_get_optional_user)
+    # Get the app from the client's transport to use dependency_overrides
+    app = client._transport.app  # type: ignore[union-attr]
+
+    # Use FastAPI's dependency_overrides to properly override the dependency
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
     monkeypatch.setattr("langflow.api.v1.endpoints.get_settings_service", raise_settings_error)
 
-    response = await client.get("api/v1/config")
-    result = response.json()
+    try:
+        response = await client.get("api/v1/config")
+        result = response.json()
 
-    assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
-    assert error_message in result["detail"]
+        assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+        assert error_message in result["detail"]
+    finally:
+        # Clean up the override
+        app.dependency_overrides.pop(get_optional_user, None)
 
 
 async def test_get_config_authenticated_returns_full_config(client: AsyncClient, logged_in_headers: dict):
