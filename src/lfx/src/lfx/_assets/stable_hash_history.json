@@ -936,7 +936,7 @@
   },
   "IBMwatsonxModel": {
     "versions": {
-      "0.3.0": "4bd01c353b04"
+      "0.3.0": "1b0d3ef73001"
     }
   },
   "WatsonxEmbeddingsComponent": {
