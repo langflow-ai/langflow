@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING, Any
 
 from ag_ui.core import StepFinishedEvent, StepStartedEvent
 
-from lfx.events.observability.lifecycle_events import observable
 from lfx.exceptions.component import ComponentBuildError
 from lfx.graph.schema import INPUT_COMPONENTS, OUTPUT_COMPONENTS, InterfaceComponentTypes, ResultData
 from lfx.graph.utils import UnbuiltObject, UnbuiltResult, emit_build_start_event, log_transaction
@@ -385,7 +384,6 @@ class Vertex:
                 vertex=self,
             )
 
-    @observable
     async def _build(
         self,
         fallback_to_env_vars,
