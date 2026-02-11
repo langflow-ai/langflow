@@ -230,7 +230,7 @@ async def get_optional_user(
     token: Annotated[str | None, Security(oauth2_login)],
     query_param: Annotated[str | None, Security(api_key_query)],
     header_param: Annotated[str | None, Security(api_key_header)],
-    db: Annotated[AsyncSession, Depends(injectable_session_scope)],
+    db: AsyncSession = Depends(injectable_session_scope),
 ) -> User | None:
     """Get the current user if authenticated, otherwise return None.
 
