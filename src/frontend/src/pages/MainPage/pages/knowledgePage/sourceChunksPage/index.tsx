@@ -1,10 +1,14 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Loading from "@/components/ui/loading";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { useGetKnowledgeBaseChunks } from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-base-chunks";
+import {
+  ChunkInfo,
+  useGetKnowledgeBaseChunks,
+} from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-base-chunks";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { cn } from "@/utils/utils";
 import { CHUNKS_PER_PAGE, TRUNCATE_LENGTH } from "./constants";
