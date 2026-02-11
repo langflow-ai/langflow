@@ -1,20 +1,26 @@
+import asyncio
 import json
 import shutil
 from datetime import datetime, timezone
 from http import HTTPStatus
 from pathlib import Path
 from typing import Annotated
+from uuid import uuid4
 
 import pandas as pd
 from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from lfx.base.models.unified_models import get_embedding_model_options
+from lfx.components.models_and_agents.embedding_model import EmbeddingModelComponent
 from lfx.log import logger
 from pydantic import BaseModel
 
 from langflow.api.utils import CurrentActiveUser
-from langflow.services.deps import get_settings_service
+from langflow.api.v1.schemas import TaskResponse
+from langflow.services.database.models.jobs.model import JobType
+from langflow.services.deps import get_job_service, get_settings_service, get_task_service
 
 router = APIRouter(tags=["Knowledge Bases"], prefix="/knowledge_bases", include_in_schema=False)
 
@@ -490,7 +496,7 @@ async def ingest_files_to_knowledge_base(
     source_name: Annotated[str, Form()] = "",
     chunk_size: Annotated[int, Form()] = 1000,
     chunk_overlap: Annotated[int, Form()] = 200,
-) -> dict[str, object]:
+) -> dict[str, object] | TaskResponse:
     """Upload and ingest files directly into a knowledge base.
 
     This endpoint:
@@ -500,6 +506,24 @@ async def ingest_files_to_knowledge_base(
     4. Stores the vectors in the knowledge base
     """
     try:
+        settings = get_settings_service().settings
+        max_file_size_upload = settings.max_file_size_upload
+        async_threshold = 5 * 1024 * 1024  # 5MB threshold for async ingestion
+
+        total_size = 0
+        files_data = []
+
+        for uploaded_file in files:
+            file_size = uploaded_file.size
+            if file_size > max_file_size_upload * 1024 * 1024:
+                raise HTTPException(
+                    status_code=413,
+                    detail=f"File {uploaded_file.filename} exceeds the maximum upload size of {max_file_size_upload}MB",
+                )
+            total_size += file_size
+            content = await uploaded_file.read()
+            files_data.append((uploaded_file.filename or "unknown", content))
+
         kb_root_path = get_kb_root_path()
         kb_user = current_user.username
         kb_path = kb_root_path / kb_user / kb_name
@@ -519,23 +543,83 @@ async def ingest_files_to_knowledge_base(
         if not embedding_provider or not embedding_model:
             raise HTTPException(status_code=400, detail="Invalid embedding configuration")
 
-        if not files:
-            raise HTTPException(status_code=400, detail="No files provided")
+        if total_size > async_threshold:
+            job_service = get_job_service()
+            task_service = get_task_service()
+            job_id = uuid4()
 
-        # Process uploaded files and create documents
-        documents = []
+            # Create job record in database
+            await job_service.create_job(job_id=job_id, flow_id=job_id, job_type=JobType.INGESTION)
+
+            # Fire and forget the ingestion logic wrapped in status updates
+            await task_service.fire_and_forget_task(
+                job_service.execute_with_status,
+                job_id=job_id,
+                run_coro_func=_perform_ingestion,
+                kb_name=kb_name,
+                kb_path=kb_path,
+                files_data=files_data,
+                chunk_size=chunk_size,
+                chunk_overlap=chunk_overlap,
+                source_name=source_name,
+                current_user=current_user,
+                embedding_provider=embedding_provider,
+                embedding_model=embedding_model,
+            )
+            return TaskResponse(id=str(job_id), href=f"/task/{job_id}")
+
+        return await _perform_ingestion(
+            kb_name=kb_name,
+            kb_path=kb_path,
+            files_data=files_data,
+            chunk_size=chunk_size,
+            chunk_overlap=chunk_overlap,
+            source_name=source_name,
+            current_user=current_user,
+            embedding_provider=embedding_provider,
+            embedding_model=embedding_model,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error ingesting files to knowledge base: {e!s}") from e
+
+
+async def _perform_ingestion(
+    kb_name: str,
+    kb_path: Path,
+    files_data: list[tuple[str, bytes]],
+    chunk_size: int,
+    chunk_overlap: int,
+    source_name: str,
+    current_user: CurrentActiveUser,
+    embedding_provider: str,
+    embedding_model: str,
+) -> dict[str, object]:
+    """Internal function to perform the actual ingestion logic."""
+    try:
         processed_files = []
+        total_chunks_created = 0
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=chunk_size,
             chunk_overlap=chunk_overlap,
         )
 
-        for uploaded_file in files:
-            try:
-                # Read file content
-                file_content = await uploaded_file.read()
-                file_name = uploaded_file.filename or "unknown"
+        # Build embeddings based on provider
+        embeddings = await _build_embeddings(embedding_provider, embedding_model, current_user)
 
+        # Create or update vector store
+        chroma = Chroma(
+            persist_directory=str(kb_path),
+            embedding_function=embeddings,
+            collection_name=kb_name,
+        )
+
+        batch_size = 100
+
+        for file_name, file_content in files_data:
+            try:
                 # Decode text content
                 text_content = file_content.decode("utf-8", errors="ignore")
 
@@ -545,110 +629,85 @@ async def ingest_files_to_knowledge_base(
 
                 # Split into chunks
                 chunks = text_splitter.split_text(text_content)
+                file_chunks_count = len(chunks)
+                await logger.ainfo(f"Processing {file_name}: splitting into {file_chunks_count} chunks")
 
-                # Create documents from chunks
-                for i, chunk in enumerate(chunks):
-                    doc = Document(
-                        page_content=chunk,
-                        metadata={
-                            "source": source_name or file_name,
-                            "file_name": file_name,
-                            "chunk_index": i,
-                            "total_chunks": len(chunks),
-                            "ingested_at": datetime.now(timezone.utc).isoformat(),
-                        },
-                    )
-                    documents.append(doc)
+                # Ingest this file's chunks in batches to prevent memory and API issues
+                for i in range(0, file_chunks_count, batch_size):
+                    batch_chunks = chunks[i : i + batch_size]
+                    batch_docs = [
+                        Document(
+                            page_content=chunk,
+                            metadata={
+                                "source": source_name or file_name,
+                                "file_name": file_name,
+                                "chunk_index": i + j,
+                                "total_chunks": file_chunks_count,
+                                "ingested_at": datetime.now(timezone.utc).isoformat(),
+                            },
+                        )
+                        for j, chunk in enumerate(batch_chunks)
+                    ]
 
+                    # Embed and add to Chroma using the native async method
+                    await chroma.aadd_documents(batch_docs)
+
+                    # Yield to the event loop to allow other tasks (like logging) to run
+                    await asyncio.sleep(0.01)
+
+                    if (i + batch_size) % 1000 == 0 or (i + batch_size) >= file_chunks_count:
+                        await logger.ainfo(
+                            f"Progress for {file_name}: {min(i + batch_size, file_chunks_count)}/{file_chunks_count} chunks ingested"
+                        )
+
+                total_chunks_created += file_chunks_count
                 processed_files.append(file_name)
 
             except Exception as file_error:
-                await logger.awarning(f"Error processing file {uploaded_file.filename}: {file_error}")
+                await logger.aerror(f"Error processing file {file_name}: {file_error}")
                 continue
 
-        if not documents:
-            raise HTTPException(status_code=400, detail="No valid content extracted from files")
-
-        # Build embeddings based on provider
-        embeddings = _build_embeddings(embedding_provider, embedding_model, current_user)
-
-        # Create or update vector store
-        chroma = Chroma(
-            persist_directory=str(kb_path),
-            embedding_function=embeddings,
-            collection_name=kb_name,
-        )
-
-        # Add documents to vector store
-        chroma.add_documents(documents)
+        if not processed_files:
+            raise ValueError("No files were successfully processed")
 
         return {
-            "message": f"Successfully ingested {len(processed_files)} file(s) with {len(documents)} chunks into '{kb_name}'",
+            "message": f"Successfully ingested {len(processed_files)} file(s) with {total_chunks_created} chunks into '{kb_name}'",
             "files_processed": len(processed_files),
-            "chunks_created": len(documents),
+            "chunks_created": total_chunks_created,
             "file_names": processed_files,
         }
 
-    except HTTPException:
-        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error ingesting files to knowledge base: {e!s}") from e
+        await logger.aerror(f"Error in background ingestion: {e!s}")
+        raise
 
 
-def _build_embeddings(provider: str, model: str, current_user):
-    """Build embedding model based on provider configuration."""
-    from langflow.services.database.utils import session_scope
-    from langflow.services.deps import get_variable_service
+async def _build_embeddings(provider: str, model: str, current_user):
+    """Build embeddings based on provider using EmbeddingModelComponent"""
+    # Get available embedding model options for the user
+    options = get_embedding_model_options(user_id=current_user.id)
 
-    # Get API key from global variables based on provider
-    provider_key_mapping = {
-        "OpenAI": "OPENAI_API_KEY",
-        "Cohere": "COHERE_API_KEY",
-        "HuggingFace": "HUGGINGFACEHUB_API_TOKEN",
-        "Google": "GOOGLE_API_KEY",
-    }
+    # Find the specific model option for the provider and model
+    selected_option = next((o for o in options if o["provider"] == provider and o["name"] == model), None)
 
-    variable_name = provider_key_mapping.get(provider)
-    api_key = None
+    if not selected_option:
+        # If not found in user-specific options, try one more time without user-specific filtering
+        # to see if it exists but is just not configured yet
+        all_options = get_embedding_model_options()
+        selected_option = next((o for o in all_options if o["provider"] == provider and o["name"] == model), None)
 
-    if variable_name:
-        import asyncio
+        if not selected_option:
+            msg = f"Embedding model '{model}' for provider '{provider}' not found."
+            raise ValueError(msg)
 
-        async def get_api_key():
-            variable_service = get_variable_service()
-            async with session_scope() as session:
-                try:
-                    return await variable_service.get_variable(
-                        user_id=current_user.id,
-                        name=variable_name,
-                        field="",
-                        session=session,
-                    )
-                except Exception:
-                    return None
+    # Instantiate the component with the correct model configuration and user ID
+    embedding_model = EmbeddingModelComponent(model=[selected_option], user_id=current_user.id)
 
-        api_key = asyncio.get_event_loop().run_until_complete(get_api_key())
+    # Build the embeddings object. This returns an EmbeddingsWithModels wrapper.
+    embeddings_with_models = embedding_model.build_embeddings()
 
-    if provider == "OpenAI":
-        from langchain_openai import OpenAIEmbeddings
-
-        if not api_key:
-            raise ValueError("OpenAI API key not configured. Please set up the provider in settings.")
-        return OpenAIEmbeddings(model=model, api_key=api_key)
-
-    if provider == "HuggingFace":
-        from langchain_huggingface import HuggingFaceEmbeddings
-
-        return HuggingFaceEmbeddings(model_name=model)
-
-    if provider == "Cohere":
-        from langchain_cohere import CohereEmbeddings
-
-        if not api_key:
-            raise ValueError("Cohere API key not configured. Please set up the provider in settings.")
-        return CohereEmbeddings(model=model, cohere_api_key=api_key)
-
-    raise ValueError(f"Unsupported embedding provider: {provider}")
+    # Return the primary LangChain Embeddings instance
+    return embeddings_with_models.embeddings
 
 
 @router.get("", status_code=HTTPStatus.OK)
@@ -664,18 +723,15 @@ async def list_knowledge_bases(current_user: CurrentActiveUser) -> list[Knowledg
             return []
 
         knowledge_bases = []
-
         for kb_dir in kb_path.iterdir():
             if not kb_dir.is_dir() or kb_dir.name.startswith("."):
                 continue
-
             try:
                 # Get size of the directory
                 size = get_directory_size(kb_dir)
 
                 # Get metadata from KB files
                 metadata = get_kb_metadata(kb_dir)
-                print(metadata)
 
                 kb_info = KnowledgeBaseInfo(
                     id=kb_dir.name,
