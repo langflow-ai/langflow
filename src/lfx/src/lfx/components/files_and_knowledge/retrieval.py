@@ -327,21 +327,20 @@ class KnowledgeRetrievalComponent(Component):
             else:
                 # Exact match search
                 results = self._exact_match_search(chroma, self.search_query)
+        # No query - just return top_k documents
+        elif use_similarity:
+            docs = chroma.similarity_search(query="", k=self.top_k)
+            results = [(doc, 0) for doc in docs]
         else:
-            # No query - just return top_k documents
-            if use_similarity:
-                docs = chroma.similarity_search(query="", k=self.top_k)
-                results = [(doc, 0) for doc in docs]
-            else:
-                # For exact match without query, just get documents
-                collection = chroma._collection  # noqa: SLF001
-                all_docs = collection.get(include=["documents", "metadatas"], limit=self.top_k)
-                from langchain_core.documents import Document
+            # For exact match without query, just get documents
+            collection = chroma._collection  # noqa: SLF001
+            all_docs = collection.get(include=["documents", "metadatas"], limit=self.top_k)
+            from langchain_core.documents import Document
 
-                for i, doc_content in enumerate(all_docs.get("documents", [])):
-                    meta = all_docs["metadatas"][i] if all_docs.get("metadatas") else {}
-                    doc = Document(page_content=doc_content or "", metadata=meta or {})
-                    results.append((doc, 0))
+            for i, doc_content in enumerate(all_docs.get("documents", [])):
+                meta = all_docs["metadatas"][i] if all_docs.get("metadatas") else {}
+                doc = Document(page_content=doc_content or "", metadata=meta or {})
+                results.append((doc, 0))
 
         # If include_embeddings is enabled, get embeddings for the results
         id_to_embedding = {}
