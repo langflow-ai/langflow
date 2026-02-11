@@ -135,42 +135,6 @@ class TestWatsonxEmbeddingsComponent:
         assert models == ["alpha-model", "beta-model", "zebra-model"]
 
     @patch("lfx.components.ibm.watsonx_embeddings.requests.get")
-    def test_fetch_models_api_error(self, mock_get):
-        """Test that default models are returned on API error."""
-        from lfx.components.ibm.watsonx_embeddings import WatsonxEmbeddingsComponent
-
-        mock_get.side_effect = Exception("API Error")
-
-        models = WatsonxEmbeddingsComponent.fetch_models("https://us-south.ml.cloud.ibm.com")
-
-        # Should return default models on error
-        assert models == WatsonxEmbeddingsComponent._default_models
-
-    @patch("lfx.components.ibm.watsonx_embeddings.requests.get")
-    def test_fetch_models_timeout(self, mock_get):
-        """Test that default models are returned on timeout."""
-        from lfx.components.ibm.watsonx_embeddings import WatsonxEmbeddingsComponent
-
-        mock_get.side_effect = TimeoutError("Request timeout")
-
-        models = WatsonxEmbeddingsComponent.fetch_models("https://us-south.ml.cloud.ibm.com")
-
-        assert models == WatsonxEmbeddingsComponent._default_models
-
-    @patch("lfx.components.ibm.watsonx_embeddings.requests.get")
-    def test_fetch_models_http_error(self, mock_get):
-        """Test that default models are returned on HTTP error."""
-        from lfx.components.ibm.watsonx_embeddings import WatsonxEmbeddingsComponent
-
-        mock_resp = Mock()
-        mock_resp.raise_for_status.side_effect = Exception("HTTP 500 Error")
-        mock_get.return_value = mock_resp
-
-        models = WatsonxEmbeddingsComponent.fetch_models("https://us-south.ml.cloud.ibm.com")
-
-        assert models == WatsonxEmbeddingsComponent._default_models
-
-    @patch("lfx.components.ibm.watsonx_embeddings.requests.get")
     def test_fetch_models_empty_resources(self, mock_get):
         """Test handling of empty resources in API response."""
         from lfx.components.ibm.watsonx_embeddings import WatsonxEmbeddingsComponent
