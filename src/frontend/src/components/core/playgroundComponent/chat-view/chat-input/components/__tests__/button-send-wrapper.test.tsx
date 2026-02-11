@@ -58,9 +58,11 @@ describe("ButtonSendWrapper", () => {
 
   const defaultProps = {
     send: jest.fn(),
+    stopBuilding: jest.fn(),
     noInput: false,
     chatValue: "",
     files: [] as FilePreviewType[],
+    isBuilding: false,
   };
 
   beforeEach(() => {
@@ -114,5 +116,27 @@ describe("ButtonSendWrapper", () => {
     render(<ButtonSendWrapper {...defaultProps} noInput={false} />);
     const button = screen.getByTestId("button-send");
     expect(button.className).toContain("bg-primary");
+  });
+
+  it("renders stop button when building", () => {
+    render(<ButtonSendWrapper {...defaultProps} isBuilding={true} />);
+    expect(screen.getByTestId("button-stop")).toBeInTheDocument();
+    expect(screen.getByTestId("icon-Square")).toBeInTheDocument();
+  });
+
+  it("calls stopBuilding when stop button is clicked", () => {
+    const stopBuilding = jest.fn();
+    render(
+      <ButtonSendWrapper {...defaultProps} isBuilding={true} stopBuilding={stopBuilding} />,
+    );
+    fireEvent.click(screen.getByTestId("button-stop"));
+    expect(stopBuilding).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not call send when building", () => {
+    const send = jest.fn();
+    render(<ButtonSendWrapper {...defaultProps} send={send} isBuilding={true} />);
+    fireEvent.click(screen.getByTestId("button-stop"));
+    expect(send).not.toHaveBeenCalled();
   });
 });

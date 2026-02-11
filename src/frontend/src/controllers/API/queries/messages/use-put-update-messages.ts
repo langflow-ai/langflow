@@ -33,11 +33,14 @@ export const useUpdateMessage: useMutationFunctionType<
       const messageIndex = messages.findIndex(
         (m: Message) => m.id === message.id,
       );
+      const existingMessage = messages[messageIndex];
+      const textChanged =
+        message.text !== undefined && message.text !== existingMessage.text;
       messages[messageIndex] = {
-        ...messages[messageIndex],
+        ...existingMessage,
         ...message,
         flow_id: flowId,
-        edit: true,
+        edit: textChanged ? true : existingMessage.edit,
       };
       sessionStorage.setItem(flowId, JSON.stringify(messages));
     } else {
@@ -56,30 +59,38 @@ export const useUpdateMessage: useMutationFunctionType<
       ...options,
       onSettled: (_, __, variables, ___) => {
         const params = variables as unknown as UpdateMessageParams | undefined;
-        if (params?.refetch && flowId) {
-          const message = params.message;
-          const sessionId = message.session_id;
+        if (!flowId) return;
 
-          // Update the session-specific cache directly so UI updates
-          if (sessionId) {
-            const sessionCacheKey = [
-              MESSAGES_QUERY_KEY,
-              { id: flowId, session_id: sessionId },
-            ];
-            queryClient.setQueryData(sessionCacheKey, (old: Message[] = []) => {
-              const existingIndex = old.findIndex((m) => m.id === message.id);
-              if (existingIndex !== -1) {
-                return old.map((m, idx) =>
-                  idx === existingIndex
-                    ? { ...m, text: message.text, edit: true, properties: message.properties ?? m.properties }
-                    : m,
-                );
-              }
-              return old;
-            });
-          }
+        const message = params?.message;
+        const sessionId = message?.session_id;
 
-          // Also refetch the main query for backend sync
+        // Always update the session-specific cache so UI reflects the change
+        if (sessionId && message) {
+          const sessionCacheKey = [
+            MESSAGES_QUERY_KEY,
+            { id: flowId, session_id: sessionId },
+          ];
+          queryClient.setQueryData(sessionCacheKey, (old: Message[] = []) => {
+            const existingIndex = old.findIndex((m) => m.id === message.id);
+            if (existingIndex !== -1) {
+              return old.map((m, idx) => {
+                if (idx !== existingIndex) return m;
+                const textChanged =
+                  message.text !== undefined && message.text !== m.text;
+                return {
+                  ...m,
+                  text: message.text,
+                  edit: textChanged ? true : m.edit,
+                  properties: message.properties ?? m.properties,
+                };
+              });
+            }
+            return old;
+          });
+        }
+
+        // Only refetch the main query when explicitly requested (text edits)
+        if (params?.refetch) {
           queryClient.refetchQueries({
             queryKey: [MESSAGES_QUERY_KEY, { id: flowId }],
             exact: true,

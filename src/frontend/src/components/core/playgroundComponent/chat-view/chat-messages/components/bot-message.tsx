@@ -91,7 +91,6 @@ export const BotMessage = memo(
               positive_feedback: evaluation,
             },
           },
-          refetch: true,
         },
         {
           onError: () => {

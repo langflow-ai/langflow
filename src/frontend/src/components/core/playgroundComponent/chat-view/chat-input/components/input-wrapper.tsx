@@ -10,6 +10,7 @@ import UploadFileButton from "./upload-file-button";
 
 interface InputWrapperProps {
   isBuilding: boolean;
+  stopBuilding: () => void;
   checkSendingOk: (event: React.KeyboardEvent<HTMLTextAreaElement>) => boolean;
   send: () => void;
   noInput: boolean;
@@ -29,6 +30,7 @@ interface InputWrapperProps {
 
 const InputWrapper = ({
   isBuilding,
+  stopBuilding,
   checkSendingOk,
   send,
   noInput,
@@ -136,6 +138,8 @@ const InputWrapper = ({
               noInput={noInput}
               chatValue={chatValue}
               files={files}
+              isBuilding={isBuilding}
+              stopBuilding={stopBuilding}
             />
           </div>
         </div>

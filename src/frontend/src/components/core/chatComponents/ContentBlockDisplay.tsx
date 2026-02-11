@@ -66,10 +66,10 @@ export function ContentBlockDisplay({
   return (
     <div className="relative py-3">
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
         transition={{
-          duration: 0.2,
+          duration: 0.15,
           ease: "easeOut",
         }}
         className={cn("relative rounded-lg bg-transparent", "overflow-hidden")}

@@ -23,7 +23,7 @@ export default function EditMessageField({
   };
   useEffect(() => {
     adjustTextareaHeight();
-  }, []);
+  }, [message]);
 
   return (
     <div className="flex h-fit w-full flex-col rounded-md bg-muted px-4 py-2">
