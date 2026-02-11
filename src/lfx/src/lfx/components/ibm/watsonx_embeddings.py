@@ -27,6 +27,15 @@ class WatsonxEmbeddingsComponent(LCEmbeddingsModel):
         "ibm/slate-30m-english-rtrvr-v2",
         "intfloat/multilingual-e5-large",
     ]
+    _urls = [
+        "https://us-south.ml.cloud.ibm.com",
+        "https://eu-de.ml.cloud.ibm.com",
+        "https://eu-gb.ml.cloud.ibm.com",
+        "https://au-syd.ml.cloud.ibm.com",
+        "https://jp-tok.ml.cloud.ibm.com",
+        "https://ca-tor.ml.cloud.ibm.com",
+        "https://ap-south-1.aws.wxai.ibm.com",
+    ]
 
     inputs = [
         DropdownInput(
@@ -34,15 +43,7 @@ class WatsonxEmbeddingsComponent(LCEmbeddingsModel):
             display_name="watsonx API Endpoint",
             info="The base URL of the API.",
             value=None,
-            options=[
-                "https://us-south.ml.cloud.ibm.com",
-                "https://eu-de.ml.cloud.ibm.com",
-                "https://eu-gb.ml.cloud.ibm.com",
-                "https://au-syd.ml.cloud.ibm.com",
-                "https://jp-tok.ml.cloud.ibm.com",
-                "https://ca-tor.ml.cloud.ibm.com",
-                "https://ap-south-1.aws.wxai.ibm.com",
-            ],
+            options=_urls,
             real_time_refresh=True,
         ),
         StrInput(
