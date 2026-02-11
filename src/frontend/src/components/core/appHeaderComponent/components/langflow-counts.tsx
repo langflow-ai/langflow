@@ -14,7 +14,7 @@ export const LangflowCounts = () => {
   const formattedDiscordCount = formatNumber(discordCount);
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-1">
       <ShadTooltip
         content="Go to GitHub repo"
         side="bottom"
@@ -25,7 +25,7 @@ export const LangflowCounts = () => {
           onClick={() => window.open(GITHUB_URL, "_blank")}
           className="hit-area-hover flex items-center gap-2 rounded-md p-1 text-muted-foreground"
         >
-          <div className="relative items-center rounded-md px-2 py-1 flex">
+          <div className="relative items-center rounded-md px-1 py-1 flex">
             <FaGithub className="h-4 w-4" />
             <Case condition={Boolean(formattedStars) && formattedStars !== "0"}>
               <span className="text-xs font-semibold pl-2">
@@ -46,7 +46,7 @@ export const LangflowCounts = () => {
           onClick={() => window.open(DISCORD_URL, "_blank")}
           className="hit-area-hover flex items-center gap-2 rounded-md p-1 text-muted-foreground"
         >
-          <div className="relative items-center rounded-md px-2 py-1 flex">
+          <div className="relative items-center rounded-md px-1 py-1 flex">
             <FaDiscord className="h-4 w-4" />
             <Case
               condition={

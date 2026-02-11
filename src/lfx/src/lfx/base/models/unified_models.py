@@ -1078,7 +1078,12 @@ def get_llm(
         kwargs[base_url_param] = ollama_base_url
 
     try:
-        return model_class(**kwargs)
+        model_instance = model_class(**kwargs)
+        # Enable stream_usage so token counts are reported even when
+        # the model is invoked via astream_events (which forces streaming).
+        if hasattr(model_instance, "stream_usage"):
+            model_instance.stream_usage = True
+        return model_instance
     except Exception as e:
         # If instantiation fails and it's WatsonX, provide additional context
         if provider == "IBM WatsonX" and ("url" in str(e).lower() or "project" in str(e).lower()):
