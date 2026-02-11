@@ -16,3 +16,5 @@ export const DEFAULT_SEPARATOR = "";
 
 export const ACCEPTED_FILE_TYPES =
   ".pdf,.txt,.md,.docx,.doc,.csv,.json,.html,.xml";
+
+export const KB_NAME_REGEX = /^[a-zA-Z0-9][a-zA-Z0-9._-]*[a-zA-Z0-9]$/;

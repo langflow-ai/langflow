@@ -10,6 +10,7 @@ import {
   DEFAULT_CHUNK_OVERLAP,
   DEFAULT_CHUNK_SIZE,
   DEFAULT_SEPARATOR,
+  KB_NAME_REGEX,
 } from "../constants";
 import type {
   ChunkPreview,
@@ -224,8 +225,14 @@ export function useKnowledgeBaseForm({
 
   const getValidationErrors = useCallback((): Record<string, string> => {
     const errors: Record<string, string> = {};
-    if (!sourceName.trim()) {
+    const trimmedName = sourceName.trim().replace(/\s+/g, "_");
+    if (!trimmedName) {
       errors.sourceName = "Name is required";
+    } else if (trimmedName.length < 3 || trimmedName.length > 512) {
+      errors.sourceName = "Name must be between 3 and 512 characters";
+    } else if (!KB_NAME_REGEX.test(trimmedName)) {
+      errors.sourceName =
+        "Name must only contain [a-zA-Z0-9._-] and start/end with [a-zA-Z0-9]";
     }
     if (!isAddSourcesMode && selectedEmbeddingModel.length === 0) {
       errors.embeddingModel = "Embedding model is required";

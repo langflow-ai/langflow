@@ -98,7 +98,11 @@ export default function KnowledgeBaseUploadModal({
       }
       description={STEP_DESCRIPTIONS[form.currentStep]}
       icon="Database"
-      height={!hideAdvanced && form.showAdvanced ? "h-[690px]" : "h-[347px]"}
+      height={(() => {
+        const errorCount = Object.keys(form.validationErrors).length;
+        const base = !hideAdvanced && form.showAdvanced ? 690 : 347;
+        return `h-[${base + errorCount * 16}px]`;
+      })()}
       width="w-[700px]"
       showProgress={false}
       sidePanel={

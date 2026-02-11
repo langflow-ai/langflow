@@ -92,6 +92,11 @@ export function StepConfiguration({
             disabled={isAddSourcesMode}
             className={validationErrors.sourceName ? "border-destructive" : ""}
           />
+          {validationErrors.sourceName && (
+            <span className="text-xs text-destructive">
+              {validationErrors.sourceName}
+            </span>
+          )}
         </div>
 
         {/* Model Selection */}
@@ -110,19 +115,32 @@ export function StepConfiguration({
               </span>
             </div>
           ) : (
-            <ModelInputComponent
-              id="kb-embedding-model"
-              value={selectedEmbeddingModel}
-              editNode={false}
-              disabled={false}
-              handleOnNewValue={({ value }) => {
-                onEmbeddingModelChange(value);
-                onFieldChange?.();
-              }}
-              options={embeddingModelOptions}
-              placeholder="Select embedding model"
-              showEmptyState
-            />
+            <div
+              className={cn(
+                "rounded-md",
+                validationErrors.embeddingModel &&
+                  "[&_button]:border-destructive",
+              )}
+            >
+              <ModelInputComponent
+                id="kb-embedding-model"
+                value={selectedEmbeddingModel}
+                editNode={false}
+                disabled={false}
+                handleOnNewValue={({ value }) => {
+                  onEmbeddingModelChange(value);
+                  onFieldChange?.();
+                }}
+                options={embeddingModelOptions}
+                placeholder="Select embedding model"
+                showEmptyState
+              />
+            </div>
+          )}
+          {validationErrors.embeddingModel && (
+            <span className="text-xs text-destructive">
+              {validationErrors.embeddingModel}
+            </span>
           )}
         </div>
 
