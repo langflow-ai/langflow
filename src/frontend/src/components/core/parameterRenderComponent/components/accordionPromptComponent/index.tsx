@@ -1,19 +1,18 @@
-import { useState, useRef, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import { regexHighlight } from "@/constants/constants";
-import PromptModal from "@/modals/promptModal";
-import { cn } from "@/utils/utils";
-import MustachePromptModal from "@/modals/mustachePromptModal";
 import { Button } from "@/components/ui/button";
 import {
   Disclosure,
   DisclosureContent,
   DisclosureTrigger,
 } from "@/components/ui/disclosure";
+import { regexHighlight } from "@/constants/constants";
+import { usePostValidatePrompt } from "@/controllers/API/queries/nodes/use-post-validate-prompt";
+import MustachePromptModal from "@/modals/mustachePromptModal";
+import PromptModal from "@/modals/promptModal";
+import { cn } from "@/utils/utils";
 import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
 import type { InputProps, PromptAreaComponentType } from "../../types";
-import useAlertStore from "@/stores/alertStore";
-import { usePostValidatePrompt } from "@/controllers/API/queries/nodes/use-post-validate-prompt";
 
 /**
  * Generates a unique variable name for the prompt template.
@@ -47,7 +46,6 @@ export default function AccordionPromptComponent({
   handleNodeClass,
   value,
   disabled,
-  editNode = false,
   id = "",
   readonly = false,
   showParameter = false,
@@ -57,12 +55,30 @@ export default function AccordionPromptComponent({
   const [internalValue, setInternalValue] = useState(value);
   const [isScrollable, setIsScrollable] = useState(false);
   const contentEditableRef = useRef<HTMLDivElement>(null);
-  const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const cursorPositionRef = useRef<number>(0);
   const isTypingRef = useRef(false);
   const { mutate: postValidatePrompt } = usePostValidatePrompt();
   const validateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastValidatedValueRef = useRef<string>(value);
+
+  const resizeToFit = () => {
+    const el = contentEditableRef.current;
+    if (!el) return;
+
+    const baseHeightPx = 40;
+    const multilineMinHeightPx = 60;
+    const maxHeightPx = 96;
+
+    el.style.height = "auto";
+    const scrollHeight = el.scrollHeight;
+    const minHeight =
+      scrollHeight > baseHeightPx ? multilineMinHeightPx : baseHeightPx;
+    const nextHeight = Math.min(Math.max(scrollHeight, minHeight), maxHeightPx);
+
+    el.style.height = `${nextHeight}px`;
+    el.style.overflowY = scrollHeight > maxHeightPx ? "auto" : "hidden";
+    setIsScrollable(scrollHeight > nextHeight);
+  };
 
   // Apply highlighting to the content
   const getHighlightedHTML = (text: string) => {
@@ -244,8 +260,11 @@ export default function AccordionPromptComponent({
       // Update DOM when value comes from external source
       if (contentEditableRef.current) {
         saveCursorPosition();
-        contentEditableRef.current.innerHTML = getHighlightedHTML(value);
+        contentEditableRef.current.innerHTML = value
+          ? getHighlightedHTML(value)
+          : "";
         restoreCursorPosition();
+        resizeToFit();
       }
 
       // Update last validated value to avoid redundant calls
@@ -259,7 +278,10 @@ export default function AccordionPromptComponent({
 
     const currentText = contentEditableRef.current.innerText;
     if (currentText !== internalValue) {
-      contentEditableRef.current.innerHTML = getHighlightedHTML(internalValue);
+      contentEditableRef.current.innerHTML = internalValue
+        ? getHighlightedHTML(internalValue)
+        : "";
+      resizeToFit();
     }
   }, [internalValue]);
 
@@ -271,10 +293,15 @@ export default function AccordionPromptComponent({
         if (contentEditableRef.current) {
           contentEditableRef.current.innerHTML =
             getHighlightedHTML(internalValue);
+          resizeToFit();
         }
       });
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    resizeToFit();
+  }, []);
 
   // Validate prompt with debounce
   useEffect(() => {
@@ -333,21 +360,25 @@ export default function AccordionPromptComponent({
   const handleInput = (e: React.FormEvent<HTMLDivElement>) => {
     if (!contentEditableRef.current) return;
 
-    const newValue = contentEditableRef.current.innerText;
+    const rawValue = contentEditableRef.current.innerText;
+    const newValue = rawValue.replace(/\u200B/g, "");
+    const normalizedValue = newValue.trim() === "" ? "" : newValue;
 
-    if (newValue === internalValue) return;
+    if (normalizedValue === internalValue) return;
 
     isTypingRef.current = true;
 
     // Update internal state
-    setInternalValue(newValue);
+    setInternalValue(normalizedValue);
 
     // Notify parent immediately
-    handleOnNewValue({ value: newValue });
+    handleOnNewValue({ value: normalizedValue });
 
     // Check if we need to update HTML for highlighting
     const currentHTML = contentEditableRef.current.innerHTML;
-    const expectedHTML = getHighlightedHTML(newValue);
+    const expectedHTML = normalizedValue
+      ? getHighlightedHTML(normalizedValue)
+      : "";
 
     // Only update if the HTML actually needs to change (for highlighting)
     // This prevents unnecessary updates that mess with cursor position
@@ -362,6 +393,10 @@ export default function AccordionPromptComponent({
       restoreCursorPosition();
     }
 
+    if (normalizedValue === "") {
+      contentEditableRef.current.innerHTML = "";
+    }
+
     // Reset typing flag after a short delay
     setTimeout(() => {
       isTypingRef.current = false;
@@ -369,6 +404,8 @@ export default function AccordionPromptComponent({
 
     // Scroll cursor into view
     scrollToCursor();
+
+    resizeToFit();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -404,6 +441,7 @@ export default function AccordionPromptComponent({
 
       // Scroll cursor into view
       scrollToCursor();
+      resizeToFit();
     }
   };
 
@@ -435,6 +473,7 @@ export default function AccordionPromptComponent({
 
     // Update DOM with highlighting
     contentEditableRef.current.innerHTML = getHighlightedHTML(newValue);
+    resizeToFit();
   };
 
   const handlePromptModalSetValue = (newValue: string) => {
@@ -495,8 +534,10 @@ export default function AccordionPromptComponent({
               id={id}
               data-testid={id}
               className={cn(
-                "min-h-[60px] max-h-24 overflow-y-auto rounded-md border bg-background p-2 pr-8 text-xs outline-none break-words whitespace-pre-wrap",
+                "relative min-h-10 overflow-y-auto rounded-md border bg-background px-3 py-2 pr-8 text-sm outline-none break-words whitespace-pre-wrap",
                 "focus:border-primary hover:border-muted-foreground",
+                "before:content-[''] before:pointer-events-none before:absolute before:left-3 before:top-2 before:text-muted-foreground",
+                "empty:before:content-[attr(data-placeholder)]",
                 disabled && "cursor-not-allowed opacity-50",
                 readonly && "cursor-default",
                 !internalValue && "text-muted-foreground",
