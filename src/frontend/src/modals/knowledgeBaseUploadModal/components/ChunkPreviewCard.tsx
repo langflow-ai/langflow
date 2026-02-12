@@ -8,7 +8,7 @@ export function ChunkPreviewCard({
   index: number;
 }) {
   return (
-    <div className="flex flex-col rounded-lg border bg-muted/30 p-3 min-h-0 h-full">
+    <div className="flex flex-col rounded-lg border bg-muted/30 p-3 h-full">
       <div className="mb-2 flex items-center justify-between shrink-0">
         <span className="text-xs font-medium text-muted-foreground">
           Chunk {index + 1}

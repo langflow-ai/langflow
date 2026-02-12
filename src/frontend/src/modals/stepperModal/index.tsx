@@ -38,7 +38,11 @@ export function StepperModal({
   sidePanelOpen = DEFAULT_SIDE_PANEL_OPEN,
 }: StepperModalProps) {
   const { minWidth, height: sizeHeight } = switchCaseModalSize(size);
-  const height = customHeight || sizeHeight;
+  const isNumericHeight = customHeight && /^\d+$/.test(customHeight);
+  const heightClass = isNumericHeight ? undefined : customHeight || sizeHeight;
+  const heightStyle = isNumericHeight
+    ? { height: `${customHeight}px` }
+    : undefined;
 
   return (
     <StepperContext.Provider
@@ -46,10 +50,11 @@ export function StepperModal({
     >
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
+          style={heightStyle}
           className={cn(
-            "flex max-h-[85vh] flex-col gap-0 overflow-visible border bg-background p-0 shadow-lg transition-all duration-300 ease-in-out",
+            "flex max-h-[85vh] flex-col gap-0 overflow-visible border bg-background p-0 shadow-lg transition-[height,width,border-radius,opacity] duration-300 ease-in-out",
             customWidth ? `${customWidth} !max-w-none` : minWidth,
-            height,
+            heightClass,
             sidePanel && sidePanelOpen
               ? "rounded-l-xl rounded-r-none border-r-0"
               : "rounded-xl",

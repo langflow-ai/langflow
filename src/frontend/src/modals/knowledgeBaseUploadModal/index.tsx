@@ -101,7 +101,7 @@ export default function KnowledgeBaseUploadModal({
       height={(() => {
         const errorCount = Object.keys(form.validationErrors).length;
         const base = !hideAdvanced && form.showAdvanced ? 690 : 347;
-        return `h-[${base + errorCount * 16}px]`;
+        return `${base + errorCount * 16}`;
       })()}
       width="w-[700px]"
       showProgress={false}

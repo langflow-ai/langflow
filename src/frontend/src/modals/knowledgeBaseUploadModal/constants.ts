@@ -12,7 +12,7 @@ export const STEP_DESCRIPTIONS: Record<WizardStep, string> = {
 
 export const DEFAULT_CHUNK_SIZE = 100;
 export const DEFAULT_CHUNK_OVERLAP = 0;
-export const DEFAULT_SEPARATOR = "";
+export const DEFAULT_SEPARATOR = "\\n";
 
 export const ACCEPTED_FILE_TYPES =
   ".pdf,.txt,.md,.docx,.doc,.csv,.json,.html,.xml";

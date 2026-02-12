@@ -74,7 +74,7 @@ export function StepReview({
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 align="end"
-                className="max-w-[160px] overflow-y-auto"
+                className="max-h-[300px] max-w-[160px] overflow-y-auto"
               >
                 {files.map((file, idx) => (
                   <DropdownMenuItem
@@ -131,7 +131,7 @@ export function StepReview({
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 flex flex-col">
+      <div className="h-48 shrink-0 flex flex-col">
         {files.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center h-full">
             <ForwardedIconComponent
@@ -154,7 +154,6 @@ export function StepReview({
           </div>
         ) : chunkPreviews.length > 0 ? (
           <ChunkPreviewCard
-            key={currentChunkIndex}
             chunk={chunkPreviews[currentChunkIndex]}
             index={currentChunkIndex}
           />

@@ -399,6 +399,7 @@ export function StepConfiguration({
                 </Label>
                 <Input
                   id="separator"
+                  placeholder="\n"
                   value={separator}
                   onChange={(e) => onSeparatorChange(e.target.value)}
                   data-testid="kb-separator-input"
