@@ -481,6 +481,12 @@
               "max_tokens",
               "format_instructions",
               "output_schema",
+              "tools",
+              "input_value",
+              "handle_parsing_errors",
+              "verbose",
+              "max_iterations",
+              "agent_description",
               "add_current_date_tool"
             ],
             "frozen": false,

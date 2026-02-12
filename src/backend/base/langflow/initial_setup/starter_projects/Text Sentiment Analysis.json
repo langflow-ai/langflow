@@ -2574,6 +2574,13 @@
             "edited": false,
             "field_order": [
               "storage_location",
+              "path",
+              "file_path",
+              "separator",
+              "silent_errors",
+              "delete_server_file_after_processing",
+              "ignore_unsupported_extensions",
+              "ignore_unspecified_files",
               "file_path_str",
               "aws_access_key_id",
               "aws_secret_access_key",

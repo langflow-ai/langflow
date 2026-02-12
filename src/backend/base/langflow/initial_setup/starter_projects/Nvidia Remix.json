@@ -784,6 +784,12 @@
               "max_tokens",
               "format_instructions",
               "output_schema",
+              "tools",
+              "input_value",
+              "handle_parsing_errors",
+              "verbose",
+              "max_iterations",
+              "agent_description",
               "add_current_date_tool"
             ],
             "frozen": false,
@@ -2094,6 +2100,9 @@
             "field_order": [
               "index_name",
               "persist_directory",
+              "ingest_data",
+              "search_query",
+              "should_cache_vector_store",
               "allow_dangerous_deserialization",
               "embedding",
               "number_of_results"

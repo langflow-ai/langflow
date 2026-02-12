@@ -369,11 +369,11 @@
         },
         "position": {
           "x": 516.7529480335185,
-          "y": 237.04967879541528
+          "y": 350.0
         },
         "positionAbsolute": {
           "x": 516.7529480335185,
-          "y": 237.04967879541528
+          "y": 350.0
         },
         "selected": false,
         "type": "genericNode"
@@ -1275,6 +1275,13 @@
             "edited": false,
             "field_order": [
               "storage_location",
+              "path",
+              "file_path",
+              "separator",
+              "silent_errors",
+              "delete_server_file_after_processing",
+              "ignore_unsupported_extensions",
+              "ignore_unspecified_files",
               "file_path_str",
               "aws_access_key_id",
               "aws_secret_access_key",
