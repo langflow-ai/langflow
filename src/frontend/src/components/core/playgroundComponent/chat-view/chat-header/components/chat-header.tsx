@@ -1,14 +1,12 @@
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { AnimatedConditional } from "@/components/ui/animated-close";
 import { useDeleteSession } from "@/controllers/API/queries/messages/use-delete-sessions";
-import { useIsMobile } from "@/hooks/use-mobile";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import { cn } from "@/utils/utils";
 import { clearSessionMessages } from "../../utils/message-utils";
 import { useEditSessionInfo } from "../hooks/use-edit-session-info";
 import { useRenameSession } from "../hooks/use-rename-session";
-import { useSessionHasMessages } from "../hooks/use-session-has-messages";
 import { useSessionMoreMenuHandlers } from "../hooks/use-session-more-menu-handlers";
 import type { ChatHeaderProps } from "../types/chat-header.types";
 import { getSessionTitle } from "../utils/get-session-title";
@@ -24,7 +22,6 @@ export function ChatHeader({
   onSessionSelect,
   currentSessionId,
   currentFlowId,
-  onToggleFullscreen,
   isFullscreen = false,
   onDeleteSession,
   className,
@@ -58,8 +55,8 @@ export function ChatHeader({
     handleEditStart();
   };
 
-  const isMobile = useIsMobile();
   const isShareablePlayground = useFlowStore((state) => state.playgroundPage);
+  const isBuilding = useFlowStore((state) => state.isBuilding);
   const isSessionDropdownVisible = true;
   const isDefaultSession = currentSessionId === currentFlowId;
   const deleteSessionMutation = useDeleteSession({});
@@ -67,48 +64,54 @@ export function ChatHeader({
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
   const handleDeleteSessionInternal = () => {
-    if (!currentSessionId || isDefaultSession || !currentFlowId) return;
+    if (!currentSessionId || !currentFlowId) return;
+
+    if (isShareablePlayground) {
+      clearSessionMessages(currentSessionId, currentFlowId);
+      if (!isDefaultSession) {
+        handleDelete(currentSessionId);
+        onDeleteSession?.(currentSessionId);
+      }
+      setSuccessData({ title: "Session deleted successfully." });
+      return;
+    }
+
+    if (isDefaultSession) return;
 
     deleteSessionMutation.mutate(
       { sessionId: currentSessionId },
       {
         onSuccess: () => {
-          // Clear messages from React Query cache
           clearSessionMessages(currentSessionId, currentFlowId);
-          // Call the delete handler to update session list and selected session
           handleDelete(currentSessionId);
-          // Call the parent callback
           onDeleteSession?.(currentSessionId);
-          setSuccessData({
-            title: "Session deleted successfully.",
-          });
+          setSuccessData({ title: "Session deleted successfully." });
         },
         onError: () => {
-          setErrorData({
-            title: "Error deleting session.",
-          });
+          setErrorData({ title: "Error deleting session." });
         },
       },
     );
   };
 
   const handleClearChat = () => {
-    if (!currentSessionId || !isDefaultSession || !currentFlowId) return;
+    if (!currentSessionId || !currentFlowId) return;
+
+    if (isShareablePlayground) {
+      clearSessionMessages(currentSessionId, currentFlowId);
+      setSuccessData({ title: "Chat cleared successfully." });
+      return;
+    }
 
     deleteSessionMutation.mutate(
       { sessionId: currentSessionId },
       {
         onSuccess: () => {
-          // Clear messages from React Query cache
           clearSessionMessages(currentSessionId, currentFlowId);
-          setSuccessData({
-            title: "Chat cleared successfully.",
-          });
+          setSuccessData({ title: "Chat cleared successfully." });
         },
         onError: () => {
-          setErrorData({
-            title: "Error clearing chat.",
-          });
+          setErrorData({ title: "Error clearing chat." });
         },
       },
     );
@@ -119,15 +122,10 @@ export function ChatHeader({
     onOpenLogs: () => setOpenLogsModal?.(true),
   });
 
-  const hasMessages = useSessionHasMessages({
-    sessionId: currentSessionId,
-    flowId: currentFlowId,
-  });
-
-  const canRename = !isShareablePlayground && !isDefaultSession && hasMessages;
+  const canRename = !isShareablePlayground && !isDefaultSession;
   const canShowLogs = !isShareablePlayground;
-  const canClearChat = isDefaultSession;
-  const canDelete = !isShareablePlayground && !isDefaultSession;
+  const canClearChat = isShareablePlayground || isDefaultSession;
+  const canDelete = isShareablePlayground || !isDefaultSession;
   const hasAnyMenuOption =
     canRename || canShowLogs || canClearChat || canDelete;
 
@@ -147,6 +145,7 @@ export function ChatHeader({
         sideOffset={4}
         contentClassName="z-[100] [&>div.p-1]:!h-auto [&>div.p-1]:!min-h-0"
         isVisible={true}
+        disabled={isBuilding}
         tooltipContent="More options"
         tooltipSide="left"
         dataTestid="chat-header-more-menu"

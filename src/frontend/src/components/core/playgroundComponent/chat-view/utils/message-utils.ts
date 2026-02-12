@@ -251,27 +251,27 @@ export const clearSessionMessages = (sessionId: string, flowId: string) => {
     () => [],
   );
 
-  // Legacy: default session may have messages with null session_id
-  if (isDefaultSession) {
-    const mainQueryKey = [MESSAGES_QUERY_KEY, { id: flowId }];
-    const mainCache = queryClient.getQueryData<{ rows?: { data?: Message[] } }>(
-      mainQueryKey,
-    );
+  const mainQueryKey = [MESSAGES_QUERY_KEY, { id: flowId }];
+  const mainCache = queryClient.getQueryData<{ rows?: { data?: Message[] } }>(
+    mainQueryKey,
+  );
 
-    if (mainCache?.rows?.data) {
-      const filteredMessages = mainCache.rows.data.filter((msg) => {
-        if (msg.flow_id !== flowId) return true;
+  if (mainCache?.rows?.data) {
+    const filteredMessages = mainCache.rows.data.filter((msg) => {
+      if (msg.flow_id !== flowId) return true;
+      if (isDefaultSession) {
         return msg.session_id !== null && msg.session_id !== sessionId;
-      });
+      }
+      return msg.session_id !== sessionId;
+    });
 
-      queryClient.setQueryData(mainQueryKey, {
-        ...mainCache,
-        rows: {
-          ...mainCache.rows,
-          data: filteredMessages,
-        },
-      });
-    }
+    queryClient.setQueryData(mainQueryKey, {
+      ...mainCache,
+      rows: {
+        ...mainCache.rows,
+        data: filteredMessages,
+      },
+    });
   }
 
   queryClient.removeQueries({

@@ -4,7 +4,6 @@ import { useUpdateSessionName } from "@/controllers/API/queries/messages/use-ren
 import useFlowStore from "@/stores/flowStore";
 import { useVoiceStore } from "@/stores/voiceStore";
 import { cn } from "@/utils/utils";
-import { useSessionHasMessages } from "../hooks/use-session-has-messages";
 import { SessionMoreMenu } from "./session-more-menu";
 import { SessionRename } from "./session-rename";
 
@@ -43,6 +42,7 @@ export function SessionSelector({
 }: SessionSelectorProps) {
   const [isEditing, setIsEditing] = useState(false);
   const isShareablePlayground = useFlowStore((state) => state.playgroundPage);
+  const isBuilding = useFlowStore((state) => state.isBuilding);
   const { mutate: updateSessionName } = useUpdateSessionName();
   const setNewSessionCloseVoiceAssistant = useVoiceStore(
     (state) => state.setNewSessionCloseVoiceAssistant,
@@ -92,13 +92,8 @@ export function SessionSelector({
   // Default session (flowId) cannot be renamed or deleted
   const isDefaultSession = session === currentFlowId;
 
-  const hasMessages = useSessionHasMessages({
-    sessionId: session,
-    flowId: currentFlowId,
-  });
-
   const canModifySession = !isDefaultSession;
-  const canRenameSession = canModifySession && hasMessages;
+  const canRenameSession = canModifySession;
 
   return (
     <div
@@ -141,13 +136,15 @@ export function SessionSelector({
           )}
         </div>
 
-        {!isShareablePlayground && (
+        {(!isShareablePlayground || canModifySession) && (
           <SessionMoreMenu
             onRename={handleEditClick}
             onMessageLogs={() => inspectSession?.(session)}
             onDelete={() => deleteSession(session)}
-            showRename={canRenameSession}
+            showRename={!isShareablePlayground && canRenameSession}
+            showMessageLogs={!isShareablePlayground}
             showDelete={canModifySession}
+            disabled={isBuilding}
             side="bottom"
             align="end"
             sideOffset={4}

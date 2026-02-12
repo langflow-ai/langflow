@@ -1,8 +1,25 @@
 import { queryClient } from "@/contexts";
 import type { Message } from "@/types/messages";
-import { findLastBotMessage, updateMessageProperties } from "../message-utils";
+import {
+  clearSessionMessages,
+  findLastBotMessage,
+  updateMessageProperties,
+} from "../message-utils";
 
-const QUERY_KEY = ["useGetMessagesQuery", { id: "flow-1", session_id: "s1" }];
+jest.mock("@/stores/flowStore", () => ({
+  __esModule: true,
+  default: {
+    getState: () => ({ playgroundPage: false }),
+  },
+}));
+
+jest.mock("@/utils/playground-storage", () => ({
+  removePlaygroundSessionMessages: jest.fn(),
+  savePlaygroundMessages: jest.fn(),
+}));
+
+const MESSAGES_QUERY_KEY = "useGetMessagesQuery";
+const QUERY_KEY = [MESSAGES_QUERY_KEY, { id: "flow-1", session_id: "s1" }];
 
 function buildMessage(overrides: Partial<Message> = {}): Message {
   return {
@@ -102,5 +119,111 @@ describe("updateMessageProperties", () => {
     expect(updated![0].properties).toEqual(
       expect.objectContaining({ build_duration: 500 }),
     );
+  });
+});
+
+describe("clearSessionMessages", () => {
+  const FLOW_ID = "flow-1";
+  const SESSION_ID = "custom-session";
+  const MAIN_KEY = [MESSAGES_QUERY_KEY, { id: FLOW_ID }];
+  const SESSION_KEY = [
+    MESSAGES_QUERY_KEY,
+    { id: FLOW_ID, session_id: SESSION_ID },
+  ];
+
+  it("should_clear_per_session_cache", () => {
+    const msg = buildMessage({ id: "m1", session_id: SESSION_ID });
+    queryClient.setQueryData(SESSION_KEY, [msg]);
+
+    clearSessionMessages(SESSION_ID, FLOW_ID);
+
+    const cached = queryClient.getQueryData<Message[]>(SESSION_KEY);
+    expect(cached).toBeUndefined();
+  });
+
+  it("should_remove_non_default_session_messages_from_main_cache", () => {
+    const sessionMsg = buildMessage({
+      id: "m1",
+      session_id: SESSION_ID,
+      flow_id: FLOW_ID,
+    });
+    const otherMsg = buildMessage({
+      id: "m2",
+      session_id: "other-session",
+      flow_id: FLOW_ID,
+    });
+
+    queryClient.setQueryData(MAIN_KEY, {
+      rows: { data: [sessionMsg, otherMsg] },
+    });
+
+    clearSessionMessages(SESSION_ID, FLOW_ID);
+
+    const mainCache = queryClient.getQueryData<{
+      rows?: { data?: Message[] };
+    }>(MAIN_KEY);
+    expect(mainCache?.rows?.data).toHaveLength(1);
+    expect(mainCache?.rows?.data![0].id).toBe("m2");
+  });
+
+  it("should_remove_default_session_messages_including_null_session_id", () => {
+    const defaultMsg = buildMessage({
+      id: "m1",
+      session_id: FLOW_ID,
+      flow_id: FLOW_ID,
+    });
+    const nullSessionMsg = buildMessage({
+      id: "m2",
+      session_id: null as unknown as string,
+      flow_id: FLOW_ID,
+    });
+    const otherMsg = buildMessage({
+      id: "m3",
+      session_id: "other",
+      flow_id: FLOW_ID,
+    });
+
+    queryClient.setQueryData(MAIN_KEY, {
+      rows: { data: [defaultMsg, nullSessionMsg, otherMsg] },
+    });
+
+    clearSessionMessages(FLOW_ID, FLOW_ID);
+
+    const mainCache = queryClient.getQueryData<{
+      rows?: { data?: Message[] };
+    }>(MAIN_KEY);
+    expect(mainCache?.rows?.data).toHaveLength(1);
+    expect(mainCache?.rows?.data![0].id).toBe("m3");
+  });
+
+  it("should_preserve_messages_from_different_flow", () => {
+    const sameFlowMsg = buildMessage({
+      id: "m1",
+      session_id: SESSION_ID,
+      flow_id: FLOW_ID,
+    });
+    const diffFlowMsg = buildMessage({
+      id: "m2",
+      session_id: SESSION_ID,
+      flow_id: "other-flow",
+    });
+
+    queryClient.setQueryData(MAIN_KEY, {
+      rows: { data: [sameFlowMsg, diffFlowMsg] },
+    });
+
+    clearSessionMessages(SESSION_ID, FLOW_ID);
+
+    const mainCache = queryClient.getQueryData<{
+      rows?: { data?: Message[] };
+    }>(MAIN_KEY);
+    expect(mainCache?.rows?.data).toHaveLength(1);
+    expect(mainCache?.rows?.data![0].id).toBe("m2");
+  });
+
+  it("should_handle_missing_main_cache_gracefully", () => {
+    queryClient.setQueryData(SESSION_KEY, [buildMessage()]);
+
+    expect(() => clearSessionMessages(SESSION_ID, FLOW_ID)).not.toThrow();
   });
 });

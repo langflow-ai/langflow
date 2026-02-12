@@ -59,6 +59,7 @@ const ButtonSendWrapper = ({
       disabled={isLoading && !isBuilding}
       unstyled
       data-testid={isBuilding ? "button-stop" : "button-send"}
+      aria-label={isBuilding ? "Stop" : "Send"}
     >
       <div className="flex h-fit w-fit items-center gap-2 text-sm font-medium">
         <ForwardedIconComponent

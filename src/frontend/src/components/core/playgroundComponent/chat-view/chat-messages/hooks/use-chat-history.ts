@@ -49,13 +49,24 @@ export const useChatHistory = (visibleSession: string | null) => {
         const existingCache =
           queryClient.getQueryData<Message[]>(sessionCacheKey) || [];
 
-        // Only initialize if cache is empty and we have backend messages
         if (existingCache.length === 0 && backendMessages.length > 0) {
-          queryClient.setQueryData(sessionCacheKey, backendMessages);
+          // Filter to only include messages for the current session
+          const sessionOnly = backendMessages.filter((msg) => {
+            if (msg.flow_id !== currentFlowId) return false;
+            if (visibleSession === currentFlowId) {
+              return (
+                msg.session_id === visibleSession || !msg.session_id
+              );
+            }
+            return msg.session_id === visibleSession;
+          });
+          if (sessionOnly.length > 0) {
+            queryClient.setQueryData(sessionCacheKey, sessionOnly);
+          }
         }
       }
     }
-  }, [queryData, queryClient, sessionCacheKey]);
+  }, [queryData, queryClient, sessionCacheKey, currentFlowId, visibleSession]);
 
   // Use session cache as the single source of truth
   // updateMessage and addUserMessage handle all updates (placeholders, streaming, etc.)

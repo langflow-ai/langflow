@@ -41,7 +41,7 @@ export function ChatHeaderTitle({
         />
       ) : (
         <ShadTooltip content={displayTitle} side="bottom">
-          <div className="truncate text-mmd text-foreground">
+          <div className="truncate text-mmd text-foreground" title={displayTitle}>
             {displayTitle}
           </div>
         </ShadTooltip>

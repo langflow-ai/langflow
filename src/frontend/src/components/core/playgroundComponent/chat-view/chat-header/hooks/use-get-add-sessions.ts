@@ -37,13 +37,13 @@ export const useGetAddSessions: UseGetAddSessionsReturnType = ({
   });
 
   // Clean up local sessions that are now persisted (in fetchedSessions)
+  // Skip for shareable playground: sessions are local-only and must survive message clearing
   useEffect(() => {
-    if (localSessions.size === 0) return;
+    if (localSessions.size === 0 || isPlaygroundPage) return;
     setLocalSessions((prev) => {
       const updated = new Set(prev);
       let changed = false;
       prev.forEach((session) => {
-        // If session is now in fetchedSessions, remove it from localSessions
         if (fetchedSessions.includes(session)) {
           updated.delete(session);
           changed = true;
@@ -51,7 +51,7 @@ export const useGetAddSessions: UseGetAddSessionsReturnType = ({
       });
       return changed ? updated : prev;
     });
-  }, [fetchedSessions, localSessions.size]);
+  }, [fetchedSessions, localSessions.size, isPlaygroundPage]);
 
   useEffect(() => {
     if (!flowId || !isPlaygroundPage) return;
