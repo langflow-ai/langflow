@@ -267,19 +267,18 @@ class MongoDBQueryComponent(Component):
             """Recursively convert ObjectId instances in any value."""
             if isinstance(value, ObjectId):
                 return str(value)
-            elif isinstance(value, dict):
+            if isinstance(value, dict):
                 # Recurse into dict values
                 for key, val in value.items():
                     value[key] = convert_value(val)
                 return value
-            elif isinstance(value, (list, tuple)):
+            if isinstance(value, (list, tuple)):
                 # Recurse into list/tuple elements
                 converted = [convert_value(item) for item in value]
                 # Preserve tuple type if input was tuple
                 return tuple(converted) if isinstance(value, tuple) else converted
-            else:
-                # Return other types unchanged
-                return value
+            # Return other types unchanged
+            return value
 
         # Start recursive conversion on the document
         for key, value in doc.items():
@@ -296,7 +295,7 @@ class MongoDBQueryComponent(Component):
                 "keys": list(obj.keys()),
                 "count": len(obj),
             }
-        elif isinstance(obj, list):
+        if isinstance(obj, list):
             return {"count": len(obj)}
         return {"type": type(obj).__name__}
 
