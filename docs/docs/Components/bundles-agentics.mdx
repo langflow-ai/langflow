@@ -6,16 +6,50 @@ slug: /bundles-agentics
 import Icon from "@site/src/components/icon";
 import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 
-[Agentics](https://github.com/IBM/agentics/) uses LLMs to transform tabular data: add or fill columns row-by-row (map), collapse many rows into one (reduce), filter rows by natural-language conditions, or generate synthetic rows. For example, turn a table of customer reviews into sentiment scores per row, or into a single summary.
+[Agentics](https://github.com/IBM/agentics/) uses LLMs to transform tabular data:
+add or fill columns row-by-row (map), collapse many rows into one (reduce),
+filter rows by natural-language conditions, or generate synthetic rows.
+For example, turn a table of customer reviews into sentiment scores per row, or into a single summary, by just providing the slot definitions, as illustrated below:
 
-The **Agentics** bundle in Langflow provides components that run these operations inside your flows.
+**Input DataFrame:**
+
+| review_id | text |
+|-----------|------|
+| 1 | Great product, fast shipping! |
+| 2 | Terrible quality, broke after one use |
+
+**Output DataFrame:**
+
+| review_id | text | sentiment | confidence | key_topics |
+|-----------|------|-----------|------------|------------|
+| 1 | Great product, fast shipping! | positive | 0.95 | product quality, shipping |
+| 2 | Terrible quality, broke after one use | negative | 0.92 | quality, durability |
+
+
+Agentics is particularly useful to process batch data from databases, spreadsheets and CSV files.
+It can also be used to process data from APIs, web scraping, or any other source that can be transformed
+into a table.
+
+Agentics is based on logical transduction, a new form of logical/functional programming that can
+be used to instruct agentics workflows by using a declarative syntax, as described in the [Transduction is All You Need for Structured Data Workflows](https://arxiv.org/abs/2508.15610) paper.
+
+Agentics implements a map-reduce paradigm, enabling asynchronous execution of multiple rows in batches that can be processed in parallel, often achieving >10x speedup if compared to synchronous execution.
+
+The **Agentics** bundle in Langflow provides components that abstract the power of these operations inside your flows.
 
 ## Prerequisites
 
-1. Install the Agentics package in Langflow's virtual environment.
+### Installation
+
+1. Install the Agentics package in Langflow's virtual environment:
+
 ```bash
 uv pip install agentics-py
 ```
+
+:::info Python Version
+Agentics requires Python 3.9 or higher. Ensure your Langflow environment meets this requirement.
+:::
 
 2. Restart Langflow so the Agentics components are available:
 
@@ -23,9 +57,116 @@ uv pip install agentics-py
 uv run langflow run
 ```
 
-## Use the component in your flow
+### LLM Provider Configuration
 
-<!-- Add examples here when available -->
+Agentics components require an LLM provider. Supported providers include:
+- **OpenAI** - Requires `OPENAI_API_KEY` environment variable
+- **Anthropic** - Requires `ANTHROPIC_API_KEY` environment variable
+- **Google Generative AI** - Requires `GOOGLE_API_KEY` environment variable
+- **IBM WatsonX** - Requires WatsonX credentials
+- **Ollama** - Requires local Ollama installation (default: `http://localhost:11434`)
+
+Configure your API keys as [global variables](/configuration-global-variables) or environment variables before using Agentics components.
+
+## Use Cases and Examples
+
+### Customer Review Sentiment Analysis (SemanticMap)
+
+Transform customer reviews into structured sentiment data:
+
+**Input DataFrame:**
+
+| review_id | text |
+|-----------|------|
+| 1 | Great product, fast shipping! |
+| 2 | Terrible quality, broke after one use |
+
+**Generated Fields Configuration:**
+- `sentiment` (str): "positive", "negative", or "neutral"
+- `confidence` (float): Confidence score 0-1
+- `key_topics` (str, As List): Main topics mentioned
+
+**Output DataFrame:**
+
+| review_id | text | sentiment | confidence | key_topics |
+|-----------|------|-----------|------------|------------|
+| 1 | Great product, fast shipping! | positive | 0.95 | product quality, shipping |
+| 2 | Terrible quality, broke after one use | negative | 0.92 | quality, durability |
+
+### Sales Data Summary (Semantic Aggregator)
+
+Aggregate multiple sales records into a single summary:
+
+**Input DataFrame:**
+
+| date | product | revenue | units |
+|------|---------|---------|-------|
+| 2024-01-01 | Widget A | 1200 | 50 |
+| 2024-01-02 | Widget B | 800 | 30 |
+| 2024-01-03 | Widget A | 1500 | 60 |
+
+**Generated Fields Configuration:**
+- `total_revenue` (float): Sum of all revenue
+- `best_selling_product` (str): Product with highest units
+- `summary` (str): Natural language summary
+
+**Output DataFrame:**
+
+| total_revenue | best_selling_product | summary |
+|---------------|---------------------|---------|
+| 3500 | Widget A | Over 3 days, Widget A was the best seller with 110 units, generating $2700 in revenue. |
+
+### Spam Detection (SemanticFilter)
+
+Filter messages to keep only legitimate content:
+
+**Input DataFrame:**
+
+| message_id | content |
+|------------|---------|
+| 1 | Meeting at 3pm tomorrow |
+| 2 | CLICK HERE FOR FREE MONEY!!! |
+| 3 | Project deadline extended to Friday |
+
+**Predicate Template:** `{content} is not spam or promotional content`
+
+**Output DataFrame:**
+
+| message_id | content |
+|------------|---------|
+| 1 | Meeting at 3pm tomorrow |
+| 3 | Project deadline extended to Friday |
+
+### Test Data Generation (Synthetic Data Generator)
+
+Generate realistic test data for development:
+
+**Generated Fields Configuration:**
+- `customer_name` (str): Full name
+- `email` (str): Email address
+- `age` (int): Age between 18-80
+- `purchase_categories` (str, As List): List of product categories purchased
+
+**Output DataFrame (10 rows generated):**
+
+| customer_name | email | age | purchase_categories |
+|---------------|-------|-----|---------------------|
+| Sarah Johnson | sarah.j@email.com | 34 | Electronics, Books, Home & Garden |
+| Michael Chen | m.chen@email.com | 28 | Sports, Clothing, Electronics |
+| ... | ... | ... | ... |
+
+## Components Overview
+
+The Agentics bundle includes six components: five specialized components for data transformation and one for DataFrame operations:
+
+| Component | Purpose | Input Rows | Output Rows |
+|-----------|---------|------------|-------------|
+| SemanticMap | Add columns to each row | N | N |
+| Semantic Aggregator | Summarize all rows | N | 1 |
+| SemanticFilter | Filter rows by condition | N | ≤N |
+| Synthetic Data Generator | Generate fake data | 0 | N |
+| DataFrameOps | Combine two DataFrames | N + M | Variable |
+| Agentics | General map/reduce/generate | Variable | Variable |
 
 ## Parameters
 
@@ -33,98 +174,428 @@ uv run langflow run
 
 ### SemanticMap
 
-Processes a dataframe and expands it by adding new columns generated by LLMs (one row in, one row out per row).
+Processes a DataFrame row-by-row and adds new columns generated by LLMs. Each input row produces exactly one output row with additional fields.
 
-#### Semantic Map parameters
+**Use when:** You need to enrich existing data with LLM-generated insights (e.g., sentiment analysis, categorization, entity extraction).
+
+#### SemanticMap Parameters
 
 | Name | Type | Description |
 |------|------|-------------|
-| Language Model | String | Input parameter. Specifies the name of the LLM to be used. Use guided experience. |
-| Source DataFrame | DataFrame | Input parameter. Input dataframe (JSON list of dicts or DataFrame). |
-| Generated Fields | Table | Input parameter. Describe the output columns to be generated. |
-| Instructions | String | Input parameter. Instructions for generating the new column values. |
-| Append To Source Columns | bool | Input parameter (advanced). If false, returns only the new columns; if true, appends them to the original data. Default: true. |
+| Language Model | Dropdown | Select the LLM provider and model. Click the dropdown to see available models from configured providers. |
+| Source DataFrame | DataFrame | Input data as JSON (list of dicts) or DataFrame object. Each row will be processed independently. |
+| Generated Fields | Table | Define the schema for new columns to generate. See [Generated Fields Format](#generated-fields-format) below. |
+| Instructions | String | Natural language instructions for the LLM on how to generate the new column values. Be specific for better results. |
+| Append To Source Columns | Boolean | **Advanced.** If `true` (default), new columns are added to existing data. If `false`, only new columns are returned. |
 
-**Generated Fields** is defined by editing a table in which each row specifies:
-- **name** — the name of the column to be generated
-- **type** — one of: str, int, float, bool, dict
-- **description** — optional instructions for the LLM to generate the column's content
-- **As List** — boolean; if true, the column is a list of values (e.g. entities extracted from text)
+**Performance Notes:**
+- Rows are processed concurrently for better performance
+- Default batch size: 10 rows per API call
+- Token usage scales linearly with number of rows
+
+**Example Instructions:**
+```
+Analyze the review text and determine:
+1. Overall sentiment (positive/negative/neutral)
+2. Confidence level of the sentiment
+3. Key topics mentioned in the review
+```
 
 ### Semantic Aggregator
 
-Aggregates all rows in the input dataframe into a single row following the desired output schema.
+Aggregates all rows in the input DataFrame into a single row with LLM-generated summary fields.
 
-#### Semantic Aggregator parameters
+**Use when:** You need to summarize, analyze, or extract insights from multiple rows (e.g., creating reports, finding patterns, generating summaries).
 
-| Name | Type | Description |
-|------|------|-------------|
-| Language Model | String | Input parameter. Specifies the name of the LLM to be used. |
-| Source DataFrame | DataFrame | Input parameter. Input dataframe (JSON list of dicts or DataFrame). Required. |
-| Generated Fields | Table | Input parameter. Describe the output columns to be generated. |
-| Instructions | String | Input parameter (advanced). Optional instructions for generating the aggregated values. |
-
-**Generated Fields** is defined by editing a table in which each row specifies:
-- **name** — the name of the column to be generated
-- **type** — one of: str, int, float, bool, dict
-- **description** — optional instructions for the LLM
-- **As List** — boolean; if true, the column is a list of values
-
-### Semantic Filter
-
-Filters out rows from a dataframe based on LLM-evaluated conditions.
-
-#### Semantic Filter parameters
+#### Semantic Aggregator Parameters
 
 | Name | Type | Description |
 |------|------|-------------|
-| Language Model | String | Input parameter. Specifies the name of the LLM to be used. Use guided experience. |
-| Source DataFrame | DataFrame | Input parameter. Input dataframe (JSON list of dicts or DataFrame). |
-| Predicate Template | String | Input parameter. Expression or natural-language predicate the LLM evaluates per row. If true, the row is kept; otherwise it is filtered out. |
-| Batch Size | Integer | Input parameter (advanced). Number of rows to evaluate per batch. Default: 10. |
+| Language Model | Dropdown | Select the LLM provider and model from configured providers. |
+| Source DataFrame | DataFrame | **Required.** Input data as JSON (list of dicts) or DataFrame object. All rows are analyzed together. |
+| Generated Fields | Table | Define the schema for the aggregated output. See [Generated Fields Format](#generated-fields-format) below. |
+| Instructions | String | **Advanced.** Optional instructions for how to aggregate the data. If not provided, the LLM infers from field descriptions. |
 
-Predicate template examples:
-- `is about war` — the whole input row is evaluated if no explicit `{field_name}` is used (can lead to high token usage)
-- `{temperature} is higher than 30` — only the `temperature` column is used; other columns are discarded
-- `{content} is about war and {country} is in Europe` — multiple columns can be used in the predicate
+**Performance Notes:**
+- All rows are sent to the LLM in a single request
+- Token usage can be high for large DataFrames
+- Consider filtering or sampling large datasets first
+
+**Example Instructions:**
+```
+Analyze all sales records and provide:
+1. Total revenue across all products
+2. The best-selling product by units
+3. A brief summary of sales trends
+```
+
+### SemanticFilter
+
+Filters DataFrame rows based on LLM-evaluated natural language conditions. Rows where the predicate evaluates to `true` are kept; others are removed.
+
+**Use when:** You need to filter data using complex, semantic conditions that are difficult to express with traditional logic (e.g., content moderation, relevance filtering, quality assessment).
+
+#### SemanticFilter Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Language Model | Dropdown | Select the LLM provider and model from configured providers. |
+| Source DataFrame | DataFrame | Input data as JSON (list of dicts) or DataFrame object. |
+| Predicate Template | String | Natural language condition to evaluate per row. Use `{column_name}` to reference specific columns. |
+| Batch Size | Integer | **Advanced.** Number of rows to evaluate per API call. Default: 10. Increase for better performance, decrease for lower token usage. |
+
+#### Predicate Template Examples
+
+**Simple predicates:**
+```
+is about technology
+```
+Evaluates the entire row (high token usage).
+
+**Column-specific predicates:**
+```
+{temperature} is higher than 30
+```
+Only the `temperature` column is evaluated; other columns are ignored (lower token usage).
+
+**Complex predicates:**
+```
+{content} is about war and {country} is in Europe
+```
+Multiple columns can be referenced in a single predicate.
+
+**Advanced predicates:**
+```
+{review_text} expresses genuine satisfaction and {rating} is consistent with the sentiment
+```
+Combines semantic understanding with logical reasoning.
+
+**Performance Tips:**
+- Reference specific columns with `{column_name}` to reduce token usage
+- Larger batch sizes improve throughput but increase latency
+- Test predicates on small samples before processing large datasets
 
 ### Synthetic Data Generator
 
-Generates fake data of the requested type using LLMs.
+Generates realistic synthetic data based on a schema definition using LLMs.
 
-#### Synthetic Data Generator parameters
+**Use when:** You need test data, want to augment training datasets, or need to generate examples for documentation.
+
+#### Synthetic Data Generator Parameters
 
 | Name | Type | Description |
 |------|------|-------------|
-| Language Model | String | Input parameter. Specifies the name of the LLM to be used. Use guided experience. |
-| Generated Fields | Table | Input parameter. Describe the output columns to be generated (schema). |
-| Number of Instances | Integer | Input parameter. How many synthetic rows to generate. Default: 10. |
+| Language Model | Dropdown | Select the LLM provider and model from configured providers. |
+| Generated Fields | Table | Define the schema for synthetic data. See [Generated Fields Format](#generated-fields-format) below. |
+| Number of Instances | Integer | How many synthetic rows to generate. Default: 10. Maximum depends on LLM context limits. |
+
+**Performance Notes:**
+- Generation happens in batches (default: 10 instances per batch)
+- Token usage scales with schema complexity and number of instances
+- More detailed field descriptions produce more realistic data
+
+**Example Schema:**
+```
+name: customer_name, type: str, description: "Full name of a realistic customer"
+email: email_address, type: str, description: "Valid email format matching the customer name"
+age: age, type: int, description: "Age between 18 and 80"
+preferences: preferences, type: dict, description: "Customer preferences including favorite_category and budget_range"
+```
 
 ### Agentics
 
-General-purpose component that can perform Map/Reduce operations over dataframes based on user-defined instructions. For details on Agentics and logical transduction, see the [Agentics documentation](https://ibm.github.io/Agentics/).
+General-purpose component that can perform Map, Reduce, or Generate operations over DataFrames based on user-defined instructions. This is the most flexible component but requires more configuration.
 
-#### Agentics parameters
+**Use when:** You need custom transduction logic not covered by specialized components, or want to experiment with different operation types.
+
+For details on Agentics and logical transduction theory, see the [Agentics documentation](https://ibm.github.io/Agentics/).
+
+#### Agentics Parameters
 
 | Name | Type | Description |
 |------|------|-------------|
-| Language Model | String | Input parameter. Specifies the name of the LLM to be used. Use guided experience. |
-| Source DataFrame | DataFrame | Input parameter. Input dataframe (JSON list of dicts or DataFrame). |
-| Transduction Type | Dropdown | Input parameter. Options: amap, areduce, generate. Required. |
-| Generated Type | String | Input parameter. Name for the generated target type. Required. |
-| Generated Fields | Table | Input parameter. Describe the output columns to be generated. |
-| Instructions | String | Input parameter. Instructions on how to perform the transduction. |
-| Merge Source States | bool | Input parameter (advanced). If true, source row fields are appended to the output; if false, only the target type is returned. Default: true. |
-| Batch Size | Integer | Input parameter (advanced). For amap: rows per batch; for generate: number of instances. Default: 10. |
+| Language Model | Dropdown | Select the LLM provider and model from configured providers. |
+| Source DataFrame | DataFrame | Input data as JSON (list of dicts) or DataFrame object. Not required for `generate` mode. |
+| Transduction Type | Dropdown | **Required.** Operation type: `amap`, `areduce`, or `generate`. See descriptions below. |
+| Generated Type | String | **Required.** Name for the generated target type (used for schema naming). |
+| Generated Fields | Table | Define the schema for output data. See [Generated Fields Format](#generated-fields-format) below. |
+| Instructions | String | Natural language instructions on how to perform the transduction. |
+| Merge Source States | Boolean | **Advanced.** If `true` (default), source row fields are appended to output (only for `amap`). If `false`, only generated fields are returned. |
+| Batch Size | Integer | **Advanced.** For `amap`: rows per batch. For `generate`: number of instances. Default: 10. |
 
-- **amap** — all rows are processed concurrently; output has the same number of rows as the source.
-- **areduce** — all rows are processed together; output is a single row of the specified type.
-- **generate** — no source dataframe is required; multiple fake instances of the specified type are generated.
+#### Transduction Types
 
-<!-- A video walkthrough for the Agentics bundle can be added here when available. -->
+**amap (Map)**
+- Processes all rows concurrently
+- Output has the same number of rows as input
+- Each input row produces one output row
+- Similar to SemanticMap but more configurable
 
-## See also
+**areduce (Reduce)**
+- Processes all rows together
+- Output is a single row
+- All input rows are analyzed to produce aggregated output
+- Similar to Semantic Aggregator but more configurable
+
+**generate (Generate)**
+- No source DataFrame required
+- Generates multiple synthetic instances
+- Similar to Synthetic Data Generator but more configurable
+
+**Example Use Cases:**
+- `amap`: Translate product descriptions to multiple languages
+- `areduce`: Create executive summary from meeting notes
+- `generate`: Generate test cases for software testing
+
+### DataFrameOps
+
+Combines two DataFrames using merge, compose, or concatenate operations. This component enables DataFrame manipulation without LLM processing.
+
+**Use when:** You need to combine data from multiple sources, join related datasets, or append rows from different DataFrames.
+
+#### DataFrameOps Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Left DataFrame | DataFrame | First input DataFrame as JSON (list of dicts) or DataFrame object. |
+| Right DataFrame | DataFrame | Second input DataFrame as JSON (list of dicts) or DataFrame object. |
+| Operation Type | Dropdown | **Required.** Operation to perform: `merge`, `compose`, or `concatenate`. |
+
+#### Operation Types
+
+**merge**
+- Combines DataFrames by matching row indices
+- Adds columns from the right DataFrame to corresponding rows in the left DataFrame
+- Output has the same number of rows as the left DataFrame
+- Similar to a SQL LEFT JOIN on row position
+
+**Example:**
+
+Left DataFrame:
+
+| id | name |
+|----|------|
+| 1 | Alice |
+| 2 | Bob |
+
+Right DataFrame:
+
+| age | city |
+|-----|------|
+| 30 | NYC |
+| 25 | LA |
+
+Output (merge):
+
+| id | name | age | city |
+|----|------|-----|------|
+| 1 | Alice | 30 | NYC |
+| 2 | Bob | 25 | LA |
+
+**compose**
+- Creates a composite structure with both DataFrames as nested fields
+- Each row contains both a `target` field (from left DataFrame) and a `source` field (from right DataFrame)
+- Output has the same number of rows as the left DataFrame
+- Each row pairs one left row with one right row by index
+- Useful for maintaining relationships between related data
+
+**Example:**
+
+Left DataFrame:
+
+| id | name |
+|----|------|
+| 1 | Alice |
+| 2 | Bob |
+
+Right DataFrame:
+
+| score | grade |
+|-------|-------|
+| 95 | A |
+| 82 | B |
+
+Output (compose):
+
+| target | source |
+|--------|--------|
+| `{"id": 1, "name": "Alice"}` | `{"score": 95, "grade": "A"}` |
+| `{"id": 2, "name": "Bob"}` | `{"score": 82, "grade": "B"}` |
+
+**concatenate**
+- Appends rows from the right DataFrame to the left DataFrame
+- Output has left_rows + right_rows
+- Similar to SQL UNION ALL
+- Columns must be compatible
+
+**Example:**
+
+Left DataFrame:
+
+| product | price |
+|---------|-------|
+| Widget A | 10 |
+
+Right DataFrame:
+
+| product | price |
+|---------|-------|
+| Widget B | 15 |
+
+Output (concatenate):
+
+| product | price |
+|---------|-------|
+| Widget A | 10 |
+| Widget B | 15 |
+
+**Performance Notes:**
+- No LLM calls required (fast and free)
+- All operations are O(n) where n is the number of rows
+- Merge and compose pair rows by index (same output size as left DataFrame)
+- Concatenate appends rows (output size = left + right rows)
+
+## Generated Fields Format
+
+The **Generated Fields** parameter is a table where each row defines an output column:
+
+| Column | Type | Description | Required |
+|--------|------|-------------|----------|
+| name | String | Column name in output DataFrame | Yes |
+| type | Dropdown | Data type: `str`, `int`, `float`, `bool`, or `dict` | Yes |
+| description | String | Instructions for the LLM on what to generate | No |
+| As List | String | Enter "true" or "false". If true, the column contains a list of values | No |
+
+### Type Descriptions
+
+- **str**: Text data (e.g., names, descriptions, categories)
+- **int**: Integer numbers (e.g., counts, IDs, ages)
+- **float**: Decimal numbers (e.g., prices, scores, percentages)
+- **bool**: True/False values (e.g., flags, binary classifications)
+- **dict**: Nested JSON objects (e.g., structured data, complex attributes)
+
+### Examples
+
+**Simple fields:**
+```
+name: sentiment, type: str, description: "positive, negative, or neutral"
+name: confidence, type: float, description: "confidence score between 0 and 1"
+```
+
+**List fields:**
+```
+name: topics, type: str, As List: true, description: "main topics discussed"
+name: scores, type: float, As List: true, description: "individual scores for each criterion"
+```
+
+**Nested structures:**
+```
+name: metadata, type: dict, description: "JSON object with keys: author, date, category"
+name: analysis, type: dict, description: "nested object containing sentiment, topics, and entities"
+```
+
+## Output Format
+
+All Agentics components return data as a **list of dictionaries**, which displays as a table in Langflow:
+
+**Example Output:**
+
+| column1 | column2 | column3 |
+|---------|---------|---------|
+| value1 | 123 | true |
+| value2 | 456 | false |
+
+**JSON Representation:**
+```json
+[
+  {"column1": "value1", "column2": 123, "column3": true},
+  {"column1": "value2", "column2": 456, "column3": false}
+]
+```
+
+This format is compatible with:
+- DataFrame components in Langflow
+- JSON processing components
+- API endpoints
+- Database insert operations
+- CSV export tools
+
+## Performance Considerations
+
+### Token Usage
+
+- **SemanticMap**: Tokens per row × number of rows
+- **Semantic Aggregator**: All rows sent in one request (can be large)
+- **SemanticFilter**: Tokens per row × number of rows (reduced with column-specific predicates)
+- **Synthetic Data Generator**: Tokens per instance × number of instances
+
+### Batch Size Recommendations
+
+| Dataset Size | Recommended Batch Size | Rationale |
+|--------------|------------------------|-----------|
+| < 100 rows | 10 (default) | Balanced performance |
+| 100-1000 rows | 15-25 | Better throughput |
+| > 1000 rows | 25 (maximum) | Maximum efficiency |
+
+**Note:** Maximum batch size is 25. Larger batch sizes increase latency per batch but improve overall throughput.
+
+### Best Practices
+
+1. **Test on small samples** before processing large datasets
+2. **Use column-specific predicates** in SemanticFilter to reduce token usage
+3. **Consider filtering data** before using Semantic Aggregator on large datasets
+4. **Monitor API costs** when processing large volumes
+5. **Optimize batch sizes** based on your dataset size and performance requirements
+
+## Troubleshooting
+
+### Common Errors
+
+**"Agentics-py is not installed"**
+```bash
+# Solution: Install the package
+uv pip install agentics-py
+# Then restart Langflow
+uv run langflow run
+```
+
+**"API key is required"**
+- Configure your LLM provider's API key as a global variable
+- Or set the appropriate environment variable (e.g., `OPENAI_API_KEY`)
+- Restart Langflow after setting environment variables
+
+**"No model selected"**
+- Click the Language Model dropdown
+- Select a provider (e.g., OpenAI)
+- Choose a specific model (e.g., gpt-4)
+
+**DataFrame format errors**
+- Ensure input is a list of dictionaries: `[{"col1": "val1"}, {"col2": "val2"}]`
+- Or use a DataFrame component output
+- Check that column names in predicates match actual column names (case-sensitive)
+
+**High token usage**
+- Use column-specific predicates: `{column_name}` instead of evaluating entire rows
+- Reduce batch size to process fewer rows per API call
+- Filter or sample large datasets before processing
+
+**Timeout errors**
+- Reduce batch size
+- Simplify instructions
+- Use a faster LLM model
+- Process data in smaller chunks
+
+### Getting Help
+
+If you encounter issues:
+1. Check the [Agentics documentation](https://ibm.github.io/Agentics/)
+2. Review the [Agentics GitHub issues](https://github.com/IBM/agentics/issues)
+3. Ask in the [Langflow community](https://github.com/langflow-ai/langflow/discussions)
+
+## See Also
 
 - [Agentics official documentation](https://ibm.github.io/Agentics/)
 - [Agentics GitHub repository](https://github.com/IBM/agentics/)
-- [Transduction is All You Need for Structured Data Workflows](https://arxiv.org/abs/2508.15610) (paper)
+- [Transduction is All You Need for Structured Data Workflows](https://arxiv.org/abs/2508.15610) (research paper)
+- [Global Variables Configuration](/configuration-global-variables)
+- [DataFrame Operations](/dataframe-operations)
