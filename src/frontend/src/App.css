@@ -163,6 +163,15 @@ body {
 .react-flow__controls-button svg {
   fill: none !important;
 }
+.react-flow__controls,
+.react-flow__panel.bottom-center-panel {
+  overflow: visible !important;
+}
+
+/* Reset grab cursor on canvas when a Radix dropdown/popover is open */
+body:has([data-radix-popper-content-wrapper]) .react-flow__pane {
+  cursor: default !important;
+}
 
 .react-flow__edge .react-flow__edge-path {
   transition: color;

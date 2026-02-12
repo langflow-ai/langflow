@@ -1,9 +1,6 @@
 import { useEffect, useState } from "react";
 import { useBlocker, useParams } from "react-router-dom";
-import {
-  AssistantPanel,
-  useAssistantViewMode,
-} from "@/components/core/assistantPanel";
+import { AssistantPanel } from "@/components/core/assistantPanel";
 import { FlowPageSlidingContainerContent } from "@/components/core/playgroundComponent/sliding-container/components/flow-page-sliding-container";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import {
@@ -196,7 +193,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const setAssistantOpen = useAssistantManagerStore(
     (state) => state.setAssistantSidebarOpen,
   );
-  const { viewMode: assistantViewMode } = useAssistantViewMode();
+
 
   // Auto-close playground when all chat components are removed
   useEffect(() => {
@@ -274,32 +271,11 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
                   {/* FlowSidebarComponent - stays in place */}
                   {!view && <FlowSidebarComponent isLoading={isLoading} />}
 
-                  {/* Spacer for Assistant (sidebar mode only) - pushes main when open */}
-                  {/* Uses negative margin to account for sidebar width (17.5rem = 280px) */}
-                  <div
-                    className="h-full shrink-0 transition-all duration-300"
-                    style={{
-                      width:
-                        assistantOpen && assistantViewMode === "sidebar"
-                          ? 500
-                          : 0,
-                      marginLeft:
-                        assistantOpen && assistantViewMode === "sidebar"
-                          ? "-17.5rem"
-                          : 0,
-                    }}
-                  />
-
                   <main
                     className={cn(
                       "flex flex-1 min-w-0 overflow-hidden transition-all duration-300",
-                      ((assistantOpen && assistantViewMode === "sidebar") ||
-                        (isSlidingContainerOpen && !isFullscreen)) &&
-                        "rounded-xl m-2",
-                      assistantOpen &&
-                        assistantViewMode === "sidebar" &&
-                        "ml-0",
-                      isSlidingContainerOpen && !isFullscreen && "mr-0",
+                      isSlidingContainerOpen && !isFullscreen &&
+                        "rounded-xl m-2 mr-0",
                     )}
                   >
                     <div className="h-full w-full">

@@ -18,7 +18,7 @@ const MESSAGE_DELAY = 400;
 
 function TypingCursor() {
   return (
-    <span className="ml-0.5 inline-block h-4 w-1.5 animate-pulse bg-accent-emerald-foreground/50" />
+    <span className="ml-0.5 inline-block h-3.5 w-1.5 animate-pulse align-text-bottom bg-accent-emerald-foreground/50" />
   );
 }
 

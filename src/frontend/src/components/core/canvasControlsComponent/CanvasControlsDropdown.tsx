@@ -100,12 +100,12 @@ const CanvasControlsDropdown = ({
         <Button
           variant="ghost"
           data-testid="canvas_controls_dropdown"
-          className="group flex h-8 items-center justify-center rounded-md px-2 hover:bg-muted"
+          className="group flex h-8 items-center justify-center rounded-md px-1 hover:bg-muted"
           unstyled
           title="Canvas Controls"
         >
           <div className="flex items-center justify-center">
-            <div className="text-sm pr-1 text-muted-foreground group-hover:text-foreground">
+            <div className="text-sm px-1 text-muted-foreground group-hover:text-foreground">
               {formatZoomPercentage(zoom)}
             </div>
             <IconComponent

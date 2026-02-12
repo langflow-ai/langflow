@@ -26,8 +26,7 @@ export type AssistantManagerStoreType = {
   takeSnapshot: () => void;
   assistantSidebarOpen: boolean;
   setAssistantSidebarOpen: (AssistantSideBarOpen: boolean) => void;
-  assistantViewMode: "sidebar" | "floating";
-  setAssistantViewMode: (mode: "sidebar" | "floating") => void;
+
 
   // Chat state
   examples: Array<FlowType>;
