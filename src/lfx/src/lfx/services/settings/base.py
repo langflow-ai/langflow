@@ -96,6 +96,9 @@ class Settings(BaseSettings):
     """The number of seconds to wait before giving up on a lock to released or establishing a connection to the
     database."""
 
+    mcp_tool_timeout: int = 30
+    """The number of seconds to wait before giving up on an MCP tool call."""
+
     # ---------------------------------------------------------------------
     # MCP Session-manager tuning
     # ---------------------------------------------------------------------
