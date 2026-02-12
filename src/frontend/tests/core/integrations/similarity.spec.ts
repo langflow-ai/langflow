@@ -21,8 +21,7 @@ test(
 
     await page.getByTestId("blank-flow").click();
 
-  await disableInspectPanel(page);
-
+    await disableInspectPanel(page);
 
     await addLegacyComponents(page);
 

@@ -101,9 +101,7 @@ test(
     ).toEqual("THIS IS A NEW VALUE");
 
     await page
-      .getByTestId(
-        "button_open_text_area_modal_query_query_openai_api_base",
-      )
+      .getByTestId("button_open_text_area_modal_query_query_openai_api_base")
       .click();
 
     await page
@@ -119,7 +117,6 @@ test(
     expect(
       await page.getByTestId("query_query_openai_api_base").inputValue(),
     ).toEqual("THIS IA TEST TEXT INSIDE CONTROLS PANEL");
-
   },
 );
 

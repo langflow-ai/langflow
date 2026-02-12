@@ -84,8 +84,7 @@ test(
     await page.getByTestId("keypair0").fill("test1");
     await page.getByTestId("keypair100").fill("test2");
 
-
-        await page.locator(".react-flow__renderer").click();
+    await page.locator(".react-flow__renderer").click();
 
     await page.waitForTimeout(1000);
 
@@ -96,6 +95,5 @@ test(
 
     expect(valueKeyPair0).toBe("test1");
     expect(valueKeyPair100).toBe("test2");
-
   },
 );

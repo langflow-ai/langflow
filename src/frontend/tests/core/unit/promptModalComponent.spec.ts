@@ -129,15 +129,12 @@ test(
     // Final verification - check that the template persists
     await page.getByTestId("div-generic-node").click();
 
-
     const savedTemplate = await page
       .locator('//*[@id="promptarea_prompt_template"]')
       .innerText();
     expect(savedTemplate).toBe(
       "Multi-line with {var1}\n      and {var2} plus\n      {var3} at the end",
     );
-
-
   },
 );
 
@@ -231,18 +228,15 @@ test(
     }
 
     value =
-      (await page
-        .locator('//*[@id="textarea_str_prompt"]')
-        .inputValue()) ?? "";
+      (await page.locator('//*[@id="textarea_str_prompt"]').inputValue()) ?? "";
 
     if (value != "prompt_value_!@#!@#") {
       expect(false).toBeTruthy();
     }
 
     value =
-      (await page
-        .locator('//*[@id="textarea_str_prompt1"]')
-        .inputValue()) ?? "";
+      (await page.locator('//*[@id="textarea_str_prompt1"]').inputValue()) ??
+      "";
 
     if (value != "prompt_name_test_123123!@#!@#") {
       expect(false).toBeTruthy();
@@ -257,9 +251,7 @@ test(
     }
 
     await page
-      .getByTestId(
-        "button_open_text_area_modal_textarea_str_prompt1",
-      )
+      .getByTestId("button_open_text_area_modal_textarea_str_prompt1")
       .click();
     await page
       .getByTestId("text-area-modal")
@@ -268,9 +260,7 @@ test(
     await page.getByText("Finish Editing", { exact: true }).click();
 
     await page
-      .getByTestId(
-        "button_open_text_area_modal_textarea_str_prompt",
-      )
+      .getByTestId("button_open_text_area_modal_textarea_str_prompt")
       .nth(0)
       .click();
     await page
@@ -280,18 +270,15 @@ test(
     await page.getByText("Finish Editing", { exact: true }).click();
 
     value =
-      (await page
-        .locator('//*[@id="textarea_str_prompt"]')
-        .inputValue()) ?? "";
+      (await page.locator('//*[@id="textarea_str_prompt"]').inputValue()) ?? "";
 
     if (value != "prompt_test_44444444444!@#$") {
       expect(false).toBeTruthy();
     }
 
     value =
-      (await page
-        .locator('//*[@id="textarea_str_prompt1"]')
-        .inputValue()) ?? "";
+      (await page.locator('//*[@id="textarea_str_prompt1"]').inputValue()) ??
+      "";
 
     if (value != "prompt_test_12312312321!@#$") {
       expect(false).toBeTruthy();
@@ -448,9 +435,7 @@ test(
 
     // Verify the toggle is now checked
     expect(
-      await page
-        .getByTestId("toggle_bool_use_double_brackets")
-        .isChecked(),
+      await page.getByTestId("toggle_bool_use_double_brackets").isChecked(),
     ).toBeTruthy();
 
     // Close the modal
@@ -523,6 +508,5 @@ test(
 
     await page.getByTestId("textarea_str_age").fill("25");
     expect(await page.getByTestId("textarea_str_age").inputValue()).toBe("25");
-
   },
 );

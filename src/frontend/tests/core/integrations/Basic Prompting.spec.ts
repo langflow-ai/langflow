@@ -23,8 +23,6 @@ withEventDeliveryModes(
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
-
-
     await initialGPTsetup(page);
 
     await page.getByTestId("button_run_chat output").click();
