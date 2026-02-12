@@ -1,9 +1,12 @@
 import json
+import logging
 import re
 
 from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, Field
 from pymongo.collection import Collection
+
+logger = logging.getLogger(__name__)
 
 from lfx.custom import Component
 from lfx.field_typing import Tool
@@ -26,6 +29,10 @@ class MongoDBQueryComponent(Component):
     icon = "MongoDB"
     OPERATIONS = ["query", "insert", "update", "delete", "replace"]
     INSERT_MODES = ["append", "overwrite"]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._mongo_client = None
 
     inputs = [
         SecretStrInput(
@@ -99,6 +106,13 @@ class MongoDBQueryComponent(Component):
             info="Bulk insert mode: append (add to existing) or overwrite (clear collection first)",
             advanced=True,
         ),
+        BoolInput(
+            name="overwrite_confirmed",
+            display_name="Confirm Collection Overwrite",
+            value=False,
+            info="REQUIRED for overwrite mode: explicitly confirm to delete all existing documents in the collection before inserting new ones. This is a safety measure to prevent accidental data loss.",
+            advanced=True,
+        ),
     ]
 
     outputs = [
@@ -132,7 +146,9 @@ class MongoDBQueryComponent(Component):
         )
         update: str | dict = Field(
             ...,
-            description='Data to update as JSON. Examples: {"runtime": 120} or {"$set": {"sinais_vitais.temperatura": 40}}',
+            description=(
+                'Data to update as JSON. Examples: {"runtime": 120} or {"$set": {"sinais_vitais.temperatura": 40}}'
+            ),
         )
 
     class MongoDBReplaceSchema(BaseModel):
@@ -158,11 +174,14 @@ class MongoDBQueryComponent(Component):
         )
 
     def parse_json(self, json_string: str) -> dict:
-        """Parse JSON string to dict.
+        """Parse JSON string to dict with support for relaxed JSON formats.
 
         Accepts both formats:
         - {"title": "value", "runtime": 11}  (standard JSON)
         - {title:'value',runtime:11}  (JavaScript-like)
+
+        Carefully handles single quotes and apostrophes to avoid corruption
+        of values containing apostrophes (e.g., "It's a movie").
         """
         if not json_string or json_string.strip() in ["{}", ""]:
             return {}
@@ -171,10 +190,19 @@ class MongoDBQueryComponent(Component):
             # Try parsing as standard JSON first
             return json.loads(json_string)
         except json.JSONDecodeError:
-            # Try to fix JavaScript-like format
+            # Try to fix JavaScript-like format with careful quote handling
             try:
-                # Replace single quotes with double quotes
-                fixed_json = json_string.replace("'", '"')
+                fixed_json = json_string
+
+                # Targeted single-quote replacement only at key/value boundaries
+                # Replace opening single quotes (after { , or : with optional whitespace)
+                fixed_json = re.sub(r"([{,:]\s*)'", r'\1"', fixed_json)
+
+                # Replace closing single quotes (before } , or : with optional whitespace)
+                fixed_json = re.sub(r"'(\s*[},:])", r'"\1', fixed_json)
+
+                # Handle single quotes at end of input (before closing brace)
+                fixed_json = re.sub(r"'(\s*})", r'"\1', fixed_json)
 
                 # Add quotes around unquoted keys
                 fixed_json = re.sub(r"(\{|,)\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*:", r'\1"\2":', fixed_json)
@@ -185,7 +213,11 @@ class MongoDBQueryComponent(Component):
                 raise ValueError(msg) from e
 
     def get_collection(self) -> Collection:
-        """Build MongoDB connection and return collection."""
+        """Get MongoDB collection with cached connection.
+
+        Caches the MongoClient on the instance to prevent connection leaks.
+        The connection should be closed by calling close() when done.
+        """
         try:
             from pymongo import MongoClient
         except ImportError as e:
@@ -193,27 +225,85 @@ class MongoDBQueryComponent(Component):
             raise ImportError(msg) from e
 
         try:
-            mongo_client: MongoClient = MongoClient(self.mongodb_nosql_uri)
-            collection = mongo_client[self.db_name][self.collection_name]
+            # Reuse cached client if available
+            if self._mongo_client is None:
+                self._mongo_client = MongoClient(self.mongodb_nosql_uri)
+
+            collection = self._mongo_client[self.db_name][self.collection_name]
             return collection
 
         except Exception as e:
             msg = f"Failed to connect to MongoDB NoSQL: {e}"
             raise ValueError(msg) from e
 
+    def close(self):
+        """Close the MongoDB connection and clear the cached client.
+
+        Call this method when the component is done to properly close the connection
+        and prevent resource leaks.
+        """
+        if self._mongo_client is not None:
+            try:
+                self._mongo_client.close()
+                logger.info("MongoDB connection closed")
+            except Exception as e:
+                logger.error(f"Error closing MongoDB connection: {e}")
+            finally:
+                self._mongo_client = None
+
+    def __del__(self):
+        """Cleanup: ensure connection is closed when component is garbage collected."""
+        self.close()
+
     def convert_objectid_to_str(self, doc: dict) -> dict:
-        """Convert ObjectId fields to strings for serialization."""
+        """Recursively convert all ObjectId fields to strings for safe JSON serialization.
+
+        Traverses nested dictionaries and lists to find and convert ObjectId instances,
+        including nested structures within arrays and subdocuments.
+        """
         from bson.objectid import ObjectId
 
-        for key, value in doc.items():
+        def convert_value(value):
+            """Recursively convert ObjectId instances in any value."""
             if isinstance(value, ObjectId):
-                doc[key] = str(value)
+                return str(value)
+            elif isinstance(value, dict):
+                # Recurse into dict values
+                for key, val in value.items():
+                    value[key] = convert_value(val)
+                return value
+            elif isinstance(value, (list, tuple)):
+                # Recurse into list/tuple elements
+                converted = [convert_value(item) for item in value]
+                # Preserve tuple type if input was tuple
+                return tuple(converted) if isinstance(value, tuple) else converted
+            else:
+                # Return other types unchanged
+                return value
+
+        # Start recursive conversion on the document
+        for key, value in doc.items():
+            doc[key] = convert_value(value)
         return doc
+
+    def _redact_sensitive(self, obj: dict | list) -> dict:
+        """Extract safe metadata from object without exposing sensitive data.
+
+        Returns only key names, types, and counts instead of actual values.
+        """
+        if isinstance(obj, dict):
+            return {
+                "keys": list(obj.keys()),
+                "count": len(obj),
+            }
+        elif isinstance(obj, list):
+            return {"count": len(obj)}
+        return {"type": type(obj).__name__}
 
     def query_operation(self, collection: Collection) -> list[Data]:
         """Execute query operation."""
         query_filter = self.parse_json(self.search_query)
-        self.log(f"Executing query: {query_filter}")
+        self.log(f"Executing query with filter: {self._redact_sensitive(query_filter)}")
 
         cursor = collection.find(query_filter).limit(self.limit)
 
@@ -249,8 +339,26 @@ class MongoDBQueryComponent(Component):
 
         # Handle insert mode
         if self.insert_mode == "overwrite":
+            if not self.overwrite_confirmed:
+                msg = (
+                    "Overwrite mode requires explicit confirmation via 'Confirm Collection Overwrite' flag. "
+                    "This prevents accidental deletion of all documents in the collection. "
+                    "Please set 'Confirm Collection Overwrite' to True if you want to proceed."
+                )
+                raise ValueError(msg)
+
+            # Warn before deleting all documents
+            warning_msg = (
+                f"DELETING ALL DOCUMENTS from collection '{self.collection_name}' in database '{self.db_name}'"
+            )
+            logger.warning(warning_msg)
+            self.log(warning_msg)
+
+            # Perform deletion
             deleted_count = collection.delete_many({}).deleted_count
-            self.log(f"Deleted {deleted_count} existing documents (overwrite mode)")
+            info_msg = f"Deleted {deleted_count} existing documents (overwrite mode)"
+            logger.info(info_msg)
+            self.log(info_msg)
 
         # Insert documents
         if len(documents) == 1:
@@ -285,8 +393,8 @@ class MongoDBQueryComponent(Component):
         if not any(key.startswith("$") for key in update_data.keys()):
             update_data = {"$set": update_data}
 
-        self.log(f"Updating documents matching: {query_filter}")
-        self.log(f"Update operation: {update_data}")
+        self.log(f"Updating documents with filter: {self._redact_sensitive(query_filter)}")
+        self.log(f"Update operation with fields: {self._redact_sensitive(update_data)}")
 
         if self.update_many:
             result = collection.update_many(query_filter, update_data, upsert=self.upsert)
@@ -319,7 +427,7 @@ class MongoDBQueryComponent(Component):
             msg = "No replacement document provided. Use 'Document Data' field"
             raise ValueError(msg)
 
-        self.log(f"Replacing document matching: {query_filter}")
+        self.log(f"Replacing document with filter: {self._redact_sensitive(query_filter)}")
 
         result = collection.replace_one(query_filter, replacement_doc, upsert=self.upsert)
         self.log(f"Matched: {result.matched_count}, Modified: {result.modified_count}, Upserted: {result.upserted_id}")
@@ -343,7 +451,7 @@ class MongoDBQueryComponent(Component):
             msg = "Delete operation requires a filter. Use 'Filter/Query' field"
             raise ValueError(msg)
 
-        self.log(f"Deleting documents matching: {query_filter}")
+        self.log(f"Deleting documents with filter: {self._redact_sensitive(query_filter)}")
 
         if self.update_many:
             result = collection.delete_many(query_filter)
@@ -391,7 +499,7 @@ class MongoDBQueryComponent(Component):
         else:
             query_filter = self.parse_json(filter)
 
-        self.log(f"Tool Mode - Executing query: {query_filter}")
+        self.log(f"Tool Mode - Executing query with filter: {self._redact_sensitive(query_filter)}")
 
         collection = self.get_collection()
         cursor = collection.find(query_filter).limit(self.limit)
@@ -418,7 +526,7 @@ class MongoDBQueryComponent(Component):
         else:
             doc = self.parse_json(document)
 
-        self.log(f"Tool Mode - Inserting document: {doc}")
+        self.log(f"Tool Mode - Inserting document with fields: {self._redact_sensitive(doc)}")
 
         collection = self.get_collection()
         result = collection.insert_one(doc)
@@ -450,17 +558,23 @@ class MongoDBQueryComponent(Component):
         if not any(key.startswith("$") for key in upd_data.keys()):
             upd_data = {"$set": upd_data}
 
-        self.log(f"Tool Mode - Updating documents matching: {query_filter}")
-        self.log(f"Tool Mode - Update operation: {upd_data}")
+        self.log(f"Tool Mode - Updating documents with filter: {self._redact_sensitive(query_filter)}")
+        self.log(f"Tool Mode - Update operation with fields: {self._redact_sensitive(upd_data)}")
 
         collection = self.get_collection()
-        result = collection.update_many(query_filter, upd_data, upsert=self.upsert)
+
+        if self.update_many:
+            result = collection.update_many(query_filter, upd_data, upsert=self.upsert)
+            operation = "update_many"
+        else:
+            result = collection.update_one(query_filter, upd_data, upsert=self.upsert)
+            operation = "update_one"
 
         self.log(
             f"Tool Mode - Matched: {result.matched_count}, Modified: {result.modified_count}, Upserted: {result.upserted_id}"
         )
         return {
-            "operation": "update",
+            "operation": operation,
             "matched_count": result.matched_count,
             "modified_count": result.modified_count,
             "upserted_id": str(result.upserted_id) if result.upserted_id else None,
@@ -486,7 +600,7 @@ class MongoDBQueryComponent(Component):
         else:
             repl_doc = self.parse_json(replacement)
 
-        self.log(f"Tool Mode - Replacing document matching: {query_filter}")
+        self.log(f"Tool Mode - Replacing document with filter: {self._redact_sensitive(query_filter)}")
 
         collection = self.get_collection()
         result = collection.replace_one(query_filter, repl_doc, upsert=self.upsert)
@@ -519,13 +633,20 @@ class MongoDBQueryComponent(Component):
             msg = "Delete operation requires a filter"
             raise ValueError(msg)
 
-        self.log(f"Tool Mode - Deleting documents matching: {query_filter}")
+        self.log(f"Tool Mode - Deleting documents with filter: {self._redact_sensitive(query_filter)}")
 
         collection = self.get_collection()
-        result = collection.delete_many(query_filter)
 
-        self.log(f"Tool Mode - Deleted {result.deleted_count} documents")
-        return {"operation": "delete", "deleted_count": result.deleted_count}
+        if self.update_many:
+            result = collection.delete_many(query_filter)
+            operation = "delete_many"
+            self.log(f"Tool Mode - Deleted {result.deleted_count} documents")
+        else:
+            result = collection.delete_one(query_filter)
+            operation = "delete_one"
+            self.log(f"Tool Mode - Deleted {result.deleted_count} document")
+
+        return {"operation": operation, "deleted_count": result.deleted_count}
 
     async def to_toolkit(self) -> list[Tool]:
         """Convert MongoDB component to tools for agent use.
