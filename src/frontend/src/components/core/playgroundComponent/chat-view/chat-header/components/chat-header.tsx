@@ -124,17 +124,23 @@ export function ChatHeader({
     flowId: currentFlowId,
   });
 
+  const canRename = !isShareablePlayground && !isDefaultSession && hasMessages;
+  const canShowLogs = !isShareablePlayground;
+  const canClearChat = isDefaultSession;
+  const canDelete = !isShareablePlayground && !isDefaultSession;
+  const hasAnyMenuOption = canRename || canShowLogs || canClearChat || canDelete;
+
   const moreMenu = (
-    <AnimatedConditional isOpen={isSessionDropdownVisible}>
+    <AnimatedConditional isOpen={isSessionDropdownVisible && hasAnyMenuOption}>
       <SessionMoreMenu
         onRename={handleEditStartLogged}
         onMessageLogs={onMessageLogs}
         onClearChat={handleClearChat}
         onDelete={handleDeleteSessionInternal}
-        showRename={!isDefaultSession && hasMessages}
-        showMessageLogs={!isShareablePlayground}
-        showClearChat={isDefaultSession}
-        showDelete={!isDefaultSession}
+        showRename={canRename}
+        showMessageLogs={canShowLogs}
+        showClearChat={canClearChat}
+        showDelete={canDelete}
         side="bottom"
         align="end"
         sideOffset={4}
