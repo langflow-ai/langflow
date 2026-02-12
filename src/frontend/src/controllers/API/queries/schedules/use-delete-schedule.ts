@@ -14,9 +14,7 @@ export const useDeleteSchedule: useMutationFunctionType<
 > = (options?) => {
   const { mutate, queryClient } = UseRequestProcessor();
 
-  const deleteScheduleFn = async ({
-    id,
-  }: IDeleteSchedule): Promise<void> => {
+  const deleteScheduleFn = async ({ id }: IDeleteSchedule): Promise<void> => {
     await api.delete(`${getURL("SCHEDULES")}/${id}`);
   };
 

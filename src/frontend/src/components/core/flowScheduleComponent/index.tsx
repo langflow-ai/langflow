@@ -12,9 +12,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import {
-  useGetSchedules,
-} from "@/controllers/API/queries/schedules/use-get-schedules";
+import { useGetSchedules } from "@/controllers/API/queries/schedules/use-get-schedules";
 import { useCreateSchedule } from "@/controllers/API/queries/schedules/use-create-schedule";
 import { useUpdateSchedule } from "@/controllers/API/queries/schedules/use-update-schedule";
 import { useDeleteSchedule } from "@/controllers/API/queries/schedules/use-delete-schedule";
@@ -100,16 +98,13 @@ function parseCronExpression(cron: string): {
 
   const [minutePart, hourPart, , , dayOfWeekPart] = parts;
 
-  const minutes =
-    minutePart === "*" ? [0] : minutePart.split(",").map(Number);
+  const minutes = minutePart === "*" ? [0] : minutePart.split(",").map(Number);
   const hours = hourPart === "*" ? [0] : hourPart.split(",").map(Number);
 
   const times: string[] = [];
   for (const h of hours) {
     for (const m of minutes) {
-      times.push(
-        `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`,
-      );
+      times.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
     }
   }
 
@@ -333,11 +328,11 @@ export default function FlowScheduleComponent({
           {/* Repeat frequency */}
           <div className="flex flex-col gap-1.5">
             <Label className="text-mmd font-medium">Repeat</Label>
-            <Select
-              value={repeatFrequency}
-              onValueChange={setRepeatFrequency}
-            >
-              <SelectTrigger className="w-full" data-testid="schedule-repeat-select">
+            <Select value={repeatFrequency} onValueChange={setRepeatFrequency}>
+              <SelectTrigger
+                className="w-full"
+                data-testid="schedule-repeat-select"
+              >
                 <SelectValue placeholder="Select frequency" />
               </SelectTrigger>
               <SelectContent>
@@ -351,8 +346,7 @@ export default function FlowScheduleComponent({
           </div>
 
           {/* Days of week (for weekly/custom) */}
-          {(repeatFrequency === "weekly" ||
-            repeatFrequency === "custom") && (
+          {(repeatFrequency === "weekly" || repeatFrequency === "custom") && (
             <div className="flex flex-col gap-1.5">
               <Label className="text-mmd font-medium">Days</Label>
               <div className="flex flex-wrap gap-1.5">
@@ -397,10 +391,7 @@ export default function FlowScheduleComponent({
                       onClick={() => removeTimeSlot(index)}
                       data-testid={`schedule-remove-time-${index}`}
                     >
-                      <ForwardedIconComponent
-                        name="X"
-                        className="!h-4 !w-4"
-                      />
+                      <ForwardedIconComponent name="X" className="!h-4 !w-4" />
                     </Button>
                   )}
                 </div>
@@ -429,7 +420,10 @@ export default function FlowScheduleComponent({
               value={selectedTimezone}
               onValueChange={setSelectedTimezone}
             >
-              <SelectTrigger className="w-full" data-testid="schedule-timezone-select">
+              <SelectTrigger
+                className="w-full"
+                data-testid="schedule-timezone-select"
+              >
                 <SelectValue placeholder="Select timezone" />
               </SelectTrigger>
               <SelectContent>

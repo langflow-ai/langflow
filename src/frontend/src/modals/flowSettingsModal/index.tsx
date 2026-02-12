@@ -16,12 +16,7 @@ export default function FlowSettingsModal({
   const flowId = flowData?.id ?? currentFlow?.id;
 
   return (
-    <BaseModal
-      open={open}
-      setOpen={setOpen}
-      size="medium"
-      className="p-4"
-    >
+    <BaseModal open={open} setOpen={setOpen} size="medium" className="p-4">
       <BaseModal.Header>
         <span className="text-base font-semibold">Flow Settings</span>
       </BaseModal.Header>

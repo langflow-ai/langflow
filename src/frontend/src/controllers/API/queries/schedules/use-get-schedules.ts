@@ -7,9 +7,7 @@ export const useGetSchedules = (flowId: string) => {
   const { query } = UseRequestProcessor();
 
   const getSchedulesFn = async (): Promise<FlowScheduleType[]> => {
-    const response = await api.get(
-      `${getURL("SCHEDULES")}?flow_id=${flowId}`,
-    );
+    const response = await api.get(`${getURL("SCHEDULES")}?flow_id=${flowId}`);
     return response.data;
   };
 

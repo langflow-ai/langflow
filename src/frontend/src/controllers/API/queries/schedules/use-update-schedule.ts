@@ -1,5 +1,8 @@
 import type { useMutationFunctionType } from "@/types/api";
-import type { FlowScheduleType, FlowScheduleUpdateType } from "@/types/schedules";
+import type {
+  FlowScheduleType,
+  FlowScheduleUpdateType,
+} from "@/types/schedules";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -20,10 +23,7 @@ export const useUpdateSchedule: useMutationFunctionType<
     flow_id,
     ...payload
   }: IUpdateSchedule): Promise<FlowScheduleType> => {
-    const response = await api.patch(
-      `${getURL("SCHEDULES")}/${id}`,
-      payload,
-    );
+    const response = await api.patch(`${getURL("SCHEDULES")}/${id}`, payload);
     return response.data;
   };
 
