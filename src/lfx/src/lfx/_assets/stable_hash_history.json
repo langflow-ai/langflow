@@ -1781,7 +1781,7 @@
   },
   "MongoDBNoSQL": {
     "versions": {
-      "0.3.0": "619eb78863c4"
+      "0.3.0": "e2beea1c44ca"
     }
   }
 }
