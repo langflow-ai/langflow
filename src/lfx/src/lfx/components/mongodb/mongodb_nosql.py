@@ -495,10 +495,7 @@ class MongoDBQueryComponent(Component):
             List of documents matching the query
         """
         # Handle both string and dict inputs
-        if isinstance(query_filter, dict):
-            filter_dict = query_filter
-        else:
-            filter_dict = self.parse_json(query_filter)
+        filter_dict = query_filter if isinstance(query_filter, dict) else self.parse_json(query_filter)
 
         self.log(f"Tool Mode - Executing query with filter: {self._redact_sensitive(filter_dict)}")
 
@@ -522,10 +519,7 @@ class MongoDBQueryComponent(Component):
         Returns:
             Result info with inserted IDs
         """
-        if isinstance(document, dict):
-            doc = document
-        else:
-            doc = self.parse_json(document)
+        doc = document if isinstance(document, dict) else self.parse_json(document)
 
         self.log(f"Tool Mode - Inserting document with fields: {self._redact_sensitive(doc)}")
 
@@ -545,15 +539,8 @@ class MongoDBQueryComponent(Component):
         Returns:
             Result info with update counts
         """
-        if isinstance(query_filter, dict):
-            filter_dict = query_filter
-        else:
-            filter_dict = self.parse_json(query_filter)
-
-        if isinstance(update, dict):
-            upd_data = update
-        else:
-            upd_data = self.parse_json(update)
+        filter_dict = query_filter if isinstance(query_filter, dict) else self.parse_json(query_filter)
+        upd_data = update if isinstance(update, dict) else self.parse_json(update)
 
         # Wrap in $set if not already using update operators
         if not any(key.startswith("$") for key in upd_data):
@@ -593,15 +580,8 @@ class MongoDBQueryComponent(Component):
         Returns:
             Result info with replace counts
         """
-        if isinstance(query_filter, dict):
-            filter_dict = query_filter
-        else:
-            filter_dict = self.parse_json(query_filter)
-
-        if isinstance(replacement, dict):
-            repl_doc = replacement
-        else:
-            repl_doc = self.parse_json(replacement)
+        filter_dict = query_filter if isinstance(query_filter, dict) else self.parse_json(query_filter)
+        repl_doc = replacement if isinstance(replacement, dict) else self.parse_json(replacement)
 
         self.log(f"Tool Mode - Replacing document with filter: {self._redact_sensitive(filter_dict)}")
 
@@ -629,10 +609,7 @@ class MongoDBQueryComponent(Component):
         Returns:
             Result info with deleted count
         """
-        if isinstance(query_filter, dict):
-            filter_dict = query_filter
-        else:
-            filter_dict = self.parse_json(query_filter)
+        filter_dict = query_filter if isinstance(query_filter, dict) else self.parse_json(query_filter)
 
         if not filter_dict:
             msg = "Delete operation requires a filter"
