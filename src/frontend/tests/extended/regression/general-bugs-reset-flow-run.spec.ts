@@ -1,6 +1,3 @@
-import dotenv from "dotenv";
-import { readFileSync } from "fs";
-import path from "path";
 import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
@@ -69,7 +66,10 @@ test(
 
     await page.getByTestId("generic-node-title-arrangement").last().click();
 
-    await page.getByTestId("edit-name-description-button").click();
+    await page
+      .getByTestId("panel-description")
+      .getByTestId("edit-name-description-button")
+      .click();
 
     await page.getByTestId("inspection-panel-name").fill("textoutputfalse");
 

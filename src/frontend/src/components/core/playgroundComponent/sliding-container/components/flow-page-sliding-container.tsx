@@ -6,9 +6,15 @@ import { useSendMessage } from "@/components/core/playgroundComponent/chat-view/
 import { useGetFlowId } from "@/components/core/playgroundComponent/hooks/use-get-flow-id";
 import { AnimatedConditional } from "@/components/ui/animated-close";
 import { useSimpleSidebar } from "@/components/ui/simple-sidebar";
+import {
+  CHAT_CONTENT_MAX_WIDTH,
+  FOCUS_DELAY_MS,
+  SESSION_SIDEBAR_WIDTH,
+} from "@/constants/constants";
 import useFlowStore from "@/stores/flowStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import type { FilePreviewType } from "@/types/components";
+import { cn } from "@/utils/utils";
 import { useEditSessionInfo } from "../../chat-view/chat-header/hooks/use-edit-session-info";
 import { useGetAddSessions } from "../../chat-view/chat-header/hooks/use-get-add-sessions";
 import { ChatInput } from "../../chat-view/chat-input";
@@ -26,7 +32,7 @@ export function FlowPageSlidingContainerContent({
   setIsFullscreen,
 }: FlowPageSlidingContainerContentProps) {
   const currentFlowId = useGetFlowId();
-  const { setOpen, setWidth } = useSimpleSidebar();
+  const { setOpen } = useSimpleSidebar();
   const inputs = useFlowStore((state) => state.inputs);
   const nodes = useFlowStore((state) => state.nodes);
   const isBuilding = useFlowStore((state) => state.isBuilding);
@@ -53,7 +59,6 @@ export function FlowPageSlidingContainerContent({
     renameLocalSession,
   });
 
-  // Ensure currentFlowId is always first in sessions list
   const orderedSessions = useMemo(() => {
     const ordered: string[] = [];
     const seen = new Set<string>();
@@ -106,18 +111,8 @@ export function FlowPageSlidingContainerContent({
     setSidebarOpen(isFullscreen);
   }, [isFullscreen]);
 
-  const handleExitFullscreen = () => {
-    setIsFullscreen(false);
-    setOpen(true);
-    setWidth(218);
-  };
-
   const handleClose = () => {
     setOpen(false);
-  };
-
-  const handleEnterFullscreen = () => {
-    setIsFullscreen(true);
   };
 
   const handleSessionSelect = (sessionId: string) => {
@@ -125,14 +120,19 @@ export function FlowPageSlidingContainerContent({
   };
 
   const handleNewChat = () => {
-    // Pass all sessions (including currentSessionId) to ensure unique IDs
     const newId = addNewSession(orderedSessions);
     setCurrentSessionId(newId);
+    // querySelector because the textarea ref lives inside ChatInput and is not exposed to this parent
+    setTimeout(() => {
+      const textarea = document.querySelector<HTMLTextAreaElement>(
+        '[data-testid="input-wrapper"] textarea',
+      );
+      textarea?.focus();
+    }, FOCUS_DELAY_MS);
   };
 
   const handleDeleteSession = (sessionId: string) => {
     handleDelete(sessionId);
-    // Also remove from local sessions if it's a local session
     removeLocalSession(sessionId);
     if (sessionId === currentSessionId) {
       setCurrentSessionId(currentFlowId);
@@ -153,8 +153,11 @@ export function FlowPageSlidingContainerContent({
       onDrop={onDrop}
     >
       <div className="flex-1 flex overflow-hidden">
-        <AnimatedConditional isOpen={sidebarOpen} width="218px">
-          <div className="h-full overflow-y-auto border-r border-border w-218">
+        <AnimatedConditional isOpen={sidebarOpen} width={SESSION_SIDEBAR_WIDTH}>
+          <div
+            style={{ width: SESSION_SIDEBAR_WIDTH }}
+            className="h-full overflow-y-auto border-r border-border bg-black/10 dark:bg-black/20"
+          >
             <div className="p-4">
               <ChatSidebar
                 sessions={orderedSessions}
@@ -175,9 +178,6 @@ export function FlowPageSlidingContainerContent({
             onSessionSelect={handleSessionSelect}
             currentSessionId={currentSessionId}
             currentFlowId={currentFlowId}
-            onToggleFullscreen={
-              isFullscreen ? handleExitFullscreen : handleEnterFullscreen
-            }
             isFullscreen={isFullscreen}
             onDeleteSession={handleDeleteSession}
             onClose={handleClose}
@@ -193,7 +193,15 @@ export function FlowPageSlidingContainerContent({
             >
               <StickToBottom.Content className="flex flex-col min-h-full overflow-x-hidden">
                 <div
-                  className={`flex flex-col ${isFullscreen ? "w-full max-w-[744px] p-0 mx-auto" : "w-full"}`}
+                  style={
+                    isFullscreen
+                      ? { maxWidth: CHAT_CONTENT_MAX_WIDTH }
+                      : undefined
+                  }
+                  className={cn(
+                    "flex flex-col w-full",
+                    isFullscreen && "p-0 mx-auto",
+                  )}
                 >
                   <Messages
                     visibleSession={currentSessionId ?? currentFlowId ?? null}
@@ -204,10 +212,18 @@ export function FlowPageSlidingContainerContent({
             </StickToBottom>
 
             <div
-              className={`flex-shrink-0 p-4 ${isFullscreen ? "flex justify-center" : ""}`}
+              className={cn(
+                "flex-shrink-0 p-4",
+                isFullscreen && "flex justify-center",
+              )}
             >
               <div
-                className={`${isFullscreen ? "w-full max-w-[744px]" : "w-full"} p-0`}
+                style={
+                  isFullscreen
+                    ? { maxWidth: CHAT_CONTENT_MAX_WIDTH }
+                    : undefined
+                }
+                className="w-full p-0"
               >
                 <ChatInput
                   noInput={noInput}

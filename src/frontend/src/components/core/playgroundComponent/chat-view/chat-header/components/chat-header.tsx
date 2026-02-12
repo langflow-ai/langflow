@@ -200,21 +200,11 @@ export function ChatHeader({
         </div>
       )}
       <div className="relative flex items-center flex-1 justify-end min-h-xxs">
-        <AnimatedConditional isOpen={!isFullscreen}>
-          <ChatHeaderActions
-            isFullscreen={false}
-            onToggleFullscreen={onToggleFullscreen}
-            onClose={onClose}
-            renderPrefix={() => moreMenu}
-          />
-        </AnimatedConditional>
-        <AnimatedConditional isOpen={isFullscreen}>
-          <ChatHeaderActions
-            isFullscreen={true}
-            onToggleFullscreen={onToggleFullscreen}
-            onClose={onClose}
-          />
-        </AnimatedConditional>
+        <ChatHeaderActions
+          isFullscreen={isFullscreen}
+          onClose={onClose}
+          renderPrefix={() => moreMenu}
+        />
       </div>
       {currentSessionId && (
         <SessionLogsModal

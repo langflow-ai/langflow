@@ -2,12 +2,7 @@ import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { loginLangflow } from "../../utils/login-langflow";
-import {
-  closeAdvancedOptions,
-  disableInspectPanel,
-  enableInspectPanel,
-  openAdvancedOptions,
-} from "../../utils/open-advanced-options";
+import { enableInspectPanel } from "../../utils/open-advanced-options";
 
 test(
   "user must be able to see api key in webhook component when auto login is disabled",
@@ -62,25 +57,17 @@ test(
 
     await adjustScreenView(page);
 
+    await enableInspectPanel(page);
+
     await page.getByTestId("title-Webhook").click();
 
-    await disableInspectPanel(page);
-
-    await openAdvancedOptions(page);
-
-    await page
-      .getByTestId("button_open_text_area_modal_str_edit_curl_advanced")
-      .click();
+    await page.getByTestId("button_open_text_area_modal_str_curl").click();
 
     const curl = await page.getByTestId("text-area-modal").inputValue();
 
     expect(curl).toContain("x-api-key");
 
     await page.getByText("Close", { exact: true }).last().click();
-
-    await closeAdvancedOptions(page);
-
-    await enableInspectPanel(page);
   },
 );
 
@@ -125,24 +112,16 @@ test(
 
     await adjustScreenView(page);
 
+    await enableInspectPanel(page);
+
     await page.getByTestId("title-Webhook").click();
 
-    await disableInspectPanel(page);
-
-    await openAdvancedOptions(page);
-
-    await page
-      .getByTestId("button_open_text_area_modal_str_edit_curl_advanced")
-      .click();
+    await page.getByTestId("button_open_text_area_modal_str_curl").click();
 
     const curl = await page.getByTestId("text-area-modal").inputValue();
 
     expect(curl).not.toContain("x-api-key");
 
     await page.getByText("Close", { exact: true }).last().click();
-
-    await closeAdvancedOptions(page);
-
-    await enableInspectPanel(page);
   },
 );

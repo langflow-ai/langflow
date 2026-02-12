@@ -302,7 +302,9 @@ test(
       await expect(page.getByText('{"test":"content"}')).toBeVisible({
         timeout: 10000,
       });
-      await page.getByTestId("playground-btn-flow-io").click();
+
+      await page.getByTestId("icon-X").last().click();
+
       await page.getByTestId("button_open_file_management").click();
       await page.getByTestId(`context-menu-button-${renamedJsonFile}`).click();
       await page.getByTestId("btn-delete-file").click();

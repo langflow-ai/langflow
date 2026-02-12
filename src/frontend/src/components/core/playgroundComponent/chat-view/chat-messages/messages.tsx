@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo, useRef } from "react";
 import { StickToBottom } from "use-stick-to-bottom";
 import useFlowStore from "@/stores/flowStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
@@ -27,14 +27,13 @@ export const Messages = ({
 
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
-    // Always scroll to bottom when new messages arrive or thinking starts
-    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [chatHistory.length, isBuilding]);
-
   // Show thinking placeholder when building and last message is from user (no bot response yet)
+  // Only show if the flow has a ChatOutput, otherwise there's nothing to produce a response
+  const outputs = useFlowStore((state) => state.outputs);
+  const hasChatOutput = outputs.some((output) => output.type === "ChatOutput");
   const lastChat = chatHistory[chatHistory.length - 1];
-  const showThinkingPlaceholder = isBuilding && lastChat?.isSend === true;
+  const showThinkingPlaceholder =
+    isBuilding && lastChat?.isSend === true && hasChatOutput;
 
   const thinkingPlaceholder = useMemo<ChatMessageType>(
     () => ({

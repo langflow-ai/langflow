@@ -42,7 +42,7 @@ The future of AI is both exciting and uncertain. As the technology continues to 
       timeout: 30000,
     });
     await page.getByTestId("blank-flow").click();
-    await page.getByTestId("sidebar-nav-add_note").click();
+    await page.getByTestId("sidebar-add-sticky-note-button").click();
 
     const targetElement = page.locator('//*[@id="react-flow-id"]');
     await targetElement.click();

@@ -4,15 +4,14 @@ import { useShallow } from "zustand/react/shallow";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import CanvasControlButton from "@/components/core/canvasControlsComponent/CanvasControlButton";
 import CanvasControls from "@/components/core/canvasControlsComponent/CanvasControls";
-import LogCanvasControls from "@/components/core/logCanvasControlsComponent";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import useFlowStore from "@/stores/flowStore";
+import type { AllNodeType } from "@/types/flow";
 import { cn } from "@/utils/utils";
 import { useSearchContext } from "../flowSidebarComponent";
 import { NAV_ITEMS } from "../flowSidebarComponent/components/sidebarSegmentedNav";
-import { AllNodeType } from "@/types/flow";
 
 export const MemoizedBackground = memo(() => (
   <Background size={2} gap={20} className="" />
@@ -25,8 +24,6 @@ interface MemoizedCanvasControlsProps {
   selectedNode: AllNodeType | null;
 }
 
-export const MemoizedLogCanvasControls = memo(() => <LogCanvasControls />);
-
 export const MemoizedCanvasControls = memo(
   ({
     setIsAddingNote,
@@ -38,29 +35,7 @@ export const MemoizedCanvasControls = memo(
       useShallow((state) => state.currentFlow?.locked),
     );
 
-    return (
-      <CanvasControls selectedNode={selectedNode}>
-        <Button
-          unstyled
-          unselectable="on"
-          size="icon"
-          data-testid="lock-status"
-          className="flex items-center justify-center px-2 rounded-none gap-1 cursor-default"
-          title={`Lock status: ${isLocked ? "Locked" : "Unlocked"}`}
-        >
-          <ForwardedIconComponent
-            name={isLocked ? "Lock" : "Unlock"}
-            className={cn(
-              "!h-[18px] !w-[18px] text-muted-foreground",
-              isLocked && "text-destructive",
-            )}
-          />
-          {isLocked && (
-            <span className="text-xs text-destructive">Flow Locked</span>
-          )}
-        </Button>
-      </CanvasControls>
-    );
+    return <CanvasControls selectedNode={selectedNode} />;
   },
 );
 
@@ -71,12 +46,13 @@ export const MemoizedSidebarTrigger = memo(() => {
     return (
       <Panel
         className={cn(
-          "react-flow__controls !top-auto !m-2 flex gap-1.5 rounded-md border border-secondary-hover bg-background p-0.5 text-primary shadow transition-all duration-300 [&>button]:border-0 [&>button]:bg-background hover:[&>button]:bg-accent",
-          "pointer-events-auto opacity-100 group-data-[open=true]/sidebar-wrapper:pointer-events-none group-data-[open=true]/sidebar-wrapper:-translate-x-full group-data-[open=true]/sidebar-wrapper:opacity-0",
+          "react-flow__controls !top-auto !m-2 flex gap-1.5 rounded-md border border-secondary-hover bg-background p-0.5 text-primary shadow transition-[opacity,transform] duration-300 ease-in-out [&>button]:border-0 [&>button]:bg-background hover:[&>button]:bg-accent",
+          "pointer-events-auto opacity-100 group-data-[open=true]/sidebar-wrapper:pointer-events-none",
+          "group-data-[open=true]/sidebar-wrapper:-translate-x-80 group-data-[open=true]/sidebar-wrapper:opacity-0",
         )}
         position="top-left"
       >
-        {NAV_ITEMS.map((item) => (
+        {NAV_ITEMS.filter((item) => item.id !== "logs").map((item) => (
           <CanvasControlButton
             data-testid={`sidebar-trigger-${item.id}`}
             iconName={item.icon}
@@ -103,7 +79,7 @@ export const MemoizedSidebarTrigger = memo(() => {
   return (
     <Panel
       className={cn(
-        "react-flow__controls !top-auto !m-2 flex gap-1.5 rounded-md border border-secondary-hover bg-background p-1.5 text-primary shadow transition-all duration-300 [&>button]:border-0 [&>button]:bg-background hover:[&>button]:bg-accent",
+        "react-flow__controls !top-auto !m-2 flex gap-1.5 rounded-md border border-secondary-hover bg-background p-1.5 text-primary shadow transition-[opacity,transform] duration-300 ease-in-out [&>button]:border-0 [&>button]:bg-background hover:[&>button]:bg-accent",
         "pointer-events-auto opacity-100 group-data-[open=true]/sidebar-wrapper:pointer-events-none group-data-[open=true]/sidebar-wrapper:-translate-x-full group-data-[open=true]/sidebar-wrapper:opacity-0",
       )}
       position="top-left"
