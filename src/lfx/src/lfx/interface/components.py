@@ -261,19 +261,86 @@ async def _send_telemetry(
         await logger.adebug(f"Failed to send component index telemetry: {e}")
 
 
+def _is_category_excluded(
+    category_lower: str,
+    category_allowlist: frozenset[str] | None,
+    category_blocklist: frozenset[str] | None,
+) -> bool:
+    """Check if a category should be excluded based on allowlist/blocklist."""
+    if category_allowlist is not None and category_lower not in category_allowlist:
+        return True
+    return category_blocklist is not None and category_lower in category_blocklist
+
+
+def _all_category_names(entries: list[list]) -> frozenset[str]:
+    """Extract all valid category names (lowercased) from index entries."""
+    return frozenset(
+        entry[0].lower()
+        for entry in entries
+        if isinstance(entry, (list, tuple)) and len(entry) == 2 and isinstance(entry[0], str)  # noqa: PLR2004
+    )
+
+
+def _get_all_known_categories(settings_service: Optional["SettingsService"] = None) -> frozenset[str]:
+    """Get all category names from the built-in index (for validation only).
+
+    This reads the index to extract category names without applying any filters.
+    Used at startup to validate allowlist/blocklist entries against known categories.
+    """
+    custom_path = None
+    if settings_service and settings_service.settings.components_index_path:
+        custom_path = settings_service.settings.components_index_path
+    index = _read_component_index(custom_path)
+    if index and "entries" in index:
+        return _all_category_names(index["entries"])
+    return frozenset()
+
+
+def _entries_to_dict(
+    entries: list[list],
+    category_allowlist: frozenset[str] | None = None,
+    category_blocklist: frozenset[str] | None = None,
+) -> dict[str, Any]:
+    """Convert index entries to a modules dict, applying optional allowlist/blocklist filtering.
+
+    Args:
+        entries: List of [category_name, components_dict] pairs from the index.
+        category_allowlist: If set, only include categories whose lowercase name is in this set.
+        category_blocklist: If set, exclude categories whose lowercase name is in this set.
+
+    Returns:
+        Dictionary mapping category names to their components.
+    """
+    modules_dict: dict[str, Any] = {}
+    for entry in entries:
+        if not isinstance(entry, (list, tuple)) or len(entry) != 2:  # noqa: PLR2004
+            continue
+        top_level, components = entry
+        if not isinstance(top_level, str) or not isinstance(components, dict):
+            continue
+        if _is_category_excluded(top_level.lower(), category_allowlist, category_blocklist):
+            continue
+        if top_level not in modules_dict:
+            modules_dict[top_level] = {}
+        modules_dict[top_level].update(components)
+    return filter_disabled_components_from_dict(modules_dict)
+
+
 async def _load_from_index_or_cache(
     settings_service: Optional["SettingsService"] = None,
+    category_allowlist: frozenset[str] | None = None,
+    category_blocklist: frozenset[str] | None = None,
 ) -> tuple[dict[str, Any], str | None]:
     """Load components from prebuilt index or cache.
 
     Args:
         settings_service: Optional settings service to get custom index path
+        category_allowlist: If set, only include categories whose lowercase name is in this set.
+        category_blocklist: If set, exclude categories whose lowercase name is in this set.
 
     Returns:
         Tuple of (modules_dict, index_source) where index_source is "builtin", "cache", or None if failed
     """
-    modules_dict: dict[str, Any] = {}
-
     # Try to load from prebuilt index first
     custom_index_path = None
     if settings_service and settings_service.settings.components_index_path:
@@ -284,13 +351,7 @@ async def _load_from_index_or_cache(
     if index and "entries" in index:
         source = custom_index_path or "built-in index"
         await logger.adebug(f"Loading components from {source}")
-        # Reconstruct modules_dict from index entries
-        for top_level, components in index["entries"]:
-            if top_level not in modules_dict:
-                modules_dict[top_level] = {}
-            modules_dict[top_level].update(components)
-        # Filter disabled components for Astra cloud
-        modules_dict = filter_disabled_components_from_dict(modules_dict)
+        modules_dict = _entries_to_dict(index["entries"], category_allowlist, category_blocklist)
         await logger.adebug(f"Loaded {len(modules_dict)} component categories from index")
         return modules_dict, "builtin"
 
@@ -306,25 +367,24 @@ async def _load_from_index_or_cache(
             index = _read_component_index(str(cache_path))
             if index and "entries" in index:
                 await logger.adebug("Loading components from cached index")
-                for top_level, components in index["entries"]:
-                    if top_level not in modules_dict:
-                        modules_dict[top_level] = {}
-                    modules_dict[top_level].update(components)
-                # Filter disabled components for Astra cloud
-                modules_dict = filter_disabled_components_from_dict(modules_dict)
+                modules_dict = _entries_to_dict(index["entries"], category_allowlist, category_blocklist)
                 await logger.adebug(f"Loaded {len(modules_dict)} component categories from cache")
                 return modules_dict, "cache"
 
-    return modules_dict, None
+    return {}, None
 
 
 async def _load_components_dynamically(
     target_modules: list[str] | None = None,
+    category_allowlist: frozenset[str] | None = None,
+    category_blocklist: frozenset[str] | None = None,
 ) -> dict[str, Any]:
     """Load components dynamically by scanning and importing modules.
 
     Args:
         target_modules: Optional list of specific module names to load (e.g., ["mistral", "openai"])
+        category_allowlist: If set, only include categories whose lowercase name is in this set.
+        category_blocklist: If set, exclude categories whose lowercase name is in this set.
 
     Returns:
         Dictionary mapping top-level module names to their components
@@ -348,15 +408,20 @@ async def _load_components_dynamically(
         parts = modname.split(".")
         if len(parts) > MIN_MODULE_PARTS:
             component_type = parts[2]
+            component_type_lower = component_type.lower()
+
+            # Skip excluded categories (avoids expensive module imports)
+            if _is_category_excluded(component_type_lower, category_allowlist, category_blocklist):
+                continue
 
             # Skip disabled components when ASTRA_CLOUD_DISABLE_COMPONENT is true
             if len(parts) >= MIN_MODULE_PARTS_WITH_FILENAME:
                 module_filename = parts[3]
-                if is_component_disabled_in_astra_cloud(component_type.lower(), module_filename):
+                if is_component_disabled_in_astra_cloud(component_type_lower, module_filename):
                     continue
 
             # If specific modules requested, filter by top-level module name
-            if target_modules and component_type.lower() not in target_modules:
+            if target_modules and component_type_lower not in target_modules:
                 continue
 
         module_names.append(modname)
@@ -393,35 +458,32 @@ async def _load_components_dynamically(
     return modules_dict
 
 
-async def _load_full_dev_mode() -> tuple[dict[str, Any], str]:
-    """Load all components dynamically in full dev mode.
-
-    Returns:
-        Tuple of (modules_dict, index_source)
-    """
-    await logger.adebug("LFX_DEV full mode: loading all modules dynamically")
-    modules_dict = await _load_components_dynamically(target_modules=None)
-    return modules_dict, "dynamic"
-
-
 async def _load_selective_dev_mode(
     settings_service: Optional["SettingsService"],
     target_modules: list[str],
+    category_allowlist: frozenset[str] | None = None,
+    category_blocklist: frozenset[str] | None = None,
 ) -> tuple[dict[str, Any], str]:
     """Load index and selectively reload specific modules.
 
     Args:
         settings_service: Settings service for custom index path
         target_modules: List of module names to reload
+        category_allowlist: If set, only include categories whose lowercase name is in this set.
+        category_blocklist: If set, exclude categories whose lowercase name is in this set.
 
     Returns:
         Tuple of (modules_dict, index_source)
     """
     await logger.adebug(f"LFX_DEV selective mode: reloading {target_modules}")
-    modules_dict, _ = await _load_from_index_or_cache(settings_service)
+    modules_dict, _ = await _load_from_index_or_cache(
+        settings_service, category_allowlist=category_allowlist, category_blocklist=category_blocklist
+    )
 
     # Reload specific modules dynamically
-    dynamic_modules = await _load_components_dynamically(target_modules=target_modules)
+    dynamic_modules = await _load_components_dynamically(
+        target_modules=target_modules, category_allowlist=category_allowlist, category_blocklist=category_blocklist
+    )
 
     # Merge/replace the targeted modules
     for top_level, components in dynamic_modules.items():
@@ -435,6 +497,8 @@ async def _load_selective_dev_mode(
 
 async def _load_production_mode(
     settings_service: Optional["SettingsService"],
+    category_allowlist: frozenset[str] | None = None,
+    category_blocklist: frozenset[str] | None = None,
 ) -> tuple[dict[str, Any], str]:
     """Load components in production mode with fallback chain.
 
@@ -442,20 +506,26 @@ async def _load_production_mode(
 
     Args:
         settings_service: Settings service for custom index path
+        category_allowlist: If set, only include categories whose lowercase name is in this set.
+        category_blocklist: If set, exclude categories whose lowercase name is in this set.
 
     Returns:
         Tuple of (modules_dict, index_source)
     """
-    modules_dict, index_source = await _load_from_index_or_cache(settings_service)
+    modules_dict, index_source = await _load_from_index_or_cache(
+        settings_service, category_allowlist=category_allowlist, category_blocklist=category_blocklist
+    )
 
     if not index_source:
         # No index or cache available - build dynamically and save
         await logger.adebug("Falling back to dynamic loading")
-        modules_dict = await _load_components_dynamically(target_modules=None)
+        modules_dict = await _load_components_dynamically(
+            target_modules=None, category_allowlist=category_allowlist, category_blocklist=category_blocklist
+        )
         index_source = "dynamic"
 
-        # Save to cache for future use
-        if modules_dict:
+        # Save to cache for future use (skip when filtering is active to avoid caching a filtered subset)
+        if modules_dict and category_allowlist is None and category_blocklist is None:
             await logger.adebug("Saving generated component index to cache")
             _save_generated_index(modules_dict)
 
@@ -483,13 +553,78 @@ async def import_langflow_components(
     start_time_ms: int = int(time.time() * 1000)
     dev_mode_enabled, target_modules = _parse_dev_mode()
 
-    # Strategy pattern: map dev mode state to loading function
+    # Build allowlist/blocklist sets once — passed into every loading path to skip work early
+    category_allowlist: frozenset[str] | None = None
+    if settings_service and settings_service.settings.component_category_allowlist:
+        cleaned = [cat.lower().strip() for cat in settings_service.settings.component_category_allowlist if cat.strip()]
+        if cleaned:
+            category_allowlist = frozenset(cleaned)
+            await logger.adebug(f"component_category_allowlist active: {sorted(category_allowlist)}")
+
+    category_blocklist: frozenset[str] | None = None
+    if settings_service and settings_service.settings.component_category_blocklist:
+        cleaned = [cat.lower().strip() for cat in settings_service.settings.component_category_blocklist if cat.strip()]
+        if cleaned:
+            category_blocklist = frozenset(cleaned)
+            await logger.adebug(f"component_category_blocklist active: {sorted(category_blocklist)}")
+
+    if category_allowlist is not None and category_blocklist is not None:
+        overlap = category_allowlist & category_blocklist
+        if overlap:
+            await logger.aerror(
+                f"component_category_blocklist contains categories also in allowlist: "
+                f"{', '.join(sorted(overlap))}. These categories will be excluded."
+            )
+        if category_allowlist <= category_blocklist:
+            await logger.aerror(
+                "component_category_blocklist completely overrides component_category_allowlist — "
+                "no categories will be loaded. Check your configuration."
+            )
+
     if dev_mode_enabled and not target_modules:
-        modules_dict, index_source = await _load_full_dev_mode()
+        await logger.adebug("LFX_DEV full mode: loading all modules dynamically")
+        modules_dict = await _load_components_dynamically(
+            category_allowlist=category_allowlist, category_blocklist=category_blocklist
+        )
+        index_source = "dynamic"
     elif dev_mode_enabled and target_modules:
-        modules_dict, index_source = await _load_selective_dev_mode(settings_service, target_modules)
+        modules_dict, index_source = await _load_selective_dev_mode(
+            settings_service,
+            target_modules,
+            category_allowlist=category_allowlist,
+            category_blocklist=category_blocklist,
+        )
     else:
-        modules_dict, index_source = await _load_production_mode(settings_service)
+        modules_dict, index_source = await _load_production_mode(
+            settings_service, category_allowlist=category_allowlist, category_blocklist=category_blocklist
+        )
+
+    # Validate allowlist/blocklist entries against what was actually loaded
+    if category_allowlist is not None or category_blocklist is not None:
+        loaded = frozenset(k.lower() for k in modules_dict)
+
+        if category_allowlist is not None:
+            unmatched = category_allowlist - loaded
+            if unmatched:
+                await logger.aerror(
+                    f"component_category_allowlist contains categories not found in the index: "
+                    f"{', '.join(sorted(unmatched))}. Check for typos in "
+                    f"LANGFLOW_COMPONENT_CATEGORY_ALLOWLIST. "
+                    f"Available: {', '.join(sorted(loaded)) or '(none)'}"
+                )
+
+        if category_blocklist is not None:
+            # To detect typos in the blocklist we need the full set of categories before
+            # the blocklist was applied.  The cheapest way is to re-derive it from the index.
+            all_known = _get_all_known_categories(settings_service)
+            effective_known = all_known if category_allowlist is None else all_known & category_allowlist
+            unmatched_block = category_blocklist - effective_known
+            if unmatched_block:
+                await logger.aerror(
+                    f"component_category_blocklist contains categories not found in the index: "
+                    f"{', '.join(sorted(unmatched_block))}. These entries have no effect. "
+                    f"Check for typos in LANGFLOW_COMPONENT_CATEGORY_BLOCKLIST."
+                )
 
     # Send telemetry
     await _send_telemetry(

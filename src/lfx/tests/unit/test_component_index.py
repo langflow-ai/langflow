@@ -1,18 +1,32 @@
 """Unit tests for component index system."""
 
+import functools
 import hashlib
+import inspect
 from pathlib import Path
 from unittest.mock import Mock, patch
 
 import orjson
 import pytest
 from lfx.interface.components import (
+    _entries_to_dict,
     _get_cache_path,
+    _is_category_excluded,
     _parse_dev_mode,
     _read_component_index,
     _save_generated_index,
     import_langflow_components,
 )
+
+
+@functools.lru_cache(maxsize=1)
+def _load_real_index() -> dict:
+    """Load the real built-in component index (cached across calls)."""
+    import lfx
+
+    pkg_dir = Path(inspect.getfile(lfx)).parent
+    index_path = pkg_dir / "_assets" / "component_index.json"
+    return orjson.loads(index_path.read_bytes())
 
 
 class TestParseDevMode:
@@ -383,6 +397,8 @@ class TestImportLangflowComponents:
 
         mock_settings = Mock()
         mock_settings.settings.components_index_path = str(custom_file)
+        mock_settings.settings.component_category_allowlist = []
+        mock_settings.settings.component_category_blocklist = []
 
         with (
             patch("lfx.interface.components._read_component_index") as mock_read,
@@ -413,3 +429,341 @@ class TestImportLangflowComponents:
         # Should return empty dict, not raise
         assert "components" in result
         assert len(result["components"]) == 0
+
+
+class TestCategoryAllowlist:
+    """Tests for component_category_allowlist filtering using the real component index."""
+
+    def test_no_allowlist_keeps_all(self):
+        index = _load_real_index()
+        all_categories = _entries_to_dict(index["entries"])
+        assert len(all_categories) > 50  # sanity: real index has many categories
+
+    def test_allowlist_filters_to_requested_categories(self):
+        index = _load_real_index()
+        result = _entries_to_dict(index["entries"], category_allowlist=frozenset(["openai", "anthropic"]))
+        assert set(result.keys()) == {"openai", "anthropic"}
+
+    def test_allowlist_case_insensitive_with_real_categories(self):
+        index = _load_real_index()
+        # Real index has "FAISS" and "Notion" (mixed case)
+        result = _entries_to_dict(index["entries"], category_allowlist=frozenset(["faiss", "notion"]))
+        assert len(result) == 2
+        # Original casing from the index is preserved
+        result_lower = {k.lower() for k in result}
+        assert result_lower == {"faiss", "notion"}
+
+    def test_allowlist_single_category_has_components(self):
+        index = _load_real_index()
+        result = _entries_to_dict(index["entries"], category_allowlist=frozenset(["openai"]))
+        assert "openai" in result
+        assert len(result["openai"]) > 0  # openai has actual components
+
+    def test_allowlist_nonexistent_category_returns_empty(self):
+        index = _load_real_index()
+        result = _entries_to_dict(index["entries"], category_allowlist=frozenset(["nonexistent_category"]))
+        assert result == {}
+
+    def test_empty_allowlist_differs_from_none(self):
+        """frozenset() (empty) filters everything out; None keeps everything."""
+        index = _load_real_index()
+        with_none = _entries_to_dict(index["entries"], category_allowlist=None)
+        with_empty = _entries_to_dict(index["entries"], category_allowlist=frozenset())
+        assert len(with_none) > 50
+        assert with_empty == {}
+
+    def test_allowlist_preserves_component_data(self):
+        """Filtered components have the same data as unfiltered ones."""
+        index = _load_real_index()
+        all_categories = _entries_to_dict(index["entries"])
+        filtered = _entries_to_dict(index["entries"], category_allowlist=frozenset(["openai"]))
+        assert filtered["openai"] == all_categories["openai"]
+
+
+class TestCategoryBlocklist:
+    """Tests for component_category_blocklist filtering using the real component index."""
+
+    def test_no_blocklist_keeps_all(self):
+        index = _load_real_index()
+        all_categories = _entries_to_dict(index["entries"])
+        with_none = _entries_to_dict(index["entries"], category_blocklist=None)
+        assert with_none == all_categories
+
+    def test_blocklist_removes_specified_categories(self):
+        index = _load_real_index()
+        all_categories = _entries_to_dict(index["entries"])
+        result = _entries_to_dict(index["entries"], category_blocklist=frozenset(["openai", "anthropic"]))
+        assert "openai" not in result
+        assert "anthropic" not in result
+        assert len(result) == len(all_categories) - 2
+
+    def test_blocklist_case_insensitive(self):
+        index = _load_real_index()
+        # Real index has "FAISS" (uppercase)
+        result = _entries_to_dict(index["entries"], category_blocklist=frozenset(["faiss"]))
+        result_lower = {k.lower() for k in result}
+        assert "faiss" not in result_lower
+
+    def test_blocklist_nonexistent_category_is_noop(self):
+        index = _load_real_index()
+        all_categories = _entries_to_dict(index["entries"])
+        result = _entries_to_dict(index["entries"], category_blocklist=frozenset(["nonexistent_category"]))
+        assert result == all_categories
+
+    def test_empty_blocklist_keeps_all(self):
+        """frozenset() (empty) removes nothing."""
+        index = _load_real_index()
+        all_categories = _entries_to_dict(index["entries"])
+        with_empty = _entries_to_dict(index["entries"], category_blocklist=frozenset())
+        assert with_empty == all_categories
+
+    def test_blocklist_preserves_remaining_component_data(self):
+        index = _load_real_index()
+        all_categories = _entries_to_dict(index["entries"])
+        result = _entries_to_dict(index["entries"], category_blocklist=frozenset(["openai"]))
+        # anthropic should still have the same data
+        assert result["anthropic"] == all_categories["anthropic"]
+
+
+class TestAllowlistAndBlocklistCombined:
+    """Tests for allowlist + blocklist interaction using the real component index."""
+
+    def test_allowlist_then_blocklist(self):
+        """Blocklist removes from the allowlist result."""
+        index = _load_real_index()
+        result = _entries_to_dict(
+            index["entries"],
+            category_allowlist=frozenset(["openai", "anthropic", "google"]),
+            category_blocklist=frozenset(["anthropic"]),
+        )
+        assert set(result.keys()) == {"openai", "google"}
+
+    def test_blocklist_overrides_allowlist_for_same_category(self):
+        """If a category is in both, blocklist wins (excluded)."""
+        index = _load_real_index()
+        result = _entries_to_dict(
+            index["entries"],
+            category_allowlist=frozenset(["openai"]),
+            category_blocklist=frozenset(["openai"]),
+        )
+        assert result == {}
+
+    def test_both_none_keeps_all(self):
+        index = _load_real_index()
+        all_categories = _entries_to_dict(index["entries"])
+        result = _entries_to_dict(index["entries"], category_allowlist=None, category_blocklist=None)
+        assert result == all_categories
+
+
+class TestIsCategoryExcluded:
+    """Truth-table tests for _is_category_excluded."""
+
+    def test_no_filters(self):
+        assert _is_category_excluded("openai", None, None) is False
+
+    def test_allowlist_match(self):
+        assert _is_category_excluded("openai", frozenset(["openai"]), None) is False
+
+    def test_allowlist_no_match(self):
+        assert _is_category_excluded("anthropic", frozenset(["openai"]), None) is True
+
+    def test_blocklist_match(self):
+        assert _is_category_excluded("openai", None, frozenset(["openai"])) is True
+
+    def test_blocklist_no_match(self):
+        assert _is_category_excluded("anthropic", None, frozenset(["openai"])) is False
+
+    def test_in_both_blocklist_wins(self):
+        assert _is_category_excluded("openai", frozenset(["openai"]), frozenset(["openai"])) is True
+
+    def test_in_allowlist_not_in_blocklist(self):
+        assert _is_category_excluded("openai", frozenset(["openai", "anthropic"]), frozenset(["anthropic"])) is False
+
+    def test_empty_allowlist_excludes_everything(self):
+        assert _is_category_excluded("openai", frozenset(), None) is True
+
+    def test_empty_blocklist_excludes_nothing(self):
+        assert _is_category_excluded("openai", None, frozenset()) is False
+
+
+class TestEntriesToDictDefensive:
+    """Tests for _entries_to_dict defensive handling of malformed entries."""
+
+    def test_malformed_entry_wrong_length(self):
+        entries = [["valid", {"comp": {}}], ["only_one_element"], ["a", "b", "c"]]
+        result = _entries_to_dict(entries)
+        assert set(result.keys()) == {"valid"}
+
+    def test_entry_with_non_string_category(self):
+        entries = [[123, {"comp": {}}], ["valid", {"comp": {}}]]
+        result = _entries_to_dict(entries)
+        assert set(result.keys()) == {"valid"}
+
+    def test_entry_with_non_dict_components(self):
+        entries = [["bad", "not_a_dict"], ["valid", {"comp": {}}]]
+        result = _entries_to_dict(entries)
+        assert set(result.keys()) == {"valid"}
+
+    def test_empty_entries(self):
+        assert _entries_to_dict([]) == {}
+
+    def test_none_in_entries(self):
+        entries = [None, ["valid", {"comp": {}}]]
+        result = _entries_to_dict(entries)
+        assert set(result.keys()) == {"valid"}
+
+
+@pytest.mark.asyncio
+class TestImportLangflowComponentsFiltering:
+    """Integration tests for allowlist/blocklist through import_langflow_components."""
+
+    async def test_allowlist_filters_via_settings(self, monkeypatch):
+        """Settings with allowlist=['category1'] returns only category1."""
+        monkeypatch.delenv("LFX_DEV", raising=False)
+
+        index = {
+            "version": "0.1.12",
+            "entries": [
+                ["category1", {"comp1": {"template": {}}}],
+                ["category2", {"comp2": {"template": {}}}],
+                ["category3", {"comp3": {"template": {}}}],
+            ],
+        }
+        payload = orjson.dumps(index, option=orjson.OPT_SORT_KEYS)
+        index["sha256"] = hashlib.sha256(payload).hexdigest()
+
+        mock_settings = Mock()
+        mock_settings.settings.components_index_path = None
+        mock_settings.settings.component_category_allowlist = ["category1"]
+        mock_settings.settings.component_category_blocklist = []
+
+        with patch("lfx.interface.components._read_component_index", return_value=index):
+            result = await import_langflow_components(mock_settings)
+
+        assert set(result["components"].keys()) == {"category1"}
+
+    async def test_blocklist_filters_via_settings(self, monkeypatch):
+        """Settings with blocklist=['category2'] excludes category2."""
+        monkeypatch.delenv("LFX_DEV", raising=False)
+
+        index = {
+            "version": "0.1.12",
+            "entries": [
+                ["category1", {"comp1": {"template": {}}}],
+                ["category2", {"comp2": {"template": {}}}],
+                ["category3", {"comp3": {"template": {}}}],
+            ],
+        }
+        payload = orjson.dumps(index, option=orjson.OPT_SORT_KEYS)
+        index["sha256"] = hashlib.sha256(payload).hexdigest()
+
+        mock_settings = Mock()
+        mock_settings.settings.components_index_path = None
+        mock_settings.settings.component_category_allowlist = []
+        mock_settings.settings.component_category_blocklist = ["category2"]
+
+        with patch("lfx.interface.components._read_component_index", return_value=index):
+            result = await import_langflow_components(mock_settings)
+
+        assert "category1" in result["components"]
+        assert "category2" not in result["components"]
+        assert "category3" in result["components"]
+
+    async def test_empty_list_settings_means_no_filtering(self, monkeypatch):
+        """Empty lists [] in settings mean no filtering (not 'block everything')."""
+        monkeypatch.delenv("LFX_DEV", raising=False)
+
+        index = {
+            "version": "0.1.12",
+            "entries": [
+                ["category1", {"comp1": {"template": {}}}],
+                ["category2", {"comp2": {"template": {}}}],
+            ],
+        }
+        payload = orjson.dumps(index, option=orjson.OPT_SORT_KEYS)
+        index["sha256"] = hashlib.sha256(payload).hexdigest()
+
+        mock_settings = Mock()
+        mock_settings.settings.components_index_path = None
+        mock_settings.settings.component_category_allowlist = []
+        mock_settings.settings.component_category_blocklist = []
+
+        with patch("lfx.interface.components._read_component_index", return_value=index):
+            result = await import_langflow_components(mock_settings)
+
+        assert set(result["components"].keys()) == {"category1", "category2"}
+
+    async def test_empty_string_entries_are_ignored(self, monkeypatch):
+        """Allowlist with empty strings (from ALLOWLIST='') doesn't filter everything."""
+        monkeypatch.delenv("LFX_DEV", raising=False)
+
+        index = {
+            "version": "0.1.12",
+            "entries": [
+                ["category1", {"comp1": {"template": {}}}],
+                ["category2", {"comp2": {"template": {}}}],
+            ],
+        }
+        payload = orjson.dumps(index, option=orjson.OPT_SORT_KEYS)
+        index["sha256"] = hashlib.sha256(payload).hexdigest()
+
+        mock_settings = Mock()
+        mock_settings.settings.components_index_path = None
+        mock_settings.settings.component_category_allowlist = [""]  # parsed from ALLOWLIST=""
+        mock_settings.settings.component_category_blocklist = []
+
+        with patch("lfx.interface.components._read_component_index", return_value=index):
+            result = await import_langflow_components(mock_settings)
+
+        # Empty string should be stripped, resulting in no filtering
+        assert set(result["components"].keys()) == {"category1", "category2"}
+
+    async def test_cache_not_saved_when_allowlist_active(self, tmp_path, monkeypatch):
+        """Cache is skipped when allowlist filters the result."""
+        monkeypatch.delenv("LFX_DEV", raising=False)
+        cache_file = tmp_path / "component_index.json"
+        monkeypatch.setattr("lfx.interface.components._get_cache_path", lambda: cache_file)
+
+        mock_settings = Mock()
+        mock_settings.settings.components_index_path = None
+        mock_settings.settings.component_category_allowlist = ["category1"]
+        mock_settings.settings.component_category_blocklist = []
+
+        with (
+            patch("lfx.interface.components._read_component_index", return_value=None),
+            patch("lfx.interface.components._process_single_module") as mock_process,
+            patch("lfx.interface.components.pkgutil.walk_packages") as mock_walk,
+            patch("importlib.metadata.version", return_value="0.1.12"),
+        ):
+            mock_process.return_value = ("category1", {"comp1": {"template": {}}})
+            mock_walk.return_value = [(None, "lfx.components.category1", False)]
+
+            await import_langflow_components(mock_settings)
+
+        # Cache should NOT exist because allowlist was active
+        assert not cache_file.exists()
+
+    async def test_cache_not_saved_when_blocklist_active(self, tmp_path, monkeypatch):
+        """Cache is skipped when blocklist filters the result."""
+        monkeypatch.delenv("LFX_DEV", raising=False)
+        cache_file = tmp_path / "component_index.json"
+        monkeypatch.setattr("lfx.interface.components._get_cache_path", lambda: cache_file)
+
+        mock_settings = Mock()
+        mock_settings.settings.components_index_path = None
+        mock_settings.settings.component_category_allowlist = []
+        mock_settings.settings.component_category_blocklist = ["category1"]
+
+        with (
+            patch("lfx.interface.components._read_component_index", return_value=None),
+            patch("lfx.interface.components._process_single_module") as mock_process,
+            patch("lfx.interface.components.pkgutil.walk_packages") as mock_walk,
+            patch("importlib.metadata.version", return_value="0.1.12"),
+        ):
+            mock_process.return_value = ("category1", {"comp1": {"template": {}}})
+            mock_walk.return_value = [(None, "lfx.components.category1", False)]
+
+            await import_langflow_components(mock_settings)
+
+        # Cache should NOT exist because blocklist was active
+        assert not cache_file.exists()
