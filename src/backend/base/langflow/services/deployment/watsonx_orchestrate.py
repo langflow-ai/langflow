@@ -93,7 +93,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             resource_object=config,
         )
 
-        clients = await self._get_provider_clients(user_id=user_id, db=db, data=config or snapshot)
+        clients = await self._get_provider_clients(user_id=user_id, db=db)
         app_id = await self._resolve_config_id_for_deployment(
             config_id=config_id,
             config=config,
@@ -112,7 +112,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             raise ValueError(msg)
 
         connection = self._ensure_connection_exists(clients.connections_client, app_id=app_id)
-        self._validate_live_connection(clients.connections_client, app_id=app_id)
+        self._validate_draft_connection(clients.connections_client, app_id=app_id)
         connection_id = connection.connection_id
         payload = self._build_agent_payload(
             deployment_type=deployment_type,
@@ -190,7 +190,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
 
         if config_id:
             connection = self._ensure_connection_exists(clients.connections_client, app_id=config_id)
-            self._validate_live_connection(clients.connections_client, app_id=config_id)
+            self._validate_draft_connection(clients.connections_client, app_id=config_id)
             update_payload["connection_ids"] = [connection.connection_id]
 
         if update_payload:
@@ -205,9 +205,9 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         user_id: UUID | str,
         db: Any,
     ) -> dict[str, Any]:
-        """Trigger a deployment release for the agent in a live environment."""
+        """Trigger a deployment release for the agent in draft environment."""
         clients = await self._get_provider_clients(user_id=user_id, db=db)
-        environment_id = self._resolve_live_environment_id(clients.agent_client, deployment_id)
+        environment_id = self._resolve_draft_environment_id(clients.agent_client, deployment_id)
         deployed = clients.agent_client.deploy(agent_id=deployment_id, environment_id=environment_id)
         return {
             "deployment_id": deployment_id,
@@ -254,27 +254,18 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         user_id: UUID | str,
         db: Any,
     ) -> dict[str, Any]:
-        """Get deployment health from the provider."""
+        """Get deployment health for draft agents from the provider."""
         clients = await self._get_provider_clients(user_id=user_id, db=db)
         agent = clients.agent_client.get_draft_by_id(deployment_id)
         if not agent:
             msg = f"Deployment '{deployment_id}' not found."
             raise ValueError(msg)
 
-        health: dict[str, Any] = {
+        return {
             "deployment_id": deployment_id,
             "exists": True,
             "tool_count": len(self._extract_agent_tool_ids(agent)),
         }
-        try:
-            environment_id = self._resolve_live_environment_id(clients.agent_client, deployment_id)
-            status = clients.agent_client._get(  # noqa: SLF001
-                f"{clients.agent_client.base_endpoint}/{deployment_id}/releases/status?environment_id={environment_id}"
-            )
-            health["release_status"] = status
-        except Exception as exc:  # noqa: BLE001
-            health["release_status"] = {"status": "unknown", "reason": str(exc)}
-        return health
 
     async def create_deployment_config(
         self,
@@ -283,11 +274,11 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         user_id: UUID | str,
         db: Any,
     ) -> dict[str, Any]:
-        """Create/update a WXO live key-value connection config plus runtime credentials."""
+        """Create/update a WXO draft key-value connection config plus runtime credentials."""
         app_id = self._require_app_id(data)
-        clients = await self._get_provider_clients(data=data, user_id=user_id, db=db)
+        clients = await self._get_provider_clients(user_id=user_id, db=db)
         self._ensure_connection_exists(clients.connections_client, app_id=app_id)
-        self._upsert_live_kv_config(clients.connections_client, app_id=app_id)
+        self._upsert_draft_kv_config(clients.connections_client, app_id=app_id)
 
         runtime_credentials = await self._resolve_runtime_credentials(data, user_id=user_id, db=db)
         self._upsert_runtime_credentials(
@@ -311,19 +302,19 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             app_id = getattr(app, "app_id", None)
             if not app_id:
                 continue
-            config = clients.connections_client.get_config(app_id=app_id, env=ConnectionEnvironment.LIVE)
+            config = clients.connections_client.get_config(app_id=app_id, env=ConnectionEnvironment.DRAFT)
             if not config:
                 continue
             credentials = clients.connections_client.get_credentials(
                 app_id=app_id,
-                env=ConnectionEnvironment.LIVE,
+                env=ConnectionEnvironment.DRAFT,
                 use_app_credentials=False,
             )
             results.append(
                 {
                     "config_id": app_id,
                     "app_id": app_id,
-                    "environment": ConnectionEnvironment.LIVE.value,
+                    "environment": ConnectionEnvironment.DRAFT.value,
                     "preference": config.preference.value if getattr(config, "preference", None) else None,
                     "security_scheme": (
                         config.security_scheme.value if getattr(config, "security_scheme", None) else None
@@ -342,19 +333,19 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
     ) -> dict[str, Any]:
         """Get deployment config by app_id (adapter config_id)."""
         clients = await self._get_provider_clients(user_id=user_id, db=db)
-        config = clients.connections_client.get_config(app_id=config_id, env=ConnectionEnvironment.LIVE)
+        config = clients.connections_client.get_config(app_id=config_id, env=ConnectionEnvironment.DRAFT)
         if not config:
-            msg = f"Deployment config '{config_id}' not found in live environment."
+            msg = f"Deployment config '{config_id}' not found in draft environment."
             raise ValueError(msg)
         credentials = clients.connections_client.get_credentials(
             app_id=config_id,
-            env=ConnectionEnvironment.LIVE,
+            env=ConnectionEnvironment.DRAFT,
             use_app_credentials=False,
         )
         return {
             "config_id": config_id,
             "app_id": config_id,
-            "environment": ConnectionEnvironment.LIVE.value,
+            "environment": ConnectionEnvironment.DRAFT.value,
             "preference": config.preference.value if getattr(config, "preference", None) else None,
             "security_scheme": config.security_scheme.value if getattr(config, "security_scheme", None) else None,
             "credentials_entered": bool(credentials),
@@ -368,7 +359,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         user_id: UUID | str,
         db: Any,
     ) -> dict[str, Any]:
-        """Update an existing live config by app_id."""
+        """Update an existing draft config by app_id."""
         payload = dict(data or {})
         payload["app_id"] = config_id
         return await self.create_deployment_config(data=payload, user_id=user_id, db=db)
@@ -393,7 +384,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         db: Any,
     ) -> dict[str, Any]:
         """Create an immutable WXO tool snapshot from a Langflow definition."""
-        clients = await self._get_provider_clients(data=data, user_id=user_id, db=db)
+        clients = await self._get_provider_clients(user_id=user_id, db=db)
         flow_definition = self._require_flow_definition(data)
         app_id = data.get("config_id") or data.get("app_id")
         if not app_id:
@@ -481,13 +472,12 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         *,
         user_id: UUID | str,
         db: Any,
-        data: dict[str, Any] | None = None,
     ) -> _ProviderClients:
-        cache_key = self._build_client_cache_key(user_id=user_id, data=data)
+        cache_key = str(user_id)
         if cache_key in self._provider_clients_cache:
             return self._provider_clients_cache[cache_key]
 
-        creds_dict = await self._resolve_wxo_client_credentials(user_id=user_id, db=db, data=data)
+        creds_dict = await self._resolve_wxo_client_credentials(user_id=user_id, db=db)
         credentials = Credentials(
             url=creds_dict["instance_url"],
             api_key=creds_dict["api_key"],
@@ -503,22 +493,11 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         self._provider_clients_cache[cache_key] = clients
         return clients
 
-    def _build_client_cache_key(
-        self,
-        *,
-        user_id: UUID | str,
-        data: dict[str, Any] | None = None,
-    ) -> str:
-        if data and isinstance(data.get("wxo_client_cache_key"), str) and data["wxo_client_cache_key"]:
-            return data["wxo_client_cache_key"]
-        return str(user_id)
-
     async def _resolve_wxo_client_credentials(
         self,
         *,
         user_id: UUID | str,
         db: Any,
-        data: dict[str, Any] | None = None,
     ) -> dict[str, str]:
         names = {
             "instance_url": DEFAULT_WXO_INSTANCE_URL_VARIABLE,
@@ -526,12 +505,6 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             "iam_url": DEFAULT_WXO_AWS_IAM_URL_VARIABLE,
             "auth_type": DEFAULT_WXO_AUTH_TYPE_VARIABLE,
         }
-        overrides = (data or {}).get("wxo_credentials", {})
-        if isinstance(overrides, dict):
-            names["instance_url"] = overrides.get("instance_url_variable", names["instance_url"])
-            names["api_key"] = overrides.get("api_key_variable", names["api_key"])
-            names["iam_url"] = overrides.get("iam_url_variable", names["iam_url"])
-            names["auth_type"] = overrides.get("auth_type_variable", names["auth_type"])
 
         return {
             "instance_url": await self._resolve_variable_value(
@@ -633,35 +606,35 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             raise ValueError(msg)
         return connection
 
-    def _validate_live_connection(self, connections_client: ConnectionsClient, *, app_id: str) -> None:
-        config = connections_client.get_config(app_id=app_id, env=ConnectionEnvironment.LIVE)
+    def _validate_draft_connection(self, connections_client: ConnectionsClient, *, app_id: str) -> None:
+        config = connections_client.get_config(app_id=app_id, env=ConnectionEnvironment.DRAFT)
         if not config:
-            msg = f"Connection '{app_id}' is missing live config. Deployments require live mode."
+            msg = f"Connection '{app_id}' is missing draft config. Deployments require draft mode."
             raise ValueError(msg)
         if config.security_scheme != ConnectionSecurityScheme.KEY_VALUE:
             msg = f"Connection '{app_id}' must use key-value credentials for Langflow flows."
             raise ValueError(msg)
         runtime_credentials = connections_client.get_credentials(
             app_id=app_id,
-            env=ConnectionEnvironment.LIVE,
+            env=ConnectionEnvironment.DRAFT,
             use_app_credentials=False,
         )
         if not runtime_credentials:
-            msg = f"Connection '{app_id}' is missing live runtime credentials."
+            msg = f"Connection '{app_id}' is missing draft runtime credentials."
             raise ValueError(msg)
 
-    def _upsert_live_kv_config(self, connections_client: ConnectionsClient, *, app_id: str) -> None:
+    def _upsert_draft_kv_config(self, connections_client: ConnectionsClient, *, app_id: str) -> None:
         config = ConnectionConfiguration(
             app_id=app_id,
-            environment=ConnectionEnvironment.LIVE,
+            environment=ConnectionEnvironment.DRAFT,
             preference=ConnectionPreference.TEAM,
             security_scheme=ConnectionSecurityScheme.KEY_VALUE,
         )
-        existing = connections_client.get_config(app_id=app_id, env=ConnectionEnvironment.LIVE)
+        existing = connections_client.get_config(app_id=app_id, env=ConnectionEnvironment.DRAFT)
         if existing:
             connections_client.update_config(
                 app_id=app_id,
-                env=ConnectionEnvironment.LIVE,
+                env=ConnectionEnvironment.DRAFT,
                 payload=config.model_dump(exclude_none=True),
             )
             return
@@ -677,21 +650,21 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         credentials = KeyValueConnectionCredentials(runtime_credentials)
         existing = connections_client.get_credentials(
             app_id=app_id,
-            env=ConnectionEnvironment.LIVE,
+            env=ConnectionEnvironment.DRAFT,
             use_app_credentials=False,
         )
         payload = {"runtime_credentials": credentials.model_dump()}
         if existing:
             connections_client.update_credentials(
                 app_id=app_id,
-                env=ConnectionEnvironment.LIVE,
+                env=ConnectionEnvironment.DRAFT,
                 use_app_credentials=False,
                 payload=payload,
             )
             return
         connections_client.create_credentials(
             app_id=app_id,
-            env=ConnectionEnvironment.LIVE,
+            env=ConnectionEnvironment.DRAFT,
             use_app_credentials=False,
             payload=payload,
         )
@@ -831,7 +804,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         connections = agent.get("connection_ids", [])
         return [item for item in connections if isinstance(item, str)]
 
-    def _resolve_live_environment_id(self, agent_client: AgentClient, deployment_id: str) -> str:
+    def _resolve_draft_environment_id(self, agent_client: AgentClient, deployment_id: str) -> str:
         environments = agent_client.get_environments_for_agent(deployment_id)
         if isinstance(environments, dict):
             envs = environments.get("environments", []) or environments.get("data", []) or []
@@ -846,7 +819,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             name = str(env.get("name", "")).lower()
             label = str(env.get("label", "")).lower()
             mode = str(env.get("environment", "")).lower()
-            if "live" in {name, label, mode}:
+            if "draft" in {name, label, mode} or "draft" in name or "draft" in label:
                 env_id = env.get("id") or env.get("environment_id")
                 if env_id:
                     return str(env_id)
@@ -854,7 +827,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             env_id = envs[0].get("id") or envs[0].get("environment_id")
             if env_id:
                 return str(env_id)
-        msg = f"No deployable environment found for deployment '{deployment_id}'."
+        msg = f"No draft environment found for deployment '{deployment_id}'."
         raise ValueError(msg)
 
     def _map_agent_to_deployment(self, agent: dict[str, Any]) -> dict[str, Any]:

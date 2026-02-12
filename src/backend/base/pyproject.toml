@@ -373,6 +373,8 @@ ibm-watsonx = [
     "ibm-cloud-sdk-core~=3.24.4",
     "ibm-watsonx-orchestrate-clients==2.3.2.dev5117; python_version >= '3.11'",
     "ibm-watsonx-orchestrate-core==2.3.2.dev5117; python_version >= '3.11'",
+    "rich",
+    "PyYAML"
 ]
 
 # Complete installation
