@@ -145,7 +145,7 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         Output(
             display_name="Guarded Tools",
             type_=Tool,
-            name="guard_code",
+            name="guarded_tools",
             method="guard_tools",
             # group_outputs=True,
         ),
@@ -159,14 +159,12 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         toolguard_step1_dir = join(self.guard_code_path, STEP1)
         policy_text = "\n".join(self.policies)
         open_api = langchain_tools_to_openapi(self.in_tools)
-        specs = await generate_guard_specs(
-            policy_text=policy_text, tools=open_api, llm=llm, work_dir=out_dir, short=True
-        )
-        logger.info("🔒️ToolGuard: Step 1 Done")
+        specs = await generate_guard_specs(policy_text=policy_text, tools=open_api, llm=llm, work_dir=out_dir)
+        logger.info("Step 1 Done")
         return specs
 
     async def _generate_guard_code(self, specs: list[ToolGuardSpec]) -> ToolGuardsCodeGenerationResult:
-        logger.info("🔒️ToolGuard: Starting step 2")
+        logger.info("Starting step 2")
         out_dir = self.work_dir / STEP2
         if out_dir.exists():
             shutil.rmtree(out_dir)
@@ -177,7 +175,7 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         gen_result = await generate_guards_code(
             tools=open_api, tool_specs=specs, work_dir=out_dir, llm=llm, app_name=app_name
         )
-        logger.info("🔒️ToolGuard: Step 2 Done")
+        logger.info("Step 2 Done")
         return gen_result
 
     def in_recommended_models(self, model_name: str):
@@ -186,29 +184,27 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
     def validate_before_generate(self) -> None:
         """Validate required inputs before generating guard code."""
         if not self.project:
-            msg = "🔒️ToolGuard: project cannot be empty!"
+            msg = "Policies: project cannot be empty!"
             raise ValueError(msg)
 
         if not any(self.policies):
-            msg = "🔒️ToolGuard: policies cannot be empty!"
+            msg = "Policies: policies cannot be empty!"
             raise ValueError(msg)
 
         if not self.in_tools:
-            msg = "🔒️ToolGuard: in_tools cannot be empty!"
+            msg = "Policies: in_tools cannot be empty!"
             raise ValueError(msg)
 
         if not self.model or not self.api_key:
-            msg = "🔒️ToolGuard: model or api_key cannot be empty!"
+            msg = "Policies: model or api_key cannot be empty!"
             raise ValueError(msg)
 
         if not self.in_recommended_models(self.model[0]["name"]):
-            msg = f"🔒️ToolGuard: model {self.model[0]['name']} is not in recommended models: {BUILDTIME_MODELS}"
+            msg = f"Policies: model {self.model[0]['name']} is not in recommended models: {BUILDTIME_MODELS}"
             raise ValueError(msg)
 
     async def generate(self):
-        self.log(
-            f"🔒️ToolGuard: Start generating. Please review the generated guard code at {self.work_dir}", name="info"
-        )
+        self.log(f"Start generating. Please review the generated guard code at {self.work_dir}", name="info")
 
         specs = await self._generate_guard_specs()
         res = await self._generate_guard_code(specs)
@@ -220,7 +216,7 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         # Validate cache exists before attempting to load
         if not code_dir.exists():
             msg = (
-                f"🔒️ToolGuard: Cache directory not found at '{code_dir}'. "
+                f"Policies: Cache directory not found at '{code_dir}'. "
                 f"Please run in 'Generate' mode first to create the guard code, "
                 f"or verify the project name is correct."
             )
