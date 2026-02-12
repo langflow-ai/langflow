@@ -255,3 +255,14 @@ def get_job_service():
     from langflow.services.jobs.factory import JobServiceFactory
 
     return get_service(ServiceType.JOB_SERVICE, JobServiceFactory())
+
+
+def get_scheduler_service():
+    """Retrieves the SchedulerService instance from the service manager.
+
+    Returns:
+        SchedulerService: The SchedulerService instance.
+    """
+    from langflow.services.scheduler.factory import SchedulerServiceFactory
+
+    return get_service(ServiceType.SCHEDULER_SERVICE, SchedulerServiceFactory())
