@@ -571,8 +571,8 @@ def setup_static_files(app: FastAPI, static_files_dir: Path) -> None:
 
     @app.exception_handler(404)
     async def custom_404_handler(_request, _exc):
-        # Return JSON for workflow API endpoints to prevent HTML responses
-        if _request.url.path.startswith("/api/v2/workflows"):
+        # Return JSON for all API endpoints to prevent HTML responses
+        if _request.url.path.startswith("/api"):
             # Extract detail from HTTPException if available
             detail = _exc.detail if isinstance(_exc, HTTPException) else "Not Found"
             return JSONResponse(
