@@ -1,6 +1,7 @@
 import { useState } from "react";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { useUpdateSessionName } from "@/controllers/API/queries/messages/use-rename-session";
+import useFlowStore from "@/stores/flowStore";
 import { useVoiceStore } from "@/stores/voiceStore";
 import { cn } from "@/utils/utils";
 import { useSessionHasMessages } from "../hooks/use-session-has-messages";
@@ -41,6 +42,7 @@ export function SessionSelector({
   onMenuOpenChange,
 }: SessionSelectorProps) {
   const [isEditing, setIsEditing] = useState(false);
+  const isShareablePlayground = useFlowStore((state) => state.playgroundPage);
   const { mutate: updateSessionName } = useUpdateSessionName();
   const setNewSessionCloseVoiceAssistant = useVoiceStore(
     (state) => state.setNewSessionCloseVoiceAssistant,
@@ -139,22 +141,24 @@ export function SessionSelector({
           )}
         </div>
 
-        <SessionMoreMenu
-          onRename={handleEditClick}
-          onMessageLogs={() => inspectSession?.(session)}
-          onDelete={() => deleteSession(session)}
-          showRename={canRenameSession}
-          showDelete={canModifySession}
-          side="bottom"
-          align="end"
-          sideOffset={4}
-          contentClassName="z-[100] [&>div.p-1]:!h-auto [&>div.p-1]:!min-h-0"
-          isVisible={true}
-          tooltipContent="More options"
-          tooltipSide="left"
-          open={menuOpen}
-          onOpenChange={onMenuOpenChange}
-        />
+        {!isShareablePlayground && (
+          <SessionMoreMenu
+            onRename={handleEditClick}
+            onMessageLogs={() => inspectSession?.(session)}
+            onDelete={() => deleteSession(session)}
+            showRename={canRenameSession}
+            showDelete={canModifySession}
+            side="bottom"
+            align="end"
+            sideOffset={4}
+            contentClassName="z-[100] [&>div.p-1]:!h-auto [&>div.p-1]:!min-h-0"
+            isVisible={true}
+            tooltipContent="More options"
+            tooltipSide="left"
+            open={menuOpen}
+            onOpenChange={onMenuOpenChange}
+          />
+        )}
       </div>
     </div>
   );

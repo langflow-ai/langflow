@@ -3,6 +3,7 @@ import { AnimatedConditional } from "@/components/ui/animated-close";
 import { useDeleteSession } from "@/controllers/API/queries/messages/use-delete-sessions";
 import { useIsMobile } from "@/hooks/use-mobile";
 import useAlertStore from "@/stores/alertStore";
+import useFlowStore from "@/stores/flowStore";
 import { cn } from "@/utils/utils";
 import { clearSessionMessages } from "../../utils/message-utils";
 import { useEditSessionInfo } from "../hooks/use-edit-session-info";
@@ -58,7 +59,7 @@ export function ChatHeader({
   };
 
   const isMobile = useIsMobile();
-  // Keep session actions (including logs) available in fullscreen
+  const isShareablePlayground = useFlowStore((state) => state.playgroundPage);
   const isSessionDropdownVisible = true;
   const isDefaultSession = currentSessionId === currentFlowId;
   const deleteSessionMutation = useDeleteSession({});
@@ -131,6 +132,7 @@ export function ChatHeader({
         onClearChat={handleClearChat}
         onDelete={handleDeleteSessionInternal}
         showRename={!isDefaultSession && hasMessages}
+        showMessageLogs={!isShareablePlayground}
         showClearChat={isDefaultSession}
         showDelete={!isDefaultSession}
         side="bottom"
@@ -199,14 +201,14 @@ export function ChatHeader({
           />
         </div>
       )}
-      <div className="relative flex items-center flex-1 justify-end min-h-xxs">
+      <div className="relative flex items-center shrink-0 justify-end min-h-xxs">
         <ChatHeaderActions
           isFullscreen={isFullscreen}
           onClose={onClose}
           renderPrefix={() => moreMenu}
         />
       </div>
-      {currentSessionId && (
+      {!isShareablePlayground && currentSessionId && (
         <SessionLogsModal
           sessionId={currentSessionId}
           flowId={currentFlowId}

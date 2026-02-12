@@ -27,6 +27,7 @@ export const BotMessage = memo(
     const setErrorData = useAlertStore((state) => state.setErrorData);
     const [editMessage, setEditMessage] = useState(false);
     const isBuilding = useFlowStore((state) => state.isBuilding);
+    const isShareablePlayground = useFlowStore((state) => state.playgroundPage);
     const buildStartTime = useFlowStore((state) => state.buildStartTime);
     const buildDuration = useFlowStore((state) => state.buildDuration);
     const flow_id = useFlowsManagerStore((state) => state.currentFlowId);
@@ -237,9 +238,9 @@ export const BotMessage = memo(
               <div className="invisible absolute -top-4 right-0 group-hover:visible">
                 <EditMessageButton
                   onCopy={() => navigator.clipboard.writeText(chatMessage)}
-                  onEdit={() => setEditMessage(true)}
+                  onEdit={isShareablePlayground ? undefined : () => setEditMessage(true)}
                   className="h-fit group-hover:visible"
-                  isBotMessage={true}
+                  isBotMessage={!isShareablePlayground}
                   onEvaluate={handleEvaluateAnswer}
                   evaluation={chat.properties?.positive_feedback}
                   isAudioMessage={isAudioMessage}
