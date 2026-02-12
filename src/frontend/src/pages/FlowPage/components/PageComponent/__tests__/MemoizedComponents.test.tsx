@@ -277,7 +277,7 @@ describe("MemoizedSidebarTrigger", () => {
         "group-data-[open=true]/sidebar-wrapper:pointer-events-none",
       );
       expect(panel).toHaveClass(
-        "group-data-[open=true]/sidebar-wrapper:-translate-x-full",
+        "group-data-[open=true]/sidebar-wrapper:-translate-x-80",
       );
       expect(panel).toHaveClass(
         "group-data-[open=true]/sidebar-wrapper:opacity-0",
