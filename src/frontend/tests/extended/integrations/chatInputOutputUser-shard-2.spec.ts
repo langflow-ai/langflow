@@ -3,12 +3,8 @@ import path from "path";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
-import {
-  closeAdvancedOptions,
-  disableInspectPanel,
-  enableInspectPanel,
-  openAdvancedOptions,
-} from "../../utils/open-advanced-options";
+import { enableInspectPanel } from "../../utils/open-advanced-options";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 
 test(
   "user must interact with chat with Input/Output",
@@ -29,6 +25,8 @@ test(
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
     await initialGPTsetup(page);
+
+    await enableInspectPanel(page);
 
     // Open Playground
     await page.getByRole("button", { name: "Playground", exact: true }).click();
@@ -63,19 +61,23 @@ test(
       page.locator('[data-testid^="chat-message-AI"]').first(),
     ).not.toBeEmpty();
 
-    // close the playground
-    await page.getByRole("button", { name: "Playground", exact: true }).click();
+    // close the playground (dispatchEvent bypasses the fullscreen overlay interception)
+    await page.getByTestId("playground-btn-flow-io").dispatchEvent("click");
+    await page.waitForTimeout(1000);
 
-    await disableInspectPanel(page);
-    await page.getByText("Chat Input", { exact: true }).click();
-    await openAdvancedOptions(page);
+    // Make sender_name visible on Chat Input
+    await page.getByText("Chat Input", { exact: true }).first().click();
+    await page.getByTestId("edit-fields-button").click();
     await page.getByTestId("showsender_name").click();
-    await closeAdvancedOptions(page);
+    await page.getByTestId("edit-fields-button").click();
 
+    await adjustScreenView(page);
+
+    // Make sender_name visible on Chat Output
     await page.getByText("Chat Output", { exact: true }).click();
-    await openAdvancedOptions(page);
+    await page.getByTestId("edit-fields-button").click();
     await page.getByTestId("showsender_name").click();
-    await closeAdvancedOptions(page);
+    await page.getByTestId("edit-fields-button").click();
 
     await page
       .getByTestId("popover-anchor-input-sender_name")
@@ -114,7 +116,6 @@ test(
       page.locator('[data-testid^="chat-message-TestSenderNameAI"]').first(),
     ).not.toBeEmpty();
 
-    await page.getByTestId("playground-btn-flow-io").last().click();
-    await enableInspectPanel(page);
+    await page.getByTestId("playground-btn-flow-io").dispatchEvent("click");
   },
 );

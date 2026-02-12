@@ -4,12 +4,11 @@ import { test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { enableInspectPanel } from "../../utils/open-advanced-options";
 import { zoomOut } from "../../utils/zoom-out";
 import { selectGptModel } from "../../utils/select-gpt-model";
-import {
-  closeAdvancedOptions,
-  openAdvancedOptions,
-} from "../../utils/open-advanced-options";
+
+
 
 test(
   "should create a flow with decision",
@@ -312,20 +311,27 @@ test(
       .nth(0)
       .click();
     await page.getByTestId("popover-anchor-input-match_text").fill("TRUE");
+
+    await enableInspectPanel(page);
+
     await page.getByTestId("title-Pass").nth(1).click();
     await page
       .getByTestId(/^popover-anchor-input-input_message.*/)
       .nth(0)
       .fill("You're Happy! 🤪");
-    await page.getByTestId("showignored_message").last().click();
-    await closeAdvancedOptions(page);
+    await page.getByTestId("edit-fields-button").click();
+    await page.getByTestId("showignored_message").click();
+    await page.getByTestId("edit-fields-button").click();
     await page.getByTestId("title-Pass").nth(0).click();
     await page
       .getByTestId(/^popover-anchor-input-input_message.*/)
       .nth(0)
       .fill("You're Sad! 🥲");
-    await page.getByTestId("showignored_message").last().click();
-    await closeAdvancedOptions(page);
+    await page.getByTestId("edit-fields-button").click();
+    await page.getByTestId("showignored_message").click();
+    await page.getByTestId("edit-fields-button").click();
+    await adjustScreenView(page);
+
 
     await page
       .getByTestId("handle-conditionalrouter-shownode-true-right")
