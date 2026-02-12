@@ -185,14 +185,16 @@ export function FlowPageSlidingContainerContent({
             setOpenLogsModal={setOpenLogsModal}
             renameLocalSession={renameLocalSession}
           />
-          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden playground-messages-wrapper">
             <StickToBottom
               className="flex-1 min-h-0 overflow-hidden"
               resize="smooth"
               initial="instant"
             >
               <StickToBottom.Content className="flex flex-col min-h-full overflow-x-hidden">
-                <div className="flex flex-col w-full">
+                <div
+                  className={`flex flex-col ${isFullscreen ? "w-full max-w-[744px] p-0 mx-auto" : "w-full"}`}
+                >
                   <Messages
                     visibleSession={currentSessionId ?? currentFlowId ?? null}
                     playgroundPage={true}
