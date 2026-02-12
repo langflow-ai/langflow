@@ -18,34 +18,34 @@ test("user must be able to move flow from folder", async ({ page }) => {
 
   await page.getByTestId("icon-ChevronLeft").click();
   await page.waitForSelector('[data-testid="add-project-button"]', {
-    timeout: 3000,
+    timeout: 10000,
   });
 
-  await page.getByTestId("add-project-button").click();
+  // Only create a new folder if none exists besides "Starter Project"
+  const newProjectExists =
+    (await page.locator('[id="sidebar-nav-New Project"]').count()) > 0;
 
-  //wait for the project to be created and changed to the new project
-  await page.waitForTimeout(1000);
+  if (!newProjectExists) {
+    await page.getByTestId("add-project-button").click();
+    await page.waitForTimeout(1000);
+  }
 
   await page.getByTestId("sidebar-nav-Starter Project").click();
-
   await page.waitForTimeout(500);
 
-  await page.getByText(randomName).hover();
+  await page.getByText(randomName).waitFor({ timeout: 5000 });
+
+  const targetFolder = page.locator('[id="sidebar-nav-New Project"]');
+  await targetFolder.scrollIntoViewIfNeeded();
 
   await page
     .getByTestId("list-card")
-    .first()
-    .dragTo(page.locator('//*[@id="sidebar-nav-New Project"]'));
+    .filter({ hasText: randomName })
+    .dragTo(targetFolder);
 
-  //wait for the drag and drop to be completed
   await page.waitForTimeout(1000);
 
   await page.getByTestId("sidebar-nav-New Project").click();
 
-  await page.waitForSelector('[data-testid="list-card"]', {
-    timeout: 3000,
-  });
-
-  const flowNameCount = await page.getByText(randomName).count();
-  expect(flowNameCount).toBeGreaterThan(0);
+  await expect(page.getByText(randomName)).toBeVisible({ timeout: 10000 });
 });

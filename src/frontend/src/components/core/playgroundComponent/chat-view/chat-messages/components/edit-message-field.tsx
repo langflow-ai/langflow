@@ -29,6 +29,7 @@ export default function EditMessageField({
     <div className="flex h-fit w-full flex-col rounded-md bg-muted px-4 py-2">
       <Textarea
         ref={textareaRef}
+        data-testid="edit-message-textarea"
         className="max-h-[400px] w-full resize-none rounded-none border-0 bg-muted shadow-none focus:ring-0"
         value={message}
         autoFocus={true}

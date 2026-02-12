@@ -92,28 +92,28 @@ test(
     //check edit message
     await page.getByTestId("chat-message-User-message 1").hover();
     await page.getByTestId("icon-Pen").first().click();
-    await page.getByTestId("textarea").fill("edit_1");
+    await page.getByTestId("edit-message-textarea").fill("edit_1");
     await page.getByTestId("save-button").click();
     await expect(page.getByTestId("chat-message-User-edit_1")).toBeVisible();
 
     // check cancel edit
     await page.getByTestId("chat-message-User-edit_1").hover();
     await page.getByTestId("icon-Pen").first().click();
-    await page.getByTestId("textarea").fill("cancel_edit");
+    await page.getByTestId("edit-message-textarea").fill("cancel_edit");
     await page.getByTestId("cancel-button").click();
     await expect(page.getByTestId("chat-message-User-edit_1")).toBeVisible();
 
     //check edit bot message
     await page.getByTestId("chat-message-AI-message 1").hover();
     await page.getByTestId("icon-Pen").last().click();
-    await page.getByTestId("textarea").fill("edit_bot_1");
+    await page.getByTestId("edit-message-textarea").fill("edit_bot_1");
     await page.getByTestId("save-button").click();
     await expect(page.getByTestId("chat-message-AI-edit_bot_1")).toBeVisible();
 
     // check cancel edit bot
     await page.getByTestId("chat-message-AI-edit_bot_1").hover();
     await page.getByTestId("icon-Pen").last().click();
-    await page.getByTestId("textarea").fill("edit_bot_cancel");
+    await page.getByTestId("edit-message-textarea").fill("edit_bot_cancel");
     await page.getByTestId("cancel-button").click();
     await expect(page.getByTestId("chat-message-AI-edit_bot_1")).toBeVisible();
 
