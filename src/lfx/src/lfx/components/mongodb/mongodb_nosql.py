@@ -6,8 +6,6 @@ from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, Field
 from pymongo.collection import Collection
 
-logger = logging.getLogger(__name__)
-
 from lfx.custom import Component
 from lfx.field_typing import Tool
 from lfx.io import (
@@ -20,6 +18,8 @@ from lfx.io import (
     StrInput,
 )
 from lfx.schema import Data
+
+logger = logging.getLogger(__name__)
 
 
 class MongoDBQueryComponent(Component):
@@ -232,13 +232,11 @@ class MongoDBQueryComponent(Component):
             # Reuse cached client if available
             if self._mongo_client is None:
                 self._mongo_client = MongoClient(self.mongodb_nosql_uri)
-
-            collection = self._mongo_client[self.db_name][self.collection_name]
-            return collection
-
         except Exception as e:
             msg = f"Failed to connect to MongoDB NoSQL: {e}"
             raise ValueError(msg) from e
+        else:
+            return self._mongo_client[self.db_name][self.collection_name]
 
     def close(self):
         """Close the MongoDB connection and clear the cached client.
@@ -250,8 +248,8 @@ class MongoDBQueryComponent(Component):
             try:
                 self._mongo_client.close()
                 logger.info("MongoDB connection closed")
-            except Exception as e:
-                logger.error(f"Error closing MongoDB connection: {e}")
+            except Exception:
+                logger.exception("Error closing MongoDB connection")
             finally:
                 self._mongo_client = None
 
@@ -311,9 +309,9 @@ class MongoDBQueryComponent(Component):
         cursor = collection.find(query_filter).limit(self.limit)
 
         results = []
-        for doc in cursor:
-            doc = self.convert_objectid_to_str(doc)
-            results.append(Data(data=doc))
+        for raw_doc in cursor:
+            converted_doc = self.convert_objectid_to_str(raw_doc)
+            results.append(Data(data=converted_doc))
 
         self.log(f"Found {len(results)} documents")
         return results
@@ -371,7 +369,7 @@ class MongoDBQueryComponent(Component):
         else:
             result = collection.insert_many(documents)
             self.log(f"Inserted {len(result.inserted_ids)} documents")
-            inserted_ids = [str(id) for id in result.inserted_ids]
+            inserted_ids = [str(obj_id) for obj_id in result.inserted_ids]
 
         return [
             Data(
@@ -393,7 +391,7 @@ class MongoDBQueryComponent(Component):
             raise ValueError(msg)
 
         # Wrap in $set if not already using update operators
-        if not any(key.startswith("$") for key in update_data.keys()):
+        if not any(key.startswith("$") for key in update_data):
             update_data = {"$set": update_data}
 
         self.log(f"Updating documents with filter: {self._redact_sensitive(query_filter)}")
@@ -487,30 +485,30 @@ class MongoDBQueryComponent(Component):
 
         return results
 
-    def _query_with_filter(self, filter: str | dict) -> list[dict]:
+    def _query_with_filter(self, query_filter: str | dict) -> list[dict]:
         """Execute query operation with filter for tool mode.
 
         Args:
-            filter: MongoDB filter query as JSON string or dict
+            query_filter: MongoDB filter query as JSON string or dict
 
         Returns:
             List of documents matching the query
         """
         # Handle both string and dict inputs
-        if isinstance(filter, dict):
-            query_filter = filter
+        if isinstance(query_filter, dict):
+            filter_dict = query_filter
         else:
-            query_filter = self.parse_json(filter)
+            filter_dict = self.parse_json(query_filter)
 
-        self.log(f"Tool Mode - Executing query with filter: {self._redact_sensitive(query_filter)}")
+        self.log(f"Tool Mode - Executing query with filter: {self._redact_sensitive(filter_dict)}")
 
         collection = self.get_collection()
-        cursor = collection.find(query_filter).limit(self.limit)
+        cursor = collection.find(filter_dict).limit(self.limit)
 
         results = []
-        for doc in cursor:
-            doc = self.convert_objectid_to_str(doc)
-            results.append(doc)
+        for raw_doc in cursor:
+            converted_doc = self.convert_objectid_to_str(raw_doc)
+            results.append(converted_doc)
 
         self.log(f"Tool Mode - Found {len(results)} documents")
         return results
@@ -537,20 +535,20 @@ class MongoDBQueryComponent(Component):
         self.log(f"Tool Mode - Inserted document with _id: {result.inserted_id}")
         return {"operation": "insert", "inserted_id": str(result.inserted_id)}
 
-    def _update_with_filter(self, filter: str | dict, update: str | dict) -> dict:
+    def _update_with_filter(self, query_filter: str | dict, update: str | dict) -> dict:
         """Execute update operation for tool mode.
 
         Args:
-            filter: MongoDB filter query as JSON string or dict
+            query_filter: MongoDB filter query as JSON string or dict
             update: Data to update as JSON string or dict
 
         Returns:
             Result info with update counts
         """
-        if isinstance(filter, dict):
-            query_filter = filter
+        if isinstance(query_filter, dict):
+            filter_dict = query_filter
         else:
-            query_filter = self.parse_json(filter)
+            filter_dict = self.parse_json(query_filter)
 
         if isinstance(update, dict):
             upd_data = update
@@ -558,19 +556,19 @@ class MongoDBQueryComponent(Component):
             upd_data = self.parse_json(update)
 
         # Wrap in $set if not already using update operators
-        if not any(key.startswith("$") for key in upd_data.keys()):
+        if not any(key.startswith("$") for key in upd_data):
             upd_data = {"$set": upd_data}
 
-        self.log(f"Tool Mode - Updating documents with filter: {self._redact_sensitive(query_filter)}")
+        self.log(f"Tool Mode - Updating documents with filter: {self._redact_sensitive(filter_dict)}")
         self.log(f"Tool Mode - Update operation with fields: {self._redact_sensitive(upd_data)}")
 
         collection = self.get_collection()
 
         if self.update_many:
-            result = collection.update_many(query_filter, upd_data, upsert=self.upsert)
+            result = collection.update_many(filter_dict, upd_data, upsert=self.upsert)
             operation = "update_many"
         else:
-            result = collection.update_one(query_filter, upd_data, upsert=self.upsert)
+            result = collection.update_one(filter_dict, upd_data, upsert=self.upsert)
             operation = "update_one"
 
         self.log(
@@ -585,30 +583,30 @@ class MongoDBQueryComponent(Component):
             "upserted_id": str(result.upserted_id) if result.upserted_id else None,
         }
 
-    def _replace_with_filter(self, filter: str | dict, replacement: str | dict) -> dict:
+    def _replace_with_filter(self, query_filter: str | dict, replacement: str | dict) -> dict:
         """Execute replace operation for tool mode.
 
         Args:
-            filter: MongoDB filter query as JSON string or dict
+            query_filter: MongoDB filter query as JSON string or dict
             replacement: Document to replace with as JSON string or dict
 
         Returns:
             Result info with replace counts
         """
-        if isinstance(filter, dict):
-            query_filter = filter
+        if isinstance(query_filter, dict):
+            filter_dict = query_filter
         else:
-            query_filter = self.parse_json(filter)
+            filter_dict = self.parse_json(query_filter)
 
         if isinstance(replacement, dict):
             repl_doc = replacement
         else:
             repl_doc = self.parse_json(replacement)
 
-        self.log(f"Tool Mode - Replacing document with filter: {self._redact_sensitive(query_filter)}")
+        self.log(f"Tool Mode - Replacing document with filter: {self._redact_sensitive(filter_dict)}")
 
         collection = self.get_collection()
-        result = collection.replace_one(query_filter, repl_doc, upsert=self.upsert)
+        result = collection.replace_one(filter_dict, repl_doc, upsert=self.upsert)
 
         self.log(
             f"Tool Mode - Matched: {result.matched_count}, "
@@ -622,34 +620,34 @@ class MongoDBQueryComponent(Component):
             "upserted_id": str(result.upserted_id) if result.upserted_id else None,
         }
 
-    def _delete_with_filter(self, filter: str | dict) -> dict:
+    def _delete_with_filter(self, query_filter: str | dict) -> dict:
         """Execute delete operation for tool mode.
 
         Args:
-            filter: MongoDB filter query as JSON string or dict
+            query_filter: MongoDB filter query as JSON string or dict
 
         Returns:
             Result info with deleted count
         """
-        if isinstance(filter, dict):
-            query_filter = filter
+        if isinstance(query_filter, dict):
+            filter_dict = query_filter
         else:
-            query_filter = self.parse_json(filter)
+            filter_dict = self.parse_json(query_filter)
 
-        if not query_filter:
+        if not filter_dict:
             msg = "Delete operation requires a filter"
             raise ValueError(msg)
 
-        self.log(f"Tool Mode - Deleting documents with filter: {self._redact_sensitive(query_filter)}")
+        self.log(f"Tool Mode - Deleting documents with filter: {self._redact_sensitive(filter_dict)}")
 
         collection = self.get_collection()
 
         if self.update_many:
-            result = collection.delete_many(query_filter)
+            result = collection.delete_many(filter_dict)
             operation = "delete_many"
             self.log(f"Tool Mode - Deleted {result.deleted_count} documents")
         else:
-            result = collection.delete_one(query_filter)
+            result = collection.delete_one(filter_dict)
             operation = "delete_one"
             self.log(f"Tool Mode - Deleted {result.deleted_count} document")
 
