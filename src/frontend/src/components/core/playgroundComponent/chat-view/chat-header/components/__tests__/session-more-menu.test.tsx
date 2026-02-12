@@ -114,7 +114,9 @@ describe("SessionMoreMenu visibility", () => {
       />,
     );
 
-    expect(screen.queryByTestId("rename-session-option")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("rename-session-option"),
+    ).not.toBeInTheDocument();
     expect(screen.getByTestId("message-logs-option")).toBeInTheDocument();
     expect(screen.getByTestId("delete-session-option")).toBeInTheDocument();
   });
@@ -130,9 +132,7 @@ describe("SessionMoreMenu visibility", () => {
     );
 
     expect(screen.getByTestId("rename-session-option")).toBeInTheDocument();
-    expect(
-      screen.queryByTestId("message-logs-option"),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByTestId("message-logs-option")).not.toBeInTheDocument();
     expect(screen.getByTestId("delete-session-option")).toBeInTheDocument();
   });
 
@@ -147,10 +147,10 @@ describe("SessionMoreMenu visibility", () => {
       />,
     );
 
-    expect(screen.queryByTestId("rename-session-option")).not.toBeInTheDocument();
     expect(
-      screen.queryByTestId("message-logs-option"),
+      screen.queryByTestId("rename-session-option"),
     ).not.toBeInTheDocument();
+    expect(screen.queryByTestId("message-logs-option")).not.toBeInTheDocument();
     expect(screen.queryByTestId("clear-chat-option")).not.toBeInTheDocument();
     expect(screen.getByTestId("delete-session-option")).toBeInTheDocument();
   });
@@ -235,8 +235,6 @@ describe("SessionMoreMenu custom data-testid", () => {
       />,
     );
 
-    expect(
-      screen.getByTestId("chat-header-more-menu"),
-    ).toBeInTheDocument();
+    expect(screen.getByTestId("chat-header-more-menu")).toBeInTheDocument();
   });
 });

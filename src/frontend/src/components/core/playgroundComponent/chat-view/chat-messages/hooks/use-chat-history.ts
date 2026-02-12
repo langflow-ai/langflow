@@ -54,9 +54,7 @@ export const useChatHistory = (visibleSession: string | null) => {
           const sessionOnly = backendMessages.filter((msg) => {
             if (msg.flow_id !== currentFlowId) return false;
             if (visibleSession === currentFlowId) {
-              return (
-                msg.session_id === visibleSession || !msg.session_id
-              );
+              return msg.session_id === visibleSession || !msg.session_id;
             }
             return msg.session_id === visibleSession;
           });
