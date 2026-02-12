@@ -543,3 +543,45 @@ def test_apply_tweaks_dict_field_overwrites_list_default():
 
     # The dict tweak should fully replace the old list value
     assert node["data"]["node"]["template"]["headers"]["value"] == {"new_key": "new_val"}
+
+
+def test_apply_tweaks_dict_field_value_wrapped_list():
+    """Test that dict field tweaks wrapped in {"value": [...]} are unwrapped correctly.
+
+    When users pass tweaks in the template-format style (e.g. from UI exports),
+    the list of key-value pairs is wrapped in a "value" key. The tweak should
+    unwrap this and set the inner list as the field's value.
+    """
+    from langflow.processing.process import apply_tweaks
+
+    node = {
+        "id": "MCPTools-svrRq",
+        "data": {
+            "node": {
+                "template": {
+                    "headers": {
+                        "value": [],
+                        "type": "dict",
+                    },
+                }
+            }
+        },
+    }
+
+    # Tweak using the template-format wrapper: {"value": [list of key-value pairs]}
+    node_tweaks = {
+        "headers": {
+            "value": [
+                {"key": "header1", "value": "gabriel1"},
+                {"key": "header2", "value": "gabriel2"},
+            ]
+        },
+    }
+
+    apply_tweaks(node, node_tweaks)
+
+    # The inner list should be unwrapped and set as the field's value
+    assert node["data"]["node"]["template"]["headers"]["value"] == [
+        {"key": "header1", "value": "gabriel1"},
+        {"key": "header2", "value": "gabriel2"},
+    ]
