@@ -223,9 +223,7 @@ export function ShareablePlaygroundContent() {
                     </div>
                   ) : (
                     <Messages
-                      visibleSession={
-                        currentSessionId ?? currentFlowId ?? null
-                      }
+                      visibleSession={currentSessionId ?? currentFlowId ?? null}
                       playgroundPage={true}
                     />
                   )}

@@ -28,7 +28,8 @@ jest.mock("@/components/ui/animated-close", () => ({
   }: {
     children: React.ReactNode;
     isOpen: boolean;
-  }) => (isOpen ? <div data-testid="animated-conditional">{children}</div> : null),
+  }) =>
+    isOpen ? <div data-testid="animated-conditional">{children}</div> : null,
 }));
 
 jest.mock("@/components/ui/button", () => ({
@@ -201,12 +202,9 @@ jest.mock(
   }),
 );
 
-jest.mock(
-  "@/components/core/playgroundComponent/chat-view/chat-input",
-  () => ({
-    ChatInput: () => <div data-testid="chat-input" />,
-  }),
-);
+jest.mock("@/components/core/playgroundComponent/chat-view/chat-input", () => ({
+  ChatInput: () => <div data-testid="chat-input" />,
+}));
 
 describe("ShareablePlaygroundContent", () => {
   beforeEach(() => {
