@@ -176,6 +176,9 @@ def apply_tweaks(node: dict[str, Any], node_tweaks: dict[str, Any]) -> None:
             if template_data[tweak_name]["type"] == "NestedDict":
                 value = validate_and_repair_json(tweak_value)
                 template_data[tweak_name]["value"] = value
+            elif template_data[tweak_name]["type"] == "dict" and isinstance(tweak_value, dict):
+                # Dict fields: set the dict directly as the value
+                template_data[tweak_name]["value"] = tweak_value
             elif isinstance(tweak_value, dict):
                 for k, v in tweak_value.items():
                     k_ = "file_path" if template_data[tweak_name]["type"] == "file" else k
