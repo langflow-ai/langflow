@@ -58,8 +58,17 @@ jest.mock("@/components/common/genericIconComponent", () => ({
   default: ({ name, className }: { name?: string; className?: string }) => (
     <div data-testid={name ? `icon-${name}` : "icon"} className={className} />
   ),
-  ForwardedIconComponent: ({ name, className }: { name?: string; className?: string }) => (
-    <div data-testid={name ? `icon-${name}` : "forwarded-icon"} className={className} />
+  ForwardedIconComponent: ({
+    name,
+    className,
+  }: {
+    name?: string;
+    className?: string;
+  }) => (
+    <div
+      data-testid={name ? `icon-${name}` : "forwarded-icon"}
+      className={className}
+    />
   ),
 }));
 
