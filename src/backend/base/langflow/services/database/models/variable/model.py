@@ -55,6 +55,12 @@ class VariableRead(SQLModel):
     type: str | None = Field(None, description="Type of the variable")
     value: str | None = Field(None, description="Encrypted value of the variable")
     default_fields: list[str] | None = Field(None, description="Default fields for the variable")
+    validation_error: str | None = Field(
+        None, description="Validation error message if this is a model provider credential with an invalid key"
+    )
+    is_valid: bool | None = Field(
+        None, description="Whether this model provider credential has a valid key (None if not a provider credential)"
+    )
 
     @field_validator("value")
     @classmethod

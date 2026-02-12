@@ -21,11 +21,11 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22
-          cache: yarn
-          cache-dependency-path: ./docs/yarn.lock
+          cache: npm
+          cache-dependency-path: ./docs/package-lock.json
 
       - name: Validate Branch Names
         run: |
@@ -74,14 +74,14 @@ jobs:
           echo "url=${{ vars.DOCS_DRAFT_BASE_URL }}/langflow-drafts/${{ steps.extract_branch.outputs.draft_directory }}/index.html" >> $GITHUB_OUTPUT
 
       - name: Install dependencies
-        run: cd docs && yarn install
+        run: cd docs && npm install
 
       - name: Build website
         if: success()
         run: |
           set -o pipefail
           cd docs
-          yarn build |& tee $GITHUB_WORKSPACE/build.log
+          npm run build |& tee $GITHUB_WORKSPACE/build.log
         env:
           BASE_URL: /langflow-drafts/${{ steps.extract_branch.outputs.draft_directory }}
           FORCE_COLOR: 0 # Disable color output
@@ -259,7 +259,7 @@ jobs:
           reactions: hooray
 
       - name: Upload Deploy Log
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: deploy.log

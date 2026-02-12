@@ -18,12 +18,20 @@ class CurrentDateComponent(Component):
         DropdownInput(
             name="timezone",
             display_name="Timezone",
-            options=sorted(tz for tz in available_timezones() if tz != "localtime"),
+            options=[],  # Options loaded dynamically via update_build_config
             value="UTC",
             info="Select the timezone for the current date and time.",
             tool_mode=True,
+            real_time_refresh=True,
         ),
     ]
+
+    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):  # noqa: ARG002
+        """Dynamically update build config with timezone options."""
+        if field_name == "timezone" or field_name is None:
+            build_config["timezone"]["options"] = sorted(tz for tz in available_timezones() if tz != "localtime")
+        return build_config
+
     outputs = [
         Output(display_name="Current Date", name="current_date", method="get_current_date"),
     ]
