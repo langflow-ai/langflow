@@ -70,6 +70,7 @@ dev = [
     "types-cachetools>=5.5.0.20240820",
     "pyyaml>=6.0.2",
     "pyleak>=0.1.14",
+    "mcp-server-fetch>=2025.1.17",
 ]
 
 [tool.uv.sources]
