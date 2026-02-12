@@ -2,6 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { NEW_SESSION_NAME } from "@/constants/constants";
 import { useGetSessionsFromFlowQuery } from "@/controllers/API/queries/messages/use-get-sessions-from-flow";
 import useFlowStore from "@/stores/flowStore";
+import {
+  getPlaygroundSessions,
+  savePlaygroundSessions,
+} from "@/utils/playground-storage";
 
 interface UseGetAddSessionsProps {
   flowId?: string;
@@ -16,9 +20,6 @@ type UseGetAddSessionsReturnType = (props: UseGetAddSessionsProps) => {
   fetchedSessions: string[];
 };
 
-const LOCAL_SESSIONS_STORAGE_KEY = (flowId: string) =>
-  `langflow_local_sessions_${flowId}`;
-
 export const useGetAddSessions: UseGetAddSessionsReturnType = ({
   flowId,
   currentSessionId,
@@ -29,21 +30,10 @@ export const useGetAddSessions: UseGetAddSessionsReturnType = ({
   const fetchedSessions = dbSessionsResponse?.sessions ?? [];
   const isPlaygroundPage = useFlowStore((state) => state.playgroundPage);
 
-  // Load local sessions from sessionStorage on mount
   const [localSessions, setLocalSessions] = useState<Set<string>>(() => {
     if (!flowId || !isPlaygroundPage) return new Set();
-    try {
-      const stored = window.sessionStorage.getItem(
-        LOCAL_SESSIONS_STORAGE_KEY(flowId),
-      );
-      if (stored) {
-        const parsed = JSON.parse(stored) as string[];
-        return new Set(parsed);
-      }
-    } catch (error) {
-      console.error("Error loading local sessions from sessionStorage:", error);
-    }
-    return new Set();
+    const stored = getPlaygroundSessions(flowId);
+    return stored.length > 0 ? new Set(stored) : new Set();
   });
 
   // Clean up local sessions that are now persisted (in fetchedSessions)
@@ -63,17 +53,9 @@ export const useGetAddSessions: UseGetAddSessionsReturnType = ({
     });
   }, [fetchedSessions, localSessions.size]);
 
-  // Save local sessions to sessionStorage whenever they change
   useEffect(() => {
     if (!flowId || !isPlaygroundPage) return;
-    try {
-      window.sessionStorage.setItem(
-        LOCAL_SESSIONS_STORAGE_KEY(flowId),
-        JSON.stringify(Array.from(localSessions)),
-      );
-    } catch (error) {
-      console.error("Error saving local sessions to sessionStorage:", error);
-    }
+    savePlaygroundSessions(flowId, Array.from(localSessions));
   }, [localSessions, flowId, isPlaygroundPage]);
 
   // Merge fetched sessions with local sessions and current session
@@ -87,7 +69,7 @@ export const useGetAddSessions: UseGetAddSessionsReturnType = ({
       ordered.push(trimmed);
     };
 
-    // Add fetched sessions from database/sessionStorage
+    // Add fetched sessions from database/localStorage
     if (fetchedSessions?.length) fetchedSessions.forEach(push);
 
     // Add all locally created sessions

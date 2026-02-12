@@ -3,6 +3,10 @@ import { useGetFlowId } from "@/modals/IOModal/hooks/useGetFlowId";
 import useFlowStore from "@/stores/flowStore";
 import type { useMutationFunctionType } from "@/types/api";
 import type { Message } from "@/types/messages";
+import {
+  getPlaygroundMessages,
+  savePlaygroundMessages,
+} from "@/utils/playground-storage";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -29,7 +33,7 @@ export const useUpdateMessage: useMutationFunctionType<
       message.files = JSON.parse(message.files);
     }
     if (isPlayground && flowId) {
-      const messages = JSON.parse(sessionStorage.getItem(flowId) || "");
+      const messages = getPlaygroundMessages(flowId);
       const messageIndex = messages.findIndex(
         (m: Message) => m.id === message.id,
       );
@@ -42,7 +46,7 @@ export const useUpdateMessage: useMutationFunctionType<
         flow_id: flowId,
         edit: textChanged ? true : existingMessage.edit,
       };
-      sessionStorage.setItem(flowId, JSON.stringify(messages));
+      savePlaygroundMessages(flowId, messages);
     } else {
       const result = await api.put(
         `${getURL("MESSAGES")}/${message.id}`,

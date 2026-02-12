@@ -21,6 +21,7 @@ import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
 import { LangflowButtonRedirectTarget } from "@/customization/utils/urls";
 import { track } from "@/customization/utils/analytics";
 import useFlowStore from "@/stores/flowStore";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import type { FilePreviewType } from "@/types/components";
 
@@ -30,6 +31,9 @@ export function ShareablePlaygroundContent() {
   const nodes = useFlowStore((state) => state.nodes);
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const setChatValueStore = useUtilityStore((state) => state.setChatValueStore);
+  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
+  const flowTitle = currentFlow?.name ?? null;
+  const flowDescription = currentFlow?.description ?? null;
 
   const [currentSessionId, setCurrentSessionId] = useState<string | undefined>(
     currentFlowId,
@@ -206,16 +210,17 @@ export function ShareablePlaygroundContent() {
                           title="Langflow logo"
                           className="h-10 w-10 scale-[1.5]"
                         />
-                        <div className="flex flex-col items-center justify-center">
-                          <h3 className="mt-2 pb-2 text-2xl font-semibold text-primary">
-                            New chat
+                        <div className="flex flex-col items-center justify-center gap-2 max-w-lg">
+                          <h3 className="mt-2 text-2xl font-semibold text-primary text-center">
+                            {flowTitle ?? "New chat"}
                           </h3>
                           <p
-                            className="text-lg text-muted-foreground"
+                            className="text-lg text-muted-foreground text-center"
                             data-testid="new-chat-text"
                           >
                             <TextEffectPerChar>
-                              Test your flow with a chat prompt
+                              {flowDescription ??
+                                "Test your flow with a chat prompt"}
                             </TextEffectPerChar>
                           </p>
                         </div>

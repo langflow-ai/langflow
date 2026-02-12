@@ -4,6 +4,7 @@ import { EMPTY_INPUT_SEND_MESSAGE } from "@/constants/constants";
 import { useUpdateMessage } from "@/controllers/API/queries/messages";
 import { CustomProfileIcon } from "@/customization/components/custom-profile-icon";
 import useAlertStore from "@/stores/alertStore";
+import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { chatMessagePropsType } from "@/types/components";
 import { cn } from "@/utils/utils";
@@ -16,6 +17,7 @@ export const UserMessage = memo(
   ({ chat, lastMessage, updateChat, playgroundPage }: chatMessagePropsType) => {
     const setErrorData = useAlertStore((state) => state.setErrorData);
     const [editMessage, setEditMessage] = useState(false);
+    const isShareablePlayground = useFlowStore((state) => state.playgroundPage);
     const flow_id = useFlowsManagerStore((state) => state.currentFlowId);
 
     const isAudioMessage = chat.category === "audio";
@@ -180,10 +182,10 @@ export const UserMessage = memo(
               <div className="invisible absolute -top-4 right-0 group-hover:visible">
                 <EditMessageButton
                   onCopy={() => navigator.clipboard.writeText(chatMessage)}
-                  onEdit={() => setEditMessage(true)}
+                  onEdit={isShareablePlayground ? undefined : () => setEditMessage(true)}
                   className="h-fit group-hover:visible"
                   isBotMessage={false}
-                  onEvaluate={handleEvaluateAnswer}
+                  onEvaluate={isShareablePlayground ? undefined : handleEvaluateAnswer}
                   evaluation={chat.properties?.positive_feedback}
                   isAudioMessage={isAudioMessage}
                 />
