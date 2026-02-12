@@ -88,7 +88,6 @@ sse = SseServerTransport("/api/v1/mcp/")
 @router.head(
     "/sse",
     response_class=HTMLResponse,
-    include_in_schema=False,
     dependencies=[Depends(raise_error_if_astra_cloud_env)],
 )
 async def im_alive():
@@ -160,7 +159,7 @@ async def handle_messages(request: Request):
 # Streamable HTTP Transport
 ################################################################################
 class StreamableHTTP:
-    def __init__(self):
+    def __init__(self) -> None:
         self.session_manager: StreamableHTTPSessionManager | None = None
         self._started = False
         self._start_stop_lock = asyncio.Lock()
@@ -255,7 +254,7 @@ streamable_http_route_config = {  # use for all streamable http routes (except f
 }
 
 
-@router.head("/streamable", include_in_schema=False)
+@router.head("/streamable")
 async def streamable_health():
     return Response()
 

@@ -49,13 +49,12 @@ from langflow.services.auth.utils import (
     api_key_security,
     get_current_active_user,
     get_current_user_for_sse,
-    get_webhook_user,
 )
 from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
 from langflow.services.database.models.user.model import User, UserRead
-from langflow.services.deps import get_session_service, get_settings_service, get_telemetry_service
+from langflow.services.deps import get_auth_service, get_session_service, get_settings_service, get_telemetry_service
 from langflow.services.event_manager import create_webhook_event_manager, webhook_event_manager
 from langflow.services.telemetry.schema import RunPayload
 from langflow.utils.compression import compress_response
@@ -600,7 +599,9 @@ async def simplified_run_flow(
     )
 
 
-@router.post("/run/session/{flow_id_or_name}", response_model=None, response_model_exclude_none=True)
+@router.post(
+    "/run/session/{flow_id_or_name}", response_model=None, response_model_exclude_none=True, include_in_schema=False
+)
 async def simplified_run_flow_session(
     *,
     background_tasks: BackgroundTasks,
@@ -666,7 +667,7 @@ async def simplified_run_flow_session(
     )
 
 
-@router.get("/webhook-events/{flow_id_or_name}")
+@router.get("/webhook-events/{flow_id_or_name}", include_in_schema=False)
 async def webhook_events_stream(
     flow_id_or_name: str,  # noqa: ARG001 - Used by get_flow_by_id_or_endpoint_name dependency
     flow: Annotated[Flow, Depends(get_flow_by_id_or_endpoint_name)],
@@ -752,7 +753,7 @@ async def webhook_run_flow(
     error_msg = ""
 
     # Get the appropriate user for webhook execution based on auth settings
-    webhook_user = await get_webhook_user(flow_id_or_name, request)
+    webhook_user = await get_auth_service().get_webhook_user(flow_id_or_name, request)
 
     try:
         data = await request.body()
@@ -937,10 +938,12 @@ async def experimental_run_flow(
 @router.post(
     "/predict/{_flow_id}",
     dependencies=[Depends(api_key_security)],
+    include_in_schema=False,
 )
 @router.post(
     "/process/{_flow_id}",
     dependencies=[Depends(api_key_security)],
+    include_in_schema=False,
 )
 async def process(_flow_id) -> None:
     """Endpoint to process an input with a given flow_id."""
@@ -954,7 +957,7 @@ async def process(_flow_id) -> None:
     )
 
 
-@router.get("/task/{_task_id}", deprecated=True)
+@router.get("/task/{_task_id}", deprecated=True, include_in_schema=False)
 async def get_task_status(_task_id: str) -> TaskStatusResponse:
     """Get the status of a task by ID (Deprecated).
 
@@ -970,6 +973,7 @@ async def get_task_status(_task_id: str) -> TaskStatusResponse:
     "/upload/{flow_id}",
     status_code=HTTPStatus.CREATED,
     deprecated=True,
+    include_in_schema=False,
 )
 async def create_upload_file(
     file: UploadFile,
@@ -998,7 +1002,7 @@ async def get_version():
     return get_version_info()
 
 
-@router.post("/custom_component", status_code=HTTPStatus.OK)
+@router.post("/custom_component", status_code=HTTPStatus.OK, include_in_schema=False)
 async def custom_component(
     raw_code: CustomComponentRequest,
     user: CurrentActiveUser,
@@ -1020,7 +1024,7 @@ async def custom_component(
     return CustomComponentResponse(data=built_frontend_node, type=type_)
 
 
-@router.post("/custom_component/update", status_code=HTTPStatus.OK)
+@router.post("/custom_component/update", status_code=HTTPStatus.OK, include_in_schema=False)
 async def custom_component_update(
     code_request: UpdateCustomComponentRequest,
     user: CurrentActiveUser,

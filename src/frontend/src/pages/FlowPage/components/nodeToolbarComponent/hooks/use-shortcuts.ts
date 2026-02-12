@@ -1,6 +1,7 @@
 import { useHotkeys } from "react-hotkeys-hook";
 import { useShortcutsStore } from "@/stores/shortcuts";
 import isWrappedWithClass from "../../PageComponent/utils/is-wrapped-with-class";
+import useFlowStore from "@/stores/flowStore";
 
 export default function useShortcuts({
   showOverrideModal,
@@ -45,6 +46,10 @@ export default function useShortcuts({
   const download = useShortcutsStore((state) => state.download);
   const freezeAll = useShortcutsStore((state) => state.freezePath);
   const toolMode = useShortcutsStore((state) => state.toolMode);
+
+  const inspectionPanelVisible = useFlowStore(
+    (state) => state.inspectionPanelVisible,
+  );
 
   function handleFreezeAll(e: KeyboardEvent) {
     if (isWrappedWithClass(e, "noflow") || !FreezeAllVertices) return;
@@ -121,9 +126,13 @@ export default function useShortcuts({
   useHotkeys(group, handleGroupWShortcut, { preventDefault: true });
   useHotkeys(componentShare, handleShareWShortcut, { preventDefault: true });
   useHotkeys(code, handleCodeWShortcut, { preventDefault: true });
-  useHotkeys(advancedSettings, handleAdvancedWShortcut, {
-    preventDefault: true,
-  });
+  useHotkeys(
+    advancedSettings,
+    !inspectionPanelVisible ? handleAdvancedWShortcut : () => {},
+    {
+      preventDefault: true,
+    },
+  );
   useHotkeys(save, handleSaveWShortcut, { preventDefault: true });
   useHotkeys(docs, handleDocsWShortcut, { preventDefault: true });
   useHotkeys(download, handleDownloadWShortcut, { preventDefault: true });
