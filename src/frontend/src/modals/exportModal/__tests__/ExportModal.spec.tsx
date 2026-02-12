@@ -67,9 +67,12 @@ jest.mock("../../baseModal", () => {
     );
   }
 
-  BaseModal.Trigger = ({ children }: any) => React.createElement(React.Fragment, null, children);
-  BaseModal.Header = ({ children }: any) => React.createElement("div", null, children);
-  BaseModal.Content = ({ children }: any) => React.createElement("div", null, children);
+  BaseModal.Trigger = ({ children }: any) =>
+    React.createElement(React.Fragment, null, children);
+  BaseModal.Header = ({ children }: any) =>
+    React.createElement("div", null, children);
+  BaseModal.Content = ({ children }: any) =>
+    React.createElement("div", null, children);
   BaseModal.Footer = () => null;
 
   return {

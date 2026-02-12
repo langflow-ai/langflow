@@ -8,7 +8,9 @@ const mockQueryClient = {
 };
 
 jest.mock("@/stores/foldersStore", () => ({
-  useFolderStore: jest.fn((selector: any) => selector({ myCollectionId: "mc" })),
+  useFolderStore: jest.fn((selector: any) =>
+    selector({ myCollectionId: "mc" }),
+  ),
 }));
 
 jest.mock("@/controllers/API/api", () => ({
@@ -35,7 +37,6 @@ jest.mock("@/controllers/API/services/request-processor", () => ({
     queryClient: mockQueryClient,
   })),
 }));
-
 
 describe("usePostAddFlow", () => {
   beforeEach(() => {
