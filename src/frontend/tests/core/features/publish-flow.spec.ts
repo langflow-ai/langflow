@@ -70,7 +70,7 @@ test(
     await newPage.getByPlaceholder("Send a message...").fill("Hello");
     await newPage.getByTestId("button-send").last().click();
 
-    const stopButton = newPage.getByRole("button", { name: "Stop" });
+    const stopButton = newPage.getByTestId("button-stop");
     await stopButton.waitFor({ state: "visible", timeout: 30000 });
 
     await newPage.close();

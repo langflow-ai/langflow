@@ -3,14 +3,16 @@ import { useParams } from "react-router-dom";
 import { v4 as uuid } from "uuid";
 import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
-import { CustomIOModal } from "@/customization/components/custom-new-modal";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
 import useFlowStore from "@/stores/flowStore";
+import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { type CookieOptions, getCookie, setCookie } from "@/utils/utils";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { getInputsAndOutputs } from "../../utils/storeUtils";
+import { ShareablePlaygroundContent } from "./components/shareable-playground-content";
+
 export default function PlaygroundPage() {
   useGetConfig();
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
@@ -25,6 +27,7 @@ export default function PlaygroundPage() {
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const setIsLoading = useFlowsManagerStore((state) => state.setIsLoading);
   const setPlaygroundPage = useFlowStore((state) => state.setPlaygroundPage);
+  const setIsOpen = usePlaygroundStore((state) => state.setIsOpen);
 
   async function getFlowData() {
     try {
@@ -56,6 +59,10 @@ export default function PlaygroundPage() {
   useEffect(() => {
     if (id) track("Playground Page Loaded", { flowId: id });
     setPlaygroundPage(true);
+    setIsOpen(true);
+    return () => {
+      setPlaygroundPage(false);
+    };
   }, []);
 
   useEffect(() => {
@@ -91,17 +98,8 @@ export default function PlaygroundPage() {
   }, []);
 
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center align-middle">
-      {currentSavedFlow && (
-        <CustomIOModal
-          open={true}
-          setOpen={() => {}}
-          isPlayground
-          playgroundPage
-        >
-          <></>
-        </CustomIOModal>
-      )}
+    <div className="flex h-full w-full flex-col">
+      {currentSavedFlow && <ShareablePlaygroundContent />}
     </div>
   );
 }

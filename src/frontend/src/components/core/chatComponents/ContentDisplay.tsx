@@ -208,7 +208,7 @@ export default function ContentDisplay({
               <div className="mt-1">{formatToolOutput(content.output)}</div>
             </>
           )}
-          {content.error !== undefined && (
+          {content.error != null && (
             <div className="text-red-500">
               <Markdown
                 remarkPlugins={[remarkGfm]}

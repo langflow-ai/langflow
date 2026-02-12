@@ -1,47 +1,47 @@
 import { useEffect, useMemo, useState } from "react";
 import { StickToBottom } from "use-stick-to-bottom";
+import LangflowLogo from "@/assets/LangflowLogo.svg?react";
+import LangflowLogoColor from "@/assets/LangflowLogoColor.svg?react";
+import ThemeButtons from "@/components/core/appHeaderComponent/components/ThemeButtons";
 import { ChatHeader } from "@/components/core/playgroundComponent/chat-view/chat-header/components/chat-header";
 import { ChatSidebar } from "@/components/core/playgroundComponent/chat-view/chat-header/components/chat-sidebar";
+import { useEditSessionInfo } from "@/components/core/playgroundComponent/chat-view/chat-header/hooks/use-edit-session-info";
+import { useGetAddSessions } from "@/components/core/playgroundComponent/chat-view/chat-header/hooks/use-get-add-sessions";
+import { ChatInput } from "@/components/core/playgroundComponent/chat-view/chat-input";
+import useDragAndDrop from "@/components/core/playgroundComponent/chat-view/chat-input/hooks/use-drag-and-drop";
+import { Messages } from "@/components/core/playgroundComponent/chat-view/chat-messages";
+import { useChatHistory } from "@/components/core/playgroundComponent/chat-view/chat-messages/hooks/use-chat-history";
 import { useSendMessage } from "@/components/core/playgroundComponent/chat-view/hooks/use-send-message";
 import { useGetFlowId } from "@/components/core/playgroundComponent/hooks/use-get-flow-id";
 import { AnimatedConditional } from "@/components/ui/animated-close";
-import { useSimpleSidebar } from "@/components/ui/simple-sidebar";
-import {
-  CHAT_CONTENT_MAX_WIDTH,
-  FOCUS_DELAY_MS,
-  SESSION_SIDEBAR_WIDTH,
-} from "@/constants/constants";
+import { Button } from "@/components/ui/button";
+import { TextEffectPerChar } from "@/components/ui/textAnimation";
+import { ENABLE_PUBLISH } from "@/customization/feature-flags";
+import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
+import { LangflowButtonRedirectTarget } from "@/customization/utils/urls";
+import { track } from "@/customization/utils/analytics";
 import useFlowStore from "@/stores/flowStore";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import type { FilePreviewType } from "@/types/components";
-import { cn } from "@/utils/utils";
-import { useEditSessionInfo } from "../../chat-view/chat-header/hooks/use-edit-session-info";
-import { useGetAddSessions } from "../../chat-view/chat-header/hooks/use-get-add-sessions";
-import { ChatInput } from "../../chat-view/chat-input";
-import useDragAndDrop from "../../chat-view/chat-input/hooks/use-drag-and-drop";
-import { Messages } from "../../chat-view/chat-messages";
-import { useChatHistory } from "../../chat-view/chat-messages/hooks/use-chat-history";
 
-type FlowPageSlidingContainerContentProps = {
-  isFullscreen: boolean;
-  setIsFullscreen: (value: boolean) => void;
-};
-
-export function FlowPageSlidingContainerContent({
-  isFullscreen,
-  setIsFullscreen,
-}: FlowPageSlidingContainerContentProps) {
+export function ShareablePlaygroundContent() {
   const currentFlowId = useGetFlowId();
-  const { setOpen } = useSimpleSidebar();
   const inputs = useFlowStore((state) => state.inputs);
   const nodes = useFlowStore((state) => state.nodes);
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const setChatValueStore = useUtilityStore((state) => state.setChatValueStore);
+  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
+  const flowTitle = currentFlow?.name ?? null;
+  const flowDescription = currentFlow?.description ?? null;
 
   const [currentSessionId, setCurrentSessionId] = useState<string | undefined>(
     currentFlowId,
   );
   const [openLogsModal, setOpenLogsModal] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [files, setFiles] = useState<FilePreviewType[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
 
   const {
     sessions,
@@ -53,6 +53,7 @@ export function FlowPageSlidingContainerContent({
     flowId: currentFlowId,
     currentSessionId,
   });
+
   const { handleDelete } = useEditSessionInfo({
     flowId: currentFlowId,
     dbSessions: fetchedSessions,
@@ -68,16 +69,10 @@ export function FlowPageSlidingContainerContent({
       seen.add(trimmed);
       ordered.push(trimmed);
     };
-    // Always keep the current flow id first to avoid duplicate "Default Session"
     push(currentFlowId);
-    // Add all other sessions
     sessions.forEach(push);
     return ordered;
   }, [sessions, currentFlowId]);
-
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [files, setFiles] = useState<FilePreviewType[]>([]);
-  const [isDragging, setIsDragging] = useState(false);
 
   const { sendMessage } = useSendMessage({ sessionId: currentSessionId });
   const inputTypes = inputs.map((obj) => obj.type);
@@ -108,12 +103,17 @@ export function FlowPageSlidingContainerContent({
   };
 
   useEffect(() => {
-    setSidebarOpen(isFullscreen);
-  }, [isFullscreen]);
-
-  const handleClose = () => {
-    setOpen(false);
-  };
+    const handleResize = () => {
+      if (window.innerWidth < 1024) {
+        setSidebarOpen(false);
+      } else {
+        setSidebarOpen(true);
+      }
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const handleSessionSelect = (sessionId: string) => {
     setCurrentSessionId(sessionId);
@@ -122,13 +122,6 @@ export function FlowPageSlidingContainerContent({
   const handleNewChat = () => {
     const newId = addNewSession(orderedSessions);
     setCurrentSessionId(newId);
-    // querySelector because the textarea ref lives inside ChatInput and is not exposed to this parent
-    setTimeout(() => {
-      const textarea = document.querySelector<HTMLTextAreaElement>(
-        '[data-testid="input-wrapper"] textarea',
-      );
-      textarea?.focus();
-    }, FOCUS_DELAY_MS);
   };
 
   const handleDeleteSession = (sessionId: string) => {
@@ -144,21 +137,23 @@ export function FlowPageSlidingContainerContent({
     setOpenLogsModal(true);
   };
 
+  const handleLangflowButtonClick = () => {
+    track("LangflowButtonClick");
+    customOpenNewTab(LangflowButtonRedirectTarget());
+  };
+
   return (
     <div
-      className="h-full w-full muted shadow-lg flex flex-col relative z-[50] @container/chat-panel"
+      className="h-full w-full flex flex-col relative"
       onDragOver={dragOver}
       onDragEnter={dragEnter}
       onDragLeave={dragLeave}
       onDrop={onDrop}
     >
       <div className="flex-1 flex overflow-hidden">
-        <AnimatedConditional isOpen={sidebarOpen} width={SESSION_SIDEBAR_WIDTH}>
-          <div
-            style={{ width: SESSION_SIDEBAR_WIDTH }}
-            className="h-full overflow-y-auto border-r border-border bg-black/10 dark:bg-black/20"
-          >
-            <div className="p-4">
+        <AnimatedConditional isOpen={sidebarOpen} width="218px">
+          <div className="h-full overflow-y-auto border-r border-border w-218 flex flex-col">
+            <div className="flex-1 p-4">
               <ChatSidebar
                 sessions={orderedSessions}
                 onNewChat={handleNewChat}
@@ -169,6 +164,22 @@ export function FlowPageSlidingContainerContent({
                 renameLocalSession={renameLocalSession}
               />
             </div>
+            {ENABLE_PUBLISH && (
+              <div className="flex w-full flex-col gap-8 border-t border-border px-2 py-4">
+                <div className="flex items-center justify-between px-2">
+                  <div className="text-sm">Theme</div>
+                  <ThemeButtons />
+                </div>
+                <Button
+                  onClick={handleLangflowButtonClick}
+                  variant="primary"
+                  className="w-full !rounded-xl shadow-lg"
+                >
+                  <LangflowLogoColor />
+                  <div className="text-sm">Built with Langflow</div>
+                </Button>
+              </div>
+            )}
           </div>
         </AnimatedConditional>
         <div className="flex-1 flex flex-col overflow-hidden pt-2">
@@ -178,53 +189,55 @@ export function FlowPageSlidingContainerContent({
             onSessionSelect={handleSessionSelect}
             currentSessionId={currentSessionId}
             currentFlowId={currentFlowId}
-            isFullscreen={isFullscreen}
+            isFullscreen={true}
             onDeleteSession={handleDeleteSession}
-            onClose={handleClose}
             openLogsModal={openLogsModal}
             setOpenLogsModal={setOpenLogsModal}
             renameLocalSession={renameLocalSession}
           />
-          <div className="flex-1 flex flex-col min-h-0 overflow-hidden playground-messages-wrapper">
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
             <StickToBottom
               className="flex-1 min-h-0 overflow-hidden"
               resize="smooth"
               initial="instant"
             >
               <StickToBottom.Content className="flex flex-col min-h-full overflow-x-hidden">
-                <div
-                  style={
-                    isFullscreen
-                      ? { maxWidth: CHAT_CONTENT_MAX_WIDTH }
-                      : undefined
-                  }
-                  className={cn(
-                    "flex flex-col w-full",
-                    isFullscreen && "p-0 mx-auto",
+                <div className="flex flex-col w-full max-w-[744px] p-0 mx-auto">
+                  {chatHistory.length === 0 && !isBuilding ? (
+                    <div className="flex flex-grow w-full flex-col items-center justify-center">
+                      <div className="flex flex-col items-center justify-center gap-4 p-8">
+                        <LangflowLogo
+                          title="Langflow logo"
+                          className="h-10 w-10 scale-[1.5]"
+                        />
+                        <div className="flex flex-col items-center justify-center gap-2 max-w-lg">
+                          <h3 className="mt-2 text-2xl font-semibold text-primary text-center">
+                            {flowTitle ?? "New chat"}
+                          </h3>
+                          <p
+                            className="text-lg text-muted-foreground text-center"
+                            data-testid="new-chat-text"
+                          >
+                            <TextEffectPerChar>
+                              {flowDescription ??
+                                "Test your flow with a chat prompt"}
+                            </TextEffectPerChar>
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <Messages
+                      visibleSession={currentSessionId ?? currentFlowId ?? null}
+                      playgroundPage={true}
+                    />
                   )}
-                >
-                  <Messages
-                    visibleSession={currentSessionId ?? currentFlowId ?? null}
-                    playgroundPage={true}
-                  />
                 </div>
               </StickToBottom.Content>
             </StickToBottom>
 
-            <div
-              className={cn(
-                "flex-shrink-0 p-4",
-                isFullscreen && "flex justify-center",
-              )}
-            >
-              <div
-                style={
-                  isFullscreen
-                    ? { maxWidth: CHAT_CONTENT_MAX_WIDTH }
-                    : undefined
-                }
-                className="w-full p-0"
-              >
+            <div className="flex-shrink-0 p-4 flex justify-center">
+              <div className="w-full max-w-[744px] p-0">
                 <ChatInput
                   noInput={noInput}
                   files={files}
