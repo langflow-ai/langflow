@@ -96,18 +96,12 @@ test(
       await page.getByTestId("query_query_openai_api_base").inputValue(),
     ).toEqual("THIS IS A NEW VALUE");
 
-    await disableInspectPanel(page);
-
-    await openAdvancedOptions(page);
-
     expect(
-      await page.getByTestId("query_query_edit_openai_api_base").inputValue(),
+      await page.getByTestId("query_query_openai_api_base").inputValue(),
     ).toEqual("THIS IS A NEW VALUE");
 
     await page
-      .getByTestId(
-        "button_open_text_area_modal_query_query_edit_openai_api_base_advanced",
-      )
+      .getByTestId("button_open_text_area_modal_query_query_openai_api_base")
       .click();
 
     await page
@@ -117,16 +111,12 @@ test(
     await page.getByTestId("genericModalBtnSave").click();
 
     expect(
-      await page.getByTestId("query_query_edit_openai_api_base").inputValue(),
+      await page.getByTestId("query_query_openai_api_base").inputValue(),
     ).toEqual("THIS IA TEST TEXT INSIDE CONTROLS PANEL");
-
-    await closeAdvancedOptions(page);
 
     expect(
       await page.getByTestId("query_query_openai_api_base").inputValue(),
     ).toEqual("THIS IA TEST TEXT INSIDE CONTROLS PANEL");
-
-    await enableInspectPanel(page);
   },
 );
 

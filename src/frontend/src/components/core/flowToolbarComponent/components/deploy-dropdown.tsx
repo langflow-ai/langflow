@@ -1,9 +1,4 @@
-import React, {
-  type Dispatch,
-  ReactNode,
-  type SetStateAction,
-  useState,
-} from "react";
+import { type Dispatch, ReactNode, type SetStateAction, useState } from "react";
 import { useHref } from "react-router-dom";
 import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltipComponent from "@/components/common/shadTooltipComponent";
@@ -56,6 +51,8 @@ export default function PublishDropdown({
   const isAuth = useAuthStore((state) => !!state.autoLogin);
   const [openExportModal, setOpenExportModal] = useState(false);
 
+  const playgroundPath = `/playground/${flowId}`;
+
   const handlePublishedSwitch = async (checked: boolean) => {
     mutateAsync(
       {
@@ -98,7 +95,7 @@ export default function PublishDropdown({
           <Button
             variant="ghost"
             size="md"
-            className="!px-2.5 font-normal bg-foreground text-background"
+            className="!px-2.5 font-normal"
             data-testid="publish-button"
           >
             Share
@@ -170,7 +167,7 @@ export default function PublishDropdown({
                     content={
                       hasIO
                         ? isPublished
-                          ? encodeURI(`${domain}/playground/${flowId}`)
+                          ? encodeURI(`${domain}${playgroundPath}`)
                           : "Activate to share a public version of this Playground"
                         : "Add a Chat Input or Chat Output to access your flow"
                     }
@@ -187,7 +184,7 @@ export default function PublishDropdown({
                       {isPublished ? (
                         <CustomLink
                           className="flex-1"
-                          to={`/playground/${flowId}`}
+                          to={playgroundPath}
                           target="_blank"
                         >
                           <span>Shareable Playground</span>
