@@ -138,36 +138,41 @@ def validate_input(
 
 
 def apply_tweaks(node: dict[str, Any], node_tweaks: dict[str, Any]) -> None:
-    template_data = node.get("data", {}).get("node", {}).get("template")
+    data = node.get("data", {})
+    node_obj = data.get("node", {}) if isinstance(data, dict) else {}
+    template_data = node_obj.get("template")
 
     if not isinstance(template_data, dict):
         logger.warning(f"Template data for node {node.get('id')} should be a dictionary")
         return
 
     for tweak_name, tweak_value in node_tweaks.items():
-        if tweak_name not in template_data:
+        try:
+            field = template_data[tweak_name]
+        except KeyError:
             continue
         if tweak_name == "code":
             logger.warning("Security: Code field cannot be overridden via tweaks.")
             continue
-        if tweak_name in template_data:
-            field_type = template_data[tweak_name].get("type", "")
-            if field_type == "NestedDict":
-                value = validate_and_repair_json(tweak_value)
-                template_data[tweak_name]["value"] = value
-            elif field_type == "mcp":
-                # MCP fields expect dict values to be set directly
-                template_data[tweak_name]["value"] = tweak_value
-            elif field_type == "dict" and isinstance(tweak_value, dict):
-                # Dict fields: set the dict directly as the value
-                template_data[tweak_name]["value"] = tweak_value
-            elif isinstance(tweak_value, dict):
-                for k, v in tweak_value.items():
-                    k_ = "file_path" if field_type == "file" else k
-                    template_data[tweak_name][k_] = v
-            else:
-                key = "file_path" if field_type == "file" else "value"
-                template_data[tweak_name][key] = tweak_value
+
+        field_type = field.get("type", "")
+
+        if field_type == "NestedDict":
+            value = validate_and_repair_json(tweak_value)
+            field["value"] = value
+        elif field_type == "mcp":
+            # MCP fields expect dict values to be set directly
+            field["value"] = tweak_value
+        elif field_type == "dict" and isinstance(tweak_value, dict):
+            # Dict fields: set the dict directly as the value
+            field["value"] = tweak_value
+        elif isinstance(tweak_value, dict):
+            for k, v in tweak_value.items():
+                k_ = "file_path" if field_type == "file" else k
+                field[k_] = v
+        else:
+            key = "file_path" if field_type == "file" else "value"
+            field[key] = tweak_value
 
 
 def apply_tweaks_on_vertex(vertex: Vertex, node_tweaks: dict[str, Any]) -> None:
