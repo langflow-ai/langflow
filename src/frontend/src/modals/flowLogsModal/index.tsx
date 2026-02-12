@@ -91,14 +91,29 @@ export default function FlowLogsModal({
   }, []);
 
   const handleOpenAutoFocus = useCallback((e: Event) => {
-    const viewport = document.querySelector(
-      ".ag-body-viewport",
-    ) as HTMLElement | null;
-    if (viewport) {
-      e.preventDefault();
-      viewport.focus();
-    }
-    // If viewport doesn't exist (empty table), let default focus behavior happen
+    e.preventDefault();
+
+    const focusViewport = () => {
+      const viewport = document.querySelector(
+        ".ag-body-viewport",
+      ) as HTMLElement | null;
+
+      if (viewport) {
+        viewport.focus();
+        return true;
+      }
+
+      return false;
+    };
+
+    if (focusViewport()) return;
+
+    const target = e.target as HTMLElement | null;
+    target?.focus?.();
+
+    requestAnimationFrame(() => {
+      focusViewport();
+    });
   }, []);
 
   return (
