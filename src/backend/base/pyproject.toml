@@ -207,7 +207,7 @@ elasticsearch = ["elasticsearch==8.16.0", "langchain-elasticsearch>=0.3.0,<1.0.0
 
 # Individual vector store providers
 faiss = ["faiss-cpu==1.9.0.post1"]
-qdrant = ["qdrant-client==1.9.2"]
+qdrant = ["qdrant-client>=1.15.1,<2.0.0", "langchain-qdrant>=0.1.0,<1.0.0"]
 weaviate = ["weaviate-client>=4.10.2,<5.0.0"]
 chroma = [
     "chromadb>=1.0.0,<2.0.0",
