@@ -182,10 +182,16 @@ export const UserMessage = memo(
               <div className="invisible absolute -top-4 right-0 group-hover:visible">
                 <EditMessageButton
                   onCopy={() => navigator.clipboard.writeText(chatMessage)}
-                  onEdit={isShareablePlayground ? undefined : () => setEditMessage(true)}
+                  onEdit={
+                    isShareablePlayground
+                      ? undefined
+                      : () => setEditMessage(true)
+                  }
                   className="h-fit group-hover:visible"
                   isBotMessage={false}
-                  onEvaluate={isShareablePlayground ? undefined : handleEvaluateAnswer}
+                  onEvaluate={
+                    isShareablePlayground ? undefined : handleEvaluateAnswer
+                  }
                   evaluation={chat.properties?.positive_feedback}
                   isAudioMessage={isAudioMessage}
                 />
