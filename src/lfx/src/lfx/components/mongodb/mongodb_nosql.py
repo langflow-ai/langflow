@@ -110,7 +110,11 @@ class MongoDBQueryComponent(Component):
             name="overwrite_confirmed",
             display_name="Confirm Collection Overwrite",
             value=False,
-            info="REQUIRED for overwrite mode: explicitly confirm to delete all existing documents in the collection before inserting new ones. This is a safety measure to prevent accidental data loss.",
+            info=(
+                "REQUIRED for overwrite mode: explicitly confirm to delete all existing "
+                "documents in the collection before inserting new ones. This is a safety "
+                "measure to prevent accidental data loss."
+            ),
             advanced=True,
         ),
     ]
@@ -570,7 +574,9 @@ class MongoDBQueryComponent(Component):
             operation = "update_one"
 
         self.log(
-            f"Tool Mode - Matched: {result.matched_count}, Modified: {result.modified_count}, Upserted: {result.upserted_id}"
+            f"Tool Mode - Matched: {result.matched_count}, "
+            f"Modified: {result.modified_count}, "
+            f"Upserted: {result.upserted_id}"
         )
         return {
             "operation": operation,
@@ -605,7 +611,9 @@ class MongoDBQueryComponent(Component):
         result = collection.replace_one(query_filter, repl_doc, upsert=self.upsert)
 
         self.log(
-            f"Tool Mode - Matched: {result.matched_count}, Modified: {result.modified_count}, Upserted: {result.upserted_id}"
+            f"Tool Mode - Matched: {result.matched_count}, "
+            f"Modified: {result.modified_count}, "
+            f"Upserted: {result.upserted_id}"
         )
         return {
             "operation": "replace",
