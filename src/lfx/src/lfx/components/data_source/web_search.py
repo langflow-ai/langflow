@@ -181,6 +181,7 @@ class WebSearchComponent(Component):
         result_elements = soup.select("div.result")
         total_results = len(result_elements)
         for idx, result in enumerate(result_elements):
+            self.set_progress(idx + 1, total_results, f"Fetching result {idx + 1}/{total_results}")
             title_tag = result.select_one("a.result__a")
             snippet_tag = result.select_one("a.result__snippet")
             if title_tag:
@@ -188,8 +189,6 @@ class WebSearchComponent(Component):
                 parsed = urlparse(raw_link)
                 uddg = parse_qs(parsed.query).get("uddg", [""])[0]
                 decoded_link = unquote(uddg) if uddg else raw_link
-
-                self.set_progress(idx + 1, total_results, f"Fetching result {idx + 1}/{total_results}")
 
                 try:
                     final_url = self.ensure_url(decoded_link)

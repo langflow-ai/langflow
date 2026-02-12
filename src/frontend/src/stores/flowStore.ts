@@ -64,9 +64,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   nodeProgress: {},
   setNodeProgress: (nodeId, progress) => {
     if (progress === null) {
-      const newProgress = { ...get().nodeProgress };
-      delete newProgress[nodeId];
-      set({ nodeProgress: newProgress });
+      const { [nodeId]: _, ...rest } = get().nodeProgress;
+      set({ nodeProgress: rest });
     } else {
       set({
         nodeProgress: {

@@ -264,7 +264,7 @@ async def test_component_streaming_message():
 
 
 @pytest.mark.asyncio
-async def test_component_set_progress():
+async def test_should_emit_progress_event_when_set_progress_called():
     """Test component's set_progress functionality."""
     queue = asyncio.Queue()
     event_manager = EventManager(queue)
@@ -289,7 +289,7 @@ async def test_component_set_progress():
 
 
 @pytest.mark.asyncio
-async def test_component_set_progress_input_validation():
+async def test_should_clamp_values_when_inputs_are_out_of_bounds():
     """Test set_progress clamps invalid inputs."""
     queue = asyncio.Queue()
     event_manager = EventManager(queue)
@@ -318,7 +318,7 @@ async def test_component_set_progress_input_validation():
 
 
 @pytest.mark.asyncio
-async def test_component_set_progress_no_event_manager():
+async def test_should_not_raise_when_event_manager_is_none():
     """Test set_progress is a no-op when event manager is None."""
     component = ComponentForTesting()
     # No event manager set - should not raise

@@ -691,7 +691,7 @@ function GenericNode({
         {/* Progress bar - only render when building with progress */}
         {buildStatus === BuildStatus.BUILDING &&
           nodeProgress &&
-          progressPercent != null && (
+          progressPercent > 0 && (
             <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-3 overflow-hidden rounded-b-[11px]">
               <div
                 className="absolute bottom-0 left-0 h-1 bg-accent-indigo-foreground transition-all duration-300 ease-out"
