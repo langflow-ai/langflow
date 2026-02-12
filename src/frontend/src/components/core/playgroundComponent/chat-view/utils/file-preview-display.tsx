@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import Loading from "@/components/ui/loading";
-import { customGetAccessToken } from "@/customization/utils/custom-get-access-token";
-import { getFetchCredentials } from "@/customization/utils/get-fetch-credentials";
 import { cn } from "@/utils/utils";
 import {
   extractFileInfo,
@@ -59,68 +57,23 @@ export default function FilePreviewDisplay({
   className,
 }: FilePreviewDisplayProps) {
   const [imageError, setImageError] = useState(false);
-  const [blobUrl, setBlobUrl] = useState<string | null>(null);
-  const [isLoadingBlob, setIsLoadingBlob] = useState(false);
   const previewUrl = getFilePreviewUrl(file);
   const fileInfo = extractFileInfo(file);
 
   // Reset error state when file changes
   useEffect(() => {
     setImageError(false);
-    setBlobUrl(null);
   }, [file]);
 
-  // For server file paths (not File objects), fetch and convert to blob URL
+  // Cleanup blob URLs for File objects
   useEffect(() => {
-    if (
-      previewUrl &&
-      !(file instanceof File) &&
-      !blobUrl &&
-      !isLoadingBlob &&
-      !imageError
-    ) {
-      setIsLoadingBlob(true);
-
-      // Prepare fetch options with credentials and auth headers
-      const accessToken = customGetAccessToken();
-      const fetchOptions: RequestInit = {
-        credentials: getFetchCredentials(),
-      };
-
-      if (accessToken) {
-        fetchOptions.headers = {
-          Authorization: `Bearer ${accessToken}`,
-        };
-      }
-
-      fetch(previewUrl, fetchOptions)
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error(
-              `Failed to fetch image: ${response.status} ${response.statusText}`,
-            );
-          }
-          return response.blob();
-        })
-        .then((blob) => {
-          const url = URL.createObjectURL(blob);
-          setBlobUrl(url);
-          setIsLoadingBlob(false);
-        })
-        .catch((err) => {
-          console.error("Failed to load image as blob:", err);
-          setImageError(true);
-          setIsLoadingBlob(false);
-        });
-    }
-
-    // Cleanup blob URL on unmount or when file changes
     return () => {
-      if (blobUrl) {
-        URL.revokeObjectURL(blobUrl);
+      // Only cleanup blob URLs from File objects
+      if (file instanceof File && previewUrl && previewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(previewUrl);
       }
     };
-  }, [file, previewUrl, blobUrl, isLoadingBlob, imageError]);
+  }, [file, previewUrl]);
 
   // Compact variant (for input-wrapper)
   if (variant === "compact") {
@@ -132,21 +85,17 @@ export default function FilePreviewDisplay({
           className,
         )}
       >
-        {loading || isLoadingBlob ? (
+        {loading ? (
           <Loading className="h-4 w-4" />
-        ) : previewUrl &&
-          (file instanceof File ? previewUrl : blobUrl) &&
-          !imageError ? (
+        ) : previewUrl && !imageError ? (
           <img
-            src={(file instanceof File ? previewUrl : blobUrl) ?? undefined}
+            src={previewUrl}
             alt={fileInfo.name}
             className="h-full w-full rounded-md object-cover"
+            crossOrigin={file instanceof File ? undefined : "use-credentials"}
             onError={() => {
               setImageError(true);
-              console.error(
-                "Failed to load image:",
-                file instanceof File ? previewUrl : blobUrl,
-              );
+              console.error("Failed to load image:", previewUrl);
             }}
           />
         ) : (
@@ -176,21 +125,17 @@ export default function FilePreviewDisplay({
         className,
       )}
     >
-      {loading || isLoadingBlob ? (
+      {loading ? (
         <Loading className="h-4 w-4" />
-      ) : previewUrl &&
-        (file instanceof File ? previewUrl : blobUrl) &&
-        !imageError ? (
+      ) : previewUrl && !imageError ? (
         <img
-          src={(file instanceof File ? previewUrl : blobUrl) ?? undefined}
+          src={previewUrl}
           alt={fileInfo.name}
           className="h-full w-full rounded-md object-cover"
+          crossOrigin={file instanceof File ? undefined : "use-credentials"}
           onError={() => {
             setImageError(true);
-            console.error(
-              "Failed to load image:",
-              file instanceof File ? previewUrl : blobUrl,
-            );
+            console.error("Failed to load image:", previewUrl);
           }}
         />
       ) : (

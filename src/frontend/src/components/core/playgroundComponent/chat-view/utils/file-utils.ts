@@ -30,13 +30,17 @@ export function isImageFile(
     );
   } else if (typeof file === "string") {
     // File path string - extract extension
-    const extension = file.split(".").pop()?.toLowerCase() || "";
+    // Normalize Windows paths first
+    const normalizedPath = file.replace(/\\/g, '/');
+    const extension = normalizedPath.split(".").pop()?.toLowerCase() || "";
     return IMAGE_TYPES.has(extension);
   } else if (file && typeof file === "object") {
     // Object with type or path property
     // For server files, check path extension first (most reliable)
     if ("path" in file && file.path) {
-      const extension = file.path.split(".").pop()?.toLowerCase() || "";
+      // Normalize Windows paths first
+      const normalizedPath = file.path.replace(/\\/g, '/');
+      const extension = normalizedPath.split(".").pop()?.toLowerCase() || "";
       if (IMAGE_TYPES.has(extension)) {
         return true;
       }
@@ -64,12 +68,14 @@ export function getFileDisplayName(
   if (file instanceof File) {
     return file.name;
   } else if (typeof file === "string") {
-    // Extract name from path
-    return file.split("/").pop() || file;
+    // Extract name from path (normalize Windows paths first)
+    const normalizedPath = file.replace(/\\/g, '/');
+    return normalizedPath.split("/").pop() || file;
   } else if ("name" in file) {
     return file.name;
   } else if ("path" in file) {
-    return file.path.split("/").pop() || file.path;
+    const normalizedPath = file.path.replace(/\\/g, '/');
+    return normalizedPath.split("/").pop() || file.path;
   }
   return "";
 }
@@ -108,9 +114,9 @@ export function getFilePreviewUrl(
     // Browser File object - create object URL
     return URL.createObjectURL(file);
   } else if (typeof file === "string") {
-    // Server file path string - path format is "flow_id/filename"
-    // Encode each path segment to handle spaces and special characters
-    const path = file.trim();
+    // Server file path string - path format is "flow_id/filename" or "flow_id\filename" on Windows
+    // Normalize Windows backslashes to forward slashes
+    const path = file.trim().replace(/\\/g, '/');
     if (!path) return null;
     const encodedPath = path
       .split("/")
@@ -119,9 +125,9 @@ export function getFilePreviewUrl(
     // Explicitly use /api/v1/files/images/ prefix for server file paths
     return `${getBaseUrl()}files/images/${encodedPath}`;
   } else if ("path" in file) {
-    // Server file path object - path format is "flow_id/filename"
-    // Encode each path segment to handle spaces and special characters
-    const path = file.path.trim();
+    // Server file path object - path format is "flow_id/filename" or "flow_id\filename" on Windows
+    // Normalize Windows backslashes to forward slashes
+    const path = file.path.trim().replace(/\\/g, '/');
     if (!path) return null;
     const encodedPath = path
       .split("/")
@@ -149,8 +155,9 @@ export function extractFileInfo(
       path: file.name, // For File objects, path is just the name
     };
   } else if (typeof file === "string") {
-    const name = file.split("/").pop() || file;
-    const type = file.split(".").pop() || "";
+    const normalizedPath = file.replace(/\\/g, '/');
+    const name = normalizedPath.split("/").pop() || file;
+    const type = normalizedPath.split(".").pop() || "";
     return { name, type, path: file };
   } else {
     return {
