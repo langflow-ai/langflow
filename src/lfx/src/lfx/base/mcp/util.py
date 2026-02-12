@@ -1609,7 +1609,7 @@ async def update_tools(
                 args = args[:-1] + extra_args + [args[-1]]
             else:
                 args.extend(extra_args)
-        full_command = shlex.join([command, *args])
+        full_command = shlex.join([*shlex.split(command), *args])
         tools = await mcp_stdio_client.connect_to_server(full_command, env)
         client = mcp_stdio_client
     elif mode in ["Streamable_HTTP", "SSE"]:
