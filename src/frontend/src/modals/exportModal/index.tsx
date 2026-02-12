@@ -57,21 +57,20 @@ const ExportModal = forwardRef(
         setOpen={setOpen}
         onSubmit={async () => {
           try {
+            const flowToExport: FlowType = {
+              id: currentFlow!.id,
+              data: currentFlow!.data!,
+              description,
+              name,
+              last_tested_version: version,
+              endpoint_name: currentFlow!.endpoint_name,
+              is_component: false,
+              tags: currentFlow!.tags,
+              locked,
+            };
+
             if (checked) {
-              await downloadFlow(
-                {
-                  id: currentFlow!.id,
-                  data: currentFlow!.data!,
-                  description,
-                  name,
-                  last_tested_version: version,
-                  endpoint_name: currentFlow!.endpoint_name,
-                  is_component: false,
-                  tags: currentFlow!.tags,
-                },
-                name!,
-                description,
-              );
+              await downloadFlow(flowToExport, name!, description);
 
               setNoticeData({
                 title: API_WARNING_NOTICE_ALERT,
@@ -80,16 +79,7 @@ const ExportModal = forwardRef(
               track("Flow Exported", { flowId: currentFlow!.id });
             } else {
               await downloadFlow(
-                removeApiKeys({
-                  id: currentFlow!.id,
-                  data: currentFlow!.data!,
-                  description,
-                  name,
-                  last_tested_version: version,
-                  endpoint_name: currentFlow!.endpoint_name,
-                  is_component: false,
-                  tags: currentFlow!.tags,
-                }),
+                removeApiKeys(flowToExport),
                 name!,
                 description,
               );
