@@ -128,7 +128,8 @@ export function ChatHeader({
   const canShowLogs = !isShareablePlayground;
   const canClearChat = isDefaultSession;
   const canDelete = !isShareablePlayground && !isDefaultSession;
-  const hasAnyMenuOption = canRename || canShowLogs || canClearChat || canDelete;
+  const hasAnyMenuOption =
+    canRename || canShowLogs || canClearChat || canDelete;
 
   const moreMenu = (
     <AnimatedConditional isOpen={isSessionDropdownVisible && hasAnyMenuOption}>
