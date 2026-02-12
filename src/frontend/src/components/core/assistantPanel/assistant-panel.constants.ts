@@ -2,6 +2,9 @@ import type { AssistantSuggestion } from "./assistant-panel.types";
 
 export const ASSISTANT_TITLE = "Langflow Assistant";
 
+export const ASSISTANT_SESSION_STORAGE_KEY_PREFIX =
+  "langflow-assistant-session-";
+
 export const ASSISTANT_PLACEHOLDER = "Create an agent component...";
 
 export const ASSISTANT_WELCOME_TEXT = "Here's how I can help";

@@ -163,7 +163,6 @@ class TestClassifyIntent:
                 text="test input",
                 global_variables={"API_KEY": "secret"},
                 user_id="user123",
-                session_id="session456",
                 provider="OpenAI",
                 model_name="gpt-4",
                 api_key_var="OPENAI_API_KEY",
@@ -174,10 +173,31 @@ class TestClassifyIntent:
             assert call_kwargs["input_value"] == "test input"
             assert call_kwargs["global_variables"] == {"API_KEY": "secret"}
             assert call_kwargs["user_id"] == "user123"
-            assert call_kwargs["session_id"] == "session456"
             assert call_kwargs["provider"] == "OpenAI"
             assert call_kwargs["model_name"] == "gpt-4"
             assert call_kwargs["api_key_var"] == "OPENAI_API_KEY"
+
+    @pytest.mark.asyncio
+    async def test_should_not_pass_session_id_to_flow(self):
+        """Should never pass session_id to TranslationFlow to avoid polluting conversation memory."""
+        mock_result = {"result": '{"translation": "test", "intent": "question"}'}
+
+        with patch(
+            "langflow.agentic.services.helpers.intent_classification.execute_flow_file",
+            new_callable=AsyncMock,
+            return_value=mock_result,
+        ) as mock_execute:
+            await classify_intent(
+                text="test input",
+                global_variables={},
+                user_id="user123",
+            )
+
+            call_kwargs = mock_execute.call_args[1]
+            assert "session_id" not in call_kwargs, (
+                "session_id must not be passed to TranslationFlow "
+                "to prevent polluting conversation memory"
+            )
 
     @pytest.mark.asyncio
     async def test_should_use_translation_flow_filename(self):

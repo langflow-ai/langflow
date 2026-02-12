@@ -1,8 +1,8 @@
 import { useCallback, useRef, useState } from "react";
 import ShortUniqueId from "short-unique-id";
 import {
-  postAssistStream,
   type AgenticStepType,
+  postAssistStream,
 } from "@/controllers/API/queries/agentic";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 import { useAddComponent } from "@/hooks/use-add-component";
@@ -12,6 +12,7 @@ import type {
   AssistantMessage,
   AssistantModel,
 } from "../assistant-panel.types";
+import { useAssistantSessionId } from "./use-assistant-session-id";
 
 const uid = new ShortUniqueId();
 
@@ -32,6 +33,9 @@ export function useAssistantChat(): UseAssistantChatReturn {
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  const { sessionId, resetSessionId } = useAssistantSessionId(
+    currentFlowId || "",
+  );
   const addComponent = useAddComponent();
   const { mutateAsync: validateComponent } = usePostValidateComponentCode();
 
@@ -77,6 +81,7 @@ export function useAssistantChat(): UseAssistantChatReturn {
             input_value: content,
             provider: model?.provider,
             model_name: model?.name,
+            session_id: sessionId,
           },
           {
             onProgress: (event) => {
@@ -191,7 +196,7 @@ export function useAssistantChat(): UseAssistantChatReturn {
         setIsProcessing(false);
       }
     },
-    [isProcessing, currentFlowId],
+    [isProcessing, currentFlowId, sessionId],
   );
 
   const handleApprove = useCallback(
@@ -238,7 +243,8 @@ export function useAssistantChat(): UseAssistantChatReturn {
     setMessages([]);
     setCurrentStep(null);
     setIsProcessing(false);
-  }, []);
+    resetSessionId();
+  }, [resetSessionId]);
 
   return {
     messages,

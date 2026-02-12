@@ -145,7 +145,6 @@ async def execute_flow_with_validation_streaming(
         text=input_value,
         global_variables=global_variables,
         user_id=user_id,
-        session_id=session_id,
         provider=provider,
         model_name=model_name,
         api_key_var=api_key_var,

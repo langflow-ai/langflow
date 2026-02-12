@@ -18,7 +18,6 @@ async def classify_intent(
     text: str,
     global_variables: dict[str, str],
     user_id: str | None = None,
-    session_id: str | None = None,
     provider: str | None = None,
     model_name: str | None = None,
     api_key_var: str | None = None,
@@ -27,6 +26,10 @@ async def classify_intent(
 
     The flow returns JSON with translation and intent classification.
     Returns original text with "question" intent if classification fails.
+
+    Note: session_id is intentionally NOT accepted here. The TranslationFlow is
+    stateless and must use an isolated session to avoid polluting the conversation
+    memory with JSON classification output.
     """
     if not text:
         return IntentResult(translation=text, intent="question")
@@ -39,7 +42,6 @@ async def classify_intent(
             global_variables=global_variables,
             verbose=False,
             user_id=user_id,
-            session_id=session_id,
             provider=provider,
             model_name=model_name,
             api_key_var=api_key_var,
