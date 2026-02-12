@@ -70,7 +70,9 @@ class SchedulerService(Service):
                 )
                 schedules = result.all()
                 for schedule in schedules:
-                    self._start_schedule_task(schedule.id, schedule.flow_id, schedule.cron_expression, schedule.timezone)
+                    self._start_schedule_task(
+                        schedule.id, schedule.flow_id, schedule.cron_expression, schedule.timezone
+                    )
                 await logger.ainfo(f"Loaded {len(schedules)} active schedule(s)")
         except Exception:
             await logger.aexception("Failed to load schedules from database")
@@ -111,20 +113,14 @@ class SchedulerService(Service):
         except Exception:
             await logger.aexception("Error syncing schedules")
 
-    def _start_schedule_task(
-        self, schedule_id: UUID, flow_id: UUID, cron_expression: str, tz: str
-    ) -> None:
+    def _start_schedule_task(self, schedule_id: UUID, flow_id: UUID, cron_expression: str, tz: str) -> None:
         """Start an asyncio task that waits for cron triggers and executes the flow."""
         sid = str(schedule_id)
         if sid in self._tasks and not self._tasks[sid].done():
             self._tasks[sid].cancel()
-        self._tasks[sid] = asyncio.create_task(
-            self._cron_runner(schedule_id, flow_id, cron_expression, tz)
-        )
+        self._tasks[sid] = asyncio.create_task(self._cron_runner(schedule_id, flow_id, cron_expression, tz))
 
-    async def _cron_runner(
-        self, schedule_id: UUID, flow_id: UUID, cron_expression: str, tz: str
-    ) -> None:
+    async def _cron_runner(self, schedule_id: UUID, flow_id: UUID, cron_expression: str, tz: str) -> None:
         """Run loop: sleep until the next cron trigger, then execute the flow."""
         try:
             tzinfo = zoneinfo.ZoneInfo(tz)
@@ -186,9 +182,7 @@ class SchedulerService(Service):
         """Update the next_run_at field for a schedule."""
         try:
             async with session_scope() as session:
-                schedule = (
-                    await session.exec(select(FlowSchedule).where(FlowSchedule.id == schedule_id))
-                ).first()
+                schedule = (await session.exec(select(FlowSchedule).where(FlowSchedule.id == schedule_id))).first()
                 if schedule:
                     schedule.next_run_at = next_run
                     session.add(schedule)
@@ -199,9 +193,7 @@ class SchedulerService(Service):
         """Update the last run status/time for a schedule."""
         try:
             async with session_scope() as session:
-                schedule = (
-                    await session.exec(select(FlowSchedule).where(FlowSchedule.id == schedule_id))
-                ).first()
+                schedule = (await session.exec(select(FlowSchedule).where(FlowSchedule.id == schedule_id))).first()
                 if schedule:
                     schedule.last_run_at = datetime.now(timezone.utc)
                     schedule.last_run_status = status

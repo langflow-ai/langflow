@@ -47,9 +47,7 @@ async def create_schedule(
     """Create a new flow schedule."""
     # Verify the flow exists and belongs to the user
     flow = (
-        await session.exec(
-            select(Flow).where(Flow.id == schedule_in.flow_id, Flow.user_id == current_user.id)
-        )
+        await session.exec(select(Flow).where(Flow.id == schedule_in.flow_id, Flow.user_id == current_user.id))
     ).first()
     if not flow:
         raise HTTPException(status_code=404, detail="Flow not found")
