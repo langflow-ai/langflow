@@ -1,6 +1,8 @@
 """Test OpenAI Responses Error Handling."""
 
 import json
+from collections.abc import AsyncIterator
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -9,13 +11,13 @@ from langflow.main import create_app
 
 
 @pytest.fixture
-def client():
+def client() -> TestClient:
     app = create_app()
     return TestClient(app)
 
 
 @pytest.mark.asyncio
-async def test_openai_response_stream_error_handling(client):
+async def test_openai_response_stream_error_handling(client: TestClient) -> None:
     """Test that errors during streaming are correctly propagated to the client.
 
     Ensure errors are propagated as OpenAI-compatible error responses.
@@ -24,7 +26,7 @@ async def test_openai_response_stream_error_handling(client):
     from langflow.services.auth.utils import api_key_security
     from langflow.services.database.models.user.model import UserRead
 
-    async def mock_api_key_security():
+    async def mock_api_key_security() -> UserRead:
         from datetime import datetime, timezone
 
         now = datetime.now(timezone.utc)
@@ -65,7 +67,7 @@ async def test_openai_response_stream_error_handling(client):
         error_event = json.dumps({"event": "error", "data": {"error": "Simulated streaming error"}}).encode("utf-8")
 
         # Yield error event then None to end stream
-        async def event_generator(*_, **__):
+        async def event_generator(*_: Any, **__: Any) -> AsyncIterator[bytes | None]:
             yield error_event
             yield None
 
