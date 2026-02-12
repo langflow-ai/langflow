@@ -5,6 +5,7 @@ import re
 import tempfile
 import warnings
 from contextlib import asynccontextmanager
+from functools import lru_cache
 from http import HTTPStatus
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
@@ -421,9 +422,7 @@ def _load_plugin_routes(app: FastAPI) -> None:
     This is the primary mechanism for the enterprise package to inject its
     SSO, RBAC, and observability API routes without modifying the OSS codebase.
     """
-    from importlib.metadata import entry_points
-
-    eps = entry_points(group="langflow.plugins")
+    eps = _get_cached_entry_points()
     for ep in eps:
         try:
             plugin_register = ep.load()
@@ -637,6 +636,14 @@ def setup_app(static_files_dir: Path | None = None, *, backend_only: bool = Fals
     if not backend_only and static_files_dir is not None:
         setup_static_files(app, static_files_dir)
     return app
+
+
+@lru_cache(maxsize=1)
+def _get_cached_entry_points():
+    """Cache the entry_points lookup to avoid redundant filesystem scans."""
+    from importlib.metadata import entry_points
+
+    return entry_points(group="langflow.plugins")
 
 
 if __name__ == "__main__":
