@@ -2,7 +2,6 @@ import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { disableInspectPanel } from "../../utils/open-advanced-options";
 import { unselectNodes } from "../../utils/unselect-nodes";
 
 import { updateOldComponents } from "../../utils/update-old-components";
@@ -20,8 +19,6 @@ test(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("blank-flow").click();
-
-    await disableInspectPanel(page);
 
     await addLegacyComponents(page);
 
@@ -250,7 +247,9 @@ test(
     await textOutputInput.hover();
     await page.mouse.up();
 
-    await page.getByTestId("button_run_text output").click();
+    await page
+      .getByTestId("button_run_text output")
+      .dispatchEvent("click");
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
@@ -260,7 +259,7 @@ test(
       .getByTestId(/rf__node-TextOutput-[a-zA-Z0-9]{5}/)
       .getByTestId("output-inspection-output text-textoutput")
       .first()
-      .click();
+      .dispatchEvent("click");
     const valueSimilarity = await page.getByTestId("textarea").textContent();
 
     expect(valueSimilarity).toContain("cosine_similarity");
