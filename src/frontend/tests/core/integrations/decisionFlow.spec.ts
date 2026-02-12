@@ -8,8 +8,6 @@ import { enableInspectPanel } from "../../utils/open-advanced-options";
 import { zoomOut } from "../../utils/zoom-out";
 import { selectGptModel } from "../../utils/select-gpt-model";
 
-
-
 test(
   "should create a flow with decision",
   { tag: ["@release", "@components", "@workflow"] },
@@ -331,7 +329,6 @@ test(
     await page.getByTestId("showignored_message").click();
     await page.getByTestId("edit-fields-button").click();
     await adjustScreenView(page);
-
 
     await page
       .getByTestId("handle-conditionalrouter-shownode-true-right")

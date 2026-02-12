@@ -3,7 +3,6 @@ import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { enableInspectPanel } from "../../utils/open-advanced-options";
 
-
 test(
   "user must see on handle click the possibility connections",
   { tag: ["@release", "@components", "@api"] },
