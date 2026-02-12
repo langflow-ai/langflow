@@ -278,6 +278,20 @@ def get_lifespan(*, fix_migration=False, version=None):
                 queue_service.start()
             await logger.adebug(f"Flows loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
+            # Start the scheduler service for cron-based flow execution
+            current_time = asyncio.get_event_loop().time()
+            await logger.adebug("Starting scheduler service")
+            try:
+                from langflow.services.deps import get_scheduler_service
+
+                scheduler_service = get_scheduler_service()
+                await scheduler_service.start()
+                await logger.adebug(
+                    f"Scheduler service started in {asyncio.get_event_loop().time() - current_time:.2f}s"
+                )
+            except Exception as e:  # noqa: BLE001
+                await logger.awarning(f"Failed to start scheduler service: {e}")
+
             total_time = asyncio.get_event_loop().time() - start_time
             await logger.adebug(f"Total initialization time: {total_time:.2f}s")
 
@@ -348,6 +362,15 @@ def get_lifespan(*, fix_migration=False, version=None):
                 with shutdown_progress.step(1):
                     from langflow.api.v1.mcp import stop_streamable_http_manager
                     from langflow.api.v1.mcp_projects import stop_project_task_group
+
+                    # Stop the scheduler service
+                    try:
+                        from langflow.services.deps import get_scheduler_service
+
+                        scheduler_service = get_scheduler_service()
+                        await scheduler_service.stop()
+                    except Exception as e:  # noqa: BLE001
+                        await logger.aerror(f"Failed to stop scheduler service: {e}")
 
                     # Shutdown MCP project servers
                     try:
