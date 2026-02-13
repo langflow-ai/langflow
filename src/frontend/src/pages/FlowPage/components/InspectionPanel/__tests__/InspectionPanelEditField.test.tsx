@@ -1,7 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import InspectionPanelEditField from "../components/InspectionPanelEditField";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import type { NodeDataType } from "@/types/flow";
+import InspectionPanelEditField from "../components/InspectionPanelEditField";
 
 // Mock IconComponent
 jest.mock("@/components/common/genericIconComponent", () => {
@@ -28,6 +29,10 @@ jest.mock("@/utils/utils", () => ({
   cn: (...classes: any[]) => classes.filter(Boolean).join(" "),
 }));
 
+const renderWithProviders = (component: React.ReactNode) => {
+  return render(<TooltipProvider>{component}</TooltipProvider>);
+};
+
 describe("InspectionPanelEditField", () => {
   const createMockData = (overrides = {}): NodeDataType => ({
     id: "test-node-123",
@@ -35,12 +40,16 @@ describe("InspectionPanelEditField", () => {
     node: {
       display_name: "Test Node",
       description: "Test description",
+      documentation: "",
       template: {
         test_field: {
           type: "str",
           value: "test value",
           advanced: false,
           show: true,
+          required: false,
+          list: false,
+          readonly: false,
         },
       },
       ...overrides,
@@ -61,20 +70,20 @@ describe("InspectionPanelEditField", () => {
 
   describe("Basic Rendering", () => {
     it("should render field title", () => {
-      render(<InspectionPanelEditField {...defaultProps} />);
+      renderWithProviders(<InspectionPanelEditField {...defaultProps} />);
 
       expect(screen.getByText("Test Field")).toBeInTheDocument();
     });
 
     it("should render field description", () => {
-      render(<InspectionPanelEditField {...defaultProps} />);
+      renderWithProviders(<InspectionPanelEditField {...defaultProps} />);
 
       expect(screen.getByText("This is a test field")).toBeInTheDocument();
     });
 
     it("should not render description when empty", () => {
       const props = { ...defaultProps, description: "" };
-      render(<InspectionPanelEditField {...props} />);
+      renderWithProviders(<InspectionPanelEditField {...props} />);
 
       expect(
         screen.queryByText("This is a test field"),
@@ -82,14 +91,14 @@ describe("InspectionPanelEditField", () => {
     });
 
     it("should render toggle button", () => {
-      render(<InspectionPanelEditField {...defaultProps} />);
+      renderWithProviders(<InspectionPanelEditField {...defaultProps} />);
 
       const button = screen.getByTestId(`show${defaultProps.name}`);
       expect(button).toBeInTheDocument();
     });
 
     it("should have correct test id on button", () => {
-      render(<InspectionPanelEditField {...defaultProps} />);
+      renderWithProviders(<InspectionPanelEditField {...defaultProps} />);
 
       expect(screen.getByTestId("showtest_field")).toBeInTheDocument();
     });
@@ -98,7 +107,7 @@ describe("InspectionPanelEditField", () => {
   describe("Icon Display", () => {
     it("should show Plus icon when field is not on canvas", () => {
       const props = { ...defaultProps, isOnCanvas: false };
-      render(<InspectionPanelEditField {...props} />);
+      renderWithProviders(<InspectionPanelEditField {...props} />);
 
       expect(screen.getByTestId("icon-Plus")).toBeInTheDocument();
       expect(screen.queryByTestId("icon-Minus")).not.toBeInTheDocument();
@@ -106,7 +115,7 @@ describe("InspectionPanelEditField", () => {
 
     it("should show Minus icon when field is on canvas", () => {
       const props = { ...defaultProps, isOnCanvas: true };
-      render(<InspectionPanelEditField {...props} />);
+      renderWithProviders(<InspectionPanelEditField {...props} />);
 
       expect(screen.getByTestId("icon-Minus")).toBeInTheDocument();
       expect(screen.queryByTestId("icon-Plus")).not.toBeInTheDocument();
@@ -116,7 +125,7 @@ describe("InspectionPanelEditField", () => {
   describe("Button Styling", () => {
     it("should apply primary styling when field is on canvas", () => {
       const props = { ...defaultProps, isOnCanvas: true };
-      render(<InspectionPanelEditField {...props} />);
+      renderWithProviders(<InspectionPanelEditField {...props} />);
 
       const button = screen.getByTestId(`show${defaultProps.name}`);
       expect(button).toHaveClass("bg-primary/10");
@@ -125,7 +134,7 @@ describe("InspectionPanelEditField", () => {
 
     it("should apply muted styling when field is not on canvas", () => {
       const props = { ...defaultProps, isOnCanvas: false };
-      render(<InspectionPanelEditField {...props} />);
+      renderWithProviders(<InspectionPanelEditField {...props} />);
 
       const button = screen.getByTestId(`show${defaultProps.name}`);
       expect(button).toHaveClass("bg-muted");
@@ -133,7 +142,7 @@ describe("InspectionPanelEditField", () => {
     });
 
     it("should have hover classes", () => {
-      render(<InspectionPanelEditField {...defaultProps} />);
+      renderWithProviders(<InspectionPanelEditField {...defaultProps} />);
 
       const button = screen.getByTestId(`show${defaultProps.name}`);
       expect(button.className).toContain("hover:");
@@ -142,7 +151,7 @@ describe("InspectionPanelEditField", () => {
 
   describe("Accessibility", () => {
     it("should have role checkbox", () => {
-      render(<InspectionPanelEditField {...defaultProps} />);
+      renderWithProviders(<InspectionPanelEditField {...defaultProps} />);
 
       const button = screen.getByTestId(`show${defaultProps.name}`);
       expect(button).toHaveAttribute("role", "checkbox");
@@ -150,7 +159,7 @@ describe("InspectionPanelEditField", () => {
 
     it("should have aria-checked false when not on canvas", () => {
       const props = { ...defaultProps, isOnCanvas: false };
-      render(<InspectionPanelEditField {...props} />);
+      renderWithProviders(<InspectionPanelEditField {...props} />);
 
       const button = screen.getByTestId(`show${defaultProps.name}`);
       expect(button).toHaveAttribute("aria-checked", "false");
@@ -158,7 +167,7 @@ describe("InspectionPanelEditField", () => {
 
     it("should have aria-checked true when on canvas", () => {
       const props = { ...defaultProps, isOnCanvas: true };
-      render(<InspectionPanelEditField {...props} />);
+      renderWithProviders(<InspectionPanelEditField {...props} />);
 
       const button = screen.getByTestId(`show${defaultProps.name}`);
       expect(button).toHaveAttribute("aria-checked", "true");
@@ -169,7 +178,7 @@ describe("InspectionPanelEditField", () => {
     it("should call handleOnNewValue when button is clicked (not on canvas)", async () => {
       const user = userEvent.setup();
       const props = { ...defaultProps, isOnCanvas: false };
-      render(<InspectionPanelEditField {...props} />);
+      renderWithProviders(<InspectionPanelEditField {...props} />);
 
       const button = screen.getByTestId(`show${defaultProps.name}`);
       await user.click(button);
@@ -181,7 +190,7 @@ describe("InspectionPanelEditField", () => {
     it("should call handleOnNewValue when button is clicked (on canvas)", async () => {
       const user = userEvent.setup();
       const props = { ...defaultProps, isOnCanvas: true };
-      render(<InspectionPanelEditField {...props} />);
+      renderWithProviders(<InspectionPanelEditField {...props} />);
 
       const button = screen.getByTestId(`show${defaultProps.name}`);
       await user.click(button);
@@ -192,7 +201,7 @@ describe("InspectionPanelEditField", () => {
 
     it("should handle multiple clicks", async () => {
       const user = userEvent.setup();
-      render(<InspectionPanelEditField {...defaultProps} />);
+      renderWithProviders(<InspectionPanelEditField {...defaultProps} />);
 
       const button = screen.getByTestId(`show${defaultProps.name}`);
 
@@ -206,14 +215,14 @@ describe("InspectionPanelEditField", () => {
 
   describe("Text Truncation", () => {
     it("should apply truncate class to title", () => {
-      render(<InspectionPanelEditField {...defaultProps} />);
+      renderWithProviders(<InspectionPanelEditField {...defaultProps} />);
 
       const title = screen.getByText("Test Field");
       expect(title).toHaveClass("truncate");
     });
 
     it("should apply truncate class to description", () => {
-      render(<InspectionPanelEditField {...defaultProps} />);
+      renderWithProviders(<InspectionPanelEditField {...defaultProps} />);
 
       const description = screen.getByText("This is a test field");
       expect(description).toHaveClass("truncate");
@@ -224,7 +233,7 @@ describe("InspectionPanelEditField", () => {
         ...defaultProps,
         title: "This is a very long title that should be truncated properly",
       };
-      render(<InspectionPanelEditField {...props} />);
+      renderWithProviders(<InspectionPanelEditField {...props} />);
 
       expect(
         screen.getByText(
@@ -239,7 +248,7 @@ describe("InspectionPanelEditField", () => {
         description:
           "This is a very long description that should be truncated properly to avoid layout issues",
       };
-      render(<InspectionPanelEditField {...props} />);
+      renderWithProviders(<InspectionPanelEditField {...props} />);
 
       expect(
         screen.getByText(
@@ -252,21 +261,21 @@ describe("InspectionPanelEditField", () => {
   describe("Different Field Names", () => {
     it("should handle field names with underscores", () => {
       const props = { ...defaultProps, name: "my_custom_field" };
-      render(<InspectionPanelEditField {...props} />);
+      renderWithProviders(<InspectionPanelEditField {...props} />);
 
       expect(screen.getByTestId("showmy_custom_field")).toBeInTheDocument();
     });
 
     it("should handle field names with numbers", () => {
       const props = { ...defaultProps, name: "field123" };
-      render(<InspectionPanelEditField {...props} />);
+      renderWithProviders(<InspectionPanelEditField {...props} />);
 
       expect(screen.getByTestId("showfield123")).toBeInTheDocument();
     });
 
     it("should handle camelCase field names", () => {
       const props = { ...defaultProps, name: "myCustomField" };
-      render(<InspectionPanelEditField {...props} />);
+      renderWithProviders(<InspectionPanelEditField {...props} />);
 
       expect(screen.getByTestId("showmyCustomField")).toBeInTheDocument();
     });
@@ -275,7 +284,7 @@ describe("InspectionPanelEditField", () => {
   describe("Edge Cases", () => {
     it("should handle empty title", () => {
       const props = { ...defaultProps, title: "" };
-      render(<InspectionPanelEditField {...props} />);
+      renderWithProviders(<InspectionPanelEditField {...props} />);
 
       // Component should still render
       expect(
@@ -288,7 +297,7 @@ describe("InspectionPanelEditField", () => {
         ...defaultProps,
         description: "Description with <special> & characters",
       };
-      render(<InspectionPanelEditField {...props} />);
+      renderWithProviders(<InspectionPanelEditField {...props} />);
 
       expect(
         screen.getByText("Description with <special> & characters"),
@@ -299,14 +308,14 @@ describe("InspectionPanelEditField", () => {
       const props = { ...defaultProps, description: null as any };
 
       expect(() => {
-        render(<InspectionPanelEditField {...props} />);
+        renderWithProviders(<InspectionPanelEditField {...props} />);
       }).not.toThrow();
     });
   });
 
   describe("Layout", () => {
     it("should have correct container classes", () => {
-      const { container } = render(
+      const { container } = renderWithProviders(
         <InspectionPanelEditField {...defaultProps} />,
       );
 
@@ -318,7 +327,7 @@ describe("InspectionPanelEditField", () => {
     });
 
     it("should have hover effect class", () => {
-      const { container } = render(
+      const { container } = renderWithProviders(
         <InspectionPanelEditField {...defaultProps} />,
       );
 

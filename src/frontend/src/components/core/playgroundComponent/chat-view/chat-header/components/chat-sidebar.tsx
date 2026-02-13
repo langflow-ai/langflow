@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,7 @@ export function ChatSidebar({
   onOpenLogs,
   renameLocalSession,
 }: ChatSidebarProps) {
+  const [openMenuSession, setOpenMenuSession] = useState<string | null>(null);
   const currentFlowId = useGetFlowId();
   const { handleDelete, handleRename } = useEditSessionInfo({
     flowId: currentFlowId,
@@ -51,7 +52,7 @@ export function ChatSidebar({
   return (
     <div className="flex flex-col pb-4 gap-2">
       <div className="flex flex-col">
-        <div className="flex h-4 items-center justify-between">
+        <div className="flex items-center justify-between mb-2">
           <div className="px-2 text-xs font-semibold leading-4 text-muted-foreground">
             Sessions
           </div>
@@ -93,6 +94,10 @@ export function ChatSidebar({
               selectedView={undefined}
               setSelectedView={() => {}}
               playgroundPage={true}
+              menuOpen={openMenuSession === session}
+              onMenuOpenChange={(open) => {
+                setOpenMenuSession(open ? session : null);
+              }}
             />
           ))}
         </div>

@@ -7,6 +7,8 @@ const BUTTON_STATES = {
   NO_INPUT: "bg-high-indigo text-background",
   DEFAULT:
     "bg-primary text-primary-foreground hover:bg-primary-hover hover:text-secondary",
+  BUILDING:
+    "bg-muted text-foreground hover:bg-secondary-hover dark:hover:bg-input",
 };
 
 type ButtonSendWrapperProps = {
@@ -14,6 +16,8 @@ type ButtonSendWrapperProps = {
   noInput: boolean;
   chatValue: string;
   files: FilePreviewType[];
+  isBuilding: boolean;
+  stopBuilding: () => void;
 };
 
 const ButtonSendWrapper = ({
@@ -21,10 +25,13 @@ const ButtonSendWrapper = ({
   noInput,
   chatValue,
   files,
+  isBuilding,
+  stopBuilding,
 }: ButtonSendWrapperProps) => {
   const isLoading = files.some((file) => file.loading);
 
   const getButtonState = () => {
+    if (isBuilding) return BUTTON_STATES.BUILDING;
     if (noInput) return BUTTON_STATES.NO_INPUT;
     return BUTTON_STATES.DEFAULT;
   };
@@ -33,6 +40,10 @@ const ButtonSendWrapper = ({
 
   const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
+    if (isBuilding) {
+      stopBuilding();
+      return;
+    }
     if (!isLoading) {
       send();
     }
@@ -45,12 +56,15 @@ const ButtonSendWrapper = ({
         "h-6 w-6 px-0 flex items-center justify-center",
       )}
       onClick={handleClick}
-      disabled={isLoading}
+      disabled={isLoading && !isBuilding}
       unstyled
-      data-testid="button-send"
+      data-testid={isBuilding ? "button-stop" : "button-send"}
     >
       <div className="flex h-fit w-fit items-center gap-2 text-sm font-medium">
-        <ForwardedIconComponent name="ArrowUp" className="h-4 w-4" />
+        <ForwardedIconComponent
+          name={isBuilding ? "Square" : "ArrowUp"}
+          className={cn("h-4 w-4", isBuilding && "h-3 w-3")}
+        />
       </div>
     </Button>
   );

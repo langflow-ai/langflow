@@ -20,11 +20,17 @@ interface DetailViewState {
 
 export default function FlowLogsModal({
   children,
+  open: openProp,
+  onOpenChange,
 }: {
-  children: React.ReactNode;
+  children?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }): JSX.Element {
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = openProp ?? internalOpen;
+  const setOpen = onOpenChange ?? setInternalOpen;
 
   const [pageIndex, setPageIndex] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -109,7 +115,9 @@ export default function FlowLogsModal({
         size="x-large"
         onOpenAutoFocus={handleOpenAutoFocus}
       >
-        <BaseModal.Trigger asChild>{children}</BaseModal.Trigger>
+        <BaseModal.Trigger asChild>
+          {children ?? <span className="hidden" />}
+        </BaseModal.Trigger>
         <BaseModal.Header description="Inspect component executions.">
           <div className="flex w-full justify-between">
             <div className="flex h-fit w-32 items-center">

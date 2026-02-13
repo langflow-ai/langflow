@@ -111,10 +111,9 @@
               "sender",
               "sender_name",
               "session_id",
+              "context_id",
               "data_template",
-              "background_color",
-              "chat_icon",
-              "text_color"
+              "clean_data"
             ],
             "frozen": false,
             "icon": "MessagesSquare",
@@ -397,10 +396,8 @@
               "sender",
               "sender_name",
               "session_id",
-              "files",
-              "background_color",
-              "chat_icon",
-              "text_color"
+              "context_id",
+              "files"
             ],
             "frozen": false,
             "icon": "MessagesSquare",
@@ -728,7 +725,8 @@
             "documentation": "https://docs.langflow.org/components-processing#structured-output",
             "edited": false,
             "field_order": [
-              "llm",
+              "model",
+              "api_key",
               "input_value",
               "system_prompt",
               "schema_name",

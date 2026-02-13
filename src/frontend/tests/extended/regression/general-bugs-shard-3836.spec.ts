@@ -3,11 +3,8 @@ import path from "path";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { enableInspectPanel } from "../../utils/open-advanced-options";
 import { uploadFile } from "../../utils/upload-file";
-import {
-  closeAdvancedOptions,
-  openAdvancedOptions,
-} from "../../utils/open-advanced-options";
 
 test(
   "user must be able to send an image on chat using advanced tool on ChatInputComponent",
@@ -30,12 +27,23 @@ test(
 
     await page.waitForSelector("text=Chat Input", { timeout: 30000 });
 
+    await enableInspectPanel(page);
+
     await page.getByText("Chat Input", { exact: true }).click();
-    await openAdvancedOptions(page);
+    await page.getByTestId("edit-fields-button").click();
     await page.getByTestId("showfiles").click();
-    await closeAdvancedOptions(page);
+    await page.getByTestId("edit-fields-button").click();
     const userQuestion = "What is this image?";
     await page.getByTestId("textarea_str_input_value").fill(userQuestion);
+
+    await uploadFile(page, "chain.png");
+
+    const uploadButton = page.getByTestId("button_upload_file");
+
+    await uploadButton.hover();
+    await expect(uploadButton.getByTestId("icon-X")).toHaveCSS("opacity", "1");
+    await uploadButton.click();
+    await expect(page.getByText("chain.png")).not.toBeVisible();
 
     await uploadFile(page, "chain.png");
 

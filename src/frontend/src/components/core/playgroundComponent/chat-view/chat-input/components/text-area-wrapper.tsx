@@ -21,55 +21,22 @@ interface TextAreaWrapperProps {
 }
 
 //Resizes a textarea element to fit its content, with a minimum and maximum height constraint.
-const resizeTextarea = (
-  textarea: HTMLTextAreaElement,
-  value: string,
-  previousScrollHeightRef: React.MutableRefObject<number>,
-): void => {
-  // Reset height to auto to get the correct scrollHeight
-  textarea.style.height = "auto";
-
-  // Get the new scroll height
+const resizeTextarea = (textarea: HTMLTextAreaElement, value: string): void => {
+  // Collapse to 0 so scrollHeight reflects only the content, not the container
+  textarea.style.height = "0px";
   const scrollHeight = textarea.scrollHeight;
-  const previousScrollHeight = previousScrollHeightRef.current;
 
-  // If empty, set minimal height (one line)
   if (!value || value.trim() === "") {
     textarea.style.height = `${CHAT_INPUT_MIN_HEIGHT}px`;
     textarea.style.overflowY = "hidden";
-    previousScrollHeightRef.current = CHAT_INPUT_MIN_HEIGHT;
   } else {
-    // Only resize when:
-    // 1. scrollHeight increased significantly (content wrapped to new line) - use 10px threshold
-    // 2. scrollHeight decreased significantly (content unwrapped) - use 10px threshold
-    // This prevents any micro-adjustments that cause visible growth on every character
-    const threshold = 10;
-    const heightDifference = scrollHeight - previousScrollHeight;
-
-    if (Math.abs(heightDifference) > threshold) {
-      // Content wrapped/unwrapped significantly - resize to fit, but respect max height
-      const newHeight = Math.min(scrollHeight, CHAT_INPUT_MAX_HEIGHT);
-      textarea.style.height = `${newHeight}px`;
-      previousScrollHeightRef.current = newHeight;
-
-      // Enable scrolling if content exceeds max height
-      if (scrollHeight > CHAT_INPUT_MAX_HEIGHT) {
-        textarea.style.overflowY = "auto";
-      } else {
-        textarea.style.overflowY = "hidden";
-      }
-    } else {
-      // No significant change - restore previous height immediately to prevent any visual growth
-      // Don't update the ref so we maintain the stable height
-      textarea.style.height = `${previousScrollHeight}px`;
-
-      // Check if we need scrolling based on current content
-      if (scrollHeight > CHAT_INPUT_MAX_HEIGHT) {
-        textarea.style.overflowY = "auto";
-      } else {
-        textarea.style.overflowY = "hidden";
-      }
-    }
+    const newHeight = Math.max(
+      CHAT_INPUT_MIN_HEIGHT,
+      Math.min(scrollHeight, CHAT_INPUT_MAX_HEIGHT),
+    );
+    textarea.style.height = `${newHeight}px`;
+    textarea.style.overflowY =
+      scrollHeight > CHAT_INPUT_MAX_HEIGHT ? "auto" : "hidden";
   }
 };
 
@@ -85,7 +52,6 @@ const TextAreaWrapper = ({
   isDragging,
 }: TextAreaWrapperProps) => {
   const setChatValueStore = useUtilityStore((state) => state.setChatValueStore);
-  const previousScrollHeightRef = useRef<number>(CHAT_INPUT_MIN_HEIGHT);
 
   const getPlaceholderText = useCallback((): string => {
     if (isDragging) {
@@ -100,7 +66,7 @@ const TextAreaWrapper = ({
   const fileClass = files.length > 0 ? "!rounded-t-none border-t-0" : "";
 
   const additionalClassNames =
-    "form-input block w-full border-0 custom-scroll focus:border-ring rounded-none shadow-none focus:ring-0 p-0 sm:text-sm !bg-transparent resize-none overflow-hidden !max-h-none";
+    "form-input block w-full border-0 custom-scroll focus:border-ring rounded-none shadow-none focus:ring-0 p-0 sm:text-sm !bg-transparent resize-none";
 
   // Auto-focus when not building and input is enabled
   useEffect(() => {
@@ -114,7 +80,7 @@ const TextAreaWrapper = ({
   useEffect(() => {
     const textarea = inputRef.current;
     if (textarea) {
-      resizeTextarea(textarea, chatValue, previousScrollHeightRef);
+      resizeTextarea(textarea, chatValue);
     }
   }, [chatValue, inputRef]);
 
@@ -133,11 +99,7 @@ const TextAreaWrapper = ({
       for (const entry of entries) {
         if (entry.contentRect.width !== previousWidthRef.current) {
           previousWidthRef.current = entry.contentRect.width;
-          resizeTextarea(
-            textarea,
-            chatValueRef.current,
-            previousScrollHeightRef,
-          );
+          resizeTextarea(textarea, chatValueRef.current);
         }
       }
     });
@@ -154,7 +116,7 @@ const TextAreaWrapper = ({
       const newValue = event.target.value;
       setChatValueStore(newValue);
       // Resize immediately on user input for better UX
-      resizeTextarea(event.target, newValue, previousScrollHeightRef);
+      resizeTextarea(event.target, newValue);
     },
     [setChatValueStore],
   );
@@ -180,6 +142,7 @@ const TextAreaWrapper = ({
       onChange={handleChange}
       className={classNames(fileClass, additionalClassNames)}
       placeholder={getPlaceholderText()}
+      style={{ maxHeight: `${CHAT_INPUT_MAX_HEIGHT}px` }}
     />
   );
 };

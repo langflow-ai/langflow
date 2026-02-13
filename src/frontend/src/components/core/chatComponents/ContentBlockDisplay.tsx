@@ -66,10 +66,10 @@ export function ContentBlockDisplay({
   return (
     <div className="relative py-3">
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
         transition={{
-          duration: 0.2,
+          duration: 0.15,
           ease: "easeOut",
         }}
         className={cn("relative rounded-lg bg-transparent", "overflow-hidden")}
@@ -144,7 +144,7 @@ export function ContentBlockDisplay({
                       value={toolKey}
                       className="border border-border rounded-lg overflow-hidden bg-background"
                     >
-                      <AccordionTrigger className="hover:bg-muted hover:no-underline px-1 py-1.5">
+                      <AccordionTrigger className="hover:bg-muted hover:no-underline px-3 py-2.5">
                         <div className="flex items-center justify-between w-full pr-2">
                           <div className="flex items-center gap-1 text-sm font-normal min-w-0 flex-1 overflow-hidden">
                             <div className="text-muted-foreground whitespace-nowrap flex-shrink-0">

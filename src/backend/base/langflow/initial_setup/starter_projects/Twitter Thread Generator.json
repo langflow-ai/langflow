@@ -274,10 +274,8 @@
               "sender",
               "sender_name",
               "session_id",
-              "files",
-              "background_color",
-              "chat_icon",
-              "text_color"
+              "context_id",
+              "files"
             ],
             "frozen": false,
             "icon": "MessagesSquare",
@@ -549,7 +547,8 @@
             "documentation": "",
             "edited": false,
             "field_order": [
-              "input_value"
+              "input_value",
+              "use_global_variable"
             ],
             "frozen": false,
             "icon": "type",
@@ -692,10 +691,8 @@
               "sender",
               "sender_name",
               "session_id",
+              "context_id",
               "data_template",
-              "background_color",
-              "chat_icon",
-              "text_color",
               "clean_data"
             ],
             "frozen": false,
@@ -973,7 +970,8 @@
             "documentation": "",
             "edited": false,
             "field_order": [
-              "input_value"
+              "input_value",
+              "use_global_variable"
             ],
             "frozen": false,
             "icon": "type",
@@ -1109,7 +1107,8 @@
             "documentation": "",
             "edited": false,
             "field_order": [
-              "input_value"
+              "input_value",
+              "use_global_variable"
             ],
             "frozen": false,
             "icon": "type",
@@ -1245,7 +1244,8 @@
             "documentation": "",
             "edited": false,
             "field_order": [
-              "input_value"
+              "input_value",
+              "use_global_variable"
             ],
             "frozen": false,
             "icon": "type",
@@ -1381,7 +1381,8 @@
             "documentation": "",
             "edited": false,
             "field_order": [
-              "input_value"
+              "input_value",
+              "use_global_variable"
             ],
             "frozen": false,
             "icon": "type",
@@ -1517,7 +1518,8 @@
             "documentation": "",
             "edited": false,
             "field_order": [
-              "input_value"
+              "input_value",
+              "use_global_variable"
             ],
             "frozen": false,
             "icon": "type",
@@ -1702,6 +1704,7 @@
             "edited": false,
             "field_order": [
               "template",
+              "use_double_brackets",
               "tool_placeholder"
             ],
             "frozen": false,
@@ -1910,6 +1913,27 @@
                 "type": "prompt",
                 "value": "<Instructions Structure>\nIntroduce the task of generating tweets or tweet threads based on the provided inputs\n\nExplain each input variable:\n\n{{PROFILE_TYPE}}\n\n{{PROFILE_DETAILS}}\n\n{{CONTENT_GUIDELINES}}\n\n{{TONE_AND_STYLE}}\n\n{{CONTEXT}}\n\n{{OUTPUT_FORMAT}}\n\n{{OUTPUT_LANGUAGE}}\n\nProvide step-by-step instructions on how to analyze the inputs to determine if a single tweet or thread is appropriate\n\nGive guidance on generating tweet content that aligns with the profile, guidelines, tone, style, and context\n\nExplain how to format the output based on the {{OUTPUT_FORMAT}} value\n\nProvide tips for creating engaging, coherent tweet content\n\n</Instructions Structure>\n\n<Instructions>\nYou are an AI tweet generator that can create standalone tweets or multi-tweet threads based on a variety of inputs about the desired content. Here are the key inputs you will use to generate the tweet(s):\n\n<profile_type>\n\n{PROFILE_TYPE}\n\n</profile_type>\n\n<profile_details>\n\n{PROFILE_DETAILS}\n\n</profile_details>\n\n<content_guidelines>\n\n{CONTENT_GUIDELINES}\n\n</content_guidelines>\n\n<tone_and_style>\n\n{TONE_AND_STYLE}\n\n</tone_and_style>\n\n<output_format>\n\n{OUTPUT_FORMAT}\n\n</output_format>\n\n\n<output_language>\n\n{OUTPUT_LANGUAGE}\n\n</output_language>\n\nTo generate the appropriate tweet(s), follow these steps:\n\n<output_determination>\n\nCarefully analyze the {{PROFILE_TYPE}}, {{PROFILE_DETAILS}}, {{CONTENT_GUIDELINES}}, {{TONE_AND_STYLE}}, and {{CONTEXT}} to determine the depth and breadth of content needed.\n\nIf the {{OUTPUT_FORMAT}} is \"single_tweet\", plan to convey the key information in a concise, standalone tweet.\n\nIf the {{OUTPUT_FORMAT}} is \"thread\" or if the content seems too complex for a single tweet, outline a series of connected tweets that flow together to cover the topic.\n\n</output_determination>\n\n<content_generation>\n\nBrainstorm tweet content that aligns with the {{PROFILE_TYPE}} and {{PROFILE_DETAILS}}, adheres to the {{CONTENT_GUIDELINES}}, matches the {{TONE_AND_STYLE}}, and incorporates the {{CONTEXT}}.\n\nFor a single tweet, craft the most engaging, informative message possible within the 280 character limit.\n\nFor a thread, break down the content into distinct yet connected tweet-sized chunks. Ensure each tweet flows logically into the next to maintain reader engagement. Use transitional phrases as needed to link tweets.\n\n</content_generation>\n\n<formatting>\nFormat the output based on the {{OUTPUT_FORMAT}}:\n\nFor a single tweet, provide the content.\n\nFor a thread, include each tweet inside numbered markdown list.\n\n</formatting> <tips>\nFocus on creating original, engaging content that provides value to the intended audience.\n\nOptimize the tweet(s) for the 280 character limit. Be concise yet impactful.\n\nMaintain a consistent voice that matches the {{TONE_AND_STYLE}} throughout the tweet(s).\n\nInclude calls-to-action or questions to drive engagement when appropriate.\n\nDouble check that the final output aligns with the {{PROFILE_DETAILS}} and {{CONTENT_GUIDELINES}}.\n\n</tips>\n\nNow create a Tweet or Twitter Thread for this context:\n\n"
               },
+              "use_double_brackets": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Use Double Brackets",
+                "dynamic": false,
+                "info": "Use {{variable}} syntax instead of {variable}.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "use_double_brackets",
+                "override_skip": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": false
+              },
               "tool_placeholder": {
                 "_input_type": "MessageTextInput",
                 "advanced": true,
@@ -1932,27 +1956,6 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": ""
-              },
-              "use_double_brackets": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Use Double Brackets",
-                "dynamic": false,
-                "info": "Use {{variable}} syntax instead of {variable}.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "use_double_brackets",
-                "override_skip": false,
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": true,
-                "type": "bool",
-                "value": false
               }
             },
             "tool_mode": false
@@ -2000,7 +2003,8 @@
               "input_value",
               "system_message",
               "stream",
-              "temperature"
+              "temperature",
+              "max_tokens"
             ],
             "frozen": false,
             "icon": "brain-circuit",

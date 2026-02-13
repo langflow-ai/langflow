@@ -25,6 +25,7 @@ export interface SessionMoreMenuProps {
   triggerClassName?: string;
   contentClassName?: string;
   isVisible?: boolean;
+  disabled?: boolean;
   tooltipContent?: string;
   tooltipSide?: "top" | "right" | "bottom" | "left";
   dataTestid?: string;
@@ -50,6 +51,7 @@ export function SessionMoreMenu({
   triggerClassName,
   contentClassName,
   isVisible = true,
+  disabled = false,
   tooltipContent = "More options",
   tooltipSide = "left",
   dataTestid,
@@ -100,10 +102,12 @@ export function SessionMoreMenu({
             className={cn(
               "h-8 w-8 border-none bg-transparent p-2 rounded transition-colors text-muted-foreground hover:bg-accent hover:text-foreground focus:ring-0",
               !isVisible && "invisible group-hover:visible",
+              disabled && "pointer-events-none opacity-50",
               triggerClassName,
             )}
             aria-label={tooltipContent}
             aria-haspopup="true"
+            aria-disabled={disabled}
             onClick={(e) => {
               e.stopPropagation();
             }}
@@ -121,6 +125,7 @@ export function SessionMoreMenu({
           align={align}
           sideOffset={sideOffset}
           className={cn("p-0", contentClassName)}
+          onCloseAutoFocus={(e) => e.preventDefault()}
         >
           {showRename && (
             <SelectItem

@@ -334,9 +334,12 @@
             "field_order": [
               "model",
               "api_key",
+              "base_url_ibm_watsonx",
+              "project_id",
               "system_prompt",
               "context_id",
               "n_messages",
+              "max_tokens",
               "format_instructions",
               "output_schema",
               "tools",
@@ -916,9 +919,12 @@
             "field_order": [
               "model",
               "api_key",
+              "base_url_ibm_watsonx",
+              "project_id",
               "system_prompt",
               "context_id",
               "n_messages",
+              "max_tokens",
               "format_instructions",
               "output_schema",
               "tools",
@@ -1499,7 +1505,9 @@
             "edited": false,
             "error": null,
             "field_order": [
-              "template"
+              "template",
+              "use_double_brackets",
+              "tool_placeholder"
             ],
             "frozen": false,
             "full_path": null,
@@ -1579,6 +1587,27 @@
                 "type": "prompt",
                 "value": "# Expert Research Agent Protocol\n\n[Previous content remains the same, but adding this critical section about image handling:]\n\n## Image and Visual Data Handling\nWhen using Tavily Search with images enabled:\n\n1. Image Collection\n   - Always enable include_images in Tavily search\n   - Collect relevant stock charts, product images, and news photos\n   - Save image URLs from reliable sources\n   - Focus on recent, high-quality images\n\n2. Image Categories to Collect\n   - Product showcase images\n   - Stock performance charts\n   - Company facilities\n   - Key executive photos\n   - Recent event images\n   - Market share visualizations\n\n3. Image Documentation\n   - Include full image URL\n   - Add clear descriptions\n   - Note image source and date\n   - Explain image relevance\n\n4. Image Presentation in Output\n   ```markdown\n   ![Image Description](image_url)\n   - Source: [Source Name]\n   - Date: [Image Date]\n   - Context: [Brief explanation of image relevance]\n   ```\n\n## Output Structure\nPresent your findings in this format:\n\n### Company Overview\n[Comprehensive overview based on search results]\n\n### Recent Developments\n[Latest news and announcements with dates]\n\n### Market Context\n[Industry trends and competitive position]\n\n### Visual Insights\n[Reference relevant images from search]\n\n### Key Risk Factors\n[Identified risks and challenges]\n\n### Sources\n[List of key sources consulted]\n\nRemember to:\n- Use Markdown formatting for clear structure\n- Include dates for all time-sensitive information\n- Quote significant statistics and statements\n- Reference any included images\n- Highlight conflicting information or viewpoints\n- Pass all gathered data to the Finance Agent for detailed financial analysis"
               },
+              "use_double_brackets": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Use Double Brackets",
+                "dynamic": false,
+                "info": "Use {{variable}} syntax instead of {variable}.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "use_double_brackets",
+                "override_skip": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": false
+              },
               "tool_placeholder": {
                 "_input_type": "MessageTextInput",
                 "advanced": true,
@@ -1600,27 +1629,6 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": ""
-              },
-              "use_double_brackets": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Use Double Brackets",
-                "dynamic": false,
-                "info": "Use {{variable}} syntax instead of {variable}.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "use_double_brackets",
-                "override_skip": false,
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": true,
-                "type": "bool",
-                "value": false
               }
             },
             "tool_mode": false
@@ -1665,7 +1673,9 @@
             "edited": false,
             "error": null,
             "field_order": [
-              "template"
+              "template",
+              "use_double_brackets",
+              "tool_placeholder"
             ],
             "frozen": false,
             "full_path": null,
@@ -1745,6 +1755,27 @@
                 "type": "prompt",
                 "value": "# Financial Analysis Expert Protocol\n\nYou are an elite financial analyst with access to Yahoo! Finance tools. Your role is to perform comprehensive financial analysis based on the research provided and the data available through Yahoo! Finance methods.\n\n## CRITICAL: Stock Symbol Usage\n- Always use correct stock ticker symbols in UPPERCASE format\n- Examples of valid symbols:\n  * AAPL (Apple Inc.)\n  * MSFT (Microsoft)\n  * NVDA (NVIDIA)\n  * GOOGL (Alphabet/Google)\n  * TSLA (Tesla)\n- Invalid formats to avoid:\n  * ❌ Apple (company name instead of symbol)\n  * ❌ aapl (lowercase)\n  * ❌ $AAPL (with dollar sign)\n  * ❌ AAPL.US (with extension)\n\n## Data Collection Strategy\n\n1. Initial Symbol Verification\n   - Confirm valid stock symbol format before any analysis\n   - Use get_info first to verify symbol validity\n   - Cross-reference with get_fast_info to ensure data availability\n   - If symbol is invalid, immediately report the error\n\n2. Core Company Analysis\n   - Get basic info (get_info): Full company details\n   - Fast metrics (get_fast_info): Quick market data\n   - Earnings data (get_earnings): Performance history\n   - Calendar events (get_calendar): Upcoming events\n\n3. Financial Statement Analysis\n   - Income statements (get_income_stmt)\n   - Balance sheets (get_balance_sheet)\n   - Cash flow statements (get_cashflow)\n\n4. Market Intelligence\n   - Latest recommendations (get_recommendations)\n   - Recommendation trends (get_recommendations_summary)\n   - Recent rating changes (get_upgrades_downgrades)\n   - Breaking news (get_news, specify number of articles needed)\n\n5. Ownership Structure\n   - Institutional holdings (get_institutional_holders)\n   - Major stakeholders (get_major_holders)\n   - Fund ownership (get_mutualfund_holders)\n   - Insider activity:\n     * Recent purchases (get_insider_purchases)\n     * Transaction history (get_insider_transactions)\n     * Insider roster (get_insider_roster_holders)\n\n6. Historical Patterns\n   - Corporate actions (get_actions)\n   - Dividend history (get_dividends)\n   - Split history (get_splits)\n   - Capital gains (get_capital_gains)\n   - Regulatory filings (get_sec_filings)\n   - ESG metrics (get_sustainability)\n\n## Analysis Framework\n\n1. Profitability Metrics\n   - Revenue trends\n   - Margin analysis\n   - Efficiency ratios\n   - Return metrics\n\n2. Financial Health\n   - Liquidity ratios\n   - Debt analysis\n   - Working capital\n   - Cash flow quality\n\n3. Growth Assessment\n   - Historical rates\n   - Future projections\n   - Market opportunity\n   - Expansion plans\n\n4. Risk Evaluation\n   - Financial risks\n   - Market position\n   - Operational challenges\n   - Competitive threats\n\n## Output Structure\n\n### Symbol Information\n[Confirm stock symbol and basic company information]\n\n### Financial Overview\n[Key metrics summary with actual numbers]\n\n### Profitability Analysis\n[Detailed profit metrics with comparisons]\n\n### Balance Sheet Review\n[Asset and liability analysis]\n\n### Cash Flow Assessment\n[Cash generation and usage patterns]\n\n### Market Sentiment\n[Analyst views and institutional activity]\n\n### Growth Analysis\n[Historical and projected growth]\n\n### Risk Factors\n[Comprehensive risk assessment]\n\nRemember to:\n- ALWAYS verify stock symbol validity first\n- Use exact numbers from the data\n- Compare with industry standards\n- Highlight significant trends\n- Flag data anomalies\n- Identify key risks\n- Provide metric context\n- Focus on material information\n\nPass your comprehensive financial analysis to the Analysis & Editor Agent for final synthesis and recommendations. Include any invalid symbol errors or data availability issues in your report."
               },
+              "use_double_brackets": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Use Double Brackets",
+                "dynamic": false,
+                "info": "Use {{variable}} syntax instead of {variable}.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "use_double_brackets",
+                "override_skip": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": false
+              },
               "tool_placeholder": {
                 "_input_type": "MessageTextInput",
                 "advanced": true,
@@ -1766,27 +1797,6 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": ""
-              },
-              "use_double_brackets": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Use Double Brackets",
-                "dynamic": false,
-                "info": "Use {{variable}} syntax instead of {variable}.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "use_double_brackets",
-                "override_skip": false,
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": true,
-                "type": "bool",
-                "value": false
               }
             },
             "tool_mode": false
@@ -1834,7 +1844,9 @@
             "edited": false,
             "error": null,
             "field_order": [
-              "template"
+              "template",
+              "use_double_brackets",
+              "tool_placeholder"
             ],
             "frozen": false,
             "full_path": null,
@@ -1960,6 +1972,27 @@
                 "type": "prompt",
                 "value": "# Investment Analysis & Editorial Protocol\n\nYou are an elite financial analyst and editorial expert responsible for creating the final investment analysis report. Your role is to synthesize research and financial data into a visually appealing, data-rich investment analysis using proper markdown formatting.\n\n## Input Processing\n1. Research Agent Input (Visual + Market Research):\n   - Market research and news\n   - Industry trends\n   - Competitive analysis\n   - Images and charts\n   - News sentiment\n   - {research_agent_output}\n\n2. Finance Agent Input (Quantitative Data):\n   - Detailed financial metrics\n   - Stock statistics\n   - Analyst ratings\n   - Growth metrics\n   - Risk factors\n   - {finance_agent_output}\n\n## Output Format Requirements\n\n1. Header Format\n   Use single # for main title, increment for subsections\n   \n2. Image Placement\n   - Place images immediately after relevant sections\n   - Use proper markdown format: ![Alt Text](url)\n   - Always include source and context\n   - Use *italics* for image captions\n\n3. Table Formatting\n   - Use standard markdown tables\n   - Align numbers right, text left\n   - Include header separators\n   - Keep consistent column widths\n\n4. Data Presentation\n   - Use bold (**) for key metrics\n   - Include percentage changes\n   - Show comparisons\n   - Include trends (↑/↓)\n\n## Report Structure\n\n# Investment Analysis Report: [Company Name] ($SYMBOL)\n*Generated: [Date] | Type: Comprehensive Evaluation*\n\n[Executive Summary - 3 paragraphs max]\n\n## Quick Take\n- **Recommendation**: [BUY/HOLD/SELL]\n- **Target Price**: $XXX\n- **Risk Level**: [LOW/MEDIUM/HIGH]\n- **Investment Horizon**: [SHORT/MEDIUM/LONG]-term\n\n## Market Analysis\n[Insert most relevant market image here]\n*Source: [Name] - [Context]*\n\n### Industry Position\n- Market share data\n- Competitive analysis\n- Recent developments\n\n## Financial Health\n| Metric | Value | YoY Change | Industry Avg |\n|:-------|------:|-----------:|-------------:|\n| Revenue | $XXX | XX% | $XXX |\n[Additional metrics]\n\n### Key Performance Indicators\n- **Revenue Growth**: XX%\n- **Profit Margin**: XX%\n- **ROE**: XX%\n\n## Growth Drivers\n1. Short-term Catalysts\n2. Long-term Opportunities\n3. Innovation Pipeline\n\n## Risk Assessment\n| Risk Factor | Severity | Probability | Impact |\n|:------------|:---------|:------------|:-------|\n| [Risk 1] | HIGH/MED/LOW | H/M/L | Details |\n\n## Technical Analysis\n[Insert technical chart]\n*Source: [Name] - Analysis of key technical indicators*\n\n## Investment Strategy\n### Long-term (18+ months)\n- Entry points\n- Position sizing\n- Risk management\n\n### Medium-term (6-18 months)\n- Technical levels\n- Catalysts timeline\n\n### Short-term (0-6 months)\n- Support/Resistance\n- Trading parameters\n\n## Price Targets\n- **Bear Case**: $XXX (-XX%)\n- **Base Case**: $XXX\n- **Bull Case**: $XXX (+XX%)\n\n## Monitoring Checklist\n1. [Metric 1]\n2. [Metric 2]\n3. [Metric 3]\n\n## Visual Evidence\n[Insert additional relevant images]\n*Source: [Name] - [Specific context and analysis]*\n\n*Disclaimer: This analysis is for informational purposes only. Always conduct your own research before making investment decisions.*\n\n## Output Requirements\n\n1. Visual Excellence\n   - Strategic image placement\n   - Clear data visualization\n   - Consistent formatting\n   - Professional appearance\n\n2. Data Accuracy\n   - Cross-reference numbers\n   - Verify calculations\n   - Include trends\n   - Show comparisons\n\n3. Action Focus\n   - Clear recommendations\n   - Specific entry/exit points\n   - Risk management guidelines\n   - Monitoring triggers\n\n4. Professional Standards\n   - No spelling errors\n   - Consistent formatting\n   - Proper citations\n   - Clear attribution\n\nRemember:\n- Never use triple backticks\n- Include all images with proper markdown\n- Maintain consistent formatting\n- Provide specific, actionable insights\n- Use emojis sparingly and professionally\n- Cross-validate all data points"
               },
+              "use_double_brackets": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Use Double Brackets",
+                "dynamic": false,
+                "info": "Use {{variable}} syntax instead of {variable}.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "use_double_brackets",
+                "override_skip": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": false
+              },
               "tool_placeholder": {
                 "_input_type": "MessageTextInput",
                 "advanced": true,
@@ -1981,27 +2014,6 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": ""
-              },
-              "use_double_brackets": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Use Double Brackets",
-                "dynamic": false,
-                "info": "Use {{variable}} syntax instead of {variable}.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "use_double_brackets",
-                "override_skip": false,
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": true,
-                "type": "bool",
-                "value": false
               }
             },
             "tool_mode": false
@@ -2046,10 +2058,8 @@
               "sender",
               "sender_name",
               "session_id",
-              "files",
-              "background_color",
-              "chat_icon",
-              "text_color"
+              "context_id",
+              "files"
             ],
             "frozen": false,
             "icon": "MessagesSquare",
@@ -2351,9 +2361,12 @@
             "field_order": [
               "model",
               "api_key",
+              "base_url_ibm_watsonx",
+              "project_id",
               "system_prompt",
               "context_id",
               "n_messages",
+              "max_tokens",
               "format_instructions",
               "output_schema",
               "tools",
@@ -3332,11 +3345,16 @@
               "api_key",
               "query",
               "search_depth",
+              "chunks_per_source",
               "topic",
-              "time_range",
+              "days",
               "max_results",
+              "include_answer",
+              "time_range",
               "include_images",
-              "include_answer"
+              "include_domains",
+              "exclude_domains",
+              "include_raw_content"
             ],
             "frozen": false,
             "icon": "TavilyIcon",
@@ -3744,10 +3762,8 @@
               "sender",
               "sender_name",
               "session_id",
+              "context_id",
               "data_template",
-              "background_color",
-              "chat_icon",
-              "text_color",
               "clean_data"
             ],
             "frozen": false,

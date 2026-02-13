@@ -43,7 +43,7 @@ test(
 
     await page.getByTestId("div-generic-node").click();
 
-    await page.getByTestId("edit-name-description-button").click();
+    await page.getByTestId("edit-name-description-button").first().click();
 
     await page.getByTestId("inspection-panel-name").fill(randomName);
 
@@ -54,11 +54,11 @@ test(
     await page.getByTestId("save-name-description-button").click();
 
     expect(await page.getByText(randomName).count()).toBe(2);
-    expect(await page.getByText(randomDescription).count()).toBe(1);
+    expect(await page.getByText(randomDescription).count()).toBe(2);
 
     await page.getByTestId("div-generic-node").click();
 
-    await page.getByTestId("edit-name-description-button").click();
+    await page.getByTestId("edit-name-description-button").first().click();
 
     await page.getByTestId(`inspection-panel-name`).fill(randomName_2);
 
@@ -69,11 +69,11 @@ test(
     await page.getByTestId("save-name-description-button").click();
 
     expect(await page.getByText(randomName_2).count()).toBe(2);
-    expect(await page.getByText(randomDescription_2).count()).toBe(1);
+    expect(await page.getByText(randomDescription_2).count()).toBe(2);
 
     await page.getByTestId("div-generic-node").click();
 
-    await page.getByTestId("edit-name-description-button").click();
+    await page.getByTestId("edit-name-description-button").first().click();
 
     await page.getByTestId(`inspection-panel-name`).fill(randomName_3);
 
@@ -83,7 +83,7 @@ test(
 
     await page.getByTestId("div-generic-node").click();
 
-    await page.getByTestId("edit-name-description-button").click();
+    await page.getByTestId("edit-name-description-button").first().click();
 
     await page.getByTestId(`inspection-panel-name`).fill(randomName_4);
 
@@ -95,7 +95,7 @@ test(
 
     expect(await page.getByText(randomName_4).count()).toBe(0);
 
-    expect(await page.getByText(randomDescription_2).count()).toBe(1);
+    expect(await page.getByText(randomDescription_2).count()).toBe(2);
 
     expect(await page.getByText(randomDescription_4).count()).toBe(0);
 
@@ -103,7 +103,7 @@ test(
 
     await page.getByTestId("div-generic-node").click();
 
-    await page.getByTestId("edit-name-description-button").click();
+    await page.getByTestId("edit-name-description-button").first().click();
 
     await page
       .getByTestId("inspection-panel-description")
@@ -113,7 +113,7 @@ test(
 
     await page.keyboard.press("Enter");
 
-    expect(await page.getByText(randomDescription_3).count()).toBe(1);
+    expect(await page.getByText(randomDescription_3).count()).toBe(2);
 
     expect(await page.getByText(randomName_4).count()).toBe(0);
 

@@ -41,16 +41,6 @@ test(
 
     //add
 
-    await disableInspectPanel(page);
-
-    await page.getByTestId("title-NVIDIA").click();
-
-    await openAdvancedOptions(page);
-
-    await page.getByTestId("showseed").click();
-
-    await closeAdvancedOptions(page);
-
     await adjustScreenView(page);
 
     await page.locator('//*[@id="int_int_seed"]').click();

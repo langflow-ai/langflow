@@ -1,6 +1,7 @@
 import { useState } from "react";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { useUpdateSessionName } from "@/controllers/API/queries/messages/use-rename-session";
+import useFlowStore from "@/stores/flowStore";
 import { useVoiceStore } from "@/stores/voiceStore";
 import { cn } from "@/utils/utils";
 import { SessionMoreMenu } from "./session-more-menu";
@@ -19,6 +20,8 @@ export interface SessionSelectorProps {
   playgroundPage?: boolean;
   setActiveSession?: (session: string) => void;
   handleRename?: (oldSessionId: string, newSessionId: string) => Promise<void>;
+  menuOpen?: boolean;
+  onMenuOpenChange?: (open: boolean) => void;
 }
 
 export function SessionSelector({
@@ -34,8 +37,12 @@ export function SessionSelector({
   playgroundPage = false,
   setActiveSession,
   handleRename,
+  menuOpen,
+  onMenuOpenChange,
 }: SessionSelectorProps) {
   const [isEditing, setIsEditing] = useState(false);
+  const isShareablePlayground = useFlowStore((state) => state.playgroundPage);
+  const isBuilding = useFlowStore((state) => state.isBuilding);
   const { mutate: updateSessionName } = useUpdateSessionName();
   const setNewSessionCloseVoiceAssistant = useVoiceStore(
     (state) => state.setNewSessionCloseVoiceAssistant,
@@ -84,7 +91,9 @@ export function SessionSelector({
 
   // Default session (flowId) cannot be renamed or deleted
   const isDefaultSession = session === currentFlowId;
+
   const canModifySession = !isDefaultSession;
+  const canRenameSession = canModifySession;
 
   return (
     <div
@@ -99,7 +108,7 @@ export function SessionSelector({
         isVisible ? "bg-accent font-semibold" : "font-normal",
       )}
     >
-      <div className="flex h-8 items-center justify-between overflow-hidden w-52">
+      <div className="flex h-8 items-center justify-between overflow-hidden w-full">
         <div className="flex w/full min-w-0 items-center px-2">
           {isEditing ? (
             <div
@@ -127,20 +136,26 @@ export function SessionSelector({
           )}
         </div>
 
-        <SessionMoreMenu
-          onRename={handleEditClick}
-          onMessageLogs={() => inspectSession?.(session)}
-          onDelete={() => deleteSession(session)}
-          showRename={canModifySession}
-          showDelete={canModifySession}
-          side="bottom"
-          align="end"
-          sideOffset={4}
-          contentClassName="z-[100] [&>div.p-1]:!h-auto [&>div.p-1]:!min-h-0"
-          isVisible={true}
-          tooltipContent="More options"
-          tooltipSide="left"
-        />
+        {(!isShareablePlayground || canModifySession) && (
+          <SessionMoreMenu
+            onRename={handleEditClick}
+            onMessageLogs={() => inspectSession?.(session)}
+            onDelete={() => deleteSession(session)}
+            showRename={!isShareablePlayground && canRenameSession}
+            showMessageLogs={!isShareablePlayground}
+            showDelete={canModifySession}
+            disabled={isBuilding}
+            side="bottom"
+            align="end"
+            sideOffset={4}
+            contentClassName="z-[100] [&>div.p-1]:!h-auto [&>div.p-1]:!min-h-0"
+            isVisible={true}
+            tooltipContent="More options"
+            tooltipSide="left"
+            open={menuOpen}
+            onOpenChange={onMenuOpenChange}
+          />
+        )}
       </div>
     </div>
   );
