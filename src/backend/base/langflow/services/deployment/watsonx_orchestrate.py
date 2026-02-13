@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 import fastapi
-from ibm_watsonx_orchestrate_clients.agents.agent_client import AgentClient
+from ibm_watsonx_orchestrate_clients.agents.agent_client import AgentClient, AgentUpsertResponse
 from ibm_watsonx_orchestrate_clients.common.client import Client
 from ibm_watsonx_orchestrate_clients.common.credentials import Credentials
 from ibm_watsonx_orchestrate_clients.connections.connections_client import ConnectionsClient
@@ -23,8 +23,24 @@ from ibm_watsonx_orchestrate_core.types.connections import (
     KeyValueConnectionCredentials,
 )
 from ibm_watsonx_orchestrate_core.types.tools.langflow_tool import create_langflow_tool
-from lfx.services.deployment.base import BaseDeploymentService, DeploymentType
-from lfx.services.deployment.exceptions import DeploymentConflictError, DeploymentError, UnprocessableContentError
+from lfx.services.deployment.base import BaseDeploymentService
+from lfx.services.deployment.exceptions import (
+    DeploymentConflictError,
+    DeploymentError,
+    UnprocessableContentError,
+    UnsupportedDeploymentTypeError,
+)
+from lfx.services.deployment.schema import (
+    BaseConfigData,
+    BaseDeploymentData,
+    ConfigDeploymentBindingCreate,
+    DeploymentCreate,
+    DeploymentType,
+    FlowPayload,
+    SnapshotDeploymentBindingCreate,
+    SnapshotPayload,
+    SnapshotType,
+)
 from lfx.services.schema import ServiceType
 
 from langflow.services.deps import get_variable_service
@@ -77,118 +93,39 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
     async def create_deployment(
         self,
         *,
-        snapshot_ids: list[str] | None = None,
-        config_id: str | None = None,
-        snapshots: list[dict] | None = None,
-        config: dict | None = None,
-        deployment_name: str,
-        deployment_type: str,
         user_id: UUID | str,
+        deployment: DeploymentCreate,
         db: Any,
     ) -> dict[str, Any]:
         """Create a deployment in Watsonx Orchestrate."""
         err_msg_prefix = "An error occured while creating a deployment: "
+        metadata = deployment.base_data
         try:
-            self._require_exclusive_resource(
-                resource="snapshot",
-                _id=snapshot_ids,
-                payload=snapshots,
-                msg_prefix=err_msg_prefix,
+            app_id: str = await self._process_config(
+                user_id=user_id,
+                db=db,
+                config=deployment.config,
             )
-            self._require_exclusive_resource(
-                resource="config",
-                _id=config_id,
-                payload=config,
-                msg_prefix=err_msg_prefix,
-            )
-
-            if deployment_type == DeploymentType.AGENT:
-                pass
-
-            app_id: str
-
-            if config_id:
-                app_id = self._require_non_empty_string(
-                    s=config_id,
-                    field_name="config_id",
-                    error_message=(
-                        "An error occured in create_deployment: "
-                        "Please provide a valid config_id with non-whitespace characters."
-                        ),
-                )
-            elif config:
-                new_app_id = config.get("app_id", None)
-                if not (new_app_id and (_app_id := new_app_id.strip())):
-                    msg = (
-                        f"{err_msg_prefix}"
-                        "The provided config object does not contain a valid 'app_id'."
-                        "Please ensure the config object contains an 'app_id' field "
-                        "and ensure it consists of alphanumeric characters."
-                    )
-                    raise ValueError(msg)
-                app_id = _app_id
-                await self.create_deployment_config(data=config, user_id=user_id, db=db)
-
-            tool_ids: list[str]
-
-            if snapshot_ids:
-                tool_ids = (
-                    self._dedupe_list(
-                        [
-                            _id
-                            for sid in snapshot_ids
-                            if sid and (_id:=sid.strip())
-                        ]
-                    )
-                )
-            elif snapshots:
-                tool_ids = self._dedupe_list(
-                    [
-                        await self._create_snapshot(
-                            snapshot_data=snapshot_data,
-                            config_id=app_id,
-                            user_id=user_id,
-                            db=db,
-                            )
-                        for snapshot_data in snapshots
-                        if isinstance(snapshot_data, dict)
-                    ]
-                )
-            if not tool_ids:
-                msg = (
-                    f"{err_msg_prefix}"
-                    "create_deployment requires a list of valid snapshot ids or a list of valid snapshots. "
-                    "A valid snapshot id is a non-empty string with non-whitespace characters. "
-                    "A valid snapshot is a JSON whose contents are Langflow flow data."
-                )
-                raise UnprocessableContentError(msg)
-
-            clients = await self._get_provider_clients(user_id=user_id, db=db)
-
-            # connection = clients.connections.get_draft_by_app_id(app_id=app_id)
-            # if not connection:
-            #     msg = f"{err_msg_prefix}Connection '{app_id}' not found."
-            #     raise ValueError(msg)
-            # self._validate_connection(clients.connections, app_id=app_id)
-            # connection_id = connection.connection_id
-
-            payload = self._build_agent_payload(
-                deployment_name=deployment_name,
-                deployment_type=deployment_type,
+            tool_ids: list[str] = await self._process_snapshots(
+                user_id=user_id,
                 app_id=app_id,
-                # connection_id=connection_id,
-                tool_ids=tool_ids,
+                snapshots=deployment.snapshot,
+                db=db,
             )
-
-
-            created = clients.agent.create(payload)
-
-            # clients.agent.connect_connections(created.id, [connection_id])
-
-            # agent = clients.agent.get_draft_by_id(created.id)
-
+            if metadata.type.value == DeploymentType.AGENT.value:
+                deployment_response: AgentUpsertResponse = (
+                    await self._create_agent_deployment(
+                        data=metadata,
+                        tool_ids=tool_ids,
+                        user_id=user_id,
+                        db=db,
+                    )
+                )
+            else:
+                msg = f"Deployment type '{metadata.type}' is not supported for watsonx Orchestrate."
+                raise UnsupportedDeploymentTypeError(message=f"Deployment type '{metadata.type}' is not supported for watsonx Orchestrate.")
         except ClientAPIException as e:
-            detail = e.response.json().get("detail", [{}])[0].get("msg", None) or e.response.text
+            detail = self._extract_error_detail(e.response.text)
             msg = f"{err_msg_prefix}{detail}"
             if e.response.status_code == fastapi.status.HTTP_409_CONFLICT:
                 raise DeploymentConflictError(message=msg) from e
@@ -200,9 +137,8 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             raise DeploymentError(message=msg) from e
 
         return {
-            "deployment_id": created.id,
-            "deployment_name": deployment_name,
-            "deployment_type": deployment_type,
+            "id": deployment_response.id,
+            **metadata.model_dump(exclude_unset=True),
         }
 
     async def list_deployments(
@@ -326,10 +262,10 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
 
     async def delete_deployment(
         self,
-        deployment_id: str,
         *,
         user_id: UUID | str,
         db: Any,
+        deployment_id: str,
     ) -> None:
         """Delete only the deployment agent (keep tools/configs reusable)."""
         clients = await self._get_provider_clients(user_id=user_id, db=db)
@@ -358,16 +294,12 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
     async def create_deployment_config(
         self,
         *,
-        data: dict,
+        config: BaseConfigData,
         user_id: UUID | str,
         db: Any,
     ) -> dict[str, Any]:
         """Create/update a WXO draft key-value connection config plus runtime credentials."""
-        app_id = self._require_non_empty_string(
-            data.get("app_id"),
-            field_name="app_id",
-            error_message="Deployment config requires a non-empty 'app_id' (also used as config_id).",
-        )
+        app_id = config.name
         clients = await self._get_provider_clients(user_id=user_id, db=db)
         connection = clients.connections.get_draft_by_app_id(app_id=app_id)
         if not connection:
@@ -378,7 +310,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 raise ValueError(msg)
         self._upsert_draft_kv_config(clients.connections, app_id=app_id)
 
-        runtime_credentials = await self._resolve_runtime_credentials(data, user_id=user_id, db=db)
+        runtime_credentials = await self._resolve_runtime_credentials(config.environment_variables, user_id=user_id, db=db)
         self._upsert_runtime_credentials(
             clients.connections,
             app_id=app_id,
@@ -475,51 +407,26 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
     async def create_snapshot(
         self,
         *,
-        data: dict,
-        snapshot_type: str,
+        snapshot: SnapshotPayload,
         user_id: UUID | str,
         db: Any,
     ) -> dict[str, Any]:
         """Create an immutable WXO tool snapshot from a Langflow definition."""
-        clients = await self._get_provider_clients(user_id=user_id, db=db)
-        flow_definition = self._require_flow_definition(data)
-        app_id = self._require_non_empty_string(
-            data.get("config_id"),
-            field_name="config_id",
-            error_message="Snapshot creation requires non-empty 'config_id' to bind tool connections.",
-        )
-
-        connection = clients.connections.get_draft_by_app_id(app_id=app_id)
-        if not connection:
-            msg = f"Connection '{app_id}' not found."
+        if not snapshot.value:
+            msg = "Snapshot payload must include at least one flow payload."
             raise ValueError(msg)
-        tool = create_langflow_tool(
-            tool_definition=flow_definition,
-            connections={app_id: connection.connection_id},
-            show_details=False,
-        )
+        if len(snapshot.value) != 1:
+            msg = "create_snapshot expects exactly one flow payload."
+            raise ValueError(msg)
 
-        existing = clients.tool.get_draft_by_name(tool.__tool_spec__.name)
-        if existing:
-            msg = (
-                f"Snapshot/tool '{tool.__tool_spec__.name}' already exists. "
-                "Snapshots are immutable; create a new snapshot with a new name."
+        if snapshot.type == SnapshotType.FLOW:
+            created_snapshot = await self._create_langflow_flow_tool(
+                flow_payload=snapshot.value[0],
+                config_id=None,
+                user_id=user_id,
+                db=db,
             )
-            raise ValueError(msg)
-
-        created = clients.tool.create(
-            tool.__tool_spec__.model_dump(mode="json", exclude_unset=True, exclude_none=True, by_alias=True)
-        )
-        tool_id = created.get("id")
-        if not tool_id:
-            msg = "WXO did not return a tool id for snapshot creation."
-            raise ValueError(msg)
-
-        artifact = self._build_langflow_artifact_bytes(tool=tool, flow_definition=flow_definition)
-        self._upload_tool_artifact_bytes(clients.tool, tool_id=tool_id, artifact_bytes=artifact)
-        snapshot = await self.get_snapshot(tool_id, user_id=user_id, db=db)
-        snapshot["snapshot_type"] = snapshot_type or DEFAULT_ADAPTER_SNAPSHOT_TYPE
-        return snapshot
+        return created_snapshot
 
     async def list_snapshots(
         self,
@@ -569,16 +476,70 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         """Teardown provider-specific resources."""
         return
 
-    def _create_agent_deployment(
-        self, deployment_name: str, 
-        deployment_type: DeploymentType,
-        app_id: str,
+    async def _create_agent_deployment(
+        self,
+        user_id: UUID | str,
         tool_ids: list[str],
+        data: BaseDeploymentData,
+        db: Any,
+    ) -> AgentUpsertResponse:
+        """Create an agent deployment."""
+        clients = await self._get_provider_clients(user_id=user_id, db=db)
+        payload = self._build_agent_payload(
+            data=data,
+            tool_ids=tool_ids,
+        )
+        return clients.agent.create(payload)
+
+    def _create_mcp_deployment(self):
+        pass
+
+    async def _process_config(
+        self,
         user_id: UUID | str,
         db: Any,
-    ) -> dict[str, Any]:
-        """Create an agent deployment."""
-        pass
+        config: ConfigDeploymentBindingCreate,
+    ) -> str:
+        """Set the config for the deployment."""
+        app_id: str
+
+        if config.format == "reference_id":
+            app_id = config.value
+        elif config.format == "raw_payload":
+            app_id = config.value.name
+            await self.create_deployment_config(data=config, user_id=user_id, db=db)
+        return app_id
+
+    async def _process_snapshots(
+        self,
+        user_id: UUID | str,
+        app_id: str,
+        snapshots: SnapshotDeploymentBindingCreate,
+        db: Any,
+    ) -> list[str]:
+        """Process snapshots."""
+        tool_ids: list[str]
+        if snapshots.format == "reference_id":
+            tool_ids = self._dedupe_list(snapshots.value)
+        elif snapshots.format == "raw_payload":
+            if snapshots.type == SnapshotType.FLOW:
+                tool_ids = self._dedupe_list(
+                    [ # TODO: task queue?
+                        await self._create_langflow_flow_tool(
+                            flow_payload=payload,
+                            snapshot_type=snapshots.type,
+                            config_id=app_id,
+                            user_id=user_id,
+                            db=db,
+                            )
+                        for payload in snapshots.value
+                    ]
+                )
+            else:
+                msg = f"Unsupported snapshot type: {snapshots.type}"
+                raise ValueError(msg)
+
+        return tool_ids
 
     async def _get_provider_clients(
         self,
@@ -612,7 +573,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         """Resolve Watsonx Orchestrate client credentials from environment variables."""
         return {
             "instance_url": await self._resolve_variable_value(
-               DEFAULT_WXO_INSTANCE_URL_VARIABLE, user_id=user_id, db=db
+                DEFAULT_WXO_INSTANCE_URL_VARIABLE, user_id=user_id, db=db
             ),
             "api_key": await self._resolve_variable_value(
                 DEFAULT_WXO_API_KEY_VARIABLE, user_id=user_id, db=db),
@@ -803,19 +764,15 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
     def _build_agent_payload(
         self,
         *,
-        deployment_name: str,
-        deployment_type: str,
-        app_id: str,
-        # connection_id: str,
+        data: BaseDeploymentData,
         tool_ids: list[str],
     ) -> dict[str, Any]:
         return {
             # Name must start with a letter and contain only alphanumeric characters and underscores
             # WxO will raise an error if the name is not valid. So we won't validate it here.
-            "name": deployment_name,
-            "description": f"Langflow deployment ({deployment_type}) using connection '{app_id}'",
+            "name": data.name,
+            "description": data.description,
             "tools": tool_ids,
-            # "connection_ids": [connection_id],
             "style": "default",
             "llm": "groq/openai/gpt-oss-120b",
         }
@@ -880,13 +837,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             "provider_raw": tool,
         }
 
-    def _require_flow_definition(self, data: dict[str, Any]) -> dict[str, Any]:
-        flow_definition = data.get("flow_definition") or data.get("tool_definition")
-        # TODO: validate the flow_definition is a pydantic flow schema.
-        if not isinstance(flow_definition, dict):
-            msg = "Snapshot data must include 'flow_definition' (Langflow JSON dict)."
-            raise TypeError(msg)
-        return flow_definition
+
 
     def _require_non_empty_string(
         self,
@@ -899,6 +850,13 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             return _value
         msg = error_message or f"Expected non-empty string for '{field_name}'."
         raise ValueError(msg)
+
+    def _require_tool_id(self, tool_response: dict[str, Any]) -> str:
+        tool_id = tool_response.get("id")
+        if not tool_id:
+            msg = "WXO did not return a tool id for snapshot creation."
+            raise ValueError(msg)
+        return tool_id
 
     def _build_langflow_artifact_bytes(
         self,
@@ -964,22 +922,88 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
     async def _create_snapshot(
         self,
         *,
-        snapshot_data: dict[str, Any],
+        flow_payload: FlowPayload,
+        snapshot_type: SnapshotType,
         config_id: str,
         user_id: UUID | str,
         db: Any,
     ) -> str:
-        data = dict(snapshot_data)
-        snapshot_type = str(data.pop("snapshot_type", DEFAULT_ADAPTER_SNAPSHOT_TYPE))
-        data.setdefault("config_id", config_id)
-        created_snapshot = await self.create_snapshot(
-            data=data,
-            snapshot_type=snapshot_type,
+        created_snapshot = await self._create_snapshot_tool(
+            flow_payload=flow_payload,
+            config_id=config_id,
             user_id=user_id,
             db=db,
         )
+        created_snapshot["snapshot_type"] = snapshot_type.value
         created_snapshot_id = created_snapshot.get("snapshot_id")
         if not created_snapshot_id:
             msg = "Failed to resolve snapshot_id from created snapshot object."
             raise ValueError(msg)
         return str(created_snapshot_id)
+
+    async def _create_langflow_flow_tool(
+        self,
+        *,
+        flow_payload: FlowPayload,
+        config_id: str | None,
+        user_id: UUID | str,
+        db: Any,
+    ) -> dict[str, Any]:
+        clients = await self._get_provider_clients(user_id=user_id, db=db)
+        flow_definition = flow_payload.data
+
+        connections: dict[str, str] = {}
+        if config_id is not None:
+            app_id = self._require_non_empty_string(
+                config_id,
+                field_name="config_id",
+                error_message="Snapshot binding requires non-empty 'config_id'.",
+            )
+            connection = clients.connections.get_draft_by_app_id(app_id=app_id)
+            if not connection:
+                msg = f"Connection '{app_id}' not found."
+                raise ValueError(msg)
+            connections = {app_id: connection.connection_id}
+
+        tool = create_langflow_tool(
+            tool_definition=flow_definition,
+            connections=connections,
+            show_details=False,
+        )
+
+        existing = clients.tool.get_draft_by_name(tool.__tool_spec__.name)
+        if existing:
+            msg = (
+                f"Snapshot/tool '{tool.__tool_spec__.name}' already exists. "
+                "Snapshots are immutable; create a new snapshot with a new name."
+            )
+            raise ValueError(msg)
+
+        tool_response = clients.tool.create(
+            tool.__tool_spec__.model_dump(mode="json", exclude_unset=True, exclude_none=True, by_alias=True)
+        )
+        tool_id = self._require_tool_id(tool_response)
+
+        artifact = self._build_langflow_artifact_bytes(tool=tool, flow_definition=flow_definition)
+        self._upload_tool_artifact_bytes(clients.tool, tool_id=tool_id, artifact_bytes=artifact)
+        return {
+            **tool_response,
+            "snapshot_id": tool_id,
+            "snapshot_type": SnapshotType.FLOW.value,
+            **flow_payload.model_dump(exclude_unset=True),
+        }
+
+    @staticmethod
+    def _extract_error_detail(response_text: str) -> str | dict:
+        """Extract a human-readable error detail from a ClientAPIException response.
+
+        The response body may contain a ``detail`` value that is a string, a dict
+        with a ``msg`` key, or a list of such dicts.  This helper normalises all
+        three shapes into a single value suitable for inclusion in an error message.
+        """
+        detail = json.loads(response_text).get("detail")
+        if detail and isinstance(detail, list):
+            detail = detail[0]
+        if isinstance(detail, dict):
+            detail = detail.get("msg") or detail
+        return detail

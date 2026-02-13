@@ -8,6 +8,7 @@ from http import HTTPStatus
 from typing import TYPE_CHECKING, Annotated
 from uuid import UUID, uuid4
 
+from lfx.services.deployment.schema import DeploymentCreate
 import orjson
 import sqlalchemy as sa
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, UploadFile, status
@@ -73,14 +74,8 @@ router = APIRouter(tags=["Base"])
 SSE_HEARTBEAT_TIMEOUT_SECONDS = 30.0
 
 
-class CreateDeploymentRequest(BaseModel):
-    deployment_name: str = Field(min_length=1)
-    deployment_type: str = Field(default="agent", min_length=1)
-    snapshot_ids: list[str] | None = None
-    config_id: str | None = None
-    snapshots: list[dict] | None = None
-    config: dict | None = None
-
+class CreateDeploymentRequest(DeploymentCreate):
+    """Create deployment request."""
 
 class DeleteDeploymentRequest(BaseModel):
     deployment_id: str = Field(min_length=1)
@@ -982,25 +977,19 @@ async def process(_flow_id) -> None:
 
 @router.post("/deploy", response_model=dict)
 async def deploy(
+    user: CurrentActiveUser,
     payload: CreateDeploymentRequest,
     db: DbSession,
-    user: CurrentActiveUser,
 ):
     """Create a deployment through the configured deployment adapter."""
     deployment_service = _require_deployment_service()
+    # print(payload)
     try:
         return await deployment_service.create_deployment(
-            snapshot_ids=payload.snapshot_ids,
-            config_id=payload.config_id,
-            snapshots=payload.snapshots,
-            config=payload.config,
-            deployment_name=payload.deployment_name,
-            deployment_type=payload.deployment_type,
             user_id=user.id,
+            deployment=payload,
             db=db,
         )
-    except HTTPException:
-        raise
     except DeploymentConflictError as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=e.message) from e
     except UnprocessableContentError as e:

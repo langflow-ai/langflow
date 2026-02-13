@@ -6,11 +6,21 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING, Any
 
 from lfx.services.deployment.base import BaseDeploymentService
+from lfx.services.deployment.schema import BaseConfigData
 from lfx.services.registry import register_service
 from lfx.services.schema import ServiceType
 
 if TYPE_CHECKING:
     from uuid import UUID
+
+    from lfx.services.deployment.schema import (
+        ConfigUpdate,
+        DeploymentCreate,
+        DeploymentType,
+        DeploymentUpdate,
+        SnapshotPayload,
+        SnapshotType,
+    )
 
 
 @register_service(ServiceType.DEPLOYMENT_SERVICE)
@@ -42,13 +52,8 @@ class DeploymentService(BaseDeploymentService):
     async def create_deployment(
         self,
         *,
-        snapshot_id: str | None = None,
-        config_id: str | None = None,
-        snapshot: dict | None = None,
-        config: dict | None = None,
-        deployment_name: str,
-        deployment_type: str,
         user_id: UUID | str,
+        deployment: DeploymentCreate,
         db: Any,
     ) -> dict[str, Any]:
         """Create a new deployment in the provider."""
@@ -57,9 +62,9 @@ class DeploymentService(BaseDeploymentService):
     @abstractmethod
     async def list_deployments(
         self,
-        deployment_type: str | None = None,
         *,
         user_id: UUID | str,
+        deployment_type: DeploymentType | None = None,
         db: Any,
     ) -> list[dict[str, Any]]:
         """List deployments visible to this adapter."""
@@ -68,9 +73,9 @@ class DeploymentService(BaseDeploymentService):
     @abstractmethod
     async def get_deployment(
         self,
-        deployment_id: str,
         *,
         user_id: UUID | str,
+        deployment_id: UUID | str,
         db: Any,
     ) -> dict[str, Any]:
         """Return deployment metadata by provider ID."""
@@ -79,11 +84,9 @@ class DeploymentService(BaseDeploymentService):
     @abstractmethod
     async def update_deployment(
         self,
-        deployment_id: str,
         *,
-        snapshot_id: str | None = None,
-        config_id: str | None = None,
         user_id: UUID | str,
+        update_data: DeploymentUpdate,
         db: Any,
     ) -> dict[str, Any]:
         """Update deployment inputs and apply changes in the provider."""
@@ -92,9 +95,9 @@ class DeploymentService(BaseDeploymentService):
     @abstractmethod
     async def redeploy_deployment(
         self,
-        deployment_id: str,
         *,
         user_id: UUID | str,
+        deployment_id: str,
         db: Any,
     ) -> dict[str, Any]:
         """Re-apply current deployment inputs without changing them."""
@@ -103,9 +106,9 @@ class DeploymentService(BaseDeploymentService):
     @abstractmethod
     async def clone_deployment(
         self,
-        deployment_id: str,
         *,
         user_id: UUID | str,
+        deployment_id: str,
         db: Any,
     ) -> dict[str, Any]:
         """Create a new deployment using the same inputs as the source."""
@@ -114,9 +117,9 @@ class DeploymentService(BaseDeploymentService):
     @abstractmethod
     async def delete_deployment(
         self,
-        deployment_id: str,
         *,
         user_id: UUID | str,
+        deployment_id: str,
         db: Any,
     ) -> None:
         """Delete the deployment from the provider."""
@@ -125,9 +128,9 @@ class DeploymentService(BaseDeploymentService):
     @abstractmethod
     async def get_deployment_health(
         self,
-        deployment_id: str,
         *,
         user_id: UUID | str,
+        deployment_id: str,
         db: Any,
     ) -> dict[str, Any]:
         """Return provider-reported health/status for the deployment."""
@@ -137,8 +140,8 @@ class DeploymentService(BaseDeploymentService):
     async def create_deployment_config(
         self,
         *,
-        data: dict,
         user_id: UUID | str,
+        config: BaseConfigData,
         db: Any,
     ) -> dict[str, Any]:
         """Create a provider-scoped deployment configuration."""
@@ -168,9 +171,8 @@ class DeploymentService(BaseDeploymentService):
     @abstractmethod
     async def update_deployment_config(
         self,
-        config_id: str,
         *,
-        data: dict | None = None,
+        update_data: ConfigUpdate,
         user_id: UUID | str,
         db: Any,
     ) -> dict[str, Any]:
@@ -192,9 +194,8 @@ class DeploymentService(BaseDeploymentService):
     async def create_snapshot(
         self,
         *,
-        data: dict,
-        snapshot_type: str,
         user_id: UUID | str,
+        snapshot: SnapshotPayload,
         db: Any,
     ) -> dict[str, Any]:
         """Create a provider snapshot (deployed or not)."""
@@ -203,9 +204,9 @@ class DeploymentService(BaseDeploymentService):
     @abstractmethod
     async def list_snapshots(
         self,
-        snapshot_type: str | None = None,
         *,
         user_id: UUID | str,
+        snapshot_type: SnapshotType | None = None,
         db: Any,
     ) -> list[dict[str, Any]]:
         """List provider snapshots (deployed or not)."""
@@ -214,9 +215,9 @@ class DeploymentService(BaseDeploymentService):
     @abstractmethod
     async def get_snapshot(
         self,
-        snapshot_id: str,
         *,
         user_id: UUID | str,
+        snapshot_id: str,
         db: Any,
     ) -> dict[str, Any]:
         """Return snapshot metadata by provider ID."""

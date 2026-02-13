@@ -33,3 +33,9 @@ class UnprocessableContentError(DeploymentError):
 
     def __init__(self, message: str = "Deployment request entity is unprocessable"):
         super().__init__(message, error_code="unprocessable_content_error")
+
+class UnsupportedDeploymentTypeError(DeploymentError):
+    """Raised when a deployment type is unsupported."""
+
+    def __init__(self, message: str = "Deployment type is unsupported"):
+        super().__init__(message, error_code="unsupported_deployment_type")
