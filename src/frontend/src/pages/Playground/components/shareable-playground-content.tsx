@@ -12,6 +12,7 @@ import useDragAndDrop from "@/components/core/playgroundComponent/chat-view/chat
 import { Messages } from "@/components/core/playgroundComponent/chat-view/chat-messages";
 import { useChatHistory } from "@/components/core/playgroundComponent/chat-view/chat-messages/hooks/use-chat-history";
 import { useSendMessage } from "@/components/core/playgroundComponent/chat-view/hooks/use-send-message";
+import { clearSessionMessages } from "@/components/core/playgroundComponent/chat-view/utils/message-utils";
 import { useGetFlowId } from "@/components/core/playgroundComponent/hooks/use-get-flow-id";
 import { AnimatedConditional } from "@/components/ui/animated-close";
 import { Button } from "@/components/ui/button";
@@ -127,6 +128,7 @@ export function ShareablePlaygroundContent() {
   const handleDeleteSession = (sessionId: string) => {
     handleDelete(sessionId);
     removeLocalSession(sessionId);
+    clearSessionMessages(sessionId, currentFlowId);
     if (sessionId === currentSessionId) {
       setCurrentSessionId(currentFlowId);
     }
