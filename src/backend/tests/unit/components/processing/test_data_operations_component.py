@@ -201,14 +201,16 @@ class TestDataOperationsComponent(ComponentTestBaseWithoutClient):
             operations=[],
         )
         # Simulate build_config after "Filter Values" was selected (operation-specific fields visible)
-        build_config = dotdict({
-            "operations": {"value": [], "show": True},
-            "data": {"value": None, "show": True},
-            "filter_key": {"value": [], "show": True},
-            "operator": {"value": "equals", "show": True},
-            "filter_values": {"value": {}, "show": True},
-            "select_keys_input": {"value": [], "show": False},
-        })
+        build_config = dotdict(
+            {
+                "operations": {"value": [], "show": True},
+                "data": {"value": None, "show": True},
+                "filter_key": {"value": [], "show": True},
+                "operator": {"value": "equals", "show": True},
+                "filter_values": {"value": {}, "show": True},
+                "select_keys_input": {"value": [], "show": False},
+            }
+        )
         result = component.update_build_config(build_config, [], "operations")
 
         # All operation-specific fields should be hidden when no operation is selected
