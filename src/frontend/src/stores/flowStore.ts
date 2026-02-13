@@ -504,6 +504,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           ...cloneDeep(node.data),
           id: newId,
         },
+        // Preserve width and height for noteNodes (sticky notes)
+        ...(node.width !== undefined && { width: node.width }),
+        ...(node.height !== undefined && { height: node.height }),
       } as AllNodeType;
 
       updateGroupRecursion(
