@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
+from enum import Enum
 from typing import TYPE_CHECKING, Any
 
 from lfx.services.base import Service
@@ -10,6 +11,10 @@ from lfx.services.base import Service
 if TYPE_CHECKING:
     from uuid import UUID
 
+class DeploymentType(Enum, str):
+    """Deployment type."""
+    AGENT = "agent"
+    MCP = "mcp"
 
 class BaseDeploymentService(Service):
     """Abstract base class for deployment provider services.
@@ -17,7 +22,6 @@ class BaseDeploymentService(Service):
     Defines the minimal interface that all deployment service implementations
     must provide, whether minimal (LFX) or full-featured (Langflow).
     """
-
     @abstractmethod
     def __init__(self):
         """Initialize the deployment service."""
@@ -41,6 +45,7 @@ class BaseDeploymentService(Service):
         config_id: str | None = None,
         snapshot: dict | None = None,
         config: dict | None = None,
+        deployment_name: str,
         deployment_type: str,
         user_id: UUID | str,
         db: Any,

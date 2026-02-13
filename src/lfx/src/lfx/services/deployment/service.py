@@ -46,6 +46,7 @@ class DeploymentService(BaseDeploymentService):
         config_id: str | None = None,
         snapshot: dict | None = None,
         config: dict | None = None,
+        deployment_name: str,
         deployment_type: str,
         user_id: UUID | str,
         db: Any,

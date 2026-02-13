@@ -94,10 +94,12 @@ def import_all_services_into_a_dict():
             logger.exception(exc)
             msg = "Could not initialize services. Please check your settings."
             raise RuntimeError(msg) from exc
-    # Import settings and auth base from lfx (used in type hints but not langflow Service subclasses)
+    # Import lfx-only base/services used in type hints but not langflow Service subclasses.
     from lfx.services.auth.base import BaseAuthService
+    from lfx.services.deployment.base import BaseDeploymentService
     from lfx.services.settings.service import SettingsService
 
     services["BaseAuthService"] = BaseAuthService
+    services["BaseDeploymentService"] = BaseDeploymentService
     services["SettingsService"] = SettingsService
     return services

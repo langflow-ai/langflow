@@ -24,7 +24,11 @@ from lfx.graph.graph.base import Graph
 from lfx.graph.schema import RunOutputs
 from lfx.log.logger import logger
 from lfx.schema.schema import InputValueRequest
+from lfx.services.deployment.exceptions import DeploymentConflictError, DeploymentError, UnprocessableContentError
+from lfx.services.deps import get_deployment_service
+from lfx.services.interfaces import DeploymentServiceProtocol
 from lfx.services.settings.service import SettingsService
+from pydantic import BaseModel, Field
 from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession, extract_global_variables_from_headers, parse_value
@@ -67,6 +71,29 @@ router = APIRouter(tags=["Base"])
 
 # SSE Constants
 SSE_HEARTBEAT_TIMEOUT_SECONDS = 30.0
+
+
+class CreateDeploymentRequest(BaseModel):
+    deployment_name: str = Field(min_length=1)
+    deployment_type: str = Field(default="agent", min_length=1)
+    snapshot_ids: list[str] | None = None
+    config_id: str | None = None
+    snapshots: list[dict] | None = None
+    config: dict | None = None
+
+
+class DeleteDeploymentRequest(BaseModel):
+    deployment_id: str = Field(min_length=1)
+
+
+def _require_deployment_service() -> DeploymentServiceProtocol:
+    deployment_service = get_deployment_service()
+    if deployment_service is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Deployment service is not available.",
+        )
+    return deployment_service
 
 
 async def parse_input_request_from_body(http_request: Request) -> SimplifiedAPIRequest:
@@ -951,6 +978,61 @@ async def process(_flow_id) -> None:
         status_code=status.HTTP_400_BAD_REQUEST,
         detail="The /process endpoint is deprecated and will be removed in a future version. Please use /run instead.",
     )
+
+
+@router.post("/deploy", response_model=dict)
+async def deploy(
+    payload: CreateDeploymentRequest,
+    db: DbSession,
+    user: CurrentActiveUser,
+):
+    """Create a deployment through the configured deployment adapter."""
+    deployment_service = _require_deployment_service()
+    try:
+        return await deployment_service.create_deployment(
+            snapshot_ids=payload.snapshot_ids,
+            config_id=payload.config_id,
+            snapshots=payload.snapshots,
+            config=payload.config,
+            deployment_name=payload.deployment_name,
+            deployment_type=payload.deployment_type,
+            user_id=user.id,
+            db=db,
+        )
+    except HTTPException:
+        raise
+    except DeploymentConflictError as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=e.message) from e
+    except UnprocessableContentError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=e.message) from e
+    except DeploymentError as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=e.message) from e
+    except Exception as exc:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+
+
+@router.delete("/deployment", response_model=dict)
+async def delete_deployment(
+    payload: DeleteDeploymentRequest,
+    db: DbSession,
+    user: CurrentActiveUser,
+):
+    """Delete a deployment through the configured deployment adapter."""
+    deployment_service = _require_deployment_service()
+    try:
+        await deployment_service.delete_deployment(
+            deployment_id=payload.deployment_id,
+            user_id=user.id,
+            db=db,
+        )
+    except HTTPException as e:
+        message = "Something went wrong while deleting the deployment."
+        raise HTTPException(status_code=e.status_code, detail=message) from e
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+    return {"message": "Deployment deleted successfully."}
 
 
 @router.get("/task/{_task_id}", deprecated=True)

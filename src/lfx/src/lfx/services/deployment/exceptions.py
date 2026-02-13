@@ -21,3 +21,15 @@ class AuthenticationError(DeploymentError):
 
     def __init__(self, message: str, *, error_code: str | None = None):
         super().__init__(message=message, error_code=error_code)
+
+class DeploymentConflictError(DeploymentError):
+    """Raised when a deployment conflict occurs."""
+
+    def __init__(self, message: str = "Deployment conflict occurred"):
+        super().__init__(message, error_code="deployment_conflict")
+
+class UnprocessableContentError(DeploymentError):
+    """Raised when a deployment request entity is unprocessable."""
+
+    def __init__(self, message: str = "Deployment request entity is unprocessable"):
+        super().__init__(message, error_code="unprocessable_content_error")

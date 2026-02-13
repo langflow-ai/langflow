@@ -250,7 +250,8 @@ def register_all_service_factories() -> None:
     service_manager.register_factory(cache_factory.CacheServiceFactory())
     service_manager.register_factory(chat_factory.ChatServiceFactory())
     service_manager.register_factory(database_factory.DatabaseServiceFactory())
-    service_manager.register_factory(deployment_factory.DeploymentServiceFactory())
+    deployment_service_factory = deployment_factory.DeploymentServiceFactory()
+    service_manager.register_factory(deployment_service_factory)
     service_manager.register_factory(session_factory.SessionServiceFactory())
     service_manager.register_factory(storage_factory.StorageServiceFactory())
     service_manager.register_factory(variable_factory.VariableServiceFactory())
@@ -264,6 +265,10 @@ def register_all_service_factories() -> None:
     service_manager.register_factory(shared_component_cache_factory.SharedComponentCacheServiceFactory())
     # Override LFX's no-op auth service with Langflow's full JWT implementation
     service_manager.register_service_class(ServiceType.AUTH_SERVICE, AuthService, override=True)
+    # Override LFX plugin-discovered deployment class with the factory-configured adapter.
+    service_manager.register_service_class(
+        ServiceType.DEPLOYMENT_SERVICE, deployment_service_factory.service_class, override=True
+    )
     service_manager.register_factory(auth_factory.AuthServiceFactory())
     service_manager.register_factory(mcp_composer_factory.MCPComposerServiceFactory())
     service_manager.set_factory_registered()

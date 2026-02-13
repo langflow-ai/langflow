@@ -32,6 +32,10 @@ VARIABLES_TO_GET_FROM_ENVIRONMENT = [
     "NOVITA_API_KEY",
     "TAVILY_API_KEY",
     "COMETAPI_KEY",
+    "WXO_INSTANCE_URL",
+    "WXO_API_KEY",
+    "WXO_AWS_IAM_URL",
+    "WXO_AUTH_TYPE",
 ]
 
 # Agentic experience specific variables
