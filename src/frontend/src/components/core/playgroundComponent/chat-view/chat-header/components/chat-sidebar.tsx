@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
+import useFlowStore from "@/stores/flowStore";
 import { useGetFlowId } from "../../../hooks/use-get-flow-id";
 import { useEditSessionInfo } from "../hooks/use-edit-session-info";
 import { SessionSelector } from "./session-selector";
@@ -27,6 +28,7 @@ export function ChatSidebar({
 }: ChatSidebarProps) {
   const [openMenuSession, setOpenMenuSession] = useState<string | null>(null);
   const currentFlowId = useGetFlowId();
+  const isShareablePlayground = useFlowStore((state) => state.playgroundPage);
   const { handleDelete, handleRename } = useEditSessionInfo({
     flowId: currentFlowId,
     renameLocalSession,
@@ -56,7 +58,7 @@ export function ChatSidebar({
           <div className="px-2 text-xs font-semibold leading-4 text-muted-foreground">
             Sessions
           </div>
-          <ShadTooltip styleClasses="z-50" content="New Chat">
+          <ShadTooltip styleClasses="z-50" content="New Chat" side={isShareablePlayground ? "bottom" : "top"}>
             <Button
               data-testid="new-chat"
               variant="ghost"
