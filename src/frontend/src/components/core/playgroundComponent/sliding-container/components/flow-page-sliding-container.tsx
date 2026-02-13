@@ -21,6 +21,7 @@ import { ChatInput } from "../../chat-view/chat-input";
 import useDragAndDrop from "../../chat-view/chat-input/hooks/use-drag-and-drop";
 import { Messages } from "../../chat-view/chat-messages";
 import { useChatHistory } from "../../chat-view/chat-messages/hooks/use-chat-history";
+import { clearSessionMessages } from "../../chat-view/utils/message-utils";
 
 type FlowPageSlidingContainerContentProps = {
   isFullscreen: boolean;
@@ -134,6 +135,7 @@ export function FlowPageSlidingContainerContent({
   const handleDeleteSession = (sessionId: string) => {
     handleDelete(sessionId);
     removeLocalSession(sessionId);
+    clearSessionMessages(sessionId, currentFlowId);
     if (sessionId === currentSessionId) {
       setCurrentSessionId(currentFlowId);
     }
