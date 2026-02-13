@@ -1,25 +1,39 @@
 import React, { useState } from "react";
 import Footer from "@theme-original/Footer";
+import { useThemeConfig } from "@docusaurus/theme-common";
 import { useDocSearchKeyboardEvents } from '@docsearch/react';
+import DocsChatbot from "@site/src/components/DocsChatbot";
 
 export default function FooterWrapper(props) {
   const [isHovered, setIsHovered] = useState(false);
+  const [chatbotOpen, setChatbotOpen] = useState(false);
   const searchButtonRef = React.useRef(null);
+  const { customFields } = useThemeConfig();
+  const docsChatbotProxyUrl = customFields?.docsChatbotProxyUrl ?? (typeof window !== "undefined" ? window.__DOCS_CHATBOT_PROXY_URL__ : undefined);
 
   useDocSearchKeyboardEvents({
-    isOpen: false,
+    isOpen: chatbotOpen,
     onOpen: () => {
-      searchButtonRef.current?.click();
+      if (docsChatbotProxyUrl) {
+        setChatbotOpen(true);
+      } else {
+        searchButtonRef.current?.click();
+      }
     },
   });
 
-  const searchButton = (
+  const handleFloatingButtonClick = () => {
+    if (docsChatbotProxyUrl) {
+      setChatbotOpen(true);
+    } else {
+      document.querySelector('.DocSearch-Button')?.click();
+    }
+  };
+
+  const floatingButton = (
     <div
       ref={searchButtonRef}
-      onClick={() => {
-        // This will trigger Docusaurus's default search modal
-        document.querySelector('.DocSearch-Button')?.click();
-      }}
+      onClick={handleFloatingButtonClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       style={{
@@ -62,7 +76,7 @@ export default function FooterWrapper(props) {
         <img
           src="/img/langflow-icon-black-transparent.svg"
           style={{ width: "40px" }}
-          alt="Search"
+          alt={docsChatbotProxyUrl ? "Chat" : "Search"}
         />
       </div>
     </div>
@@ -71,7 +85,8 @@ export default function FooterWrapper(props) {
   return (
     <>
       <Footer {...props} />
-      {searchButton}
+      {floatingButton}
+      <DocsChatbot proxyUrl={docsChatbotProxyUrl} open={chatbotOpen} onClose={() => setChatbotOpen(false)} />
     </>
   );
 }
