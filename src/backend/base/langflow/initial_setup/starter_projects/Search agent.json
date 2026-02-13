@@ -280,10 +280,8 @@
               "sender",
               "sender_name",
               "session_id",
-              "files",
-              "background_color",
-              "chat_icon",
-              "text_color"
+              "context_id",
+              "files"
             ],
             "frozen": false,
             "icon": "MessagesSquare",
@@ -556,10 +554,8 @@
               "sender",
               "sender_name",
               "session_id",
+              "context_id",
               "data_template",
-              "background_color",
-              "chat_icon",
-              "text_color",
               "clean_data"
             ],
             "frozen": false,
@@ -917,9 +913,12 @@
             "field_order": [
               "model",
               "api_key",
+              "base_url_ibm_watsonx",
+              "project_id",
               "system_prompt",
               "context_id",
               "n_messages",
+              "max_tokens",
               "format_instructions",
               "output_schema",
               "tools",

@@ -2,12 +2,6 @@ import { type Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import {
-  closeAdvancedOptions,
-  disableInspectPanel,
-  enableInspectPanel,
-  openAdvancedOptions,
-} from "../../utils/open-advanced-options";
 
 // TODO: This component doesn't have slider needs updating
 test(
@@ -78,28 +72,21 @@ test(
     await page.waitForTimeout(500);
     await adjustScreenView(page, { numberOfZoomOut: 1 });
 
-    await disableInspectPanel(page);
-
-    await openAdvancedOptions(page);
-    await expect(
-      page.getByTestId("default_slider_display_value_advanced"),
-    ).toHaveText("19.00");
+    await expect(page.getByTestId("default_slider_display_value")).toHaveText(
+      "19.00",
+    );
 
     await moveSlider(page, "left", true);
     // Wait for any potential updates
     await page.waitForTimeout(500);
 
-    await expect(
-      page.getByTestId("default_slider_display_value_advanced"),
-    ).toHaveText("14.00");
-
-    await closeAdvancedOptions(page);
-
     await expect(page.getByTestId("default_slider_display_value")).toHaveText(
       "14.00",
     );
 
-    await enableInspectPanel(page);
+    await expect(page.getByTestId("default_slider_display_value")).toHaveText(
+      "14.00",
+    );
   },
 );
 
@@ -138,8 +125,8 @@ async function moveSlider(
   side: "left" | "right",
   advanced: boolean = false,
 ) {
-  const thumbSelector = `slider_thumb${advanced ? "_advanced" : ""}`;
-  const trackSelector = `slider_track${advanced ? "_advanced" : ""}`;
+  const thumbSelector = `slider_thumb${advanced ? "" : ""}`;
+  const trackSelector = `slider_track${advanced ? "" : ""}`;
 
   await page.getByTestId(thumbSelector).click();
 

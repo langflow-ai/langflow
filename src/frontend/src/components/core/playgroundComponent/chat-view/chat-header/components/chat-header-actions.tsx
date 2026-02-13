@@ -11,35 +11,16 @@ interface ChatHeaderActionsProps {
 
 export function ChatHeaderActions({
   isFullscreen,
-  onToggleFullscreen,
   onClose,
   renderPrefix,
 }: ChatHeaderActionsProps) {
-  if (!onToggleFullscreen) {
-    return null;
-  }
-
   const actionButtonClasses =
     "h-8 w-8 p-2 text-muted-foreground hover:text-foreground hover:bg-accent rounded transition-colors overflow-hidden no-focus-visible";
 
   return (
-    <div className="relative flex items-center gap-2 w-20 justify-end">
+    <div className="relative flex items-center gap-2 justify-end">
       {renderPrefix && <div className="shrink-0">{renderPrefix()}</div>}
-      <Button
-        onClick={onToggleFullscreen}
-        variant="ghost"
-        size="icon"
-        className={actionButtonClasses}
-        title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
-        aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
-      >
-        <ForwardedIconComponent
-          name={isFullscreen ? "Shrink" : "Expand"}
-          className="h-4 w-4"
-          aria-hidden="true"
-        />
-      </Button>
-      {isFullscreen && onClose && (
+      {onClose && (
         <Button
           variant="ghost"
           size="icon"

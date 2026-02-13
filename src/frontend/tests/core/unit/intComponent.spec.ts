@@ -28,14 +28,8 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await adjustScreenView(page, { numberOfZoomOut: 2 });
 
-  await disableInspectPanel(page);
-
   await page.getByTestId("div-generic-node").click();
 
-  await openAdvancedOptions(page);
-  await page.getByTestId("showmax_tokens").click();
-
-  await closeAdvancedOptions(page);
   await page.getByTestId("int_int_max_tokens").click();
   await page.getByTestId("int_int_max_tokens").fill("100000");
 
@@ -55,84 +49,18 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
 
   await adjustScreenView(page, { numberOfZoomOut: 3 });
 
-  await openAdvancedOptions(page);
-
-  value = await page.getByTestId("int_int_edit_max_tokens").inputValue();
+  value = await page.getByTestId("int_int_max_tokens").inputValue();
 
   // max_tokens displays "" (empty) when value is 0 = no limit
   expect(value).toBe("");
 
-  await page.getByTestId("int_int_edit_max_tokens").click();
-  await page.getByTestId("int_int_edit_max_tokens").fill("50000");
-
-  await page.locator('//*[@id="showmodel_kwargs"]').click();
-  expect(
-    await page.locator('//*[@id="showmodel_kwargs"]').isChecked(),
-  ).toBeTruthy();
-
-  await page.locator('//*[@id="showmodel_name"]').click();
-  expect(
-    await page.locator('//*[@id="showmodel_name"]').isChecked(),
-  ).toBeFalsy();
-
-  await page.locator('//*[@id="showopenai_api_base"]').click();
-  expect(
-    await page.locator('//*[@id="showopenai_api_base"]').isChecked(),
-  ).toBeTruthy();
-
-  await page.locator('//*[@id="showtemperature"]').click();
-  expect(
-    await page.locator('//*[@id="showtemperature"]').isChecked(),
-  ).toBeFalsy();
-
-  await page.locator('//*[@id="showmodel_kwargs"]').click();
-  expect(
-    await page.locator('//*[@id="showmodel_kwargs"]').isChecked(),
-  ).toBeFalsy();
-
-  await page.locator('//*[@id="showmodel_name"]').click();
-  expect(
-    await page.locator('//*[@id="showmodel_name"]').isChecked(),
-  ).toBeTruthy();
-
-  await page.locator('//*[@id="showopenai_api_base"]').click();
-  expect(
-    await page.locator('//*[@id="showopenai_api_base"]').isChecked(),
-  ).toBeFalsy();
-
-  await page.locator('//*[@id="showtemperature"]').click();
-  expect(
-    await page.locator('//*[@id="showtemperature"]').isChecked(),
-  ).toBeTruthy();
-
-  await page.locator('//*[@id="showmodel_kwargs"]').click();
-  expect(
-    await page.locator('//*[@id="showmodel_kwargs"]').isChecked(),
-  ).toBeTruthy();
-
-  await page.locator('//*[@id="showmodel_name"]').click();
-  expect(
-    await page.locator('//*[@id="showmodel_name"]').isChecked(),
-  ).toBeFalsy();
-
-  await page.locator('//*[@id="showopenai_api_base"]').click();
-  expect(
-    await page.locator('//*[@id="showopenai_api_base"]').isChecked(),
-  ).toBeTruthy();
-
-  await page.locator('//*[@id="showtemperature"]').click();
-  expect(
-    await page.locator('//*[@id="showtemperature"]').isChecked(),
-  ).toBeFalsy();
-
-  await closeAdvancedOptions(page);
+  await page.getByTestId("int_int_max_tokens").click();
+  await page.getByTestId("int_int_max_tokens").fill("50000");
 
   const plusButtonLocator = page.getByTestId("int-input-max_tokens");
   const elementCount = await plusButtonLocator?.count();
   if (elementCount === 0) {
     expect(true).toBeTruthy();
-
-    await openAdvancedOptions(page);
 
     const valueEditNode = await page
       .getByTestId("int_int_max_tokens")
@@ -140,7 +68,6 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
 
     expect(valueEditNode).toBe("50000");
 
-    await closeAdvancedOptions(page);
     await page.getByTestId("int_int_max_tokens").click();
     await page.getByTestId("int_int_max_tokens").fill("3");
 
@@ -157,6 +84,4 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
     // -3 clamps to 0; max_tokens displays "" when value is 0 = no limit
     expect(value).toBe("");
   }
-
-  await enableInspectPanel(page);
 });
