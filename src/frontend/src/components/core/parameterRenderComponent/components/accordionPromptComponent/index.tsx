@@ -19,8 +19,14 @@ import type { InputProps, PromptAreaComponentType } from "../../types";
  * If "variable_name" doesn't exist, returns it.
  * Otherwise, returns "variable_name_1", "variable_name_2", etc.
  */
-export const generateUniqueVariableName = (templateValue: string): string => {
-  const variableRegex = /\{([^{}]+)\}/g;
+export const generateUniqueVariableName = (
+  templateValue: string,
+  isDoubleBrackets: boolean = false,
+): string => {
+  // Match both single {var} and double {{var}} bracket patterns
+  const variableRegex = isDoubleBrackets
+    ? /\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}/g
+    : /\{([^{}]+)\}/g;
   const existingVariables = new Set<string>();
   let match: RegExpExecArray | null;
   while ((match = variableRegex.exec(templateValue)) !== null) {
@@ -357,6 +363,39 @@ export default function AccordionPromptComponent({
     };
   }, [internalValue, isDoubleBrackets, field_name]);
 
+  // Force re-validation when isDoubleBrackets mode changes
+  useEffect(() => {
+    // Only trigger if we have a value and nodeClass
+    if (internalValue && internalValue !== "" && nodeClass) {
+      // Reset the last validated value to force re-validation
+      lastValidatedValueRef.current = "";
+      
+      // Trigger validation immediately (no debounce for mode changes)
+      postValidatePrompt(
+        {
+          name: field_name || "",
+          template: internalValue,
+          frontend_node: nodeClass,
+          mustache: isDoubleBrackets,
+        },
+        {
+          onSuccess: (apiReturn) => {
+            if (apiReturn?.frontend_node) {
+              lastValidatedValueRef.current = internalValue;
+              apiReturn.frontend_node.template.template.value = internalValue;
+              if (handleNodeClass) {
+                handleNodeClass(apiReturn.frontend_node);
+              }
+            }
+          },
+          onError: (error) => {
+            console.error("[AccordionPrompt] Mode change validation error:", error);
+          },
+        },
+      );
+    }
+  }, [isDoubleBrackets]);
+
   const handleInput = (e: React.FormEvent<HTMLDivElement>) => {
     if (!contentEditableRef.current) return;
 
@@ -450,7 +489,10 @@ export default function AccordionPromptComponent({
 
     isTypingRef.current = true;
 
-    const variableName = generateUniqueVariableName(internalValue);
+    const variableName = generateUniqueVariableName(
+      internalValue,
+      isDoubleBrackets,
+    );
     const variableText = isDoubleBrackets
       ? `{{${variableName}}}`
       : `{${variableName}}`;
