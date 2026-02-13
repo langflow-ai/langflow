@@ -4,8 +4,6 @@ import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import {
   closeAdvancedOptions,
-  disableInspectPanel,
-  enableInspectPanel,
   openAdvancedOptions,
 } from "../../utils/open-advanced-options";
 import { unselectNodes } from "../../utils/unselect-nodes";
@@ -130,19 +128,13 @@ test(
 
     // Final verification - check that the template persists
     await page.getByTestId("div-generic-node").click();
-    await disableInspectPanel(page);
-    await openAdvancedOptions(page);
 
     const savedTemplate = await page
-      .locator('//*[@id="promptarea_prompt_edit_template"]')
+      .locator('//*[@id="promptarea_prompt_template"]')
       .innerText();
     expect(savedTemplate).toBe(
       "Multi-line with {var1}\n      and {var2} plus\n      {var3} at the end",
     );
-
-    // Close the final modal
-    await closeAdvancedOptions(page);
-    await enableInspectPanel(page);
   },
 );
 
@@ -235,30 +227,23 @@ test(
       expect(false).toBeTruthy();
     }
 
-    await disableInspectPanel(page);
-
-    await openAdvancedOptions(page);
-
     value =
-      (await page
-        .locator('//*[@id="textarea_str_edit_prompt"]')
-        .inputValue()) ?? "";
+      (await page.locator('//*[@id="textarea_str_prompt"]').inputValue()) ?? "";
 
     if (value != "prompt_value_!@#!@#") {
       expect(false).toBeTruthy();
     }
 
     value =
-      (await page
-        .locator('//*[@id="textarea_str_edit_prompt1"]')
-        .inputValue()) ?? "";
+      (await page.locator('//*[@id="textarea_str_prompt1"]').inputValue()) ??
+      "";
 
     if (value != "prompt_name_test_123123!@#!@#") {
       expect(false).toBeTruthy();
     }
 
     value = await page
-      .locator('//*[@id="promptarea_prompt_edit_template"]')
+      .locator('//*[@id="promptarea_prompt_template"]')
       .innerText();
 
     if (value != "{prompt} example {prompt1}") {
@@ -266,117 +251,46 @@ test(
     }
 
     await page
-      .getByTestId(
-        "button_open_text_area_modal_textarea_str_edit_prompt1_advanced",
-      )
+      .getByTestId("button_open_text_area_modal_textarea_str_prompt1")
       .click();
     await page
       .getByTestId("text-area-modal")
-      .fill("prompt_edit_test_12312312321!@#$");
+      .fill("prompt_test_12312312321!@#$");
 
     await page.getByText("Finish Editing", { exact: true }).click();
 
     await page
-      .getByTestId(
-        "button_open_text_area_modal_textarea_str_edit_prompt_advanced",
-      )
+      .getByTestId("button_open_text_area_modal_textarea_str_prompt")
       .nth(0)
       .click();
     await page
       .getByTestId("text-area-modal")
-      .fill("prompt_edit_test_44444444444!@#$");
+      .fill("prompt_test_44444444444!@#$");
 
     await page.getByText("Finish Editing", { exact: true }).click();
 
-    await page.locator('//*[@id="showtemplate"]').click();
-    expect(
-      await page.locator('//*[@id="showtemplate"]').isChecked(),
-    ).toBeFalsy();
-
-    await page.locator('//*[@id="showprompt"]').click();
-    expect(await page.locator('//*[@id="showprompt"]').isChecked()).toBeFalsy();
-
-    await page.locator('//*[@id="showprompt1"]').click();
-    expect(
-      await page.locator('//*[@id="showprompt1"]').isChecked(),
-    ).toBeFalsy();
-
-    await page.locator('//*[@id="showtemplate"]').click();
-    expect(
-      await page.locator('//*[@id="showtemplate"]').isChecked(),
-    ).toBeTruthy();
-
-    await page.locator('//*[@id="showprompt"]').click();
-    expect(
-      await page.locator('//*[@id="showprompt"]').isChecked(),
-    ).toBeTruthy();
-
-    await page.locator('//*[@id="showprompt1"]').click();
-    expect(
-      await page.locator('//*[@id="showprompt1"]').isChecked(),
-    ).toBeTruthy();
-
-    await page.locator('//*[@id="showtemplate"]').click();
-    expect(
-      await page.locator('//*[@id="showtemplate"]').isChecked(),
-    ).toBeFalsy();
-
-    await page.locator('//*[@id="showprompt"]').click();
-    expect(await page.locator('//*[@id="showprompt"]').isChecked()).toBeFalsy();
-
-    await page.locator('//*[@id="showprompt1"]').click();
-    expect(
-      await page.locator('//*[@id="showprompt1"]').isChecked(),
-    ).toBeFalsy();
-
-    await page.locator('//*[@id="showtemplate"]').click();
-    expect(
-      await page.locator('//*[@id="showtemplate"]').isChecked(),
-    ).toBeTruthy();
-
-    await page.locator('//*[@id="showprompt"]').click();
-    expect(
-      await page.locator('//*[@id="showprompt"]').isChecked(),
-    ).toBeTruthy();
-
-    await closeAdvancedOptions(page);
-    await adjustScreenView(page, { numberOfZoomOut: 2 });
-
-    await openAdvancedOptions(page);
-
-    await page.locator('//*[@id="showprompt1"]').click();
-    expect(
-      await page.locator('//*[@id="showprompt1"]').isChecked(),
-    ).toBeTruthy();
-
     value =
-      (await page
-        .locator('//*[@id="textarea_str_edit_prompt"]')
-        .inputValue()) ?? "";
+      (await page.locator('//*[@id="textarea_str_prompt"]').inputValue()) ?? "";
 
-    if (value != "prompt_edit_test_44444444444!@#$") {
+    if (value != "prompt_test_44444444444!@#$") {
       expect(false).toBeTruthy();
     }
 
     value =
-      (await page
-        .locator('//*[@id="textarea_str_edit_prompt1"]')
-        .inputValue()) ?? "";
+      (await page.locator('//*[@id="textarea_str_prompt1"]').inputValue()) ??
+      "";
 
-    if (value != "prompt_edit_test_12312312321!@#$") {
+    if (value != "prompt_test_12312312321!@#$") {
       expect(false).toBeTruthy();
     }
 
     value = await page
-      .locator('//*[@id="promptarea_prompt_edit_template"]')
+      .locator('//*[@id="promptarea_prompt_template"]')
       .innerText();
 
     if (value != "{prompt} example {prompt1}") {
       expect(false).toBeTruthy();
     }
-
-    await closeAdvancedOptions(page);
-    await enableInspectPanel(page);
   },
 );
 
@@ -508,29 +422,20 @@ test(
     // Click on the node to select it
     await page.getByTestId("div-generic-node").click();
 
-    await disableInspectPanel(page);
-    // Wait for and click the edit button
-    await page.waitForSelector('[data-testid="edit-button-modal"]', {
-      timeout: 5000,
-    });
-    await openAdvancedOptions(page);
-
     // Wait for the modal to open and the toggle to be visible
     await page.waitForSelector(
-      '[data-testid="toggle_bool_edit_use_double_brackets"]',
+      '[data-testid="toggle_bool_use_double_brackets"]',
       {
         timeout: 5000,
       },
     );
 
     // Enable the "Use Double Brackets" toggle in the modal
-    await page.getByTestId("toggle_bool_edit_use_double_brackets").click();
+    await page.getByTestId("toggle_bool_use_double_brackets").click();
 
     // Verify the toggle is now checked
     expect(
-      await page
-        .getByTestId("toggle_bool_edit_use_double_brackets")
-        .isChecked(),
+      await page.getByTestId("toggle_bool_use_double_brackets").isChecked(),
     ).toBeTruthy();
 
     // Close the modal
@@ -603,7 +508,136 @@ test(
 
     await page.getByTestId("textarea_str_age").fill("25");
     expect(await page.getByTestId("textarea_str_age").inputValue()).toBe("25");
+  },
+);
 
-    await enableInspectPanel(page);
+test(
+  "PromptTemplateComponent - Synchronized State",
+  { tag: ["@release", "@workspace"], timeout: 60000 },
+  async ({ page }) => {
+    await awaitBootstrapTest(page);
+
+    await page.waitForSelector('[data-testid="blank-flow"]', {
+      timeout: 30000,
+    });
+    await page.getByTestId("blank-flow").click();
+    await page.getByTestId("sidebar-search-input").click();
+    await page.getByTestId("sidebar-search-input").fill("prompt");
+
+    await page.waitForSelector(
+      '[data-testid="models_and_agentsPrompt Template"]',
+      {
+        timeout: 3000,
+      },
+    );
+
+    await page
+      .locator('//*[@id="models_and_agentsPrompt Template"]')
+      .dragTo(page.locator('//*[@id="react-flow-id"]'));
+    await page.mouse.up();
+    await page.mouse.down();
+    await adjustScreenView(page);
+
+    // Wait for the node to appear
+    await page.waitForSelector('[data-testid="div-generic-node"]', {
+      timeout: 5000,
+    });
+
+    // Click on the node to select it
+    await page.getByTestId("div-generic-node").click();
+
+    // Wait for toggle to be visible
+    await page.waitForSelector(
+      '[data-testid="toggle_bool_use_double_brackets"]',
+      {
+        timeout: 5000,
+      },
+    );
+
+    // Enable the "Use Double Brackets" toggle
+    await page.getByTestId("toggle_bool_use_double_brackets").click();
+
+    // Verify the toggle is now checked
+    expect(
+      await page.getByTestId("toggle_bool_use_double_brackets").isChecked(),
+    ).toBeTruthy();
+
+    await expect(page.getByText("{{+}}")).toBeVisible({
+      timeout: 5000,
+    });
+
+    await page.waitForSelector(
+      '[data-testid="button_open_mustache_prompt_modal"]',
+      {
+        timeout: 5000,
+      },
+    );
+    await page.getByTestId("button_open_mustache_prompt_modal").click();
+
+    // Wait for the prompt modal textarea
+    const mustacheTextareaId = "modal-mustachepromptarea_mustache_template";
+    await page.waitForSelector(`[data-testid="${mustacheTextareaId}"]`, {
+      timeout: 5000,
+    });
+
+    const testValue = "Hello {{name}}!";
+    await page.getByTestId(mustacheTextareaId).fill(testValue);
+
+    await page.getByTestId("genericModalBtnSave").click();
+
+    // Wait for modal to close
+    await page.waitForTimeout(500);
+
+    // Verify the accordion prompt component text content
+    await page.waitForSelector(
+      '[data-testid="mustachepromptarea_mustache_template"]',
+      { timeout: 5000 },
+    );
+    const accordionContent = await page
+      .getByTestId("mustachepromptarea_mustache_template")
+      .innerText();
+
+    // The content might contain hidden characters or specialized formatting
+    // We check if it contains our text, ignoring potential zero-width spaces or similar
+    // The actual text content should contain "Hello {{name}}!"
+    const cleanContent = accordionContent.replace(/[\u200B-\u200D\uFEFF]/g, "");
+    expect(cleanContent).toContain("Hello");
+    expect(cleanContent).toContain("{{name}}");
+    expect(cleanContent).toContain("!");
+
+    // Also verify that the variable highlighting span exists in the accordion
+    // Note: The structure might be complex inside the contenteditable
+    const highlightedSpan = await page.evaluate(() => {
+      const span = document.querySelector(
+        '[data-testid="mustachepromptarea_mustache_template"] span.chat-message-highlight',
+      );
+      return span ? span.textContent : null;
+    });
+    expect(highlightedSpan).toBe("{{name}}");
+
+    // NEW: Edit directly on the accordion component
+    const updatedTestValue = "Updated {{new_var}} content";
+    await page.getByTestId("mustachepromptarea_mustache_template").click();
+    await page.keyboard.press("ControlOrMeta+A");
+    await page.keyboard.press("Backspace");
+    await page.keyboard.type(updatedTestValue);
+
+    // Give it a moment to update state
+    await page.waitForTimeout(500);
+
+    // Open the modal again
+    await page.getByTestId("button_open_mustache_prompt_modal").click();
+
+    await page.getByTestId("edit-prompt-sanitized").click();
+
+    // Verify the changes reflected on the modal
+    const modalValue = await page.getByTestId(mustacheTextareaId).inputValue();
+    expect(modalValue).toBe(updatedTestValue);
+
+    // Verify variables in modal
+    const modalBadge = await page.locator('//*[@id="badge0"]').innerText();
+    expect(modalBadge).toBe("new_var");
+
+    await page.getByTestId("genericModalBtnSave").click();
   },
 );

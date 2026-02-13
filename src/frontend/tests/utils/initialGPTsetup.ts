@@ -4,6 +4,7 @@ import { selectGptModel } from "./select-gpt-model";
 import { updateOldComponents } from "./update-old-components";
 import { addOpenAiInputKey } from "./add-open-ai-input-key";
 import { unselectNodes } from "./unselect-nodes";
+import { disableInspectPanel } from "./open-advanced-options";
 
 export async function initialGPTsetup(
   page: Page,
@@ -14,6 +15,8 @@ export async function initialGPTsetup(
     skipAddOpenAiInputKey?: boolean;
   },
 ) {
+  await disableInspectPanel(page);
+
   if (!options?.skipAdjustScreenView) {
     await adjustScreenView(page);
   }

@@ -1,16 +1,38 @@
 import { queryClient } from "@/contexts";
+import useFlowStore from "@/stores/flowStore";
 import type { Message } from "@/types/messages";
+import {
+  removePlaygroundSessionMessages,
+  savePlaygroundMessages,
+} from "@/utils/playground-storage";
 
 const MESSAGES_QUERY_KEY = "useGetMessagesQuery";
 const BOT_SENDER = "Machine";
 
-// Helper to find flow_id and session_id from existing message with same ID
+const syncToPlaygroundStorage = (flowId: string): void => {
+  if (!useFlowStore.getState().playgroundPage) return;
+  const seen = new Set<string>();
+  const unique: Message[] = [];
+  for (const query of queryClient.getQueryCache().getAll()) {
+    const key = query.queryKey;
+    if (!Array.isArray(key) || key[0] !== MESSAGES_QUERY_KEY) continue;
+    const params = key[1] as { id?: string; session_id?: string } | undefined;
+    if (params?.id !== flowId || !params.session_id) continue;
+    for (const msg of (query.state.data as Message[]) ?? []) {
+      if (msg.id !== null && !seen.has(msg.id)) {
+        seen.add(msg.id);
+        unique.push(msg);
+      }
+    }
+  }
+  savePlaygroundMessages(flowId, unique);
+};
+
 const findMessageContext = (
   messageId: string | null,
 ): { flow_id?: string; session_id?: string } | null => {
   if (!messageId) return null;
 
-  // Search all queries in cache for a message with this ID
   const cache = queryClient.getQueryCache();
   const queries = cache.getAll();
 
@@ -30,7 +52,7 @@ const findMessageContext = (
 };
 
 export const updateMessage = (updatedMessage: Message) => {
-  // For streaming tokens, if flow_id/session_id are missing, try to find from existing message
+  // Streaming tokens may lack flow_id/session_id — recover from existing cache entry
   let flowId = updatedMessage.flow_id;
   let sessionId = updatedMessage.session_id;
 
@@ -48,7 +70,6 @@ export const updateMessage = (updatedMessage: Message) => {
     }
   }
 
-  // Validate required fields for cache key
   if (!flowId || !sessionId) {
     console.warn(
       "updateMessage: Missing flow_id or session_id",
@@ -59,44 +80,36 @@ export const updateMessage = (updatedMessage: Message) => {
 
   const cacheKey = [MESSAGES_QUERY_KEY, { id: flowId, session_id: sessionId }];
 
-  // Ensure the query exists in cache first
   queryClient.ensureQueryData({
     queryKey: cacheKey,
     queryFn: () => [],
   });
 
-  // Update the cache directly
   queryClient.setQueryData(cacheKey, (old: Message[] = []) => {
     const newMessage = { ...updatedMessage };
     const isStreamingToken = newMessage.properties?.state === "partial";
 
-    // Find existing message
     const existingMessage = old.find(
       (message) => message.id === updatedMessage.id,
     );
 
-    // For streaming tokens ONLY, accumulate text
+    // Streaming tokens accumulate text; non-streaming replace completely
     if (isStreamingToken && existingMessage) {
-      // Accumulate text for existing streaming message
       newMessage.text = (existingMessage.text || "") + (newMessage.text || "");
-      // Preserve other fields from existing message
       newMessage.sender = existingMessage.sender || newMessage.sender;
       newMessage.sender_name =
         existingMessage.sender_name || newMessage.sender_name;
       newMessage.timestamp = existingMessage.timestamp || newMessage.timestamp;
       newMessage.files = existingMessage.files || newMessage.files;
     } else if (isStreamingToken && !existingMessage) {
-      // First token - ensure we have all required fields
       if (!newMessage.id) {
         console.warn("updateMessage: First token missing id", updatedMessage);
-        return old; // Don't add message without ID
+        return old;
       }
-      // Initialize text if empty
       newMessage.text = newMessage.text || "";
     }
-    // For non-streaming messages (add_message), always replace completely - don't accumulate
 
-    // If this is a real user message, remove matching placeholder
+    // Real user messages replace their placeholder (null-id entry)
     if (newMessage.sender === "User" && newMessage.id) {
       const placeholderIndex = old.findIndex(
         (msg) =>
@@ -106,41 +119,36 @@ export const updateMessage = (updatedMessage: Message) => {
       );
 
       if (placeholderIndex !== -1) {
-        // Remove placeholder and add/update real message
         const result = old.filter((_, idx) => idx !== placeholderIndex);
         const existingIndex = result.findIndex(
           (message) => message.id === newMessage.id,
         );
         if (existingIndex !== -1) {
-          // Update existing message
           return result.map((msg, idx) =>
             idx === existingIndex ? newMessage : msg,
           );
         } else {
-          // Add new message
           return [...result, newMessage];
         }
       }
     }
 
-    // Update existing message or add new one
     const existingIndex = old.findIndex(
       (message) => message.id === newMessage.id,
     );
     if (existingIndex !== -1) {
-      // Update existing message - create new array to trigger reactivity
       return old.map((msg, idx) => (idx === existingIndex ? newMessage : msg));
     } else {
-      // Add new message - only if it has an ID (or is a placeholder)
       if (newMessage.id === null || newMessage.id) {
         return [...old, newMessage];
       }
-      // Skip messages without ID (except placeholders)
       return old;
     }
   });
 
-  // setQueryData automatically notifies observers - no need to invalidate
+  if (updatedMessage.properties?.state !== "partial") {
+    syncToPlaygroundStorage(flowId);
+  }
 };
 
 export const addUserMessage = (updatedMessage: Message) => {
@@ -149,18 +157,16 @@ export const addUserMessage = (updatedMessage: Message) => {
     { id: updatedMessage.flow_id, session_id: updatedMessage.session_id },
   ];
 
-  // Ensure query exists
   queryClient.ensureQueryData({
     queryKey: cacheKey,
     queryFn: () => [],
   });
 
-  // Add placeholder to cache
   queryClient.setQueryData(cacheKey, (old: Message[] = []) => {
     return [...old, updatedMessage];
   });
 
-  // setQueryData automatically notifies observers - no need to invalidate
+  syncToPlaygroundStorage(updatedMessage.flow_id);
 };
 
 export const updateMessages = (updatedMessages: Message[]) => {
@@ -194,6 +200,8 @@ export const removeMessages = (
       );
     },
   );
+
+  syncToPlaygroundStorage(flowId);
 };
 
 export const findLastBotMessage = (): {
@@ -238,46 +246,39 @@ export const updateMessageProperties = (
 export const clearSessionMessages = (sessionId: string, flowId: string) => {
   const isDefaultSession = sessionId === flowId;
 
-  // Clear session-specific cache immediately
   queryClient.setQueryData(
     [MESSAGES_QUERY_KEY, { id: flowId, session_id: sessionId }],
     () => [],
   );
 
-  // For default session, also clear messages with null session_id (legacy)
-  if (isDefaultSession) {
-    // Get all messages from the main query cache and filter out default session messages
-    const mainQueryKey = [MESSAGES_QUERY_KEY, { id: flowId }];
-    const mainCache = queryClient.getQueryData<{ rows?: { data?: Message[] } }>(
-      mainQueryKey,
-    );
+  const mainQueryKey = [MESSAGES_QUERY_KEY, { id: flowId }];
+  const mainCache = queryClient.getQueryData<{ rows?: { data?: Message[] } }>(
+    mainQueryKey,
+  );
 
-    if (mainCache?.rows?.data) {
-      // Filter out messages that belong to default session (including null session_id)
-      const filteredMessages = mainCache.rows.data.filter((msg) => {
-        // Keep messages that don't belong to this flow or have a different session_id
-        if (msg.flow_id !== flowId) return true;
-        // For default session, remove messages with null session_id or matching session_id
+  if (mainCache?.rows?.data) {
+    const filteredMessages = mainCache.rows.data.filter((msg) => {
+      if (msg.flow_id !== flowId) return true;
+      if (isDefaultSession) {
         return msg.session_id !== null && msg.session_id !== sessionId;
-      });
+      }
+      return msg.session_id !== sessionId;
+    });
 
-      // Update the main cache without invalidating (to prevent refetch)
-      queryClient.setQueryData(mainQueryKey, {
-        ...mainCache,
-        rows: {
-          ...mainCache.rows,
-          data: filteredMessages,
-        },
-      });
-    }
+    queryClient.setQueryData(mainQueryKey, {
+      ...mainCache,
+      rows: {
+        ...mainCache.rows,
+        data: filteredMessages,
+      },
+    });
   }
 
-  // Remove queries instead of invalidating to prevent refetch that brings messages back
-  // The cache is already cleared above, so we just need to remove the query entries
   queryClient.removeQueries({
     queryKey: [MESSAGES_QUERY_KEY, { id: flowId, session_id: sessionId }],
   });
 
-  // For the main query, we keep it but with filtered data (already updated above)
-  // Only invalidate if we need to refetch (but not immediately to avoid race condition)
+  if (useFlowStore.getState().playgroundPage) {
+    removePlaygroundSessionMessages(flowId, sessionId);
+  }
 };

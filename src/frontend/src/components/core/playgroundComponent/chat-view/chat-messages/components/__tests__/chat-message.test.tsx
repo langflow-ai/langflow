@@ -203,6 +203,24 @@ describe("ChatMessage Component", () => {
     // Empty user message with no files should render as BotMessage
     expect(screen.getByTestId("div-chat-message")).toBeInTheDocument();
   });
+
+  it("wraps error messages in a container with margin-top", () => {
+    const errorProps = {
+      ...defaultProps,
+      chat: {
+        ...mockChat,
+        isSend: false,
+        category: "error",
+        content_blocks: [{ type: "error", content: "Something went wrong" }],
+      },
+    };
+
+    render(<ChatMessage {...errorProps} />);
+    const errorView = screen.getByTestId("error-view");
+    const wrapper = errorView.parentElement;
+    expect(wrapper).toHaveClass("mt-2");
+    expect(wrapper).toHaveClass("w-full");
+  });
 });
 
 describe("ThinkingMessage Component", () => {
