@@ -247,9 +247,7 @@ class DataOperationsComponent(Component):
     ]
 
     OPERATION_FIELD_DEFAULTS: dict[str, Any] = {
-        inp.name: getattr(inp, "value", None)
-        for inp in inputs
-        if inp.name in ALL_OPERATION_FIELDS
+        inp.name: getattr(inp, "value", None) for inp in inputs if inp.name in ALL_OPERATION_FIELDS
     }
 
     outputs = [
