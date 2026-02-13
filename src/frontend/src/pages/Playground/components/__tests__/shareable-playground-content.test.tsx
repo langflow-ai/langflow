@@ -150,15 +150,26 @@ jest.mock(
 
 // --- Mock stores ---
 let mockIsBuilding = false;
-jest.mock("@/stores/flowStore", () => ({
-  __esModule: true,
-  default: (selector: (state: Record<string, unknown>) => unknown) =>
+jest.mock("@/stores/flowStore", () => {
+  const baseState = {
+    inputs: [],
+    nodes: [],
+    playgroundPage: true,
+  };
+  const mockStore = (selector: (state: Record<string, unknown>) => unknown) =>
     selector({
-      inputs: [],
-      nodes: [],
+      ...baseState,
       isBuilding: mockIsBuilding,
-    }),
-}));
+    });
+  mockStore.getState = () => ({
+    ...baseState,
+    isBuilding: mockIsBuilding,
+  });
+  return {
+    __esModule: true,
+    default: mockStore,
+  };
+});
 
 jest.mock("@/stores/utilityStore", () => ({
   useUtilityStore: (selector: (state: Record<string, unknown>) => unknown) =>
