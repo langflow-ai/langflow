@@ -1,14 +1,14 @@
 import asyncio
 import json
 import shutil
+import uuid
 from datetime import datetime, timezone
 from http import HTTPStatus
 from pathlib import Path
 from typing import Annotated
-from uuid import uuid4
 
 import pandas as pd
-from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -21,6 +21,7 @@ from langflow.api.utils import CurrentActiveUser
 from langflow.api.v1.schemas import TaskResponse
 from langflow.services.database.models.jobs.model import JobType
 from langflow.services.deps import get_job_service, get_settings_service, get_task_service
+from langflow.services.jobs.service import JobService
 
 router = APIRouter(tags=["Knowledge Bases"], prefix="/knowledge_bases", include_in_schema=False)
 
@@ -51,6 +52,8 @@ class KnowledgeBaseInfo(BaseModel):
     characters: int = 0
     chunks: int = 0
     avg_chunk_size: float = 0.0
+    status: str = "READY"
+    last_job_id: str | None = None
 
 
 class BulkDeleteRequest(BaseModel):
@@ -254,6 +257,7 @@ def get_kb_metadata(kb_path: Path) -> dict:
         "avg_chunk_size": 0.0,
         "embedding_provider": "Unknown",
         "embedding_model": "Unknown",
+        "id": "",
     }
 
     try:
@@ -268,6 +272,8 @@ def get_kb_metadata(kb_path: Path) -> dict:
                             metadata["embedding_provider"] = embedding_metadata["embedding_provider"]
                         if "embedding_model" in embedding_metadata:
                             metadata["embedding_model"] = embedding_metadata["embedding_model"]
+                        if "id" in embedding_metadata:
+                            metadata["id"] = embedding_metadata["id"]
             except (OSError, json.JSONDecodeError) as _:
                 logger.exception("Error reading embedding metadata file '%s'", metadata_file)
 
@@ -359,19 +365,21 @@ async def create_knowledge_base(
 
         # Create KB directory
         kb_path.mkdir(parents=True, exist_ok=True)
+        kb_id = uuid.uuid4()
 
         # Save embedding metadata
         embedding_metadata = {
             "embedding_provider": request.embedding_provider,
             "embedding_model": request.embedding_model,
             "created_at": datetime.now(timezone.utc).isoformat(),
+            "id": str(kb_id),
         }
 
         metadata_path = kb_path / "embedding_metadata.json"
         metadata_path.write_text(json.dumps(embedding_metadata, indent=2))
 
         return KnowledgeBaseInfo(
-            id=kb_name,
+            id=str(kb_id),
             name=kb_name.replace("_", " ").replace("-", " "),
             embedding_provider=request.embedding_provider,
             embedding_model=request.embedding_model,
@@ -532,24 +540,48 @@ async def ingest_files_to_knowledge_base(
             raise HTTPException(status_code=404, detail=f"Knowledge base '{kb_name}' not found")
 
         # Read embedding metadata
-        metadata_path = kb_path / "embedding_metadata.json"
-        if not metadata_path.exists():
-            raise HTTPException(status_code=400, detail="Knowledge base missing embedding configuration")
+        metadata = get_kb_metadata(kb_path)
+        if not metadata:
+            raise HTTPException(
+                status_code=400,
+                detail="Knowledge base missing embedding configuration, created a new KB or configure the embedding configuration.",
+            )
 
-        embedding_metadata = json.loads(metadata_path.read_text())
-        embedding_provider = embedding_metadata.get("embedding_provider")
-        embedding_model = embedding_metadata.get("embedding_model")
+        embedding_provider = metadata.get("embedding_provider")
+        embedding_model = metadata.get("embedding_model")
+
+        # Handle backward compatibility: generate asset_id if not present
+        asset_id_str = metadata.get("id")
+        if not asset_id_str:
+            # Generate new UUID for older KBs without asset_id
+            asset_id = uuid.uuid4()
+            # Persist the new ID to metadata
+            metadata_path = kb_path / "embedding_metadata.json"
+            if metadata_path.exists():
+                try:
+                    embedding_metadata = json.loads(metadata_path.read_text())
+                    embedding_metadata["id"] = str(asset_id)
+                    metadata_path.write_text(json.dumps(embedding_metadata, indent=2))
+                except (OSError, json.JSONDecodeError) as e:
+                    await logger.awarning(f"Could not update metadata with asset_id: {e}")
+        else:
+            asset_id = uuid.UUID(asset_id_str)
 
         if not embedding_provider or not embedding_model:
             raise HTTPException(status_code=400, detail="Invalid embedding configuration")
 
-        if total_size > async_threshold:
-            job_service = get_job_service()
-            task_service = get_task_service()
-            job_id = uuid4()
+        # Get services and create job before async/sync split
+        job_service = get_job_service()
+        job_id = uuid.uuid4()
 
-            # Create job record in database
-            await job_service.create_job(job_id=job_id, flow_id=job_id, job_type=JobType.INGESTION)
+        # Create job record in database for both async and sync paths
+        await job_service.create_job(
+            job_id=job_id, flow_id=job_id, job_type=JobType.INGESTION, asset_id=asset_id, asset_type="knowledge_base"
+        )
+
+        if total_size > async_threshold:
+            # Async path: fire and forget
+            task_service = get_task_service()
 
             # Fire and forget the ingestion logic wrapped in status updates
             await task_service.fire_and_forget_task(
@@ -568,7 +600,10 @@ async def ingest_files_to_knowledge_base(
             )
             return TaskResponse(id=str(job_id), href=f"/task/{job_id}")
 
-        return await _perform_ingestion(
+        # Sync path: execute with status tracking (same as async)
+        return await job_service.execute_with_status(
+            job_id=job_id,
+            run_coro_func=_perform_ingestion,
             kb_name=kb_name,
             kb_path=kb_path,
             files_data=files_data,
@@ -712,7 +747,10 @@ async def _build_embeddings(provider: str, model: str, current_user):
 
 @router.get("", status_code=HTTPStatus.OK)
 @router.get("/", status_code=HTTPStatus.OK)
-async def list_knowledge_bases(current_user: CurrentActiveUser) -> list[KnowledgeBaseInfo]:
+async def list_knowledge_bases(
+    current_user: CurrentActiveUser,
+    job_service: Annotated[JobService, Depends(get_job_service)],
+) -> list[KnowledgeBaseInfo]:
     """List all available knowledge bases."""
     try:
         kb_root_path = get_kb_root_path()
@@ -723,6 +761,9 @@ async def list_knowledge_bases(current_user: CurrentActiveUser) -> list[Knowledg
             return []
 
         knowledge_bases = []
+        kb_ids_to_fetch = []  # Collect KB IDs for batch fetching
+
+        # First pass: Load all KBs into memory
         for kb_dir in kb_path.iterdir():
             if not kb_dir.is_dir() or kb_dir.name.startswith("."):
                 continue
@@ -733,8 +774,18 @@ async def list_knowledge_bases(current_user: CurrentActiveUser) -> list[Knowledg
                 # Get metadata from KB files
                 metadata = get_kb_metadata(kb_dir)
 
+                # Extract KB ID from metadata (stored as string, convert to UUID)
+                kb_id_str = metadata.get("id")
+                if kb_id_str:
+                    try:
+                        kb_id_uuid = uuid.UUID(kb_id_str)
+                        kb_ids_to_fetch.append(kb_id_uuid)
+                    except (ValueError, AttributeError):
+                        # If ID is invalid, skip job status lookup for this KB
+                        kb_id_str = None
+
                 kb_info = KnowledgeBaseInfo(
-                    id=kb_dir.name,
+                    id=kb_id_str or kb_dir.name,  # Fallback to directory name if no ID
                     name=kb_dir.name.replace("_", " ").replace("-", " "),
                     embedding_provider=metadata["embedding_provider"],
                     embedding_model=metadata["embedding_model"],
@@ -743,6 +794,8 @@ async def list_knowledge_bases(current_user: CurrentActiveUser) -> list[Knowledg
                     characters=metadata["characters"],
                     chunks=metadata["chunks"],
                     avg_chunk_size=metadata["avg_chunk_size"],
+                    status="READY",  # Default status
+                    last_job_id=None,
                 )
                 knowledge_bases.append(kb_info)
 
@@ -750,6 +803,22 @@ async def list_knowledge_bases(current_user: CurrentActiveUser) -> list[Knowledg
                 # Log the exception and skip directories that can't be read
                 await logger.aexception("Error reading knowledge base directory '%s'", kb_dir)
                 continue
+
+        # Second pass: Batch fetch all job statuses in a single query
+        if kb_ids_to_fetch:
+            latest_jobs = await job_service.get_latest_jobs_by_asset_ids(kb_ids_to_fetch)
+
+            # Map job statuses back to knowledge bases
+            for kb_info in knowledge_bases:
+                try:
+                    kb_uuid = uuid.UUID(kb_info.id)
+                    if kb_uuid in latest_jobs:
+                        job = latest_jobs[kb_uuid]
+                        kb_info.status = job.status.value if hasattr(job.status, "value") else str(job.status)
+                        kb_info.last_job_id = str(job.job_id)
+                except (ValueError, AttributeError):
+                    # If KB ID is not a valid UUID, skip job status update
+                    pass
 
         # Sort by name alphabetically
         knowledge_bases.sort(key=lambda x: x.name)
