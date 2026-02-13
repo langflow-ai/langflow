@@ -11,15 +11,10 @@ from contextlib import suppress
 from ipaddress import ip_address
 from pathlib import Path
 
-from dotenv import load_dotenv
-load_dotenv()
-
-from langflow.helpers.windows_postgres_helper import configure_windows_postgres_event_loop
-configure_windows_postgres_event_loop(source="main")
-
 import click
 import httpx
 import typer
+from dotenv import load_dotenv
 from fastapi import HTTPException
 from httpx import HTTPError
 from jwt import InvalidTokenError
@@ -374,12 +369,13 @@ def run(
             print_banner(str(host), int(port or 7860), protocol)
 
         from langflow.helpers.windows_postgres_helper import LANGFLOW_DATABASE_URL, POSTGRESQL_PREFIXES
-        
+
         db_url = os.environ.get(LANGFLOW_DATABASE_URL, "")
-        loop_type = None  # Let uvicorn use existing event loop for Windows + PostgreSQL
-        if not (platform.system() == "Windows" and db_url and 
-                any(db_url.startswith(prefix) for prefix in POSTGRESQL_PREFIXES)):
-            loop_type = "asyncio"
+        loop_type = "asyncio"
+        if platform.system() == "Windows" and db_url and any(
+            db_url.startswith(prefix) for prefix in POSTGRESQL_PREFIXES
+        ):
+            loop_type = "none"  # Preserve pre-configured WindowsSelectorEventLoopPolicy
         
         uvicorn.run(
             app,

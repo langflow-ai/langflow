@@ -26,11 +26,16 @@ def configure_windows_postgres_event_loop(source: str | None = None) -> bool:
     if not db_url or not any(db_url.startswith(prefix) for prefix in POSTGRESQL_PREFIXES):
         return False
 
-    current_policy = asyncio.get_event_loop_policy()
-    if isinstance(current_policy, asyncio.WindowsSelectorEventLoopPolicy):
+    # Use getattr to safely access the Windows-only class on all platforms
+    selector_policy = getattr(asyncio, "WindowsSelectorEventLoopPolicy", None)
+    if selector_policy is None:
         return False
 
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    current_policy = asyncio.get_event_loop_policy()
+    if isinstance(current_policy, selector_policy):
+        return False
+
+    asyncio.set_event_loop_policy(selector_policy())
 
     log_context = {"event_loop": "WindowsSelectorEventLoop", "reason": "psycopg_compatibility"}
     if source:
