@@ -134,7 +134,11 @@ const useHandleOnNewValue = ({
         node.display_name === "Data Operations"
       ) {
         for (const field of DATA_OPERATIONS_OPERATION_FIELDS) {
-          if (template[field] && typeof template[field] === "object" && "show" in template[field]) {
+          if (
+            template[field] &&
+            typeof template[field] === "object" &&
+            "show" in template[field]
+          ) {
             template[field].show = false;
           }
         }
