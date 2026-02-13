@@ -4,6 +4,7 @@ import { EMPTY_INPUT_SEND_MESSAGE } from "@/constants/constants";
 import { useUpdateMessage } from "@/controllers/API/queries/messages";
 import { CustomProfileIcon } from "@/customization/components/custom-profile-icon";
 import useAlertStore from "@/stores/alertStore";
+import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { chatMessagePropsType } from "@/types/components";
 import { cn } from "@/utils/utils";
@@ -16,6 +17,7 @@ export const UserMessage = memo(
   ({ chat, lastMessage, updateChat, playgroundPage }: chatMessagePropsType) => {
     const setErrorData = useAlertStore((state) => state.setErrorData);
     const [editMessage, setEditMessage] = useState(false);
+    const isShareablePlayground = useFlowStore((state) => state.playgroundPage);
     const flow_id = useFlowsManagerStore((state) => state.currentFlowId);
 
     const isAudioMessage = chat.category === "audio";
@@ -89,7 +91,9 @@ export const UserMessage = memo(
     };
 
     const editedFlag = chat.edit ? (
-      <div className="text-sm text-muted-foreground">(Edited)</div>
+      <div className="mt-2 text-xs text-muted-foreground text-right">
+        (Edited)
+      </div>
     ) : null;
 
     const isEmoji = chat.properties?.icon?.match(
@@ -98,10 +102,10 @@ export const UserMessage = memo(
 
     return (
       <>
-        <div className="w-full py-4 word-break-break-word">
+        <div className="w-full word-break-break-word mt-2">
           <div
             className={cn(
-              "group relative flex w-full gap-4 rounded-md p-2 bg-muted @[45rem]/chat-panel:bg-transparent @[45rem]/chat-panel:p-2",
+              "group relative flex w-full gap-4 rounded-md px-2 py-3 bg-muted @[45rem]/chat-panel:bg-transparent @[45rem]/chat-panel:px-2 @[45rem]/chat-panel:py-3",
               editMessage ? "" : "hover:bg-muted",
             )}
           >
@@ -178,10 +182,16 @@ export const UserMessage = memo(
               <div className="invisible absolute -top-4 right-0 group-hover:visible">
                 <EditMessageButton
                   onCopy={() => navigator.clipboard.writeText(chatMessage)}
-                  onEdit={() => setEditMessage(true)}
+                  onEdit={
+                    isShareablePlayground
+                      ? undefined
+                      : () => setEditMessage(true)
+                  }
                   className="h-fit group-hover:visible"
                   isBotMessage={false}
-                  onEvaluate={handleEvaluateAnswer}
+                  onEvaluate={
+                    isShareablePlayground ? undefined : handleEvaluateAnswer
+                  }
                   evaluation={chat.properties?.positive_feedback}
                   isAudioMessage={isAudioMessage}
                 />

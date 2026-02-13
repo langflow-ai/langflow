@@ -1,14 +1,6 @@
-import * as dotenv from "dotenv";
-import path from "path";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { initialGPTsetup } from "../../utils/initialGPTsetup";
-import {
-  closeAdvancedOptions,
-  disableInspectPanel,
-  enableInspectPanel,
-  openAdvancedOptions,
-} from "../../utils/open-advanced-options";
+import { enableInspectPanel } from "../../utils/open-advanced-options";
 import { unselectNodes } from "../../utils/unselect-nodes";
 
 test(
@@ -22,11 +14,13 @@ test(
 
     await page.waitForSelector("text=Language Model", { timeout: 30000 });
 
+    await enableInspectPanel(page);
+
     await page
       .getByTestId("div-generic-node")
       .getByText("Language Model", { exact: true })
       .click();
-    await openAdvancedOptions(page);
+    await page.getByTestId("edit-fields-button").click();
 
     const input_value = page.getByTestId("showinput_value");
     await expect(input_value).toBeVisible();
@@ -39,7 +33,7 @@ test(
       page.getByText("Cannot change visibility of connected handles"),
     ).toBeVisible();
 
-    await closeAdvancedOptions(page);
+    await page.getByTestId("edit-fields-button").click();
 
     await page.locator(".react-flow__edge").nth(0).click();
 
@@ -51,13 +45,13 @@ test(
       .getByTestId("div-generic-node")
       .getByText("Language Model", { exact: true })
       .click();
-    await openAdvancedOptions(page);
+    await page.getByTestId("edit-fields-button").click();
 
     await expect(input_value).toBeEnabled();
 
     await input_value.click();
 
-    await closeAdvancedOptions(page);
+    await page.getByTestId("edit-fields-button").click();
 
     await unselectNodes(page);
 
@@ -74,15 +68,15 @@ test(
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
-    await disableInspectPanel(page);
-
     await page.waitForSelector("text=Language Model", { timeout: 30000 });
+
+    await enableInspectPanel(page);
 
     await page
       .getByTestId("div-generic-node")
       .getByText("Language Model", { exact: true })
       .click();
-    await openAdvancedOptions(page);
+    await page.getByTestId("edit-fields-button").click();
 
     const input_value = page.getByTestId("showinput_value");
     await expect(input_value).toBeVisible();
@@ -95,7 +89,7 @@ test(
       page.getByText("Cannot change visibility of connected handles"),
     ).toBeVisible();
 
-    await closeAdvancedOptions(page);
+    await page.getByTestId("edit-fields-button").click();
 
     await page.locator(".react-flow__edge").nth(0).click();
 
@@ -107,16 +101,16 @@ test(
       .getByTestId("div-generic-node")
       .getByText("Language Model", { exact: true })
       .click();
-    await openAdvancedOptions(page);
+    await page.getByTestId("edit-fields-button").click();
 
     await expect(input_value).toBeEnabled();
 
     await input_value.click();
 
-    await closeAdvancedOptions(page);
+    await page.getByTestId("edit-fields-button").click();
+
+    await unselectNodes(page);
 
     await expect(page.getByText("Input", { exact: true })).toBeHidden();
-
-    await enableInspectPanel(page);
   },
 );

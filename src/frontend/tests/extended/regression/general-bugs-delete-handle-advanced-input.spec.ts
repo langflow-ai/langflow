@@ -1,12 +1,7 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import {
-  closeAdvancedOptions,
-  disableInspectPanel,
-  enableInspectPanel,
-  openAdvancedOptions,
-} from "../../utils/open-advanced-options";
+import { enableInspectPanel } from "../../utils/open-advanced-options";
 
 test(
   "the system must delete the handles from advanced fields when the code is updated",
@@ -32,12 +27,12 @@ test(
 
     await adjustScreenView(page, { numberOfZoomOut: 3 });
 
-    await disableInspectPanel(page);
+    await enableInspectPanel(page);
 
-    await openAdvancedOptions(page);
-
+    await page.getByTestId("title-If-Else").click();
+    await page.getByTestId("edit-fields-button").click();
     await page.getByTestId("showtrue_case_message").click();
-    await closeAdvancedOptions(page);
+    await page.getByTestId("edit-fields-button").click();
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("text input");
@@ -62,23 +57,17 @@ test(
 
     await page.getByTestId("title-If-Else").click();
 
-    await openAdvancedOptions(page);
-
     const numberOfDisabledInputs = await page
       .getByPlaceholder("Receiving input")
       .count();
 
-    expect(numberOfDisabledInputs).toBe(2);
-
-    await closeAdvancedOptions(page);
-
-    await page.getByTestId("title-If-Else").click();
+    expect(numberOfDisabledInputs).toBe(1);
 
     await page.getByTestId("code-button-modal").last().click();
 
     await page.getByTestId("checkAndSaveBtn").last().click();
 
-    await openAdvancedOptions(page);
+    await page.getByTestId("title-If-Else").click();
 
     const numberOfDisabledInputsAfter = await page
       .getByPlaceholder("Receiving input")
@@ -89,9 +78,5 @@ test(
     const numberOfLockIconsAfter = await page.getByTestId("icon-lock").count();
 
     expect(numberOfLockIconsAfter).toBe(0);
-
-    await closeAdvancedOptions(page);
-
-    await enableInspectPanel(page);
   },
 );

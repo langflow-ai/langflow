@@ -18,7 +18,7 @@ test(
     const targetElement = page.locator('//*[@id="react-flow-id"]');
 
     // Start adding note
-    await page.getByTestId("sidebar-nav-add_note").click();
+    await page.getByTestId("sidebar-add-sticky-note-button").click();
 
     // Get shadow-box dimensions while dragging
     const shadowBox = page.locator("#shadow-box");
@@ -77,7 +77,7 @@ test(
     await page.getByTestId("blank-flow").click();
 
     // Add sticky note
-    await page.getByTestId("sidebar-nav-add_note").click();
+    await page.getByTestId("sidebar-add-sticky-note-button").click();
     const targetElement = page.locator('//*[@id="react-flow-id"]');
     await targetElement.click();
     await page.mouse.up();
@@ -139,7 +139,7 @@ test(
     await page.getByTestId("blank-flow").click();
 
     // Add sticky note
-    await page.getByTestId("sidebar-nav-add_note").click();
+    await page.getByTestId("sidebar-add-sticky-note-button").click();
     const targetElement = page.locator('//*[@id="react-flow-id"]');
     await targetElement.click();
     await page.mouse.up();
@@ -200,7 +200,7 @@ test(
     await page.getByTestId("blank-flow").click();
 
     // Add sticky note
-    await page.getByTestId("sidebar-nav-add_note").click();
+    await page.getByTestId("sidebar-add-sticky-note-button").click();
     const targetElement = page.locator('//*[@id="react-flow-id"]');
     await targetElement.click();
     await page.mouse.up();
@@ -271,7 +271,7 @@ test(
     await page.getByTestId("blank-flow").click();
 
     // Add sticky note
-    await page.getByTestId("sidebar-nav-add_note").click();
+    await page.getByTestId("sidebar-add-sticky-note-button").click();
     const targetElement = page.locator('//*[@id="react-flow-id"]');
     await targetElement.click();
     await page.mouse.up();

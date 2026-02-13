@@ -51,7 +51,7 @@ jest.mock("../HelpDropdown", () => ({
 describe("CanvasControls", () => {
   it("renders panel and separators when children present", () => {
     render(
-      <CanvasControls>
+      <CanvasControls selectedNode={null}>
         <div>child</div>
       </CanvasControls>,
     );
@@ -63,7 +63,7 @@ describe("CanvasControls", () => {
   });
 
   it("updates reactFlow state based on flow lock status", () => {
-    render(<CanvasControls />);
+    render(<CanvasControls selectedNode={null} />);
 
     // The component should set up state through useStoreApi
     // This test verifies the component renders and doesn't throw
