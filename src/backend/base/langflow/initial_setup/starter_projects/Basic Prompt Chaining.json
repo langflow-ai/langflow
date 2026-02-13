@@ -1639,7 +1639,7 @@
                       "model_class": "ChatGoogleGenerativeAIFixed",
                       "model_name_param": "model"
                     },
-                    "name": "gemini-1.5-pro",
+                    "name": "gemini-2.5-flash",
                     "provider": "Google Generative AI"
                   },
                   {
@@ -1651,7 +1651,7 @@
                       "model_class": "ChatGoogleGenerativeAIFixed",
                       "model_name_param": "model"
                     },
-                    "name": "gemini-1.5-flash",
+                    "name": "gemini-2.5-pro",
                     "provider": "Google Generative AI"
                   },
                   {
@@ -1663,7 +1663,7 @@
                       "model_class": "ChatGoogleGenerativeAIFixed",
                       "model_name_param": "model"
                     },
-                    "name": "gemini-1.5-flash-8b",
+                    "name": "gemini-2.5-flash-lite",
                     "provider": "Google Generative AI"
                   },
                   {
@@ -2357,7 +2357,7 @@
                       "model_class": "ChatGoogleGenerativeAIFixed",
                       "model_name_param": "model"
                     },
-                    "name": "gemini-1.5-pro",
+                    "name": "gemini-2.5-flash",
                     "provider": "Google Generative AI"
                   },
                   {
@@ -2369,7 +2369,7 @@
                       "model_class": "ChatGoogleGenerativeAIFixed",
                       "model_name_param": "model"
                     },
-                    "name": "gemini-1.5-flash",
+                    "name": "gemini-2.5-pro",
                     "provider": "Google Generative AI"
                   },
                   {
@@ -2381,7 +2381,7 @@
                       "model_class": "ChatGoogleGenerativeAIFixed",
                       "model_name_param": "model"
                     },
-                    "name": "gemini-1.5-flash-8b",
+                    "name": "gemini-2.5-flash-lite",
                     "provider": "Google Generative AI"
                   },
                   {
@@ -3075,7 +3075,7 @@
                       "model_class": "ChatGoogleGenerativeAIFixed",
                       "model_name_param": "model"
                     },
-                    "name": "gemini-1.5-pro",
+                    "name": "gemini-2.5-flash",
                     "provider": "Google Generative AI"
                   },
                   {
@@ -3087,7 +3087,7 @@
                       "model_class": "ChatGoogleGenerativeAIFixed",
                       "model_name_param": "model"
                     },
-                    "name": "gemini-1.5-flash",
+                    "name": "gemini-2.5-pro",
                     "provider": "Google Generative AI"
                   },
                   {
@@ -3099,7 +3099,7 @@
                       "model_class": "ChatGoogleGenerativeAIFixed",
                       "model_name_param": "model"
                     },
-                    "name": "gemini-1.5-flash-8b",
+                    "name": "gemini-2.5-flash-lite",
                     "provider": "Google Generative AI"
                   },
                   {

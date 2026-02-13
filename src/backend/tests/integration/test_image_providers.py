@@ -186,7 +186,7 @@ def test_google_gemini_vision_api_real_call(sample_image):
         pytest.skip("Google Generative AI package not installed")
 
     genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-    model = genai.GenerativeModel("gemini-1.5-flash")
+    model = genai.GenerativeModel("gemini-2.5-flash")
 
     content_dict = create_image_content_dict(sample_image)
 
@@ -221,7 +221,7 @@ def test_google_gemini_vision_api_with_jpeg(sample_jpeg_image):
         pytest.skip("Google Generative AI package not installed")
 
     genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-    model = genai.GenerativeModel("gemini-1.5-flash")
+    model = genai.GenerativeModel("gemini-2.5-flash")
 
     content_dict = create_image_content_dict(sample_jpeg_image)
 
