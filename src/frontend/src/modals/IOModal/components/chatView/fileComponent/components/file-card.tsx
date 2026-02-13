@@ -32,7 +32,6 @@ export default function FileCard({
   // Use direct URL like in v1.7.2 - the server handles authentication via cookies
   const imgSrc = `${getBaseUrl()}files/images/${path}`;
 
-
   if (showFile) {
     if (imgTypes.has(fileType)) {
       return (
