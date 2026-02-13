@@ -71,7 +71,7 @@ export default function ImageViewer({ image }: { image: string }) {
   function download() {
     const imageUrl = image;
     // Fetch the image data
-    fetch(imageUrl)
+    fetch(imageUrl, { credentials: "include" })
       .then((response) => response.blob())
       .then((blob) => {
         // Save the image using FileSaver.js

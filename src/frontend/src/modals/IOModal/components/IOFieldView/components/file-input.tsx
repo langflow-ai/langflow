@@ -29,7 +29,7 @@ export default function IOFileInput({ field, updateValue }: IOFileInputProps) {
 
   useEffect(() => {
     if (field) {
-      const fileName = field.split("/")[1];
+      const fileName = field.replace(/\\/g, "/").split("/")[1];
       const flowFileId = currentFlowId.toString();
       setImage(`${getBaseUrl()}files/images/${flowFileId}/${fileName}`);
     }
@@ -154,6 +154,7 @@ export default function IOFileInput({ field, updateValue }: IOFileInputProps) {
           <img
             className="order-last h-12 w-12 rounded-full object-cover"
             src={image ?? ""}
+            crossOrigin={image && !image.startsWith("data:") ? "use-credentials" : undefined}
           />
         ) : (
           <>
