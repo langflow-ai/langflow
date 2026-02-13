@@ -246,10 +246,18 @@ class DataOperationsComponent(Component):
         ),
     ]
 
+    # Default values for operation fields when clearing (match input definitions)
     OPERATION_FIELD_DEFAULTS: dict[str, Any] = {
-        inp.name: getattr(inp, "value", None)
-        for inp in inputs
-        if inp.name in ALL_OPERATION_FIELDS
+        "select_keys_input": [],
+        "filter_key": [],
+        "operator": "equals",
+        "filter_values": {},
+        "append_update_data": {"key": "value"},
+        "remove_keys_input": [],
+        "rename_keys_input": {"old_key": "new_key"},
+        "mapped_json_display": "",
+        "selected_key": None,
+        "query": "",
     }
 
     outputs = [
