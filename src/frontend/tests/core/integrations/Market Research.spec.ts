@@ -7,7 +7,6 @@ import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { waitForOpenModalWithChatInput } from "../../utils/wait-for-open-modal";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 import { unselectNodes } from "../../utils/unselect-nodes";
-import { disableInspectPanel } from "../../utils/open-advanced-options";
 
 withEventDeliveryModes(
   "Market Research",
@@ -38,13 +37,13 @@ withEventDeliveryModes(
 
     await initialGPTsetup(page);
 
-    await disableInspectPanel(page);
-
     await page.getByText("Tavily AI Search", { exact: true }).last().click();
 
-    const tavilyApiKeyInput = page.getByTestId("popover-anchor-input-api_key");
-    if ((await tavilyApiKeyInput.count()) > 0) {
-      await tavilyApiKeyInput.fill(process.env.TAVILY_API_KEY ?? "");
+    // When TAVILY_API_KEY env var exists, the backend auto-imports it as a global
+    // variable, so the input is replaced by a badge and doesn't exist in the DOM.
+    const tavilyInput = page.getByTestId("popover-anchor-input-api_key");
+    if ((await tavilyInput.count()) > 0) {
+      await tavilyInput.fill(process.env.TAVILY_API_KEY ?? "");
     }
 
     await unselectNodes(page);
