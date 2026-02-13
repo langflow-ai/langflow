@@ -37,19 +37,13 @@ withEventDeliveryModes(
 
     await initialGPTsetup(page);
 
-    // Approach 1: Direct fill like Instagram Copywriter (most reliable)
-    const tavily = page
-      .getByTestId(/rf__node-TavilySearchComponent-[A-Za-z0-9]{5}/)
-      .getByTestId("popover-anchor-input-api_key");
-
     await page.getByText("Tavily AI Search", { exact: true }).last().click();
 
-    if ((await tavily.count()) > 0) {
-      await tavily.nth(0).fill(process.env.TAVILY_API_KEY ?? "");
-    } else {
-      await page
-        .getByTestId("popover-anchor-input-api_key")
-        .fill(process.env.TAVILY_API_KEY ?? "");
+    // When TAVILY_API_KEY env var exists, the backend auto-imports it as a global
+    // variable, so the input is replaced by a badge and doesn't exist in the DOM.
+    const tavilyInput = page.getByTestId("popover-anchor-input-api_key");
+    if ((await tavilyInput.count()) > 0) {
+      await tavilyInput.fill(process.env.TAVILY_API_KEY ?? "");
     }
 
     await unselectNodes(page);

@@ -22,9 +22,10 @@ import { useShallow } from "zustand/react/shallow";
 import { DefaultEdge } from "@/CustomEdges";
 import NoteNode from "@/CustomNodes/NoteNode";
 import FlowToolbar from "@/components/core/flowToolbarComponent";
-import InspectionPanel from "@/pages/FlowPage/components/InspectionPanel";
 import {
   COLOR_OPTIONS,
+  LF_END_ADD_NOTE_EVENT,
+  LF_START_ADD_NOTE_EVENT,
   NOTE_NODE_MIN_HEIGHT,
   NOTE_NODE_MIN_WIDTH,
 } from "@/constants/constants";
@@ -34,6 +35,7 @@ import { track } from "@/customization/utils/analytics";
 import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { useAddComponent } from "@/hooks/use-add-component";
+import InspectionPanel from "@/pages/FlowPage/components/InspectionPanel";
 import { nodeColorsName } from "@/utils/styleUtils";
 import { isSupportedNodeTypes } from "@/utils/utils";
 import GenericNode from "../../../../CustomNodes/GenericNode";
@@ -77,7 +79,6 @@ import {
 import {
   MemoizedBackground,
   MemoizedCanvasControls,
-  MemoizedLogCanvasControls,
   MemoizedSidebarTrigger,
 } from "./MemoizedComponents";
 import getRandomName from "./utils/get-random-name";
@@ -357,6 +358,9 @@ export default function Page({
   const cutAction = useShortcutsStore((state) => state.cut);
   const pasteAction = useShortcutsStore((state) => state.paste);
   const downloadAction = useShortcutsStore((state) => state.download);
+  const toggleInspectorAction = useShortcutsStore(
+    (state) => state.toggleInspector,
+  );
   //@ts-ignore
   useHotkeys(undoAction, handleUndo);
   //@ts-ignore
@@ -381,6 +385,13 @@ export default function Page({
   useHotkeys("delete", handleDelete);
   //@ts-ignore
   useHotkeys("escape", handleEscape);
+  //@ts-ignore
+  useHotkeys(toggleInspectorAction, (e: KeyboardEvent) => {
+    if (!isWrappedWithClass(e, "noflow")) {
+      e.preventDefault();
+      setInspectionPanelVisible(!inspectionPanelVisible);
+    }
+  });
 
   const onConnectMod = useCallback(
     (params: Connection) => {
@@ -666,8 +677,7 @@ export default function Page({
         };
         setNodes((nds) => nds.concat(newNode));
         setIsAddingNote(false);
-        // Signal sidebar to revert add_note active state
-        window.dispatchEvent(new Event("lf:end-add-note"));
+        window.dispatchEvent(new Event(LF_END_ADD_NOTE_EVENT));
       }
     },
     [
@@ -731,9 +741,9 @@ export default function Page({
       }
     };
 
-    window.addEventListener("lf:start-add-note", handleStartAddNote);
+    window.addEventListener(LF_START_ADD_NOTE_EVENT, handleStartAddNote);
     return () => {
-      window.removeEventListener("lf:start-add-note", handleStartAddNote);
+      window.removeEventListener(LF_START_ADD_NOTE_EVENT, handleStartAddNote);
     };
   }, [shadowBoxWidth, shadowBoxHeight]);
 
@@ -748,28 +758,20 @@ export default function Page({
   const inspectionPanelVisible = useFlowStore(
     (state) => state.inspectionPanelVisible,
   );
+  const setInspectionPanelVisible = useFlowStore(
+    (state) => state.setInspectionPanelVisible,
+  );
 
-  // Determine if InspectionPanel should be visible
-  const showInspectionPanel =
-    inspectionPanelVisible &&
+  // Get the selected node for the inspection panel (single genericNode selection)
+  const hasSingleNodeSelected =
     lastSelection?.nodes?.length === 1 &&
     lastSelection.nodes[0].type === "genericNode";
-
-  // Get the fresh node data from the store instead of using stale reference
-  const selectedNodeId = showInspectionPanel ? lastSelection.nodes[0].id : null;
+  const selectedNodeId = hasSingleNodeSelected
+    ? lastSelection.nodes[0].id
+    : null;
   const selectedNode = selectedNodeId
     ? (nodes.find((n) => n.id === selectedNodeId) as AllNodeType)
     : null;
-
-  // Handler to close the inspection panel by deselecting all nodes
-  const handleCloseInspectionPanel = useCallback(() => {
-    setNodes((nds) =>
-      nds.map((node) => ({
-        ...node,
-        selected: false,
-      })),
-    );
-  }, [setNodes]);
 
   useEffect(() => {
     if (inspectionPanelVisible) {
@@ -784,7 +786,6 @@ export default function Page({
           <div id="react-flow-id" className="h-full w-full bg-canvas relative">
             {!view && (
               <>
-                <MemoizedLogCanvasControls />
                 <MemoizedCanvasControls
                   selectedNode={selectedNode}
                   setIsAddingNote={setIsAddingNote}
@@ -792,9 +793,10 @@ export default function Page({
                   shadowBoxHeight={shadowBoxHeight}
                 />
                 <FlowToolbar />
-                {inspectionPanelVisible && (
-                  <InspectionPanel selectedNode={selectedNode} />
-                )}
+                <InspectionPanel
+                  selectedNode={selectedNode}
+                  isVisible={inspectionPanelVisible}
+                />
               </>
             )}
             <MemoizedSidebarTrigger />
