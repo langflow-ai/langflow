@@ -10,6 +10,7 @@ import { useGetDownloadFlows } from "@/controllers/API/queries/flows/use-get-dow
 import { ENABLE_MCP } from "@/customization/feature-flags";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import useAlertStore from "@/stores/alertStore";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { cn } from "@/utils/utils";
 
 interface HeaderComponentProps {
@@ -80,12 +81,18 @@ const HeaderComponent = ({
     setSuccessData({ title: "Flows downloaded successfully" });
   };
 
+  const flows = useFlowsManagerStore((state) => state.flows);
+  const setFlows = useFlowsManagerStore((state) => state.setFlows);
+
   const handleDelete = () => {
     deleteFlows(
       { flow_ids: selectedFlows },
       {
         onSuccess: () => {
           setSuccessData({ title: "Flows deleted successfully" });
+          if (flows) {
+            setFlows(flows.filter((flow) => !selectedFlows.includes(flow.id)));
+          }
         },
       },
     );
