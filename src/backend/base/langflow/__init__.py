@@ -5,12 +5,6 @@ langflow.* to lfx.* to maintain compatibility with existing code that
 references the old langflow module structure.
 """
 
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-except ImportError:
-    pass
-
 from langflow.helpers.windows_postgres_helper import configure_windows_postgres_event_loop
 
 configure_windows_postgres_event_loop(source="package_init")
