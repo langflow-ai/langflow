@@ -379,8 +379,8 @@ export default function AdminPage() {
                               >
                                 <ConfirmationModal.Content>
                                   <span>
-                                    Are you completely confident about the changes
-                                    you are making to this user?
+                                    Are you completely confident about the
+                                    changes you are making to this user?
                                   </span>
                                 </ConfirmationModal.Content>
                                 <ConfirmationModal.Trigger>
