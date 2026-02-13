@@ -372,11 +372,13 @@ def run(
 
         db_url = os.environ.get(LANGFLOW_DATABASE_URL, "")
         loop_type = "asyncio"
-        if platform.system() == "Windows" and db_url and any(
-            db_url.startswith(prefix) for prefix in POSTGRESQL_PREFIXES
+        if (
+            platform.system() == "Windows"
+            and db_url
+            and any(db_url.startswith(prefix) for prefix in POSTGRESQL_PREFIXES)
         ):
             loop_type = "none"  # Preserve pre-configured WindowsSelectorEventLoopPolicy
-        
+
         uvicorn.run(
             app,
             host=host,

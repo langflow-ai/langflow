@@ -168,12 +168,15 @@ class TestWindowsPostgresHelper:
         assert result is False
         assert asyncio.get_event_loop_policy() is original_policy
 
-    @pytest.mark.parametrize("db_url", [
-        "postgresql://localhost/test",
-        "postgresql+psycopg://localhost/test",
-        "postgresql+asyncpg://localhost/test",
-        "postgres://localhost/test",
-    ])
+    @pytest.mark.parametrize(
+        "db_url",
+        [
+            "postgresql://localhost/test",
+            "postgresql+psycopg://localhost/test",
+            "postgresql+asyncpg://localhost/test",
+            "postgres://localhost/test",
+        ],
+    )
     @patch.object(asyncio, "WindowsSelectorEventLoopPolicy", MockWindowsSelectorPolicy, create=True)
     @patch("platform.system")
     @patch("asyncio.get_event_loop_policy")
