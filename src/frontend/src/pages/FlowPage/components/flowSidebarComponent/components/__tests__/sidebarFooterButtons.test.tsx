@@ -125,7 +125,7 @@ describe("SidebarMenuButtons", () => {
       expect(
         screen.getByTestId("sidebar-custom-component-button"),
       ).toBeInTheDocument();
-      expect(screen.getByText("Create Component")).toBeInTheDocument();
+      expect(screen.getByText("New Custom Component")).toBeInTheDocument();
       expect(screen.getByTestId("icon-Plus")).toBeInTheDocument();
     });
 
@@ -140,7 +140,7 @@ describe("SidebarMenuButtons", () => {
     it("should display correct text for custom component button", () => {
       render(<SidebarMenuButtons {...defaultProps} />);
 
-      expect(screen.getByText("Create Component")).toBeInTheDocument();
+      expect(screen.getByText("New Custom Component")).toBeInTheDocument();
     });
 
     it("should display Plus icon", () => {
@@ -171,7 +171,7 @@ describe("SidebarMenuButtons", () => {
       const user = userEvent.setup();
       const propsWithoutCustomComponent = {
         ...defaultProps,
-        customComponent: null,
+        customComponent: undefined,
       };
 
       render(<SidebarMenuButtons {...propsWithoutCustomComponent} />);
@@ -477,9 +477,8 @@ describe("SidebarMenuButtons", () => {
     it("should render fragments correctly", () => {
       const { container } = render(<SidebarMenuButtons {...defaultProps} />);
 
-      // Component renders sticky note + custom component buttons via React fragment
-      const sidebarMenuButtons = screen.getAllByTestId("sidebar-menu-button");
-      expect(sidebarMenuButtons).toHaveLength(2);
+      // Component should render without wrapper elements (using React fragment)
+      expect(container.children).toHaveLength(1);
     });
 
     it("should render custom component button with correct attributes", () => {
@@ -521,7 +520,7 @@ describe("SidebarMenuButtons", () => {
       const user = userEvent.setup();
       const differentCustomComponent = {
         description: "Different component",
-        template: {},
+        template: { test: true },
         display_name: "Different Component",
         documentation: "Different docs",
       };
@@ -571,7 +570,7 @@ describe("SidebarMenuButtons", () => {
     it("should handle missing addComponent function gracefully", () => {
       const propsWithoutAddComponent = {
         ...defaultProps,
-        addComponent: jest.fn(),
+        addComponent: undefined,
       };
 
       expect(() => {
@@ -612,7 +611,7 @@ describe("SidebarMenuButtons", () => {
     it("should display correct text content in custom mode", () => {
       render(<SidebarMenuButtons {...defaultProps} />);
 
-      expect(screen.getByText("Create Component")).toBeInTheDocument();
+      expect(screen.getByText("New Custom Component")).toBeInTheDocument();
     });
 
     it("should display correct text content in MCP mode", () => {
@@ -629,7 +628,7 @@ describe("SidebarMenuButtons", () => {
     it("should have spans with correct classes", () => {
       render(<SidebarMenuButtons {...defaultProps} />);
 
-      const customSpan = screen.getByText("Create Component");
+      const customSpan = screen.getByText("New Custom Component");
 
       expect(customSpan).toHaveClass(
         "group-data-[state=open]/collapsible:font-semibold",
@@ -656,10 +655,8 @@ describe("SidebarMenuButtons", () => {
     it("should apply group class to custom component SidebarMenuButton", () => {
       render(<SidebarMenuButtons {...defaultProps} />);
 
-      const sidebarMenuButtons = screen.getAllByTestId("sidebar-menu-button");
-      for (const button of sidebarMenuButtons) {
-        expect(button).toHaveClass("group");
-      }
+      const sidebarMenuButton = screen.getByTestId("sidebar-menu-button");
+      expect(sidebarMenuButton).toHaveClass("group");
     });
   });
 

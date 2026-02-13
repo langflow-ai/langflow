@@ -16,6 +16,10 @@ test.describe("Flow Lock Feature", () => {
         timeout: 5000,
       });
 
+      // Verify initially the flow is not locked (no lock icon should be visible)
+      const initialLockIcon = page.getByTestId("icon-Lock");
+      await expect(initialLockIcon).toHaveCount(0);
+
       // Open flow settings by clicking on the flow name
       await page.getByTestId("flow_name").click();
 
@@ -66,8 +70,11 @@ test.describe("Flow Lock Feature", () => {
         timeout: 10000,
       });
 
-      // Reopen settings to verify lock state persisted
+      // Verify lock icon now appears in the flow header
+      const lockIconInHeader = page.getByTestId("icon-Lock");
+      await expect(lockIconInHeader).toBeVisible();
 
+      // Try to open settings again to unlock
       await page.getByTestId("flow_name").click();
 
       // Wait for the settings modal to open again
@@ -107,14 +114,9 @@ test.describe("Flow Lock Feature", () => {
         timeout: 10000,
       });
 
-      // Reopen settings to verify unlock state persisted
-      await page.getByTestId("flow_name").click();
-      await page.waitForSelector('[data-testid="lock-flow-switch"]', {
-        timeout: 30000,
+      await expect(page.getByTestId("icon-Lock")).toBeHidden({
+        timeout: 5000,
       });
-      await expect(lockSwitch).toHaveAttribute("data-state", "unchecked");
-      await expect(nameInput).toBeEnabled();
-      await expect(descriptionInput).toBeEnabled();
     },
   );
 

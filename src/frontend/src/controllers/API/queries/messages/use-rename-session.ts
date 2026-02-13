@@ -5,10 +5,6 @@ import { useMessagesStore } from "@/stores/messagesStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import type { useMutationFunctionType } from "@/types/api";
 import type { Message } from "@/types/messages";
-import {
-  getPlaygroundMessages,
-  savePlaygroundMessages,
-} from "@/utils/playground-storage";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -33,14 +29,14 @@ export const useUpdateSessionName: useMutationFunctionType<
     const isPlayground = isPlaygroundFromFlow || isPlaygroundFromPlayground;
     // if we are in playground we will edit the local storage instead of the API
     if (isPlayground && flowId) {
-      const messages = getPlaygroundMessages(flowId);
+      const messages = JSON.parse(sessionStorage.getItem(flowId) || "[]");
       const messagesWithNewSessionId = messages.map((message: Message) => {
         if (message.session_id === data.old_session_id) {
           message.session_id = data.new_session_id;
         }
         return message;
       });
-      savePlaygroundMessages(flowId, messagesWithNewSessionId);
+      sessionStorage.setItem(flowId, JSON.stringify(messagesWithNewSessionId));
       // Update the messages store to reflect the new session_id
       useMessagesStore
         .getState()
@@ -57,11 +53,13 @@ export const useUpdateSessionName: useMutationFunctionType<
       ];
 
       const oldCacheData = queryClient.getQueryData<Message[]>(oldCacheKey);
-      const freshMessages = getPlaygroundMessages(flowId);
+      // Get fresh messages from sessionStorage (source of truth after rename)
+      const freshMessages = JSON.parse(sessionStorage.getItem(flowId) || "[]");
       const messagesForNewSession = freshMessages.filter(
         (msg: Message) => msg.session_id === data.new_session_id,
       );
 
+      // Set the new cache with fresh messages from sessionStorage
       queryClient.setQueryData(newCacheKey, messagesForNewSession);
 
       // Remove the old cache key

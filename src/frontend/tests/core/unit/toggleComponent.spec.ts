@@ -35,6 +35,15 @@ test(
 
     await page.getByTestId("div-generic-node").click();
 
+    await openAdvancedOptions(page);
+
+    await page.locator('//*[@id="showload_hidden"]').click();
+    expect(
+      await page.locator('//*[@id="showload_hidden"]').isChecked(),
+    ).toBeTruthy();
+
+    await closeAdvancedOptions(page);
+
     await adjustScreenView(page);
 
     await page.getByTestId("toggle_bool_load_hidden").click();
@@ -66,9 +75,66 @@ test(
 
     await adjustScreenView(page);
 
+    await disableInspectPanel(page);
+
+    await openAdvancedOptions(page);
+
     expect(
       await page.getByTestId("toggle_bool_load_hidden").isChecked(),
     ).toBeTruthy();
+
+    await page.locator('//*[@id="showload_hidden"]').click();
+    expect(
+      await page.locator('//*[@id="showload_hidden"]').isChecked(),
+    ).toBeFalsy();
+
+    await page.locator('//*[@id="showmax_concurrency"]').click();
+    expect(
+      await page.locator('//*[@id="showmax_concurrency"]').isChecked(),
+    ).toBeTruthy();
+
+    await page.locator('//*[@id="showpath"]').click();
+    expect(await page.locator('//*[@id="showpath"]').isChecked()).toBeFalsy();
+
+    await page.locator('//*[@id="showrecursive"]').click();
+    expect(
+      await page.locator('//*[@id="showrecursive"]').isChecked(),
+    ).toBeTruthy();
+
+    await page.locator('//*[@id="showsilent_errors"]').click();
+    expect(
+      await page.locator('//*[@id="showsilent_errors"]').isChecked(),
+    ).toBeTruthy();
+
+    await page.locator('//*[@id="showuse_multithreading"]').click();
+    expect(
+      await page.locator('//*[@id="showuse_multithreading"]').isChecked(),
+    ).toBeTruthy();
+
+    await page.locator('//*[@id="showmax_concurrency"]').click();
+    expect(
+      await page.locator('//*[@id="showmax_concurrency"]').isChecked(),
+    ).toBeFalsy();
+
+    await page.locator('//*[@id="showpath"]').click();
+    expect(await page.locator('//*[@id="showpath"]').isChecked()).toBeTruthy();
+
+    await page.locator('//*[@id="showrecursive"]').click();
+    expect(
+      await page.locator('//*[@id="showrecursive"]').isChecked(),
+    ).toBeFalsy();
+
+    await page.locator('//*[@id="showsilent_errors"]').click();
+    expect(
+      await page.locator('//*[@id="showsilent_errors"]').isChecked(),
+    ).toBeFalsy();
+
+    await page.locator('//*[@id="showuse_multithreading"]').click();
+    expect(
+      await page.locator('//*[@id="showuse_multithreading"]').isChecked(),
+    ).toBeFalsy();
+
+    await closeAdvancedOptions(page);
 
     const plusButtonLocator = page.getByTestId("toggle_bool_load_hidden");
     const elementCount = await plusButtonLocator?.count();
@@ -76,6 +142,8 @@ test(
       expect(true).toBeTruthy();
 
       await page.getByTestId("div-generic-node").click();
+
+      await openAdvancedOptions(page);
 
       await page.locator('//*[@id="showload_hidden"]').click();
       expect(
@@ -85,6 +153,8 @@ test(
       expect(
         await page.getByTestId("toggle_bool_load_hidden").isChecked(),
       ).toBeTruthy();
+
+      await closeAdvancedOptions(page);
 
       await page.getByTestId("toggle_bool_load_hidden").click();
       expect(
@@ -111,5 +181,6 @@ test(
         await page.getByTestId("toggle_bool_load_hidden").isChecked(),
       ).toBeFalsy();
     }
+    await enableInspectPanel(page);
   },
 );
