@@ -2021,6 +2021,7 @@ export const createNewFlow = (
     folder_id: folderId,
     endpoint_name: flow?.endpoint_name ?? undefined,
     tags: flow?.tags ?? [],
+    locked: flow?.locked,
     mcp_enabled: true,
   };
 };
