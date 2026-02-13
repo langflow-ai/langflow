@@ -1,18 +1,45 @@
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import Loading from "@/components/ui/loading";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useGetKnowledgeBaseChunks } from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-base-chunks";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import ChunkCard from "./components/ChunkCard";
-import { CHUNKS_PER_PAGE } from "./constants";
+import { CHUNKS_PER_PAGE, PAGE_SIZE_OPTIONS } from "./constants";
 
 export const SourceChunksPage = () => {
   const { sourceId } = useParams<{ sourceId: string }>();
   const navigate = useCustomNavigate();
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(CHUNKS_PER_PAGE);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchQuery(value);
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => {
+      setDebouncedSearch(value);
+      setCurrentPage(1);
+    }, 300);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    };
+  }, []);
 
   const {
     data: paginatedResponse,
@@ -21,7 +48,8 @@ export const SourceChunksPage = () => {
   } = useGetKnowledgeBaseChunks({
     kb_name: sourceId || "",
     page: currentPage,
-    limit: CHUNKS_PER_PAGE,
+    limit: pageSize,
+    search: debouncedSearch || undefined,
   });
 
   const handleBack = () => {
@@ -32,10 +60,15 @@ export const SourceChunksPage = () => {
     navigator.clipboard.writeText(content);
   };
 
+  const handlePageSizeChange = (newSize: number) => {
+    setPageSize(newSize);
+    setCurrentPage(1);
+  };
+
   const chunks = paginatedResponse?.chunks || [];
   const totalPages = paginatedResponse?.total_pages || 0;
   const total = paginatedResponse?.total || 0;
-  const startIndex = ((paginatedResponse?.page || 1) - 1) * CHUNKS_PER_PAGE;
+  const startIndex = ((paginatedResponse?.page || 1) - 1) * pageSize;
 
   return (
     <div className="flex h-full w-full" data-testid="source-chunks-wrapper">
@@ -69,6 +102,22 @@ export const SourceChunksPage = () => {
                   />
                 </Button>
                 <span style={{ textTransform: "none" }}>{sourceId}</span>
+              </div>
+
+              <div className="flex shrink-0 items-center pb-4">
+                <div className="relative w-full xl:w-5/12">
+                  <ForwardedIconComponent
+                    name="Search"
+                    className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                  />
+                  <Input
+                    placeholder="Search chunks..."
+                    value={searchQuery}
+                    onChange={(e) => handleSearchChange(e.target.value)}
+                    className="pl-9"
+                    data-testid="chunks-search-input"
+                  />
+                </div>
               </div>
 
               <div className="flex flex-1 flex-col overflow-hidden">
@@ -105,11 +154,38 @@ export const SourceChunksPage = () => {
                     {totalPages > 1 && (
                       <div className="shrink-0 pb-4 pt-3">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-muted-foreground">
-                            Showing {startIndex + 1}-
-                            {Math.min(startIndex + CHUNKS_PER_PAGE, total)} of{" "}
-                            {total} chunks
-                          </span>
+                          <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm text-muted-foreground whitespace-nowrap">
+                                Per page:
+                              </span>
+                              <Select
+                                value={String(pageSize)}
+                                onValueChange={(val) =>
+                                  handlePageSizeChange(Number(val))
+                                }
+                              >
+                                <SelectTrigger
+                                  className="h-8 w-[70px] text-sm"
+                                  data-testid="chunks-page-size-select"
+                                >
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="min-w-[70px]">
+                                  {PAGE_SIZE_OPTIONS.map((opt) => (
+                                    <SelectItem key={opt} value={String(opt)}>
+                                      {opt}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <span className="text-sm text-muted-foreground">
+                              Showing {startIndex + 1}-
+                              {Math.min(startIndex + pageSize, total)} of{" "}
+                              {total} chunks
+                            </span>
+                          </div>
                           <div className="flex items-center gap-2">
                             <Button
                               variant="outline"

@@ -1010,6 +1010,7 @@ async def get_knowledge_base_chunks(
     current_user: CurrentActiveUser,
     page: int = Query(1, ge=1),
     limit: int = Query(50, ge=1, le=100),
+    search: str = Query("", description="Filter chunks whose text contains this substring"),
 ) -> PaginatedChunkResponse:
     """Get chunks from a specific knowledge base with pagination."""
     try:
@@ -1031,21 +1032,35 @@ async def get_knowledge_base_chunks(
         # Access the raw collection
         collection = chroma._collection  # noqa: SLF001
 
-        # Get total count for pagination metadata
-        total_count = collection.count()
+        search_term = search.strip()
 
-        # Calculate index for pagination
-        offset = (page - 1) * limit
-
-        # Fetch documents and metadata with limit and offset
-        results = collection.get(
-            include=["documents", "metadatas"],
-            limit=limit,
-            offset=offset,
-        )
+        if search_term:
+            # When searching, fetch all matching docs then paginate in-memory
+            where_doc = {"$contains": search_term}
+            all_results = collection.get(
+                include=["documents", "metadatas"],
+                where_document=where_doc,
+            )
+            total_count = len(all_results["ids"])
+            offset = (page - 1) * limit
+            sliced_ids = all_results["ids"][offset : offset + limit]
+            sliced_docs = all_results["documents"][offset : offset + limit]
+            sliced_metas = all_results["metadatas"][offset : offset + limit]
+        else:
+            # No search – use Chroma's native pagination
+            total_count = collection.count()
+            offset = (page - 1) * limit
+            results = collection.get(
+                include=["documents", "metadatas"],
+                limit=limit,
+                offset=offset,
+            )
+            sliced_ids = results["ids"]
+            sliced_docs = results["documents"]
+            sliced_metas = results["metadatas"]
 
         chunks = []
-        for doc_id, document, metadata in zip(results["ids"], results["documents"], results["metadatas"], strict=False):
+        for doc_id, document, metadata in zip(sliced_ids, sliced_docs, sliced_metas, strict=False):
             content = document or ""
             chunks.append(
                 ChunkInfo(
@@ -1060,7 +1075,7 @@ async def get_knowledge_base_chunks(
             total=total_count,
             page=page,
             limit=limit,
-            total_pages=(total_count + limit - 1) // limit,
+            total_pages=(total_count + limit - 1) // limit if total_count > 0 else 0,
         )
 
     except HTTPException:

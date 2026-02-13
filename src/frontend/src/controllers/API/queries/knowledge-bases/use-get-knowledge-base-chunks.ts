@@ -23,6 +23,7 @@ interface GetKnowledgeBaseChunksParams {
   kb_name: string;
   page?: number;
   limit?: number;
+  search?: string;
 }
 
 export const useGetKnowledgeBaseChunks: useQueryFunctionType<
@@ -39,6 +40,9 @@ export const useGetKnowledgeBaseChunks: useQueryFunctionType<
     if (params?.limit) {
       queryParams.append("limit", params.limit.toString());
     }
+    if (params?.search) {
+      queryParams.append("search", params.search);
+    }
 
     const url = `${getURL("KNOWLEDGE_BASES")}/${params?.kb_name}/chunks${
       queryParams.toString() ? `?${queryParams.toString()}` : ""
@@ -49,7 +53,13 @@ export const useGetKnowledgeBaseChunks: useQueryFunctionType<
   };
 
   const queryResult: UseQueryResult<PaginatedChunkResponse, any> = query(
-    ["useGetKnowledgeBaseChunks", params?.kb_name, params?.page, params?.limit],
+    [
+      "useGetKnowledgeBaseChunks",
+      params?.kb_name,
+      params?.page,
+      params?.limit,
+      params?.search,
+    ],
     getChunksFn,
     {
       enabled: !!params?.kb_name,

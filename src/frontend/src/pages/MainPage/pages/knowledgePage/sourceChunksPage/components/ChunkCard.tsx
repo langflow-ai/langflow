@@ -1,10 +1,9 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { ChunkInfo } from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-base-chunks";
 import { cn } from "@/utils/utils";
-import { TRUNCATE_LENGTH } from "../constants";
 
 interface ChunkCardProps {
   chunk: ChunkInfo;
@@ -15,11 +14,15 @@ interface ChunkCardProps {
 const ChunkCard = ({ chunk, index, onCopy }: ChunkCardProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
-  const shouldTruncate = chunk.content.length > TRUNCATE_LENGTH;
-  const displayContent =
-    shouldTruncate && !isExpanded
-      ? chunk.content.slice(0, TRUNCATE_LENGTH) + "..."
-      : chunk.content;
+  const [isOverflowing, setIsOverflowing] = useState(false);
+  const contentRef = useRef<HTMLParagraphElement>(null);
+
+  useEffect(() => {
+    const el = contentRef.current;
+    if (el) {
+      setIsOverflowing(el.scrollHeight > el.clientHeight);
+    }
+  }, [chunk.content]);
 
   const handleCopy = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -31,9 +34,10 @@ const ChunkCard = ({ chunk, index, onCopy }: ChunkCardProps) => {
   return (
     <div
       className={cn(
-        "cursor-pointer rounded-lg border border-muted bg-muted p-3 transition-all duration-200",
+        "rounded-lg border border-muted bg-muted p-3 transition-all duration-200",
+        isOverflowing && "cursor-pointer",
       )}
-      onClick={() => shouldTruncate && setIsExpanded(!isExpanded)}
+      onClick={() => isOverflowing && setIsExpanded(!isExpanded)}
     >
       <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -66,17 +70,8 @@ const ChunkCard = ({ chunk, index, onCopy }: ChunkCardProps) => {
           </Button>
         </div>
         <div className="flex items-center gap-3">
-          {/* TODO: Add score when semantic search is implemented
-          <Badge
-            variant="secondary"
-            size="sq"
-            className="text-xs text-muted-foreground"
-          >
-            {chunk?.score ?? "N/A"} score
-          </Badge>
-          */}
           <div className="w-4">
-            {shouldTruncate && (
+            {isOverflowing && (
               <ForwardedIconComponent
                 name={isExpanded ? "ChevronUp" : "ChevronDown"}
                 className="h-4 w-4 text-muted-foreground transition-transform duration-200"
@@ -86,12 +81,13 @@ const ChunkCard = ({ chunk, index, onCopy }: ChunkCardProps) => {
         </div>
       </div>
       <p
+        ref={contentRef}
         className={cn(
-          "text-sm leading-relaxed text-muted-foreground transition-all duration-200 whitespace-pre-wrap break-words",
-          !isExpanded && shouldTruncate && "line-clamp-4",
+          "text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap break-words",
+          !isExpanded && "line-clamp-2",
         )}
       >
-        {displayContent}
+        {chunk.content}
       </p>
     </div>
   );

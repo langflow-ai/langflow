@@ -193,7 +193,7 @@ const KnowledgeBasesTab = ({
             data-testid="search-kb-input"
             type="text"
             placeholder="Search knowledge bases..."
-            className="mr-2 w-full"
+            className="w-full"
             value={quickFilterText || ""}
             onChange={(event) => setQuickFilterText(event.target.value)}
           />
