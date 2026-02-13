@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { StickToBottom } from "use-stick-to-bottom";
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import LangflowLogoColor from "@/assets/LangflowLogoColor.svg?react";
+import { SafariScrollFix } from "@/components/common/safari-scroll-fix";
 import ThemeButtons from "@/components/core/appHeaderComponent/components/ThemeButtons";
 import { ChatHeader } from "@/components/core/playgroundComponent/chat-view/chat-header/components/chat-header";
 import { ChatSidebar } from "@/components/core/playgroundComponent/chat-view/chat-header/components/chat-sidebar";
@@ -18,9 +19,9 @@ import { AnimatedConditional } from "@/components/ui/animated-close";
 import { Button } from "@/components/ui/button";
 import { TextEffectPerChar } from "@/components/ui/textAnimation";
 import { ENABLE_PUBLISH } from "@/customization/feature-flags";
+import { track } from "@/customization/utils/analytics";
 import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
 import { LangflowButtonRedirectTarget } from "@/customization/utils/urls";
-import { track } from "@/customization/utils/analytics";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useUtilityStore } from "@/stores/utilityStore";
@@ -200,10 +201,10 @@ export function ShareablePlaygroundContent() {
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
             <StickToBottom
               className="flex-1 min-h-0 overflow-hidden"
-              resize="smooth"
+              resize="instant"
               initial="instant"
             >
-              <StickToBottom.Content className="flex flex-col min-h-full overflow-x-hidden">
+              <StickToBottom.Content className="flex flex-col min-h-full overflow-x-hidden ">
                 <div className="flex flex-col w-full max-w-[744px] p-0 mx-auto">
                   {chatHistory.length === 0 && !isBuilding ? (
                     <div className="flex flex-grow w-full flex-col items-center justify-center">
@@ -236,6 +237,7 @@ export function ShareablePlaygroundContent() {
                   )}
                 </div>
               </StickToBottom.Content>
+              <SafariScrollFix />
             </StickToBottom>
 
             <div className="flex-shrink-0 p-4 flex justify-center">
