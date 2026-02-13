@@ -59,3 +59,31 @@ async def update_job_status(db: AsyncSession, job_id: UUID, status: str) -> Job 
         await db.flush()
         await db.refresh(job)
     return job
+
+
+async def get_latest_jobs_by_asset_ids(db: AsyncSession, asset_ids: list[UUID]) -> dict[UUID, Job]:
+    """Get the latest job for each asset ID in a single query.
+
+    Args:
+        db: Async database session
+        asset_ids: List of asset IDs to fetch jobs for
+
+    Returns:
+        Dictionary mapping asset_id to the latest Job object
+    """
+    if not asset_ids:
+        return {}
+
+    # Query all jobs for the given asset IDs, ordered by created_timestamp descending
+    statement = select(Job).where(Job.asset_id.in_(asset_ids)).order_by(Job.created_timestamp.desc())
+
+    result = await db.exec(statement)
+    all_jobs = result.all()
+
+    # Build a dictionary with the latest job per asset_id
+    latest_jobs: dict[UUID, Job] = {}
+    for job in all_jobs:
+        if job.asset_id and job.asset_id not in latest_jobs:
+            latest_jobs[job.asset_id] = job
+
+    return latest_jobs
