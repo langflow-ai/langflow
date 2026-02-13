@@ -1,14 +1,14 @@
 // Export the lazy loading mapping for icons
 export const lazyIconsMapping = {
   AIML: () => import("@/icons/AIML").then((mod) => ({ default: mod.AIMLIcon })),
-  AgentQL: () =>
-    import("@/icons/AgentQL").then((mod) => ({ default: mod.AgentQLIcon })),
-  Agiled: () =>
-    import("@/icons/Agiled").then((mod) => ({ default: mod.AgiledIcon })),
   Agentics: () =>
     import("@/icons/Agentics").then((mod) => ({
       default: mod.AgenticsIcon,
     })),
+  AgentQL: () =>
+    import("@/icons/AgentQL").then((mod) => ({ default: mod.AgentQLIcon })),
+  Agiled: () =>
+    import("@/icons/Agiled").then((mod) => ({ default: mod.AgiledIcon })),
   Airbyte: () =>
     import("@/icons/Airbyte").then((mod) => ({ default: mod.AirbyteIcon })),
   Anthropic: () =>

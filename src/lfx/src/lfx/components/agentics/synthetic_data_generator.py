@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
 
 from lfx.components.agentics.base_component import BaseAgenticComponent
 from lfx.components.agentics.constants import ERROR_AGENTICS_NOT_INSTALLED
@@ -17,10 +16,11 @@ from lfx.components.agentics.inputs import (
 from lfx.io import (
     IntInput,
     Output,
+    MessageTextInput
 )
 
-if TYPE_CHECKING:
-    from lfx.schema.dataframe import DataFrame
+
+from lfx.schema.dataframe import DataFrame
 
 
 class SyntheticDataGenerator(BaseAgenticComponent):
@@ -37,6 +37,12 @@ class SyntheticDataGenerator(BaseAgenticComponent):
             name="schema",
             display_name="Generated Fields",
             info="Define the structure and data types for the model's output.",
+        ),
+        MessageTextInput(
+            name="instructions",
+            display_name="Instructions",
+            info="Instructions for generating the syntetic data.",
+            value="",
         ),
         IntInput(
             name="batch_size",
@@ -73,6 +79,7 @@ class SyntheticDataGenerator(BaseAgenticComponent):
             atype,
             n_instances=self.batch_size,
             llm=llm,
+            instructions=str(self.instructions),
         )
         output = AG(states=output_states)
 

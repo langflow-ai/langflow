@@ -121,8 +121,8 @@ import { AgenticsIcon } from "./Agentics";
 // Export the eagerly loaded icons map
 export const eagerIconsMapping = {
   AIML: AIMLIcon,
-  AgentQL: AgentQLIcon,
   Agentics: AgenticsIcon,
+  AgentQL: AgentQLIcon,
   Airbyte: AirbyteIcon,
   Anthropic: AnthropicIcon,
   Apify: ApifyIcon,
