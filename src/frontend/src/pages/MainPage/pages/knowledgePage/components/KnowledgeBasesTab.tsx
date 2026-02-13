@@ -1,6 +1,5 @@
 import type { RowClickedEvent, SelectionChangedEvent } from "ag-grid-community";
 import type { AgGridReact } from "ag-grid-react";
-import type { AxiosError } from "axios";
 import { useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
@@ -8,11 +7,7 @@ import TableComponent from "@/components/core/parameterRenderComponent/component
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Loading from "@/components/ui/loading";
-import { useDeleteKnowledgeBase } from "@/controllers/API/queries/knowledge-bases/use-delete-knowledge-base";
-import {
-  type KnowledgeBaseInfo,
-  useGetKnowledgeBases,
-} from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases";
+import { useGetKnowledgeBases } from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
 import useAddFlow from "@/hooks/flows/use-add-flow";
@@ -24,19 +19,13 @@ import { useFolderStore } from "@/stores/foldersStore";
 import { updateIds } from "@/utils/reactflowUtils";
 import { cn } from "@/utils/utils";
 import { createKnowledgeBaseColumns } from "../config/knowledgeBaseColumns";
+import { isBusyStatus } from "../config/statusConfig";
+import { useKnowledgeBaseActions } from "../hooks/useKnowledgeBaseActions";
+import { useKnowledgeBasePolling } from "../hooks/useKnowledgeBasePolling";
+import { useOptimisticKnowledgeBase } from "../hooks/useOptimisticKnowledgeBase";
+import type { KnowledgeBasesTabProps } from "../types";
 import KnowledgeBaseEmptyState from "./KnowledgeBaseEmptyState";
 import KnowledgeBaseSelectionOverlay from "./KnowledgeBaseSelectionOverlay";
-
-interface KnowledgeBasesTabProps {
-  quickFilterText: string;
-  setQuickFilterText: (text: string) => void;
-  selectedFiles: KnowledgeBaseInfo[];
-  setSelectedFiles: (files: KnowledgeBaseInfo[]) => void;
-  quantitySelected: number;
-  setQuantitySelected: (quantity: number) => void;
-  isShiftPressed: boolean;
-  onRowClick?: (knowledgeBase: KnowledgeBaseInfo) => void;
-}
 
 const KnowledgeBasesTab = ({
   quickFilterText,
@@ -61,88 +50,50 @@ const KnowledgeBasesTab = ({
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
   const folderIdUrl = folderId ?? myCollectionId;
 
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [knowledgeBaseToDelete, setKnowledgeBaseToDelete] =
-    useState<KnowledgeBaseInfo | null>(null);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
-  const [knowledgeBaseForAddSources, setKnowledgeBaseForAddSources] =
-    useState<KnowledgeBaseInfo | null>(null);
 
-  const { data: knowledgeBases, isLoading, error } = useGetKnowledgeBases();
+  const {
+    data: knowledgeBases,
+    isLoading,
+    error,
+    refetch,
+  } = useGetKnowledgeBases();
 
-  const deleteKnowledgeBaseMutation = useDeleteKnowledgeBase({
-    onSuccess: () => {
-      setSuccessData({
-        title: `Knowledge Base "${knowledgeBaseToDelete?.name}" deleted successfully!`,
-      });
-      resetDeleteState();
-    },
-    onError: (error: AxiosError<{ detail?: string }>) => {
-      setErrorData({
-        title: "Failed to delete knowledge base",
-        list: [
-          error?.response?.data?.detail ||
-            error?.message ||
-            "An unknown error occurred",
-        ],
-      });
-      resetDeleteState();
-    },
-  });
+  // --- Extracted hooks ---
 
-  const deleteKnowledgeBasesMutation = useDeleteKnowledgeBase({
-    onSuccess: () => {
-      setSuccessData({
-        title: `${selectedFiles.length} knowledge base(s) deleted successfully!`,
-      });
-      clearSelection();
-      setIsBulkDeleteModalOpen(false);
-    },
-    onError: (error: AxiosError<{ detail?: string }>) => {
-      setErrorData({
-        title: "Failed to delete knowledge bases",
-        list: [
-          error?.response?.data?.detail ||
-            error?.message ||
-            "An unknown error occurred",
-        ],
-      });
-      setIsBulkDeleteModalOpen(false);
+  const { pollingRef } = useKnowledgeBasePolling({
+    knowledgeBases,
+    tableRef,
+    onStatusChange: (transitions) => {
+      for (const { kb, previousStatus } of transitions) {
+        if (kb.status === "failed" && previousStatus !== "failed") {
+          setErrorData({
+            title: `Ingestion failed for "${kb.name}"`,
+            list: kb.failure_reason ? [kb.failure_reason] : undefined,
+          });
+        } else if (kb.status === "ready" && previousStatus === "ingesting") {
+          setSuccessData({
+            title: `"${kb.name}" ingestion complete — ${kb.chunks} chunks ready`,
+          });
+        }
+      }
     },
   });
 
-  const confirmBulkDelete = () => {
-    if (selectedFiles.length > 0 && !deleteKnowledgeBasesMutation.isPending) {
-      const kb_names = selectedFiles.map((kb: KnowledgeBaseInfo) => kb.id);
-      deleteKnowledgeBasesMutation.mutate({ kb_names: kb_names });
-    }
+  const clearSelection = () => {
+    setQuantitySelected(0);
+    setSelectedFiles([]);
   };
 
-  if (error) {
-    setErrorData({
-      title: "Failed to load knowledge bases",
-      list: [error?.message || "An unknown error occurred"],
-    });
-  }
+  const actions = useKnowledgeBaseActions({
+    refetch,
+    selectedFiles,
+    clearSelection,
+  });
 
-  const resetDeleteState = () => {
-    setKnowledgeBaseToDelete(null);
-    setIsDeleteModalOpen(false);
-  };
+  const { captureSubmit, applyOptimisticUpdate } = useOptimisticKnowledgeBase();
 
-  const handleDelete = (knowledgeBase: KnowledgeBaseInfo) => {
-    setKnowledgeBaseToDelete(knowledgeBase);
-    setIsDeleteModalOpen(true);
-  };
-
-  const confirmDelete = () => {
-    if (knowledgeBaseToDelete && !deleteKnowledgeBaseMutation.isPending) {
-      deleteKnowledgeBaseMutation.mutate({
-        kb_names: knowledgeBaseToDelete.id,
-      });
-    }
-  };
+  // --- Event handlers ---
 
   const handleSelectionChange = (event: SelectionChangedEvent) => {
     const selectedRows = event.api.getSelectedRows();
@@ -172,11 +123,6 @@ const KnowledgeBasesTab = ({
     }
   };
 
-  const clearSelection = () => {
-    setQuantitySelected(0);
-    setSelectedFiles([]);
-  };
-
   const handleRowClick = (event: RowClickedEvent) => {
     const clickedElement = event.event?.target as HTMLElement;
     if (clickedElement && !clickedElement.closest("button") && onRowClick) {
@@ -184,33 +130,50 @@ const KnowledgeBasesTab = ({
     }
   };
 
-  const handleAddSources = (knowledgeBase: KnowledgeBaseInfo) => {
-    setKnowledgeBaseForAddSources(knowledgeBase);
+  const handleAddSources = (
+    knowledgeBase: Parameters<typeof actions.handleAddSources>[0],
+  ) => {
+    actions.handleAddSources(knowledgeBase);
     setIsUploadModalOpen(true);
   };
 
   const existingKnowledgeBaseData = useMemo(() => {
-    if (!knowledgeBaseForAddSources) return undefined;
+    if (!actions.knowledgeBaseForAddSources) return undefined;
     return {
-      name: knowledgeBaseForAddSources.name,
-      embeddingProvider: knowledgeBaseForAddSources.embedding_provider,
-      embeddingModel: knowledgeBaseForAddSources.embedding_model,
-      chunkSize: knowledgeBaseForAddSources.chunk_size,
-      chunkOverlap: knowledgeBaseForAddSources.chunk_overlap,
-      separator: knowledgeBaseForAddSources.separator,
+      name: actions.knowledgeBaseForAddSources.dir_name,
+      embeddingProvider: actions.knowledgeBaseForAddSources.embedding_provider,
+      embeddingModel: actions.knowledgeBaseForAddSources.embedding_model,
+      chunkSize: actions.knowledgeBaseForAddSources.chunk_size,
+      chunkOverlap: actions.knowledgeBaseForAddSources.chunk_overlap,
+      separator: actions.knowledgeBaseForAddSources.separator,
     };
-  }, [knowledgeBaseForAddSources]);
+  }, [actions.knowledgeBaseForAddSources]);
 
   const columnDefs = createKnowledgeBaseColumns({
     onViewChunks: onRowClick,
-    onDelete: handleDelete,
+    onDelete: actions.handleDelete,
     onAddSources: handleAddSources,
+    onStopIngestion: actions.handleStopIngestion,
   });
+
+  // --- Error handling ---
+
+  if (error) {
+    setErrorData({
+      title: "Failed to load knowledge bases",
+      list: [error?.message || "An unknown error occurred"],
+    });
+  }
+
+  // --- Render ---
 
   if (isLoading || !knowledgeBases || !Array.isArray(knowledgeBases)) {
     return (
-      <div className="flex h-full w-full items-center justify-center">
-        <Loading />
+      <div className="flex flex-1 w-full flex-col items-center justify-center gap-3">
+        <Loading size={36} />
+        <span className="text-sm text-muted-foreground pt-3">
+          Loading Knowledge Bases...
+        </span>
       </div>
     );
   }
@@ -239,7 +202,7 @@ const KnowledgeBasesTab = ({
           <Button
             variant="destructive"
             className="flex items-center gap-2 font-semibold"
-            onClick={() => setIsBulkDeleteModalOpen(true)}
+            onClick={() => actions.setIsBulkDeleteModalOpen(true)}
           >
             <ForwardedIconComponent name="Trash2" className="h-4 w-4" />
             Delete Knowledge
@@ -247,9 +210,7 @@ const KnowledgeBasesTab = ({
         ) : (
           <Button
             className="flex items-center gap-2 font-semibold"
-            onClick={() => {
-              setIsUploadModalOpen(true);
-            }}
+            onClick={() => setIsUploadModalOpen(true)}
           >
             <ForwardedIconComponent name="Plus" className="h-4 w-4" />
             Add Knowledge
@@ -263,9 +224,7 @@ const KnowledgeBasesTab = ({
             rowHeight={45}
             headerHeight={45}
             cellSelection={false}
-            tableOptions={{
-              hide_options: true,
-            }}
+            tableOptions={{ hide_options: true }}
             suppressRowClickSelection={!isShiftPressed}
             rowSelection="multiple"
             onSelectionChanged={handleSelectionChange}
@@ -279,31 +238,38 @@ const KnowledgeBasesTab = ({
             pagination
             ref={tableRef}
             quickFilterText={quickFilterText}
+            getRowId={(params) => params.data.dir_name}
             gridOptions={{
               stopEditingWhenCellsLoseFocus: true,
               ensureDomOrder: true,
               colResizeDefault: "shift",
+              paginationAutoPageSize: true,
+              isRowSelectable: (rowNode) => !isBusyStatus(rowNode.data?.status),
             }}
           />
         </div>
       </div>
 
       <DeleteConfirmationModal
-        open={isDeleteModalOpen}
-        setOpen={setIsDeleteModalOpen}
-        onConfirm={confirmDelete}
-        description={`knowledge base "${knowledgeBaseToDelete?.name || ""}"`}
+        open={actions.isDeleteModalOpen}
+        setOpen={actions.setIsDeleteModalOpen}
+        onConfirm={actions.confirmDelete}
+        description={`knowledge base "${actions.knowledgeBaseToDelete?.name || ""}"`}
         note="This action cannot be undone"
       >
         <></>
       </DeleteConfirmationModal>
 
       <DeleteConfirmationModal
-        open={isBulkDeleteModalOpen}
-        setOpen={setIsBulkDeleteModalOpen}
-        onConfirm={confirmBulkDelete}
-        description={`${selectedFiles.length} knowledge base(s)`}
-        note="This action cannot be undone"
+        open={actions.isBulkDeleteModalOpen}
+        setOpen={actions.setIsBulkDeleteModalOpen}
+        onConfirm={actions.confirmBulkDelete}
+        description={`${actions.deletableSelected.length} knowledge base(s)`}
+        note={
+          actions.deletableSelected.length < selectedFiles.length
+            ? `${selectedFiles.length - actions.deletableSelected.length} ingesting knowledge base(s) will be skipped. This action cannot be undone.`
+            : "This action cannot be undone"
+        }
       >
         <></>
       </DeleteConfirmationModal>
@@ -313,16 +279,25 @@ const KnowledgeBasesTab = ({
         setOpen={(open) => {
           setIsUploadModalOpen(open);
           if (!open) {
-            setKnowledgeBaseForAddSources(null);
+            const startedPolling = applyOptimisticUpdate();
+            if (startedPolling) {
+              // Files were submitted — trust the optimistic "ingesting" status.
+              // Polling will sync the real status; an immediate refetch would
+              // race with the fire-and-forget ingest POST and overwrite our
+              // optimistic update with "empty".
+              pollingRef.current = true;
+            } else {
+              // No files — safe to refetch immediately (server returns "empty").
+              refetch();
+            }
+            actions.setKnowledgeBaseForAddSources(null);
           }
         }}
-        onSubmit={(data) => {
-          console.log("Creating knowledge base:", data);
-          setSuccessData({
-            title: `Knowledge base "${data.sourceName}" created successfully!`,
-          });
-        }}
+        onSubmit={captureSubmit}
         existingKnowledgeBase={existingKnowledgeBaseData}
+        existingKnowledgeBaseNames={
+          knowledgeBases?.map((kb) => kb.dir_name) ?? []
+        }
       />
     </div>
   );

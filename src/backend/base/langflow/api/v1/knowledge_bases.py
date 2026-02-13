@@ -6,7 +6,6 @@ from datetime import datetime, timezone
 from http import HTTPStatus
 from pathlib import Path
 from typing import Annotated
-from uuid import uuid4
 
 import pandas as pd
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
@@ -29,6 +28,9 @@ router = APIRouter(tags=["Knowledge Bases"], prefix="/knowledge_bases", include_
 
 _KNOWLEDGE_BASES_DIR: Path | None = None
 
+# Maps job_id (str) → task_id (str) for active ingestion tasks so they can be cancelled
+_ACTIVE_INGESTION_TASKS: dict[str, str] = {}
+
 
 def _get_knowledge_bases_dir() -> Path:
     """Lazy load the knowledge bases directory from settings."""
@@ -45,6 +47,7 @@ def _get_knowledge_bases_dir() -> Path:
 
 class KnowledgeBaseInfo(BaseModel):
     id: str
+    dir_name: str = ""
     name: str
     embedding_provider: str | None = "Unknown"
     embedding_model: str | None = "Unknown"
@@ -53,7 +56,8 @@ class KnowledgeBaseInfo(BaseModel):
     characters: int = 0
     chunks: int = 0
     avg_chunk_size: float = 0.0
-    status: str = "READY"
+    status: str = "empty"
+    failure_reason: str | None = None
     last_job_id: str | None = None
 
 
@@ -284,6 +288,19 @@ def get_kb_metadata(kb_path: Path) -> dict:
         if metadata["embedding_model"] == "Unknown":
             metadata["embedding_model"] = detect_embedding_model(kb_path)
 
+        # If the KB is currently being ingested, skip the expensive Chroma read
+        # to avoid SQLite contention with the background writer.
+        # The marker file format is: line1=job_id, line2=task_id, line3=chunks_so_far
+        ingesting_marker = kb_path / ".ingesting"
+        if ingesting_marker.exists():
+            try:
+                lines = ingesting_marker.read_text().strip().split("\n")
+                if len(lines) >= 3:
+                    metadata["chunks"] = int(lines[2])
+            except (OSError, ValueError):
+                pass
+            return metadata
+
         # Read schema for text column information
         schema_data = None
         schema_file = kb_path / "schema.json"
@@ -334,8 +351,8 @@ def get_kb_metadata(kb_path: Path) -> dict:
         except (OSError, ValueError, TypeError) as _:
             logger.exception("Error processing Chroma DB '%s'", kb_path.name)
 
-    except (OSError, ValueError, TypeError) as _:
-        logger.exception("Error processing knowledge base directory '%s'", kb_path)
+    except (OSError, ValueError, TypeError) as exc:
+        logger.exception("Error processing knowledge base directory '%s': %s: %s", kb_path, type(exc).__name__, exc)
 
     return metadata
 
@@ -381,7 +398,8 @@ async def create_knowledge_base(
 
         return KnowledgeBaseInfo(
             id=str(kb_id),
-            name=kb_name.replace("_", " ").replace("-", " "),
+            dir_name=kb_name,
+            name=kb_name.replace("_", " "),
             embedding_provider=request.embedding_provider,
             embedding_model=request.embedding_model,
             size=0,
@@ -448,7 +466,18 @@ async def preview_chunks(
                     )
                     continue
 
-                chunks = text_splitter.split_text(text_content)
+                # Only process enough text for the requested preview chunks
+                # to avoid splitting the entire file (which is slow for large files)
+                preview_text_limit = max_chunks * chunk_size * 3
+                preview_text = text_content[:preview_text_limit]
+                chunks = text_splitter.split_text(preview_text)
+
+                # Estimate total chunks from full text length
+                effective_step = max(chunk_size - chunk_overlap, 1)
+                estimated_total = max(
+                    len(chunks),
+                    int((len(text_content) - chunk_overlap) / effective_step),
+                )
 
                 # Track character positions for metadata
                 preview_chunks = []
@@ -474,7 +503,7 @@ async def preview_chunks(
                 file_previews.append(
                     {
                         "file_name": file_name,
-                        "total_chunks": len(chunks),
+                        "total_chunks": estimated_total,
                         "preview_chunks": preview_chunks,
                     }
                 )
@@ -505,6 +534,7 @@ async def ingest_files_to_knowledge_base(
     source_name: Annotated[str, Form()] = "",
     chunk_size: Annotated[int, Form()] = 1000,
     chunk_overlap: Annotated[int, Form()] = 200,
+    separator: Annotated[str, Form()] = "\n",
 ) -> dict[str, object] | TaskResponse:
     """Upload and ingest files directly into a knowledge base.
 
@@ -517,9 +547,7 @@ async def ingest_files_to_knowledge_base(
     try:
         settings = get_settings_service().settings
         max_file_size_upload = settings.max_file_size_upload
-        async_threshold = 5 * 1024 * 1024  # 5MB threshold for async ingestion
 
-        total_size = 0
         files_data = []
 
         for uploaded_file in files:
@@ -529,7 +557,6 @@ async def ingest_files_to_knowledge_base(
                     status_code=413,
                     detail=f"File {uploaded_file.filename} exceeds the maximum upload size of {max_file_size_upload}MB",
                 )
-            total_size += file_size
             content = await uploaded_file.read()
             files_data.append((uploaded_file.filename or "unknown", content))
 
@@ -580,29 +607,19 @@ async def ingest_files_to_knowledge_base(
             job_id=job_id, flow_id=job_id, job_type=JobType.INGESTION, asset_id=asset_id, asset_type="knowledge_base"
         )
 
-        if total_size > async_threshold:
-            # Async path: fire and forget
-            task_service = get_task_service()
+        # Always use async path: fire and forget so the endpoint returns immediately
+        task_service = get_task_service()
 
-            # Fire and forget the ingestion logic wrapped in status updates
-            await task_service.fire_and_forget_task(
-                job_service.execute_with_status,
-                job_id=job_id,
-                run_coro_func=_perform_ingestion,
-                kb_name=kb_name,
-                kb_path=kb_path,
-                files_data=files_data,
-                chunk_size=chunk_size,
-                chunk_overlap=chunk_overlap,
-                source_name=source_name,
-                current_user=current_user,
-                embedding_provider=embedding_provider,
-                embedding_model=embedding_model,
-            )
-            return TaskResponse(id=str(job_id), href=f"/task/{job_id}")
+        # Clear any previous failed marker and write ingesting marker
+        failed_marker = kb_path / ".failed"
+        if failed_marker.exists():
+            failed_marker.unlink(missing_ok=True)
+        marker_path = kb_path / ".ingesting"
+        marker_path.write_text(str(job_id))
 
-        # Sync path: execute with status tracking (same as async)
-        return await job_service.execute_with_status(
+        # Fire and forget the ingestion logic wrapped in status updates
+        task_id = await task_service.fire_and_forget_task(
+            job_service.execute_with_status,
             job_id=job_id,
             run_coro_func=_perform_ingestion,
             kb_name=kb_name,
@@ -610,16 +627,62 @@ async def ingest_files_to_knowledge_base(
             files_data=files_data,
             chunk_size=chunk_size,
             chunk_overlap=chunk_overlap,
+            separator=separator,
             source_name=source_name,
             current_user=current_user,
             embedding_provider=embedding_provider,
             embedding_model=embedding_model,
         )
+        # Persist task_id in the marker file so cancel works even after code reload
+        marker_path.write_text(f"{job_id}\n{task_id}")
+        _ACTIVE_INGESTION_TASKS[str(job_id)] = task_id
+        return TaskResponse(id=str(job_id), href=f"/task/{job_id}")
 
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error ingesting files to knowledge base: {e!s}") from e
+
+
+@router.post("/{kb_name}/cancel", status_code=HTTPStatus.OK)
+async def cancel_ingestion(kb_name: str, current_user: CurrentActiveUser):
+    """Cancel an active ingestion job for a knowledge base."""
+    try:
+        kb_root_path = get_kb_root_path()
+        kb_user = current_user.username
+        kb_path = kb_root_path / kb_user / kb_name
+
+        if not kb_path.exists():
+            raise HTTPException(status_code=404, detail=f"Knowledge base '{kb_name}' not found")
+
+        # Find the job_id from the .ingesting marker
+        marker_path = kb_path / ".ingesting"
+        if not marker_path.exists():
+            raise HTTPException(status_code=400, detail="No active ingestion to cancel")
+
+        marker_content = marker_path.read_text().strip().split("\n")
+        job_id_str = marker_content[0]
+        # Read task_id from marker file (line 2) or fall back to in-memory dict
+        task_id = marker_content[1] if len(marker_content) > 1 else _ACTIVE_INGESTION_TASKS.get(job_id_str)
+
+        if not task_id:
+            raise HTTPException(status_code=400, detail="Ingestion task not found or already completed")
+
+        # Revoke the task
+        task_service = get_task_service()
+        await task_service.revoke_task(task_id)
+
+        # Clean up
+        _ACTIVE_INGESTION_TASKS.pop(job_id_str, None)
+        if marker_path.exists():
+            marker_path.unlink(missing_ok=True)
+
+        return {"message": f"Ingestion for '{kb_name}' has been cancelled"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error cancelling ingestion: {e!s}") from e
 
 
 async def _perform_ingestion(
@@ -628,18 +691,29 @@ async def _perform_ingestion(
     files_data: list[tuple[str, bytes]],
     chunk_size: int,
     chunk_overlap: int,
+    separator: str,
     source_name: str,
     current_user: CurrentActiveUser,
     embedding_provider: str,
     embedding_model: str,
 ) -> dict[str, object]:
     """Internal function to perform the actual ingestion logic."""
+    marker_path = kb_path / ".ingesting"
+    chroma = None
     try:
         processed_files = []
         total_chunks_created = 0
+
+        # Build separators list: user separator first, then defaults
+        separators = None
+        if separator:
+            actual_separator = separator.replace("\\n", "\n").replace("\\t", "\t")
+            separators = [actual_separator, "\n\n", "\n", " ", ""]
+
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=chunk_size,
             chunk_overlap=chunk_overlap,
+            separators=separators,
         )
 
         # Build embeddings based on provider
@@ -688,6 +762,18 @@ async def _perform_ingestion(
                     # Embed and add to Chroma using the native async method
                     await chroma.aadd_documents(batch_docs)
 
+                    # Update the marker file with the running chunk count so the
+                    # list endpoint can report progress without reading Chroma.
+                    total_chunks_created += len(batch_chunks)
+                    try:
+                        marker_lines = marker_path.read_text().strip().split("\n")
+                        # Preserve job_id (line 1) and task_id (line 2), append/update chunks (line 3)
+                        marker_lines = marker_lines[:2]
+                        marker_lines.append(str(total_chunks_created))
+                        marker_path.write_text("\n".join(marker_lines))
+                    except OSError:
+                        pass
+
                     # Yield to the event loop to allow other tasks (like logging) to run
                     await asyncio.sleep(0.01)
 
@@ -696,7 +782,6 @@ async def _perform_ingestion(
                             f"Progress for {file_name}: {min(i + batch_size, file_chunks_count)}/{file_chunks_count} chunks ingested"
                         )
 
-                total_chunks_created += file_chunks_count
                 processed_files.append(file_name)
 
             except Exception as file_error:
@@ -715,7 +800,24 @@ async def _perform_ingestion(
 
     except Exception as e:
         await logger.aerror(f"Error in background ingestion: {e!s}")
+        # Write a failed marker so the status is visible in the KB table
+        failed_marker = kb_path / ".failed"
+        failed_marker.write_text(str(e))
         raise
+    finally:
+        # Release Chroma's resources safely.
+        # Avoid calling _server.stop() as it can leave the SQLite WAL in an
+        # un-checkpointed state, making subsequent reads fail.
+        if chroma is not None:
+            try:
+                # Reset the Python reference so the client can be garbage-collected
+                # and close its SQLite connections normally.
+                chroma = None
+            except Exception:
+                pass
+        # Always remove the ingesting marker
+        if marker_path.exists():
+            marker_path.unlink(missing_ok=True)
 
 
 async def _build_embeddings(provider: str, model: str, current_user):
@@ -737,7 +839,7 @@ async def _build_embeddings(provider: str, model: str, current_user):
             raise ValueError(msg)
 
     # Instantiate the component with the correct model configuration and user ID
-    embedding_model = EmbeddingModelComponent(model=[selected_option], user_id=current_user.id)
+    embedding_model = EmbeddingModelComponent(model=[selected_option], _user_id=current_user.id)
 
     # Build the embeddings object. This returns an EmbeddingsWithModels wrapper.
     embeddings_with_models = embedding_model.build_embeddings()
@@ -785,17 +887,34 @@ async def list_knowledge_bases(
                         # If ID is invalid, skip job status lookup for this KB
                         kb_id_str = None
 
+                chunks_count = metadata["chunks"]
+                failure_reason = None
+                failed_marker = kb_dir / ".failed"
+                if (kb_dir / ".ingesting").exists():
+                    status = "ingesting"
+                elif failed_marker.exists():
+                    status = "failed"
+                    try:
+                        failure_reason = failed_marker.read_text().strip() or None
+                    except OSError:
+                        pass
+                elif chunks_count > 0:
+                    status = "ready"
+                else:
+                    status = "empty"
                 kb_info = KnowledgeBaseInfo(
                     id=kb_id_str or kb_dir.name,  # Fallback to directory name if no ID
-                    name=kb_dir.name.replace("_", " ").replace("-", " "),
+                    dir_name=kb_dir.name,
+                    name=kb_dir.name.replace("_", " "),
                     embedding_provider=metadata["embedding_provider"],
                     embedding_model=metadata["embedding_model"],
                     size=size,
                     words=metadata["words"],
                     characters=metadata["characters"],
-                    chunks=metadata["chunks"],
+                    chunks=chunks_count,
                     avg_chunk_size=metadata["avg_chunk_size"],
-                    status="READY",  # Default status
+                    status=status,
+                    failure_reason=failure_reason,
                     last_job_id=None,
                 )
                 knowledge_bases.append(kb_info)
@@ -810,19 +929,28 @@ async def list_knowledge_bases(
             latest_jobs = await job_service.get_latest_jobs_by_asset_ids(kb_ids_to_fetch)
 
             # Map job statuses back to knowledge bases
+            # Normalize to frontend-expected values: ready, ingesting, failed, empty
+            _JOB_STATUS_MAP = {
+                "queued": "ingesting",
+                "in_progress": "ingesting",
+                "failed": "failed",
+                "cancelled": "failed",
+                "timed_out": "failed",
+            }
             for kb_info in knowledge_bases:
                 try:
                     kb_uuid = uuid.UUID(kb_info.id)
                     if kb_uuid in latest_jobs:
                         job = latest_jobs[kb_uuid]
-                        kb_info.status = job.status.value if hasattr(job.status, "value") else str(job.status)
+                        raw_status = job.status.value if hasattr(job.status, "value") else str(job.status)
+                        mapped = _JOB_STATUS_MAP.get(raw_status)
+                        if mapped:
+                            kb_info.status = mapped
+                        # For "completed", keep the file-marker / chunk-count status already set
                         kb_info.last_job_id = str(job.job_id)
                 except (ValueError, AttributeError):
                     # If KB ID is not a valid UUID, skip job status update
                     pass
-
-        # Sort by name alphabetically
-        knowledge_bases.sort(key=lambda x: x.name)
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error listing knowledge bases: {e!s}") from e
@@ -847,16 +975,27 @@ async def get_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -> K
         # Get metadata from KB files
         metadata = get_kb_metadata(kb_path)
 
+        chunks_count = metadata["chunks"]
+        if (kb_path / ".ingesting").exists():
+            status = "ingesting"
+        elif (kb_path / ".failed").exists():
+            status = "failed"
+        elif chunks_count > 0:
+            status = "ready"
+        else:
+            status = "empty"
         return KnowledgeBaseInfo(
             id=kb_name,
-            name=kb_name.replace("_", " ").replace("-", " "),
+            dir_name=kb_name,
+            name=kb_name.replace("_", " "),
             embedding_provider=metadata["embedding_provider"],
             embedding_model=metadata["embedding_model"],
             size=size,
             words=metadata["words"],
             characters=metadata["characters"],
-            chunks=metadata["chunks"],
+            chunks=chunks_count,
             avg_chunk_size=metadata["avg_chunk_size"],
+            status=status,
         )
 
     except HTTPException:
@@ -928,6 +1067,42 @@ async def get_knowledge_base_chunks(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error getting chunks for '{kb_name}': {e!s}") from e
+
+
+class IngestionJobStatusResponse(BaseModel):
+    job_id: str
+    status: str
+    created_at: str | None = None
+    finished_at: str | None = None
+
+
+@router.get("/jobs/{job_id}", status_code=HTTPStatus.OK)
+async def get_ingestion_job_status(
+    job_id: str,
+    current_user: CurrentActiveUser,
+) -> IngestionJobStatusResponse:
+    """Get the status of an ingestion job by job ID."""
+    try:
+        job_service = get_job_service()
+        job = await job_service.get_job_by_job_id(job_id=uuid.UUID(job_id))
+
+        if not job:
+            raise HTTPException(status_code=404, detail=f"Job '{job_id}' not found")
+
+        if job.type != JobType.INGESTION:
+            raise HTTPException(status_code=404, detail=f"Job '{job_id}' is not an ingestion job")
+
+        return IngestionJobStatusResponse(
+            job_id=str(job.job_id),
+            status=job.status.value,
+            created_at=job.created_timestamp.isoformat() if job.created_timestamp else None,
+            finished_at=job.finished_timestamp.isoformat() if job.finished_timestamp else None,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting job status: {e!s}") from e
 
 
 @router.delete("/{kb_name}", status_code=HTTPStatus.OK)

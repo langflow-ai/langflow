@@ -4,6 +4,7 @@ import type { ModelOption } from "@/components/core/parameterRenderComponent/com
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
 import { useCreateKnowledgeBase } from "@/controllers/API/queries/knowledge-bases/use-create-knowledge-base";
+import { useGetIngestionJobStatus } from "@/controllers/API/queries/knowledge-bases/use-get-ingestion-job-status";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
 import useAlertStore from "@/stores/alertStore";
 import {
@@ -28,10 +29,14 @@ export function useKnowledgeBaseForm({
   onSubmit,
   existingKnowledgeBase,
   hideAdvanced,
+  existingKnowledgeBaseNames,
 }: Pick<Required<KnowledgeBaseUploadModalProps>, "open" | "setOpen"> &
   Pick<
     KnowledgeBaseUploadModalProps,
-    "onSubmit" | "existingKnowledgeBase" | "hideAdvanced"
+    | "onSubmit"
+    | "existingKnowledgeBase"
+    | "hideAdvanced"
+    | "existingKnowledgeBaseNames"
   >) {
   const isAddSourcesMode = !!existingKnowledgeBase;
 
@@ -89,12 +94,33 @@ export function useKnowledgeBaseForm({
   const [currentChunkIndex, setCurrentChunkIndex] = useState(0);
   const [selectedPreviewFileIndex, setSelectedPreviewFileIndex] = useState(0);
 
+  // Async ingestion tracking
+  const [ingestionJobId, setIngestionJobId] = useState<string | null>(null);
+
   // Alert store
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
   // Create knowledge base mutation
   const createKnowledgeBase = useCreateKnowledgeBase();
+
+  // Poll for async ingestion job status
+  const { data: ingestionJobStatus } = useGetIngestionJobStatus({
+    job_id: ingestionJobId,
+  });
+
+  // Track ingestion job completion (clear the polling ID on terminal state).
+  // Notifications for completion/failure are handled by the polling hook in KnowledgeBasesTab.
+  useEffect(() => {
+    if (!ingestionJobStatus || !ingestionJobId) return;
+
+    if (
+      ingestionJobStatus.status === "completed" ||
+      ingestionJobStatus.status === "failed"
+    ) {
+      setIngestionJobId(null);
+    }
+  }, [ingestionJobStatus, ingestionJobId]);
 
   // Initialize form with existing knowledge base data when in Add Sources mode
   useEffect(() => {
@@ -144,6 +170,7 @@ export function useKnowledgeBaseForm({
     setCurrentStep(1);
     setIsFilePanelOpen(false);
     setShowAdvanced(false);
+    setIngestionJobId(null);
     setValidationErrors({});
   }, []);
 
@@ -234,6 +261,13 @@ export function useKnowledgeBaseForm({
     } else if (!KB_NAME_REGEX.test(trimmedName)) {
       errors.sourceName =
         "Name must only contain [a-zA-Z0-9._-] and start/end with [a-zA-Z0-9]";
+    } else if (
+      !isAddSourcesMode &&
+      existingKnowledgeBaseNames?.some(
+        (name) => name.toLowerCase() === trimmedName.toLowerCase(),
+      )
+    ) {
+      errors.sourceName = "A knowledge base with this name already exists";
     }
     if (!isAddSourcesMode && selectedEmbeddingModel.length === 0) {
       errors.embeddingModel = "Embedding model is required";
@@ -243,7 +277,13 @@ export function useKnowledgeBaseForm({
       errors.files = "Total file size exceeds the 1 GB limit";
     }
     return errors;
-  }, [sourceName, isAddSourcesMode, selectedEmbeddingModel, files]);
+  }, [
+    sourceName,
+    isAddSourcesMode,
+    selectedEmbeddingModel,
+    files,
+    existingKnowledgeBaseNames,
+  ]);
 
   const clearValidationErrors = useCallback(() => {
     setValidationErrors({});
@@ -280,7 +320,7 @@ export function useKnowledgeBaseForm({
         };
 
         setSuccessData({
-          title: `Knowledge base "${sourceName}" created! You can add files later.`,
+          title: `Knowledge base "${sourceName}" created`,
         });
 
         onSubmit?.(callbackData);
@@ -289,53 +329,33 @@ export function useKnowledgeBaseForm({
         return;
       }
 
-      // Advanced mode: upload and ingest files with chunk params
-      let ingestResult: { chunks_created?: number } | null = null;
+      // Fire-and-forget: kick off ingestion without blocking the modal
       if (files.length > 0) {
-        try {
-          const formData = new FormData();
-          files.forEach((file) => {
-            formData.append("files", file);
-          });
-          formData.append("source_name", sourceName);
-          formData.append("chunk_size", chunkSize.toString());
-          formData.append("chunk_overlap", chunkOverlap.toString());
-          formData.append("separator", separator);
-          formData.append("column_config", JSON.stringify(columnConfig));
+        const formData = new FormData();
+        files.forEach((file) => {
+          formData.append("files", file);
+        });
+        formData.append("source_name", sourceName);
+        formData.append("chunk_size", chunkSize.toString());
+        formData.append("chunk_overlap", chunkOverlap.toString());
+        formData.append("separator", separator);
+        formData.append("column_config", JSON.stringify(columnConfig));
 
-          const response = await api.post(
-            `${getURL("KNOWLEDGE_BASES")}/${kbName}/ingest`,
-            formData,
-            {
-              headers: { "Content-Type": "multipart/form-data" },
-            },
-          );
-          ingestResult = response.data;
-        } catch (ingestError: unknown) {
-          const err = ingestError as AxiosError<{ detail?: string }>;
-          console.warn("Failed to ingest files:", err);
-          if (!isAddSourcesMode) {
-            setSuccessData({
-              title: `Knowledge base "${sourceName}" created, but file ingestion failed. You can add files later.`,
-            });
-          } else {
+        // Don't await — fire and forget. Polling will track status.
+        api
+          .post(`${getURL("KNOWLEDGE_BASES")}/${kbName}/ingest`, formData, {
+            headers: { "Content-Type": "multipart/form-data" },
+          })
+          .catch((ingestError: unknown) => {
+            const err = ingestError as AxiosError<{ detail?: string }>;
+            console.warn("Failed to ingest files:", err);
             setErrorData({
-              title: "Failed to add sources to knowledge base",
+              title: `Failed to start ingestion for "${sourceName}"`,
+              list: [
+                err?.response?.data?.detail || err?.message || "Unknown error",
+              ],
             });
-          }
-          onSubmit?.({
-            sourceName,
-            files,
-            embeddingModel: selectedEmbeddingModel,
-            chunkSize,
-            chunkOverlap,
-            separator,
-            columnConfig,
           });
-          setOpen(false);
-          resetForm();
-          return;
-        }
       }
 
       const callbackData: KnowledgeBaseFormData = {
@@ -349,18 +369,12 @@ export function useKnowledgeBaseForm({
       };
 
       if (isAddSourcesMode) {
-        const chunksCreated = ingestResult?.chunks_created || 0;
         setSuccessData({
-          title: `Added ${files.length} file(s) with ${chunksCreated} chunks to "${sourceName}"!`,
-        });
-      } else if (files.length > 0) {
-        const chunksCreated = ingestResult?.chunks_created || 0;
-        setSuccessData({
-          title: `Knowledge base "${sourceName}" created with ${files.length} file(s) and ${chunksCreated} chunks!`,
+          title: `Sources added to "${sourceName}"`,
         });
       } else {
         setSuccessData({
-          title: `Knowledge base "${sourceName}" created! You can add files later.`,
+          title: `Knowledge base "${sourceName}" created`,
         });
       }
 

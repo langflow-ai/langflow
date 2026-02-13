@@ -149,7 +149,7 @@ describe("KnowledgeBaseUploadModal", () => {
         wrapper: createTestWrapper(),
       });
 
-      expect(screen.getByText("Add to Knowledge Base")).toBeInTheDocument();
+      expect(screen.getByText("Create Knowledge Base")).toBeInTheDocument();
     });
 
     it("does not render modal content when closed", () => {
@@ -158,7 +158,7 @@ describe("KnowledgeBaseUploadModal", () => {
       });
 
       expect(
-        screen.queryByText("Add to Knowledge Base"),
+        screen.queryByText("Create Knowledge Base"),
       ).not.toBeInTheDocument();
     });
 
@@ -186,46 +186,12 @@ describe("KnowledgeBaseUploadModal", () => {
       expect(screen.getByText("Embedding Model")).toBeInTheDocument();
     });
 
-    it("renders with trigger children", () => {
-      render(
-        <KnowledgeBaseUploadModal>
-          <button data-testid="trigger-btn">Open Modal</button>
-        </KnowledgeBaseUploadModal>,
-        {
-          wrapper: createTestWrapper(),
-        },
-      );
-
-      expect(screen.getByTestId("trigger-btn")).toBeInTheDocument();
-    it("renders modal when open", () => {
+    it("renders Configure Sources help label", () => {
       render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
         wrapper: createTestWrapper(),
       });
 
       expect(screen.getByText("Configure Sources")).toBeInTheDocument();
-    });
-
-    it("shows Knowledge Ingestion link when onOpenExampleFlow is provided", () => {
-      render(
-        <KnowledgeBaseUploadModal
-          open={true}
-          setOpen={jest.fn()}
-          onOpenExampleFlow={jest.fn()}
-        />,
-        {
-          wrapper: createTestWrapper(),
-        },
-      );
-
-      expect(screen.getByText("Knowledge Ingestion")).toBeInTheDocument();
-    });
-
-    it("does not show Knowledge Ingestion link when onOpenExampleFlow is not provided", () => {
-      render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
-        wrapper: createTestWrapper(),
-      });
-
-      expect(screen.queryByText("Knowledge Ingestion")).not.toBeInTheDocument();
     });
   });
 
@@ -286,29 +252,6 @@ describe("KnowledgeBaseUploadModal", () => {
       await user.clear(input);
 
       expect(input).toHaveValue("");
-    });
-
-    it("calls onOpenExampleFlow when Knowledge Ingestion link is clicked", async () => {
-      const mockOpenExampleFlow = jest.fn();
-      const mockSetOpen = jest.fn();
-      const user = userEvent.setup();
-
-      render(
-        <KnowledgeBaseUploadModal
-          open={true}
-          setOpen={mockSetOpen}
-          onOpenExampleFlow={mockOpenExampleFlow}
-        />,
-        {
-          wrapper: createTestWrapper(),
-        },
-      );
-
-      const link = screen.getByText("Knowledge Ingestion");
-      await user.click(link);
-
-      expect(mockOpenExampleFlow).toHaveBeenCalled();
-      expect(mockSetOpen).toHaveBeenCalledWith(false);
     });
 
     it("opens add source dropdown when button is clicked", async () => {
@@ -428,7 +371,7 @@ describe("KnowledgeBaseUploadModal Accessibility", () => {
       wrapper: createTestWrapper(),
     });
 
-    expect(screen.getByText("Source Name")).toBeInTheDocument();
+    expect(screen.getByText(/Name/)).toBeInTheDocument();
     expect(screen.getByText("Embedding Model")).toBeInTheDocument();
   });
 

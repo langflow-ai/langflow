@@ -33,12 +33,6 @@ export const useCreateKnowledgeBase: useMutationFunctionType<
     any,
     CreateKnowledgeBaseRequest
   > = mutate(["useCreateKnowledgeBase"], createKnowledgeBaseFn, {
-    onSettled: (data, error, variables, context) => {
-      queryClient.invalidateQueries({
-        queryKey: ["useGetKnowledgeBases"],
-      });
-      options?.onSettled?.(data, error, variables, context);
-    },
     ...options,
   });
 

@@ -18,6 +18,7 @@ export default function KnowledgeBaseUploadModal({
   onSubmit,
   existingKnowledgeBase,
   hideAdvanced,
+  existingKnowledgeBaseNames,
 }: KnowledgeBaseUploadModalProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const open = controlledOpen ?? internalOpen;
@@ -29,6 +30,7 @@ export default function KnowledgeBaseUploadModal({
     onSubmit,
     existingKnowledgeBase,
     hideAdvanced,
+    existingKnowledgeBaseNames,
   });
 
   const renderStepContent = () => {

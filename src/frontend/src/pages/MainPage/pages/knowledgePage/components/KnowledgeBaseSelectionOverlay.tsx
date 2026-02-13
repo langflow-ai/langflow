@@ -28,7 +28,7 @@ const KnowledgeBaseSelectionOverlay = ({
   const deleteMutation = useDeleteKnowledgeBase({
     onSuccess: (data) => {
       setSuccessData({
-        title: `${data.deleted_count} Knowledge Base(s) deleted successfully!`,
+        title: `${data.deleted_count} knowledge base(s) deleted`,
       });
       onClearSelection();
     },
@@ -49,9 +49,9 @@ const KnowledgeBaseSelectionOverlay = ({
     if (onDelete) {
       onDelete();
     } else {
-      const knowledgeBaseIds = selectedFiles.map((file) => file.id);
-      if (knowledgeBaseIds.length > 0 && !deleteMutation.isPending) {
-        deleteMutation.mutate({ kb_names: knowledgeBaseIds });
+      const knowledgeBaseDirNames = selectedFiles.map((file) => file.dir_name);
+      if (knowledgeBaseDirNames.length > 0 && !deleteMutation.isPending) {
+        deleteMutation.mutate({ kb_names: knowledgeBaseDirNames });
       }
     }
   };

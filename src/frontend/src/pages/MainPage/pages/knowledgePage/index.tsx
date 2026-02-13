@@ -68,7 +68,7 @@ export const KnowledgePage = () => {
   }, [isDrawerOpen]);
 
   const handleKnowledgeBaseSelect = (knowledgeBase: KnowledgeBaseInfo) => {
-    navigate(`/assets/knowledge-bases/${knowledgeBase.id}/chunks`);
+    navigate(`/assets/knowledge-bases/${knowledgeBase.dir_name}/chunks`);
   };
 
   const closeDrawer = () => {

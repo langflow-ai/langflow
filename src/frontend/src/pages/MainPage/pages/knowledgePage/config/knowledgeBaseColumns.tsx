@@ -1,5 +1,6 @@
 import type { ColDef } from "ag-grid-community";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import LoadingTextComponent from "@/components/common/loadingTextComponent";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -9,15 +10,18 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { KnowledgeBaseInfo } from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases";
 import { formatFileSize } from "@/utils/stringManipulation";
+import { cn } from "@/utils/utils";
 import {
   formatAverageChunkSize,
   formatNumber,
 } from "../utils/knowledgeBaseUtils";
+import { isBusyStatus, STATUS_CONFIG } from "./statusConfig";
 
 export interface KnowledgeBaseColumnsCallbacks {
   onViewChunks?: (knowledgeBase: KnowledgeBaseInfo) => void;
   onDelete?: (knowledgeBase: KnowledgeBaseInfo) => void;
   onAddSources?: (knowledgeBase: KnowledgeBaseInfo) => void;
+  onStopIngestion?: (knowledgeBase: KnowledgeBaseInfo) => void;
 }
 
 export const createKnowledgeBaseColumns = (
@@ -62,11 +66,8 @@ export const createKnowledgeBaseColumns = (
 
         const providerIconMap: Record<string, string> = {
           OpenAI: "OpenAI",
-          HuggingFace: "HuggingFace",
-          Cohere: "Cohere",
+          Anthropic: "Anthropic",
           Google: "Google",
-          Chroma: "Chroma",
-          Mistral: "Mistral",
           Ollama: "Ollama",
           NVIDIA: "NVIDIA",
         };
@@ -110,7 +111,22 @@ export const createKnowledgeBaseColumns = (
       editable: false,
       resizable: false,
       cellClass: baseCellClass,
-      valueGetter: (params) => params.data.status || "—",
+      cellRenderer: (params: { data: KnowledgeBaseInfo }) => {
+        const status = params.data?.status || "empty";
+        const c = STATUS_CONFIG[status] || STATUS_CONFIG.empty;
+
+        return (
+          <div className="flex items-center h-full">
+            <span className={cn("text-xs font-medium", c.textClass)}>
+              {isBusyStatus(status) ? (
+                <LoadingTextComponent text={c.label} />
+              ) : (
+                c.label
+              )}
+            </span>
+          </div>
+        );
+      },
     },
     {
       headerName: "",
@@ -122,55 +138,84 @@ export const createKnowledgeBaseColumns = (
       resizable: false,
       suppressMovable: true,
       cellClass: "flex items-center justify-center text-primary",
-      cellRenderer: (params: { data: KnowledgeBaseInfo }) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <ForwardedIconComponent
-                name="EllipsisVertical"
-                className="h-4 w-4 text-primary"
-              />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation();
-                callbacks?.onAddSources?.(params.data);
-              }}
-            >
-              <ForwardedIconComponent
-                name="RefreshCw"
-                className="mr-2 h-4 w-4"
-              />
-              Update Knowledge
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation();
-                callbacks?.onViewChunks?.(params.data);
-              }}
-            >
-              <ForwardedIconComponent name="Layers" className="mr-2 h-4 w-4" />
-              View Chunks
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation();
-                callbacks?.onDelete?.(params.data);
-              }}
-              className="text-destructive focus:text-destructive"
-            >
-              <ForwardedIconComponent name="Trash2" className="mr-2 h-4 w-4" />
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ),
+      cellRenderer: (params: { data: KnowledgeBaseInfo }) => {
+        const status = params.data?.status;
+        const isBusy = isBusyStatus(status);
+        const isCancelling = status === "cancelling";
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <ForwardedIconComponent
+                  name="EllipsisVertical"
+                  className="h-4 w-4 text-primary"
+                />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                disabled={isBusy}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  callbacks?.onAddSources?.(params.data);
+                }}
+              >
+                <ForwardedIconComponent
+                  name="RefreshCw"
+                  className="mr-2 h-4 w-4"
+                />
+                Update Knowledge
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  callbacks?.onViewChunks?.(params.data);
+                }}
+              >
+                <ForwardedIconComponent
+                  name="Layers"
+                  className="mr-2 h-4 w-4"
+                />
+                View Chunks
+              </DropdownMenuItem>
+              {isBusy ? (
+                <DropdownMenuItem
+                  disabled={isCancelling}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    callbacks?.onStopIngestion?.(params.data);
+                  }}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <ForwardedIconComponent
+                    name="Square"
+                    className="mr-2 h-4 w-4"
+                  />
+                  Stop Ingestion
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    callbacks?.onDelete?.(params.data);
+                  }}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <ForwardedIconComponent
+                    name="Trash2"
+                    className="mr-2 h-4 w-4"
+                  />
+                  Delete
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        );
+      },
     },
   ];
 };

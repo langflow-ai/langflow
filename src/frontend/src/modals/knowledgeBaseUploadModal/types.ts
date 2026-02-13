@@ -13,6 +13,7 @@ export interface KnowledgeBaseUploadModalProps {
     separator?: string;
   };
   hideAdvanced?: boolean;
+  existingKnowledgeBaseNames?: string[];
 }
 
 export interface ColumnConfigRow {
@@ -29,6 +30,7 @@ export interface KnowledgeBaseFormData {
   chunkOverlap?: number;
   separator?: string;
   columnConfig?: ColumnConfigRow[];
+  chunkCount?: number;
 }
 
 export interface ChunkPreview {

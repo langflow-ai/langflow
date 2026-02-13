@@ -6,6 +6,7 @@ import { UseRequestProcessor } from "../../services/request-processor";
 
 export interface KnowledgeBaseInfo {
   id: string;
+  dir_name: string;
   name: string;
   embedding_provider?: string;
   embedding_model?: string;
@@ -17,6 +18,8 @@ export interface KnowledgeBaseInfo {
   chunk_size?: number;
   chunk_overlap?: number;
   separator?: string;
+  status?: string;
+  failure_reason?: string | null;
 }
 
 export const useGetKnowledgeBases: useQueryFunctionType<
