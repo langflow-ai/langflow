@@ -13,6 +13,7 @@ from lfx.custom.custom_component.component import Component
 from lfx.field_typing import LanguageModel
 from lfx.inputs.inputs import BoolInput, InputTypes, MessageInput, MultilineInput
 from lfx.schema.message import Message
+from lfx.schema.properties import Usage
 from lfx.template.field.base import Output
 from lfx.utils.constants import MESSAGE_SENDER_AI
 
@@ -89,6 +90,42 @@ class LCModelComponent(Component):
             runnable=output, stream=self.stream, input_value=self.input_value, system_message=self.system_message
         )
         self.status = result
+    def extract_usage(self, message: AIMessage) -> Usage | None:
+        """Extract token usage from AIMessage response metadata.
+        
+        Args:
+            message: The AIMessage to extract usage from
+            
+        Returns:
+            Usage object with token counts, or None if not available
+        """
+        if not hasattr(message, 'response_metadata') or not message.response_metadata:
+            return None
+        
+        response_metadata = message.response_metadata
+        
+        # OpenAI format: response_metadata contains token_usage
+        if "token_usage" in response_metadata:
+            token_usage = response_metadata["token_usage"]
+            return Usage(
+                input_tokens=token_usage.get("prompt_tokens"),
+                output_tokens=token_usage.get("completion_tokens"),
+                total_tokens=token_usage.get("total_tokens"),
+            )
+        
+        # Anthropic format: response_metadata contains usage
+        if "usage" in response_metadata:
+            usage = response_metadata["usage"]
+            input_tokens = usage.get("input_tokens")
+            output_tokens = usage.get("output_tokens")
+            return Usage(
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                total_tokens=(input_tokens or 0) + (output_tokens or 0) if input_tokens or output_tokens else None,
+            )
+        
+        return None
+
         return result
 
     def get_result(self, *, runnable: LLM, stream: bool, input_value: str):
@@ -266,7 +303,17 @@ class LCModelComponent(Component):
             if message := self._get_exception_message(e):
                 raise ValueError(message) from e
             raise
-        return lf_message or Message(text=result)
+        
+        # Create result message
+        result_message = lf_message or Message(text=result)
+        
+        # Extract token usage if available (non-streaming mode)
+        if not stream and isinstance(message, AIMessage):
+            usage = self.extract_usage(message)
+            if usage:
+                result_message.properties.usage = usage
+        
+        return result_message
 
     async def _handle_stream(self, runnable, inputs):
         """Handle streaming responses from the language model.

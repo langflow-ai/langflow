@@ -12,6 +12,13 @@ class Source(BaseModel):
     )
 
 
+class Usage(BaseModel):
+    """Token usage information."""
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+    total_tokens: int | None = None
+
+
 class Properties(BaseModel):
     text_color: str | None = None
     background_color: str | None = None
@@ -23,6 +30,7 @@ class Properties(BaseModel):
     state: Literal["partial", "complete"] = "complete"
     targets: list = []
     build_duration: float | None = None
+    usage: Usage | None = None
 
     @field_validator("source", mode="before")
     @classmethod
