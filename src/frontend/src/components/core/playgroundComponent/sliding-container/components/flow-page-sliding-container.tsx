@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { StickToBottom } from "use-stick-to-bottom";
+import { SafariScrollFix } from "@/components/common/safari-scroll-fix";
 import { ChatHeader } from "@/components/core/playgroundComponent/chat-view/chat-header/components/chat-header";
 import { ChatSidebar } from "@/components/core/playgroundComponent/chat-view/chat-header/components/chat-sidebar";
 import { useSendMessage } from "@/components/core/playgroundComponent/chat-view/hooks/use-send-message";
@@ -190,10 +191,10 @@ export function FlowPageSlidingContainerContent({
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden playground-messages-wrapper">
             <StickToBottom
               className="flex-1 min-h-0 overflow-hidden"
-              resize="smooth"
+              resize="instant"
               initial="instant"
             >
-              <StickToBottom.Content className="flex flex-col min-h-full overflow-x-hidden">
+              <StickToBottom.Content className="flex flex-col min-h-full overflow-x-hidden ">
                 <div
                   style={
                     isFullscreen
@@ -211,6 +212,7 @@ export function FlowPageSlidingContainerContent({
                   />
                 </div>
               </StickToBottom.Content>
+              <SafariScrollFix />
             </StickToBottom>
 
             <div
