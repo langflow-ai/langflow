@@ -58,7 +58,11 @@ export function ChatSidebar({
           <div className="px-2 text-xs font-semibold leading-4 text-muted-foreground">
             Sessions
           </div>
-          <ShadTooltip styleClasses="z-50" content="New Chat" side={isShareablePlayground ? "bottom" : "top"}>
+          <ShadTooltip
+            styleClasses="z-50"
+            content="New Chat"
+            side={isShareablePlayground ? "bottom" : "top"}
+          >
             <Button
               data-testid="new-chat"
               variant="ghost"
