@@ -13,7 +13,7 @@ from langflow.helpers.windows_postgres_helper import configure_windows_postgres_
 
 configure_windows_postgres_event_loop(source="launcher")
 
-import typer
+import typer  # noqa: E402
 
 
 def main():
