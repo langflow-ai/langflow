@@ -185,8 +185,8 @@ describe("ChatMessage Component", () => {
     };
 
     render(<ChatMessage {...propsWithFiles} />);
-    // Should render UserMessage with file preview (shows loading icon for files)
-    expect(screen.getByTestId("loading-icon")).toBeInTheDocument();
+    // Should render UserMessage with file preview (image preview for .jpg files)
+    expect(screen.getByRole("img")).toBeInTheDocument();
   });
 
   it("renders bot message when no text and no files", () => {
