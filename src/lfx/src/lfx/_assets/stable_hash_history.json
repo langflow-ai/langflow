@@ -1481,7 +1481,7 @@
   },
   "QdrantVectorStoreComponent": {
     "versions": {
-      "0.3.0": "bcfc1728e7b1"
+      "0.3.0": "5fc6b5317c9e"
     }
   },
   "Redis": {

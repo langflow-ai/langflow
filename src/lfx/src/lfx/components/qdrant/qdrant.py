@@ -1,5 +1,5 @@
-from langchain_community.vectorstores import Qdrant
 from langchain_core.embeddings import Embeddings
+from langchain_qdrant import QdrantVectorStore
 
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from lfx.helpers.data import docs_to_data
@@ -49,7 +49,7 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
     ]
 
     @check_cached_vector_store
-    def build_vector_store(self) -> Qdrant:
+    def build_vector_store(self) -> QdrantVectorStore:
         qdrant_kwargs = {
             "collection_name": self.collection_name,
             "content_payload_key": self.content_payload_key,
@@ -85,12 +85,17 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
             raise TypeError(msg)
 
         if documents:
-            qdrant = Qdrant.from_documents(documents, embedding=self.embedding, **qdrant_kwargs, **server_kwargs)
+            qdrant = QdrantVectorStore.from_documents(
+                documents,
+                embedding=self.embedding,
+                **qdrant_kwargs,
+                **server_kwargs,
+            )
         else:
             from qdrant_client import QdrantClient
 
             client = QdrantClient(**server_kwargs)
-            qdrant = Qdrant(embeddings=self.embedding, client=client, **qdrant_kwargs)
+            qdrant = QdrantVectorStore(embedding=self.embedding, client=client, **qdrant_kwargs)
 
         return qdrant
 
