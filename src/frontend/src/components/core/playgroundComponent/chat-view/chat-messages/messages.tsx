@@ -1,5 +1,6 @@
 import { useMemo, useRef } from "react";
 import { StickToBottom } from "use-stick-to-bottom";
+import { SafariScrollFix } from "@/components/common/safari-scroll-fix";
 import useFlowStore from "@/stores/flowStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { ChatMessageType } from "@/types/chat";
@@ -93,13 +94,13 @@ export const Messages = ({
         "flex w-full flex-col rounded-md",
         visibleSession ? "h-[95%]" : "h-full",
       )}
-      resize="smooth"
+      resize="instant"
       initial="instant"
-      mass={1}
     >
-      <StickToBottom.Content className="flex flex-col min-h-full">
+      <StickToBottom.Content className="flex flex-col min-h-full ">
         {messagesContent}
       </StickToBottom.Content>
+      <SafariScrollFix />
     </StickToBottom>
   );
 };
