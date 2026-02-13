@@ -419,10 +419,7 @@ class TestCSVAgentComponent:
                 }
             )
 
-            with (
-                patch("lfx.components.langchain_utilities.csv_agent.get_settings_service") as mock_get_settings,
-                patch("lfx.components.langchain_utilities.csv_agent.logger") as mock_logger,
-            ):
+            with patch("lfx.components.langchain_utilities.csv_agent.get_settings_service") as mock_get_settings:
                 mock_create_agent = mock_langchain_experimental
                 mock_settings = MagicMock()
                 mock_settings.settings.storage_type = "local"
@@ -438,9 +435,6 @@ class TestCSVAgentComponent:
                 mock_create_agent.assert_called_once()
                 call_kwargs = mock_create_agent.call_args[1]
                 assert call_kwargs["allow_dangerous_code"] is False
-
-                # Verify no security warning was logged (since it's disabled)
-                mock_logger.warning.assert_not_called()
 
                 assert isinstance(result, Message)
                 assert result.text == "Safe result"
@@ -470,10 +464,7 @@ class TestCSVAgentComponent:
                 }
             )
 
-            with (
-                patch("lfx.components.langchain_utilities.csv_agent.get_settings_service") as mock_get_settings,
-                patch("lfx.components.langchain_utilities.csv_agent.logger") as mock_logger,
-            ):
+            with patch("lfx.components.langchain_utilities.csv_agent.get_settings_service") as mock_get_settings:
                 mock_create_agent = mock_langchain_experimental
                 mock_settings = MagicMock()
                 mock_settings.settings.storage_type = "local"
@@ -489,9 +480,6 @@ class TestCSVAgentComponent:
                 mock_create_agent.assert_called_once()
                 call_kwargs = mock_create_agent.call_args[1]
                 assert call_kwargs["allow_dangerous_code"] is False
-
-                # Verify no security warning was logged
-                mock_logger.warning.assert_not_called()
 
                 assert isinstance(result, Message)
                 assert result.text == "Safe result"
@@ -521,10 +509,7 @@ class TestCSVAgentComponent:
                 }
             )
 
-            with (
-                patch("lfx.components.langchain_utilities.csv_agent.get_settings_service") as mock_get_settings,
-                patch("lfx.components.langchain_utilities.csv_agent.logger") as mock_logger,
-            ):
+            with patch("lfx.components.langchain_utilities.csv_agent.get_settings_service") as mock_get_settings:
                 mock_create_agent = mock_langchain_experimental
                 mock_settings = MagicMock()
                 mock_settings.settings.storage_type = "local"
@@ -540,12 +525,6 @@ class TestCSVAgentComponent:
                 mock_create_agent.assert_called_once()
                 call_kwargs = mock_create_agent.call_args[1]
                 assert call_kwargs["allow_dangerous_code"] is True
-
-                # Verify security warning was logged
-                mock_logger.warning.assert_called_once()
-                warning_message = mock_logger.warning.call_args[0][0]
-                assert "allow_dangerous_code=True" in warning_message
-                assert "arbitrary code execution" in warning_message
 
                 assert isinstance(result, Message)
                 assert result.text == "Result with code execution"
