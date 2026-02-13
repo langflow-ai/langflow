@@ -369,7 +369,7 @@ export default function AccordionPromptComponent({
     if (internalValue && internalValue !== "" && nodeClass) {
       // Reset the last validated value to force re-validation
       lastValidatedValueRef.current = "";
-      
+
       // Trigger validation immediately (no debounce for mode changes)
       postValidatePrompt(
         {
@@ -389,7 +389,10 @@ export default function AccordionPromptComponent({
             }
           },
           onError: (error) => {
-            console.error("[AccordionPrompt] Mode change validation error:", error);
+            console.error(
+              "[AccordionPrompt] Mode change validation error:",
+              error,
+            );
           },
         },
       );
