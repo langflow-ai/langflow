@@ -62,7 +62,7 @@ test(
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
-    await page.getByText("Logs").click();
+    await page.getByTestId("sidebar-nav-logs").click();
 
     // Verify the new column headers are present (inside the dialog)
     const dialog = page.getByLabel("Dialog");
@@ -78,7 +78,6 @@ test(
     // Verify success status badge is displayed (scoped to dialog)
     await expect(dialog.locator("text=success").first()).toBeVisible();
 
-    await page.keyboard.press("Escape");
     await page.getByText("Close").last().click();
     await page.waitForTimeout(500);
 
