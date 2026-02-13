@@ -2,8 +2,8 @@ import * as dotenv from "dotenv";
 import path from "path";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { selectGptModel } from "../../utils/select-gpt-model";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { selectGptModel } from "../../utils/select-gpt-model";
 
 test(
   "should able to see and interact with logs",
@@ -39,9 +39,10 @@ test(
       filledApiKey = await page.getByTestId("remove-icon-badge").count();
     }
 
-    await page.getByText("Logs").click();
-    await page.getByText("No Data Available", { exact: true }).isVisible();
-    await page.keyboard.press("Escape");
+    await page.getByTestId("sidebar-nav-logs").click();
+    await expect(
+      page.getByText("No Data Available", { exact: true }),
+    ).toBeVisible();
     await page.getByText("Close").last().click();
     await page.waitForTimeout(500);
 
