@@ -138,6 +138,16 @@ jest.mock(
   }),
 );
 
+// --- Mock message utils ---
+const mockClearSessionMessages = jest.fn();
+jest.mock(
+  "@/components/core/playgroundComponent/chat-view/utils/message-utils",
+  () => ({
+    clearSessionMessages: (...args: unknown[]) =>
+      mockClearSessionMessages(...args),
+  }),
+);
+
 // --- Mock stores ---
 let mockIsBuilding = false;
 jest.mock("@/stores/flowStore", () => ({
