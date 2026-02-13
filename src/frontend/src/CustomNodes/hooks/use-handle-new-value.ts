@@ -13,7 +13,7 @@ import { mutateTemplate } from "../helpers/mutate-template";
 
 const DEBOUNCE_TIME_1_SECOND = 1000;
 
-// Data Operations: hide these fields when "operations" list is cleared (matches backend ALL_OPERATION_FIELDS)
+// Must match ALL_OPERATION_FIELDS in data_operations.py
 const DATA_OPERATIONS_OPERATION_FIELDS = [
   "select_keys_input",
   "filter_key",

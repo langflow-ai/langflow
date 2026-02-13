@@ -81,7 +81,7 @@ class DataOperationsComponent(Component):
         "JQ Expression": ["query", "operations"],
     }
 
-    # All operation-specific input fields (used to hide and reset when no operation selected)
+    # All operation-specific input fields (used to hide and reset when no operation selected).
     ALL_OPERATION_FIELDS = [
         "select_keys_input",
         "filter_key",
@@ -94,20 +94,6 @@ class DataOperationsComponent(Component):
         "selected_key",
         "query",
     ]
-
-    # Default values for operation fields when clearing (match input definitions)
-    OPERATION_FIELD_DEFAULTS: dict[str, Any] = {
-        "select_keys_input": [],
-        "filter_key": [],
-        "operator": "equals",
-        "filter_values": {},
-        "append_update_data": {"key": "value"},
-        "remove_keys_input": [],
-        "rename_keys_input": {"old_key": "new_key"},
-        "mapped_json_display": "",
-        "selected_key": None,
-        "query": "",
-    }
 
     @staticmethod
     def extract_all_paths(obj, path=""):
@@ -174,6 +160,7 @@ class DataOperationsComponent(Component):
             info="List of keys to select from the data. Only top-level keys can be selected.",
             show=False,
             is_list=True,
+            value=[],
         ),
         # filter values inputs
         MessageTextInput(
@@ -185,6 +172,7 @@ class DataOperationsComponent(Component):
             ),
             is_list=True,
             show=False,
+            value=[],
         ),
         DropdownInput(
             name="operator",
@@ -201,6 +189,7 @@ class DataOperationsComponent(Component):
             info="List of values to filter by.",
             show=False,
             is_list=True,
+            value={},
         ),
         # update/ Append data inputs
         DictInput(
@@ -218,6 +207,7 @@ class DataOperationsComponent(Component):
             info="List of keys to remove from the data.",
             show=False,
             is_list=True,
+            value=[],
         ),
         # rename keys inputs
         DictInput(
@@ -239,7 +229,13 @@ class DataOperationsComponent(Component):
             show=False,
         ),
         DropdownInput(
-            name="selected_key", display_name="Select Path", options=[], required=False, dynamic=True, show=False
+            name="selected_key",
+            display_name="Select Path",
+            options=[],
+            required=False,
+            dynamic=True,
+            show=False,
+            value=None,
         ),
         MessageTextInput(
             name="query",
@@ -249,6 +245,13 @@ class DataOperationsComponent(Component):
             show=False,
         ),
     ]
+
+    OPERATION_FIELD_DEFAULTS: dict[str, Any] = {
+        inp.name: getattr(inp, "value", None)
+        for inp in inputs
+        if inp.name in ALL_OPERATION_FIELDS
+    }
+
     outputs = [
         Output(display_name="Data", name="data_output", method="as_data"),
     ]
