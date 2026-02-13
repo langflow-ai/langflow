@@ -90,20 +90,21 @@ class LCModelComponent(Component):
             runnable=output, stream=self.stream, input_value=self.input_value, system_message=self.system_message
         )
         self.status = result
+
     def extract_usage(self, message: AIMessage) -> Usage | None:
         """Extract token usage from AIMessage response metadata.
-        
+
         Args:
             message: The AIMessage to extract usage from
-            
+
         Returns:
             Usage object with token counts, or None if not available
         """
-        if not hasattr(message, 'response_metadata') or not message.response_metadata:
+        if not hasattr(message, "response_metadata") or not message.response_metadata:
             return None
-        
+
         response_metadata = message.response_metadata
-        
+
         # OpenAI format: response_metadata contains token_usage
         if "token_usage" in response_metadata:
             token_usage = response_metadata["token_usage"]
@@ -112,7 +113,7 @@ class LCModelComponent(Component):
                 output_tokens=token_usage.get("completion_tokens"),
                 total_tokens=token_usage.get("total_tokens"),
             )
-        
+
         # Anthropic format: response_metadata contains usage
         if "usage" in response_metadata:
             usage = response_metadata["usage"]
@@ -123,7 +124,7 @@ class LCModelComponent(Component):
                 output_tokens=output_tokens,
                 total_tokens=(input_tokens or 0) + (output_tokens or 0) if input_tokens or output_tokens else None,
             )
-        
+
         return None
 
         return result
@@ -303,16 +304,16 @@ class LCModelComponent(Component):
             if message := self._get_exception_message(e):
                 raise ValueError(message) from e
             raise
-        
+
         # Create result message
         result_message = lf_message or Message(text=result)
-        
+
         # Extract token usage if available (non-streaming mode)
         if not stream and isinstance(message, AIMessage):
             usage = self.extract_usage(message)
             if usage:
                 result_message.properties.usage = usage
-        
+
         return result_message
 
     async def _handle_stream(self, runnable, inputs):

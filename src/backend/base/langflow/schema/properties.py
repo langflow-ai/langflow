@@ -14,6 +14,7 @@ class Source(BaseModel):
 
 class Usage(BaseModel):
     """Token usage information."""
+
     input_tokens: int | None = None
     output_tokens: int | None = None
     total_tokens: int | None = None
