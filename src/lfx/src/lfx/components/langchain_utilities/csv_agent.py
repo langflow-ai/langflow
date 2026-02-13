@@ -13,7 +13,6 @@ from lfx.inputs.inputs import (
     MessageTextInput,
 )
 from lfx.io import BoolInput
-from lfx.log.logger import logger
 from lfx.schema.message import Message
 from lfx.services.deps import get_settings_service
 from lfx.template.field.base import Output
@@ -70,7 +69,7 @@ class CSVAgentComponent(LCAgentComponent):
             value=False,
             advanced=True,
             info=(
-                "⚠️ SECURITY WARNING: Enabling this allows the agent to execute arbitrary Python code "
+                "SECURITY WARNING: Enabling this allows the agent to execute arbitrary Python code "
                 "on the server, which can lead to remote code execution vulnerabilities. "
                 "Only enable this if you fully trust the input sources and understand the security implications. "
                 "When disabled, the agent can still analyze CSV data but cannot execute custom Python code."
@@ -101,13 +100,6 @@ class CSVAgentComponent(LCAgentComponent):
         try:
             # Use False as default if allow_dangerous_code is not set (secure by default)
             allow_dangerous = getattr(self, "allow_dangerous_code", False) or False
-
-            # Log security warning if dangerous code execution is enabled
-            if allow_dangerous:
-                logger.warning(
-                    "CSV Agent is running with allow_dangerous_code=True. "
-                    "This enables arbitrary code execution and should only be used in trusted environments."
-                )
 
             agent_kwargs = {
                 "verbose": self.verbose,
@@ -144,13 +136,6 @@ class CSVAgentComponent(LCAgentComponent):
 
         # Use False as default if allow_dangerous_code is not set (secure by default)
         allow_dangerous = getattr(self, "allow_dangerous_code", False) or False
-
-        # Log security warning if dangerous code execution is enabled
-        if allow_dangerous:
-            logger.warning(
-                "CSV Agent is running with allow_dangerous_code=True. "
-                "This enables arbitrary code execution and should only be used in trusted environments."
-            )
 
         agent_kwargs = {
             "verbose": self.verbose,
