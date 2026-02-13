@@ -62,7 +62,6 @@ describe("EditableHeaderContent", () => {
     node: {
       display_name: "Test Node",
       description: "Test description",
-      documentation: "",
       template: {},
       ...overrides,
     },
@@ -292,7 +291,6 @@ describe("EditableHeaderContent", () => {
           node: {
             display_name: "Test Node",
             description: "Test description",
-            documentation: "",
           },
         },
       };
@@ -333,7 +331,6 @@ describe("EditableHeaderContent", () => {
           node: {
             display_name: "Test Node",
             description: "Test description",
-            documentation: "",
           },
         },
       };
@@ -479,7 +476,6 @@ describe("EditableHeaderContent", () => {
           node: {
             display_name: "Test Node",
             description: "Test description",
-            documentation: "",
           },
         },
       };

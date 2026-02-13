@@ -9,7 +9,6 @@ import ToggleShadComponent from "@/components/core/parameterRenderComponent/comp
 import { Button } from "@/components/ui/button";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import { usePostRetrieveVertexOrder } from "@/controllers/API/queries/vertex";
-import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
 import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
 import useAddFlow from "@/hooks/flows/use-add-flow";
 import type { APIClassType } from "@/types/api";
@@ -499,7 +498,7 @@ const NodeToolbarComponent = memo(
               dataTestId="code-button-modal"
             />
           )}
-          {nodeLength > 0 && !ENABLE_INSPECTION_PANEL && (
+          {nodeLength > 0 && !inspectionPanelVisible && (
             <ToolbarButton
               icon="SlidersHorizontal"
               label="Controls"
@@ -510,7 +509,7 @@ const NodeToolbarComponent = memo(
               dataTestId="edit-button-modal"
             />
           )}
-          {(!hasToolMode || ENABLE_INSPECTION_PANEL) && (
+          {(!hasToolMode || inspectionPanelVisible) && (
             <ToolbarButton
               icon="FreezeAll"
               label="Freeze"
