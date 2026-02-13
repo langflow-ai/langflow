@@ -23,7 +23,7 @@ from ibm_watsonx_orchestrate_core.types.connections import (
     KeyValueConnectionCredentials,
 )
 from ibm_watsonx_orchestrate_core.types.tools.langflow_tool import create_langflow_tool
-from lfx.services.deployment.base import BaseDeploymentService
+from lfx.services.deployment.base import BaseDeploymentService, DeploymentType
 from lfx.services.deployment.exceptions import DeploymentConflictError, DeploymentError, UnprocessableContentError
 from lfx.services.schema import ServiceType
 
@@ -102,6 +102,9 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 msg_prefix=err_msg_prefix,
             )
 
+            if deployment_type == DeploymentType.AGENT:
+                pass
+
             app_id: str
 
             if config_id:
@@ -162,12 +165,12 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
 
             clients = await self._get_provider_clients(user_id=user_id, db=db)
 
-            connection = clients.connections.get_draft_by_app_id(app_id=app_id)
-            if not connection:
-                msg = f"{err_msg_prefix}Connection '{app_id}' not found."
-                raise ValueError(msg)
-            self._validate_connection(clients.connections, app_id=app_id)
-            connection_id = connection.connection_id
+            # connection = clients.connections.get_draft_by_app_id(app_id=app_id)
+            # if not connection:
+            #     msg = f"{err_msg_prefix}Connection '{app_id}' not found."
+            #     raise ValueError(msg)
+            # self._validate_connection(clients.connections, app_id=app_id)
+            # connection_id = connection.connection_id
 
             payload = self._build_agent_payload(
                 deployment_name=deployment_name,
@@ -185,14 +188,13 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             # agent = clients.agent.get_draft_by_id(created.id)
 
         except ClientAPIException as e:
+            detail = e.response.json().get("detail", [{}])[0].get("msg", None) or e.response.text
+            msg = f"{err_msg_prefix}{detail}"
             if e.response.status_code == fastapi.status.HTTP_409_CONFLICT:
-                msg = f"{err_msg_prefix}{e.response.text}"
                 raise DeploymentConflictError(message=msg) from e
             if e.response.status_code == fastapi.status.HTTP_422_UNPROCESSABLE_CONTENT:
-                print(e.response.json())
-                msg = f"{err_msg_prefix}{e.response.json().get('detail', [{}])[0].get('msg', None) or e.response.text}"
                 raise UnprocessableContentError(message=msg) from e
-            raise DeploymentError(e.response.text) from e
+            raise DeploymentError(message=msg) from e
         except Exception as e:
             msg = f"{err_msg_prefix} {e!s}"
             raise DeploymentError(message=msg) from e
@@ -566,6 +568,17 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
     async def teardown(self) -> None:
         """Teardown provider-specific resources."""
         return
+
+    def _create_agent_deployment(
+        self, deployment_name: str, 
+        deployment_type: DeploymentType,
+        app_id: str,
+        tool_ids: list[str],
+        user_id: UUID | str,
+        db: Any,
+    ) -> dict[str, Any]:
+        """Create an agent deployment."""
+        pass
 
     async def _get_provider_clients(
         self,
