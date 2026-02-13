@@ -45,10 +45,7 @@ test(
 
     await page.waitForSelector("text=Chat Input", { timeout: 30000 });
 
-    await disableInspectPanel(page);
     await page.getByText("Chat Input", { exact: true }).click();
-    await openAdvancedOptions(page);
-    await closeAdvancedOptions(page);
 
     await page.getByRole("button", { name: "Playground", exact: true }).click();
 
@@ -72,9 +69,5 @@ test(
         ).toFixed(2)} KB`,
       ),
     ).toBeVisible();
-
-    await page.getByTestId("playground-btn-flow-io").last().click();
-
-    await enableInspectPanel(page);
   },
 );

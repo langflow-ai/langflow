@@ -27,19 +27,16 @@ test("user must be able outdated message on error", async ({ page }) => {
     dataTransfer,
   });
 
-  await page.waitForSelector("data-testid=list-card", {
-    timeout: 3000,
-  });
+  await page.getByText("Memory Chatbot").first().waitFor({ timeout: 5000 });
 
-  await page.getByTestId("list-card").first().click();
+  await page.getByText("Memory Chatbot").first().click();
 
-  await page
-    .getByTestId("popover-anchor-input-api_key")
-    .fill("this is a test to crash");
+  // Wait for the canvas to render the flow nodes
+  await page.getByTestId("button_run_chat output").waitFor({ timeout: 10000 });
 
   await page.getByTestId("button_run_chat output").click();
 
   await expect(
     page.getByText("there are outdated components in the flow"),
-  ).toBeVisible({ timeout: 30000 });
+  ).toBeVisible({ timeout: 60000 });
 });

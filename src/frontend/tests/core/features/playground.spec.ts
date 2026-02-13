@@ -86,6 +86,9 @@ test(
     await page.keyboard.press("Enter");
     await expect(page.getByTestId("chat-message-User-message 1")).toBeVisible();
 
+    // Wait for AI response so the build is complete and messages have real IDs
+    await expect(page.getByTestId("chat-message-AI-message 1")).toBeVisible();
+
     //check edit message
     await page.getByTestId("chat-message-User-message 1").hover();
     await page.getByTestId("icon-Pen").first().click();
@@ -121,8 +124,7 @@ test(
     await page.getByRole("button", { name: "Close" }).click();
 
     // create new session
-    await page.getByTestId("session-selector-trigger").click();
-    await page.getByText("New Session").click();
+    await page.getByTestId("new-chat").click();
     await page.keyboard.press("Escape");
     await expect(page.getByTitle("New Session 0")).toBeVisible();
 
@@ -157,8 +159,7 @@ test(
     await expect(page.getByTitle("Default Session")).toBeVisible();
 
     //create new session
-    await page.getByTestId("session-selector-trigger").click();
-    await page.getByText("New Session", { exact: true }).click();
+    await page.getByTestId("new-chat").click();
     await page.keyboard.press("Escape");
     await page.getByTestId("input-chat-playground").click();
     await page

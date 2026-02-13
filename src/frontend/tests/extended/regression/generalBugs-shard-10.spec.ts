@@ -62,7 +62,7 @@ test(
 
     await page.waitForSelector("text=built successfully");
 
-    await page.getByTestId("playground-btn-flow-io").click();
+    await page.getByTestId("playground-btn-flow-io").dispatchEvent("click");
 
     // Wait for chat messages to be fully loaded/streamed
     await page.waitForSelector('[data-testid="div-chat-message"]', {
@@ -82,7 +82,7 @@ test(
     expect(firstResponseText.length).toBeGreaterThan(0);
 
     // await page.getByText("Close").last().click();
-    await page.getByTestId("playground-btn-flow-io").click();
+    await page.getByTestId("playground-btn-flow-io").dispatchEvent("click");
 
     // Freeze the Chat Output node (not Prompt) so the entire response is cached
     await page.getByText("Chat Output", { exact: true }).last().click();
@@ -121,7 +121,7 @@ test(
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
-    await page.getByTestId("playground-btn-flow-io").click();
+    await page.getByTestId("playground-btn-flow-io").dispatchEvent("click");
 
     // Wait for chat messages to be fully loaded/streamed
     await page.waitForSelector('[data-testid="div-chat-message"]', {

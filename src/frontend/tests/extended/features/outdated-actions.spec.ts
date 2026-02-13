@@ -29,13 +29,9 @@ test("user must be able to update outdated components by update all button", asy
     dataTransfer,
   });
 
-  await page.waitForTimeout(1000);
+  await page.getByText("Memory Chatbot").first().waitFor({ timeout: 5000 });
 
-  await page.waitForSelector("data-testid=list-card", {
-    timeout: 3000,
-  });
-
-  await page.getByTestId("list-card").first().click();
+  await page.getByText("Memory Chatbot").first().click();
 
   await expect(page.getByText("Updates are available for 4")).toBeVisible({
     timeout: 30000,
@@ -130,13 +126,9 @@ test("user must be able to update outdated components by each outdated component
     dataTransfer,
   });
 
-  await page.waitForTimeout(1000);
+  await page.getByText("Memory Chatbot").first().waitFor({ timeout: 5000 });
 
-  await page.waitForSelector("data-testid=list-card", {
-    timeout: 3000,
-  });
-
-  await page.getByTestId("list-card").first().click();
+  await page.getByText("Memory Chatbot").first().click();
 
   await expect(page.getByText("Updates are available for 4")).toBeVisible({
     timeout: 30000,
