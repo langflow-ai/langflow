@@ -1,6 +1,12 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoizedSidebarTrigger } from "../MemoizedComponents";
+
+// Mock problematic dependencies first
+jest.mock("@/components/core/logCanvasControlsComponent", () => ({
+  __esModule: true,
+  default: () => <div data-testid="log-canvas-controls">Log Controls</div>,
+}));
 
 jest.mock("@/components/core/canvasControlsComponent/CanvasControls", () => ({
   __esModule: true,
@@ -30,6 +36,11 @@ jest.mock("@/customization/feature-flags", () => ({
 // Mock the sidebar hooks with proper Jest functions
 const mockToggleSidebar = jest.fn();
 const mockSetActiveSection = jest.fn();
+const mockUseSidebar = jest.fn(() => ({
+  open: false,
+  toggleSidebar: mockToggleSidebar,
+  setActiveSection: mockSetActiveSection,
+}));
 
 // Mock the UI components
 jest.mock("@/components/ui/sidebar", () => ({
@@ -78,7 +89,8 @@ jest.mock(
       testId,
       ...rest
     }: any) => {
-      const { iconClasses: _iconClasses, ...validProps } = rest;
+      // Filter out custom props that shouldn't go to DOM
+      const { iconClasses, ...validProps } = rest;
       return (
         <div data-testid="tooltip" data-content={tooltipText} data-side="right">
           <button
@@ -277,7 +289,7 @@ describe("MemoizedSidebarTrigger", () => {
         "group-data-[open=true]/sidebar-wrapper:pointer-events-none",
       );
       expect(panel).toHaveClass(
-        "group-data-[open=true]/sidebar-wrapper:-translate-x-80",
+        "group-data-[open=true]/sidebar-wrapper:-translate-x-full",
       );
       expect(panel).toHaveClass(
         "group-data-[open=true]/sidebar-wrapper:opacity-0",

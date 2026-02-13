@@ -1,4 +1,4 @@
-import ShadTooltip from "@/components/common/shadTooltipComponent";
+import React from "react";
 import { cn } from "@/utils/utils";
 import { SessionRename } from "./session-rename";
 
@@ -40,14 +40,9 @@ export function ChatHeaderTitle({
           onDone={onCancel}
         />
       ) : (
-        <ShadTooltip content={displayTitle} side="bottom">
-          <div
-            className="truncate text-mmd text-foreground"
-            title={displayTitle}
-          >
-            {displayTitle}
-          </div>
-        </ShadTooltip>
+        <div className="truncate text-mmd text-foreground" title={displayTitle}>
+          {displayTitle}
+        </div>
       )}
     </div>
   );

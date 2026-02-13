@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Separator } from "@/components/ui/separator";
@@ -9,7 +9,6 @@ import {
   type SidebarSection,
   useSidebar,
 } from "@/components/ui/sidebar";
-import FlowLogsModal from "@/modals/flowLogsModal";
 import { cn } from "@/utils/utils";
 import { useSearchContext } from "../index";
 
@@ -48,34 +47,42 @@ export const NAV_ITEMS: NavItem[] = [
     tooltip: "Bundles",
   },
   {
-    id: "logs",
-    icon: "ScrollText",
-    label: "Logs",
-    tooltip: "Logs",
+    id: "add_note",
+    icon: "sticky-note",
+    label: "Sticky Notes",
+    tooltip: "Add Sticky Notes",
   },
 ];
 
 const SidebarSegmentedNav = () => {
   const { activeSection, setActiveSection, toggleSidebar, open } = useSidebar();
   const { focusSearch, setSearch } = useSearchContext();
-  const [logsOpen, setLogsOpen] = useState(false);
+  const [isAddNoteActive, setIsAddNoteActive] = useState(false);
+  const handleAddNote = () => {
+    window.dispatchEvent(new Event("lf:start-add-note"));
+    setIsAddNoteActive(true);
+  };
+
+  useEffect(() => {
+    const onEnd = () => setIsAddNoteActive(false);
+    window.addEventListener("lf:end-add-note", onEnd);
+    return () => window.removeEventListener("lf:end-add-note", onEnd);
+  }, []);
 
   return (
     <div className="flex h-full flex-col border-r border-border bg-background">
       <SidebarMenu className="gap-2 py-1">
         {NAV_ITEMS.map((item) => (
           <div key={item.id}>
-            {item.id === "logs" && <Separator className="w-full" />}
-            <SidebarMenuItem
-              className={cn("px-1", item.id === "logs" && "pt-1")}
-            >
+            {item.id === "add_note" && <Separator className="w-full" />}
+            <SidebarMenuItem className="px-1">
               <ShadTooltip content={item.tooltip} side="right">
                 <SidebarMenuButton
                   size="md"
                   onClick={(e) => {
-                    if (item.id === "logs") {
+                    if (item.id === "add_note") {
                       e.stopPropagation();
-                      setLogsOpen(true);
+                      handleAddNote();
                       return;
                     }
 
@@ -92,10 +99,18 @@ const SidebarSegmentedNav = () => {
                       }
                     }
                   }}
-                  isActive={activeSection === item.id}
+                  isActive={
+                    item.id === "add_note"
+                      ? isAddNoteActive
+                      : activeSection === item.id
+                  }
                   className={cn(
                     "flex h-8 w-8 items-center justify-center rounded-md p-0 transition-all duration-200",
-                    activeSection === item.id
+                    (
+                      item.id === "add_note"
+                        ? isAddNoteActive
+                        : activeSection === item.id
+                    )
                       ? "bg-accent text-accent-foreground"
                       : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
                   )}
@@ -112,7 +127,6 @@ const SidebarSegmentedNav = () => {
           </div>
         ))}
       </SidebarMenu>
-      <FlowLogsModal open={logsOpen} onOpenChange={setLogsOpen} />
     </div>
   );
 };

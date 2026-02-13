@@ -54,7 +54,7 @@ export function ChatSidebar({
   return (
     <div className="flex flex-col pb-4 gap-2">
       <div className="flex flex-col">
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex h-4 items-center justify-between">
           <div className="px-2 text-xs font-semibold leading-4 text-muted-foreground">
             Sessions
           </div>

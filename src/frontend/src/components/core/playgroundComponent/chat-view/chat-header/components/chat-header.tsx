@@ -1,12 +1,13 @@
-import { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { AnimatedConditional } from "@/components/ui/animated-close";
 import { useDeleteSession } from "@/controllers/API/queries/messages/use-delete-sessions";
+import { useIsMobile } from "@/hooks/use-mobile";
 import useAlertStore from "@/stores/alertStore";
-import useFlowStore from "@/stores/flowStore";
 import { cn } from "@/utils/utils";
 import { clearSessionMessages } from "../../utils/message-utils";
 import { useEditSessionInfo } from "../hooks/use-edit-session-info";
 import { useRenameSession } from "../hooks/use-rename-session";
+import { useSessionHasMessages } from "../hooks/use-session-has-messages";
 import { useSessionMoreMenuHandlers } from "../hooks/use-session-more-menu-handlers";
 import type { ChatHeaderProps } from "../types/chat-header.types";
 import { getSessionTitle } from "../utils/get-session-title";
@@ -22,6 +23,7 @@ export function ChatHeader({
   onSessionSelect,
   currentSessionId,
   currentFlowId,
+  onToggleFullscreen,
   isFullscreen = false,
   onDeleteSession,
   className,
@@ -55,8 +57,8 @@ export function ChatHeader({
     handleEditStart();
   };
 
-  const isShareablePlayground = useFlowStore((state) => state.playgroundPage);
-  const isBuilding = useFlowStore((state) => state.isBuilding);
+  const isMobile = useIsMobile();
+  // Keep session actions (including logs) available in fullscreen
   const isSessionDropdownVisible = true;
   const isDefaultSession = currentSessionId === currentFlowId;
   const deleteSessionMutation = useDeleteSession({});
@@ -64,54 +66,48 @@ export function ChatHeader({
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
   const handleDeleteSessionInternal = () => {
-    if (!currentSessionId || !currentFlowId) return;
-
-    if (isShareablePlayground) {
-      clearSessionMessages(currentSessionId, currentFlowId);
-      if (!isDefaultSession) {
-        handleDelete(currentSessionId);
-        onDeleteSession?.(currentSessionId);
-      }
-      setSuccessData({ title: "Session deleted successfully." });
-      return;
-    }
-
-    if (isDefaultSession) return;
+    if (!currentSessionId || isDefaultSession || !currentFlowId) return;
 
     deleteSessionMutation.mutate(
       { sessionId: currentSessionId },
       {
         onSuccess: () => {
+          // Clear messages from React Query cache
           clearSessionMessages(currentSessionId, currentFlowId);
+          // Call the delete handler to update session list and selected session
           handleDelete(currentSessionId);
+          // Call the parent callback
           onDeleteSession?.(currentSessionId);
-          setSuccessData({ title: "Session deleted successfully." });
+          setSuccessData({
+            title: "Session deleted successfully.",
+          });
         },
         onError: () => {
-          setErrorData({ title: "Error deleting session." });
+          setErrorData({
+            title: "Error deleting session.",
+          });
         },
       },
     );
   };
 
   const handleClearChat = () => {
-    if (!currentSessionId || !currentFlowId) return;
-
-    if (isShareablePlayground) {
-      clearSessionMessages(currentSessionId, currentFlowId);
-      setSuccessData({ title: "Chat cleared successfully." });
-      return;
-    }
+    if (!currentSessionId || !isDefaultSession || !currentFlowId) return;
 
     deleteSessionMutation.mutate(
       { sessionId: currentSessionId },
       {
         onSuccess: () => {
+          // Clear messages from React Query cache
           clearSessionMessages(currentSessionId, currentFlowId);
-          setSuccessData({ title: "Chat cleared successfully." });
+          setSuccessData({
+            title: "Chat cleared successfully.",
+          });
         },
         onError: () => {
-          setErrorData({ title: "Error clearing chat." });
+          setErrorData({
+            title: "Error clearing chat.",
+          });
         },
       },
     );
@@ -122,30 +118,26 @@ export function ChatHeader({
     onOpenLogs: () => setOpenLogsModal?.(true),
   });
 
-  const canRename = !isShareablePlayground && !isDefaultSession;
-  const canShowLogs = !isShareablePlayground;
-  const canClearChat = isShareablePlayground || isDefaultSession;
-  const canDelete = isShareablePlayground || !isDefaultSession;
-  const hasAnyMenuOption =
-    canRename || canShowLogs || canClearChat || canDelete;
+  const hasMessages = useSessionHasMessages({
+    sessionId: currentSessionId,
+    flowId: currentFlowId,
+  });
 
   const moreMenu = (
-    <AnimatedConditional isOpen={isSessionDropdownVisible && hasAnyMenuOption}>
+    <AnimatedConditional isOpen={isSessionDropdownVisible}>
       <SessionMoreMenu
         onRename={handleEditStartLogged}
         onMessageLogs={onMessageLogs}
         onClearChat={handleClearChat}
         onDelete={handleDeleteSessionInternal}
-        showRename={canRename}
-        showMessageLogs={canShowLogs}
-        showClearChat={canClearChat}
-        showDelete={canDelete}
+        showRename={!isDefaultSession && hasMessages}
+        showClearChat={isDefaultSession}
+        showDelete={!isDefaultSession}
         side="bottom"
         align="end"
         sideOffset={4}
         contentClassName="z-[100] [&>div.p-1]:!h-auto [&>div.p-1]:!min-h-0"
         isVisible={true}
-        disabled={isBuilding}
         tooltipContent="More options"
         tooltipSide="left"
         dataTestid="chat-header-more-menu"
@@ -207,14 +199,24 @@ export function ChatHeader({
           />
         </div>
       )}
-      <div className="relative flex items-center shrink-0 justify-end min-h-xxs">
-        <ChatHeaderActions
-          isFullscreen={isFullscreen}
-          onClose={onClose}
-          renderPrefix={() => moreMenu}
-        />
+      <div className="relative flex items-center flex-1 justify-end min-h-xxs">
+        <AnimatedConditional isOpen={!isFullscreen}>
+          <ChatHeaderActions
+            isFullscreen={false}
+            onToggleFullscreen={onToggleFullscreen}
+            onClose={onClose}
+            renderPrefix={() => moreMenu}
+          />
+        </AnimatedConditional>
+        <AnimatedConditional isOpen={isFullscreen}>
+          <ChatHeaderActions
+            isFullscreen={true}
+            onToggleFullscreen={onToggleFullscreen}
+            onClose={onClose}
+          />
+        </AnimatedConditional>
       </div>
-      {!isShareablePlayground && currentSessionId && (
+      {currentSessionId && (
         <SessionLogsModal
           sessionId={currentSessionId}
           flowId={currentFlowId}

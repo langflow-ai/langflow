@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Play } from "lucide-react";
+import { PanelLeftOpen, PanelRightOpen } from "lucide-react";
 import * as React from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import isWrappedWithClass from "../../pages/FlowPage/components/PageComponent/utils/is-wrapped-with-class";
@@ -365,8 +365,7 @@ const SimpleSidebar = React.forwardRef<
     }, [open, side]);
 
     const transitionDuration = React.useMemo(() => {
-      if (fullscreen) return 0;
-      return isResizing ? 0 : 0.3;
+      return isResizing && !fullscreen ? 0 : 0.3;
     }, [isResizing, fullscreen]);
 
     return (
@@ -444,15 +443,20 @@ const SimpleSidebarTrigger = React.forwardRef<
       data-testid="playground-btn-flow-io"
       variant="ghost"
       size="md"
-      className={cn(
-        "!px-2 !font-normal !justify-start !gap-1.5 !w-[7.2rem]",
-        className,
-      )}
+      className={cn("!px-2 !font-normal !justify-start !gap-0", className)}
       onClick={handleClick}
       {...props}
     >
-      <Play strokeWidth={1.5} />
-      {children}
+      {open ? (
+        <PanelLeftOpen strokeWidth={1.5} />
+      ) : (
+        <PanelRightOpen strokeWidth={1.5} />
+      )}
+      {children && (
+        <AnimatedConditional isOpen={!open}>
+          <div className="pl-2">{children}</div>
+        </AnimatedConditional>
+      )}
     </Button>
   );
 });

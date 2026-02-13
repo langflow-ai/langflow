@@ -29,16 +29,14 @@ export default function ChatMessage({
   if (chat.category === "error") {
     const blocks = chat.content_blocks ?? [];
     return (
-      <div className="w-full mt-2">
-        <ErrorView
-          blocks={blocks}
-          showError={showError}
-          lastMessage={lastMessage}
-          closeChat={closeChat}
-          fitViewNode={fitViewNode}
-          chat={chat}
-        />
-      </div>
+      <ErrorView
+        blocks={blocks}
+        showError={showError}
+        lastMessage={lastMessage}
+        closeChat={closeChat}
+        fitViewNode={fitViewNode}
+        chat={chat}
+      />
     );
   }
 
