@@ -58,6 +58,10 @@ class JobBase(SQLModel):
         ),
     )
     user_id: UUID | None = Field(index=True, nullable=True)
+    asset_id: UUID | None = Field(index=True, nullable=True)
+    asset_type: str | None = Field(
+        index=False, nullable=True
+    )  # This can be polymorphic, it records if the job is related to a particular entity like a knowledge base, workflow etc.
 
 
 class Job(JobBase, table=True):  # type: ignore[call-arg]

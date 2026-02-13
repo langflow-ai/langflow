@@ -7,11 +7,14 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from langflow.services.base import Service
-from langflow.services.database.models.jobs.crud import get_job_by_job_id, get_jobs_by_flow_id, update_job_status
+from langflow.services.database.models.jobs.crud import (
+    get_job_by_job_id,
+    get_jobs_by_flow_id,
+    get_latest_jobs_by_asset_ids,
+    update_job_status,
+)
 from langflow.services.database.models.jobs.model import Job, JobStatus, JobType
 from langflow.services.deps import session_scope
-
-# if TYPE_CHECKING:
 
 
 class JobService(Service):
@@ -55,13 +58,22 @@ class JobService(Service):
         async with session_scope() as session:
             return await get_job_by_job_id(session, job_id)
 
-    async def create_job(self, job_id: UUID, flow_id: UUID, job_type: JobType = JobType.WORKFLOW) -> Job:
+    async def create_job(
+        self,
+        job_id: UUID,
+        flow_id: UUID,
+        job_type: JobType = JobType.WORKFLOW,
+        asset_id: UUID | None = None,
+        asset_type: str | None = None,
+    ) -> Job:
         """Create a new job record with QUEUED status.
 
         Args:
             job_id: The job ID
             flow_id: The flow ID
             job_type: The job type
+            asset_id: The asset ID
+            asset_type: The asset type
 
         Returns:
             Created Job object
@@ -73,7 +85,14 @@ class JobService(Service):
             flow_id = UUID(flow_id)
 
         async with session_scope() as session:
-            job = Job(job_id=job_id, flow_id=flow_id, status=JobStatus.QUEUED, type=job_type)
+            job = Job(
+                job_id=job_id,
+                flow_id=flow_id,
+                status=JobStatus.QUEUED,
+                type=job_type,
+                asset_id=asset_id,
+                asset_type=asset_type,
+            )
             session.add(job)
             await session.flush()
             return job
@@ -98,6 +117,21 @@ class JobService(Service):
                 session.add(job)
                 await session.flush()
             return job
+
+    async def get_latest_jobs_by_asset_ids(self, asset_ids: list[UUID | str]) -> dict[UUID, Job]:
+        """Get the latest job for each asset ID in a single batch query.
+
+        Args:
+            asset_ids: List of asset IDs (UUID or string) to fetch jobs for
+
+        Returns:
+            Dictionary mapping asset_id (UUID) to the latest Job object
+        """
+        # Convert all asset_ids to UUID
+        uuid_asset_ids = [UUID(aid) if isinstance(aid, str) else aid for aid in asset_ids]
+
+        async with session_scope() as session:
+            return await get_latest_jobs_by_asset_ids(session, uuid_asset_ids)
 
     async def execute_with_status(self, job_id: UUID, run_coro_func, *args, **kwargs):
         """Wrapper that manages job status lifecycle around a coroutine.
