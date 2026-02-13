@@ -49,9 +49,9 @@ class DatabaseService(Service):
             msg = "No database URL provided"
             raise ValueError(msg)
         self.database_url: str = settings_service.settings.database_url
-        
+
         configure_windows_postgres_event_loop(source="database_service")
-        
+
         self._sanitize_database_url()
 
         # This file is in langflow.services.database.manager.py

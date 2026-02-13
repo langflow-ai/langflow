@@ -32,13 +32,15 @@ class TestDatabaseServiceWindowsPostgres:
     @patch.dict(os.environ, {"LANGFLOW_DATABASE_URL": "postgresql://user:pass@localhost/db"}, clear=True)
     @patch("langflow.services.database.service.create_async_engine")
     @patch("langflow.services.database.service.configure_windows_postgres_event_loop")
-    def test_windows_postgresql_configures_event_loop(self, mock_configure, mock_create_engine, mock_platform, mock_settings_service):
+    def test_windows_postgresql_configures_event_loop(
+        self, mock_configure, mock_create_engine, mock_platform, mock_settings_service
+    ):
         """Test that Windows + PostgreSQL configures the event loop correctly."""
         mock_platform.return_value = "Windows"
         mock_settings_service.settings.database_url = "postgresql://user:pass@localhost/db"
         mock_create_engine.return_value = MagicMock()
         mock_configure.return_value = True
-        
+
         _ = DatabaseService(mock_settings_service)
         mock_configure.assert_called_once_with(source="database_service")
 
@@ -76,13 +78,15 @@ class TestDatabaseServiceWindowsPostgres:
     @patch.dict(os.environ, {}, clear=True)
     @patch("langflow.services.database.service.create_async_engine")
     @patch("langflow.services.database.service.configure_windows_postgres_event_loop")
-    def test_windows_sqlite_no_event_loop_change(self, mock_configure, mock_create_engine, mock_platform, mock_settings_service):
+    def test_windows_sqlite_no_event_loop_change(
+        self, mock_configure, mock_create_engine, mock_platform, mock_settings_service
+    ):
         """Test that Windows + SQLite doesn't change event loop."""
         mock_platform.return_value = "Windows"
         mock_settings_service.settings.database_url = "sqlite:///test.db"
         mock_create_engine.return_value = MagicMock()
         mock_configure.return_value = False
-        
+
         _ = DatabaseService(mock_settings_service)
         mock_configure.assert_called_once_with(source="database_service")
 
@@ -136,4 +140,3 @@ class TestDatabaseServiceWindowsPostgres:
 
             result = await test_async()
             assert result is True
-

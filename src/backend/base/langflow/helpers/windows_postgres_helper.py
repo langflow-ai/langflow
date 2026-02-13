@@ -43,4 +43,3 @@ def configure_windows_postgres_event_loop(source: str | None = None) -> bool:
 
     logger.debug("Windows PostgreSQL event loop configured", extra=log_context)
     return True
-
