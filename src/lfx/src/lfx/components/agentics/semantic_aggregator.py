@@ -81,4 +81,4 @@ class SemanticAggregator(BaseAgenticComponent):
 
         output = await (target << source)
 
-        return output.to_dataframe().to_dict(orient="records")
+        return DataFrame(output.to_dataframe().to_dict(orient="records"))

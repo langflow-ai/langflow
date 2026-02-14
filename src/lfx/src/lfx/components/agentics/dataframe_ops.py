@@ -76,4 +76,4 @@ class DataFrameOps(Component):
         else:
             raise ValueError(ERROR_UNSUPPORTED_OPERATION.format(operation_type=self.operation_type))
 
-        return output.to_dataframe().to_dict(orient="records")
+        return DataFrame(output.to_dataframe().to_dict(orient="records"))

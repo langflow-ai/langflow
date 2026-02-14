@@ -77,17 +77,23 @@ class SemanticMap(BaseAgenticComponent):
 
         schema_fields = build_schema_fields(self.generated_fields)
         atype = create_pydantic_model(schema_fields, name="Target")
+        
+       
 
         target = AG(
             atype=atype,
             transduction_type=TRANSDUCTION_AMAP,
-            instructions=self.instructions,
             llm=llm,
         )
+        if "{" in self.instructions:
+            source.prompt_template = self.instructions
+        else:
+            source.instructions += self.instructions
+
 
         output = await (target << source)
 
         if self.append_to_input_columns:
             output = source.merge_states(output)
 
-        return output.to_dataframe().to_dict(orient="records")
+        return DataFrame(output.to_dataframe().to_dict(orient="records"))

@@ -57,11 +57,7 @@ class AgenticsComponent(BaseAgenticComponent):
             value="",
             required=True,
         ),
-        get_generated_fields_input(
-            name="schema",
-            display_name="Generated Fields",
-            info="Define the structure and data types for the model's output.",
-        ),
+        get_generated_fields_input(),
         MessageTextInput(
             name="instructions",
             display_name="Instructions",
@@ -125,4 +121,4 @@ class AgenticsComponent(BaseAgenticComponent):
             if self.merge_source and self.transduction_type == TRANSDUCTION_AMAP:
                 output = source.merge_states(output)
 
-        return output.to_dataframe().to_dict(orient="records")
+        return DataFrame(output.to_dataframe().to_dict(orient="records"))

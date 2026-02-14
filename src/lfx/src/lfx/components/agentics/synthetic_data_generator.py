@@ -16,7 +16,8 @@ from lfx.components.agentics.inputs import (
 from lfx.io import (
     IntInput,
     Output,
-    MessageTextInput
+    MessageTextInput,
+    DataFrameInput
 )
 
 
@@ -27,7 +28,7 @@ class SyntheticDataGenerator(BaseAgenticComponent):
     """Generate synthetic data based on the required schema."""
 
     display_name = "SyntheticDataGen"
-    description = "Generate fake data for the required schema"
+    description = "Generate fake data. If source is provided concatenate more data to source, otherwise uses generates a new dataframe of the given schema"
     documentation: str = "github.com/IBM/agentics/"
     icon = "Agentics"
 
@@ -35,18 +36,28 @@ class SyntheticDataGenerator(BaseAgenticComponent):
         *get_model_provider_inputs(),
         get_generated_fields_input(
             name="schema",
-            display_name="Generated Fields",
-            info="Define the structure and data types for the model's output.",
+            display_name="Schema",
+            info="Define the columns that will be generated, providing name, desciption and type for each of them. Used only when source is not provided",
+        
+        ),
+        DataFrameInput(
+            name="source",
+            display_name="Source DataFrame",
+            info="A dataframe to be used as an example for the syntetic data that will be generated. Only first 50 rows considered",
+            required=False,
+            advanced=False,
+            value=None
         ),
         MessageTextInput(
             name="instructions",
             display_name="Instructions",
-            info="Instructions for generating the syntetic data.",
+            info="Specific Instructions to drive the  generation of the syntetic data. (Optional)",
             value="",
+            advanced=True,
         ),
         IntInput(
             name="batch_size",
-            display_name="Number of Instances",
+            display_name="Number of Generated Rows",
             value=10,
             advanced=False,
         ),
@@ -71,16 +82,25 @@ class SyntheticDataGenerator(BaseAgenticComponent):
             raise ImportError(ERROR_AGENTICS_NOT_INSTALLED) from e
 
         llm = prepare_llm_from_component(self)
-
-        schema_fields = build_schema_fields(self.schema)
-        atype = create_pydantic_model(schema_fields, name="GeneratedData")
+        
+        if self.source:
+            source = AG.from_dataframe(DataFrame(self.source))
+            atype=source.atype
+            instructions=str(self.instructions)
+            instructions+= "\nHere are examples to take inspiration from" + str(source.states[:50])
+        else:
+            schema_fields = build_schema_fields(self.schema)
+            atype = create_pydantic_model(schema_fields, name="GeneratedData")
+            instructions=str(self.instructions)
 
         output_states = await generate_prototypical_instances(
             atype,
             n_instances=self.batch_size,
             llm=llm,
-            instructions=str(self.instructions),
+            instructions=instructions,
         )
+        if self.source:
+            output_states = source.states + output_states
         output = AG(states=output_states)
 
         return output.to_dataframe().to_dict(orient="records")

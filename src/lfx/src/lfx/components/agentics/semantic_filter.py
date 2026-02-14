@@ -9,6 +9,7 @@ from lfx.components.agentics.inputs import get_model_provider_inputs
 from lfx.io import (
     DataFrameInput,
     IntInput,
+    FloatInput,
     MessageTextInput,
     Output,
 )
@@ -39,7 +40,15 @@ class SemanticFilter(BaseAgenticComponent):
         IntInput(
             name="batch_size",
             display_name="Batch Size",
+            info="The number of fows that will be processed in parallel.",
             value=10,
+            advanced=True,
+        ),
+        FloatInput(
+            name="sensitivity",
+            display_name="Sensitivity",
+            info="The sensitivity of the filter. O pass all, 1 for only certain predicates.",
+            value=0.8,
             advanced=True,
         ),
     ]
@@ -64,11 +73,14 @@ class SemanticFilter(BaseAgenticComponent):
         llm = prepare_llm_from_component(self)
 
         source = AG.from_dataframe(DataFrame(self.source))
+
+
         output = await sem_filter(
             source,
             self.predicate_template,
             batch_size=self.batch_size,
             llm=llm,
+            sensitivity=self.sensitivity
         )
 
-        return output.to_dataframe().to_dict(orient="records")
+        return DataFrame(output.to_dataframe().to_dict(orient="records"))
