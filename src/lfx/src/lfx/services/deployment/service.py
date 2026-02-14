@@ -6,7 +6,7 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING, Any
 
 from lfx.services.deployment.base import BaseDeploymentService
-from lfx.services.deployment.schema import BaseConfigData
+from lfx.services.deployment.schema import ArtifactType
 from lfx.services.registry import register_service
 from lfx.services.schema import ServiceType
 
@@ -14,12 +14,12 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from lfx.services.deployment.schema import (
+        BaseConfigData,
         ConfigUpdate,
         DeploymentCreate,
         DeploymentType,
         DeploymentUpdate,
         SnapshotPayload,
-        SnapshotType,
     )
 
 
@@ -206,7 +206,7 @@ class DeploymentService(BaseDeploymentService):
         self,
         *,
         user_id: UUID | str,
-        snapshot_type: SnapshotType | None = None,
+        artifact_type: ArtifactType | None = None,
         db: Any,
     ) -> list[dict[str, Any]]:
         """List provider snapshots (deployed or not)."""

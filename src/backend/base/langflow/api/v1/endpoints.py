@@ -8,7 +8,6 @@ from http import HTTPStatus
 from typing import TYPE_CHECKING, Annotated
 from uuid import UUID, uuid4
 
-from lfx.services.deployment.schema import DeploymentCreate
 import orjson
 import sqlalchemy as sa
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, UploadFile, status
@@ -26,6 +25,7 @@ from lfx.graph.schema import RunOutputs
 from lfx.log.logger import logger
 from lfx.schema.schema import InputValueRequest
 from lfx.services.deployment.exceptions import DeploymentConflictError, DeploymentError, UnprocessableContentError
+from lfx.services.deployment.schema import ArtifactType, DeploymentCreate
 from lfx.services.deps import get_deployment_service
 from lfx.services.interfaces import DeploymentServiceProtocol
 from lfx.services.settings.service import SettingsService
@@ -1022,6 +1022,27 @@ async def delete_deployment(
     except Exception as exc:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
     return {"message": "Deployment deleted successfully."}
+
+
+
+@router.get("/snapshot", response_model=list[dict])
+async def list_snapshots(
+    user: CurrentActiveUser,
+    db: DbSession,
+    artifact_type: ArtifactType | None = None,
+):
+    """List snapshots through the configured deployment adapter."""
+    deployment_service = _require_deployment_service()
+    try:
+        return await deployment_service.list_snapshots(
+            user_id=user.id,
+            artifact_type=artifact_type,
+            db=db,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
 
 @router.get("/task/{_task_id}", deprecated=True)

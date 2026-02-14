@@ -5,6 +5,8 @@ from __future__ import annotations
 from abc import abstractmethod
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
+from lfx.services.deployment.schema import DeploymentResult
+
 if TYPE_CHECKING:
     import asyncio
     from uuid import UUID
@@ -12,13 +14,14 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from lfx.services.deployment.schema import (
+        ArtifactType,
         BaseConfigData,
         ConfigUpdate,
         DeploymentCreate,
         DeploymentType,
         DeploymentUpdate,
+        SnapshotList,
         SnapshotPayload,
-        SnapshotType,
     )
     from lfx.services.settings.base import Settings
 
@@ -229,8 +232,18 @@ class DeploymentServiceProtocol(Protocol):
         user_id: UUID | str,
         deployment: DeploymentCreate,
         db: Any,
-    ) -> dict[str, Any]:
+    ) -> DeploymentResult:
         """Create a new deployment in the provider."""
+        ...
+
+    @abstractmethod
+    async def list_deployment_types(
+        self,
+        *,
+        user_id: UUID | str,
+        db: Any,
+    ) -> list[DeploymentType]:
+        """List deployment types supported by the provider."""
         ...
 
     @abstractmethod
@@ -376,11 +389,22 @@ class DeploymentServiceProtocol(Protocol):
         ...
 
     @abstractmethod
+    async def create_multiple_snapshots(
+        self,
+        *,
+        user_id: UUID | str,
+        snapshots: SnapshotList,
+        db: Any,
+    ) -> dict[str, Any]:
+        """Create a provider snapshot (deployed or not)."""
+        ...
+
+    @abstractmethod # TODO: allow filtering by flow id or by other criteria
     async def list_snapshots(
         self,
         *,
         user_id: UUID | str,
-        snapshot_type: SnapshotType | None = None,
+        artifact_type: ArtifactType | None = None,
         db: Any,
     ) -> list[dict[str, Any]]:
         """List provider snapshots (deployed or not)."""

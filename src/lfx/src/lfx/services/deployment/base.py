@@ -12,12 +12,12 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from lfx.services.deployment.schema import (
+        ArtifactType,
         ConfigUpdate,
         DeploymentCreate,
         DeploymentType,
         DeploymentUpdate,
         SnapshotPayload,
-        SnapshotType,
     )
 
 
@@ -187,7 +187,7 @@ class BaseDeploymentService(Service):
         self,
         *,
         user_id: UUID | str,
-        snapshot_type: SnapshotType | None = None,
+        artifact_type: ArtifactType | None = None,
         db: Any,
     ) -> list[dict[str, Any]]:
         """List provider snapshots (deployed or not)."""
