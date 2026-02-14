@@ -6,7 +6,7 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING, Any
 
 from lfx.services.deployment.base import BaseDeploymentService
-from lfx.services.deployment.schema import ArtifactType
+from lfx.services.deployment.schema import ArtifactType, SnapshotItemsCreate, SnapshotResult
 from lfx.services.registry import register_service
 from lfx.services.schema import ServiceType
 
@@ -19,7 +19,6 @@ if TYPE_CHECKING:
         DeploymentCreate,
         DeploymentType,
         DeploymentUpdate,
-        SnapshotPayload,
     )
 
 
@@ -57,6 +56,16 @@ class DeploymentService(BaseDeploymentService):
         db: Any,
     ) -> dict[str, Any]:
         """Create a new deployment in the provider."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def list_deployment_types(
+        self,
+        *,
+        user_id: UUID | str,
+        db: Any,
+    ) -> list[DeploymentType]:
+        """List deployment types supported by the provider."""
         raise NotImplementedError
 
     @abstractmethod
@@ -191,13 +200,13 @@ class DeploymentService(BaseDeploymentService):
         raise NotImplementedError
 
     @abstractmethod
-    async def create_snapshot(
+    async def create_snapshots(
         self,
         *,
         user_id: UUID | str,
-        snapshot: SnapshotPayload,
+        snapshot_items: SnapshotItemsCreate,
         db: Any,
-    ) -> dict[str, Any]:
+    ) -> SnapshotResult:
         """Create a provider snapshot (deployed or not)."""
         raise NotImplementedError
 

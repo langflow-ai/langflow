@@ -6,18 +6,19 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING, Any
 
 from lfx.services.base import Service
-from lfx.services.deployment.schema import BaseConfigData
 
 if TYPE_CHECKING:
     from uuid import UUID
 
     from lfx.services.deployment.schema import (
         ArtifactType,
+        BaseConfigData,
         ConfigUpdate,
         DeploymentCreate,
         DeploymentType,
         DeploymentUpdate,
-        SnapshotPayload,
+        SnapshotItemsCreate,
+        SnapshotResult,
     )
 
 
@@ -51,6 +52,16 @@ class BaseDeploymentService(Service):
         db: Any,
     ) -> dict[str, Any]:
         """Create a new deployment in the provider."""
+
+    @abstractmethod
+    async def list_deployment_types(
+        self,
+        *,
+        user_id: UUID | str,
+        db: Any,
+    ) -> list[DeploymentType]:
+        """List deployment types supported by the provider."""
+        ...
 
     @abstractmethod
     async def list_deployments(
@@ -173,13 +184,13 @@ class BaseDeploymentService(Service):
         """Delete a deployment configuration from the provider."""
 
     @abstractmethod
-    async def create_snapshot(
+    async def create_snapshots(
         self,
         *,
         user_id: UUID | str,
-        snapshot: SnapshotPayload,
+        snapshot_items: SnapshotItemsCreate,
         db: Any,
-    ) -> dict[str, Any]:
+    ) -> SnapshotResult:
         """Create a provider snapshot (deployed or not)."""
 
     @abstractmethod

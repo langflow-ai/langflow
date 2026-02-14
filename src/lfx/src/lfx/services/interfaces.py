@@ -5,7 +5,7 @@ from __future__ import annotations
 from abc import abstractmethod
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
-from lfx.services.deployment.schema import DeploymentResult
+from lfx.services.deployment.schema import DeploymentResult, SnapshotItemsCreate, SnapshotResult
 
 if TYPE_CHECKING:
     import asyncio
@@ -20,8 +20,6 @@ if TYPE_CHECKING:
         DeploymentCreate,
         DeploymentType,
         DeploymentUpdate,
-        SnapshotList,
-        SnapshotPayload,
     )
     from lfx.services.settings.base import Settings
 
@@ -378,24 +376,13 @@ class DeploymentServiceProtocol(Protocol):
         ...
 
     @abstractmethod
-    async def create_snapshot(
+    async def create_snapshots(
         self,
         *,
         user_id: UUID | str,
-        snapshot: SnapshotPayload,
+        snapshot_items: SnapshotItemsCreate,
         db: Any,
-    ) -> dict[str, Any]:
-        """Create a provider snapshot (deployed or not)."""
-        ...
-
-    @abstractmethod
-    async def create_multiple_snapshots(
-        self,
-        *,
-        user_id: UUID | str,
-        snapshots: SnapshotList,
-        db: Any,
-    ) -> dict[str, Any]:
+    ) -> SnapshotResult:
         """Create a provider snapshot (deployed or not)."""
         ...
 

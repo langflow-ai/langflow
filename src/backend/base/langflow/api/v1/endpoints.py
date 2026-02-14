@@ -25,7 +25,7 @@ from lfx.graph.schema import RunOutputs
 from lfx.log.logger import logger
 from lfx.schema.schema import InputValueRequest
 from lfx.services.deployment.exceptions import DeploymentConflictError, DeploymentError, UnprocessableContentError
-from lfx.services.deployment.schema import ArtifactType, DeploymentCreate
+from lfx.services.deployment.schema import ArtifactType, DeploymentCreate, DeploymentResult
 from lfx.services.deps import get_deployment_service
 from lfx.services.interfaces import DeploymentServiceProtocol
 from lfx.services.settings.service import SettingsService
@@ -76,6 +76,11 @@ SSE_HEARTBEAT_TIMEOUT_SECONDS = 30.0
 
 class CreateDeploymentRequest(DeploymentCreate):
     """Create deployment request."""
+
+
+class CreateDeploymentResponse(DeploymentResult):
+    """Create deployment response."""
+
 
 class DeleteDeploymentRequest(BaseModel):
     deployment_id: str = Field(min_length=1)
@@ -975,7 +980,7 @@ async def process(_flow_id) -> None:
     )
 
 
-@router.post("/deploy", response_model=dict)
+@router.post("/deploy", response_model=CreateDeploymentResponse)
 async def deploy(
     user: CurrentActiveUser,
     payload: CreateDeploymentRequest,
@@ -985,7 +990,7 @@ async def deploy(
     deployment_service = _require_deployment_service()
     # print(payload)
     try:
-        return await deployment_service.create_deployment(
+        result = await deployment_service.create_deployment(
             user_id=user.id,
             deployment=payload,
             db=db,
@@ -998,6 +1003,8 @@ async def deploy(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=e.message) from e
     except Exception as exc:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+
+    return result # can return directly for now due to inheritance
 
 
 @router.delete("/deployment", response_model=dict)

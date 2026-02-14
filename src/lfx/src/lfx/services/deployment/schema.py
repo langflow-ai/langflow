@@ -2,7 +2,7 @@ from enum import Enum
 from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field, StringConstraints, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator, model_validator
 
 DeploymentType = Annotated[
     str,
@@ -20,34 +20,48 @@ class ArtifactType(str, Enum):
 class SnapshotFormat(str, Enum):
     REFERENCE_ID = "reference_id"
     RAW_PAYLOAD = "raw_payload"
+# requests to the deployment service
+# can be either a reference snapshot by
+# id or provide a raw payload
 
 
-class FlowPayload(BaseModel):
+class BaseFlowArtifact(BaseModel):
     """Model representing a payload for a flow."""
-    artifact_type: Literal[ArtifactType.FLOW] = ArtifactType.FLOW
-    # artifact_format: Literal["json", "yaml"]
+    model_config = ConfigDict(extra="allow") # e.g., viewport - good for viewing the flow in the UI
+
     id: UUID = Field(description="Unique identifier for the flow")
-    data: dict = Field(description="The data of the flow") # TODO: validate presence of nodes and edges
+    data: dict = Field(description="The data of the flow")
     name: str = Field(description="The name of the flow")
     description: str | None = Field(None, description="The description of the flow")
     tags: list[str] | None = Field(None, description="The tags of the flow")
 
+    # TODO: validate presence of nodes and edges in data
 
-class DocumentPayload(BaseModel):
+class BaseDocumentArtifact(BaseModel):
     """Model representing a payload for a document."""
-    artifact_type: Literal[ArtifactType.DOCUMENT] = ArtifactType.DOCUMENT
-    # artifact_format: Literal["md", "pdf", "html", "txt"]
+    name: str = Field(description="The name of the document")
+    description: str | None = Field(None, description="The description of the document")
+    raw: bytes | str | dict = Field(description="The data of the document")
+
+    # TODO: validate presence of raw data
 
 
-SnapshotPayload = Annotated[
-    FlowPayload | DocumentPayload,
-    Field(discriminator="artifact_type")
+ARTIFACT_MAP: dict[ArtifactType, type[BaseModel]] = {
+    ArtifactType.FLOW: BaseFlowArtifact,
+    ArtifactType.DOCUMENT: BaseDocumentArtifact,
+}
+
+
+SnapshotList = Annotated[
+    list[BaseFlowArtifact] | list[BaseDocumentArtifact],
+    Field(min_length=1)
 ]
 
 
 class SnapshotReferenceItems(BaseModel):
     """Model representing a reference for a snapshot."""
     format: Literal[SnapshotFormat.REFERENCE_ID] = SnapshotFormat.REFERENCE_ID
+    artifact_type: ArtifactType = Field(description="The type of the snapshot items being referenced.")
     value: list[str] = Field(min_length=1)
 
     @field_validator("value")
@@ -56,20 +70,39 @@ class SnapshotReferenceItems(BaseModel):
         return _normalize_and_validate_id_list_for_duplicates(v, field_name="value")
 
 
+class SnapshotItemsCreate(BaseModel):
+    """Model representing a payload for a snapshot."""
+    artifact_type: ArtifactType = Field(description="The type of the snapshot items being referenced.")
+    value: SnapshotList
+
+    @model_validator(mode="after")
+    def validate_value_matches_artifact_type(self) -> "SnapshotItemsCreate":
+        validate_value_matches_artifact_type(self.value, self.artifact_type)
+        return self
+
 
 class SnapshotPayloadItems(BaseModel):
     """Model representing a payload for a snapshot."""
     format: Literal[SnapshotFormat.RAW_PAYLOAD] = SnapshotFormat.RAW_PAYLOAD
-    value: list[SnapshotPayload] = Field(min_length=1)
+    artifact_type: ArtifactType = Field(description="The type of the snapshot items being referenced.")
+    value: SnapshotList
 
-    @field_validator("value")
-    @classmethod
-    def validate_payloads(cls, v: list[SnapshotPayload]) -> list[SnapshotPayload]:
-        """Validate that all payloads have the same type."""
-        if len({payload.artifact_type for payload in v}) != 1:
-            msg = "All payloads must have the same type"
-            raise ValueError(msg)
-        return v
+    @model_validator(mode="after")
+    def validate_value_matches_artifact_type(self) -> "SnapshotPayloadItems":
+        validate_value_matches_artifact_type(self.value, self.artifact_type)
+        return self
+
+
+def validate_value_matches_artifact_type(value: SnapshotList, artifact_type: ArtifactType) -> None:
+    expected_model = ARTIFACT_MAP[artifact_type]
+
+    for idx, item in enumerate(value):
+        if not isinstance(item, expected_model):
+            msg = (
+                f"All items must be of type: '{expected_model.__name__}', "
+                f"but value[{idx}] is of type '{type(item).__name__}'."
+            )
+            raise TypeError(msg)
 
 
 SnapshotItems = Annotated[
@@ -133,6 +166,14 @@ class BaseConfigData(BaseModel):
     provider_config: dict | None = Field(None, description="Provider configuration")
 
 
+class ConfigResult(BaseModel):
+    """Model representing a result for a config creation operation."""
+    id: UUID | str = Field(description="The id of the created config")
+    provider_result: dict | None = Field(
+        None, description="The result of the config creation operation from the provider"
+    )
+
+
 class ConfigReference(BaseModel):
     format: Literal[ConfigFormat.REFERENCE_ID] = ConfigFormat.REFERENCE_ID
     value: str
@@ -185,27 +226,27 @@ class ConfigDeploymentBindingUpdate(BaseModel):
         return v
 
 
-class BaseDeploymentData(BaseModel): # TODO: create response model with id generated by the provider
+class BaseDeploymentData(BaseModel):
     """Model representing a data for a deployment."""
     name: str = Field(description="The name of the deployment")
     description: str = Field(default="", description="The description of the deployment")
     type: DeploymentType = Field(description="The type of the deployment")
     provider_data: dict | None = Field(None, description="The data of the deployment from the provider")
 
-    # @field_validator("id")
-    # @classmethod
-    # def validate_deployment_id(cls, v: str | UUID | None) -> str | UUID | None:
-    #     if isinstance(v, str):
-    #         return _normalize_and_validate_id(v, field_name="id")
-    #     return v
 
 class DeploymentResult(BaseDeploymentData):
     """Model representing a result for a deployment creation operation."""
     id: UUID | str = Field(description="The id of the created deployment")
     provider_result: dict | None = Field(
         None, description="The result of the deployment creation operation from the provider"
-        )
+    )
 
+class SnapshotResult(BaseModel):
+    """Model representing a result for a snapshot creation operation."""
+    ids: list[UUID | str] = Field(description="The ids of the created snapshots")
+    provider_result: dict | None = Field(
+        None, description="The result of the snapshot creation operation from the provider"
+    )
 
 class DeploymentCreate(BaseModel):
     """Deployment create payload."""
@@ -240,6 +281,7 @@ def _normalize_and_validate_id_list(values: list[str], *, field_name: str) -> li
     """Normalize identifier lists and reject blank entries."""
     return [_normalize_and_validate_id(value, field_name=field_name) for value in values]
 
+
 def _normalize_and_validate_id_list_for_duplicates(values: list[str], *, field_name: str) -> list[str]:
     """Normalize identifier lists and reject blank entries."""
     normalized_values = []
@@ -252,6 +294,7 @@ def _normalize_and_validate_id_list_for_duplicates(values: list[str], *, field_n
             msg = f"'{field_name}' must not contain duplicates: {normalized}."
             raise ValueError(msg)
     return normalized_values
+
 
 def get_str_id(v: str | UUID) -> str:
     return str(v) if isinstance(v, UUID) else v
