@@ -1749,7 +1749,7 @@
                   },
                   {
                     "name": "pandas",
-                    "version": "2.2.3"
+                    "version": "2.3.3"
                   },
                   {
                     "name": "fastapi",

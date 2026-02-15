@@ -561,7 +561,7 @@
                   },
                   {
                     "name": "langchain_huggingface",
-                    "version": "0.3.1"
+                    "version": "0.2.0"
                   },
                   {
                     "name": "langchain_cohere",

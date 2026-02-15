@@ -22,6 +22,8 @@ from lfx.io import (
     Output,
 )
 from lfx.schema.dataframe import DataFrame
+from pydantic import create_model
+
 
 
 class SemanticMap(BaseAgenticComponent):
@@ -40,6 +42,12 @@ class SemanticMap(BaseAgenticComponent):
             info="Accepts JSON (list of dicts) or DataFrame.",
         ),
         get_generated_fields_input(),
+        BoolInput(name="return_multiple_instances",
+                  display_name="return_multiple_instances",
+                  info="If True, return multiple instances of the specified type for each row.",
+                  advanced=False,
+                  value=False,
+                  ),
         MessageTextInput(
             name="instructions",
             display_name="Instructions",
@@ -77,11 +85,18 @@ class SemanticMap(BaseAgenticComponent):
 
         schema_fields = build_schema_fields(self.generated_fields)
         atype = create_pydantic_model(schema_fields, name="Target")
-        
+        if self.return_multiple_instances:
+            FinalAtype = create_model(
+                f"ListOfTarget",
+                items=(list[atype], ...)
+            )
+        else: 
+            FinalAtype= atype
+
        
 
         target = AG(
-            atype=atype,
+            atype=FinalAtype,
             transduction_type=TRANSDUCTION_AMAP,
             llm=llm,
         )

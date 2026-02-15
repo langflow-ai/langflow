@@ -103,4 +103,4 @@ class SyntheticDataGenerator(BaseAgenticComponent):
             output_states = source.states + output_states
         output = AG(states=output_states)
 
-        return output.to_dataframe().to_dict(orient="records")
+        return DataFrame(output.to_dataframe().to_dict(orient="records"))

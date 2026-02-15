@@ -18,9 +18,11 @@ from lfx.components.agentics.inputs import (
 from lfx.io import (
     DataFrameInput,
     MessageTextInput,
+    BoolInput,
     Output,
 )
 from lfx.schema.dataframe import DataFrame
+from pydantic import create_model
 
 
 class SemanticAggregator(BaseAgenticComponent):
@@ -40,11 +42,17 @@ class SemanticAggregator(BaseAgenticComponent):
             required=True,
         ),
         get_generated_fields_input(),
+        BoolInput(name="return_multiple_instances",
+                  display_name="return_multiple_instances",
+                  info="If True, return multiple instances of the specified type.",
+                  advanced=False,
+                  value=False,
+                  ),
         MessageTextInput(
             name="instructions",
             display_name="Instructions",
             info="Instructions for generating the new column values",
-            advanced=True,
+            advanced=False,
             value="",
         ),
     ]
@@ -71,14 +79,24 @@ class SemanticAggregator(BaseAgenticComponent):
 
         schema_fields = build_schema_fields(self.generated_fields)
         atype = create_pydantic_model(schema_fields, name="Target")
+        if self.return_multiple_instances:
+            FinalAtype = create_model(
+                f"ListOfTarget",
+                items=(list[atype], ...)
+            )
+        else: 
+            FinalAtype= atype
+
 
         target = AG(
-            atype=atype,
+            atype=FinalAtype,
             transduction_type=TRANSDUCTION_AREDUCE,
-            instructions=self.instructions,
+            instructions=self.instructions if not self.return_multiple_instances else  "\nGenerate a list of instances of the target type following those instructions : ." + self.instructions,
             llm=llm,
         )
 
         output = await (target << source)
+        if  self.return_multiple_instances:
+            output=AG(atype=atype, states=output[0].items)
 
         return DataFrame(output.to_dataframe().to_dict(orient="records"))
