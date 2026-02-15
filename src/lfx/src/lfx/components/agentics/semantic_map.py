@@ -48,15 +48,23 @@ class SemanticMap(BaseAgenticComponent):
                   advanced=False,
                   value=False,
                   ),
+        BoolInput(
+            name="concatenate_generated_lists",
+            display_name="Concatenate Generated Lists",
+            info="If true and the Return Multiple Instances is set to True, concatenate all the generate instances in a single dataframe of the defined schema",
+            value=True,
+            advanced=True,
+        ),
         MessageTextInput(
             name="instructions",
             display_name="Instructions",
             info="Instructions for generating the new column values",
             value="",
         ),
+       
         BoolInput(
             name="append_to_input_columns",
-            display_name="Append To Source Columns",
+            display_name="Return Source Columns",
             info="If false, returns only new columns, append to original data otherwise",
             value=True,
             advanced=True,
@@ -93,8 +101,6 @@ class SemanticMap(BaseAgenticComponent):
         else: 
             FinalAtype= atype
 
-       
-
         target = AG(
             atype=FinalAtype,
             transduction_type=TRANSDUCTION_AMAP,
@@ -105,10 +111,17 @@ class SemanticMap(BaseAgenticComponent):
         else:
             source.instructions += self.instructions
 
-
         output = await (target << source)
-
-        if self.append_to_input_columns:
+        if self.concatenate_generated_lists and self.return_multiple_instances:
+            appended_states = []
+            
+            for state in output:
+                for item_state in state.items:
+                    appended_states.append(item_state)
+                    
+            output=AG(atype=atype,states = appended_states)
+           
+        elif self.append_to_input_columns:
             output = source.merge_states(output)
 
         return DataFrame(output.to_dataframe().to_dict(orient="records"))
