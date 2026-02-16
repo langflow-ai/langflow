@@ -16,6 +16,7 @@ class DeploymentType(str, Enum):
     AGENT = "agent"
     MCP = "mcp"
 
+
 class ArtifactType(str, Enum):
     """Artifact types supported by Langflow."""
     FLOW = "flow"
@@ -63,6 +64,7 @@ SnapshotList = Annotated[
     list[BaseFlowArtifact] | list[BaseDocumentArtifact],
     Field(min_length=1)
 ]
+
 
 class SnapshotItem(BaseModel):
     """Model representing a result for a snapshot item."""
@@ -293,6 +295,7 @@ class SnapshotResult(BaseModel):
     provider_result: dict | None = Field(
         None, description="The result of the snapshot creation operation from the provider"
     )
+
 
 class DeploymentCreate(BaseModel):
     """Deployment create payload."""
