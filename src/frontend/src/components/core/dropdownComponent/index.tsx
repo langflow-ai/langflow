@@ -84,6 +84,7 @@ export default function Dropdown({
   });
   const [filteredMetadata, setFilteredMetadata] = useState(optionsMetaData);
   const [refreshOptions, setRefreshOptions] = useState(false);
+  const [pendingSelect, setPendingSelect] = useState<string | null>(null);
   const refButton = useRef<HTMLButtonElement>(null);
 
   value = useMemo(() => {
@@ -255,6 +256,14 @@ export default function Dropdown({
       ? `${firstWord}: ${option}\n${metadataEntries.join("\n")}`
       : option;
   };
+
+  // Auto-select a newly created option (e.g. knowledge base) once it appears in the options list
+  useEffect(() => {
+    if (pendingSelect && options.includes(pendingSelect)) {
+      onSelect(pendingSelect);
+      setPendingSelect(null);
+    }
+  }, [options, pendingSelect]);
 
   // Effects
   useEffect(() => {
@@ -614,7 +623,7 @@ export default function Dropdown({
               onSubmit={(data) => {
                 setOpenDialog(false);
                 setOpen(false);
-                // Refresh dropdown options to show the new KB
+                setPendingSelect(data.sourceName);
                 handleRefreshButtonPress();
               }}
               hideAdvanced
@@ -626,6 +635,9 @@ export default function Dropdown({
               onClose={() => {
                 setOpenDialog(false);
                 setOpen(false);
+              }}
+              onCreated={(createdValue) => {
+                setPendingSelect(createdValue);
               }}
               nodeId={nodeId!}
               name={name!}

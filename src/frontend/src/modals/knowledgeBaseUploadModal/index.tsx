@@ -98,7 +98,11 @@ export default function KnowledgeBaseUploadModal({
       title={
         form.isAddSourcesMode ? "Add Sources" : STEP_TITLES[form.currentStep]
       }
-      description={STEP_DESCRIPTIONS[form.currentStep]}
+      description={
+        form.isAddSourcesMode && form.currentStep === 1
+          ? "Upload files and configure chunking settings"
+          : STEP_DESCRIPTIONS[form.currentStep]
+      }
       icon="Database"
       height={(() => {
         const errorCount = Object.keys(form.validationErrors).length;
@@ -121,7 +125,7 @@ export default function KnowledgeBaseUploadModal({
           nextDisabled={false}
           submitDisabled={false}
           isSubmitting={form.isSubmitting}
-          submitLabel={form.isAddSourcesMode ? "Next Step" : "Create"}
+          submitLabel={form.isAddSourcesMode ? "Add Sources" : "Create"}
           helpLabel={
             !hideAdvanced && form.currentStep === 1
               ? form.showAdvanced

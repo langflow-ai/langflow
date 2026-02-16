@@ -143,8 +143,11 @@ export function useKnowledgeBaseForm({
       if (existingKnowledgeBase.separator !== undefined) {
         setSeparator(existingKnowledgeBase.separator);
       }
-      // Auto-enable advanced mode if the KB was created with advanced config
+      // Always enable advanced mode in add-sources mode so the file
+      // upload section is visible. Also enable when the KB already has
+      // advanced chunking config.
       const hasAdvancedConfig =
+        isAddSourcesMode ||
         existingKnowledgeBase.chunkSize !== undefined ||
         existingKnowledgeBase.chunkOverlap !== undefined ||
         existingKnowledgeBase.separator !== undefined;
