@@ -21,6 +21,7 @@ interface AssistantInputWithScrollProps {
   disabled: boolean;
   isProcessing: boolean;
   currentStep: AgenticStepType | null;
+  autoFocus?: boolean;
 }
 
 function AssistantInputWithScroll({
@@ -29,6 +30,7 @@ function AssistantInputWithScroll({
   disabled,
   isProcessing,
   currentStep,
+  autoFocus,
 }: AssistantInputWithScrollProps) {
   const { scrollToBottom } = useStickToBottomContext();
 
@@ -44,6 +46,7 @@ function AssistantInputWithScroll({
       disabled={disabled}
       isProcessing={isProcessing}
       currentStep={currentStep}
+      autoFocus={autoFocus}
       compact
     />
   );
@@ -104,7 +107,7 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
   const useExpandedSize = hasMessages || hasExpandedOnce;
 
   const containerClasses = cn(
-    "flex flex-col transition-all duration-300 fixed shadow-xl",
+    "flex flex-col transition-[opacity,transform] duration-200 fixed shadow-xl will-change-[opacity,transform]",
     "z-50 bottom-16 left-[calc(50%+140px)] -translate-x-1/2 rounded-2xl border border-border",
     useExpandedSize ? "h-[600px] w-[620px]" : "h-auto w-[520px]",
     isOpen
@@ -154,6 +157,7 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
               disabled={isProcessing}
               isProcessing={isProcessing}
               currentStep={currentStep}
+              autoFocus={isOpen}
             />
           </StickToBottom>
         ) : (
@@ -164,6 +168,7 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
             isProcessing={isProcessing}
             currentStep={currentStep}
             compact={hasExpandedOnce}
+            autoFocus={isOpen}
           />
         )}
       </div>

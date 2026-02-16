@@ -30,6 +30,7 @@ export function useAssistantChat(): UseAssistantChatReturn {
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentStep, setCurrentStep] = useState<AgenticStepType | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const sessionIdRef = useRef<string>(uid.randomUUID(16));
 
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const addComponent = useAddComponent();
@@ -77,6 +78,7 @@ export function useAssistantChat(): UseAssistantChatReturn {
             input_value: content,
             provider: model?.provider,
             model_name: model?.name,
+            session_id: sessionIdRef.current,
           },
           {
             onProgress: (event) => {
@@ -238,6 +240,7 @@ export function useAssistantChat(): UseAssistantChatReturn {
     setMessages([]);
     setCurrentStep(null);
     setIsProcessing(false);
+    sessionIdRef.current = uid.randomUUID(16);
   }, []);
 
   return {

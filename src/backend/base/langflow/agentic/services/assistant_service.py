@@ -141,11 +141,13 @@ async def execute_flow_with_validation_streaming(
 
     # Classify intent using LLM (handles multi-language support)
     # This translates the input and determines if user wants to generate a component or ask a question
+    # Use a separate session for intent classification to prevent
+    # TranslationFlow messages from contaminating the assistant's memory
     intent_result = await classify_intent(
         text=input_value,
         global_variables=global_variables,
         user_id=user_id,
-        session_id=session_id,
+        session_id=None,
         provider=provider,
         model_name=model_name,
         api_key_var=api_key_var,
@@ -252,18 +254,18 @@ async def execute_flow_with_validation_streaming(
                 message="Response ready",
             )
 
-            # For Q&A responses, return immediately without code extraction/validation
-            if not is_component_request:
-                yield format_complete_event(result)
-                return
-
-            # Only extract and validate code for component generation requests
+            # Always try to extract component code from the response,
+            # regardless of intent classification. This handles follow-up
+            # modification requests (e.g., "can you use dataframe output instead?")
+            # that get classified as "question" but actually generate component code.
             response_text = extract_response_text(result)
             code = extract_component_code(response_text)
 
-            if not code:
-                # No code found even though user asked for component generation
-                # Return as plain text response
+            # Only proceed with validation if the code looks like a Langflow component
+            has_component_code = code and "class " in code and "Component" in code
+
+            if not has_component_code:
+                # No component code found — return as plain text response
                 yield format_complete_event(result)
                 return
 

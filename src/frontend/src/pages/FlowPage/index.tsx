@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useHotkeys } from "react-hotkeys-hook";
 import { useBlocker, useParams } from "react-router-dom";
 import { AssistantPanel } from "@/components/core/assistantPanel";
 import { FlowPageSlidingContainerContent } from "@/components/core/playgroundComponent/sliding-container/components/flow-page-sliding-container";
@@ -194,6 +195,16 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
     (state) => state.setAssistantSidebarOpen,
   );
 
+  // Toggle assistant with "A" key (only when not typing in an input)
+  useHotkeys("a", () => setAssistantOpen(!assistantOpen), {
+    preventDefault: true,
+    enableOnFormTags: false,
+  }, [assistantOpen]);
+
+  // Close assistant with Escape
+  useHotkeys("escape", () => { if (assistantOpen) setAssistantOpen(false); }, {
+    enableOnFormTags: true,
+  }, [assistantOpen]);
 
   // Auto-close playground when all chat components are removed
   useEffect(() => {

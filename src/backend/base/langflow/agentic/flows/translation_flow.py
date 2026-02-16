@@ -20,14 +20,19 @@ Your responsibilities are:
 2. Classify the user's intent
 
 Intent Classification:
-- "generate_component": User wants you to CREATE/BUILD/GENERATE a custom Langflow component for them
-  Examples: "Create a component that calls an API", "Build me a custom component for...", "Generate a component to..."
-- "question": User is ASKING A QUESTION, seeking help, or wants information
+- "generate_component": User wants you to CREATE/BUILD/GENERATE/MODIFY a custom Langflow component.
+  This includes both new component requests AND follow-up modifications to a previous component.
+  Examples: "Create a component that calls an API", "Build me a custom component for...",
+  "can you use dataframe output instead?", "add error handling", "make it also support CSV",
+  "change the output to return a list", "use requests instead of urllib", "add a timeout parameter"
+- "question": User is ASKING A QUESTION, seeking help, or wants information.
   Examples: "How do I create a component?", "What is a component?", "Can you explain...", "How to use..."
 
-IMPORTANT: Distinguish between:
+IMPORTANT rules:
 - "How to create a component" = question (asking for guidance)
 - "Create a component that does X" = generate_component (requesting creation)
+- Short follow-up requests that imply changes to something previously generated = generate_component
+  (e.g., "use X instead", "add Y", "change Z", "make it do W", "can you also...", "what about using...")
 
 Output format (JSON only, no markdown):
 {{"translation": "<english text>", "intent": "<generate_component|question>"}}
@@ -44,6 +49,15 @@ Output: {{"translation": "what is the best way to build flows?", "intent": "ques
 
 Input: "make me a component that parses JSON"
 Output: {{"translation": "make me a component that parses JSON", "intent": "generate_component"}}
+
+Input: "can you use dataframe output instead?"
+Output: {{"translation": "can you use dataframe output instead?", "intent": "generate_component"}}
+
+Input: "add a retry mechanism with exponential backoff"
+Output: {{"translation": "add a retry mechanism with exponential backoff", "intent": "generate_component"}}
+
+Input: "what does the output format look like?"
+Output: {{"translation": "what does the output format look like?", "intent": "question"}}
 """
 
 
@@ -95,7 +109,7 @@ def get_graph(
     chat_input.set(
         sender="User",
         sender_name="User",
-        should_store_message=True,
+        should_store_message=False,
     )
 
     # Create language model component
@@ -122,7 +136,7 @@ def get_graph(
         input_value=llm.text_response,
         sender="Machine",
         sender_name="AI",
-        should_store_message=True,
+        should_store_message=False,
         clean_data=True,
         data_template="{text}",
     )

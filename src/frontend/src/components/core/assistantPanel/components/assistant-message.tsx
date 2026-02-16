@@ -64,10 +64,17 @@ export function AssistantMessageItem({
     "validated",
   ];
 
+  // Detect component code in streaming content (handles misclassified intent)
+  const contentLooksLikeComponentCode =
+    isStreaming &&
+    message.content &&
+    /```python[\s\S]*class\s+\w+.*Component/.test(message.content);
+
   // Check if we're in component generation mode
   const isComponentGeneration =
-    message.progress &&
-    componentGenerationSteps.includes(message.progress.step);
+    (message.progress &&
+      componentGenerationSteps.includes(message.progress.step)) ||
+    contentLooksLikeComponentCode;
 
   // Show loading state during component generation
   const isGeneratingCode = isStreaming && isComponentGeneration;
