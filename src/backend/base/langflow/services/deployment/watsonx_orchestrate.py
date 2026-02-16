@@ -214,19 +214,19 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 "An unexpected error occurred while "
                 "creating a deployment in Watsonx Orchestrate."
             )
-            raise e from e
+            raise DeploymentError(message=msg) from None
 
         except DeploymentSupportError:
             raise
         except DeploymentError:
             raise
-        except Exception as e:
+        except Exception: # noqa: BLE001
             msg = (
                 f"{ErrorPrefix.CREATE.value}. "
                 "An unexpected error occurred while "
                 "creating a deployment in Watsonx Orchestrate."
             )
-            raise e from e
+            raise DeploymentError(message=msg) from None
 
         return DeploymentCreateResult(
             id=deployment_response.id,
