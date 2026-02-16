@@ -90,10 +90,13 @@ export default function ModelInputComponent({
 
   const isLoading = isLoadingProviders || isLoadingEnabledModels;
 
-  // Determines if we should show the model selector or the "Setup Provider" button
+  // Determines if we should show the model selector or the "Setup Provider" button.
+  // When still loading, treat as having providers if we have any options (e.g. from template)
+  // so we don't flash "Setup Provider" and lose the current selection when the query is refetching/canceled.
   const hasEnabledProviders = useMemo(() => {
-    return providersData?.some((provider) => provider.is_enabled);
-  }, [providersData]);
+    if (isLoadingProviders && options.length > 0) return true;
+    return providersData?.some((provider) => provider.is_enabled) ?? false;
+  }, [providersData, isLoadingProviders, options.length]);
 
   // Groups models by their provider name for sectioned display in dropdown.
   // Filters out models from disabled providers AND disabled models.
@@ -126,6 +129,7 @@ export default function ModelInputComponent({
   // Sync local selectedModel state with the external value prop and available options.
   // Handles three cases: no available models (clear selection), current value exists in options (keep it),
   // or current value is invalid/missing (select first available model).
+  // Skip resetting when still loading so we don't clear Ollama (or other) selection during provider fetch/cancel.
   useEffect(() => {
     // Skip auto-selection when in connection mode (value is "connect_other_models" string)
     if (value === "connect_other_models") {
@@ -134,6 +138,17 @@ export default function ModelInputComponent({
 
     const availableOptions = flatOptions;
     const currentName = value?.[0]?.name;
+
+    // While loading, only sync selectedModel from value if it exists in options; don't clear or default
+    if (isLoading) {
+      if (currentName && availableOptions.length > 0) {
+        const existingModel = availableOptions.find(
+          (option) => option.name === currentName,
+        );
+        if (existingModel) setSelectedModel(existingModel);
+      }
+      return;
+    }
 
     // No available models: clear selection/value
     if (!availableOptions || availableOptions.length === 0) {
@@ -177,7 +192,7 @@ export default function ModelInputComponent({
 
     handleOnNewValue({ value: newValue });
     setSelectedModel(firstOption);
-  }, [flatOptions, value, handleOnNewValue]);
+  }, [flatOptions, value, handleOnNewValue, isLoading]);
 
   /**
    * Handles model selection from the dropdown.

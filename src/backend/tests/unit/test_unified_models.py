@@ -13,6 +13,7 @@ def test_default_providers_present():
     assert "OpenAI" in providers
     assert "Anthropic" in providers
     assert "Google Generative AI" in providers
+    assert "Ollama" in providers
 
 
 def test_default_excludes_not_supported():

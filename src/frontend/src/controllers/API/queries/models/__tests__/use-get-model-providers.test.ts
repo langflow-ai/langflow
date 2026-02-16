@@ -23,6 +23,7 @@ jest.mock("@/controllers/API/services/request-processor", () => ({
   })),
 }));
 
+import { UseRequestProcessor } from "@/controllers/API/services/request-processor";
 import {
   ModelProviderInfo,
   useGetModelProviders,
@@ -149,8 +150,22 @@ describe("useGetModelProviders", () => {
     it("should return empty array on API error", async () => {
       mockApiGet.mockRejectedValue(new Error("Network error"));
 
-      // Should not throw, returns empty array
+      // Should not throw for normal errors, returns empty array
       expect(() => useGetModelProviders({})).not.toThrow();
+    });
+
+    it("should rethrow CanceledError so React Query keeps previous data", async () => {
+      mockApiGet.mockResolvedValue({ data: [] });
+      useGetModelProviders({});
+      const lastReturn = (UseRequestProcessor as jest.Mock).mock.results.at(-1)
+        ?.value;
+      const queryFn = lastReturn?.query?.mock?.calls?.[0]?.[1];
+      expect(queryFn).toBeDefined();
+
+      const canceledError = new Error("canceled");
+      (canceledError as any).name = "CanceledError";
+      mockApiGet.mockRejectedValue(canceledError);
+      await expect(queryFn()).rejects.toThrow("canceled");
     });
   });
 
