@@ -388,7 +388,7 @@ class DeploymentServiceProtocol(Protocol):
         """Create a provider snapshot (deployed or not)."""
         ...
 
-    @abstractmethod # TODO: allow filtering by flow id or by other criteria
+    @abstractmethod  # TODO: allow filtering by flow id or by other criteria
     async def list_snapshots(
         self,
         *,
@@ -420,4 +420,3 @@ class DeploymentServiceProtocol(Protocol):
     ) -> None:
         """Delete a provider snapshot."""
         ...
-

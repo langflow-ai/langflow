@@ -28,6 +28,7 @@ class BaseDeploymentService(Service):
     Defines the minimal interface that all deployment service implementations
     must provide, whether minimal (LFX) or full-featured (Langflow).
     """
+
     @abstractmethod
     def __init__(self):
         """Initialize the deployment service."""
@@ -82,7 +83,6 @@ class BaseDeploymentService(Service):
         db: Any,
     ) -> dict[str, Any]:
         """Return deployment metadata by provider ID."""
-
 
     @abstractmethod
     async def update_deployment(
@@ -211,7 +211,7 @@ class BaseDeploymentService(Service):
         snapshot_id: str,
         db: Any,
     ) -> dict[str, Any]:
-        """Return snapshot metadata by provider ID."""\
+        """Return snapshot metadata by provider ID."""
 
     @abstractmethod
     async def delete_snapshot(

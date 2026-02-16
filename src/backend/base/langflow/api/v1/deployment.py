@@ -35,6 +35,7 @@ class DeploymentCreateResponse(DeploymentCreateResult):
 
 class DeploymentListResponse(DeploymentListResult):
     """List deployments response."""
+
     count: int = Field(description="The number of deployments")
 
 
@@ -48,6 +49,7 @@ class DeploymentDeleteResponse(DeploymentDeleteResult):
 
 class SnapshotListResponse(SnapshotListResult):
     """List snapshots response."""
+
     count: int = Field(description="The number of snapshots")
 
 
@@ -143,7 +145,8 @@ async def list_snapshots(
         count=len(snapshot_list_result.snapshots),
     )
 
-#list deployments
+
+# list deployments
 @router.get("/deployment", response_model=DeploymentListResponse)
 async def list_deployments(
     user: CurrentActiveUser,
@@ -154,7 +157,7 @@ async def list_deployments(
     deployment_service = _require_deployment_service()
     try:
         deployments = await deployment_service.list_deployments(
-        user_id=user.id,
+            user_id=user.id,
             deployment_type=deployment_type,
             db=db,
         )

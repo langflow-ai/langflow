@@ -4,8 +4,8 @@ from fastapi import APIRouter
 from langflow.api.v1 import (
     api_key_router,
     chat_router,
-    endpoints_router,
     deployment_router,
+    endpoints_router,
     files_router,
     flows_router,
     folders_router,
