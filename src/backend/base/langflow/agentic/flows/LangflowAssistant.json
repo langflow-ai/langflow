@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-c09Um",
+            "id": "Agent-spIzv",
             "name": "response",
             "output_types": [
               "Message"
@@ -15,7 +15,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-L6KsP",
+            "id": "ChatOutput-bHneZ",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -24,12 +24,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-Agent-c09Um{œdataTypeœ:œAgentœ,œidœ:œAgent-c09Umœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-L6KsP{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-L6KsPœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-Agent-spIzv{œdataTypeœ:œAgentœ,œidœ:œAgent-spIzvœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-bHneZ{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-bHneZœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "Agent-c09Um",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-c09Umœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "ChatOutput-L6KsP",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-L6KsPœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "source": "Agent-spIzv",
+        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-spIzvœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "ChatOutput-bHneZ",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-bHneZœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -37,7 +37,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-P1IWe",
+            "id": "Agent-3Mczs",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -45,19 +45,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-c09Um",
+            "id": "Agent-spIzv",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-Agent-P1IWe{œdataTypeœ:œAgentœ,œidœ:œAgent-P1IWeœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-c09Um{œfieldNameœ:œtoolsœ,œidœ:œAgent-c09Umœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-Agent-3Mczs{œdataTypeœ:œAgentœ,œidœ:œAgent-3Mczsœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-spIzv{œfieldNameœ:œtoolsœ,œidœ:œAgent-spIzvœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "Agent-P1IWe",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-P1IWeœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
-        "target": "Agent-c09Um",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-c09Umœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "source": "Agent-3Mczs",
+        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-3Mczsœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "target": "Agent-spIzv",
+        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-spIzvœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -65,7 +65,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-YRChT",
+            "id": "ChatInput-P7gTO",
             "name": "message",
             "output_types": [
               "Message"
@@ -73,19 +73,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-c09Um",
+            "id": "Agent-spIzv",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-YRChT{œdataTypeœ:œChatInputœ,œidœ:œChatInput-YRChTœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-c09Um{œfieldNameœ:œinput_valueœ,œidœ:œAgent-c09Umœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-P7gTO{œdataTypeœ:œChatInputœ,œidœ:œChatInput-P7gTOœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-spIzv{œfieldNameœ:œinput_valueœ,œidœ:œAgent-spIzvœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-YRChT",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-YRChTœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "Agent-c09Um",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-c09Umœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "source": "ChatInput-P7gTO",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-P7gTOœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Agent-spIzv",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-spIzvœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -93,7 +93,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Directory",
-            "id": "Directory-38g2t",
+            "id": "Directory-kKnNx",
             "name": "dataframe",
             "output_types": [
               "DataFrame"
@@ -101,19 +101,19 @@
           },
           "targetHandle": {
             "fieldName": "dataframe",
-            "id": "DataFrameKeywordSearch-4fcHF",
+            "id": "DataFrameKeywordSearch-FnoBJ",
             "inputTypes": [
               "DataFrame"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-Directory-38g2t{œdataTypeœ:œDirectoryœ,œidœ:œDirectory-38g2tœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-DataFrameKeywordSearch-4fcHF{œfieldNameœ:œdataframeœ,œidœ:œDataFrameKeywordSearch-4fcHFœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-Directory-kKnNx{œdataTypeœ:œDirectoryœ,œidœ:œDirectory-kKnNxœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-DataFrameKeywordSearch-FnoBJ{œfieldNameœ:œdataframeœ,œidœ:œDataFrameKeywordSearch-FnoBJœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "Directory-38g2t",
-        "sourceHandle": "{œdataTypeœ:œDirectoryœ,œidœ:œDirectory-38g2tœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}",
-        "target": "DataFrameKeywordSearch-4fcHF",
-        "targetHandle": "{œfieldNameœ:œdataframeœ,œidœ:œDataFrameKeywordSearch-4fcHFœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}"
+        "source": "Directory-kKnNx",
+        "sourceHandle": "{œdataTypeœ:œDirectoryœ,œidœ:œDirectory-kKnNxœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}",
+        "target": "DataFrameKeywordSearch-FnoBJ",
+        "targetHandle": "{œfieldNameœ:œdataframeœ,œidœ:œDataFrameKeywordSearch-FnoBJœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -121,7 +121,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "DataFrameKeywordSearch",
-            "id": "DataFrameKeywordSearch-4fcHF",
+            "id": "DataFrameKeywordSearch-FnoBJ",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -129,19 +129,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-c09Um",
+            "id": "Agent-spIzv",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-DataFrameKeywordSearch-4fcHF{œdataTypeœ:œDataFrameKeywordSearchœ,œidœ:œDataFrameKeywordSearch-4fcHFœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-c09Um{œfieldNameœ:œtoolsœ,œidœ:œAgent-c09Umœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-DataFrameKeywordSearch-FnoBJ{œdataTypeœ:œDataFrameKeywordSearchœ,œidœ:œDataFrameKeywordSearch-FnoBJœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-spIzv{œfieldNameœ:œtoolsœ,œidœ:œAgent-spIzvœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "DataFrameKeywordSearch-4fcHF",
-        "sourceHandle": "{œdataTypeœ:œDataFrameKeywordSearchœ,œidœ:œDataFrameKeywordSearch-4fcHFœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
-        "target": "Agent-c09Um",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-c09Umœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "source": "DataFrameKeywordSearch-FnoBJ",
+        "sourceHandle": "{œdataTypeœ:œDataFrameKeywordSearchœ,œidœ:œDataFrameKeywordSearch-FnoBJœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "target": "Agent-spIzv",
+        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-spIzvœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -149,7 +149,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "URLComponent",
-            "id": "URLComponent-YrTbg",
+            "id": "URLComponent-XYOnr",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -157,25 +157,25 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-c09Um",
+            "id": "Agent-spIzv",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "xy-edge__URLComponent-YrTbg{œdataTypeœ:œURLComponentœ,œidœ:œURLComponent-YrTbgœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-c09Um{œfieldNameœ:œtoolsœ,œidœ:œAgent-c09Umœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-URLComponent-XYOnr{œdataTypeœ:œURLComponentœ,œidœ:œURLComponent-XYOnrœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-spIzv{œfieldNameœ:œtoolsœ,œidœ:œAgent-spIzvœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "URLComponent-YrTbg",
-        "sourceHandle": "{œdataTypeœ:œURLComponentœ,œidœ:œURLComponent-YrTbgœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
-        "target": "Agent-c09Um",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-c09Umœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "source": "URLComponent-XYOnr",
+        "sourceHandle": "{œdataTypeœ:œURLComponentœ,œidœ:œURLComponent-XYOnrœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "target": "Agent-spIzv",
+        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-spIzvœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "Agent-c09Um",
+          "id": "Agent-spIzv",
           "node": {
             "base_classes": [
               "Message"
@@ -208,7 +208,7 @@
             ],
             "frozen": false,
             "icon": "bot",
-            "last_updated": "2026-02-10T17:58:08.211Z",
+            "last_updated": "2026-02-15T23:59:21.469Z",
             "legacy": false,
             "lf_version": "1.8.0",
             "metadata": {
@@ -258,7 +258,7 @@
             "template": {
               "_frontend_node_flow_id": {
                 "input_types": [],
-                "value": "6205030e-89d1-4252-b7a1-53f86d9e0a8b"
+                "value": "9a62a3b7-0cf7-4655-b232-2b6cceff93d8"
               },
               "_frontend_node_folder_id": {
                 "input_types": [],
@@ -322,7 +322,7 @@
                 "dynamic": false,
                 "info": "Model Provider API key",
                 "input_types": [],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "api_key",
                 "override_skip": false,
                 "password": true,
@@ -736,7 +736,6 @@
                 "type": "model",
                 "value": [
                   {
-                    "category": "Anthropic",
                     "icon": "Anthropic",
                     "metadata": {
                       "api_key_param": "api_key",
@@ -744,7 +743,7 @@
                       "model_class": "ChatAnthropic",
                       "model_name_param": "model"
                     },
-                    "name": "claude-opus-4-5-20251101",
+                    "name": "claude-sonnet-4-5-20250929",
                     "provider": "Anthropic"
                   }
                 ]
@@ -791,6 +790,7 @@
                     "description": "Specify the name of the output field.",
                     "display_name": "Name",
                     "edit_mode": "inline",
+                    "formatter": "text",
                     "name": "name",
                     "type": "str"
                   },
@@ -799,6 +799,7 @@
                     "description": "Describe the purpose of the output field.",
                     "display_name": "Description",
                     "edit_mode": "popover",
+                    "formatter": "text",
                     "name": "description",
                     "type": "str"
                   },
@@ -807,6 +808,7 @@
                     "description": "Indicate the data type of the output field (e.g., str, int, float, bool, dict).",
                     "display_name": "Type",
                     "edit_mode": "inline",
+                    "formatter": "text",
                     "name": "type",
                     "options": [
                       "str",
@@ -822,6 +824,7 @@
                     "description": "Set to True if this output field should be a list of the specified type.",
                     "display_name": "As List",
                     "edit_mode": "inline",
+                    "formatter": "text",
                     "name": "multiple",
                     "type": "boolean"
                   }
@@ -859,7 +862,7 @@
               },
               "system_prompt": {
                 "_input_type": "MultilineInput",
-                "advanced": false,
+                "advanced": true,
                 "ai_enabled": false,
                 "copy_field": false,
                 "display_name": "Agent Instructions",
@@ -884,7 +887,7 @@
                 "trace_as_metadata": true,
                 "track_in_telemetry": false,
                 "type": "str",
-                "value": "# Role\nYou are the Langflow Official Support Agent. Your purpose is to assist users with technical questions, troubleshooting, and implementation details regarding Langflow.\n\n# Capabilities & Tools\nYou have access to a browsing tool that allows you to read external URLs. You must use this tool to fetch the content of the documentation pages listed below to provide accurate, up-to-date answers.\n\n# Conversation Memory\nYou have access to the full conversation history with the user. Use this context naturally to maintain continuity across messages.\n\n# Instructions\n1. **Analyze:** specific topic of the user's query.\n2. **Select:** Identify the *single most relevant* URL from the \"Documentation Index\" below that answers the specific question. Do not browse multiple pages unless strictly necessary.\n3. **Browse:** Use the browsing tool to read the content of the selected URL.\n4. **Answer:** Provide a concise but informative summary based *only* on the retrieved content.\n5. **Cite:** You MUST end your response with the specific link used to source the information.\n\n# Response Guidelines\n- Keep answers brief and direct.\n- Do not halluncinate features; rely on the documentation text.\n- Format the citation clearly at the bottom, e.g., \"Source: [URL]\"\n\n# Documentation Index\nSelect the appropriate link from this list based on the user's intent:\n\n## Getting Started & Tutorials\n- https://docs.langflow.org/ : General introduction and home page.\n- https://docs.langflow.org/get-started-quickstart : Installation guide and first steps.\n- https://docs.langflow.org/chat-with-rag : Tutorial on building RAG (Retrieval-Augmented Generation) pipelines.\n- https://docs.langflow.org/chat-with-files : Guide on how to chat with uploaded files/documents.\n- https://docs.langflow.org/agent-tutorial : Step-by-step tutorial for building agents.\n\n## Core Concepts\n- https://docs.langflow.org/concepts-overview : High-level overview of Langflow architecture.\n- https://docs.langflow.org/concepts-flows : Explanation of Flow structure and logic.\n- https://docs.langflow.org/concepts-playground : How to use the UI Playground to test flows.\n- https://docs.langflow.org/concepts-components : Understanding individual components and nodes.\n- https://docs.langflow.org/data-types : details on data types passed between components.\n- https://docs.langflow.org/concepts-file-management : How Langflow handles file uploads and storage.\n- https://docs.langflow.org/concepts-voice-mode : Information on voice interaction capabilities.\n\n## Agents & MCP (Model Context Protocol)\n- https://docs.langflow.org/agents : General concepts of AI Agents in Langflow.\n- https://docs.langflow.org/agents-tools : How to equip agents with tools.\n- https://docs.langflow.org/mcp-client : Using Langflow as an MCP Client.\n- https://docs.langflow.org/mcp-server : Using Langflow as an MCP Server.\n- https://docs.langflow.org/mcp-component-astra : DataStax Astra DB MCP component details.\n\n## Configuration & Environment\n- https://docs.langflow.org/configuration-global-variables : Setting up global variables.\n- https://docs.langflow.org/environment-variables : List of supported environment variables.\n- https://docs.langflow.org/api-keys-and-authentication : Managing API keys and security.\n- https://docs.langflow.org/install-custom-dependencies : How to install Python packages/dependencies.\n- https://docs.langflow.org/configuration-cli : Command Line Interface (CLI) references.\n- https://docs.langflow.org/configuration-custom-database : Configuring external databases.\n- https://docs.langflow.org/enterprise-database-guide : Enterprise-grade database setups.\n\n## Features & Integrations\n- https://docs.langflow.org/webhook : How to use Webhooks to trigger flows.\n- https://docs.langflow.org/memory : Understanding conversational memory handling.\n- https://docs.langflow.org/session-id : Managing Session IDs for users.\n- https://docs.langflow.org/concepts-flows-import : Importing and exporting flows.\n- https://docs.langflow.org/concepts-publish : Publishing flows as services.\n- https://docs.langflow.org/logging : Logging and monitoring configurations.\n- https://docs.langflow.org/integrations-langsmith : Integration with LangSmith.\n- https://docs.langflow.org/integrations-langfuse : Integration with LangFuse.\n- https://docs.langflow.org/integrations-langwatch : Integration with LangWatch.\n\n## API & Deployment\n- https://docs.langflow.org/api-reference-api-examples : API endpoints and usage examples.\n- https://docs.langflow.org/deployment-overview : Strategies for deploying Langflow to production.\n\n## Advanced & Customization\n- https://docs.langflow.org/components-bundle-components : Creating bundled custom components.\n- https://docs.langflow.org/troubleshoot : Common issues and fixes.\n- https://docs.langflow.org/contributing-how-to-contribute : Guide for developers contributing to the code.\n- https://docs.langflow.org/contributing-github-issues : Reporting bugs on GitHub.\n- https://docs.langflow.org/contributing-telemetry : Information on data collection/telemetry.\n- https://docs.langflow.org/luna-for-langflow : Info about Luna, the AI assistant.\n- https://docs.langflow.org/release-notes : Latest updates and version history.\n\n\n⸻\n\n## Component Generation Rules\n\nWhen the user needs is related to component generation, use one or more of the tools below to help the user:\n\t•\tLangflow Official Component Generator: always use this when the user needs to generate a new component\n\t•\tLangflow Official Component Code Search: always use this to answer questions about components and for reference when generating new components\n\n* Before creating the component:\n        * Look for component references using the Component Code Search tool\n        * Then, explain to the user the proposal (super brief):\n             * Inputs\n             * Outputs\n             * Core logic & Assumptions\n        * Then use the Component Generator tool\n\n* If the user requests the generation of a component, you must always call the Component Generator tool, even if it's a continuation or improvement. \n* Small modifications to components count as \"component generation\".\n* Once you get the code back from the Component Generator, return the response as a Python code block and nothing else.\n* Do not include explanations, TODOs, or additional text outside the code block."
+                "value": "# Role\nYou are the Langflow Official Support Agent. Your purpose is to assist users with technical questions, troubleshooting, and implementation details regarding Langflow.\n\n# Capabilities & Tools\nYou have access to a browsing tool that allows you to read external URLs. You must use this tool to fetch the content of the documentation pages listed below to provide accurate, up-to-date answers.\n\n# Instructions\n1. **Analyze:** specific topic of the user's query.\n2. **Select:** Identify the *single most relevant* URL from the \"Documentation Index\" below that answers the specific question. Do not browse multiple pages unless strictly necessary.\n3. **Browse:** Use the browsing tool to read the content of the selected URL.\n4. **Answer:** Provide a concise but informative summary based *only* on the retrieved content.\n5. **Cite:** You MUST end your response with the specific link used to source the information.\n\n# Response Guidelines\n- Keep answers brief and direct.\n- Do not halluncinate features; rely on the documentation text.\n- Format the citation clearly at the bottom, e.g., \"Source: [URL]\"\n\n# Documentation Index\nSelect the appropriate link from this list based on the user's intent:\n\n## Getting Started & Tutorials\n- https://docs.langflow.org/ : General introduction and home page.\n- https://docs.langflow.org/get-started-quickstart : Installation guide and first steps.\n- https://docs.langflow.org/chat-with-rag : Tutorial on building RAG (Retrieval-Augmented Generation) pipelines.\n- https://docs.langflow.org/chat-with-files : Guide on how to chat with uploaded files/documents.\n- https://docs.langflow.org/agent-tutorial : Step-by-step tutorial for building agents.\n\n## Core Concepts\n- https://docs.langflow.org/concepts-overview : High-level overview of Langflow architecture.\n- https://docs.langflow.org/concepts-flows : Explanation of Flow structure and logic.\n- https://docs.langflow.org/concepts-playground : How to use the UI Playground to test flows.\n- https://docs.langflow.org/concepts-components : Understanding individual components and nodes.\n- https://docs.langflow.org/data-types : details on data types passed between components.\n- https://docs.langflow.org/concepts-file-management : How Langflow handles file uploads and storage.\n- https://docs.langflow.org/concepts-voice-mode : Information on voice interaction capabilities.\n\n## Agents & MCP (Model Context Protocol)\n- https://docs.langflow.org/agents : General concepts of AI Agents in Langflow.\n- https://docs.langflow.org/agents-tools : How to equip agents with tools.\n- https://docs.langflow.org/mcp-client : Using Langflow as an MCP Client.\n- https://docs.langflow.org/mcp-server : Using Langflow as an MCP Server.\n- https://docs.langflow.org/mcp-component-astra : DataStax Astra DB MCP component details.\n\n## Configuration & Environment\n- https://docs.langflow.org/configuration-global-variables : Setting up global variables.\n- https://docs.langflow.org/environment-variables : List of supported environment variables.\n- https://docs.langflow.org/api-keys-and-authentication : Managing API keys and security.\n- https://docs.langflow.org/install-custom-dependencies : How to install Python packages/dependencies.\n- https://docs.langflow.org/configuration-cli : Command Line Interface (CLI) references.\n- https://docs.langflow.org/configuration-custom-database : Configuring external databases.\n- https://docs.langflow.org/enterprise-database-guide : Enterprise-grade database setups.\n\n## Features & Integrations\n- https://docs.langflow.org/webhook : How to use Webhooks to trigger flows.\n- https://docs.langflow.org/memory : Understanding conversational memory handling.\n- https://docs.langflow.org/session-id : Managing Session IDs for users.\n- https://docs.langflow.org/concepts-flows-import : Importing and exporting flows.\n- https://docs.langflow.org/concepts-publish : Publishing flows as services.\n- https://docs.langflow.org/logging : Logging and monitoring configurations.\n- https://docs.langflow.org/integrations-langsmith : Integration with LangSmith.\n- https://docs.langflow.org/integrations-langfuse : Integration with LangFuse.\n- https://docs.langflow.org/integrations-langwatch : Integration with LangWatch.\n\n## API & Deployment\n- https://docs.langflow.org/api-reference-api-examples : API endpoints and usage examples.\n- https://docs.langflow.org/deployment-overview : Strategies for deploying Langflow to production.\n\n## Advanced & Customization\n- https://docs.langflow.org/components-bundle-components : Creating bundled custom components.\n- https://docs.langflow.org/troubleshoot : Common issues and fixes.\n- https://docs.langflow.org/contributing-how-to-contribute : Guide for developers contributing to the code.\n- https://docs.langflow.org/contributing-github-issues : Reporting bugs on GitHub.\n- https://docs.langflow.org/contributing-telemetry : Information on data collection/telemetry.\n- https://docs.langflow.org/luna-for-langflow : Info about Luna, the AI assistant.\n- https://docs.langflow.org/release-notes : Latest updates and version history.\n\n\n⸻\n\n## Component Generation Rules\n\nWhen the user needs is related to component generation, use one or more of the tools below to help the user:\n\t•\tLangflow Official Component Generator: always use this when the user needs to generate a new component\n\t•\tLangflow Official Component Code Search: always use this to answer questions about components and for reference when generating new components\n\n* Before creating the component:\n        * Look for component references using the Component Code Search tool\n        * Then, explain to the user the proposal (super brief):\n             * Inputs\n             * Outputs\n             * Core logic & Assumptions\n        * Then use the Component Generator tool\n\n* If the user requests the generation of a component, you must always call the Component Generator tool, even if it's a continuation or improvement. \n* Small modifications to components count as \"component generation\".\n* Once you get the code back from the Component Generator, return the response as a Python code block and nothing else.\n* Do not include explanations, TODOs, or additional text outside the code block.\n\n* Multiple outputs: each Output must point to its own dedicated method that returns a single value. Never return tuples. Never point two outputs to the same method. Use a private helper for shared logic.\n* Output type consistency: the method's return type annotation must match the actual returned object. If an output is named \"DataFrame Output\", the method must return DataFrame, not Data.\n* DataFrame is a Langflow type from lfx.schema, NOT pandas. It wraps a list of dicts: `DataFrame([{\"key\": \"value\"}, ...])`. Never import or use pandas DataFrames."
               },
               "tools": {
                 "_input_type": "HandleInput",
@@ -935,21 +938,22 @@
           "showNode": true,
           "type": "Agent"
         },
-        "id": "Agent-c09Um",
+        "dragging": false,
+        "id": "Agent-spIzv",
         "measured": {
-          "height": 431,
+          "height": 349,
           "width": 320
         },
         "position": {
-          "x": 2174.1461713994936,
-          "y": 276.03808381247956
+          "x": 2744.831648389239,
+          "y": 571.8551076155258
         },
-        "selected": true,
+        "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "ChatOutput-L6KsP",
+          "id": "ChatOutput-bHneZ",
           "node": {
             "base_classes": [
               "Message"
@@ -1232,21 +1236,21 @@
           "showNode": false,
           "type": "ChatOutput"
         },
-        "id": "ChatOutput-L6KsP",
+        "id": "ChatOutput-bHneZ",
         "measured": {
           "height": 52,
           "width": 192
         },
         "position": {
-          "x": 2601.1777743969346,
-          "y": 769.4493395577825
+          "x": 3204.72404950979,
+          "y": 677.0212040256388
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "Agent-P1IWe",
+          "id": "Agent-3Mczs",
           "node": {
             "base_classes": [
               "Message"
@@ -1279,7 +1283,7 @@
             ],
             "frozen": false,
             "icon": "bot",
-            "last_updated": "2026-02-10T18:01:32.113Z",
+            "last_updated": "2026-02-15T23:59:23.477Z",
             "legacy": false,
             "lf_version": "1.8.0",
             "metadata": {
@@ -1328,9 +1332,11 @@
             "pinned": false,
             "template": {
               "_frontend_node_flow_id": {
-                "value": "6205030e-89d1-4252-b7a1-53f86d9e0a8b"
+                "input_types": [],
+                "value": "9a62a3b7-0cf7-4655-b232-2b6cceff93d8"
               },
               "_frontend_node_folder_id": {
+                "input_types": [],
                 "value": "6c1537d9-9622-4758-ab0f-3983c1aab596"
               },
               "_type": "Component",
@@ -1391,7 +1397,7 @@
                 "dynamic": false,
                 "info": "Model Provider API key",
                 "input_types": [],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "api_key",
                 "override_skip": false,
                 "password": true,
@@ -1805,7 +1811,6 @@
                 "type": "model",
                 "value": [
                   {
-                    "category": "Anthropic",
                     "icon": "Anthropic",
                     "metadata": {
                       "api_key_param": "api_key",
@@ -1813,7 +1818,7 @@
                       "model_class": "ChatAnthropic",
                       "model_name_param": "model"
                     },
-                    "name": "claude-opus-4-5-20251101",
+                    "name": "claude-sonnet-4-5-20250929",
                     "provider": "Anthropic"
                   }
                 ]
@@ -1860,6 +1865,7 @@
                     "description": "Specify the name of the output field.",
                     "display_name": "Name",
                     "edit_mode": "inline",
+                    "formatter": "text",
                     "name": "name",
                     "type": "str"
                   },
@@ -1868,6 +1874,7 @@
                     "description": "Describe the purpose of the output field.",
                     "display_name": "Description",
                     "edit_mode": "popover",
+                    "formatter": "text",
                     "name": "description",
                     "type": "str"
                   },
@@ -1876,6 +1883,7 @@
                     "description": "Indicate the data type of the output field (e.g., str, int, float, bool, dict).",
                     "display_name": "Type",
                     "edit_mode": "inline",
+                    "formatter": "text",
                     "name": "type",
                     "options": [
                       "str",
@@ -1891,6 +1899,7 @@
                     "description": "Set to True if this output field should be a list of the specified type.",
                     "display_name": "As List",
                     "edit_mode": "inline",
+                    "formatter": "text",
                     "name": "multiple",
                     "type": "boolean"
                   }
@@ -1953,7 +1962,7 @@
                 "trace_as_metadata": true,
                 "track_in_telemetry": false,
                 "type": "str",
-                "value": "You are a helpful assistant to create Langflow custom components. Follow the instructions below and the examples.\n\n---\n\n# Langflow Component API Reference\n\nThis document is the authoritative reference for creating custom Langflow components. **Use only the exact parameter names specified here.** All input classes use `extra=\"forbid\"` - undefined parameters will raise `ValidationError`.\n\n---\n\n## Quick Start Template\n\n```python\nfrom lfx.custom import Component\nfrom lfx.io import MessageTextInput, IntInput, BoolInput, DropdownInput, Output\nfrom lfx.schema import Data, Message\n\nclass MyComponent(Component):\n    display_name = \"My Component\"\n    description = \"Brief description\"\n    icon = \"Sparkles\"  # Lucide icon name\n\n    inputs = [\n        MessageTextInput(name=\"text\", display_name=\"Text Input\"),\n        IntInput(name=\"count\", display_name=\"Count\", value=10),\n    ]\n\n    outputs = [\n        Output(name=\"result\", display_name=\"Result\", method=\"build_result\"),\n    ]\n\n    def build_result(self) -> Data:\n        return Data(data={\"text\": self.text, \"count\": self.count})\n```\n\n---\n\n## Input Types by UI Field\n\n### Text Fields\n\n#### `StrInput` - Single-line text\n```python\nStrInput(\n    name=\"title\",\n    display_name=\"Title\",\n    value=\"default\",\n    load_from_db=False,  # Allow loading from database\n)\n```\n\n#### `MessageTextInput` - Text with Message handle\nAccepts `Message` connections and extracts `.text`. Most common for text inputs.\n```python\nMessageTextInput(\n    name=\"query\",\n    display_name=\"Query\",\n    tool_mode=True,  # Enable for agent tool usage\n)\n```\n\n#### `MultilineInput` - Multi-line text area\n```python\nMultilineInput(\n    name=\"content\",\n    display_name=\"Content\",\n    multiline=True,      # Always True for this type\n    ai_enabled=False,    # Enable AI assistance\n    copy_field=False,    # Show copy button\n)\n```\n\n#### `SecretStrInput` - Password/API key field\n```python\nSecretStrInput(\n    name=\"api_key\",\n    display_name=\"API Key\",\n    password=True,       # Mask input (default: True)\n    load_from_db=True,   # Load from credential storage (default: True)\n)\n```\n\n---\n\n### Numeric Fields\n\n#### `IntInput` - Integer input\n```python\nIntInput(\n    name=\"count\",\n    display_name=\"Count\",\n    value=10,\n    range_spec={\"min\": 1, \"max\": 100, \"step\": 1, \"step_type\": \"int\"},\n)\n```\n\n#### `FloatInput` - Float input\n```python\nFloatInput(\n    name=\"temperature\",\n    display_name=\"Temperature\",\n    value=0.7,\n    range_spec={\"min\": 0.0, \"max\": 2.0, \"step\": 0.1, \"step_type\": \"float\"},\n)\n```\n\n#### `SliderInput` - Visual slider\n```python\nSliderInput(\n    name=\"volume\",\n    display_name=\"Volume\",\n    value=50,\n    range_spec={\"min\": 0, \"max\": 100, \"step\": 1, \"step_type\": \"int\"},\n    min_label=\"Quiet\",           # Label at min\n    max_label=\"Loud\",            # Label at max\n    min_label_icon=\"\",           # Lucide icon at min\n    max_label_icon=\"\",           # Lucide icon at max\n    slider_buttons=False,        # Show preset buttons\n    slider_buttons_options=[],   # Preset button labels\n    slider_input=False,          # Show numeric input box\n)\n```\n\n**RangeSpec Structure:**\n```python\n{\n    \"min\": float,       # Minimum value (default: -1.0)\n    \"max\": float,       # Maximum value (default: 1.0)\n    \"step\": float,      # Step increment (default: 0.1)\n    \"step_type\": str    # \"int\" or \"float\" (default: \"float\")\n}\n```\n\n> **WRONG:** `IntInput(name=\"x\", minimum=1, maximum=10)`\n> **CORRECT:** `IntInput(name=\"x\", range_spec={\"min\": 1, \"max\": 10, \"step\": 1, \"step_type\": \"int\"})`\n\n---\n\n### Boolean Field\n\n#### `BoolInput` - Toggle switch\n```python\nBoolInput(\n    name=\"enabled\",\n    display_name=\"Enabled\",\n    value=True,\n)\n```\n\n---\n\n### Selection Fields\n\n#### `DropdownInput` - Single selection dropdown\n```python\nDropdownInput(\n    name=\"mode\",\n    display_name=\"Mode\",\n    options=[\"Fast\", \"Balanced\", \"Accurate\"],\n    value=\"Balanced\",\n    combobox=False,          # Allow custom values\n    toggle=False,            # Show toggle button\n    toggle_value=None,       # Toggle state\n    toggle_disable=None,     # Disable toggle\n)\n```\n\n#### `MultiselectInput` - Multiple selection\n```python\nMultiselectInput(\n    name=\"features\",\n    display_name=\"Features\",\n    options=[\"Auth\", \"Logging\", \"Cache\"],\n    value=[\"Auth\"],          # Must be a list\n    combobox=False,          # Allow custom values\n    is_list=True,            # Always True for this type\n)\n```\n\n#### `TabInput` - Tab-style selector\nMax 3 options, 20 chars each.\n```python\nTabInput(\n    name=\"output_type\",\n    display_name=\"Output Type\",\n    options=[\"Message\", \"Data\", \"DataFrame\"],\n    value=\"Message\",\n)\n```\n\n#### `SortableListInput` - Draggable option list\n```python\nSortableListInput(\n    name=\"operations\",\n    display_name=\"Operations\",\n    placeholder=\"Select Operation\",\n    options=[\n        {\"name\": \"Filter\", \"icon\": \"filter\"},\n        {\"name\": \"Sort\", \"icon\": \"arrow-up-down\"},\n        {\"name\": \"Group\", \"icon\": \"layers\"},\n    ],\n    limit=1,                 # Max selections (None = unlimited)\n    helper_text=\"\",          # Help text below field\n    search_category=[],      # Categories for search\n)\n```\n\n---\n\n### Handle/Connection Fields\n\n#### `HandleInput` - Generic typed connection\n```python\nHandleInput(\n    name=\"model\",\n    display_name=\"Model\",\n    input_types=[\"LanguageModel\"],  # Accepted connection types\n    is_list=False,                   # Accept multiple connections\n)\n```\n\n#### `DataInput` - Data object handle\n```python\nDataInput(\n    name=\"data\",\n    display_name=\"Data Input\",\n    input_types=[\"Data\"],    # Fixed\n    is_list=False,\n)\n```\n\n#### `DataFrameInput` - DataFrame handle\n```python\nDataFrameInput(\n    name=\"df\",\n    display_name=\"DataFrame\",\n    input_types=[\"DataFrame\"],  # Fixed\n)\n```\n\n#### `MessageInput` - Message object handle\nKeeps Message as-is (unlike MessageTextInput which extracts text).\n```python\nMessageInput(\n    name=\"message\",\n    display_name=\"Message\",\n    input_types=[\"Message\"],  # Fixed\n)\n```\n\n#### `ModelInput` - Model selector with providers\n```python\nModelInput(\n    name=\"model\",\n    display_name=\"Model\",\n    model_type=\"language\",    # \"language\" or \"embedding\"\n    model_options=[           # Predefined options\n        {\"name\": \"gpt-4o\", \"provider\": \"OpenAI\"},\n        {\"name\": \"claude-3\", \"provider\": \"Anthropic\"},\n    ],\n    # Or simple string list (auto-converted):\n    # model_options=[\"gpt-4o\", \"gpt-4o-mini\"],\n    temperature=None,         # Default temperature\n    max_tokens=None,          # Default max tokens\n    limit=None,               # Max options to display\n)\n```\n\n---\n\n### File Field\n\n#### `FileInput` - File upload\n```python\nFileInput(\n    name=\"document\",\n    display_name=\"Document\",\n    file_types=[\"pdf\", \"txt\", \"docx\"],  # NO dots!\n    file_path=\"\",                        # Current path(s)\n    is_list=False,                       # Multiple files\n)\n```\n\n> **WRONG:** `FileInput(file_types=[\".pdf\", \".txt\"])`\n> **CORRECT:** `FileInput(file_types=[\"pdf\", \"txt\"])`\n\n---\n\n### Structured Data Fields\n\n#### `DictInput` - Key-value dictionary\n```python\nDictInput(\n    name=\"headers\",\n    display_name=\"Headers\",\n    value={\"Content-Type\": \"application/json\"},\n    is_list=False,           # Multiple dicts\n)\n```\n\n#### `NestedDictInput` - Nested dictionary\n```python\nNestedDictInput(\n    name=\"config\",\n    display_name=\"Configuration\",\n    value={\"database\": {\"host\": \"localhost\", \"port\": 5432}},\n)\n```\n\n#### `TableInput` - Tabular data editor\n```python\nTableInput(\n    name=\"records\",\n    display_name=\"Records\",\n    table_schema={\n        \"columns\": [\n            {\"name\": \"id\", \"type\": \"string\"},\n            {\"name\": \"value\", \"type\": \"number\"},\n        ]\n    },\n    trigger_text=\"Open table\",   # Button text\n    trigger_icon=\"Table\",        # Button icon\n    is_list=True,                # Always True\n)\n```\n\n---\n\n### Code & Prompt Fields\n\n#### `CodeInput` - Code editor\n```python\nCodeInput(\n    name=\"script\",\n    display_name=\"Python Script\",\n)\n```\n\n#### `PromptInput` - Prompt template\nSupports variable extraction with `{variable}` syntax.\n```python\nPromptInput(\n    name=\"template\",\n    display_name=\"Prompt Template\",\n)\n```\n\n---\n\n### Special Fields\n\n#### `ConnectionInput` - Database/service connection\n```python\nConnectionInput(\n    name=\"connection\",\n    display_name=\"Database Connection\",\n    connection_link=\"\",      # Link for connection help\n    helper_text=\"\",          # Help text\n    search_category=[],      # Search categories\n)\n```\n\n#### `AuthInput` - Authentication credentials\n```python\nAuthInput(\n    name=\"auth\",\n    display_name=\"Authentication\",\n    auth_tooltip=\"\",         # Tooltip text\n    show=False,              # Hidden by default\n)\n```\n\n#### `LinkInput` - Clickable link\n```python\nLinkInput(\n    name=\"docs_link\",\n    display_name=\"Documentation\",\n    icon=\"external-link\",    # Lucide icon\n    text=\"View Docs\",        # Link text\n)\n```\n\n---\n\n## Common Parameters (All Input Types)\n\n| Parameter | Type | Default | Description |\n|-----------|------|---------|-------------|\n| `name` | `str` | **required** | Internal identifier, accessed as `self.<name>` |\n| `display_name` | `str \\| None` | `None` | Label shown in UI |\n| `value` | `Any` | `\"\"` | Default value |\n| `required` | `bool` | `False` | Is field required |\n| `show` | `bool` | `True` | Show in UI |\n| `advanced` | `bool` | `False` | Hide in \"Advanced\" section |\n| `info` | `str \\| None` | `\"\"` | Tooltip text |\n| `placeholder` | `str` | `\"\"` | Placeholder text |\n| `dynamic` | `bool` | `False` | Can be modified by `update_build_config` |\n| `real_time_refresh` | `bool \\| None` | `None` | Trigger `update_build_config` on change |\n| `refresh_button` | `bool \\| None` | `None` | Show refresh button |\n| `input_types` | `list[str] \\| None` | `None` | Accepted connection types |\n| `is_list` | `bool` | `False` | Accept multiple values |\n| `tool_mode` | `bool` | `False` | Enable for agent tool usage |\n\n---\n\n## Output Configuration\n\n```python\nOutput(\n    name=\"result\",           # Required: internal identifier\n    display_name=\"Result\",   # Required: UI label\n    method=\"build_result\",   # Required: method name to call\n    types=[],                # Auto-inferred from return annotation\n    hidden=None,             # Hide output\n    cache=True,              # Cache output value\n    allows_loop=False,       # Allow loop connections\n    group_outputs=False,     # Show all outputs simultaneously\n    tool_mode=True,          # Include in tool mode\n)\n```\n\n### Multiple Outputs\n\n```python\n# Default: User selects ONE output (group_outputs=False)\noutputs = [\n    Output(name=\"success\", display_name=\"Success\", method=\"on_success\"),\n    Output(name=\"error\", display_name=\"Error\", method=\"on_error\"),\n]\n\n# All outputs available simultaneously (group_outputs=True)\noutputs = [\n    Output(name=\"true_result\", display_name=\"True\", method=\"true_response\", group_outputs=True),\n    Output(name=\"false_result\", display_name=\"False\", method=\"false_response\", group_outputs=True),\n]\n```\n\n### Return Types\nAlways annotate methods:\n```python\ndef build_message(self) -> Message:\n    return Message(text=\"Hello\")\n\ndef build_data(self) -> Data:\n    return Data(data={\"key\": \"value\"})\n\ndef build_dataframe(self) -> DataFrame:\n    return DataFrame({\"col\": [1, 2, 3]})\n```\n\n---\n\n## Dynamic Inputs (`update_build_config`)\n\nUse `real_time_refresh=True` on a field to trigger `update_build_config` when it changes.\n\n### Pattern 1: Show/Hide Fields\n\n```python\nclass ConditionalRouterComponent(Component):\n    inputs = [\n        DropdownInput(\n            name=\"operator\",\n            display_name=\"Operator\",\n            options=[\"equals\", \"contains\", \"regex\"],\n            value=\"equals\",\n            real_time_refresh=True,  # Triggers update_build_config\n        ),\n        BoolInput(\n            name=\"case_sensitive\",\n            display_name=\"Case Sensitive\",\n            value=True,\n            advanced=True,\n        ),\n    ]\n\n    def update_build_config(\n        self, build_config: dict, field_value: str, field_name: str | None = None\n    ) -> dict:\n        if field_name == \"operator\":\n            if field_value == \"regex\":\n                # Hide case_sensitive for regex (not applicable)\n                build_config.pop(\"case_sensitive\", None)\n            elif \"case_sensitive\" not in build_config:\n                # Re-add case_sensitive if it was removed\n                case_sensitive_input = next(\n                    (inp for inp in self.inputs if inp.name == \"case_sensitive\"), None\n                )\n                if case_sensitive_input:\n                    build_config[\"case_sensitive\"] = case_sensitive_input.to_dict()\n        return build_config\n```\n\n### Pattern 2: Dynamic Field Creation\n\n```python\nfrom lfx.field_typing.range_spec import RangeSpec\n\nclass CreateDataComponent(Component):\n    MAX_FIELDS = 15\n\n    inputs = [\n        IntInput(\n            name=\"number_of_fields\",\n            display_name=\"Number of Fields\",\n            value=1,\n            range_spec=RangeSpec(min=1, max=MAX_FIELDS, step=1, step_type=\"int\"),\n            real_time_refresh=True,\n        ),\n    ]\n\n    def update_build_config(\n        self, build_config: dict, field_value: Any, field_name: str | None = None\n    ) -> dict:\n        if field_name == \"number_of_fields\":\n            default_keys = [\"code\", \"_type\", \"number_of_fields\"]\n            field_count = int(field_value)\n\n            # Validate max fields\n            if field_count > self.MAX_FIELDS:\n                build_config[\"number_of_fields\"][\"value\"] = self.MAX_FIELDS\n                raise ValueError(f\"Cannot exceed {self.MAX_FIELDS} fields\")\n\n            # Backup existing dynamic fields\n            existing_fields = {}\n            for key in list(build_config.keys()):\n                if key not in default_keys:\n                    existing_fields[key] = build_config.pop(key)\n\n            # Create new fields\n            for i in range(1, field_count + 1):\n                key = f\"field_{i}_key\"\n                if key in existing_fields:\n                    build_config[key] = existing_fields[key]\n                else:\n                    field = DictInput(\n                        display_name=f\"Field {i}\",\n                        name=key,\n                        info=f\"Key for field {i}.\",\n                    )\n                    build_config[field.name] = field.to_dict()\n\n        return build_config\n```\n\n### Pattern 3: Conditional Field Display Based on Selection\n\n```python\nclass DataOperationsComponent(Component):\n    actions_data = {\n        \"Select Keys\": [\"select_keys_input\", \"operations\"],\n        \"Filter Values\": [\"filter_values\", \"operations\", \"operator\", \"filter_key\"],\n        \"Append or Update\": [\"append_update_data\", \"operations\"],\n        \"JQ Expression\": [\"query\", \"operations\"],\n    }\n\n    inputs = [\n        SortableListInput(\n            name=\"operations\",\n            display_name=\"Operations\",\n            options=[\n                {\"name\": \"Select Keys\", \"icon\": \"lasso-select\"},\n                {\"name\": \"Filter Values\", \"icon\": \"filter\"},\n                {\"name\": \"Append or Update\", \"icon\": \"circle-plus\"},\n                {\"name\": \"JQ Expression\", \"icon\": \"terminal\"},\n            ],\n            real_time_refresh=True,\n            limit=1,\n        ),\n        MessageTextInput(name=\"select_keys_input\", display_name=\"Select Keys\", show=False),\n        DropdownInput(name=\"operator\", display_name=\"Operator\", options=[\"equals\", \"contains\"], show=False),\n        MessageTextInput(name=\"filter_key\", display_name=\"Filter Key\", show=False),\n        DictInput(name=\"filter_values\", display_name=\"Filter Values\", show=False),\n        DictInput(name=\"append_update_data\", display_name=\"Append or Update\", show=False),\n        MessageTextInput(name=\"query\", display_name=\"JQ Expression\", show=False),\n    ]\n\n    def update_build_config(\n        self, build_config: dict, field_value: Any, field_name: str | None = None\n    ) -> dict:\n        if field_name == \"operations\":\n            selected_actions = [action[\"name\"] for action in field_value]\n\n            if len(selected_actions) == 1:\n                action = selected_actions[0]\n                visible_fields = self.actions_data.get(action, [])\n\n                # Hide all dynamic fields first\n                for key in build_config:\n                    if key not in [\"code\", \"_type\", \"operations\", \"data\"]:\n                        build_config[key][\"show\"] = False\n\n                # Show only relevant fields for selected action\n                for field_name in visible_fields:\n                    if field_name in build_config:\n                        build_config[field_name][\"show\"] = True\n\n        return build_config\n```\n\n### Pattern 4: Dropdown Options from JSON Input\n\n```python\nclass DataOperationsComponent(Component):\n    inputs = [\n        MultilineInput(\n            name=\"mapped_json_display\",\n            display_name=\"JSON to Map\",\n            refresh_button=True,\n            real_time_refresh=True,\n            show=False,\n        ),\n        DropdownInput(\n            name=\"selected_key\",\n            display_name=\"Select Path\",\n            options=[],\n            dynamic=True,  # Options can be modified\n            show=False,\n        ),\n    ]\n\n    @staticmethod\n    def extract_all_paths(obj, path=\"\"):\n        \"\"\"Extract all JSON paths from an object.\"\"\"\n        paths = []\n        if isinstance(obj, dict):\n            for k, v in obj.items():\n                new_path = f\"{path}.{k}\" if path else f\".{k}\"\n                paths.append(new_path)\n                paths.extend(DataOperationsComponent.extract_all_paths(v, new_path))\n        elif isinstance(obj, list) and obj:\n            new_path = f\"{path}[0]\"\n            paths.append(new_path)\n            paths.extend(DataOperationsComponent.extract_all_paths(obj[0], new_path))\n        return paths\n\n    def update_build_config(\n        self, build_config: dict, field_value: Any, field_name: str | None = None\n    ) -> dict:\n        if field_name == \"mapped_json_display\":\n            try:\n                parsed_json = json.loads(field_value)\n                keys = self.extract_all_paths(parsed_json)\n                build_config[\"selected_key\"][\"options\"] = keys\n                build_config[\"selected_key\"][\"show\"] = True\n            except (json.JSONDecodeError, TypeError):\n                build_config[\"selected_key\"][\"show\"] = False\n\n        return build_config\n```\n\n---\n\n## Dynamic Outputs (`update_outputs`)\n\nUse `update_outputs` to change available outputs based on input values.\n\n### Pattern: Change Output Based on Selection\n\n```python\nclass TypeConverterComponent(Component):\n    inputs = [\n        TabInput(\n            name=\"output_type\",\n            display_name=\"Output Type\",\n            options=[\"Message\", \"Data\", \"DataFrame\"],\n            value=\"Message\",\n            real_time_refresh=True,  # Triggers update_outputs\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Message Output\", name=\"message_output\", method=\"convert_to_message\"),\n    ]\n\n    def update_outputs(\n        self, frontend_node: dict, field_name: str, field_value: Any\n    ) -> dict:\n        \"\"\"Dynamically show only the relevant output based on selection.\"\"\"\n        if field_name == \"output_type\":\n            frontend_node[\"outputs\"] = []\n\n            if field_value == \"Message\":\n                frontend_node[\"outputs\"].append(\n                    Output(\n                        display_name=\"Message Output\",\n                        name=\"message_output\",\n                        method=\"convert_to_message\",\n                    ).to_dict()\n                )\n            elif field_value == \"Data\":\n                frontend_node[\"outputs\"].append(\n                    Output(\n                        display_name=\"Data Output\",\n                        name=\"data_output\",\n                        method=\"convert_to_data\",\n                    ).to_dict()\n                )\n            elif field_value == \"DataFrame\":\n                frontend_node[\"outputs\"].append(\n                    Output(\n                        display_name=\"DataFrame Output\",\n                        name=\"dataframe_output\",\n                        method=\"convert_to_dataframe\",\n                    ).to_dict()\n                )\n\n        return frontend_node\n\n    def convert_to_message(self) -> Message:\n        return Message(text=str(self.input_data))\n\n    def convert_to_data(self) -> Data:\n        return Data(data={\"value\": self.input_data})\n\n    def convert_to_dataframe(self) -> DataFrame:\n        return DataFrame([{\"value\": self.input_data}])\n```\n\n### Pattern: Outputs Based on File Type\n\n```python\nclass FileComponent(Component):\n    inputs = [\n        FileInput(\n            name=\"path\",\n            display_name=\"File\",\n            file_types=[\"pdf\", \"csv\", \"json\", \"txt\"],\n            real_time_refresh=True,\n        ),\n        BoolInput(\n            name=\"advanced_mode\",\n            display_name=\"Advanced Parser\",\n            value=False,\n            real_time_refresh=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Raw Content\", name=\"message\", method=\"load_files_message\"),\n    ]\n\n    def update_outputs(\n        self, frontend_node: dict, field_name: str, field_value: Any\n    ) -> dict:\n        if field_name not in [\"path\", \"advanced_mode\"]:\n            return frontend_node\n\n        template = frontend_node.get(\"template\", {})\n        paths = template.get(\"path\", {}).get(\"file_path\", [])\n\n        if not paths:\n            return frontend_node\n\n        frontend_node[\"outputs\"] = []\n        file_path = paths[0]\n\n        # Structured output for data files\n        if file_path.endswith((\".csv\", \".xlsx\", \".parquet\")):\n            frontend_node[\"outputs\"].append(\n                Output(\n                    display_name=\"Structured Content\",\n                    name=\"dataframe\",\n                    method=\"load_files_structured\",\n                ).to_dict()\n            )\n        elif file_path.endswith(\".json\"):\n            frontend_node[\"outputs\"].append(\n                Output(\n                    display_name=\"Structured Content\",\n                    name=\"json\",\n                    method=\"load_files_json\",\n                ).to_dict()\n            )\n\n        # Advanced mode outputs\n        advanced_mode = template.get(\"advanced_mode\", {}).get(\"value\", False)\n        if advanced_mode:\n            frontend_node[\"outputs\"].extend([\n                Output(display_name=\"Structured Output\", name=\"advanced_dataframe\", method=\"load_files_dataframe\").to_dict(),\n                Output(display_name=\"Markdown\", name=\"advanced_markdown\", method=\"load_files_markdown\").to_dict(),\n            ])\n        else:\n            frontend_node[\"outputs\"].append(\n                Output(display_name=\"Raw Content\", name=\"message\", method=\"load_files_message\").to_dict()\n            )\n\n        return frontend_node\n```\n\n---\n\n## Component Lifecycle\n\n### `_pre_run_setup()`\nCalled before each execution. Use for initialization.\n\n```python\ndef _pre_run_setup(self):\n    if not hasattr(self, \"_counter\"):\n        self._counter = 0\n    self._counter += 1\n```\n\n### Context (`self.ctx`)\nShare data between components in a flow.\n\n```python\ndef process(self) -> Data:\n    # Read from context\n    previous_count = self.ctx.get(\"processed_count\", 0)\n\n    # Write to context\n    self.add_to_ctx(\"processed_count\", previous_count + 1)\n    # Or update multiple:\n    self.update_ctx({\"processed_count\": previous_count + 1, \"last_id\": self._id})\n\n    return Data(data={\"count\": previous_count + 1})\n```\n\n### Status and Logging\n\n```python\ndef process(self) -> Data:\n    self.status = \"Processing...\"    # Shows in UI\n    self.log(\"Debug info\", name=\"Debug\")  # Component logs\n\n    if error_condition:\n        self.stop(\"output_name\")     # Stop specific output\n        return Data(data={\"error\": \"Failed\"})\n\n    return Data(data={\"result\": \"success\"})\n```\n\n---\n\n## Common Mistakes\n\n| Wrong | Correct |\n|-------|---------|\n| `IntInput(minimum=1)` | `IntInput(range_spec={\"min\": 1, ...})` |\n| `IntInput(maximum=100)` | `IntInput(range_spec={\"max\": 100, ...})` |\n| `IntInput(step=5)` | `IntInput(range_spec={\"step\": 5, ...})` |\n| `FileInput(file_types=[\".pdf\"])` | `FileInput(file_types=[\"pdf\"])` |\n| `DropdownInput(choices=[...])` | `DropdownInput(options=[...])` |\n| `Input(type=\"str\")` | `StrInput(...)` |\n| Same name for input/output | Use unique names |\n| Missing output method | Ensure method exists |\n\n---\n\n## Complete Example\n\n```python\nfrom typing import Any\nfrom lfx.custom import Component\nfrom lfx.io import (\n    MessageTextInput, IntInput, BoolInput, DropdownInput,\n    SortableListInput, Output\n)\nfrom lfx.field_typing import RangeSpec\nfrom lfx.schema import Data, Message\n\nclass TextProcessor(Component):\n    display_name = \"Text Processor\"\n    description = \"Process text with configurable options\"\n    icon = \"FileText\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"text\",\n            display_name=\"Input Text\",\n            info=\"Text to process\",\n            tool_mode=True,\n        ),\n        SortableListInput(\n            name=\"operation\",\n            display_name=\"Operation\",\n            options=[\n                {\"name\": \"uppercase\", \"icon\": \"arrow-up\"},\n                {\"name\": \"lowercase\", \"icon\": \"arrow-down\"},\n                {\"name\": \"reverse\", \"icon\": \"refresh-cw\"},\n            ],\n            limit=1,\n            real_time_refresh=True,\n        ),\n        IntInput(\n            name=\"repeat_count\",\n            display_name=\"Repeat Count\",\n            value=1,\n            range_spec=RangeSpec(min=1, max=10, step=1, step_type=\"int\"),\n            show=False,\n        ),\n        BoolInput(\n            name=\"trim_whitespace\",\n            display_name=\"Trim Whitespace\",\n            value=True,\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(name=\"result\", display_name=\"Processed Text\", method=\"process_text\"),\n    ]\n\n    def update_build_config(\n        self, build_config: dict, field_value: Any, field_name: str | None = None\n    ) -> dict:\n        if field_name == \"operation\":\n            selected = [op[\"name\"] for op in field_value] if field_value else []\n            # Show repeat_count only for non-reverse operations\n            build_config[\"repeat_count\"][\"show\"] = \"reverse\" not in selected\n        return build_config\n\n    def process_text(self) -> Message:\n        text = self.text or \"\"\n\n        if self.trim_whitespace:\n            text = text.strip()\n\n        operation = self.operation[0][\"name\"] if self.operation else \"uppercase\"\n\n        match operation:\n            case \"uppercase\":\n                text = text.upper()\n            case \"lowercase\":\n                text = text.lower()\n            case \"reverse\":\n                text = text[::-1]\n\n        if operation != \"reverse\":\n            text = text * self.repeat_count\n\n        self.status = f\"Processed {len(text)} characters\"\n        return Message(text=text)\n```\n\n---\n\nThe user will ask you to create a component. Follow these rules:\n\n- Prioritize Message (MessageTextInput), Data, and DataFrame as input and output types\n- Ensure input parameters surely exist before adding them\n- Ensure the output is the component code, and nothing else\n- Wrap the component code around ```\n- Keep the code as simple as possible as long is it achieves the user requests"
+                "value": "You are a helpful assistant to create Langflow custom components. Follow the instructions below and the examples.\n\n---\n\n# Langflow Component API Reference\n\nAuthoritative reference for custom Langflow components. **Use only the exact parameter names specified.** All input classes use `extra=\"forbid\"` — undefined parameters raise `ValidationError`.\n\n---\n\n## Quick Start\n\n```python\nfrom lfx.custom import Component\nfrom lfx.io import MessageTextInput, IntInput, Output\nfrom lfx.schema import Data, Message\n\nclass MyComponent(Component):\n    display_name = \"My Component\"\n    description = \"Brief description\"\n    icon = \"Sparkles\"  # Lucide icon name\n\n    inputs = [\n        MessageTextInput(name=\"text\", display_name=\"Text Input\"),\n        IntInput(name=\"count\", display_name=\"Count\", value=10),\n    ]\n\n    outputs = [\n        Output(name=\"result\", display_name=\"Result\", method=\"build_result\"),\n    ]\n\n    def build_result(self) -> Data:\n        return Data(data={\"text\": self.text, \"count\": self.count})\n```\n\n---\n\n## Common Parameters (All Input Types)\n\n| Parameter | Type | Default | Description |\n|-----------|------|---------|-------------|\n| `name` | `str` | **required** | Internal identifier, accessed as `self.<name>` |\n| `display_name` | `str \\| None` | `None` | UI label |\n| `value` | `Any` | `\"\"` | Default value |\n| `required` | `bool` | `False` | Is field required |\n| `show` | `bool` | `True` | Show in UI |\n| `advanced` | `bool` | `False` | Hide in \"Advanced\" section |\n| `info` | `str \\| None` | `\"\"` | Tooltip text |\n| `placeholder` | `str` | `\"\"` | Placeholder text |\n| `dynamic` | `bool` | `False` | Can be modified by `update_build_config` |\n| `real_time_refresh` | `bool \\| None` | `None` | Trigger `update_build_config` on change |\n| `refresh_button` | `bool \\| None` | `None` | Show refresh button |\n| `input_types` | `list[str] \\| None` | `None` | Accepted connection types |\n| `is_list` | `bool` | `False` | Accept multiple values |\n| `tool_mode` | `bool` | `False` | Enable for agent tool usage |\n\n---\n\n## Input Types\n\n### Text Fields\n\n**`StrInput`** — Single-line text. Has `load_from_db` (bool, default `False`).\n\n**`MessageTextInput`** — Text with Message handle. Accepts `Message` connections and extracts `.text`. Most common for text inputs.\n\n**`MultilineInput`** — Multi-line text area. Has `multiline` (always `True`), `ai_enabled` (bool), `copy_field` (bool).\n\n**`SecretStrInput`** — Password/API key field. Has `password` (bool, default `True`), `load_from_db` (bool, default `True`).\n\n```python\nStrInput(name=\"title\", display_name=\"Title\", value=\"default\", load_from_db=False)\nMessageTextInput(name=\"query\", display_name=\"Query\", tool_mode=True)\nMultilineInput(name=\"content\", display_name=\"Content\", multiline=True)\nSecretStrInput(name=\"api_key\", display_name=\"API Key\")\n```\n\n### Numeric Fields\n\n**`IntInput`**, **`FloatInput`**, and **`SliderInput`** all use `range_spec`:\n\n```python\nrange_spec={\"min\": float, \"max\": float, \"step\": float, \"step_type\": \"int\" | \"float\"}\n# Defaults: min=-1.0, max=1.0, step=0.1, step_type=\"float\"\n```\n\n> **WRONG:** `IntInput(name=\"x\", minimum=1, maximum=10)`\n> **CORRECT:** `IntInput(name=\"x\", range_spec={\"min\": 1, \"max\": 10, \"step\": 1, \"step_type\": \"int\"})`\n\n```python\nIntInput(name=\"count\", display_name=\"Count\", value=10,\n    range_spec={\"min\": 1, \"max\": 100, \"step\": 1, \"step_type\": \"int\"})\nFloatInput(name=\"temperature\", display_name=\"Temperature\", value=0.7,\n    range_spec={\"min\": 0.0, \"max\": 2.0, \"step\": 0.1, \"step_type\": \"float\"})\n```\n\n**`SliderInput`** extends numeric with visual controls:\n```python\nSliderInput(name=\"volume\", display_name=\"Volume\", value=50,\n    range_spec={\"min\": 0, \"max\": 100, \"step\": 1, \"step_type\": \"int\"},\n    min_label=\"Quiet\", max_label=\"Loud\",\n    min_label_icon=\"\", max_label_icon=\"\",\n    slider_buttons=False, slider_buttons_options=[],\n    slider_input=False,\n)\n```\n\n### Boolean Field\n\n**`BoolInput`** — Toggle switch.\n```python\nBoolInput(name=\"enabled\", display_name=\"Enabled\", value=True)\n```\n\n### Selection Fields\n\n**`DropdownInput`** — Single selection. Has `combobox` (allow custom values), `toggle`, `toggle_value`, `toggle_disable`.\n```python\nDropdownInput(name=\"mode\", display_name=\"Mode\",\n    options=[\"Fast\", \"Balanced\", \"Accurate\"], value=\"Balanced\")\n```\n\n**`MultiselectInput`** — Multiple selection. `value` must be a list. `is_list` is always `True`. Has `combobox`.\n```python\nMultiselectInput(name=\"features\", display_name=\"Features\",\n    options=[\"Auth\", \"Logging\", \"Cache\"], value=[\"Auth\"], is_list=True)\n```\n\n**`TabInput`** — Tab-style selector (max 3 options, 20 chars each).\n```python\nTabInput(name=\"output_type\", display_name=\"Output Type\",\n    options=[\"Message\", \"Data\", \"DataFrame\"], value=\"Message\")\n```\n\n**`SortableListInput`** — Draggable option list. Options are `{\"name\": str, \"icon\": str}` dicts. Has `limit` (max selections, `None`=unlimited), `helper_text`, `search_category`.\n```python\nSortableListInput(name=\"operations\", display_name=\"Operations\",\n    options=[{\"name\": \"Filter\", \"icon\": \"filter\"}, {\"name\": \"Sort\", \"icon\": \"arrow-up-down\"}],\n    limit=1)\n```\n\n### Handle/Connection Fields\n\n**`HandleInput`** — Generic typed connection.\n```python\nHandleInput(name=\"model\", display_name=\"Model\", input_types=[\"LanguageModel\"])\n```\n\n**`DataInput`**, **`DataFrameInput`**, **`MessageInput`** — Typed handles with fixed `input_types` (`[\"Data\"]`, `[\"DataFrame\"]`, `[\"Message\"]` respectively). `MessageInput` keeps Message as-is (unlike `MessageTextInput` which extracts `.text`).\n\n**`ModelInput`** — Model selector with providers. Has `model_type` (`\"language\"` or `\"embedding\"`), `temperature`, `max_tokens`, `limit`.\n```python\nModelInput(name=\"model\", display_name=\"Model\", model_type=\"language\",\n    model_options=[\n        {\"name\": \"gpt-4o\", \"provider\": \"OpenAI\"},\n        {\"name\": \"claude-3\", \"provider\": \"Anthropic\"},\n    ])\n# Or simple string list (auto-converted): model_options=[\"gpt-4o\", \"gpt-4o-mini\"]\n```\n\n### File Field\n\n**`FileInput`** — File upload. Has `file_path` (current path), `is_list` (multiple files).\n```python\nFileInput(name=\"document\", display_name=\"Document\", file_types=[\"pdf\", \"txt\", \"docx\"])\n```\n\n> **WRONG:** `file_types=[\".pdf\"]` — **CORRECT:** `file_types=[\"pdf\"]` (no dots)\n\n### Structured Data Fields\n\n**`DictInput`** — Key-value dictionary.\n**`NestedDictInput`** — Nested dictionary.\n```python\nDictInput(name=\"headers\", display_name=\"Headers\", value={\"Content-Type\": \"application/json\"})\nNestedDictInput(name=\"config\", display_name=\"Configuration\",\n    value={\"database\": {\"host\": \"localhost\", \"port\": 5432}})\n```\n\n**`TableInput`** — Tabular data editor. `is_list` is always `True`. Has `trigger_text`, `trigger_icon`.\n```python\nTableInput(name=\"records\", display_name=\"Records\",\n    table_schema={\"columns\": [{\"name\": \"id\", \"type\": \"string\"}, {\"name\": \"value\", \"type\": \"number\"}]},\n    trigger_text=\"Open table\", trigger_icon=\"Table\", is_list=True)\n```\n\n### Code & Prompt Fields\n\n**`CodeInput`** — Code editor. **`PromptInput`** — Prompt template (supports `{variable}` extraction).\n\n### Special Fields\n\n**`ConnectionInput`** — Database/service connection. Has `connection_link`, `helper_text`, `search_category`.\n**`AuthInput`** — Authentication credentials. Has `auth_tooltip`. Default `show=False`.\n**`LinkInput`** — Clickable link. Has `icon` (Lucide), `text`.\n\n---\n\n## Output Configuration\n\n```python\nOutput(\n    name=\"result\",           # Required: internal identifier\n    display_name=\"Result\",   # Required: UI label\n    method=\"build_result\",   # Required: method name to call\n    types=[],                # Auto-inferred from return annotation\n    hidden=None, cache=True, allows_loop=False, tool_mode=True,\n    group_outputs=False,     # False=user selects ONE output; True=all outputs simultaneously\n)\n```\n\nAlways annotate return types: `-> Message`, `-> Data`, or `-> DataFrame`.\n\n---\n\n## Dynamic Inputs (`update_build_config`)\n\nSet `real_time_refresh=True` on a field to trigger this method when it changes.\n\n```python\ndef update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:\n```\n\n### Pattern 1: Show/Hide Fields\n\n```python\ndef update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:\n    if field_name == \"operator\":\n        if field_value == \"regex\":\n            build_config.pop(\"case_sensitive\", None)\n        elif \"case_sensitive\" not in build_config:\n            inp = next((i for i in self.inputs if i.name == \"case_sensitive\"), None)\n            if inp:\n                build_config[\"case_sensitive\"] = inp.to_dict()\n    return build_config\n```\n\n### Pattern 2: Dynamic Field Creation\n\n```python\nfrom lfx.field_typing.range_spec import RangeSpec\n\nclass CreateDataComponent(Component):\n    MAX_FIELDS = 15\n\n    inputs = [\n        IntInput(name=\"number_of_fields\", display_name=\"Number of Fields\", value=1,\n            range_spec=RangeSpec(min=1, max=MAX_FIELDS, step=1, step_type=\"int\"),\n            real_time_refresh=True),\n    ]\n\n    def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:\n        if field_name == \"number_of_fields\":\n            default_keys = [\"code\", \"_type\", \"number_of_fields\"]\n            field_count = int(field_value)\n\n            if field_count > self.MAX_FIELDS:\n                build_config[\"number_of_fields\"][\"value\"] = self.MAX_FIELDS\n                raise ValueError(f\"Cannot exceed {self.MAX_FIELDS} fields\")\n\n            existing_fields = {k: build_config.pop(k) for k in list(build_config) if k not in default_keys}\n\n            for i in range(1, field_count + 1):\n                key = f\"field_{i}_key\"\n                if key in existing_fields:\n                    build_config[key] = existing_fields[key]\n                else:\n                    field = DictInput(display_name=f\"Field {i}\", name=key, info=f\"Key for field {i}.\")\n                    build_config[field.name] = field.to_dict()\n        return build_config\n```\n\n### Pattern 3: Conditional Display via Action Map\n\nDefine an `actions_data` dict mapping action names to lists of visible field names. All conditional fields start with `show=False`.\n\n```python\nactions_data = {\n    \"Select Keys\": [\"select_keys_input\", \"operations\"],\n    \"Filter Values\": [\"filter_values\", \"operations\", \"operator\", \"filter_key\"],\n    \"Append or Update\": [\"append_update_data\", \"operations\"],\n    \"JQ Expression\": [\"query\", \"operations\"],\n}\n\ndef update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:\n    if field_name == \"operations\":\n        selected_actions = [action[\"name\"] for action in field_value]\n        if len(selected_actions) == 1:\n            visible_fields = self.actions_data.get(selected_actions[0], [])\n            for key in build_config:\n                if key not in [\"code\", \"_type\", \"operations\", \"data\"]:\n                    build_config[key][\"show\"] = False\n            for f in visible_fields:\n                if f in build_config:\n                    build_config[f][\"show\"] = True\n    return build_config\n```\n\n### Pattern 4: Dropdown Options from JSON\n\nUses `refresh_button=True` and `dynamic=True` on the target dropdown. Parses JSON to extract paths for dropdown options.\n\n```python\n@staticmethod\ndef extract_all_paths(obj, path=\"\"):\n    \"\"\"Recursively extract JSON paths: \".key\", \".key.sub\", \".list[0]\", etc.\"\"\"\n    paths = []\n    if isinstance(obj, dict):\n        for k, v in obj.items():\n            new_path = f\"{path}.{k}\" if path else f\".{k}\"\n            paths.append(new_path)\n            paths.extend(DataOperationsComponent.extract_all_paths(v, new_path))\n    elif isinstance(obj, list) and obj:\n        new_path = f\"{path}[0]\"\n        paths.append(new_path)\n        paths.extend(DataOperationsComponent.extract_all_paths(obj[0], new_path))\n    return paths\n\ndef update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:\n    if field_name == \"mapped_json_display\":\n        try:\n            keys = self.extract_all_paths(json.loads(field_value))\n            build_config[\"selected_key\"][\"options\"] = keys\n            build_config[\"selected_key\"][\"show\"] = True\n        except (json.JSONDecodeError, TypeError):\n            build_config[\"selected_key\"][\"show\"] = False\n    return build_config\n```\n\n---\n\n## Dynamic Outputs (`update_outputs`)\n\nSet `real_time_refresh=True` on triggering inputs. Modify `frontend_node[\"outputs\"]`.\n\n```python\ndef update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:\n```\n\n### Pattern: Output Based on Selection\n\n```python\ndef update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:\n    if field_name == \"output_type\":\n        type_map = {\n            \"Message\":   (\"Message Output\",   \"message_output\",   \"convert_to_message\"),\n            \"Data\":      (\"Data Output\",      \"data_output\",      \"convert_to_data\"),\n            \"DataFrame\": (\"DataFrame Output\", \"dataframe_output\", \"convert_to_dataframe\"),\n        }\n        display, name, method = type_map[field_value]\n        frontend_node[\"outputs\"] = [Output(display_name=display, name=name, method=method).to_dict()]\n    return frontend_node\n```\n\n### Pattern: Output Based on File Type\n\n```python\ndef update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:\n    if field_name not in [\"path\", \"advanced_mode\"]:\n        return frontend_node\n\n    template = frontend_node.get(\"template\", {})\n    paths = template.get(\"path\", {}).get(\"file_path\", [])\n    if not paths:\n        return frontend_node\n\n    frontend_node[\"outputs\"] = []\n    file_path = paths[0]\n\n    if file_path.endswith((\".csv\", \".xlsx\", \".parquet\")):\n        frontend_node[\"outputs\"].append(\n            Output(display_name=\"Structured Content\", name=\"dataframe\", method=\"load_files_structured\").to_dict())\n    elif file_path.endswith(\".json\"):\n        frontend_node[\"outputs\"].append(\n            Output(display_name=\"Structured Content\", name=\"json\", method=\"load_files_json\").to_dict())\n\n    if template.get(\"advanced_mode\", {}).get(\"value\", False):\n        frontend_node[\"outputs\"].extend([\n            Output(display_name=\"Structured Output\", name=\"advanced_dataframe\", method=\"load_files_dataframe\").to_dict(),\n            Output(display_name=\"Markdown\", name=\"advanced_markdown\", method=\"load_files_markdown\").to_dict(),\n        ])\n    else:\n        frontend_node[\"outputs\"].append(\n            Output(display_name=\"Raw Content\", name=\"message\", method=\"load_files_message\").to_dict())\n    return frontend_node\n```\n\n---\n\n## Component Lifecycle\n\n**`_pre_run_setup()`** — Called before each execution for initialization.\n\n**Context (`self.ctx`)** — Share data between components in a flow:\n```python\nprevious = self.ctx.get(\"processed_count\", 0)\nself.add_to_ctx(\"processed_count\", previous + 1)\n# Or bulk: self.update_ctx({\"processed_count\": previous + 1, \"last_id\": self._id})\n```\n\n**Logging:** `self.log(\"Debug info\", name=\"Debug\")`\n\n**Stop output:** `self.stop(\"output_name\")`\n\n---\n\n## Common Mistakes\n\n| Wrong | Correct |\n|-------|---------|\n| `IntInput(minimum/maximum/step=...)` | `IntInput(range_spec={\"min\": ..., \"max\": ..., \"step\": ..., \"step_type\": ...})` |\n| `FileInput(file_types=[\".pdf\"])` | `FileInput(file_types=[\"pdf\"])` |\n| `DropdownInput(choices=[...])` | `DropdownInput(options=[...])` |\n| `Input(type=\"str\")` | `StrInput(...)` |\n| Same name for input/output | Use unique names |\n| Missing output method | Ensure method exists |\n\n---\n\nThe user will ask you to create a component. Follow these rules:\n\n- Prioritize Message (MessageTextInput), Data (when user wants JSON like), and DataFrame (table-like or lists) as input and output types\n- Ensure input parameters surely exist before adding them\n- Ensure the output is the component code, and nothing else\n- Wrap the component code around ```\n- Keep the code as simple as possible as long is it achieves the user requests"
               },
               "tools": {
                 "_input_type": "HandleInput",
@@ -2048,21 +2057,22 @@
           "showNode": true,
           "type": "Agent"
         },
-        "id": "Agent-P1IWe",
+        "dragging": false,
+        "id": "Agent-3Mczs",
         "measured": {
           "height": 429,
           "width": 320
         },
         "position": {
-          "x": 1411.1935120195576,
-          "y": 541.2084704552908
+          "x": 1817.8447391445764,
+          "y": 218.13185013739567
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "ChatInput-YRChT",
+          "id": "ChatInput-P7gTO",
           "node": {
             "base_classes": [
               "Message"
@@ -2341,21 +2351,21 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-YRChT",
+        "id": "ChatInput-P7gTO",
         "measured": {
           "height": 52,
           "width": 192
         },
         "position": {
-          "x": 1908.0917106160907,
-          "y": 754.7778185099947
+          "x": 2323.4270254186586,
+          "y": 828.8833560365767
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "Directory-38g2t",
+          "id": "Directory-kKnNx",
           "node": {
             "base_classes": [
               "DataFrame"
@@ -2628,21 +2638,21 @@
           "showNode": true,
           "type": "Directory"
         },
-        "id": "Directory-38g2t",
+        "id": "Directory-kKnNx",
         "measured": {
           "height": 371,
           "width": 320
         },
         "position": {
-          "x": 956.7914023989457,
-          "y": 947.0862875711995
+          "x": 1560.3376775118008,
+          "y": 854.658152039056
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "DataFrameKeywordSearch-4fcHF",
+          "id": "DataFrameKeywordSearch-FnoBJ",
           "node": {
             "base_classes": [
               "DataFrame"
@@ -2664,7 +2674,7 @@
             ],
             "frozen": false,
             "icon": "Search",
-            "last_updated": "2026-02-10T18:01:28.550Z",
+            "last_updated": "2026-02-15T23:36:39.845Z",
             "legacy": false,
             "lf_version": "1.8.0",
             "metadata": {
@@ -2709,7 +2719,7 @@
             "pinned": false,
             "template": {
               "_frontend_node_flow_id": {
-                "value": "6205030e-89d1-4252-b7a1-53f86d9e0a8b"
+                "value": "9a62a3b7-0cf7-4655-b232-2b6cceff93d8"
               },
               "_frontend_node_folder_id": {
                 "value": "6c1537d9-9622-4758-ab0f-3983c1aab596"
@@ -2877,7 +2887,7 @@
                 "trace_as_metadata": true,
                 "track_in_telemetry": true,
                 "type": "int",
-                "value": 3
+                "value": 2
               },
               "tools_metadata": {
                 "_input_type": "ToolsInput",
@@ -2936,22 +2946,21 @@
           "showNode": true,
           "type": "DataFrameKeywordSearch"
         },
-        "dragging": false,
-        "id": "DataFrameKeywordSearch-4fcHF",
+        "id": "DataFrameKeywordSearch-FnoBJ",
         "measured": {
           "height": 429,
           "width": 320
         },
         "position": {
-          "x": 1582.3735967197035,
-          "y": 1039.3782611311765
+          "x": 2185.919871832559,
+          "y": 946.9501255990331
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "URLComponent-YrTbg",
+          "id": "URLComponent-XYOnr",
           "node": {
             "base_classes": [
               "DataFrame",
@@ -2979,7 +2988,7 @@
             ],
             "frozen": false,
             "icon": "layout-template",
-            "last_updated": "2026-02-10T18:00:06.926Z",
+            "last_updated": "2026-02-15T23:36:39.845Z",
             "legacy": false,
             "lf_version": "1.8.0",
             "metadata": {
@@ -3036,7 +3045,7 @@
             "pinned": false,
             "template": {
               "_frontend_node_flow_id": {
-                "value": "6205030e-89d1-4252-b7a1-53f86d9e0a8b"
+                "value": "9a62a3b7-0cf7-4655-b232-2b6cceff93d8"
               },
               "_frontend_node_folder_id": {
                 "value": "6c1537d9-9622-4758-ab0f-3983c1aab596"
@@ -3189,12 +3198,14 @@
                   {
                     "description": "Header name",
                     "display_name": "Header",
+                    "formatter": "text",
                     "name": "key",
                     "type": "str"
                   },
                   {
                     "description": "Header value",
                     "display_name": "Value",
+                    "formatter": "text",
                     "name": "value",
                     "type": "str"
                   }
@@ -3378,29 +3389,28 @@
           "showNode": false,
           "type": "URLComponent"
         },
-        "dragging": false,
-        "id": "URLComponent-YrTbg",
+        "id": "URLComponent-XYOnr",
         "measured": {
           "height": 52,
           "width": 192
         },
         "position": {
-          "x": 1753.7586062145822,
-          "y": 388.1179818585685
+          "x": 2357.304881327437,
+          "y": 295.6898463264248
         },
         "selected": false,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": -722.3438063946892,
-      "y": -10.261779009705265,
-      "zoom": 0.5022211236351517
+      "x": -185.3425962781231,
+      "y": 121.07928269587848,
+      "zoom": 0.32578678734082545
     }
   },
   "description": "A simple but powerful starter agent.",
   "endpoint_name": null,
-  "id": "6205030e-89d1-4252-b7a1-53f86d9e0a8b",
+  "id": "9a62a3b7-0cf7-4655-b232-2b6cceff93d8",
   "is_component": false,
   "last_tested_version": "1.8.0",
   "name": "Langflow Assistant",

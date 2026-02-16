@@ -53,6 +53,7 @@ interface AssistantInputProps {
   currentStep?: AgenticStepType | null;
   placeholder?: string;
   compact?: boolean;
+  autoFocus?: boolean;
 }
 
 export function AssistantInput({
@@ -63,6 +64,7 @@ export function AssistantInput({
   currentStep = null,
   placeholder,
   compact = false,
+  autoFocus = false,
 }: AssistantInputProps) {
   const [message, setMessage] = useState("");
 
@@ -96,6 +98,13 @@ export function AssistantInput({
   );
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // Auto-focus textarea when requested
+  useEffect(() => {
+    if (autoFocus && textareaRef.current && !disabled && !isProcessing) {
+      textareaRef.current.focus();
+    }
+  }, [autoFocus]);
+
   // Save to localStorage when model changes
   useEffect(() => {
     if (selectedModel) {
@@ -117,6 +126,9 @@ export function AssistantInput({
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
+    }
+    if (e.key === "Escape") {
+      textareaRef.current?.blur();
     }
   };
 
@@ -143,7 +155,9 @@ export function AssistantInput({
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={
-              isPostGenerationStep ? "" : (placeholder ?? ASSISTANT_PLACEHOLDER)
+              isProcessing
+                ? (isPostGenerationStep ? "" : "Working on it...")
+                : (placeholder ?? ASSISTANT_PLACEHOLDER)
             }
             disabled={disabled || isProcessing}
             className={cn(
