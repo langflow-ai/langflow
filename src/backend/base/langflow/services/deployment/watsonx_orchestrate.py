@@ -27,12 +27,15 @@ from ibm_watsonx_orchestrate_core.types.connections import (
 from ibm_watsonx_orchestrate_core.types.tools.langflow_tool import create_langflow_tool
 from lfx.services.deployment.base import BaseDeploymentService
 from lfx.services.deployment.exceptions import (
+    AuthSchemeError,
+    CredentialResolutionError,
     DeploymentConflictError,
     DeploymentError,
-    UnprocessableContentError,
-    UnsupportedDeploymentTypeError,
+    DeploymentSupportError,
+    InvalidContentError,
 )
 from lfx.services.deployment.schema import (
+    DEPLOYMENT_CREATE_SCHEMA,
     ArtifactType,
     BaseConfigData,
     BaseDeploymentData,
@@ -60,18 +63,27 @@ if TYPE_CHECKING:
     from lfx.services.settings.service import SettingsService
 
 
-DEFAULT_WXO_INSTANCE_URL_VARIABLE = "WXO_INSTANCE_URL"
-DEFAULT_WXO_API_KEY_VARIABLE = "WXO_API_KEY"
-DEFAULT_WXO_AWS_IAM_URL_VARIABLE = "WXO_AWS_IAM_URL"
-DEFAULT_WXO_AUTH_TYPE_VARIABLE = "WXO_AUTH_TYPE"
-DEFAULT_WXO_AUTH_TYPE = "mcsp" # TODO: derive the auth type from the wxo instance url and/or iam url
-
 DEFAULT_LANGFLOW_RUNNER_MODULES = {"lfx", "lfx-nightly"}
 # TODO: use src/lfx/src/lfx/custom/dependency_analyzer.py instead to get the lfx version.
 DEFAULT_LANGFLOW_TOOL_REQUIREMENTS = ["lfx==0.3.0"]
 DEFAULT_ADAPTER_SNAPSHOT_TYPE = "langflow"
 DEFAULT_ADAPTER_DEPLOYMENT_TYPE = "agent"
 SUPPORTED_ADAPTER_DEPLOYMENT_TYPES = {DEFAULT_ADAPTER_DEPLOYMENT_TYPE}
+
+class WxOUserKey(str, Enum):
+    INSTANCE_URL = "DEPLOYMENT_SERVICE_BACKEND_WXO_URL"
+    API_KEY = "DEPLOYMENT_SERVICE_BACKEND_WXO_API_KEY"
+
+
+class WoAuthType(str, Enum):
+    MCSP="mcsp"
+    IBM_IAM="ibm_iam"
+
+
+AUTH_TYPE_MAPPING = {
+    WoAuthType.MCSP: "https://iam.platform.saas.ibm.com/siusermgr/api/1.0/apikeys/token",
+    WoAuthType.IBM_IAM: "https://iam.cloud.ibm.com/identity/token",
+}
 
 
 @dataclass(slots=True)
@@ -102,6 +114,7 @@ class ErrorPrefix(str, Enum):
     UPDATE_CONFIG = f"{ERROR_PREFIX} updating a deployment config: "
     DELETE_CONFIG = f"{ERROR_PREFIX} deleting a deployment config: "
 
+
 class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
     """Deployment adapter for Watsonx Orchestrate.
 
@@ -117,7 +130,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         super().__init__()
         self.settings_service = settings_service
         # TODO: cache clients per tenant, the current approach assumes only one tenant
-        self.clients = None
+        self._client_manager: WxOClient | None = None
         self.set_ready()
 
     async def create_deployment(
@@ -129,8 +142,6 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
     ) -> dict[str, Any]:
         """Create a deployment in Watsonx Orchestrate."""
         try:
-            deployment_data = deployment.data
-
             app_id: str = await self._process_config(
                 user_id=user_id,
                 db=db,
@@ -147,6 +158,8 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                     db=db,
                 )
 
+            deployment_data: BaseDeploymentData = deployment.data
+
             if deployment_data.type == WxODeployment.AGENT:
                 deployment_response: AgentUpsertResponse = (
                     await self._create_agent_deployment(
@@ -159,36 +172,58 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             else:
                 msg = (
                     f"{ErrorPrefix.CREATE.value}"
-                    f"Deployment type '{deployment_data.type.value}'"
+                    f"Deployment type '{deployment_data.type.value}' "
                     "is not supported for watsonx Orchestrate."
                     )
-                raise UnsupportedDeploymentTypeError(message=msg)
+                raise DeploymentSupportError(message=msg)
 
         except (ClientAPIException, HTTPException) as e:
-            if isinstance(e, ClientAPIException):
-                response_text = e.response.text
-                status_code = e.response.status_code
-            else:
-                response_text = e.detail
-                status_code = e.status_code
-
-            detail = self._extract_error_detail(response_text)
-            msg = f"{ErrorPrefix.CREATE.value}{detail}"
+            status_code = (
+                e.response.status_code
+                if isinstance(e, ClientAPIException)
+                else e.status_code
+            )
 
             if status_code == status.HTTP_409_CONFLICT:
-                raise DeploymentConflictError(message=msg) from e
+                msg = (
+                    f"{ErrorPrefix.CREATE.value}. "
+                    "One or more resources already exist. "
+                    "Pleasure the names and/or ids of the "
+                    "following resources to be unique: "
+                    f"- The deployment resource\n"
+                    f"- The deployment configuration resource\n"
+                    f"- The deployment snapshot resource"
+                )
+                raise DeploymentConflictError(message=msg) from None
+
             if status_code == status.HTTP_422_UNPROCESSABLE_CONTENT:
-                raise UnprocessableContentError(message=msg) from e
+                msg = (
+                    f"{ErrorPrefix.CREATE.value}. "
+                    "The deployment request entity is unprocessable. "
+                    "Please ensure the request entity is valid and complete. "
+                    "The expected schema is:\n"
+                    f"{DEPLOYMENT_CREATE_SCHEMA}"
+                )
+                raise InvalidContentError(message=msg) from None
 
-            raise DeploymentError(message=msg) from e
+            msg = (
+                f"{ErrorPrefix.CREATE.value}. "
+                "An unexpected error occurred while "
+                "creating a deployment in Watsonx Orchestrate."
+            )
+            raise DeploymentError(message=msg) from None
 
-        except UnsupportedDeploymentTypeError:
+        except DeploymentSupportError:
             raise
         except DeploymentError:
             raise
-        except Exception as e:
-            msg = f"{ErrorPrefix.CREATE.value} {e!s}"
-            raise DeploymentError(message=msg) from e
+        except Exception: # noqa: BLE001
+            msg = (
+                f"{ErrorPrefix.CREATE.value}. "
+                "An unexpected error occurred while "
+                "creating a deployment in Watsonx Orchestrate."
+            )
+            raise DeploymentError(message=msg) from None
 
         return DeploymentResult(
             id=deployment_response.id,
@@ -211,23 +246,42 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         deployment_type: DeploymentType | None = None,
         db: Any,
     ) -> list[dict[str, Any]]:
-        """List deployments (agents) from Watsonx Orchestrate."""
-        normalized_type = self._normalize_deployment_type(deployment_type) if deployment_type else None
-        clients = await self._get_provider_clients(user_id=user_id, db=db)
-        # Shape source:
-        # - SDK: AgentClient.get() proxies GET /agents?include_hidden=true.
-        # - API: list endpoint returns list of agent objects.
-        data = clients.agent.get()
-        deployments = [
-            self._get_deployment_metadata(
-                data=agent,
-                deployment_type=DEFAULT_ADAPTER_DEPLOYMENT_TYPE,
+        """List deployments from Watsonx Orchestrate."""
+        client_manager = await self._get_provider_clients(user_id=user_id, db=db)
+        try:
+            # Shape source:
+            # - SDK: AgentClient.get() proxies GET /agents?include_hidden=true.
+            # - API: list endpoint returns list of agent objects.
+            deployments: list[dict[str, Any]] = []
+            if deployment_type == WxODeployment.AGENT.value or deployment_type is None:
+                data = client_manager.agent.get()
+                deployments = [
+                    self._get_deployment_metadata(
+                        data=agent,
+                        deployment_type=WxODeployment.AGENT,
+                    )
+                    for agent in data
+                ]
+            else:
+                msg = (
+                    f"{ErrorPrefix.LIST.value}"
+                    f"watsonx Orchestrate has no such deployment type '{deployment_type}'."
+                )
+                raise DeploymentSupportError(message=msg)
+        except ClientAPIException:
+            msg = (
+                f"{ErrorPrefix.LIST.value}. "
+                "Failed to list deployments from Watsonx Orchestrate."
             )
-            for agent in data
-        ]
-        if normalized_type is None:
-            return deployments
-        return [deployment for deployment in deployments if deployment.get("deployment_type") == normalized_type]
+            raise DeploymentError(message=msg) from None
+        except Exception: # noqa: BLE001
+            msg = (
+                f"{ErrorPrefix.LIST.value}. "
+                "An unexpected error occurred while listing deployments from Watsonx Orchestrate."
+            )
+            raise DeploymentError(message=msg) from None
+
+        return deployments
 
     async def get_deployment(
         self,
@@ -237,8 +291,8 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         db: Any,
     ) -> dict[str, Any]:
         """Get a deployment (agent) from Watsonx Orchestrate."""
-        clients = await self._get_provider_clients(user_id=user_id, db=db)
-        agent = clients.agent.get_draft_by_id(deployment_id)
+        client_manager = await self._get_provider_clients(user_id=user_id, db=db)
+        agent = client_manager.agent.get_draft_by_id(deployment_id)
         if not agent:
             msg = f"Deployment '{deployment_id}' not found."
             raise ValueError(msg)
@@ -620,47 +674,75 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         user_id: UUID | str,
         db: Any,
     ) -> WxOClient:
-        if self.clients is not None:
-            return self.clients
-        creds_dict = await self._resolve_wxo_client_credentials(user_id=user_id, db=db)
-        credentials = Credentials(
-            url=creds_dict["instance_url"],
-            api_key=creds_dict["api_key"],
-            iam_url=creds_dict.get("iam_url"),
-            auth_type=creds_dict.get("auth_type") or DEFAULT_WXO_AUTH_TYPE,
+        if self._client_manager is not None:
+            return self._client_manager
+
+        credentials = await self._resolve_wxo_client_credentials(
+            user_id=user_id, db=db
         )
+
+        # the Client class is not functionally needed here
+        # but it performs useful validation of the credentials
         client = Client(credentials)
-        self.clients = WxOClient(
+
+        self._client_manager = WxOClient(
             tool=ToolClient(base_url=credentials.url, api_key=client.token),
             connections=ConnectionsClient(base_url=credentials.url, api_key=client.token),
             agent=AgentClient(base_url=credentials.url, api_key=client.token),
         )
-        return self.clients
+
+        return self._client_manager
 
     async def _resolve_wxo_client_credentials(
         self,
         *,
         user_id: UUID | str,
         db: Any,
-    ) -> dict[str, str]:
+    ) -> Credentials:
         """Resolve Watsonx Orchestrate client credentials from environment variables."""
-        return {
-            "instance_url": await self._resolve_variable_value(
-                DEFAULT_WXO_INSTANCE_URL_VARIABLE, user_id=user_id, db=db
-            ),
-            "api_key": await self._resolve_variable_value(
-                DEFAULT_WXO_API_KEY_VARIABLE, user_id=user_id, db=db),
-            "iam_url": await self._resolve_variable_value(
-                DEFAULT_WXO_AWS_IAM_URL_VARIABLE, user_id=user_id, db=db, optional=True
-            ),
-            "auth_type": await self._resolve_variable_value(
-                DEFAULT_WXO_AUTH_TYPE_VARIABLE,
-                user_id=user_id,
-                db=db,
-                optional=True,
-                default_value=DEFAULT_WXO_AUTH_TYPE,
-            ),
-        }
+        try:
+            instance_url = await self._resolve_variable_value(
+                    WxOUserKey.INSTANCE_URL.value, user_id=user_id, db=db
+                )
+
+            api_key = await self._resolve_variable_value(
+                    WxOUserKey.API_KEY.value, user_id=user_id, db=db
+                )
+
+            auth_type = self._infer_auth_type_from_instance_url(instance_url)
+            iam_url = AUTH_TYPE_MAPPING[auth_type]
+
+        # please ensure that when raising or re-raising an exception,
+        # that the message does not leak sensitive information
+        except KeyError as e:
+            if "AUTH_TYPE_MAPPING" in str(e):
+                msg = (
+                    "Could not determine authentication scheme for "
+                    "watsonX Orchestrate deployment provider."
+                    )
+                raise AuthSchemeError(message=msg) from None
+            msg = (
+                "A lookup operation failed when resolving "
+                "Watsonx Orchestrate client credentials for deployment."
+                )
+            raise KeyError(message=msg) from None
+        except AuthSchemeError: # custom exception managed by us, so we re-raise
+            raise
+        except CredentialResolutionError: # custom exception managed by us
+            raise
+        except Exception: # noqa: BLE001
+            msg = (
+                "Could not resolve Watsonx Orchestrate client credentials. "
+                "Please ensure valid credentials are set for the user."
+                )
+            raise CredentialResolutionError(message=msg) from None
+
+        return Credentials(
+            url=instance_url,
+            api_key=api_key,
+            iam_url=iam_url,
+            auth_type=auth_type,
+        )
 
     async def _resolve_runtime_credentials(
         self,
@@ -708,8 +790,12 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 raise
         if optional:
             return default_value or ""
-        msg = f"Required variable '{variable_name}' is not set."
-        raise ValueError(msg)
+        msg = (
+            "Failed to find a necessary credential for the "
+            "watsonX Orchestrate deployment provider. "
+            "Please ensure all credentials are provided and valid."
+            )
+        raise CredentialResolutionError(message=msg)
 
     def _validate_connection(self, connections_client: ConnectionsClient, *, app_id: str) -> None:
         config = connections_client.get_config(app_id=app_id, env=ConnectionEnvironment.DRAFT)
@@ -839,14 +925,14 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
     def _get_deployment_metadata(
         self,
         data: dict[str, Any],
-        deployment_type: DeploymentType,
+        deployment_type: WxODeployment,
         provider_raw: bool = False, # noqa: FBT001,FBT002
     ) -> dict[str, Any]:
         result = {
-            "deployment_id": data["id"],
-            "name": data["name"],
-            "description": data["description"],
-            "deployment_type": deployment_type.value,
+            "id": data.get("id"),
+            "type": deployment_type.value,
+            "name": data.get("name"),
+            "description": data.get("description"),
         }
         if provider_raw:
             result["provider_raw"] = data
@@ -998,3 +1084,14 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         if isinstance(detail, dict):
             detail = detail.get("msg") or detail
         return detail
+
+    @staticmethod
+    def _infer_auth_type_from_instance_url(instance_url: str) -> WoAuthType:
+        """Infer the authentication type from the instance URL."""
+        if ".cloud.ibm.com" in instance_url:
+            return WoAuthType.IBM_IAM
+        if ".ibm.com" in instance_url:
+            return WoAuthType.MCSP
+
+        msg = f"Could not determine authentication scheme for instance URL: {instance_url}"
+        raise AuthSchemeError(message=msg)

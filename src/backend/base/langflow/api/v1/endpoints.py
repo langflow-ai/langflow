@@ -24,7 +24,7 @@ from lfx.graph.graph.base import Graph
 from lfx.graph.schema import RunOutputs
 from lfx.log.logger import logger
 from lfx.schema.schema import InputValueRequest
-from lfx.services.deployment.exceptions import DeploymentConflictError, DeploymentError, UnprocessableContentError
+from lfx.services.deployment.exceptions import DeploymentConflictError, DeploymentError, InvalidContentError
 from lfx.services.deployment.schema import ArtifactType, DeploymentCreate, DeploymentResult
 from lfx.services.deps import get_deployment_service
 from lfx.services.interfaces import DeploymentServiceProtocol
@@ -997,7 +997,7 @@ async def deploy(
         )
     except DeploymentConflictError as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=e.message) from e
-    except UnprocessableContentError as e:
+    except InvalidContentError as e:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=e.message) from e
     except DeploymentError as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=e.message) from e

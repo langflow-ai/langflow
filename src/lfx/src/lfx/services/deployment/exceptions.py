@@ -17,10 +17,24 @@ class DeploymentError(Exception):
 
 
 class AuthenticationError(DeploymentError):
-    """Base exception for authentication failures."""
+    """Base exception for authentication failures.
+
+    Please ensure that the message does not leak sensitive information.
+    """
 
     def __init__(self, message: str, *, error_code: str | None = None):
         super().__init__(message=message, error_code=error_code)
+
+
+class CredentialResolutionError(AuthenticationError):
+    """Raised when credentials resolution fails.
+
+    Please ensure that the message does not leak sensitive information.
+    """
+
+    def __init__(self, message: str = "Credentials resolution failed"):
+        super().__init__(message, error_code="credentials_resolution_error")
+
 
 class DeploymentConflictError(DeploymentError):
     """Raised when a deployment conflict occurs."""
@@ -28,14 +42,26 @@ class DeploymentConflictError(DeploymentError):
     def __init__(self, message: str = "Deployment conflict occurred"):
         super().__init__(message, error_code="deployment_conflict")
 
-class UnprocessableContentError(DeploymentError):
+
+class InvalidContentError(DeploymentError):
     """Raised when a deployment request entity is unprocessable."""
 
     def __init__(self, message: str = "Deployment request entity is unprocessable"):
         super().__init__(message, error_code="unprocessable_content_error")
 
-class UnsupportedDeploymentTypeError(DeploymentError):
+
+class DeploymentSupportError(DeploymentError):
     """Raised when a deployment type is unsupported."""
 
     def __init__(self, message: str = "Deployment type is unsupported"):
         super().__init__(message, error_code="unsupported_deployment_type")
+
+
+class AuthSchemeError(AuthenticationError):
+    """Raised when no matching authentication scheme was found.
+
+    Please ensure that the message does not leak sensitive information.
+    """
+
+    def __init__(self, message: str = "No matching authentication scheme was found"):
+        super().__init__(message, error_code="unsupported_auth_type")

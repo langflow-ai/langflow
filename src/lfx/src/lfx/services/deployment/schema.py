@@ -1,3 +1,4 @@
+import json
 from enum import Enum
 from typing import Annotated, Literal
 from uuid import UUID
@@ -253,6 +254,9 @@ class DeploymentCreate(BaseModel):
     data: BaseDeploymentData = Field(description="The base metadata of the deployment")
     snapshot: SnapshotItems | None = Field(None, description="The snapshots of the deployment")
     config: ConfigItem | None = Field(None, description="The config of the deployment")
+
+
+DEPLOYMENT_CREATE_SCHEMA = json.dumps(DeploymentCreate.model_json_schema(), indent=2)
 
 
 class BaseDeploymentDataUpdate(BaseModel):
