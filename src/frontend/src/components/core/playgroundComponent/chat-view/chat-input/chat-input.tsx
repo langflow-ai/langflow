@@ -239,7 +239,6 @@ export default function ChatInput({
       >
         <InputWrapper
           isBuilding={isBuilding}
-          stopBuilding={stopBuilding}
           checkSendingOk={checkSendingOk}
           send={send}
           noInput={noInput}

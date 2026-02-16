@@ -79,14 +79,14 @@ describe("CanvasControlsDropdown", () => {
   });
 
   it("renders current zoom percentage and toggles menu", () => {
-    render(<CanvasControlsDropdown selectedNode={null} />);
+    render(<CanvasControlsDropdown />);
     expect(screen.getByText("100%"));
     fireEvent.click(screen.getByTestId("canvas_controls_dropdown"));
     expect(screen.getByTestId("dropdown-content")).toBeInTheDocument();
   });
 
   it("handles zoom in/out, fit and reset via click", () => {
-    render(<CanvasControlsDropdown selectedNode={null} />);
+    render(<CanvasControlsDropdown />);
     fireEvent.click(screen.getByTestId("canvas_controls_dropdown"));
 
     fireEvent.click(screen.getByTestId("zoom_in"));
@@ -103,7 +103,7 @@ describe("CanvasControlsDropdown", () => {
   });
 
   it("handles keyboard shortcuts with modifier", () => {
-    render(<CanvasControlsDropdown selectedNode={null} />);
+    render(<CanvasControlsDropdown />);
 
     const keydown = (code: string) =>
       document.dispatchEvent(
@@ -137,7 +137,7 @@ describe("CanvasControlsDropdown", () => {
       }),
     );
 
-    render(<CanvasControlsDropdown selectedNode={null} />);
+    render(<CanvasControlsDropdown />);
 
     const keydown = (code: string) =>
       document.dispatchEvent(
@@ -165,7 +165,7 @@ describe("CanvasControlsDropdown", () => {
       }),
     );
 
-    render(<CanvasControlsDropdown selectedNode={null} />);
+    render(<CanvasControlsDropdown />);
 
     const keydown = (code: string) =>
       document.dispatchEvent(

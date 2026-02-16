@@ -1,6 +1,5 @@
 import { keepPreviousData } from "@tanstack/react-query";
 import useFlowStore from "@/stores/flowStore";
-import { getPlaygroundMessages } from "@/utils/playground-storage";
 import type { useQueryFunctionType } from "../../../../types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
@@ -30,9 +29,11 @@ export const useGetSessionsFromFlowQuery: useQueryFunctionType<
     if (!isPlaygroundPage) {
       return await api.get<string[]>(`${getURL("MESSAGES")}/sessions`, config);
     } else {
-      const messages = getPlaygroundMessages(id ?? "");
+      // For playground mode, get sessions from sessionStorage
+      const data = JSON.parse(window.sessionStorage.getItem(id ?? "") || "[]");
+      // Extract unique session IDs from stored messages
       const sessionIdsSet = new Set(
-        messages.map((msg) => msg.session_id).filter(Boolean),
+        data.map((msg: any) => msg.session_id).filter(Boolean),
       );
       const sessionIds = Array.from(sessionIdsSet);
 

@@ -3,6 +3,9 @@ import { useGetSessionsFromFlowQuery } from "@/controllers/API/queries/messages/
 import { useUpdateSessionName } from "@/controllers/API/queries/messages/use-rename-session";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 
+const LOCAL_SESSIONS_STORAGE_KEY = (flowId: string) =>
+  `langflow_local_sessions_${flowId}`;
+
 export const useEditSessionInfo = ({
   flowId,
   dbSessions: providedDbSessions,
@@ -16,6 +19,7 @@ export const useEditSessionInfo = ({
     (state) => state.setSelectedSession,
   );
   const selectedSession = usePlaygroundStore((state) => state.selectedSession);
+  const isPlayground = usePlaygroundStore((state) => state.isPlayground);
 
   // Only fetch if dbSessions not provided (to avoid duplicate queries)
   const { data: dbSessionsResponse } = useGetSessionsFromFlowQuery(
@@ -42,7 +46,7 @@ export const useEditSessionInfo = ({
   };
 
   const handleRename = async (sessionId: string, newSessionId: string) => {
-    // Update session name via API or localStorage
+    // Update session name via API or sessionStorage
     await updateSessionName({
       old_session_id: sessionId,
       new_session_id: newSessionId,
