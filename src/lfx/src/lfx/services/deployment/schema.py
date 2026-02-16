@@ -5,25 +5,31 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator, model_validator
 
-DeploymentType = Annotated[
+DeploymentProviderName = Annotated[
     str,
     StringConstraints(strip_whitespace=True, min_length=1, max_length=128),
-] # deployment adapters can have varying deployment types.
+] # the name of the deployment provider.
 
+
+class DeploymentType(str, Enum):
+    """Deployment types supported by Langflow."""
+    AGENT = "agent"
+    MCP = "mcp"
 
 class ArtifactType(str, Enum):
-    """Artifact type."""
+    """Artifact types supported by Langflow."""
     FLOW = "flow"
     DOCUMENT = "document"
-# The artifacts to deploy belong to Langflow
 
 
 class SnapshotFormat(str, Enum):
+    """Snapshot formats.
+
+    - REFERENCE_ID: an existing snapshot is referenced by its id
+    - RAW_PAYLOAD: a snapshot is provided as a raw payload
+    """
     REFERENCE_ID = "reference_id"
     RAW_PAYLOAD = "raw_payload"
-# requests to the deployment service
-# can be either a reference snapshot by
-# id or provide a raw payload
 
 
 class BaseFlowArtifact(BaseModel):
@@ -31,9 +37,9 @@ class BaseFlowArtifact(BaseModel):
     model_config = ConfigDict(extra="allow") # e.g., viewport - good for viewing the flow in the UI
 
     id: UUID = Field(description="Unique identifier for the flow")
-    data: dict = Field(description="The data of the flow")
     name: str = Field(description="The name of the flow")
     description: str | None = Field(None, description="The description of the flow")
+    data: dict = Field(description="The data of the flow")
     tags: list[str] | None = Field(None, description="The tags of the flow")
 
     # TODO: validate presence of nodes and edges in data
@@ -57,6 +63,22 @@ SnapshotList = Annotated[
     list[BaseFlowArtifact] | list[BaseDocumentArtifact],
     Field(min_length=1)
 ]
+
+class SnapshotItem(BaseModel):
+    """Model representing a result for a snapshot item."""
+    id: UUID | str = Field(description="The id of the snapshot item")
+    name: str = Field(description="The name of the snapshot item")
+    description: str | None = Field(None, description="The description of the snapshot item")
+    provider_data: dict | None = Field(None, description="The data of the snapshot item from the provider")
+
+
+class SnapshotListResult(BaseModel):
+    """Model representing a result for a snapshot list operation."""
+    snapshots: list[SnapshotItem] = Field(description="The list of snapshots")
+    provider_result: dict | None = Field(
+        None, description="The result of the snapshot list operation from the provider"
+    )
+    artifact_type: ArtifactType | Literal["all"] = Field(default="all", description="The type of the snapshot items being referenced.")
 
 
 class SnapshotReferenceItems(BaseModel):
@@ -232,15 +254,38 @@ class BaseDeploymentData(BaseModel):
     name: str = Field(description="The name of the deployment")
     description: str = Field(default="", description="The description of the deployment")
     type: DeploymentType = Field(description="The type of the deployment")
-    provider_data: dict | None = Field(None, description="The data of the deployment from the provider")
+    provider_spec: dict | None = Field(None, description="The data of the deployment from the provider")
 
 
-class DeploymentResult(BaseDeploymentData):
+class DeploymentCreateResult(BaseDeploymentData):
     """Model representing a result for a deployment creation operation."""
     id: UUID | str = Field(description="The id of the created deployment")
     provider_result: dict | None = Field(
         None, description="The result of the deployment creation operation from the provider"
     )
+
+class DeploymentDeleteResult(BaseModel):
+    """Model representing a result for a deployment deletion operation."""
+    id: UUID | str = Field(description="The id of the deleted deployment")
+    provider_result: dict | None = Field(
+        None, description="The result of the deployment deletion operation from the provider"
+    )
+
+
+class DeploymentListItemResult(BaseModel):
+    """Model representing a result for a deployment list item."""
+    id: UUID | str = Field(description="The id of the deployment")
+    provider_data: dict | None = Field(None, description="The data of the deployment from the provider")
+
+
+class DeploymentListResult(BaseModel):
+    """Model representing a result for a deployment list operation."""
+    deployments: list[DeploymentListItemResult] = Field(description="The list of deployments")
+    deployment_type: DeploymentType | None = Field(None, description="The type of the deployment")
+    provider_result: dict | None = Field(
+        None, description="The result of the deployment list operation from the provider"
+        )
+
 
 class SnapshotResult(BaseModel):
     """Model representing a result for a snapshot creation operation."""
@@ -251,7 +296,9 @@ class SnapshotResult(BaseModel):
 
 class DeploymentCreate(BaseModel):
     """Deployment create payload."""
-    data: BaseDeploymentData = Field(description="The base metadata of the deployment")
+    # provider: DeploymentProviderName = Field(description="The name of the deployment provider.")
+    # account_id: str = Field(description="The id of the account / tenant/ organization registered with the deployment provider.")
+    spec: BaseDeploymentData = Field(description="The base metadata of the deployment")
     snapshot: SnapshotItems | None = Field(None, description="The snapshots of the deployment")
     config: ConfigItem | None = Field(None, description="The config of the deployment")
 

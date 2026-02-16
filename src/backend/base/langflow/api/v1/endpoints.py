@@ -24,12 +24,7 @@ from lfx.graph.graph.base import Graph
 from lfx.graph.schema import RunOutputs
 from lfx.log.logger import logger
 from lfx.schema.schema import InputValueRequest
-from lfx.services.deployment.exceptions import DeploymentConflictError, DeploymentError, InvalidContentError
-from lfx.services.deployment.schema import ArtifactType, DeploymentCreate, DeploymentResult
-from lfx.services.deps import get_deployment_service
-from lfx.services.interfaces import DeploymentServiceProtocol
 from lfx.services.settings.service import SettingsService
-from pydantic import BaseModel, Field
 from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession, extract_global_variables_from_headers, parse_value
@@ -72,28 +67,6 @@ router = APIRouter(tags=["Base"])
 
 # SSE Constants
 SSE_HEARTBEAT_TIMEOUT_SECONDS = 30.0
-
-
-class CreateDeploymentRequest(DeploymentCreate):
-    """Create deployment request."""
-
-
-class CreateDeploymentResponse(DeploymentResult):
-    """Create deployment response."""
-
-
-class DeleteDeploymentRequest(BaseModel):
-    deployment_id: str = Field(min_length=1)
-
-
-def _require_deployment_service() -> DeploymentServiceProtocol:
-    deployment_service = get_deployment_service()
-    if deployment_service is None:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Deployment service is not available.",
-        )
-    return deployment_service
 
 
 async def parse_input_request_from_body(http_request: Request) -> SimplifiedAPIRequest:
@@ -626,7 +599,9 @@ async def simplified_run_flow(
     )
 
 
-@router.post("/run/session/{flow_id_or_name}", response_model=None, response_model_exclude_none=True)
+@router.post(
+    "/run/session/{flow_id_or_name}", response_model=None, response_model_exclude_none=True, include_in_schema=False
+)
 async def simplified_run_flow_session(
     *,
     background_tasks: BackgroundTasks,
@@ -692,7 +667,7 @@ async def simplified_run_flow_session(
     )
 
 
-@router.get("/webhook-events/{flow_id_or_name}")
+@router.get("/webhook-events/{flow_id_or_name}", include_in_schema=False)
 async def webhook_events_stream(
     flow_id_or_name: str,  # noqa: ARG001 - Used by get_flow_by_id_or_endpoint_name dependency
     flow: Annotated[Flow, Depends(get_flow_by_id_or_endpoint_name)],
@@ -963,10 +938,12 @@ async def experimental_run_flow(
 @router.post(
     "/predict/{_flow_id}",
     dependencies=[Depends(api_key_security)],
+    include_in_schema=False,
 )
 @router.post(
     "/process/{_flow_id}",
     dependencies=[Depends(api_key_security)],
+    include_in_schema=False,
 )
 async def process(_flow_id) -> None:
     """Endpoint to process an input with a given flow_id."""
@@ -980,79 +957,7 @@ async def process(_flow_id) -> None:
     )
 
 
-@router.post("/deploy", response_model=CreateDeploymentResponse)
-async def deploy(
-    user: CurrentActiveUser,
-    payload: CreateDeploymentRequest,
-    db: DbSession,
-):
-    """Create a deployment through the configured deployment adapter."""
-    deployment_service = _require_deployment_service()
-    # print(payload)
-    try:
-        result = await deployment_service.create_deployment(
-            user_id=user.id,
-            deployment=payload,
-            db=db,
-        )
-    except DeploymentConflictError as e:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=e.message) from e
-    except InvalidContentError as e:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=e.message) from e
-    except DeploymentError as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=e.message) from e
-    except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
-
-    return result # can return directly for now due to inheritance
-
-
-@router.delete("/deployment", response_model=dict)
-async def delete_deployment(
-    payload: DeleteDeploymentRequest,
-    db: DbSession,
-    user: CurrentActiveUser,
-):
-    """Delete a deployment through the configured deployment adapter."""
-    deployment_service = _require_deployment_service()
-    try:
-        await deployment_service.delete_deployment(
-            deployment_id=payload.deployment_id,
-            user_id=user.id,
-            db=db,
-        )
-    except HTTPException as e:
-        message = "Something went wrong while deleting the deployment."
-        raise HTTPException(status_code=e.status_code, detail=message) from e
-    except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
-    except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
-    return {"message": "Deployment deleted successfully."}
-
-
-
-@router.get("/snapshot", response_model=list[dict])
-async def list_snapshots(
-    user: CurrentActiveUser,
-    db: DbSession,
-    artifact_type: ArtifactType | None = None,
-):
-    """List snapshots through the configured deployment adapter."""
-    deployment_service = _require_deployment_service()
-    try:
-        return await deployment_service.list_snapshots(
-            user_id=user.id,
-            artifact_type=artifact_type,
-            db=db,
-        )
-    except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
-    except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
-
-
-@router.get("/task/{_task_id}", deprecated=True)
+@router.get("/task/{_task_id}", deprecated=True, include_in_schema=False)
 async def get_task_status(_task_id: str) -> TaskStatusResponse:
     """Get the status of a task by ID (Deprecated).
 
@@ -1068,6 +973,7 @@ async def get_task_status(_task_id: str) -> TaskStatusResponse:
     "/upload/{flow_id}",
     status_code=HTTPStatus.CREATED,
     deprecated=True,
+    include_in_schema=False,
 )
 async def create_upload_file(
     file: UploadFile,
@@ -1096,7 +1002,7 @@ async def get_version():
     return get_version_info()
 
 
-@router.post("/custom_component", status_code=HTTPStatus.OK)
+@router.post("/custom_component", status_code=HTTPStatus.OK, include_in_schema=False)
 async def custom_component(
     raw_code: CustomComponentRequest,
     user: CurrentActiveUser,
@@ -1118,7 +1024,7 @@ async def custom_component(
     return CustomComponentResponse(data=built_frontend_node, type=type_)
 
 
-@router.post("/custom_component/update", status_code=HTTPStatus.OK)
+@router.post("/custom_component/update", status_code=HTTPStatus.OK, include_in_schema=False)
 async def custom_component_update(
     code_request: UpdateCustomComponentRequest,
     user: CurrentActiveUser,

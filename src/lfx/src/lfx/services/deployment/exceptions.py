@@ -65,3 +65,17 @@ class AuthSchemeError(AuthenticationError):
 
     def __init__(self, message: str = "No matching authentication scheme was found"):
         super().__init__(message, error_code="unsupported_auth_type")
+
+
+class InvalidDeploymentTypeError(DeploymentError):
+    """Raised when an invalid deployment type is provided."""
+
+    def __init__(self, message: str = "Invalid deployment type"):
+        super().__init__(message, error_code="invalid_deployment_type")
+
+
+class DeploymentNotFoundError(DeploymentError):
+    """Raised when a deployment is not found."""
+
+    def __init__(self, message: str = "Deployment not found"):
+        super().__init__(message, error_code="deployment_not_found")

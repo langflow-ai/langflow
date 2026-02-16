@@ -6,7 +6,13 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING, Any
 
 from lfx.services.deployment.base import BaseDeploymentService
-from lfx.services.deployment.schema import ArtifactType, SnapshotItemsCreate, SnapshotResult
+from lfx.services.deployment.schema import (
+    ArtifactType,
+    DeploymentCreateResult,
+    DeploymentListResult,
+    SnapshotItemsCreate,
+    SnapshotResult,
+)
 from lfx.services.registry import register_service
 from lfx.services.schema import ServiceType
 
@@ -54,7 +60,7 @@ class DeploymentService(BaseDeploymentService):
         user_id: UUID | str,
         deployment: DeploymentCreate,
         db: Any,
-    ) -> dict[str, Any]:
+    ) -> DeploymentCreateResult:
         """Create a new deployment in the provider."""
         raise NotImplementedError
 
@@ -75,7 +81,7 @@ class DeploymentService(BaseDeploymentService):
         user_id: UUID | str,
         deployment_type: DeploymentType | None = None,
         db: Any,
-    ) -> list[dict[str, Any]]:
+    ) -> DeploymentListResult:
         """List deployments visible to this adapter."""
         raise NotImplementedError
 

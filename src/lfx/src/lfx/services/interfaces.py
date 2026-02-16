@@ -5,8 +5,6 @@ from __future__ import annotations
 from abc import abstractmethod
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
-from lfx.services.deployment.schema import DeploymentResult, SnapshotItemsCreate, SnapshotResult
-
 if TYPE_CHECKING:
     import asyncio
     from uuid import UUID
@@ -18,8 +16,12 @@ if TYPE_CHECKING:
         BaseConfigData,
         ConfigUpdate,
         DeploymentCreate,
+        DeploymentCreateResult,
+        DeploymentDeleteResult,
         DeploymentType,
         DeploymentUpdate,
+        SnapshotItemsCreate,
+        SnapshotResult,
     )
     from lfx.services.settings.base import Settings
 
@@ -230,7 +232,7 @@ class DeploymentServiceProtocol(Protocol):
         user_id: UUID | str,
         deployment: DeploymentCreate,
         db: Any,
-    ) -> DeploymentResult:
+    ) -> DeploymentCreateResult:
         """Create a new deployment in the provider."""
         ...
 
@@ -306,7 +308,7 @@ class DeploymentServiceProtocol(Protocol):
         user_id: UUID | str,
         deployment_id: str,
         db: Any,
-    ) -> None:
+    ) -> DeploymentDeleteResult:
         """Delete the deployment from the provider."""
         ...
 
