@@ -1107,7 +1107,7 @@ def get_llm(
         # For Ollama, use component base_url or fall back to OLLAMA_BASE_URL variable
         base_url_param = metadata.get("base_url_param", "base_url")
         url_val = ollama_base_url
-        if hasattr(ollama_base_url, "text") and isinstance(getattr(ollama_base_url, "text"), str):
+        if hasattr(ollama_base_url, "text") and isinstance(ollama_base_url.text, str):
             url_val = ollama_base_url.text
         if not (isinstance(url_val, str) and url_val.strip()):
             url_val = get_ollama_base_url_from_variable(user_id)
@@ -1164,25 +1164,25 @@ def _merge_ollama_models_from_api(component: Any, build_config: dict, options: l
         logger.debug("Could not fetch Ollama models from %s: %s", base_url, e)
         return
 
-    existing_ollama_names = {
-        opt["name"] for opt in options if opt.get("provider") == "Ollama"
-    }
+    existing_ollama_names = {opt["name"] for opt in options if opt.get("provider") == "Ollama"}
     for model_name in fetched:
         if model_name in existing_ollama_names:
             continue
-        options.append({
-            "name": model_name,
-            "icon": "Ollama",
-            "category": "Ollama",
-            "provider": "Ollama",
-            "metadata": {
-                "context_length": 128000,
-                "model_class": "ChatOllama",
-                "model_name_param": "model",
-                "api_key_param": "base_url",
-                "base_url_param": "base_url",
-            },
-        })
+        options.append(
+            {
+                "name": model_name,
+                "icon": "Ollama",
+                "category": "Ollama",
+                "provider": "Ollama",
+                "metadata": {
+                    "context_length": 128000,
+                    "model_class": "ChatOllama",
+                    "model_name_param": "model",
+                    "api_key_param": "base_url",
+                    "base_url_param": "base_url",
+                },
+            }
+        )
 
 
 def _get_ollama_base_url_from_component(component: Any, build_config: dict) -> str | None:
@@ -1190,8 +1190,8 @@ def _get_ollama_base_url_from_component(component: Any, build_config: dict) -> s
     url = getattr(component, "ollama_base_url", None)
     if isinstance(url, str) and url.strip():
         return url.strip()
-    if hasattr(url, "text") and isinstance(getattr(url, "text"), str) and getattr(url, "text").strip():
-        return getattr(url, "text").strip()
+    if hasattr(url, "text") and isinstance(url.text, str) and url.text.strip():
+        return url.text.strip()
     build_ollama = build_config.get("ollama_base_url") or {}
     url = build_ollama.get("value") if isinstance(build_ollama, dict) else None
     if isinstance(url, str) and url.strip():

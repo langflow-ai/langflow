@@ -95,8 +95,10 @@ class TestModelInputStaticOptions:
     @patch("lfx.base.models.unified_models.get_ollama_models")
     def test_dynamic_options_still_refresh(self, mock_get_ollama_models):
         """When no options are provided, dynamic refresh should still work and merge Ollama models from API."""
+
         async def _return_ollama_models(*args, **kwargs):  # noqa: ARG001
             return ["local-ollama-model"]
+
         mock_get_ollama_models.side_effect = _return_ollama_models
         # Setup: Component WITHOUT static options, with ollama_base_url so merge runs
         component = MagicMock()
