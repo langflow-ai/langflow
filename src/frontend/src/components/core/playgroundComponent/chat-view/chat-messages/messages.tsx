@@ -1,4 +1,4 @@
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { StickToBottom } from "use-stick-to-bottom";
 import { SafariScrollFix } from "@/components/common/safari-scroll-fix";
 import useFlowStore from "@/stores/flowStore";
@@ -28,13 +28,14 @@ export const Messages = ({
 
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
+  useEffect(() => {
+    // Always scroll to bottom when new messages arrive or thinking starts
+    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [chatHistory.length, isBuilding]);
+
   // Show thinking placeholder when building and last message is from user (no bot response yet)
-  // Only show if the flow has a ChatOutput, otherwise there's nothing to produce a response
-  const outputs = useFlowStore((state) => state.outputs);
-  const hasChatOutput = outputs.some((output) => output.type === "ChatOutput");
   const lastChat = chatHistory[chatHistory.length - 1];
-  const showThinkingPlaceholder =
-    isBuilding && lastChat?.isSend === true && hasChatOutput;
+  const showThinkingPlaceholder = isBuilding && lastChat?.isSend === true;
 
   const thinkingPlaceholder = useMemo<ChatMessageType>(
     () => ({
@@ -50,7 +51,7 @@ export const Messages = ({
   );
 
   const messagesContent = (
-    <div className="flex flex-col flex-grow place-self-center w-full relative overflow-x-hidden pt-2">
+    <div className="flex flex-col flex-grow place-self-center w-full relative overflow-x-hidden">
       {chatHistory && (isBuilding || chatHistory.length > 0) && (
         <>
           {chatHistory.map((chat: ChatMessageType, index) => {

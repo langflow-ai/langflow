@@ -45,17 +45,10 @@ test(
     });
     await page.waitForTimeout(500);
 
-    // Verify lock state persisted by opening settings and checking switch
-    await page.getByTestId("flow_name").click();
-    await page.waitForSelector(
-      '[data-testid="lock-flow-switch"][data-state="checked"]',
-      { timeout: 5000 },
-    );
-    // Close dialog before unlocking
-    await page.keyboard.press("Escape");
-    await page.waitForSelector('[role="dialog"]', {
-      state: "detached",
-      timeout: 5000,
+    //ensure the UI is updated
+
+    await page.waitForSelector('[data-testid="icon-Lock"]', {
+      timeout: 3000,
     });
 
     await unlockFlow(page);

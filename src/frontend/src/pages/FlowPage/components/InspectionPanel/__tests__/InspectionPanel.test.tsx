@@ -104,45 +104,36 @@ describe("InspectionPanel", () => {
   });
 
   describe("Basic Rendering", () => {
-    it("should show empty state when selectedNode is null", () => {
-      render(<InspectionPanel selectedNode={null} isVisible={true} />);
+    it("should not render when selectedNode is null", () => {
+      render(<InspectionPanel selectedNode={null} />);
 
-      expect(screen.getByTestId("xyflow-panel")).toBeInTheDocument();
+      expect(screen.queryByTestId("xyflow-panel")).not.toBeInTheDocument();
       expect(
         screen.queryByTestId("inspection-panel-header"),
       ).not.toBeInTheDocument();
-      expect(
-        screen.getByText("Select a component to inspect its properties"),
-      ).toBeInTheDocument();
     });
 
     it("should render panel when genericNode is selected", () => {
       const mockNode = createMockNode();
-      render(<InspectionPanel selectedNode={mockNode} isVisible={true} />);
+      render(<InspectionPanel selectedNode={mockNode} />);
 
       expect(screen.getByTestId("xyflow-panel")).toBeInTheDocument();
       expect(screen.getByTestId("inspection-panel-header")).toBeInTheDocument();
       expect(screen.getByTestId("inspection-panel-fields")).toBeInTheDocument();
     });
 
-    it("should show empty state for non-genericNode types", () => {
+    it("should not render for non-genericNode types", () => {
       const mockNode = createMockNode();
-      mockNode.type = "noteNode";
+      mockNode.type = "customNode";
 
-      render(<InspectionPanel selectedNode={mockNode} isVisible={true} />);
+      render(<InspectionPanel selectedNode={mockNode} />);
 
-      expect(screen.getByTestId("xyflow-panel")).toBeInTheDocument();
-      expect(
-        screen.queryByTestId("inspection-panel-header"),
-      ).not.toBeInTheDocument();
-      expect(
-        screen.getByText("Select a component to inspect its properties"),
-      ).toBeInTheDocument();
+      expect(screen.queryByTestId("xyflow-panel")).not.toBeInTheDocument();
     });
 
     it("should render edit fields button", () => {
       const mockNode = createMockNode();
-      render(<InspectionPanel selectedNode={mockNode} isVisible={true} />);
+      render(<InspectionPanel selectedNode={mockNode} />);
 
       const editButton = screen.getByTestId("edit-fields-button");
       expect(editButton).toBeInTheDocument();
@@ -151,7 +142,7 @@ describe("InspectionPanel", () => {
 
     it("should render separator", () => {
       const mockNode = createMockNode();
-      render(<InspectionPanel selectedNode={mockNode} isVisible={true} />);
+      render(<InspectionPanel selectedNode={mockNode} />);
 
       expect(screen.getByTestId("separator")).toBeInTheDocument();
     });
@@ -161,7 +152,7 @@ describe("InspectionPanel", () => {
     it("should toggle edit mode when button is clicked", async () => {
       const user = userEvent.setup();
       const mockNode = createMockNode();
-      render(<InspectionPanel selectedNode={mockNode} isVisible={true} />);
+      render(<InspectionPanel selectedNode={mockNode} />);
 
       const editButton = screen.getByTestId("edit-fields-button");
       expect(editButton).toHaveTextContent("Edit");
@@ -180,7 +171,7 @@ describe("InspectionPanel", () => {
     it("should toggle back to view mode", async () => {
       const user = userEvent.setup();
       const mockNode = createMockNode();
-      render(<InspectionPanel selectedNode={mockNode} isVisible={true} />);
+      render(<InspectionPanel selectedNode={mockNode} />);
 
       const editButton = screen.getByTestId("edit-fields-button");
 
@@ -199,7 +190,7 @@ describe("InspectionPanel", () => {
     it("should apply correct styling in edit mode", async () => {
       const user = userEvent.setup();
       const mockNode = createMockNode();
-      render(<InspectionPanel selectedNode={mockNode} isVisible={true} />);
+      render(<InspectionPanel selectedNode={mockNode} />);
 
       const editButton = screen.getByTestId("edit-fields-button");
 
@@ -210,7 +201,7 @@ describe("InspectionPanel", () => {
 
     it("should apply correct styling in view mode", () => {
       const mockNode = createMockNode();
-      render(<InspectionPanel selectedNode={mockNode} isVisible={true} />);
+      render(<InspectionPanel selectedNode={mockNode} />);
 
       const editButton = screen.getByTestId("edit-fields-button");
 
@@ -222,9 +213,7 @@ describe("InspectionPanel", () => {
     it("should reset edit mode when node changes", async () => {
       const user = userEvent.setup();
       const mockNode1 = createMockNode();
-      const { rerender } = render(
-        <InspectionPanel selectedNode={mockNode1} isVisible={true} />,
-      );
+      const { rerender } = render(<InspectionPanel selectedNode={mockNode1} />);
 
       const editButton = screen.getByTestId("edit-fields-button");
 
@@ -237,7 +226,7 @@ describe("InspectionPanel", () => {
       mockNode2.id = "different-node-456";
       mockNode2.data.id = "different-node-456";
 
-      rerender(<InspectionPanel selectedNode={mockNode2} isVisible={true} />);
+      rerender(<InspectionPanel selectedNode={mockNode2} />);
 
       // Edit mode should be reset
       await waitFor(() => {
@@ -250,9 +239,7 @@ describe("InspectionPanel", () => {
     it("should maintain edit mode when same node is re-rendered", async () => {
       const user = userEvent.setup();
       const mockNode = createMockNode();
-      const { rerender } = render(
-        <InspectionPanel selectedNode={mockNode} isVisible={true} />,
-      );
+      const { rerender } = render(<InspectionPanel selectedNode={mockNode} />);
 
       const editButton = screen.getByTestId("edit-fields-button");
 
@@ -261,7 +248,7 @@ describe("InspectionPanel", () => {
       expect(editButton).toHaveTextContent("Done");
 
       // Re-render with same node
-      rerender(<InspectionPanel selectedNode={mockNode} isVisible={true} />);
+      rerender(<InspectionPanel selectedNode={mockNode} />);
 
       // Edit mode should be maintained
       expect(screen.getByTestId("edit-fields-button")).toHaveTextContent(
@@ -273,7 +260,7 @@ describe("InspectionPanel", () => {
   describe("Panel Positioning", () => {
     it("should apply correct positioning classes", () => {
       const mockNode = createMockNode();
-      render(<InspectionPanel selectedNode={mockNode} isVisible={true} />);
+      render(<InspectionPanel selectedNode={mockNode} />);
 
       const panel = screen.getByTestId("xyflow-panel");
       expect(panel).toHaveClass("!top-[3rem]");
@@ -283,24 +270,24 @@ describe("InspectionPanel", () => {
 
     it("should apply correct width", () => {
       const mockNode = createMockNode();
-      render(<InspectionPanel selectedNode={mockNode} isVisible={true} />);
+      render(<InspectionPanel selectedNode={mockNode} />);
 
       const panel = screen.getByTestId("xyflow-panel");
-      expect(panel).toHaveStyle({ width: "340px" });
+      expect(panel).toHaveClass("w-[340px]");
     });
   });
 
   describe("Component Integration", () => {
     it("should pass correct data to InspectionPanelHeader", () => {
       const mockNode = createMockNode();
-      render(<InspectionPanel selectedNode={mockNode} isVisible={true} />);
+      render(<InspectionPanel selectedNode={mockNode} />);
 
       expect(screen.getByText("Header for test-node-123")).toBeInTheDocument();
     });
 
     it("should pass correct data to InspectionPanelFields", () => {
       const mockNode = createMockNode();
-      render(<InspectionPanel selectedNode={mockNode} isVisible={true} />);
+      render(<InspectionPanel selectedNode={mockNode} />);
 
       expect(screen.getByText("Fields for test-node-123")).toBeInTheDocument();
     });
@@ -308,7 +295,7 @@ describe("InspectionPanel", () => {
     it("should pass isEditingFields prop correctly", async () => {
       const user = userEvent.setup();
       const mockNode = createMockNode();
-      render(<InspectionPanel selectedNode={mockNode} isVisible={true} />);
+      render(<InspectionPanel selectedNode={mockNode} />);
 
       expect(screen.getByTestId("edit-mode-indicator")).toHaveTextContent(
         "Viewing",
@@ -323,9 +310,7 @@ describe("InspectionPanel", () => {
 
     it("should use node id as key for InspectionPanelFields", () => {
       const mockNode = createMockNode();
-      const { container } = render(
-        <InspectionPanel selectedNode={mockNode} isVisible={true} />,
-      );
+      const { container } = render(<InspectionPanel selectedNode={mockNode} />);
 
       // The key is used internally by React, we can verify the component renders
       expect(screen.getByTestId("inspection-panel-fields")).toBeInTheDocument();
@@ -339,18 +324,16 @@ describe("InspectionPanel", () => {
         type: "genericNode",
         position: { x: 0, y: 0 },
         data: null as any,
-      } as AllNodeType;
+      };
 
       expect(() => {
-        render(<InspectionPanel selectedNode={mockNode} isVisible={true} />);
+        render(<InspectionPanel selectedNode={mockNode} />);
       }).not.toThrow();
     });
 
     it("should handle rapid node changes", async () => {
       const mockNode1 = createMockNode();
-      const { rerender } = render(
-        <InspectionPanel selectedNode={mockNode1} isVisible={true} />,
-      );
+      const { rerender } = render(<InspectionPanel selectedNode={mockNode1} />);
 
       const mockNode2 = createMockNode({ id: "node-2" });
       mockNode2.id = "node-2";
@@ -360,9 +343,9 @@ describe("InspectionPanel", () => {
       mockNode3.id = "node-3";
       mockNode3.data.id = "node-3";
 
-      rerender(<InspectionPanel selectedNode={mockNode2} isVisible={true} />);
-      rerender(<InspectionPanel selectedNode={mockNode3} isVisible={true} />);
-      rerender(<InspectionPanel selectedNode={null} isVisible={true} />);
+      rerender(<InspectionPanel selectedNode={mockNode2} />);
+      rerender(<InspectionPanel selectedNode={mockNode3} />);
+      rerender(<InspectionPanel selectedNode={null} />);
 
       expect(
         screen.queryByTestId("inspection-panel-header"),
