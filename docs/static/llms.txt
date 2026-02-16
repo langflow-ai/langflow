@@ -1,0 +1,86 @@
+#
+# LLMS.TXT - AI LANGUAGE MODEL INSTRUCTIONS
+#
+# PRIMARY FUNCTION:
+# This file provides structured information about your website specifically for AI language models.
+# It helps LLMs understand your site's purpose, content, and context when answering questions about it.
+#
+# SECTION IMPORTANCE:
+#
+# 1. Core Information (CRITICAL)
+#    - Essential facts: name, description, type, URL
+#    - Helps LLMs identify and describe your platform accurately
+#    - Should be concise but comprehensive
+#
+# 2. Key Features (HIGH IMPORTANCE)
+#    - Main value propositions and capabilities
+#    - Helps LLMs explain what users can do on your platform
+#    - Useful for recommendation and comparison queries
+#
+# 3. Important Pages (HIGH IMPORTANCE)
+#    - Direct links to key sections
+#    - Helps LLMs provide specific navigation guidance
+#    - Should include primary user journeys
+#
+# 4. Contact Information (MEDIUM IMPORTANCE)
+#    - Social media and communication channels
+#    - Enables LLMs to direct users to support/community
+#    - Builds credibility and trust signals
+#
+# 5. Product Details (HIGH IMPORTANCE)
+#    - Specific information about your main offering
+#    - Helps LLMs provide accurate details about the product
+#    - Should include key facts users frequently ask about
+#
+# BEST PRACTICES:
+# - Keep information current and accurate
+# - Use clear, descriptive language
+# - Include quantifiable details (features, system requirements)
+# - Provide absolute URLs
+# - Update when major features/details change
+# - Consider what users would most commonly ask about
+#
+
+# Core Information - Essential facts about the platform
+name: Langflow Documentation
+description: Official documentation for Langflow, a low-code platform for building and deploying AI-powered agents and workflows with a visual builder, API, and MCP server.
+type: Technical Documentation - AI Development Platform
+url: https://docs.langflow.org
+
+# Key Features - Main value propositions and platform capabilities
+- Visual flow builder to design AI workflows with drag-and-drop
+- Get started guides: installation, quickstart, and tutorials (RAG, files, agents, MCP)
+- Flows: build, run via API or webhooks, test in playground, import/export
+- Agents and tools; Model Context Protocol (MCP) client and server
+- Develop: API keys, custom dependencies, global variables, storage, memory, observability (LangSmith, LangFuse, etc.)
+- Deploy: public server, Nginx/SSL, Docker, Kubernetes, GCP, Hugging Face Spaces, Railway, Render; security
+- Components reference: inputs/outputs, prompts, models, retrievers, and more
+- API reference and contribution guidelines
+
+# Important Pages - Primary navigation destinations for users
+- Home / About: https://docs.langflow.org/Get-Started/about-langflow
+- Install Langflow: https://docs.langflow.org/Get-Started/get-started-installation
+- Quickstart: https://docs.langflow.org/Get-Started/get-started-quickstart
+- Use the visual editor: https://docs.langflow.org/Flows/concepts-overview
+- Trigger flows with the API: https://docs.langflow.org/Flows/concepts-publish
+- Agents: https://docs.langflow.org/Agents/agents
+- MCP client and server: https://docs.langflow.org/Agents/mcp-client
+- Deployment overview: https://docs.langflow.org/Deployment/deployment-overview
+- Security: https://docs.langflow.org/Deployment/security
+- Release notes: https://docs.langflow.org/Support/release-notes
+
+# Contact Information - Community and support channels
+- GitHub (source): https://github.com/langflow-ai/langflow
+- Main website: https://langflow.org
+- Desktop app: https://langflow.org/desktop
+- Discord: https://discord.com/invite/EqksyE2EX9
+- Twitter/X: https://x.com/langflow_ai
+- YouTube: https://www.youtube.com/@Langflow
+
+# Product Details - Specific information about Langflow
+- Platform: Open-source Python application; also available as Langflow Desktop (Windows, macOS)
+- License: MIT
+- Requirements: Python 3.10–3.13; uv or pip for install; Docker optional
+- Run locally: uv run langflow run (default http://127.0.0.1:7860)
+- Use cases: RAG apps, multi-agent workflows, MCP tools, API-backed AI services
+- Target users: Developers, data scientists, AI engineers, teams building LLM applications
