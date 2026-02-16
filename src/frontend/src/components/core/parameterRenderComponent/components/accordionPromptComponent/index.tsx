@@ -380,7 +380,7 @@ export default function AccordionPromptComponent({
       queueMicrotask(() => {
         // Reset the last validated value to force re-validation
         lastValidatedValueRef.current = "";
-        
+
         postValidatePrompt(
           {
             name: field_name || "",
@@ -407,7 +407,10 @@ export default function AccordionPromptComponent({
               }
             },
             onError: (error) => {
-              console.error("[AccordionPrompt] Mode change validation error:", error);
+              console.error(
+                "[AccordionPrompt] Mode change validation error:",
+                error,
+              );
             },
           },
         );
