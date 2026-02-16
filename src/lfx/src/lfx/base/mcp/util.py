@@ -10,7 +10,8 @@ import shutil
 import subprocess
 import unicodedata
 from collections.abc import Awaitable, Callable
-from typing import Any
+from types import UnionType
+from typing import Any, Union, get_args, get_origin
 from urllib.parse import urlparse
 from uuid import UUID
 
@@ -22,6 +23,7 @@ from mcp import ClientSession
 from mcp.shared.exceptions import McpError
 from pydantic import BaseModel
 
+from lfx.base.agents.utils import maybe_unflatten_dict
 from lfx.log.logger import logger
 from lfx.schema.json_schema import create_input_schema_from_json_schema
 from lfx.services.deps import get_settings_service
@@ -288,6 +290,183 @@ def _convert_camel_case_to_snake_case(provided_args: dict[str, Any], arg_schema:
     return converted_args
 
 
+def _resolve_expected_type(annotation: Any) -> type | None:
+    """Resolve the effective expected type from a Pydantic field annotation.
+
+    Handles Union, UnionType (X | None), list, list[X]. Returns the primary
+    type (dict, list, int, float, bool, str) or None if not one we normalize.
+    """
+    ann = annotation
+    origin = get_origin(ann)
+    if origin is UnionType or origin is Union:
+        args = get_args(ann)
+        non_none = [a for a in args if a is not type(None)]
+        if non_none:
+            ann = non_none[0]
+            origin = get_origin(ann)
+    if origin is list or ann is list:
+        return list
+    if origin is dict or ann is dict:
+        return dict
+    if ann in (int, float, bool, str):
+        return ann
+    return None
+
+
+def _try_convert_value(value: Any, expected_type: type, field_name: str, tool_name: str) -> Any:
+    """Try to convert value to expected type. Raise ValueError with clear message on failure."""
+    if value is None and expected_type in (int, float, bool, dict, list):
+        msg = f"Tool '{tool_name}': Parameter '{field_name}' expects {expected_type.__name__} but received None."
+        raise ValueError(msg)
+    if isinstance(value, expected_type):
+        if expected_type is int and isinstance(value, bool):
+            msg = (
+                f"Tool '{tool_name}': Parameter '{field_name}' expects integer "
+                f"but received boolean {value!r}; use 0 or 1 instead."
+            )
+            raise ValueError(msg)
+        return value
+
+    if expected_type is dict:
+        if isinstance(value, str):
+            try:
+                parsed = json.loads(value)
+            except json.JSONDecodeError as e:
+                msg = (
+                    f"Tool '{tool_name}': Parameter '{field_name}' expects object (dict) "
+                    f"but received invalid JSON string {value!r}; {e}"
+                )
+                raise ValueError(msg) from e
+            if not isinstance(parsed, dict):
+                msg = (
+                    f"Tool '{tool_name}': Parameter '{field_name}' expects object (dict) "
+                    f"but JSON parsed to {type(parsed).__name__}."
+                )
+                raise ValueError(msg)  # noqa: TRY004
+            return parsed
+        msg = (
+            f"Tool '{tool_name}': Parameter '{field_name}' expects object (dict) "
+            f"but received {type(value).__name__} {value!r}; could not convert."
+        )
+        raise ValueError(msg)
+
+    if expected_type is list:
+        if isinstance(value, str):
+            try:
+                parsed = json.loads(value)
+            except json.JSONDecodeError as e:
+                msg = (
+                    f"Tool '{tool_name}': Parameter '{field_name}' expects array (list) "
+                    f"but received invalid JSON string {value!r}; {e}"
+                )
+                raise ValueError(msg) from e
+            if not isinstance(parsed, list):
+                msg = (
+                    f"Tool '{tool_name}': Parameter '{field_name}' expects array (list) "
+                    f"but JSON parsed to {type(parsed).__name__}."
+                )
+                raise ValueError(msg)  # noqa: TRY004
+            return parsed
+        msg = (
+            f"Tool '{tool_name}': Parameter '{field_name}' expects array (list) "
+            f"but received {type(value).__name__} {value!r}; could not convert."
+        )
+        raise ValueError(msg)
+
+    if expected_type is int:
+        if isinstance(value, float):
+            if value.is_integer():
+                return int(value)
+            msg = (
+                f"Tool '{tool_name}': Parameter '{field_name}' expects integer "
+                f"but received {value!r} (float); could not convert."
+            )
+            raise ValueError(msg)
+        if isinstance(value, str):
+            try:
+                return int(value)
+            except ValueError as e:
+                msg = (
+                    f"Tool '{tool_name}': Parameter '{field_name}' expects integer "
+                    f"but received {value!r} (string); could not convert."
+                )
+                raise ValueError(msg) from e
+        msg = (
+            f"Tool '{tool_name}': Parameter '{field_name}' expects integer "
+            f"but received {type(value).__name__} {value!r}; could not convert."
+        )
+        raise ValueError(msg)
+
+    if expected_type is float:
+        if isinstance(value, (int, float)):
+            return float(value)
+        if isinstance(value, str):
+            try:
+                return float(value)
+            except ValueError as e:
+                msg = (
+                    f"Tool '{tool_name}': Parameter '{field_name}' expects number "
+                    f"but received {value!r} (string); could not convert."
+                )
+                raise ValueError(msg) from e
+        msg = (
+            f"Tool '{tool_name}': Parameter '{field_name}' expects number "
+            f"but received {type(value).__name__} {value!r}; could not convert."
+        )
+        raise ValueError(msg)
+
+    if expected_type is bool:
+        if isinstance(value, str):
+            lower = value.strip().lower()
+            if lower in ("true", "1", "yes"):
+                return True
+            if lower in ("false", "0", "no"):
+                return False
+            msg = (
+                f"Tool '{tool_name}': Parameter '{field_name}' expects boolean "
+                f"but received {value!r} (string); could not convert."
+            )
+            raise ValueError(msg)
+        msg = (
+            f"Tool '{tool_name}': Parameter '{field_name}' expects boolean "
+            f"but received {type(value).__name__} {value!r}; could not convert."
+        )
+        raise ValueError(msg)
+
+    return value
+
+
+def _normalize_arguments_for_mcp(
+    arguments: dict[str, Any], arg_schema: type[BaseModel], tool_name: str
+) -> dict[str, Any]:
+    """Normalize tool arguments for MCP: try-convert when value type != schema expected type.
+
+    Uses schema from MCP server (no guessing). On conversion failure, raises
+    ValueError with clear user-facing message.
+    """
+    result: dict[str, Any] = {}
+    schema_field_names = set(arg_schema.model_fields.keys())
+    for field_name, model_field in arg_schema.model_fields.items():
+        value = arguments.get(field_name)
+        if value is None:
+            if model_field.is_required() or field_name in arguments:
+                result[field_name] = value
+            else:
+                continue
+            continue
+        expected = _resolve_expected_type(model_field.annotation)
+        if expected is None:
+            result[field_name] = value
+            continue
+        if expected is str:
+            result[field_name] = value
+            continue
+        result[field_name] = _try_convert_value(value, expected, field_name, tool_name)
+    # Preserve extra keys so Pydantic validation can report them
+    result.update({k: v for k, v in arguments.items() if k not in schema_field_names})
+    return result
+
+
 def _handle_tool_validation_error(
     e: Exception, tool_name: str, provided_args: dict[str, Any], arg_schema: type[BaseModel]
 ) -> None:
@@ -320,11 +499,13 @@ def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], client) -
         # Merge in keyword arguments
         provided_args.update(kwargs)
         provided_args = _convert_camel_case_to_snake_case(provided_args, arg_schema)
+        original_args = provided_args
+        provided_args = _normalize_arguments_for_mcp(provided_args, arg_schema, tool_name)
         # Validate input and fill defaults for missing optional fields
         try:
             validated = arg_schema.model_validate(provided_args)
         except Exception as e:  # noqa: BLE001
-            _handle_tool_validation_error(e, tool_name, provided_args, arg_schema)
+            _handle_tool_validation_error(e, tool_name, original_args, arg_schema)
 
         try:
             return await client.run_tool(tool_name, arguments=validated.model_dump())
@@ -348,10 +529,12 @@ def create_tool_func(tool_name: str, arg_schema: type[BaseModel], client) -> Cal
             provided_args[field_names[i]] = arg
         provided_args.update(kwargs)
         provided_args = _convert_camel_case_to_snake_case(provided_args, arg_schema)
+        original_args = provided_args
+        provided_args = _normalize_arguments_for_mcp(provided_args, arg_schema, tool_name)
         try:
             validated = arg_schema.model_validate(provided_args)
         except Exception as e:  # noqa: BLE001
-            _handle_tool_validation_error(e, tool_name, provided_args, arg_schema)
+            _handle_tool_validation_error(e, tool_name, original_args, arg_schema)
 
         try:
             return run_until_complete(client.run_tool(tool_name, arguments=validated.model_dump()))
@@ -1713,10 +1896,10 @@ async def update_tools(
                             if snake_key in original_fields:
                                 converted_dict[snake_key] = value
                             else:
-                                # Keep original key
+                                # Keep original key (may be flattened e.g. params.search)
                                 converted_dict[key] = value
 
-                    return converted_dict
+                    return maybe_unflatten_dict(converted_dict)
 
             tool_obj = MCPStructuredTool(
                 name=tool.name,

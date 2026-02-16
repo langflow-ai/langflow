@@ -1657,6 +1657,7 @@ class TestMCPStructuredTool:
                 if not input_dict or not isinstance(input_dict, dict):
                     return input_dict
 
+                from lfx.base.agents.utils import maybe_unflatten_dict
                 from lfx.base.mcp.util import _camel_to_snake
 
                 converted_dict = {}
@@ -1675,7 +1676,7 @@ class TestMCPStructuredTool:
                             # Keep original key
                             converted_dict[key] = value
 
-                return converted_dict
+                return maybe_unflatten_dict(converted_dict)
 
         return MCPStructuredTool(
             name="test_tool",
@@ -1729,6 +1730,48 @@ class TestMCPStructuredTool:
         assert mcp_tool._convert_parameters({}) == {}
         assert mcp_tool._convert_parameters(None) is None
         assert mcp_tool._convert_parameters("not_a_dict") == "not_a_dict"
+
+    def test_convert_parameters_flattened_input_produces_nested(self):
+        """Test flattened keys (params.search, params.per_page) become nested structure."""
+        from lfx.base.agents.utils import maybe_unflatten_dict
+        from lfx.base.mcp.util import _camel_to_snake
+        from pydantic import Field, create_model
+
+        schema = create_model(
+            "ForemanSchema",
+            resource=(str, Field(..., description="Resource")),
+            action=(str, Field(..., description="Action")),
+            params=(dict, Field(default_factory=dict, description="Params")),
+        )
+
+        def _convert_parameters(input_dict, args_schema):
+            if not input_dict or not isinstance(input_dict, dict):
+                return input_dict
+            converted_dict = {}
+            original_fields = set(args_schema.model_fields.keys())
+            for key, value in input_dict.items():
+                if key in original_fields:
+                    converted_dict[key] = value
+                else:
+                    snake_key = _camel_to_snake(key)
+                    if snake_key in original_fields:
+                        converted_dict[snake_key] = value
+                    else:
+                        converted_dict[key] = value
+            return maybe_unflatten_dict(converted_dict)
+
+        input_dict = {
+            "resource": "hosts",
+            "action": "index",
+            "params.search": "name ~ test",
+            "params.per_page": 20,
+        }
+        result = _convert_parameters(input_dict, schema)
+        assert result == {
+            "resource": "hosts",
+            "action": "index",
+            "params": {"search": "name ~ test", "per_page": 20},
+        }
 
     def test_convert_parameters_preserves_value_types(self, mcp_tool):
         """Test _convert_parameters preserves all value types correctly."""
@@ -1874,6 +1917,135 @@ class TestMCPStructuredTool:
 
         with pytest.raises(Exception):  # noqa: B017, PT011
             await mcp_tool.arun(input_data)
+
+
+class TestNormalizeArgumentsForMcp:
+    """Test _normalize_arguments_for_mcp try-convert on type mismatch."""
+
+    def test_str_to_int_when_int_expected(self):
+        """Test str '42' when int expected -> 42."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            count: int = Field(..., description="Count")
+
+        result = util._normalize_arguments_for_mcp({"count": "42"}, Schema, "test_tool")
+        assert result == {"count": 42}
+        assert isinstance(result["count"], int)
+
+    def test_float_to_int_when_int_expected(self):
+        """Test float 3.0 when int expected -> 3."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            id: int = Field(..., description="ID")
+
+        result = util._normalize_arguments_for_mcp({"id": 3.0}, Schema, "test_tool")
+        assert result == {"id": 3}
+        assert isinstance(result["id"], int)
+
+    def test_str_to_dict_when_dict_expected(self):
+        r"""Test str '{"x":1}' when dict expected -> {"x":1}."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            params: dict = Field(..., description="Params")
+
+        result = util._normalize_arguments_for_mcp({"params": '{"x": 1}'}, Schema, "test_tool")
+        assert result == {"params": {"x": 1}}
+        assert isinstance(result["params"], dict)
+
+    def test_str_to_bool_when_bool_expected(self):
+        """Test str 'true' when bool expected -> True."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            flag: bool = Field(..., description="Flag")
+
+        result = util._normalize_arguments_for_mcp({"flag": "true"}, Schema, "test_tool")
+        assert result == {"flag": True}
+
+    def test_already_correct_types_unchanged(self):
+        """Test value type matches schema -> unchanged."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            count: int = Field(..., description="Count")
+            params: dict = Field(..., description="Params")
+
+        result = util._normalize_arguments_for_mcp({"count": 42, "params": {"search": "x"}}, Schema, "test_tool")
+        assert result == {"count": 42, "params": {"search": "x"}}
+
+    def test_conversion_failure_propagates_error(self):
+        """Test str 'abc' when int expected -> clear error propagated."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            id: int = Field(..., description="ID")
+
+        with pytest.raises(ValueError, match="expects integer") as exc_info:
+            util._normalize_arguments_for_mcp({"id": "abc"}, Schema, "test_tool")
+
+        assert "test_tool" in str(exc_info.value)
+        assert "Parameter 'id'" in str(exc_info.value)
+        assert "could not convert" in str(exc_info.value)
+
+    def test_optional_field_none_unchanged(self):
+        """Test optional field with None -> unchanged."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            count: int = Field(..., description="Count")
+            optional: int | None = Field(default=None, description="Optional")
+
+        result = util._normalize_arguments_for_mcp({"count": 1, "optional": None}, Schema, "test_tool")
+        assert result == {"count": 1, "optional": None}
+
+    def test_str_to_list_when_optional_list_expected(self):
+        r"""Test str '["a"]' when list[str] | None expected -> ["a"]."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            items: list[str] | None = Field(default=None, description="Items")
+
+        result = util._normalize_arguments_for_mcp({"items": '["a", "b"]'}, Schema, "test_tool")
+        assert result == {"items": ["a", "b"]}
+        assert isinstance(result["items"], list)
+
+    def test_str_to_dict_when_optional_dict_expected(self):
+        r"""Test str '{"x":1}' when dict | None expected -> {"x":1}."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            params: dict | None = Field(default=None, description="Params")
+
+        result = util._normalize_arguments_for_mcp({"params": '{"x": 1}'}, Schema, "test_tool")
+        assert result == {"params": {"x": 1}}
+        assert isinstance(result["params"], dict)
+
+    def test_bool_rejected_when_int_expected(self):
+        """Test bool True/False when int expected -> raises ValueError."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            count: int = Field(..., description="Count")
+
+        with pytest.raises(ValueError, match=r"expects integer.*boolean"):
+            util._normalize_arguments_for_mcp({"count": True}, Schema, "test_tool")
+
+        with pytest.raises(ValueError, match=r"expects integer.*boolean"):
+            util._normalize_arguments_for_mcp({"count": False}, Schema, "test_tool")
+
+    def test_extra_keys_preserved_for_pydantic_validation(self):
+        """Test extra keys not in schema are preserved so Pydantic can report them."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            valid_field: int = Field(..., description="Valid")
+
+        result = util._normalize_arguments_for_mcp({"valid_field": 1, "typo_field": 2}, Schema, "test_tool")
+        assert result["valid_field"] == 1
+        assert result["typo_field"] == 2
 
 
 class TestSnakeToCamelConversion:
