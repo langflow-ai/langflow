@@ -363,39 +363,55 @@ export default function AccordionPromptComponent({
     };
   }, [internalValue, isDoubleBrackets, field_name]);
 
+  // Track if this is the first render to avoid triggering on mount
+  const isFirstRenderRef = useRef(true);
+
   // Force re-validation when isDoubleBrackets mode changes
   useEffect(() => {
+    // Skip the first render (mount)
+    if (isFirstRenderRef.current) {
+      isFirstRenderRef.current = false;
+      return;
+    }
+
     // Only trigger if we have a value and nodeClass
     if (internalValue && internalValue !== "" && nodeClass) {
-      // Reset the last validated value to force re-validation
-      lastValidatedValueRef.current = "";
-
-      // Trigger validation immediately (no debounce for mode changes)
-      postValidatePrompt(
-        {
-          name: field_name || "",
-          template: internalValue,
-          frontend_node: nodeClass,
-          mustache: isDoubleBrackets,
-        },
-        {
-          onSuccess: (apiReturn) => {
-            if (apiReturn?.frontend_node) {
-              lastValidatedValueRef.current = internalValue;
-              apiReturn.frontend_node.template.template.value = internalValue;
-              if (handleNodeClass) {
-                handleNodeClass(apiReturn.frontend_node);
+      // Use queueMicrotask to defer validation until after current render cycle
+      queueMicrotask(() => {
+        // Reset the last validated value to force re-validation
+        lastValidatedValueRef.current = "";
+        
+        postValidatePrompt(
+          {
+            name: field_name || "",
+            template: internalValue,
+            frontend_node: nodeClass,
+            mustache: isDoubleBrackets,
+          },
+          {
+            onSuccess: (apiReturn) => {
+              if (apiReturn?.frontend_node) {
+                lastValidatedValueRef.current = internalValue;
+                apiReturn.frontend_node.template.template.value = internalValue;
+                if (handleNodeClass) {
+                  // Merge the updated template fields while preserving existing properties
+                  const updatedNode = {
+                    ...nodeClass,
+                    template: {
+                      ...nodeClass.template,
+                      ...apiReturn.frontend_node.template,
+                    },
+                  };
+                  handleNodeClass(updatedNode);
+                }
               }
-            }
+            },
+            onError: (error) => {
+              console.error("[AccordionPrompt] Mode change validation error:", error);
+            },
           },
-          onError: (error) => {
-            console.error(
-              "[AccordionPrompt] Mode change validation error:",
-              error,
-            );
-          },
-        },
-      );
+        );
+      });
     }
   }, [isDoubleBrackets]);
 
@@ -439,10 +455,10 @@ export default function AccordionPromptComponent({
       contentEditableRef.current.innerHTML = "";
     }
 
-    // Reset typing flag after a short delay
-    setTimeout(() => {
+    // Reset typing flag after current event loop completes
+    queueMicrotask(() => {
       isTypingRef.current = false;
-    }, 100);
+    });
 
     // Scroll cursor into view
     scrollToCursor();
