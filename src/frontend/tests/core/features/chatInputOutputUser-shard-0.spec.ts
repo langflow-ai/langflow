@@ -34,6 +34,8 @@ test(
     await page.waitForSelector("text=Chat Input", { timeout: 30000 });
 
     await page.getByText("Chat Input", { exact: true }).click();
+    await openAdvancedOptions(page);
+    await closeAdvancedOptions(page);
     await page.getByRole("button", { name: "Playground", exact: true }).click();
 
     await page.waitForSelector('[data-testid="input-chat-playground"]', {

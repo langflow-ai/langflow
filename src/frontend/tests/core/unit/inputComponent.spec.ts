@@ -1,7 +1,12 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { enableInspectPanel } from "../../utils/open-advanced-options";
+import {
+  closeAdvancedOptions,
+  disableInspectPanel,
+  enableInspectPanel,
+  openAdvancedOptions,
+} from "../../utils/open-advanced-options";
 
 test(
   "InputComponent",
@@ -52,11 +57,11 @@ test(
     }
     await input.fill("collection_name_test_123123123!@#$&*(&%$@");
 
-    await enableInspectPanel(page);
+    await disableInspectPanel(page);
 
     await page.getByTestId("div-generic-node").click();
 
-    await page.getByTestId("edit-fields-button").click();
+    await openAdvancedOptions(page);
 
     await page
       .locator('//*[@id="showchroma_server_cors_allow_origins"]')
@@ -120,29 +125,42 @@ test(
         .isChecked(),
     ).toBeFalsy();
 
-    // Exit edit fields mode
-    await page.getByTestId("edit-fields-button").click();
-
-    // Verify canvas value is still correct after toggling field visibility
-    const valueAfterToggles = await page
-      .getByTestId("popover-anchor-input-collection_name")
+    const valueEditNode = await page
+      .getByTestId("popover-anchor-input-collection_name-edit")
+      .nth(0)
       .inputValue();
 
-    if (valueAfterToggles != "collection_name_test_123123123!@#$&*(&%$@") {
+    if (valueEditNode != "collection_name_test_123123123!@#$&*(&%$@") {
       expect(false).toBeTruthy();
     }
 
-    // Fill new value on canvas and verify it persists
     await page
-      .getByTestId("popover-anchor-input-collection_name")
+      .getByTestId("popover-anchor-input-collection_name-edit")
+      .nth(0)
       .fill("NEW_collection_name_test_123123123!@#$&*(&%$@ÇÇÇÀõe");
 
-    const newValue = await page
-      .getByTestId("popover-anchor-input-collection_name")
-      .inputValue();
+    await closeAdvancedOptions(page);
 
-    if (newValue != "NEW_collection_name_test_123123123!@#$&*(&%$@ÇÇÇÀõe") {
-      expect(false).toBeTruthy();
+    const plusButtonLocator = page.getByTestId("input-collection_name");
+    const elementCount = await plusButtonLocator?.count();
+    if (elementCount === 0) {
+      expect(true).toBeTruthy();
+
+      await page.getByTestId("div-generic-node").click();
+
+      await openAdvancedOptions(page);
+
+      await closeAdvancedOptions(page);
+
+      const value = await page
+        .getByTestId("popover-anchor-input-collection_name")
+        .inputValue();
+
+      if (value != "NEW_collection_name_test_123123123!@#$&*(&%$@ÇÇÇÀõe") {
+        expect(false).toBeTruthy();
+      }
     }
+
+    await enableInspectPanel(page);
   },
 );

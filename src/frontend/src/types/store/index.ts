@@ -46,7 +46,6 @@ export type shortcutsStoreType = {
   update: string;
   download: string;
   toggleSidebar: string;
-  toggleInspector: string;
   freezePath: string;
   toolMode: string;
   shortcuts: Array<{
