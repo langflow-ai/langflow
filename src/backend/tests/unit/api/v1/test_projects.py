@@ -1749,9 +1749,7 @@ async def test_read_project_exclude_flows_data(client: AsyncClient, logged_in_he
     assert flow_resp.status_code == status.HTTP_201_CREATED
 
     # --- Test with exclude_flows_data=true: graph data should be absent ---
-    no_data_resp = await client.get(
-        f"api/v1/projects/{project_id}?exclude_flows_data=true", headers=logged_in_headers
-    )
+    no_data_resp = await client.get(f"api/v1/projects/{project_id}?exclude_flows_data=true", headers=logged_in_headers)
     assert no_data_resp.status_code == status.HTTP_200_OK
     no_data_result = no_data_resp.json()
 
