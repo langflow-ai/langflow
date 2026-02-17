@@ -4,23 +4,27 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
+from pydantic import BaseModel
 
 from langflow.api.utils import DbSession
 from langflow.api.v1.schemas import Token
 from langflow.initial_setup.setup import get_or_create_default_folder
-from langflow.services.auth.utils import (
-    authenticate_user,
-    create_refresh_token,
-    create_user_longterm_token,
-    create_user_tokens,
-)
 from langflow.services.database.models.user.crud import get_user_by_id
-from langflow.services.deps import get_settings_service, get_variable_service
+from langflow.services.database.models.user.model import UserRead
+from langflow.services.deps import get_auth_service, get_settings_service, get_variable_service
 
 router = APIRouter(tags=["Login"])
 
 
-@router.post("/login", response_model=Token)
+class SessionResponse(BaseModel):
+    """Session validation response."""
+
+    authenticated: bool
+    user: UserRead | None = None
+    store_api_key: str | None = None
+
+
+@router.post("/login", response_model=Token, include_in_schema=False)
 async def login_to_get_access_token(
     response: Response,
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
@@ -28,17 +32,22 @@ async def login_to_get_access_token(
 ):
     auth_settings = get_settings_service().auth_settings
     try:
-        user = await authenticate_user(form_data.username, form_data.password, db)
+        auth = get_auth_service()
+        user = await auth.authenticate_user(form_data.username, form_data.password, db)
     except Exception as exc:
         if isinstance(exc, HTTPException):
             raise
+        # Log the actual error server-side but don't expose it to clients
+        from loguru import logger
+
+        logger.error(f"Authentication error: {exc}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(exc),
+            detail="An error occurred during authentication",
         ) from exc
 
     if user:
-        tokens = await create_user_tokens(user_id=user.id, db=db, update_last_login=True)
+        tokens = await auth.create_user_tokens(user_id=user.id, db=db, update_last_login=True)
         response.set_cookie(
             "refresh_token_lf",
             tokens["refresh_token"],
@@ -84,12 +93,13 @@ async def login_to_get_access_token(
     )
 
 
-@router.get("/auto_login")
+@router.get("/auto_login", include_in_schema=False)
 async def auto_login(response: Response, db: DbSession):
     auth_settings = get_settings_service().auth_settings
 
     if auth_settings.AUTO_LOGIN:
-        user_id, tokens = await create_user_longterm_token(db)
+        auth = get_auth_service()
+        user_id, tokens = await auth.create_user_longterm_token(db)
         response.set_cookie(
             "access_token_lf",
             tokens["access_token"],
@@ -124,15 +134,15 @@ async def auto_login(response: Response, db: DbSession):
         return tokens
 
     raise HTTPException(
-        status_code=status.HTTP_400_BAD_REQUEST,
+        status_code=status.HTTP_403_FORBIDDEN,
         detail={
-            "message": "Auto login is disabled. Please enable it in the settings",
+            "message": "Auto login is disabled.",
             "auto_login": False,
         },
     )
 
 
-@router.post("/refresh")
+@router.post("/refresh", include_in_schema=False)
 async def refresh_token(
     request: Request,
     response: Response,
@@ -143,7 +153,8 @@ async def refresh_token(
     token = request.cookies.get("refresh_token_lf")
 
     if token:
-        tokens = await create_refresh_token(token, db)
+        auth = get_auth_service()
+        tokens = await auth.create_refresh_token(token, db)
         response.set_cookie(
             "refresh_token_lf",
             tokens["refresh_token"],
@@ -170,7 +181,40 @@ async def refresh_token(
     )
 
 
-@router.post("/logout")
+@router.get("/session", include_in_schema=False)
+async def get_session(
+    request: Request,
+    db: DbSession,
+) -> SessionResponse:
+    """Validate session and return user information.
+
+    This endpoint checks if the user is authenticated via cookie or Authorization header.
+    It does not raise an error if unauthenticated, allowing the frontend to gracefully
+    handle the session state.
+    """
+    from langflow.services.auth.utils import oauth2_login
+
+    # Try to get the token from the request (cookie or Authorization header)
+    try:
+        token = await oauth2_login(request)
+        if not token:
+            return SessionResponse(authenticated=False)
+
+        # Validate the token and get user
+        user = await get_auth_service().get_current_user_from_access_token(token, db)
+        if not user or not user.is_active:
+            return SessionResponse(authenticated=False)
+
+        return SessionResponse(
+            authenticated=True,
+            user=UserRead.model_validate(user, from_attributes=True),
+        )
+    except (HTTPException, ValueError) as _:
+        # Any authentication error means not authenticated
+        return SessionResponse(authenticated=False)
+
+
+@router.post("/logout", include_in_schema=False)
 async def logout(response: Response):
     auth_settings = get_settings_service().auth_settings
 

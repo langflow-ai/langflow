@@ -193,6 +193,127 @@ class TestHeaderValidation:
         assert result == {"safe-header": "safe-value"}
 
 
+class TestGlobalVariableResolution:
+    """Test global variable resolution in headers."""
+
+    def test_resolve_global_variables_basic(self):
+        """Test basic global variable resolution in headers."""
+        from lfx.base.mcp.util import _resolve_global_variables_in_headers
+
+        headers = {"x-api-key": "MY_API_KEY", "authorization": "MY_TOKEN"}
+        request_variables = {"MY_API_KEY": "secret-key-123", "MY_TOKEN": "token-456"}  # pragma: allowlist secret
+
+        result = _resolve_global_variables_in_headers(headers, request_variables)
+
+        assert result == {"x-api-key": "secret-key-123", "authorization": "token-456"}
+
+    def test_resolve_global_variables_no_variables(self):
+        """Test header resolution when no request_variables provided."""
+        from lfx.base.mcp.util import _resolve_global_variables_in_headers
+
+        headers = {"x-api-key": "MY_API_KEY", "content-type": "application/json"}
+
+        # No request_variables
+        result = _resolve_global_variables_in_headers(headers, None)
+        assert result == headers
+
+        # Empty request_variables
+        result = _resolve_global_variables_in_headers(headers, {})
+        assert result == headers
+
+    def test_resolve_global_variables_partial_match(self):
+        """Test resolution when only some headers match variables."""
+        from lfx.base.mcp.util import _resolve_global_variables_in_headers
+
+        headers = {
+            "x-api-key": "MY_API_KEY",  # matches
+            "authorization": "static-token",  # no match
+            "x-custom": "MY_CUSTOM",  # matches
+        }
+        request_variables = {"MY_API_KEY": "resolved-key", "MY_CUSTOM": "custom-value"}  # pragma: allowlist secret
+
+        result = _resolve_global_variables_in_headers(headers, request_variables)
+
+        assert result == {
+            "x-api-key": "resolved-key",
+            "authorization": "static-token",
+            "x-custom": "custom-value",
+        }
+
+    def test_resolve_global_variables_non_string_values(self):
+        """Test that non-string header values are preserved."""
+        from lfx.base.mcp.util import _resolve_global_variables_in_headers
+
+        headers = {"x-api-key": "MY_KEY", "x-number": 123, "x-none": None}
+        request_variables = {"MY_KEY": "resolved"}
+
+        result = _resolve_global_variables_in_headers(headers, request_variables)
+
+        assert result == {"x-api-key": "resolved", "x-number": 123, "x-none": None}
+
+    def test_process_headers_with_request_variables_dict(self):
+        """Test _process_headers with dict input and request_variables."""
+        headers = {"x-api-key": "MY_API_KEY", "content-type": "application/json"}
+        request_variables = {"MY_API_KEY": "secret-123"}  # pragma: allowlist secret
+
+        result = _process_headers(headers, request_variables)
+
+        # Should resolve variable and normalize to lowercase
+        assert result == {"x-api-key": "secret-123", "content-type": "application/json"}
+
+    def test_process_headers_with_request_variables_list(self):
+        """Test _process_headers with list input and request_variables."""
+        headers = [
+            {"key": "x-api-key", "value": "MY_API_KEY"},
+            {"key": "Content-Type", "value": "application/json"},
+        ]
+        request_variables = {"MY_API_KEY": "secret-123"}  # pragma: allowlist secret
+
+        result = _process_headers(headers, request_variables)
+
+        # Should resolve variable and normalize to lowercase
+        assert result == {"x-api-key": "secret-123", "content-type": "application/json"}
+
+    def test_process_headers_without_request_variables(self):
+        """Test _process_headers maintains backward compatibility without request_variables."""
+        headers = {"X-API-Key": "static-value", "Content-Type": "application/json"}
+
+        result = _process_headers(headers)
+
+        # Should just normalize without resolution
+        assert result == {"x-api-key": "static-value", "content-type": "application/json"}
+
+    def test_resolve_global_variables_case_sensitive_matching(self):
+        """Test that variable name matching is case-sensitive."""
+        from lfx.base.mcp.util import _resolve_global_variables_in_headers
+
+        headers = {"x-api-key": "my_api_key", "x-token": "MY_API_KEY"}
+        request_variables = {"MY_API_KEY": "resolved-uppercase"}  # pragma: allowlist secret
+
+        result = _resolve_global_variables_in_headers(headers, request_variables)
+
+        # Only exact match should be resolved
+        assert result == {"x-api-key": "my_api_key", "x-token": "resolved-uppercase"}
+
+    def test_resolve_global_variables_empty_headers(self):
+        """Test resolution with empty headers."""
+        from lfx.base.mcp.util import _resolve_global_variables_in_headers
+
+        result = _resolve_global_variables_in_headers({}, {"VAR": "value"})
+        assert result == {}
+
+    def test_resolve_global_variables_special_characters(self):
+        """Test resolution with special characters in values."""
+        from lfx.base.mcp.util import _resolve_global_variables_in_headers
+
+        headers = {"authorization": "MY_TOKEN"}
+        request_variables = {"MY_TOKEN": "Bearer token-with-special!@#$%^&*()_+-=[]{}|;:,.<>?"}
+
+        result = _resolve_global_variables_in_headers(headers, request_variables)
+
+        assert result["authorization"] == "Bearer token-with-special!@#$%^&*()_+-=[]{}|;:,.<>?"
+
+
 class TestStreamableHTTPHeaderIntegration:
     """Integration test to verify headers are properly passed through the entire StreamableHTTP flow."""
 

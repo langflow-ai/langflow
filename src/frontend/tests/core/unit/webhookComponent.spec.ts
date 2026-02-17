@@ -1,6 +1,12 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import {
+  closeAdvancedOptions,
+  disableInspectPanel,
+  enableInspectPanel,
+  openAdvancedOptions,
+} from "../../utils/open-advanced-options";
 
 test(
   "user should be able to create an api key within a webhook component",
@@ -44,8 +50,9 @@ test(
     await page.getByTestId("btn_copy_str_endpoint").click();
     await page.waitForSelector("text=Endpoint URL copied", { timeout: 30000 });
 
+    await disableInspectPanel(page);
     await page.getByTestId("title-Webhook").click();
-    await page.getByTestId("edit-button-modal").click();
+    await openAdvancedOptions(page);
 
     await page
       .getByTestId("button_open_text_area_modal_str_edit_curl_advanced")
@@ -58,6 +65,10 @@ test(
     const flowId = currentUrl.split("/")[2];
 
     expect(curl).toContain(flowId);
+
+    await page.getByText("Close", { exact: true }).last().click();
+    await closeAdvancedOptions(page);
+    await enableInspectPanel(page);
   },
 );
 

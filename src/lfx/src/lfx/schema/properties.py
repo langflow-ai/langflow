@@ -24,6 +24,7 @@ class Properties(BaseModel):
     positive_feedback: bool | None = None
     state: Literal["partial", "complete"] = "complete"
     targets: list = []
+    build_duration: float | None = None
 
     @field_validator("source", mode="before")
     @classmethod

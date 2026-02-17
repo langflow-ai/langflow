@@ -5,10 +5,7 @@ import {
   ENABLE_VOICE_ASSISTANT,
 } from "@/customization/feature-flags";
 import type { FilePreviewType } from "@/types/components";
-import {
-  CHAT_INPUT_PLACEHOLDER,
-  CHAT_INPUT_PLACEHOLDER_SEND,
-} from "../../../../../../constants/constants";
+import { CHAT_INPUT_PLACEHOLDER } from "../../../../../../constants/constants";
 import FilePreview from "../../fileComponent/components/file-preview";
 import ButtonSendWrapper from "./button-send-wrapper";
 import TextAreaWrapper from "./text-area-wrapper";
@@ -91,7 +88,6 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
           noInput={noInput}
           chatValue={chatValue}
           CHAT_INPUT_PLACEHOLDER={CHAT_INPUT_PLACEHOLDER}
-          CHAT_INPUT_PLACEHOLDER_SEND={CHAT_INPUT_PLACEHOLDER_SEND}
           inputRef={inputRef}
           files={files}
           isDragging={isDragging}

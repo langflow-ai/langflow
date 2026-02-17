@@ -26,7 +26,8 @@ from pydantic import PydanticDeprecatedSince20
 from pydantic_core import PydanticSerializationError
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
-from langflow.api import health_check_router, log_router, router
+from langflow.api import health_check_router, log_router
+from langflow.api.router import router
 from langflow.api.v1.mcp_projects import init_mcp_servers
 from langflow.initial_setup.setup import (
     copy_profile_pictures,
@@ -570,6 +571,15 @@ def setup_static_files(app: FastAPI, static_files_dir: Path) -> None:
 
     @app.exception_handler(404)
     async def custom_404_handler(_request, _exc):
+        # Return JSON for workflow API endpoints to prevent HTML responses
+        if _request.url.path.startswith("/api/v2/workflows"):
+            # Extract detail from HTTPException if available
+            detail = _exc.detail if isinstance(_exc, HTTPException) else "Not Found"
+            return JSONResponse(
+                status_code=404,
+                content=detail if isinstance(detail, dict) else {"detail": detail},
+            )
+
         path = anyio.Path(static_files_dir) / "index.html"
 
         if not await path.exists():

@@ -5,8 +5,15 @@ import { Separator } from "@/components/ui/separator";
 import useFlowStore from "@/stores/flowStore";
 import CanvasControlsDropdown from "./CanvasControlsDropdown";
 import HelpDropdown from "./HelpDropdown";
+import { AllNodeType } from "@/types/flow";
 
-const CanvasControls = ({ children }: { children?: ReactNode }) => {
+const CanvasControls = ({
+  children,
+  selectedNode,
+}: {
+  children?: ReactNode;
+  selectedNode: AllNodeType | null;
+}) => {
   const reactFlowStoreApi = useStoreApi();
   const isFlowLocked = useFlowStore(
     useShallow((state) => state.currentFlow?.locked),
@@ -32,7 +39,7 @@ const CanvasControls = ({ children }: { children?: ReactNode }) => {
           <Separator orientation="vertical" />
         </span>
       )}
-      <CanvasControlsDropdown />
+      <CanvasControlsDropdown selectedNode={selectedNode} />
       <span>
         <Separator orientation="vertical" />
       </span>

@@ -1,6 +1,8 @@
 """Schema modules for lfx package."""
 
 __all__ = [
+    "WORKFLOW_EXECUTION_RESPONSES",
+    "WORKFLOW_STATUS_RESPONSES",
     "ComponentOutput",
     "Data",
     "DataFrame",
@@ -17,7 +19,6 @@ __all__ = [
     "WorkflowExecutionRequest",
     "WorkflowExecutionResponse",
     "WorkflowJobResponse",
-    "WorkflowStatusResponse",
     "WorkflowStopRequest",
     "WorkflowStopResponse",
     "WorkflowStreamEvent",
@@ -87,10 +88,14 @@ def __getattr__(name: str):
         from .workflow import WorkflowStreamEvent
 
         return WorkflowStreamEvent
-    if name == "WorkflowStatusResponse":
-        from .workflow import WorkflowStatusResponse
+    if name == "WORKFLOW_EXECUTION_RESPONSES":
+        from .workflow import WORKFLOW_EXECUTION_RESPONSES
 
-        return WorkflowStatusResponse
+        return WORKFLOW_EXECUTION_RESPONSES
+    if name == "WORKFLOW_STATUS_RESPONSES":
+        from .workflow import WORKFLOW_STATUS_RESPONSES
+
+        return WORKFLOW_STATUS_RESPONSES
     if name == "WorkflowStopRequest":
         from .workflow import WorkflowStopRequest
 
