@@ -6,6 +6,7 @@ slug: /components-custom-components
 import Icon from "@site/src/components/icon";
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import PartialBasicComponentStructure from '../_partial-basic-component-structure.mdx';
 
 Create your own custom components to add any functionality you need to Langflow, from API integrations to data processing.
 
@@ -24,7 +25,9 @@ Use the [Custom component quickstart](#quickstart) to add an example component t
 
 Create a custom `DataFrameProcessor` component by creating a Python file, saving it in the correct folder, including an `__init__.py` file, and loading it into Langflow.
 
-For the structure of a component (class, attributes, inputs, and methods), see the [Components overview](/concepts-components#component-code), which includes examples pulled from the [Recursive Character Text Splitter](https://github.com/langflow-ai/langflow/blob/main/src/lfx/src/lfx/components/langchain_utilities/recursive_character.py) component in the repository.
+### Create a Python file
+
+<PartialBasicComponentStructure />
 
 ### Save the custom component {#custom-component-path}
 
