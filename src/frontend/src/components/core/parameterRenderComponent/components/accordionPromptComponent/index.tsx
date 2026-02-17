@@ -19,8 +19,14 @@ import type { InputProps, PromptAreaComponentType } from "../../types";
  * If "variable_name" doesn't exist, returns it.
  * Otherwise, returns "variable_name_1", "variable_name_2", etc.
  */
-export const generateUniqueVariableName = (templateValue: string): string => {
-  const variableRegex = /\{([^{}]+)\}/g;
+export const generateUniqueVariableName = (
+  templateValue: string,
+  isDoubleBrackets: boolean = false,
+): string => {
+  // Match both single {var} and double {{var}} bracket patterns
+  const variableRegex = isDoubleBrackets
+    ? /\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}/g
+    : /\{([^{}]+)\}/g;
   const existingVariables = new Set<string>();
   let match: RegExpExecArray | null;
   while ((match = variableRegex.exec(templateValue)) !== null) {
@@ -357,6 +363,61 @@ export default function AccordionPromptComponent({
     };
   }, [internalValue, isDoubleBrackets, field_name]);
 
+  // Track if this is the first render to avoid triggering on mount
+  const isFirstRenderRef = useRef(true);
+
+  // Force re-validation when isDoubleBrackets mode changes
+  useEffect(() => {
+    // Skip the first render (mount)
+    if (isFirstRenderRef.current) {
+      isFirstRenderRef.current = false;
+      return;
+    }
+
+    // Only trigger if we have a value and nodeClass
+    if (internalValue && internalValue !== "" && nodeClass) {
+      // Use queueMicrotask to defer validation until after current render cycle
+      queueMicrotask(() => {
+        // Reset the last validated value to force re-validation
+        lastValidatedValueRef.current = "";
+
+        postValidatePrompt(
+          {
+            name: field_name || "",
+            template: internalValue,
+            frontend_node: nodeClass,
+            mustache: isDoubleBrackets,
+          },
+          {
+            onSuccess: (apiReturn) => {
+              if (apiReturn?.frontend_node) {
+                lastValidatedValueRef.current = internalValue;
+                apiReturn.frontend_node.template.template.value = internalValue;
+                if (handleNodeClass) {
+                  // Merge the updated template fields while preserving existing properties
+                  const updatedNode = {
+                    ...nodeClass,
+                    template: {
+                      ...nodeClass.template,
+                      ...apiReturn.frontend_node.template,
+                    },
+                  };
+                  handleNodeClass(updatedNode);
+                }
+              }
+            },
+            onError: (error) => {
+              console.error(
+                "[AccordionPrompt] Mode change validation error:",
+                error,
+              );
+            },
+          },
+        );
+      });
+    }
+  }, [isDoubleBrackets]);
+
   const handleInput = (e: React.FormEvent<HTMLDivElement>) => {
     if (!contentEditableRef.current) return;
 
@@ -397,10 +458,10 @@ export default function AccordionPromptComponent({
       contentEditableRef.current.innerHTML = "";
     }
 
-    // Reset typing flag after a short delay
-    setTimeout(() => {
+    // Reset typing flag after current event loop completes
+    queueMicrotask(() => {
       isTypingRef.current = false;
-    }, 100);
+    });
 
     // Scroll cursor into view
     scrollToCursor();
@@ -450,7 +511,10 @@ export default function AccordionPromptComponent({
 
     isTypingRef.current = true;
 
-    const variableName = generateUniqueVariableName(internalValue);
+    const variableName = generateUniqueVariableName(
+      internalValue,
+      isDoubleBrackets,
+    );
     const variableText = isDoubleBrackets
       ? `{{${variableName}}}`
       : `{${variableName}}`;
