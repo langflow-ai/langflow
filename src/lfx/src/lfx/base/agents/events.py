@@ -315,7 +315,7 @@ async def handle_on_chain_stream(
         # For streaming, send token event if callback is available
         # Note: we should expect the callback, but we keep it optional for backwards compatibility
         # as of v1.6.5
-        if output_text and output_text.strip() and send_token_callback and message_id:
+        if output_text is not None and output_text != "" and send_token_callback and message_id:
             await asyncio.to_thread(
                 send_token_callback,
                 data={
