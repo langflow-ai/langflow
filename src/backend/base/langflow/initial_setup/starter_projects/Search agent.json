@@ -845,7 +845,7 @@
         "data": {
           "id": "note-IK0Uo",
           "node": {
-            "description": "### 💡 Add your OpenAI API key here 👇",
+            "description": "### Configure your Model Provider",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -861,8 +861,8 @@
           "width": 324
         },
         "position": {
-          "x": 417.976712381606,
-          "y": 122.2833671724412
+          "x": 393.976712381606,
+          "y": 101.2833671724412
         },
         "selected": false,
         "type": "noteNode"
@@ -871,7 +871,7 @@
         "data": {
           "id": "note-zpH8d",
           "node": {
-            "description": "### 💡 Add your ScrapeGraphAI API key here 👇",
+            "description": "### Add your ScrapeGraphAI API key here 👇",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -888,8 +888,8 @@
           "width": 390
         },
         "position": {
-          "x": 8.432436918410303,
-          "y": 130.15072721938364
+          "x": 32.432436918410303,
+          "y": 95.15072721938364
         },
         "resizing": false,
         "selected": false,
