@@ -28,6 +28,7 @@ test(
         status: 200,
         contentType: "application/json",
         body: JSON.stringify({
+          type: "full",
           webhook_auth_enable: true,
         }),
         headers: {
@@ -93,6 +94,7 @@ test(
         status: 200,
         contentType: "application/json",
         body: JSON.stringify({
+          type: "full",
           webhook_auth_enable: false,
         }),
         headers: {

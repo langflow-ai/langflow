@@ -21,7 +21,8 @@ async def test_get_version(client: AsyncClient):
     assert "package" in result, "The dictionary must contain a key called 'package'"
 
 
-async def test_get_config(client: AsyncClient, logged_in_headers: dict):
+async def test_get_config_basic(client: AsyncClient, logged_in_headers: dict):
+    """Test basic authenticated /config endpoint returns expected structure."""
     response = await client.get("api/v1/config", headers=logged_in_headers)
     result = response.json()
 
@@ -185,3 +186,106 @@ class ConsistencyTestComponent(Component):
 
     # assert metadata1["module"] == metadata2["module"], "Module names should be consistent"
     # assert metadata1["code_hash"] == metadata2["code_hash"], "Code hashes should be consistent for identical code"
+
+
+async def test_get_config_without_authentication_returns_public_config(client: AsyncClient):
+    """Test that /config returns public config when accessed without authentication."""
+    response = await client.get("api/v1/config")
+    assert response.status_code == status.HTTP_200_OK
+
+
+async def test_get_config_unauthenticated_returns_expected_fields(client: AsyncClient):
+    """Test that unauthenticated /config response contains only public-safe fields."""
+    response = await client.get("api/v1/config")
+    result = response.json()
+
+    assert response.status_code == status.HTTP_200_OK
+    assert isinstance(result, dict), "The result must be a dictionary"
+
+    # Verify expected public fields are present
+    assert "max_file_size_upload" in result, "Response must contain 'max_file_size_upload'"
+    assert "event_delivery" in result, "Response must contain 'event_delivery'"
+    assert "voice_mode_available" in result, "Response must contain 'voice_mode_available'"
+    assert "frontend_timeout" in result, "Response must contain 'frontend_timeout'"
+
+    # Verify type discriminator for public config
+    assert "type" in result, "Response must contain 'type' discriminator field"
+    assert result["type"] == "public", "Unauthenticated response must have type='public'"
+
+
+async def test_get_config_unauthenticated_does_not_expose_sensitive_fields(client: AsyncClient):
+    """Test that unauthenticated /config response does not contain sensitive configuration fields."""
+    response = await client.get("api/v1/config")
+    result = response.json()
+
+    assert response.status_code == status.HTTP_200_OK
+
+    # Verify sensitive fields are NOT present
+    sensitive_fields = [
+        "database_url",
+        "secret_key",
+        "auto_saving",
+        "auto_saving_interval",
+        "health_check_max_retries",
+        "feature_flags",
+        "webhook_polling_interval",
+        "serialization_max_items_length",
+        "webhook_auth_enable",
+        "default_folder_name",
+        "hide_getting_started_progress",
+    ]
+
+    for field in sensitive_fields:
+        assert field not in result, f"Sensitive field '{field}' should not be exposed in unauthenticated config"
+
+
+async def test_get_config_unauthenticated_returns_correct_field_types(client: AsyncClient):
+    """Test that unauthenticated /config response fields have correct types."""
+    response = await client.get("api/v1/config")
+    result = response.json()
+
+    assert response.status_code == status.HTTP_200_OK
+
+    # Verify field types
+    assert isinstance(result["max_file_size_upload"], int), "max_file_size_upload must be an integer"
+    assert isinstance(result["frontend_timeout"], int), "frontend_timeout must be an integer"
+    assert isinstance(result["voice_mode_available"], bool), "voice_mode_available must be a boolean"
+    assert result["event_delivery"] in ["polling", "streaming", "direct"], (
+        "event_delivery must be one of: polling, streaming, direct"
+    )
+
+
+async def test_get_config_returns_500_on_settings_error(client: AsyncClient, monkeypatch):
+    """Test that /config endpoint returns 500 when settings retrieval fails."""
+    error_message = "Settings retrieval failed"
+
+    def raise_settings_error():
+        raise RuntimeError(error_message)
+
+    # Patch get_settings_service at the module level
+    monkeypatch.setattr("langflow.api.v1.endpoints.get_settings_service", raise_settings_error)
+
+    response = await client.get("api/v1/config")
+    result = response.json()
+
+    assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    assert error_message in result["detail"]
+
+
+async def test_get_config_authenticated_returns_full_config(client: AsyncClient, logged_in_headers: dict):
+    """Test that authenticated /config returns full ConfigResponse with all settings."""
+    response = await client.get("api/v1/config", headers=logged_in_headers)
+    result = response.json()
+
+    assert response.status_code == status.HTTP_200_OK
+    assert isinstance(result, dict), "The result must be a dictionary"
+
+    # Verify type discriminator for full config
+    assert "type" in result, "Response must contain 'type' discriminator field"
+    assert result["type"] == "full", "Authenticated response must have type='full'"
+
+    # Verify full config fields are present (not just public fields)
+    assert "auto_saving" in result, "Authenticated response must contain 'auto_saving'"
+    assert "auto_saving_interval" in result, "Authenticated response must contain 'auto_saving_interval'"
+    assert "health_check_max_retries" in result, "Authenticated response must contain 'health_check_max_retries'"
+    assert "feature_flags" in result, "Authenticated response must contain 'feature_flags'"

@@ -1,4 +1,3 @@
-import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
 import { ENABLE_VOICE_ASSISTANT } from "@/customization/feature-flags";
 import type { FilePreviewType } from "@/types/components";
 import FilePreviewDisplay from "../../utils/file-preview-display";
@@ -46,8 +45,6 @@ const InputWrapper = ({
   isAudioSupported,
 }: InputWrapperProps) => {
   const classNameFilePreview = `flex w-full items-center gap-2 py-2 overflow-auto`;
-
-  const { data: config } = useGetConfig();
 
   const onClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;

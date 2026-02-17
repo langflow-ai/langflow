@@ -81,6 +81,7 @@ test(
         status: 200,
         contentType: "application/json",
         body: JSON.stringify({
+          type: "full",
           webhook_polling_interval: 1000,
         }),
         headers: {

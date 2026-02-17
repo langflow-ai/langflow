@@ -226,6 +226,49 @@ async def get_current_user_for_sse(
         ) from e
 
 
+async def get_optional_user(
+    token: Annotated[str | None, Security(oauth2_login)],
+    query_param: Annotated[str | None, Security(api_key_query)],
+    header_param: Annotated[str | None, Security(api_key_header)],
+    db: AsyncSession = Depends(injectable_session_scope),
+) -> User | None:
+    """Get the current user if authenticated, otherwise return None.
+
+    This is useful for endpoints that need to behave differently for authenticated
+    vs unauthenticated users (e.g., returning different response types).
+
+    Returns:
+        User | None: The authenticated user if valid credentials are provided, None otherwise.
+    """
+    try:
+        user = await _auth_service().get_current_user(token, query_param, header_param, db)
+    except (AuthenticationError, HTTPException):
+        return None
+    else:
+        if user and user.is_active:
+            return user
+        return None
+
+
+async def get_webhook_user(flow_id: str, request: Request) -> UserRead:
+    """Get the user for webhook execution.
+
+    When WEBHOOK_AUTH_ENABLE=false, allows execution as the flow owner without API key.
+    When WEBHOOK_AUTH_ENABLE=true, requires API key authentication and validates flow ownership.
+
+    Args:
+        flow_id: The ID of the flow being executed
+        request: The FastAPI request object
+
+    Returns:
+        UserRead: The user to execute the webhook as
+
+    Raises:
+        HTTPException: If authentication fails or user doesn't have permission
+    """
+    return await _auth_service().get_webhook_user(flow_id, request)
+
+
 async def get_current_active_user(user: User = Depends(get_current_user)) -> User | UserRead:
     result = await _auth_service().get_current_active_user(user)
     if result is None:
