@@ -28,9 +28,6 @@ router = APIRouter(tags=["Knowledge Bases"], prefix="/knowledge_bases", include_
 
 _KNOWLEDGE_BASES_DIR: Path | None = None
 
-# Maps job_id (str) → task_id (str) for active ingestion tasks so they can be cancelled
-_ACTIVE_INGESTION_TASKS: dict[str, str] = {}
-
 
 def _get_knowledge_bases_dir() -> Path:
     """Lazy load the knowledge bases directory from settings."""
@@ -253,8 +250,13 @@ def calculate_text_metrics(df: pd.DataFrame, text_columns: list[str]) -> tuple[i
     return total_words, total_characters
 
 
-def get_kb_metadata(kb_path: Path) -> dict:
-    """Extract metadata from a knowledge base directory."""
+def get_kb_metadata(kb_path: Path, fast: bool = False) -> dict:
+    """Extract metadata from a knowledge base directory.
+
+    If fast=True, it will attempt to read from the embedding_metadata.json file.
+    If essential fields are missing (backward compatibility), it will fall back
+    to a full scan once and update the metadata file (backfill).
+    """
     metadata: dict[str, float | int | str] = {
         "chunks": 0,
         "words": 0,
@@ -263,30 +265,51 @@ def get_kb_metadata(kb_path: Path) -> dict:
         "embedding_provider": "Unknown",
         "embedding_model": "Unknown",
         "id": "",
+        "size": 0,
     }
 
+    metadata_file = kb_path / "embedding_metadata.json"
+    backfill_needed = False
+
     try:
-        # First check embedding metadata file for accurate provider and model info
-        metadata_file = kb_path / "embedding_metadata.json"
+        # 1. Try reading from existing metadata file
         if metadata_file.exists():
             try:
                 with metadata_file.open("r", encoding="utf-8") as f:
                     embedding_metadata = json.load(f)
                     if isinstance(embedding_metadata, dict):
-                        if "embedding_provider" in embedding_metadata:
-                            metadata["embedding_provider"] = embedding_metadata["embedding_provider"]
-                        if "embedding_model" in embedding_metadata:
-                            metadata["embedding_model"] = embedding_metadata["embedding_model"]
-                        if "id" in embedding_metadata:
-                            metadata["id"] = embedding_metadata["id"]
+                        # Update all fields that exist in the JSON
+                        for key in metadata:
+                            if key in embedding_metadata:
+                                metadata[key] = embedding_metadata[key]
+
+                        # Check if we are missing essential stats (for backward compatibility)
+                        # If chunks/size are missing or 0, we might need a backfill
+                        if "chunks" not in embedding_metadata or "size" not in embedding_metadata:
+                            backfill_needed = True
             except (OSError, json.JSONDecodeError) as _:
                 logger.exception("Error reading embedding metadata file '%s'", metadata_file)
+                backfill_needed = True
+        else:
+            backfill_needed = True
 
-        # Fallback to detection if not found in metadata file
+        # 2. If we have all the data we need and fast=True, we can return early
+        if fast and not backfill_needed:
+            return metadata
+
+        # 3. Slow path: Calculate missing data
+        # Fallback to detection if provider/model are Unknown
         if metadata["embedding_provider"] == "Unknown":
             metadata["embedding_provider"] = detect_embedding_provider(kb_path)
+            backfill_needed = True
         if metadata["embedding_model"] == "Unknown":
             metadata["embedding_model"] = detect_embedding_model(kb_path)
+            backfill_needed = True
+
+        # Calculate size if missing
+        if metadata.get("size") == 0:
+            metadata["size"] = get_directory_size(kb_path)
+            backfill_needed = True
 
         # If the KB is currently being ingested, skip the expensive Chroma read
         # to avoid SQLite contention with the background writer.
@@ -313,29 +336,24 @@ def get_kb_metadata(kb_path: Path) -> dict:
             except (ValueError, TypeError, OSError) as _:
                 logger.exception("Error reading schema file '%s'", schema_file)
 
-        # Create vector store
-        chroma = Chroma(
-            persist_directory=str(kb_path),
-            collection_name=kb_path.name,
-        )
-
-        # Access the raw collection
-        collection = chroma._collection  # noqa: SLF001
-
-        # Fetch all documents and metadata
-        results = collection.get(include=["documents", "metadatas"])
-
-        # Convert to pandas DataFrame
-        source_chunks = pd.DataFrame(
-            {
-                "document": results["documents"],
-                "metadata": results["metadatas"],
-            }
-        )
-
-        # Process the source data for metadata
+        # Create vector store and fetch count
         try:
-            metadata["chunks"] = len(source_chunks)
+            chroma = Chroma(
+                persist_directory=str(kb_path),
+                collection_name=kb_path.name,
+            )
+            # Access the raw collection and get count (this is fast)
+            collection = chroma._collection  # noqa: SLF001
+            metadata["chunks"] = collection.count()
+
+            # Perform the heavy scan for text metrics if needed
+            results = collection.get(include=["documents", "metadatas"])
+            source_chunks = pd.DataFrame(
+                {
+                    "document": results["documents"],
+                    "metadata": results["metadatas"],
+                }
+            )
 
             # Get text columns and calculate metrics
             text_columns = get_text_columns(source_chunks, schema_data)
@@ -347,9 +365,20 @@ def get_kb_metadata(kb_path: Path) -> dict:
                 # Calculate average chunk size
                 if int(metadata["chunks"]) > 0:
                     metadata["avg_chunk_size"] = round(int(characters) / int(metadata["chunks"]), 1)
+        except Exception as e:
+            logger.debug(f"Chroma-based metadata calculation failed for {kb_path.name}: {e}")
 
-        except (OSError, ValueError, TypeError) as _:
-            logger.exception("Error processing Chroma DB '%s'", kb_path.name)
+        # 4. Backfill: Update the metadata file for next time
+        if backfill_needed:
+            try:
+                current_json = {}
+                if metadata_file.exists():
+                    current_json = json.loads(metadata_file.read_text())
+                current_json.update(metadata)
+                metadata_file.write_text(json.dumps(current_json, indent=2))
+                logger.info(f"Backfilled metadata for knowledge base: {kb_path.name}")
+            except Exception as e:
+                logger.warning(f"Could not save backfilled metadata for {kb_path.name}: {e}")
 
     except (OSError, ValueError, TypeError) as exc:
         logger.exception("Error processing knowledge base directory '%s': %s: %s", kb_path, type(exc).__name__, exc)
@@ -534,7 +563,6 @@ async def ingest_files_to_knowledge_base(
     source_name: Annotated[str, Form()] = "",
     chunk_size: Annotated[int, Form()] = 1000,
     chunk_overlap: Annotated[int, Form()] = 200,
-    separator: Annotated[str, Form()] = "\n",
 ) -> dict[str, object] | TaskResponse:
     """Upload and ingest files directly into a knowledge base.
 
@@ -607,18 +635,9 @@ async def ingest_files_to_knowledge_base(
             job_id=job_id, flow_id=job_id, job_type=JobType.INGESTION, asset_id=asset_id, asset_type="knowledge_base"
         )
 
-        # Always use async path: fire and forget so the endpoint returns immediately
+        # Always use async path: fire and forget the ingestion logic wrapped in status updates
         task_service = get_task_service()
-
-        # Clear any previous failed marker and write ingesting marker
-        failed_marker = kb_path / ".failed"
-        if failed_marker.exists():
-            failed_marker.unlink(missing_ok=True)
-        marker_path = kb_path / ".ingesting"
-        marker_path.write_text(str(job_id))
-
-        # Fire and forget the ingestion logic wrapped in status updates
-        task_id = await task_service.fire_and_forget_task(
+        await task_service.fire_and_forget_task(
             job_service.execute_with_status,
             job_id=job_id,
             run_coro_func=_perform_ingestion,
@@ -627,15 +646,12 @@ async def ingest_files_to_knowledge_base(
             files_data=files_data,
             chunk_size=chunk_size,
             chunk_overlap=chunk_overlap,
-            separator=separator,
             source_name=source_name,
             current_user=current_user,
             embedding_provider=embedding_provider,
             embedding_model=embedding_model,
+            task_job_id=job_id,
         )
-        # Persist task_id in the marker file so cancel works even after code reload
-        marker_path.write_text(f"{job_id}\n{task_id}")
-        _ACTIVE_INGESTION_TASKS[str(job_id)] = task_id
         return TaskResponse(id=str(job_id), href=f"/task/{job_id}")
 
     except HTTPException:
@@ -644,76 +660,27 @@ async def ingest_files_to_knowledge_base(
         raise HTTPException(status_code=500, detail=f"Error ingesting files to knowledge base: {e!s}") from e
 
 
-@router.post("/{kb_name}/cancel", status_code=HTTPStatus.OK)
-async def cancel_ingestion(kb_name: str, current_user: CurrentActiveUser):
-    """Cancel an active ingestion job for a knowledge base."""
-    try:
-        kb_root_path = get_kb_root_path()
-        kb_user = current_user.username
-        kb_path = kb_root_path / kb_user / kb_name
-
-        if not kb_path.exists():
-            raise HTTPException(status_code=404, detail=f"Knowledge base '{kb_name}' not found")
-
-        # Find the job_id from the .ingesting marker
-        marker_path = kb_path / ".ingesting"
-        if not marker_path.exists():
-            raise HTTPException(status_code=400, detail="No active ingestion to cancel")
-
-        marker_content = marker_path.read_text().strip().split("\n")
-        job_id_str = marker_content[0]
-        # Read task_id from marker file (line 2) or fall back to in-memory dict
-        task_id = marker_content[1] if len(marker_content) > 1 else _ACTIVE_INGESTION_TASKS.get(job_id_str)
-
-        if not task_id:
-            raise HTTPException(status_code=400, detail="Ingestion task not found or already completed")
-
-        # Revoke the task
-        task_service = get_task_service()
-        await task_service.revoke_task(task_id)
-
-        # Clean up
-        _ACTIVE_INGESTION_TASKS.pop(job_id_str, None)
-        if marker_path.exists():
-            marker_path.unlink(missing_ok=True)
-
-        return {"message": f"Ingestion for '{kb_name}' has been cancelled"}
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error cancelling ingestion: {e!s}") from e
-
-
 async def _perform_ingestion(
     kb_name: str,
     kb_path: Path,
     files_data: list[tuple[str, bytes]],
     chunk_size: int,
     chunk_overlap: int,
-    separator: str,
     source_name: str,
     current_user: CurrentActiveUser,
     embedding_provider: str,
     embedding_model: str,
+    task_job_id: uuid.UUID,
 ) -> dict[str, object]:
-    """Internal function to perform the actual ingestion logic."""
-    marker_path = kb_path / ".ingesting"
+    """Internal function to perform the actual ingestion logic with rollback capability."""
     chroma = None
     try:
         processed_files = []
         total_chunks_created = 0
 
-        # Build separators list: user separator first, then defaults
-        separators = None
-        if separator:
-            actual_separator = separator.replace("\\n", "\n").replace("\\t", "\t")
-            separators = [actual_separator, "\n\n", "\n", " ", ""]
-
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=chunk_size,
             chunk_overlap=chunk_overlap,
-            separators=separators,
         )
 
         # Build embeddings based on provider
@@ -727,6 +694,7 @@ async def _perform_ingestion(
         )
 
         batch_size = 100
+        job_id_str = str(task_job_id)
 
         for file_name, file_content in files_data:
             try:
@@ -754,6 +722,7 @@ async def _perform_ingestion(
                                 "chunk_index": i + j,
                                 "total_chunks": file_chunks_count,
                                 "ingested_at": datetime.now(timezone.utc).isoformat(),
+                                "job_id": job_id_str,  # Tag each chunk with the unique job ID
                             },
                         )
                         for j, chunk in enumerate(batch_chunks)
@@ -761,18 +730,6 @@ async def _perform_ingestion(
 
                     # Embed and add to Chroma using the native async method
                     await chroma.aadd_documents(batch_docs)
-
-                    # Update the marker file with the running chunk count so the
-                    # list endpoint can report progress without reading Chroma.
-                    total_chunks_created += len(batch_chunks)
-                    try:
-                        marker_lines = marker_path.read_text().strip().split("\n")
-                        # Preserve job_id (line 1) and task_id (line 2), append/update chunks (line 3)
-                        marker_lines = marker_lines[:2]
-                        marker_lines.append(str(total_chunks_created))
-                        marker_path.write_text("\n".join(marker_lines))
-                    except OSError:
-                        pass
 
                     # Yield to the event loop to allow other tasks (like logging) to run
                     await asyncio.sleep(0.01)
@@ -782,14 +739,35 @@ async def _perform_ingestion(
                             f"Progress for {file_name}: {min(i + batch_size, file_chunks_count)}/{file_chunks_count} chunks ingested"
                         )
 
+                total_chunks_created += file_chunks_count
                 processed_files.append(file_name)
 
             except Exception as file_error:
                 await logger.aerror(f"Error processing file {file_name}: {file_error}")
-                continue
+                # Re-raise to trigger the collection-level rollback
+                raise file_error
 
         if not processed_files:
             raise ValueError("No files were successfully processed")
+
+        # After successful ingestion, recalculate full metadata (cached for listing)
+        try:
+            full_metadata = get_kb_metadata(kb_path, fast=False)
+            # Add directory size
+            full_metadata["size"] = get_directory_size(kb_path)
+
+            # Save to metadata file
+            metadata_path = kb_path / "embedding_metadata.json"
+            embedding_metadata = {}
+            if metadata_path.exists():
+                embedding_metadata = json.loads(metadata_path.read_text())
+
+            # Merge updated fields
+            embedding_metadata.update(full_metadata)
+            metadata_path.write_text(json.dumps(embedding_metadata, indent=2))
+            await logger.ainfo(f"Updated metadata for {kb_name} with {full_metadata['chunks']} total chunks")
+        except Exception as e:
+            await logger.awarning(f"Failed to update metadata cache for {kb_name}: {e}")
 
         return {
             "message": f"Successfully ingested {len(processed_files)} file(s) with {total_chunks_created} chunks into '{kb_name}'",
@@ -799,10 +777,15 @@ async def _perform_ingestion(
         }
 
     except Exception as e:
-        await logger.aerror(f"Error in background ingestion: {e!s}")
-        # Write a failed marker so the status is visible in the KB table
-        failed_marker = kb_path / ".failed"
-        failed_marker.write_text(str(e))
+        await logger.aerror(f"Error in background ingestion: {e!s}. Initiating rollback...")
+        # Rollback: Delete any chunks added during this specific job attempt
+        if chroma:
+            try:
+                # Delete by job_id metadata to ensure we only remove partial data from THIS attempt
+                await chroma.adelete(where={"job_id": str(task_job_id)})
+                await logger.ainfo(f"Rollback successful: Cleaned up partial data for job {task_job_id}")
+            except Exception as rollback_error:
+                await logger.aerror(f"Failed to perform rollback for job {task_job_id}: {rollback_error}")
         raise
     finally:
         # Release Chroma's resources safely.
@@ -815,9 +798,6 @@ async def _perform_ingestion(
                 chroma = None
             except Exception:
                 pass
-        # Always remove the ingesting marker
-        if marker_path.exists():
-            marker_path.unlink(missing_ok=True)
 
 
 async def _build_embeddings(provider: str, model: str, current_user):
@@ -871,11 +851,8 @@ async def list_knowledge_bases(
             if not kb_dir.is_dir() or kb_dir.name.startswith("."):
                 continue
             try:
-                # Get size of the directory
-                size = get_directory_size(kb_dir)
-
-                # Get metadata from KB files
-                metadata = get_kb_metadata(kb_dir)
+                # Get metadata from KB files (fast path)
+                metadata = get_kb_metadata(kb_dir, fast=True)
 
                 # Extract KB ID from metadata (stored as string, convert to UUID)
                 kb_id_str = metadata.get("id")
@@ -908,7 +885,7 @@ async def list_knowledge_bases(
                     name=kb_dir.name.replace("_", " "),
                     embedding_provider=metadata["embedding_provider"],
                     embedding_model=metadata["embedding_model"],
-                    size=size,
+                    size=metadata["size"],
                     words=metadata["words"],
                     characters=metadata["characters"],
                     chunks=chunks_count,
