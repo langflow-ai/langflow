@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import functools
 import io
 import json
 import zipfile
@@ -1047,6 +1048,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         return {"id": tool_id}
 
     @staticmethod
+    @functools.lru_cache(maxsize=128)
     def _extract_error_detail(response_text: str) -> str | dict:
         """Extract a human-readable error detail from a ClientAPIException response.
 
