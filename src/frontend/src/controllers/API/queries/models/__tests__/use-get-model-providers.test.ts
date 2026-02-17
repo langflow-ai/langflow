@@ -157,8 +157,9 @@ describe("useGetModelProviders", () => {
     it("should rethrow CanceledError so React Query keeps previous data", async () => {
       mockApiGet.mockResolvedValue({ data: [] });
       useGetModelProviders({});
-      const lastReturn = (UseRequestProcessor as jest.Mock).mock.results.at(-1)
-        ?.value;
+      const lastReturn = (UseRequestProcessor as jest.Mock).mock.results.at(
+        -1,
+      )?.value;
       const queryFn = lastReturn?.query?.mock?.calls?.[0]?.[1];
       expect(queryFn).toBeDefined();
 
