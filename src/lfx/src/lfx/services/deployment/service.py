@@ -15,13 +15,23 @@ if TYPE_CHECKING:
     from lfx.services.deployment.schema import (
         ArtifactType,
         BaseConfigData,
+        ConfigItemResult,
+        ConfigListResult,
+        ConfigResult,
         ConfigUpdate,
         DeploymentCreate,
         DeploymentCreateResult,
-        DeploymentListResult,
+        DeploymentDeleteResult,
+        DeploymentHealthResult,
+        DeploymentItem,
+        DeploymentList,
+        DeploymentRedeployResult,
         DeploymentType,
         DeploymentUpdate,
+        DeploymentUpdateResult,
+        SnapshotItem,
         SnapshotItemsCreate,
+        SnapshotListResult,
         SnapshotResult,
     )
 
@@ -79,7 +89,7 @@ class DeploymentService(BaseDeploymentService):
         user_id: UUID | str,
         deployment_type: DeploymentType | None = None,
         db: Any,
-    ) -> DeploymentListResult:
+    ) -> DeploymentList:
         """List deployments visible to this adapter."""
         raise NotImplementedError
 
@@ -90,7 +100,7 @@ class DeploymentService(BaseDeploymentService):
         user_id: UUID | str,
         deployment_id: UUID | str,
         db: Any,
-    ) -> dict[str, Any]:
+    ) -> DeploymentItem:
         """Return deployment metadata by provider ID."""
         raise NotImplementedError
 
@@ -101,7 +111,7 @@ class DeploymentService(BaseDeploymentService):
         user_id: UUID | str,
         update_data: DeploymentUpdate,
         db: Any,
-    ) -> dict[str, Any]:
+    ) -> DeploymentUpdateResult:
         """Update deployment inputs and apply changes in the provider."""
         raise NotImplementedError
 
@@ -112,7 +122,7 @@ class DeploymentService(BaseDeploymentService):
         user_id: UUID | str,
         deployment_id: str,
         db: Any,
-    ) -> dict[str, Any]:
+    ) -> DeploymentRedeployResult:
         """Re-apply current deployment inputs without changing them."""
         raise NotImplementedError
 
@@ -123,7 +133,7 @@ class DeploymentService(BaseDeploymentService):
         user_id: UUID | str,
         deployment_id: str,
         db: Any,
-    ) -> dict[str, Any]:
+    ) -> DeploymentItem:
         """Create a new deployment using the same inputs as the source."""
         raise NotImplementedError
 
@@ -134,7 +144,7 @@ class DeploymentService(BaseDeploymentService):
         user_id: UUID | str,
         deployment_id: str,
         db: Any,
-    ) -> None:
+    ) -> DeploymentDeleteResult:
         """Delete the deployment from the provider."""
         raise NotImplementedError
 
@@ -145,7 +155,7 @@ class DeploymentService(BaseDeploymentService):
         user_id: UUID | str,
         deployment_id: str,
         db: Any,
-    ) -> dict[str, Any]:
+    ) -> DeploymentHealthResult:
         """Return provider-reported health/status for the deployment."""
         raise NotImplementedError
 
@@ -156,7 +166,7 @@ class DeploymentService(BaseDeploymentService):
         user_id: UUID | str,
         config: BaseConfigData,
         db: Any,
-    ) -> dict[str, Any]:
+    ) -> ConfigResult:
         """Create a provider-scoped deployment configuration."""
         raise NotImplementedError
 
@@ -166,7 +176,7 @@ class DeploymentService(BaseDeploymentService):
         *,
         user_id: UUID | str,
         db: Any,
-    ) -> list[dict[str, Any]]:
+    ) -> ConfigListResult:
         """List deployment configurations for this provider."""
         raise NotImplementedError
 
@@ -177,7 +187,7 @@ class DeploymentService(BaseDeploymentService):
         *,
         user_id: UUID | str,
         db: Any,
-    ) -> dict[str, Any]:
+    ) -> ConfigItemResult:
         """Return deployment configuration by provider ID."""
         raise NotImplementedError
 
@@ -188,7 +198,7 @@ class DeploymentService(BaseDeploymentService):
         update_data: ConfigUpdate,
         user_id: UUID | str,
         db: Any,
-    ) -> dict[str, Any]:
+    ) -> ConfigResult:
         """Update a deployment configuration's JSON data."""
         raise NotImplementedError
 
@@ -221,7 +231,7 @@ class DeploymentService(BaseDeploymentService):
         user_id: UUID | str,
         artifact_type: ArtifactType | None = None,
         db: Any,
-    ) -> list[dict[str, Any]]:
+    ) -> SnapshotListResult:
         """List provider snapshots (deployed or not)."""
         raise NotImplementedError
 
@@ -232,7 +242,7 @@ class DeploymentService(BaseDeploymentService):
         user_id: UUID | str,
         snapshot_id: str,
         db: Any,
-    ) -> dict[str, Any]:
+    ) -> SnapshotItem:
         """Return snapshot metadata by provider ID."""
         raise NotImplementedError
 

@@ -10,6 +10,11 @@ DeploymentProviderName = Annotated[
     StringConstraints(strip_whitespace=True, min_length=1, max_length=128),
 ] # the name of the deployment provider.
 
+AccountId = Annotated[
+    str,
+    StringConstraints(strip_whitespace=True, min_length=1, max_length=128),
+] # the provider account / tenant id.
+
 
 class DeploymentType(str, Enum):
     """Deployment types supported by Langflow."""
@@ -80,7 +85,10 @@ class SnapshotListResult(BaseModel):
     provider_result: dict | None = Field(
         None, description="The result of the snapshot list operation from the provider"
     )
-    artifact_type: ArtifactType | Literal["all"] = Field(default="all", description="The type of the snapshot items being referenced.")
+    artifact_type: ArtifactType | Literal["all"] = Field(
+        default="all",
+        description="The type of the snapshot items being referenced.",
+    )
 
 
 class SnapshotReferenceItems(BaseModel):
@@ -199,6 +207,22 @@ class ConfigResult(BaseModel):
     )
 
 
+class ConfigItemResult(BaseModel):
+    """Model representing a result for a config item."""
+    id: UUID | str = Field(description="The id of the config")
+    name: str | None = Field(None, description="The name of the config")
+    description: str | None = Field(None, description="The description of the config")
+    provider_data: dict | None = Field(None, description="The config data from the provider")
+
+
+class ConfigListResult(BaseModel):
+    """Model representing a result for a config list operation."""
+    configs: list[ConfigItemResult] = Field(description="The list of configs")
+    provider_result: dict | None = Field(
+        None, description="The result of the config list operation from the provider"
+    )
+
+
 class ConfigReference(BaseModel):
     format: Literal[ConfigFormat.REFERENCE_ID] = ConfigFormat.REFERENCE_ID
     value: str
@@ -266,6 +290,7 @@ class DeploymentCreateResult(BaseDeploymentData):
         None, description="The result of the deployment creation operation from the provider"
     )
 
+
 class DeploymentDeleteResult(BaseModel):
     """Model representing a result for a deployment deletion operation."""
     id: UUID | str = Field(description="The id of the deleted deployment")
@@ -274,15 +299,18 @@ class DeploymentDeleteResult(BaseModel):
     )
 
 
-class DeploymentListItemResult(BaseModel):
+class DeploymentItem(BaseModel):
     """Model representing a result for a deployment list item."""
     id: UUID | str = Field(description="The id of the deployment")
+    name: str = Field(description="The name of the deployment")
+    description: str | None = Field(None, description="The description of the deployment")
+    type: DeploymentType = Field(description="The type of the deployment")
     provider_data: dict | None = Field(None, description="The data of the deployment from the provider")
 
 
-class DeploymentListResult(BaseModel):
+class DeploymentList(BaseModel):
     """Model representing a result for a deployment list operation."""
-    deployments: list[DeploymentListItemResult] = Field(description="The list of deployments")
+    deployments: list[DeploymentItem] = Field(description="The list of deployments")
     deployment_type: DeploymentType | None = Field(None, description="The type of the deployment")
     provider_result: dict | None = Field(
         None, description="The result of the deployment list operation from the provider"
@@ -300,7 +328,9 @@ class SnapshotResult(BaseModel):
 class DeploymentCreate(BaseModel):
     """Deployment create payload."""
     # provider: DeploymentProviderName = Field(description="The name of the deployment provider.")
-    # account_id: str = Field(description="The id of the account / tenant/ organization registered with the deployment provider.")
+    # account_id: str = Field(
+    #     description="The id of the account / tenant/ organization registered with the deployment provider."
+    # )
     spec: BaseDeploymentData = Field(description="The base metadata of the deployment")
     snapshot: SnapshotItems | None = Field(None, description="The snapshots of the deployment")
     config: ConfigItem | None = Field(None, description="The config of the deployment")
@@ -317,9 +347,41 @@ class BaseDeploymentDataUpdate(BaseModel):
 
 class DeploymentUpdate(BaseModel):
     """Deployment update payload."""
-    data: BaseDeploymentDataUpdate | None = Field(None, description="The metadata of the deployment")
+    id: str | UUID = Field(description="The id of the deployment to update")
+    spec: BaseDeploymentDataUpdate | None = Field(None, description="The metadata of the deployment")
     snapshot: SnapshotDeploymentBindingUpdate | None = Field(None, description="The snapshot of the deployment")
     config: ConfigDeploymentBindingUpdate | None = Field(None, description="The config of the deployment")
+
+    @field_validator("id")
+    @classmethod
+    def validate_deployment_id(cls, v: str | UUID) -> str | UUID:
+        if isinstance(v, str):
+            return _normalize_and_validate_id(v, field_name="id")
+        return v
+
+
+class DeploymentUpdateResult(BaseModel):
+    """Model representing a result for a deployment update operation."""
+    id: UUID | str = Field(description="The id of the updated deployment")
+    provider_result: dict | None = Field(
+        None, description="The result of the deployment update operation from the provider"
+    )
+
+
+class DeploymentRedeployResult(BaseModel):
+    """Model representing a result for a deployment redeploy operation."""
+    id: UUID | str = Field(description="The id of the redeployed deployment")
+    status: str = Field(description="The deployment status reported by the provider")
+    provider_result: dict | None = Field(
+        None, description="The result of the deployment redeploy operation from the provider"
+    )
+
+
+class DeploymentHealthResult(BaseModel):
+    """Model representing a deployment health/status response."""
+    id: UUID | str = Field(description="The id of the deployment")
+    status: str | None = Field(None, description="The normalized deployment health status")
+    provider_data: dict | None = Field(None, description="The provider health payload")
 
 
 def _normalize_and_validate_id(value: str, *, field_name: str) -> str:

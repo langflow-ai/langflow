@@ -14,13 +14,23 @@ if TYPE_CHECKING:
     from lfx.services.deployment.schema import (
         ArtifactType,
         BaseConfigData,
+        ConfigItemResult,
+        ConfigListResult,
+        ConfigResult,
         ConfigUpdate,
         DeploymentCreate,
         DeploymentCreateResult,
         DeploymentDeleteResult,
+        DeploymentHealthResult,
+        DeploymentItem,
+        DeploymentList,
+        DeploymentRedeployResult,
         DeploymentType,
         DeploymentUpdate,
+        DeploymentUpdateResult,
+        SnapshotItem,
         SnapshotItemsCreate,
+        SnapshotListResult,
         SnapshotResult,
     )
     from lfx.services.settings.base import Settings
@@ -221,8 +231,9 @@ class TransactionServiceProtocol(Protocol):
 class DeploymentServiceProtocol(Protocol):
     """Protocol for deployment provider services.
 
-    This protocol is provider-only:
-    inputs/outputs represent provider state.
+    This protocol exposes adapter-agnostic deployment contracts:
+    top-level fields are minimal generic metadata, while provider-specific
+    details are carried in ``provider_data``/``provider_result`` fields.
     """
 
     @abstractmethod
@@ -253,7 +264,7 @@ class DeploymentServiceProtocol(Protocol):
         user_id: UUID | str,
         deployment_type: DeploymentType | None = None,
         db: Any,
-    ) -> list[dict[str, Any]]:
+    ) -> DeploymentList:
         """List deployments visible to this adapter."""
         ...
 
@@ -264,7 +275,7 @@ class DeploymentServiceProtocol(Protocol):
         user_id: UUID | str,
         deployment_id: UUID | str,
         db: Any,
-    ) -> dict[str, Any]:
+    ) -> DeploymentItem:
         """Return deployment metadata by provider ID."""
         ...
 
@@ -275,7 +286,7 @@ class DeploymentServiceProtocol(Protocol):
         user_id: UUID | str,
         update_data: DeploymentUpdate,
         db: Any,
-    ) -> dict[str, Any]:
+    ) -> DeploymentUpdateResult:
         """Update deployment inputs and apply changes in the provider."""
         ...
 
@@ -286,7 +297,7 @@ class DeploymentServiceProtocol(Protocol):
         user_id: UUID | str,
         deployment_id: str,
         db: Any,
-    ) -> dict[str, Any]:
+    ) -> DeploymentRedeployResult:
         """Re-apply current deployment inputs without changing them."""
         ...
 
@@ -297,7 +308,7 @@ class DeploymentServiceProtocol(Protocol):
         user_id: UUID | str,
         deployment_id: str,
         db: Any,
-    ) -> dict[str, Any]:
+    ) -> DeploymentItem:
         """Create a new deployment using the same inputs as the source."""
         ...
 
@@ -319,7 +330,7 @@ class DeploymentServiceProtocol(Protocol):
         user_id: UUID | str,
         deployment_id: str,
         db: Any,
-    ) -> dict[str, Any]:
+    ) -> DeploymentHealthResult:
         """Return provider-reported health/status for the deployment."""
         ...
 
@@ -330,7 +341,7 @@ class DeploymentServiceProtocol(Protocol):
         user_id: UUID | str,
         config: BaseConfigData,
         db: Any,
-    ) -> dict[str, Any]:
+    ) -> ConfigResult:
         """Create a provider-scoped deployment configuration."""
         ...
 
@@ -340,7 +351,7 @@ class DeploymentServiceProtocol(Protocol):
         *,
         user_id: UUID | str,
         db: Any,
-    ) -> list[dict[str, Any]]:
+    ) -> ConfigListResult:
         """List deployment configurations."""
         ...
 
@@ -351,7 +362,7 @@ class DeploymentServiceProtocol(Protocol):
         user_id: UUID | str,
         config_id: str,
         db: Any,
-    ) -> dict[str, Any]:
+    ) -> ConfigItemResult:
         """Return deployment configuration by provider ID."""
         ...
 
@@ -362,7 +373,7 @@ class DeploymentServiceProtocol(Protocol):
         update_data: ConfigUpdate,
         user_id: UUID | str,
         db: Any,
-    ) -> dict[str, Any]:
+    ) -> ConfigResult:
         """Update a deployment configuration's JSON data."""
         ...
 
@@ -395,7 +406,7 @@ class DeploymentServiceProtocol(Protocol):
         user_id: UUID | str,
         artifact_type: ArtifactType | None = None,
         db: Any,
-    ) -> list[dict[str, Any]]:
+    ) -> SnapshotListResult:
         """List provider snapshots (deployed or not)."""
         ...
 
@@ -406,7 +417,7 @@ class DeploymentServiceProtocol(Protocol):
         user_id: UUID | str,
         snapshot_id: str,
         db: Any,
-    ) -> dict[str, Any]:
+    ) -> SnapshotItem:
         """Return snapshot metadata by provider ID."""
         ...
 

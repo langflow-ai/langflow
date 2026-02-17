@@ -13,11 +13,23 @@ if TYPE_CHECKING:
     from lfx.services.deployment.schema import (
         ArtifactType,
         BaseConfigData,
+        ConfigItemResult,
+        ConfigListResult,
+        ConfigResult,
         ConfigUpdate,
         DeploymentCreate,
+        DeploymentCreateResult,
+        DeploymentDeleteResult,
+        DeploymentHealthResult,
+        DeploymentItem,
+        DeploymentList,
+        DeploymentRedeployResult,
         DeploymentType,
         DeploymentUpdate,
+        DeploymentUpdateResult,
+        SnapshotItem,
         SnapshotItemsCreate,
+        SnapshotListResult,
         SnapshotResult,
     )
 
@@ -50,7 +62,7 @@ class BaseDeploymentService(Service):
         user_id: UUID | str,
         deployment: DeploymentCreate,
         db: Any,
-    ) -> dict[str, Any]:
+    ) -> DeploymentCreateResult:
         """Create a new deployment in the provider."""
 
     @abstractmethod
@@ -70,7 +82,7 @@ class BaseDeploymentService(Service):
         user_id: UUID | str,
         deployment_type: DeploymentType | None = None,
         db: Any,
-    ) -> list[dict[str, Any]]:
+    ) -> DeploymentList:
         """List deployments visible to this adapter."""
 
     @abstractmethod
@@ -80,9 +92,8 @@ class BaseDeploymentService(Service):
         user_id: UUID | str,
         deployment_id: UUID | str,
         db: Any,
-    ) -> dict[str, Any]:
+    ) -> DeploymentItem:
         """Return deployment metadata by provider ID."""
-
 
     @abstractmethod
     async def update_deployment(
@@ -91,7 +102,7 @@ class BaseDeploymentService(Service):
         user_id: UUID | str,
         update_data: DeploymentUpdate,
         db: Any,
-    ) -> dict[str, Any]:
+    ) -> DeploymentUpdateResult:
         """Update deployment inputs and apply changes in the provider."""
 
     @abstractmethod
@@ -101,7 +112,7 @@ class BaseDeploymentService(Service):
         user_id: UUID | str,
         deployment_id: str,
         db: Any,
-    ) -> dict[str, Any]:
+    ) -> DeploymentRedeployResult:
         """Re-apply current deployment inputs without changing them."""
 
     @abstractmethod
@@ -111,7 +122,7 @@ class BaseDeploymentService(Service):
         user_id: UUID | str,
         deployment_id: str,
         db: Any,
-    ) -> dict[str, Any]:
+    ) -> DeploymentItem:
         """Create a new deployment using the same inputs as the source."""
 
     @abstractmethod
@@ -121,7 +132,7 @@ class BaseDeploymentService(Service):
         user_id: UUID | str,
         deployment_id: str,
         db: Any,
-    ) -> None:
+    ) -> DeploymentDeleteResult:
         """Delete the deployment from the provider."""
 
     @abstractmethod
@@ -131,7 +142,7 @@ class BaseDeploymentService(Service):
         user_id: UUID | str,
         deployment_id: str,
         db: Any,
-    ) -> dict[str, Any]:
+    ) -> DeploymentHealthResult:
         """Return provider-reported health/status for the deployment."""
 
     @abstractmethod
@@ -141,7 +152,7 @@ class BaseDeploymentService(Service):
         config: BaseConfigData,
         user_id: UUID | str,
         db: Any,
-    ) -> dict[str, Any]:
+    ) -> ConfigResult:
         """Create a provider-scoped deployment configuration."""
 
     @abstractmethod
@@ -150,7 +161,7 @@ class BaseDeploymentService(Service):
         *,
         user_id: UUID | str,
         db: Any,
-    ) -> list[dict[str, Any]]:
+    ) -> ConfigListResult:
         """List deployment configurations for this provider."""
 
     @abstractmethod
@@ -160,7 +171,7 @@ class BaseDeploymentService(Service):
         *,
         user_id: UUID | str,
         db: Any,
-    ) -> dict[str, Any]:
+    ) -> ConfigItemResult:
         """Return deployment configuration by provider ID."""
 
     @abstractmethod
@@ -170,7 +181,7 @@ class BaseDeploymentService(Service):
         update_data: ConfigUpdate,
         user_id: UUID | str,
         db: Any,
-    ) -> dict[str, Any]:
+    ) -> ConfigResult:
         """Update a deployment configuration's JSON data."""
 
     @abstractmethod
@@ -200,7 +211,7 @@ class BaseDeploymentService(Service):
         user_id: UUID | str,
         artifact_type: ArtifactType | None = None,
         db: Any,
-    ) -> list[dict[str, Any]]:
+    ) -> SnapshotListResult:
         """List provider snapshots (deployed or not)."""
 
     @abstractmethod
@@ -210,16 +221,16 @@ class BaseDeploymentService(Service):
         user_id: UUID | str,
         snapshot_id: str,
         db: Any,
-    ) -> dict[str, Any]:
-        """Return snapshot metadata by provider ID."""\
+    ) -> SnapshotItem:
+        """Return snapshot metadata by provider ID."""
 
     @abstractmethod
     async def delete_snapshot(
         self,
-        snapshot_id: str,
         *,
         user_id: UUID | str,
         db: Any,
+        snapshot_id: str,
     ) -> None:
         """Delete a provider snapshot."""
 
