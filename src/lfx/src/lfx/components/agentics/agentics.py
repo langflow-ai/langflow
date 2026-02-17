@@ -1,4 +1,5 @@
-"""Agentics component for Map/Reduce style data transformations."""
+"""Agentics component for data transformation using an LLM and natural language instructions with desired schema.
+Process a large batch of data in Map/Reduce style computation for concurrent and faster processing."""
 
 from __future__ import annotations
 
@@ -29,10 +30,10 @@ from lfx.schema.dataframe import DataFrame
 
 
 class AgenticsComponent(BaseAgenticComponent):
-    """Enables Map Reduce Style Agentic data transformations among dataframes."""
+    """Uses an LLM to transform a large batch of data defined by the data type and natural langauge instructions."""
 
-    display_name = "Agentics"
-    description = "Enables Map Reduce Style Agentic data transformations among dataframes"
+    display_name = "Agentic Data Transducer"    
+    description = "Uses an LLM to transform a large batch of data defined by the data type and natural langauge instructions."
     documentation: str = "github.com/IBM/agentics/"
     icon = "Agentics"
 
@@ -40,20 +41,21 @@ class AgenticsComponent(BaseAgenticComponent):
         *get_model_provider_inputs(),
         DataFrameInput(
             name="source",
-            display_name="Source DataFrame",
-            info="Accepts JSON (list of dicts) or DataFrame.",
+            display_name="Data Input",
+            info="DataFrame or a batch of structured data",
         ),
         DropdownInput(
             name="transduction_type",
-            display_name="Transduction Type",
+            display_name="Transduction Mode",
+            info="Choose how to process input data. amap transforms each row or item, areduce aggregates all rows, and generate creates a batch of data",
             options=TRANSDUCTION_TYPES,
             value=TRANSDUCTION_AMAP,
             required=True,
         ),
         MessageTextInput(
             name="atype_name",
-            display_name="Generated Type",
-            info="Provide a name for the generated target type",
+            display_name="Output Schema Name",
+            info="Give a descriptive name for the output data",
             value="",
             required=True,
         ),
@@ -61,17 +63,20 @@ class AgenticsComponent(BaseAgenticComponent):
         MessageTextInput(
             name="instructions",
             display_name="Instructions",
+            info="Natural language instruction to transform your input data to output schema",
             value="",
         ),
         BoolInput(
             name="merge_source",
-            display_name="Merge Source States",
+            display_name="Keep Input Data",
+            info="When enabled, the output data will include input data columns. Disable to return only generated data columns",
             value=True,
             advanced=True,
         ),
         IntInput(
             name="batch_size",
             display_name="Batch Size",
+            info="Number of rows or items to process at once. In generate mode, this is the number of rows or items to create",
             value=10,
             advanced=True,
         ),
@@ -80,7 +85,8 @@ class AgenticsComponent(BaseAgenticComponent):
     outputs = [
         Output(
             name="states",
-            display_name="Target DataFrame",
+            display_name="Data Output",
+            info="The resulting data processed by the LLM that follows the output schema",
             method="transduce",
             tool_mode=True,
         ),

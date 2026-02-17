@@ -1,4 +1,4 @@
-"""SemanticMap component for generating new columns using LLM instructions."""
+"""SemanticMap component for generating new data following the specified schema using LLM instructions."""
 
 from __future__ import annotations
 
@@ -27,10 +27,10 @@ from pydantic import create_model
 
 
 class SemanticMap(BaseAgenticComponent):
-    """Generates new columns in a DataFrame based on LLM instructions."""
+    """Process each row or item with an LLM using natural language instructions to generate output data following the specified schema."""
 
-    display_name = "SemanticMap"
-    description = "Reads each of the input rows and generates new columns"
+    display_name = "Semantic Map"
+    description = "Process each row or item with an LLM using natural language instructions to generate output data following the specified schema."
     documentation: str = "github.com/IBM/agentics/"
     icon = "Agentics"
 
@@ -38,34 +38,34 @@ class SemanticMap(BaseAgenticComponent):
         *get_model_provider_inputs(),
         DataFrameInput(
             name="source",
-            display_name="Source DataFrame",
-            info="Accepts JSON (list of dicts) or DataFrame.",
+            display_name="Data Input",
+            info="DataFrame or a batch of structured data",            
         ),
         get_generated_fields_input(),
         BoolInput(name="return_multiple_instances",
-                  display_name="return_multiple_instances",
-                  info="If True, return multiple instances of the specified type for each row.",
+                  display_name="Generate Multiple Outputs",
+                  info="If enabled, generate multiple instances of the specified type",
                   advanced=False,
                   value=False,
                   ),
         BoolInput(
             name="concatenate_generated_lists",
-            display_name="Concatenate Generated Lists",
-            info="If true and the Return Multiple Instances is set to True, concatenate all the generate instances in a single dataframe of the defined schema",
+            display_name="Flatten Generated Outputs",
+            info="If enabled, flatten multiple outputs into a single output",
             value=True,
             advanced=True,
         ),
         MessageTextInput(
             name="instructions",
             display_name="Instructions",
-            info="Instructions for generating the new column values",
+            info="Natural language instructions to map your input data to the output schema",
             value="",
         ),
        
         BoolInput(
             name="append_to_input_columns",
-            display_name="Return Source Columns",
-            info="If false, returns only new columns, append to original data otherwise",
+            display_name="Keep Source Columns",
+            info="If disabled, returns only new columns. Otherwise, keep the input columns in the output",
             value=True,
             advanced=True,
         ),
@@ -74,7 +74,8 @@ class SemanticMap(BaseAgenticComponent):
     outputs = [
         Output(
             name="states",
-            display_name="Target DataFrame",
+            display_name="Data Output",
+            info="The resulting data processed by the LLM that follows the output schema",
             method="semantic_map",
             tool_mode=True,
         ),

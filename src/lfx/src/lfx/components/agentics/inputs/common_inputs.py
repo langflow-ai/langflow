@@ -124,8 +124,8 @@ def get_ollama_url_input() -> MessageInput:
 
 def get_generated_fields_input(
     name: str = "generated_fields",
-    display_name: str = "Generated Fields",
-    info: str = "Define the structure and data types for the generated output.",
+    display_name: str = "Output Schema",
+    info: str = "Define the structure and data types for the generated output",
 ) -> TableInput:
     """Return the generated fields table input."""
     return TableInput(

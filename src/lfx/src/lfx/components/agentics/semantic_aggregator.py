@@ -1,4 +1,4 @@
-"""SemanticAggregator component for aggregating DataFrame rows using LLM."""
+"""SemanticAggregator component for aggregating input data and generating the output data following the specified schema."""
 
 from __future__ import annotations
 
@@ -26,10 +26,10 @@ from pydantic import create_model
 
 
 class SemanticAggregator(BaseAgenticComponent):
-    """Generate a single row with the required field based on the analysis of the entire dataframe."""
+    """Aggregate or summarize entire input data following natural langauge instructions and the output schema."""
 
     display_name = "Semantic Aggregator"
-    description = "Generate a single row with the required field based on the analysis of the entire dataframe"
+    description = "Aggregate or summarize entire input data following natural langauge instructions and the output schema."
     documentation: str = "github.com/IBM/agentics/"
     icon = "Agentics"
 
@@ -37,21 +37,21 @@ class SemanticAggregator(BaseAgenticComponent):
         *get_model_provider_inputs(),
         DataFrameInput(
             name="source",
-            display_name="Source DataFrame",
-            info="Accepts JSON (list of dicts) or DataFrame.",
+            display_name="Data Input",
+            info="DataFrame or a batch of structured data",
             required=True,
         ),
         get_generated_fields_input(),
         BoolInput(name="return_multiple_instances",
-                  display_name="return_multiple_instances",
-                  info="If True, return multiple instances of the specified type.",
+                  display_name="Generate Multiple Outputs",
+                  info="If enabled, generate multiple instances of the specified type",
                   advanced=False,
                   value=False,
                   ),
         MessageTextInput(
             name="instructions",
             display_name="Instructions",
-            info="Instructions for generating the new column values",
+            info="Natural language instructions to aggregate your input data to output schema",
             advanced=False,
             value="",
         ),
@@ -60,8 +60,9 @@ class SemanticAggregator(BaseAgenticComponent):
     outputs = [
         Output(
             name="states",
-            display_name="Target DataFrame",
             method="semantic_aggregation",
+            display_name="Data Output",
+            info="The resulting data processed by the LLM that follows the output schema",            
             tool_mode=True,
         ),
     ]

@@ -1,4 +1,4 @@
-"""DataFrameOps component for DataFrame operations."""
+"""Component for combining two DataFrames, possibly having two different schema. Merge or Compose a new output schema if requested."""
 
 from __future__ import annotations
 
@@ -20,10 +20,10 @@ from lfx.schema.dataframe import DataFrame
 
 
 class DataFrameOps(Component):
-    """Enables operations between DataFrames: merge, concatenate, composition."""
+    """Combine two structured DataFrames, possibly with different schema. Merge creates a new output schema by merging input schemas, compose introduces a nested schema of a pair of input and output schema."""
 
-    display_name = "DataFrameOps"
-    description = "Enable Operations between DataFrames: merge, concatenate, composition"
+    display_name = "DataFrame Combiner"
+    description = "Combine two DataFrames, possibly with different schema."
     documentation: str = "github.com/IBM/agentics/"
     icon = "Agentics"
 
@@ -31,26 +31,28 @@ class DataFrameOps(Component):
         DataFrameInput(
             name="left_dataframe",
             display_name="Left DataFrame",
-            info="Accepts JSON (list of dicts) or DataFrame.",
+            info="The first input DataFrame to combine",
         ),
         DataFrameInput(
             name="right_dataframe",
             display_name="Right DataFrame",
-            info="Accepts JSON (list of dicts) or DataFrame.",
+            info="The second input DataFrame to combine",
         ),
         DropdownInput(
             name="operation_type",
-            display_name="Operation Type",
+            display_name="Combination Method",
+            info="Merge creates a new output schema by merging input schemas, compose introduces a nested schema of a pair of the input and output schema, and concatenate stacks all the rows",
             options=DATAFRAME_OPERATIONS,
             value=OPERATION_MERGE,
             required=True,
-        ),
+        )
     ]
 
     outputs = [
         Output(
             name="states",
-            display_name="Target DataFrame",
+            display_name="Combined DataFrame",
+            info="The resulting DataFrame after combining two input DataFrames",
             method="dataframe_operations",
             tool_mode=True,
         ),
