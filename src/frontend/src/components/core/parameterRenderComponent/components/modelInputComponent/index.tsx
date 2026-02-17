@@ -39,6 +39,8 @@ export interface ModelInputComponentType {
   options?: ModelOption[];
   placeholder?: string;
   externalOptions?: any;
+  /** When true and options are empty, shows "No models enabled" in a clickable dropdown instead of loading state */
+  showEmptyState?: boolean;
 }
 
 export type SelectedModel = ModelOption;
@@ -57,6 +59,7 @@ export default function ModelInputComponent({
   showParameter = true,
   editNode,
   inspectionPanel,
+  showEmptyState = false,
 }: BaseInputProps<any> & ModelInputComponentType): JSX.Element | null {
   const { setErrorData } = useAlertStore();
   const refButton = useRef<HTMLButtonElement>(null);
@@ -271,9 +274,12 @@ export default function ModelInputComponent({
     ) : null;
   };
 
+  // Check if we're in empty state mode (showEmptyState=true and no options)
+  const isEmptyStateMode = showEmptyState && options.length === 0;
+
   // Renders either a "Setup Provider" button (no providers) or the model selector dropdown trigger
   const renderTriggerButton = () =>
-    !hasEnabledProviders ? (
+    !hasEnabledProviders && !showEmptyState ? (
       <Button
         variant="default"
         loading={isLoading}
@@ -288,7 +294,7 @@ export default function ModelInputComponent({
       <div className="flex w-full flex-col">
         <PopoverTrigger asChild>
           <Button
-            disabled={disabled || options.length === 0}
+            disabled={disabled || (options.length === 0 && !showEmptyState)}
             variant="primary"
             size="xs"
             role="combobox"
@@ -308,6 +314,10 @@ export default function ModelInputComponent({
               <span className="truncate">
                 {disabled ? (
                   RECEIVING_INPUT_VALUE
+                ) : isEmptyStateMode ? (
+                  <div className="truncate text-muted-foreground">
+                    No models enabled
+                  </div>
                 ) : (
                   <div
                     className={cn(
@@ -417,7 +427,7 @@ export default function ModelInputComponent({
     <CommandList className="max-h-[300px] overflow-y-auto">
       <CommandItem
         disabled
-        className="w-full px-4 py-2 text-[13px] text-muted-foreground"
+        className="w-full px-4 py-2 text-xs text-muted-foreground"
       >
         No Models Enabled
       </CommandItem>
@@ -450,8 +460,8 @@ export default function ModelInputComponent({
     return null;
   }
 
-  // Loading state
-  if (!options || options.length === 0 || refreshOptions) {
+  // Loading state (skip if showEmptyState is true - we want to show the empty dropdown instead)
+  if ((!options || options.length === 0 || refreshOptions) && !showEmptyState) {
     return <div className="w-full">{renderLoadingButton()}</div>;
   }
 

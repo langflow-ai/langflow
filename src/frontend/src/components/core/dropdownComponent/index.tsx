@@ -6,6 +6,7 @@ import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
 import { RECEIVING_INPUT_VALUE, SELECT_AN_OPTION } from "@/constants/constants";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
+import KnowledgeBaseUploadModal from "@/modals/knowledgeBaseUploadModal";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import { useTypesStore } from "@/stores/typesStore";
@@ -601,17 +602,36 @@ export default function Dropdown({
               </div>
             </CommandItem>
           )}
-          <NodeDialog
-            open={openDialog}
-            dialogInputs={dialogInputs}
-            onClose={() => {
-              setOpenDialog(false);
-              setOpen(false);
-            }}
-            nodeId={nodeId!}
-            name={name!}
-            nodeClass={nodeClass!}
-          />
+          {dialogInputs?.fields?.data?.node?.display_name ===
+            "Create Knowledge" ||
+          dialogInputs?.fields?.data?.node?.name === "create_knowledge_base" ? (
+            <KnowledgeBaseUploadModal
+              open={openDialog}
+              setOpen={(isOpen) => {
+                setOpenDialog(isOpen);
+                if (!isOpen) setOpen(false);
+              }}
+              onSubmit={(data) => {
+                setOpenDialog(false);
+                setOpen(false);
+                // Refresh dropdown options to show the new KB
+                handleRefreshButtonPress();
+              }}
+              hideAdvanced
+            />
+          ) : (
+            <NodeDialog
+              open={openDialog}
+              dialogInputs={dialogInputs}
+              onClose={() => {
+                setOpenDialog(false);
+                setOpen(false);
+              }}
+              nodeId={nodeId!}
+              name={name!}
+              nodeClass={nodeClass!}
+            />
+          )}
         </CommandGroup>
       )}
     </CommandList>

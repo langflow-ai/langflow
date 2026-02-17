@@ -3,7 +3,15 @@ import React from "react";
 
 // Mock the component to avoid complex dependency chains
 jest.mock("../KnowledgeBaseDrawer", () => {
-  const MockKnowledgeBaseDrawer = ({ isOpen, onClose, knowledgeBase }: any) => {
+  const MockKnowledgeBaseDrawer = ({
+    isOpen,
+    onClose,
+    knowledgeBase,
+  }: {
+    isOpen: boolean;
+    onClose: () => void;
+    knowledgeBase: { name: string; embedding_model?: string } | null;
+  }) => {
     if (!isOpen || !knowledgeBase) {
       return null;
     }

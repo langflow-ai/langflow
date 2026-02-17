@@ -1,11 +1,15 @@
 import json
 import shutil
+from datetime import datetime, timezone
 from http import HTTPStatus
 from pathlib import Path
+from typing import Annotated
 
 import pandas as pd
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from langchain_chroma import Chroma
+from langchain_core.documents import Document
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from lfx.log import logger
 from pydantic import BaseModel
 
@@ -45,6 +49,24 @@ class KnowledgeBaseInfo(BaseModel):
 
 class BulkDeleteRequest(BaseModel):
     kb_names: list[str]
+
+
+class CreateKnowledgeBaseRequest(BaseModel):
+    name: str
+    embedding_provider: str
+    embedding_model: str
+
+
+class AddSourceRequest(BaseModel):
+    source_name: str
+    files: list[str]  # List of file paths or file IDs
+
+
+class ChunkInfo(BaseModel):
+    id: str
+    content: str
+    char_count: int
+    metadata: dict | None = None
 
 
 def get_kb_root_path() -> Path:
@@ -297,6 +319,330 @@ def get_kb_metadata(kb_path: Path) -> dict:
     return metadata
 
 
+@router.post("", status_code=HTTPStatus.CREATED)
+@router.post("/", status_code=HTTPStatus.CREATED)
+async def create_knowledge_base(
+    request: CreateKnowledgeBaseRequest,
+    current_user: CurrentActiveUser,
+) -> KnowledgeBaseInfo:
+    """Create a new knowledge base with embedding configuration."""
+    from datetime import datetime, timezone
+
+    try:
+        kb_root_path = get_kb_root_path()
+        kb_user = current_user.username
+        kb_name = request.name.strip().replace(" ", "_")
+
+        # Validate KB name
+        if not kb_name or len(kb_name) < 3:
+            raise HTTPException(status_code=400, detail="Knowledge base name must be at least 3 characters")
+
+        kb_path = kb_root_path / kb_user / kb_name
+
+        # Check if KB already exists
+        if kb_path.exists():
+            raise HTTPException(status_code=409, detail=f"Knowledge base '{kb_name}' already exists")
+
+        # Create KB directory
+        kb_path.mkdir(parents=True, exist_ok=True)
+
+        # Save embedding metadata
+        embedding_metadata = {
+            "embedding_provider": request.embedding_provider,
+            "embedding_model": request.embedding_model,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+
+        metadata_path = kb_path / "embedding_metadata.json"
+        metadata_path.write_text(json.dumps(embedding_metadata, indent=2))
+
+        return KnowledgeBaseInfo(
+            id=kb_name,
+            name=kb_name.replace("_", " ").replace("-", " "),
+            embedding_provider=request.embedding_provider,
+            embedding_model=request.embedding_model,
+            size=0,
+            words=0,
+            characters=0,
+            chunks=0,
+            avg_chunk_size=0.0,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        # Clean up if something went wrong
+        if kb_path.exists():
+            shutil.rmtree(kb_path)
+        raise HTTPException(status_code=500, detail=f"Error creating knowledge base: {e!s}") from e
+
+
+@router.post("/preview-chunks", status_code=HTTPStatus.OK)
+async def preview_chunks(
+    current_user: CurrentActiveUser,
+    files: Annotated[list[UploadFile], File(description="Files to preview chunking for")],
+    chunk_size: Annotated[int, Form()] = 1000,
+    chunk_overlap: Annotated[int, Form()] = 200,
+    separator: Annotated[str, Form()] = "\n",
+    max_chunks: Annotated[int, Form()] = 5,
+) -> dict[str, object]:
+    """Preview how files will be chunked without storing anything.
+
+    Uses the same RecursiveCharacterTextSplitter as the ingest endpoint
+    so the preview accurately reflects what will be stored.
+    """
+    try:
+        if not files:
+            raise HTTPException(status_code=400, detail="No files provided")
+
+        # Build separators list: user separator first, then defaults
+        separators = None
+        if separator:
+            # Unescape common escape sequences
+            actual_separator = separator.replace("\\n", "\n").replace("\\t", "\t")
+            separators = [actual_separator, "\n\n", "\n", " ", ""]
+
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=chunk_size,
+            chunk_overlap=chunk_overlap,
+            separators=separators,
+        )
+
+        file_previews = []
+        for uploaded_file in files:
+            try:
+                file_content = await uploaded_file.read()
+                file_name = uploaded_file.filename or "unknown"
+                text_content = file_content.decode("utf-8", errors="ignore")
+
+                if not text_content.strip():
+                    file_previews.append(
+                        {
+                            "file_name": file_name,
+                            "total_chunks": 0,
+                            "preview_chunks": [],
+                        }
+                    )
+                    continue
+
+                chunks = text_splitter.split_text(text_content)
+
+                # Track character positions for metadata
+                preview_chunks = []
+                position = 0
+                for i, chunk in enumerate(chunks[:max_chunks]):
+                    # Find the actual position of this chunk in the original text
+                    chunk_start = text_content.find(chunk, position)
+                    if chunk_start == -1:
+                        chunk_start = position
+                    chunk_end = chunk_start + len(chunk)
+
+                    preview_chunks.append(
+                        {
+                            "content": chunk,
+                            "index": i,
+                            "char_count": len(chunk),
+                            "start": chunk_start,
+                            "end": chunk_end,
+                        }
+                    )
+                    position = chunk_start + 1
+
+                file_previews.append(
+                    {
+                        "file_name": file_name,
+                        "total_chunks": len(chunks),
+                        "preview_chunks": preview_chunks,
+                    }
+                )
+
+            except Exception as file_error:
+                logger.warning("Error previewing file %s: %s", uploaded_file.filename, file_error)
+                file_previews.append(
+                    {
+                        "file_name": uploaded_file.filename or "unknown",
+                        "total_chunks": 0,
+                        "preview_chunks": [],
+                    }
+                )
+
+        return {"files": file_previews}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error previewing chunks: {e!s}") from e
+
+
+@router.post("/{kb_name}/ingest", status_code=HTTPStatus.OK)
+async def ingest_files_to_knowledge_base(
+    kb_name: str,
+    current_user: CurrentActiveUser,
+    files: Annotated[list[UploadFile], File(description="Files to ingest into the knowledge base")],
+    source_name: Annotated[str, Form()] = "",
+    chunk_size: Annotated[int, Form()] = 1000,
+    chunk_overlap: Annotated[int, Form()] = 200,
+) -> dict[str, object]:
+    """Upload and ingest files directly into a knowledge base.
+
+    This endpoint:
+    1. Accepts file uploads
+    2. Extracts text and chunks the content
+    3. Creates embeddings using the KB's configured embedding model
+    4. Stores the vectors in the knowledge base
+    """
+    try:
+        kb_root_path = get_kb_root_path()
+        kb_user = current_user.username
+        kb_path = kb_root_path / kb_user / kb_name
+
+        if not kb_path.exists() or not kb_path.is_dir():
+            raise HTTPException(status_code=404, detail=f"Knowledge base '{kb_name}' not found")
+
+        # Read embedding metadata
+        metadata_path = kb_path / "embedding_metadata.json"
+        if not metadata_path.exists():
+            raise HTTPException(status_code=400, detail="Knowledge base missing embedding configuration")
+
+        embedding_metadata = json.loads(metadata_path.read_text())
+        embedding_provider = embedding_metadata.get("embedding_provider")
+        embedding_model = embedding_metadata.get("embedding_model")
+
+        if not embedding_provider or not embedding_model:
+            raise HTTPException(status_code=400, detail="Invalid embedding configuration")
+
+        if not files:
+            raise HTTPException(status_code=400, detail="No files provided")
+
+        # Process uploaded files and create documents
+        documents = []
+        processed_files = []
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=chunk_size,
+            chunk_overlap=chunk_overlap,
+        )
+
+        for uploaded_file in files:
+            try:
+                # Read file content
+                file_content = await uploaded_file.read()
+                file_name = uploaded_file.filename or "unknown"
+
+                # Decode text content
+                text_content = file_content.decode("utf-8", errors="ignore")
+
+                if not text_content.strip():
+                    await logger.awarning(f"File {file_name} is empty or not readable as text")
+                    continue
+
+                # Split into chunks
+                chunks = text_splitter.split_text(text_content)
+
+                # Create documents from chunks
+                for i, chunk in enumerate(chunks):
+                    doc = Document(
+                        page_content=chunk,
+                        metadata={
+                            "source": source_name or file_name,
+                            "file_name": file_name,
+                            "chunk_index": i,
+                            "total_chunks": len(chunks),
+                            "ingested_at": datetime.now(timezone.utc).isoformat(),
+                        },
+                    )
+                    documents.append(doc)
+
+                processed_files.append(file_name)
+
+            except Exception as file_error:
+                await logger.awarning(f"Error processing file {uploaded_file.filename}: {file_error}")
+                continue
+
+        if not documents:
+            raise HTTPException(status_code=400, detail="No valid content extracted from files")
+
+        # Build embeddings based on provider
+        embeddings = _build_embeddings(embedding_provider, embedding_model, current_user)
+
+        # Create or update vector store
+        chroma = Chroma(
+            persist_directory=str(kb_path),
+            embedding_function=embeddings,
+            collection_name=kb_name,
+        )
+
+        # Add documents to vector store
+        chroma.add_documents(documents)
+
+        return {
+            "message": f"Successfully ingested {len(processed_files)} file(s) with {len(documents)} chunks into '{kb_name}'",
+            "files_processed": len(processed_files),
+            "chunks_created": len(documents),
+            "file_names": processed_files,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error ingesting files to knowledge base: {e!s}") from e
+
+
+def _build_embeddings(provider: str, model: str, current_user):
+    """Build embedding model based on provider configuration."""
+    from langflow.services.database.utils import session_scope
+    from langflow.services.deps import get_variable_service
+
+    # Get API key from global variables based on provider
+    provider_key_mapping = {
+        "OpenAI": "OPENAI_API_KEY",
+        "Cohere": "COHERE_API_KEY",
+        "HuggingFace": "HUGGINGFACEHUB_API_TOKEN",
+        "Google": "GOOGLE_API_KEY",
+    }
+
+    variable_name = provider_key_mapping.get(provider)
+    api_key = None
+
+    if variable_name:
+        import asyncio
+
+        async def get_api_key():
+            variable_service = get_variable_service()
+            async with session_scope() as session:
+                try:
+                    return await variable_service.get_variable(
+                        user_id=current_user.id,
+                        name=variable_name,
+                        field="",
+                        session=session,
+                    )
+                except Exception:
+                    return None
+
+        api_key = asyncio.get_event_loop().run_until_complete(get_api_key())
+
+    if provider == "OpenAI":
+        from langchain_openai import OpenAIEmbeddings
+
+        if not api_key:
+            raise ValueError("OpenAI API key not configured. Please set up the provider in settings.")
+        return OpenAIEmbeddings(model=model, api_key=api_key)
+
+    if provider == "HuggingFace":
+        from langchain_huggingface import HuggingFaceEmbeddings
+
+        return HuggingFaceEmbeddings(model_name=model)
+
+    if provider == "Cohere":
+        from langchain_cohere import CohereEmbeddings
+
+        if not api_key:
+            raise ValueError("Cohere API key not configured. Please set up the provider in settings.")
+        return CohereEmbeddings(model=model, cohere_api_key=api_key)
+
+    raise ValueError(f"Unsupported embedding provider: {provider}")
+
+
 @router.get("", status_code=HTTPStatus.OK)
 @router.get("/", status_code=HTTPStatus.OK)
 async def list_knowledge_bases(current_user: CurrentActiveUser) -> list[KnowledgeBaseInfo]:
@@ -324,7 +670,7 @@ async def list_knowledge_bases(current_user: CurrentActiveUser) -> list[Knowledg
 
                 kb_info = KnowledgeBaseInfo(
                     id=kb_dir.name,
-                    name=kb_dir.name.replace("_", " ").replace("-", " ").title(),
+                    name=kb_dir.name.replace("_", " ").replace("-", " "),
                     embedding_provider=metadata["embedding_provider"],
                     embedding_model=metadata["embedding_model"],
                     size=size,
@@ -369,7 +715,7 @@ async def get_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -> K
 
         return KnowledgeBaseInfo(
             id=kb_name,
-            name=kb_name.replace("_", " ").replace("-", " ").title(),
+            name=kb_name.replace("_", " ").replace("-", " "),
             embedding_provider=metadata["embedding_provider"],
             embedding_model=metadata["embedding_model"],
             size=size,
@@ -383,6 +729,51 @@ async def get_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -> K
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error getting knowledge base '{kb_name}': {e!s}") from e
+
+
+@router.get("/{kb_name}/chunks", status_code=HTTPStatus.OK)
+async def get_knowledge_base_chunks(kb_name: str, current_user: CurrentActiveUser) -> list[ChunkInfo]:
+    """Get all chunks from a specific knowledge base."""
+    try:
+        kb_root_path = get_kb_root_path()
+        kb_user = current_user.username
+        kb_path = kb_root_path / kb_user / kb_name
+
+        if not kb_path.exists() or not kb_path.is_dir():
+            raise HTTPException(status_code=404, detail=f"Knowledge base '{kb_name}' not found")
+
+        # Create vector store
+        chroma = Chroma(
+            persist_directory=str(kb_path),
+            collection_name=kb_name,
+        )
+
+        # Access the raw collection
+        collection = chroma._collection  # noqa: SLF001
+
+        # Fetch all documents and metadata
+        results = collection.get(include=["documents", "metadatas"])
+
+        chunks = []
+        for i, (doc_id, document, metadata) in enumerate(
+            zip(results["ids"], results["documents"], results["metadatas"], strict=False)
+        ):
+            content = document or ""
+            chunks.append(
+                ChunkInfo(
+                    id=doc_id,
+                    content=content,
+                    char_count=len(content),
+                    metadata=metadata,
+                )
+            )
+
+        return chunks
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting chunks for '{kb_name}': {e!s}") from e
 
 
 @router.delete("/{kb_name}", status_code=HTTPStatus.OK)

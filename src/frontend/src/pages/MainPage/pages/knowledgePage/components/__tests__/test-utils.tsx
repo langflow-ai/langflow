@@ -71,7 +71,7 @@ export const mockIconComponent = () => {
       ...props
     }: {
       name: string;
-      [key: string]: any;
+      [key: string]: unknown;
     }) => <span data-testid={`icon-${name}`} {...props} />;
     MockedIcon.displayName = "ForwardedIconComponent";
     return MockedIcon;
@@ -85,7 +85,7 @@ export const mockTableComponent = () => {
   jest.mock(
     "@/components/core/parameterRenderComponent/components/tableComponent",
     () => {
-      const MockTable = (props: any) => (
+      const MockTable = (props: Record<string, unknown>) => (
         <div data-testid="mock-table" {...props}>
           <div data-testid="table-content">Mock Table</div>
         </div>

@@ -1,12 +1,14 @@
+import type { AxiosError } from "axios";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
-import { useDeleteKnowledgeBases } from "@/controllers/API/queries/knowledge-bases/use-delete-knowledge-bases";
+import { useDeleteKnowledgeBase } from "@/controllers/API/queries/knowledge-bases/use-delete-knowledge-base";
+import type { KnowledgeBaseInfo } from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import useAlertStore from "@/stores/alertStore";
 import { cn } from "@/utils/utils";
 
 interface KnowledgeBaseSelectionOverlayProps {
-  selectedFiles: any[];
+  selectedFiles: KnowledgeBaseInfo[];
   quantitySelected: number;
   onDelete?: () => void;
   onClearSelection: () => void;
@@ -23,14 +25,14 @@ const KnowledgeBaseSelectionOverlay = ({
     setErrorData: state.setErrorData,
   }));
 
-  const deleteMutation = useDeleteKnowledgeBases({
+  const deleteMutation = useDeleteKnowledgeBase({
     onSuccess: (data) => {
       setSuccessData({
         title: `${data.deleted_count} Knowledge Base(s) deleted successfully!`,
       });
       onClearSelection();
     },
-    onError: (error: any) => {
+    onError: (error: AxiosError<{ detail?: string }>) => {
       setErrorData({
         title: "Failed to delete knowledge bases",
         list: [
