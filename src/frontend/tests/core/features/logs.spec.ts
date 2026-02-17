@@ -39,7 +39,7 @@ test(
       filledApiKey = await page.getByTestId("remove-icon-badge").count();
     }
 
-    await page.getByTestId("sidebar-nav-logs").click();
+    await page.getByRole("button", { name: "Logs" }).first().click();
     await expect(
       page.getByText("No Data Available", { exact: true }),
     ).toBeVisible();
@@ -62,7 +62,7 @@ test(
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
-    await page.getByTestId("sidebar-nav-logs").click();
+    await page.getByRole("button", { name: "Logs" }).first().click();
 
     // Verify the new column headers are present (inside the dialog)
     const dialog = page.getByLabel("Dialog");
