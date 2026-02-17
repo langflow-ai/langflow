@@ -43,11 +43,10 @@ export default function CodeSnippet({
   title,
   showLineNumbers = true,
 }: CodeSnippetProps): React.ReactElement {
-  const { slice, lineCount } = useMemo(() => {
+  const { slice } = useMemo(() => {
     const lines = source.split("\n");
     const slice = lines.slice(startLine - 1, endLine).join("\n");
-    const lineCount = lines.slice(startLine - 1, endLine).length;
-    return { slice, lineCount };
+    return { slice };
   }, [source, startLine, endLine]);
 
   const [highlighted, setHighlighted] = useState<LighterResult | null>(null);
@@ -73,7 +72,7 @@ export default function CodeSnippet({
     setTimeout(() => setCopied(false), 1200);
   };
 
-  const lineNumberWidth = showLineNumbers ? String(lineCount).length : 0;
+  const lineNumberWidth = showLineNumbers ? String(endLine).length : 0;
 
   return (
     <div
