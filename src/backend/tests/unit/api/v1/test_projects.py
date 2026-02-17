@@ -1719,3 +1719,79 @@ async def test_download_file_starter_project(client: AsyncClient, logged_in_head
     # Clean up: delete the project (which will cascade delete flows)
     delete_response = await client.delete(f"api/v1/projects/{starter_project_id}", headers=logged_in_headers)
     assert delete_response.status_code == status.HTTP_204_NO_CONTENT
+
+
+async def test_read_project_exclude_flows_data(client: AsyncClient, logged_in_headers):
+    """Test that exclude_flows_data=true omits the graph data field from flows in the response."""
+    # Create a project
+    project_payload = {
+        "name": "Test Exclude Flows Data Project",
+        "description": "Testing exclude_flows_data parameter",
+        "flows_list": [],
+        "components_list": [],
+    }
+    create_resp = await client.post("api/v1/projects/", json=project_payload, headers=logged_in_headers)
+    assert create_resp.status_code == status.HTTP_201_CREATED
+    project_id = create_resp.json()["id"]
+
+    # Create a flow with non-trivial graph data inside the project
+    flow_payload = {
+        "name": "Graph Flow",
+        "description": "Flow with graph data",
+        "folder_id": project_id,
+        "data": {
+            "nodes": [{"id": "node-1", "type": "genericNode", "data": {"type": "OpenAI", "node": {}}}],
+            "edges": [],
+        },
+        "is_component": False,
+    }
+    flow_resp = await client.post("api/v1/flows/", json=flow_payload, headers=logged_in_headers)
+    assert flow_resp.status_code == status.HTTP_201_CREATED
+
+    # --- Test with exclude_flows_data=true: graph data should be absent ---
+    no_data_resp = await client.get(
+        f"api/v1/projects/{project_id}?exclude_flows_data=true", headers=logged_in_headers
+    )
+    assert no_data_resp.status_code == status.HTTP_200_OK
+    no_data_result = no_data_resp.json()
+
+    assert "flows" in no_data_result, "Response must contain flows list"
+    actual_flows = [f for f in no_data_result["flows"] if not f.get("is_component", False)]
+    assert len(actual_flows) == 1, "Expected one non-component flow"
+
+    flow_entry = actual_flows[0]
+    assert "data" not in flow_entry or flow_entry.get("data") is None, (
+        "Flow graph data must be absent when exclude_flows_data=true"
+    )
+    assert "id" in flow_entry, "Flow id must be present"
+    assert "name" in flow_entry, "Flow name must be present"
+    assert flow_entry["name"] == "Graph Flow"
+
+    # --- Test without exclude_flows_data (default): graph data should be present ---
+    full_resp = await client.get(f"api/v1/projects/{project_id}", headers=logged_in_headers)
+    assert full_resp.status_code == status.HTTP_200_OK
+    full_result = full_resp.json()
+
+    assert "flows" in full_result, "Response must contain flows list"
+    full_flows = [f for f in full_result["flows"] if not f.get("is_component", False)]
+    assert len(full_flows) == 1, "Expected one non-component flow"
+
+    full_flow_entry = full_flows[0]
+    assert "data" in full_flow_entry and full_flow_entry["data"] is not None, (
+        "Flow graph data must be present when exclude_flows_data is not set"
+    )
+    assert "nodes" in full_flow_entry["data"], "Nodes must be present in flow data"
+
+    # --- Test with exclude_flows_data=false explicitly: should behave as default ---
+    explicit_false_resp = await client.get(
+        f"api/v1/projects/{project_id}?exclude_flows_data=false", headers=logged_in_headers
+    )
+    assert explicit_false_resp.status_code == status.HTTP_200_OK
+    explicit_false_result = explicit_false_resp.json()
+    explicit_false_flows = [f for f in explicit_false_result["flows"] if not f.get("is_component", False)]
+    assert len(explicit_false_flows) == 1
+    assert explicit_false_flows[0].get("data") is not None, "Data must be present when exclude_flows_data=false"
+
+    # Clean up
+    delete_resp = await client.delete(f"api/v1/projects/{project_id}", headers=logged_in_headers)
+    assert delete_resp.status_code == status.HTTP_204_NO_CONTENT
