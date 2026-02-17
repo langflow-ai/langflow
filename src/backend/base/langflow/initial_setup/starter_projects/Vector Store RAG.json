@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-8l9oz",
+            "id": "ChatInput-z5C0I",
             "name": "message",
             "output_types": [
               "Message"
@@ -15,7 +15,7 @@
           },
           "targetHandle": {
             "fieldName": "question",
-            "id": "Prompt-ML5XQ",
+            "id": "Prompt-5HY4b",
             "inputTypes": [
               "Message",
               "Text"
@@ -23,12 +23,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-8l9oz{œdataTypeœ:œChatInputœ,œidœ:œChatInput-8l9ozœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-ML5XQ{œfieldNameœ:œquestionœ,œidœ:œPrompt-ML5XQœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-z5C0I{œdataTypeœ:œChatInputœ,œidœ:œChatInput-z5C0Iœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-5HY4b{œfieldNameœ:œquestionœ,œidœ:œPrompt-5HY4bœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-8l9oz",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-8l9ozœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-ML5XQ",
-        "targetHandle": "{œfieldNameœ: œquestionœ, œidœ: œPrompt-ML5XQœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-z5C0I",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-z5C0Iœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-5HY4b",
+        "targetHandle": "{œfieldNameœ: œquestionœ, œidœ: œPrompt-5HY4bœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -36,7 +36,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "parser",
-            "id": "parser-oHf4E",
+            "id": "parser-13SZf",
             "name": "parsed_text",
             "output_types": [
               "Message"
@@ -44,7 +44,7 @@
           },
           "targetHandle": {
             "fieldName": "context",
-            "id": "Prompt-ML5XQ",
+            "id": "Prompt-5HY4b",
             "inputTypes": [
               "Message",
               "Text"
@@ -52,12 +52,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-parser-oHf4E{œdataTypeœ:œparserœ,œidœ:œparser-oHf4Eœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-ML5XQ{œfieldNameœ:œcontextœ,œidœ:œPrompt-ML5XQœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-parser-13SZf{œdataTypeœ:œparserœ,œidœ:œparser-13SZfœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-5HY4b{œfieldNameœ:œcontextœ,œidœ:œPrompt-5HY4bœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "parser-oHf4E",
-        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-oHf4Eœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-ML5XQ",
-        "targetHandle": "{œfieldNameœ: œcontextœ, œidœ: œPrompt-ML5XQœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "source": "parser-13SZf",
+        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-13SZfœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-5HY4b",
+        "targetHandle": "{œfieldNameœ: œcontextœ, œidœ: œPrompt-5HY4bœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -65,7 +65,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "File",
-            "id": "File-7D3hP",
+            "id": "File-oaUqO",
             "name": "message",
             "output_types": [
               "Message"
@@ -73,7 +73,7 @@
           },
           "targetHandle": {
             "fieldName": "data_inputs",
-            "id": "SplitText-4s7Dt",
+            "id": "SplitText-NTQIl",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -82,12 +82,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-File-7D3hP{œdataTypeœ:œFileœ,œidœ:œFile-7D3hPœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-SplitText-4s7Dt{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-4s7Dtœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-File-oaUqO{œdataTypeœ:œFileœ,œidœ:œFile-oaUqOœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-SplitText-NTQIl{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-NTQIlœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "File-7D3hP",
-        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-7D3hPœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "SplitText-4s7Dt",
-        "targetHandle": "{œfieldNameœ: œdata_inputsœ, œidœ: œSplitText-4s7Dtœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
+        "source": "File-oaUqO",
+        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-oaUqOœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "SplitText-NTQIl",
+        "targetHandle": "{œfieldNameœ: œdata_inputsœ, œidœ: œSplitText-NTQIlœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -95,7 +95,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-ML5XQ",
+            "id": "Prompt-5HY4b",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -103,19 +103,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "LanguageModelComponent-Wqbva",
+            "id": "LanguageModelComponent-lqsKj",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-ML5XQ{œdataTypeœ:œPromptœ,œidœ:œPrompt-ML5XQœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-Wqbva{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-Wqbvaœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-5HY4b{œdataTypeœ:œPromptœ,œidœ:œPrompt-5HY4bœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-lqsKj{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-lqsKjœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Prompt-ML5XQ",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-ML5XQœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "LanguageModelComponent-Wqbva",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-Wqbvaœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Prompt-5HY4b",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-5HY4bœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "LanguageModelComponent-lqsKj",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-lqsKjœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -123,7 +123,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "LanguageModelComponent",
-            "id": "LanguageModelComponent-Wqbva",
+            "id": "LanguageModelComponent-lqsKj",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -131,7 +131,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-g0Phk",
+            "id": "ChatOutput-vauHc",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -140,12 +140,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-LanguageModelComponent-Wqbva{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-Wqbvaœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-g0Phk{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-g0Phkœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-LanguageModelComponent-lqsKj{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-lqsKjœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-vauHc{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-vauHcœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "LanguageModelComponent-Wqbva",
-        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-Wqbvaœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-g0Phk",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-g0Phkœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "LanguageModelComponent-lqsKj",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-lqsKjœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-vauHc",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-vauHcœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -153,7 +153,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "SplitText",
-            "id": "SplitText-4s7Dt",
+            "id": "SplitText-NTQIl",
             "name": "dataframe",
             "output_types": [
               "DataFrame"
@@ -161,7 +161,7 @@
           },
           "targetHandle": {
             "fieldName": "ingest_data",
-            "id": "AstraDB-TCSqR",
+            "id": "AstraDB-mJvb6",
             "inputTypes": [
               "Data",
               "DataFrame"
@@ -169,12 +169,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-SplitText-4s7Dt{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-4s7Dtœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-AstraDB-TCSqR{œfieldNameœ:œingest_dataœ,œidœ:œAstraDB-TCSqRœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-SplitText-NTQIl{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-NTQIlœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-AstraDB-mJvb6{œfieldNameœ:œingest_dataœ,œidœ:œAstraDB-mJvb6œ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "SplitText-4s7Dt",
-        "sourceHandle": "{œdataTypeœ: œSplitTextœ, œidœ: œSplitText-4s7Dtœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
-        "target": "AstraDB-TCSqR",
-        "targetHandle": "{œfieldNameœ: œingest_dataœ, œidœ: œAstraDB-TCSqRœ, œinputTypesœ: [œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
+        "source": "SplitText-NTQIl",
+        "sourceHandle": "{œdataTypeœ: œSplitTextœ, œidœ: œSplitText-NTQIlœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
+        "target": "AstraDB-mJvb6",
+        "targetHandle": "{œfieldNameœ: œingest_dataœ, œidœ: œAstraDB-mJvb6œ, œinputTypesœ: [œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -182,7 +182,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-8l9oz",
+            "id": "ChatInput-z5C0I",
             "name": "message",
             "output_types": [
               "Message"
@@ -190,19 +190,19 @@
           },
           "targetHandle": {
             "fieldName": "search_query",
-            "id": "AstraDB-BteL9",
+            "id": "AstraDB-ZiGZI",
             "inputTypes": [
               "Message"
             ],
             "type": "query"
           }
         },
-        "id": "reactflow__edge-ChatInput-8l9oz{œdataTypeœ:œChatInputœ,œidœ:œChatInput-8l9ozœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-AstraDB-BteL9{œfieldNameœ:œsearch_queryœ,œidœ:œAstraDB-BteL9œ,œinputTypesœ:[œMessageœ],œtypeœ:œqueryœ}",
+        "id": "reactflow__edge-ChatInput-z5C0I{œdataTypeœ:œChatInputœ,œidœ:œChatInput-z5C0Iœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-AstraDB-ZiGZI{œfieldNameœ:œsearch_queryœ,œidœ:œAstraDB-ZiGZIœ,œinputTypesœ:[œMessageœ],œtypeœ:œqueryœ}",
         "selected": false,
-        "source": "ChatInput-8l9oz",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-8l9ozœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "AstraDB-BteL9",
-        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œAstraDB-BteL9œ, œinputTypesœ: [œMessageœ], œtypeœ: œqueryœ}"
+        "source": "ChatInput-z5C0I",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-z5C0Iœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "AstraDB-ZiGZI",
+        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œAstraDB-ZiGZIœ, œinputTypesœ: [œMessageœ], œtypeœ: œqueryœ}"
       },
       {
         "animated": false,
@@ -210,7 +210,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "AstraDB",
-            "id": "AstraDB-BteL9",
+            "id": "AstraDB-ZiGZI",
             "name": "dataframe",
             "output_types": [
               "DataFrame"
@@ -218,7 +218,7 @@
           },
           "targetHandle": {
             "fieldName": "input_data",
-            "id": "parser-oHf4E",
+            "id": "parser-13SZf",
             "inputTypes": [
               "DataFrame",
               "Data"
@@ -226,12 +226,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-AstraDB-BteL9{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-BteL9œ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-parser-oHf4E{œfieldNameœ:œinput_dataœ,œidœ:œparser-oHf4Eœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-AstraDB-ZiGZI{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-ZiGZIœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-parser-13SZf{œfieldNameœ:œinput_dataœ,œidœ:œparser-13SZfœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "AstraDB-BteL9",
-        "sourceHandle": "{œdataTypeœ: œAstraDBœ, œidœ: œAstraDB-BteL9œ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
-        "target": "parser-oHf4E",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-oHf4Eœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
+        "source": "AstraDB-ZiGZI",
+        "sourceHandle": "{œdataTypeœ: œAstraDBœ, œidœ: œAstraDB-ZiGZIœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
+        "target": "parser-13SZf",
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-13SZfœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -239,55 +239,55 @@
         "data": {
           "sourceHandle": {
             "dataType": "EmbeddingModel",
-            "id": "EmbeddingModel-U8tZg",
+            "id": "EmbeddingModel-MBTyq",
             "name": "embeddings",
             "output_types": [
               "Embeddings"
             ]
           },
-          "sourceNodeName": "Embedding Model",
           "targetHandle": {
             "fieldName": "embedding_model",
-            "id": "AstraDB-TCSqR",
+            "id": "AstraDB-ZiGZI",
             "inputTypes": [
               "Embeddings"
             ],
             "type": "other"
           }
         },
-        "id": "xy-edge__EmbeddingModel-Pn2Ax{œdataTypeœ:œEmbeddingModelœ,œidœ:œEmbeddingModel-Pn2Axœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-TCSqR{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-TCSqRœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
+        "id": "xy-edge__EmbeddingModel-MBTyq{œdataTypeœ:œEmbeddingModelœ,œidœ:œEmbeddingModel-MBTyqœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-ZiGZI{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-ZiGZIœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "EmbeddingModel-Pn2Ax",
-        "sourceHandle": "{œdataTypeœ: œEmbeddingModelœ, œidœ: œEmbeddingModel-U8tZgœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
-        "target": "AstraDB-TCSqR",
-        "targetHandle": "{œfieldNameœ: œembedding_modelœ, œidœ: œAstraDB-TCSqRœ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
+        "source": "EmbeddingModel-MBTyq",
+        "sourceHandle": "{œdataTypeœ: œEmbeddingModelœ, œidœ: œEmbeddingModel-MBTyqœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
+        "target": "AstraDB-ZiGZI",
+        "targetHandle": "{œfieldNameœ: œembedding_modelœ, œidœ: œAstraDB-ZiGZIœ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
       },
       {
+        "animated": false,
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "EmbeddingModel",
-            "id": "EmbeddingModel-jsaKm",
+            "id": "EmbeddingModel-K8DK0",
             "name": "embeddings",
             "output_types": [
               "Embeddings"
             ]
           },
-          "sourceNodeName": "Embedding Model",
           "targetHandle": {
             "fieldName": "embedding_model",
-            "id": "AstraDB-BteL9",
+            "id": "AstraDB-mJvb6",
             "inputTypes": [
               "Embeddings"
             ],
             "type": "other"
           }
         },
-        "id": "xy-edge__EmbeddingModel-xuT4K{œdataTypeœ:œEmbeddingModelœ,œidœ:œEmbeddingModel-xuT4Kœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-BteL9{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-BteL9œ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
-        "source": "EmbeddingModel-xuT4K",
-        "sourceHandle": "{œdataTypeœ: œEmbeddingModelœ, œidœ: œEmbeddingModel-jsaKmœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
-        "target": "AstraDB-BteL9",
-        "targetHandle": "{œfieldNameœ: œembedding_modelœ, œidœ: œAstraDB-BteL9œ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
+        "id": "xy-edge__EmbeddingModel-K8DK0{œdataTypeœ:œEmbeddingModelœ,œidœ:œEmbeddingModel-K8DK0œ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-mJvb6{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-mJvb6œ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "EmbeddingModel-K8DK0",
+        "sourceHandle": "{œdataTypeœ: œEmbeddingModelœ, œidœ: œEmbeddingModel-K8DK0œ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
+        "target": "AstraDB-mJvb6",
+        "targetHandle": "{œfieldNameœ: œembedding_modelœ, œidœ: œAstraDB-mJvb6œ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -295,7 +295,7 @@
         "data": {
           "description": "Get chat inputs from the Playground.",
           "display_name": "Chat Input",
-          "id": "ChatInput-8l9oz",
+          "id": "ChatInput-z5C0I",
           "node": {
             "base_classes": [
               "Message"
@@ -534,9 +534,9 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-8l9oz",
+        "id": "ChatInput-z5C0I",
         "measured": {
-          "height": 234,
+          "height": 207,
           "width": 320
         },
         "position": {
@@ -554,7 +554,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt Template",
-          "id": "Prompt-ML5XQ",
+          "id": "Prompt-5HY4b",
           "node": {
             "base_classes": [
               "Message"
@@ -699,27 +699,6 @@
                 "type": "prompt",
                 "value": "{context}\n\n---\n\nGiven the context above, answer the question as best as possible.\n\nQuestion: {question}\n\nAnswer: "
               },
-              "use_double_brackets": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Use Double Brackets",
-                "dynamic": false,
-                "info": "Use {{variable}} syntax instead of {variable}.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "use_double_brackets",
-                "override_skip": false,
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": true,
-                "type": "bool",
-                "value": false
-              },
               "tool_placeholder": {
                 "_input_type": "MessageTextInput",
                 "advanced": true,
@@ -741,6 +720,27 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": ""
+              },
+              "use_double_brackets": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Use Double Brackets",
+                "dynamic": false,
+                "info": "Use {{variable}} syntax instead of {variable}.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "use_double_brackets",
+                "override_skip": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": false
               }
             },
             "tool_mode": false
@@ -749,9 +749,9 @@
           "type": "Prompt"
         },
         "dragging": false,
-        "id": "Prompt-ML5XQ",
+        "id": "Prompt-5HY4b",
         "measured": {
-          "height": 433,
+          "height": 429,
           "width": 320
         },
         "position": {
@@ -769,7 +769,7 @@
         "data": {
           "description": "Split text into chunks based on specified criteria.",
           "display_name": "Split Text",
-          "id": "SplitText-4s7Dt",
+          "id": "SplitText-NTQIl",
           "node": {
             "base_classes": [
               "Data"
@@ -993,9 +993,9 @@
           "type": "SplitText"
         },
         "dragging": false,
-        "id": "SplitText-4s7Dt",
+        "id": "SplitText-NTQIl",
         "measured": {
-          "height": 475,
+          "height": 415,
           "width": 320
         },
         "position": {
@@ -1011,7 +1011,7 @@
       },
       {
         "data": {
-          "id": "note-PMpi6",
+          "id": "note-CtXyf",
           "node": {
             "description": "## 🐕 2. Retriever Flow\n\nThis flow answers your questions with contextual data retrieved from your vector database.\n\nOpen the **Playground** and ask, \n\n```\nWhat is this document about?\n```\n",
             "display_name": "",
@@ -1024,7 +1024,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-PMpi6",
+        "id": "note-CtXyf",
         "measured": {
           "height": 324,
           "width": 324
@@ -1048,7 +1048,7 @@
       },
       {
         "data": {
-          "id": "note-WvtH0",
+          "id": "note-4NJHd",
           "node": {
             "description": "Retrieval Augmented Generation (RAG) is a way of providing additional context to a Large Language Model (LLM) by preloading a vector database with embeddings for relevant content. When a user chats with the LLM, a _similarity search_ retrieves relevant content by comparing an embedding for the user's query against the embeddings in the vector database.\nFor example, a RAG chatbot could be pre-loaded with product data, and then it can help customers find specific products based on their queries.\nThis template has two sub-flows. One flow loads data into your vector store, and the other is the user-driven chat flow that compares a new query against the existing content in your vector database.\n\n## Quickstart\n1. Add your OpenAI API key to the **Language Model** component and the two **Embeddings** components.\n2. Add an Astra application token to the **Astra DB** vector store components, or replace these components with other vector store components available in the **Components** menu.\n**💡 Store your credentials as Langflow global variables 🌐 to simplify token management and reuse in your flows.**\n\n## Run the flows\n1. Load your data into a vector database with the 📚 **Load Data** flow. Select a file to upload in the **File** component, and then click **Play** ▶️ on the **Astra DB** component to run the **Load Data** flow.\n2. Open the **Playground** to start a chat with the 🐕 **Retriever** flow.\n\nOnly the run the **Load Data** flow when you need to populate your vector database with baseline content, such as product data.\nThe **Retriever** flow is the user-facing chat flow. This flow generates an embedding from chat input, runs a similarity search against the vector database to retrieve relevant content, and then passes the original query and the retrieved content to the LLM, which produces the chat response sent to the user.\n\n## Next steps\nExperiment by changing the prompt and the loaded data to see how the LLM's responses change.",
             "display_name": "Read Me",
@@ -1061,7 +1061,7 @@
         },
         "dragging": false,
         "height": 556,
-        "id": "note-WvtH0",
+        "id": "note-4NJHd",
         "measured": {
           "height": 556,
           "width": 389
@@ -1087,7 +1087,7 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-g0Phk",
+          "id": "ChatOutput-vauHc",
           "node": {
             "base_classes": [
               "Message"
@@ -1345,9 +1345,9 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-g0Phk",
+        "id": "ChatOutput-vauHc",
         "measured": {
-          "height": 234,
+          "height": 207,
           "width": 320
         },
         "position": {
@@ -1363,391 +1363,7 @@
       },
       {
         "data": {
-          "description": "Generate embeddings using a specified provider.",
-          "display_name": "Embedding Model",
-          "id": "EmbeddingModel-xuT4K",
-          "node": {
-            "base_classes": [
-              "Embeddings"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Generate embeddings using a specified provider.",
-            "display_name": "Embedding Model",
-            "documentation": "",
-            "edited": false,
-            "field_order": [
-              "model",
-              "api_key",
-              "api_base",
-              "base_url_ibm_watsonx",
-              "project_id",
-              "dimensions",
-              "chunk_size",
-              "request_timeout",
-              "max_retries",
-              "show_progress_bar",
-              "model_kwargs",
-              "truncate_input_tokens",
-              "input_text"
-            ],
-            "frozen": false,
-            "icon": "binary",
-            "legacy": false,
-            "lf_version": "1.4.2",
-            "metadata": {
-              "code_hash": "3e0b64afc9a2",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "lfx",
-                    "version": null
-                  },
-                  {
-                    "name": "langchain_core",
-                    "version": "0.3.83"
-                  }
-                ],
-                "total_dependencies": 2
-              },
-              "module": "lfx.components.models_and_agents.embedding_model.EmbeddingModelComponent"
-            },
-            "minimized": false,
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Embedding Model",
-                "group_outputs": false,
-                "method": "build_embeddings",
-                "name": "embeddings",
-                "selected": "Embeddings",
-                "tool_mode": true,
-                "types": [
-                  "Embeddings"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "template": {
-              "_type": "Component",
-              "api_base": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "API Base URL",
-                "dynamic": false,
-                "info": "Base URL for the API. Leave empty for default.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "api_base",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "api_key": {
-                "_input_type": "SecretStrInput",
-                "advanced": false,
-                "display_name": "API Key",
-                "dynamic": false,
-                "info": "Model Provider API key",
-                "input_types": [],
-                "load_from_db": false,
-                "name": "api_key",
-                "password": true,
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": ""
-              },
-              "base_url_ibm_watsonx": {
-                "_input_type": "DropdownInput",
-                "advanced": false,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "watsonx API Endpoint",
-                "dynamic": false,
-                "external_options": {},
-                "info": "The base URL of the API (IBM watsonx.ai only)",
-                "name": "base_url_ibm_watsonx",
-                "options": [
-                  "https://us-south.ml.cloud.ibm.com",
-                  "https://eu-de.ml.cloud.ibm.com",
-                  "https://eu-gb.ml.cloud.ibm.com",
-                  "https://au-syd.ml.cloud.ibm.com",
-                  "https://jp-tok.ml.cloud.ibm.com",
-                  "https://ca-tor.ml.cloud.ibm.com"
-                ],
-                "options_metadata": [],
-                "override_skip": false,
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": false,
-                "title_case": false,
-                "toggle": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": true,
-                "type": "str",
-                "value": "https://us-south.ml.cloud.ibm.com"
-              },
-              "chunk_size": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Chunk Size",
-                "dynamic": false,
-                "info": "",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "chunk_size",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": 1000
-              },
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from typing import Any\n\nfrom lfx.base.embeddings.embeddings_class import EmbeddingsWithModels\nfrom lfx.base.embeddings.model import LCEmbeddingsModel\nfrom lfx.base.models.unified_models import (\n    get_api_key_for_provider,\n    get_embedding_classes,\n    get_embedding_model_options,\n    get_unified_models_detailed,\n    update_model_options_in_build_config,\n)\nfrom lfx.base.models.watsonx_constants import IBM_WATSONX_URLS\nfrom lfx.field_typing import Embeddings\nfrom lfx.io import (\n    BoolInput,\n    DictInput,\n    DropdownInput,\n    FloatInput,\n    IntInput,\n    MessageTextInput,\n    ModelInput,\n    SecretStrInput,\n)\nfrom lfx.log.logger import logger\n\n\nclass EmbeddingModelComponent(LCEmbeddingsModel):\n    display_name = \"Embedding Model\"\n    description = \"Generate embeddings using a specified provider.\"\n    documentation: str = \"https://docs.langflow.org/components-embedding-models\"\n    icon = \"binary\"\n    name = \"EmbeddingModel\"\n    category = \"models\"\n\n    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):\n        \"\"\"Dynamically update build config with user-filtered model options.\"\"\"\n        # Update model options\n        build_config = update_model_options_in_build_config(\n            component=self,\n            build_config=build_config,\n            cache_key_prefix=\"embedding_model_options\",\n            get_options_func=get_embedding_model_options,\n            field_name=field_name,\n            field_value=field_value,\n        )\n\n        # Show/hide provider-specific fields based on selected model\n        if field_name == \"model\" and isinstance(field_value, list) and len(field_value) > 0:\n            selected_model = field_value[0]\n            provider = selected_model.get(\"provider\", \"\")\n\n            # Show/hide watsonx fields\n            is_watsonx = provider == \"IBM WatsonX\"\n            build_config[\"base_url_ibm_watsonx\"][\"show\"] = is_watsonx\n            build_config[\"project_id\"][\"show\"] = is_watsonx\n            build_config[\"truncate_input_tokens\"][\"show\"] = is_watsonx\n            build_config[\"input_text\"][\"show\"] = is_watsonx\n            if is_watsonx:\n                build_config[\"base_url_ibm_watsonx\"][\"required\"] = True\n                build_config[\"project_id\"][\"required\"] = True\n\n        return build_config\n\n    inputs = [\n        ModelInput(\n            name=\"model\",\n            display_name=\"Embedding Model\",\n            info=\"Select your model provider\",\n            real_time_refresh=True,\n            required=True,\n            model_type=\"embedding\",\n            input_types=[\"Embeddings\"],  # Override default to accept Embeddings instead of LanguageModel\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"API Key\",\n            info=\"Model Provider API key\",\n            real_time_refresh=True,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"api_base\",\n            display_name=\"API Base URL\",\n            info=\"Base URL for the API. Leave empty for default.\",\n            advanced=True,\n        ),\n        # Watson-specific inputs\n        DropdownInput(\n            name=\"base_url_ibm_watsonx\",\n            display_name=\"watsonx API Endpoint\",\n            info=\"The base URL of the API (IBM watsonx.ai only)\",\n            options=IBM_WATSONX_URLS,\n            value=IBM_WATSONX_URLS[0],\n            show=False,\n            real_time_refresh=True,\n        ),\n        MessageTextInput(\n            name=\"project_id\",\n            display_name=\"Project ID\",\n            info=\"IBM watsonx.ai Project ID (required for IBM watsonx.ai)\",\n            show=False,\n        ),\n        IntInput(\n            name=\"dimensions\",\n            display_name=\"Dimensions\",\n            info=\"The number of dimensions the resulting output embeddings should have. \"\n            \"Only supported by certain models.\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"chunk_size\",\n            display_name=\"Chunk Size\",\n            advanced=True,\n            value=1000,\n        ),\n        FloatInput(\n            name=\"request_timeout\",\n            display_name=\"Request Timeout\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"max_retries\",\n            display_name=\"Max Retries\",\n            advanced=True,\n            value=3,\n        ),\n        BoolInput(\n            name=\"show_progress_bar\",\n            display_name=\"Show Progress Bar\",\n            advanced=True,\n        ),\n        DictInput(\n            name=\"model_kwargs\",\n            display_name=\"Model Kwargs\",\n            advanced=True,\n            info=\"Additional keyword arguments to pass to the model.\",\n        ),\n        IntInput(\n            name=\"truncate_input_tokens\",\n            display_name=\"Truncate Input Tokens\",\n            advanced=True,\n            value=200,\n            show=False,\n        ),\n        BoolInput(\n            name=\"input_text\",\n            display_name=\"Include the original text in the output\",\n            value=True,\n            advanced=True,\n            show=False,\n        ),\n    ]\n\n    def build_embeddings(self) -> Embeddings:\n        \"\"\"Build and return an embeddings instance based on the selected model.\n\n        Returns an EmbeddingsWithModels wrapper that contains:\n        - The primary embedding instance (for the selected model)\n        - available_models dict mapping all available model names to their instances\n        \"\"\"\n        # If an Embeddings object is directly connected, return it\n        try:\n            from langchain_core.embeddings import Embeddings as BaseEmbeddings\n\n            if isinstance(self.model, BaseEmbeddings):\n                return self.model\n        except ImportError:\n            pass\n\n        # Safely extract model configuration\n        if not self.model or not isinstance(self.model, list):\n            msg = \"Model must be a non-empty list\"\n            raise ValueError(msg)\n\n        model = self.model[0]\n        model_name = model.get(\"name\")\n        provider = model.get(\"provider\")\n        metadata = model.get(\"metadata\", {})\n\n        # Get API key from user input or global variables\n        api_key = get_api_key_for_provider(self.user_id, provider, self.api_key)\n\n        # Validate required fields (Ollama doesn't require API key)\n        if not api_key and provider != \"Ollama\":\n            msg = (\n                f\"{provider} API key is required. \"\n                f\"Please provide it in the component or configure it globally as \"\n                f\"{provider.upper().replace(' ', '_')}_API_KEY.\"\n            )\n            raise ValueError(msg)\n\n        if not model_name:\n            msg = \"Model name is required\"\n            raise ValueError(msg)\n\n        # Get embedding class\n        embedding_class_name = metadata.get(\"embedding_class\")\n        if not embedding_class_name:\n            msg = f\"No embedding class defined in metadata for {model_name}\"\n            raise ValueError(msg)\n\n        embedding_class = get_embedding_classes().get(embedding_class_name)\n        if not embedding_class:\n            msg = f\"Unknown embedding class: {embedding_class_name}\"\n            raise ValueError(msg)\n\n        # Build kwargs using parameter mapping for primary instance\n        kwargs = self._build_kwargs(model, metadata)\n        primary_instance = embedding_class(**kwargs)\n\n        # Get all available embedding models for this provider\n        available_models_dict = self._build_available_models(\n            provider=provider,\n            embedding_class=embedding_class,\n            metadata=metadata,\n            api_key=api_key,\n        )\n\n        # Wrap with EmbeddingsWithModels to provide available_models metadata\n        return EmbeddingsWithModels(\n            embeddings=primary_instance,\n            available_models=available_models_dict,\n        )\n\n    def _build_available_models(\n        self,\n        provider: str,\n        embedding_class: type,\n        metadata: dict[str, Any],\n        api_key: str | None,\n    ) -> dict[str, Embeddings]:\n        \"\"\"Build a dictionary of all available embedding model instances for the provider.\n\n        Args:\n            provider: The provider name (e.g., \"OpenAI\", \"Ollama\")\n            embedding_class: The embedding class to instantiate\n            metadata: Metadata containing param_mapping\n            api_key: The API key for the provider\n\n        Returns:\n            Dict mapping model names to their embedding instances\n        \"\"\"\n        available_models_dict: dict[str, Embeddings] = {}\n\n        # Get all embedding models for this provider from unified models\n        all_embedding_models = get_unified_models_detailed(\n            providers=[provider],\n            model_type=\"embeddings\",\n            include_deprecated=False,\n            include_unsupported=False,\n        )\n\n        if not all_embedding_models:\n            return available_models_dict\n\n        # Extract models from the provider data\n        for provider_data in all_embedding_models:\n            if provider_data.get(\"provider\") != provider:\n                continue\n\n            for model_data in provider_data.get(\"models\", []):\n                model_name = model_data.get(\"model_name\")\n                if not model_name:\n                    continue\n\n                # Create a model dict compatible with _build_kwargs\n                model_dict = {\n                    \"name\": model_name,\n                    \"provider\": provider,\n                    \"metadata\": metadata,  # Reuse the same metadata/param_mapping\n                }\n\n                try:\n                    # Build kwargs for this model\n                    model_kwargs = self._build_kwargs_for_model(model_dict, metadata, api_key)\n                    # Create the embedding instance\n                    available_models_dict[model_name] = embedding_class(**model_kwargs)\n                except Exception:  # noqa: BLE001\n                    # Skip models that fail to instantiate\n                    # This handles cases where specific models have incompatible parameters\n                    logger.debug(\"Failed to instantiate embedding model %s: skipping\", model_name, exc_info=True)\n                    continue\n\n        return available_models_dict\n\n    def _build_kwargs_for_model(\n        self,\n        model: dict[str, Any],\n        metadata: dict[str, Any],\n        api_key: str | None,\n    ) -> dict[str, Any]:\n        \"\"\"Build kwargs dictionary for a specific model using parameter mapping.\n\n        This is similar to _build_kwargs but uses the provided api_key directly\n        instead of looking it up again.\n\n        Args:\n            model: Model dict with name and provider\n            metadata: Metadata containing param_mapping\n            api_key: The API key to use\n\n        Returns:\n            kwargs dict for embedding class instantiation\n        \"\"\"\n        param_mapping = metadata.get(\"param_mapping\", {})\n        if not param_mapping:\n            msg = \"Parameter mapping not found in metadata\"\n            raise ValueError(msg)\n\n        kwargs = {}\n        provider = model.get(\"provider\")\n\n        # Required parameters - handle both \"model\" and \"model_id\" (for watsonx)\n        if \"model\" in param_mapping:\n            kwargs[param_mapping[\"model\"]] = model.get(\"name\")\n        elif \"model_id\" in param_mapping:\n            kwargs[param_mapping[\"model_id\"]] = model.get(\"name\")\n\n        # Add API key if mapped\n        if \"api_key\" in param_mapping and api_key:\n            kwargs[param_mapping[\"api_key\"]] = api_key\n\n        # Optional parameters with their values\n        optional_params = {\n            \"api_base\": self.api_base if self.api_base else None,\n            \"dimensions\": int(self.dimensions) if self.dimensions else None,\n            \"chunk_size\": int(self.chunk_size) if self.chunk_size else None,\n            \"request_timeout\": float(self.request_timeout) if self.request_timeout else None,\n            \"max_retries\": int(self.max_retries) if self.max_retries else None,\n            \"show_progress_bar\": self.show_progress_bar if hasattr(self, \"show_progress_bar\") else None,\n            \"model_kwargs\": self.model_kwargs if self.model_kwargs else None,\n        }\n\n        # Watson-specific parameters\n        if provider in {\"IBM WatsonX\", \"IBM watsonx.ai\"}:\n            # Map base_url_ibm_watsonx to \"url\" parameter for watsonx\n            if \"url\" in param_mapping:\n                url_value = (\n                    self.base_url_ibm_watsonx\n                    if hasattr(self, \"base_url_ibm_watsonx\") and self.base_url_ibm_watsonx\n                    else \"https://us-south.ml.cloud.ibm.com\"\n                )\n                kwargs[param_mapping[\"url\"]] = url_value\n            # Map project_id for watsonx\n            if hasattr(self, \"project_id\") and self.project_id and \"project_id\" in param_mapping:\n                kwargs[param_mapping[\"project_id\"]] = self.project_id\n\n        # Ollama-specific parameters\n        if provider == \"Ollama\" and \"base_url\" in param_mapping:\n            # Map api_base to \"base_url\" parameter for Ollama\n            base_url_value = self.api_base if hasattr(self, \"api_base\") and self.api_base else \"http://localhost:11434\"\n            kwargs[param_mapping[\"base_url\"]] = base_url_value\n\n        # Add optional parameters if they have values and are mapped\n        for param_name, param_value in optional_params.items():\n            if param_value is not None and param_name in param_mapping:\n                # Special handling for request_timeout with Google provider\n                if param_name == \"request_timeout\":\n                    if provider == \"Google Generative AI\" and isinstance(param_value, (int, float)):\n                        kwargs[param_mapping[param_name]] = {\"timeout\": param_value}\n                    else:\n                        kwargs[param_mapping[param_name]] = param_value\n                else:\n                    kwargs[param_mapping[param_name]] = param_value\n\n        return kwargs\n\n    def _build_kwargs(self, model: dict[str, Any], metadata: dict[str, Any]) -> dict[str, Any]:\n        \"\"\"Build kwargs dictionary using parameter mapping.\"\"\"\n        param_mapping = metadata.get(\"param_mapping\", {})\n        if not param_mapping:\n            msg = \"Parameter mapping not found in metadata\"\n            raise ValueError(msg)\n\n        kwargs = {}\n\n        # Required parameters - handle both \"model\" and \"model_id\" (for watsonx)\n        if \"model\" in param_mapping:\n            kwargs[param_mapping[\"model\"]] = model.get(\"name\")\n        elif \"model_id\" in param_mapping:\n            kwargs[param_mapping[\"model_id\"]] = model.get(\"name\")\n        if \"api_key\" in param_mapping:\n            kwargs[param_mapping[\"api_key\"]] = get_api_key_for_provider(\n                self.user_id,\n                model.get(\"provider\"),\n                self.api_key,\n            )\n\n        # Optional parameters with their values\n        provider = model.get(\"provider\")\n        optional_params = {\n            \"api_base\": self.api_base if self.api_base else None,\n            \"dimensions\": int(self.dimensions) if self.dimensions else None,\n            \"chunk_size\": int(self.chunk_size) if self.chunk_size else None,\n            \"request_timeout\": float(self.request_timeout) if self.request_timeout else None,\n            \"max_retries\": int(self.max_retries) if self.max_retries else None,\n            \"show_progress_bar\": self.show_progress_bar if hasattr(self, \"show_progress_bar\") else None,\n            \"model_kwargs\": self.model_kwargs if self.model_kwargs else None,\n        }\n\n        # Watson-specific parameters\n        if provider in {\"IBM WatsonX\", \"IBM watsonx.ai\"}:\n            # Map base_url_ibm_watsonx to \"url\" parameter for watsonx\n            if \"url\" in param_mapping:\n                url_value = (\n                    self.base_url_ibm_watsonx\n                    if hasattr(self, \"base_url_ibm_watsonx\") and self.base_url_ibm_watsonx\n                    else \"https://us-south.ml.cloud.ibm.com\"\n                )\n                kwargs[param_mapping[\"url\"]] = url_value\n            # Map project_id for watsonx\n            if hasattr(self, \"project_id\") and self.project_id and \"project_id\" in param_mapping:\n                kwargs[param_mapping[\"project_id\"]] = self.project_id\n\n        # Ollama-specific parameters\n        if provider == \"Ollama\" and \"base_url\" in param_mapping:\n            # Map api_base to \"base_url\" parameter for Ollama\n            base_url_value = self.api_base if hasattr(self, \"api_base\") and self.api_base else \"http://localhost:11434\"\n            kwargs[param_mapping[\"base_url\"]] = base_url_value\n\n        # Add optional parameters if they have values and are mapped\n        for param_name, param_value in optional_params.items():\n            if param_value is not None and param_name in param_mapping:\n                # Special handling for request_timeout with Google provider\n                if param_name == \"request_timeout\":\n                    if provider == \"Google Generative AI\" and isinstance(param_value, (int, float)):\n                        kwargs[param_mapping[param_name]] = {\"timeout\": param_value}\n                    else:\n                        kwargs[param_mapping[param_name]] = param_value\n                else:\n                    kwargs[param_mapping[param_name]] = param_value\n\n        return kwargs\n"
-              },
-              "dimensions": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Dimensions",
-                "dynamic": false,
-                "info": "The number of dimensions the resulting output embeddings should have. Only supported by certain models.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "dimensions",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": ""
-              },
-              "input_text": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Include the original text in the output",
-                "dynamic": false,
-                "info": "",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "input_text",
-                "override_skip": false,
-                "placeholder": "",
-                "required": false,
-                "show": false,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": true,
-                "type": "bool",
-                "value": true
-              },
-              "max_retries": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Max Retries",
-                "dynamic": false,
-                "info": "",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "max_retries",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": 3
-              },
-              "model": {
-                "_input_type": "DropdownInput",
-                "advanced": false,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Embedding Model",
-                "dynamic": false,
-                "info": "Select your model provider",
-                "name": "model",
-                "options": [
-                  "text-embedding-3-small",
-                  "text-embedding-3-large",
-                  "text-embedding-ada-002"
-                ],
-                "options_metadata": [],
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "toggle": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "text-embedding-3-small"
-              },
-              "model_kwargs": {
-                "_input_type": "DictInput",
-                "advanced": true,
-                "display_name": "Model Kwargs",
-                "dynamic": false,
-                "info": "Additional keyword arguments to pass to the model.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "model_kwargs",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "type": "dict",
-                "value": {}
-              },
-              "project_id": {
-                "_input_type": "MessageTextInput",
-                "advanced": false,
-                "display_name": "Project ID",
-                "dynamic": false,
-                "info": "IBM watsonx.ai Project ID (required for IBM watsonx.ai)",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "project_id",
-                "override_skip": false,
-                "placeholder": "",
-                "required": false,
-                "show": false,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "track_in_telemetry": false,
-                "type": "str",
-                "value": ""
-              },
-              "request_timeout": {
-                "_input_type": "FloatInput",
-                "advanced": true,
-                "display_name": "Request Timeout",
-                "dynamic": false,
-                "info": "",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "request_timeout",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "float",
-                "value": ""
-              },
-              "show_progress_bar": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Show Progress Bar",
-                "dynamic": false,
-                "info": "",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "show_progress_bar",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": false
-              },
-              "truncate_input_tokens": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Truncate Input Tokens",
-                "dynamic": false,
-                "info": "",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "truncate_input_tokens",
-                "override_skip": false,
-                "placeholder": "",
-                "required": false,
-                "show": false,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": true,
-                "type": "int",
-                "value": 200
-              }
-            },
-            "tool_mode": false
-          },
-          "type": "EmbeddingModel"
-        },
-        "dragging": false,
-        "id": "EmbeddingModel-xuT4K",
-        "measured": {
-          "height": 320,
-          "width": 320
-        },
-        "position": {
-          "x": 825.435626932521,
-          "y": 739.6327999745448
-        },
-        "positionAbsolute": {
-          "x": 825.435626932521,
-          "y": 739.6327999745448
-        },
-        "selected": false,
-        "type": "genericNode"
-      },
-      {
-        "data": {
-          "id": "note-WLlNM",
+          "id": "note-LxVaH",
           "node": {
             "description": "## 📚 1. Load Data Flow\n\nRun this first! Load data from a local file and embed it into the vector database.\n\nSelect a Database and a Collection, or create new ones. \n\nClick  **Run component** on the **Astra DB** component to load your data.\n\n\n### Next steps:\n Experiment by changing the prompt and the contextual data to see how the retrieval flow's responses change.",
             "display_name": "",
@@ -1760,7 +1376,7 @@
         },
         "dragging": false,
         "height": 460,
-        "id": "note-WLlNM",
+        "id": "note-LxVaH",
         "measured": {
           "height": 460,
           "width": 340
@@ -1784,393 +1400,9 @@
       },
       {
         "data": {
-          "description": "Generate embeddings using a specified provider.",
-          "display_name": "Embedding Model",
-          "id": "EmbeddingModel-Pn2Ax",
+          "id": "note-nCjcp",
           "node": {
-            "base_classes": [
-              "Embeddings"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Generate embeddings using a specified provider.",
-            "display_name": "Embedding Model",
-            "documentation": "",
-            "edited": false,
-            "field_order": [
-              "model",
-              "api_key",
-              "api_base",
-              "base_url_ibm_watsonx",
-              "project_id",
-              "dimensions",
-              "chunk_size",
-              "request_timeout",
-              "max_retries",
-              "show_progress_bar",
-              "model_kwargs",
-              "truncate_input_tokens",
-              "input_text"
-            ],
-            "frozen": false,
-            "icon": "binary",
-            "legacy": false,
-            "lf_version": "1.4.2",
-            "metadata": {
-              "code_hash": "3e0b64afc9a2",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "lfx",
-                    "version": null
-                  },
-                  {
-                    "name": "langchain_core",
-                    "version": "0.3.83"
-                  }
-                ],
-                "total_dependencies": 2
-              },
-              "module": "lfx.components.models_and_agents.embedding_model.EmbeddingModelComponent"
-            },
-            "minimized": false,
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Embedding Model",
-                "group_outputs": false,
-                "method": "build_embeddings",
-                "name": "embeddings",
-                "selected": "Embeddings",
-                "tool_mode": true,
-                "types": [
-                  "Embeddings"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "template": {
-              "_type": "Component",
-              "api_base": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "API Base URL",
-                "dynamic": false,
-                "info": "Base URL for the API. Leave empty for default.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "api_base",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "api_key": {
-                "_input_type": "SecretStrInput",
-                "advanced": false,
-                "display_name": "API Key",
-                "dynamic": false,
-                "info": "Model Provider API key",
-                "input_types": [],
-                "load_from_db": false,
-                "name": "api_key",
-                "password": true,
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": ""
-              },
-              "base_url_ibm_watsonx": {
-                "_input_type": "DropdownInput",
-                "advanced": false,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "watsonx API Endpoint",
-                "dynamic": false,
-                "external_options": {},
-                "info": "The base URL of the API (IBM watsonx.ai only)",
-                "name": "base_url_ibm_watsonx",
-                "options": [
-                  "https://us-south.ml.cloud.ibm.com",
-                  "https://eu-de.ml.cloud.ibm.com",
-                  "https://eu-gb.ml.cloud.ibm.com",
-                  "https://au-syd.ml.cloud.ibm.com",
-                  "https://jp-tok.ml.cloud.ibm.com",
-                  "https://ca-tor.ml.cloud.ibm.com"
-                ],
-                "options_metadata": [],
-                "override_skip": false,
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": false,
-                "title_case": false,
-                "toggle": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": true,
-                "type": "str",
-                "value": "https://us-south.ml.cloud.ibm.com"
-              },
-              "chunk_size": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Chunk Size",
-                "dynamic": false,
-                "info": "",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "chunk_size",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": 1000
-              },
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from typing import Any\n\nfrom lfx.base.embeddings.embeddings_class import EmbeddingsWithModels\nfrom lfx.base.embeddings.model import LCEmbeddingsModel\nfrom lfx.base.models.unified_models import (\n    get_api_key_for_provider,\n    get_embedding_classes,\n    get_embedding_model_options,\n    get_unified_models_detailed,\n    update_model_options_in_build_config,\n)\nfrom lfx.base.models.watsonx_constants import IBM_WATSONX_URLS\nfrom lfx.field_typing import Embeddings\nfrom lfx.io import (\n    BoolInput,\n    DictInput,\n    DropdownInput,\n    FloatInput,\n    IntInput,\n    MessageTextInput,\n    ModelInput,\n    SecretStrInput,\n)\nfrom lfx.log.logger import logger\n\n\nclass EmbeddingModelComponent(LCEmbeddingsModel):\n    display_name = \"Embedding Model\"\n    description = \"Generate embeddings using a specified provider.\"\n    documentation: str = \"https://docs.langflow.org/components-embedding-models\"\n    icon = \"binary\"\n    name = \"EmbeddingModel\"\n    category = \"models\"\n\n    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):\n        \"\"\"Dynamically update build config with user-filtered model options.\"\"\"\n        # Update model options\n        build_config = update_model_options_in_build_config(\n            component=self,\n            build_config=build_config,\n            cache_key_prefix=\"embedding_model_options\",\n            get_options_func=get_embedding_model_options,\n            field_name=field_name,\n            field_value=field_value,\n        )\n\n        # Show/hide provider-specific fields based on selected model\n        if field_name == \"model\" and isinstance(field_value, list) and len(field_value) > 0:\n            selected_model = field_value[0]\n            provider = selected_model.get(\"provider\", \"\")\n\n            # Show/hide watsonx fields\n            is_watsonx = provider == \"IBM WatsonX\"\n            build_config[\"base_url_ibm_watsonx\"][\"show\"] = is_watsonx\n            build_config[\"project_id\"][\"show\"] = is_watsonx\n            build_config[\"truncate_input_tokens\"][\"show\"] = is_watsonx\n            build_config[\"input_text\"][\"show\"] = is_watsonx\n            if is_watsonx:\n                build_config[\"base_url_ibm_watsonx\"][\"required\"] = True\n                build_config[\"project_id\"][\"required\"] = True\n\n        return build_config\n\n    inputs = [\n        ModelInput(\n            name=\"model\",\n            display_name=\"Embedding Model\",\n            info=\"Select your model provider\",\n            real_time_refresh=True,\n            required=True,\n            model_type=\"embedding\",\n            input_types=[\"Embeddings\"],  # Override default to accept Embeddings instead of LanguageModel\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"API Key\",\n            info=\"Model Provider API key\",\n            real_time_refresh=True,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"api_base\",\n            display_name=\"API Base URL\",\n            info=\"Base URL for the API. Leave empty for default.\",\n            advanced=True,\n        ),\n        # Watson-specific inputs\n        DropdownInput(\n            name=\"base_url_ibm_watsonx\",\n            display_name=\"watsonx API Endpoint\",\n            info=\"The base URL of the API (IBM watsonx.ai only)\",\n            options=IBM_WATSONX_URLS,\n            value=IBM_WATSONX_URLS[0],\n            show=False,\n            real_time_refresh=True,\n        ),\n        MessageTextInput(\n            name=\"project_id\",\n            display_name=\"Project ID\",\n            info=\"IBM watsonx.ai Project ID (required for IBM watsonx.ai)\",\n            show=False,\n        ),\n        IntInput(\n            name=\"dimensions\",\n            display_name=\"Dimensions\",\n            info=\"The number of dimensions the resulting output embeddings should have. \"\n            \"Only supported by certain models.\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"chunk_size\",\n            display_name=\"Chunk Size\",\n            advanced=True,\n            value=1000,\n        ),\n        FloatInput(\n            name=\"request_timeout\",\n            display_name=\"Request Timeout\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"max_retries\",\n            display_name=\"Max Retries\",\n            advanced=True,\n            value=3,\n        ),\n        BoolInput(\n            name=\"show_progress_bar\",\n            display_name=\"Show Progress Bar\",\n            advanced=True,\n        ),\n        DictInput(\n            name=\"model_kwargs\",\n            display_name=\"Model Kwargs\",\n            advanced=True,\n            info=\"Additional keyword arguments to pass to the model.\",\n        ),\n        IntInput(\n            name=\"truncate_input_tokens\",\n            display_name=\"Truncate Input Tokens\",\n            advanced=True,\n            value=200,\n            show=False,\n        ),\n        BoolInput(\n            name=\"input_text\",\n            display_name=\"Include the original text in the output\",\n            value=True,\n            advanced=True,\n            show=False,\n        ),\n    ]\n\n    def build_embeddings(self) -> Embeddings:\n        \"\"\"Build and return an embeddings instance based on the selected model.\n\n        Returns an EmbeddingsWithModels wrapper that contains:\n        - The primary embedding instance (for the selected model)\n        - available_models dict mapping all available model names to their instances\n        \"\"\"\n        # If an Embeddings object is directly connected, return it\n        try:\n            from langchain_core.embeddings import Embeddings as BaseEmbeddings\n\n            if isinstance(self.model, BaseEmbeddings):\n                return self.model\n        except ImportError:\n            pass\n\n        # Safely extract model configuration\n        if not self.model or not isinstance(self.model, list):\n            msg = \"Model must be a non-empty list\"\n            raise ValueError(msg)\n\n        model = self.model[0]\n        model_name = model.get(\"name\")\n        provider = model.get(\"provider\")\n        metadata = model.get(\"metadata\", {})\n\n        # Get API key from user input or global variables\n        api_key = get_api_key_for_provider(self.user_id, provider, self.api_key)\n\n        # Validate required fields (Ollama doesn't require API key)\n        if not api_key and provider != \"Ollama\":\n            msg = (\n                f\"{provider} API key is required. \"\n                f\"Please provide it in the component or configure it globally as \"\n                f\"{provider.upper().replace(' ', '_')}_API_KEY.\"\n            )\n            raise ValueError(msg)\n\n        if not model_name:\n            msg = \"Model name is required\"\n            raise ValueError(msg)\n\n        # Get embedding class\n        embedding_class_name = metadata.get(\"embedding_class\")\n        if not embedding_class_name:\n            msg = f\"No embedding class defined in metadata for {model_name}\"\n            raise ValueError(msg)\n\n        embedding_class = get_embedding_classes().get(embedding_class_name)\n        if not embedding_class:\n            msg = f\"Unknown embedding class: {embedding_class_name}\"\n            raise ValueError(msg)\n\n        # Build kwargs using parameter mapping for primary instance\n        kwargs = self._build_kwargs(model, metadata)\n        primary_instance = embedding_class(**kwargs)\n\n        # Get all available embedding models for this provider\n        available_models_dict = self._build_available_models(\n            provider=provider,\n            embedding_class=embedding_class,\n            metadata=metadata,\n            api_key=api_key,\n        )\n\n        # Wrap with EmbeddingsWithModels to provide available_models metadata\n        return EmbeddingsWithModels(\n            embeddings=primary_instance,\n            available_models=available_models_dict,\n        )\n\n    def _build_available_models(\n        self,\n        provider: str,\n        embedding_class: type,\n        metadata: dict[str, Any],\n        api_key: str | None,\n    ) -> dict[str, Embeddings]:\n        \"\"\"Build a dictionary of all available embedding model instances for the provider.\n\n        Args:\n            provider: The provider name (e.g., \"OpenAI\", \"Ollama\")\n            embedding_class: The embedding class to instantiate\n            metadata: Metadata containing param_mapping\n            api_key: The API key for the provider\n\n        Returns:\n            Dict mapping model names to their embedding instances\n        \"\"\"\n        available_models_dict: dict[str, Embeddings] = {}\n\n        # Get all embedding models for this provider from unified models\n        all_embedding_models = get_unified_models_detailed(\n            providers=[provider],\n            model_type=\"embeddings\",\n            include_deprecated=False,\n            include_unsupported=False,\n        )\n\n        if not all_embedding_models:\n            return available_models_dict\n\n        # Extract models from the provider data\n        for provider_data in all_embedding_models:\n            if provider_data.get(\"provider\") != provider:\n                continue\n\n            for model_data in provider_data.get(\"models\", []):\n                model_name = model_data.get(\"model_name\")\n                if not model_name:\n                    continue\n\n                # Create a model dict compatible with _build_kwargs\n                model_dict = {\n                    \"name\": model_name,\n                    \"provider\": provider,\n                    \"metadata\": metadata,  # Reuse the same metadata/param_mapping\n                }\n\n                try:\n                    # Build kwargs for this model\n                    model_kwargs = self._build_kwargs_for_model(model_dict, metadata, api_key)\n                    # Create the embedding instance\n                    available_models_dict[model_name] = embedding_class(**model_kwargs)\n                except Exception:  # noqa: BLE001\n                    # Skip models that fail to instantiate\n                    # This handles cases where specific models have incompatible parameters\n                    logger.debug(\"Failed to instantiate embedding model %s: skipping\", model_name, exc_info=True)\n                    continue\n\n        return available_models_dict\n\n    def _build_kwargs_for_model(\n        self,\n        model: dict[str, Any],\n        metadata: dict[str, Any],\n        api_key: str | None,\n    ) -> dict[str, Any]:\n        \"\"\"Build kwargs dictionary for a specific model using parameter mapping.\n\n        This is similar to _build_kwargs but uses the provided api_key directly\n        instead of looking it up again.\n\n        Args:\n            model: Model dict with name and provider\n            metadata: Metadata containing param_mapping\n            api_key: The API key to use\n\n        Returns:\n            kwargs dict for embedding class instantiation\n        \"\"\"\n        param_mapping = metadata.get(\"param_mapping\", {})\n        if not param_mapping:\n            msg = \"Parameter mapping not found in metadata\"\n            raise ValueError(msg)\n\n        kwargs = {}\n        provider = model.get(\"provider\")\n\n        # Required parameters - handle both \"model\" and \"model_id\" (for watsonx)\n        if \"model\" in param_mapping:\n            kwargs[param_mapping[\"model\"]] = model.get(\"name\")\n        elif \"model_id\" in param_mapping:\n            kwargs[param_mapping[\"model_id\"]] = model.get(\"name\")\n\n        # Add API key if mapped\n        if \"api_key\" in param_mapping and api_key:\n            kwargs[param_mapping[\"api_key\"]] = api_key\n\n        # Optional parameters with their values\n        optional_params = {\n            \"api_base\": self.api_base if self.api_base else None,\n            \"dimensions\": int(self.dimensions) if self.dimensions else None,\n            \"chunk_size\": int(self.chunk_size) if self.chunk_size else None,\n            \"request_timeout\": float(self.request_timeout) if self.request_timeout else None,\n            \"max_retries\": int(self.max_retries) if self.max_retries else None,\n            \"show_progress_bar\": self.show_progress_bar if hasattr(self, \"show_progress_bar\") else None,\n            \"model_kwargs\": self.model_kwargs if self.model_kwargs else None,\n        }\n\n        # Watson-specific parameters\n        if provider in {\"IBM WatsonX\", \"IBM watsonx.ai\"}:\n            # Map base_url_ibm_watsonx to \"url\" parameter for watsonx\n            if \"url\" in param_mapping:\n                url_value = (\n                    self.base_url_ibm_watsonx\n                    if hasattr(self, \"base_url_ibm_watsonx\") and self.base_url_ibm_watsonx\n                    else \"https://us-south.ml.cloud.ibm.com\"\n                )\n                kwargs[param_mapping[\"url\"]] = url_value\n            # Map project_id for watsonx\n            if hasattr(self, \"project_id\") and self.project_id and \"project_id\" in param_mapping:\n                kwargs[param_mapping[\"project_id\"]] = self.project_id\n\n        # Ollama-specific parameters\n        if provider == \"Ollama\" and \"base_url\" in param_mapping:\n            # Map api_base to \"base_url\" parameter for Ollama\n            base_url_value = self.api_base if hasattr(self, \"api_base\") and self.api_base else \"http://localhost:11434\"\n            kwargs[param_mapping[\"base_url\"]] = base_url_value\n\n        # Add optional parameters if they have values and are mapped\n        for param_name, param_value in optional_params.items():\n            if param_value is not None and param_name in param_mapping:\n                # Special handling for request_timeout with Google provider\n                if param_name == \"request_timeout\":\n                    if provider == \"Google Generative AI\" and isinstance(param_value, (int, float)):\n                        kwargs[param_mapping[param_name]] = {\"timeout\": param_value}\n                    else:\n                        kwargs[param_mapping[param_name]] = param_value\n                else:\n                    kwargs[param_mapping[param_name]] = param_value\n\n        return kwargs\n\n    def _build_kwargs(self, model: dict[str, Any], metadata: dict[str, Any]) -> dict[str, Any]:\n        \"\"\"Build kwargs dictionary using parameter mapping.\"\"\"\n        param_mapping = metadata.get(\"param_mapping\", {})\n        if not param_mapping:\n            msg = \"Parameter mapping not found in metadata\"\n            raise ValueError(msg)\n\n        kwargs = {}\n\n        # Required parameters - handle both \"model\" and \"model_id\" (for watsonx)\n        if \"model\" in param_mapping:\n            kwargs[param_mapping[\"model\"]] = model.get(\"name\")\n        elif \"model_id\" in param_mapping:\n            kwargs[param_mapping[\"model_id\"]] = model.get(\"name\")\n        if \"api_key\" in param_mapping:\n            kwargs[param_mapping[\"api_key\"]] = get_api_key_for_provider(\n                self.user_id,\n                model.get(\"provider\"),\n                self.api_key,\n            )\n\n        # Optional parameters with their values\n        provider = model.get(\"provider\")\n        optional_params = {\n            \"api_base\": self.api_base if self.api_base else None,\n            \"dimensions\": int(self.dimensions) if self.dimensions else None,\n            \"chunk_size\": int(self.chunk_size) if self.chunk_size else None,\n            \"request_timeout\": float(self.request_timeout) if self.request_timeout else None,\n            \"max_retries\": int(self.max_retries) if self.max_retries else None,\n            \"show_progress_bar\": self.show_progress_bar if hasattr(self, \"show_progress_bar\") else None,\n            \"model_kwargs\": self.model_kwargs if self.model_kwargs else None,\n        }\n\n        # Watson-specific parameters\n        if provider in {\"IBM WatsonX\", \"IBM watsonx.ai\"}:\n            # Map base_url_ibm_watsonx to \"url\" parameter for watsonx\n            if \"url\" in param_mapping:\n                url_value = (\n                    self.base_url_ibm_watsonx\n                    if hasattr(self, \"base_url_ibm_watsonx\") and self.base_url_ibm_watsonx\n                    else \"https://us-south.ml.cloud.ibm.com\"\n                )\n                kwargs[param_mapping[\"url\"]] = url_value\n            # Map project_id for watsonx\n            if hasattr(self, \"project_id\") and self.project_id and \"project_id\" in param_mapping:\n                kwargs[param_mapping[\"project_id\"]] = self.project_id\n\n        # Ollama-specific parameters\n        if provider == \"Ollama\" and \"base_url\" in param_mapping:\n            # Map api_base to \"base_url\" parameter for Ollama\n            base_url_value = self.api_base if hasattr(self, \"api_base\") and self.api_base else \"http://localhost:11434\"\n            kwargs[param_mapping[\"base_url\"]] = base_url_value\n\n        # Add optional parameters if they have values and are mapped\n        for param_name, param_value in optional_params.items():\n            if param_value is not None and param_name in param_mapping:\n                # Special handling for request_timeout with Google provider\n                if param_name == \"request_timeout\":\n                    if provider == \"Google Generative AI\" and isinstance(param_value, (int, float)):\n                        kwargs[param_mapping[param_name]] = {\"timeout\": param_value}\n                    else:\n                        kwargs[param_mapping[param_name]] = param_value\n                else:\n                    kwargs[param_mapping[param_name]] = param_value\n\n        return kwargs\n"
-              },
-              "dimensions": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Dimensions",
-                "dynamic": false,
-                "info": "The number of dimensions the resulting output embeddings should have. Only supported by certain models.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "dimensions",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": ""
-              },
-              "input_text": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Include the original text in the output",
-                "dynamic": false,
-                "info": "",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "input_text",
-                "override_skip": false,
-                "placeholder": "",
-                "required": false,
-                "show": false,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": true,
-                "type": "bool",
-                "value": true
-              },
-              "max_retries": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Max Retries",
-                "dynamic": false,
-                "info": "",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "max_retries",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": 3
-              },
-              "model": {
-                "_input_type": "DropdownInput",
-                "advanced": false,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Embedding Model",
-                "dynamic": false,
-                "info": "Select your model provider",
-                "name": "model",
-                "options": [
-                  "text-embedding-3-small",
-                  "text-embedding-3-large",
-                  "text-embedding-ada-002"
-                ],
-                "options_metadata": [],
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "toggle": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "text-embedding-3-small"
-              },
-              "model_kwargs": {
-                "_input_type": "DictInput",
-                "advanced": true,
-                "display_name": "Model Kwargs",
-                "dynamic": false,
-                "info": "Additional keyword arguments to pass to the model.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "model_kwargs",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "type": "dict",
-                "value": {}
-              },
-              "project_id": {
-                "_input_type": "MessageTextInput",
-                "advanced": false,
-                "display_name": "Project ID",
-                "dynamic": false,
-                "info": "IBM watsonx.ai Project ID (required for IBM watsonx.ai)",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "project_id",
-                "override_skip": false,
-                "placeholder": "",
-                "required": false,
-                "show": false,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "track_in_telemetry": false,
-                "type": "str",
-                "value": ""
-              },
-              "request_timeout": {
-                "_input_type": "FloatInput",
-                "advanced": true,
-                "display_name": "Request Timeout",
-                "dynamic": false,
-                "info": "",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "request_timeout",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "float",
-                "value": ""
-              },
-              "show_progress_bar": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Show Progress Bar",
-                "dynamic": false,
-                "info": "",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "show_progress_bar",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": false
-              },
-              "truncate_input_tokens": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Truncate Input Tokens",
-                "dynamic": false,
-                "info": "",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "truncate_input_tokens",
-                "override_skip": false,
-                "placeholder": "",
-                "required": false,
-                "show": false,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": true,
-                "type": "int",
-                "value": 200
-              }
-            },
-            "tool_mode": false
-          },
-          "type": "EmbeddingModel"
-        },
-        "dragging": false,
-        "id": "EmbeddingModel-Pn2Ax",
-        "measured": {
-          "height": 320,
-          "width": 320
-        },
-        "position": {
-          "x": 1690.9220896443658,
-          "y": 1866.483269483266
-        },
-        "positionAbsolute": {
-          "x": 1690.9220896443658,
-          "y": 1866.483269483266
-        },
-        "selected": false,
-        "type": "genericNode"
-      },
-      {
-        "data": {
-          "id": "note-5qEgh",
-          "node": {
-            "description": "### 💡 Add your OpenAI API key here 👇",
+            "description": "### Add your OpenAI API key",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -2181,14 +1413,14 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-5qEgh",
+        "id": "note-nCjcp",
         "measured": {
           "height": 324,
           "width": 324
         },
         "position": {
-          "x": 1692.2322233423606,
-          "y": 1821.9077961087607
+          "x": 1680.3201287235133,
+          "y": 1853.0651173944264
         },
         "positionAbsolute": {
           "x": 1692.2322233423606,
@@ -2200,9 +1432,9 @@
       },
       {
         "data": {
-          "id": "note-siZGp",
+          "id": "note-kDM5x",
           "node": {
-            "description": "### 💡 Add your OpenAI API key here 👇",
+            "description": "### Add your OpenAI API key",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -2213,14 +1445,14 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-siZGp",
+        "id": "note-kDM5x",
         "measured": {
           "height": 324,
           "width": 324
         },
         "position": {
-          "x": 824.1003268813427,
-          "y": 698.6951695764802
+          "x": 812.9362088802095,
+          "y": 727.7371850183482
         },
         "positionAbsolute": {
           "x": 824.1003268813427,
@@ -2232,9 +1464,9 @@
       },
       {
         "data": {
-          "id": "note-qKdBl",
+          "id": "note-u9JQx",
           "node": {
-            "description": "### 💡 Add your OpenAI API key here 👇",
+            "description": "### Configure your Model Provider",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -2245,26 +1477,27 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-qKdBl",
+        "id": "note-u9JQx",
         "measured": {
           "height": 324,
-          "width": 324
+          "width": 347
         },
         "position": {
-          "x": 2350.297636215281,
-          "y": 577.4592910079571
+          "x": 2337.797636215281,
+          "y": 582.4592910079571
         },
         "positionAbsolute": {
           "x": 2350.297636215281,
           "y": 525.0687902842766
         },
-        "selected": false,
+        "resizing": false,
+        "selected": true,
         "type": "noteNode",
-        "width": 324
+        "width": 347
       },
       {
         "data": {
-          "id": "parser-oHf4E",
+          "id": "parser-13SZf",
           "node": {
             "base_classes": [
               "Message"
@@ -2426,9 +1659,9 @@
           "type": "parser"
         },
         "dragging": false,
-        "id": "parser-oHf4E",
+        "id": "parser-13SZf",
         "measured": {
-          "height": 361,
+          "height": 363,
           "width": 320
         },
         "position": {
@@ -2440,7 +1673,7 @@
       },
       {
         "data": {
-          "id": "File-7D3hP",
+          "id": "File-oaUqO",
           "node": {
             "base_classes": [
               "Message"
@@ -2481,7 +1714,7 @@
             ],
             "frozen": false,
             "icon": "file-text",
-            "last_updated": "2025-10-10T17:51:29.596Z",
+            "last_updated": "2026-02-13T00:12:55.550Z",
             "legacy": false,
             "metadata": {
               "code_hash": "12a5841f1a03",
@@ -2555,7 +1788,7 @@
                 "dynamic": false,
                 "info": "AWS Access key ID.",
                 "input_types": [],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "aws_access_key_id",
                 "override_skip": false,
                 "password": true,
@@ -2595,7 +1828,7 @@
                 "dynamic": false,
                 "info": "AWS Secret Key.",
                 "input_types": [],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "aws_secret_access_key",
                 "override_skip": false,
                 "password": true,
@@ -3024,7 +2257,7 @@
                 "dynamic": false,
                 "info": "Your Google Cloud Platform service account JSON key as a secret string (complete JSON content).",
                 "input_types": [],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "service_account_key",
                 "override_skip": false,
                 "password": true,
@@ -3114,9 +2347,9 @@
           "type": "File"
         },
         "dragging": false,
-        "id": "File-7D3hP",
+        "id": "File-oaUqO",
         "measured": {
-          "height": 256,
+          "height": 358,
           "width": 320
         },
         "position": {
@@ -3128,7 +2361,7 @@
       },
       {
         "data": {
-          "id": "LanguageModelComponent-Wqbva",
+          "id": "LanguageModelComponent-lqsKj",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -3155,7 +2388,7 @@
             ],
             "frozen": false,
             "icon": "brain-circuit",
-            "last_updated": "2025-12-11T21:29:10.202Z",
+            "last_updated": "2026-02-13T00:07:15.182Z",
             "legacy": false,
             "lf_version": "1.7.0",
             "metadata": {
@@ -3185,6 +2418,7 @@
                 "cache": true,
                 "display_name": "Model Response",
                 "group_outputs": false,
+                "hidden": null,
                 "loop_types": null,
                 "method": "text_response",
                 "name": "text_output",
@@ -3202,6 +2436,7 @@
                 "cache": true,
                 "display_name": "Language Model",
                 "group_outputs": false,
+                "hidden": null,
                 "loop_types": null,
                 "method": "build_model",
                 "name": "model_output",
@@ -3219,10 +2454,10 @@
             "priority": 0,
             "template": {
               "_frontend_node_flow_id": {
-                "value": "524f71dc-cc58-441a-a009-c71d6755765f"
+                "value": "94d56f37-8c90-4ca0-a5a8-c8fe885205be"
               },
               "_frontend_node_folder_id": {
-                "value": "afaca9ee-97e3-4211-8569-722a4058ea5e"
+                "value": "ce670bdf-fcca-4006-9f28-b58452b08ea2"
               },
               "_type": "Component",
               "api_key": {
@@ -3320,7 +2555,7 @@
                 "type": "str",
                 "value": ""
               },
-              "is_refresh": false,
+              "is_refresh": true,
               "model": {
                 "_input_type": "ModelInput",
                 "advanced": false,
@@ -3345,7 +2580,123 @@
                 "list_add_label": "Add More",
                 "model_type": "language",
                 "name": "model",
-                "options": [],
+                "options": [
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5.1"
+                      ]
+                    },
+                    "name": "gpt-5.1",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5"
+                      ]
+                    },
+                    "name": "gpt-5",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5-mini"
+                      ]
+                    },
+                    "name": "gpt-5-mini",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5-nano"
+                      ]
+                    },
+                    "name": "gpt-5-nano",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5-chat-latest"
+                      ]
+                    },
+                    "name": "gpt-5-chat-latest",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "Anthropic",
+                    "icon": "Anthropic",
+                    "metadata": {
+                      "is_disabled_provider": true,
+                      "variable_name": "ANTHROPIC_API_KEY"
+                    },
+                    "name": "__enable_provider_Anthropic__",
+                    "provider": "Anthropic"
+                  },
+                  {
+                    "category": "Google Generative AI",
+                    "icon": "GoogleGenerativeAI",
+                    "metadata": {
+                      "is_disabled_provider": true,
+                      "variable_name": "GOOGLE_API_KEY"
+                    },
+                    "name": "__enable_provider_Google Generative AI__",
+                    "provider": "Google Generative AI"
+                  },
+                  {
+                    "category": "Ollama",
+                    "icon": "Ollama",
+                    "metadata": {
+                      "is_disabled_provider": true,
+                      "variable_name": "OLLAMA_BASE_URL"
+                    },
+                    "name": "__enable_provider_Ollama__",
+                    "provider": "Ollama"
+                  },
+                  {
+                    "category": "IBM WatsonX",
+                    "icon": "WatsonxAI",
+                    "metadata": {
+                      "is_disabled_provider": true,
+                      "variable_name": "WATSONX_APIKEY"
+                    },
+                    "name": "__enable_provider_IBM WatsonX__",
+                    "provider": "IBM WatsonX"
+                  }
+                ],
                 "override_skip": false,
                 "placeholder": "Setup Provider",
                 "real_time_refresh": true,
@@ -3357,7 +2708,22 @@
                 "trace_as_input": true,
                 "track_in_telemetry": false,
                 "type": "model",
-                "value": []
+                "value": [
+                  {
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5.1"
+                      ]
+                    },
+                    "name": "gpt-5.1",
+                    "provider": "OpenAI"
+                  }
+                ]
               },
               "ollama_base_url": {
                 "_input_type": "MessageInput",
@@ -3492,9 +2858,9 @@
           "type": "LanguageModelComponent"
         },
         "dragging": false,
-        "id": "LanguageModelComponent-Wqbva",
+        "id": "LanguageModelComponent-lqsKj",
         "measured": {
-          "height": 451,
+          "height": 371,
           "width": 320
         },
         "position": {
@@ -3506,7 +2872,7 @@
       },
       {
         "data": {
-          "id": "AstraDB-TCSqR",
+          "id": "AstraDB-mJvb6",
           "node": {
             "base_classes": [
               "Data",
@@ -3546,6 +2912,7 @@
             ],
             "frozen": false,
             "icon": "AstraDB",
+            "last_updated": "2026-02-13T00:12:55.551Z",
             "legacy": false,
             "metadata": {
               "code_hash": "d52094e54e96",
@@ -3961,7 +3328,7 @@
                 "real_time_refresh": true,
                 "refresh_button": true,
                 "required": true,
-                "show": true,
+                "show": false,
                 "title_case": false,
                 "toggle": false,
                 "tool_mode": false,
@@ -4286,7 +3653,7 @@
                 "dynamic": false,
                 "info": "Authentication token for accessing Astra DB.",
                 "input_types": [],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "token",
                 "password": true,
                 "placeholder": "",
@@ -4295,7 +3662,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "ASTRA_DB_APPLICATION_TOKEN"
+                "value": ""
               }
             },
             "tool_mode": false
@@ -4305,9 +3672,9 @@
           "type": "AstraDB"
         },
         "dragging": false,
-        "id": "AstraDB-TCSqR",
+        "id": "AstraDB-mJvb6",
         "measured": {
-          "height": 458,
+          "height": 377,
           "width": 320
         },
         "position": {
@@ -4319,7 +3686,7 @@
       },
       {
         "data": {
-          "id": "AstraDB-BteL9",
+          "id": "AstraDB-ZiGZI",
           "node": {
             "base_classes": [
               "Data",
@@ -4359,6 +3726,7 @@
             ],
             "frozen": false,
             "icon": "AstraDB",
+            "last_updated": "2026-02-13T00:12:55.551Z",
             "legacy": false,
             "metadata": {
               "code_hash": "d52094e54e96",
@@ -4774,7 +4142,7 @@
                 "real_time_refresh": true,
                 "refresh_button": true,
                 "required": true,
-                "show": true,
+                "show": false,
                 "title_case": false,
                 "toggle": false,
                 "tool_mode": false,
@@ -5099,7 +4467,7 @@
                 "dynamic": false,
                 "info": "Authentication token for accessing Astra DB.",
                 "input_types": [],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "token",
                 "password": true,
                 "placeholder": "",
@@ -5108,7 +4476,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "ASTRA_DB_APPLICATION_TOKEN"
+                "value": ""
               }
             },
             "tool_mode": false
@@ -5118,9 +4486,9 @@
           "type": "AstraDB"
         },
         "dragging": false,
-        "id": "AstraDB-BteL9",
+        "id": "AstraDB-ZiGZI",
         "measured": {
-          "height": 458,
+          "height": 377,
           "width": 320
         },
         "position": {
@@ -5129,19 +4497,1067 @@
         },
         "selected": false,
         "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "EmbeddingModel-MBTyq",
+          "node": {
+            "base_classes": [
+              "Embeddings"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Generate embeddings using a specified provider.",
+            "display_name": "Embedding Model",
+            "documentation": "https://docs.langflow.org/components-embedding-models",
+            "edited": false,
+            "field_order": [
+              "model",
+              "api_key",
+              "api_base",
+              "base_url_ibm_watsonx",
+              "project_id",
+              "dimensions",
+              "chunk_size",
+              "request_timeout",
+              "max_retries",
+              "show_progress_bar",
+              "model_kwargs",
+              "truncate_input_tokens",
+              "input_text"
+            ],
+            "frozen": false,
+            "icon": "binary",
+            "last_updated": "2026-02-13T00:12:55.746Z",
+            "legacy": false,
+            "metadata": {
+              "code_hash": "3e0b64afc9a2",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "lfx",
+                    "version": null
+                  },
+                  {
+                    "name": "langchain_core",
+                    "version": "0.3.83"
+                  }
+                ],
+                "total_dependencies": 2
+              },
+              "module": "lfx.components.models_and_agents.embedding_model.EmbeddingModelComponent"
+            },
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Embedding Model",
+                "group_outputs": false,
+                "method": "build_embeddings",
+                "name": "embeddings",
+                "selected": "Embeddings",
+                "tool_mode": true,
+                "types": [
+                  "Embeddings"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "api_base": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "API Base URL",
+                "dynamic": false,
+                "info": "Base URL for the API. Leave empty for default.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "api_base",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "api_key": {
+                "_input_type": "SecretStrInput",
+                "advanced": true,
+                "display_name": "API Key",
+                "dynamic": false,
+                "info": "Model Provider API key",
+                "input_types": [],
+                "load_from_db": false,
+                "name": "api_key",
+                "override_skip": false,
+                "password": true,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "base_url_ibm_watsonx": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "watsonx API Endpoint",
+                "dynamic": false,
+                "external_options": {},
+                "info": "The base URL of the API (IBM watsonx.ai only)",
+                "name": "base_url_ibm_watsonx",
+                "options": [
+                  "https://us-south.ml.cloud.ibm.com",
+                  "https://eu-de.ml.cloud.ibm.com",
+                  "https://eu-gb.ml.cloud.ibm.com",
+                  "https://au-syd.ml.cloud.ibm.com",
+                  "https://jp-tok.ml.cloud.ibm.com",
+                  "https://ca-tor.ml.cloud.ibm.com"
+                ],
+                "options_metadata": [],
+                "override_skip": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "str",
+                "value": "https://us-south.ml.cloud.ibm.com"
+              },
+              "chunk_size": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Chunk Size",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "chunk_size",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "int",
+                "value": 1000
+              },
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from typing import Any\n\nfrom lfx.base.embeddings.embeddings_class import EmbeddingsWithModels\nfrom lfx.base.embeddings.model import LCEmbeddingsModel\nfrom lfx.base.models.unified_models import (\n    get_api_key_for_provider,\n    get_embedding_classes,\n    get_embedding_model_options,\n    get_unified_models_detailed,\n    update_model_options_in_build_config,\n)\nfrom lfx.base.models.watsonx_constants import IBM_WATSONX_URLS\nfrom lfx.field_typing import Embeddings\nfrom lfx.io import (\n    BoolInput,\n    DictInput,\n    DropdownInput,\n    FloatInput,\n    IntInput,\n    MessageTextInput,\n    ModelInput,\n    SecretStrInput,\n)\nfrom lfx.log.logger import logger\n\n\nclass EmbeddingModelComponent(LCEmbeddingsModel):\n    display_name = \"Embedding Model\"\n    description = \"Generate embeddings using a specified provider.\"\n    documentation: str = \"https://docs.langflow.org/components-embedding-models\"\n    icon = \"binary\"\n    name = \"EmbeddingModel\"\n    category = \"models\"\n\n    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):\n        \"\"\"Dynamically update build config with user-filtered model options.\"\"\"\n        # Update model options\n        build_config = update_model_options_in_build_config(\n            component=self,\n            build_config=build_config,\n            cache_key_prefix=\"embedding_model_options\",\n            get_options_func=get_embedding_model_options,\n            field_name=field_name,\n            field_value=field_value,\n        )\n\n        # Show/hide provider-specific fields based on selected model\n        if field_name == \"model\" and isinstance(field_value, list) and len(field_value) > 0:\n            selected_model = field_value[0]\n            provider = selected_model.get(\"provider\", \"\")\n\n            # Show/hide watsonx fields\n            is_watsonx = provider == \"IBM WatsonX\"\n            build_config[\"base_url_ibm_watsonx\"][\"show\"] = is_watsonx\n            build_config[\"project_id\"][\"show\"] = is_watsonx\n            build_config[\"truncate_input_tokens\"][\"show\"] = is_watsonx\n            build_config[\"input_text\"][\"show\"] = is_watsonx\n            if is_watsonx:\n                build_config[\"base_url_ibm_watsonx\"][\"required\"] = True\n                build_config[\"project_id\"][\"required\"] = True\n\n        return build_config\n\n    inputs = [\n        ModelInput(\n            name=\"model\",\n            display_name=\"Embedding Model\",\n            info=\"Select your model provider\",\n            real_time_refresh=True,\n            required=True,\n            model_type=\"embedding\",\n            input_types=[\"Embeddings\"],  # Override default to accept Embeddings instead of LanguageModel\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"API Key\",\n            info=\"Model Provider API key\",\n            real_time_refresh=True,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"api_base\",\n            display_name=\"API Base URL\",\n            info=\"Base URL for the API. Leave empty for default.\",\n            advanced=True,\n        ),\n        # Watson-specific inputs\n        DropdownInput(\n            name=\"base_url_ibm_watsonx\",\n            display_name=\"watsonx API Endpoint\",\n            info=\"The base URL of the API (IBM watsonx.ai only)\",\n            options=IBM_WATSONX_URLS,\n            value=IBM_WATSONX_URLS[0],\n            show=False,\n            real_time_refresh=True,\n        ),\n        MessageTextInput(\n            name=\"project_id\",\n            display_name=\"Project ID\",\n            info=\"IBM watsonx.ai Project ID (required for IBM watsonx.ai)\",\n            show=False,\n        ),\n        IntInput(\n            name=\"dimensions\",\n            display_name=\"Dimensions\",\n            info=\"The number of dimensions the resulting output embeddings should have. \"\n            \"Only supported by certain models.\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"chunk_size\",\n            display_name=\"Chunk Size\",\n            advanced=True,\n            value=1000,\n        ),\n        FloatInput(\n            name=\"request_timeout\",\n            display_name=\"Request Timeout\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"max_retries\",\n            display_name=\"Max Retries\",\n            advanced=True,\n            value=3,\n        ),\n        BoolInput(\n            name=\"show_progress_bar\",\n            display_name=\"Show Progress Bar\",\n            advanced=True,\n        ),\n        DictInput(\n            name=\"model_kwargs\",\n            display_name=\"Model Kwargs\",\n            advanced=True,\n            info=\"Additional keyword arguments to pass to the model.\",\n        ),\n        IntInput(\n            name=\"truncate_input_tokens\",\n            display_name=\"Truncate Input Tokens\",\n            advanced=True,\n            value=200,\n            show=False,\n        ),\n        BoolInput(\n            name=\"input_text\",\n            display_name=\"Include the original text in the output\",\n            value=True,\n            advanced=True,\n            show=False,\n        ),\n    ]\n\n    def build_embeddings(self) -> Embeddings:\n        \"\"\"Build and return an embeddings instance based on the selected model.\n\n        Returns an EmbeddingsWithModels wrapper that contains:\n        - The primary embedding instance (for the selected model)\n        - available_models dict mapping all available model names to their instances\n        \"\"\"\n        # If an Embeddings object is directly connected, return it\n        try:\n            from langchain_core.embeddings import Embeddings as BaseEmbeddings\n\n            if isinstance(self.model, BaseEmbeddings):\n                return self.model\n        except ImportError:\n            pass\n\n        # Safely extract model configuration\n        if not self.model or not isinstance(self.model, list):\n            msg = \"Model must be a non-empty list\"\n            raise ValueError(msg)\n\n        model = self.model[0]\n        model_name = model.get(\"name\")\n        provider = model.get(\"provider\")\n        metadata = model.get(\"metadata\", {})\n\n        # Get API key from user input or global variables\n        api_key = get_api_key_for_provider(self.user_id, provider, self.api_key)\n\n        # Validate required fields (Ollama doesn't require API key)\n        if not api_key and provider != \"Ollama\":\n            msg = (\n                f\"{provider} API key is required. \"\n                f\"Please provide it in the component or configure it globally as \"\n                f\"{provider.upper().replace(' ', '_')}_API_KEY.\"\n            )\n            raise ValueError(msg)\n\n        if not model_name:\n            msg = \"Model name is required\"\n            raise ValueError(msg)\n\n        # Get embedding class\n        embedding_class_name = metadata.get(\"embedding_class\")\n        if not embedding_class_name:\n            msg = f\"No embedding class defined in metadata for {model_name}\"\n            raise ValueError(msg)\n\n        embedding_class = get_embedding_classes().get(embedding_class_name)\n        if not embedding_class:\n            msg = f\"Unknown embedding class: {embedding_class_name}\"\n            raise ValueError(msg)\n\n        # Build kwargs using parameter mapping for primary instance\n        kwargs = self._build_kwargs(model, metadata)\n        primary_instance = embedding_class(**kwargs)\n\n        # Get all available embedding models for this provider\n        available_models_dict = self._build_available_models(\n            provider=provider,\n            embedding_class=embedding_class,\n            metadata=metadata,\n            api_key=api_key,\n        )\n\n        # Wrap with EmbeddingsWithModels to provide available_models metadata\n        return EmbeddingsWithModels(\n            embeddings=primary_instance,\n            available_models=available_models_dict,\n        )\n\n    def _build_available_models(\n        self,\n        provider: str,\n        embedding_class: type,\n        metadata: dict[str, Any],\n        api_key: str | None,\n    ) -> dict[str, Embeddings]:\n        \"\"\"Build a dictionary of all available embedding model instances for the provider.\n\n        Args:\n            provider: The provider name (e.g., \"OpenAI\", \"Ollama\")\n            embedding_class: The embedding class to instantiate\n            metadata: Metadata containing param_mapping\n            api_key: The API key for the provider\n\n        Returns:\n            Dict mapping model names to their embedding instances\n        \"\"\"\n        available_models_dict: dict[str, Embeddings] = {}\n\n        # Get all embedding models for this provider from unified models\n        all_embedding_models = get_unified_models_detailed(\n            providers=[provider],\n            model_type=\"embeddings\",\n            include_deprecated=False,\n            include_unsupported=False,\n        )\n\n        if not all_embedding_models:\n            return available_models_dict\n\n        # Extract models from the provider data\n        for provider_data in all_embedding_models:\n            if provider_data.get(\"provider\") != provider:\n                continue\n\n            for model_data in provider_data.get(\"models\", []):\n                model_name = model_data.get(\"model_name\")\n                if not model_name:\n                    continue\n\n                # Create a model dict compatible with _build_kwargs\n                model_dict = {\n                    \"name\": model_name,\n                    \"provider\": provider,\n                    \"metadata\": metadata,  # Reuse the same metadata/param_mapping\n                }\n\n                try:\n                    # Build kwargs for this model\n                    model_kwargs = self._build_kwargs_for_model(model_dict, metadata, api_key)\n                    # Create the embedding instance\n                    available_models_dict[model_name] = embedding_class(**model_kwargs)\n                except Exception:  # noqa: BLE001\n                    # Skip models that fail to instantiate\n                    # This handles cases where specific models have incompatible parameters\n                    logger.debug(\"Failed to instantiate embedding model %s: skipping\", model_name, exc_info=True)\n                    continue\n\n        return available_models_dict\n\n    def _build_kwargs_for_model(\n        self,\n        model: dict[str, Any],\n        metadata: dict[str, Any],\n        api_key: str | None,\n    ) -> dict[str, Any]:\n        \"\"\"Build kwargs dictionary for a specific model using parameter mapping.\n\n        This is similar to _build_kwargs but uses the provided api_key directly\n        instead of looking it up again.\n\n        Args:\n            model: Model dict with name and provider\n            metadata: Metadata containing param_mapping\n            api_key: The API key to use\n\n        Returns:\n            kwargs dict for embedding class instantiation\n        \"\"\"\n        param_mapping = metadata.get(\"param_mapping\", {})\n        if not param_mapping:\n            msg = \"Parameter mapping not found in metadata\"\n            raise ValueError(msg)\n\n        kwargs = {}\n        provider = model.get(\"provider\")\n\n        # Required parameters - handle both \"model\" and \"model_id\" (for watsonx)\n        if \"model\" in param_mapping:\n            kwargs[param_mapping[\"model\"]] = model.get(\"name\")\n        elif \"model_id\" in param_mapping:\n            kwargs[param_mapping[\"model_id\"]] = model.get(\"name\")\n\n        # Add API key if mapped\n        if \"api_key\" in param_mapping and api_key:\n            kwargs[param_mapping[\"api_key\"]] = api_key\n\n        # Optional parameters with their values\n        optional_params = {\n            \"api_base\": self.api_base if self.api_base else None,\n            \"dimensions\": int(self.dimensions) if self.dimensions else None,\n            \"chunk_size\": int(self.chunk_size) if self.chunk_size else None,\n            \"request_timeout\": float(self.request_timeout) if self.request_timeout else None,\n            \"max_retries\": int(self.max_retries) if self.max_retries else None,\n            \"show_progress_bar\": self.show_progress_bar if hasattr(self, \"show_progress_bar\") else None,\n            \"model_kwargs\": self.model_kwargs if self.model_kwargs else None,\n        }\n\n        # Watson-specific parameters\n        if provider in {\"IBM WatsonX\", \"IBM watsonx.ai\"}:\n            # Map base_url_ibm_watsonx to \"url\" parameter for watsonx\n            if \"url\" in param_mapping:\n                url_value = (\n                    self.base_url_ibm_watsonx\n                    if hasattr(self, \"base_url_ibm_watsonx\") and self.base_url_ibm_watsonx\n                    else \"https://us-south.ml.cloud.ibm.com\"\n                )\n                kwargs[param_mapping[\"url\"]] = url_value\n            # Map project_id for watsonx\n            if hasattr(self, \"project_id\") and self.project_id and \"project_id\" in param_mapping:\n                kwargs[param_mapping[\"project_id\"]] = self.project_id\n\n        # Ollama-specific parameters\n        if provider == \"Ollama\" and \"base_url\" in param_mapping:\n            # Map api_base to \"base_url\" parameter for Ollama\n            base_url_value = self.api_base if hasattr(self, \"api_base\") and self.api_base else \"http://localhost:11434\"\n            kwargs[param_mapping[\"base_url\"]] = base_url_value\n\n        # Add optional parameters if they have values and are mapped\n        for param_name, param_value in optional_params.items():\n            if param_value is not None and param_name in param_mapping:\n                # Special handling for request_timeout with Google provider\n                if param_name == \"request_timeout\":\n                    if provider == \"Google Generative AI\" and isinstance(param_value, (int, float)):\n                        kwargs[param_mapping[param_name]] = {\"timeout\": param_value}\n                    else:\n                        kwargs[param_mapping[param_name]] = param_value\n                else:\n                    kwargs[param_mapping[param_name]] = param_value\n\n        return kwargs\n\n    def _build_kwargs(self, model: dict[str, Any], metadata: dict[str, Any]) -> dict[str, Any]:\n        \"\"\"Build kwargs dictionary using parameter mapping.\"\"\"\n        param_mapping = metadata.get(\"param_mapping\", {})\n        if not param_mapping:\n            msg = \"Parameter mapping not found in metadata\"\n            raise ValueError(msg)\n\n        kwargs = {}\n\n        # Required parameters - handle both \"model\" and \"model_id\" (for watsonx)\n        if \"model\" in param_mapping:\n            kwargs[param_mapping[\"model\"]] = model.get(\"name\")\n        elif \"model_id\" in param_mapping:\n            kwargs[param_mapping[\"model_id\"]] = model.get(\"name\")\n        if \"api_key\" in param_mapping:\n            kwargs[param_mapping[\"api_key\"]] = get_api_key_for_provider(\n                self.user_id,\n                model.get(\"provider\"),\n                self.api_key,\n            )\n\n        # Optional parameters with their values\n        provider = model.get(\"provider\")\n        optional_params = {\n            \"api_base\": self.api_base if self.api_base else None,\n            \"dimensions\": int(self.dimensions) if self.dimensions else None,\n            \"chunk_size\": int(self.chunk_size) if self.chunk_size else None,\n            \"request_timeout\": float(self.request_timeout) if self.request_timeout else None,\n            \"max_retries\": int(self.max_retries) if self.max_retries else None,\n            \"show_progress_bar\": self.show_progress_bar if hasattr(self, \"show_progress_bar\") else None,\n            \"model_kwargs\": self.model_kwargs if self.model_kwargs else None,\n        }\n\n        # Watson-specific parameters\n        if provider in {\"IBM WatsonX\", \"IBM watsonx.ai\"}:\n            # Map base_url_ibm_watsonx to \"url\" parameter for watsonx\n            if \"url\" in param_mapping:\n                url_value = (\n                    self.base_url_ibm_watsonx\n                    if hasattr(self, \"base_url_ibm_watsonx\") and self.base_url_ibm_watsonx\n                    else \"https://us-south.ml.cloud.ibm.com\"\n                )\n                kwargs[param_mapping[\"url\"]] = url_value\n            # Map project_id for watsonx\n            if hasattr(self, \"project_id\") and self.project_id and \"project_id\" in param_mapping:\n                kwargs[param_mapping[\"project_id\"]] = self.project_id\n\n        # Ollama-specific parameters\n        if provider == \"Ollama\" and \"base_url\" in param_mapping:\n            # Map api_base to \"base_url\" parameter for Ollama\n            base_url_value = self.api_base if hasattr(self, \"api_base\") and self.api_base else \"http://localhost:11434\"\n            kwargs[param_mapping[\"base_url\"]] = base_url_value\n\n        # Add optional parameters if they have values and are mapped\n        for param_name, param_value in optional_params.items():\n            if param_value is not None and param_name in param_mapping:\n                # Special handling for request_timeout with Google provider\n                if param_name == \"request_timeout\":\n                    if provider == \"Google Generative AI\" and isinstance(param_value, (int, float)):\n                        kwargs[param_mapping[param_name]] = {\"timeout\": param_value}\n                    else:\n                        kwargs[param_mapping[param_name]] = param_value\n                else:\n                    kwargs[param_mapping[param_name]] = param_value\n\n        return kwargs\n"
+              },
+              "dimensions": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Dimensions",
+                "dynamic": false,
+                "info": "The number of dimensions the resulting output embeddings should have. Only supported by certain models.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "dimensions",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "int",
+                "value": 0
+              },
+              "input_text": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Include the original text in the output",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "input_text",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": true
+              },
+              "max_retries": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Max Retries",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "max_retries",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "int",
+                "value": 3
+              },
+              "model": {
+                "_input_type": "ModelInput",
+                "advanced": false,
+                "display_name": "Embedding Model",
+                "dynamic": false,
+                "external_options": {
+                  "fields": {
+                    "data": {
+                      "node": {
+                        "display_name": "Connect other models",
+                        "icon": "CornerDownLeft",
+                        "name": "connect_other_models"
+                      }
+                    }
+                  }
+                },
+                "info": "Select your model provider",
+                "input_types": [
+                  "Embeddings"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "model_type": "embedding",
+                "name": "model",
+                "options": [
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "embedding_class": "OpenAIEmbeddings",
+                      "model_type": "embeddings",
+                      "param_mapping": {
+                        "api_base": "base_url",
+                        "api_key": "api_key",
+                        "chunk_size": "chunk_size",
+                        "dimensions": "dimensions",
+                        "max_retries": "max_retries",
+                        "model": "model",
+                        "model_kwargs": "model_kwargs",
+                        "request_timeout": "timeout",
+                        "show_progress_bar": "show_progress_bar"
+                      }
+                    },
+                    "name": "text-embedding-3-small",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "embedding_class": "OpenAIEmbeddings",
+                      "model_type": "embeddings",
+                      "param_mapping": {
+                        "api_base": "base_url",
+                        "api_key": "api_key",
+                        "chunk_size": "chunk_size",
+                        "dimensions": "dimensions",
+                        "max_retries": "max_retries",
+                        "model": "model",
+                        "model_kwargs": "model_kwargs",
+                        "request_timeout": "timeout",
+                        "show_progress_bar": "show_progress_bar"
+                      }
+                    },
+                    "name": "text-embedding-3-large",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "embedding_class": "OpenAIEmbeddings",
+                      "model_type": "embeddings",
+                      "param_mapping": {
+                        "api_base": "base_url",
+                        "api_key": "api_key",
+                        "chunk_size": "chunk_size",
+                        "dimensions": "dimensions",
+                        "max_retries": "max_retries",
+                        "model": "model",
+                        "model_kwargs": "model_kwargs",
+                        "request_timeout": "timeout",
+                        "show_progress_bar": "show_progress_bar"
+                      }
+                    },
+                    "name": "text-embedding-ada-002",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "Google Generative AI",
+                    "icon": "GoogleGenerativeAI",
+                    "metadata": {
+                      "is_disabled_provider": true,
+                      "variable_name": "GOOGLE_API_KEY"
+                    },
+                    "name": "__enable_provider_Google Generative AI__",
+                    "provider": "Google Generative AI"
+                  },
+                  {
+                    "category": "Ollama",
+                    "icon": "Ollama",
+                    "metadata": {
+                      "is_disabled_provider": true,
+                      "variable_name": "OLLAMA_BASE_URL"
+                    },
+                    "name": "__enable_provider_Ollama__",
+                    "provider": "Ollama"
+                  },
+                  {
+                    "category": "IBM WatsonX",
+                    "icon": "WatsonxAI",
+                    "metadata": {
+                      "is_disabled_provider": true,
+                      "variable_name": "WATSONX_APIKEY"
+                    },
+                    "name": "__enable_provider_IBM WatsonX__",
+                    "provider": "IBM WatsonX"
+                  }
+                ],
+                "override_skip": false,
+                "placeholder": "Setup Provider",
+                "real_time_refresh": true,
+                "refresh_button": true,
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "track_in_telemetry": false,
+                "type": "model",
+                "value": [
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "embedding_class": "OpenAIEmbeddings",
+                      "model_type": "embeddings",
+                      "param_mapping": {
+                        "api_base": "base_url",
+                        "api_key": "api_key",
+                        "chunk_size": "chunk_size",
+                        "dimensions": "dimensions",
+                        "max_retries": "max_retries",
+                        "model": "model",
+                        "model_kwargs": "model_kwargs",
+                        "request_timeout": "timeout",
+                        "show_progress_bar": "show_progress_bar"
+                      }
+                    },
+                    "name": "text-embedding-3-small",
+                    "provider": "OpenAI"
+                  }
+                ]
+              },
+              "model_kwargs": {
+                "_input_type": "DictInput",
+                "advanced": true,
+                "display_name": "Model Kwargs",
+                "dynamic": false,
+                "info": "Additional keyword arguments to pass to the model.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "model_kwargs",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "track_in_telemetry": false,
+                "type": "dict",
+                "value": {}
+              },
+              "project_id": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "display_name": "Project ID",
+                "dynamic": false,
+                "info": "IBM watsonx.ai Project ID (required for IBM watsonx.ai)",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "project_id",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "request_timeout": {
+                "_input_type": "FloatInput",
+                "advanced": true,
+                "display_name": "Request Timeout",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "request_timeout",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "float",
+                "value": ""
+              },
+              "show_progress_bar": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Show Progress Bar",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "show_progress_bar",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": false
+              },
+              "truncate_input_tokens": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Truncate Input Tokens",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "truncate_input_tokens",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "int",
+                "value": 200
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "EmbeddingModel"
+        },
+        "dragging": false,
+        "id": "EmbeddingModel-MBTyq",
+        "measured": {
+          "height": 207,
+          "width": 320
+        },
+        "position": {
+          "x": 827.5165057959512,
+          "y": 784.7043818484318
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "EmbeddingModel-K8DK0",
+          "node": {
+            "base_classes": [
+              "Embeddings"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Generate embeddings using a specified provider.",
+            "display_name": "Embedding Model",
+            "documentation": "https://docs.langflow.org/components-embedding-models",
+            "edited": false,
+            "field_order": [
+              "model",
+              "api_key",
+              "api_base",
+              "base_url_ibm_watsonx",
+              "project_id",
+              "dimensions",
+              "chunk_size",
+              "request_timeout",
+              "max_retries",
+              "show_progress_bar",
+              "model_kwargs",
+              "truncate_input_tokens",
+              "input_text"
+            ],
+            "frozen": false,
+            "icon": "binary",
+            "last_updated": "2026-02-13T00:12:55.747Z",
+            "legacy": false,
+            "metadata": {
+              "code_hash": "3e0b64afc9a2",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "lfx",
+                    "version": null
+                  },
+                  {
+                    "name": "langchain_core",
+                    "version": "0.3.83"
+                  }
+                ],
+                "total_dependencies": 2
+              },
+              "module": "lfx.components.models_and_agents.embedding_model.EmbeddingModelComponent"
+            },
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Embedding Model",
+                "group_outputs": false,
+                "method": "build_embeddings",
+                "name": "embeddings",
+                "selected": "Embeddings",
+                "tool_mode": true,
+                "types": [
+                  "Embeddings"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "api_base": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "API Base URL",
+                "dynamic": false,
+                "info": "Base URL for the API. Leave empty for default.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "api_base",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "api_key": {
+                "_input_type": "SecretStrInput",
+                "advanced": true,
+                "display_name": "API Key",
+                "dynamic": false,
+                "info": "Model Provider API key",
+                "input_types": [],
+                "load_from_db": false,
+                "name": "api_key",
+                "override_skip": false,
+                "password": true,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "base_url_ibm_watsonx": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "watsonx API Endpoint",
+                "dynamic": false,
+                "external_options": {},
+                "info": "The base URL of the API (IBM watsonx.ai only)",
+                "name": "base_url_ibm_watsonx",
+                "options": [
+                  "https://us-south.ml.cloud.ibm.com",
+                  "https://eu-de.ml.cloud.ibm.com",
+                  "https://eu-gb.ml.cloud.ibm.com",
+                  "https://au-syd.ml.cloud.ibm.com",
+                  "https://jp-tok.ml.cloud.ibm.com",
+                  "https://ca-tor.ml.cloud.ibm.com"
+                ],
+                "options_metadata": [],
+                "override_skip": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "str",
+                "value": "https://us-south.ml.cloud.ibm.com"
+              },
+              "chunk_size": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Chunk Size",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "chunk_size",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "int",
+                "value": 1000
+              },
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from typing import Any\n\nfrom lfx.base.embeddings.embeddings_class import EmbeddingsWithModels\nfrom lfx.base.embeddings.model import LCEmbeddingsModel\nfrom lfx.base.models.unified_models import (\n    get_api_key_for_provider,\n    get_embedding_classes,\n    get_embedding_model_options,\n    get_unified_models_detailed,\n    update_model_options_in_build_config,\n)\nfrom lfx.base.models.watsonx_constants import IBM_WATSONX_URLS\nfrom lfx.field_typing import Embeddings\nfrom lfx.io import (\n    BoolInput,\n    DictInput,\n    DropdownInput,\n    FloatInput,\n    IntInput,\n    MessageTextInput,\n    ModelInput,\n    SecretStrInput,\n)\nfrom lfx.log.logger import logger\n\n\nclass EmbeddingModelComponent(LCEmbeddingsModel):\n    display_name = \"Embedding Model\"\n    description = \"Generate embeddings using a specified provider.\"\n    documentation: str = \"https://docs.langflow.org/components-embedding-models\"\n    icon = \"binary\"\n    name = \"EmbeddingModel\"\n    category = \"models\"\n\n    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):\n        \"\"\"Dynamically update build config with user-filtered model options.\"\"\"\n        # Update model options\n        build_config = update_model_options_in_build_config(\n            component=self,\n            build_config=build_config,\n            cache_key_prefix=\"embedding_model_options\",\n            get_options_func=get_embedding_model_options,\n            field_name=field_name,\n            field_value=field_value,\n        )\n\n        # Show/hide provider-specific fields based on selected model\n        if field_name == \"model\" and isinstance(field_value, list) and len(field_value) > 0:\n            selected_model = field_value[0]\n            provider = selected_model.get(\"provider\", \"\")\n\n            # Show/hide watsonx fields\n            is_watsonx = provider == \"IBM WatsonX\"\n            build_config[\"base_url_ibm_watsonx\"][\"show\"] = is_watsonx\n            build_config[\"project_id\"][\"show\"] = is_watsonx\n            build_config[\"truncate_input_tokens\"][\"show\"] = is_watsonx\n            build_config[\"input_text\"][\"show\"] = is_watsonx\n            if is_watsonx:\n                build_config[\"base_url_ibm_watsonx\"][\"required\"] = True\n                build_config[\"project_id\"][\"required\"] = True\n\n        return build_config\n\n    inputs = [\n        ModelInput(\n            name=\"model\",\n            display_name=\"Embedding Model\",\n            info=\"Select your model provider\",\n            real_time_refresh=True,\n            required=True,\n            model_type=\"embedding\",\n            input_types=[\"Embeddings\"],  # Override default to accept Embeddings instead of LanguageModel\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"API Key\",\n            info=\"Model Provider API key\",\n            real_time_refresh=True,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"api_base\",\n            display_name=\"API Base URL\",\n            info=\"Base URL for the API. Leave empty for default.\",\n            advanced=True,\n        ),\n        # Watson-specific inputs\n        DropdownInput(\n            name=\"base_url_ibm_watsonx\",\n            display_name=\"watsonx API Endpoint\",\n            info=\"The base URL of the API (IBM watsonx.ai only)\",\n            options=IBM_WATSONX_URLS,\n            value=IBM_WATSONX_URLS[0],\n            show=False,\n            real_time_refresh=True,\n        ),\n        MessageTextInput(\n            name=\"project_id\",\n            display_name=\"Project ID\",\n            info=\"IBM watsonx.ai Project ID (required for IBM watsonx.ai)\",\n            show=False,\n        ),\n        IntInput(\n            name=\"dimensions\",\n            display_name=\"Dimensions\",\n            info=\"The number of dimensions the resulting output embeddings should have. \"\n            \"Only supported by certain models.\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"chunk_size\",\n            display_name=\"Chunk Size\",\n            advanced=True,\n            value=1000,\n        ),\n        FloatInput(\n            name=\"request_timeout\",\n            display_name=\"Request Timeout\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"max_retries\",\n            display_name=\"Max Retries\",\n            advanced=True,\n            value=3,\n        ),\n        BoolInput(\n            name=\"show_progress_bar\",\n            display_name=\"Show Progress Bar\",\n            advanced=True,\n        ),\n        DictInput(\n            name=\"model_kwargs\",\n            display_name=\"Model Kwargs\",\n            advanced=True,\n            info=\"Additional keyword arguments to pass to the model.\",\n        ),\n        IntInput(\n            name=\"truncate_input_tokens\",\n            display_name=\"Truncate Input Tokens\",\n            advanced=True,\n            value=200,\n            show=False,\n        ),\n        BoolInput(\n            name=\"input_text\",\n            display_name=\"Include the original text in the output\",\n            value=True,\n            advanced=True,\n            show=False,\n        ),\n    ]\n\n    def build_embeddings(self) -> Embeddings:\n        \"\"\"Build and return an embeddings instance based on the selected model.\n\n        Returns an EmbeddingsWithModels wrapper that contains:\n        - The primary embedding instance (for the selected model)\n        - available_models dict mapping all available model names to their instances\n        \"\"\"\n        # If an Embeddings object is directly connected, return it\n        try:\n            from langchain_core.embeddings import Embeddings as BaseEmbeddings\n\n            if isinstance(self.model, BaseEmbeddings):\n                return self.model\n        except ImportError:\n            pass\n\n        # Safely extract model configuration\n        if not self.model or not isinstance(self.model, list):\n            msg = \"Model must be a non-empty list\"\n            raise ValueError(msg)\n\n        model = self.model[0]\n        model_name = model.get(\"name\")\n        provider = model.get(\"provider\")\n        metadata = model.get(\"metadata\", {})\n\n        # Get API key from user input or global variables\n        api_key = get_api_key_for_provider(self.user_id, provider, self.api_key)\n\n        # Validate required fields (Ollama doesn't require API key)\n        if not api_key and provider != \"Ollama\":\n            msg = (\n                f\"{provider} API key is required. \"\n                f\"Please provide it in the component or configure it globally as \"\n                f\"{provider.upper().replace(' ', '_')}_API_KEY.\"\n            )\n            raise ValueError(msg)\n\n        if not model_name:\n            msg = \"Model name is required\"\n            raise ValueError(msg)\n\n        # Get embedding class\n        embedding_class_name = metadata.get(\"embedding_class\")\n        if not embedding_class_name:\n            msg = f\"No embedding class defined in metadata for {model_name}\"\n            raise ValueError(msg)\n\n        embedding_class = get_embedding_classes().get(embedding_class_name)\n        if not embedding_class:\n            msg = f\"Unknown embedding class: {embedding_class_name}\"\n            raise ValueError(msg)\n\n        # Build kwargs using parameter mapping for primary instance\n        kwargs = self._build_kwargs(model, metadata)\n        primary_instance = embedding_class(**kwargs)\n\n        # Get all available embedding models for this provider\n        available_models_dict = self._build_available_models(\n            provider=provider,\n            embedding_class=embedding_class,\n            metadata=metadata,\n            api_key=api_key,\n        )\n\n        # Wrap with EmbeddingsWithModels to provide available_models metadata\n        return EmbeddingsWithModels(\n            embeddings=primary_instance,\n            available_models=available_models_dict,\n        )\n\n    def _build_available_models(\n        self,\n        provider: str,\n        embedding_class: type,\n        metadata: dict[str, Any],\n        api_key: str | None,\n    ) -> dict[str, Embeddings]:\n        \"\"\"Build a dictionary of all available embedding model instances for the provider.\n\n        Args:\n            provider: The provider name (e.g., \"OpenAI\", \"Ollama\")\n            embedding_class: The embedding class to instantiate\n            metadata: Metadata containing param_mapping\n            api_key: The API key for the provider\n\n        Returns:\n            Dict mapping model names to their embedding instances\n        \"\"\"\n        available_models_dict: dict[str, Embeddings] = {}\n\n        # Get all embedding models for this provider from unified models\n        all_embedding_models = get_unified_models_detailed(\n            providers=[provider],\n            model_type=\"embeddings\",\n            include_deprecated=False,\n            include_unsupported=False,\n        )\n\n        if not all_embedding_models:\n            return available_models_dict\n\n        # Extract models from the provider data\n        for provider_data in all_embedding_models:\n            if provider_data.get(\"provider\") != provider:\n                continue\n\n            for model_data in provider_data.get(\"models\", []):\n                model_name = model_data.get(\"model_name\")\n                if not model_name:\n                    continue\n\n                # Create a model dict compatible with _build_kwargs\n                model_dict = {\n                    \"name\": model_name,\n                    \"provider\": provider,\n                    \"metadata\": metadata,  # Reuse the same metadata/param_mapping\n                }\n\n                try:\n                    # Build kwargs for this model\n                    model_kwargs = self._build_kwargs_for_model(model_dict, metadata, api_key)\n                    # Create the embedding instance\n                    available_models_dict[model_name] = embedding_class(**model_kwargs)\n                except Exception:  # noqa: BLE001\n                    # Skip models that fail to instantiate\n                    # This handles cases where specific models have incompatible parameters\n                    logger.debug(\"Failed to instantiate embedding model %s: skipping\", model_name, exc_info=True)\n                    continue\n\n        return available_models_dict\n\n    def _build_kwargs_for_model(\n        self,\n        model: dict[str, Any],\n        metadata: dict[str, Any],\n        api_key: str | None,\n    ) -> dict[str, Any]:\n        \"\"\"Build kwargs dictionary for a specific model using parameter mapping.\n\n        This is similar to _build_kwargs but uses the provided api_key directly\n        instead of looking it up again.\n\n        Args:\n            model: Model dict with name and provider\n            metadata: Metadata containing param_mapping\n            api_key: The API key to use\n\n        Returns:\n            kwargs dict for embedding class instantiation\n        \"\"\"\n        param_mapping = metadata.get(\"param_mapping\", {})\n        if not param_mapping:\n            msg = \"Parameter mapping not found in metadata\"\n            raise ValueError(msg)\n\n        kwargs = {}\n        provider = model.get(\"provider\")\n\n        # Required parameters - handle both \"model\" and \"model_id\" (for watsonx)\n        if \"model\" in param_mapping:\n            kwargs[param_mapping[\"model\"]] = model.get(\"name\")\n        elif \"model_id\" in param_mapping:\n            kwargs[param_mapping[\"model_id\"]] = model.get(\"name\")\n\n        # Add API key if mapped\n        if \"api_key\" in param_mapping and api_key:\n            kwargs[param_mapping[\"api_key\"]] = api_key\n\n        # Optional parameters with their values\n        optional_params = {\n            \"api_base\": self.api_base if self.api_base else None,\n            \"dimensions\": int(self.dimensions) if self.dimensions else None,\n            \"chunk_size\": int(self.chunk_size) if self.chunk_size else None,\n            \"request_timeout\": float(self.request_timeout) if self.request_timeout else None,\n            \"max_retries\": int(self.max_retries) if self.max_retries else None,\n            \"show_progress_bar\": self.show_progress_bar if hasattr(self, \"show_progress_bar\") else None,\n            \"model_kwargs\": self.model_kwargs if self.model_kwargs else None,\n        }\n\n        # Watson-specific parameters\n        if provider in {\"IBM WatsonX\", \"IBM watsonx.ai\"}:\n            # Map base_url_ibm_watsonx to \"url\" parameter for watsonx\n            if \"url\" in param_mapping:\n                url_value = (\n                    self.base_url_ibm_watsonx\n                    if hasattr(self, \"base_url_ibm_watsonx\") and self.base_url_ibm_watsonx\n                    else \"https://us-south.ml.cloud.ibm.com\"\n                )\n                kwargs[param_mapping[\"url\"]] = url_value\n            # Map project_id for watsonx\n            if hasattr(self, \"project_id\") and self.project_id and \"project_id\" in param_mapping:\n                kwargs[param_mapping[\"project_id\"]] = self.project_id\n\n        # Ollama-specific parameters\n        if provider == \"Ollama\" and \"base_url\" in param_mapping:\n            # Map api_base to \"base_url\" parameter for Ollama\n            base_url_value = self.api_base if hasattr(self, \"api_base\") and self.api_base else \"http://localhost:11434\"\n            kwargs[param_mapping[\"base_url\"]] = base_url_value\n\n        # Add optional parameters if they have values and are mapped\n        for param_name, param_value in optional_params.items():\n            if param_value is not None and param_name in param_mapping:\n                # Special handling for request_timeout with Google provider\n                if param_name == \"request_timeout\":\n                    if provider == \"Google Generative AI\" and isinstance(param_value, (int, float)):\n                        kwargs[param_mapping[param_name]] = {\"timeout\": param_value}\n                    else:\n                        kwargs[param_mapping[param_name]] = param_value\n                else:\n                    kwargs[param_mapping[param_name]] = param_value\n\n        return kwargs\n\n    def _build_kwargs(self, model: dict[str, Any], metadata: dict[str, Any]) -> dict[str, Any]:\n        \"\"\"Build kwargs dictionary using parameter mapping.\"\"\"\n        param_mapping = metadata.get(\"param_mapping\", {})\n        if not param_mapping:\n            msg = \"Parameter mapping not found in metadata\"\n            raise ValueError(msg)\n\n        kwargs = {}\n\n        # Required parameters - handle both \"model\" and \"model_id\" (for watsonx)\n        if \"model\" in param_mapping:\n            kwargs[param_mapping[\"model\"]] = model.get(\"name\")\n        elif \"model_id\" in param_mapping:\n            kwargs[param_mapping[\"model_id\"]] = model.get(\"name\")\n        if \"api_key\" in param_mapping:\n            kwargs[param_mapping[\"api_key\"]] = get_api_key_for_provider(\n                self.user_id,\n                model.get(\"provider\"),\n                self.api_key,\n            )\n\n        # Optional parameters with their values\n        provider = model.get(\"provider\")\n        optional_params = {\n            \"api_base\": self.api_base if self.api_base else None,\n            \"dimensions\": int(self.dimensions) if self.dimensions else None,\n            \"chunk_size\": int(self.chunk_size) if self.chunk_size else None,\n            \"request_timeout\": float(self.request_timeout) if self.request_timeout else None,\n            \"max_retries\": int(self.max_retries) if self.max_retries else None,\n            \"show_progress_bar\": self.show_progress_bar if hasattr(self, \"show_progress_bar\") else None,\n            \"model_kwargs\": self.model_kwargs if self.model_kwargs else None,\n        }\n\n        # Watson-specific parameters\n        if provider in {\"IBM WatsonX\", \"IBM watsonx.ai\"}:\n            # Map base_url_ibm_watsonx to \"url\" parameter for watsonx\n            if \"url\" in param_mapping:\n                url_value = (\n                    self.base_url_ibm_watsonx\n                    if hasattr(self, \"base_url_ibm_watsonx\") and self.base_url_ibm_watsonx\n                    else \"https://us-south.ml.cloud.ibm.com\"\n                )\n                kwargs[param_mapping[\"url\"]] = url_value\n            # Map project_id for watsonx\n            if hasattr(self, \"project_id\") and self.project_id and \"project_id\" in param_mapping:\n                kwargs[param_mapping[\"project_id\"]] = self.project_id\n\n        # Ollama-specific parameters\n        if provider == \"Ollama\" and \"base_url\" in param_mapping:\n            # Map api_base to \"base_url\" parameter for Ollama\n            base_url_value = self.api_base if hasattr(self, \"api_base\") and self.api_base else \"http://localhost:11434\"\n            kwargs[param_mapping[\"base_url\"]] = base_url_value\n\n        # Add optional parameters if they have values and are mapped\n        for param_name, param_value in optional_params.items():\n            if param_value is not None and param_name in param_mapping:\n                # Special handling for request_timeout with Google provider\n                if param_name == \"request_timeout\":\n                    if provider == \"Google Generative AI\" and isinstance(param_value, (int, float)):\n                        kwargs[param_mapping[param_name]] = {\"timeout\": param_value}\n                    else:\n                        kwargs[param_mapping[param_name]] = param_value\n                else:\n                    kwargs[param_mapping[param_name]] = param_value\n\n        return kwargs\n"
+              },
+              "dimensions": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Dimensions",
+                "dynamic": false,
+                "info": "The number of dimensions the resulting output embeddings should have. Only supported by certain models.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "dimensions",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "int",
+                "value": 0
+              },
+              "input_text": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Include the original text in the output",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "input_text",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": true
+              },
+              "max_retries": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Max Retries",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "max_retries",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "int",
+                "value": 3
+              },
+              "model": {
+                "_input_type": "ModelInput",
+                "advanced": false,
+                "display_name": "Embedding Model",
+                "dynamic": false,
+                "external_options": {
+                  "fields": {
+                    "data": {
+                      "node": {
+                        "display_name": "Connect other models",
+                        "icon": "CornerDownLeft",
+                        "name": "connect_other_models"
+                      }
+                    }
+                  }
+                },
+                "info": "Select your model provider",
+                "input_types": [
+                  "Embeddings"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "model_type": "embedding",
+                "name": "model",
+                "options": [
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "embedding_class": "OpenAIEmbeddings",
+                      "model_type": "embeddings",
+                      "param_mapping": {
+                        "api_base": "base_url",
+                        "api_key": "api_key",
+                        "chunk_size": "chunk_size",
+                        "dimensions": "dimensions",
+                        "max_retries": "max_retries",
+                        "model": "model",
+                        "model_kwargs": "model_kwargs",
+                        "request_timeout": "timeout",
+                        "show_progress_bar": "show_progress_bar"
+                      }
+                    },
+                    "name": "text-embedding-3-small",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "embedding_class": "OpenAIEmbeddings",
+                      "model_type": "embeddings",
+                      "param_mapping": {
+                        "api_base": "base_url",
+                        "api_key": "api_key",
+                        "chunk_size": "chunk_size",
+                        "dimensions": "dimensions",
+                        "max_retries": "max_retries",
+                        "model": "model",
+                        "model_kwargs": "model_kwargs",
+                        "request_timeout": "timeout",
+                        "show_progress_bar": "show_progress_bar"
+                      }
+                    },
+                    "name": "text-embedding-3-large",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "embedding_class": "OpenAIEmbeddings",
+                      "model_type": "embeddings",
+                      "param_mapping": {
+                        "api_base": "base_url",
+                        "api_key": "api_key",
+                        "chunk_size": "chunk_size",
+                        "dimensions": "dimensions",
+                        "max_retries": "max_retries",
+                        "model": "model",
+                        "model_kwargs": "model_kwargs",
+                        "request_timeout": "timeout",
+                        "show_progress_bar": "show_progress_bar"
+                      }
+                    },
+                    "name": "text-embedding-ada-002",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "Google Generative AI",
+                    "icon": "GoogleGenerativeAI",
+                    "metadata": {
+                      "is_disabled_provider": true,
+                      "variable_name": "GOOGLE_API_KEY"
+                    },
+                    "name": "__enable_provider_Google Generative AI__",
+                    "provider": "Google Generative AI"
+                  },
+                  {
+                    "category": "Ollama",
+                    "icon": "Ollama",
+                    "metadata": {
+                      "is_disabled_provider": true,
+                      "variable_name": "OLLAMA_BASE_URL"
+                    },
+                    "name": "__enable_provider_Ollama__",
+                    "provider": "Ollama"
+                  },
+                  {
+                    "category": "IBM WatsonX",
+                    "icon": "WatsonxAI",
+                    "metadata": {
+                      "is_disabled_provider": true,
+                      "variable_name": "WATSONX_APIKEY"
+                    },
+                    "name": "__enable_provider_IBM WatsonX__",
+                    "provider": "IBM WatsonX"
+                  }
+                ],
+                "override_skip": false,
+                "placeholder": "Setup Provider",
+                "real_time_refresh": true,
+                "refresh_button": true,
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "track_in_telemetry": false,
+                "type": "model",
+                "value": [
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "embedding_class": "OpenAIEmbeddings",
+                      "model_type": "embeddings",
+                      "param_mapping": {
+                        "api_base": "base_url",
+                        "api_key": "api_key",
+                        "chunk_size": "chunk_size",
+                        "dimensions": "dimensions",
+                        "max_retries": "max_retries",
+                        "model": "model",
+                        "model_kwargs": "model_kwargs",
+                        "request_timeout": "timeout",
+                        "show_progress_bar": "show_progress_bar"
+                      }
+                    },
+                    "name": "text-embedding-3-small",
+                    "provider": "OpenAI"
+                  }
+                ]
+              },
+              "model_kwargs": {
+                "_input_type": "DictInput",
+                "advanced": true,
+                "display_name": "Model Kwargs",
+                "dynamic": false,
+                "info": "Additional keyword arguments to pass to the model.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "model_kwargs",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "track_in_telemetry": false,
+                "type": "dict",
+                "value": {}
+              },
+              "project_id": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "display_name": "Project ID",
+                "dynamic": false,
+                "info": "IBM watsonx.ai Project ID (required for IBM watsonx.ai)",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "project_id",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "request_timeout": {
+                "_input_type": "FloatInput",
+                "advanced": true,
+                "display_name": "Request Timeout",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "request_timeout",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "float",
+                "value": ""
+              },
+              "show_progress_bar": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Show Progress Bar",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "show_progress_bar",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": false
+              },
+              "truncate_input_tokens": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Truncate Input Tokens",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "truncate_input_tokens",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "int",
+                "value": 200
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "EmbeddingModel"
+        },
+        "dragging": false,
+        "id": "EmbeddingModel-K8DK0",
+        "measured": {
+          "height": 207,
+          "width": 320
+        },
+        "position": {
+          "x": 1694.5650679361215,
+          "y": 1911.094616301919
+        },
+        "selected": false,
+        "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": -242.44739610333954,
-      "y": -59.21391294314947,
-      "zoom": 0.4677494046491174
+      "x": -4451.985322924141,
+      "y": -990.2362880869305,
+      "zoom": 2
     }
   },
   "description": "Load your data for chat context with Retrieval Augmented Generation.",
   "endpoint_name": null,
-  "id": "64f82d31-c711-441d-8082-fdb46cda7cdd",
+  "id": "94d56f37-8c90-4ca0-a5a8-c8fe885205be",
   "is_component": false,
-  "last_tested_version": "1.6.4",
+  "last_tested_version": "1.8.0",
   "name": "Vector Store RAG",
   "tags": [
     "openai",
