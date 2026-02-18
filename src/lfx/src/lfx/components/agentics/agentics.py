@@ -41,8 +41,8 @@ class AgenticsComponent(BaseAgenticComponent):
         *get_model_provider_inputs(),
         DataFrameInput(
             name="source",
-            display_name="Data Input",
-            info="DataFrame or a batch of structured data",
+            display_name="Input DataFrame",
+            info="The input schema is inferred from columns",
         ),
         DropdownInput(
             name="transduction_type",
@@ -85,8 +85,8 @@ class AgenticsComponent(BaseAgenticComponent):
     outputs = [
         Output(
             name="states",
-            display_name="Data Output",
-            info="The resulting data processed by the LLM that follows the output schema",
+            display_name="Output DataFrame",
+            info="The resulting DataFrame processed by the LLM that follows the output schema",
             method="transduce",
             tool_mode=True,
         ),
