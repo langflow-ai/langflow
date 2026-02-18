@@ -1603,12 +1603,33 @@ async def update_tools(
                 idx = args.index("--headers")
                 for i, arg in enumerate(extra_args):
                     args.insert(idx + i, arg)
-            elif args and not args[-1].startswith("-"):
-                # No existing --headers flag; insert before the last positional arg
-                # (typically the URL in mcp-proxy commands)
-                args = args[:-1] + extra_args + [args[-1]]
             else:
-                args.extend(extra_args)
+                # No existing --headers flag; try to insert before the last
+                # positional arg (typically the URL in mcp-proxy commands).
+                # Scan args to find the last true positional token by skipping
+                # flag+value pairs so we don't mistake a flag's value for a
+                # positional argument (e.g. "--port 8080").
+                last_positional_idx: int | None = None
+                i = 0
+                while i < len(args):
+                    if args[i].startswith("-"):
+                        # Skip the flag and its value (if a next token exists
+                        # and isn't itself a flag, treat it as the value).
+                        i += 1
+                        if i < len(args) and not args[i].startswith("-"):
+                            i += 1
+                    else:
+                        last_positional_idx = i
+                        i += 1
+
+                if last_positional_idx is not None:
+                    args = (
+                        args[:last_positional_idx]
+                        + extra_args
+                        + args[last_positional_idx:]
+                    )
+                else:
+                    args.extend(extra_args)
         full_command = shlex.join([command, *args])
         tools = await mcp_stdio_client.connect_to_server(full_command, env)
         client = mcp_stdio_client
