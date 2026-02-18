@@ -12,13 +12,13 @@ from lfx.base.models.unified_models import (
     get_unified_models_detailed,
 )
 from loguru import logger
-from pydantic import BaseModel, field_validator
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.deps import get_variable_service
 from langflow.services.variable.constants import GENERIC_TYPE
 from langflow.services.variable.service import DatabaseVariableService
+from pydantic import BaseModel, field_validator
 
 router = APIRouter(prefix="/models", tags=["Models"], include_in_schema=False)
 
@@ -316,7 +316,7 @@ async def get_enabled_providers(
 @router.post("/validate-provider", status_code=200, response_model=ValidateProviderResponse)
 async def validate_provider(
     request: ValidateProviderRequest,
-    current_user: CurrentActiveUser,
+    current_user: CurrentActiveUser,  # noqa: ARG001
 ) -> ValidateProviderResponse:
     """Validate provider credentials before saving.
 
@@ -331,7 +331,7 @@ async def validate_provider(
         return ValidateProviderResponse(valid=True, error=None)
     except ValueError as e:
         return ValidateProviderResponse(valid=False, error=str(e))
-    except Exception as e:
+    except (ConnectionError, TimeoutError, RuntimeError, KeyError, AttributeError, TypeError) as e:
         logger.exception("Unexpected error validating provider %s", request.provider)
         return ValidateProviderResponse(valid=False, error=f"Validation failed: {e}")
 
