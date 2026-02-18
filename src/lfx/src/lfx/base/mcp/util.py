@@ -1623,11 +1623,7 @@ async def update_tools(
                         i += 1
 
                 if last_positional_idx is not None:
-                    args = (
-                        args[:last_positional_idx]
-                        + extra_args
-                        + args[last_positional_idx:]
-                    )
+                    args = args[:last_positional_idx] + extra_args + args[last_positional_idx:]
                 else:
                     args.extend(extra_args)
         full_command = shlex.join([command, *args])
