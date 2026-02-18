@@ -96,6 +96,15 @@ def _normalize_dist(name: str) -> str:
     return re.sub(r"[-_.]+", "-", name).lower()
 
 
+def _pin_version(package_name: str) -> str:
+    """Return ``package_name==X.Y.Z`` if the package is installed, else bare name."""
+    try:
+        version = md.version(package_name)
+        return f"{package_name}=={version}"
+    except md.PackageNotFoundError:
+        return package_name
+
+
 @lru_cache(maxsize=1)
 def _get_lfx_transitive_dists(lfx_dist_name: str = "lfx") -> frozenset[str]:
     """Compute the full transitive closure of distributions provided by lfx.
@@ -285,6 +294,7 @@ def generate_requirements_from_flow(
     *,
     lfx_package: str = "lfx",
     include_lfx: bool = True,
+    pin_versions: bool = True,
 ) -> list[str]:
     """Generate a requirements list from a Langflow flow JSON.
 
@@ -293,9 +303,12 @@ def generate_requirements_from_flow(
         lfx_package: Name of the LFX package to include (e.g. ``"lfx"`` or
             ``"lfx-nightly"``).
         include_lfx: Whether to include the LFX package itself.
+        pin_versions: If True, pin each package to the version currently
+            installed in this environment (``pkg==X.Y.Z``).  Falls back to
+            an unpinned name when the package is not installed.
 
     Returns:
-        Sorted list of PyPI package names needed to run this flow.
+        Sorted list of PyPI package specifiers needed to run this flow.
     """
     all_packages: set[str] = set()
     all_providers: set[str] = set()
@@ -317,11 +330,13 @@ def generate_requirements_from_flow(
         provider_pkgs = PROVIDER_PACKAGES.get(provider, [])
         all_packages.update(provider_pkgs)
 
+    fmt = _pin_version if pin_versions else lambda p: p
+
     # Build final sorted list
     result: list[str] = []
     if include_lfx:
-        result.append(lfx_package)
-    result.extend(sorted(all_packages))
+        result.append(fmt(lfx_package))
+    result.extend(sorted(fmt(p) for p in all_packages))
 
     return result
 
@@ -331,6 +346,7 @@ def generate_requirements_txt(
     *,
     lfx_package: str = "lfx",
     include_lfx: bool = True,
+    pin_versions: bool = True,
 ) -> str:
     """Generate requirements.txt content from a Langflow flow JSON.
 
@@ -338,12 +354,15 @@ def generate_requirements_txt(
         flow: Parsed Langflow flow JSON (dict).
         lfx_package: Name of the LFX package to include.
         include_lfx: Whether to include the LFX package itself.
+        pin_versions: If True, pin each package to the currently installed
+            version.
 
     Returns:
         String content suitable for writing to a requirements.txt file.
     """
     reqs = generate_requirements_from_flow(
         flow, lfx_package=lfx_package, include_lfx=include_lfx,
+        pin_versions=pin_versions,
     )
     lines = [
         "# Auto-generated requirements for Langflow flow",
@@ -360,6 +379,7 @@ def generate_requirements_from_file(
     *,
     lfx_package: str = "lfx",
     include_lfx: bool = True,
+    pin_versions: bool = True,
 ) -> list[str]:
     """Generate requirements list from a flow JSON file path.
 
@@ -367,14 +387,17 @@ def generate_requirements_from_file(
         flow_path: Path to a Langflow flow JSON file.
         lfx_package: Name of the LFX package to include.
         include_lfx: Whether to include the LFX package itself.
+        pin_versions: If True, pin each package to the currently installed
+            version.
 
     Returns:
-        Sorted list of PyPI package names.
+        Sorted list of PyPI package specifiers.
     """
     path = Path(flow_path)
     flow = json.loads(path.read_text(encoding="utf-8"))
     return generate_requirements_from_flow(
         flow, lfx_package=lfx_package, include_lfx=include_lfx,
+        pin_versions=pin_versions,
     )
 
 
@@ -400,6 +423,11 @@ def main() -> None:
         help="Exclude the LFX package from output",
     )
     parser.add_argument(
+        "--no-pin",
+        action="store_true",
+        help="Do not pin package versions",
+    )
+    parser.add_argument(
         "-o", "--output",
         help="Output file path (default: stdout)",
     )
@@ -415,6 +443,7 @@ def main() -> None:
         flow,
         lfx_package=args.lfx_package,
         include_lfx=not args.no_lfx,
+        pin_versions=not args.no_pin,
     )
 
     if args.output:

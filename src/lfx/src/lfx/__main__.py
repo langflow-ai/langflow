@@ -167,6 +167,11 @@ def requirements_command_wrapper(
         "--no-lfx",
         help="Exclude the LFX package from output",
     ),
+    no_pin: bool = typer.Option(
+        False,  # noqa: FBT003
+        "--no-pin",
+        help="Do not pin package versions (default: pin to currently installed versions)",
+    ),
 ) -> None:
     """Generate requirements.txt from a Langflow flow JSON (lazy-loaded)."""
     import json
@@ -189,6 +194,7 @@ def requirements_command_wrapper(
         flow,
         lfx_package=lfx_package,
         include_lfx=not no_lfx,
+        pin_versions=not no_pin,
     )
 
     if output:

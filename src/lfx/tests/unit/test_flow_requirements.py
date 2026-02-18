@@ -8,10 +8,8 @@ from pathlib import Path
 import pytest
 
 from lfx.utils.flow_requirements import (
-    IMPORT_NAME_OVERRIDES,
     MODULE_EXTRA_DEPS,
     PROVIDER_PACKAGES,
-    STDLIB_MODULES,
     _detect_providers_from_template,
     _extract_component_requirements,
     _extract_imports,
@@ -19,6 +17,7 @@ from lfx.utils.flow_requirements import (
     _get_lfx_provided_imports,
     _get_lfx_transitive_dists,
     _import_to_package,
+    _pin_version,
     generate_requirements_from_file,
     generate_requirements_from_flow,
     generate_requirements_txt,
@@ -375,17 +374,20 @@ from bs4 import BeautifulSoup
         assert "lxml" in packages
         assert "tabulate" in packages
 
-    def test_langflow_backward_compat_detected(self):
+    def test_langflow_imports_filtered(self):
+        """Components with langflow imports should NOT list langflow as a dep.
+
+        lfx provides the langflow interfaces at runtime, so langflow/langflow_base
+        should be filtered out just like lfx itself.
+        """
         code = """
 from langflow.custom import Component
 from langflow.io import MessageTextInput
 """
         node = _make_node("LegacyComponent", code)
         packages, _ = _extract_component_requirements(node)
-        # langflow is not in lfx's dep tree, so it should be detected.
-        # The exact package name depends on what importlib.metadata resolves,
-        # but it should not be empty.
-        assert len(packages) > 0
+        assert "langflow" not in packages
+        assert "langflow-base" not in packages
 
 
 # ===================================================================
@@ -396,7 +398,7 @@ from langflow.io import MessageTextInput
 class TestGenerateRequirementsFromFlow:
     def test_empty_flow(self):
         flow = _make_flow()
-        result = generate_requirements_from_flow(flow)
+        result = generate_requirements_from_flow(flow, pin_versions=False)
         assert result == ["lfx"]
 
     def test_lfx_only_flow(self):
@@ -405,7 +407,7 @@ class TestGenerateRequirementsFromFlow:
             "from lfx.schema.message import Message",
         )
         flow = _make_flow(node)
-        result = generate_requirements_from_flow(flow)
+        result = generate_requirements_from_flow(flow, pin_versions=False)
         assert result == ["lfx"]
 
     def test_external_dep_flow(self):
@@ -414,7 +416,7 @@ class TestGenerateRequirementsFromFlow:
             "from langchain_openai import ChatOpenAI",
         )
         flow = _make_flow(node)
-        result = generate_requirements_from_flow(flow)
+        result = generate_requirements_from_flow(flow, pin_versions=False)
         assert "lfx" in result
         assert "langchain-openai" in result
 
@@ -429,7 +431,7 @@ class TestGenerateRequirementsFromFlow:
             },
         )
         flow = _make_flow(node)
-        result = generate_requirements_from_flow(flow)
+        result = generate_requirements_from_flow(flow, pin_versions=False)
         assert "langchain-openai" in result
 
     def test_note_nodes_skipped(self):
@@ -439,17 +441,17 @@ class TestGenerateRequirementsFromFlow:
             "from lfx.schema.message import Message",
         )
         flow = _make_flow(note, component)
-        result = generate_requirements_from_flow(flow)
+        result = generate_requirements_from_flow(flow, pin_versions=False)
         assert result == ["lfx"]
 
     def test_include_lfx_false(self):
         flow = _make_flow()
-        result = generate_requirements_from_flow(flow, include_lfx=False)
+        result = generate_requirements_from_flow(flow, include_lfx=False, pin_versions=False)
         assert "lfx" not in result
 
     def test_custom_lfx_package_name(self):
         flow = _make_flow()
-        result = generate_requirements_from_flow(flow, lfx_package="lfx-nightly")
+        result = generate_requirements_from_flow(flow, lfx_package="lfx-nightly", pin_versions=False)
         assert "lfx-nightly" in result
         assert "lfx" not in result
 
@@ -457,7 +459,7 @@ class TestGenerateRequirementsFromFlow:
         node1 = _make_node("A", "from langchain_openai import ChatOpenAI")
         node2 = _make_node("B", "from bs4 import BeautifulSoup")
         flow = _make_flow(node1, node2)
-        result = generate_requirements_from_flow(flow)
+        result = generate_requirements_from_flow(flow, pin_versions=False)
         # lfx should be first, then sorted extras
         assert result[0] == "lfx"
         extras = result[1:]
@@ -467,7 +469,7 @@ class TestGenerateRequirementsFromFlow:
         node1 = _make_node("A", "from langchain_openai import ChatOpenAI")
         node2 = _make_node("B", "from langchain_openai import OpenAI")
         flow = _make_flow(node1, node2)
-        result = generate_requirements_from_flow(flow)
+        result = generate_requirements_from_flow(flow, pin_versions=False)
         assert result.count("langchain-openai") == 1
 
     def test_multiple_providers(self):
@@ -486,9 +488,61 @@ class TestGenerateRequirementsFromFlow:
             },
         )
         flow = _make_flow(node1, node2)
-        result = generate_requirements_from_flow(flow)
+        result = generate_requirements_from_flow(flow, pin_versions=False)
         assert "langchain-openai" in result
         assert "langchain-google-genai" in result
+
+
+# ===================================================================
+# Unit tests: version pinning
+# ===================================================================
+
+
+class TestVersionPinning:
+    def test_pin_version_installed_package(self):
+        """Installed packages should get ==X.Y.Z suffix."""
+        result = _pin_version("lfx")
+        assert result.startswith("lfx==")
+        # Version should be a valid semver-ish string
+        version_part = result.split("==")[1]
+        assert len(version_part) > 0
+
+    def test_pin_version_uninstalled_package(self):
+        """Packages not installed should return bare name."""
+        result = _pin_version("totally-nonexistent-package-xyz-999")
+        assert result == "totally-nonexistent-package-xyz-999"
+
+    def test_pin_versions_true_by_default(self):
+        """Default behavior should pin versions."""
+        flow = _make_flow()
+        result = generate_requirements_from_flow(flow)
+        assert result[0].startswith("lfx==")
+
+    def test_pin_versions_false(self):
+        """pin_versions=False should return bare names."""
+        flow = _make_flow()
+        result = generate_requirements_from_flow(flow, pin_versions=False)
+        assert result == ["lfx"]
+
+    def test_pinned_output_includes_versions_for_installed_deps(self):
+        """Installed deps should get pinned; uninstalled deps stay bare."""
+        node = _make_node("A", "from langchain_openai import ChatOpenAI")
+        flow = _make_flow(node)
+        result = generate_requirements_from_flow(flow, pin_versions=True)
+        # lfx is installed, so it should be pinned
+        assert result[0].startswith("lfx==")
+        # langchain-openai may or may not be installed depending on env;
+        # just verify it appears in the output
+        langchain_openai_entries = [r for r in result if r.startswith("langchain-openai")]
+        assert len(langchain_openai_entries) == 1
+
+    def test_pinned_txt_output(self):
+        """generate_requirements_txt should respect pin_versions."""
+        flow = _make_flow()
+        txt_pinned = generate_requirements_txt(flow, pin_versions=True)
+        txt_unpinned = generate_requirements_txt(flow, pin_versions=False)
+        assert "==" in txt_pinned
+        assert "==" not in txt_unpinned
 
 
 # ===================================================================
@@ -511,7 +565,7 @@ class TestGenerateRequirementsTxt:
     def test_packages_on_separate_lines(self):
         node = _make_node("A", "from langchain_openai import ChatOpenAI")
         flow = _make_flow(node)
-        txt = generate_requirements_txt(flow)
+        txt = generate_requirements_txt(flow, pin_versions=False)
         lines = [l for l in txt.strip().split("\n") if l and not l.startswith("#")]
         assert "lfx" in lines
         assert "langchain-openai" in lines
@@ -541,12 +595,11 @@ class TestStarterProjects:
 
     def test_basic_prompting_lfx_only(self, basic_prompting_flow):
         """Basic Prompting (no model selected) should only need lfx."""
-        result = generate_requirements_from_flow(basic_prompting_flow)
+        result = generate_requirements_from_flow(basic_prompting_flow, pin_versions=False)
         assert result == ["lfx"]
 
     def test_basic_prompting_with_openai_provider(self, basic_prompting_flow):
         """When OpenAI is selected as provider, langchain-openai should be added."""
-        # Simulate user selecting OpenAI provider
         for node in basic_prompting_flow["data"]["nodes"]:
             node_data = node.get("data", {})
             if node_data.get("type") == "LanguageModelComponent":
@@ -556,7 +609,7 @@ class TestStarterProjects:
                 }
                 break
 
-        result = generate_requirements_from_flow(basic_prompting_flow)
+        result = generate_requirements_from_flow(basic_prompting_flow, pin_versions=False)
         assert "lfx" in result
         assert "langchain-openai" in result
 
@@ -571,13 +624,13 @@ class TestStarterProjects:
                 }
                 break
 
-        result = generate_requirements_from_flow(basic_prompting_flow)
+        result = generate_requirements_from_flow(basic_prompting_flow, pin_versions=False)
         assert "lfx" in result
         assert "langchain-anthropic" in result
 
     def test_simple_agent_has_community(self, simple_agent_flow):
         """Simple Agent should require langchain-community for its tools."""
-        result = generate_requirements_from_flow(simple_agent_flow)
+        result = generate_requirements_from_flow(simple_agent_flow, pin_versions=False)
         assert "lfx" in result
         assert "langchain-community" in result
 
@@ -586,16 +639,21 @@ class TestStarterProjects:
         path = STARTER_PROJECTS_DIR / "Basic Prompting.json"
         if not path.exists():
             pytest.skip("Basic Prompting.json not found")
-        result = generate_requirements_from_file(path)
+        result = generate_requirements_from_file(path, pin_versions=False)
         assert result == ["lfx"]
 
     def test_lfx_nightly_package_name(self, basic_prompting_flow):
         """Test specifying lfx-nightly as the package name."""
         result = generate_requirements_from_flow(
-            basic_prompting_flow, lfx_package="lfx-nightly",
+            basic_prompting_flow, lfx_package="lfx-nightly", pin_versions=False,
         )
         assert result[0] == "lfx-nightly"
         assert "lfx" not in result
+
+    def test_pinned_output_from_starter(self, basic_prompting_flow):
+        """Default (pinned) output should have version specifiers."""
+        result = generate_requirements_from_flow(basic_prompting_flow)
+        assert result[0].startswith("lfx==")
 
 
 # ===================================================================
