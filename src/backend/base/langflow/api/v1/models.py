@@ -12,13 +12,13 @@ from lfx.base.models.unified_models import (
     get_unified_models_detailed,
 )
 from loguru import logger
+from pydantic import BaseModel, field_validator
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.deps import get_variable_service
 from langflow.services.variable.constants import GENERIC_TYPE
 from langflow.services.variable.service import DatabaseVariableService
-from pydantic import BaseModel, field_validator
 
 router = APIRouter(prefix="/models", tags=["Models"], include_in_schema=False)
 
