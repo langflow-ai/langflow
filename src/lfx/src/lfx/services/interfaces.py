@@ -24,6 +24,7 @@ if TYPE_CHECKING:
         DeploymentHealthResult,
         DeploymentItem,
         DeploymentList,
+        DeploymentProviderId,
         DeploymentRedeployResult,
         DeploymentType,
         DeploymentUpdate,
@@ -430,5 +431,23 @@ class DeploymentServiceProtocol(Protocol):
         db: Any,
     ) -> None:
         """Delete a provider snapshot."""
+        ...
+
+
+class DeploymentRouterServiceProtocol(Protocol):
+    """Protocol for deployment adapter resolver services."""
+
+    @abstractmethod
+    def resolve_adapter(
+        self,
+        *,
+        provider_id: DeploymentProviderId,
+    ) -> DeploymentServiceProtocol:
+        """Resolve and return adapter for a provider routing ID."""
+        ...
+
+    @abstractmethod
+    def list_adapter_keys(self) -> list[str]:
+        """List available adapter keys."""
         ...
 

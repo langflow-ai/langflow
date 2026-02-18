@@ -122,9 +122,70 @@ Service keys **must** match `ServiceType` enum values exactly:
 - `shared_component_cache_service`
 - `mcp_composer_service`
 - `transaction_service`
-- `deployment_service`
+- `deployment_router_service`
 
 **Important:** `settings_service` is **not pluggable** and cannot be overridden. It is always created using the built-in factory and provides the foundational configuration for all other services.
+
+## Sub-Service Discovery (Generic)
+
+Some services need their own internal plugin registry (for example, a router
+service that dispatches to provider adapters). LFX now supports this pattern
+via generic sub-service discovery utilities in `lfx.services.subservice`.
+
+Sub-service discovery follows the same precedence pattern as top-level services:
+1. Entry points (lowest priority)
+2. Decorator registration
+3. Config files (highest priority)
+
+### Register sub-services with a decorator
+
+```python
+from lfx.services.subservice import register_sub_service
+
+@register_sub_service("my_service.adapters", "my-adapter")
+class MyAdapter:
+    ...
+```
+
+### Discover sub-services via entry points
+
+```toml
+[project.entry-points."lfx.my_service.adapters"]
+my-adapter = "my_package.adapters:MyAdapter"
+```
+
+### Discover sub-services via config
+
+**Standalone `lfx.toml`:**
+
+```toml
+[my_service.adapters]
+my-adapter = "my_package.adapters:MyAdapter"
+```
+
+**In `pyproject.toml`:**
+
+```toml
+[tool.lfx.my_service.adapters]
+my-adapter = "my_package.adapters:MyAdapter"
+```
+
+### Deployment router adapter example
+
+Deployment adapters are a concrete use case of generic sub-services.
+
+```python
+from lfx.services.deployment_router.registry import register_deployment_adapter
+
+@register_deployment_adapter("watsonx-orchestrate")
+class WatsonxOrchestrateDeploymentService:
+    ...
+```
+
+```toml
+[deployment.adapters]
+watsonx-orchestrate = "langflow.services.deployment.watsonx_orchestrate:WatsonxOrchestrateDeploymentService"
+```
 
 ## Creating Custom Services
 

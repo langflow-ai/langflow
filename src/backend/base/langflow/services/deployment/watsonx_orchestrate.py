@@ -65,6 +65,7 @@ from lfx.services.deployment.schema import (
     SnapshotListResult,
     SnapshotResult,
 )
+from lfx.services.deployment_router.registry import register_deployment_adapter
 from lfx.services.schema import ServiceType
 
 from langflow.services.deps import get_variable_service
@@ -125,6 +126,7 @@ class ErrorPrefix(str, Enum):
     DELETE_CONFIG = f"{ERROR_PREFIX} deleting a deployment config: "
 
 
+@register_deployment_adapter("watsonx-orchestrate")
 class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
     """Deployment adapter for Watsonx Orchestrate.
 

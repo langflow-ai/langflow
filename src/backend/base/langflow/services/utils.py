@@ -232,7 +232,7 @@ def register_all_service_factories() -> None:
     from langflow.services.cache import factory as cache_factory
     from langflow.services.chat import factory as chat_factory
     from langflow.services.database import factory as database_factory
-    from langflow.services.deployment import factory as deployment_factory
+    from langflow.services.deployment_router import factory as deployment_router_factory
     from langflow.services.job_queue import factory as job_queue_factory
     from langflow.services.session import factory as session_factory
     from langflow.services.shared_component_cache import factory as shared_component_cache_factory
@@ -250,8 +250,8 @@ def register_all_service_factories() -> None:
     service_manager.register_factory(cache_factory.CacheServiceFactory())
     service_manager.register_factory(chat_factory.ChatServiceFactory())
     service_manager.register_factory(database_factory.DatabaseServiceFactory())
-    deployment_service_factory = deployment_factory.DeploymentServiceFactory()
-    service_manager.register_factory(deployment_service_factory)
+    deployment_router_service_factory = deployment_router_factory.DeploymentRouterServiceFactory()
+    service_manager.register_factory(deployment_router_service_factory)
     service_manager.register_factory(session_factory.SessionServiceFactory())
     service_manager.register_factory(storage_factory.StorageServiceFactory())
     service_manager.register_factory(variable_factory.VariableServiceFactory())
@@ -265,9 +265,8 @@ def register_all_service_factories() -> None:
     service_manager.register_factory(shared_component_cache_factory.SharedComponentCacheServiceFactory())
     # Override LFX's no-op auth service with Langflow's full JWT implementation
     service_manager.register_service_class(ServiceType.AUTH_SERVICE, AuthService, override=True)
-    # Override LFX plugin-discovered deployment class with the factory-configured adapter.
     service_manager.register_service_class(
-        ServiceType.DEPLOYMENT_SERVICE, deployment_service_factory.service_class, override=True
+        ServiceType.DEPLOYMENT_ROUTER_SERVICE, deployment_router_service_factory.service_class, override=True
     )
     service_manager.register_factory(auth_factory.AuthServiceFactory())
     service_manager.register_factory(mcp_composer_factory.MCPComposerServiceFactory())

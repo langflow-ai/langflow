@@ -10,6 +10,11 @@ DeploymentProviderName = Annotated[
     StringConstraints(strip_whitespace=True, min_length=1, max_length=128),
 ] # the name of the deployment provider.
 
+DeploymentProviderId = Annotated[
+    str,
+    StringConstraints(strip_whitespace=True, min_length=1, max_length=128),
+] # the unique provider/account routing id for deployment router resolution.
+
 AccountId = Annotated[
     str,
     StringConstraints(strip_whitespace=True, min_length=1, max_length=128),
