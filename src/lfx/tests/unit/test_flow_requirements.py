@@ -22,6 +22,7 @@ from lfx.utils.flow_requirements import (
     generate_requirements_from_file,
     generate_requirements_from_flow,
     generate_requirements_txt,
+    main,
 )
 
 
@@ -795,6 +796,7 @@ class TestResolveProviderPackages:
         This is critical because many provider components use lazy imports
         inside methods like ``build_model()`` rather than at module level.
         """
+        self._skip_if_provider_not_loaded("Amazon Bedrock")
         packages = _resolve_provider_packages("Amazon Bedrock")
         # boto3 and langchain_aws are imported inside build_model(), not at module level
         assert "boto3" in packages
@@ -829,6 +831,20 @@ class TestResolveEmbeddingProviderPackages:
     def test_unknown_provider_returns_empty(self):
         packages = _resolve_embedding_provider_packages("NonexistentProvider")
         assert packages == set()
+
+    def test_azure_openai_embedding_resolves(self):
+        """Azure OpenAI shares langchain-openai with OpenAI."""
+        packages = _resolve_embedding_provider_packages("Azure OpenAI")
+        assert "langchain-openai" in packages
+
+    def test_ibm_watsonx_embedding_resolves(self):
+        packages = _resolve_embedding_provider_packages("IBM WatsonX")
+        assert "langchain-ibm" in packages
+
+    def test_ibm_watsonx_ai_variant_resolves(self):
+        """The 'IBM watsonx.ai' name variant should also resolve."""
+        packages = _resolve_embedding_provider_packages("IBM watsonx.ai")
+        assert "langchain-ibm" in packages
 
     def test_embedding_only_flow(self):
         """A flow with only an embedding model should still get provider packages."""
@@ -883,3 +899,75 @@ class TestErrorHandling:
         flow = {"data": {"nodes": [{"type": "genericNode", "data": {}}]}}
         result = generate_requirements_from_flow(flow, pin_versions=False)
         assert result == ["lfx"]
+
+
+# ===================================================================
+# CLI main() tests
+# ===================================================================
+
+
+class TestMainCLI:
+    """Tests for the argparse main() entry point."""
+
+    def test_happy_path(self, tmp_path, capsys):
+        """main() should print requirements to stdout."""
+        flow_file = tmp_path / "flow.json"
+        flow = _make_flow(_make_node("Simple", "import lfx"))
+        flow_file.write_text(json.dumps(flow), encoding="utf-8")
+
+        with pytest.MonkeyPatch.context() as mp:
+            mp.setattr("sys.argv", ["flow_requirements", str(flow_file), "--no-pin"])
+            main()
+
+        captured = capsys.readouterr()
+        assert "lfx" in captured.out
+
+    def test_output_flag(self, tmp_path, capsys):
+        """main() with -o should write to file."""
+        flow_file = tmp_path / "flow.json"
+        output_file = tmp_path / "requirements.txt"
+        flow = _make_flow(_make_node("Simple", "import lfx"))
+        flow_file.write_text(json.dumps(flow), encoding="utf-8")
+
+        with pytest.MonkeyPatch.context() as mp:
+            mp.setattr("sys.argv", ["flow_requirements", str(flow_file), "-o", str(output_file), "--no-pin"])
+            main()
+
+        assert output_file.exists()
+        content = output_file.read_text(encoding="utf-8")
+        assert "lfx" in content
+        captured = capsys.readouterr()
+        assert "Requirements written to" in captured.out
+
+    def test_no_lfx_flag(self, tmp_path, capsys):
+        """--no-lfx should exclude lfx from output."""
+        flow_file = tmp_path / "flow.json"
+        flow = _make_flow(_make_node("Simple", "import lfx"))
+        flow_file.write_text(json.dumps(flow), encoding="utf-8")
+
+        with pytest.MonkeyPatch.context() as mp:
+            mp.setattr("sys.argv", ["flow_requirements", str(flow_file), "--no-lfx", "--no-pin"])
+            main()
+
+        captured = capsys.readouterr()
+        # With --no-lfx and only lfx imports, output should just be the header
+        assert "lfx\n" not in captured.out
+
+    def test_file_not_found(self, tmp_path):
+        """main() should exit(1) on missing file."""
+        with pytest.MonkeyPatch.context() as mp:
+            mp.setattr("sys.argv", ["flow_requirements", str(tmp_path / "missing.json")])
+            with pytest.raises(SystemExit) as exc_info:
+                main()
+            assert exc_info.value.code == 1
+
+    def test_invalid_json(self, tmp_path):
+        """main() should exit(1) on invalid JSON."""
+        bad_file = tmp_path / "bad.json"
+        bad_file.write_text("not json", encoding="utf-8")
+
+        with pytest.MonkeyPatch.context() as mp:
+            mp.setattr("sys.argv", ["flow_requirements", str(bad_file)])
+            with pytest.raises(SystemExit) as exc_info:
+                main()
+            assert exc_info.value.code == 1

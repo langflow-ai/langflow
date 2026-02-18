@@ -22,6 +22,15 @@ Known limitations
 * **System-level dependencies** — Native libraries required by Python packages
   (e.g. ``libpq-dev`` for ``psycopg2``) cannot be expressed in
   ``requirements.txt``.
+* **``--lfx-package`` and transitive filtering** — The ``lfx_package`` parameter
+  controls only the output name (e.g. ``lfx-nightly``).  The "already provided
+  by lfx" filter always resolves against the ``lfx`` distribution installed in
+  the current environment.  If the alternative distribution has different
+  transitive dependencies, the output may include extra or missing packages.
+* **New embedding providers** — The ``_PROVIDER_EMBEDDING_CLASS`` mapping in
+  ``_resolve_embedding_provider_packages()`` must be updated manually when new
+  embedding providers are added to ``unified_models.py``.  Missing providers
+  will silently produce incomplete requirements.
 """
 
 from __future__ import annotations
@@ -32,6 +41,7 @@ import inspect
 import json
 import re
 import sys
+import warnings
 from functools import lru_cache
 from pathlib import Path
 
@@ -87,7 +97,19 @@ def _get_import_to_dist_map() -> dict[str, list[str]]:
     """
     try:
         return dict(md.packages_distributions())
-    except (OSError, AttributeError, ValueError):
+    except AttributeError:
+        warnings.warn(
+            "importlib.metadata.packages_distributions() not available. "
+            "Package resolution will use heuristic fallbacks.",
+            stacklevel=2,
+        )
+        return {}
+    except (OSError, ValueError) as exc:
+        warnings.warn(
+            f"Failed to read package metadata: {exc}. "
+            "Package resolution will use heuristic fallbacks.",
+            stacklevel=2,
+        )
         return {}
 
 
@@ -181,10 +203,20 @@ def _import_to_package(import_name: str) -> str:
 
 
 def _extract_imports(source: str) -> set[str]:
-    """Extract top-level import names from Python source code via AST."""
+    """Extract top-level package names from all imports in Python source via AST.
+
+    Walks the entire AST (including function bodies and try/except blocks) so
+    that lazy imports inside ``build_model()`` etc. are captured.  Returns only
+    the first segment of each dotted import (e.g. ``foo`` from ``import foo.bar``).
+    """
     try:
         tree = ast.parse(source)
-    except SyntaxError:
+    except SyntaxError as exc:
+        warnings.warn(
+            f"Could not parse component source (SyntaxError: {exc}). "
+            "Imports from this component will not be included in requirements.",
+            stacklevel=2,
+        )
         return set()
 
     imports: set[str] = set()
@@ -224,6 +256,11 @@ def _resolve_provider_packages(provider_name: str) -> set[str]:
     try:
         from lfx.base.models.model_input_constants import MODEL_PROVIDERS_DICT
     except ImportError:
+        warnings.warn(
+            f"Could not import MODEL_PROVIDERS_DICT. "
+            f"Provider '{provider_name}' packages will not be resolved.",
+            stacklevel=2,
+        )
         return set()
 
     provider_info = MODEL_PROVIDERS_DICT.get(provider_name)
@@ -237,9 +274,19 @@ def _resolve_provider_packages(provider_name: str) -> set[str]:
     try:
         module = inspect.getmodule(type(component_instance))
         if module is None:
+            warnings.warn(
+                f"Could not locate source module for provider '{provider_name}'. "
+                "Its dependencies will not be included in requirements.",
+                stacklevel=2,
+            )
             return set()
         source = inspect.getsource(module)
-    except (OSError, TypeError):
+    except (OSError, TypeError) as exc:
+        warnings.warn(
+            f"Could not inspect source for provider '{provider_name}': {exc}. "
+            "Its dependencies will not be included in requirements.",
+            stacklevel=2,
+        )
         return set()
 
     imports = _extract_imports(source)
@@ -272,11 +319,17 @@ def _resolve_embedding_provider_packages(provider_name: str) -> set[str]:
     try:
         from lfx.base.models.unified_models import _EMBEDDING_CLASS_IMPORTS
     except ImportError:
+        warnings.warn(
+            f"Could not import _EMBEDDING_CLASS_IMPORTS. "
+            f"Embedding packages for provider '{provider_name}' will not be resolved.",
+            stacklevel=2,
+        )
         return set()
 
-    # Provider name → embedding class name.  Mirrors the mapping in
-    # ``get_embedding_model_options()`` inside unified_models.py.
-    # Azure OpenAI shares the ``langchain-openai`` package with OpenAI.
+    # Provider name → embedding class name.  Based on embedding_class_mapping
+    # in ``get_embedding_model_options()`` (unified_models.py), extended with
+    # additional provider name variants (e.g. "Azure OpenAI", "IBM watsonx.ai")
+    # that may appear in flow templates.
     _PROVIDER_EMBEDDING_CLASS: dict[str, str] = {
         "OpenAI": "OpenAIEmbeddings",
         "Azure OpenAI": "OpenAIEmbeddings",
@@ -537,7 +590,12 @@ def main() -> None:
         print(f"Error: File not found: {flow_path}", file=sys.stderr)
         sys.exit(1)
 
-    flow = json.loads(flow_path.read_text(encoding="utf-8"))
+    try:
+        flow = json.loads(flow_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as e:
+        print(f"Error: Could not read flow JSON: {e}", file=sys.stderr)
+        sys.exit(1)
+
     content = generate_requirements_txt(
         flow,
         lfx_package=args.lfx_package,
