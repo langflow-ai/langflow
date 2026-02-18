@@ -125,9 +125,7 @@ async def create_variable(
             # Validate that the key actually works using the Language Model Service
             # Run validation off the event loop to avoid blocking
             try:
-                await asyncio.to_thread(
-                    validate_model_provider_key, provider, {variable.name: variable.value}
-                )
+                await asyncio.to_thread(validate_model_provider_key, provider, {variable.name: variable.value})
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e)) from e
 
