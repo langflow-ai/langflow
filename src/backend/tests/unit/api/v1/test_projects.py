@@ -1775,9 +1775,8 @@ async def test_read_project_exclude_flows_data(client: AsyncClient, logged_in_he
     assert len(full_flows) == 1, "Expected one non-component flow"
 
     full_flow_entry = full_flows[0]
-    assert "data" in full_flow_entry and full_flow_entry["data"] is not None, (
-        "Flow graph data must be present when exclude_flows_data is not set"
-    )
+    assert "data" in full_flow_entry, "Flow data key must be present when exclude_flows_data is not set"
+    assert full_flow_entry["data"] is not None, "Flow graph data must not be None when exclude_flows_data is not set"
     assert "nodes" in full_flow_entry["data"], "Nodes must be present in flow data"
 
     # --- Test with exclude_flows_data=false explicitly: should behave as default ---

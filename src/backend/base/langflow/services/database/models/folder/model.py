@@ -68,9 +68,12 @@ class FlowReadNoData(SQLModel):
     access_type: AccessTypeEnum = AccessTypeEnum.PRIVATE
     icon: str | None = None
     icon_bg_color: str | None = None
+    gradient: str | None = None
     locked: bool | None = None
     mcp_enabled: bool | None = None
     webhook: bool | None = None
+    action_name: str | None = None
+    action_description: str | None = None
 
 
 class FolderReadWithFlowsNoData(FolderBase):

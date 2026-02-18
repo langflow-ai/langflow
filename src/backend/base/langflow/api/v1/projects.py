@@ -254,13 +254,12 @@ async def read_project(
     is_component: bool = False,
     is_flow: bool = False,
     search: str = "",
-    exclude_flows_data: bool = Query(
-        default=False,
+    exclude_flows_data: Annotated[bool, Query(
         description=(
             "When true, omits the flow graph data from each flow in the response. "
             "Useful for listing flows or performing existence checks without fetching heavy graph data."
         ),
-    ),
+    )] = False,
 ):
     try:
         project = (
