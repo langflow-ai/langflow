@@ -1,7 +1,9 @@
 import ELK, { type ElkNode } from "elkjs/lib/elk.bundled.js";
 import { cloneDeep } from "lodash";
-import { NODE_HEIGHT, NODE_WIDTH } from "@/constants/constants";
+import { NODE_WIDTH } from "@/constants/constants";
 import type { AllNodeType, EdgeType } from "@/types/flow";
+
+const DEFAULT_NODE_HEIGHT = 300;
 
 const layoutOptions = {
   "elk.algorithm": "layered",
@@ -12,7 +14,7 @@ const layoutOptions = {
   "elk.layered.nodePlacement.strategy": "NETWORK_SIMPLEX",
   "elk.separateConnectedComponents": "true",
   "elk.layered.crossingMinimization.strategy": "LAYER_SWEEP",
-  "elk.spacing.componentComponent": `${NODE_WIDTH}`,
+  "elk.spacing.componentComponent": "80",
   "elk.layered.considerModelOrder.strategy": "NODES_AND_EDGES",
 };
 const elk = new ELK();
@@ -45,8 +47,8 @@ export const getLayoutedNodes = async (
         }));
       return {
         id: n.id,
-        width: NODE_WIDTH,
-        height: NODE_HEIGHT,
+        width: n.measured?.width ?? NODE_WIDTH,
+        height: n.measured?.height ?? DEFAULT_NODE_HEIGHT,
         // ⚠️ we need to tell elk that the ports are fixed, in order to reduce edge crossings
         properties: {
           "org.eclipse.elk.portConstraints": "FIXED_ORDER",

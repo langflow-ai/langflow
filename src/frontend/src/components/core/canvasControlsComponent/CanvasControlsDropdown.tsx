@@ -12,13 +12,16 @@ import { Separator } from "@/components/ui/separator";
 import DropdownControlButton from "./DropdownControlButton";
 import { formatZoomPercentage, reactFlowSelector } from "./utils/canvasUtils";
 import useFlowStore from "@/stores/flowStore";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { AllNodeType } from "@/types/flow";
+import { getLayoutedNodes } from "@/utils/layoutUtils";
 
 export const KEYBOARD_SHORTCUTS = {
   ZOOM_IN: { key: "+", code: "Equal" },
   ZOOM_OUT: { key: "-", code: "Minus" },
   FIT_VIEW: { key: "1", code: "Digit1" },
   RESET_ZOOM: { key: "0", code: "Digit0" },
+  TIDY_UP: { key: "L", code: "KeyL", requiresShift: true },
 } as const;
 
 const CanvasControlsDropdown = ({
@@ -37,6 +40,40 @@ const CanvasControlsDropdown = ({
   const inspectionPanelVisible = useFlowStore(
     (state) => state.inspectionPanelVisible,
   );
+  const nodes = useFlowStore((state) => state.nodes);
+  const edges = useFlowStore((state) => state.edges);
+  const setNodes = useFlowStore((state) => state.setNodes);
+  const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
+
+  const handleZoomIn = useCallback(() => {
+    zoomIn();
+  }, [zoomIn]);
+
+  const handleZoomOut = useCallback(() => {
+    zoomOut();
+  }, [zoomOut]);
+
+  const handleFitView = useCallback(() => {
+    fitView({
+      padding: {
+        left: "20px",
+        right: inspectionPanelVisible && selectedNode ? "340px" : "20px",
+        top: "80px",
+      },
+    });
+  }, [fitView, selectedNode]);
+
+  const handleResetZoom = useCallback(() => {
+    zoomTo(1);
+  }, [zoomTo]);
+
+  const handleTidyUp = useCallback(async () => {
+    if (nodes.length === 0) return;
+    takeSnapshot();
+    const layoutedNodes = await getLayoutedNodes(nodes, edges);
+    setNodes(layoutedNodes);
+    setTimeout(() => fitView(), 50);
+  }, [nodes, edges, setNodes, takeSnapshot, fitView]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -65,34 +102,26 @@ const CanvasControlsDropdown = ({
           event.preventDefault();
           zoomTo(1);
           break;
+        case KEYBOARD_SHORTCUTS.TIDY_UP.code:
+          if (event.shiftKey) {
+            event.preventDefault();
+            handleTidyUp();
+          }
+          break;
       }
     };
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [zoomIn, zoomOut, fitView, zoomTo, maxZoomReached, minZoomReached]);
-
-  const handleZoomIn = useCallback(() => {
-    zoomIn();
-  }, [zoomIn]);
-
-  const handleZoomOut = useCallback(() => {
-    zoomOut();
-  }, [zoomOut]);
-
-  const handleFitView = useCallback(() => {
-    fitView({
-      padding: {
-        left: "20px",
-        right: inspectionPanelVisible && selectedNode ? "340px" : "20px",
-        top: "80px",
-      },
-    });
-  }, [fitView, selectedNode]);
-
-  const handleResetZoom = useCallback(() => {
-    zoomTo(1);
-  }, [zoomTo]);
+  }, [
+    zoomIn,
+    zoomOut,
+    fitView,
+    zoomTo,
+    maxZoomReached,
+    minZoomReached,
+    handleTidyUp,
+  ]);
 
   return (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
@@ -151,6 +180,15 @@ const CanvasControlsDropdown = ({
           testId="fit_view"
           label="Zoom To Fit"
           shortcut={KEYBOARD_SHORTCUTS.FIT_VIEW.key}
+        />
+        <Separator />
+        <DropdownControlButton
+          tooltipText="Auto-layout all nodes"
+          onClick={handleTidyUp}
+          disabled={nodes.length === 0}
+          testId="tidy_up"
+          label="Tidy Up"
+          shortcut={`⇧${KEYBOARD_SHORTCUTS.TIDY_UP.key}`}
         />
       </DropdownMenuContent>
     </DropdownMenu>
