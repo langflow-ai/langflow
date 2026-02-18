@@ -12,6 +12,7 @@ from lfx.inputs.inputs import (
     HandleInput,
     MessageTextInput,
 )
+from lfx.io import BoolInput
 from lfx.schema.message import Message
 from lfx.services.deps import get_settings_service
 from lfx.template.field.base import Output
@@ -62,6 +63,18 @@ class CSVAgentComponent(LCAgentComponent):
             advanced=True,
             is_list=True,
         ),
+        BoolInput(
+            name="allow_dangerous_code",
+            display_name="Allow Dangerous Code",
+            value=False,
+            advanced=True,
+            info=(
+                "SECURITY WARNING: Enabling this allows the agent to execute arbitrary Python code "
+                "on the server, which can lead to remote code execution vulnerabilities. "
+                "Only enable this if you fully trust the input sources and understand the security implications. "
+                "When disabled, the agent can still analyze CSV data but cannot execute custom Python code."
+            ),
+        ),
     ]
 
     outputs = [
@@ -85,9 +98,12 @@ class CSVAgentComponent(LCAgentComponent):
             raise ImportError(msg) from e
 
         try:
+            # Use False as default if allow_dangerous_code is not set (secure by default)
+            allow_dangerous = getattr(self, "allow_dangerous_code", False) or False
+
             agent_kwargs = {
                 "verbose": self.verbose,
-                "allow_dangerous_code": True,
+                "allow_dangerous_code": allow_dangerous,
             }
 
             # Get local path (downloads from S3 if needed)
@@ -118,9 +134,12 @@ class CSVAgentComponent(LCAgentComponent):
             )
             raise ImportError(msg) from e
 
+        # Use False as default if allow_dangerous_code is not set (secure by default)
+        allow_dangerous = getattr(self, "allow_dangerous_code", False) or False
+
         agent_kwargs = {
             "verbose": self.verbose,
-            "allow_dangerous_code": True,
+            "allow_dangerous_code": allow_dangerous,
         }
 
         # Get local path (downloads from S3 if needed)
