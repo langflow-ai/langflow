@@ -1,5 +1,4 @@
-"""
-ModelsLab Image Generation component for Langflow.
+"""ModelsLab Image Generation component for Langflow.
 
 Generates images using ModelsLab's text-to-image API (Flux, SDXL,
 Playground v2.5, and 1000+ community models). Handles both synchronous
@@ -42,8 +41,7 @@ MODELSLAB_IMAGE_MODELS = [
 
 
 class ModelsLabImageComponent(Component):
-    """
-    ModelsLab Image Generation component for Langflow.
+    """ModelsLab Image Generation component for Langflow.
 
     Generates images via ModelsLab's API and returns the image URL(s)
     as Langflow Data objects compatible with downstream components.
@@ -146,9 +144,7 @@ class ModelsLabImageComponent(Component):
     ]
 
     def generate_image(self) -> Data:
-        """
-        Call ModelsLab image API and return image URL(s) as a Data object.
-        """
+        """Call ModelsLab image API and return image URL(s) as a Data object."""
         if not self.api_key:
             msg = "ModelsLab API key is required."
             raise ValueError(msg)

@@ -1,5 +1,4 @@
-"""
-ModelsLab LLM component for Langflow.
+"""ModelsLab LLM component for Langflow.
 
 Provides uncensored Llama 3.1 8B and 70B models via ModelsLab's
 OpenAI-compatible API endpoint.
@@ -31,8 +30,7 @@ MODELSLAB_CHAT_BASE_URL = "https://modelslab.com/uncensored-chat/v1"
 
 
 class ModelsLabModelComponent(LCModelComponent):
-    """
-    ModelsLab LLM component for Langflow.
+    """ModelsLab LLM component for Langflow.
 
     Connects to ModelsLab's OpenAI-compatible endpoint to provide uncensored
     Llama 3.1 models with 128K token context windows.
@@ -123,14 +121,9 @@ class ModelsLabModelComponent(LCModelComponent):
     ]
 
     def build_model(self) -> LanguageModel:
-        """
-        Instantiate and return a ChatOpenAI model configured for ModelsLab.
-        """
+        """Instantiate and return a ChatOpenAI model configured for ModelsLab."""
         if not self.api_key:
-            msg = (
-                "ModelsLab API key is required. "
-                "Get yours at https://modelslab.com"
-            )
+            msg = "ModelsLab API key is required. Get yours at https://modelslab.com"
             raise ValueError(msg)
 
         params: dict = {

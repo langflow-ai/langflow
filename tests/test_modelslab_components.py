@@ -1,5 +1,4 @@
-"""
-Tests for ModelsLab Langflow components.
+"""Tests for ModelsLab Langflow components.
 
 Run with: pytest tests/test_modelslab_components.py -v
 """
@@ -7,7 +6,6 @@ Run with: pytest tests/test_modelslab_components.py -v
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -25,9 +23,7 @@ def make_llm_component(**kwargs):
     comp.top_p = kwargs.get("top_p", 1.0)
     comp.n = kwargs.get("n", 1)
     comp.stream = kwargs.get("stream", False)
-    comp.base_url = kwargs.get(
-        "base_url", "https://modelslab.com/uncensored-chat/v1"
-    )
+    comp.base_url = kwargs.get("base_url", "https://modelslab.com/uncensored-chat/v1")
     return comp
 
 
@@ -119,10 +115,12 @@ class TestModelsLabModelComponent:
 
     def test_display_name(self):
         from langflow.components.models.modelslab import ModelsLabModelComponent
+
         assert ModelsLabModelComponent.display_name == "ModelsLab"
 
     def test_has_both_outputs(self):
         from langflow.components.models.modelslab import ModelsLabModelComponent
+
         output_names = [o.name for o in ModelsLabModelComponent.outputs]
         assert "text_output" in output_names
         assert "model_output" in output_names
@@ -193,6 +191,7 @@ class TestModelsLabImageComponent:
     @patch("langflow.components.utilities.modelslab_image.requests.post")
     def test_generate_image_raises_on_http_error(self, mock_post):
         import requests as req
+
         mock_post.return_value = MagicMock(
             ok=False,
             raise_for_status=MagicMock(side_effect=req.HTTPError("500 Server Error")),
@@ -260,4 +259,5 @@ class TestModelsLabImageComponent:
 
     def test_display_name(self):
         from langflow.components.utilities.modelslab_image import ModelsLabImageComponent
+
         assert ModelsLabImageComponent.display_name == "ModelsLab Image Generation"
