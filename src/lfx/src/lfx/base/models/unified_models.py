@@ -436,10 +436,12 @@ def _validate_and_get_enabled_providers(
 ) -> set[str]:
     """Return set of enabled providers based on credential existence.
 
-    This helper function determines which providers have credentials stored and (optionally) validates that their API keys are present and valid.
+    This helper function determines which providers have credentials stored and (optionally)
+    validates that their API keys are present and valid.
     It is used by get_enabled_providers and model options functions.
     Providers are considered enabled if all required credential variables are set (from DB or environment variables).
-    API key validation is performed when credentials are saved, not on every read, to avoid latency from external API calls.
+    API key validation is performed when credentials are saved, not on every read,
+    to avoid latency from external API calls.
 
 
     For providers requiring multiple variables (e.g., IBM WatsonX needs API key, project ID, and URL),
@@ -553,6 +555,7 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
 
     Args:
         provider: The provider name (e.g., "OpenAI", "IBM WatsonX")
+        model_name: The model name to test (e.g., "gpt-4o", "gpt-4o-mini")
         variables: Dictionary mapping variable keys to their decrypted values
                    (e.g., {"WATSONX_APIKEY": "...", "WATSONX_PROJECT_ID": "...", "WATSONX_URL": "..."})
 
@@ -567,8 +570,8 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
         models = get_unified_models_detailed(providers=[provider])
         if models and models[0].get("models"):
             first_model = models[0]["models"][0]["model_name"]
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception as e:  # noqa: BLE001
+        logger.error(f"Error getting unified models for provider {provider}: {e}")
 
     # For providers that need a model to test credentials
     if not first_model and provider in ["OpenAI", "Anthropic", "Google Generative AI", "IBM WatsonX"]:
@@ -620,7 +623,9 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
 
             base_url = variables.get("OLLAMA_BASE_URL")
             if not base_url:
-                raise ValueError("Ollama Base URL is not configured.")
+                msg = "Ollama Base URL is not configured."
+                logger.error(msg)
+                raise ValueError(msg)
 
             base_url = base_url.rstrip("/")
             response = requests.get(f"{base_url}/api/tags", timeout=5)
@@ -628,7 +633,9 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
 
             data = response.json()
             if not isinstance(data, dict) or "models" not in data:
-                raise ValueError(f"URL {base_url} does not appear to be an Ollama server.")
+                msg = f"URL {base_url} does not appear to be an Ollama server."
+                logger.error(msg)
+                raise ValueError(msg)
 
             if model_name:
                 available_models = [m.get("name") for m in data["models"]]
@@ -637,20 +644,24 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
                     # Lenient check for missing tag
                     if ":" not in model_name:
                         if not any(m.startswith(f"{model_name}:") for m in available_models):
-                            raise ValueError(
-                                f"Model '{model_name}' not found on Ollama server. Available: {', '.join(available_models[:3])}..."
-                            )
+                            available_str = ", ".join(available_models[:3])
+                            msg = f"Model '{model_name}' not found on Ollama server. Available: {available_str}"
+                            logger.error(msg)
+                            raise ValueError(msg)
                     else:
-                        raise ValueError(
-                            f"Model '{model_name}' not found on Ollama server. Available: {', '.join(available_models[:3])}..."
-                        )
+                        available_str = ", ".join(available_models[:3])
+                        msg = f"Model '{model_name}' not found on Ollama server. Available: {available_str}"
+                        logger.error(msg)
+                        raise ValueError(msg)
 
     except ValueError:
         raise
     except Exception as e:
         error_msg = str(e).lower()
         if any(word in error_msg for word in ["401", "authentication", "api key"]):
-            raise ValueError(f"Invalid API key for {provider}") from e
+            msg = f"Invalid API key for {provider}"
+            logger.error(f"Invalid API key for {provider}: {e}")
+            raise ValueError(msg) from e
 
         # Rethrow specific Ollama errors
         if provider == "Ollama":
@@ -783,8 +794,9 @@ def get_language_model_options(
                                 )
                                 if variable_obj and variable_obj.value:
                                     all_provider_variables[var_name] = VarWithValue(variable_obj.value)
-                            except (ValueError, Exception):  # noqa: BLE001
+                            except Exception as e:  # noqa: BLE001
                                 # Variable not found or error accessing it - skip
+                                logger.error(f"Error accessing variable {var_name} for provider {provider}: {e}")
                                 continue
 
                     # Use shared helper to validate and get enabled providers
@@ -993,8 +1005,9 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
                                 )
                                 if variable_obj and variable_obj.value:
                                     all_provider_variables[var_name] = VarWithValue(variable_obj.value)
-                            except (ValueError, Exception):  # noqa: BLE001
+                            except Exception as e:  # noqa: BLE001
                                 # Variable not found or error accessing it - skip
+                                logger.error(f"Error accessing variable {var_name} for provider {provider}: {e}")
                                 continue
 
                     # Use shared helper to validate and get enabled providers
