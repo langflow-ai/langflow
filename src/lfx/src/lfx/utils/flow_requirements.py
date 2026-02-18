@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import ast
 import importlib.metadata as md
+import inspect
 import json
 import re
 import sys
@@ -25,23 +26,6 @@ try:
     STDLIB_MODULES: frozenset[str] = frozenset(sys.stdlib_module_names)
 except AttributeError:
     STDLIB_MODULES = frozenset(sys.builtin_module_names)
-
-# ---------------------------------------------------------------------------
-# Provider name (as it appears in the model field) → required PyPI packages.
-# This is Langflow-specific domain knowledge with no standard mapping.
-# ---------------------------------------------------------------------------
-PROVIDER_PACKAGES: dict[str, list[str]] = {
-    "OpenAI": ["langchain-openai"],
-    "Anthropic": ["langchain-anthropic"],
-    "Google Generative AI": ["langchain-google-genai"],
-    "Ollama": ["langchain-ollama"],
-    "IBM WatsonX": ["langchain-ibm"],
-    "Cohere": ["langchain-cohere"],
-    "NVIDIA": ["langchain-nvidia-ai-endpoints"],
-    "Mistral AI": ["langchain-mistralai"],
-    "SambaNova": ["langchain-sambanova"],
-    "Groq": ["langchain-groq"],
-}
 
 # ---------------------------------------------------------------------------
 # Import name → PyPI name overrides for packages where the import name
@@ -206,6 +190,57 @@ def _extract_imports(source: str) -> set[str]:
 # ===================================================================
 
 
+def _resolve_provider_packages(provider_name: str) -> set[str]:
+    """Dynamically resolve PyPI packages needed for a model provider.
+
+    Uses ``MODEL_PROVIDERS_DICT`` to look up the provider's component class,
+    then inspects its source code to extract import statements.  This avoids
+    maintaining a static provider→package mapping table.
+
+    This is specifically necessary for components like the LanguageModelComponent
+    that dynamically import the model class.
+
+    Note: only the component's own module is inspected, not parent classes.
+    Parent classes (e.g. ``LCModelComponent``) are all part of lfx, so any
+    imports they introduce are already in lfx's transitive dependency tree
+    and would be filtered out regardless.
+    """
+    try:
+        from lfx.base.models.model_input_constants import MODEL_PROVIDERS_DICT
+    except ImportError:
+        return set()
+
+    provider_info = MODEL_PROVIDERS_DICT.get(provider_name)
+    if not provider_info:
+        return set()
+
+    component_instance = provider_info.get("component_class")
+    if component_instance is None:
+        return set()
+
+    try:
+        module = inspect.getmodule(type(component_instance))
+        if module is None:
+            return set()
+        source = inspect.getsource(module)
+    except (OSError, TypeError):
+        return set()
+
+    imports = _extract_imports(source)
+    lfx_provided = _get_lfx_provided_imports()
+    packages: set[str] = set()
+    for imp in imports:
+        if imp in STDLIB_MODULES or imp in {"lfx", "langflow", "langflow_base"}:
+            continue
+        if imp in MODULE_EXTRA_DEPS:
+            for extra in MODULE_EXTRA_DEPS[imp]:
+                packages.add(extra)
+        if imp in lfx_provided:
+            continue
+        packages.add(_import_to_package(imp))
+    return packages
+
+
 def _detect_providers_from_template(template: dict) -> set[str]:
     """Detect model providers from a component's template field values.
 
@@ -325,10 +360,9 @@ def generate_requirements_from_flow(
         all_packages.update(packages)
         all_providers.update(providers)
 
-    # Add provider-specific packages
+    # Add provider-specific packages (resolved dynamically from component source)
     for provider in all_providers:
-        provider_pkgs = PROVIDER_PACKAGES.get(provider, [])
-        all_packages.update(provider_pkgs)
+        all_packages.update(_resolve_provider_packages(provider))
 
     fmt = _pin_version if pin_versions else lambda p: p
 

@@ -9,7 +9,6 @@ import pytest
 
 from lfx.utils.flow_requirements import (
     MODULE_EXTRA_DEPS,
-    PROVIDER_PACKAGES,
     _detect_providers_from_template,
     _extract_component_requirements,
     _extract_imports,
@@ -18,6 +17,7 @@ from lfx.utils.flow_requirements import (
     _get_lfx_transitive_dists,
     _import_to_package,
     _pin_version,
+    _resolve_provider_packages,
     generate_requirements_from_file,
     generate_requirements_from_flow,
     generate_requirements_txt,
@@ -265,6 +265,33 @@ class TestDetectProviders:
         result = _detect_providers_from_template(template)
         assert result == {"Google Generative AI"}
 
+    def test_azure_openai_provider(self):
+        template = {
+            "model": {
+                "value": [{"provider": "Azure OpenAI", "name": "gpt-4o"}],
+            },
+        }
+        result = _detect_providers_from_template(template)
+        assert result == {"Azure OpenAI"}
+
+    def test_amazon_bedrock_provider(self):
+        template = {
+            "model": {
+                "value": [{"provider": "Amazon Bedrock", "name": "anthropic.claude-3"}],
+            },
+        }
+        result = _detect_providers_from_template(template)
+        assert result == {"Amazon Bedrock"}
+
+    def test_ibm_watsonx_provider(self):
+        template = {
+            "model": {
+                "value": [{"provider": "IBM watsonx.ai", "name": "ibm/granite-13b"}],
+            },
+        }
+        result = _detect_providers_from_template(template)
+        assert result == {"IBM watsonx.ai"}
+
     def test_multiple_providers(self):
         template = {
             "model": {
@@ -472,6 +499,42 @@ class TestGenerateRequirementsFromFlow:
         result = generate_requirements_from_flow(flow, pin_versions=False)
         assert result.count("langchain-openai") == 1
 
+    def test_azure_openai_provider_adds_package(self):
+        node = _make_node(
+            "LLM",
+            "",
+            template_extra={
+                "model": {"value": [{"provider": "Azure OpenAI", "name": "gpt-4o"}]},
+            },
+        )
+        flow = _make_flow(node)
+        result = generate_requirements_from_flow(flow, pin_versions=False)
+        assert "langchain-openai" in result
+
+    def test_amazon_bedrock_provider_adds_package(self):
+        node = _make_node(
+            "LLM",
+            "",
+            template_extra={
+                "model": {"value": [{"provider": "Amazon Bedrock", "name": "anthropic.claude-3"}]},
+            },
+        )
+        flow = _make_flow(node)
+        result = generate_requirements_from_flow(flow, pin_versions=False)
+        assert "langchain-aws" in result
+
+    def test_ibm_watsonx_provider_adds_package(self):
+        node = _make_node(
+            "LLM",
+            "",
+            template_extra={
+                "model": {"value": [{"provider": "IBM watsonx.ai", "name": "ibm/granite-13b"}]},
+            },
+        )
+        flow = _make_flow(node)
+        result = generate_requirements_from_flow(flow, pin_versions=False)
+        assert "langchain-ibm" in result
+
     def test_multiple_providers(self):
         node1 = _make_node(
             "LLM",
@@ -662,16 +725,7 @@ class TestStarterProjects:
 
 
 class TestDataIntegrity:
-    """Verify the mapping tables and dynamic resolution are consistent."""
-
-    def test_all_providers_have_packages(self):
-        for provider, pkgs in PROVIDER_PACKAGES.items():
-            assert len(pkgs) > 0, f"Provider {provider} has no packages"
-
-    def test_provider_packages_are_strings(self):
-        for provider, pkgs in PROVIDER_PACKAGES.items():
-            for pkg in pkgs:
-                assert isinstance(pkg, str), f"Package {pkg} for {provider} is not a string"
+    """Verify dynamic resolution and mapping tables are consistent."""
 
     def test_known_langchain_packages_resolved_by_metadata(self):
         """importlib.metadata should correctly resolve common langchain packages."""
@@ -686,3 +740,41 @@ class TestDataIntegrity:
     def test_module_extra_deps_values_are_lists(self):
         for mod, deps in MODULE_EXTRA_DEPS.items():
             assert isinstance(deps, list), f"Extra deps for {mod} should be a list"
+
+
+class TestResolveProviderPackages:
+    """Verify dynamic provider resolution via inspect."""
+
+    def test_openai_provider_resolves(self):
+        packages = _resolve_provider_packages("OpenAI")
+        assert "langchain-openai" in packages
+
+    def test_anthropic_provider_resolves(self):
+        packages = _resolve_provider_packages("Anthropic")
+        assert "langchain-anthropic" in packages
+
+    def test_amazon_bedrock_provider_resolves(self):
+        packages = _resolve_provider_packages("Amazon Bedrock")
+        assert "langchain-aws" in packages
+
+    def test_google_provider_resolves(self):
+        packages = _resolve_provider_packages("Google Generative AI")
+        assert "langchain-google-genai" in packages
+
+    def test_ollama_provider_resolves(self):
+        packages = _resolve_provider_packages("Ollama")
+        assert "langchain-ollama" in packages
+
+    def test_unknown_provider_returns_empty(self):
+        packages = _resolve_provider_packages("NonexistentProvider")
+        assert packages == set()
+
+    def test_all_registered_providers_resolve_to_packages(self):
+        """Every provider in MODEL_PROVIDERS_DICT should resolve to at least one package."""
+        try:
+            from lfx.base.models.model_input_constants import MODEL_PROVIDERS_DICT
+        except ImportError:
+            pytest.skip("MODEL_PROVIDERS_DICT not available")
+        for provider_name in MODEL_PROVIDERS_DICT:
+            packages = _resolve_provider_packages(provider_name)
+            assert len(packages) > 0, f"Provider {provider_name} resolved to no packages"
