@@ -125,6 +125,10 @@ class AuthService(BaseAuthService):
     def decrypt_api_key(self, encrypted_api_key: str) -> str:
         return encrypted_api_key
 
+    async def get_current_active_user_mcp(self, current_user: Any) -> Any | None:
+        """No user store; return None."""
+        return None
+
     async def get_current_user_mcp(
         self,
         token: str | Coroutine[Any, Any, str] | None,
