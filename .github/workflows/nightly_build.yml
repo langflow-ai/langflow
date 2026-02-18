@@ -10,7 +10,7 @@ on:
         options:
           - ubuntu-latest
           - self-hosted
-          - "[self-hosted, linux, ARM64, langflow-ai-arm64-40gb]"
+          - '["self-hosted", "linux", "ARM64", "langflow-ai-arm64-40gb-ephemeral"]'
         default: ubuntu-latest
       skip_frontend_tests:
         description: "Skip frontend tests. Only do this for testing purposes."
@@ -197,7 +197,7 @@ jobs:
         with:
           ref: ${{ needs.create-nightly-tag.outputs.main_tag }}
           persist-credentials: true
-      
+
       - name: "Setup Environment"
         uses: astral-sh/setup-uv@v6
         with:
@@ -205,32 +205,32 @@ jobs:
           cache-dependency-glob: "uv.lock"
           python-version: ${{ env.PYTHON_VERSION }}
           prune-cache: false
-      
+
       - name: Install the project
         run: uv sync
-      
+
       - name: Force reinstall LFX to pick up version change
         run: |
           echo "Force reinstalling lfx-nightly to ensure version metadata is updated..."
           uv pip install --reinstall --no-deps src/lfx
-      
+
       - name: Verify LFX version
         run: |
           echo "Checking installed LFX version..."
           uv run python -c "from importlib.metadata import version; print(f'lfx-nightly version: {version(\"lfx-nightly\")}')" || \
           uv run python -c "from importlib.metadata import version; print(f'lfx version: {version(\"lfx\")}')"
-      
+
       - name: Build and validate nightly hash history
         run: |
           # The script includes append-only validation
           uv run python scripts/build_hash_history.py --nightly
-      
+
       - name: Commit and push hash history changes
         run: |
           echo "=== Configuring git ==="
           git config --global user.email "bot-nightly-builds@langflow.org"
           git config --global user.name "Langflow Bot"
-          
+
           echo "=== Checking for hash history changes ==="
           # Check if there are changes to commit (handles if it's a new file for first run)
           git add src/lfx/src/lfx/_assets/nightly_hash_history.json
@@ -240,26 +240,26 @@ jobs:
             echo "Hash history changes detected, committing..."
             # Commit to the nightly tag itself so builds include the hash history
             git commit -m "Update nightly hash history for ${{ needs.create-nightly-tag.outputs.main_tag }}"
-            
+
             echo "=== Updating nightly tag ${{ needs.create-nightly-tag.outputs.main_tag }} ==="
             # Update the tag to include the hash history
             git tag -f ${{ needs.create-nightly-tag.outputs.main_tag }}
             git push -f origin ${{ needs.create-nightly-tag.outputs.main_tag }}
-            
+
             echo "=== Creating clean branch from main with only hash history changes ==="
             # Fetch latest main
             git fetch origin main
-            
+
             # Create a new branch from main
             git checkout -B nightly-hash-history-updates origin/main
-            
+
             # Copy ONLY the hash history file from the nightly tag
             git checkout ${{ needs.create-nightly-tag.outputs.main_tag }} -- src/lfx/src/lfx/_assets/nightly_hash_history.json
-            
+
             # Commit only this file
             git add src/lfx/src/lfx/_assets/nightly_hash_history.json
             git commit -m "Update nightly hash history for ${{ needs.create-nightly-tag.outputs.main_tag }}"
-            
+
             # Force push the clean branch
             git push origin nightly-hash-history-updates --force
             echo "Updated nightly tag and created clean branch with only hash history changes"
@@ -273,7 +273,7 @@ jobs:
     with:
       tests_folder: "tests"
       release: true
-      runs-on: ${{ (inputs['runs_on'] && startsWith(format('{0}', inputs['runs_on']), '[') && fromJSON(inputs['runs_on'])) || inputs['runs_on'] || github.event.inputs['runs_on'] || 'ubuntu-latest' }}
+      runs-on: ${{ inputs['runs_on'] || github.event.inputs['runs_on'] || 'ubuntu-latest' }}
     secrets:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       STORE_API_KEY: ${{ secrets.STORE_API_KEY }}
@@ -287,7 +287,7 @@ jobs:
     uses: ./.github/workflows/python_test.yml
     with:
       python-versions: '["3.10", "3.11", "3.12", "3.13"]'
-      runs-on: ${{ (inputs['runs_on'] && startsWith(format('{0}', inputs['runs_on']), '[') && fromJSON(inputs['runs_on'])) || inputs['runs_on'] || github.event.inputs['runs_on'] || 'ubuntu-latest' }}
+      runs-on: ${{ inputs['runs_on'] || github.event.inputs['runs_on'] || 'ubuntu-latest' }}
     secrets:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -341,7 +341,7 @@ jobs:
           elif [ "${{ needs.merge-hash-history-to-main.result }}" == "failure" ]; then
             FAILED_JOB="merge-hash-history-to-main"
           fi
-          
+
           curl -X POST -H 'Content-type: application/json' \
           --data "{
             \"blocks\": [
@@ -395,12 +395,12 @@ jobs:
           ref: main
           fetch-depth: 0
           persist-credentials: true
-      
+
       - name: Configure Git
         run: |
           git config --global user.email "bot-nightly-builds@langflow.org"
           git config --global user.name "Langflow Bot"
-      
+
       - name: "Setup Environment"
         uses: astral-sh/setup-uv@v6
         with:
@@ -408,13 +408,13 @@ jobs:
           cache-dependency-glob: "uv.lock"
           python-version: ${{ env.PYTHON_VERSION }}
           prune-cache: false
-      
+
       - name: Fetch nightly hash history branch
         run: |
           echo "=== Fetching nightly-hash-history-updates branch ==="
           git fetch origin nightly-hash-history-updates || true
           echo "Fetch completed"
-      
+
       - name: Check if branch exists and has changes
         id: check_branch
         run: |
@@ -422,7 +422,7 @@ jobs:
           if git rev-parse --verify origin/nightly-hash-history-updates >/dev/null 2>&1; then
             echo "branch_exists=true" >> $GITHUB_OUTPUT
             echo "Branch exists"
-            
+
             # Check if there are differences between main and the nightly branch
             echo "=== Comparing with main branch ==="
             if git diff --quiet main origin/nightly-hash-history-updates -- src/lfx/src/lfx/_assets/nightly_hash_history.json; then
@@ -439,14 +439,14 @@ jobs:
             echo "This should have been created by the build-hash-history job."
             exit 1
           fi
-      
+
       - name: Validate and prepare PR
         if: steps.check_branch.outputs.branch_exists == 'true' && steps.check_branch.outputs.has_changes == 'true'
         run: |
           echo "=== Checking out hash history file from nightly branch ==="
           # Checkout the nightly hash history file to verify it
           git checkout origin/nightly-hash-history-updates -- src/lfx/src/lfx/_assets/nightly_hash_history.json
-          
+
           echo "=== Verifying only hash history file was modified ==="
           # Verify that ONLY the nightly_hash_history.json file was modified
           CHANGED_FILES=$(git diff --name-only main)
@@ -456,23 +456,23 @@ jobs:
             exit 1
           fi
           echo "Only hash history file modified"
-          
+
           echo "=== Validating hash history file ==="
           # Basic validation - ensure file exists and is valid JSON
-          
+
           if [ ! -f "src/lfx/src/lfx/_assets/nightly_hash_history.json" ]; then
             echo "ERROR: nightly_hash_history.json file was deleted!"
             exit 1
           fi
-          
+
           if ! uv run python -c "import json; json.load(open('src/lfx/src/lfx/_assets/nightly_hash_history.json'))"; then
             echo "ERROR: nightly_hash_history.json is not valid JSON!"
             exit 1
           fi
-          
+
           echo "Hash history file validation passed"
           echo "Note: Append-only validation was performed during the build step"
-      
+
       - name: Create Pull Request
         if: steps.check_branch.outputs.branch_exists == 'true' && steps.check_branch.outputs.has_changes == 'true'
         env:
@@ -494,16 +494,16 @@ jobs:
             Auto-merge is enabled - PR will merge automatically when checks pass.
         run: |
           echo "=== Creating or updating PR ==="
-          
+
           # Check if PR already exists
           EXISTING_PR=$(gh pr list --head nightly-hash-history-updates --base main --json number --jq '.[0].number' 2>/dev/null || echo "")
-          
+
           if [ -n "$EXISTING_PR" ]; then
             echo "PR #$EXISTING_PR already exists, updating..."
             gh pr edit "$EXISTING_PR" \
               --title "chore: update nightly hash history" \
               --body "$PR_BODY"
-            
+
             echo "PR updated successfully"
             PR_NUMBER="$EXISTING_PR"
           else
@@ -513,12 +513,12 @@ jobs:
               --body "$PR_BODY" \
               --base main \
               --head nightly-hash-history-updates)
-            
+
             echo "PR created: $PR_URL"
             # Extract PR number from URL (works with both formats)
             PR_NUMBER=$(echo "$PR_URL" | sed 's/.*\/pull\///' | sed 's/[^0-9].*//')
           fi
-          
+
           # Enable auto-merge on the PR
           echo "=== Enabling auto-merge ==="
           if gh pr merge "$PR_NUMBER" --auto --squash; then
