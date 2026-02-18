@@ -623,7 +623,7 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
 
             base_url = variables.get("OLLAMA_BASE_URL")
             if not base_url:
-                msg = "Ollama Base URL is not configured."
+                msg = "Invalid Ollama base URL"
                 logger.error(msg)
                 raise ValueError(msg)
 
@@ -633,7 +633,7 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
 
             data = response.json()
             if not isinstance(data, dict) or "models" not in data:
-                msg = f"URL {base_url} does not appear to be an Ollama server."
+                msg = "Invalid Ollama base URL"
                 logger.error(msg)
                 raise ValueError(msg)
 
@@ -663,9 +663,9 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
             logger.error(f"Invalid API key for {provider}: {e}")
             raise ValueError(msg) from e
 
-        # Rethrow specific Ollama errors
+        # Rethrow specific Ollama errors with a user-facing message
         if provider == "Ollama":
-            raise ValueError(str(e)) from e
+            raise ValueError("Invalid Ollama base URL") from e
 
         # For others, log and return (allow saving despite minor errors)
         return
