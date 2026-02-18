@@ -249,8 +249,10 @@ def _extract_component_requirements(node: dict) -> tuple[set[str], set[str]]:
                 # Skip stdlib
                 if imp in STDLIB_MODULES:
                     continue
-                # Skip lfx-internal imports
-                if imp == "lfx":
+                # Skip lfx / langflow internal imports – lfx provides these
+                # interfaces at runtime so they should never be listed as
+                # separate requirements.
+                if imp in {"lfx", "langflow", "langflow_base"}:
                     continue
 
                 # Always check extra runtime deps (e.g. bs4 → lxml, tabulate)
