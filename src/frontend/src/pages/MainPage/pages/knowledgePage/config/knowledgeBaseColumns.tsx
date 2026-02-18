@@ -67,7 +67,8 @@ export const createKnowledgeBaseColumns = (
         const providerIconMap: Record<string, string> = {
           OpenAI: "OpenAI",
           Anthropic: "Anthropic",
-          Google: "Google",
+          "Google Generative AI": "GoogleGenerativeAI",
+          "IBM WatsonX": "WatsonxAI",
           Ollama: "Ollama",
           NVIDIA: "NVIDIA",
         };
