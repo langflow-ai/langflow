@@ -23,21 +23,22 @@ from lfx.log.logger import logger
 from lfx.services.deps import get_variable_service, session_scope
 from lfx.utils.async_helpers import run_until_complete
 
-# Mapping from class name to (module_path, attribute_name).
+# Mapping from class name to (module_path, attribute_name, install_hint | None).
 # Only the provider package that is actually needed gets imported at runtime.
-_MODEL_CLASS_IMPORTS: dict[str, tuple[str, str]] = {
-    "ChatOpenAI": ("langchain_openai", "ChatOpenAI"),
-    "ChatAnthropic": ("langchain_anthropic", "ChatAnthropic"),
-    "ChatGoogleGenerativeAIFixed": ("lfx.base.models.google_generative_ai_model", "ChatGoogleGenerativeAIFixed"),
-    "ChatOllama": ("langchain_ollama", "ChatOllama"),
-    "ChatWatsonx": ("langchain_ibm", "ChatWatsonx"),
+# install_hint overrides the auto-derived pip name for internal module paths.
+_MODEL_CLASS_IMPORTS: dict[str, tuple[str, str, str | None]] = {
+    "ChatOpenAI": ("langchain_openai", "ChatOpenAI", None),
+    "ChatAnthropic": ("langchain_anthropic", "ChatAnthropic", None),
+    "ChatGoogleGenerativeAIFixed": ("lfx.base.models.google_generative_ai_model", "ChatGoogleGenerativeAIFixed", "langchain-google-genai"),
+    "ChatOllama": ("langchain_ollama", "ChatOllama", None),
+    "ChatWatsonx": ("langchain_ibm", "ChatWatsonx", None),
 }
 
-_EMBEDDING_CLASS_IMPORTS: dict[str, tuple[str, str]] = {
-    "OpenAIEmbeddings": ("langchain_openai", "OpenAIEmbeddings"),
-    "GoogleGenerativeAIEmbeddings": ("langchain_google_genai", "GoogleGenerativeAIEmbeddings"),
-    "OllamaEmbeddings": ("langchain_ollama", "OllamaEmbeddings"),
-    "WatsonxEmbeddings": ("langchain_ibm", "WatsonxEmbeddings"),
+_EMBEDDING_CLASS_IMPORTS: dict[str, tuple[str, str, str | None]] = {
+    "OpenAIEmbeddings": ("langchain_openai", "OpenAIEmbeddings", None),
+    "GoogleGenerativeAIEmbeddings": ("langchain_google_genai", "GoogleGenerativeAIEmbeddings", None),
+    "OllamaEmbeddings": ("langchain_ollama", "OllamaEmbeddings", None),
+    "WatsonxEmbeddings": ("langchain_ibm", "WatsonxEmbeddings", None),
 }
 
 _model_class_cache: dict[str, type] = {}
@@ -57,11 +58,11 @@ def get_model_class(class_name: str) -> type:
         msg = f"Unknown model class: {class_name}"
         raise ValueError(msg)
 
-    module_path, attr_name = import_info
+    module_path, attr_name, install_hint = import_info
     try:
         module = importlib.import_module(module_path)
     except ImportError as exc:
-        pkg_hint = module_path.split(".")[0].replace("_", "-")
+        pkg_hint = install_hint or module_path.split(".")[0].replace("_", "-")
         msg = (
             f"Could not import '{module_path}' for model class '{class_name}'. "
             f"Install the missing package (e.g. uv pip install {pkg_hint})."
@@ -85,11 +86,11 @@ def get_embedding_class(class_name: str) -> type:
         msg = f"Unknown embedding class: {class_name}"
         raise ValueError(msg)
 
-    module_path, attr_name = import_info
+    module_path, attr_name, install_hint = import_info
     try:
         module = importlib.import_module(module_path)
     except ImportError as exc:
-        pkg_hint = module_path.split(".")[0].replace("_", "-")
+        pkg_hint = install_hint or module_path.split(".")[0].replace("_", "-")
         msg = (
             f"Could not import '{module_path}' for embedding class '{class_name}'. "
             f"Install the missing package (e.g. uv pip install {pkg_hint})."

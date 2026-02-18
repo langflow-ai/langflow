@@ -180,14 +180,14 @@ def requirements_command_wrapper(
     from lfx.utils.flow_requirements import generate_requirements_txt
 
     path = Path(flow_path)
-    if not path.exists():
+    if not path.is_file():
         typer.echo(f"Error: File not found: {path}", err=True)
         raise typer.Exit(1)
 
     try:
         flow = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as e:
-        typer.echo(f"Error: Invalid JSON: {e}", err=True)
+    except (json.JSONDecodeError, OSError) as e:
+        typer.echo(f"Error: Could not read flow JSON: {e}", err=True)
         raise typer.Exit(1) from e
 
     content = generate_requirements_txt(
@@ -198,7 +198,11 @@ def requirements_command_wrapper(
     )
 
     if output:
-        Path(output).write_text(content, encoding="utf-8")
+        try:
+            Path(output).write_text(content, encoding="utf-8")
+        except OSError as e:
+            typer.echo(f"Error: Could not write to {output}: {e}", err=True)
+            raise typer.Exit(1) from e
         typer.echo(f"Requirements written to {output}")
     else:
         typer.echo(content, nl=False)
