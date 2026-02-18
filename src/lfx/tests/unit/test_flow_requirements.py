@@ -769,6 +769,17 @@ class TestResolveProviderPackages:
         packages = _resolve_provider_packages("NonexistentProvider")
         assert packages == set()
 
+    def test_function_level_imports_captured(self):
+        """Verify imports inside function bodies (e.g. build_model) are captured.
+
+        This is critical because many provider components use lazy imports
+        inside methods like ``build_model()`` rather than at module level.
+        """
+        packages = _resolve_provider_packages("Amazon Bedrock")
+        # boto3 and langchain_aws are imported inside build_model(), not at module level
+        assert "boto3" in packages
+        assert "langchain-aws" in packages
+
     def test_all_registered_providers_resolve_to_packages(self):
         """Every provider in MODEL_PROVIDERS_DICT should resolve to at least one package."""
         try:
@@ -778,3 +789,44 @@ class TestResolveProviderPackages:
         for provider_name in MODEL_PROVIDERS_DICT:
             packages = _resolve_provider_packages(provider_name)
             assert len(packages) > 0, f"Provider {provider_name} resolved to no packages"
+
+
+# ===================================================================
+# Error handling tests
+# ===================================================================
+
+
+class TestErrorHandling:
+    """Test error handling for edge cases."""
+
+    def test_generate_requirements_from_file_not_found(self, tmp_path):
+        """FileNotFoundError should propagate for missing files."""
+        with pytest.raises(FileNotFoundError):
+            generate_requirements_from_file(tmp_path / "nonexistent.json")
+
+    def test_generate_requirements_from_file_invalid_json(self, tmp_path):
+        """JSONDecodeError should propagate for invalid JSON."""
+        bad_file = tmp_path / "bad.json"
+        bad_file.write_text("not json at all", encoding="utf-8")
+        with pytest.raises(json.JSONDecodeError):
+            generate_requirements_from_file(bad_file)
+
+    def test_generate_requirements_from_file_wrong_structure(self, tmp_path):
+        """A valid JSON file that isn't a flow should still produce a result (just lfx)."""
+        wrong_file = tmp_path / "wrong.json"
+        wrong_file.write_text('{"not": "a flow"}', encoding="utf-8")
+        result = generate_requirements_from_file(wrong_file, pin_versions=False)
+        assert result == ["lfx"]
+
+    def test_flow_with_empty_code_value(self):
+        """A node with an empty code string should not crash."""
+        node = _make_node("Empty", "")
+        flow = _make_flow(node)
+        result = generate_requirements_from_flow(flow, pin_versions=False)
+        assert result == ["lfx"]
+
+    def test_flow_with_malformed_node(self):
+        """Nodes with missing expected fields should be handled gracefully."""
+        flow = {"data": {"nodes": [{"type": "genericNode", "data": {}}]}}
+        result = generate_requirements_from_flow(flow, pin_versions=False)
+        assert result == ["lfx"]

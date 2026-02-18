@@ -70,7 +70,7 @@ def _get_import_to_dist_map() -> dict[str, list[str]]:
     For example: ``{'PIL': ['pillow'], 'yaml': ['PyYAML'], ...}``.
     """
     try:
-        return md.packages_distributions()
+        return dict(md.packages_distributions())
     except (OSError, AttributeError, ValueError):
         return {}
 
