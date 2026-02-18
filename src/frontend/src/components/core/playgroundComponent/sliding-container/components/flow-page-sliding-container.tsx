@@ -8,6 +8,7 @@ import { useGetFlowId } from "@/components/core/playgroundComponent/hooks/use-ge
 import { AnimatedConditional } from "@/components/ui/animated-close";
 import { useSimpleSidebar } from "@/components/ui/simple-sidebar";
 import useFlowStore from "@/stores/flowStore";
+import { useMessagesStore } from "@/stores/messagesStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import type { FilePreviewType } from "@/types/components";
 import { useEditSessionInfo } from "../../chat-view/chat-header/hooks/use-edit-session-info";
@@ -33,6 +34,7 @@ export function FlowPageSlidingContainerContent({
   const nodes = useFlowStore((state) => state.nodes);
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const setChatValueStore = useUtilityStore((state) => state.setChatValueStore);
+  const deleteSessionFromStore = useMessagesStore((state) => state.deleteSession);
 
   const [currentSessionId, setCurrentSessionId] = useState<string | undefined>(
     currentFlowId,
@@ -129,6 +131,8 @@ export function FlowPageSlidingContainerContent({
   const handleNewChat = () => {
     // Pass all sessions (including currentSessionId) to ensure unique IDs
     const newId = addNewSession(orderedSessions);
+    // Clear any cached messages for the new session to prevent stale data
+    clearSessionMessages(newId, currentFlowId);
     setCurrentSessionId(newId);
   };
 
@@ -136,7 +140,9 @@ export function FlowPageSlidingContainerContent({
     handleDelete(sessionId);
     // Also remove from local sessions if it's a local session
     removeLocalSession(sessionId);
+    // Clear messages from both React Query cache and Zustand store
     clearSessionMessages(sessionId, currentFlowId);
+    deleteSessionFromStore(sessionId);
     if (sessionId === currentSessionId) {
       setCurrentSessionId(currentFlowId);
     }
