@@ -436,12 +436,11 @@ def _validate_and_get_enabled_providers(
 ) -> set[str]:
     """Return set of enabled providers based on credential existence.
 
-    
     This helper function determines which providers have credentials stored and (optionally) validates that their API keys are present and valid.
     It is used by get_enabled_providers and model options functions.
     Providers are considered enabled if all required credential variables are set (from DB or environment variables).
     API key validation is performed when credentials are saved, not on every read, to avoid latency from external API calls.
-    
+
 
     For providers requiring multiple variables (e.g., IBM WatsonX needs API key, project ID, and URL),
     all variables marked as `required: True` must be present (from DB or environment variables)
