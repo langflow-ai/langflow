@@ -32,12 +32,8 @@ class DatabaseVariableService(VariableService, Service):
 
         # Import the provider mapping to set default_fields for known providers
         try:
-            from lfx.base.models.unified_models import (
-                get_model_provider_metadata,
-                get_model_provider_variable_mapping,
-            )
+            from lfx.base.models.unified_models import get_model_provider_metadata
 
-            provider_mapping = get_model_provider_variable_mapping()
             # Build var_to_provider from all variables in metadata (not just primary)
             var_to_provider = {}
             var_to_info = {}  # Maps variable_key to its full info (including is_secret)

@@ -480,7 +480,7 @@ async def test_provider_variable_mapping_multi_variable_provider(client: AsyncCl
 
 
 @pytest.mark.usefixtures("active_user")
-async def test_backward_compatible_variable_mapping(client: AsyncClient, logged_in_headers):
+async def test_backward_compatible_variable_mapping(client: AsyncClient, logged_in_headers):  # noqa: ARG001
     """Test that get_model_provider_variable_mapping() still returns primary variable (backward compat)."""
     from lfx.base.models.unified_models import get_model_provider_variable_mapping
 
