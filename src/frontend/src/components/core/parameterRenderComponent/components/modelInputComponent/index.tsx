@@ -125,22 +125,22 @@ export default function ModelInputComponent({
   useEffect(() => {
     // Only proceed if we have options and haven't selected a value
     if (flatOptions.length > 0 && (!value || value.length === 0)) {
-       // Check ref to avoid infinite loops
-       if (!hasProcessedEmptyRef.current) {
-          const firstOption = flatOptions[0];
-          // Construct the new value object
-          const newValue = [
-            {
-              ...(firstOption.id && { id: firstOption.id }),
-              name: firstOption.name,
-              icon: firstOption.icon || "Bot",
-              provider: firstOption.provider || "Unknown",
-              metadata: firstOption.metadata ?? {},
-            },
-          ];
-          handleOnNewValue({ value: newValue });
-          hasProcessedEmptyRef.current = true;
-       }
+      // Check ref to avoid infinite loops
+      if (!hasProcessedEmptyRef.current) {
+        const firstOption = flatOptions[0];
+        // Construct the new value object
+        const newValue = [
+          {
+            ...(firstOption.id && { id: firstOption.id }),
+            name: firstOption.name,
+            icon: firstOption.icon || "Bot",
+            provider: firstOption.provider || "Unknown",
+            metadata: firstOption.metadata ?? {},
+          },
+        ];
+        handleOnNewValue({ value: newValue });
+        hasProcessedEmptyRef.current = true;
+      }
     }
   }, [flatOptions, value, handleOnNewValue]);
 
