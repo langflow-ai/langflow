@@ -34,7 +34,9 @@ export function FlowPageSlidingContainerContent({
   const nodes = useFlowStore((state) => state.nodes);
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const setChatValueStore = useUtilityStore((state) => state.setChatValueStore);
-  const deleteSessionFromStore = useMessagesStore((state) => state.deleteSession);
+  const deleteSessionFromStore = useMessagesStore(
+    (state) => state.deleteSession,
+  );
 
   const [currentSessionId, setCurrentSessionId] = useState<string | undefined>(
     currentFlowId,

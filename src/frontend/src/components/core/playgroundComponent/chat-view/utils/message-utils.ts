@@ -255,12 +255,12 @@ export const clearSessionMessages = (sessionId: string, flowId: string) => {
     const filteredMessages = mainCache.rows.data.filter((msg) => {
       // Keep messages that don't belong to this flow
       if (msg.flow_id !== flowId) return true;
-      
+
       // For default session, remove messages with null session_id or matching session_id
       if (isDefaultSession) {
         return msg.session_id !== null && msg.session_id !== sessionId;
       }
-      
+
       // For non-default sessions, remove messages with matching session_id
       return msg.session_id !== sessionId;
     });
