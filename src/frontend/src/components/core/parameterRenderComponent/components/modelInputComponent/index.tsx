@@ -10,7 +10,11 @@ import type { APIClassType } from "@/types/api";
 import ForwardedIconComponent from "../../../../common/genericIconComponent";
 import { Button } from "../../../../ui/button";
 import { Command } from "../../../../ui/command";
-import { Popover, PopoverContentWithoutPortal, PopoverContent } from "../../../../ui/popover";
+import {
+  Popover,
+  PopoverContentWithoutPortal,
+  PopoverContent,
+} from "../../../../ui/popover";
 import type { BaseInputProps } from "../../types";
 import ModelList from "./components/ModelList";
 import ModelTrigger from "./components/ModelTrigger";
@@ -148,7 +152,6 @@ export default function ModelInputComponent({
   const handleManageProvidersDialogClose = useCallback(() => {
     setOpenManageProvidersDialog(false);
   }, []);
-
 
   const renderLoadingButton = () => (
     <Button

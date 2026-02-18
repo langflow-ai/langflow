@@ -461,7 +461,8 @@ export const useProviderConfiguration = ({
   const handleDisconnect = useCallback(async () => {
     if (!syncedSelectedProvider) return;
 
-    const variableName = PROVIDER_VARIABLE_MAPPING[syncedSelectedProvider.provider];
+    const variableName =
+      PROVIDER_VARIABLE_MAPPING[syncedSelectedProvider.provider];
     if (!variableName) return;
 
     const existingVariable = globalVariables.find(
