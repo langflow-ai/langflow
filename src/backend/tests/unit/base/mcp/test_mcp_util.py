@@ -507,7 +507,7 @@ class TestUpdateToolsStdioHeaders:
 
     @pytest.mark.asyncio
     async def test_stdio_headers_appended_when_last_token_is_flag_value(self):
-        """When the last token is a flag's value (e.g. --port 8080), headers should be appended, not inserted before it."""
+        """When the last token is a flag's value, headers should be appended, not inserted before it."""
         mock_stdio = AsyncMock(spec=MCPStdioClient)
         mock_stdio.connect_to_server.return_value = []
         mock_stdio._connected = True
