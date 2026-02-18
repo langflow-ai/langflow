@@ -665,7 +665,9 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
 
         # Rethrow specific Ollama errors with a user-facing message
         if provider == "Ollama":
-            raise ValueError("Invalid Ollama base URL") from e
+            msg = "Invalid Ollama base URL"
+            logger.error(msg)
+            raise ValueError(msg) from e
 
         # For others, log and return (allow saving despite minor errors)
         return
