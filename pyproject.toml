@@ -259,6 +259,11 @@ external = ["RUF027"]
 "src/lfx/src/lfx/base/curl/parse.py" = [
     "S105",  # False positive: 'token' variable name, not a password
 ]
+"src/lfx/src/lfx/services/auth/service.py" = [
+    "ARG002",  # No-op impl: unused args required by interface
+    "EM101",  # NotImplementedError messages as literals
+    "TC003",  # Type-only imports used in signatures
+]
 "src/lfx/src/lfx/base/mcp/util.py" = [
     "SLF001",  # MCP library private member access
 ]

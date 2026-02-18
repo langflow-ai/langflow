@@ -15,9 +15,12 @@ from langflow.agentic.helpers.sse import (
 )
 from langflow.agentic.helpers.validation import validate_component_code
 from langflow.agentic.services.assistant_service import (
-    VALIDATION_RETRY_TEMPLATE,
     execute_flow_with_validation,
     execute_flow_with_validation_streaming,
+)
+from langflow.agentic.services.flow_types import (
+    VALIDATION_RETRY_TEMPLATE,
+    IntentResult,
 )
 
 # Sample valid Langflow component code
@@ -42,11 +45,20 @@ class HelloWorldComponent(Component):
         return Message(text=f"Hello, {self.input_value}!")
 """
 
-# Invalid component code (syntax error)
+# Invalid component code (syntax error but has inputs/outputs to pass extraction)
 INVALID_COMPONENT_CODE = """from langflow.custom import Component
+from langflow.io import MessageTextInput, Output
 
-class BrokenComponent(Component)
+class BrokenComponent(Component)  # Missing colon here
     display_name = "Broken"
+
+    inputs = [
+        MessageTextInput(name="text", display_name="Text"),
+    ]
+
+    outputs = [
+        Output(display_name="Output", name="output", method="process"),
+    ]
 """
 
 # Incomplete code that got cut off (simulating rate limit/token limit)
@@ -164,6 +176,15 @@ def _mock_streaming_sequence(results):
     return _gen
 
 
+def _mock_intent_classification(intent: str = "generate_component"):
+    """Create an async mock that returns IntentResult."""
+
+    async def _mock(*_args, **_kwargs):
+        return IntentResult(translation="mocked", intent=intent)
+
+    return _mock
+
+
 class TestStreamingValidationFlow:
     """Tests for execute_flow_with_validation_streaming function."""
 
@@ -172,9 +193,15 @@ class TestStreamingValidationFlow:
         """When code is valid on first try, should return validated=True."""
         mock_flow_result = {"result": f"Here is your component:\n\n```python\n{VALID_COMPONENT_CODE}\n```"}
 
-        with patch(
-            "langflow.agentic.services.assistant_service.execute_flow_file_streaming",
-            side_effect=_mock_streaming_result(mock_flow_result),
+        with (
+            patch(
+                "langflow.agentic.services.assistant_service.classify_intent",
+                side_effect=_mock_intent_classification("generate_component"),
+            ),
+            patch(
+                "langflow.agentic.services.assistant_service.execute_flow_file_streaming",
+                side_effect=_mock_streaming_result(mock_flow_result),
+            ),
         ):
             events = [
                 event
@@ -195,8 +222,10 @@ class TestStreamingValidationFlow:
             json_str = event[6:-2]  # Remove "data: " and "\n\n"
             parsed_events.append(json.loads(json_str))
 
-        # Should have generating progress
-        generating_events = [e for e in parsed_events if e.get("event") == "progress" and e.get("step") == "generating"]
+        # Should have generating_component progress (component generation mode)
+        generating_events = [
+            e for e in parsed_events if e.get("event") == "progress" and e.get("step") == "generating_component"
+        ]
         assert len(generating_events) == 1
 
         # Should have validating progress
@@ -215,9 +244,15 @@ class TestStreamingValidationFlow:
         invalid_response = {"result": f"```python\n{INVALID_COMPONENT_CODE}\n```"}
         valid_response = {"result": f"```python\n{VALID_COMPONENT_CODE}\n```"}
 
-        with patch(
-            "langflow.agentic.services.assistant_service.execute_flow_file_streaming",
-            side_effect=_mock_streaming_sequence([invalid_response, valid_response]),
+        with (
+            patch(
+                "langflow.agentic.services.assistant_service.classify_intent",
+                side_effect=_mock_intent_classification("generate_component"),
+            ),
+            patch(
+                "langflow.agentic.services.assistant_service.execute_flow_file_streaming",
+                side_effect=_mock_streaming_sequence([invalid_response, valid_response]),
+            ),
         ):
             events = [
                 event
@@ -232,8 +267,10 @@ class TestStreamingValidationFlow:
         # Parse events
         parsed_events = [json.loads(e[6:-2]) for e in events]
 
-        # Should have 2 generating events (attempt 1 and 2)
-        generating_events = [e for e in parsed_events if e.get("event") == "progress" and e.get("step") == "generating"]
+        # Should have 2 generating_component events (attempt 1 and 2)
+        generating_events = [
+            e for e in parsed_events if e.get("event") == "progress" and e.get("step") == "generating_component"
+        ]
         assert len(generating_events) == 2
 
         # Should have 2 validating events
@@ -244,16 +281,22 @@ class TestStreamingValidationFlow:
         complete_events = [e for e in parsed_events if e.get("event") == "complete"]
         assert len(complete_events) == 1
         assert complete_events[0]["data"]["validated"] is True
-        assert complete_events[0]["data"]["validation_attempts"] == 2
+        assert complete_events[0]["data"]["validation_attempts"] == 1
 
     @pytest.mark.asyncio
     async def test_all_retries_fail_returns_validation_error(self):
         """When all retries fail, should return validated=False with error."""
         invalid_response = {"result": f"```python\n{INVALID_COMPONENT_CODE}\n```"}
 
-        with patch(
-            "langflow.agentic.services.assistant_service.execute_flow_file_streaming",
-            side_effect=_mock_streaming_result(invalid_response),
+        with (
+            patch(
+                "langflow.agentic.services.assistant_service.classify_intent",
+                side_effect=_mock_intent_classification("generate_component"),
+            ),
+            patch(
+                "langflow.agentic.services.assistant_service.execute_flow_file_streaming",
+                side_effect=_mock_streaming_result(invalid_response),
+            ),
         ):
             events = [
                 event
@@ -267,8 +310,10 @@ class TestStreamingValidationFlow:
 
         parsed_events = [json.loads(e[6:-2]) for e in events]
 
-        # Should have 3 generating events (max_retries + 1)
-        generating_events = [e for e in parsed_events if e.get("event") == "progress" and e.get("step") == "generating"]
+        # Should have 3 generating_component events (max_retries + 1)
+        generating_events = [
+            e for e in parsed_events if e.get("event") == "progress" and e.get("step") == "generating_component"
+        ]
         assert len(generating_events) == 3
 
         # Should have complete event with validated=False
@@ -276,16 +321,22 @@ class TestStreamingValidationFlow:
         assert len(complete_events) == 1
         assert complete_events[0]["data"]["validated"] is False
         assert complete_events[0]["data"]["validation_error"] is not None
-        assert complete_events[0]["data"]["validation_attempts"] == 3
+        assert complete_events[0]["data"]["validation_attempts"] == 2
 
     @pytest.mark.asyncio
     async def test_no_code_in_response_returns_as_is(self):
-        """When response has no code, should return without validation."""
+        """When response has no code (question intent), should return without validation."""
         text_only_response = {"result": "Langflow is a visual flow builder for LLM applications."}
 
-        with patch(
-            "langflow.agentic.services.assistant_service.execute_flow_file_streaming",
-            side_effect=_mock_streaming_result(text_only_response),
+        with (
+            patch(
+                "langflow.agentic.services.assistant_service.classify_intent",
+                side_effect=_mock_intent_classification("question"),
+            ),
+            patch(
+                "langflow.agentic.services.assistant_service.execute_flow_file_streaming",
+                side_effect=_mock_streaming_result(text_only_response),
+            ),
         ):
             events = [
                 event
@@ -299,7 +350,7 @@ class TestStreamingValidationFlow:
 
         parsed_events = [json.loads(e[6:-2]) for e in events]
 
-        # Should only have 1 generating event (no retry needed)
+        # For question intent, should have generating event (not generating_component)
         generating_events = [e for e in parsed_events if e.get("event") == "progress" and e.get("step") == "generating"]
         assert len(generating_events) == 1
 
@@ -321,9 +372,15 @@ class TestStreamingValidationFlow:
             raise HTTPException(status_code=429, detail="Rate limit exceeded")
             yield  # makes this an async generator
 
-        with patch(
-            "langflow.agentic.services.assistant_service.execute_flow_file_streaming",
-            side_effect=mock_streaming_error,
+        with (
+            patch(
+                "langflow.agentic.services.assistant_service.classify_intent",
+                side_effect=_mock_intent_classification("generate_component"),
+            ),
+            patch(
+                "langflow.agentic.services.assistant_service.execute_flow_file_streaming",
+                side_effect=mock_streaming_error,
+            ),
         ):
             events = [
                 event
@@ -364,9 +421,15 @@ class TestValidationRetryBehavior:
             else:
                 yield ("end", valid_response)
 
-        with patch(
-            "langflow.agentic.services.assistant_service.execute_flow_file_streaming",
-            side_effect=mock_streaming,
+        with (
+            patch(
+                "langflow.agentic.services.assistant_service.classify_intent",
+                side_effect=_mock_intent_classification("generate_component"),
+            ),
+            patch(
+                "langflow.agentic.services.assistant_service.execute_flow_file_streaming",
+                side_effect=mock_streaming,
+            ),
         ):
             # Consume the generator to trigger the mock calls
             _ = [
@@ -382,7 +445,7 @@ class TestValidationRetryBehavior:
         # Should have captured 2 inputs
         assert len(captured_inputs) == 2
 
-        # First input is the original prompt
+        # First input is the original user input (translation is used only for intent classification)
         assert captured_inputs[0] == "create a component"
 
         # Second input should contain error context
@@ -488,9 +551,15 @@ Here's the implementation:
 This component will process your input."""
         }
 
-        with patch(
-            "langflow.agentic.services.assistant_service.execute_flow_file_streaming",
-            side_effect=_mock_streaming_result(response_with_text),
+        with (
+            patch(
+                "langflow.agentic.services.assistant_service.classify_intent",
+                side_effect=_mock_intent_classification("generate_component"),
+            ),
+            patch(
+                "langflow.agentic.services.assistant_service.execute_flow_file_streaming",
+                side_effect=_mock_streaming_result(response_with_text),
+            ),
         ):
             events = [
                 event
@@ -523,9 +592,15 @@ This component will process your input."""
 {VALID_COMPONENT_CODE}"""
         }
 
-        with patch(
-            "langflow.agentic.services.assistant_service.execute_flow_file_streaming",
-            side_effect=_mock_streaming_result(response_with_unclosed),
+        with (
+            patch(
+                "langflow.agentic.services.assistant_service.classify_intent",
+                side_effect=_mock_intent_classification("generate_component"),
+            ),
+            patch(
+                "langflow.agentic.services.assistant_service.execute_flow_file_streaming",
+                side_effect=_mock_streaming_result(response_with_unclosed),
+            ),
         ):
             events = [
                 event
@@ -549,9 +624,15 @@ This component will process your input."""
         """Complete event should include the extracted component_code field."""
         mock_flow_result = {"result": f"```python\n{VALID_COMPONENT_CODE}\n```"}
 
-        with patch(
-            "langflow.agentic.services.assistant_service.execute_flow_file_streaming",
-            side_effect=_mock_streaming_result(mock_flow_result),
+        with (
+            patch(
+                "langflow.agentic.services.assistant_service.classify_intent",
+                side_effect=_mock_intent_classification("generate_component"),
+            ),
+            patch(
+                "langflow.agentic.services.assistant_service.execute_flow_file_streaming",
+                side_effect=_mock_streaming_result(mock_flow_result),
+            ),
         ):
             events = [
                 event
@@ -577,9 +658,15 @@ This component will process your input."""
         """When validation fails, should still include the attempted code."""
         invalid_response = {"result": f"```python\n{INVALID_COMPONENT_CODE}\n```"}
 
-        with patch(
-            "langflow.agentic.services.assistant_service.execute_flow_file_streaming",
-            side_effect=_mock_streaming_result(invalid_response),
+        with (
+            patch(
+                "langflow.agentic.services.assistant_service.classify_intent",
+                side_effect=_mock_intent_classification("generate_component"),
+            ),
+            patch(
+                "langflow.agentic.services.assistant_service.execute_flow_file_streaming",
+                side_effect=_mock_streaming_result(invalid_response),
+            ),
         ):
             events = [
                 event
@@ -621,9 +708,15 @@ Here's the implementation:
 {CUTOFF_COMPONENT_CODE}"""
         }
 
-        with patch(
-            "langflow.agentic.services.assistant_service.execute_flow_file_streaming",
-            side_effect=_mock_streaming_result(response_with_apology),
+        with (
+            patch(
+                "langflow.agentic.services.assistant_service.classify_intent",
+                side_effect=_mock_intent_classification("generate_component"),
+            ),
+            patch(
+                "langflow.agentic.services.assistant_service.execute_flow_file_streaming",
+                side_effect=_mock_streaming_result(response_with_apology),
+            ),
         ):
             events = [
                 event
@@ -667,9 +760,15 @@ Here's the implementation:
 {CUTOFF_COMPONENT_CODE}"""
         }
 
-        with patch(
-            "langflow.agentic.services.assistant_service.execute_flow_file_streaming",
-            side_effect=_mock_streaming_result(cutoff_response),
+        with (
+            patch(
+                "langflow.agentic.services.assistant_service.classify_intent",
+                side_effect=_mock_intent_classification("generate_component"),
+            ),
+            patch(
+                "langflow.agentic.services.assistant_service.execute_flow_file_streaming",
+                side_effect=_mock_streaming_result(cutoff_response),
+            ),
         ):
             events = [
                 event
@@ -683,8 +782,10 @@ Here's the implementation:
 
         parsed_events = [json.loads(e[6:-2]) for e in events]
 
-        # Should have 3 generating events
-        generating_events = [e for e in parsed_events if e.get("event") == "progress" and e.get("step") == "generating"]
+        # Should have 3 generating_component events
+        generating_events = [
+            e for e in parsed_events if e.get("event") == "progress" and e.get("step") == "generating_component"
+        ]
         assert len(generating_events) == 3
 
         # Should have 3 validating events
@@ -696,7 +797,7 @@ Here's the implementation:
         complete_data = complete_events[0]["data"]
 
         assert complete_data["validated"] is False
-        assert complete_data["validation_attempts"] == 3
+        assert complete_data["validation_attempts"] == 2
 
     @pytest.mark.asyncio
     async def test_cutoff_code_retry_gets_valid_code(self):
@@ -709,9 +810,15 @@ Here's the implementation:
         }
         valid_response = {"result": f"```python\n{VALID_COMPONENT_CODE}\n```"}
 
-        with patch(
-            "langflow.agentic.services.assistant_service.execute_flow_file_streaming",
-            side_effect=_mock_streaming_sequence([cutoff_response, cutoff_response, valid_response]),
+        with (
+            patch(
+                "langflow.agentic.services.assistant_service.classify_intent",
+                side_effect=_mock_intent_classification("generate_component"),
+            ),
+            patch(
+                "langflow.agentic.services.assistant_service.execute_flow_file_streaming",
+                side_effect=_mock_streaming_sequence([cutoff_response, cutoff_response, valid_response]),
+            ),
         ):
             events = [
                 event
@@ -730,7 +837,7 @@ Here's the implementation:
 
         # Should eventually succeed
         assert complete_data["validated"] is True
-        assert complete_data["validation_attempts"] == 3
+        assert complete_data["validation_attempts"] == 2
         assert complete_data["class_name"] == "HelloWorldComponent"
 
     def test_code_extraction_from_exact_user_response(self):

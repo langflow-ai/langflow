@@ -10,11 +10,14 @@ import type { APIClassType } from "@/types/api";
 import ForwardedIconComponent from "../../../../common/genericIconComponent";
 import { Button } from "../../../../ui/button";
 import { Command } from "../../../../ui/command";
-import { Popover, PopoverContentWithoutPortal } from "../../../../ui/popover";
+import {
+  Popover,
+  PopoverContentWithoutPortal,
+  PopoverContent,
+} from "../../../../ui/popover";
 import type { BaseInputProps } from "../../types";
 import ModelList from "./components/ModelList";
 import ModelTrigger from "./components/ModelTrigger";
-import { useModelConnectionLogic } from "./hooks/useModelConnectionLogic";
 import { ModelInputComponentType, ModelOption } from "./types";
 
 export default function ModelInputComponent({
@@ -28,7 +31,10 @@ export default function ModelInputComponent({
   nodeClass,
   handleNodeClass,
   externalOptions,
-}: BaseInputProps<any> & ModelInputComponentType): JSX.Element {
+  showParameter = true,
+  editNode,
+  inspectionPanel,
+}: BaseInputProps<any> & ModelInputComponentType): JSX.Element | null {
   const { setErrorData } = useAlertStore();
   const refButton = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
@@ -50,8 +56,12 @@ export default function ModelInputComponent({
       ? "llm"
       : "embeddings";
 
-  const { data: providersData = [] } = useGetModelProviders({});
-  const { data: enabledModelsData } = useGetEnabledModels();
+  const { data: providersData = [], isLoading: isLoadingProviders } =
+    useGetModelProviders({});
+  const { data: enabledModelsData, isLoading: isLoadingEnabledModels } =
+    useGetEnabledModels();
+
+  const isLoading = isLoadingProviders || isLoadingEnabledModels;
 
   // Determines if we should show the model selector or the "Setup Provider" button
   const hasEnabledProviders = useMemo(() => {
@@ -143,17 +153,6 @@ export default function ModelInputComponent({
     setOpenManageProvidersDialog(false);
   }, []);
 
-  const { handleExternalOptions } = useModelConnectionLogic({
-    nodeId: nodeId || "",
-    nodeClass: nodeClass,
-    handleNodeClass: handleNodeClass!,
-    postTemplateValue,
-    setErrorData,
-    handleOnNewValue,
-    closePopover: () => setOpen(false),
-    clearSelection: () => {}, // No local state to clear anymore
-  });
-
   const renderLoadingButton = () => (
     <Button
       className="dropdown-component-false-outline w-full justify-between py-2 font-normal"
@@ -195,35 +194,36 @@ export default function ModelInputComponent({
         () => setOpenManageProvidersDialog(true),
         "manage-model-providers",
       )}
-
-      {externalOptions?.fields?.data?.node &&
-        renderFooterButton(
-          externalOptions.fields.data.node.display_name,
-          externalOptions.fields.data.node.icon || "Box",
-          () =>
-            handleExternalOptions(externalOptions.fields.data.node.name || ""),
-          "external-option-button",
-        )}
     </div>
   );
 
-  const renderPopoverContent = () => (
-    <PopoverContentWithoutPortal
-      side="bottom"
-      avoidCollisions={true}
-      className="noflow nowheel nopan nodelete nodrag p-0"
-      style={{ minWidth: refButton?.current?.clientWidth ?? "200px" }}
-    >
-      <Command className="flex flex-col">
-        <ModelList
-          groupedOptions={groupedOptions}
-          selectedModel={selectedModel}
-          onSelect={handleModelSelect}
-        />
-        {renderManageProvidersButton()}
-      </Command>
-    </PopoverContentWithoutPortal>
-  );
+  const renderPopoverContent = () => {
+    const PopoverContentInput =
+      editNode || inspectionPanel
+        ? PopoverContent
+        : PopoverContentWithoutPortal;
+    return (
+      <PopoverContentInput
+        side="bottom"
+        avoidCollisions={true}
+        className="noflow nowheel nopan nodelete nodrag p-0"
+        style={{ minWidth: refButton?.current?.clientWidth ?? "200px" }}
+      >
+        <Command className="flex flex-col">
+          <ModelList
+            groupedOptions={groupedOptions}
+            selectedModel={selectedModel}
+            onSelect={handleModelSelect}
+          />
+          {renderManageProvidersButton()}
+        </Command>
+      </PopoverContentInput>
+    );
+  };
+
+  if (!showParameter) {
+    return null;
+  }
 
   // Loading state
   if (!options || options.length === 0) {

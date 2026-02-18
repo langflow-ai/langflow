@@ -9,6 +9,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 import contextlib
+import json
 
 from lfx.base.models.anthropic_constants import ANTHROPIC_MODELS_DETAILED
 from lfx.base.models.google_generative_ai_constants import (
@@ -430,11 +431,17 @@ def get_all_variables_for_provider(user_id: UUID | str | None, provider: str) ->
 def _validate_and_get_enabled_providers(
     all_variables: dict[str, Any],
     provider_variable_map: dict[str, str],
+    *,
+    skip_validation: bool = True,
 ) -> set[str]:
-    """Validate API keys and return set of enabled providers.
+    """Return set of enabled providers based on credential existence.
 
-    This helper function validates API keys for variables and returns
-    only providers with valid keys. Used by get_enabled_providers and model options functions.
+    
+    This helper function determines which providers have credentials stored and (optionally) validates that their API keys are present and valid.
+    It is used by get_enabled_providers and model options functions.
+    Providers are considered enabled if all required credential variables are set (from DB or environment variables).
+    API key validation is performed when credentials are saved, not on every read, to avoid latency from external API calls.
+    
 
     For providers requiring multiple variables (e.g., IBM WatsonX needs API key, project ID, and URL),
     all variables marked as `required: True` must be present (from DB or environment variables)
@@ -447,9 +454,12 @@ def _validate_and_get_enabled_providers(
     Args:
         all_variables: Dictionary mapping variable names to Variable/VariableRead objects
         provider_variable_map: Dictionary mapping provider names to primary variable names
+        credential_variables: Dictionary mapping variable names to VariableRead objects
+        skip_validation: If True (default), skip API validation and just check existence.
+                        If False, validate each API key (slower, makes external calls).
 
     Returns:
-        Set of provider names that have valid API keys
+        Set of provider names that have credentials stored
     """
     import os
 
@@ -460,10 +470,8 @@ def _validate_and_get_enabled_providers(
     enabled = set()
 
     for provider in provider_variable_map:
-        # Get all variable keys for this provider
         provider_vars = get_provider_all_variables(provider)
 
-        # Collect values from database or environment variables
         collected_values: dict[str, str] = {}
         all_required_present = True
 
@@ -472,21 +480,17 @@ def _validate_and_get_enabled_providers(
             if not var_key:
                 continue
 
-            is_secret = bool(var_info.get("is_secret"))
             is_required = bool(var_info.get("required", False))
             value = None
 
-            # First try to get from database variables
             if var_key in all_variables:
                 variable = all_variables[var_key]
-                # All database variables are stored encrypted, so we always try to decrypt
                 if variable.value is not None:
                     try:
                         decrypted_value = auth_utils.decrypt_api_key(variable.value, settings_service=settings_service)
                         if decrypted_value and decrypted_value.strip():
                             value = decrypted_value
                     except Exception as e:  # noqa: BLE001
-                        # If decryption fails, try using the raw value (may be plaintext)
                         raw_value = variable.value
                         if raw_value is not None and str(raw_value).strip():
                             value = str(raw_value)
@@ -498,7 +502,6 @@ def _validate_and_get_enabled_providers(
                                 e,
                             )
 
-            # Fall back to environment variable if not found in database
             if value is None:
                 env_value = os.environ.get(var_key)
                 if env_value and env_value.strip():
@@ -512,19 +515,20 @@ def _validate_and_get_enabled_providers(
             if value:
                 collected_values[var_key] = value
             elif is_required:
-                # Required variable is missing
                 all_required_present = False
 
-        # Validate with collected variable values if all required variables are present
-        if all_required_present and collected_values:
-            try:
-                validate_model_provider_key(provider, collected_values)
-                enabled.add(provider)
-            except (ValueError, Exception) as e:  # noqa: BLE001
-                logger.debug("Provider %s validation failed: %s", provider, e)
-        elif not provider_vars:
-            # Provider has no variables defined
+        if not provider_vars:
             enabled.add(provider)
+        elif all_required_present and collected_values:
+            if skip_validation:
+                # Just check existence - validation was done on save
+                enabled.add(provider)
+            else:
+                try:
+                    validate_model_provider_key(provider, collected_values)
+                    enabled.add(provider)
+                except (ValueError, Exception) as e:  # noqa: BLE001
+                    logger.debug("Provider %s validation failed: %s", provider, e)
 
     return enabled
 
@@ -1503,8 +1507,6 @@ def update_model_options_in_build_config(
                                 session=session,
                             )
                             if var and var.value:
-                                import json
-
                                 parsed_value = json.loads(var.value)
                                 if isinstance(parsed_value, dict):
                                     return parsed_value.get("model_name"), parsed_value.get("provider")
@@ -1535,17 +1537,10 @@ def update_model_options_in_build_config(
             if default_model:
                 build_config["model"]["value"] = [default_model]
 
-    # Handle visibility logic:
-    # - Show handle ONLY when field_value is "connect_other_models"
-    # - Hide handle in all other cases (default, model selection, etc.)
-    if field_value == "connect_other_models":
-        # User explicitly selected "Connect other models", show the handle
-        if cache_key_prefix == "embedding_model_options":
-            build_config["model"]["input_types"] = ["Embeddings"]
-        else:
-            build_config["model"]["input_types"] = ["LanguageModel"]
+    # Always set input_types based on model type to enable connection handles
+    if cache_key_prefix == "embedding_model_options":
+        build_config["model"]["input_types"] = ["Embeddings"]
     else:
-        # Default case or model selection: hide the handle
-        build_config["model"]["input_types"] = []
+        build_config["model"]["input_types"] = ["LanguageModel"]
 
     return build_config

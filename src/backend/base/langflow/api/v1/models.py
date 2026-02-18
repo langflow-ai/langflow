@@ -20,7 +20,7 @@ from langflow.services.deps import get_variable_service
 from langflow.services.variable.constants import GENERIC_TYPE
 from langflow.services.variable.service import DatabaseVariableService
 
-router = APIRouter(prefix="/models", tags=["Models"])
+router = APIRouter(prefix="/models", tags=["Models"], include_in_schema=False)
 
 # Variable names for storing disabled models and default models
 DISABLED_MODELS_VAR = "__disabled_models__"
@@ -249,8 +249,9 @@ async def get_enabled_providers(
 ):
     """Get enabled providers for the current user.
 
-    A provider is enabled when ALL of its required variables are saved in the database.
-    This does NOT validate the credentials - use /validate-provider for that.
+    Providers are considered enabled if they have a credential variable stored.
+    API key validation is performed when credentials are saved, not on every read,
+    to avoid latency from external API calls.
     """
     variable_service = get_variable_service()
     try:
@@ -345,7 +346,7 @@ async def _get_disabled_models(session: DbSession, current_user: CurrentActiveUs
         var = await variable_service.get_variable_object(
             user_id=current_user.id, name=DISABLED_MODELS_VAR, session=session
         )
-        if var.value is not None:
+        if var.value:  # This checks for both None and empty string
             try:
                 parsed_value = json.loads(var.value)
                 # Validate it's a list of strings
@@ -376,9 +377,10 @@ async def _get_enabled_models(session: DbSession, current_user: CurrentActiveUse
         var = await variable_service.get_variable_object(
             user_id=current_user.id, name=ENABLED_MODELS_VAR, session=session
         )
-        if var.value is not None:
+        # Strip whitespace and check if value is non-empty
+        if var.value and (value_stripped := var.value.strip()):
             try:
-                parsed_value = json.loads(var.value)
+                parsed_value = json.loads(value_stripped)
                 # Validate it's a list of strings
                 if not isinstance(parsed_value, list):
                     logger.warning("Invalid enabled models format for user %s: not a list", current_user.id)
@@ -386,7 +388,8 @@ async def _get_enabled_models(session: DbSession, current_user: CurrentActiveUse
                 # Ensure all items are strings
                 return {str(item) for item in parsed_value if isinstance(item, str)}
             except (json.JSONDecodeError, TypeError):
-                logger.warning("Failed to parse enabled models for user %s", current_user.id, exc_info=True)
+                # Log at debug level to avoid flooding logs with expected edge cases
+                logger.debug("Failed to parse enabled models for user %s: %s", current_user.id, var.value)
                 return set()
     except ValueError:
         # Variable not found, return empty set

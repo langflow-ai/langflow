@@ -11,6 +11,8 @@ import { ProviderVariable } from "@/constants/providerConstants";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { cn } from "@/utils/utils";
 import { AnimatePresence, motion } from "framer-motion";
+import { useState } from "react";
+import DisconnectWarning from "./DisconnectWarning";
 import { Provider } from "./types";
 
 const MASKED_VALUE = "••••••••";
@@ -24,8 +26,10 @@ export interface ProviderConfigurationFormProps {
   onVariableChange: (key: string, value: string) => void;
   onSave: () => void;
   onActivate: () => void;
+  onDisconnect: () => void;
   isSaving: boolean;
   isPending: boolean;
+  isDeleting: boolean;
   validationFailed: boolean;
   validationState: "idle" | "validating" | "valid" | "invalid";
   validationError: string | null;
@@ -42,14 +46,18 @@ const ProviderConfigurationForm = ({
   onVariableChange,
   onSave,
   onActivate,
+  onDisconnect,
   isSaving,
   isPending,
+  isDeleting,
   validationFailed,
   validationState,
   validationError,
   canSave,
   requiresConfiguration,
 }: ProviderConfigurationFormProps) => {
+  const [showDisconnectWarning, setShowDisconnectWarning] = useState(false);
+
   if (!selectedProvider) return null;
 
   return (
@@ -257,18 +265,57 @@ const ProviderConfigurationForm = ({
                 ? "Retry Save"
                 : "Save Configuration"}
           </Button>
+          {selectedProvider.is_enabled && (
+            <div className="flex justify-end mt-2">
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setShowDisconnectWarning(true)}
+                disabled={isDeleting || isSaving}
+              >
+                Disconnect
+              </Button>
+            </div>
+          )}
         </div>
       ) : (
-        <Button
-          onClick={onActivate}
-          loading={isPending}
-          disabled={selectedProvider.is_enabled}
-        >
-          {selectedProvider.is_enabled
-            ? `${selectedProvider.provider} Activated`
-            : `Activate ${selectedProvider.provider}`}
-        </Button>
+        <div className="flex flex-col gap-2">
+          <Button
+            onClick={onActivate}
+            loading={isPending}
+            disabled={selectedProvider.is_enabled}
+          >
+            {selectedProvider.is_enabled
+              ? `${selectedProvider.provider} Activated`
+              : `Activate ${selectedProvider.provider}`}
+          </Button>
+          {selectedProvider.is_enabled && (
+            <Button
+              variant="destructive"
+              onClick={() => setShowDisconnectWarning(true)}
+              disabled={isDeleting || isPending}
+            >
+              Deactivate {selectedProvider.provider}
+            </Button>
+          )}
+        </div>
       )}
+
+      <DisconnectWarning
+        show={showDisconnectWarning}
+        message={
+          requiresConfiguration
+            ? "Disconnecting an API key will disable all of the provider's models being used in a flow."
+            : `Deactivating ${selectedProvider.provider} will disable all of the provider's models being used in a flow.`
+        }
+        onCancel={() => setShowDisconnectWarning(false)}
+        onConfirm={() => {
+          onDisconnect();
+          setShowDisconnectWarning(false);
+        }}
+        isLoading={isDeleting}
+        className="absolute inset-0 m-4 bg-background z-50 border-destructive border"
+      />
     </div>
   );
 };

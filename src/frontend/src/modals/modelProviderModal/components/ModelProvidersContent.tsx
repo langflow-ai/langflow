@@ -21,9 +21,11 @@ const ModelProvidersContent = ({ modelType }: ModelProvidersContentProps) => {
     validationFailed,
     isSaving,
     isPending,
+    isDeleting,
     handleVariableChange,
     handleSaveAllVariables,
     handleActivateProvider,
+    handleDisconnect,
     isVariableConfigured,
     getConfiguredValue,
     validationState,
@@ -37,7 +39,6 @@ const ModelProvidersContent = ({ modelType }: ModelProvidersContentProps) => {
     selectedProvider,
   });
 
-  // Toggle provider selection - clicking same provider deselects it
   const handleProviderSelect = (provider: Provider) => {
     setSelectedProvider((prev) =>
       prev?.provider === provider.provider ? null : provider,
@@ -77,8 +78,10 @@ const ModelProvidersContent = ({ modelType }: ModelProvidersContentProps) => {
           onVariableChange={handleVariableChange}
           onSave={handleSaveAllVariables}
           onActivate={handleActivateProvider}
+          onDisconnect={handleDisconnect}
           isSaving={isSaving}
           isPending={isPending}
+          isDeleting={isDeleting}
           validationFailed={validationFailed}
           validationState={validationState}
           validationError={validationError}

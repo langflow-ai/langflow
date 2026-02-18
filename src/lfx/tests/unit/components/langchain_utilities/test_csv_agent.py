@@ -353,7 +353,7 @@ class TestCSVAgentComponent:
                 assert not Path(temp_file_path).exists()
 
     def test_build_agent(self, component_class, mock_langchain_experimental):
-        """Test build_agent method."""
+        """Test build_agent method with allow_dangerous_code explicitly set."""
         component = component_class()
 
         # Create real CSV file
@@ -371,6 +371,7 @@ class TestCSVAgentComponent:
                     "verbose": True,
                     "handle_parsing_errors": False,
                     "pandas_kwargs": {"encoding": "utf-8"},
+                    "allow_dangerous_code": True,  # Explicitly enable for this test
                 }
             )
 
@@ -393,5 +394,139 @@ class TestCSVAgentComponent:
                 assert call_kwargs["handle_parsing_errors"] is False
                 assert call_kwargs["pandas_kwargs"] == {"encoding": "utf-8"}
                 assert call_kwargs["path"] == csv_file
+        finally:
+            Path(csv_file).unlink()
+
+    def test_security_default_safe_no_warning(self, component_class, mock_langchain_experimental):
+        """Test that allow_dangerous_code defaults to False and no warning is logged."""
+        component = component_class()
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
+            f.write("col1,col2\n1,a\n2,b")
+            csv_file = f.name
+
+        try:
+            # Don't set allow_dangerous_code - should default to False
+            component.set_attributes(
+                {
+                    "llm": MagicMock(),
+                    "path": csv_file,
+                    "agent_type": "openai-tools",
+                    "input_value": "test",
+                    "verbose": False,
+                    "handle_parsing_errors": True,
+                    "pandas_kwargs": {},
+                }
+            )
+
+            with patch("lfx.components.langchain_utilities.csv_agent.get_settings_service") as mock_get_settings:
+                mock_create_agent = mock_langchain_experimental
+                mock_settings = MagicMock()
+                mock_settings.settings.storage_type = "local"
+                mock_get_settings.return_value = mock_settings
+
+                mock_agent = MagicMock()
+                mock_agent.invoke.return_value = {"output": "Safe result"}
+                mock_create_agent.return_value = mock_agent
+
+                result = component.build_agent_response()
+
+                # Verify the agent was created with allow_dangerous_code=False
+                mock_create_agent.assert_called_once()
+                call_kwargs = mock_create_agent.call_args[1]
+                assert call_kwargs["allow_dangerous_code"] is False
+
+                assert isinstance(result, Message)
+                assert result.text == "Safe result"
+        finally:
+            Path(csv_file).unlink()
+
+    def test_security_explicit_disable_no_warning(self, component_class, mock_langchain_experimental):
+        """Test that explicitly setting allow_dangerous_code=False works and no warning is logged."""
+        component = component_class()
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
+            f.write("col1,col2\n1,a\n2,b")
+            csv_file = f.name
+
+        try:
+            # Explicitly disable dangerous code
+            component.set_attributes(
+                {
+                    "llm": MagicMock(),
+                    "path": csv_file,
+                    "agent_type": "openai-tools",
+                    "input_value": "test",
+                    "verbose": False,
+                    "handle_parsing_errors": True,
+                    "pandas_kwargs": {},
+                    "allow_dangerous_code": False,  # Explicitly disabled
+                }
+            )
+
+            with patch("lfx.components.langchain_utilities.csv_agent.get_settings_service") as mock_get_settings:
+                mock_create_agent = mock_langchain_experimental
+                mock_settings = MagicMock()
+                mock_settings.settings.storage_type = "local"
+                mock_get_settings.return_value = mock_settings
+
+                mock_agent = MagicMock()
+                mock_agent.invoke.return_value = {"output": "Safe result"}
+                mock_create_agent.return_value = mock_agent
+
+                result = component.build_agent_response()
+
+                # Verify the agent was created with allow_dangerous_code=False
+                mock_create_agent.assert_called_once()
+                call_kwargs = mock_create_agent.call_args[1]
+                assert call_kwargs["allow_dangerous_code"] is False
+
+                assert isinstance(result, Message)
+                assert result.text == "Safe result"
+        finally:
+            Path(csv_file).unlink()
+
+    def test_security_explicit_enable_with_warning(self, component_class, mock_langchain_experimental):
+        """Test that allow_dangerous_code=True works and logs security warning."""
+        component = component_class()
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
+            f.write("col1,col2\n1,a\n2,b")
+            csv_file = f.name
+
+        try:
+            # Explicitly enable dangerous code
+            component.set_attributes(
+                {
+                    "llm": MagicMock(),
+                    "path": csv_file,
+                    "agent_type": "openai-tools",
+                    "input_value": "test",
+                    "verbose": False,
+                    "handle_parsing_errors": True,
+                    "pandas_kwargs": {},
+                    "allow_dangerous_code": True,  # Explicitly enabled
+                }
+            )
+
+            with patch("lfx.components.langchain_utilities.csv_agent.get_settings_service") as mock_get_settings:
+                mock_create_agent = mock_langchain_experimental
+                mock_settings = MagicMock()
+                mock_settings.settings.storage_type = "local"
+                mock_get_settings.return_value = mock_settings
+
+                mock_agent = MagicMock()
+                mock_agent.invoke.return_value = {"output": "Result with code execution"}
+                mock_create_agent.return_value = mock_agent
+
+                result = component.build_agent_response()
+
+                # Verify the agent was created with allow_dangerous_code=True
+                mock_create_agent.assert_called_once()
+                call_kwargs = mock_create_agent.call_args[1]
+                assert call_kwargs["allow_dangerous_code"] is True
+
+                assert isinstance(result, Message)
+                assert result.text == "Result with code execution"
         finally:
             Path(csv_file).unlink()

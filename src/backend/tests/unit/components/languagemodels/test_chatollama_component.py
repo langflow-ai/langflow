@@ -161,6 +161,110 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert mock_post.call_count == 2
 
     @pytest.mark.asyncio
+    @patch("lfx.components.ollama.ollama.httpx.AsyncClient.post")
+    @patch("lfx.components.ollama.ollama.httpx.AsyncClient.get")
+    async def test_get_models_missing_capabilities_without_tool_model(self, mock_get, mock_post):
+        """Test backwards compatibility: models without capabilities field are included.
+
+        When tool_model_enabled=False, models should be included for backwards compatibility.
+        """
+        component = ChatOllamaComponent()
+        mock_get_response = AsyncMock()
+        mock_get_response.raise_for_status.return_value = None
+        mock_get_response.json.return_value = {
+            component.JSON_MODELS_KEY: [
+                {component.JSON_NAME_KEY: "old-model-1"},
+                {component.JSON_NAME_KEY: "old-model-2"},
+            ]
+        }
+        mock_get.return_value = mock_get_response
+
+        # Simulate older Ollama API that doesn't return capabilities field
+        mock_post_response = AsyncMock()
+        mock_post_response.raise_for_status.return_value = None
+        mock_post_response.json.side_effect = [
+            {},  # No capabilities field
+            {},  # No capabilities field
+        ]
+        mock_post.return_value = mock_post_response
+
+        base_url = "http://localhost:11434"
+        result = await component.get_models(base_url, tool_model_enabled=False)
+
+        # Both models should be included for backwards compatibility
+        assert result == ["old-model-1", "old-model-2"]
+        assert mock_get.call_count == 1
+        assert mock_post.call_count == 2
+
+    @pytest.mark.asyncio
+    @patch("lfx.components.ollama.ollama.httpx.AsyncClient.post")
+    @patch("lfx.components.ollama.ollama.httpx.AsyncClient.get")
+    async def test_get_models_missing_capabilities_with_tool_model(self, mock_get, mock_post):
+        """Test that models without capabilities field are excluded when tool_model_enabled=True."""
+        component = ChatOllamaComponent()
+        mock_get_response = AsyncMock()
+        mock_get_response.raise_for_status.return_value = None
+        mock_get_response.json.return_value = {
+            component.JSON_MODELS_KEY: [
+                {component.JSON_NAME_KEY: "old-model-1"},
+                {component.JSON_NAME_KEY: "old-model-2"},
+            ]
+        }
+        mock_get.return_value = mock_get_response
+
+        # Simulate older Ollama API that doesn't return capabilities field
+        mock_post_response = AsyncMock()
+        mock_post_response.raise_for_status.return_value = None
+        mock_post_response.json.side_effect = [
+            {},  # No capabilities field
+            {},  # No capabilities field
+        ]
+        mock_post.return_value = mock_post_response
+
+        base_url = "http://localhost:11434"
+        result = await component.get_models(base_url, tool_model_enabled=True)
+
+        # No models should be included since we can't verify tool support
+        assert result == []
+        assert mock_get.call_count == 1
+        assert mock_post.call_count == 2
+
+    @pytest.mark.asyncio
+    @patch("lfx.components.ollama.ollama.httpx.AsyncClient.post")
+    @patch("lfx.components.ollama.ollama.httpx.AsyncClient.get")
+    async def test_get_models_mixed_capabilities_response(self, mock_get, mock_post):
+        """Test mixed scenario: some models have capabilities, some don't."""
+        component = ChatOllamaComponent()
+        mock_get_response = AsyncMock()
+        mock_get_response.raise_for_status.return_value = None
+        mock_get_response.json.return_value = {
+            component.JSON_MODELS_KEY: [
+                {component.JSON_NAME_KEY: "new-model"},
+                {component.JSON_NAME_KEY: "old-model"},
+                {component.JSON_NAME_KEY: "embedding-model"},
+            ]
+        }
+        mock_get.return_value = mock_get_response
+
+        mock_post_response = AsyncMock()
+        mock_post_response.raise_for_status.return_value = None
+        mock_post_response.json.side_effect = [
+            {component.JSON_CAPABILITIES_KEY: [component.DESIRED_CAPABILITY]},  # new-model has completion
+            {},  # old-model has no capabilities field
+            {component.JSON_CAPABILITIES_KEY: ["embedding"]},  # embedding-model only has embedding
+        ]
+        mock_post.return_value = mock_post_response
+
+        base_url = "http://localhost:11434"
+        result = await component.get_models(base_url, tool_model_enabled=False)
+
+        # new-model (has completion) and old-model (no capabilities = backwards compat) should be included
+        # embedding-model should be excluded (has capabilities but no completion)
+        assert result == ["new-model", "old-model"]
+        assert mock_get.call_count == 1
+        assert mock_post.call_count == 3
+
+    @pytest.mark.asyncio
     @patch("lfx.components.ollama.ollama.httpx.AsyncClient.get")
     async def test_get_models_failure(self, mock_get):
         import httpx

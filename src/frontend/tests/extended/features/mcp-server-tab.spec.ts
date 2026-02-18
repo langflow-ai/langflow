@@ -234,22 +234,10 @@ test(
 
     // Create a new flow with MCP component
     await page.getByTestId("blank-flow").click();
-    await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("mcp");
-
-    await page.waitForSelector('[data-testid="models_and_agentsMCP Tools"]', {
-      timeout: 30000,
-    });
-
-    await page
-      .getByTestId("models_and_agentsMCP Tools")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 50, y: 50 },
-      });
+    await page.getByTestId("sidebar-nav-mcp").click();
+    await page.getByTestId("add-component-button-lf-starter_project").click();
 
     await adjustScreenView(page, { numberOfZoomOut: 3 });
-
-    await expect(page.getByTestId("dropdown_str_tool")).toBeHidden();
 
     await openAddMcpServerModal(page);
 

@@ -718,3 +718,17 @@ class TestFileComponentCloudEnvironment:
         # Even if pipeline is set to "standard", OCR engine should be disabled in cloud
         assert result["ocr_engine"]["show"] is False
         assert result["ocr_engine"]["value"] == "None"
+
+
+class TestFileComponentStorageLocation:
+    """Tests for default Local storage and Storage Location in advanced controls."""
+
+    def test_storage_location_defaults_to_local(self):
+        """Test that storage_location input defaults to Local when component is dropped."""
+        storage_input = next(i for i in FileComponent.inputs if i.name == "storage_location")
+        assert storage_input.value == [{"name": "Local", "icon": "hard-drive"}]
+
+    def test_storage_location_is_advanced(self):
+        """Test that storage_location is in advanced controls."""
+        storage_input = next(i for i in FileComponent.inputs if i.name == "storage_location")
+        assert storage_input.advanced is True
