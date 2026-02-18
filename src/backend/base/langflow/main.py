@@ -411,14 +411,14 @@ def get_lifespan(*, fix_migration=False, version=None):
 
 
 def _load_plugin_routes(app: FastAPI) -> None:
-    """Discover and register additional routers from enterprise plugins.
+    """Discover and register additional routers from plugins.
 
     Plugins register themselves via the ``langflow.plugins`` entry-point group.
     Each entry point must expose a callable with the signature::
 
         def register(app: FastAPI) -> None: ...
 
-    This is the primary mechanism for the enterprise package to inject its
+    This is the primary mechanism for external integrations to inject
     SSO, RBAC, and observability API routes without modifying the OSS codebase.
     """
     from importlib.metadata import entry_points
