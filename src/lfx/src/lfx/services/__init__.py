@@ -1,6 +1,7 @@
 """LFX services module - pluggable service architecture for dependency injection."""
 
 from .interfaces import (
+    AuthServiceProtocol,
     CacheServiceProtocol,
     ChatServiceProtocol,
     DatabaseServiceProtocol,
@@ -15,6 +16,7 @@ from .registry import register_service
 from .session import NoopSession
 
 __all__ = [
+    "AuthServiceProtocol",
     "CacheServiceProtocol",
     "ChatServiceProtocol",
     "DatabaseServiceProtocol",

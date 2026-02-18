@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Callable, Coroutine
 from typing import TYPE_CHECKING, Any
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from langflow.exceptions.api import WorkflowResourceError, WorkflowServiceUnavailableError
 from langflow.services.base import Service
@@ -88,3 +89,16 @@ class TaskService(Service):
     async def launch_task(self, task_func: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
         task = self.backend.launch_task(task_func, *args, **kwargs)
         return await task if isinstance(task, Coroutine) else task
+
+    async def revoke_task(self, task_id: UUID | str) -> bool:
+        if self.use_celery:
+            return await self.backend.revoke_task(str(task_id))
+
+        job_queue_service = get_queue_service()
+        try:
+            await job_queue_service.cleanup_job(str(task_id))
+        except asyncio.CancelledError as e:
+            if str(e) != "LANGFLOW_USER_CANCELLED":
+                raise
+            return True
+        return True
