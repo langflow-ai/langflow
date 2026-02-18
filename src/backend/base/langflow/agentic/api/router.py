@@ -35,7 +35,6 @@ from langflow.agentic.services.provider_service import (
     get_enabled_providers_for_user,
 )
 from langflow.api.utils.core import CurrentActiveUser, DbSession
-from langflow.services.deps import get_variable_service
 
 router = APIRouter(prefix="/agentic", tags=["Agentic"])
 
@@ -93,7 +92,7 @@ async def _resolve_assistant_context(
     model_name = request.model_name or DEFAULT_MODELS.get(provider) or ""
 
     # Get all configured variables for the provider
-    provider_vars = await get_all_variables_for_provider._get_all_variables(user_id, provider, session)
+    provider_vars = await get_all_variables_for_provider(user_id, provider)
 
     # Validate all required variables are present
     required_keys = get_provider_required_variable_keys(provider)
@@ -132,14 +131,8 @@ async def _resolve_assistant_context(
 
 
 @router.post("/execute/{flow_name}")
-async def execute_named_flow(
-    flow_name: str,
-    request: AssistantRequest,
-    current_user: CurrentActiveUser,
-    session: DbSession,
-) -> dict:
+async def execute_named_flow(flow_name: str, request: AssistantRequest, current_user: CurrentActiveUser) -> dict:
     """Execute a named flow from the flows directory."""
-    variable_service = get_variable_service()
     user_id = current_user.id
 
     global_vars = {
@@ -154,7 +147,7 @@ async def execute_named_flow(
 
     try:
         # Check for OpenAI variables (required for some assistant features)
-        openai_vars = await get_all_variables_for_provider._get_all_variables(user_id, "OpenAI", session)
+        openai_vars = await get_all_variables_for_provider(user_id, "OpenAI")
         global_vars.update(openai_vars)
     except (ValueError, HTTPException):
         logger.debug("OpenAI variables not configured, continuing without them")
