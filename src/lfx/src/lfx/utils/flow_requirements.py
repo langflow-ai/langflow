@@ -246,12 +246,13 @@ def _extract_imports(source: str) -> set[str]:
 def _resolve_provider_packages(provider_name: str) -> set[str]:
     """Dynamically resolve PyPI packages needed for a model provider.
 
-    Uses ``MODEL_PROVIDERS_DICT`` to look up the provider's component class,
-    then inspects its source code to extract import statements.  This avoids
-    maintaining a static provider→package mapping table.
+    Uses ``MODEL_PROVIDERS_DICT`` to look up the provider's component instance,
+    then inspects its class's source module to extract import statements.  This
+    avoids maintaining a static provider→package mapping table.
 
-    This is specifically necessary for components like the LanguageModelComponent
-    that dynamically import the model class.
+    This is specifically necessary because the ``LanguageModelComponent`` delegates
+    to provider-specific components (e.g. ``OpenAIModelComponent``) that dynamically
+    import the actual model class at runtime.
 
     Note: only the component's own module is inspected, not parent classes.
     Parent classes (e.g. ``LCModelComponent``) are all part of lfx, so any
@@ -280,6 +281,11 @@ def _resolve_provider_packages(provider_name: str) -> set[str]:
 
     component_instance = provider_info.get("component_class")
     if component_instance is None:
+        warnings.warn(
+            f"Provider '{provider_name}' has no component instance in MODEL_PROVIDERS_DICT. "
+            "Its dependencies will not be included in requirements.",
+            stacklevel=2,
+        )
         return set()
 
     try:
@@ -352,6 +358,11 @@ def _resolve_embedding_provider_packages(provider_name: str) -> set[str]:
 
     class_name = _PROVIDER_EMBEDDING_CLASS.get(provider_name)
     if not class_name:
+        warnings.warn(
+            f"Embedding provider '{provider_name}' is not in the local embedding class mapping. "
+            "Its embedding dependencies will not be included in requirements.",
+            stacklevel=2,
+        )
         return set()
 
     import_info = _EMBEDDING_CLASS_IMPORTS.get(class_name)
