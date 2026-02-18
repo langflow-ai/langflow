@@ -6,6 +6,22 @@ set of PyPI packages needed to run that flow on a standalone LFX runner.
 Uses ``importlib.metadata`` to dynamically resolve import names to PyPI
 distribution names and to compute the transitive dependency tree of ``lfx``,
 eliminating the need for static mapping tables.
+
+Known limitations
+-----------------
+* **String-based dynamic imports** — ``importlib.import_module(variable)``,
+  ``exec()``, and ``__import__()`` are invisible to AST analysis.  If a custom
+  component loads a package this way, it will not appear in the output.
+* **PythonREPLTool ``global_imports`` field** — The ``PythonREPLTool``
+  component accepts a comma-separated string of module names in a template
+  field.  These are imported at runtime via ``importlib.import_module()`` and
+  are not detected.
+* **Cross-platform versions** — Versions are pinned from the *current*
+  environment.  Packages pinned on macOS may lack Linux wheels (or vice versa)
+  and a pin from Python 3.12 may not install on 3.10.
+* **System-level dependencies** — Native libraries required by Python packages
+  (e.g. ``libpq-dev`` for ``psycopg2``) cannot be expressed in
+  ``requirements.txt``.
 """
 
 from __future__ import annotations
@@ -241,6 +257,54 @@ def _resolve_provider_packages(provider_name: str) -> set[str]:
     return packages
 
 
+def _resolve_embedding_provider_packages(provider_name: str) -> set[str]:
+    """Resolve PyPI packages needed for an embedding model provider.
+
+    The ``EmbeddingModelComponent`` follows the same dynamic-import pattern as
+    the ``LanguageModelComponent``: its code field only imports from ``lfx``
+    internals, while the actual provider package (e.g. ``langchain-openai``) is
+    imported at runtime via ``get_embedding_class()``.
+
+    This function bridges that gap by mapping the provider name to its
+    embedding class, then looking up the import module in
+    ``_EMBEDDING_CLASS_IMPORTS``.
+    """
+    try:
+        from lfx.base.models.unified_models import _EMBEDDING_CLASS_IMPORTS
+    except ImportError:
+        return set()
+
+    # Provider name → embedding class name.  Mirrors the mapping in
+    # ``get_embedding_model_options()`` inside unified_models.py.
+    # Azure OpenAI shares the ``langchain-openai`` package with OpenAI.
+    _PROVIDER_EMBEDDING_CLASS: dict[str, str] = {
+        "OpenAI": "OpenAIEmbeddings",
+        "Azure OpenAI": "OpenAIEmbeddings",
+        "Google Generative AI": "GoogleGenerativeAIEmbeddings",
+        "Ollama": "OllamaEmbeddings",
+        "IBM WatsonX": "WatsonxEmbeddings",
+        "IBM watsonx.ai": "WatsonxEmbeddings",
+    }
+
+    class_name = _PROVIDER_EMBEDDING_CLASS.get(provider_name)
+    if not class_name:
+        return set()
+
+    import_info = _EMBEDDING_CLASS_IMPORTS.get(class_name)
+    if not import_info:
+        return set()
+
+    top_level = import_info[0].split(".")[0]
+    if top_level in STDLIB_MODULES or top_level in {"lfx", "langflow", "langflow_base"}:
+        return set()
+
+    lfx_provided = _get_lfx_provided_imports()
+    if top_level in lfx_provided:
+        return set()
+
+    return {_import_to_package(top_level)}
+
+
 def _detect_providers_from_template(template: dict) -> set[str]:
     """Detect model providers from a component's template field values.
 
@@ -363,6 +427,7 @@ def generate_requirements_from_flow(
     # Add provider-specific packages (resolved dynamically from component source)
     for provider in all_providers:
         all_packages.update(_resolve_provider_packages(provider))
+        all_packages.update(_resolve_embedding_provider_packages(provider))
 
     fmt = _pin_version if pin_versions else lambda p: p
 

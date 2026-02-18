@@ -17,6 +17,7 @@ from lfx.utils.flow_requirements import (
     _get_lfx_transitive_dists,
     _import_to_package,
     _pin_version,
+    _resolve_embedding_provider_packages,
     _resolve_provider_packages,
     generate_requirements_from_file,
     generate_requirements_from_flow,
@@ -745,23 +746,42 @@ class TestDataIntegrity:
 class TestResolveProviderPackages:
     """Verify dynamic provider resolution via inspect."""
 
+    @staticmethod
+    def _skip_if_provider_not_loaded(provider_name: str):
+        """Skip test if the provider's component class isn't loaded in MODEL_PROVIDERS_DICT.
+
+        MODEL_PROVIDERS_DICT only contains providers whose packages are
+        installed in the current environment.
+        """
+        try:
+            from lfx.base.models.model_input_constants import MODEL_PROVIDERS_DICT
+        except ImportError:
+            pytest.skip("MODEL_PROVIDERS_DICT not available")
+        if provider_name not in MODEL_PROVIDERS_DICT:
+            pytest.skip(f"{provider_name} component not loaded (package not installed)")
+
     def test_openai_provider_resolves(self):
+        self._skip_if_provider_not_loaded("OpenAI")
         packages = _resolve_provider_packages("OpenAI")
         assert "langchain-openai" in packages
 
     def test_anthropic_provider_resolves(self):
+        self._skip_if_provider_not_loaded("Anthropic")
         packages = _resolve_provider_packages("Anthropic")
         assert "langchain-anthropic" in packages
 
     def test_amazon_bedrock_provider_resolves(self):
+        self._skip_if_provider_not_loaded("Amazon Bedrock")
         packages = _resolve_provider_packages("Amazon Bedrock")
         assert "langchain-aws" in packages
 
     def test_google_provider_resolves(self):
+        self._skip_if_provider_not_loaded("Google Generative AI")
         packages = _resolve_provider_packages("Google Generative AI")
         assert "langchain-google-genai" in packages
 
     def test_ollama_provider_resolves(self):
+        self._skip_if_provider_not_loaded("Ollama")
         packages = _resolve_provider_packages("Ollama")
         assert "langchain-ollama" in packages
 
@@ -789,6 +809,39 @@ class TestResolveProviderPackages:
         for provider_name in MODEL_PROVIDERS_DICT:
             packages = _resolve_provider_packages(provider_name)
             assert len(packages) > 0, f"Provider {provider_name} resolved to no packages"
+
+
+class TestResolveEmbeddingProviderPackages:
+    """Verify embedding provider resolution via unified models metadata."""
+
+    def test_openai_embedding_resolves(self):
+        packages = _resolve_embedding_provider_packages("OpenAI")
+        assert "langchain-openai" in packages
+
+    def test_google_embedding_resolves(self):
+        packages = _resolve_embedding_provider_packages("Google Generative AI")
+        assert "langchain-google-genai" in packages
+
+    def test_ollama_embedding_resolves(self):
+        packages = _resolve_embedding_provider_packages("Ollama")
+        assert "langchain-ollama" in packages
+
+    def test_unknown_provider_returns_empty(self):
+        packages = _resolve_embedding_provider_packages("NonexistentProvider")
+        assert packages == set()
+
+    def test_embedding_only_flow(self):
+        """A flow with only an embedding model should still get provider packages."""
+        node = _make_node(
+            "EmbeddingModel",
+            "from lfx.base.embeddings.model import LCEmbeddingsModel",
+            template_extra={
+                "model": {"value": [{"provider": "OpenAI", "name": "text-embedding-3-small"}]},
+            },
+        )
+        flow = _make_flow(node)
+        result = generate_requirements_from_flow(flow, pin_versions=False)
+        assert "langchain-openai" in result
 
 
 # ===================================================================
