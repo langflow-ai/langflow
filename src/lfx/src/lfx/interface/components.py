@@ -281,11 +281,14 @@ def _all_category_names(entries: list[list]) -> frozenset[str]:
     )
 
 
-def _get_all_known_categories(settings_service: Optional["SettingsService"] = None) -> frozenset[str]:
+def _get_all_known_categories(settings_service: Optional["SettingsService"] = None) -> frozenset[str] | None:
     """Get all category names from the built-in index (for validation only).
 
     This reads the index to extract category names without applying any filters.
     Used at startup to validate allowlist/blocklist entries against known categories.
+
+    Returns:
+        frozenset of category names, or None if the index could not be loaded.
     """
     custom_path = None
     if settings_service and settings_service.settings.components_index_path:
@@ -293,7 +296,7 @@ def _get_all_known_categories(settings_service: Optional["SettingsService"] = No
     index = _read_component_index(custom_path)
     if index and "entries" in index:
         return _all_category_names(index["entries"])
-    return frozenset()
+    return None
 
 
 def _entries_to_dict(
@@ -312,17 +315,22 @@ def _entries_to_dict(
         Dictionary mapping category names to their components.
     """
     modules_dict: dict[str, Any] = {}
+    skipped = 0
     for entry in entries:
         if not isinstance(entry, (list, tuple)) or len(entry) != 2:  # noqa: PLR2004
+            skipped += 1
             continue
         top_level, components = entry
         if not isinstance(top_level, str) or not isinstance(components, dict):
+            skipped += 1
             continue
         if _is_category_excluded(top_level.lower(), category_allowlist, category_blocklist):
             continue
         if top_level not in modules_dict:
             modules_dict[top_level] = {}
         modules_dict[top_level].update(components)
+    if skipped:
+        logger.warning(f"Skipped {skipped} malformed entries in component index")
     return filter_disabled_components_from_dict(modules_dict)
 
 
@@ -617,14 +625,15 @@ async def import_langflow_components(
             # To detect typos in the blocklist we need the full set of categories before
             # the blocklist was applied.  The cheapest way is to re-derive it from the index.
             all_known = _get_all_known_categories(settings_service)
-            effective_known = all_known if category_allowlist is None else all_known & category_allowlist
-            unmatched_block = category_blocklist - effective_known
-            if unmatched_block:
-                await logger.aerror(
-                    f"component_category_blocklist contains categories not found in the index: "
-                    f"{', '.join(sorted(unmatched_block))}. These entries have no effect. "
-                    f"Check for typos in LANGFLOW_COMPONENT_CATEGORY_BLOCKLIST."
-                )
+            if all_known is not None:
+                effective_known = all_known if category_allowlist is None else all_known & category_allowlist
+                unmatched_block = category_blocklist - effective_known
+                if unmatched_block:
+                    await logger.aerror(
+                        f"component_category_blocklist contains categories not found in the index: "
+                        f"{', '.join(sorted(unmatched_block))}. These entries have no effect. "
+                        f"Check for typos in LANGFLOW_COMPONENT_CATEGORY_BLOCKLIST."
+                    )
 
     # Send telemetry
     await _send_telemetry(
