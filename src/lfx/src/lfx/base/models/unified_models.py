@@ -605,21 +605,8 @@ def get_language_model_options(
             pass
 
     options = []
-    model_class_mapping = {
-        "OpenAI": "ChatOpenAI",
-        "Anthropic": "ChatAnthropic",
-        "Google Generative AI": "ChatGoogleGenerativeAIFixed",
-        "Ollama": "ChatOllama",
-        "IBM WatsonX": "ChatWatsonx",
-    }
-
-    api_key_param_mapping = {
-        "OpenAI": "api_key",
-        "Anthropic": "api_key",
-        "Google Generative AI": "google_api_key",
-        "Ollama": "base_url",
-        "IBM WatsonX": "apikey",
-    }
+    model_class_mapping = {p: m["model_class"] for p, m in model_provider_metadata.items()}
+    api_key_param_mapping = {p: m["api_key_param"] for p, m in model_provider_metadata.items()}
 
     # Track which providers have models
     providers_with_models = set()
@@ -931,22 +918,9 @@ def normalize_model_names_to_dicts(model_names: list[str] | str) -> list[dict[st
         # If we can't get models, just create basic dicts
         return [{"name": name} for name in model_names]
 
-    # Model class mapping for runtime metadata
-    model_class_mapping = {
-        "OpenAI": "ChatOpenAI",
-        "Anthropic": "ChatAnthropic",
-        "Google Generative AI": "ChatGoogleGenerativeAIFixed",
-        "Ollama": "ChatOllama",
-        "IBM WatsonX": "ChatWatsonx",
-    }
-
-    api_key_param_mapping = {
-        "OpenAI": "api_key",
-        "Anthropic": "api_key",
-        "Google Generative AI": "google_api_key",
-        "Ollama": "base_url",
-        "IBM WatsonX": "apikey",
-    }
+    # Derive mappings from the canonical provider metadata
+    model_class_mapping = {p: m["model_class"] for p, m in model_provider_metadata.items()}
+    api_key_param_mapping = {p: m["api_key_param"] for p, m in model_provider_metadata.items()}
 
     # Build a lookup map of model_name -> full model data with runtime metadata
     model_lookup = {}

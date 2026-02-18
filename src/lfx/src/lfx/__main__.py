@@ -147,6 +147,57 @@ def run_command_wrapper(
     )
 
 
+@app.command(name="requirements", help="Generate requirements.txt for a flow", no_args_is_help=True)
+def requirements_command_wrapper(
+    flow_path: str = typer.Argument(help="Path to the Langflow flow JSON file"),
+    output: str | None = typer.Option(
+        None,
+        "--output",
+        "-o",
+        help="Output file path (default: stdout)",
+    ),
+    lfx_package: str = typer.Option(
+        "lfx",
+        "--lfx-package",
+        help="Name of the LFX package (default: lfx)",
+    ),
+    *,
+    no_lfx: bool = typer.Option(
+        False,  # noqa: FBT003
+        "--no-lfx",
+        help="Exclude the LFX package from output",
+    ),
+) -> None:
+    """Generate requirements.txt from a Langflow flow JSON (lazy-loaded)."""
+    import json
+    from pathlib import Path
+
+    from lfx.utils.flow_requirements import generate_requirements_txt
+
+    path = Path(flow_path)
+    if not path.exists():
+        typer.echo(f"Error: File not found: {path}", err=True)
+        raise typer.Exit(1)
+
+    try:
+        flow = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as e:
+        typer.echo(f"Error: Invalid JSON: {e}", err=True)
+        raise typer.Exit(1) from e
+
+    content = generate_requirements_txt(
+        flow,
+        lfx_package=lfx_package,
+        include_lfx=not no_lfx,
+    )
+
+    if output:
+        Path(output).write_text(content, encoding="utf-8")
+        typer.echo(f"Requirements written to {output}")
+    else:
+        typer.echo(content, nl=False)
+
+
 def main():
     """Main entry point for the LFX CLI."""
     app()
