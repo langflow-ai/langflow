@@ -276,6 +276,14 @@ class ParameterHandler:
                     params[field_name] = {k: v for item in val for k, v in item.items()}
             case dict():
                 params[field_name] = val
+            case _:
+                logger.warning(
+                    "Unexpected type %s for dict field '%s'; expected list or dict, got %r",
+                    type(val).__name__,
+                    field_name,
+                    val,
+                )
+                params[field_name] = val
         return params
 
     def _handle_other_direct_types(

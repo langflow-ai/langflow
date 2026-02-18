@@ -162,6 +162,7 @@ def apply_tweaks(node: dict[str, Any], node_tweaks: dict[str, Any]) -> None:
                 # Dict fields: set the dict directly as the value.
                 # If the tweak is wrapped in {"value": <actual>}, unwrap it
                 # to support the template-format style (e.g. from UI exports).
+                # Caveat: a legitimate single-key dict {"value": x} will be unwrapped.
                 if len(tweak_value) == 1 and "value" in tweak_value:
                     template_data[tweak_name]["value"] = tweak_value["value"]
                 else:

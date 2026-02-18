@@ -1613,10 +1613,17 @@ async def update_tools(
                 i = 0
                 while i < len(args):
                     if args[i].startswith("-"):
-                        # Skip the flag and its value (if a next token exists
-                        # and isn't itself a flag, treat it as the value).
+                        # Skip the flag and its value (assumes each flag
+                        # takes at most one value argument; boolean flags
+                        # are handled correctly since the next token will
+                        # start with '-' or be a URL-like positional).
                         i += 1
-                        if i < len(args) and not args[i].startswith("-"):
+                        if (
+                            i < len(args)
+                            and not args[i].startswith("-")
+                            and not args[i].startswith("http://")
+                            and not args[i].startswith("https://")
+                        ):
                             i += 1
                     else:
                         last_positional_idx = i
