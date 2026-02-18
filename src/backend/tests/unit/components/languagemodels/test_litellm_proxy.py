@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from lfx.components.litellm.litellm_proxy import LiteLLMProxyComponent
 from lfx.inputs.inputs import IntInput, SecretStrInput, SliderInput, StrInput
+from pydantic.v1 import SecretStr
 
 from tests.base import ComponentTestBaseWithoutClient
 
@@ -15,7 +16,7 @@ class TestLiteLLMProxyComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def default_kwargs(self):
         return {
-            "api_base": "http://litellm:4000/v1",
+            "api_base": "http://localhost:4000/v1",
             "api_key": "sk-test-key",
             "model_name": "gpt-4o",
             "temperature": 0.7,
@@ -60,7 +61,7 @@ class TestLiteLLMProxyComponent(ComponentTestBaseWithoutClient):
         model = component.build_model()
 
         mock_chat_openai.assert_called_once_with(
-            base_url="http://litellm:4000/v1",
+            base_url="http://localhost:4000/v1",
             api_key="sk-test-key",
             model="gpt-4o",
             temperature=0.7,
@@ -70,6 +71,20 @@ class TestLiteLLMProxyComponent(ComponentTestBaseWithoutClient):
             streaming=False,
         )
         assert model == mock_chat_openai.return_value
+
+    def test_build_model_secret_str_api_key(self, component_class, default_kwargs, mocker):
+        default_kwargs["api_key"] = SecretStr("sk-secret-key")
+        component = component_class(**default_kwargs)
+
+        mock_chat_openai = mocker.patch(
+            "lfx.components.litellm.litellm_proxy.ChatOpenAI",
+            return_value=MagicMock(),
+        )
+        component.build_model()
+
+        _args, kwargs = mock_chat_openai.call_args
+        assert kwargs["api_key"] == "sk-secret-key"
+        assert not isinstance(kwargs["api_key"], SecretStr)
 
     def test_build_model_max_tokens_zero(self, component_class, default_kwargs, mocker):
         default_kwargs["max_tokens"] = 0
@@ -132,6 +147,6 @@ class TestLiteLLMProxyComponent(ComponentTestBaseWithoutClient):
     def test_get_exception_message_no_openai_import(self, component_class, default_kwargs):
         component = component_class(**default_kwargs)
 
-        with patch.dict("sys.modules", {"openai": None}), patch("builtins.__import__", side_effect=ImportError):
+        with patch.dict("sys.modules", {"openai": None}):
             message = component._get_exception_message(Exception("test"))
             assert message is None

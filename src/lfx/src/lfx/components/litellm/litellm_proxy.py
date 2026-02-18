@@ -20,9 +20,9 @@ class LiteLLMProxyComponent(LCModelComponent):
         StrInput(
             name="api_base",
             display_name="LiteLLM Proxy URL",
-            value="http://litellm:4000/v1",
+            value="http://localhost:4000/v1",
             required=True,
-            info="Base URL of the LiteLLM proxy (e.g. http://litellm:4000/v1).",
+            info="Base URL of the LiteLLM proxy.",
         ),
         SecretStrInput(
             name="api_key",
