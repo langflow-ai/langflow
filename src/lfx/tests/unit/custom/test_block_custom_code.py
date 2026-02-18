@@ -4,7 +4,7 @@
 from unittest.mock import Mock, patch
 
 import pytest
-from lfx.custom.validate import create_class, create_function, extract_display_name
+from lfx.custom.validate import create_class, create_function, eval_function, execute_function, extract_display_name
 
 
 class TestExtractDisplayName:
@@ -257,3 +257,149 @@ class TestComponent(Component):
 
                 result = create_class(code, "TestComponent")
                 assert result is not None
+
+
+class TestEvalFunctionBlocking:
+    """Tests for eval_function hash validation blocking."""
+
+    def test_eval_function_allowed_when_blocking_disabled(self):
+        """Test that eval_function works when blocking is disabled (default)."""
+        code = """
+def test_function(x):
+    return x * 2
+"""
+        result = eval_function(code)
+        assert result is not None
+        assert result(5) == 10
+
+    def test_eval_function_blocked_when_hash_not_in_index(self):
+        """Test that eval_function is blocked when hash not in index."""
+        code = """
+def test_function(x):
+    return x * 2
+"""
+        with patch("lfx.custom.validate._check_and_block_if_not_allowed") as mock_check:
+            mock_check.return_value = False
+            with pytest.raises(ValueError, match="Custom function evaluation is not allowed"):
+                eval_function(code)
+
+    def test_eval_function_allowed_when_hash_in_index(self):
+        """Test that eval_function works when hash is in index."""
+        code = """
+def test_function(x):
+    return x * 2
+"""
+        with patch("lfx.custom.validate._check_and_block_if_not_allowed") as mock_check:
+            mock_check.return_value = True
+            result = eval_function(code)
+            assert result is not None
+            assert result(5) == 10
+
+    def test_eval_function_blocked_on_exception(self):
+        """Test that eval_function blocks when hash validation raises exception (fail-closed)."""
+        code = """
+def test_function(x):
+    return x * 2
+"""
+        with patch("lfx.custom.validate._check_and_block_if_not_allowed") as mock_check:
+            mock_check.return_value = False
+            with pytest.raises(ValueError, match="Custom function evaluation is not allowed"):
+                eval_function(code)
+
+
+class TestExecuteFunctionBlocking:
+    """Tests for execute_function hash validation blocking."""
+
+    def test_execute_function_blocked_when_hash_not_in_index(self):
+        """Test that execute_function is blocked when hash not in index."""
+        code = """
+def test_function(x):
+    return x * 2
+"""
+        with patch("lfx.custom.validate._check_and_block_if_not_allowed") as mock_check:
+            mock_check.return_value = False
+            with pytest.raises(ValueError, match="Custom Component 'test_function' is not allowed"):
+                execute_function(code, "test_function", 5)
+
+    def test_execute_function_allowed_when_hash_in_index(self):
+        """Test that execute_function works when hash is in index."""
+        code = """
+def test_function(x):
+    return x * 2
+"""
+        with patch("lfx.custom.validate._check_and_block_if_not_allowed") as mock_check:
+            mock_check.return_value = True
+            result = execute_function(code, "test_function", 5)
+            assert result == 10
+
+
+class TestCodeParserSafety:
+    """Tests for code_parser construct_eval_env using importlib instead of exec."""
+
+    def test_construct_eval_env_with_importlib(self):
+        """Test that construct_eval_env correctly uses importlib for imports."""
+        from lfx.custom.code_parser.code_parser import CodeParser
+
+        code = """
+from typing import Optional
+def test_func() -> Optional[str]:
+    return None
+"""
+        parser = CodeParser(code)
+        parser.parse_code()
+
+        # construct_eval_env should handle tuple imports (from X import Y)
+        eval_env = parser.construct_eval_env("Optional[str]", tuple(parser.data["imports"]))
+        assert "Optional" in eval_env
+
+    def test_construct_eval_env_with_module_alias(self):
+        """Test that construct_eval_env handles module aliases correctly."""
+        from lfx.custom.code_parser.code_parser import CodeParser
+
+        code = """
+import json
+def test_func() -> json:
+    pass
+"""
+        parser = CodeParser(code)
+        parser.parse_code()
+
+        eval_env = parser.construct_eval_env("json", tuple(parser.data["imports"]))
+        import json
+
+        assert eval_env.get("json") is json
+
+    def test_construct_eval_env_no_exec_used(self):
+        """Test that construct_eval_env does not use exec (uses importlib instead)."""
+        import ast
+        import inspect
+        import textwrap
+
+        from lfx.custom.code_parser.code_parser import CodeParser
+
+        source = textwrap.dedent(inspect.getsource(CodeParser.construct_eval_env))
+        tree = ast.parse(source)
+        # Check that there are no exec() calls in the AST
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "exec":
+                pytest.fail("construct_eval_env should not use exec()")
+
+
+class TestAllExecPathsProtected:
+    """Tests to verify all exec/eval paths in validate.py are protected."""
+
+    def test_all_public_exec_functions_have_hash_check(self):
+        """Verify that all functions in validate.py that call exec() have hash validation."""
+        import inspect
+
+        from lfx.custom import validate
+
+        # List of functions that should have _check_and_block_if_not_allowed
+        functions_with_exec = ["validate_code", "execute_function", "create_function", "create_class", "eval_function"]
+
+        for func_name in functions_with_exec:
+            func = getattr(validate, func_name)
+            source = inspect.getsource(func)
+            assert "_check_and_block_if_not_allowed" in source, (
+                f"Function {func_name} uses exec() but does not call _check_and_block_if_not_allowed"
+            )

@@ -19,6 +19,7 @@ class PythonREPLToolComponent(LCToolComponent):
     icon = "Python"
     legacy = True
     replacement = ["processing.PythonREPLComponent"]
+    executes_code = True  # Executes user-provided Python code via PythonREPL
 
     inputs = [
         StrInput(

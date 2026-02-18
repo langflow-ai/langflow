@@ -8,9 +8,9 @@ from lfx.custom.validate import extract_display_name, validate_code
 def validate_flow_custom_components(flow_data: dict[str, Any]) -> list[dict[str, str]]:
     """Validate all custom components in a flow.
 
-    This checks for:
-    1. Nodes with type "CustomComponent"
-    2. ANY node with custom code (edited built-in components)
+    This validates ALL nodes with code against the hash allowlist, regardless of
+    client-provided metadata like 'edited' or 'type'. This prevents bypass by
+    forging metadata. Also recursively validates nodes inside group/sub-flow nodes.
 
     Args:
         flow_data: The flow data dictionary containing nodes
@@ -21,16 +21,30 @@ def validate_flow_custom_components(flow_data: dict[str, Any]) -> list[dict[str,
         Empty list if all components are valid.
     """
     blocked_components = []
+    _validate_nodes(flow_data.get("nodes", []), blocked_components)
+    return blocked_components
 
-    # Extract nodes from flow data
-    nodes = flow_data.get("nodes", [])
 
+def _validate_nodes(nodes: list[dict[str, Any]], blocked_components: list[dict[str, str]]) -> None:
+    """Validate a list of nodes, recursively checking group/sub-flow nodes.
+
+    Args:
+        nodes: List of node dictionaries to validate
+        blocked_components: List to append blocked component details to (mutated in place)
+    """
     for node in nodes:
         node_data = node.get("data", {})
-        node_type = node_data.get("type")
         node_info = node_data.get("node", {})
 
-        # Check if node has custom code
+        # Recursively validate nodes inside group/sub-flow nodes
+        nested_flow = node_info.get("flow", {})
+        if nested_flow:
+            nested_flow_data = nested_flow.get("data", {})
+            nested_nodes = nested_flow_data.get("nodes", [])
+            if nested_nodes:
+                _validate_nodes(nested_nodes, blocked_components)
+
+        # Check if node has code
         template = node_info.get("template", {})
         code_field = template.get("code", {})
         code = code_field.get("value", "")
@@ -39,16 +53,9 @@ def validate_flow_custom_components(flow_data: dict[str, Any]) -> list[dict[str,
         if not code:
             continue
 
-        # Check if this is a CustomComponent OR if it's an edited built-in component
-        is_custom_component = node_type == "CustomComponent"
-        is_edited = node_info.get("edited", False)
-
-        # If it's not a custom component and not edited, skip validation
-        # (it's using the original built-in code)
-        if not is_custom_component and not is_edited:
-            continue
-
-        # Validate the code
+        # Validate ALL nodes with code against the hash allowlist.
+        # Do NOT trust client-provided 'edited' or 'type' metadata —
+        # the hash check determines if the code is an allowed built-in.
         validation_result = validate_code(code)
 
         # Check if there are any errors (blocked by security)
@@ -59,16 +66,17 @@ def validate_flow_custom_components(flow_data: dict[str, Any]) -> list[dict[str,
             # Try to get class name from the node
             class_name = node_info.get("display_name") or node.get("id", "Unknown")
 
+            node_type = node_data.get("type")
+            is_edited = node_info.get("edited", False)
+
             blocked_components.append(
                 {
                     "node_id": node.get("id", "unknown"),
                     "display_name": display_name or class_name,
                     "class_name": class_name,
-                    "is_edited_builtin": is_edited and not is_custom_component,
+                    "is_edited_builtin": is_edited and node_type != "CustomComponent",
                 }
             )
-
-    return blocked_components
 
 
 def validate_flows_custom_components(flows: list[dict[str, Any]]) -> dict[str, list[dict[str, str]]]:

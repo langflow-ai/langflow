@@ -38,6 +38,9 @@ def _check_and_block_if_not_allowed(code: str, context: str = "code") -> bool:
     Returns:
         True if code is allowed, False if blocked
     """
+    if not code or not isinstance(code, str):
+        return True
+
     try:
         from lfx.custom.hash_validator import is_code_hash_allowed
 
@@ -172,6 +175,11 @@ def _create_langflow_execution_context():
 
 
 def eval_function(function_string: str):
+    # Check hash validation before processing
+    if not _check_and_block_if_not_allowed(function_string, "function evaluation"):
+        msg = "Custom function evaluation is not allowed"
+        raise ValueError(msg)
+
     # Create an empty dictionary to serve as a separate namespace
     namespace: dict = {}
 

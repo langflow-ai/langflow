@@ -70,6 +70,12 @@ jest.mock("@/customization/feature-flags", () => ({
   ENABLE_NEW_SIDEBAR: true,
 }));
 
+// Mock useGetConfig hook
+const mockUseGetConfig = jest.fn();
+jest.mock("@/controllers/API/queries/config/use-get-config", () => ({
+  useGetConfig: () => mockUseGetConfig(),
+}));
+
 // Mock navigation hook
 const mockNavigate = jest.fn();
 jest.mock("@/customization/hooks/use-custom-navigate", () => ({
@@ -115,6 +121,10 @@ describe("SidebarMenuButtons", () => {
     // Reset to default sidebar state
     mockUseSidebar.mockReturnValue({
       activeSection: "components",
+    });
+    // Default: custom components allowed
+    mockUseGetConfig.mockReturnValue({
+      data: { allow_custom_components: true },
     });
   });
 
@@ -657,6 +667,75 @@ describe("SidebarMenuButtons", () => {
 
       const sidebarMenuButton = screen.getByTestId("sidebar-menu-button");
       expect(sidebarMenuButton).toHaveClass("group");
+    });
+  });
+
+  describe("Custom Components Blocked (allow_custom_components=false)", () => {
+    beforeEach(() => {
+      mockUseGetConfig.mockReturnValue({
+        data: { allow_custom_components: false },
+      });
+    });
+
+    it("should not render custom component button when custom components are disabled", () => {
+      render(<SidebarMenuButtons {...defaultProps} />);
+
+      expect(
+        screen.queryByTestId("sidebar-custom-component-button"),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByText("New Custom Component"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("should render nothing (null) when custom components are disabled", () => {
+      const { container } = render(<SidebarMenuButtons {...defaultProps} />);
+
+      expect(container.innerHTML).toBe("");
+    });
+
+    it("should still render MCP buttons when in MCP section even if custom components are disabled", () => {
+      mockUseSidebar.mockReturnValue({
+        activeSection: "mcp",
+      });
+
+      render(<SidebarMenuButtons {...defaultProps} />);
+
+      expect(
+        screen.getByTestId("sidebar-add-mcp-server-button"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByTestId("sidebar-manage-servers-button"),
+      ).toBeInTheDocument();
+    });
+
+    it("should show custom component button when re-enabled", () => {
+      const { rerender } = render(<SidebarMenuButtons {...defaultProps} />);
+
+      expect(
+        screen.queryByTestId("sidebar-custom-component-button"),
+      ).not.toBeInTheDocument();
+
+      // Re-enable custom components
+      mockUseGetConfig.mockReturnValue({
+        data: { allow_custom_components: true },
+      });
+
+      rerender(<SidebarMenuButtons {...defaultProps} />);
+
+      expect(
+        screen.getByTestId("sidebar-custom-component-button"),
+      ).toBeInTheDocument();
+    });
+
+    it("should default to allowing custom components when config data is undefined", () => {
+      mockUseGetConfig.mockReturnValue({ data: undefined });
+
+      render(<SidebarMenuButtons {...defaultProps} />);
+
+      expect(
+        screen.getByTestId("sidebar-custom-component-button"),
+      ).toBeInTheDocument();
     });
   });
 

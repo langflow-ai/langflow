@@ -257,4 +257,92 @@ async def test_validation_error_message_includes_component_name(client: AsyncCli
     assert "My Custom Component" in response.json()["detail"] or "custom" in response.json()["detail"].lower()
 
 
+async def test_build_flow_blocks_custom_component(client: AsyncClient, logged_in_headers):
+    """Test that POST /build/{flow_id}/flow blocks flows with custom components.
+
+    This tests defense-in-depth: even if a flow with custom code was saved
+    before blocking was enabled, the build endpoint should block it.
+    """
+    # First create a flow WITHOUT custom components (so it gets stored)
+    initial_flow = {"name": "test_build_flow", "data": {"nodes": [], "edges": []}}
+    create_response = await client.post("api/v1/flows/", json=initial_flow, headers=logged_in_headers)
+    assert create_response.status_code == status.HTTP_201_CREATED
+    flow_id = create_response.json()["id"]
+
+    # Try to update the flow with custom component data
+    # (the update endpoint should also block this)
+    custom_flow_data = create_flow_with_custom_component()
+
+    update_response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"data": custom_flow_data["data"]},
+        headers=logged_in_headers,
+    )
+    # This should also be blocked by update validation
+    assert update_response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "blocked" in update_response.json()["detail"].lower()
+
+
+async def test_deprecated_vertices_endpoint_blocks_custom_component(client: AsyncClient, logged_in_headers):
+    """Test that POST /build/{flow_id}/vertices blocks custom components in data param.
+
+    This deprecated endpoint accepts a 'data' parameter that could bypass validation.
+    """
+    import uuid
+
+    flow_id = str(uuid.uuid4())
+    custom_nodes = create_flow_with_custom_component()["data"]["nodes"]
+
+    # The endpoint uses Body(embed=True) so data is nested under "data" key
+    response = await client.post(
+        f"api/v1/build/{flow_id}/vertices",
+        json={"nodes": custom_nodes, "edges": []},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST, f"Expected 400, got {response.status_code}: {response.json()}"
+    assert "blocked" in response.json()["detail"].lower()
+
+
+async def test_build_flow_blocks_custom_component_in_data_param(client: AsyncClient, logged_in_headers):
+    """Test that POST /build/{flow_id}/flow blocks custom components in client-provided data."""
+    # First create a valid flow
+    initial_flow = {"name": "test_flow", "data": {"nodes": [], "edges": []}}
+    create_response = await client.post("api/v1/flows/", json=initial_flow, headers=logged_in_headers)
+    assert create_response.status_code == status.HTTP_201_CREATED
+    flow_id = create_response.json()["id"]
+
+    # Try to build with custom component in data parameter
+    custom_data = create_flow_with_custom_component()
+
+    response = await client.post(
+        f"api/v1/build/{flow_id}/flow",
+        json={"data": custom_data["data"]},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "blocked" in response.json()["detail"].lower()
+
+
+async def test_project_upload_blocks_custom_component(client: AsyncClient, logged_in_headers):
+    """Test that POST /projects/upload/ blocks custom components."""
+    flow_data = create_flow_with_custom_component()
+    project_data = {
+        "folder_name": "test_project",
+        "folder_description": "test",
+        "flows": [flow_data],
+    }
+    file_content = json.dumps(project_data)
+
+    response = await client.post(
+        "api/v1/projects/upload/",
+        files={"file": ("project.json", file_content, "application/json")},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "blocked" in response.json()["detail"].lower()
+
+
 # Made with Bob

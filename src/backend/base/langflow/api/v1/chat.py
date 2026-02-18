@@ -81,6 +81,30 @@ async def retrieve_vertices_order(
     Raises:
         HTTPException: If there is an error checking the build status.
     """
+    # Validate custom components before building
+    from langflow.api.utils.flow_validation import validate_flow_custom_components
+
+    if data:
+        # Validate client-provided flow data
+        blocked_components = validate_flow_custom_components(data.model_dump())
+        if blocked_components:
+            component_names = [comp["display_name"] for comp in blocked_components]
+            raise HTTPException(
+                status_code=400,
+                detail=f"Flow build blocked: custom components are not allowed: {', '.join(component_names)}",
+            )
+    else:
+        # Validate flow data from database
+        flow = await session.get(Flow, flow_id)
+        if flow and flow.data:
+            blocked_components = validate_flow_custom_components(flow.data)
+            if blocked_components:
+                component_names = [comp["display_name"] for comp in blocked_components]
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Flow build blocked: custom components are not allowed: {', '.join(component_names)}",
+                )
+
     chat_service = get_chat_service()
     telemetry_service = get_telemetry_service()
     start_time = time.perf_counter()
@@ -168,11 +192,33 @@ async def build_flow(
     Returns:
         Dict with job_id that can be used to poll for build status
     """
-    # First verify the flow exists
+    # Validate custom components before building
+    from langflow.api.utils.flow_validation import validate_flow_custom_components
+
+    # Validate client-provided data if present
+    if data:
+        blocked_components = validate_flow_custom_components(data.model_dump())
+        if blocked_components:
+            component_names = [comp["display_name"] for comp in blocked_components]
+            raise HTTPException(
+                status_code=400,
+                detail=f"Flow build blocked: custom components are not allowed: {', '.join(component_names)}",
+            )
+
+    # Also validate the stored flow data
     async with session_scope() as session:
         flow = await session.get(Flow, flow_id)
         if not flow:
             raise HTTPException(status_code=404, detail=f"Flow with id {flow_id} not found")
+
+        if flow.data:
+            blocked_components = validate_flow_custom_components(flow.data)
+            if blocked_components:
+                component_names = [comp["display_name"] for comp in blocked_components]
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Flow build blocked: custom components are not allowed: {', '.join(component_names)}",
+                )
 
     job_id = await start_flow_build(
         flow_id=flow_id,
@@ -622,6 +668,30 @@ async def build_public_tmp(
         # Verify this is a public flow and get the associated user
         client_id = request.cookies.get("client_id")
         owner_user, new_flow_id = await verify_public_flow_and_get_user(flow_id=flow_id, client_id=client_id)
+
+        from langflow.api.utils.flow_validation import validate_flow_custom_components
+
+        # Validate client-provided data if present
+        if data:
+            blocked_components = validate_flow_custom_components(data.model_dump())
+            if blocked_components:
+                component_names = [comp["display_name"] for comp in blocked_components]
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Flow build blocked: custom components are not allowed: {', '.join(component_names)}",
+                )
+
+        # Also validate the stored flow data
+        async with session_scope() as session:
+            flow_record = await session.get(Flow, flow_id)
+            if flow_record and flow_record.data:
+                blocked_components = validate_flow_custom_components(flow_record.data)
+                if blocked_components:
+                    component_names = [comp["display_name"] for comp in blocked_components]
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Flow build blocked: custom components are not allowed: {', '.join(component_names)}",
+                    )
 
         # Start the flow build using the new flow ID
         job_id = await start_flow_build(
