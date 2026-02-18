@@ -17,7 +17,8 @@ class JobStatus(str, Enum):
 
 
 class JobType(str, Enum):
-    """Enum to specify type of job,
+    """Enum to specify type of job.
+
     WORKFLOW: for workflow execution
     INGESTION: for knowledge base ingestion
     EVALUATION: for evaluation of workflows.
@@ -61,7 +62,7 @@ class JobBase(SQLModel):
     asset_id: UUID | None = Field(index=True, nullable=True)
     asset_type: str | None = Field(
         index=False, nullable=True
-    )  # This can be polymorphic, it records if the job is related to a particular entity like a knowledge base, workflow etc.
+    )  # Polymorphic: records if job is related to an entity like a KB, workflow, etc.
 
 
 class Job(JobBase, table=True):  # type: ignore[call-arg]

@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 from datetime import datetime, timezone
 from uuid import UUID
 
@@ -118,7 +122,7 @@ class JobService(Service):
                 await session.flush()
             return job
 
-    async def get_latest_jobs_by_asset_ids(self, asset_ids: list[UUID | str]) -> dict[UUID, Job]:
+    async def get_latest_jobs_by_asset_ids(self, asset_ids: Sequence[UUID | str]) -> dict[UUID, Job]:
         """Get the latest job for each asset ID in a single batch query.
 
         Args:

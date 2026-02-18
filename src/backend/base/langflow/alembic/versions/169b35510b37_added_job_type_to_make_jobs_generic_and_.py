@@ -4,6 +4,7 @@ Revision ID: 169b35510b37
 Revises: 369268b9af8b
 Create Date: 2026-02-10 16:15:51.830502
 
+Phase: EXPAND
 """
 
 from collections.abc import Sequence
