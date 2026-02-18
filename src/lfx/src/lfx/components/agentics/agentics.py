@@ -1,5 +1,6 @@
 """Agentics component for data transformation using an LLM and natural language instructions with desired schema.
-Process a large batch of data in Map/Reduce style computation for concurrent and faster processing."""
+Process a large batch of data in Map/Reduce style computation for concurrent and faster processing.
+"""
 
 from __future__ import annotations
 
@@ -32,8 +33,10 @@ from lfx.schema.dataframe import DataFrame
 class AgenticsComponent(BaseAgenticComponent):
     """Uses an LLM to transform a large batch of data defined by the data type and natural langauge instructions."""
 
-    display_name = "Agentic Data Transducer"    
-    description = "Uses an LLM to transform a large batch of data defined by the data type and natural langauge instructions."
+    display_name = "Agentic Data Transducer"
+    description = (
+        "Uses an LLM to transform a large batch of data defined by the data type and natural langauge instructions."
+    )
     documentation: str = "github.com/IBM/agentics/"
     icon = "Agentics"
 

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pydantic import create_model
+
 from lfx.components.agentics.base_component import BaseAgenticComponent
 from lfx.components.agentics.constants import (
     ERROR_AGENTICS_NOT_INSTALLED,
@@ -16,20 +18,21 @@ from lfx.components.agentics.inputs import (
     get_model_provider_inputs,
 )
 from lfx.io import (
+    BoolInput,
     DataFrameInput,
     MessageTextInput,
-    BoolInput,
     Output,
 )
 from lfx.schema.dataframe import DataFrame
-from pydantic import create_model
 
 
 class SemanticAggregator(BaseAgenticComponent):
     """Aggregate or summarize entire input data following natural langauge instructions and the output schema."""
 
     display_name = "Semantic Aggregator"
-    description = "Aggregate or summarize entire input data following natural langauge instructions and the output schema."
+    description = (
+        "Aggregate or summarize entire input data following natural langauge instructions and the output schema."
+    )
     documentation: str = "github.com/IBM/agentics/"
     icon = "Agentics"
 
@@ -42,12 +45,13 @@ class SemanticAggregator(BaseAgenticComponent):
             required=True,
         ),
         get_generated_fields_input(),
-        BoolInput(name="return_multiple_instances",
-                  display_name="Generate Multiple Outputs",
-                  info="If enabled, generate multiple instances of the specified type",
-                  advanced=False,
-                  value=False,
-                  ),
+        BoolInput(
+            name="return_multiple_instances",
+            display_name="Generate Multiple Outputs",
+            info="If enabled, generate multiple instances of the specified type",
+            advanced=False,
+            value=False,
+        ),
         MessageTextInput(
             name="instructions",
             display_name="Instructions",
@@ -62,7 +66,7 @@ class SemanticAggregator(BaseAgenticComponent):
             name="states",
             method="semantic_aggregation",
             display_name="Output DataFrame",
-            info="The resulting DataFrame processed by the LLM that follows the output schema",            
+            info="The resulting DataFrame processed by the LLM that follows the output schema",
             tool_mode=True,
         ),
     ]
@@ -81,23 +85,22 @@ class SemanticAggregator(BaseAgenticComponent):
         schema_fields = build_schema_fields(self.generated_fields)
         atype = create_pydantic_model(schema_fields, name="Target")
         if self.return_multiple_instances:
-            FinalAtype = create_model(
-                f"ListOfTarget",
-                items=(list[atype], ...)
-            )
-        else: 
-            FinalAtype= atype
-
+            FinalAtype = create_model("ListOfTarget", items=(list[atype], ...))
+        else:
+            FinalAtype = atype
 
         target = AG(
             atype=FinalAtype,
             transduction_type=TRANSDUCTION_AREDUCE,
-            instructions=self.instructions if not self.return_multiple_instances else  "\nGenerate a list of instances of the target type following those instructions : ." + self.instructions,
+            instructions=self.instructions
+            if not self.return_multiple_instances
+            else "\nGenerate a list of instances of the target type following those instructions : ."
+            + self.instructions,
             llm=llm,
         )
 
         output = await (target << source)
-        if  self.return_multiple_instances:
-            output=AG(atype=atype, states=output[0].items)
+        if self.return_multiple_instances:
+            output = AG(atype=atype, states=output[0].items)
 
         return DataFrame(output.to_dataframe().to_dict(orient="records"))

@@ -45,7 +45,7 @@ class DataFrameOps(Component):
             options=DATAFRAME_OPERATIONS,
             value=OPERATION_MERGE,
             required=True,
-        )
+        ),
     ]
 
     outputs = [
