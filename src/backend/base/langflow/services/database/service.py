@@ -240,7 +240,7 @@ class DatabaseService(Service):
         async with self._with_session() as session:
             # server_version is "15.2" or "15.2 (Debian 15.2-1.pgdg120+1)"
             result = await session.exec(text("SELECT current_setting('server_version')"))
-            row = await result.one()
+            row = result.one()
             version_str = row[0] if hasattr(row, "__getitem__") else row
             # Parse major from the start (e.g. "15.2" or "15.2 (Debian ...)" -> 15)
             try:
