@@ -124,6 +124,11 @@ def _pin_version(package_name: str) -> str:
         version = md.version(package_name)
         return f"{package_name}=={version}"
     except md.PackageNotFoundError:
+        warnings.warn(
+            f"Could not determine installed version for '{package_name}'. "
+            "It will be included without a version pin.",
+            stacklevel=2,
+        )
         return package_name
 
 
@@ -265,6 +270,12 @@ def _resolve_provider_packages(provider_name: str) -> set[str]:
 
     provider_info = MODEL_PROVIDERS_DICT.get(provider_name)
     if not provider_info:
+        warnings.warn(
+            f"Provider '{provider_name}' was detected in the flow but is not "
+            "registered in MODEL_PROVIDERS_DICT (its package may not be installed). "
+            "Its dependencies will not be included in requirements.",
+            stacklevel=2,
+        )
         return set()
 
     component_instance = provider_info.get("component_class")
@@ -345,9 +356,20 @@ def _resolve_embedding_provider_packages(provider_name: str) -> set[str]:
 
     import_info = _EMBEDDING_CLASS_IMPORTS.get(class_name)
     if not import_info:
+        warnings.warn(
+            f"Embedding class '{class_name}' for provider '{provider_name}' is not "
+            "in _EMBEDDING_CLASS_IMPORTS. The import registry may need updating.",
+            stacklevel=2,
+        )
         return set()
 
-    top_level = import_info[0].split(".")[0]
+    module_path, _attr_name, install_hint = import_info
+
+    # Use install_hint if provided (handles internal module paths like lfx.base.models.*)
+    if install_hint:
+        return {install_hint}
+
+    top_level = module_path.split(".")[0]
     if top_level in STDLIB_MODULES or top_level in {"lfx", "langflow", "langflow_base"}:
         return set()
 
@@ -604,7 +626,11 @@ def main() -> None:
     )
 
     if args.output:
-        Path(args.output).write_text(content, encoding="utf-8")
+        try:
+            Path(args.output).write_text(content, encoding="utf-8")
+        except OSError as e:
+            print(f"Error: Could not write to {args.output}: {e}", file=sys.stderr)
+            sys.exit(1)
         print(f"Requirements written to {args.output}")
     else:
         print(content)
