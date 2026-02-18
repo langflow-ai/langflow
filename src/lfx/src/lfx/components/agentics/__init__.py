@@ -8,4 +8,4 @@ from lfx.components.agentics.semantic_aggregator import SemanticAggregator
 from lfx.components.agentics.semantic_map import SemanticMap
 from lfx.components.agentics.synthetic_data_generator import SyntheticDataGenerator
 
-__all__ = ["SemanticMap", "SemanticAggregator", "SyntheticDataGeneratorDataFrameOps", "AgenticsComponent"]
+__all__ = ["AgenticsComponent", "SemanticAggregator", "SemanticMap", "SyntheticDataGeneratorDataFrameOps"]
