@@ -2,10 +2,12 @@
 
 from typing import Any
 
-from lfx.custom.validate import extract_display_name, validate_code
+from lfx.custom.hash_validator import is_code_hash_allowed
+from lfx.custom.validate import extract_display_name
+from lfx.log.logger import logger
 
 
-def validate_flow_custom_components(flow_data: dict[str, Any]) -> list[dict[str, str]]:
+def validate_flow_custom_components(flow_data: dict[str, Any]) -> list[dict[str, str | bool]]:
     """Validate all custom components in a flow.
 
     This validates ALL nodes with code against the hash allowlist, regardless of
@@ -17,15 +19,15 @@ def validate_flow_custom_components(flow_data: dict[str, Any]) -> list[dict[str,
 
     Returns:
         List of blocked components with their details:
-        [{"node_id": "...", "display_name": "...", "class_name": "..."}]
+        [{"node_id": "...", "display_name": "...", "class_name": "...", "is_edited_builtin": bool}]
         Empty list if all components are valid.
     """
-    blocked_components = []
+    blocked_components: list[dict[str, str | bool]] = []
     _validate_nodes(flow_data.get("nodes", []), blocked_components)
     return blocked_components
 
 
-def _validate_nodes(nodes: list[dict[str, Any]], blocked_components: list[dict[str, str]]) -> None:
+def _validate_nodes(nodes: list[dict[str, Any]], blocked_components: list[dict[str, str | bool]]) -> None:
     """Validate a list of nodes, recursively checking group/sub-flow nodes.
 
     Args:
@@ -53,17 +55,23 @@ def _validate_nodes(nodes: list[dict[str, Any]], blocked_components: list[dict[s
         if not code:
             continue
 
-        # Validate ALL nodes with code against the hash allowlist.
+        # Validate ALL nodes with code directly against the hash allowlist.
         # Do NOT trust client-provided 'edited' or 'type' metadata —
         # the hash check determines if the code is an allowed built-in.
-        validation_result = validate_code(code)
+        # Use is_code_hash_allowed directly instead of validate_code to avoid
+        # conflating hash-blocked errors with legitimate code validation errors.
+        try:
+            is_allowed = is_code_hash_allowed(code)
+        except Exception:  # noqa: BLE001
+            # Fail closed: if hash validation raises, treat as blocked
+            logger.error("Hash validation failed with exception, blocking component", exc_info=True)
+            is_allowed = False
 
-        # Check if there are any errors (blocked by security)
-        if validation_result.get("function", {}).get("errors"):
+        if not is_allowed:
             # Extract display name from code
             display_name = extract_display_name(code)
 
-            # Try to get class name from the node
+            # Get display name from the node metadata
             class_name = node_info.get("display_name") or node.get("id", "Unknown")
 
             node_type = node_data.get("type")

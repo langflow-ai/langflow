@@ -93,8 +93,7 @@ class Settings(BaseSettings):
     instances share the same database and need coordinated migration locking."""
 
     mcp_server_timeout: int = 20
-    """The number of seconds to wait before giving up on a lock to released or establishing a connection to the
-    database."""
+    """The number of seconds to wait before giving up on establishing a connection to an MCP server."""
 
     # ---------------------------------------------------------------------
     # MCP Session-manager tuning

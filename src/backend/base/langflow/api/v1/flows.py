@@ -656,20 +656,6 @@ async def _update_existing_flow(
     - Fails on name/endpoint_name conflict with OTHER flows (409)
     - Keeps existing folder_id if not provided in request
     """
-    # Validate custom components if flow data is being updated
-    if flow.data is not None:
-        from langflow.api.utils.flow_validation import validate_flow_custom_components
-
-        blocked_components = validate_flow_custom_components(flow.data)
-
-        if blocked_components:
-            component_names = [comp["display_name"] for comp in blocked_components]
-            error_message = (
-                f"Flow update blocked: The flow contains custom components that are not allowed: "
-                f"{', '.join(component_names)}"
-            )
-            raise HTTPException(status_code=400, detail=error_message)
-
     settings_service = get_settings_service()
     user_id = current_user.id
 

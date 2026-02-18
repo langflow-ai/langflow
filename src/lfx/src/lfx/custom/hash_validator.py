@@ -5,13 +5,13 @@ hash history files by comparing code hashes. When allow_custom_components is Fal
 only components whose hash matches an entry in the hash history are allowed.
 """
 
-import hashlib
 import threading
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import orjson
 
+from lfx.custom.utils import _generate_code_hash
 from lfx.log.logger import logger
 from lfx.services.deps import get_settings_service
 
@@ -23,34 +23,6 @@ if TYPE_CHECKING:
 _component_hash_cache: set[str] | None = None
 _cache_settings_key: tuple[str, bool, bool, int] | None = None
 _cache_lock = threading.Lock()
-
-
-def _generate_code_hash(source_code: str) -> str:
-    """Generate a hash of the component source code.
-
-    This uses the exact same method as _generate_code_hash in custom/utils.py
-    to ensure consistency with the build_hash_history.py script.
-
-    Args:
-        source_code: The source code string to hash
-
-    Returns:
-        First 12 characters of SHA256 hex digest
-
-    Raises:
-        TypeError: If source_code is not a string
-        ValueError: If source_code is empty
-    """
-    if not isinstance(source_code, str):
-        msg = "Source code must be a string"
-        raise TypeError(msg)
-
-    if not source_code:
-        msg = "Empty source code provided"
-        raise ValueError(msg)
-
-    # Generate SHA256 hash of the source code (first 12 chars for brevity)
-    return hashlib.sha256(source_code.encode("utf-8")).hexdigest()[:12]
 
 
 def _extract_hashes_from_history(history: dict, *, allow_code_execution: bool = True) -> tuple[set[str], set[str]]:
@@ -66,6 +38,7 @@ def _extract_hashes_from_history(history: dict, *, allow_code_execution: bool = 
         - code_execution_hashes: Set of hashes for components marked with executes_code=true
 
     Raises:
+        TypeError: If component data or version data has an unexpected type
         ValueError: If history data is malformed or invalid
     """
     allowed_hashes: set[str] = set()
@@ -300,16 +273,16 @@ def is_code_hash_allowed(source_code: str, settings_service: "SettingsService | 
 
     # Check if custom components are allowed
     if settings_service.settings.allow_custom_components:
-        # Warn if code execution components setting is disabled but being ignored
+        # Log at debug level since this fires on every validation call
         if not settings_service.settings.allow_code_execution_components:
-            logger.warning(
-                "SECURITY WARNING: LANGFLOW_ALLOW_CODE_EXECUTION_COMPONENTS=false is being ignored "
+            logger.debug(
+                "LANGFLOW_ALLOW_CODE_EXECUTION_COMPONENTS=false is being ignored "
                 "because LANGFLOW_ALLOW_CUSTOM_COMPONENTS=true. Code-execution components "
-                "are currently ALLOWED. "
+                "are currently ALLOWED."
             )
         return True
 
-    code_hash = _generate_code_hash(source_code)
+    code_hash = _generate_code_hash(source_code, "hash_validation")
     allowed_hashes = _get_cached_hashes(settings_service)
 
     is_allowed = code_hash in allowed_hashes

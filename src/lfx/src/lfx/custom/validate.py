@@ -307,7 +307,7 @@ def create_class(code, class_name):
         class_name: Name of the class to be created
 
     Returns:
-         A function that, when called, returns an instance of the created class
+         The dynamically created class
 
     Raises:
         ValueError: If the code contains syntax errors or the class definition is invalid
@@ -519,13 +519,13 @@ def build_class_constructor(compiled_class, exec_globals, class_name):
         class_name: Name of the class
 
     Returns:
-         Constructor function for the class
+         The dynamically created class
     """
     exec_locals = dict(locals())
     exec(compiled_class, exec_globals, exec_locals)
     exec_globals[class_name] = exec_locals[class_name]
 
-    # Return a function that imports necessary modules and creates an instance of the target class
+    # Import necessary modules into globals and return the target class
     def build_custom_class():
         for module_name, module in exec_globals.items():
             if isinstance(module, type(importlib)):
