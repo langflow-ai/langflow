@@ -359,21 +359,63 @@ class FlowDataRequest(BaseModel):
     viewport: dict | None = None
 
 
-class ConfigResponse(BaseModel):
+class BaseConfigResponse(BaseModel):
+    """Base configuration shared by both public and authenticated responses.
+
+    Contains fields that are safe to expose publicly and needed by the frontend
+    for basic functionality (file uploads, event delivery, voice mode, timeouts).
+    """
+
+    max_file_size_upload: int
+    event_delivery: Literal["polling", "streaming", "direct"]
+    voice_mode_available: bool
+    frontend_timeout: int
+
+
+class PublicConfigResponse(BaseConfigResponse):
+    """Configuration response for public/unauthenticated endpoints like the public playground.
+
+    Contains only the configuration values needed for public features, without sensitive data.
+    The 'type' field is a discriminator to distinguish from full ConfigResponse.
+    """
+
+    type: Literal["public"] = "public"
+
+    @classmethod
+    def from_settings(cls, settings: Settings) -> "PublicConfigResponse":
+        """Create a PublicConfigResponse instance using values from a Settings object.
+
+        Parameters:
+            settings (Settings): The Settings object containing configuration values.
+
+        Returns:
+            PublicConfigResponse: An instance populated with public-safe configuration values.
+        """
+        return cls(
+            max_file_size_upload=settings.max_file_size_upload,
+            event_delivery=settings.event_delivery,
+            voice_mode_available=settings.voice_mode_available,
+            frontend_timeout=settings.frontend_timeout,
+        )
+
+
+class ConfigResponse(BaseConfigResponse):
+    """Full configuration response for authenticated users.
+
+    The 'type' field is a discriminator to distinguish from PublicConfigResponse.
+    """
+
+    type: Literal["full"] = "full"
     feature_flags: FeatureFlags
     serialization_max_items_length: int
     serialization_max_text_length: int
-    frontend_timeout: int
     auto_saving: bool
     auto_saving_interval: int
     health_check_max_retries: int
-    max_file_size_upload: int
     webhook_polling_interval: int
     public_flow_cleanup_interval: int
     public_flow_expiration: int
-    event_delivery: Literal["polling", "streaming", "direct"]
     webhook_auth_enable: bool
-    voice_mode_available: bool
     default_folder_name: str
     hide_getting_started_progress: bool
 
