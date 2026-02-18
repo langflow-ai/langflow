@@ -246,10 +246,23 @@ jobs:
             git tag -f ${{ needs.create-nightly-tag.outputs.main_tag }}
             git push -f origin ${{ needs.create-nightly-tag.outputs.main_tag }}
             
-            echo "=== Pushing to nightly-hash-history-updates branch ==="
-            # Also push to the branch for PR creation
-            git push origin HEAD:refs/heads/nightly-hash-history-updates --force
-            echo "Updated nightly tag and branch with hash history changes"
+            echo "=== Creating clean branch from main with only hash history changes ==="
+            # Fetch latest main
+            git fetch origin main
+            
+            # Create a new branch from main
+            git checkout -B nightly-hash-history-updates origin/main
+            
+            # Copy ONLY the hash history file from the nightly tag
+            git checkout ${{ needs.create-nightly-tag.outputs.main_tag }} -- src/lfx/src/lfx/_assets/nightly_hash_history.json
+            
+            # Commit only this file
+            git add src/lfx/src/lfx/_assets/nightly_hash_history.json
+            git commit -m "Update nightly hash history for ${{ needs.create-nightly-tag.outputs.main_tag }}"
+            
+            # Force push the clean branch
+            git push origin nightly-hash-history-updates --force
+            echo "Updated nightly tag and created clean branch with only hash history changes"
           fi
 
   frontend-tests:
@@ -310,47 +323,59 @@ jobs:
 
   slack-notification:
     name: Send Slack Notification
-    needs: [frontend-tests, backend-unit-tests, release-nightly-build]
-    if: ${{ github.repository == 'langflow-ai/langflow' && !inputs.skip_slack && always() && (needs.release-nightly-build.result == 'failure' || needs.frontend-tests.result == 'failure' || needs.backend-unit-tests.result == 'failure' || needs.release-nightly-build.result == 'success') }}
+    needs: [frontend-tests, backend-unit-tests, release-nightly-build, merge-hash-history-to-main]
+    if: ${{ github.repository == 'langflow-ai/langflow' && !inputs.skip_slack && always() && (needs.release-nightly-build.result == 'failure' || needs.frontend-tests.result == 'failure' || needs.backend-unit-tests.result == 'failure' || needs.merge-hash-history-to-main.result == 'failure' || needs.release-nightly-build.result == 'success') }}
     runs-on: ubuntu-latest
     steps:
       - name: Send failure notification to Slack
-        if: ${{ needs.release-nightly-build.result == 'failure' || needs.frontend-tests.result == 'failure' || needs.backend-unit-tests.result == 'failure' }}
+        if: ${{ needs.release-nightly-build.result == 'failure' || needs.frontend-tests.result == 'failure' || needs.backend-unit-tests.result == 'failure' || needs.merge-hash-history-to-main.result == 'failure' }}
         run: |
+          # Determine which job failed
+          FAILED_JOB="unknown"
+          if [ "${{ needs.release-nightly-build.result }}" == "failure" ]; then
+            FAILED_JOB="release-nightly-build"
+          elif [ "${{ needs.frontend-tests.result }}" == "failure" ]; then
+            FAILED_JOB="frontend-tests"
+          elif [ "${{ needs.backend-unit-tests.result }}" == "failure" ]; then
+            FAILED_JOB="backend-unit-tests"
+          elif [ "${{ needs.merge-hash-history-to-main.result }}" == "failure" ]; then
+            FAILED_JOB="merge-hash-history-to-main"
+          fi
+          
           curl -X POST -H 'Content-type: application/json' \
-          --data '{
-            "blocks": [
+          --data "{
+            \"blocks\": [
               {
-                "type": "section",
-                "text": {
-                  "type": "mrkdwn",
-                  "text": "❌ *Nightly Build Failed*"
+                \"type\": \"section\",
+                \"text\": {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"❌ *Nightly Build Failed*\"
                 }
               },
               {
-                "type": "section",
-                "fields": [
+                \"type\": \"section\",
+                \"fields\": [
                   {
-                    "type": "mrkdwn",
-                    "text": "*Job:*\nrelease-nightly-build"
+                    \"type\": \"mrkdwn\",
+                    \"text\": \"*Failed Job:*\\n$FAILED_JOB\"
                   },
                   {
-                    "type": "mrkdwn",
-                    "text": "*Status:*\n`${{ needs.release-nightly-build.result }}`"
+                    \"type\": \"mrkdwn\",
+                    \"text\": \"*Status:*\\nfailure\"
                   }
                 ]
               },
               {
-                "type": "context",
-                "elements": [
+                \"type\": \"context\",
+                \"elements\": [
                   {
-                    "type": "mrkdwn",
-                    "text": "<https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View full logs on GitHub>"
+                    \"type\": \"mrkdwn\",
+                    \"text\": \"<https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View full logs on GitHub>\"
                   }
                 ]
               }
             ]
-          }' ${{ secrets.LANGFLOW_ENG_SLACK_WEBHOOK_URL }}
+          }" ${{ secrets.LANGFLOW_ENG_SLACK_WEBHOOK_URL }}
 
   merge-hash-history-to-main:
     name: Create PR to Merge Hash History to Main
@@ -387,7 +412,7 @@ jobs:
       - name: Fetch nightly hash history branch
         run: |
           echo "=== Fetching nightly-hash-history-updates branch ==="
-          git fetch origin nightly-hash-history-updates || echo "Branch does not exist yet, will be created"
+          git fetch origin nightly-hash-history-updates || true
           echo "Fetch completed"
       
       - name: Check if branch exists and has changes
@@ -410,7 +435,9 @@ jobs:
           else
             echo "branch_exists=false" >> $GITHUB_OUTPUT
             echo "has_changes=false" >> $GITHUB_OUTPUT
-            echo "Branch does not exist yet - will be created by build-hash-history job"
+            echo "ERROR: Branch nightly-hash-history-updates does not exist!"
+            echo "This should have been created by the build-hash-history job."
+            exit 1
           fi
       
       - name: Validate and prepare PR
@@ -450,29 +477,55 @@ jobs:
         if: steps.check_branch.outputs.branch_exists == 'true' && steps.check_branch.outputs.has_changes == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # Create or update PR from the nightly-hash-history-updates branch
-          PR_URL=$(gh pr create \
-            --title "chore: update nightly hash history" \
-            --body "This PR updates the nightly hash history file with the latest component hashes from the nightly build.
+          PR_BODY: >-
+            This PR updates the nightly hash history file with the latest component hashes from the nightly build.
 
-          **Automated PR** - Generated by nightly build workflow
+
+            **Automated PR** - Generated by nightly build workflow
+
+
+            - Updates: `src/lfx/src/lfx/_assets/nightly_hash_history.json`
+
+            - Source: Nightly build tag ${{ needs.create-nightly-tag.outputs.main_tag || 'latest nightly' }}
+
+
+            This PR is automatically updated each night with the latest hash history.
+
+            Auto-merge is enabled - PR will merge automatically when checks pass.
+        run: |
+          echo "=== Creating or updating PR ==="
           
-          - Updates: \`src/lfx/src/lfx/_assets/nightly_hash_history.json\`
-          - Source: Nightly build tag ${{ needs.create-nightly-tag.outputs.main_tag }}
+          # Check if PR already exists
+          EXISTING_PR=$(gh pr list --head nightly-hash-history-updates --base main --json number --jq '.[0].number' 2>/dev/null || echo "")
           
-          This PR is automatically updated each night with the latest hash history.
-          Auto-merge is enabled - PR will merge automatically when checks pass." \
-            --base main \
-            --head nightly-hash-history-updates \
-            --label "automated" \
-            --label "nightly" 2>&1 || echo "")
+          if [ -n "$EXISTING_PR" ]; then
+            echo "PR #$EXISTING_PR already exists, updating..."
+            gh pr edit "$EXISTING_PR" \
+              --title "chore: update nightly hash history" \
+              --body "$PR_BODY"
+            
+            echo "PR updated successfully"
+            PR_NUMBER="$EXISTING_PR"
+          else
+            echo "Creating new PR..."
+            PR_URL=$(gh pr create \
+              --title "chore: update nightly hash history" \
+              --body "$PR_BODY" \
+              --base main \
+              --head nightly-hash-history-updates)
+            
+            echo "PR created: $PR_URL"
+            # Extract PR number from URL (works with both formats)
+            PR_NUMBER=$(echo "$PR_URL" | sed 's/.*\/pull\///' | sed 's/[^0-9].*//')
+          fi
           
-          # Enable auto-merge if PR was created or get existing PR
-          if [ -n "$PR_URL" ]; then
-            echo "PR created or found: $PR_URL"
-            # Enable auto-merge on the PR
-            gh pr merge nightly-hash-history-updates --auto --squash || echo "Auto-merge may already be enabled or PR doesn't exist yet"
+          # Enable auto-merge on the PR
+          echo "=== Enabling auto-merge ==="
+          if gh pr merge "$PR_NUMBER" --auto --squash; then
+            echo "Auto-merge enabled successfully"
+          else
+            echo "ERROR: Could not enable auto-merge on PR"
+            # TODO: Fail the job here (once you've got everything working on happy path)
           fi
 
       - name: Send success notification to Slack

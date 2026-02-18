@@ -10,14 +10,10 @@ from sqlmodel.sql.expression import SelectOfScalar
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.schemas import UsersResponse
 from langflow.initial_setup.setup import get_or_create_default_folder
-from langflow.services.auth.utils import (
-    get_current_active_superuser,
-    get_password_hash,
-    verify_password,
-)
+from langflow.services.auth.utils import get_current_active_superuser
 from langflow.services.database.models.user.crud import get_user_by_id, update_user
 from langflow.services.database.models.user.model import User, UserCreate, UserRead, UserUpdate
-from langflow.services.deps import get_settings_service
+from langflow.services.deps import get_auth_service, get_settings_service
 
 router = APIRouter(tags=["Users"], prefix="/users")
 
@@ -26,16 +22,18 @@ router = APIRouter(tags=["Users"], prefix="/users")
 async def add_user(
     user: UserCreate,
     session: DbSession,
-    current_user: Annotated[User, Depends(get_current_active_superuser)],  # noqa: ARG001
 ) -> User:
     """Add a new user to the database.
 
-    Requires superuser authentication to prevent unauthorized account creation.
+    This endpoint allows public user registration (sign up).
+    User activation is controlled by the NEW_USER_IS_ACTIVE setting.
     """
+    settings_service = get_settings_service()
+
     new_user = User.model_validate(user, from_attributes=True)
     try:
-        new_user.password = get_password_hash(user.password)
-        new_user.is_active = get_settings_service().auth_settings.NEW_USER_IS_ACTIVE
+        new_user.password = get_auth_service().get_password_hash(user.password)
+        new_user.is_active = settings_service.auth_settings.NEW_USER_IS_ACTIVE
         session.add(new_user)
         await session.flush()
         await session.refresh(new_user)
@@ -94,7 +92,7 @@ async def patch_user(
     if update_password:
         if not user.is_superuser:
             raise HTTPException(status_code=400, detail="You can't change your password here")
-        user_update.password = get_password_hash(user_update.password)
+        user_update.password = get_auth_service().get_password_hash(user_update.password)
 
     if user_db := await get_user_by_id(session, user_id):
         if not update_password:
@@ -112,15 +110,19 @@ async def reset_password(
 ) -> User:
     """Reset a user's password."""
     if user_id != user.id:
-        raise HTTPException(status_code=400, detail="You can't change another user's password")
+        raise HTTPException(status_code=404, detail="You can't change another user's password")
 
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    if verify_password(user_update.password, user.password):
+    if user_update.password is None:
+        raise HTTPException(status_code=400, detail="Password is required for password reset")
+
+    auth = get_auth_service()
+    if auth.verify_password(user_update.password, user.password):
         raise HTTPException(status_code=400, detail="You can't use your current password")
 
-    new_password = get_password_hash(user_update.password)
+    new_password = auth.get_password_hash(user_update.password)
     user.password = new_password
 
     await session.flush()

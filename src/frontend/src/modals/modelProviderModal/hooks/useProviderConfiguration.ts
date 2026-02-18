@@ -6,6 +6,7 @@ import {
   VARIABLE_CATEGORY,
 } from "@/constants/providerConstants";
 import {
+  useDeleteGlobalVariables,
   useGetGlobalVariables,
   usePatchGlobalVariables,
   usePostGlobalVariables,
@@ -33,6 +34,7 @@ interface UseProviderConfigurationReturn {
   validationFailed: boolean;
   isSaving: boolean;
   isPending: boolean;
+  isDeleting: boolean;
   validationState: ValidationState;
   validationError: string | null;
   providerVariables: ProviderVariable[];
@@ -41,6 +43,7 @@ interface UseProviderConfigurationReturn {
   // Handlers
   handleVariableChange: (key: string, value: string) => void;
   handleSaveAllVariables: () => Promise<void>;
+  handleDisconnect: () => Promise<void>;
   handleActivateProvider: () => void;
   validateCredentials: () => Promise<boolean>;
   handleModelToggle: (modelName: string, enabled: boolean) => void;
@@ -84,6 +87,8 @@ export const useProviderConfiguration = ({
     usePostGlobalVariables();
   const { mutateAsync: updateGlobalVariable, isPending: isUpdating } =
     usePatchGlobalVariables();
+  const { mutateAsync: deleteGlobalVariable, isPending: isDeleting } =
+    useDeleteGlobalVariables();
   const { data: globalVariables = [] } = useGetGlobalVariables();
   const { mutateAsync: validateProvider } = useValidateProvider();
   const { data: providerVariablesMapping = {} } = useGetProviderVariables();
@@ -151,7 +156,11 @@ export const useProviderConfiguration = ({
   }, [syncedSelectedProvider, providerVariablesMapping]);
 
   const isPending =
-    isCreating || isUpdating || isSaving || validationState === "validating";
+    isCreating ||
+    isUpdating ||
+    isDeleting ||
+    isSaving ||
+    validationState === "validating";
 
   // Invalidate all provider-related caches after successful create/update
   const invalidateProviderQueries = useCallback(() => {
@@ -448,6 +457,47 @@ export const useProviderConfiguration = ({
     invalidateProviderQueries,
   ]);
 
+  // Disconnect / Deactivate provider
+  const handleDisconnect = useCallback(async () => {
+    if (!syncedSelectedProvider) return;
+
+    const variableName = PROVIDER_VARIABLE_MAPPING[syncedSelectedProvider.provider];
+    if (!variableName) return;
+
+    const existingVariable = globalVariables.find(
+      (v) => v.name === variableName,
+    );
+    if (!existingVariable) return;
+
+    try {
+      await deleteGlobalVariable({ id: existingVariable.id });
+
+      setSuccessData({
+        title: `${syncedSelectedProvider.provider} Disconnected`,
+      });
+      invalidateProviderQueries();
+      setVariableValues({});
+      setSyncedSelectedProvider((prev) =>
+        prev ? { ...prev, is_enabled: false, is_configured: false } : null,
+      );
+    } catch (error: any) {
+      setErrorData({
+        title: "Error Disconnecting Provider",
+        list: [
+          error?.response?.data?.detail ||
+            "An unexpected error occurred. Please try again.",
+        ],
+      });
+    }
+  }, [
+    syncedSelectedProvider,
+    globalVariables,
+    deleteGlobalVariable,
+    setSuccessData,
+    setErrorData,
+    invalidateProviderQueries,
+  ]);
+
   const handleModelToggle = useCallback(
     (modelName: string, enabled: boolean) => {
       if (!syncedSelectedProvider?.provider) return;
@@ -512,6 +562,7 @@ export const useProviderConfiguration = ({
     validationFailed,
     isSaving,
     isPending,
+    isDeleting,
     validationState,
     validationError,
     providerVariables,
@@ -520,6 +571,7 @@ export const useProviderConfiguration = ({
     // Handlers
     handleVariableChange,
     handleSaveAllVariables,
+    handleDisconnect,
     handleActivateProvider,
     validateCredentials,
     handleModelToggle,
