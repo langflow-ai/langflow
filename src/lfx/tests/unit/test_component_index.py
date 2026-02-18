@@ -10,8 +10,10 @@ from unittest.mock import patch
 import orjson
 import pytest
 from lfx.interface.components import (
+    CORE_CATEGORIES,
     _all_category_names,
     _entries_to_dict,
+    _expand_virtual_keywords,
     _get_all_known_categories,
     _get_cache_path,
     _is_category_excluded,
@@ -608,6 +610,103 @@ class TestGetAllKnownCategories:
         with patch("lfx.interface.components._read_component_index", return_value=None):
             result = _get_all_known_categories()
         assert result is None
+
+
+class TestExpandVirtualKeywords:
+    """Tests for _expand_virtual_keywords helper."""
+
+    def test_core_expands(self):
+        result = _expand_virtual_keywords(["core"])
+        assert set(result) == CORE_CATEGORIES
+
+    def test_core_case_insensitive(self):
+        result = _expand_virtual_keywords(["Core"])
+        assert set(result) == CORE_CATEGORIES
+
+    def test_non_keyword_passthrough(self):
+        assert _expand_virtual_keywords(["openai", "anthropic"]) == ["openai", "anthropic"]
+
+    def test_core_plus_bundle(self):
+        result = _expand_virtual_keywords(["core", "openai"])
+        expanded = set(result)
+        assert expanded >= CORE_CATEGORIES
+        assert "openai" in expanded
+
+    def test_empty_list(self):
+        assert _expand_virtual_keywords([]) == []
+
+    def test_core_with_whitespace(self):
+        result = _expand_virtual_keywords([" core "])
+        assert set(result) == CORE_CATEGORIES
+
+
+@pytest.mark.asyncio
+class TestCoreKeywordIntegration:
+    """Integration tests for the 'core' virtual keyword through import_langflow_components."""
+
+    async def test_core_allowlist_includes_core_categories(self, tmp_path, monkeypatch):
+        """ALLOWLIST=core loads only core categories, not bundles."""
+        monkeypatch.delenv("LFX_DEV", raising=False)
+
+        entries = [
+            ["input_output", {"comp1": {"template": {}}}],
+            ["processing", {"comp2": {"template": {}}}],
+            ["openai", {"comp3": {"template": {}}}],
+            ["anthropic", {"comp4": {"template": {}}}],
+        ]
+        index_file = tmp_path / "index.json"
+        _write_index(index_file, entries)
+
+        settings = _make_settings(index_path=str(index_file), allowlist=["core"])
+
+        result = await import_langflow_components(settings)
+
+        assert "input_output" in result["components"]
+        assert "processing" in result["components"]
+        assert "openai" not in result["components"]
+        assert "anthropic" not in result["components"]
+
+    async def test_core_plus_bundle_allowlist(self, tmp_path, monkeypatch):
+        """ALLOWLIST=core,openai loads core categories + openai."""
+        monkeypatch.delenv("LFX_DEV", raising=False)
+
+        entries = [
+            ["input_output", {"comp1": {"template": {}}}],
+            ["processing", {"comp2": {"template": {}}}],
+            ["openai", {"comp3": {"template": {}}}],
+            ["anthropic", {"comp4": {"template": {}}}],
+        ]
+        index_file = tmp_path / "index.json"
+        _write_index(index_file, entries)
+
+        settings = _make_settings(index_path=str(index_file), allowlist=["core", "openai"])
+
+        result = await import_langflow_components(settings)
+
+        assert "input_output" in result["components"]
+        assert "processing" in result["components"]
+        assert "openai" in result["components"]
+        assert "anthropic" not in result["components"]
+
+    async def test_core_blocklist_removes_core_categories(self, tmp_path, monkeypatch):
+        """BLOCKLIST=core removes core categories, keeps bundles."""
+        monkeypatch.delenv("LFX_DEV", raising=False)
+
+        entries = [
+            ["input_output", {"comp1": {"template": {}}}],
+            ["processing", {"comp2": {"template": {}}}],
+            ["openai", {"comp3": {"template": {}}}],
+        ]
+        index_file = tmp_path / "index.json"
+        _write_index(index_file, entries)
+
+        settings = _make_settings(index_path=str(index_file), blocklist=["core"])
+
+        result = await import_langflow_components(settings)
+
+        assert "input_output" not in result["components"]
+        assert "processing" not in result["components"]
+        assert "openai" in result["components"]
 
 
 @pytest.mark.asyncio

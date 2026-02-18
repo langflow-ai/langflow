@@ -26,6 +26,39 @@ MIN_MODULE_PARTS = 2
 MIN_MODULE_PARTS_WITH_FILENAME = 4  # Minimum parts needed to have a module filename (lfx.components.type.filename)
 EXPECTED_RESULT_LENGTH = 2  # Expected length of the tuple returned by _process_single_module
 
+# Core component categories — mirrors SIDEBAR_CATEGORIES in the frontend (styleUtils.ts).
+# The virtual keyword "core" in allowlist/blocklist expands to these names.
+CORE_CATEGORIES: frozenset[str] = frozenset(
+    {
+        "input_output",
+        "data_source",
+        "models_and_agents",
+        "llm_operations",
+        "files_and_knowledge",
+        "processing",
+        "flow_controls",
+        "utilities",
+        "prototypes",
+        "tools",
+        "agents",
+        "data",
+        "logic",
+        "helpers",
+        "models",
+        "vectorstores",
+        "inputs",
+        "outputs",
+        "prompts",
+        "chains",
+        "documentloaders",
+        "link_extractors",
+        "output_parsers",
+        "retrievers",
+        "textsplitters",
+        "toolkits",
+    }
+)
+
 
 # Create a class to manage component cache instead of using globals
 class ComponentCache:
@@ -259,6 +292,17 @@ async def _send_telemetry(
     except Exception as e:  # noqa: BLE001
         # Don't fail component loading if telemetry fails
         await logger.adebug(f"Failed to send component index telemetry: {e}")
+
+
+def _expand_virtual_keywords(categories: list[str]) -> list[str]:
+    """Expand virtual keywords like 'core' into their constituent category names."""
+    expanded: list[str] = []
+    for cat in categories:
+        if cat.lower().strip() == "core":
+            expanded.extend(CORE_CATEGORIES)
+        else:
+            expanded.append(cat)
+    return expanded
 
 
 def _is_category_excluded(
@@ -564,14 +608,16 @@ async def import_langflow_components(
     # Build allowlist/blocklist sets once — passed into every loading path to skip work early
     category_allowlist: frozenset[str] | None = None
     if settings_service and settings_service.settings.component_category_allowlist:
-        cleaned = [cat.lower().strip() for cat in settings_service.settings.component_category_allowlist if cat.strip()]
+        expanded = _expand_virtual_keywords(settings_service.settings.component_category_allowlist)
+        cleaned = [cat.lower().strip() for cat in expanded if cat.strip()]
         if cleaned:
             category_allowlist = frozenset(cleaned)
             await logger.adebug(f"component_category_allowlist active: {sorted(category_allowlist)}")
 
     category_blocklist: frozenset[str] | None = None
     if settings_service and settings_service.settings.component_category_blocklist:
-        cleaned = [cat.lower().strip() for cat in settings_service.settings.component_category_blocklist if cat.strip()]
+        expanded = _expand_virtual_keywords(settings_service.settings.component_category_blocklist)
+        cleaned = [cat.lower().strip() for cat in expanded if cat.strip()]
         if cleaned:
             category_blocklist = frozenset(cleaned)
             await logger.adebug(f"component_category_blocklist active: {sorted(category_blocklist)}")
