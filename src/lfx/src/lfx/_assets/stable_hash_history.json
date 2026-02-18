@@ -1041,7 +1041,7 @@
   },
   "CSVAgent": {
     "versions": {
-      "0.3.0": "97947e212da9"
+      "0.3.0": "4978be110e63"
     }
   },
   "LangChainFakeEmbeddings": {
