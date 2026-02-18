@@ -28,6 +28,10 @@ from tenacity import retry, stop_after_attempt, wait_fixed
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.base import Service
 from langflow.services.database import models
+from langflow.services.database.constants import (
+    MIN_POSTGRESQL_MAJOR_VERSION,
+    POSTGRESQL_VERSION_REQUIRED_MESSAGE,
+)
 from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.database.session import NoopSession
 from langflow.services.database.utils import Result, TableResults
@@ -221,6 +225,31 @@ class DatabaseService(Service):
             # Provides efficient session creation and proper connection pooling
             async with self.async_session_maker() as session:
                 yield session
+
+    async def ensure_postgresql_version(self) -> None:
+        """If the database is PostgreSQL, ensure it is version 15 or higher.
+
+        Langflow's schema uses UNIQUE NULLS DISTINCT, which is only supported in PostgreSQL 15+.
+        Raises RuntimeError with a clear message if the version is too old.
+        """
+        # Start with DATABASE_URL: only run this check when PostgreSQL is configured
+        if not self.database_url.startswith(("postgresql", "postgres")):
+            return
+        if self.settings_service.settings.use_noop_database:
+            return
+        async with self._with_session() as session:
+            # server_version is "15.2" or "15.2 (Debian 15.2-1.pgdg120+1)"
+            result = await session.exec(text("SELECT current_setting('server_version')"))
+            row = await result.one()
+            version_str = row[0] if hasattr(row, "__getitem__") else row
+            # Parse major from the start (e.g. "15.2" or "15.2 (Debian ...)" -> 15)
+            try:
+                major = int(version_str.split()[0].split(".")[0])
+            except (ValueError, IndexError, AttributeError):
+                major = 0
+            if major < MIN_POSTGRESQL_MAJOR_VERSION:
+                msg = f"You are running PostgreSQL {version_str}. {POSTGRESQL_VERSION_REQUIRED_MESSAGE}"
+                raise RuntimeError(msg) from None
 
     async def assign_orphaned_flows_to_superuser(self) -> None:
         """Assign orphaned flows to the default superuser when auto login is enabled."""
