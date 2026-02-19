@@ -279,6 +279,15 @@ def serialize(
     if no_limits and not to_str and is_simple_primitive:
         return obj
 
+    # Fast-path for nested simple JSON-like structures (dict/list of primitives)
+    # common in tracing outputs. Avoids expensive dispatcher when no serialization needed.
+    if no_limits and not to_str and isinstance(obj, (dict, list, tuple)):
+        try:
+            if _is_simple_json_structure(obj):
+                return obj
+        except Exception:
+            pass
+
     try:
         # First try type-specific serialization
         result = _serialize_dispatcher(obj, max_length, max_items)
@@ -327,3 +336,20 @@ def serialize_or_str(
         max_items: Maximum items in list-like structures, None for no truncation
     """
     return serialize(obj, max_length, max_items, to_str=True)
+
+
+def _is_simple_json_structure(obj: Any) -> bool:
+    """Check if object is a simple JSON-like structure (primitives, dicts, lists)."""
+    if obj is None or isinstance(obj, (str, int, float, bool)):
+        return True
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            if not isinstance(k, str) or not _is_simple_json_structure(v):
+                return False
+        return True
+    if isinstance(obj, (list, tuple)):
+        for item in obj:
+            if not _is_simple_json_structure(item):
+                return False
+        return True
+    return False
