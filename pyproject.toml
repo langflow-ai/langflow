@@ -18,6 +18,9 @@ maintainers = [
 # Define your main dependencies here
 dependencies = [
     "langflow-base[complete]~=0.8.0",
+    # Explicit torch/torchvision to trigger [tool.uv.sources] index override
+    "torch>=2.0.0",
+    "torchvision>=0.15.0",
 ]
 
 
@@ -73,10 +76,17 @@ dev = [
     "mcp-server-fetch>=2025.1.17",
 ]
 
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
 [tool.uv.sources]
 langflow-base = { workspace = true }
 langflow = { workspace = true }
 lfx = { workspace = true }
+torch = { index = "pytorch-cpu" }
+torchvision = { index = "pytorch-cpu" }
 
 [tool.uv.workspace]
 members = [
@@ -135,6 +145,15 @@ postgresql = [
 ]
 
 [tool.uv]
+# Ensure lockfile resolves packages for both x86_64 and ARM64 platforms
+# Required because we have platform-specific torch CPU wheels for x86_64
+# Without this, ARM64 builds fail with --frozen as they can't find compatible wheels
+required-environments = [
+    "sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "sys_platform == 'linux' and platform_machine == 'aarch64'",
+    "sys_platform == 'darwin'",
+]
+
 override-dependencies = [
     # temporary force a newer python-pptx
     "python-pptx>=1.0.2",
