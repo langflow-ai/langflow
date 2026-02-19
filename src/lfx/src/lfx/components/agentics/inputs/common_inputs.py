@@ -1,4 +1,4 @@
-"""Common input definitions for Agentics components."""
+"""Common input field definitions shared across Agentics components."""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ GENERATED_FIELDS_TABLE_SCHEMA = [
         "name": "name",
         "display_name": "Name",
         "type": "str",
-        "description": "Specify the name of the output field.",
+        "description": "The name of the output field (e.g., 'summary', 'category', 'score').",
         "default": "text",
         "edit_mode": EditMode.INLINE,
     },
@@ -27,7 +27,7 @@ GENERATED_FIELDS_TABLE_SCHEMA = [
         "name": "description",
         "display_name": "Description",
         "type": "str",
-        "description": "Describe the purpose of the output field.",
+        "description": "A clear description of what this field represents and how it should be generated.",
         "default": "",
         "edit_mode": EditMode.POPOVER,
     },
@@ -36,7 +36,7 @@ GENERATED_FIELDS_TABLE_SCHEMA = [
         "display_name": "Type",
         "type": "str",
         "edit_mode": EditMode.INLINE,
-        "description": "Indicate the data type of the output field (e.g., str, int, float, bool, dict).",
+        "description": "The data type for this field (str, int, float, bool, or dict).",
         "options": ["str", "int", "float", "bool", "dict"],
         "default": "str",
     },
@@ -44,24 +44,21 @@ GENERATED_FIELDS_TABLE_SCHEMA = [
         "name": "multiple",
         "display_name": "As List",
         "type": "boolean",
-        "description": "Set to True if this output field should be a list of the specified type.",
+        "description": "Enable to make this field a list of the specified type (e.g., list[str]).",
         "default": False,
         "edit_mode": EditMode.INLINE,
     },
 ]
 
-GENERATED_FIELDS_DEFAULT_VALUE = [
-    {
-        "name": "text",
-        "description": "",
-        "type": "str",
-        "multiple": False,
-    }
-]
+GENERATED_FIELDS_DEFAULT_VALUE = []
 
 
 def get_model_provider_inputs() -> list:
-    """Return the common model provider inputs."""
+    """Return the standard set of model provider configuration inputs.
+    
+    Includes model selection, API key, and provider-specific fields for
+    WatsonX and Ollama.
+    """
     return [
         ModelInput(
             name="model",
@@ -77,23 +74,26 @@ def get_model_provider_inputs() -> list:
 
 
 def get_api_key_input() -> SecretStrInput:
-    """Return the API key input."""
+    """Return the API key input field for provider authentication."""
     return SecretStrInput(
         name="api_key",
         display_name="API Key",
-        info="Model Provider API key",
+        info="API key for authenticating with the selected model provider.",
         real_time_refresh=True,
         advanced=True,
     )
 
 
 def get_watsonx_inputs() -> list:
-    """Return IBM WatsonX-specific inputs."""
+    """Return IBM WatsonX-specific configuration inputs.
+    
+    Includes API endpoint selection and project ID fields.
+    """
     return [
         DropdownInput(
             name="base_url_ibm_watsonx",
             display_name="Watsonx API Endpoint",
-            info="The base URL of the API (IBM watsonx.ai only)",
+            info="API endpoint URL for IBM WatsonX (shown only when WatsonX is selected).",
             options=IBM_WATSONX_URLS,
             value=IBM_WATSONX_URLS[0],
             show=False,
@@ -102,7 +102,7 @@ def get_watsonx_inputs() -> list:
         StrInput(
             name="project_id",
             display_name="Watsonx Project ID",
-            info="The project ID associated with the foundation model (IBM watsonx.ai only)",
+            info="Project ID for IBM WatsonX workspace (shown only when WatsonX is selected).",
             show=False,
             required=False,
         ),
@@ -110,11 +110,11 @@ def get_watsonx_inputs() -> list:
 
 
 def get_ollama_url_input() -> MessageInput:
-    """Return the Ollama URL input."""
+    """Return the Ollama base URL input for local model deployment."""
     return MessageInput(
         name="ollama_base_url",
         display_name="Ollama API URL",
-        info=f"Endpoint of the Ollama API (Ollama only). Defaults to {DEFAULT_OLLAMA_URL}",
+        info=f"API endpoint for Ollama (shown only when Ollama is selected). Defaults to {DEFAULT_OLLAMA_URL}.",
         value=DEFAULT_OLLAMA_URL,
         show=False,
         real_time_refresh=True,
@@ -123,16 +123,21 @@ def get_ollama_url_input() -> MessageInput:
 
 
 def get_generated_fields_input(
-    name: str = "generated_fields",
-    display_name: str = "Output Schema",
-    info: str = "Define the structure and data types for the generated output",
+    name: str = "schema",
+    display_name: str = "Schema",
+    info: str = "Define the structure of data to generate. Specify column names, descriptions, and types.",
+    required: bool = True,
 ) -> TableInput:
-    """Return the generated fields table input."""
+    """Return the output schema table input for defining generated fields.
+    
+    Allows users to specify field names, descriptions, types, and whether
+    fields should be lists.
+    """
     return TableInput(
         name=name,
         display_name=display_name,
         info=info,
-        required=True,
+        required=required,
         table_schema=GENERATED_FIELDS_TABLE_SCHEMA,
         value=GENERATED_FIELDS_DEFAULT_VALUE,
     )

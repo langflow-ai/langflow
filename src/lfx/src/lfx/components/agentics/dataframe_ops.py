@@ -1,4 +1,4 @@
-"""Component for combining two DataFrames, possibly having two different schema. Merge or Compose a new output schema if requested."""
+"""Component for combining two DataFrames with different schemas using various merge strategies."""
 
 from __future__ import annotations
 
@@ -20,10 +20,16 @@ from lfx.schema.dataframe import DataFrame
 
 
 class DataFrameOps(Component):
-    """Combine two structured DataFrames, possibly with different schema. Merge creates a new output schema by merging input schemas, compose introduces a nested schema of a pair of input and output schema."""
+    """Combine two DataFrames with potentially different schemas using various strategies.
+    
+    Supports three combination methods:
+    - Merge: Creates a unified schema by merging both input schemas
+    - Compose: Creates a nested schema pairing input and output schemas
+    - Concatenate: Stacks all rows from both DataFrames
+    """
 
     display_name = "DataFrame Combiner"
-    description = "Combine two DataFrames, possibly with different schema."
+    description = "Combine two DataFrames with potentially different schemas using merge, compose, or concatenate operations."
     documentation: str = "github.com/IBM/agentics/"
     icon = "Agentics"
 
@@ -31,17 +37,19 @@ class DataFrameOps(Component):
         DataFrameInput(
             name="left_dataframe",
             display_name="Left DataFrame",
-            info="The first input DataFrame to combine",
+            info="The first DataFrame to combine.",
+            required=True,
         ),
         DataFrameInput(
             name="right_dataframe",
             display_name="Right DataFrame",
-            info="The second input DataFrame to combine",
+            info="The second DataFrame to combine.",
+            required=True,
         ),
         DropdownInput(
             name="operation_type",
             display_name="Combination Method",
-            info="Merge creates a new output schema by merging input schemas, compose introduces a nested schema of a pair of the input and output schema, and concatenate stacks all the rows",
+            info="Merge: unifies schemas | Compose: creates nested schema | Concatenate: stacks all rows vertically.",
             options=DATAFRAME_OPERATIONS,
             value=OPERATION_MERGE,
             required=True,
@@ -52,30 +60,37 @@ class DataFrameOps(Component):
         Output(
             name="states",
             display_name="Combined DataFrame",
-            info="The resulting DataFrame after combining two input DataFrames",
+            info="Combined DataFrame resulting from the selected operation.",
             method="dataframe_operations",
             tool_mode=True,
         ),
     ]
 
     async def dataframe_operations(self) -> DataFrame:
-        """Execute the selected operation on two DataFrames."""
+        """Execute the selected combination operation on two DataFrames.
+        
+        Returns:
+            DataFrame resulting from the merge, compose, or concatenate operation.
+        """
         try:
             from agentics import AG
         except ImportError as e:
             raise ImportError(ERROR_AGENTICS_NOT_INSTALLED) from e
+        
+        if self.left_dataframe or self.right_dataframe:
+            
+            left = AG.from_dataframe(DataFrame(self.left_dataframe))
+            right = AG.from_dataframe(DataFrame(self.right_dataframe))
 
-        left = AG.from_dataframe(DataFrame(self.left_dataframe))
-        right = AG.from_dataframe(DataFrame(self.right_dataframe))
+            if self.operation_type == OPERATION_MERGE:
+                output = left.merge_states(right)
+            elif self.operation_type == OPERATION_COMPOSE:
+                output = left.compose_states(right)
+            elif self.operation_type == OPERATION_CONCATENATE:
+                output_states = left.states + right.states
+                output = AG(states=output_states)
+            else:
+                raise ValueError(ERROR_UNSUPPORTED_OPERATION.format(operation_type=self.operation_type))
 
-        if self.operation_type == OPERATION_MERGE:
-            output = left.merge_states(right)
-        elif self.operation_type == OPERATION_COMPOSE:
-            output = left.compose_states(right)
-        elif self.operation_type == OPERATION_CONCATENATE:
-            output_states = left.states + right.states
-            output = AG(states=output_states)
-        else:
-            raise ValueError(ERROR_UNSUPPORTED_OPERATION.format(operation_type=self.operation_type))
-
-        return DataFrame(output.to_dataframe().to_dict(orient="records"))
+            return DataFrame(output.to_dataframe().to_dict(orient="records"))
+        else: raise ValueError("Both DataFrames should be provided.")

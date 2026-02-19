@@ -1,4 +1,4 @@
-"""Model configuration helpers for Agentics components."""
+"""Model configuration and validation helpers for Agentics components."""
 
 from __future__ import annotations
 
@@ -12,16 +12,18 @@ from lfx.components.agentics.constants import (
 
 
 def validate_model_selection(model: Any) -> tuple[str, str]:
-    """Validate and extract model selection.
+    """Validate and extract model name and provider from component input.
+    
+    Ensures the model selection is properly formatted and contains required fields.
 
     Args:
-        model: The model selection from the component input.
+        model: The model selection from the component input (expected as a list with model dict).
 
     Returns:
-        Tuple of (model_name, provider).
+        Tuple of (model_name, provider) extracted from the selection.
 
     Raises:
-        ValueError: If no model is selected or model data is invalid.
+        ValueError: If no model is selected, model data is invalid, or required fields are missing.
     """
     if not model or not isinstance(model, list) or len(model) == 0:
         raise ValueError(ERROR_MODEL_NOT_SELECTED)
@@ -42,15 +44,18 @@ def update_provider_fields_visibility(
     field_value: Any,
     field_name: str | None,
 ) -> dict:
-    """Update visibility of provider-specific fields based on selected model.
+    """Update visibility of provider-specific fields based on the selected model.
+    
+    Dynamically shows/hides fields like WatsonX project_id or Ollama base_url
+    depending on which provider is currently selected.
 
     Args:
-        build_config: The build configuration dictionary.
-        field_value: The current field value.
-        field_name: The name of the field being updated.
+        build_config: The build configuration dictionary to update.
+        field_value: The current field value being processed.
+        field_name: The name of the field being updated (e.g., "model").
 
     Returns:
-        Updated build configuration.
+        Updated build configuration with adjusted field visibility.
     """
     current_model_value = field_value if field_name == "model" else build_config.get("model", {}).get("value")
 
@@ -67,7 +72,10 @@ def update_provider_fields_visibility(
 
 
 def _update_watsonx_fields(build_config: dict, provider: str) -> None:
-    """Update WatsonX-specific field visibility."""
+    """Update visibility and requirements for IBM WatsonX-specific fields.
+    
+    Shows base_url and project_id fields only when WatsonX is selected.
+    """
     is_watsonx = provider == PROVIDER_IBM_WATSONX
 
     if "base_url_ibm_watsonx" in build_config:
@@ -80,7 +88,10 @@ def _update_watsonx_fields(build_config: dict, provider: str) -> None:
 
 
 def _update_ollama_fields(build_config: dict, provider: str) -> None:
-    """Update Ollama-specific field visibility."""
+    """Update visibility for Ollama-specific fields.
+    
+    Shows ollama_base_url field only when Ollama is selected.
+    """
     is_ollama = provider == PROVIDER_OLLAMA
 
     if "ollama_base_url" in build_config:

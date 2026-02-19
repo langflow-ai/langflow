@@ -1,4 +1,4 @@
-"""LLM setup utilities for Agentics components."""
+"""LLM setup and configuration utilities for Agentics components."""
 
 from __future__ import annotations
 
@@ -19,16 +19,19 @@ if TYPE_CHECKING:
 
 
 def prepare_llm_from_component(component: Component) -> LLM:
-    """Prepare and configure LLM from component settings.
+    """Prepare and configure an LLM instance from component settings.
+    
+    Extracts model selection, validates configuration, retrieves API keys,
+    and creates a fully configured LLM instance ready for use.
 
     Args:
-        component: The Agentics component instance.
+        component: The Agentics component instance containing model configuration.
 
     Returns:
-        Configured LLM instance.
+        Configured LLM instance with all provider-specific settings applied.
 
     Raises:
-        ValueError: If model is not selected or API key is missing.
+        ValueError: If model is not selected or required API key is missing for the provider.
     """
     model_name, provider = validate_model_selection(component.model)
     api_key = get_api_key_for_provider(component.user_id, provider, component.api_key)

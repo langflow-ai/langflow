@@ -11,15 +11,32 @@ from lfx.custom.custom_component.component import Component
 
 
 class BaseAgenticComponent(Component):
-    """Base class for Agentics components with common configuration logic."""
-
+    """Base class for Agentics components with shared configuration and model management.
+    
+    Provides common functionality for:
+    - Dynamic model option updates based on user selection
+    - Provider-specific field visibility management
+    - Unified build configuration handling
+    """
+    
+    display_name = False  # Hide from sidebar - not meant to be used directly
+    
     def update_build_config(
         self,
         build_config: dict,
         field_value: str,
         field_name: str | None = None,
     ) -> dict:
-        """Dynamically update build config with user-filtered model options."""
+        """Dynamically update build configuration with user-filtered model options.
+        
+        Args:
+            build_config: The current build configuration dictionary.
+            field_value: The value of the field being updated.
+            field_name: The name of the field being updated.
+            
+        Returns:
+            Updated build configuration with filtered model options and adjusted field visibility.
+        """
         build_config = update_model_options_in_build_config(
             component=self,
             build_config=build_config,

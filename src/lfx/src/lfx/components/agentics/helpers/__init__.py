@@ -1,4 +1,11 @@
-"""Helpers for Agentics components."""
+"""Helper utilities for Agentics components.
+
+Provides utilities for:
+- LLM instance creation and configuration
+- Model selection validation
+- Schema building for Pydantic models
+- Provider-specific field visibility management
+"""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""SemanticMap component for generating new data following the specified schema using LLM instructions."""
+"""SemanticMap component for transforming each row of input data using LLM-based semantic processing."""
 
 from __future__ import annotations
 
@@ -27,11 +27,15 @@ from lfx.schema.dataframe import DataFrame
 
 
 class SemanticMap(BaseAgenticComponent):
-    """Process each row or item with an LLM using natural language instructions to generate output data following the specified schema."""
+    """Transform each row of input data using natural language instructions and a defined output schema.
+    
+    This component processes input data row-by-row, applying LLM-based transformations to generate
+    new columns or derive insights for each individual record.
+    """
 
     display_name = "Semantic Map"
-    description = "Process each row or item with an LLM using natural language instructions to generate output data following the specified schema."
-    documentation: str = "github.com/IBM/agentics/"
+    description = "Transform each row of input data using natural language instructions and a defined output schema."
+    documentation: str = "https://docs.langflow.org/bundles-agentics"
     icon = "Agentics"
 
     inputs = [
@@ -39,33 +43,27 @@ class SemanticMap(BaseAgenticComponent):
         DataFrameInput(
             name="source",
             display_name="Input DataFrame",
-            info="The input schema is inferred from columns",
+            info="Input DataFrame to transform. The schema is automatically inferred from column names and types.",
         ),
         get_generated_fields_input(),
         BoolInput(
             name="return_multiple_instances",
-            display_name="Generate Multiple Outputs",
-            info="If enabled, generate multiple instances of the specified type",
+            display_name="As List",
+            info="If True, generate multiple instances of the provided schema for each input row concatenating all them.",
             advanced=False,
             value=False,
-        ),
-        BoolInput(
-            name="concatenate_generated_lists",
-            display_name="Flatten Generated Outputs",
-            info="If enabled, flatten multiple outputs into a single output",
-            value=True,
-            advanced=True,
         ),
         MessageTextInput(
             name="instructions",
             display_name="Instructions",
-            info="Natural language instructions to map your input data to the output schema",
+            info="Natural language instructions describing how to transform each input row into the output schema.",
             value="",
+            required=False,
         ),
         BoolInput(
             name="append_to_input_columns",
             display_name="Keep Source Columns",
-            info="If disabled, returns only new columns. Otherwise, keep the input columns in the output",
+            info="Keep original input columns in the output. If disabled, only newly generated columns are returned. This is ignored if As List is set to True.",
             value=True,
             advanced=True,
         ),
@@ -75,14 +73,18 @@ class SemanticMap(BaseAgenticComponent):
         Output(
             name="states",
             display_name="Output DataFrame",
-            info="The resulting DataFrame processed by the LLM that follows the output schema",
+            info="Transformed DataFrame resulting from semantic mapping.",
             method="semantic_map",
             tool_mode=True,
         ),
     ]
 
     async def semantic_map(self) -> DataFrame:
-        """Generate new columns based on the provided instructions."""
+        """Transform input data row-by-row using LLM-based semantic processing.
+        
+        Returns:
+            DataFrame with transformed data following the output schema.
+        """
         try:
             from agentics import AG
             from agentics.core.atype import create_pydantic_model
@@ -90,36 +92,38 @@ class SemanticMap(BaseAgenticComponent):
             raise ImportError(ERROR_AGENTICS_NOT_INSTALLED) from e
 
         llm = prepare_llm_from_component(self)
-        source = AG.from_dataframe(DataFrame(self.source))
+        if self.source and self.schema != []:
+            source = AG.from_dataframe(DataFrame(self.source))
 
-        schema_fields = build_schema_fields(self.generated_fields)
-        atype = create_pydantic_model(schema_fields, name="Target")
-        if self.return_multiple_instances:
-            FinalAtype = create_model("ListOfTarget", items=(list[atype], ...))
-        else:
-            FinalAtype = atype
+            schema_fields = build_schema_fields(self.schema)
+            atype = create_pydantic_model(schema_fields, name="Target")
+            if self.return_multiple_instances:
+                FinalAtype = create_model("ListOfTarget", items=(list[atype], ...))
+            else:
+                FinalAtype = atype
 
-        target = AG(
-            atype=FinalAtype,
-            transduction_type=TRANSDUCTION_AMAP,
-            llm=llm,
-        )
-        if "{" in self.instructions:
-            source.prompt_template = self.instructions
-        else:
-            source.instructions += self.instructions
+            target = AG(
+                atype=FinalAtype,
+                transduction_type=TRANSDUCTION_AMAP,
+                llm=llm,
+            )
+            if "{" in self.instructions:
+                source.prompt_template = self.instructions
+            else:
+                source.instructions += self.instructions
 
-        output = await (target << source)
-        if self.concatenate_generated_lists and self.return_multiple_instances:
-            appended_states = []
+            output = await (target << source)
+            if self.return_multiple_instances:
+                appended_states = []
 
-            for state in output:
-                for item_state in state.items:
-                    appended_states.append(item_state)
+                for state in output:
+                    for item_state in state.items:
+                        appended_states.append(item_state)
 
-            output = AG(atype=atype, states=appended_states)
+                output = AG(atype=atype, states=appended_states)
 
-        elif self.append_to_input_columns:
-            output = source.merge_states(output)
+            elif self.append_to_input_columns:
+                output = source.merge_states(output)
 
-        return DataFrame(output.to_dataframe().to_dict(orient="records"))
+            return DataFrame(output.to_dataframe().to_dict(orient="records"))
+        else: raise ValueError("BOTH Input DataFrame AND Output Schema inputs should be provided.")

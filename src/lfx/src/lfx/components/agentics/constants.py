@@ -1,4 +1,4 @@
-"""Constants for the Agentics components."""
+"""Constants and configuration values for Agentics components."""
 
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ LLM_MODEL_PREFIXES = {
     PROVIDER_OLLAMA: "ollama/",
 }
 
-# WatsonX default parameters
+# IBM WatsonX default parameters
 WATSONX_DEFAULT_TEMPERATURE = 0
 WATSONX_DEFAULT_MAX_TOKENS = 4000
 WATSONX_DEFAULT_MAX_INPUT_TOKENS = 100000
@@ -48,11 +48,11 @@ TRANSDUCTION_GENERATE = "generate"
 
 TRANSDUCTION_TYPES = [TRANSDUCTION_AMAP, TRANSDUCTION_AREDUCE, TRANSDUCTION_GENERATE]
 
-# Error messages
+# Error messages for user feedback
 ERROR_AGENTICS_NOT_INSTALLED = (
     "Agentics-py is not installed. Please install it with `uv pip install agentics-py==0.3.1`."
 )
-ERROR_API_KEY_REQUIRED = "{provider} API key is required. Please configure it globally."
-ERROR_UNSUPPORTED_PROVIDER = f"Unsupported provider: {{provider}}. Supported: {', '.join(SUPPORTED_PROVIDERS)}"
-ERROR_UNSUPPORTED_OPERATION = "Unsupported operation type: {operation_type}"
-ERROR_MODEL_NOT_SELECTED = "No model selected. Please select a language model."
+ERROR_API_KEY_REQUIRED = "{provider} API key is required. Please configure it in your settings or provide it directly."
+ERROR_UNSUPPORTED_PROVIDER = f"Unsupported provider: {{provider}}. Supported providers: {', '.join(SUPPORTED_PROVIDERS)}"
+ERROR_UNSUPPORTED_OPERATION = "Unsupported operation type: {operation_type}. Valid operations: merge, compose, concatenate."
+ERROR_MODEL_NOT_SELECTED = "No model selected. Please select a language model from the available options."

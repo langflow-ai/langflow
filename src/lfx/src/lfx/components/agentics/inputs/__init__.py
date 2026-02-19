@@ -1,4 +1,10 @@
-"""Common inputs for Agentics components."""
+"""Common input field definitions and utilities for Agentics components.
+
+Provides reusable input configurations for:
+- Model provider selection and authentication
+- Output schema definition
+- Provider-specific settings (WatsonX, Ollama)
+"""
 
 from __future__ import annotations
 

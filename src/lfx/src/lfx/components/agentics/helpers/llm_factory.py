@@ -1,4 +1,4 @@
-"""Factory functions for creating LLM instances."""
+"""Factory functions for creating and configuring LLM instances for different providers."""
 
 from __future__ import annotations
 
@@ -32,21 +32,21 @@ def create_llm(
     project_id: str | None = None,
     ollama_base_url: str | None = None,
 ) -> LLM:
-    """Create LLM instance based on provider.
+    """Create and configure an LLM instance for the specified provider.
 
     Args:
-        provider: The LLM provider name.
-        model_name: The model name/identifier.
-        api_key: The API key for the provider.
-        base_url_ibm_watsonx: Base URL for IBM WatsonX (optional).
-        project_id: Project ID for IBM WatsonX (optional).
-        ollama_base_url: Base URL for Ollama (optional).
+        provider: The LLM provider name (e.g., "OpenAI", "Anthropic", "IBM WatsonX").
+        model_name: The model identifier without provider prefix.
+        api_key: The API key for authentication (not required for Ollama).
+        base_url_ibm_watsonx: Base URL for IBM WatsonX API endpoint (WatsonX only).
+        project_id: Project ID for IBM WatsonX (WatsonX only).
+        ollama_base_url: Base URL for Ollama API endpoint (Ollama only).
 
     Returns:
-        Configured LLM instance.
+        Configured LLM instance ready for use with the Agentics framework.
 
     Raises:
-        ValueError: If the provider is not supported.
+        ValueError: If the provider is not supported or configuration is invalid.
     """
     from crewai import LLM
 
@@ -79,7 +79,10 @@ def _create_watsonx_llm(
     base_url: str,
     project_id: str | None,
 ) -> LLM:
-    """Create IBM WatsonX LLM instance."""
+    """Create IBM WatsonX LLM instance with default parameters.
+    
+    Configures temperature, max_tokens, and max_input_tokens to WatsonX defaults.
+    """
     from crewai import LLM
 
     return LLM(
@@ -94,7 +97,10 @@ def _create_watsonx_llm(
 
 
 def _create_ollama_llm(model_name: str, base_url: str | None) -> LLM:
-    """Create Ollama LLM instance."""
+    """Create Ollama LLM instance for local model deployment.
+    
+    Uses the provided base URL or defaults to localhost:11434.
+    """
     from crewai import LLM
 
     return LLM(
