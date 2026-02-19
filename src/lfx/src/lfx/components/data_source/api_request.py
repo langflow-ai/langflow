@@ -321,10 +321,12 @@ class APIRequestComponent(Component):
                 "method": method,
                 "url": url,
                 "headers": headers,
-                "json": processed_body,
                 "timeout": timeout,
                 "follow_redirects": follow_redirects,
             }
+            # Only include body for methods that support it (GET must not have a body per HTTP spec)
+            if method in {"POST", "PATCH", "PUT"} and processed_body:
+                request_params["json"] = processed_body
             response = await client.request(**request_params)
 
             redirection_history = [
