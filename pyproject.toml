@@ -133,6 +133,8 @@ postgresql = [
 override-dependencies = [
     # temporary force a newer python-pptx
     "python-pptx>=1.0.2",
+    # z3-solver 4.15.7 dropped Linux wheels, pin until codeflash is removed
+    "z3-solver<4.15.7",
 ]
 
 [project.scripts]
