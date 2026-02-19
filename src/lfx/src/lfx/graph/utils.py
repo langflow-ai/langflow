@@ -313,6 +313,7 @@ async def log_vertex_build(
     params: Any,
     data: dict | Any,
     artifacts: dict | None = None,
+    job_id: str | None = None,
 ) -> None:
     """Asynchronously logs a vertex build record if vertex build storage is enabled.
 
@@ -362,6 +363,7 @@ async def log_vertex_build(
                 params=str(params) if params else None,
                 data=data_dict,
                 artifacts=artifacts_dict,
+                job_id=job_id,
             )
 
             db_service = langflow_get_db_service()
@@ -414,10 +416,10 @@ def has_output_vertex(vertices: dict[Vertex, int]):
 def has_chat_output(vertices: dict[Vertex, int]):
     from lfx.graph.schema import InterfaceComponentTypes
 
-    return any(InterfaceComponentTypes.ChatOutput in vertex.id for vertex in vertices)
+    return any(vertex.base_name == InterfaceComponentTypes.ChatOutput.value for vertex in vertices)
 
 
 def has_chat_input(vertices: dict[Vertex, int]):
     from lfx.graph.schema import InterfaceComponentTypes
 
-    return any(InterfaceComponentTypes.ChatInput in vertex.id for vertex in vertices)
+    return any(vertex.base_name == InterfaceComponentTypes.ChatInput.value for vertex in vertices)

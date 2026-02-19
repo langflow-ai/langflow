@@ -31,6 +31,8 @@ export type BaseInputProps<valueType = any> = {
   searchCategory?: string[];
   buttonMetadata?: { variant?: string; icon?: string };
   connectionLink?: string;
+  showParameter?: boolean;
+  inspectionPanel?: boolean;
 };
 
 // Generic type for composing input props
@@ -65,6 +67,7 @@ export type FloatComponentType = {
 
 export type IntComponentType = {
   rangeSpec: RangeSpecType;
+  name?: string;
 };
 export type ToggleComponentType = {
   size?: "small" | "medium" | "large";

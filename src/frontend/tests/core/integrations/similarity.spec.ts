@@ -2,6 +2,7 @@ import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { unselectNodes } from "../../utils/unselect-nodes";
 
 import { updateOldComponents } from "../../utils/update-old-components";
 import { zoomOut } from "../../utils/zoom-out";
@@ -249,6 +250,8 @@ test(
     await page.getByTestId("button_run_text output").click();
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
+
+    await unselectNodes(page);
 
     await page
       .getByTestId(/rf__node-TextOutput-[a-zA-Z0-9]{5}/)

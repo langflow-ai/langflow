@@ -32,12 +32,8 @@ class DatabaseVariableService(VariableService, Service):
 
         # Import the provider mapping to set default_fields for known providers
         try:
-            from lfx.base.models.unified_models import (
-                get_model_provider_metadata,
-                get_model_provider_variable_mapping,
-            )
+            from lfx.base.models.unified_models import get_model_provider_metadata
 
-            provider_mapping = get_model_provider_variable_mapping()
             # Build var_to_provider from all variables in metadata (not just primary)
             var_to_provider = {}
             var_to_info = {}  # Maps variable_key to its full info (including is_secret)
@@ -92,7 +88,7 @@ class DatabaseVariableService(VariableService, Service):
                             try:
                                 from lfx.base.models.unified_models import validate_model_provider_key
 
-                                validate_model_provider_key(var_name, value)
+                                validate_model_provider_key(provider_name, {var_name: value})
                                 # Only set default_fields if validation passes
                                 default_fields = [provider_name, var_display_name]
                                 await logger.adebug(f"Validated {var_name} - provider will be enabled")
@@ -216,7 +212,7 @@ class DatabaseVariableService(VariableService, Service):
 
         # Only decrypt CREDENTIAL type variables; GENERIC variables are stored as plain text
         if variable.type == CREDENTIAL_TYPE:
-            return auth_utils.decrypt_api_key(variable.value, settings_service=self.settings_service)
+            return auth_utils.decrypt_api_key(variable.value)
         # GENERIC type - return as-is
         return variable.value
 
@@ -227,7 +223,7 @@ class DatabaseVariableService(VariableService, Service):
         for variable in variables:
             value = None
             if variable.type == GENERIC_TYPE:
-                value = auth_utils.decrypt_api_key(variable.value, settings_service=self.settings_service)
+                value = auth_utils.decrypt_api_key(variable.value)
                 if not value:
                     # If decryption fails (likely due to encryption by different key), skip this variable
                     continue
@@ -263,7 +259,7 @@ class DatabaseVariableService(VariableService, Service):
         for var in variables:
             if var.name and var.value:
                 try:
-                    decrypted_value = auth_utils.decrypt_api_key(var.value, settings_service=self.settings_service)
+                    decrypted_value = auth_utils.decrypt_api_key(var.value)
                 except Exception as e:  # noqa: BLE001
                     await logger.awarning(f"Decryption failed for variable '{var.name}': {e}. Skipping")
                     continue
@@ -336,16 +332,22 @@ class DatabaseVariableService(VariableService, Service):
         db_variable = (await session.exec(query)).one()
         db_variable.updated_at = datetime.now(timezone.utc)
 
-        # Use the variable's type if provided, otherwise use the db_variable's type
-        variable_type = variable.type or db_variable.type
-
-        # Only process value if it's actually provided (not None)
+        # Handle value encryption based on variable type (consistent with update_variable and create_variable)
         if variable.value is not None:
-            # Handle empty string as valid value
-            value_to_store = variable.value
+            variable_type = variable.type if variable.type is not None else db_variable.type
+
+            # Validate that GENERIC variables don't start with Fernet signature
+            if variable_type == GENERIC_TYPE and variable.value.startswith("gAAAAA"):
+                msg = (
+                    f"Generic variable '{db_variable.name}' cannot start with 'gAAAAA' as this is reserved "
+                    "for encrypted values. Please use a different value."
+                )
+                raise ValueError(msg)
+
+            # Only encrypt CREDENTIAL_TYPE variables (consistent with update_variable and create_variable)
             if variable_type == CREDENTIAL_TYPE:
-                encrypted = auth_utils.encrypt_api_key(value_to_store, settings_service=self.settings_service)
-                variable.value = encrypted
+                variable.value = auth_utils.encrypt_api_key(variable.value, settings_service=self.settings_service)
+            # GENERIC_TYPE variables are stored as plain text
 
         variable_data = variable.model_dump(exclude_unset=True)
         for key, value in variable_data.items():
@@ -396,11 +398,7 @@ class DatabaseVariableService(VariableService, Service):
             raise ValueError(msg)
 
         # Only encrypt CREDENTIAL_TYPE variables
-        encrypted_value = (
-            auth_utils.encrypt_api_key(value, settings_service=self.settings_service)
-            if type_ == CREDENTIAL_TYPE
-            else value
-        )
+        encrypted_value = auth_utils.encrypt_api_key(value) if type_ == CREDENTIAL_TYPE else value
         variable_base = VariableCreate(
             name=name,
             type=type_,

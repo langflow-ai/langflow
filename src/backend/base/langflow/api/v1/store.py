@@ -17,14 +17,14 @@ from langflow.services.store.schema import (
     UsersLikesResponse,
 )
 
-router = APIRouter(prefix="/store", tags=["Components Store"])
+router = APIRouter(prefix="/store", tags=["Components Store"], include_in_schema=False)
 
 
 def get_user_store_api_key(user: CurrentActiveUser):
     if not user.store_api_key:
         raise HTTPException(status_code=400, detail="You must have a store API key set.")
     try:
-        return auth_utils.decrypt_api_key(user.store_api_key, get_settings_service())
+        return auth_utils.decrypt_api_key(user.store_api_key)
     except Exception as e:
         raise HTTPException(status_code=500, detail="Failed to decrypt API key. Please set a new one.") from e
 
@@ -33,7 +33,7 @@ def get_optional_user_store_api_key(user: CurrentActiveUser):
     if not user.store_api_key:
         return None
     try:
-        return auth_utils.decrypt_api_key(user.store_api_key, get_settings_service())
+        return auth_utils.decrypt_api_key(user.store_api_key)
     except Exception:  # noqa: BLE001
         logger.exception("Failed to decrypt API key")
         return user.store_api_key

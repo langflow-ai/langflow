@@ -1,6 +1,8 @@
 """Schema modules for lfx package."""
 
 __all__ = [
+    "WORKFLOW_EXECUTION_RESPONSES",
+    "WORKFLOW_STATUS_RESPONSES",
     "ComponentOutput",
     "Data",
     "DataFrame",
@@ -17,10 +19,11 @@ __all__ = [
     "WorkflowExecutionRequest",
     "WorkflowExecutionResponse",
     "WorkflowJobResponse",
-    "WorkflowStatusResponse",
     "WorkflowStopRequest",
     "WorkflowStopResponse",
     "WorkflowStreamEvent",
+    "create_openai_error",
+    "create_openai_error_chunk",
     "dotdict",
 ]
 
@@ -71,6 +74,14 @@ def __getattr__(name: str):
         from .openai_responses_schemas import OpenAIErrorResponse
 
         return OpenAIErrorResponse
+    if name == "create_openai_error":
+        from .openai_responses_schemas import create_openai_error
+
+        return create_openai_error
+    if name == "create_openai_error_chunk":
+        from .openai_responses_schemas import create_openai_error_chunk
+
+        return create_openai_error_chunk
     if name == "WorkflowExecutionRequest":
         from .workflow import WorkflowExecutionRequest
 
@@ -87,10 +98,14 @@ def __getattr__(name: str):
         from .workflow import WorkflowStreamEvent
 
         return WorkflowStreamEvent
-    if name == "WorkflowStatusResponse":
-        from .workflow import WorkflowStatusResponse
+    if name == "WORKFLOW_EXECUTION_RESPONSES":
+        from .workflow import WORKFLOW_EXECUTION_RESPONSES
 
-        return WorkflowStatusResponse
+        return WORKFLOW_EXECUTION_RESPONSES
+    if name == "WORKFLOW_STATUS_RESPONSES":
+        from .workflow import WORKFLOW_STATUS_RESPONSES
+
+        return WORKFLOW_STATUS_RESPONSES
     if name == "WorkflowStopRequest":
         from .workflow import WorkflowStopRequest
 

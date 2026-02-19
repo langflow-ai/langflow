@@ -35,7 +35,7 @@ from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_variable_service, session_scope
 from langflow.utils.voice_utils import BYTES_PER_24K_FRAME, VAD_SAMPLE_RATE_16K, resample_24k_to_16k
 
-router = APIRouter(prefix="/voice", tags=["Voice"])
+router = APIRouter(prefix="/voice", tags=["Voice"], include_in_schema=False)
 
 SILENCE_THRESHOLD = 0.1
 PREFIX_PADDING_MS = 100

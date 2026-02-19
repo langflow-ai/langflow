@@ -38,6 +38,7 @@ const ProviderList = ({
           provider: provider.provider,
           icon: provider.icon,
           is_enabled: provider.is_enabled,
+          is_configured: provider.is_configured,
           model_count: matchingModels.length,
           models: matchingModels,
           api_docs_url: provider.api_docs_url,
