@@ -27,7 +27,7 @@ from lfx.services.deployment.schema import (
     DeploymentType,
     DeploymentUpdate,
     DeploymentUpdateResult,
-    SnapshotItem,
+    SnapshotGetResult,
     SnapshotItemsCreate,
     SnapshotListResult,
     SnapshotResult,
@@ -153,7 +153,7 @@ class SnapshotCreateResponse(SnapshotResult):
     message: str = Field(description="Operation status message")
 
 
-class SnapshotGetResponse(SnapshotItem):
+class SnapshotGetResponse(SnapshotGetResult):
     """Get snapshot response."""
 
 
@@ -179,7 +179,7 @@ def _resolve_deployment_adapter(provider_id: DeploymentProviderId) -> Deployment
     return deployment_router_service.resolve_adapter(provider_id=provider_id)
 
 
-@router.post("/providers/{provider_id}/deployments", response_model=DeploymentCreateResponse)
+@router.post("/deployment-providers/{provider_id}/deploy", response_model=DeploymentCreateResponse)
 async def deploy(
     provider_id: DeploymentProviderId,
     user: CurrentActiveUser,
@@ -206,7 +206,7 @@ async def deploy(
     return DeploymentCreateResponse(**result.model_dump(exclude_unset=True), message="Deployment created successfully.")
 
 
-@router.get("/providers/{provider_id}/deployments/types", response_model=DeploymentTypesResponse)
+@router.get("/deployment-providers/{provider_id}/deployments/types", response_model=DeploymentTypesResponse)
 async def list_deployment_types(
     provider_id: DeploymentProviderId,
     user: CurrentActiveUser,
@@ -226,7 +226,7 @@ async def list_deployment_types(
     return DeploymentTypesResponse(deployment_types=deployment_types, count=len(deployment_types))
 
 
-@router.get("/providers/{provider_id}/deployments", response_model=DeploymentListResponse)
+@router.get("/deployment-providers/{provider_id}/deployments", response_model=DeploymentListResponse)
 async def list_deployments(
     provider_id: DeploymentProviderId,
     user: CurrentActiveUser,
@@ -250,7 +250,7 @@ async def list_deployments(
     return DeploymentListResponse(**deployments.model_dump(exclude_unset=True), count=len(deployments.deployments))
 
 
-@router.get("/providers/{provider_id}/deployments/{deployment_id}", response_model=DeploymentGetResponse)
+@router.get("/deployment-providers/{provider_id}/deployments/{deployment_id}", response_model=DeploymentGetResponse)
 async def get_deployment(
     provider_id: DeploymentProviderId,
     deployment_id: str,
@@ -274,7 +274,10 @@ async def get_deployment(
     return DeploymentGetResponse(**deployment.model_dump(exclude_unset=True))
 
 
-@router.patch("/providers/{provider_id}/deployments/{deployment_id}", response_model=DeploymentUpdateResponse)
+@router.patch(
+    "/deployment-providers/{provider_id}/deployments/{deployment_id}",
+    response_model=DeploymentUpdateResponse,
+)
 async def update_deployment(
     provider_id: DeploymentProviderId,
     deployment_id: str,
@@ -307,7 +310,10 @@ async def update_deployment(
     )
 
 
-@router.delete("/providers/{provider_id}/deployments/{deployment_id}", response_model=DeploymentDeleteResponse)
+@router.delete(
+    "/deployment-providers/{provider_id}/deployments/{deployment_id}",
+    response_model=DeploymentDeleteResponse,
+)
 async def delete_deployment(
     provider_id: DeploymentProviderId,
     deployment_id: str,
@@ -332,7 +338,10 @@ async def delete_deployment(
     )
 
 
-@router.post("/providers/{provider_id}/deployments/{deployment_id}/redeploy", response_model=DeploymentRedeployResponse)
+@router.post(
+    "/deployment-providers/{provider_id}/deployments/{deployment_id}/redeploy",
+    response_model=DeploymentRedeployResponse,
+)
 async def redeploy_deployment(
     provider_id: DeploymentProviderId,
     deployment_id: str,
@@ -359,7 +368,10 @@ async def redeploy_deployment(
     )
 
 
-@router.post("/providers/{provider_id}/deployments/{deployment_id}/clone", response_model=DeploymentCloneResponse)
+@router.post(
+    "/deployment-providers/{provider_id}/deployments/{deployment_id}/clone",
+    response_model=DeploymentCloneResponse,
+)
 async def clone_deployment(
     provider_id: DeploymentProviderId,
     deployment_id: str,
@@ -386,7 +398,10 @@ async def clone_deployment(
     )
 
 
-@router.get("/providers/{provider_id}/deployments/{deployment_id}/health", response_model=DeploymentHealthResponse)
+@router.get(
+    "/deployment-providers/{provider_id}/deployments/{deployment_id}/health",
+    response_model=DeploymentHealthResponse,
+)
 async def get_deployment_health(
     provider_id: DeploymentProviderId,
     deployment_id: str,
@@ -410,7 +425,7 @@ async def get_deployment_health(
     return DeploymentHealthResponse(**health_result.model_dump(exclude_unset=True))
 
 
-@router.get("/providers/{provider_id}/snapshots", response_model=SnapshotListResponse)
+@router.get("/deployment-providers/{provider_id}/snapshots", response_model=SnapshotListResponse)
 async def list_snapshots(
     provider_id: DeploymentProviderId,
     user: CurrentActiveUser,
@@ -435,7 +450,7 @@ async def list_snapshots(
     )
 
 
-@router.post("/providers/{provider_id}/snapshots", response_model=SnapshotCreateResponse)
+@router.post("/deployment-providers/{provider_id}/snapshots", response_model=SnapshotCreateResponse)
 async def create_snapshots(
     provider_id: DeploymentProviderId,
     payload: SnapshotCreateRequest,
@@ -464,7 +479,7 @@ async def create_snapshots(
     )
 
 
-@router.get("/providers/{provider_id}/snapshots/{snapshot_id}", response_model=SnapshotGetResponse)
+@router.get("/deployment-providers/{provider_id}/snapshots/{snapshot_id}", response_model=SnapshotGetResponse)
 async def get_snapshot(
     provider_id: DeploymentProviderId,
     snapshot_id: str,
@@ -488,7 +503,7 @@ async def get_snapshot(
     return SnapshotGetResponse(**snapshot.model_dump(exclude_unset=True))
 
 
-@router.delete("/providers/{provider_id}/snapshots/{snapshot_id}", response_model=SnapshotDeleteResponse)
+@router.delete("/deployment-providers/{provider_id}/snapshots/{snapshot_id}", response_model=SnapshotDeleteResponse)
 async def delete_snapshot(
     provider_id: DeploymentProviderId,
     snapshot_id: str,
@@ -512,7 +527,7 @@ async def delete_snapshot(
     return SnapshotDeleteResponse(id=snapshot_id, message="Snapshot deleted successfully.")
 
 
-@router.post("/providers/{provider_id}/configs", response_model=DeploymentConfigCreateResponse)
+@router.post("/deployment-providers/{provider_id}/configs", response_model=DeploymentConfigCreateResponse)
 async def create_deployment_config(
     provider_id: DeploymentProviderId,
     payload: DeploymentConfigCreateRequest,
@@ -543,7 +558,7 @@ async def create_deployment_config(
     )
 
 
-@router.get("/providers/{provider_id}/configs", response_model=DeploymentConfigListResponse)
+@router.get("/deployment-providers/{provider_id}/configs", response_model=DeploymentConfigListResponse)
 async def list_deployment_configs(
     provider_id: DeploymentProviderId,
     db: DbSession,
@@ -568,7 +583,7 @@ async def list_deployment_configs(
     )
 
 
-@router.get("/providers/{provider_id}/configs/{config_id}", response_model=DeploymentConfigGetResponse)
+@router.get("/deployment-providers/{provider_id}/configs/{config_id}", response_model=DeploymentConfigGetResponse)
 async def get_deployment_config(
     provider_id: DeploymentProviderId,
     config_id: str,
@@ -592,7 +607,7 @@ async def get_deployment_config(
     return DeploymentConfigGetResponse(**config.model_dump(exclude_unset=True))
 
 
-@router.patch("/providers/{provider_id}/configs/{config_id}", response_model=DeploymentConfigUpdateResponse)
+@router.patch("/deployment-providers/{provider_id}/configs/{config_id}", response_model=DeploymentConfigUpdateResponse)
 async def update_deployment_config(
     provider_id: DeploymentProviderId,
     config_id: str,
@@ -627,7 +642,7 @@ async def update_deployment_config(
     )
 
 
-@router.delete("/providers/{provider_id}/configs/{config_id}", response_model=DeploymentConfigDeleteResponse)
+@router.delete("/deployment-providers/{provider_id}/configs/{config_id}", response_model=DeploymentConfigDeleteResponse)
 async def delete_deployment_config(
     provider_id: DeploymentProviderId,
     config_id: str,

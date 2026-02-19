@@ -84,6 +84,15 @@ class SnapshotItem(BaseModel):
     provider_data: dict | None = Field(None, description="The data of the snapshot item from the provider")
 
 
+class SnapshotGetResult(SnapshotItem):
+    """Model representing a result for retrieving a single snapshot payload."""
+
+    artifact_type: ArtifactType = Field(description="The type of artifact stored in the snapshot.")
+    value: BaseFlowArtifact | BaseDocumentArtifact = Field(
+        description="The artifact payload stored in the snapshot."
+    )
+
+
 class SnapshotListResult(BaseModel):
     """Model representing a result for a snapshot list operation."""
     snapshots: list[SnapshotItem] = Field(description="The list of snapshots")

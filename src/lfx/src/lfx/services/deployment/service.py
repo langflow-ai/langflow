@@ -29,7 +29,7 @@ if TYPE_CHECKING:
         DeploymentType,
         DeploymentUpdate,
         DeploymentUpdateResult,
-        SnapshotItem,
+        SnapshotGetResult,
         SnapshotItemsCreate,
         SnapshotListResult,
         SnapshotResult,
@@ -242,8 +242,8 @@ class DeploymentService(BaseDeploymentService):
         user_id: UUID | str,
         snapshot_id: str,
         db: Any,
-    ) -> SnapshotItem:
-        """Return snapshot metadata by provider ID."""
+    ) -> SnapshotGetResult:
+        """Return snapshot payload by provider ID."""
         raise NotImplementedError
 
 

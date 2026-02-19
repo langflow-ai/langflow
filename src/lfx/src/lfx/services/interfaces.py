@@ -29,7 +29,7 @@ if TYPE_CHECKING:
         DeploymentType,
         DeploymentUpdate,
         DeploymentUpdateResult,
-        SnapshotItem,
+        SnapshotGetResult,
         SnapshotItemsCreate,
         SnapshotListResult,
         SnapshotResult,
@@ -418,8 +418,8 @@ class DeploymentServiceProtocol(Protocol):
         user_id: UUID | str,
         snapshot_id: str,
         db: Any,
-    ) -> SnapshotItem:
-        """Return snapshot metadata by provider ID."""
+    ) -> SnapshotGetResult:
+        """Return snapshot payload by provider ID."""
         ...
 
     @abstractmethod

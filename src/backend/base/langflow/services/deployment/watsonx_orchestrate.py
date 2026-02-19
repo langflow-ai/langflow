@@ -59,6 +59,7 @@ from lfx.services.deployment.schema import (
     EnvVarKey,
     EnvVarValue,
     SnapshotFormat,
+    SnapshotGetResult,
     SnapshotItem,
     SnapshotItems,
     SnapshotItemsCreate,
@@ -69,6 +70,7 @@ from lfx.services.deployment_router.registry import register_deployment_adapter
 from lfx.services.schema import ServiceType
 
 from langflow.services.deps import get_variable_service
+from langflow.utils.version import get_version_info
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -276,6 +278,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                     )
                     for agent in data
                 ]
+                # print(data[0])
             else:
                 msg = (
                     f"{ErrorPrefix.LIST.value}"
@@ -325,16 +328,11 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         update_data: DeploymentUpdate,
         db: Any,
     ) -> DeploymentUpdateResult:
-        """Update deployment metadata and/or connection binding."""
+        """Update deployment metadata, snapshot bindings, and/or connection binding."""
         deployment_id = str(update_data.id)
         config_id = (
             str(update_data.config.config_id)
             if update_data.config and update_data.config.config_id is not None
-            else None
-        )
-        snapshot_id = (
-            update_data.snapshot.add[0]
-            if update_data.snapshot and update_data.snapshot.add
             else None
         )
         clients = await self._get_provider_clients(user_id=user_id, db=db)
@@ -345,12 +343,12 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
 
         update_payload: dict[str, Any] = {}
         current_tool_ids = self._extract_agent_tool_ids(current)
-        if snapshot_id and current_tool_ids and snapshot_id not in set(current_tool_ids):
-            msg = (
-                "Snapshots are immutable in this adapter. "
-                "Updating deployment snapshots is not allowed; create a new deployment with the new snapshot instead."
-            )
-            raise ValueError(msg)
+        if update_data.snapshot:
+            tool_ids_to_remove = set(update_data.snapshot.remove or [])
+            updated_tool_ids = {tool_id for tool_id in current_tool_ids if tool_id not in tool_ids_to_remove}
+            updated_tool_ids.update(update_data.snapshot.add or [])
+            if updated_tool_ids != set(current_tool_ids):
+                update_payload["tools"] = list(updated_tool_ids)
 
         if config_id:
             connection = clients.connections.get_draft_by_app_id(app_id=config_id)
@@ -653,14 +651,26 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         user_id: UUID | str,
         snapshot_id: str,
         db: Any,
-    ) -> SnapshotItem:
+    ) -> SnapshotGetResult:
         """Get a WXO tool snapshot."""
         clients = await self._get_provider_clients(user_id=user_id, db=db)
         tool = clients.tool.get_draft_by_id(snapshot_id)
         if not tool:
             msg = f"Snapshot '{snapshot_id}' not found."
             raise ValueError(msg)
-        return self._map_tool_to_snapshot(tool)
+
+        artifact_bytes = clients.tool.download_tools_artifact(snapshot_id)
+        artifact_payload = self._extract_langflow_artifact_from_zip(artifact_bytes, snapshot_id=snapshot_id)
+        flow_artifact = BaseFlowArtifact.model_validate(artifact_payload)
+
+        snapshot = self._map_tool_to_snapshot(tool)
+        return SnapshotGetResult(
+            id=snapshot.id,
+            name=snapshot.name,
+            description=snapshot.description,
+            artifact_type=ArtifactType.FLOW,
+            value=flow_artifact,
+        )
 
     async def delete_snapshot(
         self,
@@ -1014,6 +1024,31 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             description=tool.get("description"),
         )
 
+    def _extract_langflow_artifact_from_zip(self, artifact_zip_bytes: bytes, *, snapshot_id: str) -> dict[str, Any]:
+        """Read and parse the Langflow flow JSON from a WXO snapshot artifact zip."""
+        try:
+            with zipfile.ZipFile(io.BytesIO(artifact_zip_bytes), "r") as zip_artifact:
+                json_members = [name for name in zip_artifact.namelist() if name.lower().endswith(".json")]
+                if not json_members:
+                    msg = f"Snapshot '{snapshot_id}' artifact does not include a flow JSON file."
+                    raise ValueError(msg)
+
+                # Snapshot upload currently stores exactly one flow JSON payload.
+                flow_json_member = json_members[0]
+                flow_json_raw = zip_artifact.read(flow_json_member)
+        except zipfile.BadZipFile as exc:
+            msg = f"Snapshot '{snapshot_id}' artifact is not a valid zip archive."
+            raise ValueError(msg) from exc
+
+        try:
+            return json.loads(flow_json_raw.decode("utf-8"))
+        except UnicodeDecodeError as exc:
+            msg = f"Snapshot '{snapshot_id}' flow artifact is not valid UTF-8 JSON."
+            raise ValueError(msg) from exc
+        except json.JSONDecodeError as exc:
+            msg = f"Snapshot '{snapshot_id}' flow artifact contains invalid JSON."
+            raise ValueError(msg) from exc
+
 
     def _require_non_empty_string(
         self,
@@ -1104,8 +1139,21 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         db: Any,
     ) -> str:
         clients = await self._get_provider_clients(user_id=user_id, db=db)
-        flow_definition = flow_payload.data
-
+        flow_definition = flow_payload.model_dump()
+        flow_definition["name"] = flow_definition.get("name").replace(" ", "_")
+        # print(flow_definition["name"])
+        flow_definition["id"] = str(flow_definition.get("id"))
+        # print(flow_definition["last_tested_version"]) # key error here
+        # right here
+        # Fallback for flows that don't include last_tested_version in payload
+        if not flow_definition.get("last_tested_version"):
+            version_info = get_version_info() or {}
+            detected_version = version_info.get("version")
+            if not detected_version:
+                msg = "Unable to determine running Langflow version for snapshot creation."
+                raise ValueError(msg)
+            flow_definition["last_tested_version"] = detected_version
+        # print(flow_definition["last_tested_version"])
         connections: dict[str, str] = {}
         if config_id is not None:
             app_id = self._require_non_empty_string(
