@@ -22,7 +22,6 @@ from lfx.base.models.model_utils import (
     get_ollama_llm_models,
     get_watsonx_embedding_models,
     get_watsonx_llm_models,
-    is_valid_ollama_url,
 )
 from lfx.base.models.ollama_constants import OLLAMA_EMBEDDING_MODELS_DETAILED, OLLAMA_MODELS_DETAILED
 from lfx.base.models.openai_constants import OPENAI_EMBEDDING_MODELS_DETAILED, OPENAI_MODELS_DETAILED

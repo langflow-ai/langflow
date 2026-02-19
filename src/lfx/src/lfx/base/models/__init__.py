@@ -6,10 +6,10 @@ from .model_utils import (
     get_watsonx_llm_models,
 )
 from .unified_models import (
+    apply_provider_variable_config_to_build_config,
     fetch_live_ollama_models,
     fetch_live_watsonx_models,
     get_live_models_for_provider,
-    apply_provider_variable_config_to_build_config,
     get_model_provider_metadata,
     get_model_provider_variable_mapping,
     get_model_providers,
@@ -22,10 +22,10 @@ from .unified_models import (
 
 __all__ = [
     "LCModelComponent",
+    "apply_provider_variable_config_to_build_config",
     "fetch_live_ollama_models",
     "fetch_live_watsonx_models",
     "get_live_models_for_provider",
-    "apply_provider_variable_config_to_build_config",
     "get_model_provider_metadata",
     "get_model_provider_variable_mapping",
     "get_model_providers",

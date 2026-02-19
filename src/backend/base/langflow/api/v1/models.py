@@ -5,6 +5,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from lfx.base.models.unified_models import (
+    get_live_models_for_provider,
     get_model_provider_metadata,
     get_model_provider_variable_mapping,
     get_model_providers,
@@ -12,13 +13,13 @@ from lfx.base.models.unified_models import (
     get_unified_models_detailed,
 )
 from loguru import logger
-from pydantic import BaseModel, field_validator
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.deps import get_variable_service
 from langflow.services.variable.constants import GENERIC_TYPE
 from langflow.services.variable.service import DatabaseVariableService
+from pydantic import BaseModel, field_validator
 
 router = APIRouter(prefix="/models", tags=["Models"], include_in_schema=False)
 
@@ -203,6 +204,34 @@ async def list_models(
         prov_models_status = enabled_models_map.get(prov_name, {})
         has_active_model = any(prov_models_status.values())
         provider_dict["is_enabled"] = has_active_model
+
+    # Replace Ollama and IBM WatsonX with live models when the provider is configured
+    # so the UI shows only models actually available on the user's instance
+    for prov in ["Ollama", "IBM WatsonX"]:
+        if not provider_configured_status.get(prov, False):
+            continue
+        # Find the provider entry in filtered_models
+        for provider_dict in filtered_models:
+            if provider_dict.get("provider") != prov:
+                continue
+            if model_type is None:
+                live_llm = get_live_models_for_provider(current_user.id, prov, "llm")
+                live_emb = get_live_models_for_provider(current_user.id, prov, "embeddings")
+                live_models = live_llm + live_emb
+            else:
+                live_models = get_live_models_for_provider(
+                    current_user.id, prov, "llm" if model_type == "llm" else "embeddings"
+                )
+            # Convert to same shape as static catalog: list of {model_name, metadata}
+            provider_dict["models"] = [
+                {
+                    "model_name": m.get("name"),
+                    "metadata": {k: v for k, v in m.items() if k not in ("provider", "name")},
+                }
+                for m in live_models
+            ]
+            provider_dict["num_models"] = len(provider_dict["models"])
+            break
 
     # Sort providers:
     # 1. Provider with default model first

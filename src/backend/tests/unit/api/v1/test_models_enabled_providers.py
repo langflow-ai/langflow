@@ -494,3 +494,74 @@ async def test_backward_compatible_variable_mapping(client: AsyncClient, logged_
     assert mapping.get("Ollama") == "OLLAMA_BASE_URL"
     # IBM WatsonX should return primary secret (API key)
     assert mapping.get("IBM WatsonX") == "WATSONX_APIKEY"
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_list_models_returns_live_ollama_models_when_configured(
+    client: AsyncClient, logged_in_headers
+):
+    """When Ollama is configured, list_models returns live models from get_live_models_for_provider, not static list."""
+    live_ollama_models = [
+        {"name": "llama3.2", "icon": "Ollama", "tool_calling": True},
+        {"name": "mistral", "icon": "Ollama", "tool_calling": True},
+    ]
+
+    async def mock_get_enabled_providers(*args, **kwargs):
+        return {
+            "enabled_providers": ["Ollama"],
+            "provider_status": {"Ollama": True},
+        }
+
+    # list_models with model_type=None fetches llm then embeddings and merges; so two calls
+    with (
+        mock.patch(
+            "langflow.api.v1.models.get_enabled_providers",
+            side_effect=mock_get_enabled_providers,
+        ),
+        mock.patch(
+            "langflow.api.v1.models.get_live_models_for_provider",
+            side_effect=[live_ollama_models, []],  # llm list, then embeddings list
+        ),
+    ):
+        response = await client.get("api/v1/models", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    ollama_provider = next((p for p in data if p.get("provider") == "Ollama"), None)
+    assert ollama_provider is not None
+    model_names = [m["model_name"] for m in ollama_provider["models"]]
+    assert set(model_names) == {"llama3.2", "mistral"}
+    assert len(model_names) == 2
+    assert ollama_provider["num_models"] == 2
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_list_models_ollama_empty_when_live_fetch_returns_empty(
+    client: AsyncClient, logged_in_headers
+):
+    """When Ollama is configured but live fetch returns no models, Ollama shows empty list (no static models)."""
+
+    async def mock_get_enabled_providers(*args, **kwargs):
+        return {
+            "enabled_providers": ["Ollama"],
+            "provider_status": {"Ollama": True},
+        }
+
+    with (
+        mock.patch(
+            "langflow.api.v1.models.get_enabled_providers",
+            side_effect=mock_get_enabled_providers,
+        ),
+        mock.patch(
+            "langflow.api.v1.models.get_live_models_for_provider",
+            return_value=[],
+        ),
+    ):
+        response = await client.get("api/v1/models", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    ollama_provider = next((p for p in data if p.get("provider") == "Ollama"), None)
+    assert ollama_provider is not None
+    assert ollama_provider["models"] == []
+    assert ollama_provider["num_models"] == 0

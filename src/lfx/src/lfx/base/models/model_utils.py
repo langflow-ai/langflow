@@ -6,6 +6,8 @@ import requests
 
 from lfx.base.models.watsonx_constants import (
     WATSONX_DEFAULT_EMBEDDING_MODELS as WATSONX_EMBEDDING_METADATA,
+)
+from lfx.base.models.watsonx_constants import (
     WATSONX_DEFAULT_LLM_MODELS as WATSONX_LLM_METADATA,
 )
 from lfx.log.logger import logger
