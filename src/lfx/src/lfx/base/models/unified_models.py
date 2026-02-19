@@ -295,14 +295,11 @@ def get_unified_models_detailed(
 
     # Mark the first 5 models in each provider as default (based on list order)
     # and optionally filter to only defaults
-    # Note: Ollama is excluded because users need to explicitly pull models first
     default_model_count = 5  # Number of default models per provider
-    no_default_providers = {"Ollama"}  # Providers where no models are enabled by default
 
     for prov, models in provider_map.items():
         for i, model in enumerate(models):
-            # Mark first N models as default, except for no-default providers (e.g., Ollama)
-            if i < default_model_count and prov not in no_default_providers:
+            if i < default_model_count:
                 model["metadata"]["default"] = True
             else:
                 model["metadata"]["default"] = False
