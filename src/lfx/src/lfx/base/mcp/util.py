@@ -5,7 +5,9 @@ import json
 import os
 import platform
 import re
+import shlex
 import shutil
+import subprocess
 import unicodedata
 from collections.abc import Awaitable, Callable
 from typing import Any
@@ -1056,7 +1058,7 @@ class MCPStdioClient:
         """Connect to MCP server using stdio transport (SDK style)."""
         from mcp import StdioServerParameters
 
-        command = command_str.split(" ")
+        command = shlex.split(command_str)
         env_data: dict[str, str] = {"DEBUG": "true", "PATH": os.environ["PATH"], **(env or {})}
 
         if platform.system() == "Windows":
@@ -1064,7 +1066,7 @@ class MCPStdioClient:
                 command="cmd",
                 args=[
                     "/c",
-                    f"{command[0]} {' '.join(command[1:])} || echo Command failed with exit code %errorlevel% 1>&2",
+                    f"{subprocess.list2cmdline(command)} || echo Command failed with exit code %errorlevel% 1>&2",
                 ],
                 env=env_data,
             )
@@ -1586,10 +1588,52 @@ async def update_tools(
     # Determine connection type and parameters
     client: MCPStdioClient | MCPStreamableHttpClient | None = None
     if mode == "Stdio":
-        # Stdio connection
-        args = server_config.get("args", [])
+        args = list(server_config.get("args", []))
         env = server_config.get("env", {})
-        full_command = " ".join([command, *args])
+        # For stdio mode, inject component headers as --headers CLI args.
+        # This enables passing headers through proxy tools like mcp-proxy
+        # that forward them to the upstream HTTP server.
+        if headers:
+            extra_args = []
+            for key, value in headers.items():
+                extra_args.extend(["--headers", key, str(value)])
+            if "--headers" in args:
+                # Insert before the existing --headers flag so all header
+                # flags are grouped together
+                idx = args.index("--headers")
+                for i, arg in enumerate(extra_args):
+                    args.insert(idx + i, arg)
+            else:
+                # No existing --headers flag; try to insert before the last
+                # positional arg (typically the URL in mcp-proxy commands).
+                # Scan args to find the last true positional token by skipping
+                # flag+value pairs so we don't mistake a flag's value for a
+                # positional argument (e.g. "--port 8080").
+                last_positional_idx: int | None = None
+                i = 0
+                while i < len(args):
+                    if args[i].startswith("-"):
+                        # Skip the flag and its value (assumes each flag
+                        # takes at most one value argument; boolean flags
+                        # are handled correctly since the next token will
+                        # start with '-' or be a URL-like positional).
+                        i += 1
+                        if (
+                            i < len(args)
+                            and not args[i].startswith("-")
+                            and not args[i].startswith("http://")
+                            and not args[i].startswith("https://")
+                        ):
+                            i += 1
+                    else:
+                        last_positional_idx = i
+                        i += 1
+
+                if last_positional_idx is not None:
+                    args = args[:last_positional_idx] + extra_args + args[last_positional_idx:]
+                else:
+                    args.extend(extra_args)
+        full_command = shlex.join([command, *args])
         tools = await mcp_stdio_client.connect_to_server(full_command, env)
         client = mcp_stdio_client
     elif mode in ["Streamable_HTTP", "SSE"]:

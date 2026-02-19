@@ -158,6 +158,15 @@ def apply_tweaks(node: dict[str, Any], node_tweaks: dict[str, Any]) -> None:
             elif field_type == "mcp":
                 # MCP fields expect dict values to be set directly
                 template_data[tweak_name]["value"] = tweak_value
+            elif field_type == "dict" and isinstance(tweak_value, dict):
+                # Dict fields: set the dict directly as the value.
+                # If the tweak is wrapped in {"value": <actual>}, unwrap it
+                # to support the template-format style (e.g. from UI exports).
+                # Caveat: a legitimate single-key dict {"value": x} will be unwrapped.
+                if len(tweak_value) == 1 and "value" in tweak_value:
+                    template_data[tweak_name]["value"] = tweak_value["value"]
+                else:
+                    template_data[tweak_name]["value"] = tweak_value
             elif isinstance(tweak_value, dict):
                 for k, v in tweak_value.items():
                     k_ = "file_path" if field_type == "file" else k
