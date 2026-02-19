@@ -561,38 +561,61 @@ class BaseFileComponent(Component, ABC):
 
         return updated_base_files
 
+    def _resolve_paths_from_value(self, value: Any) -> list[tuple[Data, str]]:
+        """Resolve all paths from a given value, handling Data/Message objects and stringified JSON lists.
+
+        Returns:
+            list[tuple[Data, str]]: A list of tuples containing (Data object, path string).
+        """
+        if not value:
+            return []
+
+        raw_items = value if isinstance(value, list) else [value]
+        final_paths: list[tuple[Data, str]] = []
+
+        def process_item(item: Any):
+            if isinstance(item, Data):
+                path_str = getattr(item, "get_text", lambda: None)() or item.data.get("text")
+                if path_str:
+                    process_string(path_str, item)
+            elif isinstance(item, str):
+                process_string(item, None)
+            elif isinstance(item, Path):
+                final_paths.append((Data(data={self.SERVER_FILE_PATH_FIELDNAME: str(item)}), str(item)))
+
+        def process_string(s: str, original_data: Data | None):
+            s = s.strip()
+            if s.startswith("["):
+                try:
+                    loaded = orjson.loads(s)
+                    if isinstance(loaded, str) and loaded.strip().startswith("["):
+                        with contextlib.suppress(orjson.JSONDecodeError):
+                            loaded = orjson.loads(loaded)
+                    if isinstance(loaded, list):
+                        for inner in loaded:
+                            if isinstance(inner, str):
+                                process_string(inner, original_data)
+                            else:
+                                process_item(inner)
+                        return
+                except orjson.JSONDecodeError:
+                    pass
+
+            data_obj = original_data or Data(data={self.SERVER_FILE_PATH_FIELDNAME: s})
+            final_paths.append((data_obj, s))
+
+
+        for item in raw_items:
+            process_item(item)
+
+        return final_paths
+
     def _file_path_as_list(self) -> list[Data]:
-        file_path = self.file_path
-        if not file_path:
+        if not self.file_path:
             return []
 
-        def _message_to_data(message: Message) -> Data:
-            return Data(**{self.SERVER_FILE_PATH_FIELDNAME: message.text})
-
-        if isinstance(file_path, Data):
-            file_path = [file_path]
-        elif isinstance(file_path, Message):
-            file_path = [_message_to_data(file_path)]
-        elif not isinstance(file_path, list):
-            msg = f"Expected list of Data objects in file_path but got {type(file_path)}."
-            self.log(msg)
-            if not self.silent_errors:
-                raise ValueError(msg)
-            return []
-
-        file_paths = []
-        for obj in file_path:
-            data_obj = _message_to_data(obj) if isinstance(obj, Message) else obj
-
-            if not isinstance(data_obj, Data):
-                msg = f"Expected Data object in file_path but got {type(data_obj)}."
-                self.log(msg)
-                if not self.silent_errors:
-                    raise ValueError(msg)
-                continue
-            file_paths.append(data_obj)
-
-        return file_paths
+        # Use the helper to resolve paths from self.file_path (HandleInput)
+        return [data_obj for data_obj, _ in self._resolve_paths_from_value(self.file_path)]
 
     def _validate_and_resolve_paths(self) -> list[BaseFile]:
         """Validate that all input paths exist and are valid, and create BaseFile instances.
@@ -642,49 +665,8 @@ class BaseFileComponent(Component, ABC):
         file_path = self._file_path_as_list()
 
         if self.path and not file_path:
-            # 1. Collect initial raw items from self.path
-            raw_items = self.path if isinstance(self.path, list) else [self.path]
-            # 2. Flatten and extract paths
-            final_paths: list[tuple[Data, str]] = []
-            def process_item(item: Any):
-                if isinstance(item, Data):
-                    path_str = getattr(item, "get_text", lambda: None)() or item.data.get("text")
-                    if path_str:
-                        # Recursive check for stringified lists inside Data objects
-                        process_string(path_str, item)
-                elif isinstance(item, str):
-                    process_string(item, None)
-                elif isinstance(item, Path):
-                    final_paths.append((Data(data={self.SERVER_FILE_PATH_FIELDNAME: str(item)}), str(item)))
-
-            def process_string(s: str, original_data: Data | None):
-                s = s.strip()
-                if s.startswith("["):
-                    try:
-                        loaded = orjson.loads(s)
-                        # Handle double encoding: if loaded results in another stringified list
-                        if isinstance(loaded, str) and loaded.strip().startswith("["):
-                            with contextlib.suppress(orjson.JSONDecodeError):
-                                loaded = orjson.loads(loaded)
-
-                        if isinstance(loaded, list):
-                            for inner in loaded:
-                                if isinstance(inner, str):
-                                    process_string(inner, original_data)
-                                else:
-                                    process_item(inner)
-                            return
-                    except orjson.JSONDecodeError:
-                        pass
-                # If not a list or parsing failed, it's a single path
-                data_obj = original_data or Data(data={self.SERVER_FILE_PATH_FIELDNAME: s})
-                final_paths.append((data_obj, s))
-
-            for item in raw_items:
-                process_item(item)
-
-            # 3. Resolve and add validated files
-            for data_obj, path_str in final_paths:
+            # Use the helper to resolve paths from self.path
+            for data_obj, path_str in self._resolve_paths_from_value(self.path):
                 add_file(data=data_obj, path=path_str, delete_after_processing=False)
         elif file_path:
             for obj in file_path:

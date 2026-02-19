@@ -603,7 +603,6 @@ class FileComponent(BaseFileComponent):
                     if isinstance(loaded, str) and loaded.strip().startswith("["):
                         with contextlib.suppress(json.JSONDecodeError):
                             loaded = json.loads(loaded)
-                            
                     if isinstance(loaded, list):
                         path_strs = [str(p) for p in loaded]
                 except json.JSONDecodeError:
