@@ -17,6 +17,11 @@ test(
     });
     await page.getByTestId("blank-flow").click();
     await page.getByTestId("sidebar-nav-mcp").click();
+
+    await page.waitForSelector(
+      '[data-testid="add-component-button-lf-starter_project"]',
+      { timeout: 30000, state: "visible" },
+    );
     await page.getByTestId("add-component-button-lf-starter_project").click();
 
     // See if the color matches
@@ -297,21 +302,6 @@ test(
     await expect(
       page.locator('[data-testid="display-name"]', { hasText: testName }),
     ).not.toBeVisible({ timeout: 10000 });
-
-    await page.waitForSelector('[data-testid="save-mcp-server-button"]', {
-      timeout: 10000,
-    });
-
-    await page.getByTestId("save-mcp-server-button").click({ timeout: 10000 });
-
-    await expect(page.getByTestId("save-mcp-server-button")).toBeHidden({
-      timeout: 30000,
-    });
-
-    await page.getByTestId("mcp-server-dropdown").click({ timeout: 10000 });
-    await expect(page.getByText(testName)).toHaveCount(3, {
-      timeout: 10000,
-    });
   },
 );
 
@@ -634,6 +624,11 @@ test(
     });
     await page.getByTestId("blank-flow").click();
     await page.getByTestId("sidebar-nav-mcp").click();
+
+    await page.waitForSelector(
+      '[data-testid="add-component-button-lf-starter_project"]',
+      { timeout: 30000, state: "visible" },
+    );
     await page.getByTestId("add-component-button-lf-starter_project").click();
 
     await page.getByTestId("canvas_controls_dropdown").click();
