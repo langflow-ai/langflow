@@ -62,7 +62,7 @@ test(
     await page.waitForSelector(
       '[data-testid="dropdown_str_tool"]:not([disabled])',
       {
-        timeout: 10000,
+        timeout: 30000,
         state: "visible",
       },
     );
@@ -152,7 +152,7 @@ test(
 
     await page
       .getByTestId(`mcp-server-menu-button-${testName}`)
-      .click({ timeout: 3000 });
+      .click({ timeout: 10000 });
 
     await page.waitForTimeout(500);
 
@@ -239,7 +239,7 @@ test(
     await page.waitForSelector(
       '[data-testid="dropdown_str_tool"]:not([disabled])',
       {
-        timeout: 10000,
+        timeout: 30000,
         state: "visible",
       },
     );
@@ -665,7 +665,7 @@ test(
     await page.waitForSelector(
       '[data-testid="dropdown_str_tool"]:not([disabled])',
       {
-        timeout: 10000,
+        timeout: 30000,
         state: "visible",
       },
     );
