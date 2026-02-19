@@ -157,12 +157,12 @@ class VideoFileComponent(BaseFileComponent):
 
             # Use the base class helper to resolve paths
             resolved_paths = self._resolve_paths_from_value(self.file_path)
-            
+
             video_data_list = []
             for _, path_str in resolved_paths:
                 # Resolve to absolute path
                 resolved_path = Path(self.resolve_path(path_str))
-                
+
                 if not resolved_path.exists():
                     self.log(f"DEBUG: Video file not found at path: {resolved_path}")
                     continue
