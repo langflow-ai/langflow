@@ -100,10 +100,7 @@ class DeploymentRouterService(BaseDeploymentRouterService):
             if parameter.default is not inspect.Parameter.empty:
                 continue
 
-            msg = (
-                f"Failed to instantiate adapter '{adapter_class.__name__}': "
-                f"unresolved required dependency '{name}'."
-            )
+            msg = f"Failed to instantiate adapter '{adapter_class.__name__}': unresolved required dependency '{name}'."
             raise DeploymentError(message=msg)
 
         return adapter_class(**dependencies)

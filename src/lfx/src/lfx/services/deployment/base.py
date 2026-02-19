@@ -40,6 +40,7 @@ class BaseDeploymentService(Service):
     Defines the minimal interface that all deployment service implementations
     must provide, whether minimal (LFX) or full-featured (Langflow).
     """
+
     @abstractmethod
     def __init__(self):
         """Initialize the deployment service."""

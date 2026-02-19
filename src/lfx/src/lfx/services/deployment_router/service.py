@@ -28,7 +28,7 @@ class DeploymentRouterService(BaseDeploymentRouterService):
     def resolve_adapter(
         self,
         *,
-        provider_id: DeploymentProviderId,  # noqa: ARG002
+        provider_id: DeploymentProviderId,
     ) -> DeploymentServiceProtocol:
         raise NotImplementedError
 

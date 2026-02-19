@@ -400,7 +400,7 @@ class DeploymentServiceProtocol(Protocol):
         """Create a provider snapshot (deployed or not)."""
         ...
 
-    @abstractmethod # TODO: allow filtering by flow id or by other criteria
+    @abstractmethod  # TODO: allow filtering by flow id or by other criteria
     async def list_snapshots(
         self,
         *,
@@ -450,4 +450,3 @@ class DeploymentRouterServiceProtocol(Protocol):
     def list_adapter_keys(self) -> list[str]:
         """List available adapter keys."""
         ...
-

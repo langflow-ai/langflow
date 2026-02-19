@@ -3,7 +3,6 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import pytest
-
 from langflow.services.deployment_router.service import DeploymentRouterService
 from lfx.services.deployment.exceptions import DeploymentError
 from lfx.services.schema import ServiceType
@@ -173,4 +172,3 @@ async def test_teardown_handles_sync_and_async_adapter_teardown(monkeypatch):
     assert AdapterWithSyncTeardown.teardown_called == 1
     assert AdapterWithAsyncTeardown.teardown_called == 1
     assert service._adapter_instances == {}
-
