@@ -17,9 +17,6 @@ const ModelProviderModal = ({
 
   const handleClose = () => {
     onClose();
-    // Refresh after a delay to allow pending API operations to complete
-    // This ensures model toggles are persisted before we fetch updated options
-    // Using 1000ms to ensure database transactions complete for both LLM and embedding models
     setTimeout(() => {
       refreshAllModelInputs({ silent: true });
     }, 1000);
@@ -35,7 +32,7 @@ const ModelProviderModal = ({
         </DialogHeader>
 
         <div className="h-[513px] overflow-hidden">
-          <ModelProvidersContent modelType={modelType} onClose={handleClose} />
+          <ModelProvidersContent modelType={modelType} />
         </div>
       </DialogContent>
     </Dialog>

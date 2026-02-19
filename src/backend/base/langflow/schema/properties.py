@@ -31,6 +31,7 @@ class Properties(BaseModel):
     state: Literal["partial", "complete"] = "complete"
     targets: list = []
     usage: Usage | None = None
+    build_duration: float | None = None
 
     @field_validator("source", mode="before")
     @classmethod

@@ -95,12 +95,14 @@ With your component credentials configured, query your BigQuery datasets and tab
 
 This component generates text using [Google Generative AI models](https://cloud.google.com/vertex-ai/docs/).
 
+Supported models include the Gemini 1.5, 2.0, 2.5, and 3.0 series. The latest Gemini 3.0 models (`gemini-3-pro-preview`, `gemini-3-flash-preview`, and `gemini-3-pro-image-preview`) offer advanced reasoning and multimodal capabilities.
+
 ### Google Generative AI parameters
 
 | Name | Type | Description |
 |------|------|-------------|
 | Google API Key | SecretString | Input parameter. Your Google API key to use for the Google Generative AI. |
-| Model | String | Input parameter. The name of the model to use, such as `"gemini-pro"`. |
+| Model | String | Input parameter. The name of the model to use, such as `"gemini-1.5-pro"` or `"gemini-3-pro-preview"`. |
 | Max Output Tokens | Integer | Input parameter. The maximum number of tokens to generate. |
 | Temperature | Float | Input parameter. Run inference with this temperature. |
 | Top K | Integer | Input parameter. Consider the set of top K most probable tokens. |
