@@ -60,14 +60,13 @@ test(
 
     await page.getByTestId("add-mcp-server-button").click();
 
-    await expect(page.getByTestId("dropdown_str_tool")).toBeVisible({
-      timeout: 30000,
-    });
+    // Wait for the add-server modal to fully close
+    await expect(page.getByTestId("stdio-tab")).toBeHidden({ timeout: 30000 });
 
     await page.waitForSelector(
       '[data-testid="dropdown_str_tool"]:not([disabled])',
       {
-        timeout: 10000,
+        timeout: 30000,
         state: "visible",
       },
     );
@@ -231,20 +230,19 @@ test(
 
     await page.getByTestId("add-mcp-server-button").click();
 
+    // Wait for the add-server modal to fully close
+    await expect(page.getByTestId("stdio-tab")).toBeHidden({ timeout: 30000 });
+
     await page.waitForSelector(
       `[data-testid="add-component-button-${testName}"]`,
       { timeout: 30000, state: "visible" },
     );
     await page.getByTestId(`add-component-button-${testName}`).click();
 
-    await expect(page.getByTestId("dropdown_str_tool")).toBeVisible({
-      timeout: 30000,
-    });
-
     await page.waitForSelector(
       '[data-testid="dropdown_str_tool"]:not([disabled])',
       {
-        timeout: 10000,
+        timeout: 30000,
         state: "visible",
       },
     );
@@ -655,19 +653,18 @@ test(
 
     await page.getByTestId("add-mcp-server-button").click();
 
-    await page.waitForTimeout(500);
+    // Wait for the add-server modal to fully close
+    await expect(page.getByTestId("stdio-tab")).toBeHidden({ timeout: 30000 });
 
     await page.waitForSelector(
       '[data-testid="dropdown_str_tool"]:not([disabled])',
       {
-        timeout: 10000,
+        timeout: 30000,
         state: "visible",
       },
     );
 
     await page.getByTestId("dropdown_str_tool").click();
-
-    await page.waitForTimeout(500);
 
     const fetchOptionCount = await page.getByTestId("fetch-0-option").count();
 
