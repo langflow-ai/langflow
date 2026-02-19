@@ -936,12 +936,12 @@
   },
   "IBMwatsonxModel": {
     "versions": {
-      "0.3.0": "769869108e5e"
+      "0.3.0": "689a87ecc73a"
     }
   },
   "WatsonxEmbeddingsComponent": {
     "versions": {
-      "0.3.0": "ffded413ea90"
+      "0.3.0": "011bcac795de"
     }
   },
   "Combinatorial Reasoner": {
