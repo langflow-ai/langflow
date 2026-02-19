@@ -497,9 +497,7 @@ async def test_backward_compatible_variable_mapping(client: AsyncClient, logged_
 
 
 @pytest.mark.usefixtures("active_user")
-async def test_list_models_returns_live_ollama_models_when_configured(
-    client: AsyncClient, logged_in_headers
-):
+async def test_list_models_returns_live_ollama_models_when_configured(client: AsyncClient, logged_in_headers):
     """When Ollama is configured, list_models returns live models from get_live_models_for_provider, not static list."""
     live_ollama_models = [
         {"name": "llama3.2", "icon": "Ollama", "tool_calling": True},
@@ -536,9 +534,7 @@ async def test_list_models_returns_live_ollama_models_when_configured(
 
 
 @pytest.mark.usefixtures("active_user")
-async def test_list_models_ollama_empty_when_live_fetch_returns_empty(
-    client: AsyncClient, logged_in_headers
-):
+async def test_list_models_ollama_empty_when_live_fetch_returns_empty(client: AsyncClient, logged_in_headers):
     """When Ollama is configured but live fetch returns no models, Ollama shows empty list (no static models)."""
 
     async def mock_get_enabled_providers(*args, **kwargs):

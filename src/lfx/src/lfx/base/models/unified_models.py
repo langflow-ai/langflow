@@ -497,6 +497,8 @@ def get_live_models_for_provider(
     if provider == "IBM WatsonX":
         return fetch_live_watsonx_models(user_id, model_type)
     return []
+
+
 def get_all_variables_for_provider(user_id: UUID | str | None, provider: str) -> dict[str, str]:
     """Get all configured variables for a provider from database or environment.
 
@@ -950,22 +952,22 @@ def get_language_model_options(
                 live_models = get_live_models_for_provider(user_id, provider, "llm")
                 if live_models:
                     # Replace static models with live models for this provider
-                    all_models = [
-                        pm for pm in all_models if pm.get("provider") != provider
-                    ]
+                    all_models = [pm for pm in all_models if pm.get("provider") != provider]
                     # Group live models by provider
-                    all_models.append({
-                        "provider": provider,
-                        "models": [
-                            {
-                                "model_name": m.get("name"),
-                                "metadata": {k: v for k, v in m.items() if k not in ("provider", "name")},
-                            }
-                            for m in live_models
-                        ],
-                        "num_models": len(live_models),
-                        **model_provider_metadata.get(provider, {}),
-                    })
+                    all_models.append(
+                        {
+                            "provider": provider,
+                            "models": [
+                                {
+                                    "model_name": m.get("name"),
+                                    "metadata": {k: v for k, v in m.items() if k not in ("provider", "name")},
+                                }
+                                for m in live_models
+                            ],
+                            "num_models": len(live_models),
+                            **model_provider_metadata.get(provider, {}),
+                        }
+                    )
 
     options = []
 
@@ -1186,22 +1188,22 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
                 live_models = get_live_models_for_provider(user_id, provider, "embeddings")
                 if live_models:
                     # Replace static models with live models for this provider
-                    all_models = [
-                        pm for pm in all_models if pm.get("provider") != provider
-                    ]
+                    all_models = [pm for pm in all_models if pm.get("provider") != provider]
                     # Group live models by provider
-                    all_models.append({
-                        "provider": provider,
-                        "models": [
-                            {
-                                "model_name": m.get("name"),
-                                "metadata": {k: v for k, v in m.items() if k not in ("provider", "name")},
-                            }
-                            for m in live_models
-                        ],
-                        "num_models": len(live_models),
-                        **model_provider_metadata.get(provider, {}),
-                    })
+                    all_models.append(
+                        {
+                            "provider": provider,
+                            "models": [
+                                {
+                                    "model_name": m.get("name"),
+                                    "metadata": {k: v for k, v in m.items() if k not in ("provider", "name")},
+                                }
+                                for m in live_models
+                            ],
+                            "num_models": len(live_models),
+                            **model_provider_metadata.get(provider, {}),
+                        }
+                    )
 
     options = []
     embedding_class_mapping = {
