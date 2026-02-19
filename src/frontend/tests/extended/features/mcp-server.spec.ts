@@ -63,19 +63,18 @@ test(
     // Wait for the add-server modal to fully close
     await expect(page.getByTestId("stdio-tab")).toBeHidden({ timeout: 30000 });
 
-    await page.waitForSelector(
-      '[data-testid="dropdown_str_tool"]:not([disabled])',
-      {
-        timeout: 30000,
-        state: "visible",
-      },
-    );
+    // Wait for tools to load from the new MCP server (old stale options may linger)
+    await page.waitForSelector('[data-testid="fetch-0-option"]', {
+      timeout: 60000,
+      state: "attached",
+    });
 
     await page.getByTestId("dropdown_str_tool").click();
 
-    const fetchOptionCount = await page.getByTestId("fetch-0-option").count();
-
-    expect(fetchOptionCount).toBeGreaterThan(0);
+    await page.waitForSelector('[data-testid="fetch-0-option"]', {
+      timeout: 30000,
+      state: "visible",
+    });
 
     await page.getByTestId("fetch-0-option").click();
 
@@ -239,19 +238,18 @@ test(
     );
     await page.getByTestId(`add-component-button-${testName}`).click();
 
-    await page.waitForSelector(
-      '[data-testid="dropdown_str_tool"]:not([disabled])',
-      {
-        timeout: 30000,
-        state: "visible",
-      },
-    );
+    // Wait for tools to load from the new MCP server
+    await page.waitForSelector('[data-testid="fetch-0-option"]', {
+      timeout: 60000,
+      state: "attached",
+    });
 
     await page.getByTestId("dropdown_str_tool").click();
 
-    const fetchOptionCount = await page.getByTestId("fetch-0-option").count();
-
-    expect(fetchOptionCount).toBeGreaterThan(0);
+    await page.waitForSelector('[data-testid="fetch-0-option"]', {
+      timeout: 30000,
+      state: "visible",
+    });
 
     await page.getByTestId("fetch-0-option").click();
 
@@ -656,19 +654,18 @@ test(
     // Wait for the add-server modal to fully close
     await expect(page.getByTestId("stdio-tab")).toBeHidden({ timeout: 30000 });
 
-    await page.waitForSelector(
-      '[data-testid="dropdown_str_tool"]:not([disabled])',
-      {
-        timeout: 30000,
-        state: "visible",
-      },
-    );
+    // Wait for tools to load from the new MCP server (old stale options may linger)
+    await page.waitForSelector('[data-testid="fetch-0-option"]', {
+      timeout: 60000,
+      state: "attached",
+    });
 
     await page.getByTestId("dropdown_str_tool").click();
 
-    const fetchOptionCount = await page.getByTestId("fetch-0-option").count();
-
-    expect(fetchOptionCount).toBeGreaterThan(0);
+    await page.waitForSelector('[data-testid="fetch-0-option"]', {
+      timeout: 30000,
+      state: "visible",
+    });
 
     await page.getByTestId("fetch-0-option").click();
 
@@ -775,15 +772,18 @@ test(
     await page.getByTestId("mcp-server-dropdown").click();
     await page.getByTestId(`list_item_${testName}`).click({ timeout: 5000 });
 
-    await page.waitForSelector(
-      '[data-testid="dropdown_str_tool"]:not([disabled])',
-      {
-        timeout: 30000,
-        state: "visible",
-      },
-    );
+    // Wait for tools to load from the edited MCP server (now mcp-server-time)
+    await page.waitForSelector('[data-testid="get_current_time-0-option"]', {
+      timeout: 60000,
+      state: "attached",
+    });
 
     await page.getByTestId("dropdown_str_tool").click();
+
+    await page.waitForSelector('[data-testid="get_current_time-0-option"]', {
+      timeout: 30000,
+      state: "visible",
+    });
 
     const timeOptionCount = await page
       .getByTestId("get_current_time-0-option")
@@ -878,15 +878,18 @@ test(
     await page.getByTestId("mcp-server-dropdown").click();
     await page.getByTestId(`list_item_${testName}`).click({ timeout: 5000 });
 
-    await page.waitForSelector(
-      '[data-testid="dropdown_str_tool"]:not([disabled])',
-      {
-        timeout: 30000,
-        state: "visible",
-      },
-    );
+    // Wait for tools to load from the re-created MCP server (now mcp-server-fetch again)
+    await page.waitForSelector('[data-testid="fetch-0-option"]', {
+      timeout: 60000,
+      state: "attached",
+    });
 
     await page.getByTestId("dropdown_str_tool").click();
+
+    await page.waitForSelector('[data-testid="fetch-0-option"]', {
+      timeout: 30000,
+      state: "visible",
+    });
 
     const fetchOptionCount2 = await page.getByTestId("fetch-0-option").count();
 
