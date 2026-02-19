@@ -228,7 +228,9 @@ test(
 
     await page.waitForTimeout(500);
 
-    await page.getByTestId(`add-component-button-${testName}`).click({timeout: 30000});
+    await page
+      .getByTestId(`add-component-button-${testName}`)
+      .click({ timeout: 30000 });
 
     await page.waitForTimeout(500);
 
