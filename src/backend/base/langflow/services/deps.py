@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union
 
 from langflow.services.schema import ServiceType
 
@@ -23,6 +23,7 @@ if TYPE_CHECKING:
 # These imports MUST be outside TYPE_CHECKING because FastAPI uses eval_str=True
 # to evaluate type annotations, and these types are used as return types for
 # dependency functions that FastAPI evaluates at module load time.
+from lfx.services.auth.base import BaseAuthService  # noqa: TC002
 from lfx.services.settings.service import SettingsService  # noqa: TC002
 
 from langflow.services.job_queue.service import JobQueueService  # noqa: TC001
@@ -176,7 +177,7 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
         yield session
 
 
-def get_cache_service() -> CacheService | AsyncBaseCacheService:
+def get_cache_service() -> Union[CacheService, AsyncBaseCacheService]:  # noqa: UP007
     """Retrieves the cache service from the service manager.
 
     Returns:
@@ -244,3 +245,21 @@ def get_queue_service() -> JobQueueService:
     from langflow.services.job_queue.factory import JobQueueServiceFactory
 
     return get_service(ServiceType.JOB_QUEUE_SERVICE, JobQueueServiceFactory())
+
+
+def get_auth_service() -> BaseAuthService:
+    """Retrieve the authentication service."""
+    from langflow.services.auth.factory import AuthServiceFactory
+
+    return get_service(ServiceType.AUTH_SERVICE, AuthServiceFactory())
+
+
+def get_job_service():
+    """Retrieves the JobService instance from the service manager.
+
+    Returns:
+        JobService: The JobService instance.
+    """
+    from langflow.services.jobs.factory import JobServiceFactory
+
+    return get_service(ServiceType.JOB_SERVICE, JobServiceFactory())

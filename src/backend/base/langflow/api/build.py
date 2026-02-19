@@ -253,7 +253,7 @@ async def generate_flow_events(
 
             if "stream or streaming set to True" in str(exc):
                 raise HTTPException(status_code=400, detail=str(exc)) from exc
-            await logger.aexception("Error checking build status")
+            await logger.aexception("Error checking build status: " + str(exc))
             raise HTTPException(status_code=500, detail=str(exc)) from exc
         return first_layer, vertices_to_run, graph
 
@@ -373,13 +373,6 @@ async def generate_flow_events(
 
             timedelta = time.perf_counter() - start_time
 
-            # Use client_request_time if available for accurate end-to-end duration
-            if inputs and inputs.client_request_time:
-                # Convert client timestamp (ms) to seconds and calculate elapsed time
-                client_start_seconds = inputs.client_request_time / 1000
-                current_time_seconds = time.time()
-                timedelta = current_time_seconds - client_start_seconds
-
             duration = format_elapsed_time(timedelta)
             result_data_response.duration = duration
             result_data_response.timedelta = timedelta
@@ -454,6 +447,7 @@ async def generate_flow_events(
         vertex_id: str,
         graph: Graph,
         event_manager: EventManager,
+        vertex_timedeltas: list[float],
     ) -> None:
         """Build vertices and handle their events.
 
@@ -461,12 +455,17 @@ async def generate_flow_events(
             vertex_id: The ID of the vertex to build
             graph: The graph instance
             event_manager: Manager for handling events
+            vertex_timedeltas: Shared list to accumulate each vertex's timedelta
         """
         try:
             vertex_build_response: VertexBuildResponse = await _build_vertex(vertex_id, graph, event_manager)
         except asyncio.CancelledError as exc:
             await logger.ainfo(f"Build cancelled: {exc}")
             raise
+
+        # Accumulate the vertex timedelta
+        if vertex_build_response.data.timedelta is not None:
+            vertex_timedeltas.append(vertex_build_response.data.timedelta)
 
         # send built event or error event
         try:
@@ -486,6 +485,7 @@ async def generate_flow_events(
                         next_vertex_id,
                         graph,
                         event_manager,
+                        vertex_timedeltas,
                     )
                 )
                 tasks.append(task)
@@ -503,9 +503,11 @@ async def generate_flow_events(
 
     event_manager.on_vertices_sorted(data={"ids": ids, "to_run": vertices_to_run})
 
+    vertex_timedeltas: list[float] = []
+    event_manager.on_build_start(data={})
     tasks = []
     for vertex_id in ids:
-        task = asyncio.create_task(build_vertices(vertex_id, graph, event_manager))
+        task = asyncio.create_task(build_vertices(vertex_id, graph, event_manager, vertex_timedeltas))
         tasks.append(task)
     try:
         await asyncio.gather(*tasks)
@@ -525,7 +527,8 @@ async def generate_flow_events(
         event_manager.on_error(data=error_message.data)
         raise
 
-    event_manager.on_end(data={})
+    build_duration = sum(vertex_timedeltas)
+    event_manager.on_end(data={"build_duration": build_duration})
     await graph.end_all_traces()
     await event_manager.queue.put((None, None, time.time()))
 

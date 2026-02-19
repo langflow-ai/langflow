@@ -7,6 +7,7 @@ export interface InputProps
   icon?: string;
   inputClassName?: string;
   placeholder?: string;
+  placeholderClassName?: string;
   endIcon?: string;
   endIconClassName?: string;
 }
@@ -61,13 +62,15 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           {placeholder}
         </span>
         {endIcon && (
-          <ForwardedIconComponent
-            name={endIcon}
-            className={cn(
-              "pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 transform text-muted-foreground",
-              endIconClassName,
-            )}
-          />
+          <div data-testid="input-end-icon">
+            <ForwardedIconComponent
+              name={endIcon}
+              className={cn(
+                "pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 transform text-muted-foreground",
+                endIconClassName,
+              )}
+            />
+          </div>
         )}
       </label>
     );

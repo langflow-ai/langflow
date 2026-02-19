@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from aiofile import async_open
+import aiofiles
 
 from lfx.log.logger import logger
+from lfx.services.base import Service
 from lfx.services.storage.service import StorageService
 
 if TYPE_CHECKING:
@@ -18,7 +19,7 @@ if TYPE_CHECKING:
 EXPECTED_PATH_PARTS = 2  # Path format: "flow_id/filename"
 
 
-class LocalStorageService(StorageService):
+class LocalStorageService(StorageService, Service):
     """A service class for handling local file storage operations."""
 
     def __init__(
@@ -53,16 +54,21 @@ class LocalStorageService(StorageService):
         flow_id, file_name = parts
         return self.build_full_path(flow_id, file_name)
 
+    async def teardown(self) -> None:
+        """Teardown the storage service."""
+        # No cleanup needed for local storage
+
     def build_full_path(self, flow_id: str, file_name: str) -> str:
         """Build the full path of a file in the local storage."""
         return str(self.data_dir / flow_id / file_name)
 
     def parse_file_path(self, full_path: str) -> tuple[str, str]:
-        """Parse a full local storage path to extract flow_id and file_name.
+        r"""Parse a full local storage path to extract flow_id and file_name.
 
         Args:
             full_path: Filesystem path, may or may not include data_dir
-                e.g., "/data/user_123/image.png" or "user_123/image.png"
+                e.g., "/data/user_123/image.png" or "user_123/image.png". On Windows the
+                separators may be backslashes ("\\"). This method handles both.
 
         Returns:
             tuple[str, str]: A tuple of (flow_id, file_name)
@@ -78,15 +84,19 @@ class LocalStorageService(StorageService):
         # Remove data_dir if present (but don't require it)
         path_without_prefix = full_path
         if full_path.startswith(data_dir_str):
-            path_without_prefix = full_path[len(data_dir_str) :].lstrip("/")
+            # Strip both POSIX and Windows separators
+            path_without_prefix = full_path[len(data_dir_str) :].lstrip("/").lstrip("\\")
 
-        # Split from the right to get the filename
-        # Everything before the last "/" is the flow_id
-        if "/" not in path_without_prefix:
-            return "", path_without_prefix
+        # Normalize separators so downstream logic is platform-agnostic
+        normalized_path = path_without_prefix.replace("\\", "/")
+
+        # Split from the right to get the filename; everything before the last
+        # "/" is the flow_id
+        if "/" not in normalized_path:
+            return "", normalized_path
 
         # Use rsplit to split from the right, limiting to 1 split
-        flow_id, file_name = path_without_prefix.rsplit("/", 1)
+        flow_id, file_name = normalized_path.rsplit("/", 1)
         return flow_id, file_name
 
     async def save_file(self, flow_id: str, file_name: str, data: bytes, *, append: bool = False) -> None:
@@ -109,7 +119,7 @@ class LocalStorageService(StorageService):
 
         try:
             mode = "ab" if append else "wb"
-            async with async_open(str(file_path), mode) as f:
+            async with aiofiles.open(str(file_path), mode) as f:
                 await f.write(data)
             action = "appended to" if append else "saved"
             await logger.ainfo(f"File {file_name} {action} successfully in flow {flow_id}.")
@@ -136,7 +146,7 @@ class LocalStorageService(StorageService):
             msg = f"File {file_name} not found in flow {flow_id}"
             raise FileNotFoundError(msg)
 
-        async with async_open(str(file_path), "rb") as f:
+        async with aiofiles.open(str(file_path), "rb") as f:
             content = await f.read()
 
         logger.debug(f"File {file_name} retrieved successfully from flow {flow_id}.")
@@ -211,7 +221,3 @@ class LocalStorageService(StorageService):
             raise
         else:
             return file_size_stat.st_size
-
-    async def teardown(self) -> None:
-        """Perform any cleanup operations when the service is being torn down."""
-        # No specific teardown actions required for local

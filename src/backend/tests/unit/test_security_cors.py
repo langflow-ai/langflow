@@ -3,7 +3,7 @@
 import os
 import tempfile
 import warnings
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import HTTPException
@@ -221,7 +221,7 @@ class TestRefreshTokenSecurity:
         NOTE: Currently the code doesn't validate that the token type is 'refresh'.
         It only checks if the token_type is empty. This should be enhanced.
         """
-        from langflow.services.auth.utils import create_refresh_token
+        from langflow.services.deps import get_auth_service
 
         mock_db = MagicMock()
 
@@ -237,7 +237,7 @@ class TestRefreshTokenSecurity:
 
                 # This SHOULD raise an exception for wrong token type, but currently doesn't
                 with pytest.raises(HTTPException) as exc_info:
-                    await create_refresh_token("fake-token", mock_db)
+                    await get_auth_service().create_refresh_token("fake-token", mock_db)
 
                 assert exc_info.value.status_code == 401
                 assert "Invalid refresh token" in str(exc_info.value.detail)
@@ -250,7 +250,7 @@ class TestRefreshTokenSecurity:
         NOTE: This is a security enhancement that should be implemented.
         Currently, the system does not check if a user is active when refreshing tokens.
         """
-        from langflow.services.auth.utils import create_refresh_token
+        from langflow.services.deps import get_auth_service
 
         mock_db = MagicMock()
         mock_user = MagicMock()
@@ -270,7 +270,7 @@ class TestRefreshTokenSecurity:
 
                     # This SHOULD raise an exception for inactive users, but currently doesn't
                     with pytest.raises(HTTPException) as exc_info:
-                        await create_refresh_token("fake-token", mock_db)
+                        await get_auth_service().create_refresh_token("fake-token", mock_db)
 
                     assert exc_info.value.status_code == 401
                     assert "inactive" in str(exc_info.value.detail).lower()
@@ -278,26 +278,28 @@ class TestRefreshTokenSecurity:
     @pytest.mark.asyncio
     async def test_refresh_token_valid_flow(self):
         """Test that valid refresh tokens work correctly."""
+        from uuid import uuid4
+
         from langflow.services.auth.utils import create_refresh_token
 
-        mock_db = MagicMock()
+        mock_db = AsyncMock()
         mock_user = MagicMock()
         mock_user.is_active = True  # Active user
-        mock_user.id = "user-123"
+        user_id = uuid4()
+        mock_user.id = user_id
 
-        with patch("langflow.services.auth.utils.jwt.decode") as mock_decode:
-            mock_decode.return_value = {"sub": "user-123", "type": "refresh"}  # Correct type
+        with patch("langflow.services.auth.service.jwt.decode") as mock_decode:
+            mock_decode.return_value = {"sub": str(user_id), "type": "refresh"}  # Correct type
 
-            with patch("langflow.services.auth.utils.get_settings_service") as mock_settings:
-                mock_settings.return_value.auth_settings.SECRET_KEY.get_secret_value.return_value = "secret"
-                mock_settings.return_value.auth_settings.ALGORITHM = "HS256"
-                mock_settings.return_value.auth_settings.ACCESS_TOKEN_EXPIRE_SECONDS = 3600
-                mock_settings.return_value.auth_settings.REFRESH_TOKEN_EXPIRE_SECONDS = 604800
+            with patch("langflow.services.auth.utils.get_jwt_verification_key") as mock_verification_key:
+                mock_verification_key.return_value = "secret"
 
-                with patch("langflow.services.auth.utils.get_user_by_id") as mock_get_user:
+                with patch("langflow.services.auth.service.get_user_by_id", new_callable=AsyncMock) as mock_get_user:
                     mock_get_user.return_value = mock_user
 
-                    with patch("langflow.services.auth.utils.create_user_tokens") as mock_create_tokens:
+                    with patch(
+                        "langflow.services.auth.service.AuthService.create_user_tokens", new_callable=AsyncMock
+                    ) as mock_create_tokens:
                         expected_access = "new-access-token"
                         expected_refresh = "new-refresh-token"
                         mock_create_tokens.return_value = {
@@ -309,7 +311,8 @@ class TestRefreshTokenSecurity:
 
                         assert result["access_token"] == expected_access
                         assert result["refresh_token"] == expected_refresh
-                        mock_create_tokens.assert_called_once_with("user-123", mock_db)
+                        # user_id is converted to string in JWT payload, then back to UUID in service
+                        mock_create_tokens.assert_called_once_with(str(user_id), mock_db)
 
     def test_refresh_token_samesite_setting_current_behavior(self):
         """Test current refresh token SameSite settings (warns about security)."""

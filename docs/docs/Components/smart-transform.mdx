@@ -1,0 +1,43 @@
+---
+title: Smart Transform
+slug: /smart-transform
+---
+
+import Icon from "@site/src/components/icon";
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialDevModeWindows from '@site/docs/_partial-dev-mode-windows.mdx';
+
+This component has been renamed multiple times.
+Its previous names include **Lambda Filter** and **Smart Function**.
+
+The **Smart Transform** component uses an LLM to generate a Lambda function to filter or transform structured data based on natural language instructions.
+You must connect this component to a [language model component](/components-models), which is used to generate a function based on the natural language instructions you provide in the **Instructions** parameter.
+The LLM runs the function against the data input, and then outputs the results as [`Data`](/data-types#data).
+
+:::tip
+Provide brief, clear instructions, focusing on the desired outcome or specific actions, such as `Filter the data to only include items where the 'status' is 'active'`.
+One sentence or less is preferred because end punctuation, like periods, can cause errors or unexpected behavior.
+
+If you need to provide more details instructions that aren't directly relevant to the Lambda function, you can input them in the **Language Model** component's **Input** field or through a **Prompt Template** component.
+:::
+
+The following example uses the **API Request** endpoint to pass JSON data from the `https://jsonplaceholder.typicode.com/users` endpoint to the **Smart Transform** component.
+Then, the **Smart Transform** component passes the data and the instruction `extract emails` to the attached **Language Model** component.
+From there, the LLM generates a filter function that extracts email addresses from the JSON data, returning the filtered data as chat output.
+
+![A small flow using a Smart Transform component to extract data from an API response.](/img/component-lambda-filter.png)
+
+## Smart Transform parameters
+
+<PartialParams />
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data | Data | Input parameter. The structured data to filter or transform using a Lambda function. |
+| llm | Language Model | Input parameter. Connect [`LanguageModel`](/data-types#languagemodel) output from a **Language Model** component. |
+| filter_instruction | Instructions | Input parameter. The natural language instructions for how to filter or transform the data. The LLM uses these instructions to create a Lambda function. |
+| sample_size | Sample Size | Input parameter. For large datasets, the number of characters to sample from the dataset head and tail. Only applied if the dataset meets or exceeds `max_size`. Default: `1000`. |
+| max_size | Max Size | Input parameter. The number of characters for the dataset to be considered large, which triggers sampling by the `sample_size` value. Default: `30000`. |
+

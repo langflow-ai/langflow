@@ -78,6 +78,8 @@ Langflow is available at http://localhost:7860/.
 For configuration options, see the [Docker deployment guide](https://docs.langflow.org/deployment-docker).
 
 > [!CAUTION]
+> - Users must update to Langflow >= 1.7.1 to protect against [CVE-2025-68477](https://github.com/langflow-ai/langflow/security/advisories/GHSA-5993-7p27-66g5) and [CVE-2025-68478](https://github.com/langflow-ai/langflow/security/advisories/GHSA-f43r-cc68-gpx4).
+> - Langflow version 1.7.0 has a critical bug where persisted state (flows, projects, and global variables) cannot be found when upgrading. Version 1.7.0 was yanked and replaced with version 1.7.1, which includes a fix for this bug. **DO NOT** upgrade to version 1.7.0. Instead, upgrade directly to version 1.7.1.
 > - Langflow versions 1.6.0 through 1.6.3 have a critical bug where `.env` files are not read, potentially causing security vulnerabilities. **DO NOT** upgrade to these versions if you use `.env` files for configuration. Instead, upgrade to 1.6.4, which includes a fix for this bug.
 > - Windows users of Langflow Desktop should **not** use the in-app update feature to upgrade to Langflow version 1.6.0. For upgrade instructions, see [Windows Desktop update issue](https://docs.langflow.org/release-notes#windows-desktop-update-issue).
 > - Users must update to Langflow >= 1.3 to protect against [CVE-2025-3248](https://nvd.nist.gov/vuln/detail/CVE-2025-3248)

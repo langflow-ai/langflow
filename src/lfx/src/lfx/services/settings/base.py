@@ -276,10 +276,10 @@ class Settings(BaseSettings):
     """The maximum number of transactions to keep in the database."""
     max_vertex_builds_to_keep: int = 3000
     """The maximum number of vertex builds to keep in the database."""
-    max_vertex_builds_per_vertex: int = 2
+    max_vertex_builds_per_vertex: int = 50
     """The maximum number of builds to keep per vertex. Older builds will be deleted."""
-    webhook_polling_interval: int = 5000
-    """The polling interval for the webhook in ms."""
+    webhook_polling_interval: int = 0
+    """The polling interval for the webhook in ms. Set to 0 to disable (SSE provides real-time updates)."""
     fs_flows_polling_interval: int = 10000
     """The polling interval in milliseconds for synchronizing flows from the file system."""
     ssl_cert_file: str | None = None
@@ -312,6 +312,10 @@ class Settings(BaseSettings):
     agentic_experience: bool = False
     """If set to True, Langflow will start the agentic MCP server that provides tools for
     flow/component operations, template search, and graph visualization."""
+
+    # Developer API
+    developer_api_enabled: bool = False
+    """If set to True, Langflow will enable developer API endpoints for advanced debugging and introspection."""
 
     # Public Flow Settings
     public_flow_cleanup_interval: int = Field(default=3600, gt=600)
@@ -497,7 +501,13 @@ class Settings(BaseSettings):
             if info.data["save_db_in_config_dir"]:
                 database_dir = info.data["config_dir"]
             else:
-                database_dir = Path(__file__).parent.parent.parent.resolve()
+                # Use langflow package path, not lfx, for backwards compatibility
+                try:
+                    import langflow
+
+                    database_dir = Path(langflow.__file__).parent.resolve()
+                except ImportError:
+                    database_dir = Path(__file__).parent.parent.parent.resolve()
 
             pre_db_file_name = "langflow-pre.db"
             db_file_name = "langflow.db"

@@ -170,7 +170,7 @@ test(
     await adjustScreenView(page, { numberOfZoomOut: 2 });
 
     // Select both Combine Text nodes using box selection (Shift+drag)
-    // Note: Ctrl/Meta+click doesn't work reliably in Playwright 1.56 with ReactFlow
+    // Note: Ctrl/Meta+click doesn't work reliably in Playwright with ReactFlow
     const combineTextNodes = page.locator(".react-flow__node").filter({
       has: page.getByTestId("title-Combine Text"),
     });

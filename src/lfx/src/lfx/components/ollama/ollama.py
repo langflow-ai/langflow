@@ -350,12 +350,17 @@ class ChatOllamaComponent(LCModelComponent):
                     build_config["mirostat_tau"]["value"] = 5
 
         if field_name in {"model_name", "base_url", "tool_model_enabled"}:
-            logger.warning(f"Fetching Ollama models from updated URL: {build_config['base_url']}")
+            # Use field_value if base_url is being updated, otherwise use self.base_url
+            base_url_to_check = field_value if field_name == "base_url" else self.base_url
+            # Fallback to self.base_url if field_value is None or empty
+            if not base_url_to_check and field_name == "base_url":
+                base_url_to_check = self.base_url
+            logger.warning(f"Fetching Ollama models from updated URL: {base_url_to_check}")
 
-            if await self.is_valid_ollama_url(self.base_url):
+            if base_url_to_check and await self.is_valid_ollama_url(base_url_to_check):
                 tool_model_enabled = build_config["tool_model_enabled"].get("value", False) or self.tool_model_enabled
                 build_config["model_name"]["options"] = await self.get_models(
-                    self.base_url, tool_model_enabled=tool_model_enabled
+                    base_url_to_check, tool_model_enabled=tool_model_enabled
                 )
             else:
                 build_config["model_name"]["options"] = []
@@ -372,7 +377,7 @@ class ChatOllamaComponent(LCModelComponent):
         return build_config
 
     async def get_models(self, base_url_value: str, *, tool_model_enabled: bool | None = None) -> list[str]:
-        """Fetches a list of models from the Ollama API that do not have the "embedding" capability.
+        """Fetches a list of models from the Ollama API suitable for text generation.
 
         Args:
             base_url_value (str): The base URL of the Ollama API.
@@ -380,8 +385,11 @@ class ChatOllamaComponent(LCModelComponent):
                 only those that support tool calling. Defaults to None.
 
         Returns:
-            list[str]: A list of model names that do not have the "embedding" capability. If
-                `tool_model_enabled` is True, only models supporting tool calling are included.
+            list[str]: A list of model names suitable for text generation. Models are included if:
+                - They have the "completion" capability, OR
+                - The capabilities field is not returned (backwards compatibility with older Ollama versions)
+                If `tool_model_enabled` is True, only models with verified "tools" capability are included
+                (models without capabilities info are excluded in this case).
 
         Raises:
             ValueError: If there is an issue with the API request or response, or if the model
@@ -423,10 +431,17 @@ class ChatOllamaComponent(LCModelComponent):
                     if asyncio.iscoroutine(json_data):
                         json_data = await json_data
 
-                    capabilities = json_data.get(self.JSON_CAPABILITIES_KEY, [])
+                    capabilities = json_data.get(self.JSON_CAPABILITIES_KEY)
                     await logger.adebug(f"Model: {model_name}, Capabilities: {capabilities}")
 
-                    if self.DESIRED_CAPABILITY in capabilities and (
+                    # If capabilities not provided, assume it's a completion model (backwards compatibility
+                    # with older Ollama versions that don't return capabilities from /api/show)
+                    if capabilities is None:
+                        if not tool_model_enabled:
+                            model_ids.append(model_name)
+                        # If tool_model_enabled is True but no capabilities info, skip the model
+                        # since we can't verify tool support
+                    elif self.DESIRED_CAPABILITY in capabilities and (
                         not tool_model_enabled or self.TOOL_CALLING_CAPABILITY in capabilities
                     ):
                         model_ids.append(model_name)

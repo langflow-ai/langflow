@@ -17,7 +17,7 @@ import typer
 from dotenv import load_dotenv
 from fastapi import HTTPException
 from httpx import HTTPError
-from jose import JWTError
+from jwt import InvalidTokenError
 from lfx.log.logger import configure, logger
 from lfx.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
 from multiprocess import cpu_count
@@ -32,7 +32,8 @@ from sqlmodel import select
 from langflow.cli.progress import create_langflow_progress
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.main import setup_app
-from langflow.services.auth.utils import check_key, get_current_user_by_jwt
+from langflow.services.auth.utils import get_current_user_from_access_token
+from langflow.services.database.models.api_key.crud import check_key
 from langflow.services.deps import get_db_service, get_settings_service, is_settings_service_initialized, session_scope
 from langflow.services.utils import initialize_services
 from langflow.utils.version import fetch_latest_version, get_version_info
@@ -735,8 +736,8 @@ async def _create_superuser(username: str, password: str, auth_token: str | None
                 # Try JWT first
                 user = None
                 try:
-                    user = await get_current_user_by_jwt(auth_token, session)
-                except (JWTError, HTTPException):
+                    user = await get_current_user_from_access_token(auth_token, session)
+                except (InvalidTokenError, HTTPException):
                     # Try API key
                     api_key_result = await check_key(session, auth_token)
                     if api_key_result and hasattr(api_key_result, "is_superuser"):
@@ -756,9 +757,10 @@ async def _create_superuser(username: str, password: str, auth_token: str | None
 
     # Auth complete, create the superuser
     async with session_scope() as session:
-        from langflow.services.auth.utils import create_super_user
+        from langflow.services.deps import get_auth_service
 
-        if await create_super_user(db=session, username=username, password=password):
+        auth = get_auth_service()
+        if await auth.create_super_user(username, password, db=session):
             # Verify that the superuser was created
             from langflow.services.database.models.user.model import User
 
@@ -887,7 +889,7 @@ def api_key(
             stmt = select(ApiKey).where(ApiKey.user_id == superuser.id)
             api_key = (await session.exec(stmt)).first()
             if api_key:
-                await delete_api_key(session, api_key.id)
+                await delete_api_key(session, api_key.id, superuser.id)
 
             api_key_create = ApiKeyCreate(name="CLI")
             return await create_api_key(session, api_key_create, user_id=superuser.id)

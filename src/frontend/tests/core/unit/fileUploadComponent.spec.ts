@@ -194,40 +194,39 @@ test(
 
       await page.getByTestId(`context-menu-button-${jsonFileName}`).click();
       await page.getByTestId("btn-rename-file").click();
+      await page.waitForTimeout(1000);
+
       await page
         .getByTestId(`rename-input-${jsonFileName}`)
         .fill(renamedJsonFile);
-      await page.waitForTimeout(500);
-
+      await page.waitForTimeout(1000);
       await page.getByTestId(`rename-input-${jsonFileName}`).press("Enter");
-      await page.waitForTimeout(500);
-
       await expect(
         page.getByText(`${renamedJsonFile}.json`).first(),
       ).toBeVisible({
-        timeout: 1000,
+        timeout: 5000,
       });
       await expect(page.getByText(`${jsonFileName}.json`).first()).toBeHidden({
-        timeout: 1000,
+        timeout: 5000,
       });
 
       await page.getByTestId(`context-menu-button-${sourceFileName}`).click();
       await page.getByTestId("btn-rename-file").click();
-      await page.waitForTimeout(500);
+      await page.waitForTimeout(1000);
 
       await page
         .getByTestId(`rename-input-${sourceFileName}`)
         .fill(renamedTxtFile);
+      await page.waitForTimeout(1000);
 
-      await page.waitForTimeout(500);
       await page.getByTestId(`rename-input-${sourceFileName}`).press("Enter");
       await expect(page.getByText(`${renamedTxtFile}.txt`).first()).toBeVisible(
         {
-          timeout: 1000,
+          timeout: 5000,
         },
       );
       await expect(page.getByText(`${sourceFileName}.txt`).first()).toBeHidden({
-        timeout: 1000,
+        timeout: 5000,
       });
 
       await page.getByTestId(`checkbox-${renamedTxtFile}`).last().click();
@@ -303,7 +302,7 @@ test(
       await expect(page.getByText('{"test":"content"}')).toBeVisible({
         timeout: 10000,
       });
-      await page.getByText("Close", { exact: true }).last().click();
+      await page.getByTestId("playground-btn-flow-io").click();
       await page.getByTestId("button_open_file_management").click();
       await page.getByTestId(`context-menu-button-${renamedJsonFile}`).click();
       await page.getByTestId("btn-delete-file").click();
@@ -366,14 +365,26 @@ test(
       await page
         .getByRole("button", { name: "Playground", exact: true })
         .click();
-      await page.getByTestId("icon-MoreHorizontal").last().click();
-      await page.getByText("Delete", { exact: true }).last().click();
+      await page.getByTestId("chat-header-more-menu").click();
+      await page.getByTestId("clear-chat-option").click();
+      // await page.getByTestId("icon-MoreHorizontal").last().click();
+      // await page.getByText("Delete", { exact: true }).last().click();
 
       await page.waitForSelector("text=Run Flow", {
         timeout: 30000,
       });
 
       await page.getByText("Run Flow", { exact: true }).last().click();
+
+      // wait the flow to run
+      await page.getByTestId("stop_building_button").waitFor({
+        state: "visible",
+        timeout: 30000,
+      });
+      await page.getByTestId("stop_building_button").waitFor({
+        state: "hidden",
+        timeout: 180000,
+      });
 
       await expect(page.getByText("this is a test file")).toBeHidden({
         timeout: 10000,

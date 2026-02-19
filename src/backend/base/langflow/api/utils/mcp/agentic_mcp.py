@@ -14,7 +14,7 @@ from langflow.api.v2.mcp import get_server_list, update_server
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_service, get_variable_service
 from langflow.services.schema import ServiceType
-from langflow.services.variable.constants import GENERIC_TYPE
+from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 
 
 async def auto_configure_agentic_mcp_server(session: AsyncSession) -> None:
@@ -318,15 +318,16 @@ async def initialize_agentic_user_variables(user_id: UUID | str, session: AsyncS
         variable_service = get_variable_service()
 
         # Define agentic variables with defaults
-        agentic_variables = {
-            "FLOW_ID": "",
-            "COMPONENT_ID": "",
-            "FIELD_NAME": "",
-        }
+        from lfx.services.settings.constants import AGENTIC_VARIABLES, DEFAULT_AGENTIC_VARIABLE_VALUE
+
+        # Create a dict with agentic variable names and default values as empty strings
+        agentic_variables = dict.fromkeys(AGENTIC_VARIABLES, DEFAULT_AGENTIC_VARIABLE_VALUE)
+        logger.adebug(f"Agentic variables: {agentic_variables}")
 
         existing_vars = await variable_service.list_variables(user_id, session)
 
         for var_name, default_value in agentic_variables.items():
+            logger.adebug(f"Checking if agentic variable {var_name} exists for user {user_id}")
             if var_name not in existing_vars:
                 try:
                     await variable_service.create_variable(
@@ -334,7 +335,7 @@ async def initialize_agentic_user_variables(user_id: UUID | str, session: AsyncS
                         name=var_name,
                         value=default_value,
                         default_fields=[],
-                        type_=GENERIC_TYPE,
+                        type_=CREDENTIAL_TYPE,
                         session=session,
                     )
                     await logger.adebug(f"Created agentic variable {var_name} for user {user_id}")

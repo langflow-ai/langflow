@@ -1,4 +1,5 @@
 import json
+import tempfile
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -567,3 +568,167 @@ class TestFileComponentToolMode:
                 break
         else:
             pytest.fail("Output 'message' not found in component outputs")
+
+    # ==================== Cloud Storage Temp File Cleanup Tests ====================
+
+    @patch("lfx.base.data.cloud_storage_utils.create_s3_client")
+    @patch("lfx.base.data.cloud_storage_utils.validate_aws_credentials")
+    def test_s3_temp_file_cleanup_on_download_failure(self, mock_validate, mock_create_client):  # noqa: ARG002
+        """Test that temp file is cleaned up when S3 download fails."""
+        from pathlib import Path
+
+        component = FileComponent()
+        component.set_attributes(
+            {
+                "storage_location": [{"name": "AWS"}],
+                "aws_access_key_id": "test_key",
+                "aws_secret_access_key": "test_secret",
+                "bucket_name": "test-bucket",
+                "s3_file_key": "test-file.txt",
+            }
+        )
+
+        # Mock S3 client to raise an exception during download
+        mock_s3_client = MagicMock()
+        mock_s3_client.download_fileobj.side_effect = Exception("S3 download failed")
+        mock_create_client.return_value = mock_s3_client
+
+        # Track temp files created
+        temp_dir = Path(tempfile.gettempdir())
+        temp_files_before = set(temp_dir.glob("tmp*.txt")) if temp_dir.exists() else set()
+
+        # Attempt to read from S3 - should fail and clean up temp file
+        with pytest.raises(RuntimeError, match="Failed to download file from S3"):
+            component._read_from_aws_s3()
+
+        # Verify no new temp files are left behind
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_files_after = set(Path(temp_dir).glob("tmp*.txt"))
+        new_temp_files = temp_files_after - temp_files_before
+        assert len(new_temp_files) == 0, f"Temp files not cleaned up: {new_temp_files}"
+
+    @patch("lfx.base.data.cloud_storage_utils.create_google_drive_service")
+    def test_google_drive_temp_file_cleanup_on_download_failure(self, mock_create_service):
+        """Test that temp file is cleaned up when Google Drive download fails."""
+        from pathlib import Path
+
+        component = FileComponent()
+        component.set_attributes(
+            {
+                "storage_location": [{"name": "Google Drive"}],
+                "service_account_key": '{"type": "service_account", "project_id": "test"}',
+                "file_id": "test-file-id",
+            }
+        )
+
+        # Mock Google Drive service
+        mock_drive_service = MagicMock()
+        # Metadata call succeeds
+        mock_drive_service.files().get().execute.return_value = {"name": "test-file.txt"}
+        # Media download fails
+        mock_drive_service.files().get_media.side_effect = Exception("Drive download failed")
+        mock_create_service.return_value = mock_drive_service
+
+        # Track temp files created
+        temp_files_before = (
+            set(Path(tempfile.gettempdir()).glob("tmp*.txt")) if Path(tempfile.gettempdir()).exists() else set()
+        )
+
+        # Attempt to read from Google Drive - should fail and clean up temp file
+        with pytest.raises(RuntimeError, match="Failed to download file from Google Drive"):
+            component._read_from_google_drive()
+
+        # Verify no new temp files are left behind
+        temp_files_after = (
+            set(Path(tempfile.gettempdir()).glob("tmp*.txt")) if Path(tempfile.gettempdir()).exists() else set()
+        )
+        new_temp_files = temp_files_after - temp_files_before
+        assert len(new_temp_files) == 0, f"Temp files not cleaned up: {new_temp_files}"
+
+
+class TestFileComponentCloudEnvironment:
+    """Test FileComponent behavior in cloud environments."""
+
+    def test_advanced_mode_disabled_in_cloud(self, monkeypatch):
+        """Test that advanced_mode and all Docling fields are disabled when ASTRA_CLOUD_DISABLE_COMPONENT is set."""
+        # Set the environment variable to simulate cloud environment
+        monkeypatch.setenv("ASTRA_CLOUD_DISABLE_COMPONENT", "true")
+
+        component = FileComponent()
+        build_config = {
+            "advanced_mode": {"show": True, "value": False},
+            "pipeline": {"show": False},
+            "ocr_engine": {"show": False},
+            "doc_key": {"show": False},
+            "md_image_placeholder": {"show": False},
+            "md_page_break_placeholder": {"show": False},
+            "path": {"file_path": ["document.pdf"]},
+        }
+
+        result = component.update_build_config(build_config, ["document.pdf"], "path")
+
+        # In cloud, advanced_mode should be hidden regardless of file type
+        assert result["advanced_mode"]["show"] is False, "advanced_mode should be hidden in cloud"
+        assert result["advanced_mode"]["value"] is False, "advanced_mode value should be False in cloud"
+        # All related fields should be hidden
+        assert result["pipeline"]["show"] is False
+        assert result["ocr_engine"]["show"] is False
+        assert result["ocr_engine"]["value"] == "None"
+        assert result["doc_key"]["show"] is False
+        assert result["md_image_placeholder"]["show"] is False
+        assert result["md_page_break_placeholder"]["show"] is False
+
+    def test_advanced_mode_toggle_disabled_in_cloud(self, monkeypatch):
+        """Test that toggling advanced_mode in cloud doesn't show Docling fields."""
+        monkeypatch.setenv("ASTRA_CLOUD_DISABLE_COMPONENT", "true")
+
+        component = FileComponent()
+        build_config = {
+            "advanced_mode": {"show": True, "value": True},
+            "pipeline": {"show": False},
+            "ocr_engine": {"show": False},
+            "doc_key": {"show": False},
+            "md_image_placeholder": {"show": False},
+            "md_page_break_placeholder": {"show": False},
+        }
+
+        result = component.update_build_config(build_config, field_value=True, field_name="advanced_mode")
+
+        # Even if advanced_mode is toggled to True, it should be disabled in cloud
+        assert result["advanced_mode"]["show"] is False
+        assert result["advanced_mode"]["value"] is False
+        # All Docling fields should remain hidden
+        assert result["pipeline"]["show"] is False
+        assert result["ocr_engine"]["show"] is False
+        assert result["ocr_engine"]["value"] == "None"
+
+    def test_pipeline_change_disabled_in_cloud(self, monkeypatch):
+        """Test that changing pipeline in cloud doesn't show OCR engine."""
+        monkeypatch.setenv("ASTRA_CLOUD_DISABLE_COMPONENT", "true")
+
+        component = FileComponent()
+        build_config = {
+            "advanced_mode": {"show": False, "value": False},
+            "pipeline": {"show": False},
+            "ocr_engine": {"show": False, "value": "easyocr"},
+        }
+
+        result = component.update_build_config(build_config, "standard", "pipeline")
+
+        # Even if pipeline is set to "standard", OCR engine should be disabled in cloud
+        assert result["ocr_engine"]["show"] is False
+        assert result["ocr_engine"]["value"] == "None"
+
+
+class TestFileComponentStorageLocation:
+    """Tests for default Local storage and Storage Location in advanced controls."""
+
+    def test_storage_location_defaults_to_local(self):
+        """Test that storage_location input defaults to Local when component is dropped."""
+        storage_input = next(i for i in FileComponent.inputs if i.name == "storage_location")
+        assert storage_input.value == [{"name": "Local", "icon": "hard-drive"}]
+
+    def test_storage_location_is_advanced(self):
+        """Test that storage_location is in advanced controls."""
+        storage_input = next(i for i in FileComponent.inputs if i.name == "storage_location")
+        assert storage_input.advanced is True

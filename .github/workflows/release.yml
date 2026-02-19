@@ -108,6 +108,157 @@ jobs:
 
           echo "✅ Release dependencies validated successfully."
 
+  determine-base-version:
+    name: Determine Base Version
+    needs: [validate-tag, validate-dependencies]
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      skipped: ${{ steps.version.outputs.skipped }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.release_tag }}
+
+      - name: Setup Environment
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: "3.13"
+          prune-cache: false
+
+      - name: Install the project
+        run: uv sync
+
+      - name: Determine version
+        id: version
+        run: |
+          version=$(python3 -c "
+          import tomllib, pathlib
+          data = tomllib.loads(pathlib.Path('src/backend/base/pyproject.toml').read_text())
+          print(data['project']['version'])
+          ")
+          echo "Base version from pyproject.toml: $version"
+
+          if [ ${{inputs.pre_release}} == "true" ]; then
+            last_released_version=$(curl -s "https://pypi.org/pypi/langflow-base/json" | jq -r '.releases | keys | .[]' | grep -E '(a|b|rc|dev|alpha|beta)' | sort -V | tail -n 1)
+            version="$(uv run ./scripts/ci/langflow_pre_release_tag.py "$version" "$last_released_version")"
+            echo "Latest base pre-release version: $last_released_version"
+            echo "Base pre-release version to be released: $version"
+          else
+            last_released_version=$(curl -s "https://pypi.org/pypi/langflow-base/json" | jq -r '.releases | keys | .[]' | grep -vE '(a|b|rc|dev|alpha|beta)' | sort -V | tail -n 1)
+            echo "Latest base release version: $last_released_version"
+          fi
+
+          if [ "$version" = "$last_released_version" ]; then
+            echo "Base pypi version $version is already released. Skipping release."
+            echo skipped=true >> $GITHUB_OUTPUT
+            exit 1
+          else
+            echo version=$version >> $GITHUB_OUTPUT
+            echo skipped=false >> $GITHUB_OUTPUT
+          fi
+
+  determine-main-version:
+    name: Determine Main Version
+    needs: [validate-tag, validate-dependencies]
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      skipped: ${{ steps.version.outputs.skipped }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.release_tag }}
+
+      - name: Setup Environment
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: "3.13"
+          prune-cache: false
+
+      - name: Install the project
+        run: uv sync
+
+      - name: Determine version
+        id: version
+        run: |
+          version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}' | sed 's/^v//')
+          echo "Main version from pyproject.toml: $version"
+
+          if [ ${{inputs.pre_release}} == "true" ]; then
+            last_released_version=$(curl -s "https://pypi.org/pypi/langflow/json" | jq -r '.releases | keys | .[]' | grep -E '(a|b|rc|dev|alpha|beta)' | sort -V | tail -n 1)
+            version="$(uv run ./scripts/ci/langflow_pre_release_tag.py "$version" "$last_released_version")"
+            echo "Latest main pre-release version: $last_released_version"
+            echo "Main pre-release version to be released: $version"
+          else
+            last_released_version=$(curl -s "https://pypi.org/pypi/langflow/json" | jq -r '.releases | keys | .[]' | grep -vE '(a|b|rc|dev|alpha|beta)' | sort -V | tail -n 1)
+            echo "Latest main release version: $last_released_version"
+          fi
+
+          if [ "$version" = "$last_released_version" ]; then
+            echo "Main pypi version $version is already released. Skipping release."
+            echo skipped=true >> $GITHUB_OUTPUT
+            exit 1
+          else
+            echo version=$version >> $GITHUB_OUTPUT
+            echo skipped=false >> $GITHUB_OUTPUT
+          fi
+
+  determine-lfx-version:
+    name: Determine LFX Version
+    needs: [validate-tag, validate-dependencies]
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      skipped: ${{ steps.version.outputs.skipped }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.release_tag }}
+
+      - name: Setup Environment
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: "3.13"
+          prune-cache: false
+
+      - name: Install LFX dependencies
+        run: uv sync --dev --package lfx
+
+      - name: Determine version
+        id: version
+        run: |
+          version=$(uv tree | grep 'lfx' | awk '{print $3}' | sed 's/^v//' | head -n 2 | xargs)
+          echo "LFX version from pyproject.toml: $version"
+
+          if [ ${{inputs.pre_release}} == "true" ]; then
+            last_released_version=$(curl -s "https://pypi.org/pypi/lfx/json" | jq -r '.releases | keys | .[]' | grep -E '(a|b|rc|dev|alpha|beta)' | sort -V | tail -n 1)
+            version="$(uv run ./scripts/ci/langflow_pre_release_tag.py "$version" "$last_released_version")"
+            echo "Latest LFX pre-release version: $last_released_version"
+            echo "LFX pre-release version to be released: $version"
+          else
+            last_released_version=$(curl -s "https://pypi.org/pypi/lfx/json" | jq -r '.releases | keys | .[]' | grep -vE '(a|b|rc|dev|alpha|beta)' | sort -V | tail -n 1)
+            echo "Latest LFX release version: $last_released_version"
+          fi
+
+          if [ "$version" = "$last_released_version" ]; then
+            echo "LFX pypi version $version is already released. Skipping release."
+            echo skipped=true >> $GITHUB_OUTPUT
+            exit 1
+          else
+            echo version=$version >> $GITHUB_OUTPUT
+            echo skipped=false >> $GITHUB_OUTPUT
+          fi
+
   ci:
     name: CI
     needs: [validate-tag, validate-dependencies]
@@ -121,23 +272,16 @@ jobs:
       runs-on: ubuntu-latest
     secrets: inherit
 
-  # Automatically ensure lfx is published before building langflow-base
-  # This job checks if the required lfx version exists on PyPI and publishes it if not
-  ensure-lfx-published:
-    name: Ensure LFX Dependency is Published
-    needs: [ci]
-    if: ${{ inputs.release_package_base }}
+  build-lfx:
+    name: Build LFX
+    needs: [determine-lfx-version]
+    if: ${{ needs.determine-lfx-version.outputs.skipped == 'false' }}
     runs-on: ubuntu-latest
-    outputs:
-      lfx-version: ${{ steps.check-lfx.outputs.lfx_version }}
-      lfx-published: ${{ steps.check-lfx.outputs.already_published }}
-      lfx-published-now: ${{ steps.publish-lfx.outputs.published }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
         with:
           ref: ${{ inputs.release_tag }}
-
       - name: Setup Environment
         uses: astral-sh/setup-uv@v6
         with:
@@ -145,100 +289,59 @@ jobs:
           cache-dependency-glob: "uv.lock"
           python-version: "3.13"
           prune-cache: false
-
-      - name: Check LFX version requirement
-        id: check-lfx
-        run: |
-          # Get the lfx version required by langflow-base from pyproject.toml
-          cd src/backend/base
-          LFX_REQUIREMENT=$(grep -E "^\s*\"lfx" pyproject.toml | head -1 | sed 's/.*lfx[~>=<]*//' | sed 's/[",].*//')
-          echo "LFX requirement from langflow-base: $LFX_REQUIREMENT"
-
-          # Get the actual lfx version from source
-          cd ../../lfx
-          LFX_SOURCE_VERSION=$(grep -E "^version\s*=" pyproject.toml | head -1 | sed 's/.*"\(.*\)".*/\1/')
-          echo "LFX source version: $LFX_SOURCE_VERSION"
-          echo "lfx_version=$LFX_SOURCE_VERSION" >> $GITHUB_OUTPUT
-
-          # Check if this version exists on PyPI
-          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://pypi.org/pypi/lfx/$LFX_SOURCE_VERSION/json")
-
-          if [ "$HTTP_STATUS" = "200" ]; then
-            echo "✅ LFX version $LFX_SOURCE_VERSION already exists on PyPI"
-            echo "already_published=true" >> $GITHUB_OUTPUT
-          else
-            echo "⚠️ LFX version $LFX_SOURCE_VERSION NOT found on PyPI (HTTP: $HTTP_STATUS)"
-            echo "Will build and publish LFX first..."
-            echo "already_published=false" >> $GITHUB_OUTPUT
-          fi
-
       - name: Install LFX dependencies
-        if: steps.check-lfx.outputs.already_published == 'false'
         run: uv sync --dev --package lfx
+      - name: Set version for pre-release
+        if: ${{ inputs.pre_release }}
+        run: |
+          VERSION="${{ needs.determine-lfx-version.outputs.version }}"
+          echo "Setting pre-release version to: $VERSION"
+          cd src/lfx
 
-      - name: Build LFX
-        if: steps.check-lfx.outputs.already_published == 'false'
+          # Update version in lfx pyproject.toml
+          sed -i.bak "s/^version = .*/version = \"$VERSION\"/" pyproject.toml
+
+          # Verify the change
+          echo "Updated pyproject.toml version:"
+          grep "^version" pyproject.toml
+      - name: Build project for distribution
         run: |
           cd src/lfx
           rm -rf dist/
           uv build --wheel --out-dir dist
-          echo "Built LFX wheel:"
-          ls -la dist/
+      - name: Verify built version
+        run: |
+          EXPECTED_VERSION="${{ needs.determine-lfx-version.outputs.version }}"
+          WHEEL_FILE=$(ls src/lfx/dist/*.whl)
+          echo "Built wheel: $WHEEL_FILE"
 
-      - name: Test LFX CLI
-        if: steps.check-lfx.outputs.already_published == 'false'
+          NORMALIZED_VERSION=$(echo "$EXPECTED_VERSION" | sed 's/\.rc/rc/g; s/\.a/a/g; s/\.b/b/g; s/\.dev/dev/g')
+          echo "Expected version: $EXPECTED_VERSION"
+          echo "Normalized for wheel: $NORMALIZED_VERSION"
+
+          if [[ ! "$WHEEL_FILE" =~ $NORMALIZED_VERSION ]]; then
+            echo "❌ Error: Wheel version doesn't match expected version"
+            echo "Expected: $EXPECTED_VERSION (normalized: $NORMALIZED_VERSION)"
+            echo "Wheel file: $WHEEL_FILE"
+            exit 1
+          fi
+          echo "✅ Version verified: $EXPECTED_VERSION"
+      - name: Test CLI
         run: |
           cd src/lfx
           uv pip install dist/*.whl --force-reinstall
           uv run lfx --help
-          echo "✅ LFX CLI test passed"
-
-      - name: Publish LFX to PyPI
-        id: publish-lfx
-        if: steps.check-lfx.outputs.already_published == 'false' && !inputs.dry_run
-        env:
-          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
-        run: |
-          cd src/lfx
-          echo "Publishing LFX ${{ steps.check-lfx.outputs.lfx_version }} to PyPI..."
-          uv publish dist/*.whl
-          echo "published=true" >> $GITHUB_OUTPUT
-          echo "✅ LFX published successfully"
-
-      - name: Wait for PyPI propagation
-        if: steps.publish-lfx.outputs.published == 'true'
-        run: |
-          echo "Waiting 60 seconds for PyPI propagation..."
-          sleep 60
-
-          # Verify the package is available
-          LFX_VERSION="${{ steps.check-lfx.outputs.lfx_version }}"
-          for i in {1..5}; do
-            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://pypi.org/pypi/lfx/$LFX_VERSION/json")
-            if [ "$HTTP_STATUS" = "200" ]; then
-              echo "✅ LFX $LFX_VERSION is now available on PyPI"
-              exit 0
-            fi
-            echo "Attempt $i: LFX not yet available (HTTP: $HTTP_STATUS), waiting 30s..."
-            sleep 30
-          done
-          echo "❌ LFX $LFX_VERSION still not available on PyPI after waiting"
-          exit 1
-
-      - name: Skip publishing (dry run)
-        if: steps.check-lfx.outputs.already_published == 'false' && inputs.dry_run
-        run: |
-          echo "⚠️ DRY RUN: Would have published LFX ${{ steps.check-lfx.outputs.lfx_version }} to PyPI"
-          echo "In actual release, this step will publish the package"
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: dist-lfx
+          path: src/lfx/dist
 
   build-base:
     name: Build Langflow Base
-    needs: [ci, ensure-lfx-published]
-    if: ${{ inputs.release_package_base }}
+    needs: [build-lfx, determine-base-version, determine-lfx-version]
+    if: ${{ inputs.release_package_base && needs.determine-base-version.outputs.skipped == 'false' }}
     runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.check-version.outputs.version }}
-      skipped: ${{ steps.check-version.outputs.skipped }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -249,30 +352,80 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
-          python-version: "3.13"
+          python-version: "3.12"
           prune-cache: false
-      - name: Install the project
-        run: uv sync
+      - name: Download LFX artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: dist-lfx
+          path: ./lfx-dist
+      - name: Install dependencies with local LFX wheel
+        run: |
+          # Create virtual environment
+          uv venv
+          # Install using pip with local wheel directory as find-links
+          uv pip install --find-links ./lfx-dist --prerelease=allow -e src/backend/base
       - name: Check for dependency incompatibility
         run: uv pip check
-      - name: Check Version
-        id: check-version
+      - name: Set version for pre-release
+        if: ${{ inputs.pre_release }}
         run: |
-          version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//' | head -n 2 | xargs)
-          last_released_version=$(curl -s "https://pypi.org/pypi/langflow-base/json" | jq -r '.releases | keys | .[]' | sort -V | tail -n 1)
-          if [ "$version" = "$last_released_version" ]; then
-            echo "Version $version is already released. Skipping release."
-            echo skipped=true >> $GITHUB_OUTPUT
-            exit 1
-          else
-            echo version=$version >> $GITHUB_OUTPUT
-            echo skipped=false >> $GITHUB_OUTPUT
-          fi
+          VERSION="${{ needs.determine-base-version.outputs.version }}"
+          echo "Setting pre-release version to: $VERSION"
+          cd src/backend/base
+
+          # Update version in pyproject.toml
+          sed -i.bak "s/^version = .*/version = \"$VERSION\"/" pyproject.toml
+
+          # Verify the change
+          echo "Updated pyproject.toml version:"
+          grep "^version" pyproject.toml
+      - name: Update lfx dependency for pre-release
+        if: ${{ inputs.pre_release }}
+        run: |
+          LFX_VERSION="${{ needs.determine-lfx-version.outputs.version }}"
+          echo "Updating lfx dependency to allow pre-release version: $LFX_VERSION"
+          cd src/backend/base
+
+          # Extract current lfx constraint from pyproject.toml
+          CURRENT_CONSTRAINT=$(grep -E '^\s*"lfx' pyproject.toml | head -1)
+          echo "Current constraint: $CURRENT_CONSTRAINT"
+
+          # Extract the major.minor version (e.g., "0.3" from "~=0.3.0")
+          MAJOR_MINOR=$(echo "$CURRENT_CONSTRAINT" | sed -E 's/.*[~>=<]+([0-9]+\.[0-9]+).*/\1/')
+          NEXT_MAJOR=$((${MAJOR_MINOR%.*} + 1))
+
+          # Create new constraint: >=LFX_VERSION,<NEXT_MAJOR.dev0
+          NEW_CONSTRAINT="\"lfx>=$LFX_VERSION,<$NEXT_MAJOR.dev0\""
+
+          echo "New constraint: $NEW_CONSTRAINT"
+
+          # Replace the constraint
+          sed -i.bak "s|\"lfx[^\"]*\"|$NEW_CONSTRAINT|" pyproject.toml
+
+          # Verify the change
+          echo "Updated lfx dependency:"
+          grep "lfx" pyproject.toml
       - name: Build project for distribution
-        if: steps.check-version.outputs.skipped == 'false'
         run: make build base=true args="--wheel"
+      - name: Verify built version
+        run: |
+          EXPECTED_VERSION="${{ needs.determine-base-version.outputs.version }}"
+          WHEEL_FILE=$(ls dist/*.whl 2>/dev/null || ls src/backend/base/dist/*.whl)
+          echo "Built wheel: $WHEEL_FILE"
+
+          NORMALIZED_VERSION=$(echo "$EXPECTED_VERSION" | sed 's/\.rc/rc/g; s/\.a/a/g; s/\.b/b/g; s/\.dev/dev/g')
+          echo "Expected version: $EXPECTED_VERSION"
+          echo "Normalized for wheel: $NORMALIZED_VERSION"
+
+          if [[ ! "$WHEEL_FILE" =~ $NORMALIZED_VERSION ]]; then
+            echo "❌ Error: Wheel version doesn't match expected version"
+            echo "Expected: $EXPECTED_VERSION (normalized: $NORMALIZED_VERSION)"
+            echo "Wheel file: $WHEEL_FILE"
+            exit 1
+          fi
+          echo "✅ Version verified: $EXPECTED_VERSION"
       - name: Test CLI
-        if: steps.check-version.outputs.skipped == 'false'
         run: |
           # TODO: Unsure why the whl is not built in src/backend/base/dist
           mkdir src/backend/base/dist
@@ -296,19 +449,23 @@ jobs:
       # PyPI publishing moved to after cross-platform testing
 
       - name: Upload Artifact
-        if: steps.check-version.outputs.skipped == 'false'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: dist-base
           path: src/backend/base/dist
 
   build-main:
     name: Build Langflow Main
-    if: ${{ inputs.release_package_main }}
-    needs: [build-base]
+    needs:
+      [
+        build-base,
+        build-lfx,
+        determine-base-version,
+        determine-main-version,
+        determine-lfx-version,
+      ]
+    if: ${{ inputs.release_package_main && needs.determine-main-version.outputs.skipped == 'false' }}
     runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.check-version.outputs.version }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -319,44 +476,86 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
-          python-version: "3.13"
+          python-version: "3.12"
           prune-cache: false
-      - name: Install the project
-        run: uv sync
+      - name: Download LFX artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: dist-lfx
+          path: ./lfx-dist
+      - name: Download base artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: dist-base
+          path: ./base-dist
+      - name: Install dependencies with local wheels
+        run: |
+          # Create virtual environment
+          uv venv
+          # Install using pip with local wheel directories as find-links
+          uv pip install --find-links ./lfx-dist --find-links ./base-dist --prerelease=allow -e .
       - name: Check for dependency incompatibility
         run: uv pip check
-
-      # If pre-release is true, we need to check if  ["a", "b", "rc", "dev", "post"] is in the version string
-      # if the version string is incorrect, we need to exit the workflow
-      - name: Check if pre-release
-        if: inputs.pre_release
+      - name: Set version for pre-release
+        if: ${{ inputs.pre_release }}
         run: |
-          version="${{ inputs.release_tag }}"
-          echo "$version"
-          if [[ "${version}" =~ ^([0-9]+\.)?([0-9]+\.)?[0-9]+((a|b|rc|dev|post)([0-9]+))$ ]]; then
-            echo "Pre-release version detected. Continuing with the release."
-          else
-            echo "Invalid pre-release version detected. Exiting the workflow."
-            exit 1
-          fi
-      - name: Check Version
-        id: check-version
-        run: |
-          version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}' | sed 's/^v//')
-          last_released_version=$(curl -s "https://pypi.org/pypi/langflow/json" | jq -r '.releases | keys | .[]' | sort -V | tail -n 1)
-          if [ "$version" = "$last_released_version" ]; then
-            echo "Version $version is already released. Skipping release."
-            echo skipped=true >> $GITHUB_OUTPUT
-            exit 1
-          else
-            echo version=$version >> $GITHUB_OUTPUT
-          fi
-      - name: Wait for PyPI Propagation
-        if: needs.build-base.outputs.skipped == 'false'
-        run: sleep 300 # wait for 5 minutes to ensure PyPI propagation
+          VERSION="${{ needs.determine-main-version.outputs.version }}"
+          echo "Setting main pre-release version to: $VERSION"
 
+          # Update version in main pyproject.toml
+          sed -i.bak "s/^version = .*/version = \"$VERSION\"/" pyproject.toml
+
+          # Verify the change
+          echo "Updated pyproject.toml version:"
+          grep "^version" pyproject.toml
+      - name: Update langflow-base dependency for pre-release
+        if: ${{ inputs.pre_release }}
+        run: |
+          BASE_VERSION="${{ needs.determine-base-version.outputs.version }}"
+          echo "Base version for pre-release: $BASE_VERSION"
+
+          # Extract current langflow-base constraint from pyproject.toml
+          CURRENT_CONSTRAINT=$(grep -E '^\s*"langflow-base' pyproject.toml | head -1)
+          echo "Current constraint: $CURRENT_CONSTRAINT"
+
+          # Extract the major.minor version (e.g., "0.8" from "~=0.8.0")
+          MAJOR_MINOR=$(echo "$CURRENT_CONSTRAINT" | sed -E 's/.*[~>=<]+([0-9]+\.[0-9]+).*/\1/')
+          NEXT_MAJOR=$((${MAJOR_MINOR%.*} + 1))
+
+          # Create new constraint: >=BASE_VERSION,<NEXT_MAJOR.dev0
+          NEW_CONSTRAINT="\"langflow-base>=$BASE_VERSION,<$NEXT_MAJOR.dev0\""
+
+          echo "New constraint: $NEW_CONSTRAINT"
+
+          # Replace the constraint
+          sed -i.bak "s|\"langflow-base[^\"]*\"|$NEW_CONSTRAINT|" pyproject.toml
+
+          # Verify the change
+          echo "Updated dependency:"
+          grep "langflow-base" pyproject.toml
+      - name: Build project for pre-release distribution
+        if: ${{ inputs.pre_release }}
+        run: make build pre=true args="--no-sources --wheel"
       - name: Build project for distribution
+        if: ${{ !inputs.pre_release }}
         run: make build main=true args="--no-sources --wheel"
+      - name: Verify built version
+        run: |
+          EXPECTED_VERSION="${{ needs.determine-main-version.outputs.version }}"
+          WHEEL_FILE=$(ls dist/*.whl)
+          echo "Built wheel: $WHEEL_FILE"
+
+          NORMALIZED_VERSION=$(echo "$EXPECTED_VERSION" | sed 's/\.rc/rc/g; s/\.a/a/g; s/\.b/b/g; s/\.dev/dev/g')
+          echo "Expected version: $EXPECTED_VERSION"
+          echo "Normalized for wheel: $NORMALIZED_VERSION"
+
+          if [[ ! "$WHEEL_FILE" =~ $NORMALIZED_VERSION ]]; then
+            echo "❌ Error: Wheel version doesn't match expected version"
+            echo "Expected: $EXPECTED_VERSION (normalized: $NORMALIZED_VERSION)"
+            echo "Wheel file: $WHEEL_FILE"
+            exit 1
+          fi
+          echo "✅ Version verified: $EXPECTED_VERSION"
       - name: Test CLI
         run: |
           uv pip install dist/*.whl
@@ -378,72 +577,23 @@ jobs:
       # PyPI publishing moved to after cross-platform testing
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: dist-main
           path: dist
 
-  build-lfx:
-    name: Build LFX
-    needs: [ci]
-    if: ${{ inputs.release_lfx }}
-    runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.check-version.outputs.version }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ inputs.release_tag }}
-      - name: Setup Environment
-        uses: astral-sh/setup-uv@v6
-        with:
-          enable-cache: true
-          cache-dependency-glob: "uv.lock"
-          python-version: "3.13"
-          prune-cache: false
-      - name: Install LFX dependencies
-        run: uv sync --dev --package lfx
-      - name: Check Version
-        id: check-version
-        run: |
-          cd src/lfx
-          version=$(uv tree | grep 'lfx' | head -n 1 | awk '{print $2}' | sed 's/^v//')
-          last_released_version=$(curl -s "https://pypi.org/pypi/lfx/json" | jq -r '.releases | keys | .[]' | sort -V | tail -n 1)
-          if [ "$version" = "$last_released_version" ]; then
-            echo "Version $version is already released. Skipping release."
-            exit 1
-          else
-            echo version=$version >> $GITHUB_OUTPUT
-          fi
-      - name: Build project for distribution
-        run: |
-          cd src/lfx
-          rm -rf dist/
-          uv build --wheel --out-dir dist
-      - name: Test CLI
-        run: |
-          cd src/lfx
-          uv pip install dist/*.whl --force-reinstall
-          uv run lfx --help
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: dist-lfx
-          path: src/lfx/dist
-
   test-cross-platform:
     name: Test Cross-Platform Installation
-    needs: [build-base, build-main]
+    needs: [build-base, build-main, build-lfx]
     if: |
       always() &&
       !cancelled() &&
-      (needs.build-base.result == 'success' || needs.build-main.result == 'success')
+      (needs.build-base.result == 'success' || needs.build-main.result == 'success' || needs.build-lfx.result == 'success')
     uses: ./.github/workflows/cross-platform-test.yml
     with:
       base-artifact-name: "dist-base"
       main-artifact-name: "dist-main"
-      lfx-artifact-name: "${{ inputs.release_lfx && 'dist-lfx' || '' }}"
+      lfx-artifact-name: "dist-lfx"
 
   publish-base:
     name: Publish Langflow Base to PyPI
@@ -452,7 +602,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download base artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           name: dist-base
           path: src/backend/base/dist
@@ -475,7 +625,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download main artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           name: dist-main
           path: dist
@@ -494,11 +644,11 @@ jobs:
   publish-lfx:
     name: Publish LFX to PyPI
     if: ${{ inputs.release_lfx }}
-    needs: [build-lfx]
+    needs: [build-lfx, test-cross-platform]
     runs-on: ubuntu-latest
     steps:
       - name: Download LFX artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           name: dist-lfx
           path: src/lfx/dist
@@ -513,31 +663,6 @@ jobs:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         run: |
           cd src/lfx && uv publish dist/*.whl
-
-  # test-lfx-cross-platform:
-  #   name: Test LFX Cross-Platform Installation
-  #   if: ${{ inputs.release_lfx }}
-  #   needs: [build-lfx]
-  #   runs-on: ${{ matrix.os }}
-  #   strategy:
-  #     matrix:
-  #       os: [ubuntu-latest, windows-latest, macos-latest]
-  #       python-version: ["3.10", "3.11", "3.12", "3.13"]
-  #   steps:
-  #     - name: Download LFX artifact
-  #       uses: actions/download-artifact@v5
-  #       with:
-  #         name: dist-lfx
-  #         path: dist-lfx
-  #     - name: Setup Environment
-  #       uses: astral-sh/setup-uv@v6
-  #       with:
-  #         enable-cache: false
-  #         python-version: ${{ matrix.python-version }}
-  #     - name: Test LFX installation
-  #       run: |
-  #         uv pip install dist-lfx/*.whl
-  #         uv run lfx --help
 
   call_docker_build_base:
     name: Call Docker Build Workflow for Langflow Base
@@ -614,7 +739,7 @@ jobs:
   create_release:
     name: Create Release
     runs-on: ubuntu-latest
-    needs: [build-main, publish-main]
+    needs: [determine-main-version, build-main, publish-main]
     if: |
       always() &&
       !cancelled() &&
@@ -635,6 +760,6 @@ jobs:
           draft: false
           generateReleaseNotes: true
           prerelease: ${{ inputs.pre_release }}
-          tag: ${{ needs.build-main.outputs.version }}
+          tag: ${{ needs.determine-main-version.outputs.version }}
           allowUpdates: true
           updateOnlyUnreleased: false

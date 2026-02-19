@@ -19,6 +19,7 @@ from lfx.base.mcp.util import (
     MCPStdioClient,
     MCPStreamableHttpClient,
     _process_headers,
+    update_tools,
     validate_headers,
 )
 
@@ -193,6 +194,127 @@ class TestHeaderValidation:
         assert result == {"safe-header": "safe-value"}
 
 
+class TestGlobalVariableResolution:
+    """Test global variable resolution in headers."""
+
+    def test_resolve_global_variables_basic(self):
+        """Test basic global variable resolution in headers."""
+        from lfx.base.mcp.util import _resolve_global_variables_in_headers
+
+        headers = {"x-api-key": "MY_API_KEY", "authorization": "MY_TOKEN"}
+        request_variables = {"MY_API_KEY": "secret-key-123", "MY_TOKEN": "token-456"}  # pragma: allowlist secret
+
+        result = _resolve_global_variables_in_headers(headers, request_variables)
+
+        assert result == {"x-api-key": "secret-key-123", "authorization": "token-456"}
+
+    def test_resolve_global_variables_no_variables(self):
+        """Test header resolution when no request_variables provided."""
+        from lfx.base.mcp.util import _resolve_global_variables_in_headers
+
+        headers = {"x-api-key": "MY_API_KEY", "content-type": "application/json"}
+
+        # No request_variables
+        result = _resolve_global_variables_in_headers(headers, None)
+        assert result == headers
+
+        # Empty request_variables
+        result = _resolve_global_variables_in_headers(headers, {})
+        assert result == headers
+
+    def test_resolve_global_variables_partial_match(self):
+        """Test resolution when only some headers match variables."""
+        from lfx.base.mcp.util import _resolve_global_variables_in_headers
+
+        headers = {
+            "x-api-key": "MY_API_KEY",  # matches
+            "authorization": "static-token",  # no match
+            "x-custom": "MY_CUSTOM",  # matches
+        }
+        request_variables = {"MY_API_KEY": "resolved-key", "MY_CUSTOM": "custom-value"}  # pragma: allowlist secret
+
+        result = _resolve_global_variables_in_headers(headers, request_variables)
+
+        assert result == {
+            "x-api-key": "resolved-key",
+            "authorization": "static-token",
+            "x-custom": "custom-value",
+        }
+
+    def test_resolve_global_variables_non_string_values(self):
+        """Test that non-string header values are preserved."""
+        from lfx.base.mcp.util import _resolve_global_variables_in_headers
+
+        headers = {"x-api-key": "MY_KEY", "x-number": 123, "x-none": None}
+        request_variables = {"MY_KEY": "resolved"}
+
+        result = _resolve_global_variables_in_headers(headers, request_variables)
+
+        assert result == {"x-api-key": "resolved", "x-number": 123, "x-none": None}
+
+    def test_process_headers_with_request_variables_dict(self):
+        """Test _process_headers with dict input and request_variables."""
+        headers = {"x-api-key": "MY_API_KEY", "content-type": "application/json"}
+        request_variables = {"MY_API_KEY": "secret-123"}  # pragma: allowlist secret
+
+        result = _process_headers(headers, request_variables)
+
+        # Should resolve variable and normalize to lowercase
+        assert result == {"x-api-key": "secret-123", "content-type": "application/json"}
+
+    def test_process_headers_with_request_variables_list(self):
+        """Test _process_headers with list input and request_variables."""
+        headers = [
+            {"key": "x-api-key", "value": "MY_API_KEY"},
+            {"key": "Content-Type", "value": "application/json"},
+        ]
+        request_variables = {"MY_API_KEY": "secret-123"}  # pragma: allowlist secret
+
+        result = _process_headers(headers, request_variables)
+
+        # Should resolve variable and normalize to lowercase
+        assert result == {"x-api-key": "secret-123", "content-type": "application/json"}
+
+    def test_process_headers_without_request_variables(self):
+        """Test _process_headers maintains backward compatibility without request_variables."""
+        headers = {"X-API-Key": "static-value", "Content-Type": "application/json"}
+
+        result = _process_headers(headers)
+
+        # Should just normalize without resolution
+        assert result == {"x-api-key": "static-value", "content-type": "application/json"}
+
+    def test_resolve_global_variables_case_sensitive_matching(self):
+        """Test that variable name matching is case-sensitive."""
+        from lfx.base.mcp.util import _resolve_global_variables_in_headers
+
+        headers = {"x-api-key": "my_api_key", "x-token": "MY_API_KEY"}
+        request_variables = {"MY_API_KEY": "resolved-uppercase"}  # pragma: allowlist secret
+
+        result = _resolve_global_variables_in_headers(headers, request_variables)
+
+        # Only exact match should be resolved
+        assert result == {"x-api-key": "my_api_key", "x-token": "resolved-uppercase"}
+
+    def test_resolve_global_variables_empty_headers(self):
+        """Test resolution with empty headers."""
+        from lfx.base.mcp.util import _resolve_global_variables_in_headers
+
+        result = _resolve_global_variables_in_headers({}, {"VAR": "value"})
+        assert result == {}
+
+    def test_resolve_global_variables_special_characters(self):
+        """Test resolution with special characters in values."""
+        from lfx.base.mcp.util import _resolve_global_variables_in_headers
+
+        headers = {"authorization": "MY_TOKEN"}
+        request_variables = {"MY_TOKEN": "Bearer token-with-special!@#$%^&*()_+-=[]{}|;:,.<>?"}
+
+        result = _resolve_global_variables_in_headers(headers, request_variables)
+
+        assert result["authorization"] == "Bearer token-with-special!@#$%^&*()_+-=[]{}|;:,.<>?"
+
+
 class TestStreamableHTTPHeaderIntegration:
     """Integration test to verify headers are properly passed through the entire StreamableHTTP flow."""
 
@@ -256,6 +378,209 @@ class TestStreamableHTTPHeaderIntegration:
         # Verify headers are stored
         assert streamable_http_client._connection_params["url"] == test_url
         assert streamable_http_client._connection_params["headers"] == test_headers
+
+
+class TestUpdateToolsStdioHeaders:
+    """Test that update_tools injects component headers into stdio args."""
+
+    @pytest.mark.asyncio
+    async def test_stdio_headers_injected_with_existing_headers_flag(self):
+        """Headers should be injected as --headers key value before the existing --headers flag."""
+        mock_stdio = AsyncMock(spec=MCPStdioClient)
+        mock_stdio.connect_to_server.return_value = []
+        mock_stdio._connected = True
+
+        server_config = {
+            "command": "uvx",
+            "args": [
+                "mcp-proxy",
+                "--transport",
+                "streamablehttp",
+                "--headers",
+                "x-api-key",
+                "sk-existing",
+                "http://localhost:7860/api/v1/mcp/project/test/streamable",
+            ],
+            "headers": {"Authorization": "Bearer token123"},
+        }
+
+        await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
+
+        mock_stdio.connect_to_server.assert_called_once()
+        full_command = mock_stdio.connect_to_server.call_args[0][0]
+
+        # The injected --headers should appear before the existing --headers
+        assert "--headers authorization 'Bearer token123' --headers x-api-key sk-existing" in full_command
+        # URL should still be at the end
+        assert full_command.endswith("http://localhost:7860/api/v1/mcp/project/test/streamable")
+
+    @pytest.mark.asyncio
+    async def test_stdio_headers_injected_without_existing_headers_flag(self):
+        """When no --headers flag exists, headers should be inserted before the last positional arg."""
+        mock_stdio = AsyncMock(spec=MCPStdioClient)
+        mock_stdio.connect_to_server.return_value = []
+        mock_stdio._connected = True
+
+        server_config = {
+            "command": "uvx",
+            "args": [
+                "mcp-proxy",
+                "--transport",
+                "streamablehttp",
+                "http://localhost:7860/streamable",
+            ],
+            "headers": {"X-Api-Key": "my-key"},
+        }
+
+        await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
+
+        full_command = mock_stdio.connect_to_server.call_args[0][0]
+
+        # --headers should be inserted before the URL
+        assert "--headers x-api-key my-key http://localhost:7860/streamable" in full_command
+
+    @pytest.mark.asyncio
+    async def test_stdio_multiple_headers_each_get_own_flag(self):
+        """Each header should get its own --headers key value triplet."""
+        mock_stdio = AsyncMock(spec=MCPStdioClient)
+        mock_stdio.connect_to_server.return_value = []
+        mock_stdio._connected = True
+
+        server_config = {
+            "command": "uvx",
+            "args": [
+                "mcp-proxy",
+                "--transport",
+                "streamablehttp",
+                "--headers",
+                "x-api-key",
+                "sk-existing",
+                "http://localhost/streamable",
+            ],
+            "headers": {"X-Custom-One": "val1", "X-Custom-Two": "val2"},
+        }
+
+        await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
+
+        full_command = mock_stdio.connect_to_server.call_args[0][0]
+
+        # Each header gets its own --headers flag
+        assert "--headers x-custom-one val1" in full_command
+        assert "--headers x-custom-two val2" in full_command
+        # Original header still present
+        assert "--headers x-api-key sk-existing" in full_command
+
+    @pytest.mark.asyncio
+    async def test_stdio_no_headers_leaves_args_unchanged(self):
+        """When no component headers are set, args should not be modified."""
+        mock_stdio = AsyncMock(spec=MCPStdioClient)
+        mock_stdio.connect_to_server.return_value = []
+        mock_stdio._connected = True
+
+        server_config = {
+            "command": "uvx",
+            "args": ["mcp-proxy", "--transport", "streamablehttp", "http://localhost/streamable"],
+        }
+
+        await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
+
+        full_command = mock_stdio.connect_to_server.call_args[0][0]
+        assert full_command == "uvx mcp-proxy --transport streamablehttp http://localhost/streamable"
+
+    @pytest.mark.asyncio
+    async def test_stdio_headers_appended_when_all_args_are_flags(self):
+        """When all args are flags (no positional URL), headers should be appended."""
+        mock_stdio = AsyncMock(spec=MCPStdioClient)
+        mock_stdio.connect_to_server.return_value = []
+        mock_stdio._connected = True
+
+        server_config = {
+            "command": "some-tool",
+            "args": ["--verbose", "--debug"],
+            "headers": {"Authorization": "Bearer tok"},
+        }
+
+        await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
+
+        full_command = mock_stdio.connect_to_server.call_args[0][0]
+        assert full_command == "some-tool --verbose --debug --headers authorization 'Bearer tok'"
+
+    @pytest.mark.asyncio
+    async def test_stdio_headers_appended_when_last_token_is_flag_value(self):
+        """When the last token is a flag's value, headers should be appended, not inserted before it."""
+        mock_stdio = AsyncMock(spec=MCPStdioClient)
+        mock_stdio.connect_to_server.return_value = []
+        mock_stdio._connected = True
+
+        server_config = {
+            "command": "some-tool",
+            "args": ["--port", "8080"],
+            "headers": {"Authorization": "Bearer tok"},
+        }
+
+        await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
+
+        full_command = mock_stdio.connect_to_server.call_args[0][0]
+        # 8080 is a value for --port, not a positional arg, so headers go at the end
+        assert full_command == "some-tool --port 8080 --headers authorization 'Bearer tok'"
+
+    @pytest.mark.asyncio
+    async def test_stdio_headers_inserted_before_positional_with_flag_value_pairs(self):
+        """Headers should be inserted before the last positional arg even when flag+value pairs precede it."""
+        mock_stdio = AsyncMock(spec=MCPStdioClient)
+        mock_stdio.connect_to_server.return_value = []
+        mock_stdio._connected = True
+
+        server_config = {
+            "command": "uvx",
+            "args": ["mcp-proxy", "--port", "8080", "http://localhost/streamable"],
+            "headers": {"X-Api-Key": "my-key"},
+        }
+
+        await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
+
+        full_command = mock_stdio.connect_to_server.call_args[0][0]
+        # --port 8080 is a flag pair; http://localhost/streamable is the positional arg
+        assert full_command == "uvx mcp-proxy --port 8080 --headers x-api-key my-key http://localhost/streamable"
+
+    @pytest.mark.asyncio
+    async def test_stdio_headers_inserted_before_last_positional_with_multiple_positionals(self):
+        """When multiple positional args exist, headers are inserted before the last one."""
+        mock_stdio = AsyncMock(spec=MCPStdioClient)
+        mock_stdio.connect_to_server.return_value = []
+        mock_stdio._connected = True
+
+        server_config = {
+            "command": "uvx",
+            "args": ["mcp-proxy", "--transport", "streamablehttp", "extra-pos-arg", "http://localhost/streamable"],
+            "headers": {"X-Key": "val"},
+        }
+
+        await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
+
+        full_command = mock_stdio.connect_to_server.call_args[0][0]
+        # Should insert before the last positional (the URL), not before "extra-pos-arg"
+        assert "--headers x-key val http://localhost/streamable" in full_command
+        assert "extra-pos-arg --headers" in full_command
+
+    @pytest.mark.asyncio
+    async def test_stdio_does_not_mutate_original_config(self):
+        """The original server_config args list should not be mutated."""
+        mock_stdio = AsyncMock(spec=MCPStdioClient)
+        mock_stdio.connect_to_server.return_value = []
+        mock_stdio._connected = True
+
+        original_args = ["mcp-proxy", "--headers", "x-api-key", "sk-orig", "http://localhost/s"]
+        server_config = {
+            "command": "uvx",
+            "args": original_args,
+            "headers": {"X-Extra": "val"},
+        }
+
+        await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
+
+        # Original list should be unchanged
+        assert original_args == ["mcp-proxy", "--headers", "x-api-key", "sk-orig", "http://localhost/s"]
 
 
 class TestFieldNameConversion:

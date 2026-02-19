@@ -62,6 +62,7 @@ def mock_settings_service_db():
     settings_service = MagicMock()
     settings_service.auth_settings.API_KEY_SOURCE = "db"
     settings_service.auth_settings.SUPERUSER = "langflow"
+    settings_service.auth_settings.SECRET_KEY.get_secret_value.return_value = "test-secret-key-for-unit-tests"
     settings_service.settings.disable_track_apikey_usage = False
     return settings_service
 
@@ -72,6 +73,7 @@ def mock_settings_service_env():
     settings_service = MagicMock()
     settings_service.auth_settings.API_KEY_SOURCE = "env"
     settings_service.auth_settings.SUPERUSER = "langflow"
+    settings_service.auth_settings.SECRET_KEY.get_secret_value.return_value = "test-secret-key-for-unit-tests"
     settings_service.settings.disable_track_apikey_usage = False
     return settings_service
 
@@ -199,25 +201,27 @@ class TestCheckKeyFromDb:
     @pytest.mark.asyncio
     async def test_valid_key_returns_user(self, mock_session, mock_user, mock_settings_service_db):
         """Valid API key should return the associated user."""
-        mock_api_key = MagicMock()
-        mock_api_key.user = mock_user
-        mock_api_key.total_uses = 0
+        api_key_id = uuid4()
+        user_id = mock_user.id
 
         mock_result = MagicMock()
-        mock_result.first.return_value = mock_api_key
-        mock_session.exec.return_value = mock_result
+        mock_result.all.return_value = [(api_key_id, "sk-valid-key", user_id)]
+
+        mock_session.exec = AsyncMock(return_value=mock_result)
+
+        mock_session.get = AsyncMock(return_value=mock_user)
 
         result = await _check_key_from_db(mock_session, "sk-valid-key", mock_settings_service_db)
 
         assert result == mock_user
-        assert mock_api_key.total_uses == 1
+        mock_session.get.assert_called_once_with(User, user_id)
 
     @pytest.mark.asyncio
     async def test_invalid_key_returns_none(self, mock_session, mock_settings_service_db):
         """Invalid API key should return None."""
         mock_result = MagicMock()
-        mock_result.first.return_value = None
-        mock_session.exec.return_value = mock_result
+        mock_result.all.return_value = []  # No keys in DB
+        mock_session.exec = AsyncMock(return_value=mock_result)
 
         result = await _check_key_from_db(mock_session, "sk-invalid-key", mock_settings_service_db)
 
@@ -226,44 +230,43 @@ class TestCheckKeyFromDb:
     @pytest.mark.asyncio
     async def test_usage_tracking_increments(self, mock_session, mock_user, mock_settings_service_db):
         """API key usage should be tracked when not disabled."""
-        mock_api_key = MagicMock()
-        mock_api_key.user = mock_user
-        mock_api_key.total_uses = 5
+        api_key_id = uuid4()
+        user_id = mock_user.id
 
         mock_result = MagicMock()
-        mock_result.first.return_value = mock_api_key
-        mock_session.exec.return_value = mock_result
+        mock_result.all.return_value = [(api_key_id, "sk-valid-key", user_id)]
+        mock_session.exec = AsyncMock(return_value=mock_result)
+        mock_session.get = AsyncMock(return_value=mock_user)
 
         await _check_key_from_db(mock_session, "sk-valid-key", mock_settings_service_db)
 
-        assert mock_api_key.total_uses == 6
-        mock_session.add.assert_called_once_with(mock_api_key)
-        mock_session.flush.assert_called_once()
+        # Verify exec was called twice (select + update)
+        assert mock_session.exec.call_count == 2
 
     @pytest.mark.asyncio
     async def test_usage_tracking_disabled(self, mock_session, mock_user, mock_settings_service_db):
         """API key usage should not be tracked when disabled."""
         mock_settings_service_db.settings.disable_track_apikey_usage = True
 
-        mock_api_key = MagicMock()
-        mock_api_key.user = mock_user
-        mock_api_key.total_uses = 5
+        api_key_id = uuid4()
+        user_id = mock_user.id
 
         mock_result = MagicMock()
-        mock_result.first.return_value = mock_api_key
-        mock_session.exec.return_value = mock_result
+        mock_result.all.return_value = [(api_key_id, "sk-valid-key", user_id)]
+        mock_session.exec = AsyncMock(return_value=mock_result)
+        mock_session.get = AsyncMock(return_value=mock_user)
 
         await _check_key_from_db(mock_session, "sk-valid-key", mock_settings_service_db)
 
-        assert mock_api_key.total_uses == 5  # Not incremented
-        mock_session.add.assert_not_called()
+        # Verify exec was called only once (select, no update)
+        assert mock_session.exec.call_count == 1
 
     @pytest.mark.asyncio
     async def test_empty_key_returns_none(self, mock_session, mock_settings_service_db):
         """Empty API key should return None."""
         mock_result = MagicMock()
-        mock_result.first.return_value = None
-        mock_session.exec.return_value = mock_result
+        mock_result.all.return_value = []  # No keys match
+        mock_session.exec = AsyncMock(return_value=mock_result)
 
         result = await _check_key_from_db(mock_session, "", mock_settings_service_db)
 
@@ -479,16 +482,17 @@ class TestCheckKeyIntegration:
     @pytest.mark.asyncio
     async def test_full_flow_db_mode_valid_key(self, mock_session, mock_user):
         """Full flow test: db mode with valid key."""
-        mock_api_key = MagicMock()
-        mock_api_key.user = mock_user
-        mock_api_key.total_uses = 0
+        api_key_id = uuid4()
+        user_id = mock_user.id
 
         mock_result = MagicMock()
-        mock_result.first.return_value = mock_api_key
-        mock_session.exec.return_value = mock_result
+        mock_result.all.return_value = [(api_key_id, "sk-valid-key", user_id)]
+        mock_session.exec = AsyncMock(return_value=mock_result)
+        mock_session.get = AsyncMock(return_value=mock_user)
 
         mock_settings = MagicMock()
         mock_settings.auth_settings.API_KEY_SOURCE = "db"
+        mock_settings.auth_settings.SECRET_KEY.get_secret_value.return_value = "test-secret-key-for-unit-tests"
         mock_settings.settings.disable_track_apikey_usage = False
 
         with patch(
@@ -498,6 +502,7 @@ class TestCheckKeyIntegration:
             result = await check_key(mock_session, "sk-valid-key")
 
             assert result == mock_user
+            mock_session.get.assert_called_once_with(User, user_id)
 
     @pytest.mark.asyncio
     async def test_full_flow_env_mode_valid_key(self, mock_session, mock_superuser, monkeypatch):
@@ -530,17 +535,23 @@ class TestCheckKeyIntegration:
         monkeypatch.setenv("LANGFLOW_API_KEY", "sk-correct-key")
 
         # Setup mock for db fallback
-        mock_api_key = MagicMock()
-        mock_api_key.user = mock_user
-        mock_api_key.total_uses = 0
+        api_key_id = uuid4()
+        user_id = mock_user.id
+
+        monkeypatch.setattr(
+            "langflow.services.database.models.api_key.crud.auth_utils.decrypt_api_key",
+            lambda v, _settings_service=None: "sk-wrong-key" if v == "sk-wrong-key" else v,
+        )
 
         mock_result = MagicMock()
-        mock_result.first.return_value = mock_api_key
-        mock_session.exec.return_value = mock_result
+        mock_result.all.return_value = [(api_key_id, "sk-wrong-key", user_id)]
+        mock_session.exec = AsyncMock(return_value=mock_result)
+        mock_session.get = AsyncMock(return_value=mock_user)
 
         mock_settings = MagicMock()
         mock_settings.auth_settings.API_KEY_SOURCE = "env"
         mock_settings.auth_settings.SUPERUSER = "langflow"
+        mock_settings.auth_settings.SECRET_KEY.get_secret_value.return_value = "test-secret-key-for-unit-tests"
         mock_settings.settings.disable_track_apikey_usage = False
 
         with patch(
@@ -560,12 +571,13 @@ class TestCheckKeyIntegration:
 
         # Setup mock for db - key not found
         mock_result = MagicMock()
-        mock_result.first.return_value = None
-        mock_session.exec.return_value = mock_result
+        mock_result.all.return_value = []
+        mock_session.exec = AsyncMock(return_value=mock_result)
 
         mock_settings = MagicMock()
         mock_settings.auth_settings.API_KEY_SOURCE = "env"
         mock_settings.auth_settings.SUPERUSER = "langflow"
+        mock_settings.auth_settings.SECRET_KEY.get_secret_value.return_value = "test-secret-key-for-unit-tests"
         mock_settings.settings.disable_track_apikey_usage = False
 
         with patch(

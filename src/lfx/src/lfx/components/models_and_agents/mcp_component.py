@@ -15,12 +15,12 @@ from lfx.base.mcp.util import (
 )
 from lfx.custom.custom_component.component_with_cache import ComponentWithCache
 from lfx.inputs.inputs import InputTypes  # noqa: TC001
-from lfx.io import BoolInput, DropdownInput, McpInput, MessageTextInput, Output
+from lfx.io import BoolInput, DictInput, DropdownInput, McpInput, MessageTextInput, Output
 from lfx.io.schema import flatten_schema, schema_to_langflow_inputs
 from lfx.log.logger import logger
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
-from lfx.services.deps import get_settings_service, get_storage_service, session_scope
+from lfx.services.deps import get_storage_service, session_scope
 
 
 def resolve_mcp_config(
@@ -87,6 +87,7 @@ class MCPToolsComponent(ComponentWithCache):
         "tool",
         "use_cache",
         "verify_ssl",
+        "headers",
     ]
 
     display_name = "MCP Tools"
@@ -121,6 +122,17 @@ class MCPToolsComponent(ComponentWithCache):
             ),
             value=True,
             advanced=True,
+        ),
+        DictInput(
+            name="headers",
+            display_name="Headers",
+            info=(
+                "HTTP headers to include with MCP server requests. "
+                "Useful for authentication (e.g., Authorization header). "
+                "These headers override any headers configured in the MCP server settings."
+            ),
+            advanced=True,
+            is_list=True,
         ),
         DropdownInput(
             name="tool",
@@ -219,6 +231,8 @@ class MCPToolsComponent(ComponentWithCache):
             try:
                 from langflow.api.v2.mcp import get_server
                 from langflow.services.database.models.user.crud import get_user_by_id
+
+                from lfx.services.deps import get_settings_service
             except ImportError as e:
                 msg = (
                     "Langflow MCP server functionality is not available. "
@@ -258,11 +272,57 @@ class MCPToolsComponent(ComponentWithCache):
                 verify_ssl = getattr(self, "verify_ssl", True)
                 server_config["verify_ssl"] = verify_ssl
 
+            # Merge headers from component input with server config headers
+            # Component headers take precedence over server config headers
+            component_headers = getattr(self, "headers", None) or []
+            if component_headers:
+                # Convert list of {"key": k, "value": v} to dict
+                component_headers_dict = {}
+                if isinstance(component_headers, list):
+                    for item in component_headers:
+                        if isinstance(item, dict) and "key" in item and "value" in item:
+                            component_headers_dict[item["key"]] = item["value"]
+                elif isinstance(component_headers, dict):
+                    component_headers_dict = component_headers
+
+                if component_headers_dict:
+                    existing_headers = server_config.get("headers", {}) or {}
+                    # Ensure existing_headers is a dict (convert from list if needed)
+                    if isinstance(existing_headers, list):
+                        existing_dict = {}
+                        for item in existing_headers:
+                            if isinstance(item, dict) and "key" in item and "value" in item:
+                                existing_dict[item["key"]] = item["value"]
+                        existing_headers = existing_dict
+                    merged_headers = {**existing_headers, **component_headers_dict}
+                    server_config["headers"] = merged_headers
+            # Get request_variables from graph context for global variable resolution
+            request_variables = None
+            if hasattr(self, "graph") and self.graph and hasattr(self.graph, "context"):
+                request_variables = self.graph.context.get("request_variables")
+
+            # Only load global variables from database if we have headers that might use them
+            # This avoids unnecessary database queries when headers are empty
+            has_headers = server_config.get("headers") and len(server_config.get("headers", {})) > 0
+            if not request_variables and has_headers:
+                try:
+                    from lfx.services.deps import get_variable_service
+
+                    variable_service = get_variable_service()
+                    if variable_service:
+                        async with session_scope() as db:
+                            request_variables = await variable_service.get_all_decrypted_variables(
+                                user_id=self.user_id, session=db
+                            )
+                except Exception as e:  # noqa: BLE001
+                    await logger.awarning(f"Failed to load global variables for MCP component: {e}")
+
             _, tool_list, tool_cache = await update_tools(
                 server_name=server_name,
                 server_config=server_config,
                 mcp_stdio_client=self.stdio_client,
                 mcp_streamable_http_client=self.streamable_http_client,
+                request_variables=request_variables,
             )
 
             self.tool_names = [tool.name for tool in tool_list if hasattr(tool, "name")]

@@ -99,7 +99,7 @@ test("should share component with share button", async ({ page }) => {
   await page.waitForTimeout(1000);
   await page.getByText("Success! Your API Key has been saved.").isVisible();
 
-  await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+  await page.waitForSelector('[data-testid="sidebar-search-input"]', {
     timeout: 100000,
   });
 

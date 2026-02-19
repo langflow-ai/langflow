@@ -38,7 +38,7 @@ test.skip(
     await zoomOut(page, 2);
 
     await page.getByTestId("div-generic-node").click();
-    await page.getByTestId("code-button-modal").click();
+    await page.getByTestId("code-button-modal").last().click();
 
     const customCodeWithError = `
 # from langflow.field_typing import Data

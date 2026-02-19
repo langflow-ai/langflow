@@ -3,10 +3,53 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
     import asyncio
+    from uuid import UUID
+
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from lfx.services.settings.base import Settings
+
+
+class AuthUserProtocol(Protocol):
+    """Auhtenticated user object (id, username, is_active, is_superuser).
+
+    Implementations may use User or UserRead from the database layer; this protocol
+    describes the surface needed by consumers of the auth service.
+    """
+
+    id: UUID
+    username: str
+    is_active: bool
+    is_superuser: bool
+
+
+class AuthServiceProtocol(Protocol):
+    """Protocol for auth service (minimal surface for dependency injection)."""
+
+    @abstractmethod
+    async def get_current_user(
+        self,
+        token: str | None,
+        query_param: str | None,
+        header_param: str | None,
+        db: AsyncSession,
+    ) -> AuthUserProtocol:
+        """Get the current authenticated user from token or API key."""
+        ...
+
+    @abstractmethod
+    async def api_key_security(
+        self,
+        query_param: str | None,
+        header_param: str | None,
+        db: AsyncSession | None = None,
+    ) -> AuthUserProtocol | None:
+        """Validate API key from query or header. Returns user or None."""
+        ...
 
 
 class DatabaseServiceProtocol(Protocol):
@@ -52,7 +95,7 @@ class SettingsServiceProtocol(Protocol):
 
     @property
     @abstractmethod
-    def settings(self) -> Any:
+    def settings(self) -> Settings:
         """Get settings object."""
         ...
 
@@ -68,6 +111,19 @@ class VariableServiceProtocol(Protocol):
     @abstractmethod
     def set_variable(self, name: str, value: Any, **kwargs) -> None:
         """Set variable value."""
+        ...
+
+    @abstractmethod
+    async def get_all_decrypted_variables(self, user_id: Any, session: Any) -> dict[str, str]:
+        """Get all variables for a user with decrypted values.
+
+        Args:
+            user_id: The user ID to get variables for
+            session: Database session
+
+        Returns:
+            Dictionary mapping variable names to decrypted values
+        """
         ...
 
 
@@ -105,4 +161,46 @@ class TracingServiceProtocol(Protocol):
     @abstractmethod
     def log(self, message: str, **kwargs) -> None:
         """Log tracing information."""
+        ...
+
+
+@runtime_checkable
+class TransactionServiceProtocol(Protocol):
+    """Protocol for transaction logging service.
+
+    This service handles logging of component execution transactions,
+    tracking inputs, outputs, and status of each vertex build.
+    """
+
+    @abstractmethod
+    async def log_transaction(
+        self,
+        flow_id: str,
+        vertex_id: str,
+        inputs: dict[str, Any] | None,
+        outputs: dict[str, Any] | None,
+        status: str,
+        target_id: str | None = None,
+        error: str | None = None,
+    ) -> None:
+        """Log a transaction record for a vertex execution.
+
+        Args:
+            flow_id: The flow ID (as string)
+            vertex_id: The vertex/component ID
+            inputs: Input parameters for the component
+            outputs: Output results from the component
+            status: Execution status (success/error)
+            target_id: Optional target vertex ID
+            error: Optional error message
+        """
+        ...
+
+    @abstractmethod
+    def is_enabled(self) -> bool:
+        """Check if transaction logging is enabled.
+
+        Returns:
+            True if transaction logging is enabled, False otherwise.
+        """
         ...

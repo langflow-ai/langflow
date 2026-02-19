@@ -23,13 +23,23 @@ from typing import Any
 from lfx.base.data.base_file import BaseFileComponent
 from lfx.base.data.storage_utils import parse_storage_path, read_file_bytes, validate_image_content_type
 from lfx.base.data.utils import TEXT_FILE_TYPES, parallel_load_data, parse_text_file_to_data
+from lfx.inputs import SortableListInput
 from lfx.inputs.inputs import DropdownInput, MessageTextInput, StrInput
-from lfx.io import BoolInput, FileInput, IntInput, Output
+from lfx.io import BoolInput, FileInput, IntInput, Output, SecretStrInput
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame  # noqa: TC001
 from lfx.schema.message import Message
 from lfx.services.deps import get_settings_service, get_storage_service
 from lfx.utils.async_helpers import run_until_complete
+from lfx.utils.validate_cloud import is_astra_cloud_environment
+
+
+def _get_storage_location_options():
+    """Get storage location options, filtering out Local if in Astra cloud environment."""
+    all_options = [{"name": "AWS", "icon": "Amazon"}, {"name": "Google Drive", "icon": "google"}]
+    if is_astra_cloud_environment():
+        return all_options
+    return [{"name": "Local", "icon": "hard-drive"}, *all_options]
 
 
 class FileComponent(BaseFileComponent):
@@ -91,6 +101,17 @@ class FileComponent(BaseFileComponent):
             break
 
     inputs = [
+        SortableListInput(
+            name="storage_location",
+            display_name="Storage Location",
+            placeholder="Select Location",
+            info="Choose where to read the file from.",
+            options=_get_storage_location_options(),
+            real_time_refresh=True,
+            limit=1,
+            value=[{"name": "Local", "icon": "hard-drive"}],
+            advanced=True,
+        ),
         *_base_inputs,
         StrInput(
             name="file_path_str",
@@ -104,6 +125,63 @@ class FileComponent(BaseFileComponent):
             tool_mode=True,  # Required for Toolset toggle, but _get_tools() ignores this parameter
             required=False,
         ),
+        # AWS S3 specific inputs
+        SecretStrInput(
+            name="aws_access_key_id",
+            display_name="AWS Access Key ID",
+            info="AWS Access key ID.",
+            show=False,
+            advanced=False,
+            required=True,
+        ),
+        SecretStrInput(
+            name="aws_secret_access_key",
+            display_name="AWS Secret Key",
+            info="AWS Secret Key.",
+            show=False,
+            advanced=False,
+            required=True,
+        ),
+        StrInput(
+            name="bucket_name",
+            display_name="S3 Bucket Name",
+            info="Enter the name of the S3 bucket.",
+            show=False,
+            advanced=False,
+            required=True,
+        ),
+        StrInput(
+            name="aws_region",
+            display_name="AWS Region",
+            info="AWS region (e.g., us-east-1, eu-west-1).",
+            show=False,
+            advanced=False,
+        ),
+        StrInput(
+            name="s3_file_key",
+            display_name="S3 File Key",
+            info="The key (path) of the file in S3 bucket.",
+            show=False,
+            advanced=False,
+            required=True,
+        ),
+        # Google Drive specific inputs
+        SecretStrInput(
+            name="service_account_key",
+            display_name="GCP Credentials Secret Key",
+            info="Your Google Cloud Platform service account JSON key as a secret string (complete JSON content).",
+            show=False,
+            advanced=False,
+            required=True,
+        ),
+        StrInput(
+            name="file_id",
+            display_name="Google Drive File ID",
+            info=("The Google Drive file ID to read. The file must be shared with the service account email."),
+            show=False,
+            advanced=False,
+            required=True,
+        ),
         BoolInput(
             name="advanced_mode",
             display_name="Advanced Parser",
@@ -113,7 +191,8 @@ class FileComponent(BaseFileComponent):
                 "Enable advanced document processing and export with Docling for PDFs, images, and office documents. "
                 "Note that advanced document processing can consume significant resources."
             ),
-            show=True,
+            # Disabled in cloud
+            show=not is_astra_cloud_environment(),
         ),
         DropdownInput(
             name="pipeline",
@@ -269,6 +348,20 @@ class FileComponent(BaseFileComponent):
         """Return the list of currently selected file paths from the template."""
         return template.get("path", {}).get("file_path", [])
 
+    def _disable_docling_fields_in_cloud(self, build_config: dict[str, Any]) -> None:
+        """Disable all Docling-related fields in cloud environments."""
+        if "advanced_mode" in build_config:
+            build_config["advanced_mode"]["show"] = False
+            build_config["advanced_mode"]["value"] = False
+        # Hide all Docling-related fields
+        docling_fields = ("pipeline", "ocr_engine", "doc_key", "md_image_placeholder", "md_page_break_placeholder")
+        for field in docling_fields:
+            if field in build_config:
+                build_config[field]["show"] = False
+        # Also disable OCR engine specifically
+        if "ocr_engine" in build_config:
+            build_config["ocr_engine"]["value"] = "None"
+
     def update_build_config(
         self,
         build_config: dict[str, Any],
@@ -276,28 +369,120 @@ class FileComponent(BaseFileComponent):
         field_name: str | None = None,
     ) -> dict[str, Any]:
         """Show/hide Advanced Parser and related fields based on selection context."""
+        # Update storage location options dynamically based on cloud environment
+        if "storage_location" in build_config:
+            updated_options = _get_storage_location_options()
+            build_config["storage_location"]["options"] = updated_options
+
+        # Handle storage location selection
+        if field_name == "storage_location":
+            # Extract selected storage location
+            selected = [location["name"] for location in field_value] if isinstance(field_value, list) else []
+
+            # Hide all storage-specific fields first
+            storage_fields = [
+                "aws_access_key_id",
+                "aws_secret_access_key",
+                "bucket_name",
+                "aws_region",
+                "s3_file_key",
+                "service_account_key",
+                "file_id",
+            ]
+
+            for f_name in storage_fields:
+                if f_name in build_config:
+                    build_config[f_name]["show"] = False
+
+            # Show fields based on selected storage location
+            if len(selected) == 1:
+                location = selected[0]
+
+                if location == "Local":
+                    # Show file upload input for local storage
+                    if "path" in build_config:
+                        build_config["path"]["show"] = True
+
+                elif location == "AWS":
+                    # Hide file upload input, show AWS fields
+                    if "path" in build_config:
+                        build_config["path"]["show"] = False
+
+                    aws_fields = [
+                        "aws_access_key_id",
+                        "aws_secret_access_key",
+                        "bucket_name",
+                        "aws_region",
+                        "s3_file_key",
+                    ]
+                    for f_name in aws_fields:
+                        if f_name in build_config:
+                            build_config[f_name]["show"] = True
+                            build_config[f_name]["advanced"] = False
+
+                elif location == "Google Drive":
+                    # Hide file upload input, show Google Drive fields
+                    if "path" in build_config:
+                        build_config["path"]["show"] = False
+
+                    gdrive_fields = ["service_account_key", "file_id"]
+                    for f_name in gdrive_fields:
+                        if f_name in build_config:
+                            build_config[f_name]["show"] = True
+                            build_config[f_name]["advanced"] = False
+            # No storage location selected - show file upload by default
+            elif "path" in build_config:
+                build_config["path"]["show"] = True
+
+            return build_config
+
         if field_name == "path":
             paths = self._path_value(build_config)
 
-            # If all files can be processed by docling, do so
-            allow_advanced = all(not file_path.endswith((".csv", ".xlsx", ".parquet")) for file_path in paths)
-            build_config["advanced_mode"]["show"] = allow_advanced
-            if not allow_advanced:
-                build_config["advanced_mode"]["value"] = False
-                for f in ("pipeline", "ocr_engine", "doc_key", "md_image_placeholder", "md_page_break_placeholder"):
-                    if f in build_config:
-                        build_config[f]["show"] = False
+            # Disable in cloud environments
+            if is_astra_cloud_environment():
+                self._disable_docling_fields_in_cloud(build_config)
+            else:
+                # If all files can be processed by docling, do so
+                allow_advanced = all(not file_path.endswith((".csv", ".xlsx", ".parquet")) for file_path in paths)
+                build_config["advanced_mode"]["show"] = allow_advanced
+                if not allow_advanced:
+                    build_config["advanced_mode"]["value"] = False
+                    docling_fields = (
+                        "pipeline",
+                        "ocr_engine",
+                        "doc_key",
+                        "md_image_placeholder",
+                        "md_page_break_placeholder",
+                    )
+                    for field in docling_fields:
+                        if field in build_config:
+                            build_config[field]["show"] = False
 
         # Docling Processing
         elif field_name == "advanced_mode":
-            for f in ("pipeline", "ocr_engine", "doc_key", "md_image_placeholder", "md_page_break_placeholder"):
-                if f in build_config:
-                    build_config[f]["show"] = bool(field_value)
-                    if f == "pipeline":
-                        build_config[f]["advanced"] = not bool(field_value)
+            # Disable in cloud environments - don't show Docling fields even if advanced_mode is toggled
+            if is_astra_cloud_environment():
+                self._disable_docling_fields_in_cloud(build_config)
+            else:
+                docling_fields = (
+                    "pipeline",
+                    "ocr_engine",
+                    "doc_key",
+                    "md_image_placeholder",
+                    "md_page_break_placeholder",
+                )
+                for field in docling_fields:
+                    if field in build_config:
+                        build_config[field]["show"] = bool(field_value)
+                        if field == "pipeline":
+                            build_config[field]["advanced"] = not bool(field_value)
 
         elif field_name == "pipeline":
-            if field_value == "standard":
+            # Disable in cloud environments - don't show OCR engine even if pipeline is changed
+            if is_astra_cloud_environment():
+                self._disable_docling_fields_in_cloud(build_config)
+            elif field_value == "standard":
                 build_config["ocr_engine"]["show"] = True
                 build_config["ocr_engine"]["value"] = "easyocr"
             else:
@@ -368,15 +553,34 @@ class FileComponent(BaseFileComponent):
 
     # ------------------------------ Core processing ----------------------------------
 
-    def _validate_and_resolve_paths(self) -> list[BaseFileComponent.BaseFile]:
-        """Override to handle file_path_str input from tool mode.
+    def _get_selected_storage_location(self) -> str:
+        """Get the selected storage location from the SortableListInput."""
+        if hasattr(self, "storage_location") and self.storage_location:
+            if isinstance(self.storage_location, list) and len(self.storage_location) > 0:
+                return self.storage_location[0].get("name", "")
+            if isinstance(self.storage_location, dict):
+                return self.storage_location.get("name", "")
+        return "Local"  # Default to Local if not specified
 
-        When called as a tool, the file_path_str parameter can be set.
-        If not provided, it will fall back to using the path FileInput (uploaded file).
+    def _validate_and_resolve_paths(self) -> list[BaseFileComponent.BaseFile]:
+        """Override to handle file_path_str input from tool mode and cloud storage.
+
         Priority:
-        1. file_path_str (if provided by the tool call)
-        2. path (uploaded file from UI)
+        1. Cloud storage (AWS/Google Drive) if selected
+        2. file_path_str (if provided by the tool call)
+        3. path (uploaded file from UI)
         """
+        storage_location = self._get_selected_storage_location()
+
+        # Handle AWS S3
+        if storage_location == "AWS":
+            return self._read_from_aws_s3()
+
+        # Handle Google Drive
+        if storage_location == "Google Drive":
+            return self._read_from_google_drive()
+
+        # Handle Local storage
         # Check if file_path_str is provided (from tool mode)
         file_path_str = getattr(self, "file_path_str", None)
         if file_path_str:
@@ -385,7 +589,16 @@ class FileComponent(BaseFileComponent):
 
             from lfx.schema.data import Data
 
-            resolved_path = Path(self.resolve_path(file_path_str))
+            # Use same resolution logic as BaseFileComponent (support storage paths)
+            path_str = str(file_path_str)
+            if parse_storage_path(path_str):
+                try:
+                    resolved_path = Path(self.get_full_path(path_str))
+                except (ValueError, AttributeError):
+                    resolved_path = Path(self.resolve_path(path_str))
+            else:
+                resolved_path = Path(self.resolve_path(path_str))
+
             if not resolved_path.exists():
                 msg = f"File or directory not found: {file_path_str}"
                 self.log(msg)
@@ -398,6 +611,101 @@ class FileComponent(BaseFileComponent):
 
         # Otherwise use the default implementation (uses path FileInput)
         return super()._validate_and_resolve_paths()
+
+    def _read_from_aws_s3(self) -> list[BaseFileComponent.BaseFile]:
+        """Read file from AWS S3."""
+        from lfx.base.data.cloud_storage_utils import create_s3_client, validate_aws_credentials
+
+        # Validate AWS credentials
+        validate_aws_credentials(self)
+        if not getattr(self, "s3_file_key", None):
+            msg = "S3 File Key is required"
+            raise ValueError(msg)
+
+        # Create S3 client
+        s3_client = create_s3_client(self)
+
+        # Download file to temp location
+        import tempfile
+
+        # Get file extension from S3 key
+        file_extension = Path(self.s3_file_key).suffix or ""
+
+        with tempfile.NamedTemporaryFile(mode="wb", suffix=file_extension, delete=False) as temp_file:
+            temp_file_path = temp_file.name
+            try:
+                s3_client.download_fileobj(self.bucket_name, self.s3_file_key, temp_file)
+            except Exception as e:
+                # Clean up temp file on failure
+                with contextlib.suppress(OSError):
+                    Path(temp_file_path).unlink()
+                msg = f"Failed to download file from S3: {e}"
+                raise RuntimeError(msg) from e
+
+        # Create BaseFile object
+        from lfx.schema.data import Data
+
+        temp_path = Path(temp_file_path)
+        data_obj = Data(data={self.SERVER_FILE_PATH_FIELDNAME: str(temp_path)})
+        return [BaseFileComponent.BaseFile(data_obj, temp_path, delete_after_processing=True)]
+
+    def _read_from_google_drive(self) -> list[BaseFileComponent.BaseFile]:
+        """Read file from Google Drive."""
+        import tempfile
+
+        from googleapiclient.http import MediaIoBaseDownload
+
+        from lfx.base.data.cloud_storage_utils import create_google_drive_service
+
+        # Validate Google Drive credentials
+        if not getattr(self, "service_account_key", None):
+            msg = "GCP Credentials Secret Key is required for Google Drive storage"
+            raise ValueError(msg)
+        if not getattr(self, "file_id", None):
+            msg = "Google Drive File ID is required"
+            raise ValueError(msg)
+
+        # Create Google Drive service with read-only scope
+        drive_service = create_google_drive_service(
+            self.service_account_key, scopes=["https://www.googleapis.com/auth/drive.readonly"]
+        )
+
+        # Get file metadata to determine file name and extension
+        try:
+            file_metadata = drive_service.files().get(fileId=self.file_id, fields="name,mimeType").execute()
+            file_name = file_metadata.get("name", "download")
+        except Exception as e:
+            msg = (
+                f"Unable to access file with ID '{self.file_id}'. "
+                f"Error: {e!s}. "
+                "Please ensure: 1) The file ID is correct, 2) The file exists, "
+                "3) The service account has been granted access to this file."
+            )
+            raise ValueError(msg) from e
+
+        # Download file to temp location
+        file_extension = Path(file_name).suffix or ""
+        with tempfile.NamedTemporaryFile(mode="wb", suffix=file_extension, delete=False) as temp_file:
+            temp_file_path = temp_file.name
+            try:
+                request = drive_service.files().get_media(fileId=self.file_id)
+                downloader = MediaIoBaseDownload(temp_file, request)
+                done = False
+                while not done:
+                    _status, done = downloader.next_chunk()
+            except Exception as e:
+                # Clean up temp file on failure
+                with contextlib.suppress(OSError):
+                    Path(temp_file_path).unlink()
+                msg = f"Failed to download file from Google Drive: {e}"
+                raise RuntimeError(msg) from e
+
+        # Create BaseFile object
+        from lfx.schema.data import Data
+
+        temp_path = Path(temp_file_path)
+        data_obj = Data(data={self.SERVER_FILE_PATH_FIELDNAME: str(temp_path)})
+        return [BaseFileComponent.BaseFile(data_obj, temp_path, delete_after_processing=True)]
 
     def _is_docling_compatible(self, file_path: str) -> bool:
         """Lightweight extension gate for Docling-compatible types."""
@@ -786,10 +1094,16 @@ class FileComponent(BaseFileComponent):
             for file in file_list:
                 extension = file.path.suffix[1:].lower()
                 if extension in self.DOCLING_ONLY_EXTENSIONS:
-                    msg = (
-                        f"File '{file.path.name}' has extension '.{extension}' which requires "
-                        f"Advanced Parser mode. Please enable 'Advanced Parser' to process this file."
-                    )
+                    if is_astra_cloud_environment():
+                        msg = (
+                            f"File '{file.path.name}' has extension '.{extension}' which requires "
+                            f"Advanced Parser mode. Advanced Parser is not available in cloud environments."
+                        )
+                    else:
+                        msg = (
+                            f"File '{file.path.name}' has extension '.{extension}' which requires "
+                            f"Advanced Parser mode. Please enable 'Advanced Parser' to process this file."
+                        )
                     self.log(msg)
                     raise ValueError(msg)
 

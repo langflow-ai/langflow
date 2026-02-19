@@ -16,7 +16,6 @@ OPENAI_MODELS_DETAILED = [
         icon="OpenAI",
         tool_calling=True,
         reasoning=True,
-        default=True,
     ),
     create_model_metadata(
         provider="OpenAI",
@@ -24,7 +23,6 @@ OPENAI_MODELS_DETAILED = [
         icon="OpenAI",
         tool_calling=True,
         reasoning=True,
-        default=True,
     ),
     create_model_metadata(
         provider="OpenAI",
@@ -32,7 +30,6 @@ OPENAI_MODELS_DETAILED = [
         icon="OpenAI",
         tool_calling=True,
         reasoning=True,
-        default=True,
     ),
     create_model_metadata(
         provider="OpenAI",
@@ -42,8 +39,8 @@ OPENAI_MODELS_DETAILED = [
         reasoning=True,
     ),
     # Regular OpenAI Models
-    create_model_metadata(provider="OpenAI", name="gpt-4o-mini", icon="OpenAI", tool_calling=True, default=True),
-    create_model_metadata(provider="OpenAI", name="gpt-4o", icon="OpenAI", tool_calling=True, default=True),
+    create_model_metadata(provider="OpenAI", name="gpt-4o-mini", icon="OpenAI", tool_calling=True),
+    create_model_metadata(provider="OpenAI", name="gpt-4o", icon="OpenAI", tool_calling=True),
     create_model_metadata(
         provider="OpenAI", name="gpt-4.1", icon="OpenAI", tool_calling=True, preview=True, not_supported=True
     ),
@@ -150,7 +147,6 @@ OPENAI_EMBEDDING_MODELS_DETAILED = [
         name=name,
         icon="OpenAI",
         model_type="embeddings",
-        default=(name == "text-embedding-3-small"),  # Mark the most efficient as default
     )
     for name in OPENAI_EMBEDDING_MODEL_NAMES
 ]

@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from langflow.api.utils import CurrentActiveUser
 from langflow.services.deps import get_settings_service
 
-router = APIRouter(tags=["Knowledge Bases"], prefix="/knowledge_bases")
+router = APIRouter(tags=["Knowledge Bases"], prefix="/knowledge_bases", include_in_schema=False)
 
 
 _KNOWLEDGE_BASES_DIR: Path | None = None
@@ -203,8 +203,8 @@ def calculate_text_metrics(df: pd.DataFrame, text_columns: list[str]) -> tuple[i
             continue
 
         text_series = df[col].astype(str).fillna("")
-        total_characters += int(text_series.str.len().sum().item())
-        total_words += int(text_series.str.split().str.len().sum().item())
+        total_characters += int(text_series.str.len().sum())
+        total_words += int(text_series.str.split().str.len().sum())
 
     return total_words, total_characters
 

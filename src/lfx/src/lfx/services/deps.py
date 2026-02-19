@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager, suppress
-from http import HTTPStatus
 from typing import TYPE_CHECKING
 
 from fastapi import HTTPException
@@ -18,12 +17,14 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from lfx.services.interfaces import (
+        AuthServiceProtocol,
         CacheServiceProtocol,
         ChatServiceProtocol,
         DatabaseServiceProtocol,
         SettingsServiceProtocol,
         StorageServiceProtocol,
         TracingServiceProtocol,
+        TransactionServiceProtocol,
         VariableServiceProtocol,
     )
 
@@ -118,6 +119,27 @@ def get_tracing_service() -> TracingServiceProtocol | None:
     return get_service(ServiceType.TRACING_SERVICE)
 
 
+def get_transaction_service() -> TransactionServiceProtocol | None:
+    """Retrieves the transaction service instance.
+
+    Returns the transaction service for logging component executions.
+    Returns None if no transaction service is registered.
+    """
+    from lfx.services.schema import ServiceType
+
+    return get_service(ServiceType.TRANSACTION_SERVICE)
+
+
+def get_auth_service() -> AuthServiceProtocol | None:
+    """Retrieves the auth service instance.
+
+    Returns the pluggable auth service (minimal LFX or full Langflow when configured).
+    """
+    from lfx.services.schema import ServiceType
+
+    return get_service(ServiceType.AUTH_SERVICE)
+
+
 async def get_session():
     msg = "get_session is deprecated, use session_scope instead"
     logger.warning(msg)
@@ -149,18 +171,17 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
         try:
             yield session
             await session.commit()
+        except HTTPException:
+            # HTTPExceptions are control flow in FastAPI (returning 4xx/5xx responses),
+            # not actual errors. Don't log them - FastAPI's exception handlers will
+            # take care of the HTTP response. Just rollback any uncommitted changes.
+            if session.is_active:
+                with suppress(InvalidRequestError):
+                    await session.rollback()
+            raise
         except Exception as e:
-            # Log at appropriate level based on error type
-            if isinstance(e, HTTPException):
-                if HTTPStatus.BAD_REQUEST.value <= e.status_code < HTTPStatus.INTERNAL_SERVER_ERROR.value:
-                    # Client errors (4xx) - log at info level
-                    await logger.ainfo(f"Client error during session scope: {e.status_code}: {e.detail}")
-                else:
-                    # Server errors (5xx) or other - log at error level
-                    await logger.aexception("An error occurred during the session scope.", exception=e)
-            else:
-                # Non-HTTP exceptions - log at error level
-                await logger.aexception("An error occurred during the session scope.", exception=e)
+            # Actual application/database errors - log at error level
+            await logger.aexception("An error occurred during the session scope.", exception=e)
 
             # Only rollback if session is still in a valid state
             if session.is_active:

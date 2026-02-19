@@ -12,6 +12,7 @@ export type Provider = {
   is_enabled: boolean;
   model_count?: number;
   models?: Model[];
+  api_docs_url?: string;
 };
 
 /** Map of provider -> model_name -> enabled status */

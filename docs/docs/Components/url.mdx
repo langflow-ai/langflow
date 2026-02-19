@@ -1,0 +1,55 @@
+---
+title: URL
+slug: /url
+---
+
+import Icon from "@site/src/components/icon";
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialDevModeWindows from '@site/docs/_partial-dev-mode-windows.mdx';
+
+The **URL** component fetches content from one or more URLs, processes the content, and returns it in various formats.
+It follows links recursively to a given depth, and it supports output in plain text or raw HTML.
+
+## URL parameters
+
+<PartialParams />
+
+Some of the available parameters include the following:
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| urls | URLs | Input parameter. One or more URLs to crawl recursively. In the visual editor, click <Icon name="Plus" aria-hidden="true"/> **Add URL** to add multiple URLs. |
+| max_depth | Depth | Input parameter. Controls link traversal: how many "clicks" away from the initial page the crawler will go. A depth of 1 limits the crawl to the first page at the given URL only. A depth of 2 means the crawler crawls the first page plus each page directly linked from the first page, then stops. This setting exclusively controls link traversal; it doesn't limit the number of URL path segments or the domain. |
+| prevent_outside | Prevent Outside | Input parameter. If enabled, only crawls URLs within the same domain as the root URL. This prevents the crawler from accessing sites outside the given URL's domain, even if they are linked from one of the crawled pages. |
+| use_async | Use Async | Input parameter. If enabled, uses asynchronous loading which can be significantly faster but might use more system resources. |
+| format | Output Format | Input parameter. Sets the desired output format as **Text** or **HTML**. The default is **Text**. For more information, see [URL output](#url-output).|
+| timeout | Timeout | Input parameter. Timeout for the request in seconds. |
+| headers | Headers | Input parameter. The headers to send with the request if needed for authentication or otherwise. |
+
+Additional input parameters are available for error handling and encoding.
+
+## URL output
+
+There are two settings that control the output of the **URL** component at different stages:
+
+* **Output Format**: This optional parameter controls the content extracted from the crawled pages:
+
+    * **Text (default)**: The component extracts only the text from the HTML of the crawled pages.
+    * **HTML**: The component extracts the entire raw HTML content of the crawled pages.
+
+* **Output data type**: In the component's output field (near the output port) you can select the structure of the outgoing data when it is passed to other components:
+
+    * **Extracted Pages**: Outputs a [`DataFrame`](/data-types#dataframe) that breaks the crawled pages into columns for the entire page content (`text`) and metadata like `url` and `title`.
+    * **Raw Content**: Outputs a [`Message`](/data-types#message) containing the entire text or HTML from the crawled pages, including metadata, in a single block of text.
+
+When used as a standard component in a flow, the **URL** component must be connected to a component that accepts the selected output data type (`DataFrame` or `Message`).
+You can connect the **URL** component directly to a compatible component, or you can use a [**Type Convert** component](/type-convert) to convert the output to another type before passing the data to other components if the data types aren't directly compatible.
+
+Processing components like the **Type Convert** component are useful with the **URL** component because it can extract a large amount of data from the crawled pages.
+For example, if you only want to pass specific fields to other components, you can use a [**Parser** component](/parser) to extract only that data from the crawled pages before passing the data to other components.
+
+When used in **Tool Mode** with an **Agent** component, the **URL** component can be connected directly to the **Agent** component's **Tools** port without converting the data.
+The agent decides whether to use the **URL** component based on the user's query, and it can process the `DataFrame` or `Message` output directly.
+

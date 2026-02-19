@@ -7,8 +7,8 @@ import {
 import { useGetProjectComposerUrl } from "@/controllers/API/queries/mcp/use-get-composer-url";
 import { useGetInstalledMCP } from "@/controllers/API/queries/mcp/use-get-installed-mcp";
 import {
-  usePatchInstallMCP,
   type MCPTransport,
+  usePatchInstallMCP,
 } from "@/controllers/API/queries/mcp/use-patch-install-mcp";
 import { ENABLE_MCP_COMPOSER } from "@/customization/feature-flags";
 import { customGetMCPUrl } from "@/customization/utils/custom-mcp-url";
@@ -249,9 +249,9 @@ export const useMcpServer = ({
         enableComposer: ENABLE_MCP_COMPOSER,
         authType,
         isAutoLogin: !!isAutoLoginFromStore,
-        apiKey: apiKeyFromStore ?? s.apiKey,
+        apiKey: apiKeyFromStore || s.apiKey,
       }),
-    [authType, isAutoLoginFromStore, apiKeyFromStore],
+    [authType, isAutoLoginFromStore, apiKeyFromStore, s.apiKey],
   );
 
   const composerError = composerUrlData?.error_message ?? null;
@@ -324,7 +324,7 @@ export const useMcpServer = ({
     availableMap,
     isInstalling,
     // api key & ui
-    apiKey: apiKeyFromStore ?? s.apiKey,
+    apiKey: apiKeyFromStore || s.apiKey,
     isGeneratingApiKey: s.isGeneratingApiKey,
     generateApiKey,
     isCopied: s.isCopied,

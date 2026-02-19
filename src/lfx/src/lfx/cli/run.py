@@ -9,6 +9,43 @@ from asyncer import syncify
 
 from lfx.run.base import RunError, run_flow
 
+# Verbosity level constants
+VERBOSITY_DETAILED = 2
+VERBOSITY_FULL = 3
+
+
+def _check_langchain_version_compatibility(error_message: str) -> str | None:
+    """Check if error is due to langchain-core version incompatibility.
+
+    Returns a helpful error message if incompatibility is detected, None otherwise.
+    """
+    # Check for the specific error that occurs with langchain-core 1.x
+    # The langchain_core.memory module was removed in langchain-core 1.x
+    if "langchain_core.memory" in error_message or "No module named 'langchain_core.memory'" in error_message:
+        try:
+            import langchain_core
+
+            version = getattr(langchain_core, "__version__", "unknown")
+        except ImportError:
+            version = "unknown"
+
+        return (
+            f"ERROR: Incompatible langchain-core version (v{version}).\n\n"
+            "The 'langchain_core.memory' module was removed in langchain-core 1.x.\n"
+            "lfx requires langchain-core < 1.0.0.\n\n"
+            "This usually happens when langchain-openai >= 1.0.0 is installed,\n"
+            "which pulls in langchain-core >= 1.0.0.\n\n"
+            "FIX: Reinstall with compatible versions:\n\n"
+            "  uv pip install 'langchain-core>=0.3.0,<1.0.0' \\\n"
+            "                 'langchain-openai>=0.3.0,<1.0.0' \\\n"
+            "                 'langchain-community>=0.3.0,<1.0.0'\n\n"
+            "Or with pip:\n\n"
+            "  pip install 'langchain-core>=0.3.0,<1.0.0' \\\n"
+            "              'langchain-openai>=0.3.0,<1.0.0' \\\n"
+            "              'langchain-community>=0.3.0,<1.0.0'"
+        )
+    return None
+
 
 @partial(syncify, raise_sync_error=False)
 async def run(

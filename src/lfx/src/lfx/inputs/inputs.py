@@ -120,27 +120,37 @@ class PromptInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeM
     field_type: SerializableFieldTypes = FieldTypes.PROMPT
 
 
+class MustachePromptInput(PromptInput):
+    field_type: SerializableFieldTypes = FieldTypes.MUSTACHE_PROMPT
+
+
 class CodeInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMixin):
     field_type: SerializableFieldTypes = FieldTypes.CODE
 
 
 class ModelInput(BaseInputMixin, ModelInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMixin):
-    """Represents a model input field with automatic LanguageModel connection support.
+    """Represents a model input field with optional model connection support.
 
-    Automatically includes:
-    - input_types=["LanguageModel"] for connection support
+    By default:
+    - input_types=[] (no handle shown)
     - external_options with "Connect other models" button
-    - refresh_button=True by default
+    - refresh_button=True
+
+    When "Connect other models" is selected (value="connect_other_models"):
+    - input_types is set based on model_type:
+      - "embedding" -> ["Embeddings"]
+      - "language" (default) -> ["LanguageModel"]
 
     Value format:
     - Can be a list of dicts: [{'name': 'gpt-4o', 'provider': 'OpenAI', ...}]
     - Can be a simple list of strings: ['gpt-4o', 'gpt-4o-mini'] (auto-converted)
     - Can be a single string: 'gpt-4o' (auto-converted to list)
+    - Can be "connect_other_models" string to enable connection mode
     """
 
     field_type: SerializableFieldTypes = FieldTypes.MODEL
     placeholder: str | None = "Setup Provider"
-    input_types: list[str] = Field(default_factory=lambda: ["LanguageModel"])
+    input_types: list[str] = Field(default_factory=list)  # Empty by default, no handle shown
     refresh_button: bool | None = True
     external_options: dict = Field(
         default_factory=lambda: {
@@ -165,9 +175,14 @@ class ModelInput(BaseInputMixin, ModelInputMixin, ListableInputMixin, InputTrace
         - 'gpt-4o' -> [{'name': 'gpt-4o', ...}]
         - ['gpt-4o', 'claude-3'] -> [{'name': 'gpt-4o', ...}, {'name': 'claude-3', ...}]
         - [{'name': 'gpt-4o'}] -> [{'name': 'gpt-4o'}] (unchanged)
+        - 'connect_other_models' -> 'connect_other_models' (special value, keep as string)
         """
         # Handle empty or None values
         if v is None or v == "":
+            return v
+
+        # Special case: keep "connect_other_models" as a string to enable connection mode
+        if v == "connect_other_models":
             return v
 
         # If it's not a list or string, return as-is (could be a BaseLanguageModel)
@@ -192,29 +207,22 @@ class ModelInput(BaseInputMixin, ModelInputMixin, ListableInputMixin, InputTrace
                     return [{"name": v}]
                 return [{"name": item} for item in v]
 
-        # Mixed list or unexpected format, return as-is
+        # Return as-is for all other cases
         return v
 
     @model_validator(mode="after")
     def set_defaults(self):
-        """Ensure input_types and external_options are set even if inherited as None."""
-        # Set input_types if not explicitly provided
-        if self.input_types is None or len(self.input_types) == 0:
-            self.input_types = ["LanguageModel"]
+        """Set default input_types based on model_type.
 
-        # Set external_options if not explicitly provided
-        if self.external_options is None or len(self.external_options) == 0:
-            self.external_options = {
-                "fields": {
-                    "data": {
-                        "node": {
-                            "name": "connect_other_models",
-                            "display_name": "Connect other models",
-                            "icon": "CornerDownLeft",
-                        }
-                    }
-                },
-            }
+        Always set input_types to enable connection handles:
+        - "embedding" -> ["Embeddings"]
+        - "language" (default) -> ["LanguageModel"]
+        """
+        # Always set input_types based on model_type if not explicitly provided
+        if not self.input_types:
+            default_input_type = "Embeddings" if self.model_type == "embedding" else "LanguageModel"
+            object.__setattr__(self, "input_types", [default_input_type])
+
         return self
 
 
@@ -359,11 +367,13 @@ class MultilineInput(MessageTextInput, AIMixin, MultilineMixin, InputTraceMixin,
     Attributes:
         field_type (SerializableFieldTypes): The type of the field. Defaults to FieldTypes.TEXT.
         multiline (CoalesceBool): Indicates whether the input field should support multiple lines. Defaults to True.
+        password (CoalesceBool): Whether to mask the input as a password field. Defaults to False.
     """
 
     field_type: SerializableFieldTypes = FieldTypes.TEXT
     multiline: CoalesceBool = True
     copy_field: CoalesceBool = False
+    password: CoalesceBool = Field(default=False)
 
 
 class MultilineSecretInput(MessageTextInput, MultilineMixin, InputTraceMixin):
@@ -451,6 +461,8 @@ class IntInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMixi
 
     field_type: SerializableFieldTypes = FieldTypes.INTEGER
     track_in_telemetry: CoalesceBool = True  # Safe numeric parameter
+
+    value: Any = 0
 
     @field_validator("value")
     @classmethod
@@ -788,6 +800,7 @@ InputTypes: TypeAlias = (
     | NestedDictInput
     | ToolsInput
     | PromptInput
+    | MustachePromptInput
     | CodeInput
     | SecretStrInput
     | StrInput
