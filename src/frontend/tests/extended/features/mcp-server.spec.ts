@@ -231,11 +231,11 @@ test(
 
     await page.getByTestId("add-mcp-server-button").click();
 
-    await page.waitForTimeout(500);
-
+    await page.waitForSelector(
+      `[data-testid="add-component-button-${testName}"]`,
+      { timeout: 30000, state: "visible" },
+    );
     await page.getByTestId(`add-component-button-${testName}`).click();
-
-    await page.waitForTimeout(500);
 
     await expect(page.getByTestId("dropdown_str_tool")).toBeVisible({
       timeout: 30000,
@@ -764,11 +764,15 @@ test(
       .first();
     await newFlowDiv.click();
 
+    await page.waitForSelector(
+      '[data-testid="generic-node-title-arrangement"]',
+      { timeout: 30000, state: "visible" },
+    );
     await page.getByText("MCP Tools", { exact: true }).last().click();
     await adjustScreenView(page);
     // Re-select the server after returning to flow (server reference may be lost after editing)
     await page.waitForSelector('[data-testid="mcp-server-dropdown"]', {
-      timeout: 10000,
+      timeout: 30000,
       state: "visible",
     });
     await page.getByTestId("mcp-server-dropdown").click();
@@ -863,11 +867,15 @@ test(
       .first();
     await newFlowDiv2.click();
 
+    await page.waitForSelector(
+      '[data-testid="generic-node-title-arrangement"]',
+      { timeout: 30000, state: "visible" },
+    );
     await page.getByText("MCP Tools", { exact: true }).last().click();
 
     // Re-select the server after returning to flow (server reference may be lost after editing)
     await page.waitForSelector('[data-testid="mcp-server-dropdown"]', {
-      timeout: 10000,
+      timeout: 30000,
       state: "visible",
     });
     await page.getByTestId("mcp-server-dropdown").click();
