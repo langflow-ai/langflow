@@ -268,7 +268,9 @@ export default function InputFileComponent({
                         )}
                         data-testid="button_open_file_management"
                       >
-                        {disabled ? getPlaceholder(disabled, placeholder) : selectedFiles.length !== 0 ? (
+                        {disabled ? (
+                          getPlaceholder(disabled, placeholder)
+                        ) : selectedFiles.length !== 0 ? (
                           <ForwardedIconComponent
                             name="Plus"
                             className="icon-size"
