@@ -1,4 +1,5 @@
 import ast
+import contextlib
 import shutil
 import tarfile
 from abc import ABC, abstractmethod
@@ -641,14 +642,50 @@ class BaseFileComponent(Component, ABC):
         file_path = self._file_path_as_list()
 
         if self.path and not file_path:
-            # Wrap self.path into a Data object
-            if isinstance(self.path, list):
-                for path in self.path:
-                    data_obj = Data(data={self.SERVER_FILE_PATH_FIELDNAME: path})
-                    add_file(data=data_obj, path=path, delete_after_processing=False)
-            else:
-                data_obj = Data(data={self.SERVER_FILE_PATH_FIELDNAME: self.path})
-                add_file(data=data_obj, path=self.path, delete_after_processing=False)
+            # 1. Collect initial raw items from self.path
+            raw_items = self.path if isinstance(self.path, list) else [self.path]
+            # 2. Flatten and extract paths
+            final_paths: list[tuple[Data, str]] = []
+            def process_item(item: Any):
+                if isinstance(item, Data):
+                    path_str = getattr(item, "get_text", lambda: None)() or item.data.get("text")
+                    if path_str:
+                        # Recursive check for stringified lists inside Data objects
+                        process_string(path_str, item)
+                elif isinstance(item, str):
+                    process_string(item, None)
+                elif isinstance(item, Path):
+                    final_paths.append((Data(data={self.SERVER_FILE_PATH_FIELDNAME: str(item)}), str(item)))
+
+            def process_string(s: str, original_data: Data | None):
+                s = s.strip()
+                if s.startswith("["):
+                    try:
+                        loaded = orjson.loads(s)
+                        # Handle double encoding: if loaded results in another stringified list
+                        if isinstance(loaded, str) and loaded.strip().startswith("["):
+                            with contextlib.suppress(orjson.JSONDecodeError):
+                                loaded = orjson.loads(loaded)
+
+                        if isinstance(loaded, list):
+                            for inner in loaded:
+                                if isinstance(inner, str):
+                                    process_string(inner, original_data)
+                                else:
+                                    process_item(inner)
+                            return
+                    except orjson.JSONDecodeError:
+                        pass
+                # If not a list or parsing failed, it's a single path
+                data_obj = original_data or Data(data={self.SERVER_FILE_PATH_FIELDNAME: s})
+                final_paths.append((data_obj, s))
+
+            for item in raw_items:
+                process_item(item)
+
+            # 3. Resolve and add validated files
+            for data_obj, path_str in final_paths:
+                add_file(data=data_obj, path=path_str, delete_after_processing=False)
         elif file_path:
             for obj in file_path:
                 server_file_path = obj.data.get(self.SERVER_FILE_PATH_FIELDNAME)

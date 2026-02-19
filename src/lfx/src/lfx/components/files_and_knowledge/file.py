@@ -286,8 +286,13 @@ class FileComponent(BaseFileComponent):
         file_names = []
         for fp in file_paths:
             if fp:
-                name = Path(fp).name
-                file_names.append(name)
+                if isinstance(fp, Data):
+                    text = getattr(fp, "get_text", lambda: None)() or fp.data.get("text")
+                    if text:
+                        file_names.append(Path(text).name)
+                elif isinstance(fp, str | Path):
+                    name = Path(fp).name
+                    file_names.append(name)
 
         if file_names:
             files_str = ", ".join(file_names)
@@ -590,24 +595,46 @@ class FileComponent(BaseFileComponent):
             from lfx.schema.data import Data
 
             # Use same resolution logic as BaseFileComponent (support storage paths)
-            path_str = str(file_path_str)
-            if parse_storage_path(path_str):
+            path_strs = []
+            if isinstance(file_path_str, str) and file_path_str.strip().startswith("["):
                 try:
-                    resolved_path = Path(self.get_full_path(path_str))
-                except (ValueError, AttributeError):
+                    loaded = json.loads(file_path_str)
+                    # Handle double-string encoding
+                    if isinstance(loaded, str) and loaded.strip().startswith("["):
+                        with contextlib.suppress(json.JSONDecodeError):
+                            loaded = json.loads(loaded)
+                            
+                    if isinstance(loaded, list):
+                        path_strs = [str(p) for p in loaded]
+                except json.JSONDecodeError:
+                    pass
+
+            if not path_strs:
+                path_strs = [str(file_path_str)]
+
+            resolved_files = []
+            for path_str in path_strs:
+                if parse_storage_path(path_str):
+                    try:
+                        resolved_path = Path(self.get_full_path(path_str))
+                    except (ValueError, AttributeError):
+                        resolved_path = Path(self.resolve_path(path_str))
+                else:
                     resolved_path = Path(self.resolve_path(path_str))
-            else:
-                resolved_path = Path(self.resolve_path(path_str))
 
-            if not resolved_path.exists():
-                msg = f"File or directory not found: {file_path_str}"
-                self.log(msg)
-                if not self.silent_errors:
-                    raise ValueError(msg)
-                return []
+                if not resolved_path.exists():
+                    msg = f"File or directory not found: {path_str}"
+                    self.log(msg)
+                    if not self.silent_errors:
+                        raise ValueError(msg)
+                    continue
 
-            data_obj = Data(data={self.SERVER_FILE_PATH_FIELDNAME: str(resolved_path)})
-            return [BaseFileComponent.BaseFile(data_obj, resolved_path, delete_after_processing=False)]
+                data_obj = Data(data={self.SERVER_FILE_PATH_FIELDNAME: str(resolved_path)})
+                resolved_files.append(
+                    BaseFileComponent.BaseFile(data_obj, resolved_path, delete_after_processing=False)
+                )
+
+            return resolved_files
 
         # Otherwise use the default implementation (uses path FileInput)
         return super()._validate_and_resolve_paths()
