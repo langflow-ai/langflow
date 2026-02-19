@@ -17,6 +17,8 @@ if TYPE_CHECKING:
     from lfx.services.interfaces import DeploymentServiceProtocol
     from lfx.services.settings.service import SettingsService
 
+_ADAPTER_REGISTRY = get_deployment_adapter_registry()
+
 
 class DeploymentRouterService(BaseDeploymentRouterService):
     """Resolves provider routing IDs into deployment adapter instances."""
@@ -28,7 +30,7 @@ class DeploymentRouterService(BaseDeploymentRouterService):
         super().__init__()
         self.settings_service = settings_service
         self._adapter_instances: dict[str, DeploymentServiceProtocol] = {}
-        self._adapter_registry = get_deployment_adapter_registry()
+        self._adapter_registry = _ADAPTER_REGISTRY
         config_dir = getattr(settings_service.settings, "config_dir", None)
         self._preload_builtin_adapter_modules()
         self._adapter_registry.discover_sub_services(config_dir=config_dir)
