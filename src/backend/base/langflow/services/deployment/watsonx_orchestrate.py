@@ -8,6 +8,7 @@ import zipfile
 from copy import deepcopy
 from dataclasses import dataclass
 from enum import Enum
+from functools import lru_cache
 from typing import TYPE_CHECKING, Any
 
 from fastapi import status
@@ -1149,6 +1150,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         return tool_id
 
     @staticmethod
+    @lru_cache(maxsize=2048)
     def _extract_error_detail(response_text: str) -> str | dict:
         """Extract a human-readable error detail from a ClientAPIException response.
 
