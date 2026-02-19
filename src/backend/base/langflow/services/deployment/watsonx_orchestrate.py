@@ -5,7 +5,6 @@ from __future__ import annotations
 import io
 import json
 import zipfile
-from copy import deepcopy
 from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING, Any
@@ -941,7 +940,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         }
 
     def _build_agent_clone_payload(self, current: dict[str, Any]) -> dict[str, Any]:
-        payload = deepcopy(current)  # TODO: deepcopy is not necessary here
+        payload = current.copy()
         payload.pop("id", None)
         payload.pop("created_at", None)
         payload.pop("updated_at", None)
