@@ -604,7 +604,6 @@ class BaseFileComponent(Component, ABC):
             data_obj = original_data or Data(data={self.SERVER_FILE_PATH_FIELDNAME: s})
             final_paths.append((data_obj, s))
 
-
         for item in raw_items:
             process_item(item)
 

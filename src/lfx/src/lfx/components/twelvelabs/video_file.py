@@ -168,10 +168,12 @@ class VideoFileComponent(BaseFileComponent):
                     continue
 
                 file_size = resolved_path.stat().st_size
-                video_data_list.append({
-                    "text": str(resolved_path),
-                    "metadata": {"source": str(resolved_path), "type": "video", "size": file_size},
-                })
+                video_data_list.append(
+                    {
+                        "text": str(resolved_path),
+                        "metadata": {"source": str(resolved_path), "type": "video", "size": file_size},
+                    }
+                )
 
             if not video_data_list:
                 return DataFrame()
