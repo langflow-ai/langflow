@@ -82,6 +82,15 @@ class ChunkDoclingDocumentComponent(Component):
             advanced=True,
             dynamic=True,
         ),
+        BoolInput(
+            name="always_emit_headings",
+            display_name="Always emit headings",
+            info="Emit headings even for empty sections.",
+            value=False,
+            show=True,
+            advanced=True,
+            dynamic=True,
+        ),
         MessageTextInput(
             name="doc_key",
             display_name="Doc Key",
@@ -177,6 +186,9 @@ class ChunkDoclingDocumentComponent(Component):
             )
         elif self.chunker == "HierarchicalChunker":
             chunker = HierarchicalChunker()
+        else:
+            msg = f"Unknown chunker: {self.chunker}"
+            raise ValueError(msg)
 
         results: list[Data] = []
         try:
