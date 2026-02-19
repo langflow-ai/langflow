@@ -1010,32 +1010,22 @@ help_advanced: ## show advanced and miscellaneous commands
 
 docs_port ?= 3030
 
-check_yarn:
-	@command -v yarn >/dev/null 2>&1 || { \
-		echo "$(RED)Error: yarn is not installed.$(NC)"; \
-		echo "$(YELLOW)The docs project requires yarn. Please install it:$(NC)"; \
-		echo "  brew install yarn"; \
-		echo "  # or"; \
-		echo "  npm install -g yarn"; \
-		exit 1; \
-	}
-
-docs_install: check_yarn ## install documentation dependencies
+docs_install: ## install documentation dependencies
 	@echo "$(GREEN)Installing documentation dependencies...$(NC)"
-	@cd docs && yarn install
+	@cd docs && npm install
 
 docs: docs_install ## start documentation development server (default port 3030)
 	@echo "$(GREEN)Starting documentation server at http://localhost:$(docs_port)$(NC)"
-	@cd docs && yarn start --port $(docs_port)
+	@cd docs && npm run start -- --port $(docs_port)
 
 docs_build: docs_install ## build documentation for production
 	@echo "$(GREEN)Building documentation...$(NC)"
-	@cd docs && yarn build
+	@cd docs && npm run build
 	@echo "$(GREEN)Documentation built successfully in docs/build/$(NC)"
 
 docs_serve: docs_build ## build and serve documentation locally
 	@echo "$(GREEN)Serving built documentation...$(NC)"
-	@cd docs && yarn serve --port $(docs_port)
+	@cd docs && npm run serve -- --port $(docs_port)
 
 ######################
 # INCLUDE FRONTEND MAKEFILE
