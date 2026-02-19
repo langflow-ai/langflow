@@ -20,7 +20,7 @@ from langflow.services.variable.service import DatabaseVariableService
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/models", tags=["Models"])
+router = APIRouter(prefix="/models", tags=["Models"], include_in_schema=False)
 
 # Variable names for storing disabled models and default models
 DISABLED_MODELS_VAR = "__disabled_models__"

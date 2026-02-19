@@ -1,7 +1,7 @@
 from langchain_text_splitters import CharacterTextSplitter
 
 from lfx.custom.custom_component.component import Component
-from lfx.io import DropdownInput, HandleInput, IntInput, MessageTextInput, Output
+from lfx.io import BoolInput, DropdownInput, HandleInput, IntInput, MessageTextInput, Output
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
@@ -63,14 +63,23 @@ class SplitTextComponent(Component):
             value="False",
             advanced=True,
         ),
+        BoolInput(
+            name="clean_output",
+            display_name="Clean Output",
+            info="When enabled, only the text column is included in the output. Metadata columns are removed.",
+            value=False,
+            advanced=True,
+        ),
     ]
 
     outputs = [
         Output(display_name="Chunks", name="dataframe", method="split_text"),
     ]
 
-    def _docs_to_data(self, docs) -> list[Data]:
-        return [Data(text=doc.page_content, data=doc.metadata) for doc in docs]
+    def _docs_to_data(self, docs, *, clean: bool = False) -> list[Data]:
+        return [
+            Data(text=doc.page_content) if clean else Data(text=doc.page_content, data=doc.metadata) for doc in docs
+        ]
 
     def _fix_separator(self, separator: str) -> str:
         """Fix common separator issues and convert to proper format."""
@@ -138,4 +147,6 @@ class SplitTextComponent(Component):
             raise TypeError(msg) from e
 
     def split_text(self) -> DataFrame:
-        return DataFrame(self._docs_to_data(self.split_text_base()))
+        docs = self.split_text_base()
+        df = DataFrame(self._docs_to_data(docs, clean=self.clean_output))
+        return df if self.clean_output else df.smart_column_order()
