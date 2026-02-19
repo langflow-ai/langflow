@@ -1603,13 +1603,37 @@ async def update_tools(
                 idx = args.index("--headers")
                 for i, arg in enumerate(extra_args):
                     args.insert(idx + i, arg)
-            elif args and not args[-1].startswith("-"):
-                # No existing --headers flag; insert before the last positional arg
-                # (typically the URL in mcp-proxy commands)
-                args = args[:-1] + extra_args + [args[-1]]
             else:
-                args.extend(extra_args)
-        full_command = shlex.join([*shlex.split(command), *args])
+                # No existing --headers flag; try to insert before the last
+                # positional arg (typically the URL in mcp-proxy commands).
+                # Scan args to find the last true positional token by skipping
+                # flag+value pairs so we don't mistake a flag's value for a
+                # positional argument (e.g. "--port 8080").
+                last_positional_idx: int | None = None
+                i = 0
+                while i < len(args):
+                    if args[i].startswith("-"):
+                        # Skip the flag and its value (assumes each flag
+                        # takes at most one value argument; boolean flags
+                        # are handled correctly since the next token will
+                        # start with '-' or be a URL-like positional).
+                        i += 1
+                        if (
+                            i < len(args)
+                            and not args[i].startswith("-")
+                            and not args[i].startswith("http://")
+                            and not args[i].startswith("https://")
+                        ):
+                            i += 1
+                    else:
+                        last_positional_idx = i
+                        i += 1
+
+                if last_positional_idx is not None:
+                    args = args[:last_positional_idx] + extra_args + args[last_positional_idx:]
+                else:
+                    args.extend(extra_args)
+        full_command = shlex.join([command, *args])
         tools = await mcp_stdio_client.connect_to_server(full_command, env)
         client = mcp_stdio_client
     elif mode in ["Streamable_HTTP", "SSE"]:

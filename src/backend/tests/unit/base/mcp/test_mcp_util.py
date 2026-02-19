@@ -506,6 +506,64 @@ class TestUpdateToolsStdioHeaders:
         assert full_command == "some-tool --verbose --debug --headers authorization 'Bearer tok'"
 
     @pytest.mark.asyncio
+    async def test_stdio_headers_appended_when_last_token_is_flag_value(self):
+        """When the last token is a flag's value, headers should be appended, not inserted before it."""
+        mock_stdio = AsyncMock(spec=MCPStdioClient)
+        mock_stdio.connect_to_server.return_value = []
+        mock_stdio._connected = True
+
+        server_config = {
+            "command": "some-tool",
+            "args": ["--port", "8080"],
+            "headers": {"Authorization": "Bearer tok"},
+        }
+
+        await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
+
+        full_command = mock_stdio.connect_to_server.call_args[0][0]
+        # 8080 is a value for --port, not a positional arg, so headers go at the end
+        assert full_command == "some-tool --port 8080 --headers authorization 'Bearer tok'"
+
+    @pytest.mark.asyncio
+    async def test_stdio_headers_inserted_before_positional_with_flag_value_pairs(self):
+        """Headers should be inserted before the last positional arg even when flag+value pairs precede it."""
+        mock_stdio = AsyncMock(spec=MCPStdioClient)
+        mock_stdio.connect_to_server.return_value = []
+        mock_stdio._connected = True
+
+        server_config = {
+            "command": "uvx",
+            "args": ["mcp-proxy", "--port", "8080", "http://localhost/streamable"],
+            "headers": {"X-Api-Key": "my-key"},
+        }
+
+        await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
+
+        full_command = mock_stdio.connect_to_server.call_args[0][0]
+        # --port 8080 is a flag pair; http://localhost/streamable is the positional arg
+        assert full_command == "uvx mcp-proxy --port 8080 --headers x-api-key my-key http://localhost/streamable"
+
+    @pytest.mark.asyncio
+    async def test_stdio_headers_inserted_before_last_positional_with_multiple_positionals(self):
+        """When multiple positional args exist, headers are inserted before the last one."""
+        mock_stdio = AsyncMock(spec=MCPStdioClient)
+        mock_stdio.connect_to_server.return_value = []
+        mock_stdio._connected = True
+
+        server_config = {
+            "command": "uvx",
+            "args": ["mcp-proxy", "--transport", "streamablehttp", "extra-pos-arg", "http://localhost/streamable"],
+            "headers": {"X-Key": "val"},
+        }
+
+        await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
+
+        full_command = mock_stdio.connect_to_server.call_args[0][0]
+        # Should insert before the last positional (the URL), not before "extra-pos-arg"
+        assert "--headers x-key val http://localhost/streamable" in full_command
+        assert "extra-pos-arg --headers" in full_command
+
+    @pytest.mark.asyncio
     async def test_stdio_does_not_mutate_original_config(self):
         """The original server_config args list should not be mutated."""
         mock_stdio = AsyncMock(spec=MCPStdioClient)

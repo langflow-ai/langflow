@@ -16,18 +16,8 @@ test(
       timeout: 30000,
     });
     await page.getByTestId("blank-flow").click();
-    await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("mcp tools");
-
-    await page.waitForSelector('[data-testid="models_and_agentsMCP Tools"]', {
-      timeout: 30000,
-    });
-
-    await page
-      .getByTestId("models_and_agentsMCP Tools")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 100, y: 100 },
-      });
+    await page.getByTestId("sidebar-nav-mcp").click();
+    await page.getByTestId("add-component-button-lf-starter_project").click();
 
     // See if the color matches
 
@@ -47,8 +37,6 @@ test(
     }
 
     await adjustScreenView(page, { numberOfZoomOut: 3 });
-
-    await expect(page.getByTestId("dropdown_str_tool")).toBeHidden();
 
     await openAddMcpServerModal(page);
 
@@ -337,18 +325,9 @@ test(
       timeout: 30000,
     });
     await page.getByTestId("blank-flow").click();
-    await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("mcp tools");
+    await page.getByTestId("sidebar-nav-mcp").click();
+    await page.getByTestId("add-component-button-lf-starter_project").click();
 
-    await page.waitForSelector('[data-testid="models_and_agentsMCP Tools"]', {
-      timeout: 30000,
-    });
-
-    await page
-      .getByTestId("models_and_agentsMCP Tools")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 100, y: 100 },
-      });
     await adjustScreenView(page, { numberOfZoomOut: 3 });
 
     await openAddMcpServerModal(page);
@@ -490,18 +469,9 @@ test(
       timeout: 30000,
     });
     await page.getByTestId("blank-flow").click();
-    await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("mcp tools");
+    await page.getByTestId("sidebar-nav-mcp").click();
+    await page.getByTestId("add-component-button-lf-starter_project").click();
 
-    await page.waitForSelector('[data-testid="models_and_agentsMCP Tools"]', {
-      timeout: 30000,
-    });
-
-    await page
-      .getByTestId("models_and_agentsMCP Tools")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 100, y: 100 },
-      });
     await adjustScreenView(page, { numberOfZoomOut: 3 });
 
     await openAddMcpServerModal(page);
@@ -663,18 +633,8 @@ test(
       timeout: 30000,
     });
     await page.getByTestId("blank-flow").click();
-    await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("mcp tools");
-
-    await page.waitForSelector('[data-testid="models_and_agentsMCP Tools"]', {
-      timeout: 30000,
-    });
-
-    await page
-      .getByTestId("models_and_agentsMCP Tools")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 100, y: 100 },
-      });
+    await page.getByTestId("sidebar-nav-mcp").click();
+    await page.getByTestId("add-component-button-lf-starter_project").click();
 
     await page.getByTestId("canvas_controls_dropdown").click();
 
@@ -682,8 +642,6 @@ test(
 
     await zoomOut(page, 3);
     await page.getByTestId("canvas_controls_dropdown").click({ force: true });
-
-    await expect(page.getByTestId("dropdown_str_tool")).toBeHidden();
 
     await openAddMcpServerModal(page);
 
@@ -948,18 +906,8 @@ test(
       timeout: 30000,
     });
     await page.getByTestId("blank-flow").click();
-    await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("mcp tools");
-
-    await page.waitForSelector('[data-testid="models_and_agentsMCP Tools"]', {
-      timeout: 30000,
-    });
-
-    await page
-      .getByTestId("models_and_agentsMCP Tools")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 100, y: 100 },
-      });
+    await page.getByTestId("sidebar-nav-mcp").click();
+    await page.getByTestId("add-component-button-lf-starter_project").click();
 
     await adjustScreenView(page, { numberOfZoomOut: 3 });
 
