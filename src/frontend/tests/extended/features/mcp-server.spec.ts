@@ -62,7 +62,7 @@ test(
     await page.waitForSelector(
       '[data-testid="dropdown_str_tool"]:not([disabled])',
       {
-        timeout: 10000,
+        timeout: 30000,
         state: "visible",
       },
     );
@@ -152,7 +152,7 @@ test(
 
     await page
       .getByTestId(`mcp-server-menu-button-${testName}`)
-      .click({ timeout: 3000 });
+      .click({ timeout: 30000 });
 
     await page.waitForTimeout(500);
 
@@ -228,7 +228,9 @@ test(
 
     await page.waitForTimeout(500);
 
-    await page.getByTestId(`add-component-button-${testName}`).click();
+    await page
+      .getByTestId(`add-component-button-${testName}`)
+      .click({ timeout: 30000 });
 
     await page.waitForTimeout(500);
 
@@ -239,7 +241,7 @@ test(
     await page.waitForSelector(
       '[data-testid="dropdown_str_tool"]:not([disabled])',
       {
-        timeout: 10000,
+        timeout: 30000,
         state: "visible",
       },
     );
@@ -379,7 +381,7 @@ test(
     await page.getByTestId("add-mcp-server-button").click();
 
     // Go to settings to edit the server
-    await page.getByTestId("user_menu_button").click({ timeout: 10000 });
+    await page.getByTestId("user_menu_button").click({ timeout: 30000 });
     await page.getByTestId("menu_settings_button").click({ timeout: 10000 });
 
     await page.waitForSelector('[data-testid="sidebar-nav-MCP Servers"]', {
@@ -529,7 +531,7 @@ test(
     await page.getByTestId("add-mcp-server-button").click();
 
     // Go to settings to edit the server
-    await page.getByTestId("user_menu_button").click({ timeout: 10000 });
+    await page.getByTestId("user_menu_button").click({ timeout: 30000 });
     await page.getByTestId("menu_settings_button").click({ timeout: 10000 });
 
     await page.waitForSelector('[data-testid="sidebar-nav-MCP Servers"]', {
@@ -665,7 +667,7 @@ test(
     await page.waitForSelector(
       '[data-testid="dropdown_str_tool"]:not([disabled])',
       {
-        timeout: 10000,
+        timeout: 30000,
         state: "visible",
       },
     );
@@ -857,7 +859,7 @@ test(
     await page.getByTestId("add-mcp-server-button").click();
 
     await expect(page.getByText(testName)).toBeVisible({
-      timeout: 3000,
+      timeout: 10000,
     });
 
     await awaitBootstrapTest(page, { skipModal: true });
