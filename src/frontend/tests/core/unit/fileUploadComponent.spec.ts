@@ -812,11 +812,10 @@ test(
       timeout: 1000,
     });
 
-
     // Get flow ID from URL
     const url = page.url();
     const flowId = url.split("/").slice(-1)[0];
-    
+
     await page
       .getByTestId("files_and_knowledgeRead File")
       .first()
@@ -879,7 +878,7 @@ test(
       timeout: 1000,
     });
 
-    await adjustScreenView(page, {numberOfZoomOut: 3});
+    await adjustScreenView(page, { numberOfZoomOut: 3 });
     await page
       .getByTestId("input_outputText Input")
       .first()
