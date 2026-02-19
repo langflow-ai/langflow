@@ -433,9 +433,9 @@ async def test_provider_variable_mapping_returns_full_variable_info(client: Asyn
         assert "is_list" in var
         assert "options" in var
 
-    # Check OpenAI primary variable
-    openai_api_key_var = openai_vars[0]
-    assert openai_api_key_var["variable_key"] == "OPENAI_API_KEY"
+    # Check OpenAI primary variable (order-independent)
+    openai_api_key_var = next((v for v in openai_vars if v["variable_key"] == "OPENAI_API_KEY"), None)
+    assert openai_api_key_var is not None
     assert openai_api_key_var["required"] is True
     assert openai_api_key_var["is_secret"] is True
 
