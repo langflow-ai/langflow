@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-from collections import OrderedDict
 from typing import TYPE_CHECKING, Any
 
 from lfx.log.logger import logger
@@ -47,8 +46,9 @@ class LangFuseTracer(BaseTracer):
         self.trace_id = trace_id
         self.user_id = user_id
         self.session_id = session_id
-        self.flow_id = trace_name.split(" - ")[-1]
-        self.spans: dict[str, LangfuseSpan] = OrderedDict()
+        # use rpartition to avoid splitting the whole string
+        self.flow_id = trace_name.rpartition(" - ")[2]
+        self.spans: dict[str, LangfuseSpan] = {}
 
         config = self._get_config()
         self._ready: bool = self._setup_langfuse(config) if config else False
@@ -220,11 +220,9 @@ class LangFuseTracer(BaseTracer):
 
     @staticmethod
     def _get_config() -> dict:
-        secret_key = os.getenv("LANGFUSE_SECRET_KEY", None)
-        public_key = os.getenv("LANGFUSE_PUBLIC_KEY", None)
-        host = os.getenv(
-            "LANGFUSE_BASE_URL", os.getenv("LANGFUSE_HOST", None)
-        )  # support legacy env var for backward compatibility
+        secret_key = os.environ.get("LANGFUSE_SECRET_KEY")
+        public_key = os.environ.get("LANGFUSE_PUBLIC_KEY")
+        host = os.environ.get("LANGFUSE_BASE_URL") or os.environ.get("LANGFUSE_HOST")
         if secret_key and public_key and host:
             return {"secret_key": secret_key, "public_key": public_key, "host": host}
         return {}
