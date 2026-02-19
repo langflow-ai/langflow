@@ -187,7 +187,8 @@ def main(argv=None):
                 print(f"Warning: Component {comp_name} in category {category_name} is missing code_hash. Skipping.")
                 continue
 
-            new_history = update_history(new_history, comp_name, code_hash, current_version)
+            qualified_name = f"{category_name}.{comp_name}"
+            new_history = update_history(new_history, qualified_name, code_hash, current_version)
 
     # Validate append-only constraint before saving
     validate_append_only(old_history, new_history)

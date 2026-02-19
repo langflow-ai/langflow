@@ -100,20 +100,22 @@ def test_main_function(tmp_path, mock_modules_dict):
         saved_history = mock_save.call_args[0][1]
 
         assert len(saved_history) == 3
-        assert "MyComponent" in saved_history
-        assert saved_history["MyComponent"]["versions"]["0.1.0"] == "hash_v1"
-        assert "AnotherComponent" in saved_history
-        assert saved_history["AnotherComponent"]["versions"]["0.1.0"] == "hash_v2"
-        assert "ThirdComponent" in saved_history
-        assert saved_history["ThirdComponent"]["versions"]["0.1.0"] == "hash_v3"
+        assert "category1.MyComponent" in saved_history
+        assert saved_history["category1.MyComponent"]["versions"]["0.1.0"] == "hash_v1"
+        assert "category1.AnotherComponent" in saved_history
+        assert saved_history["category1.AnotherComponent"]["versions"]["0.1.0"] == "hash_v2"
+        assert "category2.ThirdComponent" in saved_history
+        assert saved_history["category2.ThirdComponent"]["versions"]["0.1.0"] == "hash_v3"
 
 
 def test_all_real_component_names_are_unique():
-    """Test that all real component names loaded via _import_components are unique."""
+    """Test that all real qualified component names loaded via _import_components are unique."""
     modules_dict, _ = _import_components()  # Load real components
 
-    component_names = [
-        component_name for components_dict in modules_dict.values() for component_name in components_dict
+    qualified_names = [
+        f"{category_name}.{component_name}"
+        for category_name, components_dict in modules_dict.items()
+        for component_name in components_dict
     ]
 
-    assert len(component_names) == len(set(component_names))
+    assert len(qualified_names) == len(set(qualified_names))
