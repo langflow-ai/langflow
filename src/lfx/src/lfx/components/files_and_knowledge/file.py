@@ -596,19 +596,21 @@ class FileComponent(BaseFileComponent):
 
             # Use same resolution logic as BaseFileComponent (support storage paths)
             path_strs = []
-            if isinstance(file_path_str, str) and file_path_str.strip().startswith("["):
-                try:
-                    loaded = json.loads(file_path_str)
-                    # Handle double-string encoding
-                    if isinstance(loaded, str) and loaded.strip().startswith("["):
-                        try:
-                            loaded = json.loads(loaded)
-                        except json.JSONDecodeError as e:
-                            self.log(f"Warning: Double-encoded JSON parsing failed: {e}")
-                    if isinstance(loaded, list):
-                        path_strs = [str(p) for p in loaded]
-                except json.JSONDecodeError:
-                    pass
+            if isinstance(file_path_str, str):
+                s = file_path_str.strip()
+                if s.startswith(("[", '"[', "'[")):
+                    try:
+                        loaded = json.loads(s)
+                        # Handle double-string encoding
+                        if isinstance(loaded, str) and loaded.strip().startswith("["):
+                            try:
+                                loaded = json.loads(loaded)
+                            except json.JSONDecodeError as e:
+                                self.log(f"Warning: Double-encoded JSON parsing failed: {e}")
+                        if isinstance(loaded, list):
+                            path_strs = [str(p) for p in loaded]
+                    except json.JSONDecodeError:
+                        pass
 
             if not path_strs:
                 path_strs = [str(file_path_str)]
