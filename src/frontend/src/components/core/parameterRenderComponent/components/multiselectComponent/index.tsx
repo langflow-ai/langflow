@@ -28,6 +28,7 @@ export default function MultiselectComponent({
   editNode = false,
   id = "",
   showParameter = true,
+  hideOnSelection,
   inspectionPanel,
 }: InputProps<string[], MultiselectComponentType>): JSX.Element | null {
   const [open, setOpen] = useState(false);
@@ -97,6 +98,9 @@ export default function MultiselectComponent({
       });
     } else {
       handleOnNewValue({ value: [...treatedValue, currentValue] });
+    }
+    if (hideOnSelection) {
+      setOpen(false);
     }
   };
 

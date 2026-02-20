@@ -121,6 +121,7 @@ const ProviderConfigurationForm = ({
                       }
                       options={variable.options}
                       combobox={variable.combobox}
+                      hideOnSelection={true}
                       handleOnNewValue={(val) => {
                         const newArray = val.value as string[];
                         if (newArray && newArray.length > 0) {
