@@ -3,12 +3,11 @@ import { useParams } from "react-router-dom";
 
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
+import type { MCPTransport } from "@/controllers/API/queries/mcp/use-patch-install-mcp";
 import { ENABLE_MCP_COMPOSER } from "@/customization/feature-flags";
 import { useCustomIsLocalConnection } from "@/customization/hooks/use-custom-is-local-connection";
 import useTheme from "@/customization/hooks/use-custom-theme";
 import AuthModal from "@/modals/authModal";
-
-import type { MCPTransport } from "@/controllers/API/queries/mcp/use-patch-install-mcp";
 import { useFolderStore } from "@/stores/foldersStore";
 import { cn, getOS } from "@/utils/utils";
 import { useMcpServer } from "../hooks/useMcpServer";
@@ -65,7 +64,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   });
 
   return (
-    <div>
+    <div className="p-5">
       <div className="flex justify-between gap-4 items-start">
         <div>
           <div className="pb-2 font-medium" data-testid="mcp-server-title">

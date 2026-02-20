@@ -47,10 +47,10 @@ export const FilesPage = () => {
       data-testid="cards-wrapper"
     >
       <div className="flex h-full w-full flex-col xl:container">
-        <div className="flex flex-1 flex-col justify-start px-5 pt-10">
+        <div className="flex flex-1 flex-col justify-start px-5 pt-5">
           <div className="flex h-full flex-col justify-start">
             <div
-              className="flex items-center pb-8 text-xl font-semibold"
+              className="flex items-center pb-4 text-xl font-semibold"
               data-testid="mainpage_title"
             >
               <div className="h-7 w-10 transition-all group-data-[open=true]/sidebar-wrapper:md:w-0 lg:hidden">
