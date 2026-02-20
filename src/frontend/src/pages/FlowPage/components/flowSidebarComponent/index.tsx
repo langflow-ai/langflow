@@ -42,9 +42,7 @@ import isWrappedWithClass from "../PageComponent/utils/is-wrapped-with-class";
 import { CategoryGroup } from "./components/categoryGroup";
 import NoResultsMessage from "./components/emptySearchComponent";
 import EvaluationsSidebarGroup from "./components/EvaluationsSidebarGroup";
-import LogsSidebarGroup from "./components/LogsSidebarGroup";
 import MemoriesSidebarGroup from "./components/MemoriesSidebarGroup";
-import TracesSidebarGroup from "./components/TracesSidebarGroup";
 import McpSidebarGroup from "./components/McpSidebarGroup";
 import SavedComponentsSidebarGroup from "./components/SavedComponentsSidebarGroup";
 import MessagesSidebarGroup from "./components/MessagesSidebarGroup";
@@ -629,16 +627,15 @@ export function FlowSidebarComponent({
   const showMcp =
     (ENABLE_NEW_SIDEBAR && activeSection === "mcp") ||
     (hasSearchInput && hasMcpComponents && ENABLE_NEW_SIDEBAR);
-  const showLogs = ENABLE_NEW_SIDEBAR && activeSection === "logs";
-  const showTraces = ENABLE_NEW_SIDEBAR && activeSection === "traces";
+  const showRuns = ENABLE_NEW_SIDEBAR && activeSection === "runs";
   const showMessages = ENABLE_NEW_SIDEBAR && activeSection === "messages";
   const showEvaluations = ENABLE_NEW_SIDEBAR && activeSection === "evaluations";
   const showMemories = ENABLE_NEW_SIDEBAR && activeSection === "memories";
   const showSaved = ENABLE_NEW_SIDEBAR && activeSection === "saved";
 
-  // Collapse sidebar to just the nav strip when logs is active
+  // Collapse sidebar to just the nav strip when runs is active
   useEffect(() => {
-    if (!showLogs) return;
+    if (!showRuns) return;
     const wrapper = document.querySelector(
       ".group\\/sidebar-wrapper",
     ) as HTMLElement | null;
@@ -650,7 +647,7 @@ export function FlowSidebarComponent({
         wrapper.style.setProperty("--sidebar-width", "17.5rem");
       }
     };
-  }, [showLogs]);
+  }, [showRuns]);
 
   const [category, component] = getFilterComponent?.split(".") ?? ["", ""];
 
@@ -686,10 +683,10 @@ export function FlowSidebarComponent({
           className={cn(
             "flex flex-col h-full w-full group-data-[collapsible=icon]:hidden",
             ENABLE_NEW_SIDEBAR && "sidebar-segmented",
-            showLogs && "hidden",
+            showRuns && "hidden",
           )}
         >
-          {!showLogs && !showTraces && !showMessages && !showEvaluations && !showMemories && (
+          {!showRuns && !showMessages && !showEvaluations && !showMemories && (
             <SidebarHeaderComponent
               showConfig={showConfig}
               setShowConfig={setShowConfig}
@@ -713,17 +710,7 @@ export function FlowSidebarComponent({
             segmentedSidebar={ENABLE_NEW_SIDEBAR}
             className="flex-1 group-data-[collapsible=icon]:hidden gutter-stable"
           >
-            {showLogs ? (
-              <LogsSidebarGroup
-                selectedRunId={selectedRunId ?? null}
-                onSelectRun={onSelectRun ?? (() => {})}
-              />
-            ) : showTraces ? (
-              <TracesSidebarGroup
-                selectedTraceId={selectedTraceId ?? null}
-                onSelectTrace={onSelectTrace ?? (() => {})}
-              />
-            ) : showMessages ? (
+            {showMessages ? (
               <MessagesSidebarGroup
                 selectedSessionId={selectedSessionId ?? null}
                 onSelectSession={onSelectSession ?? (() => {})}
@@ -839,8 +826,7 @@ export function FlowSidebarComponent({
             )}
           </SidebarContent>
           {(ENABLE_NEW_SIDEBAR && activeSection === "mcp" && !hasMcpServers) ||
-          showLogs ||
-          showTraces ||
+          showRuns ||
           showMessages ||
           showEvaluations ||
           showMemories ||

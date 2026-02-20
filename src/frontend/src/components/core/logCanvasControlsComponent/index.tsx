@@ -7,7 +7,7 @@ const LogCanvasControls = () => {
   const { setActiveSection, open, toggleSidebar } = useSidebar();
 
   const handleOpenLogs = () => {
-    setActiveSection("logs");
+    setActiveSection("runs");
     if (!open) {
       toggleSidebar();
     }

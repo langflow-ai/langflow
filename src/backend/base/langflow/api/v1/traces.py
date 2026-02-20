@@ -54,27 +54,51 @@ async def _fetch_traces(
 
         traces = (await session.exec(stmt)).all()
 
-        # Get aggregated token counts per trace
+        # Get aggregated token counts per trace (leaf spans only to avoid double-counting)
         trace_ids = [trace.id for trace in traces]
         token_map: dict[str, int] = {}
         if trace_ids:
+            # Subquery: IDs of spans that are parents (i.e. have children)
+            parent_ids_subq = (
+                select(SpanTable.parent_span_id)
+                .where(SpanTable.parent_span_id != None)  # noqa: E711
+                .where(col(SpanTable.trace_id).in_(trace_ids))
+            ).subquery()
+
             token_stmt = (
                 select(
                     SpanTable.trace_id,
                     func.coalesce(func.sum(SpanTable.total_tokens), 0).label("sum_tokens"),
                 )
                 .where(col(SpanTable.trace_id).in_(trace_ids))
+                .where(col(SpanTable.id).notin_(select(parent_ids_subq)))
                 .group_by(SpanTable.trace_id)
             )
             token_rows = (await session.exec(token_stmt)).all()
             for row in token_rows:
                 token_map[str(row.trace_id)] = int(row.sum_tokens)
 
+        # Fetch root span inputs/outputs for each trace
+        io_map: dict[str, dict[str, Any]] = {}
+        if trace_ids:
+            root_spans_stmt = (
+                select(SpanTable)
+                .where(col(SpanTable.trace_id).in_(trace_ids))
+                .where(SpanTable.parent_span_id == None)  # noqa: E711
+            )
+            root_spans = (await session.exec(root_spans_stmt)).all()
+            for span in root_spans:
+                io_map[str(span.trace_id)] = {
+                    "input": span.inputs,
+                    "output": span.outputs,
+                }
+
         # Convert to response format
         trace_list = []
         for trace in traces:
             tid = str(trace.id)
             total_tokens = token_map.get(tid, trace.total_tokens)
+            io_data = io_map.get(tid, {})
             trace_list.append(
                 {
                     "id": tid,
@@ -86,6 +110,8 @@ async def _fetch_traces(
                     "totalCost": trace.total_cost,
                     "flowId": str(trace.flow_id),
                     "sessionId": trace.session_id,
+                    "input": io_data.get("input"),
+                    "output": io_data.get("output"),
                 }
             )
 
@@ -146,8 +172,9 @@ async def _fetch_single_trace(trace_id: UUID) -> dict[str, Any] | None:
         # Build hierarchical span tree
         span_tree = _build_span_tree(spans)
 
-        # Aggregate tokens from spans
-        total_tokens = sum(s.total_tokens or 0 for s in spans)
+        # Aggregate tokens from leaf spans only (parents already include children's tokens)
+        parent_ids = {s.parent_span_id for s in spans if s.parent_span_id}
+        total_tokens = sum(s.total_tokens or 0 for s in spans if s.id not in parent_ids)
 
         # Return trace with span tree in frontend-compatible format
         return {

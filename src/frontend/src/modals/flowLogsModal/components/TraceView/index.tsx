@@ -12,32 +12,21 @@ interface TraceViewProps {
   initialTraceId?: string | null;
 }
 
-/**
- * Format total cost as currency
- */
 function formatTotalCost(cost: number): string {
   if (cost === 0) return "$0.00";
   if (cost < 0.01) return `$${cost.toFixed(6)}`;
   return `$${cost.toFixed(4)}`;
 }
 
-/**
- * Format total latency
- */
 function formatTotalLatency(ms: number): string {
   if (ms < 1000) return `${ms}ms`;
   return `${(ms / 1000).toFixed(2)}s`;
 }
 
-/**
- * Main TraceView component showing hierarchical execution traces
- * Split panel layout: span tree on left, detail panel on right
- */
 export function TraceView({ flowId, initialTraceId }: TraceViewProps) {
   const [selectedTraceId, setSelectedTraceId] = useState<string | null>(initialTraceId ?? null);
   const [selectedSpan, setSelectedSpan] = useState<Span | null>(null);
 
-  // Sync selectedTraceId when initialTraceId changes (user clicks different trace in sidebar)
   useEffect(() => {
     if (initialTraceId) {
       setSelectedTraceId(initialTraceId);
@@ -45,26 +34,22 @@ export function TraceView({ flowId, initialTraceId }: TraceViewProps) {
     }
   }, [initialTraceId]);
 
-  // Fetch list of traces for this flow (only needed as fallback if no initialTraceId)
   const { data: tracesData, isLoading: isLoadingTraces } = useGetTracesQuery(
     { flowId: flowId ?? null, params: { page: 1, size: 10 } },
     { enabled: !!flowId && !initialTraceId },
   );
 
-  // Auto-select the first trace only when no initialTraceId is provided
   useEffect(() => {
     if (!initialTraceId && tracesData?.traces && tracesData.traces.length > 0 && !selectedTraceId) {
       setSelectedTraceId(tracesData.traces[0].id);
     }
   }, [tracesData, selectedTraceId, initialTraceId]);
 
-  // Fetch the selected trace with full span tree
   const { data: trace, isLoading: isLoadingTrace } = useGetTraceQuery(
     { traceId: selectedTraceId },
     { enabled: !!selectedTraceId },
   );
 
-  // Set initial selected span when trace changes
   useEffect(() => {
     if (trace?.spans && trace.spans.length > 0) {
       setSelectedSpan(trace.spans[0]);
@@ -77,27 +62,25 @@ export function TraceView({ flowId, initialTraceId }: TraceViewProps) {
 
   const isLoading = isLoadingTraces || isLoadingTrace;
 
-  // Loading state
   if (isLoading) {
     return (
-      <div className="flex h-full items-center justify-center">
+      <div className="flex h-full items-center justify-center bg-muted/30">
         <div className="flex flex-col items-center gap-2 text-muted-foreground">
           <Loading size={32} className="text-primary" />
-          <span className="text-sm">Loading traces...</span>
+          <span className="text-xs">Loading traces...</span>
         </div>
       </div>
     );
   }
 
-  // Empty state - no traces available
   if (!trace || !trace.spans || trace.spans.length === 0) {
     return (
-      <div className="flex h-full items-center justify-center">
+      <div className="flex h-full items-center justify-center bg-muted/30">
         <div className="flex flex-col items-center gap-3 text-muted-foreground">
-          <IconComponent name="Activity" className="h-12 w-12 opacity-50" />
+          <IconComponent name="Activity" className="h-10 w-10 opacity-40" />
           <div className="text-center">
             <p className="text-sm font-medium">No traces available</p>
-            <p className="mt-1 text-xs">
+            <p className="mt-1 text-xs text-muted-foreground">
               Run your flow to see execution traces here.
             </p>
           </div>
@@ -107,24 +90,23 @@ export function TraceView({ flowId, initialTraceId }: TraceViewProps) {
   }
 
   return (
-    <div className="flex h-full flex-col">
-      {/* Trace summary header */}
-      <div className="flex items-center justify-between border-b border-border px-4 py-2">
+    <div className="flex h-full flex-col bg-muted/30">
+      {/* Trace summary bar */}
+      <div className="flex items-center justify-between border-b border-border bg-background py-3 pl-6 pr-12">
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <IconComponent name="Activity" className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium">{trace.name}</span>
-          </div>
-          <span
+          <span className="text-xs text-muted-foreground">Trace Detail</span>
+          <span className="text-xs text-border">|</span>
+          <span className="text-xs font-semibold">{trace.name}</span>
+          <div
             className={cn(
-              "flex items-center gap-1 text-xs",
-              trace.status === "success" && "text-accent-emerald-foreground",
-              trace.status === "error" && "text-error-foreground",
-              trace.status === "running" && "text-muted-foreground",
+              "flex items-center gap-1 rounded-full px-2 py-0.5 text-xs",
+              trace.status === "success" && "bg-emerald-500/10 text-emerald-500",
+              trace.status === "error" && "bg-destructive/10 text-destructive",
+              trace.status === "running" && "bg-muted text-muted-foreground",
             )}
           >
             {trace.status === "success" && (
-              <IconComponent name="CheckCircle" className="h-3 w-3" />
+              <IconComponent name="CheckCircle2" className="h-3 w-3" />
             )}
             {trace.status === "error" && (
               <IconComponent name="XCircle" className="h-3 w-3" />
@@ -133,32 +115,32 @@ export function TraceView({ flowId, initialTraceId }: TraceViewProps) {
               <IconComponent name="Loader2" className="h-3 w-3 animate-spin" />
             )}
             {trace.status}
-          </span>
+          </div>
         </div>
         <div className="flex items-center gap-4 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1">
-            <IconComponent name="Clock" className="h-3 w-3" />
+          <span className="flex items-center gap-1.5">
+            <IconComponent name="Clock" className="h-3.5 w-3.5" />
             {formatTotalLatency(trace.totalLatencyMs)}
           </span>
           {trace.totalTokens > 0 && (
-            <span className="flex items-center gap-1">
-              <IconComponent name="Hash" className="h-3 w-3" />
-              {trace.totalTokens.toLocaleString()} tokens
+            <span className="flex items-center gap-1.5">
+              <IconComponent name="Coins" className="h-3.5 w-3.5" />
+              {trace.totalTokens.toLocaleString()}
             </span>
           )}
           {trace.totalCost > 0 && (
-            <span className="flex items-center gap-1">
-              <IconComponent name="DollarSign" className="h-3 w-3" />
+            <span className="flex items-center gap-1.5">
+              <IconComponent name="DollarSign" className="h-3.5 w-3.5" />
               {formatTotalCost(trace.totalCost)}
             </span>
           )}
         </div>
       </div>
 
-      {/* Main content: split panel */}
+      {/* Split panel */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Left panel: Span tree */}
-        <div className="w-1/3 min-w-[280px] overflow-y-auto border-r border-border p-2">
+        {/* Left: Span tree */}
+        <div className="w-[320px] min-w-[280px] overflow-y-auto border-r border-border bg-background p-1.5">
           <SpanTree
             spans={trace.spans ?? []}
             selectedSpanId={selectedSpan?.id ?? null}
@@ -166,8 +148,8 @@ export function TraceView({ flowId, initialTraceId }: TraceViewProps) {
           />
         </div>
 
-        {/* Right panel: Span details */}
-        <div className="flex-1 overflow-hidden">
+        {/* Right: Span detail */}
+        <div className="flex-1 overflow-hidden bg-background">
           <SpanDetail span={selectedSpan} />
         </div>
       </div>

@@ -10,7 +10,7 @@ interface TracesQueryParams {
   params?: Record<string, unknown>;
 }
 
-interface TraceListItem {
+export interface TraceListItem {
   id: string;
   name: string;
   status: string;
@@ -21,6 +21,8 @@ interface TraceListItem {
   totalCost: number;
   flowId: string;
   sessionId?: string;
+  input?: Record<string, unknown> | null;
+  output?: Record<string, unknown> | null;
 }
 
 interface TracesResponse {

@@ -21,13 +21,12 @@ import {
 } from "./components/flowSidebarComponent";
 import Page from "./components/PageComponent";
 import EvaluationsMainContent from "./components/EvaluationsMainContent";
-import LogsMainContent from "./components/LogsMainContent";
 import MemoriesMainContent from "./components/MemoriesMainContent";
 import MessagesMainContent from "./components/MessagesMainContent";
-import TracesMainContent from "./components/TracesMainContent";
+import RunsMainContent from "./components/RunsMainContent";
 
 /**
- * Wrapper component that conditionally renders Page, LogsMainContent, TracesMainContent,
+ * Wrapper component that conditionally renders Page, RunsMainContent,
  * MessagesMainContent, EvaluationsMainContent, or MemoriesMainContent
  * based on the active sidebar section
  */
@@ -35,9 +34,6 @@ function FlowMainContent({
   view,
   setIsLoading,
   selectedSessionId,
-  selectedRunId,
-  onSelectRun,
-  selectedTraceId,
   selectedEvaluationId,
   selectedMemoryId,
   onSelectMemory,
@@ -45,35 +41,18 @@ function FlowMainContent({
   view?: boolean;
   setIsLoading: (isLoading: boolean) => void;
   selectedSessionId: string | null;
-  selectedRunId: string | null;
-  onSelectRun: (runId: string | null) => void;
-  selectedTraceId: string | null;
   selectedEvaluationId: string | null;
   selectedMemoryId: string | null;
   onSelectMemory: (id: string | null) => void;
 }) {
   const { activeSection } = useSidebar();
 
-  // Show logs main content when logs section is active
-  if (ENABLE_NEW_SIDEBAR && activeSection === "logs") {
+  // Show runs main content when runs section is active
+  if (ENABLE_NEW_SIDEBAR && activeSection === "runs") {
     return (
       <main className="flex w-full overflow-hidden">
         <div className="h-full w-full">
-          <LogsMainContent
-            selectedRunId={selectedRunId}
-            onSelectRun={onSelectRun}
-          />
-        </div>
-      </main>
-    );
-  }
-
-  // Show traces main content when traces section is active
-  if (ENABLE_NEW_SIDEBAR && activeSection === "traces") {
-    return (
-      <main className="flex w-full overflow-hidden">
-        <div className="h-full w-full">
-          <TracesMainContent selectedTraceId={selectedTraceId} />
+          <RunsMainContent />
         </div>
       </main>
     );
@@ -268,10 +247,6 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const isMobile = useIsMobile();
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
 
-  // Logs state
-  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
-  const [selectedTraceId, setSelectedTraceId] = useState<string | null>(null);
-
   // Evaluations state
   const [selectedEvaluationId, setSelectedEvaluationId] = useState<string | null>(null);
 
@@ -294,10 +269,6 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
                     isLoading={isLoading}
                     selectedSessionId={selectedSessionId}
                     onSelectSession={setSelectedSessionId}
-                    selectedRunId={selectedRunId}
-                    onSelectRun={setSelectedRunId}
-                    selectedTraceId={selectedTraceId}
-                    onSelectTrace={setSelectedTraceId}
                     selectedEvaluationId={selectedEvaluationId}
                     onSelectEvaluation={setSelectedEvaluationId}
                     selectedMemoryId={selectedMemoryId}
@@ -308,9 +279,6 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
                   view={view}
                   setIsLoading={setIsLoading}
                   selectedSessionId={selectedSessionId}
-                  selectedRunId={selectedRunId}
-                  onSelectRun={setSelectedRunId}
-                  selectedTraceId={selectedTraceId}
                   selectedEvaluationId={selectedEvaluationId}
                   selectedMemoryId={selectedMemoryId}
                   onSelectMemory={setSelectedMemoryId}

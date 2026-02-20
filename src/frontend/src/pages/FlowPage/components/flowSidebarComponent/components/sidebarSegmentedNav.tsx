@@ -65,16 +65,10 @@ export const NAV_ITEMS: NavItem[] = [
     tooltip: "Memories",
   },
   {
-    id: "logs",
-    icon: "ScrollText",
-    label: "Logs",
-    tooltip: "Logs",
-  },
-  {
-    id: "traces",
+    id: "runs",
     icon: "Activity",
-    label: "Traces",
-    tooltip: "Traces",
+    label: "Runs",
+    tooltip: "Runs",
   },
 ];
 
@@ -92,7 +86,7 @@ const SidebarSegmentedNav = () => {
       <SidebarMenu className="gap-2 py-1">
         {NAV_ITEMS.map((item) => (
           <div key={item.id}>
-            {(item.id === "messages" || item.id === "logs") && (
+            {(item.id === "messages" || item.id === "runs") && (
               <Separator className="mb-2 w-full" />
             )}
             <SidebarMenuItem className="px-1">
@@ -102,7 +96,7 @@ const SidebarSegmentedNav = () => {
                   disabled={item.id === "saved" && !hasSavedComponents}
                   onClick={() => {
                     setSearch?.("");
-                    const isMainContentSection = ["logs", "traces", "messages", "evaluations", "memories"].includes(item.id);
+                    const isMainContentSection = ["runs", "messages", "evaluations", "memories"].includes(item.id);
                     if (activeSection === item.id && open) {
                       if (isMainContentSection) {
                         setActiveSection("components");

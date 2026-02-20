@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import { Badge } from "@/components/ui/badge";
 import IconComponent from "@/components/common/genericIconComponent";
 import { useTypesStore } from "@/stores/typesStore";
 import { cn } from "@/utils/utils";
@@ -14,9 +13,6 @@ interface SpanNodeProps {
   onSelect: () => void;
 }
 
-/**
- * Get the fallback icon name for each span type
- */
 function getSpanTypeIcon(type: SpanType): string {
   const iconMap: Record<SpanType, string> = {
     agent: "Bot",
@@ -30,9 +26,6 @@ function getSpanTypeIcon(type: SpanType): string {
   return iconMap[type] || "Circle";
 }
 
-/**
- * Hook to build a lookup from component display_name to its icon
- */
 function useComponentIconMap(): Record<string, string> {
   const data = useTypesStore((state) => state.data);
   return useMemo(() => {
@@ -48,45 +41,17 @@ function useComponentIconMap(): Record<string, string> {
   }, [data]);
 }
 
-/**
- * Get the badge variant based on status
- */
-function getStatusVariant(
-  status: Span["status"],
-): "successStatic" | "errorStatic" | "secondaryStatic" {
-  switch (status) {
-    case "success":
-      return "successStatic";
-    case "error":
-      return "errorStatic";
-    case "running":
-      return "secondaryStatic";
-    default:
-      return "secondaryStatic";
-  }
-}
-
-/**
- * Format latency in a human-readable way
- */
 function formatLatency(ms: number): string {
   if (ms < 1000) return `${ms}ms`;
   return `${(ms / 1000).toFixed(1)}s`;
 }
 
-/**
- * Format token count with abbreviation for large numbers
- */
 function formatTokens(tokens: number | undefined): string | null {
   if (!tokens) return null;
   if (tokens < 1000) return `${tokens}`;
   return `${(tokens / 1000).toFixed(1)}k`;
 }
 
-/**
- * Single span row in the trace tree
- * Shows icon, name, latency, token count, and status
- */
 export function SpanNode({
   span,
   depth,
@@ -98,15 +63,13 @@ export function SpanNode({
   const hasChildren = span.children.length > 0;
   const tokenStr = formatTokens(span.tokenUsage?.totalTokens);
   const iconMap = useComponentIconMap();
-
-  // Use component icon if available, otherwise fall back to span type icon
   const iconName = iconMap[span.name] || getSpanTypeIcon(span.type);
 
   return (
     <div
       className={cn(
-        "flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 transition-colors",
-        "hover:bg-muted/50",
+        "group flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1.5 transition-colors",
+        "hover:bg-muted/60",
         isSelected && "bg-muted",
       )}
       style={{ paddingLeft: `${depth * 16 + 8}px` }}
@@ -115,10 +78,10 @@ export function SpanNode({
       aria-selected={isSelected}
       aria-expanded={hasChildren ? isExpanded : undefined}
     >
-      {/* Expand/collapse button */}
+      {/* Expand/collapse */}
       <button
         className={cn(
-          "flex h-4 w-4 items-center justify-center rounded-sm text-muted-foreground transition-colors",
+          "flex h-4 w-4 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition-colors",
           hasChildren && "hover:bg-muted-foreground/20",
           !hasChildren && "invisible",
         )}
@@ -135,55 +98,58 @@ export function SpanNode({
         />
       </button>
 
-      {/* Span icon — uses component icon when available */}
+      {/* Span icon */}
       <div
         className={cn(
-          "flex h-5 w-5 items-center justify-center rounded",
-          span.status === "error" && "text-error-foreground",
-          span.status === "success" && "text-foreground",
+          "flex h-5 w-5 shrink-0 items-center justify-center rounded",
+          span.status === "error" && "text-destructive",
+          span.status === "success" && "text-muted-foreground",
           span.status === "running" && "text-muted-foreground",
         )}
       >
-        <IconComponent name={iconName} className="h-4 w-4" />
+        <IconComponent name={iconName} className="h-3.5 w-3.5" />
       </div>
 
-      {/* Span name */}
+      {/* Name */}
       <span
         className={cn(
-          "flex-1 truncate text-sm font-medium",
-          span.status === "error" && "text-error-foreground",
+          "flex-1 truncate text-xs",
+          isSelected ? "font-medium" : "font-normal",
+          span.status === "error" && "text-destructive",
         )}
       >
         {span.name}
       </span>
 
-      {/* Token count (if applicable) */}
+      {/* Tokens */}
       {tokenStr && (
-        <span className="flex items-center gap-0.5 text-xs text-muted-foreground">
+        <span className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground">
           <IconComponent name="Coins" className="h-3 w-3" />
           {tokenStr}
         </span>
       )}
 
       {/* Latency */}
-      <span className="min-w-[48px] text-right text-xs text-muted-foreground">
+      <span className="min-w-[40px] shrink-0 text-right text-xs text-muted-foreground">
         {formatLatency(span.latencyMs)}
       </span>
 
-      {/* Status badge */}
-      <Badge
-        variant={getStatusVariant(span.status)}
-        size="xq"
-        className="min-w-[16px]"
-      >
-        {span.status === "running" ? (
-          <IconComponent name="Loader2" className="h-3 w-3 animate-spin" />
-        ) : span.status === "success" ? (
-          <IconComponent name="Check" className="h-3 w-3" />
-        ) : (
-          <IconComponent name="X" className="h-3 w-3" />
+      {/* Status icon */}
+      <IconComponent
+        name={
+          span.status === "running"
+            ? "Loader2"
+            : span.status === "success"
+              ? "CheckCircle2"
+              : "XCircle"
+        }
+        className={cn(
+          "h-3.5 w-3.5 shrink-0",
+          span.status === "success" && "text-emerald-500",
+          span.status === "error" && "text-destructive",
+          span.status === "running" && "animate-spin text-muted-foreground",
         )}
-      </Badge>
+      />
     </div>
   );
 }
