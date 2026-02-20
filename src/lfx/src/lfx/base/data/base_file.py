@@ -578,14 +578,18 @@ class BaseFileComponent(Component, ABC):
                 path_str = getattr(item, "get_text", lambda: None)() or item.data.get("text")
                 if path_str:
                     process_string(path_str, item)
+                else:
+                    self.log(f"Data object has no text/path, skipping: {item}")
             elif isinstance(item, str):
                 process_string(item, None)
             elif isinstance(item, Path):
                 final_paths.append((Data(data={self.SERVER_FILE_PATH_FIELDNAME: str(item)}), str(item)))
+            else:
+                self.log(f"Ignoring unsupported item type in path resolution: {type(item).__name__}")
 
         def process_string(s: str, original_data: Data | None):
             s = s.strip()
-            if s.startswith("["):
+            if s.startswith(("[", '"[', "'[")):
                 try:
                     loaded = orjson.loads(s)
                     if isinstance(loaded, str) and loaded.strip().startswith("["):
@@ -599,7 +603,16 @@ class BaseFileComponent(Component, ABC):
                                 process_item(inner)
                         return
                 except orjson.JSONDecodeError:
-                    pass
+                    # Attempt to safely evaluate if it's a strongly quoted string
+                    try:
+                        import ast
+                        evaluated = ast.literal_eval(s)
+                        if isinstance(evaluated, str) and evaluated.strip().startswith("["):
+                            process_string(evaluated, original_data)
+                            return
+                    except (SyntaxError, ValueError):
+                        pass
+                    self.log(f"String looks like JSON but failed to parse, treating as literal path: {s[:100]}...")
 
             data_obj = original_data or Data(data={self.SERVER_FILE_PATH_FIELDNAME: s})
             final_paths.append((data_obj, s))

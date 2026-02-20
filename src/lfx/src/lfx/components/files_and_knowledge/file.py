@@ -601,8 +601,10 @@ class FileComponent(BaseFileComponent):
                     loaded = json.loads(file_path_str)
                     # Handle double-string encoding
                     if isinstance(loaded, str) and loaded.strip().startswith("["):
-                        with contextlib.suppress(json.JSONDecodeError):
+                        try:
                             loaded = json.loads(loaded)
+                        except json.JSONDecodeError as e:
+                            self.log(f"Warning: Double-encoded JSON parsing failed: {e}")
                     if isinstance(loaded, list):
                         path_strs = [str(p) for p in loaded]
                 except json.JSONDecodeError:

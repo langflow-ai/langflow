@@ -164,7 +164,10 @@ class VideoFileComponent(BaseFileComponent):
                 resolved_path = Path(self.resolve_path(path_str))
 
                 if not resolved_path.exists():
-                    self.log(f"DEBUG: Video file not found at path: {resolved_path}")
+                    msg = f"Video file not found at path: {resolved_path}"
+                    self.log(f"WARNING: {msg}")
+                    if not getattr(self, "silent_errors", False):
+                        raise FileNotFoundError(msg)
                     continue
 
                 file_size = resolved_path.stat().st_size
@@ -182,12 +185,18 @@ class VideoFileComponent(BaseFileComponent):
             self.log(f"DEBUG: Returning {len(video_data_list)} video Data objects")
         except (FileNotFoundError, PermissionError, OSError) as e:
             self.log(f"DEBUG: File error in video load_files: {e!s}", "ERROR")
+            if not getattr(self, "silent_errors", False):
+                raise
             return DataFrame()
         except ImportError as e:
             self.log(f"DEBUG: Import error in video load_files: {e!s}", "ERROR")
+            if not getattr(self, "silent_errors", False):
+                raise
             return DataFrame()
         except (ValueError, TypeError) as e:
             self.log(f"DEBUG: Value or type error in video load_files: {e!s}", "ERROR")
+            if not getattr(self, "silent_errors", False):
+                raise
             return DataFrame()
         else:
             return result
