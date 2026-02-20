@@ -46,14 +46,20 @@ class SplitTextComponent(Component):
             info="Number of characters to overlap between consecutive chunks.",
             value=200,
         ),
-        MessageTextInput(
+        DropdownInput(
             name="separator",
             display_name="Separator",
-            info=(
-                "The character to split on. Use \\n for newline. "
-                "Examples: \\n\\n for paragraphs, \\n for lines, . for sentences"
-            ),
-            value="\n\n",
+            info="The character to split on.",
+            options=["/n/n", "/n", ".", ",", '" "', '""', "Custom"],
+            value="/n/n",
+            show=False,
+            real_time_refresh=True,
+        ),
+        MessageTextInput(
+            name="custom_separator",
+            display_name="Custom Separator",
+            info="Enter a custom separator. Use \\n for newline, \\t for tab.",
+            value="",
             show=False,
         ),
         MessageTextInput(
@@ -86,7 +92,13 @@ class SplitTextComponent(Component):
 
     def update_build_config(self, build_config, field_value, field_name=None):
         if field_name == "mode":
-            build_config["separator"]["show"] = field_value == "Character"
+            is_character_mode = field_value == "Character"
+            build_config["separator"]["show"] = is_character_mode
+            build_config["custom_separator"]["show"] = (
+                is_character_mode and build_config["separator"]["value"] == "Custom"
+            )
+        if field_name == "separator":
+            build_config["custom_separator"]["show"] = field_value == "Custom"
         return build_config
 
     def _docs_to_data(self, docs, *, clean: bool = False) -> list[Data]:
@@ -95,10 +107,16 @@ class SplitTextComponent(Component):
         ]
 
     def _fix_separator(self, separator: str) -> str:
+        if separator == "/n/n":
+            return "\n\n"
         if separator == "/n":
             return "\n"
         if separator == "/t":
             return "\t"
+        if separator == '" "':
+            return " "
+        if separator == '""':
+            return ""
         return separator
 
     def _parse_keep_separator(self, value: str) -> bool | str:
@@ -148,7 +166,10 @@ class SplitTextComponent(Component):
         return documents
 
     def _split_by_character(self, documents):
-        separator = unescape_string(self._fix_separator(self.separator))
+        if self.separator == "Custom":
+            separator = unescape_string(self.custom_separator)
+        else:
+            separator = unescape_string(self._fix_separator(self.separator))
         keep_sep = self._parse_keep_separator(self.keep_separator)
         splitter = CharacterTextSplitter(
             separator=separator,
