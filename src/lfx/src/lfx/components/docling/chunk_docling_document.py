@@ -183,7 +183,9 @@ class ChunkDoclingDocumentComponent(Component):
             chunker = HybridChunker(
                 tokenizer=tokenizer,
                 merge_peers=bool(self.merge_peers),
+                always_emit_headings=bool(self.always_emit_headings),
             )
+
         elif self.chunker == "HierarchicalChunker":
             chunker = HierarchicalChunker()
         else:

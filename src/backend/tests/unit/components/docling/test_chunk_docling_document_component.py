@@ -71,13 +71,31 @@ class TestChunkDoclingDocumentComponentHybridChunker:
             (None, False),
         ],
     )
-    def test_hybrid_chunker_receives_merge_peers(self, monkeypatch, merge_peers_input, expected_merge_peers):
+    @pytest.mark.parametrize(
+        ("always_emit_headings_input", "expected_always_emit_headings"),
+        [
+            (True, True),
+            (False, False),
+            (1, True),
+            (0, False),
+            (None, False),
+        ],
+    )
+    def test_hybrid_chunker_receives_flags(
+        self,
+        monkeypatch,
+        merge_peers_input,
+        expected_merge_peers,
+        always_emit_headings_input,
+        expected_always_emit_headings,
+    ):
         captured = {}
 
         class DummyHybridChunker:
-            def __init__(self, tokenizer, *, merge_peers=False):
+            def __init__(self, tokenizer, *, merge_peers=False, always_emit_headings=False):
                 captured["tokenizer"] = tokenizer
                 captured["merge_peers"] = merge_peers
+                captured["always_emit_headings"] = always_emit_headings
 
             def chunk(self):
                 return []
@@ -111,6 +129,7 @@ class TestChunkDoclingDocumentComponentHybridChunker:
             "hf_model_name": "sentence-transformers/all-MiniLM-L6-v2",
             "max_tokens": 256,
             "merge_peers": merge_peers_input,
+            "always_emit_headings": always_emit_headings_input,
             "doc_key": "doc",
         }
 
@@ -124,3 +143,4 @@ class TestChunkDoclingDocumentComponentHybridChunker:
         assert captured["model_name"] == "sentence-transformers/all-MiniLM-L6-v2"
         assert captured["max_tokens"] == 256
         assert captured["merge_peers"] is expected_merge_peers
+        assert captured["always_emit_headings"] is expected_always_emit_headings
