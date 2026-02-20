@@ -73,3 +73,78 @@ export const MOCK_SNAPSHOTS = [
     updatedDate: "2026-02-18",
   },
 ];
+
+export const MOCK_PROVIDERS = [
+  {
+    id: "langflow-cloud",
+    name: "Langflow Cloud",
+    subLabel: "Langflow",
+    icon: "LangflowLogo",
+    iconBg: "bg-zinc-700",
+    iconColor: "text-white",
+    status: "Connected",
+    endpoint: "https://cloud.langflow.io",
+    lastVerified: "6 days ago",
+    deployments: 12,
+  },
+  {
+    id: "watsonx",
+    name: "watsonx Orchestrate",
+    subLabel: "watsonx",
+    icon: "WatsonxAI",
+    iconBg: "bg-blue-600",
+    iconColor: "text-white",
+    status: "Connected",
+    endpoint: "https://api.watsonx-orchestrate.ibm.com/inst",
+    lastVerified: "6 days ago",
+    deployments: 8,
+  },
+  {
+    id: "aws",
+    name: "AWS Cloud Deploy",
+    subLabel: "cloud",
+    icon: "AWS",
+    iconBg: "bg-[#232F3E]",
+    iconColor: "text-[#FF9900]",
+    status: "Error",
+    endpoint: "https://aws.example.com",
+    lastVerified: "6 days ago",
+    deployments: 3,
+  },
+  {
+    id: "azure",
+    name: "Azure Functions",
+    subLabel: "cloud",
+    icon: "Azure",
+    iconBg: "bg-[#0078D4]",
+    iconColor: "text-white",
+    status: "Connected",
+    endpoint: "https://azure-functions.microsoft.com",
+    lastVerified: "6 days ago",
+    deployments: 5,
+  },
+];
+
+export const MOCK_CONFIGURATIONS = [
+  {
+    id: "config-1",
+    name: "Standard Production Config",
+    description: "Default configuration for production environments",
+    usedBy: 15,
+    created: "Jan 14, 2026",
+  },
+  {
+    id: "config-2",
+    name: "Test Environment Config",
+    description: "Lightweight configuration for testing environments",
+    usedBy: 8,
+    created: "Jan 19, 2026",
+  },
+  {
+    id: "config-3",
+    name: "High Performance Config",
+    description: "Enhanced configuration for high-load scenarios",
+    usedBy: 3,
+    created: "Jan 31, 2026",
+  },
+];

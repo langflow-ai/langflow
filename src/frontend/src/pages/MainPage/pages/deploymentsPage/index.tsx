@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { StepperModal, StepperModalFooter } from "@/modals/stepperModal";
 import { columnDefs } from "./columnDefs";
 import { TOGGLE_OPTIONS, TOTAL_STEPS } from "./constants";
+import { DeploymentProvidersView } from "./DeploymentProvidersView";
 import { MOCK_DEPLOYMENTS } from "./mockData";
 import { StepAttach } from "./steps/StepAttach";
 import { StepBasics } from "./steps/StepBasics";
@@ -51,8 +52,8 @@ const DeploymentsTab = () => {
           <div
             className="absolute h-7 rounded-md bg-muted shadow-sm transition-all duration-200"
             style={{
-              width: activeView === "All Deployments" ? 133 : 165,
-              left: activeView === "All Deployments" ? "4px" : 137,
+              width: activeView === "Live Deployments" ? 133 : 175,
+              left: activeView === "Live Deployments" ? "4px" : 141,
             }}
           />
           {TOGGLE_OPTIONS.map((option) => (
@@ -71,30 +72,48 @@ const DeploymentsTab = () => {
         </div>
         <Button
           className="flex items-center gap-2 font-semibold"
-          onClick={() => handleOpenChange(true)}
+          onClick={() => {
+            if (activeView === "Deployment Providers") {
+              // TODO: Open provider modal
+              alert("Open provider modal");
+            } else {
+              handleOpenChange(true);
+            }
+          }}
         >
-          <ForwardedIconComponent name="Plus" /> New Deployment
+          <ForwardedIconComponent name="Plus" />{" "}
+          {activeView === "Deployment Providers"
+            ? "Add Provider"
+            : "New Deployment"}
         </Button>
       </div>
 
-      <div className="flex h-full flex-col pt-4">
-        <div className="relative h-full">
-          <TableComponent
-            rowHeight={65}
-            cellSelection={false}
-            tableOptions={{ hide_options: true }}
-            columnDefs={columnDefs}
-            rowData={MOCK_DEPLOYMENTS}
-            className="w-full ag-no-border"
-            pagination
-            quickFilterText=""
-            gridOptions={{
-              ensureDomOrder: true,
-              colResizeDefault: "shift",
-            }}
-          />
+      {activeView === "Deployment Providers" && (
+        <div className="pt-4">
+          <DeploymentProvidersView />
         </div>
-      </div>
+      )}
+
+      {activeView === "Live Deployments" && (
+        <div className="flex h-full flex-col pt-4">
+          <div className="relative h-full">
+            <TableComponent
+              rowHeight={65}
+              cellSelection={false}
+              tableOptions={{ hide_options: true }}
+              columnDefs={columnDefs}
+              rowData={MOCK_DEPLOYMENTS}
+              className="w-full ag-no-border"
+              pagination
+              quickFilterText=""
+              gridOptions={{
+                ensureDomOrder: true,
+                colResizeDefault: "shift",
+              }}
+            />
+          </div>
+        </div>
+      )}
       <StepperModal
         open={newDeploymentOpen}
         onOpenChange={handleOpenChange}

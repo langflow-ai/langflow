@@ -5,8 +5,8 @@ export const STATUS_DOT: Record<string, string> = {
 };
 
 export const TOGGLE_OPTIONS = [
-  "All Deployments",
-  "Deployment Provider",
+  "Live Deployments",
+  "Deployment Providers",
 ] as const;
 export type DeploymentView = (typeof TOGGLE_OPTIONS)[number];
 
