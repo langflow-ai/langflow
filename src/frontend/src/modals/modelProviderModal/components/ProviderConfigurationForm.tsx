@@ -253,18 +253,19 @@ const ProviderConfigurationForm = ({
             )}
           </AnimatePresence>
           {/* Save button - only enabled when validation passes */}
-          <Button
-            onClick={onSave}
-            loading={isSaving}
-            disabled={!canSave || isSaving}
-            className="mt-2"
-          >
-            {isSaving
-              ? "Saving..."
-              : validationFailed
-                ? "Retry Save"
-                : "Save Configuration"}
-          </Button>
+          <div className="flex justify-end mt-2">
+            <Button
+              onClick={onSave}
+              loading={isSaving}
+              disabled={!canSave || isSaving}
+            >
+              {isSaving
+                ? "Saving..."
+                : validationFailed
+                  ? "Retry Save"
+                  : "Save Configuration"}
+            </Button>
+          </div>
           {selectedProvider.is_enabled && (
             <div className="flex justify-end mt-2">
               <Button
