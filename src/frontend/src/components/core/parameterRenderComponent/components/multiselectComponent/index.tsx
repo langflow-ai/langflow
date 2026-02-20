@@ -70,11 +70,7 @@ export default function MultiselectComponent({
 
   useEffect(() => {
     searchRoleByTerm(searchValue);
-  }, [onlySelected]);
-
-  useEffect(() => {
-    searchRoleByTerm(searchValue);
-  }, [options]);
+  }, [searchValue, onlySelected, options]);
 
   useEffect(() => {
     setCustomValues(
