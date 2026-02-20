@@ -9,6 +9,7 @@ interface SpanDetailProps {
 
 function getSpanTypeLabel(type: SpanType): string {
   const labelMap: Record<SpanType, string> = {
+    run: "Run",
     agent: "Agent",
     chain: "Chain",
     llm: "LLM",
@@ -55,7 +56,7 @@ export function SpanDetail({ span }: SpanDetailProps) {
   const hasInputs = Object.keys(span.inputs).length > 0;
   const hasOutputs = Object.keys(span.outputs).length > 0;
   const hasTokenUsage = span.tokenUsage && span.tokenUsage.totalTokens > 0;
-  const isLlmSpan = span.type === "llm";
+  const showTokens = span.type === "llm" || span.type === "run";
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -118,7 +119,7 @@ export function SpanDetail({ span }: SpanDetailProps) {
             value={formatLatency(span.latencyMs)}
             icon="Clock"
           />
-          {(hasTokenUsage || isLlmSpan) && (
+          {(hasTokenUsage || showTokens) && (
             <>
               <MetricCard
                 label="Tokens"

@@ -150,7 +150,7 @@ export default function RunsMainContent() {
   return (
     <div className="flex h-full w-full flex-col bg-muted/30">
       {/* Header + Toolbar */}
-      <div className="flex items-center gap-3 border-b border-border bg-background px-6 py-3">
+      <div className="flex h-[52px] shrink-0 items-center gap-3 border-b border-border bg-background px-6">
         {/* Title + stats */}
         <h2 className="text-sm font-semibold">Runs</h2>
         <span className="text-xs text-muted-foreground">&middot;</span>

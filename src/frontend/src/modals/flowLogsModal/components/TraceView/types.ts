@@ -1,4 +1,4 @@
-export type SpanType = "chain" | "llm" | "tool" | "retriever" | "embedding" | "parser" | "agent";
+export type SpanType = "chain" | "llm" | "tool" | "retriever" | "embedding" | "parser" | "agent" | "run";
 
 export type SpanStatus = "success" | "error" | "running";
 

@@ -20,8 +20,13 @@ export function SpanTree({
   // Track which spans are expanded (default: root level expanded)
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => {
     const initial = new Set<string>();
-    // Expand root level spans by default
-    spans.forEach((span) => initial.add(span.id));
+    // Expand root and first level children by default
+    for (const span of spans) {
+      initial.add(span.id);
+      for (const child of span.children) {
+        initial.add(child.id);
+      }
+    }
     return initial;
   });
 

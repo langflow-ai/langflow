@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import IconComponent from "@/components/common/genericIconComponent";
 import { Loading } from "@/components/ui/loading";
 import { cn } from "@/utils/utils";
@@ -6,6 +6,53 @@ import type { Span, Trace } from "./types";
 import { SpanTree } from "./SpanTree";
 import { SpanDetail } from "./SpanDetail";
 import { useGetTracesQuery, useGetTraceQuery } from "@/controllers/API/queries/traces";
+
+function buildRootSpan(trace: Trace): Span {
+  const spans = trace.spans;
+
+  // Collect inputs from first span with data, outputs from last span with data
+  let rootInputs: Record<string, unknown> = {};
+  let rootOutputs: Record<string, unknown> = {};
+  for (const span of spans) {
+    if (Object.keys(span.inputs).length > 0 && Object.keys(rootInputs).length === 0) {
+      rootInputs = span.inputs;
+    }
+  }
+  for (let i = spans.length - 1; i >= 0; i--) {
+    if (Object.keys(spans[i].outputs).length > 0) {
+      rootOutputs = spans[i].outputs;
+      break;
+    }
+  }
+
+  // Aggregate token usage from leaf spans
+  let promptTokens = 0;
+  let completionTokens = 0;
+  const sumLeafTokens = (s: Span) => {
+    if (s.children.length === 0 && s.tokenUsage) {
+      promptTokens += s.tokenUsage.promptTokens;
+      completionTokens += s.tokenUsage.completionTokens;
+    }
+    s.children.forEach(sumLeafTokens);
+  };
+  spans.forEach(sumLeafTokens);
+
+  return {
+    id: `root-${trace.id}`,
+    name: trace.name,
+    type: "run",
+    status: trace.status,
+    startTime: trace.startTime,
+    endTime: trace.endTime,
+    latencyMs: trace.totalLatencyMs,
+    inputs: rootInputs,
+    outputs: rootOutputs,
+    tokenUsage: trace.totalTokens > 0
+      ? { totalTokens: trace.totalTokens, promptTokens, completionTokens, cost: trace.totalCost }
+      : undefined,
+    children: trace.spans,
+  };
+}
 
 interface TraceViewProps {
   flowId?: string | null;
@@ -56,6 +103,11 @@ export function TraceView({ flowId, initialTraceId }: TraceViewProps) {
     }
   }, [trace?.id]);
 
+  const rootSpan = useMemo(() => {
+    if (!trace) return null;
+    return buildRootSpan(trace);
+  }, [trace]);
+
   const handleSelectSpan = useCallback((span: Span) => {
     setSelectedSpan(span);
   }, []);
@@ -92,7 +144,7 @@ export function TraceView({ flowId, initialTraceId }: TraceViewProps) {
   return (
     <div className="flex h-full flex-col bg-muted/30">
       {/* Trace summary bar */}
-      <div className="flex items-center justify-between border-b border-border bg-background py-3 pl-6 pr-12">
+      <div className="flex h-[52px] shrink-0 items-center justify-between border-b border-border bg-background pl-6 pr-12">
         <div className="flex items-center gap-3">
           <span className="text-xs text-muted-foreground">Trace Detail</span>
           <span className="text-xs text-border">|</span>
@@ -142,7 +194,7 @@ export function TraceView({ flowId, initialTraceId }: TraceViewProps) {
         {/* Left: Span tree */}
         <div className="w-[320px] min-w-[280px] overflow-y-auto border-r border-border bg-background p-1.5">
           <SpanTree
-            spans={trace.spans ?? []}
+            spans={rootSpan ? [rootSpan] : []}
             selectedSpanId={selectedSpan?.id ?? null}
             onSelectSpan={handleSelectSpan}
           />

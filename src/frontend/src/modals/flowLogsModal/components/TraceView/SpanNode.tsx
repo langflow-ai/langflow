@@ -15,6 +15,7 @@ interface SpanNodeProps {
 
 function getSpanTypeIcon(type: SpanType): string {
   const iconMap: Record<SpanType, string> = {
+    run: "Workflow",
     agent: "Bot",
     chain: "Link",
     llm: "MessageSquare",
