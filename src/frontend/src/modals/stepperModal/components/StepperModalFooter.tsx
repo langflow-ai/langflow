@@ -23,6 +23,7 @@ export function StepperModalFooter({
   helpHref,
   onHelp,
   helpLabel = DEFAULT_HELP_LABEL,
+  submitTestId,
 }: StepperModalFooterProps) {
   const showHelp = helpHref || onHelp;
 
@@ -66,7 +67,11 @@ export function StepperModalFooter({
             {nextLabel}
           </Button>
         ) : (
-          <Button onClick={onSubmit} disabled={submitDisabled || isSubmitting}>
+          <Button
+            onClick={onSubmit}
+            disabled={submitDisabled || isSubmitting}
+            data-testid={submitTestId}
+          >
             {isSubmitting && (
               <ForwardedIconComponent
                 name="Loader2"

@@ -191,7 +191,9 @@ describe("KnowledgeBaseUploadModal", () => {
         wrapper: createTestWrapper(),
       });
 
-      expect(screen.getByText("Configure Sources")).toBeInTheDocument();
+      expect(screen.getAllByText("Configure Sources").length).toBeGreaterThan(
+        0,
+      );
     });
   });
 
@@ -371,7 +373,7 @@ describe("KnowledgeBaseUploadModal Accessibility", () => {
       wrapper: createTestWrapper(),
     });
 
-    expect(screen.getByText(/Name/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Name/).length).toBeGreaterThan(0);
     expect(screen.getByText("Embedding Model")).toBeInTheDocument();
   });
 

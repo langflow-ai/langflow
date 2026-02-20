@@ -55,4 +55,5 @@ export interface StepperModalFooterProps {
   helpHref?: string;
   onHelp?: () => void;
   helpLabel?: string;
+  submitTestId?: string;
 }

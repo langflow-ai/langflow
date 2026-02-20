@@ -198,6 +198,7 @@ export function StepConfiguration({
                     <DropdownMenuTrigger asChild>
                       <Button
                         variant="outline"
+                        data-testid="kb-browse-btn"
                         className={cn(
                           "w-full px-3",
                           validationErrors.files && "border-destructive",

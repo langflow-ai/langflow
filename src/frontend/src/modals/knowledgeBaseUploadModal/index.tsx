@@ -123,8 +123,12 @@ export default function KnowledgeBaseUploadModal({
           onNext={form.handleNext}
           onSubmit={form.handleSubmit}
           nextDisabled={false}
-          submitDisabled={false}
+          submitDisabled={
+            !form.sourceName.trim() ||
+            (!form.isAddSourcesMode && form.selectedEmbeddingModel.length === 0)
+          }
           isSubmitting={form.isSubmitting}
+          submitTestId="kb-create-button"
           submitLabel={form.isAddSourcesMode ? "Add Sources" : "Create"}
           helpLabel={
             !hideAdvanced && form.currentStep === 1
