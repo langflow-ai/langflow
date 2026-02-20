@@ -69,7 +69,6 @@ test(
       "disclosure-data sources",
       "disclosure-models & agents",
       "disclosure-llm operations",
-      "disclosure-files",
       "disclosure-processing",
       "disclosure-flow control",
       "disclosure-utilities",
