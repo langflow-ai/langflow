@@ -28,7 +28,7 @@ def upgrade() -> None:
     if not migration.table_exists("trace", conn):
         op.create_table(
             "trace",
-            sa.Column("id", sqlmodel.sql.sqltypes.GUID(), nullable=False),
+            sa.Column("id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
             sa.Column("name", sa.String(), nullable=False),
             sa.Column(
                 "status",
@@ -41,7 +41,7 @@ def upgrade() -> None:
             sa.Column("total_latency_ms", sa.Integer(), nullable=False, server_default="0"),
             sa.Column("total_tokens", sa.Integer(), nullable=False, server_default="0"),
             sa.Column("total_cost", sa.Float(), nullable=False, server_default="0.0"),
-            sa.Column("flow_id", sqlmodel.sql.sqltypes.GUID(), nullable=False),
+            sa.Column("flow_id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
             sa.Column("session_id", sa.String(), nullable=True),
             sa.PrimaryKeyConstraint("id"),
         )
@@ -52,9 +52,9 @@ def upgrade() -> None:
     if not migration.table_exists("span", conn):
         op.create_table(
             "span",
-            sa.Column("id", sqlmodel.sql.sqltypes.GUID(), nullable=False),
-            sa.Column("trace_id", sqlmodel.sql.sqltypes.GUID(), nullable=False),
-            sa.Column("parent_span_id", sqlmodel.sql.sqltypes.GUID(), nullable=True),
+            sa.Column("id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
+            sa.Column("trace_id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
+            sa.Column("parent_span_id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=True),
             sa.Column("name", sa.String(), nullable=False),
             sa.Column(
                 "span_type",

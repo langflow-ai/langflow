@@ -20,6 +20,7 @@ class MockTracer(BaseTracer):
         trace_type: str,
         project_name: str,
         trace_id: uuid.UUID,
+        flow_id: str | None = None,
         user_id: str | None = None,
         session_id: str | None = None,
     ) -> None:
@@ -27,6 +28,7 @@ class MockTracer(BaseTracer):
         self.trace_type = trace_type
         self.project_name = project_name
         self.trace_id = trace_id
+        self.flow_id = flow_id
         self.user_id = user_id
         self.session_id = session_id
         self._ready = True
@@ -145,6 +147,10 @@ def mock_tracers():
             "langflow.services.tracing.service._get_traceloop_tracer",
             return_value=MockTracer,
         ),
+        patch(
+            "langflow.services.tracing.service._get_native_tracer",
+            return_value=MockTracer,
+        ),
     ):
         yield
 
@@ -175,7 +181,9 @@ async def test_start_end_tracers(tracing_service):
     assert "langwatch" in trace_context.tracers
     assert "langfuse" in trace_context.tracers
     assert "arize_phoenix" in trace_context.tracers
+    assert "opik" in trace_context.tracers
     assert "traceloop" in trace_context.tracers
+    assert "native" in trace_context.tracers
 
     await tracing_service.end_tracers(outputs)
 
