@@ -276,7 +276,6 @@ class NativeTracer(BaseTracer):
             total_tokens = sum(span.get("total_tokens") or 0 for span in self.completed_spans)
 
             async with session_scope() as session:
-                # Create trace record
                 trace = TraceTable(
                     id=self.trace_id,
                     name=self.trace_name,
@@ -288,7 +287,7 @@ class NativeTracer(BaseTracer):
                     total_latency_ms=total_latency_ms,
                     total_tokens=total_tokens,
                 )
-                session.add(trace)
+                await session.merge(trace)
 
                 # Create span records
                 from uuid import NAMESPACE_DNS, uuid5
