@@ -269,6 +269,10 @@ def register_all_service_factories() -> None:
 
 async def initialize_services(*, fix_migration: bool = False) -> None:
     """Initialize all the services needed."""
+    from langflow.helpers.windows_postgres_helper import configure_windows_postgres_event_loop
+
+    configure_windows_postgres_event_loop(source="initialize_services")
+
     # Register all service factories first
     register_all_service_factories()
 

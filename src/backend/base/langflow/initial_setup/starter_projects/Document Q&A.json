@@ -136,10 +136,11 @@
             "edited": false,
             "field_order": [
               "input_value",
-              "store_message",
+              "should_store_message",
               "sender",
               "sender_name",
               "session_id",
+              "context_id",
               "files"
             ],
             "frozen": false,
@@ -368,11 +369,11 @@
         },
         "position": {
           "x": 516.7529480335185,
-          "y": 237.04967879541528
+          "y": 350.0
         },
         "positionAbsolute": {
           "x": 516.7529480335185,
-          "y": 237.04967879541528
+          "y": 350.0
         },
         "selected": false,
         "type": "genericNode"
@@ -399,10 +400,9 @@
               "sender",
               "sender_name",
               "session_id",
+              "context_id",
               "data_template",
-              "background_color",
-              "chat_icon",
-              "text_color"
+              "clean_data"
             ],
             "frozen": false,
             "icon": "MessagesSquare",
@@ -713,7 +713,9 @@
             "edited": false,
             "error": null,
             "field_order": [
-              "template"
+              "template",
+              "use_double_brackets",
+              "tool_placeholder"
             ],
             "frozen": false,
             "full_path": null,
@@ -814,6 +816,27 @@
                 "type": "prompt",
                 "value": "Answer user's questions based on the document below:\n\n---\n\n{Document}\n\n---\n\nQuestion:"
               },
+              "use_double_brackets": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Use Double Brackets",
+                "dynamic": false,
+                "info": "Use {{variable}} syntax instead of {variable}.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "use_double_brackets",
+                "override_skip": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": false
+              },
               "tool_placeholder": {
                 "_input_type": "MessageTextInput",
                 "advanced": true,
@@ -835,27 +858,6 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": ""
-              },
-              "use_double_brackets": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Use Double Brackets",
-                "dynamic": false,
-                "info": "Use {{variable}} syntax instead of {variable}.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "use_double_brackets",
-                "override_skip": false,
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": true,
-                "type": "bool",
-                "value": false
               }
             },
             "tool_mode": false
@@ -904,7 +906,8 @@
               "input_value",
               "system_message",
               "stream",
-              "temperature"
+              "temperature",
+              "max_tokens"
             ],
             "frozen": false,
             "icon": "brain-circuit",
@@ -1267,10 +1270,11 @@
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Loads and returns the content from uploaded files.",
-            "display_name": "File",
+            "display_name": "Read File",
             "documentation": "",
             "edited": false,
             "field_order": [
+              "storage_location",
               "path",
               "file_path",
               "separator",
@@ -1278,8 +1282,23 @@
               "delete_server_file_after_processing",
               "ignore_unsupported_extensions",
               "ignore_unspecified_files",
+              "file_path_str",
+              "aws_access_key_id",
+              "aws_secret_access_key",
+              "bucket_name",
+              "aws_region",
+              "s3_file_key",
+              "service_account_key",
+              "file_id",
+              "advanced_mode",
+              "pipeline",
+              "ocr_engine",
+              "md_image_placeholder",
+              "md_page_break_placeholder",
+              "doc_key",
               "use_multithreading",
-              "concurrency_multithreading"
+              "concurrency_multithreading",
+              "markdown"
             ],
             "frozen": false,
             "icon": "file-text",

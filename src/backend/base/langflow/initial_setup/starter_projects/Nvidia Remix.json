@@ -222,10 +222,8 @@
               "sender",
               "sender_name",
               "session_id",
-              "files",
-              "background_color",
-              "chat_icon",
-              "text_color"
+              "context_id",
+              "files"
             ],
             "frozen": false,
             "icon": "MessagesSquare",
@@ -500,10 +498,8 @@
               "sender",
               "sender_name",
               "session_id",
+              "context_id",
               "data_template",
-              "background_color",
-              "chat_icon",
-              "text_color",
               "clean_data"
             ],
             "frozen": false,
@@ -780,9 +776,12 @@
             "field_order": [
               "model",
               "api_key",
+              "base_url_ibm_watsonx",
+              "project_id",
               "system_prompt",
               "context_id",
               "n_messages",
+              "max_tokens",
               "format_instructions",
               "output_schema",
               "tools",
@@ -1363,6 +1362,7 @@
             "error": null,
             "field_order": [
               "template",
+              "use_double_brackets",
               "tool_placeholder"
             ],
             "frozen": false,
@@ -1511,6 +1511,27 @@
                 "type": "prompt",
                 "value": "# Background\n\nYou are a helpful assistant that must use tools to answer questions and perform tasks regarding RTX Remix.\n\n# Procedure\n\n- You MUST ABSOLUTELY ALWAYS search through the documentation before responding to the user. Follow the instructions in the \"Documentation Instructions\" section for instruction on using the documentation.\n- When the user asks how to do something, always assume they are asking about the RTX Remix Toolkit or Runtime Graphic User Interfaces unless specified otherwise (DO NOT mention the tools available to you).\n- If the user requested you take an action or provide information about the current project, you may follow the instructions in the \"RTX Remix Toolkit Instructions\" section.\n\n# Documentation Instructions\n\n- DO NOT ATTEMPT, UNDER ANY CIRCUMSTANCES TO PROVIDE AN ANSWER BASED ON YOUR TRAINING DATA.\n- Use the {remix_documentation} tool to fetch the requested information from the RTX Remix documentation.\n- Always provide the source you used to get to the answer provided to the user.\n- If the user asks a question that can be ambiguous, request that they provide more information.\n- If the user asks a question that cannot be answered using the documentation, simply say so and don't attempt to answer the question.\n\n# RTX Remix Toolkit Instructions\n\n- Use the tools provided by the \"{remix_mcp_server}\" MCP Server to interact with the RTX Remix Toolkit.\n- Always verify if a recipe provided in the \"MCP Server Recipes\" sub-section matches the current user request. \n    - If a recipe matches, follow the instructions as closely as possible\n    - If NO recipe matches the user request, try to use any combination of tools to complete the user's request\n\n## MCP Server Recipes\n\n{mcp_prompts}"
               },
+              "use_double_brackets": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Use Double Brackets",
+                "dynamic": false,
+                "info": "Use {{variable}} syntax instead of {variable}.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "use_double_brackets",
+                "override_skip": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": false
+              },
               "tool_placeholder": {
                 "_input_type": "MessageTextInput",
                 "advanced": true,
@@ -1533,27 +1554,6 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": ""
-              },
-              "use_double_brackets": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Use Double Brackets",
-                "dynamic": false,
-                "info": "Use {{variable}} syntax instead of {variable}.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "use_double_brackets",
-                "override_skip": false,
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": true,
-                "type": "bool",
-                "value": false
               }
             },
             "tool_mode": false
@@ -1718,16 +1718,19 @@
             "documentation": "",
             "edited": false,
             "field_order": [
-              "provider",
               "model",
               "api_key",
               "api_base",
+              "base_url_ibm_watsonx",
+              "project_id",
               "dimensions",
               "chunk_size",
               "request_timeout",
               "max_retries",
               "show_progress_bar",
-              "model_kwargs"
+              "model_kwargs",
+              "truncate_input_tokens",
+              "input_text"
             ],
             "frozen": false,
             "icon": "binary",
@@ -2444,11 +2447,10 @@
             "documentation": "",
             "edited": false,
             "field_order": [
-              "mode",
-              "command",
-              "env",
-              "sse_url",
-              "headers_input",
+              "mcp_server",
+              "use_cache",
+              "verify_ssl",
+              "headers",
               "tool",
               "tool_placeholder"
             ],

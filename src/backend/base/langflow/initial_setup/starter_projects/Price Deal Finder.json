@@ -126,10 +126,8 @@
               "sender",
               "sender_name",
               "session_id",
-              "files",
-              "background_color",
-              "chat_icon",
-              "text_color"
+              "context_id",
+              "files"
             ],
             "frozen": false,
             "icon": "MessagesSquare",
@@ -405,10 +403,9 @@
               "sender",
               "sender_name",
               "session_id",
+              "context_id",
               "data_template",
-              "background_color",
-              "chat_icon",
-              "text_color"
+              "clean_data"
             ],
             "frozen": false,
             "icon": "MessagesSquare",
@@ -690,11 +687,16 @@
               "api_key",
               "query",
               "search_depth",
+              "chunks_per_source",
               "topic",
-              "time_range",
+              "days",
               "max_results",
+              "include_answer",
+              "time_range",
               "include_images",
-              "include_answer"
+              "include_domains",
+              "exclude_domains",
+              "include_raw_content"
             ],
             "frozen": false,
             "icon": "TavilyIcon",
@@ -1456,7 +1458,7 @@
         "data": {
           "id": "note-Dw2MZ",
           "node": {
-            "description": "### 💡 Add your OpenAI API key here",
+            "description": "### Configure your Model Provider",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -1472,8 +1474,8 @@
           "width": 324
         },
         "position": {
-          "x": 798.1532899902708,
-          "y": 48.63976452163034
+          "x": 766.1712523368794,
+          "y": 39.91739061615999
         },
         "selected": false,
         "type": "noteNode"
@@ -1578,9 +1580,12 @@
             "field_order": [
               "model",
               "api_key",
+              "base_url_ibm_watsonx",
+              "project_id",
               "system_prompt",
               "context_id",
               "n_messages",
+              "max_tokens",
               "format_instructions",
               "output_schema",
               "tools",

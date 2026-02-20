@@ -607,3 +607,134 @@ test(
     await enableInspectPanel(page);
   },
 );
+
+test(
+  "PromptTemplateComponent - Synchronized State",
+  { tag: ["@release", "@workspace"], timeout: 60000 },
+  async ({ page }) => {
+    await awaitBootstrapTest(page);
+
+    await page.waitForSelector('[data-testid="blank-flow"]', {
+      timeout: 30000,
+    });
+    await page.getByTestId("blank-flow").click();
+    await page.getByTestId("sidebar-search-input").click();
+    await page.getByTestId("sidebar-search-input").fill("prompt");
+
+    await page.waitForSelector(
+      '[data-testid="models_and_agentsPrompt Template"]',
+      {
+        timeout: 3000,
+      },
+    );
+
+    await page
+      .locator('//*[@id="models_and_agentsPrompt Template"]')
+      .dragTo(page.locator('//*[@id="react-flow-id"]'));
+    await page.mouse.up();
+    await page.mouse.down();
+    await adjustScreenView(page);
+
+    // Wait for the node to appear
+    await page.waitForSelector('[data-testid="div-generic-node"]', {
+      timeout: 5000,
+    });
+
+    // Click on the node to select it
+    await page.getByTestId("div-generic-node").click();
+
+    // Wait for toggle to be visible
+    await page.waitForSelector(
+      '[data-testid="toggle_bool_use_double_brackets"]',
+      {
+        timeout: 5000,
+      },
+    );
+
+    // Enable the "Use Double Brackets" toggle
+    await page.getByTestId("toggle_bool_use_double_brackets").click();
+
+    // Verify the toggle is now checked
+    expect(
+      await page.getByTestId("toggle_bool_use_double_brackets").isChecked(),
+    ).toBeTruthy();
+
+    await expect(page.getByText("{{+}}")).toBeVisible({
+      timeout: 5000,
+    });
+
+    await page.waitForSelector(
+      '[data-testid="button_open_mustache_prompt_modal"]',
+      {
+        timeout: 5000,
+      },
+    );
+    await page.getByTestId("button_open_mustache_prompt_modal").click();
+
+    // Wait for the prompt modal textarea
+    const mustacheTextareaId = "modal-mustachepromptarea_mustache_template";
+    await page.waitForSelector(`[data-testid="${mustacheTextareaId}"]`, {
+      timeout: 5000,
+    });
+
+    const testValue = "Hello {{name}}!";
+    await page.getByTestId(mustacheTextareaId).fill(testValue);
+
+    await page.getByTestId("genericModalBtnSave").click();
+
+    // Wait for modal to close
+    await page.waitForTimeout(500);
+
+    // Verify the accordion prompt component text content
+    await page.waitForSelector(
+      '[data-testid="mustachepromptarea_mustache_template"]',
+      { timeout: 5000 },
+    );
+    const accordionContent = await page
+      .getByTestId("mustachepromptarea_mustache_template")
+      .innerText();
+
+    // The content might contain hidden characters or specialized formatting
+    // We check if it contains our text, ignoring potential zero-width spaces or similar
+    // The actual text content should contain "Hello {{name}}!"
+    const cleanContent = accordionContent.replace(/[\u200B-\u200D\uFEFF]/g, "");
+    expect(cleanContent).toContain("Hello");
+    expect(cleanContent).toContain("{{name}}");
+    expect(cleanContent).toContain("!");
+
+    // Also verify that the variable highlighting span exists in the accordion
+    // Note: The structure might be complex inside the contenteditable
+    const highlightedSpan = await page.evaluate(() => {
+      const span = document.querySelector(
+        '[data-testid="mustachepromptarea_mustache_template"] span.chat-message-highlight',
+      );
+      return span ? span.textContent : null;
+    });
+    expect(highlightedSpan).toBe("{{name}}");
+
+    // NEW: Edit directly on the accordion component
+    const updatedTestValue = "Updated {{new_var}} content";
+    await page.getByTestId("mustachepromptarea_mustache_template").click();
+    await page.keyboard.press("ControlOrMeta+A");
+    await page.keyboard.press("Backspace");
+    await page.keyboard.type(updatedTestValue);
+
+    // Give it a moment to update state
+    await page.waitForTimeout(500);
+
+    // Open the modal again
+    await page.getByTestId("button_open_mustache_prompt_modal").click();
+
+    await page.getByTestId("edit-prompt-sanitized").click();
+
+    // Verify the changes reflected on the modal
+    const modalValue = await page.getByTestId(mustacheTextareaId).inputValue();
+    expect(modalValue).toBe(updatedTestValue);
+
+    // Verify variables in modal
+    const modalBadge = await page.locator('//*[@id="badge0"]').innerText();
+    expect(modalBadge).toBe("new_var");
+
+    await page.getByTestId("genericModalBtnSave").click();
+  },
+);

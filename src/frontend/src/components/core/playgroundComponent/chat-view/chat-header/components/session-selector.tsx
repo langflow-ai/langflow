@@ -3,6 +3,7 @@ import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { useUpdateSessionName } from "@/controllers/API/queries/messages/use-rename-session";
 import { useVoiceStore } from "@/stores/voiceStore";
 import { cn } from "@/utils/utils";
+import { useSessionHasMessages } from "../hooks/use-session-has-messages";
 import { SessionMoreMenu } from "./session-more-menu";
 import { SessionRename } from "./session-rename";
 
@@ -19,6 +20,8 @@ export interface SessionSelectorProps {
   playgroundPage?: boolean;
   setActiveSession?: (session: string) => void;
   handleRename?: (oldSessionId: string, newSessionId: string) => Promise<void>;
+  menuOpen?: boolean;
+  onMenuOpenChange?: (open: boolean) => void;
 }
 
 export function SessionSelector({
@@ -34,6 +37,8 @@ export function SessionSelector({
   playgroundPage = false,
   setActiveSession,
   handleRename,
+  menuOpen,
+  onMenuOpenChange,
 }: SessionSelectorProps) {
   const [isEditing, setIsEditing] = useState(false);
   const { mutate: updateSessionName } = useUpdateSessionName();
@@ -84,7 +89,14 @@ export function SessionSelector({
 
   // Default session (flowId) cannot be renamed or deleted
   const isDefaultSession = session === currentFlowId;
+
+  const hasMessages = useSessionHasMessages({
+    sessionId: session,
+    flowId: currentFlowId,
+  });
+
   const canModifySession = !isDefaultSession;
+  const canRenameSession = canModifySession && hasMessages;
 
   return (
     <div
@@ -131,7 +143,7 @@ export function SessionSelector({
           onRename={handleEditClick}
           onMessageLogs={() => inspectSession?.(session)}
           onDelete={() => deleteSession(session)}
-          showRename={canModifySession}
+          showRename={canRenameSession}
           showDelete={canModifySession}
           side="bottom"
           align="end"
@@ -140,6 +152,8 @@ export function SessionSelector({
           isVisible={true}
           tooltipContent="More options"
           tooltipSide="left"
+          open={menuOpen}
+          onOpenChange={onMenuOpenChange}
         />
       </div>
     </div>

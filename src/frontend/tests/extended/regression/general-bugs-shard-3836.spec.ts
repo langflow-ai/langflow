@@ -39,6 +39,15 @@ test(
 
     await uploadFile(page, "chain.png");
 
+    const uploadButton = page.getByTestId("button_upload_file");
+
+    await uploadButton.hover();
+    await expect(uploadButton.getByTestId("icon-X")).toHaveCSS("opacity", "1");
+    await uploadButton.click();
+    await expect(page.getByText("chain.png")).not.toBeVisible();
+
+    await uploadFile(page, "chain.png");
+
     await page.getByTestId("button_run_chat output").click();
 
     await page.getByRole("button", { name: "Playground", exact: true }).click();

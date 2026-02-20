@@ -42,8 +42,7 @@ from langflow.utils.version import is_pre_release as langflow_is_pre_release
 app = typer.Typer(no_args_is_help=True)
 console = Console()
 if platform.system() == "Windows":
-    console = Console(legacy_windows=True, emoji=False)  # Initialize console with Windows-safe settings
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())  # type: ignore[attr-defined]
+    console = Console(legacy_windows=True, emoji=False)
 
 # Add LFX commands as a sub-app
 try:
@@ -369,7 +368,17 @@ def run(
             progress.print_summary()
             print_banner(str(host), int(port or 7860), protocol)
 
-        # Blocking call, so must be outside of the progress step
+        from langflow.helpers.windows_postgres_helper import LANGFLOW_DATABASE_URL, POSTGRESQL_PREFIXES
+
+        db_url = os.environ.get(LANGFLOW_DATABASE_URL, "")
+        loop_type = "asyncio"
+        if (
+            platform.system() == "Windows"
+            and db_url
+            and any(db_url.startswith(prefix) for prefix in POSTGRESQL_PREFIXES)
+        ):
+            loop_type = "none"  # Preserve pre-configured WindowsSelectorEventLoopPolicy
+
         uvicorn.run(
             app,
             host=host,
@@ -377,7 +386,7 @@ def run(
             log_level=log_level,
             reload=False,
             workers=get_number_of_workers(workers),
-            loop="asyncio",
+            loop=loop_type,
         )
     else:
         with progress.step(6):

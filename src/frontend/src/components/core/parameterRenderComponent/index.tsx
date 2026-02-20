@@ -208,7 +208,15 @@ export function ParameterRenderComponent({
           />
         );
       case "mustache":
-        return (
+        return ENABLE_INSPECTION_PANEL && !baseInputProps.editNode ? (
+          <AccordionPromptComponent
+            {...baseInputProps}
+            readonly={!!nodeClass.flow}
+            field_name={name}
+            id={`mustachepromptarea_${id}`}
+            isDoubleBrackets={true}
+          />
+        ) : (
           <MustachePromptAreaComponent
             {...baseInputProps}
             readonly={!!nodeClass.flow}

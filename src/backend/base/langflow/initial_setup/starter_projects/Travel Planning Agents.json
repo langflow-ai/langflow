@@ -221,6 +221,7 @@
               "sender",
               "sender_name",
               "session_id",
+              "context_id",
               "files"
             ],
             "frozen": false,
@@ -454,8 +455,8 @@
           "width": 360
         },
         "position": {
-          "x": 1731.3224944651397,
-          "y": 595.5715252590742
+          "x": 1968.5557093537664,
+          "y": 700.7096961735156
         },
         "positionAbsolute": {
           "x": 1756.77096149088,
@@ -486,10 +487,9 @@
               "sender",
               "sender_name",
               "session_id",
+              "context_id",
               "data_template",
-              "background_color",
-              "chat_icon",
-              "text_color"
+              "clean_data"
             ],
             "frozen": false,
             "icon": "MessagesSquare",
@@ -733,8 +733,8 @@
           "width": 360
         },
         "position": {
-          "x": 4349.229697347143,
-          "y": 620.5490494265098
+          "x": 4242.285249980585,
+          "y": 558.0810953322224
         },
         "positionAbsolute": {
           "x": 4349.229697347143,
@@ -761,8 +761,8 @@
           "width": 371
         },
         "position": {
-          "x": 1708.5674196681368,
-          "y": 75.74701473340798
+          "x": 1582.0118393255968,
+          "y": 245.33934044504494
         },
         "positionAbsolute": {
           "x": 1076.3710803600266,
@@ -1184,8 +1184,8 @@
           "width": 320
         },
         "position": {
-          "x": 2815.5187953791974,
-          "y": 949.802524756467
+          "x": 2847.830479916553,
+          "y": 351.89145449559277
         },
         "selected": false,
         "type": "genericNode"
@@ -1344,8 +1344,8 @@
           "width": 320
         },
         "position": {
-          "x": 3540.356346381247,
-          "y": 989.3563951826354
+          "x": 3553.0904081481876,
+          "y": 352.6335828511419
         },
         "selected": false,
         "type": "genericNode"
@@ -1612,8 +1612,8 @@
           "width": 320
         },
         "position": {
-          "x": 2089.0393126914205,
-          "y": 894.9349094163676
+          "x": 2108.8977476223718,
+          "y": 349.8027691985795
         },
         "selected": false,
         "type": "genericNode"
@@ -1635,9 +1635,12 @@
             "field_order": [
               "model",
               "api_key",
+              "base_url_ibm_watsonx",
+              "project_id",
               "system_prompt",
               "context_id",
               "n_messages",
+              "max_tokens",
               "format_instructions",
               "output_schema",
               "tools",
@@ -2189,8 +2192,8 @@
           "width": 320
         },
         "position": {
-          "x": 2462.5131863965653,
-          "y": 338.2948031203553
+          "x": 2503.3812350791063,
+          "y": 351.77346902100396
         },
         "selected": false,
         "type": "genericNode"
@@ -2212,9 +2215,12 @@
             "field_order": [
               "model",
               "api_key",
+              "base_url_ibm_watsonx",
+              "project_id",
               "system_prompt",
               "context_id",
               "n_messages",
+              "max_tokens",
               "format_instructions",
               "output_schema",
               "tools",
@@ -2766,8 +2772,8 @@
           "width": 320
         },
         "position": {
-          "x": 3168.5639981397626,
-          "y": 342.7862450828752
+          "x": 3208.8781157062203,
+          "y": 350.39664170999504
         },
         "selected": false,
         "type": "genericNode"
@@ -2789,9 +2795,12 @@
             "field_order": [
               "model",
               "api_key",
+              "base_url_ibm_watsonx",
+              "project_id",
               "system_prompt",
               "context_id",
               "n_messages",
+              "max_tokens",
               "format_instructions",
               "output_schema",
               "tools",
@@ -3343,8 +3352,8 @@
           "width": 320
         },
         "position": {
-          "x": 3936.123532016018,
-          "y": 356.3534774464019
+          "x": 3898.002800711221,
+          "y": 351.0101687899769
         },
         "selected": false,
         "type": "genericNode"

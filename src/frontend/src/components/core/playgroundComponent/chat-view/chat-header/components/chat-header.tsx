@@ -7,6 +7,7 @@ import { cn } from "@/utils/utils";
 import { clearSessionMessages } from "../../utils/message-utils";
 import { useEditSessionInfo } from "../hooks/use-edit-session-info";
 import { useRenameSession } from "../hooks/use-rename-session";
+import { useSessionHasMessages } from "../hooks/use-session-has-messages";
 import { useSessionMoreMenuHandlers } from "../hooks/use-session-more-menu-handlers";
 import type { ChatHeaderProps } from "../types/chat-header.types";
 import { getSessionTitle } from "../utils/get-session-title";
@@ -117,6 +118,11 @@ export function ChatHeader({
     onOpenLogs: () => setOpenLogsModal?.(true),
   });
 
+  const hasMessages = useSessionHasMessages({
+    sessionId: currentSessionId,
+    flowId: currentFlowId,
+  });
+
   const moreMenu = (
     <AnimatedConditional isOpen={isSessionDropdownVisible}>
       <SessionMoreMenu
@@ -124,7 +130,7 @@ export function ChatHeader({
         onMessageLogs={onMessageLogs}
         onClearChat={handleClearChat}
         onDelete={handleDeleteSessionInternal}
-        showRename={!isDefaultSession}
+        showRename={!isDefaultSession && hasMessages}
         showClearChat={isDefaultSession}
         showDelete={!isDefaultSession}
         side="bottom"

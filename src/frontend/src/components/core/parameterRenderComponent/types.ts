@@ -83,6 +83,7 @@ export type FileComponentType = {
 
 export type PromptAreaComponentType = {
   field_name?: string;
+  isDoubleBrackets?: boolean;
 };
 
 export type LinkComponentType = {

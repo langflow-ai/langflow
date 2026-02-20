@@ -33,11 +33,6 @@ export const customDefaultShortcuts = [
     shortcut: "mod+d",
   },
   {
-    display_name: "Component Share",
-    name: "Component Share",
-    shortcut: "mod+shift+s",
-  },
-  {
     display_name: "Docs",
     name: "Docs",
     shortcut: "mod+shift+d",

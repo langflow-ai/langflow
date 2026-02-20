@@ -59,7 +59,8 @@ export default function CollectionPage(): JSX.Element {
       {flows &&
         examples &&
         folders &&
-        (flows?.length !== examples?.length || folders?.length > 1) && (
+        ((flows?.length !== examples?.length && folders?.length > 0) ||
+          folders?.length > 1) && (
           <SideBarFoldersButtonsComponent
             handleChangeFolder={(id: string) => {
               navigate(`all/folder/${id}`);
@@ -78,7 +79,8 @@ export default function CollectionPage(): JSX.Element {
           <div
             className={`relative mx-auto flex h-full w-full flex-col overflow-hidden`}
           >
-            {flows?.length !== examples?.length || folders?.length > 1 ? (
+            {(flows?.length !== examples?.length && folders?.length > 0) ||
+            folders?.length > 1 ? (
               <Outlet />
             ) : (
               <CustomEmptyPageCommunity setOpenModal={setOpenModal} />

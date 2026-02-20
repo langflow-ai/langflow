@@ -112,7 +112,9 @@
             "documentation": "",
             "edited": false,
             "field_order": [
-              "template"
+              "template",
+              "use_double_brackets",
+              "tool_placeholder"
             ],
             "frozen": false,
             "icon": "prompts",
@@ -325,6 +327,27 @@
                 "type": "prompt",
                 "value": "Product:\n{product}\n \nPain Points:\n{pain_points}\n \nGoals:\n{goals}\n \nCurrent Solutions:\n{current_solutions}\n \nSpecific Target Audience:\n{target_audience}\n\nExpertise Level:\n{expertise_level}\n"
               },
+              "use_double_brackets": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Use Double Brackets",
+                "dynamic": false,
+                "info": "Use {{variable}} syntax instead of {variable}.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "use_double_brackets",
+                "override_skip": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": false
+              },
               "tool_placeholder": {
                 "_input_type": "MessageTextInput",
                 "advanced": true,
@@ -346,27 +369,6 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": ""
-              },
-              "use_double_brackets": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Use Double Brackets",
-                "dynamic": false,
-                "info": "Use {{variable}} syntax instead of {variable}.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "use_double_brackets",
-                "override_skip": false,
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": true,
-                "type": "bool",
-                "value": false
               }
             },
             "tool_mode": false
@@ -445,7 +447,9 @@
             "documentation": "",
             "edited": false,
             "field_order": [
-              "template"
+              "template",
+              "use_double_brackets",
+              "tool_placeholder"
             ],
             "frozen": false,
             "icon": "prompts",
@@ -520,6 +524,27 @@
                 "type": "prompt",
                 "value": "You are a digital marketing strategist specialized in generating highly relevant, optimized keywords for a product’s specific target audience. Your task is to create a list of keywords that are not only attractive and impactful but also resonate with the needs and desires of the customers, capturing the core motivations driving them to seek a solution.\n\nBelow are details about the product, including its target audience, the pain points faced by this audience, and the current solutions they consider or use. Use this information to generate precise keywords that connect directly with the unique value of the product and with the customers' goals. Consider factors like the customer’s level of expertise and major market trends to create a powerful and well-grounded keyword list.\n\n### Product Information:\n- **Product:** – A brief description of the product, including what sets it apart in the market.\n- **Customer Pain Points:** – Specific pain points that the audience faces and that the product aims to address.\n- **Customer Goals:** – The primary goals and aspirations of the target audience that the product helps to achieve.\n- **Current Solutions Used:** – How the audience currently tries to address these pain points, including competitor solutions or alternatives.\n- **Specific Target Audience:** – A detailed description of the target audience, including demographics, interests, lifestyle, and behavioral profile.\n- **Customer Expertise Level:**– The level of familiarity or experience the audience has with similar or related solutions.\n\n### Guidelines for Keyword Generation:\n1. **Focus on Pain Points and Solutions**: Generate keywords that accurately reflect the customers’ pain points, clearly conveying how the product offers an effective and unique solution.\n2. **Emphasize Goals and Benefits**: Highlight keywords aligned with customer goals, emphasizing the positive impact and achievable results of the product.\n3. **Consider Competition and Differentiators**: Think about existing solutions and how the product stands out. Create keywords that emphasize differentiators and help the product stand out in a competitive landscape.\n4. **Tailor to Target Audience**: Use terms and phrases that resonate directly with the target audience’s profile, utilizing language and themes most appealing to this segment.\n5. **Customize to Expertise Level**: Adjust the complexity of the keywords according to the audience’s experience level, ensuring they are appealing and accessible.\n6. **Incorporate Market Trends**: Where possible, include keywords that reflect the latest trends in the sector, increasing the content’s relevance and timeliness.\n\n### Example Keyword Suggestions:\n- **For customer pain points:**  – Use keywords that reinforce customer pain points, making it clear how the product can be a solution.\n- **For goals and aspirations:**  – Keywords that symbolize the outcomes and goals desired by customers, such as ‘stress relief,’ ‘productivity boost.’\n- **For product differentiators:** – Keywords that contrast the product with current solutions, highlighting its unique advantages.\n\nFor each keyword generated, provide a brief explanation of how it connects with the product details and the target audience, ensuring the final list is powerful, strategic, and well-founded for maximum market impact."
               },
+              "use_double_brackets": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Use Double Brackets",
+                "dynamic": false,
+                "info": "Use {{variable}} syntax instead of {variable}.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "use_double_brackets",
+                "override_skip": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": false
+              },
               "tool_placeholder": {
                 "_input_type": "MessageTextInput",
                 "advanced": true,
@@ -541,27 +566,6 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": ""
-              },
-              "use_double_brackets": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Use Double Brackets",
-                "dynamic": false,
-                "info": "Use {{variable}} syntax instead of {variable}.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "use_double_brackets",
-                "override_skip": false,
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": true,
-                "type": "bool",
-                "value": false
               }
             },
             "tool_mode": false
@@ -608,10 +612,9 @@
               "sender",
               "sender_name",
               "session_id",
+              "context_id",
               "data_template",
-              "background_color",
-              "chat_icon",
-              "text_color"
+              "clean_data"
             ],
             "frozen": false,
             "icon": "MessagesSquare",
@@ -869,7 +872,7 @@
         "data": {
           "id": "note-dikol",
           "node": {
-            "description": "### 💡 Add your OpenAI API key here",
+            "description": "### Configure your Model Provider",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -885,8 +888,8 @@
           "width": 324
         },
         "position": {
-          "x": 1208.3032428372405,
-          "y": 369.8385257208433
+          "x": 1197.492030626807,
+          "y": 348.2161012999763
         },
         "selected": false,
         "type": "noteNode"
@@ -915,7 +918,8 @@
               "input_value",
               "system_message",
               "stream",
-              "temperature"
+              "temperature",
+              "max_tokens"
             ],
             "frozen": false,
             "icon": "brain-circuit",

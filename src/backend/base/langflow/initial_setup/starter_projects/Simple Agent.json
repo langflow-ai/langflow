@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-D0Kx2",
+            "id": "Agent-oYRYa",
             "name": "response",
             "output_types": [
               "Message"
@@ -15,7 +15,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-yhCn0",
+            "id": "ChatOutput-z90NZ",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -24,12 +24,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-Agent-D0Kx2{œdataTypeœ:œAgentœ,œidœ:œAgent-D0Kx2œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-yhCn0{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-yhCn0œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-Agent-oYRYa{œdataTypeœ:œAgentœ,œidœ:œAgent-oYRYaœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-z90NZ{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-z90NZœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "Agent-D0Kx2",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-D0Kx2œ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-yhCn0",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-yhCn0œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
+        "source": "Agent-oYRYa",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-oYRYaœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-z90NZ",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-z90NZœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -37,7 +37,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "CalculatorComponent",
-            "id": "CalculatorComponent-hMbFw",
+            "id": "CalculatorComponent-Nbeeo",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -45,19 +45,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-D0Kx2",
+            "id": "Agent-oYRYa",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-CalculatorComponent-hMbFw{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-hMbFwœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-D0Kx2{œfieldNameœ:œtoolsœ,œidœ:œAgent-D0Kx2œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-CalculatorComponent-Nbeeo{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-Nbeeoœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-oYRYa{œfieldNameœ:œtoolsœ,œidœ:œAgent-oYRYaœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "CalculatorComponent-hMbFw",
-        "sourceHandle": "{œdataTypeœ: œCalculatorComponentœ, œidœ: œCalculatorComponent-hMbFwœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-D0Kx2",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-D0Kx2œ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "CalculatorComponent-Nbeeo",
+        "sourceHandle": "{œdataTypeœ: œCalculatorComponentœ, œidœ: œCalculatorComponent-Nbeeoœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-oYRYa",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-oYRYaœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -65,7 +65,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-iPUSx",
+            "id": "ChatInput-2M1cy",
             "name": "message",
             "output_types": [
               "Message"
@@ -73,26 +73,27 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-D0Kx2",
+            "id": "Agent-oYRYa",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-iPUSx{œdataTypeœ:œChatInputœ,œidœ:œChatInput-iPUSxœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-D0Kx2{œfieldNameœ:œinput_valueœ,œidœ:œAgent-D0Kx2œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-2M1cy{œdataTypeœ:œChatInputœ,œidœ:œChatInput-2M1cyœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-oYRYa{œfieldNameœ:œinput_valueœ,œidœ:œAgent-oYRYaœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-iPUSx",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-iPUSxœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-D0Kx2",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-D0Kx2œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-2M1cy",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-2M1cyœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-oYRYa",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-oYRYaœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "URLComponent",
-            "id": "URLComponent-TpTHB",
+            "id": "URLComponent-qf3tz",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -100,25 +101,25 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-D0Kx2",
+            "id": "Agent-oYRYa",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "xy-edge__URLComponent-TpTHB{œdataTypeœ:œURLComponentœ,œidœ:œURLComponent-TpTHBœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-D0Kx2{œfieldNameœ:œtoolsœ,œidœ:œAgent-D0Kx2œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-URLComponent-qf3tz{œdataTypeœ:œURLComponentœ,œidœ:œURLComponent-qf3tzœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-oYRYa{œfieldNameœ:œtoolsœ,œidœ:œAgent-oYRYaœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "URLComponent-TpTHB",
-        "sourceHandle": "{œdataTypeœ: œURLComponentœ, œidœ: œURLComponent-TpTHBœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-D0Kx2",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-D0Kx2œ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "URLComponent-qf3tz",
+        "sourceHandle": "{œdataTypeœ: œURLComponentœ, œidœ: œURLComponent-qf3tzœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-oYRYa",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-oYRYaœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "note-28UlV",
+          "id": "note-kXSAk",
           "node": {
             "description": "# 📖 README\nRun an Agent with URL and Calculator tools available for its use. \nThe Agent decides which tool to use to solve a problem.\n## Quick start\n\n1. Add your OpenAI API key to the Agent.\n2. Open the Playground and chat with the Agent. Request some information about a recipe, and then ask to add two numbers together. In the responses, the Agent will use different tools to solve different problems.\n\n## Next steps\nConnect more tools to the Agent to create your perfect assistant.\n\nFor more, see the [Langflow docs](https://docs.langflow.org/agents-tool-calling-agent-component).",
             "display_name": "",
@@ -130,7 +131,7 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-28UlV",
+        "id": "note-kXSAk",
         "measured": {
           "height": 630,
           "width": 575
@@ -144,9 +145,9 @@
       },
       {
         "data": {
-          "id": "note-2JuVK",
+          "id": "note-JI7SZ",
           "node": {
-            "description": "### 💡 Add your OpenAI API key here👇",
+            "description": "### Configure your Model Provider",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -155,21 +156,25 @@
           },
           "type": "note"
         },
-        "id": "note-2JuVK",
+        "dragging": false,
+        "height": 324,
+        "id": "note-JI7SZ",
         "measured": {
           "height": 324,
-          "width": 324
+          "width": 367
         },
         "position": {
-          "x": 1648.6876745095624,
-          "y": 253.8646618156497
+          "x": 1623.1172622980635,
+          "y": 251.0811463211472
         },
+        "resizing": false,
         "selected": false,
-        "type": "noteNode"
+        "type": "noteNode",
+        "width": 367
       },
       {
         "data": {
-          "id": "CalculatorComponent-hMbFw",
+          "id": "CalculatorComponent-Nbeeo",
           "node": {
             "base_classes": [
               "Data"
@@ -188,6 +193,7 @@
             "frozen": false,
             "icon": "calculator",
             "key": "CalculatorComponent",
+            "last_updated": "2026-02-12T20:48:13.880Z",
             "legacy": false,
             "lf_version": "1.2.0",
             "metadata": {
@@ -212,6 +218,7 @@
                 "display_name": "Toolset",
                 "group_outputs": false,
                 "hidden": false,
+                "loop_types": null,
                 "method": "to_toolkit",
                 "name": "component_as_tool",
                 "options": null,
@@ -278,6 +285,7 @@
                 "is_list": true,
                 "list_add_label": "Add More",
                 "name": "tools_metadata",
+                "override_skip": false,
                 "placeholder": "",
                 "real_time_refresh": true,
                 "required": false,
@@ -285,6 +293,7 @@
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
+                "track_in_telemetry": false,
                 "type": "tools",
                 "value": [
                   {
@@ -315,9 +324,9 @@
           "type": "CalculatorComponent"
         },
         "dragging": false,
-        "id": "CalculatorComponent-hMbFw",
+        "id": "CalculatorComponent-Nbeeo",
         "measured": {
-          "height": 218,
+          "height": 177,
           "width": 320
         },
         "position": {
@@ -329,7 +338,7 @@
       },
       {
         "data": {
-          "id": "ChatInput-iPUSx",
+          "id": "ChatInput-2M1cy",
           "node": {
             "base_classes": [
               "Message"
@@ -348,10 +357,8 @@
               "sender",
               "sender_name",
               "session_id",
-              "files",
-              "background_color",
-              "chat_icon",
-              "text_color"
+              "context_id",
+              "files"
             ],
             "frozen": false,
             "icon": "MessagesSquare",
@@ -595,9 +602,9 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-iPUSx",
+        "id": "ChatInput-2M1cy",
         "measured": {
-          "height": 48,
+          "height": 52,
           "width": 192
         },
         "position": {
@@ -609,7 +616,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-yhCn0",
+          "id": "ChatOutput-z90NZ",
           "node": {
             "base_classes": [
               "Message"
@@ -628,10 +635,8 @@
               "sender",
               "sender_name",
               "session_id",
+              "context_id",
               "data_template",
-              "background_color",
-              "chat_icon",
-              "text_color",
               "clean_data"
             ],
             "frozen": false,
@@ -878,9 +883,9 @@
           "showNode": false,
           "type": "ChatOutput"
         },
-        "id": "ChatOutput-yhCn0",
+        "id": "ChatOutput-z90NZ",
         "measured": {
-          "height": 48,
+          "height": 52,
           "width": 192
         },
         "position": {
@@ -892,7 +897,7 @@
       },
       {
         "data": {
-          "id": "Agent-D0Kx2",
+          "id": "Agent-oYRYa",
           "node": {
             "base_classes": [
               "Message"
@@ -907,9 +912,12 @@
             "field_order": [
               "model",
               "api_key",
+              "base_url_ibm_watsonx",
+              "project_id",
               "system_prompt",
               "context_id",
               "n_messages",
+              "max_tokens",
               "format_instructions",
               "output_schema",
               "tools",
@@ -922,7 +930,7 @@
             ],
             "frozen": false,
             "icon": "bot",
-            "last_updated": "2025-12-11T21:41:48.407Z",
+            "last_updated": "2026-02-12T20:48:13.965Z",
             "legacy": false,
             "metadata": {
               "code_hash": "60401f4e0ff8",
@@ -1044,6 +1052,7 @@
                 "dynamic": false,
                 "external_options": {},
                 "info": "The base URL of the API (IBM watsonx.ai only)",
+                "input_types": [],
                 "name": "base_url_ibm_watsonx",
                 "options": [
                   "https://us-south.ml.cloud.ibm.com",
@@ -1211,15 +1220,16 @@
                 "display_name": "Max Tokens",
                 "dynamic": false,
                 "info": "Maximum number of tokens to generate. Field name varies by provider.",
+                "input_types": [],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "max_tokens",
                 "override_skip": false,
                 "placeholder": "",
                 "range_spec": {
-                  "max": 128000.0,
-                  "min": 1.0,
-                  "step": 1.0,
+                  "max": 128000,
+                  "min": 1,
+                  "step": 1,
                   "step_type": "int"
                 },
                 "required": false,
@@ -1255,7 +1265,307 @@
                 "list_add_label": "Add More",
                 "model_type": "language",
                 "name": "model",
-                "options": [],
+                "options": [
+                  {
+                    "category": "Anthropic",
+                    "icon": "Anthropic",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatAnthropic",
+                      "model_name_param": "model"
+                    },
+                    "name": "claude-opus-4-5-20251101",
+                    "provider": "Anthropic"
+                  },
+                  {
+                    "category": "Anthropic",
+                    "icon": "Anthropic",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatAnthropic",
+                      "model_name_param": "model"
+                    },
+                    "name": "claude-haiku-4-5-20251001",
+                    "provider": "Anthropic"
+                  },
+                  {
+                    "category": "Anthropic",
+                    "icon": "Anthropic",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatAnthropic",
+                      "model_name_param": "model"
+                    },
+                    "name": "claude-sonnet-4-5-20250929",
+                    "provider": "Anthropic"
+                  },
+                  {
+                    "category": "Anthropic",
+                    "icon": "Anthropic",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatAnthropic",
+                      "model_name_param": "model"
+                    },
+                    "name": "claude-opus-4-1-20250805",
+                    "provider": "Anthropic"
+                  },
+                  {
+                    "category": "Anthropic",
+                    "icon": "Anthropic",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatAnthropic",
+                      "model_name_param": "model"
+                    },
+                    "name": "claude-opus-4-20250514",
+                    "provider": "Anthropic"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5.1"
+                      ]
+                    },
+                    "name": "gpt-5.1",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5"
+                      ]
+                    },
+                    "name": "gpt-5",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5-mini"
+                      ]
+                    },
+                    "name": "gpt-5-mini",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5-nano"
+                      ]
+                    },
+                    "name": "gpt-5-nano",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model"
+                    },
+                    "name": "gpt-4o-mini",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "Google Generative AI",
+                    "icon": "GoogleGenerativeAI",
+                    "metadata": {
+                      "api_key_param": "google_api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatGoogleGenerativeAIFixed",
+                      "model_name_param": "model"
+                    },
+                    "name": "gemini-1.5-pro",
+                    "provider": "Google Generative AI"
+                  },
+                  {
+                    "category": "Google Generative AI",
+                    "icon": "GoogleGenerativeAI",
+                    "metadata": {
+                      "api_key_param": "google_api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatGoogleGenerativeAIFixed",
+                      "model_name_param": "model"
+                    },
+                    "name": "gemini-1.5-flash",
+                    "provider": "Google Generative AI"
+                  },
+                  {
+                    "category": "Google Generative AI",
+                    "icon": "GoogleGenerativeAI",
+                    "metadata": {
+                      "api_key_param": "google_api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatGoogleGenerativeAIFixed",
+                      "model_name_param": "model"
+                    },
+                    "name": "gemini-1.5-flash-8b",
+                    "provider": "Google Generative AI"
+                  },
+                  {
+                    "category": "Google Generative AI",
+                    "icon": "GoogleGenerativeAI",
+                    "metadata": {
+                      "api_key_param": "google_api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatGoogleGenerativeAIFixed",
+                      "model_name_param": "model"
+                    },
+                    "name": "gemini-2.0-flash-lite",
+                    "provider": "Google Generative AI"
+                  },
+                  {
+                    "category": "Google Generative AI",
+                    "icon": "GoogleGenerativeAI",
+                    "metadata": {
+                      "api_key_param": "google_api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatGoogleGenerativeAIFixed",
+                      "model_name_param": "model"
+                    },
+                    "name": "gemini-3-pro-preview",
+                    "provider": "Google Generative AI"
+                  },
+                  {
+                    "category": "Ollama",
+                    "icon": "Ollama",
+                    "metadata": {
+                      "api_key_param": "base_url",
+                      "base_url_param": "base_url",
+                      "context_length": 128000,
+                      "model_class": "ChatOllama",
+                      "model_name_param": "model"
+                    },
+                    "name": "llama3.3",
+                    "provider": "Ollama"
+                  },
+                  {
+                    "category": "Ollama",
+                    "icon": "Ollama",
+                    "metadata": {
+                      "api_key_param": "base_url",
+                      "base_url_param": "base_url",
+                      "context_length": 128000,
+                      "model_class": "ChatOllama",
+                      "model_name_param": "model"
+                    },
+                    "name": "qwq",
+                    "provider": "Ollama"
+                  },
+                  {
+                    "category": "Ollama",
+                    "icon": "Ollama",
+                    "metadata": {
+                      "api_key_param": "base_url",
+                      "base_url_param": "base_url",
+                      "context_length": 128000,
+                      "model_class": "ChatOllama",
+                      "model_name_param": "model"
+                    },
+                    "name": "llama3.2",
+                    "provider": "Ollama"
+                  },
+                  {
+                    "category": "Ollama",
+                    "icon": "Ollama",
+                    "metadata": {
+                      "api_key_param": "base_url",
+                      "base_url_param": "base_url",
+                      "context_length": 128000,
+                      "model_class": "ChatOllama",
+                      "model_name_param": "model"
+                    },
+                    "name": "llama3.1",
+                    "provider": "Ollama"
+                  },
+                  {
+                    "category": "Ollama",
+                    "icon": "Ollama",
+                    "metadata": {
+                      "api_key_param": "base_url",
+                      "base_url_param": "base_url",
+                      "context_length": 128000,
+                      "model_class": "ChatOllama",
+                      "model_name_param": "model"
+                    },
+                    "name": "mistral",
+                    "provider": "Ollama"
+                  },
+                  {
+                    "category": "IBM WatsonX",
+                    "icon": "WatsonxAI",
+                    "metadata": {
+                      "api_key_param": "apikey",
+                      "context_length": 128000,
+                      "model_class": "ChatWatsonx",
+                      "model_name_param": "model_id",
+                      "project_id_param": "project_id",
+                      "url_param": "url"
+                    },
+                    "name": "ibm/granite-3-2b-instruct",
+                    "provider": "IBM WatsonX"
+                  },
+                  {
+                    "category": "IBM WatsonX",
+                    "icon": "WatsonxAI",
+                    "metadata": {
+                      "api_key_param": "apikey",
+                      "context_length": 128000,
+                      "model_class": "ChatWatsonx",
+                      "model_name_param": "model_id",
+                      "project_id_param": "project_id",
+                      "url_param": "url"
+                    },
+                    "name": "ibm/granite-3-8b-instruct",
+                    "provider": "IBM WatsonX"
+                  },
+                  {
+                    "category": "IBM WatsonX",
+                    "icon": "WatsonxAI",
+                    "metadata": {
+                      "api_key_param": "apikey",
+                      "context_length": 128000,
+                      "model_class": "ChatWatsonx",
+                      "model_name_param": "model_id",
+                      "project_id_param": "project_id",
+                      "url_param": "url"
+                    },
+                    "name": "ibm/granite-13b-instruct-v2",
+                    "provider": "IBM WatsonX"
+                  }
+                ],
                 "override_skip": false,
                 "placeholder": "Setup Provider",
                 "real_time_refresh": true,
@@ -1267,7 +1577,20 @@
                 "trace_as_input": true,
                 "track_in_telemetry": false,
                 "type": "model",
-                "value": []
+                "value": [
+                  {
+                    "category": "Anthropic",
+                    "icon": "Anthropic",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatAnthropic",
+                      "model_name_param": "model"
+                    },
+                    "name": "claude-opus-4-5-20251101",
+                    "provider": "Anthropic"
+                  }
+                ]
               },
               "n_messages": {
                 "_input_type": "IntInput",
@@ -1361,6 +1684,7 @@
                 "display_name": "watsonx Project ID",
                 "dynamic": false,
                 "info": "The project ID associated with the foundation model (IBM watsonx.ai only)",
+                "input_types": [],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1455,21 +1779,21 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-D0Kx2",
+        "id": "Agent-oYRYa",
         "measured": {
-          "height": 594,
+          "height": 385,
           "width": 320
         },
         "position": {
           "x": 1641.6239626366948,
           "y": 301.10345101561927
         },
-        "selected": true,
+        "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "URLComponent-TpTHB",
+          "id": "URLComponent-qf3tz",
           "node": {
             "base_classes": [
               "DataFrame",
@@ -1499,6 +1823,7 @@
             "frozen": false,
             "icon": "layout-template",
             "key": "URLComponent",
+            "last_updated": "2026-02-12T20:48:13.882Z",
             "legacy": false,
             "metadata": {
               "code_hash": "f773f55e3820",
@@ -1538,6 +1863,7 @@
                 "display_name": "Toolset",
                 "group_outputs": false,
                 "hidden": null,
+                "loop_types": null,
                 "method": "to_toolkit",
                 "name": "component_as_tool",
                 "options": null,
@@ -1801,6 +2127,7 @@
                 "is_list": true,
                 "list_add_label": "Add More",
                 "name": "tools_metadata",
+                "override_skip": false,
                 "placeholder": "",
                 "real_time_refresh": true,
                 "required": false,
@@ -1808,6 +2135,7 @@
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
+                "track_in_telemetry": false,
                 "type": "tools",
                 "value": [
                   {
@@ -1880,9 +2208,9 @@
           "type": "URLComponent"
         },
         "dragging": false,
-        "id": "URLComponent-TpTHB",
+        "id": "URLComponent-qf3tz",
         "measured": {
-          "height": 290,
+          "height": 249,
           "width": 320
         },
         "position": {
@@ -1894,16 +2222,16 @@
       }
     ],
     "viewport": {
-      "x": -562.0961577584201,
-      "y": 188.68156067492384,
-      "zoom": 0.8264000374576776
+      "x": -430.4798151183429,
+      "y": 100.22371228463038,
+      "zoom": 0.7755583291049821
     }
   },
   "description": "A simple but powerful starter agent.",
   "endpoint_name": null,
-  "id": "0209ae03-677e-4315-b80a-0d90b3e12cb5",
+  "id": "5ead1bd5-bd5a-4b40-a0bb-20c15a72f561",
   "is_component": false,
-  "last_tested_version": "1.4.3",
+  "last_tested_version": "1.8.0",
   "name": "Simple Agent",
   "tags": [
     "assistants",

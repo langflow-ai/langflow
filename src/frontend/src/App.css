@@ -17,6 +17,16 @@ body {
   -webkit-user-select: none; /* Safari */
   -moz-user-select: none; /* Firefox */
   -ms-user-select: none;
+
+  /* Safari-only fix for playground padding */
+  @media not all and (min-resolution: 0.001dpcm) {
+    @supports (-webkit-appearance: none) {
+      .playground-messages-wrapper {
+        padding-left: 1rem;
+        padding-right: 1rem;
+      }
+    }
+  }
 }
 
 .react-flow__node {
