@@ -472,6 +472,7 @@
             "error": null,
             "field_order": [
               "template",
+              "use_double_brackets",
               "tool_placeholder"
             ],
             "frozen": false,
@@ -552,6 +553,27 @@
                 "type": "prompt",
                 "value": "{transcript}\n\n---\n\nSummarize the action items and main ideas based on the conversation above. Be objective and avoid redundancy. \n\n"
               },
+              "use_double_brackets": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Use Double Brackets",
+                "dynamic": false,
+                "info": "Use {{variable}} syntax instead of {variable}.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "use_double_brackets",
+                "override_skip": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": false
+              },
               "tool_placeholder": {
                 "_input_type": "MessageTextInput",
                 "advanced": true,
@@ -596,27 +618,6 @@
                 "title_case": false,
                 "type": "str",
                 "value": ""
-              },
-              "use_double_brackets": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Use Double Brackets",
-                "dynamic": false,
-                "info": "Use {{variable}} syntax instead of {variable}.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "use_double_brackets",
-                "override_skip": false,
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": true,
-                "type": "bool",
-                "value": false
               }
             },
             "tool_mode": false
@@ -658,10 +659,9 @@
               "sender",
               "sender_name",
               "session_id",
+              "context_id",
               "data_template",
-              "background_color",
-              "chat_icon",
-              "text_color"
+              "clean_data"
             ],
             "frozen": false,
             "icon": "MessagesSquare",
@@ -937,10 +937,9 @@
               "sender",
               "sender_name",
               "session_id",
+              "context_id",
               "data_template",
-              "background_color",
-              "chat_icon",
-              "text_color"
+              "clean_data"
             ],
             "frozen": false,
             "icon": "MessagesSquare",
@@ -1216,10 +1215,9 @@
               "sender",
               "sender_name",
               "session_id",
+              "context_id",
               "data_template",
-              "background_color",
-              "chat_icon",
-              "text_color"
+              "clean_data"
             ],
             "frozen": false,
             "icon": "MessagesSquare",
@@ -1496,6 +1494,7 @@
             "error": null,
             "field_order": [
               "template",
+              "use_double_brackets",
               "tool_placeholder"
             ],
             "frozen": false,
@@ -1622,6 +1621,27 @@
                 "type": "prompt",
                 "value": "{history}\n\n{input}\n\n"
               },
+              "use_double_brackets": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Use Double Brackets",
+                "dynamic": false,
+                "info": "Use {{variable}} syntax instead of {variable}.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "use_double_brackets",
+                "override_skip": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": false
+              },
               "tool_placeholder": {
                 "_input_type": "MessageTextInput",
                 "advanced": true,
@@ -1643,27 +1663,6 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": ""
-              },
-              "use_double_brackets": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Use Double Brackets",
-                "dynamic": false,
-                "info": "Use {{variable}} syntax instead of {variable}.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "use_double_brackets",
-                "override_skip": false,
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": true,
-                "type": "bool",
-                "value": false
               }
             },
             "tool_mode": false
@@ -1700,11 +1699,15 @@
             "documentation": "",
             "edited": false,
             "field_order": [
+              "mode",
+              "message",
               "memory",
+              "sender_type",
               "sender",
               "sender_name",
               "n_messages",
               "session_id",
+              "context_id",
               "order",
               "template"
             ],
@@ -2065,10 +2068,8 @@
               "sender",
               "sender_name",
               "session_id",
-              "files",
-              "background_color",
-              "chat_icon",
-              "text_color"
+              "context_id",
+              "files"
             ],
             "frozen": false,
             "icon": "MessagesSquare",
@@ -2318,7 +2319,7 @@
         "data": {
           "id": "note-KeDpr",
           "node": {
-            "description": "### 💡 Add your Assembly AI API key and audio file here",
+            "description": "### Add your Assembly AI API key and audio file here",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -2335,8 +2336,8 @@
           "width": 456
         },
         "position": {
-          "x": 452.7834981529654,
-          "y": 186.89794978262478
+          "x": 507.4506341676323,
+          "y": 142.35435747437768
         },
         "resizing": false,
         "selected": false,
@@ -2347,7 +2348,7 @@
         "data": {
           "id": "note-59kOs",
           "node": {
-            "description": "### 💡 Add your Assembly AI API key here",
+            "description": "### Add your Assembly AI API key here",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -2364,8 +2365,8 @@
           "width": 365
         },
         "position": {
-          "x": 920.5426847894952,
-          "y": 231.76073203017918
+          "x": 936.7403547197667,
+          "y": 201.3901009109198
         },
         "resizing": false,
         "selected": false,
@@ -2376,7 +2377,7 @@
         "data": {
           "id": "note-KvTWl",
           "node": {
-            "description": "### 💡 Add your OpenAI API key here",
+            "description": "### Configure your Model Provider",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -2393,8 +2394,8 @@
           "width": 335
         },
         "position": {
-          "x": 2151.1746324575247,
-          "y": 500.2170739157981
+          "x": 2157.2487586813763,
+          "y": 528.5629962937735
         },
         "resizing": false,
         "selected": false,
@@ -2405,7 +2406,7 @@
         "data": {
           "id": "note-cvsjg",
           "node": {
-            "description": "### 💡 Add your OpenAI API key here",
+            "description": "### Configure your Model Provider",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -2421,8 +2422,8 @@
           "width": 324
         },
         "position": {
-          "x": 1665.156818365488,
-          "y": 1348.5600122190888
+          "x": 1675.2803620719078,
+          "y": 1391.078895786052
         },
         "selected": false,
         "type": "noteNode"
@@ -2494,7 +2495,7 @@
               }
             ],
             "pinned": false,
-            "score": 0.000018578044550916993,
+            "score": 1.8578044550916993e-05,
             "template": {
               "_type": "Component",
               "api_key": {
@@ -3022,7 +3023,8 @@
               "input_value",
               "system_message",
               "stream",
-              "temperature"
+              "temperature",
+              "max_tokens"
             ],
             "frozen": false,
             "icon": "brain-circuit",
@@ -3398,7 +3400,8 @@
               "input_value",
               "system_message",
               "stream",
-              "temperature"
+              "temperature",
+              "max_tokens"
             ],
             "frozen": false,
             "icon": "brain-circuit",

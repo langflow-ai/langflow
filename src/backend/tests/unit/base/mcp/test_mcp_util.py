@@ -488,6 +488,45 @@ class TestUpdateToolsStdioHeaders:
         assert full_command == "uvx mcp-proxy --transport streamablehttp http://localhost/streamable"
 
     @pytest.mark.asyncio
+    async def test_stdio_multiword_command_with_empty_args(self):
+        """A multi-word command string (e.g. 'uvx mcp-server-fetch') with empty args should be split correctly.
+
+        Regression test: shlex.join(["uvx mcp-server-fetch"]) used to produce
+        a single-quoted token that bash treated as one binary name, causing
+        'exec: uvx mcp-server-fetch: not found'.
+        """
+        mock_stdio = AsyncMock(spec=MCPStdioClient)
+        mock_stdio.connect_to_server.return_value = []
+        mock_stdio._connected = True
+
+        server_config = {
+            "command": "uvx mcp-server-fetch",
+            "args": [],
+        }
+
+        await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
+
+        full_command = mock_stdio.connect_to_server.call_args[0][0]
+        assert full_command == "uvx mcp-server-fetch"
+
+    @pytest.mark.asyncio
+    async def test_stdio_multiword_command_with_args(self):
+        """A multi-word command string combined with additional args should produce correct tokens."""
+        mock_stdio = AsyncMock(spec=MCPStdioClient)
+        mock_stdio.connect_to_server.return_value = []
+        mock_stdio._connected = True
+
+        server_config = {
+            "command": "uvx mcp-server-fetch",
+            "args": ["--timeout", "30"],
+        }
+
+        await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
+
+        full_command = mock_stdio.connect_to_server.call_args[0][0]
+        assert full_command == "uvx mcp-server-fetch --timeout 30"
+
+    @pytest.mark.asyncio
     async def test_stdio_headers_appended_when_all_args_are_flags(self):
         """When all args are flags (no positional URL), headers should be appended."""
         mock_stdio = AsyncMock(spec=MCPStdioClient)
