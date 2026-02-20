@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pydantic import create_model
 
-from lfx.components.agentics.base_component import BaseAgenticComponent
+from lfx.components.agentics.inputs.base_component import BaseAgenticComponent
 from lfx.components.agentics.constants import (
     ERROR_AGENTICS_NOT_INSTALLED,
     TRANSDUCTION_AMAP,
@@ -33,8 +33,8 @@ class SemanticMap(BaseAgenticComponent):
     new columns or derive insights for each individual record.
     """
 
-    display_name = "Semantic Map"
-    description = "Transform each row of input data using natural language instructions and a defined output schema."
+    display_name = "aMap"
+    description = "Augment the input dataframe adding new columns defined in the input schema. Rows are processed independently and in parallel using LLMs."
     documentation: str = "https://docs.langflow.org/bundles-agentics"
     icon = "Agentics"
 
@@ -74,12 +74,12 @@ class SemanticMap(BaseAgenticComponent):
             name="states",
             display_name="Output DataFrame",
             info="Transformed DataFrame resulting from semantic mapping.",
-            method="semantic_map",
+            method="aMap",
             tool_mode=True,
         ),
     ]
 
-    async def semantic_map(self) -> DataFrame:
+    async def aMap(self) -> DataFrame:
         """Transform input data row-by-row using LLM-based semantic processing.
         
         Returns:

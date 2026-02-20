@@ -70,7 +70,7 @@ Configure your API keys as [global variables](/configuration-global-variables) o
 
 ## Use Cases and Examples
 
-### Customer Review Sentiment Analysis (SemanticMap)
+### Customer Review Sentiment Analysis (aMap)
 
 Transform customer reviews into structured sentiment data:
 
@@ -93,7 +93,7 @@ Transform customer reviews into structured sentiment data:
 | 1 | Great product, fast shipping! | positive | 0.95 | product quality, shipping |
 | 2 | Terrible quality, broke after one use | negative | 0.92 | quality, durability |
 
-### Sales Data Summary (Semantic Aggregator)
+### Sales Data Summary (aReduce)
 
 Aggregate multiple sales records into a single summary:
 
@@ -116,28 +116,7 @@ Aggregate multiple sales records into a single summary:
 |---------------|---------------------|---------|
 | 3500 | Widget A | Over 3 days, Widget A was the best seller with 110 units, generating $2700 in revenue. |
 
-### Spam Detection (SemanticFilter)
-
-Filter messages to keep only legitimate content:
-
-**Input DataFrame:**
-
-| message_id | content |
-|------------|---------|
-| 1 | Meeting at 3pm tomorrow |
-| 2 | CLICK HERE FOR FREE MONEY!!! |
-| 3 | Project deadline extended to Friday |
-
-**Predicate Template:** `{content} is not spam or promotional content`
-
-**Output DataFrame:**
-
-| message_id | content |
-|------------|---------|
-| 1 | Meeting at 3pm tomorrow |
-| 3 | Project deadline extended to Friday |
-
-### Test Data Generation (Synthetic Data Generator)
+### Test Data Generation (aGenerate)
 
 Generate realistic test data for development:
 
@@ -161,22 +140,22 @@ The Agentics bundle includes four specialized components for data transformation
 
 | Component | Purpose | Input Rows | Output Rows |
 |-----------|---------|------------|-------------|
-| Semantic Map | Add columns to each row | N | N |
-| Semantic Aggregator | Summarize all rows | N | 1 |
-| Synthetic Data Generator | Generate fake data | 0 | N |
+| aMap | Add columns to each row | N | N |
+| aReduce | Summarize all rows | N | 1 |
+| aGenerate | Generate fake data | 0 | N |
 | DataFrame Combiner | Combine two DataFrames | N + M | Variable |
 
 ## Parameters
 
 <PartialParams />
 
-### Semantic Map
+### aMap
 
 Transforms each row of input data using natural language instructions and a defined output schema. This component processes input data row-by-row, applying LLM-based transformations to generate new columns or derive insights for each individual record.
 
 **Use when:** You need to enrich existing data with LLM-generated insights (e.g., sentiment analysis, categorization, entity extraction).
 
-#### Semantic Map Parameters
+#### aMap Parameters
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -200,13 +179,13 @@ Analyze the review text and determine:
 3. Key topics mentioned in the review
 ```
 
-### Semantic Aggregator
+### aReduce
 
 Aggregates or summarizes entire input data using natural language instructions and a defined output schema. This component processes all rows of input data collectively to produce aggregated results, such as summaries, statistics, or consolidated information based on LLM analysis.
 
 **Use when:** You need to summarize, analyze, or extract insights from multiple rows (e.g., creating reports, finding patterns, generating summaries).
 
-#### Semantic Aggregator Parameters
+#### aReduce Parameters
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -229,13 +208,13 @@ Analyze all sales records and provide:
 3. A brief summary of sales trends
 ```
 
-### Synthetic Data Generator
+### aGenerate
 
 Generates synthetic data using either example data or a defined schema. This component creates realistic synthetic data by either learning from an input DataFrame and generating similar rows, or following a user-defined schema to create data from scratch.
 
 **Use when:** You need test data, want to augment training datasets, or need to generate examples for documentation.
 
-#### Synthetic Data Generator Parameters
+#### aGenerate Parameters
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -435,10 +414,10 @@ This format is compatible with:
 
 ### Token Usage
 
-- **SemanticMap**: Tokens per row × number of rows
-- **Semantic Aggregator**: All rows sent in one request (can be large)
-- **SemanticFilter**: Tokens per row × number of rows (reduced with column-specific predicates)
-- **Synthetic Data Generator**: Tokens per instance × number of instances
+- **aMap**: Tokens per row × number of rows
+- **aReduce**: All rows sent in one request (can be large)
+- **aFilter**: Tokens per row × number of rows (reduced with column-specific predicates)
+- **aGenerate**: Tokens per instance × number of instances
 
 ### Batch Size Recommendations
 
@@ -453,8 +432,8 @@ This format is compatible with:
 ### Best Practices
 
 1. **Test on small samples** before processing large datasets
-2. **Use column-specific predicates** in SemanticFilter to reduce token usage
-3. **Consider filtering data** before using Semantic Aggregator on large datasets
+2. **Use column-specific predicates** in aFilter to reduce token usage
+3. **Consider filtering data** before using aReduce on large datasets
 4. **Monitor API costs** when processing large volumes
 5. **Optimize batch sizes** based on your dataset size and performance requirements
 
