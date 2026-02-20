@@ -4,7 +4,7 @@ This module tests that when a component specifies static options for a ModelInpu
 those options remain static and are not overridden by global user settings.
 """
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from lfx.base.models.unified_models import update_model_options_in_build_config
 
@@ -92,13 +92,20 @@ class TestModelInputStaticOptions:
         # Verify: Static options should STILL be preserved after refresh
         assert result["model"]["options"] == static_options
 
-    def test_dynamic_options_still_refresh(self):
-        """When no options are provided, dynamic refresh should still work."""
-        # Setup: Component WITHOUT static options
+    @patch("lfx.base.models.unified_models.get_ollama_models")
+    def test_dynamic_options_still_refresh(self, mock_get_ollama_models):
+        """When no options are provided, dynamic refresh should still work and merge Ollama models from API."""
+
+        async def _return_ollama_models(*args, **kwargs):  # noqa: ARG001
+            return ["local-ollama-model"]
+
+        mock_get_ollama_models.side_effect = _return_ollama_models
+        # Setup: Component WITHOUT static options, with ollama_base_url so merge runs
         component = MagicMock()
         component.user_id = "test_user"
         component.cache = {}
         component.log = MagicMock()
+        component.ollama_base_url = "http://localhost:11434"
 
         # No options initially
         build_config = {"model": {}}
@@ -121,8 +128,14 @@ class TestModelInputStaticOptions:
             field_value=None,
         )
 
-        # Verify: Should use global options since no static options were provided
-        assert result["model"]["options"] == global_options
+        options = result["model"]["options"]
+        # Should include global options
+        assert any(o["name"] == "gpt-4o" and o["provider"] == "OpenAI" for o in options)
+        # Should merge in Ollama models from API when component has ollama_base_url
+        ollama_options = [o for o in options if o.get("provider") == "Ollama" and o.get("name") == "local-ollama-model"]
+        assert len(ollama_options) == 1
+        assert ollama_options[0]["metadata"].get("base_url_param") == "base_url"
+        assert ollama_options[0]["metadata"].get("model_class") == "ChatOllama"
 
     def test_static_options_with_connect_other_models(self):
         """Static options with 'connect_other_models' should show handle but keep options."""

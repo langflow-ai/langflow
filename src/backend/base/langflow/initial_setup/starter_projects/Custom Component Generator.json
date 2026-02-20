@@ -224,11 +224,15 @@
             "documentation": "",
             "edited": false,
             "field_order": [
+              "mode",
+              "message",
               "memory",
+              "sender_type",
               "sender",
               "sender_name",
               "n_messages",
               "session_id",
+              "context_id",
               "order",
               "template"
             ],
@@ -586,7 +590,9 @@
             "documentation": "",
             "edited": false,
             "field_order": [
-              "template"
+              "template",
+              "use_double_brackets",
+              "tool_placeholder"
             ],
             "frozen": false,
             "icon": "prompts",
@@ -1966,10 +1972,8 @@
               "sender",
               "sender_name",
               "session_id",
-              "files",
-              "background_color",
-              "chat_icon",
-              "text_color"
+              "context_id",
+              "files"
             ],
             "frozen": false,
             "icon": "MessagesSquare",
@@ -2246,10 +2250,8 @@
               "sender",
               "sender_name",
               "session_id",
+              "context_id",
               "data_template",
-              "background_color",
-              "chat_icon",
-              "text_color",
               "clean_data"
             ],
             "frozen": false,
@@ -2533,7 +2535,8 @@
               "input_value",
               "system_message",
               "stream",
-              "temperature"
+              "temperature",
+              "max_tokens"
             ],
             "frozen": false,
             "icon": "brain-circuit",

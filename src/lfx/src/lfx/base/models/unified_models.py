@@ -15,6 +15,7 @@ from lfx.base.models.google_generative_ai_constants import (
     GOOGLE_GENERATIVE_AI_EMBEDDING_MODELS_DETAILED,
     GOOGLE_GENERATIVE_AI_MODELS_DETAILED,
 )
+from lfx.base.models.model_utils import get_ollama_models
 from lfx.base.models.ollama_constants import OLLAMA_EMBEDDING_MODELS_DETAILED, OLLAMA_MODELS_DETAILED
 from lfx.base.models.openai_constants import OPENAI_EMBEDDING_MODELS_DETAILED, OPENAI_MODELS_DETAILED
 from lfx.base.models.watsonx_constants import WATSONX_MODELS_DETAILED
@@ -315,6 +316,36 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
                 field="",
                 session=session,
             )
+
+    return run_until_complete(_get_variable())
+
+
+def get_ollama_base_url_from_variable(user_id: UUID | str | None) -> str | None:
+    """Get Ollama base URL from global variable OLLAMA_BASE_URL.
+
+    Args:
+        user_id: The user ID to look up the variable for
+
+    Returns:
+        The base URL string if the variable exists and is non-empty, None otherwise
+    """
+    if user_id is None or (isinstance(user_id, str) and user_id == "None"):
+        return None
+
+    async def _get_variable():
+        async with session_scope() as session:
+            variable_service = get_variable_service()
+            if variable_service is None:
+                return None
+            value = await variable_service.get_variable(
+                user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
+                name="OLLAMA_BASE_URL",
+                field="",
+                session=session,
+            )
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+            return None
 
     return run_until_complete(_get_variable())
 
@@ -1072,10 +1103,16 @@ def get_llm(
             )
             raise ValueError(msg)
         # else: neither provided - let ChatWatsonx handle it (will fail with its own error)
-    elif provider == "Ollama" and ollama_base_url:
-        # For Ollama, handle custom base_url
+    elif provider == "Ollama":
+        # For Ollama, use component base_url or fall back to OLLAMA_BASE_URL variable
         base_url_param = metadata.get("base_url_param", "base_url")
-        kwargs[base_url_param] = ollama_base_url
+        url_val = ollama_base_url
+        if hasattr(ollama_base_url, "text") and isinstance(ollama_base_url.text, str):
+            url_val = ollama_base_url.text
+        if not (isinstance(url_val, str) and url_val.strip()):
+            url_val = get_ollama_base_url_from_variable(user_id)
+        if isinstance(url_val, str) and url_val.strip():
+            kwargs[base_url_param] = url_val.strip()
 
     try:
         return model_class(**kwargs)
@@ -1091,6 +1128,75 @@ def get_llm(
             raise ValueError(msg) from e
         # Re-raise the original exception for other cases
         raise
+
+
+# Ollama API response keys and capability for language models (completion, not embedding)
+_OLLAMA_JSON_MODELS_KEY = "models"
+_OLLAMA_JSON_NAME_KEY = "name"
+_OLLAMA_JSON_CAPABILITIES_KEY = "capabilities"
+_OLLAMA_DESIRED_CAPABILITY = "completion"
+_DEFAULT_OLLAMA_URL = "http://localhost:11434"
+
+
+def _merge_ollama_models_from_api(component: Any, build_config: dict, options: list[dict[str, Any]]) -> None:
+    """Fetch Ollama models from the user's instance and add any missing ones to options.
+
+    The unified Language Model dropdown uses a static list from ollama_constants; this
+    merges in models returned by the Ollama API (api/tags + api/show) so locally pulled
+    models appear in the list.
+    """
+    base_url = _get_ollama_base_url_from_component(component, build_config)
+    if not base_url or not base_url.strip():
+        return
+    base_url = base_url.strip()
+
+    try:
+        fetched = run_until_complete(
+            get_ollama_models(
+                base_url,
+                _OLLAMA_DESIRED_CAPABILITY,
+                _OLLAMA_JSON_MODELS_KEY,
+                _OLLAMA_JSON_NAME_KEY,
+                _OLLAMA_JSON_CAPABILITIES_KEY,
+            )
+        )
+    except Exception as e:  # noqa: BLE001
+        logger.debug("Could not fetch Ollama models from %s: %s", base_url, e)
+        return
+
+    existing_ollama_names = {opt["name"] for opt in options if opt.get("provider") == "Ollama"}
+    for model_name in fetched:
+        if model_name in existing_ollama_names:
+            continue
+        options.append(
+            {
+                "name": model_name,
+                "icon": "Ollama",
+                "category": "Ollama",
+                "provider": "Ollama",
+                "metadata": {
+                    "context_length": 128000,
+                    "model_class": "ChatOllama",
+                    "model_name_param": "model",
+                    "api_key_param": "base_url",
+                    "base_url_param": "base_url",
+                },
+            }
+        )
+
+
+def _get_ollama_base_url_from_component(component: Any, build_config: dict) -> str | None:
+    """Get Ollama base URL from component or build_config; default to localhost."""
+    url = getattr(component, "ollama_base_url", None)
+    if isinstance(url, str) and url.strip():
+        return url.strip()
+    if hasattr(url, "text") and isinstance(url.text, str) and url.text.strip():
+        return url.text.strip()
+    build_ollama = build_config.get("ollama_base_url") or {}
+    url = build_ollama.get("value") if isinstance(build_ollama, dict) else None
+    if isinstance(url, str) and url.strip():
+        return url.strip()
+    return _DEFAULT_OLLAMA_URL
 
 
 def update_model_options_in_build_config(
@@ -1189,7 +1295,14 @@ def update_model_options_in_build_config(
 
     # Use cached results
     cached = component.cache.get(cache_key, {"options": []})
-    build_config["model"]["options"] = cached["options"]
+    options = cached["options"]
+
+    # For language model options, merge in Ollama models fetched from the user's instance
+    # so locally pulled models (not in the static list) appear in the dropdown
+    if cache_key_prefix == "language_model_options" and options:
+        _merge_ollama_models_from_api(component, build_config, options)
+
+    build_config["model"]["options"] = options
 
     # Set default value on initial load when field is empty
     # Fetch from user's default model setting in the database

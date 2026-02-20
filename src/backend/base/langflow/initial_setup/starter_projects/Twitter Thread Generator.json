@@ -274,10 +274,8 @@
               "sender",
               "sender_name",
               "session_id",
-              "files",
-              "background_color",
-              "chat_icon",
-              "text_color"
+              "context_id",
+              "files"
             ],
             "frozen": false,
             "icon": "MessagesSquare",
@@ -549,7 +547,8 @@
             "documentation": "",
             "edited": false,
             "field_order": [
-              "input_value"
+              "input_value",
+              "use_global_variable"
             ],
             "frozen": false,
             "icon": "type",
@@ -692,10 +691,8 @@
               "sender",
               "sender_name",
               "session_id",
+              "context_id",
               "data_template",
-              "background_color",
-              "chat_icon",
-              "text_color",
               "clean_data"
             ],
             "frozen": false,
@@ -973,7 +970,8 @@
             "documentation": "",
             "edited": false,
             "field_order": [
-              "input_value"
+              "input_value",
+              "use_global_variable"
             ],
             "frozen": false,
             "icon": "type",
@@ -1109,7 +1107,8 @@
             "documentation": "",
             "edited": false,
             "field_order": [
-              "input_value"
+              "input_value",
+              "use_global_variable"
             ],
             "frozen": false,
             "icon": "type",
@@ -1245,7 +1244,8 @@
             "documentation": "",
             "edited": false,
             "field_order": [
-              "input_value"
+              "input_value",
+              "use_global_variable"
             ],
             "frozen": false,
             "icon": "type",
@@ -1381,7 +1381,8 @@
             "documentation": "",
             "edited": false,
             "field_order": [
-              "input_value"
+              "input_value",
+              "use_global_variable"
             ],
             "frozen": false,
             "icon": "type",
@@ -1517,7 +1518,8 @@
             "documentation": "",
             "edited": false,
             "field_order": [
-              "input_value"
+              "input_value",
+              "use_global_variable"
             ],
             "frozen": false,
             "icon": "type",
@@ -1702,6 +1704,7 @@
             "edited": false,
             "field_order": [
               "template",
+              "use_double_brackets",
               "tool_placeholder"
             ],
             "frozen": false,
@@ -2000,7 +2003,8 @@
               "input_value",
               "system_message",
               "stream",
-              "temperature"
+              "temperature",
+              "max_tokens"
             ],
             "frozen": false,
             "icon": "brain-circuit",

@@ -51,7 +51,17 @@ export const useGetModelProviders: useQueryFunctionType<
         ...providerInfo,
         icon: getProviderIcon(providerInfo.provider),
       }));
-    } catch (error) {
+    } catch (error: any) {
+      // Rethrow cancel/abort errors so React Query keeps previous data instead of
+      // updating to [], which would hide the model dropdown and reset selection to OpenAI
+      const isCanceled =
+        error?.name === "CanceledError" ||
+        error?.code === "ERR_CANCELED" ||
+        (typeof error?.message === "string" &&
+          error.message?.toLowerCase().includes("cancel"));
+      if (isCanceled) {
+        throw error;
+      }
       console.error("Error fetching model providers:", error);
       return [];
     }
