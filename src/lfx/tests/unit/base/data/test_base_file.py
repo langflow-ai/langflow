@@ -262,7 +262,7 @@ class TestResolvePathsFromValue:
         """Data object with text field containing path should be resolved."""
         data = Data(data={"text": "/test/path.txt"})
         paths = self.component._resolve_paths_from_value(data)
-        
+
         assert len(paths) == 1
         resolved_data, path_str = paths[0]
         assert path_str == "/test/path.txt"
@@ -286,7 +286,7 @@ class TestResolvePathsFromValue:
 
         assert len(paths) == 1
         assert paths[0][1] == "/path/double.txt"
-        
+
     def test_resolve_malformed_json_fallback(self):
         """Malformed JSON should be treated as literal string."""
         malformed = '["/path/a.txt", missing_quote]'
@@ -314,7 +314,7 @@ class TestResolvePathsFromValue:
         data1 = Data(data={"text": "/list/data1.txt"})
         data2 = Data(data={"text": "/list/data2.txt"})
         mixed_list = [data1, "/list/str.txt", data2]
-        
+
         paths = self.component._resolve_paths_from_value(mixed_list)
 
         assert len(paths) == 3
@@ -328,8 +328,8 @@ class TestResolvePathsFromValue:
         paths = self.component._resolve_paths_from_value(data)
 
         # Assuming it gets skipped or yields an empty string if get_text() returns None
-        # From tracing the code, it uses format_text() which might return a repr if text isn't found, 
-        # or None if get_text() is overridden. Let's see what it actually does. 
+        # From tracing the code, it uses format_text() which might return a repr if text isn't found,
+        # or None if get_text() is overridden. Let's see what it actually does.
         # In base_file, if path_str is empty we skip processing.
         # But wait, data.data.get("text") might be None. get_text() usually returns data.get("text", "").
         assert len(paths) == 0
@@ -337,7 +337,7 @@ class TestResolvePathsFromValue:
 
 class TestFilePathAsList:
     """Test cases for BaseFileComponent._file_path_as_list method."""
-    
+
     def setup_method(self):
         """Set up test fixtures."""
         self.component = TestFileComponent()
@@ -353,6 +353,6 @@ class TestFilePathAsList:
         data = Data(data={"text": "/test/file.txt"})
         self.component.set_attributes({"file_path": data, "path": []})
         result = self.component._file_path_as_list()
-        
+
         assert len(result) == 1
         assert result[0] is data
