@@ -416,7 +416,6 @@ This format is compatible with:
 
 - **aMap**: Tokens per row × number of rows
 - **aReduce**: All rows sent in one request (can be large)
-- **aFilter**: Tokens per row × number of rows (reduced with column-specific predicates)
 - **aGenerate**: Tokens per instance × number of instances
 
 ### Batch Size Recommendations
@@ -432,10 +431,9 @@ This format is compatible with:
 ### Best Practices
 
 1. **Test on small samples** before processing large datasets
-2. **Use column-specific predicates** in aFilter to reduce token usage
-3. **Consider filtering data** before using aReduce on large datasets
-4. **Monitor API costs** when processing large volumes
-5. **Optimize batch sizes** based on your dataset size and performance requirements
+2. **Consider filtering data** before using aReduce on large datasets
+3. **Monitor API costs** when processing large volumes
+4. **Optimize batch sizes** based on your dataset size and performance requirements
 
 ## Troubleshooting
 
