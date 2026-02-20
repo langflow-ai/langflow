@@ -683,10 +683,8 @@
               "sender",
               "sender_name",
               "session_id",
-              "files",
-              "background_color",
-              "chat_icon",
-              "text_color"
+              "context_id",
+              "files"
             ],
             "frozen": false,
             "icon": "MessagesSquare",
@@ -960,10 +958,8 @@
               "sender",
               "sender_name",
               "session_id",
+              "context_id",
               "data_template",
-              "background_color",
-              "chat_icon",
-              "text_color",
               "clean_data"
             ],
             "frozen": false,
@@ -1226,7 +1222,7 @@
         "data": {
           "id": "note-1Ws1d",
           "node": {
-            "description": "### 💡 Add your OpenAI API key here ",
+            "description": "### Configure your Model Provider",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -1242,8 +1238,8 @@
           "width": 324
         },
         "position": {
-          "x": 1035.6043472316023,
-          "y": 238.36639317703757
+          "x": 1015.0969003266209,
+          "y": 206.1404051834952
         },
         "selected": false,
         "type": "noteNode"
@@ -1265,9 +1261,12 @@
             "field_order": [
               "model",
               "api_key",
+              "base_url_ibm_watsonx",
+              "project_id",
               "system_prompt",
               "context_id",
               "n_messages",
+              "max_tokens",
               "format_instructions",
               "output_schema",
               "tools",

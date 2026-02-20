@@ -741,7 +741,7 @@
   },
   "OpenSearchVectorStoreComponentMultimodalMultiEmbedding": {
     "versions": {
-      "0.3.0": "a52b7daaae16"
+      "0.3.0": "89f34f2ad64e"
     }
   },
   "EmbeddingSimilarityComponent": {
@@ -886,7 +886,7 @@
   },
   "GoogleGenerativeAIModel": {
     "versions": {
-      "0.3.0": "ffb6e75b6684"
+      "0.3.0": "049f38001189"
     }
   },
   "Google Generative AI Embeddings": {
@@ -1041,7 +1041,7 @@
   },
   "CSVAgent": {
     "versions": {
-      "0.3.0": "97947e212da9"
+      "0.3.0": "4978be110e63"
     }
   },
   "LangChainFakeEmbeddings": {
@@ -1456,7 +1456,7 @@
   },
   "SplitText": {
     "versions": {
-      "0.3.0": "b9d63ae59e8a"
+      "0.3.0": "29ae597d2d86"
     }
   },
   "StoreMessage": {
