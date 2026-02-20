@@ -218,6 +218,7 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
                 "required": True,
                 "is_secret": False,
                 "is_list": False,
+                "combobox": True,
                 "options": [
                     "https://us-south.ml.cloud.ibm.com",
                     "https://eu-de.ml.cloud.ibm.com",
