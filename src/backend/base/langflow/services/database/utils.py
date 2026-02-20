@@ -9,8 +9,6 @@ from lfx.log.logger import logger
 from sqlmodel import text
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from langflow.services.database.constants import POSTGRESQL_VERSION_REQUIRED_MESSAGE
-
 if TYPE_CHECKING:
     from langflow.services.database.service import DatabaseService
 
@@ -49,16 +47,14 @@ async def initialize_database(*, fix_migration: bool = False) -> None:
         ):
             # Wrong revision in the DB: delete alembic_version and re-run migrations
             logger.warning("Wrong revision in DB, deleting alembic_version table and running migrations again")
-            async with session_getter(database_service) as session:
+            from langflow.services.deps import session_scope
+
+            async with session_scope() as session:
                 await session.exec(text("DROP TABLE alembic_version"))
             await database_service.run_migrations(fix=fix_migration)
-        elif _is_postgresql_nulls_syntax_error(exc):
-            raise RuntimeError(POSTGRESQL_VERSION_REQUIRED_MESSAGE) from exc
         else:
             raise
     except Exception as exc:
-        if _is_postgresql_nulls_syntax_error(exc):
-            raise RuntimeError(POSTGRESQL_VERSION_REQUIRED_MESSAGE) from exc
         error_message = str(exc)
         # if the exception involves tables already existing
         # we can ignore it
@@ -67,12 +63,6 @@ async def initialize_database(*, fix_migration: bool = False) -> None:
             raise
         await logger.adebug("Migration attempted to create existing table, skipping.")
     await logger.adebug("Database initialized")
-
-
-def _is_postgresql_nulls_syntax_error(exc: BaseException) -> bool:
-    """True if this exception is the UNIQUE NULLS DISTINCT syntax error (PostgreSQL < 15)."""
-    msg = str(exc)
-    return "NULLS" in msg and "syntax error" in msg.lower()
 
 
 @asynccontextmanager

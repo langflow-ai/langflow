@@ -237,18 +237,16 @@ class DatabaseService(Service):
             return
         if self.settings_service.settings.use_noop_database:
             return
-        async with self._with_session() as session:
-            # server_version is "15.2" or "15.2 (Debian 15.2-1.pgdg120+1)"
-            result = await session.exec(text("SELECT current_setting('server_version')"))
-            row = result.one()
-            version_str = row[0] if hasattr(row, "__getitem__") else row
-            # Parse major from the start (e.g. "15.2" or "15.2 (Debian ...)" -> 15)
-            try:
-                major = int(version_str.split()[0].split(".")[0])
-            except (ValueError, IndexError, AttributeError):
-                major = 0
-            if major < MIN_POSTGRESQL_MAJOR_VERSION:
-                msg = f"You are running PostgreSQL {version_str}. {POSTGRESQL_VERSION_REQUIRED_MESSAGE}"
+        async with session_scope() as session:
+            # Use server_version_num (integer) per PostgreSQL preset options:
+            # https://www.postgresql.org/docs/current/runtime-config-preset.html
+            result = await session.execute(
+                text("SELECT current_setting('server_version_num'), current_setting('server_version')")
+            )
+            version_num_str, version_str = result.fetchone()
+            # server_version_num is major*10000 + minor*100 + patch
+            if int(version_num_str) < MIN_POSTGRESQL_MAJOR_VERSION * 10000:
+                msg = f"Running PostgreSQL {version_str}. {POSTGRESQL_VERSION_REQUIRED_MESSAGE}"
                 raise RuntimeError(msg) from None
 
     async def assign_orphaned_flows_to_superuser(self) -> None:
