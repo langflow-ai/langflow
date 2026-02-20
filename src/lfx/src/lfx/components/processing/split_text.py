@@ -1,7 +1,7 @@
-from langchain_text_splitters import CharacterTextSplitter
+from langchain_text_splitters import CharacterTextSplitter, RecursiveCharacterTextSplitter
 
 from lfx.custom.custom_component.component import Component
-from lfx.io import BoolInput, DropdownInput, HandleInput, IntInput, MessageTextInput, Output
+from lfx.io import BoolInput, DropdownInput, HandleInput, IntInput, MessageTextInput, Output, TabInput
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
@@ -23,21 +23,28 @@ class SplitTextComponent(Component):
             input_types=["Data", "DataFrame", "Message"],
             required=True,
         ),
-        IntInput(
-            name="chunk_overlap",
-            display_name="Chunk Overlap",
-            info="Number of characters to overlap between chunks.",
-            value=200,
+        TabInput(
+            name="mode",
+            display_name="Mode",
+            options=["Recursive", "Character"],
+            value="Recursive",
+            info=(
+                "Character: splits by a single separator, configurable. "
+                "Recursive: tries multiple separators in cascade to guarantee chunk size."
+            ),
+            real_time_refresh=True,
         ),
         IntInput(
             name="chunk_size",
             display_name="Chunk Size",
-            info=(
-                "The maximum length of each chunk. Text is first split by separator, "
-                "then chunks are merged up to this size. "
-                "Individual splits larger than this won't be further divided."
-            ),
+            info="The maximum number of characters in each chunk.",
             value=1000,
+        ),
+        IntInput(
+            name="chunk_overlap",
+            display_name="Chunk Overlap",
+            info="Number of characters to overlap between consecutive chunks.",
+            value=200,
         ),
         MessageTextInput(
             name="separator",
@@ -46,7 +53,8 @@ class SplitTextComponent(Component):
                 "The character to split on. Use \\n for newline. "
                 "Examples: \\n\\n for paragraphs, \\n for lines, . for sentences"
             ),
-            value="\n",
+            value="\n\n",
+            show=False,
         ),
         MessageTextInput(
             name="text_key",
@@ -76,72 +84,96 @@ class SplitTextComponent(Component):
         Output(display_name="Chunks", name="dataframe", method="split_text"),
     ]
 
+    def update_build_config(self, build_config, field_value, field_name=None):
+        if field_name == "mode":
+            build_config["separator"]["show"] = field_value == "Character"
+        return build_config
+
     def _docs_to_data(self, docs, *, clean: bool = False) -> list[Data]:
         return [
             Data(text=doc.page_content) if clean else Data(text=doc.page_content, data=doc.metadata) for doc in docs
         ]
 
     def _fix_separator(self, separator: str) -> str:
-        """Fix common separator issues and convert to proper format."""
         if separator == "/n":
             return "\n"
         if separator == "/t":
             return "\t"
         return separator
 
-    def split_text_base(self):
-        separator = self._fix_separator(self.separator)
-        separator = unescape_string(separator)
+    def _parse_keep_separator(self, value: str) -> bool | str:
+        if value.lower() == "false":
+            return False
+        if value.lower() == "true":
+            return True
+        return value  # 'start' or 'end' kept as string
 
-        if isinstance(self.data_inputs, DataFrame):
-            if not len(self.data_inputs):
+    def _get_documents(self):
+        inputs = self.data_inputs
+
+        if isinstance(inputs, DataFrame):
+            if not len(inputs):
                 msg = "DataFrame is empty"
                 raise TypeError(msg)
-
-            self.data_inputs.text_key = self.text_key
+            inputs.text_key = self.text_key
             try:
-                documents = self.data_inputs.to_lc_documents()
+                return inputs.to_lc_documents()
             except Exception as e:
                 msg = f"Error converting DataFrame to documents: {e}"
                 raise TypeError(msg) from e
-        elif isinstance(self.data_inputs, Message):
-            self.data_inputs = [self.data_inputs.to_data()]
-            return self.split_text_base()
-        else:
-            if not self.data_inputs:
-                msg = "No data inputs provided"
-                raise TypeError(msg)
 
-            documents = []
-            if isinstance(self.data_inputs, Data):
-                self.data_inputs.text_key = self.text_key
-                documents = [self.data_inputs.to_lc_document()]
-            else:
-                try:
-                    documents = [input_.to_lc_document() for input_ in self.data_inputs if isinstance(input_, Data)]
-                    if not documents:
-                        msg = f"No valid Data inputs found in {type(self.data_inputs)}"
-                        raise TypeError(msg)
-                except AttributeError as e:
-                    msg = f"Invalid input type in collection: {e}"
-                    raise TypeError(msg) from e
+        if isinstance(inputs, Message):
+            inputs = [inputs.to_data()]
+        elif isinstance(inputs, Data):
+            inputs = [inputs]
+
+        if not inputs:
+            msg = "No data inputs provided"
+            raise TypeError(msg)
+
         try:
-            # Convert string 'False'/'True' to boolean
-            keep_sep = self.keep_separator
-            if isinstance(keep_sep, str):
-                if keep_sep.lower() == "false":
-                    keep_sep = False
-                elif keep_sep.lower() == "true":
-                    keep_sep = True
-                # 'start' and 'end' are kept as strings
+            documents = []
+            for item in inputs:
+                if isinstance(item, Data):
+                    item.text_key = self.text_key
+                    documents.append(item.to_lc_document())
+        except AttributeError as e:
+            msg = f"Invalid input type in collection: {e}"
+            raise TypeError(msg) from e
 
-            splitter = CharacterTextSplitter(
-                chunk_overlap=self.chunk_overlap,
-                chunk_size=self.chunk_size,
-                separator=separator,
-                keep_separator=keep_sep,
-            )
-            return splitter.split_documents(documents)
+        if not documents:
+            msg = f"No valid Data inputs found in {type(inputs)}"
+            raise TypeError(msg)
+
+        return documents
+
+    def _split_by_character(self, documents):
+        separator = unescape_string(self._fix_separator(self.separator))
+        keep_sep = self._parse_keep_separator(self.keep_separator)
+        splitter = CharacterTextSplitter(
+            separator=separator,
+            chunk_size=self.chunk_size,
+            chunk_overlap=self.chunk_overlap,
+            keep_separator=keep_sep,
+            length_function=len,
+        )
+        return splitter.split_documents(documents)
+
+    def _split_by_recursive(self, documents):
+        splitter = RecursiveCharacterTextSplitter(
+            chunk_size=self.chunk_size,
+            chunk_overlap=self.chunk_overlap,
+        )
+        return splitter.split_documents(documents)
+
+    def split_text_base(self):
+        try:
+            documents = self._get_documents()
+            if self.mode == "Recursive":
+                return self._split_by_recursive(documents)
+            return self._split_by_character(documents)
+        except TypeError:
+            raise
         except Exception as e:
             msg = f"Error splitting text: {e}"
             raise TypeError(msg) from e
