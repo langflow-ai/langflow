@@ -18,10 +18,6 @@ maintainers = [
 # Define your main dependencies here
 dependencies = [
     "langflow-base[complete]~=0.8.0",
-    # Explicit torch/torchvision to trigger [tool.uv.sources] index override for CPU-only wheels
-    # Loose version ranges intentionally used to avoid conflicts with transitive dependencies (e.g., altk)
-    "torch>=2.0.0",
-    "torchvision>=0.15.0",
 ]
 
 
@@ -109,6 +105,10 @@ docling = [
     "tesserocr>=2.8.0",
     "rapidocr-onnxruntime>=1.4.4",
     "ocrmac>=1.0.0; sys_platform == 'darwin'",
+    # CPU-only PyTorch required for docling features
+    # Loose version ranges intentionally used to avoid conflicts with transitive dependencies (e.g., altk)
+    "torch>=2.0.0",
+    "torchvision>=0.15.0",
 ]
 
 audio = [
