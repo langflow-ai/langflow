@@ -14,8 +14,30 @@ export const DEFAULT_CHUNK_SIZE = 100;
 export const DEFAULT_CHUNK_OVERLAP = 0;
 export const DEFAULT_SEPARATOR = "\\n";
 
-export const ACCEPTED_FILE_TYPES =
-  ".pdf,.txt,.md,.docx,.doc,.csv,.json,.html,.xml";
+export const KB_INGEST_FORMATS: Record<string, string[]> = {
+  documents: [
+    "txt",
+    "md",
+    "mdx",
+    "html",
+    "htm",
+    "xhtml",
+    "xml",
+    "adoc",
+    "asciidoc",
+    "asc",
+  ],
+  spreadsheets: ["csv"],
+  code: ["py", "js", "ts", "tsx", "sh", "sql"],
+  data: ["json", "yaml", "yml"],
+};
+
+export const KB_INGEST_EXTENSIONS: string[] =
+  Object.values(KB_INGEST_FORMATS).flat();
+
+export const ACCEPTED_FILE_TYPES = KB_INGEST_EXTENSIONS.map(
+  (ext) => `.${ext}`,
+).join(",");
 
 export const KB_NAME_REGEX = /^[a-zA-Z0-9][a-zA-Z0-9._-]*[a-zA-Z0-9]$/;
 
