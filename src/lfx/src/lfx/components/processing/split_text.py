@@ -29,8 +29,9 @@ class SplitTextComponent(Component):
             options=["Recursive", "Character"],
             value="Recursive",
             info=(
-                "Character: splits by a single separator, configurable. "
-                "Recursive: tries multiple separators in cascade to guarantee chunk size."
+                "Recursive (default): Tries multiple separators in cascade to guarantee chunk size.\n"
+                "Character: Splits by a single configurable separator, "
+                "then reassembles pieces up to the Chunk Size limit."
             ),
             real_time_refresh=True,
         ),
