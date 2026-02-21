@@ -236,8 +236,7 @@ jobs:
     if: |
       always() &&
       !cancelled() &&
-      needs.set-ci-condition.outputs.should-run-tests == 'true' &&
-      (inputs.run-all-tests || needs.path-filter.outputs.python == 'true')
+      needs.set-ci-condition.outputs.should-run-tests == 'true'
     uses: ./.github/workflows/python_test.yml
     with:
       python-versions: ${{ inputs.python-versions || '["3.10"]' }}
@@ -254,8 +253,7 @@ jobs:
     if: |
       always() &&
       !cancelled() &&
-      needs.set-ci-condition.outputs.should-run-tests == 'true' &&
-      (inputs.run-all-tests || needs.path-filter.outputs.frontend == 'true')
+      needs.set-ci-condition.outputs.should-run-tests == 'true'
     uses: ./.github/workflows/jest_test.yml
     with:
       ref: ${{ inputs.ref || github.ref }}
@@ -268,8 +266,7 @@ jobs:
     if: |
       always() &&
       !cancelled() &&
-      needs.set-ci-condition.outputs.should-run-tests == 'true' &&
-      (inputs.run-all-tests || needs.path-filter.outputs.frontend == 'true' || needs.path-filter.outputs.frontend-tests == 'true' || needs.path-filter.outputs.components-changes == 'true' || needs.path-filter.outputs.starter-projects-changes == 'true' || needs.path-filter.outputs.starter-projects == 'true' || needs.path-filter.outputs.components == 'true' || needs.path-filter.outputs.workspace == 'true' || needs.path-filter.outputs.api == 'true' || needs.path-filter.outputs.database == 'true')
+      needs.set-ci-condition.outputs.should-run-tests == 'true'
     uses: ./.github/workflows/typescript_test.yml
     with:
       tests_folder: ${{ inputs.frontend-tests-folder }}
