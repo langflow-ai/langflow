@@ -6,6 +6,7 @@ import CanvasControlButton from "@/components/core/canvasControlsComponent/Canva
 import CanvasControls from "@/components/core/canvasControlsComponent/CanvasControls";
 import LogCanvasControls from "@/components/core/logCanvasControlsComponent";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import useFlowStore from "@/stores/flowStore";
@@ -37,9 +38,34 @@ export const MemoizedCanvasControls = memo(
     const isLocked = useFlowStore(
       useShallow((state) => state.currentFlow?.locked),
     );
+    const isLassoMode = useFlowStore((state) => state.isLassoMode);
+    const setIsLassoMode = useFlowStore((state) => state.setIsLassoMode);
 
     return (
       <CanvasControls selectedNode={selectedNode}>
+        <Button
+          unstyled
+          size="icon"
+          data-testid="lasso-mode-toggle"
+          className={cn(
+            "flex items-center justify-center px-2 rounded-none gap-1",
+            isLassoMode && "bg-accent",
+          )}
+          title={isLassoMode ? "Exit Lasso Select (Esc)" : "Lasso Select"}
+          onClick={() => setIsLassoMode(!isLassoMode)}
+          disabled={!!isLocked}
+        >
+          <ForwardedIconComponent
+            name="LassoSelect"
+            className={cn(
+              "!h-[18px] !w-[18px]",
+              isLassoMode ? "text-primary" : "text-muted-foreground",
+            )}
+          />
+        </Button>
+        <span>
+          <Separator orientation="vertical" />
+        </span>
         <Button
           unstyled
           unselectable="on"

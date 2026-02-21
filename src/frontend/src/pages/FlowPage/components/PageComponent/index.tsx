@@ -158,6 +158,8 @@ export default function Page({
   }, [currentFlowId]);
 
   const [isAddingNote, setIsAddingNote] = useState(false);
+  const isLassoMode = useFlowStore((state) => state.isLassoMode);
+  const setIsLassoMode = useFlowStore((state) => state.setIsLassoMode);
 
   const addComponent = useAddComponent();
 
@@ -336,6 +338,7 @@ export default function Page({
   function handleEscape(e: KeyboardEvent) {
     if (e.key === "Escape") {
       setRightClickedNodeId(null);
+      setIsLassoMode(false);
     }
   }
 
@@ -752,6 +755,7 @@ export default function Page({
   // Determine if InspectionPanel should be visible
   const showInspectionPanel =
     inspectionPanelVisible &&
+    !isLassoMode &&
     lastSelection?.nodes?.length === 1 &&
     lastSelection.nodes[0].type === "genericNode";
 
@@ -841,7 +845,8 @@ export default function Page({
               zoomOnScroll={!view}
               zoomOnPinch={!view}
               selectNodesOnDrag={false}
-              panOnDrag={!view}
+              selectionOnDrag={isLassoMode}
+              panOnDrag={!view && !isLassoMode}
               panActivationKeyCode={""}
               proOptions={{ hideAttribution: true }}
               onPaneClick={onPaneClick}

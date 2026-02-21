@@ -360,6 +360,7 @@ function GenericNode({
   }, [selected]);
 
   const rightClickedNodeId = useFlowStore((state) => state.rightClickedNodeId);
+  const isLassoMode = useFlowStore((state) => state.isLassoMode);
 
   const shouldShowUpdateComponent = useMemo(
     () => (isOutdated || hasBreakingChange) && !isUserEdited && !dismissAll,
@@ -377,7 +378,7 @@ function GenericNode({
 
   const memoizedNodeToolbarComponent = useMemo(() => {
     const isRightClicked = rightClickedNodeId === data.id;
-    const isSelectedSingle = selected && selectedNodesCount === 1;
+    const isSelectedSingle = selected && selectedNodesCount === 1 && !isLassoMode;
     const shouldShowToolbar = isSelectedSingle || isRightClicked;
 
     return shouldShowToolbar ? (
@@ -469,6 +470,7 @@ function GenericNode({
     selectedNodesCount,
     rightClickedNodeId,
     inspectionPanelVisible,
+    isLassoMode,
   ]);
   useEffect(() => {
     if (hiddenOutputs && hiddenOutputs.length === 0) {

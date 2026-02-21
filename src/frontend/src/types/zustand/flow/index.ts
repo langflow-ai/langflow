@@ -299,6 +299,8 @@ export type FlowStoreType = {
   setHelperLineEnabled: (helperLineEnabled: boolean) => void;
   inspectionPanelVisible: boolean;
   setInspectionPanelVisible: (visible: boolean) => void;
+  isLassoMode: boolean;
+  setIsLassoMode: (isLassoMode: boolean) => void;
   newChatOnPlayground: boolean;
   setNewChatOnPlayground: (newChat: boolean) => void;
   stopNodeId: string | undefined;

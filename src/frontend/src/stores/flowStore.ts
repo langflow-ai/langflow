@@ -1133,6 +1133,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   setHelperLineEnabled: (helperLineEnabled: boolean) => {
     set({ helperLineEnabled });
   },
+  isLassoMode: false,
+  setIsLassoMode: (isLassoMode: boolean) => {
+    set({ isLassoMode });
+  },
   inspectionPanelVisible: ENABLE_INSPECTION_PANEL
     ? localStorage.getItem("inspectionPanelVisible") !== null
       ? localStorage.getItem("inspectionPanelVisible") === "true"
