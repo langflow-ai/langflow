@@ -140,6 +140,9 @@ override-dependencies = [
     "python-pptx>=1.0.2",
 ]
 
+[tool.uv.extra-build-dependencies]
+langflow-base = ["hatchling"]
+
 [project.scripts]
 langflow = "langflow.langflow_launcher:main"
 
