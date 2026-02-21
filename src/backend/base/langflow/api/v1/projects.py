@@ -102,7 +102,15 @@ async def create_project(
                     api_key_name = f"MCP Project {new_project.name} - default"
                     unmasked_api_key = await create_api_key(session, ApiKeyCreate(name=api_key_name), current_user.id)
                     command = "uvx"
-                    args = ["mcp-proxy", "--transport", "streamablehttp", "--headers", "x-api-key", unmasked_api_key.api_key, streamable_http_url]
+                    args = [
+                        "mcp-proxy",
+                        "--transport",
+                        "streamablehttp",
+                        "--headers",
+                        "x-api-key",
+                        unmasked_api_key.api_key,
+                        streamable_http_url,
+                    ]
                 elif default_auth.get("auth_type", "none") == "oauth":
                     msg = "OAuth authentication is not yet implemented for MCP server creation during project creation."
                     logger.warning(msg)
@@ -113,8 +121,13 @@ async def create_project(
 
                 server_config = {"command": command, "args": args}
                 validation_result = await validate_mcp_server_for_project(
-                    new_project.id, new_project.name, current_user, session,
-                    get_storage_service(), get_settings_service(), operation="create",
+                    new_project.id,
+                    new_project.name,
+                    current_user,
+                    session,
+                    get_storage_service(),
+                    get_settings_service(),
+                    operation="create",
                 )
                 if validation_result.has_conflict:
                     await logger.aerror(validation_result.conflict_message)
@@ -122,7 +135,9 @@ async def create_project(
                 if validation_result.should_skip:
                     await logger.adebug(f"MCP server already exists for project {new_project.id}, updating")
                 server_name = validation_result.server_name
-                await update_server(server_name, server_config, current_user, session, get_storage_service(), get_settings_service())
+                await update_server(
+                    server_name, server_config, current_user, session, get_storage_service(), get_settings_service()
+                )
             except HTTPException:
                 raise
             except NotImplementedError:
@@ -134,7 +149,9 @@ async def create_project(
                 await logger.aexception(msg, exc_info=True)
 
         if project.components_list:
-            await session.exec(update(Flow).where(Flow.id.in_(project.components_list)).values(folder_id=new_project.id))
+            await session.exec(
+                update(Flow).where(Flow.id.in_(project.components_list)).values(folder_id=new_project.id)
+            )
         if project.flows_list:
             await session.exec(update(Flow).where(Flow.id.in_(project.flows_list)).values(folder_id=new_project.id))
         folder_read = FolderRead.model_validate(new_project, from_attributes=True)
@@ -148,7 +165,9 @@ async def create_project(
 @router.get("/", response_model=list[FolderRead], status_code=200)
 async def read_projects(*, session: DbSession, current_user: CurrentActiveUser):
     try:
-        projects = (await session.exec(select(Folder).where(or_(Folder.user_id == current_user.id, Folder.user_id == None)))).all()
+        projects = (
+            await session.exec(select(Folder).where(or_(Folder.user_id == current_user.id, Folder.user_id == None)))
+        ).all()
         projects = [p for p in projects if p.name != STARTER_FOLDER_NAME]
         sorted_projects = sorted(projects, key=lambda x: x.name != DEFAULT_FOLDER_NAME)
         return [FolderRead.model_validate(p, from_attributes=True) for p in sorted_projects]
@@ -157,9 +176,26 @@ async def read_projects(*, session: DbSession, current_user: CurrentActiveUser):
 
 
 @router.get("/{project_id}", response_model=FolderWithPaginatedFlows | FolderReadWithFlows, status_code=200)
-async def read_project(*, session: DbSession, project_id: UUID, current_user: CurrentActiveUser, params: Annotated[Params | None, Depends(custom_params)], page: Annotated[int | None, Query()] = None, size: Annotated[int | None, Query()] = None, is_component: bool = False, is_flow: bool = False, search: str = ""):
+async def read_project(
+    *,
+    session: DbSession,
+    project_id: UUID,
+    current_user: CurrentActiveUser,
+    params: Annotated[Params | None, Depends(custom_params)],
+    page: Annotated[int | None, Query()] = None,
+    size: Annotated[int | None, Query()] = None,
+    is_component: bool = False,
+    is_flow: bool = False,
+    search: str = "",
+):
     try:
-        project = (await session.exec(select(Folder).options(selectinload(Folder.flows)).where(Folder.id == project_id, Folder.user_id == current_user.id))).first()
+        project = (
+            await session.exec(
+                select(Folder)
+                .options(selectinload(Folder.flows))
+                .where(Folder.id == project_id, Folder.user_id == current_user.id)
+            )
+        ).first()
     except Exception as e:
         if "No result found" in str(e):
             raise HTTPException(status_code=404, detail="Project not found") from e
@@ -178,8 +214,11 @@ async def read_project(*, session: DbSession, project_id: UUID, current_user: Cu
             if search:
                 stmt = stmt.where(Flow.name.like(f"%{search}%"))
             import warnings
+
             with warnings.catch_warnings():
-                warnings.filterwarnings("ignore", category=DeprecationWarning, module=r"fastapi_pagination\.ext\.sqlalchemy")
+                warnings.filterwarnings(
+                    "ignore", category=DeprecationWarning, module=r"fastapi_pagination\.ext\.sqlalchemy"
+                )
                 paginated_flows = await apaginate(session, stmt, params=params)
             return FolderWithPaginatedFlows(folder=FolderRead.model_validate(project), flows=paginated_flows)
         flows_from_current_user_in_project = [flow for flow in project.flows if flow.user_id == current_user.id]
@@ -190,14 +229,25 @@ async def read_project(*, session: DbSession, project_id: UUID, current_user: Cu
 
 
 @router.patch("/{project_id}", response_model=FolderRead, status_code=200)
-async def update_project(*, session: DbSession, project_id: UUID, project: FolderUpdate, current_user: CurrentActiveUser, background_tasks: BackgroundTasks):
+async def update_project(
+    *,
+    session: DbSession,
+    project_id: UUID,
+    project: FolderUpdate,
+    current_user: CurrentActiveUser,
+    background_tasks: BackgroundTasks,
+):
     try:
-        existing_project = (await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id))).first()
+        existing_project = (
+            await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id))
+        ).first()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
     if not existing_project:
         raise HTTPException(status_code=404, detail="Project not found")
-    result = await session.exec(select(Flow.id, Flow.is_component).where(Flow.folder_id == existing_project.id, Flow.user_id == current_user.id))
+    result = await session.exec(
+        select(Flow.id, Flow.is_component).where(Flow.folder_id == existing_project.id, Flow.user_id == current_user.id)
+    )
     flows_and_components = result.all()
     project.flows = [flow_id for flow_id, is_component in flows_and_components if not is_component]
     project.components = [flow_id for flow_id, is_component in flows_and_components if is_component]
@@ -205,7 +255,9 @@ async def update_project(*, session: DbSession, project_id: UUID, project: Folde
         should_start_mcp_composer = False
         should_stop_mcp_composer = False
         if "auth_settings" in project.model_fields_set:
-            auth_result = handle_auth_settings_update(existing_project=existing_project, new_auth_settings=project.auth_settings)
+            auth_result = handle_auth_settings_update(
+                existing_project=existing_project, new_auth_settings=project.auth_settings
+            )
             should_start_mcp_composer = auth_result["should_start_composer"]
             should_stop_mcp_composer = auth_result["should_stop_composer"]
         if project.name and project.name != existing_project.name:
@@ -213,15 +265,46 @@ async def update_project(*, session: DbSession, project_id: UUID, project: Folde
             existing_project.name = project.name
             if get_settings_service().settings.add_projects_to_mcp_servers:
                 try:
-                    old_validation = await validate_mcp_server_for_project(existing_project.id, old_project_name, current_user, session, get_storage_service(), get_settings_service(), operation="update")
-                    new_validation = await validate_mcp_server_for_project(existing_project.id, project.name, current_user, session, get_storage_service(), get_settings_service(), operation="update")
+                    old_validation = await validate_mcp_server_for_project(
+                        existing_project.id,
+                        old_project_name,
+                        current_user,
+                        session,
+                        get_storage_service(),
+                        get_settings_service(),
+                        operation="update",
+                    )
+                    new_validation = await validate_mcp_server_for_project(
+                        existing_project.id,
+                        project.name,
+                        current_user,
+                        session,
+                        get_storage_service(),
+                        get_settings_service(),
+                        operation="update",
+                    )
                     if old_validation.server_name != new_validation.server_name:
                         if new_validation.has_conflict:
                             await logger.aerror(new_validation.conflict_message)
                             raise HTTPException(status_code=409, detail=new_validation.conflict_message)
                         if old_validation.server_exists and old_validation.project_id_matches:
-                            await update_server(old_validation.server_name, {}, current_user, session, get_storage_service(), get_settings_service(), delete=True)
-                            await update_server(new_validation.server_name, old_validation.existing_config or {}, current_user, session, get_storage_service(), get_settings_service())
+                            await update_server(
+                                old_validation.server_name,
+                                {},
+                                current_user,
+                                session,
+                                get_storage_service(),
+                                get_settings_service(),
+                                delete=True,
+                            )
+                            await update_server(
+                                new_validation.server_name,
+                                old_validation.existing_config or {},
+                                current_user,
+                                session,
+                                get_storage_service(),
+                                get_settings_service(),
+                            )
                 except HTTPException:
                     raise
                 except Exception as e:
@@ -243,9 +326,13 @@ async def update_project(*, session: DbSession, project_id: UUID, project: Folde
         excluded_flows = list(set(flows_ids) - set(project.flows))
         my_collection_project = (await session.exec(select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME))).first()
         if my_collection_project:
-            await session.exec(update(Flow).where(Flow.id.in_(excluded_flows)).values(folder_id=my_collection_project.id))
+            await session.exec(
+                update(Flow).where(Flow.id.in_(excluded_flows)).values(folder_id=my_collection_project.id)
+            )
         if concat_project_components:
-            await session.exec(update(Flow).where(Flow.id.in_(concat_project_components)).values(folder_id=existing_project.id))
+            await session.exec(
+                update(Flow).where(Flow.id.in_(concat_project_components)).values(folder_id=existing_project.id)
+            )
         folder_read = FolderRead.model_validate(existing_project, from_attributes=True)
     except HTTPException:
         raise
@@ -257,11 +344,15 @@ async def update_project(*, session: DbSession, project_id: UUID, project: Folde
 @router.delete("/{project_id}", status_code=204)
 async def delete_project(*, session: DbSession, project_id: UUID, current_user: CurrentActiveUser):
     try:
-        flows = (await session.exec(select(Flow).where(Flow.folder_id == project_id, Flow.user_id == current_user.id))).all()
+        flows = (
+            await session.exec(select(Flow).where(Flow.folder_id == project_id, Flow.user_id == current_user.id))
+        ).all()
         if len(flows) > 0:
             for flow in flows:
                 await cascade_delete_flow(session, flow.id)
-        project = (await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id))).first()
+        project = (
+            await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id))
+        ).first()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
     if not project:
@@ -276,9 +367,25 @@ async def delete_project(*, session: DbSession, project_id: UUID, current_user: 
             await logger.aerror(f"Failed to stop MCP Composer: {e}")
     if get_settings_service().settings.add_projects_to_mcp_servers:
         try:
-            validation_result = await validate_mcp_server_for_project(project_id, project.name, current_user, session, get_storage_service(), get_settings_service(), operation="delete")
+            validation_result = await validate_mcp_server_for_project(
+                project_id,
+                project.name,
+                current_user,
+                session,
+                get_storage_service(),
+                get_settings_service(),
+                operation="delete",
+            )
             if validation_result.server_exists and validation_result.project_id_matches:
-                await update_server(validation_result.server_name, {}, current_user, session, get_storage_service(), get_settings_service(), delete=True)
+                await update_server(
+                    validation_result.server_name,
+                    {},
+                    current_user,
+                    session,
+                    get_storage_service(),
+                    get_settings_service(),
+                    delete=True,
+                )
         except Exception as e:
             await logger.awarning(f"Failed to handle MCP server cleanup: {e}")
     try:
@@ -312,7 +419,11 @@ async def download_file(*, session: DbSession, project_id: UUID, current_user: C
         current_time = datetime.now(tz=timezone.utc).astimezone().strftime("%Y%m%d_%H%M%S")
         filename = f"{current_time}_{project.name}_flows.zip"
         encoded_filename = quote(filename)
-        return StreamingResponse(zip_stream, media_type="application/x-zip-compressed", headers={"Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"})
+        return StreamingResponse(
+            zip_stream,
+            media_type="application/x-zip-compressed",
+            headers={"Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"},
+        )
     except Exception as e:
         if "No result found" in str(e):
             raise HTTPException(status_code=404, detail="Project not found") from e
