@@ -75,7 +75,7 @@ class Message(Data):
     content_blocks: list[ContentBlock] = Field(default_factory=list)
     duration: int | None = None
 
-    @field_validator("flow_id", mode="before")
+    @field_validator("session_id", "context_id", "flow_id", mode="before")
     @classmethod
     def validate_flow_id(cls, value):
         if isinstance(value, UUID):

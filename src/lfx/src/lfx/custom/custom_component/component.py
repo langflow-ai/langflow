@@ -1609,9 +1609,7 @@ class Component(CustomComponent):
             and hasattr(self.graph, "session_id")
             and self.graph.session_id
         ):
-            session_id = (
-                UUID(self.graph.session_id) if isinstance(self.graph.session_id, str) else self.graph.session_id
-            )
+            session_id = str(self.graph.session_id) if isinstance(self.graph.session_id, UUID) else self.graph.session_id
             message.session_id = session_id
 
         # Set default sender if not set (preserves existing values)
