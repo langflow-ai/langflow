@@ -7,6 +7,7 @@ from langflow.api.v1.folders import router as folders_router
 from langflow.api.v1.knowledge_bases import router as knowledge_bases_router
 from langflow.api.v1.login import router as login_router
 from langflow.api.v1.mcp import router as mcp_router
+from langflow.api.v1.mcp_oauth import router as mcp_oauth_router
 from langflow.api.v1.mcp_projects import router as mcp_projects_router
 from langflow.api.v1.model_options import router as model_options_router
 from langflow.api.v1.models import router as models_router
@@ -29,6 +30,7 @@ __all__ = [
     "folders_router",
     "knowledge_bases_router",
     "login_router",
+    "mcp_oauth_router",
     "mcp_projects_router",
     "mcp_router",
     "model_options_router",

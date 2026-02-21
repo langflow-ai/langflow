@@ -13,6 +13,7 @@ import sqlalchemy as sa
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, UploadFile, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
+from lfx.base.mcp.oauth.provider import OAuthRequiredError
 from lfx.custom.custom_component.component import Component
 from lfx.custom.utils import (
     add_code_field_to_build_config,
@@ -1086,6 +1087,8 @@ async def custom_component_update(
                 field_value=code_request.field_value,
             )
 
+    except OAuthRequiredError:
+        raise  # Let global handler in main.py handle this
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

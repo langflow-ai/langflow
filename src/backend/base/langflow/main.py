@@ -19,6 +19,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi_pagination import add_pagination
 from filelock import FileLock
+from lfx.base.mcp.oauth.provider import OAuthRequiredError
 from lfx.interface.utils import setup_llm_caching
 from lfx.log.logger import configure, logger
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
@@ -517,6 +518,22 @@ def create_app():
     app.include_router(router)
     app.include_router(health_check_router)
     app.include_router(log_router)
+
+    # Handle OAuthRequiredError from MCP components
+    @app.exception_handler(OAuthRequiredError)
+    async def oauth_required_handler(_request: Request, exc: OAuthRequiredError):
+        """Return a structured JSON response for OAuth required errors.
+
+        This allows the frontend to detect when OAuth is needed and initiate
+        the OAuth flow via the /api/v1/mcp/oauth/initiate endpoint.
+
+        The response is wrapped in {"detail": ...} to match FastAPI's standard
+        error response format that the frontend expects.
+        """
+        return JSONResponse(
+            status_code=HTTPStatus.UNAUTHORIZED,
+            content={"detail": exc.to_dict()},
+        )
 
     @app.exception_handler(Exception)
     async def exception_handler(_request: Request, exc: Exception):
