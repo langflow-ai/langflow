@@ -18,6 +18,7 @@ from lfx.base.mcp.util import (
     MCPSseClient,
     MCPStdioClient,
     MCPStreamableHttpClient,
+    _convert_mcp_result_to_langchain,
     _process_headers,
     update_tools,
     validate_headers,
@@ -1983,3 +1984,69 @@ class TestSnakeToCamelConversion:
         # Metadata fields
         assert _snake_to_camel("_meta_data") == "_metaData"
         assert _snake_to_camel("_created_at") == "_createdAt"
+
+
+class TestConvertMcpResultToLangchain:
+    """Tests for _convert_mcp_result_to_langchain helper."""
+
+    def _make_text_item(self, text: str):
+        item = MagicMock()
+        item.type = "text"
+        item.text = text
+        return item
+
+    def _make_image_item(self, data: str = "abc123", mime_type: str = "image/jpeg"):
+        item = MagicMock()
+        item.type = "image"
+        item.data = data
+        item.mimeType = mime_type
+        return item
+
+    def _make_result(self, content):
+        result = MagicMock()
+        result.content = content
+        return result
+
+    def test_text_only_returns_string(self):
+        result = self._make_result([self._make_text_item("hello"), self._make_text_item("world")])
+        output = _convert_mcp_result_to_langchain(result)
+        assert output == "hello\nworld"
+
+    def test_image_only_returns_list_with_image_url(self):
+        result = self._make_result([self._make_image_item("BASE64DATA", "image/png")])
+        output = _convert_mcp_result_to_langchain(result)
+        assert isinstance(output, list)
+        assert len(output) == 1
+        assert output[0]["type"] == "image_url"
+        assert output[0]["image_url"]["url"] == "data:image/png;base64,BASE64DATA"
+
+    def test_mixed_text_and_image_returns_list(self):
+        result = self._make_result(
+            [self._make_text_item("Description"), self._make_image_item("IMGDATA", "image/jpeg")]
+        )
+        output = _convert_mcp_result_to_langchain(result)
+        assert isinstance(output, list)
+        assert output[0] == {"type": "text", "text": "Description"}
+        assert output[1]["type"] == "image_url"
+        assert "image/jpeg" in output[1]["image_url"]["url"]
+        assert "IMGDATA" in output[1]["image_url"]["url"]
+
+    def test_empty_content_returns_str(self):
+        result = self._make_result([])
+        output = _convert_mcp_result_to_langchain(result)
+        assert isinstance(output, str)
+
+    def test_no_content_attribute_returns_str(self):
+        result = MagicMock(spec=[])  # no 'content' attribute
+        output = _convert_mcp_result_to_langchain(result)
+        assert isinstance(output, str)
+
+    def test_unknown_content_type_falls_back_to_text_block(self):
+        item = MagicMock()
+        item.type = "resource"
+        item.__str__ = lambda self: "resource_content"
+        image_item = self._make_image_item()
+        result = self._make_result([item, image_item])
+        output = _convert_mcp_result_to_langchain(result)
+        assert isinstance(output, list)
+        assert output[0]["type"] == "text"
