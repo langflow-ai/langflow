@@ -1610,7 +1610,7 @@ class Component(CustomComponent):
             and self.graph.session_id
         ):
             session_id = (
-                UUID(self.graph.session_id) if isinstance(self.graph.session_id, str) else self.graph.session_id
+                str(self.graph.session_id) if isinstance(self.graph.session_id, UUID) else self.graph.session_id
             )
             message.session_id = session_id
 
