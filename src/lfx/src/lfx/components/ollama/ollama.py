@@ -17,10 +17,10 @@ from lfx.io import (
     DropdownInput,
     FloatInput,
     IntInput,
-    MessageTextInput,
     Output,
     SecretStrInput,
     SliderInput,
+    StrInput,
     TableInput,
 )
 from lfx.log.logger import logger
@@ -87,7 +87,7 @@ class ChatOllamaComponent(LCModelComponent):
     default_table_row_schema = build_model_from_schema([default_table_row]).model_json_schema()
 
     inputs = [
-        MessageTextInput(
+        StrInput(
             name="base_url",
             display_name="Ollama API URL",
             info="Endpoint of the Ollama API. Defaults to http://localhost:11434.",

@@ -1236,7 +1236,7 @@
   },
   "LanguageModelComponent": {
     "versions": {
-      "0.3.0": "a62aad5981d3"
+      "0.3.0": "4af3c0cc0dcf"
     }
   },
   "MCPTools": {
@@ -1311,7 +1311,7 @@
   },
   "OllamaEmbeddings": {
     "versions": {
-      "0.3.0": "c1f138e1f771"
+      "0.3.0": "a8c56d0835de"
     }
   },
   "OpenAIEmbeddings": {
