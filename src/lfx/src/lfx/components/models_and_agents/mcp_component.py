@@ -652,8 +652,11 @@ class MCPToolsComponent(ComponentWithCache):
                 tool_content = []
                 for item in output.content:
                     item_dict = item.model_dump()
-                    item_dict = self.process_output_item(item_dict)
-                    tool_content.append(item_dict)
+                    processed = self.process_output_item(item_dict)
+                    if isinstance(processed, list):
+                        tool_content.extend(processed)
+                    else:
+                        tool_content.append(processed)
 
                 if isinstance(tool_content, list) and all(isinstance(x, dict) for x in tool_content):
                     return DataFrame(tool_content)
@@ -665,15 +668,22 @@ class MCPToolsComponent(ComponentWithCache):
             raise ValueError(msg) from e
 
     def process_output_item(self, item_dict):
-        """Process the output of a tool."""
+        """Process the output of a tool.
+
+        Returns a dict, or a list of dicts when the response text is a JSON array.
+        Callers must handle the list case by extending rather than appending.
+        """
         if item_dict.get("type") == "text":
             text = item_dict.get("text")
             try:
                 parsed = json.loads(text)
-                # Ensure we always return a dictionary for DataFrame compatibility
                 if isinstance(parsed, dict):
                     return parsed
-                # Wrap non-dict parsed values in a dictionary
+                if isinstance(parsed, list):
+                    # Flatten JSON arrays so each element becomes a separate DataFrame row.
+                    # Non-dict elements are wrapped to maintain a uniform structure.
+                    return [item if isinstance(item, dict) else {"value": item} for item in parsed]  # noqa: TRY300
+                # Wrap scalar parsed values in a dictionary
                 return {"text": text, "parsed_value": parsed, "type": "text"}  # noqa: TRY300
             except json.JSONDecodeError:
                 return item_dict
