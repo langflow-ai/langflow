@@ -682,7 +682,7 @@ class MCPToolsComponent(ComponentWithCache):
                 if isinstance(parsed, list):
                     # Flatten JSON arrays so each element becomes a separate DataFrame row.
                     # Non-dict elements are wrapped to maintain a uniform structure.
-                    return [item if isinstance(item, dict) else {"value": item} for item in parsed]  # noqa: TRY300
+                    return [item if isinstance(item, dict) else {"value": item} for item in parsed]
                 # Wrap scalar parsed values in a dictionary
                 return {"text": text, "parsed_value": parsed, "type": "text"}  # noqa: TRY300
             except json.JSONDecodeError:
