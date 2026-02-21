@@ -161,6 +161,7 @@
             "error": null,
             "field_order": [
               "template",
+              "use_double_brackets",
               "tool_placeholder"
             ],
             "frozen": false,
@@ -241,6 +242,27 @@
                 "type": "prompt",
                 "value": "You are a meticulous expense analyst with expertise in financial data analysis and cost categorization.  \nYour role is to analyze invoices, break down expenses, identify spending patterns, and provide actionable cost-saving insights.  \nYou use available tools, such as a knowledge base search, to enhance your analysis.  \nProvide structured and well-formatted responses.\n"
               },
+              "use_double_brackets": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Use Double Brackets",
+                "dynamic": false,
+                "info": "Use {{variable}} syntax instead of {variable}.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "use_double_brackets",
+                "override_skip": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": false
+              },
               "tool_placeholder": {
                 "_input_type": "MessageTextInput",
                 "advanced": true,
@@ -263,27 +285,6 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": ""
-              },
-              "use_double_brackets": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Use Double Brackets",
-                "dynamic": false,
-                "info": "Use {{variable}} syntax instead of {variable}.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "use_double_brackets",
-                "override_skip": false,
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": true,
-                "type": "bool",
-                "value": false
               }
             },
             "tool_mode": false
@@ -325,10 +326,9 @@
               "sender",
               "sender_name",
               "session_id",
+              "context_id",
               "data_template",
-              "background_color",
-              "chat_icon",
-              "text_color"
+              "clean_data"
             ],
             "frozen": false,
             "icon": "MessagesSquare",
@@ -593,7 +593,7 @@
         "data": {
           "id": "note-24qvs",
           "node": {
-            "description": "### 💡 Add your OpenAI API key here 👇",
+            "description": "### Configure your Model Provider",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -610,7 +610,7 @@
         },
         "position": {
           "x": 1084.4738832838511,
-          "y": -356.23959895639695
+          "y": -378.23959895639695
         },
         "selected": false,
         "type": "noteNode"
@@ -619,7 +619,7 @@
         "data": {
           "id": "note-jxdmT",
           "node": {
-            "description": "### 💡 Add your Needle Search API key here 👇",
+            "description": "### Add your Needle Search API key here 👇",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -636,8 +636,8 @@
           "width": 402
         },
         "position": {
-          "x": 500.88806568161635,
-          "y": -196.26232150672587
+          "x": 526.88806568161635,
+          "y": -229.26232150672587
         },
         "resizing": false,
         "selected": false,
@@ -708,7 +708,7 @@
               }
             ],
             "pinned": false,
-            "score": 7.568328950209746e-6,
+            "score": 7.568328950209746e-06,
             "template": {
               "_type": "Component",
               "code": {
@@ -881,10 +881,8 @@
               "sender",
               "sender_name",
               "session_id",
-              "files",
-              "background_color",
-              "chat_icon",
-              "text_color"
+              "context_id",
+              "files"
             ],
             "frozen": false,
             "icon": "MessagesSquare",
@@ -1156,9 +1154,12 @@
             "field_order": [
               "model",
               "api_key",
+              "base_url_ibm_watsonx",
+              "project_id",
               "system_prompt",
               "context_id",
               "n_messages",
+              "max_tokens",
               "format_instructions",
               "output_schema",
               "tools",
