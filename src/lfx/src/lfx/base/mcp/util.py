@@ -306,6 +306,61 @@ def _handle_tool_validation_error(
     raise ValueError(msg) from e
 
 
+def _convert_mcp_result_to_langchain(result: Any) -> str | list[dict]:
+    """Convert an MCP CallToolResult to a LangChain-compatible format.
+
+    If the result contains only text content, returns a plain string for
+    backward compatibility.  If the result contains one or more image
+    content blocks, returns a list of LangChain content-block dicts so
+    that vision-capable LLMs receive the image data rather than raw
+    base64 text.
+
+    Args:
+        result: The ``CallToolResult`` returned by ``ClientSession.call_tool``.
+
+    Returns:
+        A plain string for text-only results, or a list of content-block
+        dicts (``{"type": "text", ...}`` / ``{"type": "image_url", ...}``)
+        for results that include at least one image.
+    """
+    if not hasattr(result, "content") or not result.content:
+        return str(result)
+
+    has_image = any(getattr(item, "type", None) == "image" for item in result.content)
+
+    if not has_image:
+        # Text-only result – return as a single string (backward-compatible).
+        parts = []
+        for item in result.content:
+            if hasattr(item, "text"):
+                parts.append(item.text)
+            else:
+                parts.append(str(item))
+        return "\n".join(parts)
+
+    # Mixed or image-only result – build a list of LangChain content blocks
+    # so that vision LLMs receive proper multimodal input.
+    blocks: list[dict] = []
+    for item in result.content:
+        item_type = getattr(item, "type", None)
+        if item_type == "text":
+            blocks.append({"type": "text", "text": item.text})
+        elif item_type == "image":
+            mime_type = getattr(item, "mimeType", "image/png") or "image/png"
+            data = getattr(item, "data", "") or ""
+            blocks.append(
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:{mime_type};base64,{data}"},
+                }
+            )
+        else:
+            # Unknown content type – fall back to string representation.
+            blocks.append({"type": "text", "text": str(item)})
+
+    return blocks
+
+
 def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], client) -> Callable[..., Awaitable]:
     async def tool_coroutine(*args, **kwargs):
         # Get field names from the model (preserving order)
@@ -327,7 +382,8 @@ def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], client) -
             _handle_tool_validation_error(e, tool_name, provided_args, arg_schema)
 
         try:
-            return await client.run_tool(tool_name, arguments=validated.model_dump())
+            result = await client.run_tool(tool_name, arguments=validated.model_dump())
+            return _convert_mcp_result_to_langchain(result)
         except Exception as e:
             await logger.aerror(f"Tool '{tool_name}' execution failed: {e}")
             # Re-raise with more context
@@ -354,7 +410,8 @@ def create_tool_func(tool_name: str, arg_schema: type[BaseModel], client) -> Cal
             _handle_tool_validation_error(e, tool_name, provided_args, arg_schema)
 
         try:
-            return run_until_complete(client.run_tool(tool_name, arguments=validated.model_dump()))
+            result = run_until_complete(client.run_tool(tool_name, arguments=validated.model_dump()))
+            return _convert_mcp_result_to_langchain(result)
         except Exception as e:
             logger.error(f"Tool '{tool_name}' execution failed: {e}")
             # Re-raise with more context
