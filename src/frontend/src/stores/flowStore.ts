@@ -250,6 +250,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       currentFlow: flow,
       positionDictionary: {},
       rightClickedNodeId: null,
+      isLassoMode: false,
     });
   },
   setIsBuilding: (isBuilding) => {
@@ -1095,6 +1096,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       positionDictionary: {},
       componentsToUpdate: [],
       rightClickedNodeId: null,
+      isLassoMode: false,
     });
   },
   dismissedNodes: [],
