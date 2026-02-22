@@ -26,6 +26,8 @@ class Tweaks(RootModel):
             "examples": [
                 {
                     "parameter_name": "value",
+                    "stream": False,
+                    "temperature": 0.7,
                     "Component Name": {"parameter_name": "value"},
                     "component_id": {"parameter_name": "value"},
                 }

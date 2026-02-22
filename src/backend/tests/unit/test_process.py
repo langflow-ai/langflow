@@ -320,7 +320,7 @@ def test_tweak_no_node_id_boolean():
                     "data": {
                         "node": {
                             "template": {
-                                "stream": {"value": True, "type": "bool"},
+                                "enabled": {"value": True, "type": "bool"},
                                 "param1": {"value": "hello", "type": "str"},
                             }
                         }
@@ -331,7 +331,7 @@ def test_tweak_no_node_id_boolean():
                     "data": {
                         "node": {
                             "template": {
-                                "stream": {"value": True, "type": "bool"},
+                                "enabled": {"value": True, "type": "bool"},
                             }
                         }
                     },
@@ -339,7 +339,7 @@ def test_tweak_no_node_id_boolean():
             ]
         }
     }
-    tweaks = {"stream": False}
+    tweaks = {"enabled": False}
     expected_result = {
         "data": {
             "nodes": [
@@ -348,7 +348,7 @@ def test_tweak_no_node_id_boolean():
                     "data": {
                         "node": {
                             "template": {
-                                "stream": {"value": False, "type": "bool"},
+                                "enabled": {"value": False, "type": "bool"},
                                 "param1": {"value": "hello", "type": "str"},
                             }
                         }
@@ -359,7 +359,7 @@ def test_tweak_no_node_id_boolean():
                     "data": {
                         "node": {
                             "template": {
-                                "stream": {"value": False, "type": "bool"},
+                                "enabled": {"value": False, "type": "bool"},
                             }
                         }
                     },
@@ -430,6 +430,38 @@ def test_tweak_no_node_id_numeric():
     }
     result = process_tweaks(graph_data, tweaks)
     assert result == expected_result
+
+
+def test_tweaks_schema_accepts_bool():
+    """Tweaks model must accept boolean root-level values without coercion."""
+    from lfx.schema.graph import Tweaks
+
+    tweaks = Tweaks(root={"stream": False, "enabled": True})
+    assert tweaks.root["stream"] is False
+    assert tweaks.root["enabled"] is True
+    # Verify bool is preserved and not coerced to int
+    assert isinstance(tweaks.root["stream"], bool)
+    assert isinstance(tweaks.root["enabled"], bool)
+
+
+def test_tweaks_schema_accepts_numerics():
+    """Tweaks model must accept int and float root-level values."""
+    from lfx.schema.graph import Tweaks
+
+    tweaks = Tweaks(root={"temperature": 0.7, "max_tokens": 256})
+    assert tweaks.root["temperature"] == 0.7
+    assert tweaks.root["max_tokens"] == 256
+
+
+def test_tweaks_schema_rejects_invalid():
+    """Tweaks model should still reject unsupported value types."""
+    import pytest
+    from pydantic import ValidationError
+
+    from lfx.schema.graph import Tweaks
+
+    with pytest.raises(ValidationError):
+        Tweaks(root={"param": [1, 2, 3]})
 
 
 def test_apply_tweaks_code_override_prevention():
