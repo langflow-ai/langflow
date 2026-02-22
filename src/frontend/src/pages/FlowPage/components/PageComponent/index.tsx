@@ -158,6 +158,8 @@ export default function Page({
   }, [currentFlowId]);
 
   const [isAddingNote, setIsAddingNote] = useState(false);
+  // Lasso (box-select) mode: when true, ReactFlow switches from pan-on-drag to
+  // selection-on-drag so users can rubber-band-select multiple nodes at once.
   const isLassoMode = useFlowStore((state) => state.isLassoMode);
   const setIsLassoMode = useFlowStore((state) => state.setIsLassoMode);
 
@@ -338,6 +340,8 @@ export default function Page({
   function handleEscape(e: KeyboardEvent) {
     if (e.key === "Escape") {
       setRightClickedNodeId(null);
+      // Exit lasso mode on Escape so the canvas returns to normal pan behaviour
+      // without requiring the user to click the toolbar toggle again.
       setIsLassoMode(false);
     }
   }
@@ -752,7 +756,11 @@ export default function Page({
     (state) => state.inspectionPanelVisible,
   );
 
-  // Determine if InspectionPanel should be visible
+  // Determine if InspectionPanel should be visible.
+  // `!isLassoMode` prevents the panel from opening mid-selection: when the
+  // rubber-band drag finishes with exactly one node inside, we do NOT want to
+  // immediately open that node's inspection panel — the user may still be
+  // building a larger selection.
   const showInspectionPanel =
     inspectionPanelVisible &&
     !isLassoMode &&
@@ -845,6 +853,8 @@ export default function Page({
               zoomOnScroll={!view}
               zoomOnPinch={!view}
               selectNodesOnDrag={false}
+              // selectionOnDrag draws a rubber-band selection box on drag.
+              // panOnDrag is disabled simultaneously so the two gestures don't conflict.
               selectionOnDrag={isLassoMode}
               panOnDrag={!view && !isLassoMode}
               panActivationKeyCode={""}

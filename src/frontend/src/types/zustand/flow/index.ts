@@ -299,7 +299,24 @@ export type FlowStoreType = {
   setHelperLineEnabled: (helperLineEnabled: boolean) => void;
   inspectionPanelVisible: boolean;
   setInspectionPanelVisible: (visible: boolean) => void;
+  /**
+   * Whether the canvas is currently in lasso (box-select) mode.
+   *
+   * When `true`, dragging on the canvas draws a rectangular selection box
+   * instead of panning. Releasing the drag selects all nodes inside the box.
+   * Pan-on-drag and single-node toolbar activation are both suppressed while
+   * this flag is set.
+   */
   isLassoMode: boolean;
+  /**
+   * Toggle or set lasso selection mode on the flow canvas.
+   *
+   * Calling `setIsLassoMode(true)` activates box-select drag behaviour.
+   * Calling `setIsLassoMode(false)` (or pressing Escape) returns the canvas
+   * to its normal pan-on-drag state.
+   *
+   * @param isLassoMode - `true` to enter lasso mode, `false` to exit.
+   */
   setIsLassoMode: (isLassoMode: boolean) => void;
   newChatOnPlayground: boolean;
   setNewChatOnPlayground: (newChat: boolean) => void;

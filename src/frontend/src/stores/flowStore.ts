@@ -250,6 +250,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       currentFlow: flow,
       positionDictionary: {},
       rightClickedNodeId: null,
+      // Reset lasso mode so the new flow always starts in normal pan mode,
+      // regardless of what mode was active when the user switched flows.
       isLassoMode: false,
     });
   },
@@ -1096,6 +1098,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       positionDictionary: {},
       componentsToUpdate: [],
       rightClickedNodeId: null,
+      // Ensure lasso mode is cleared on full state reset so the canvas never
+      // gets stuck in box-select mode after navigating away from a flow.
       isLassoMode: false,
     });
   },
@@ -1135,6 +1139,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   setHelperLineEnabled: (helperLineEnabled: boolean) => {
     set({ helperLineEnabled });
   },
+  // Lasso (box-select) mode state. When true, dragging on the canvas draws a
+  // rectangular selection box rather than panning. Defaults to false so the
+  // canvas starts in normal pan mode.
   isLassoMode: false,
   setIsLassoMode: (isLassoMode: boolean) => {
     set({ isLassoMode });

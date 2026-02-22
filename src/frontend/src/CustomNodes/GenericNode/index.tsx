@@ -360,6 +360,9 @@ function GenericNode({
   }, [selected]);
 
   const rightClickedNodeId = useFlowStore((state) => state.rightClickedNodeId);
+  // Suppress the per-node toolbar while a lasso selection is in progress.
+  // Without this guard, selecting exactly one node with the rubber-band tool
+  // would still show its control menu, which is confusing UX.
   const isLassoMode = useFlowStore((state) => state.isLassoMode);
 
   const shouldShowUpdateComponent = useMemo(

@@ -38,11 +38,18 @@ export const MemoizedCanvasControls = memo(
     const isLocked = useFlowStore(
       useShallow((state) => state.currentFlow?.locked),
     );
+    // Read lasso state directly from the store so this memoized component
+    // re-renders only when these two values change, avoiding prop drilling.
     const isLassoMode = useFlowStore((state) => state.isLassoMode);
     const setIsLassoMode = useFlowStore((state) => state.setIsLassoMode);
 
     return (
       <CanvasControls selectedNode={selectedNode}>
+        {/* Lasso-select toggle: activates ReactFlow's selectionOnDrag mode so
+            the user can rubber-band-select multiple nodes by dragging. The
+            button is highlighted (bg-accent / text-primary) when active and
+            disabled while the flow is locked. Pressing Escape also exits the
+            mode (see handleEscape in PageComponent). */}
         <Button
           unstyled
           size="icon"
