@@ -456,9 +456,8 @@ def test_tweaks_schema_accepts_numerics():
 def test_tweaks_schema_rejects_invalid():
     """Tweaks model should still reject unsupported value types."""
     import pytest
-    from pydantic import ValidationError
-
     from lfx.schema.graph import Tweaks
+    from pydantic import ValidationError
 
     with pytest.raises(ValidationError):
         Tweaks(root={"param": [1, 2, 3]})
