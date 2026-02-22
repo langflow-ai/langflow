@@ -63,9 +63,9 @@ export const MemoizedCanvasControls = memo(
             )}
           />
         </Button>
-        <span>
+        <div>
           <Separator orientation="vertical" />
-        </span>
+        </div>
         <Button
           unstyled
           unselectable="on"
