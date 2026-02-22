@@ -29,7 +29,11 @@ from lfx.utils.async_helpers import run_until_complete
 _MODEL_CLASS_IMPORTS: dict[str, tuple[str, str, str | None]] = {
     "ChatOpenAI": ("langchain_openai", "ChatOpenAI", None),
     "ChatAnthropic": ("langchain_anthropic", "ChatAnthropic", None),
-    "ChatGoogleGenerativeAIFixed": ("lfx.base.models.google_generative_ai_model", "ChatGoogleGenerativeAIFixed", "langchain-google-genai"),
+    "ChatGoogleGenerativeAIFixed": (
+        "lfx.base.models.google_generative_ai_model",
+        "ChatGoogleGenerativeAIFixed",
+        "langchain-google-genai",
+    ),
     "ChatOllama": ("langchain_ollama", "ChatOllama", None),
     "ChatWatsonx": ("langchain_ibm", "ChatWatsonx", None),
 }

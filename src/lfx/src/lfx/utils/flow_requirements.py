@@ -76,7 +76,7 @@ MODULE_EXTRA_DEPS: dict[str, list[str]] = {
 
 # Fields in a component template that may contain provider selection info
 # NOTE: Look back into how the dynamic components (LanguageModel, EmbeddingModel) are handled.
-# Currently, these two make dependency extraction more complex by requiring 
+# Currently, these two make dependency extraction more complex by requiring
 # this "guesswork" on what models are being used.
 _MODEL_FIELDS = {"model", "agent_llm", "embeddings_model", "embedding_model"}
 
@@ -105,8 +105,7 @@ def _get_import_to_dist_map() -> dict[str, list[str]]:
         return {}
     except (OSError, ValueError) as exc:
         warnings.warn(
-            f"Failed to read package metadata: {exc}. "
-            "Package resolution will use heuristic fallbacks.",
+            f"Failed to read package metadata: {exc}. Package resolution will use heuristic fallbacks.",
             stacklevel=2,
         )
         return {}
@@ -124,8 +123,7 @@ def _pin_version(package_name: str) -> str:
         return f"{package_name}=={version}"
     except md.PackageNotFoundError:
         warnings.warn(
-            f"Could not determine installed version for '{package_name}'. "
-            "It will be included without a version pin.",
+            f"Could not determine installed version for '{package_name}'. It will be included without a version pin.",
             stacklevel=2,
         )
         return package_name
@@ -262,8 +260,7 @@ def _resolve_provider_packages(provider_name: str) -> set[str]:
         from lfx.base.models.model_input_constants import MODEL_PROVIDERS_DICT
     except ImportError:
         warnings.warn(
-            f"Could not import MODEL_PROVIDERS_DICT. "
-            f"Provider '{provider_name}' packages will not be resolved.",
+            f"Could not import MODEL_PROVIDERS_DICT. Provider '{provider_name}' packages will not be resolved.",
             stacklevel=2,
         )
         return set()
@@ -340,8 +337,8 @@ def _resolve_embedding_provider_packages(provider_name: str) -> set[str]:
     """
     try:
         from lfx.base.models.unified_models import (
-            EMBEDDING_PROVIDER_CLASS_MAPPING,
             _EMBEDDING_CLASS_IMPORTS,
+            EMBEDDING_PROVIDER_CLASS_MAPPING,
         )
     except ImportError:
         warnings.warn(
@@ -540,7 +537,9 @@ def generate_requirements_txt(
         String content suitable for writing to a requirements.txt file.
     """
     reqs = generate_requirements_from_flow(
-        flow, lfx_package=lfx_package, include_lfx=include_lfx,
+        flow,
+        lfx_package=lfx_package,
+        include_lfx=include_lfx,
         pin_versions=pin_versions,
     )
     lines = [
@@ -575,7 +574,9 @@ def generate_requirements_from_file(
     path = Path(flow_path)
     flow = json.loads(path.read_text(encoding="utf-8"))
     return generate_requirements_from_flow(
-        flow, lfx_package=lfx_package, include_lfx=include_lfx,
+        flow,
+        lfx_package=lfx_package,
+        include_lfx=include_lfx,
         pin_versions=pin_versions,
     )
 
@@ -607,7 +608,8 @@ def main() -> None:
         help="Do not pin package versions",
     )
     parser.add_argument(
-        "-o", "--output",
+        "-o",
+        "--output",
         help="Output file path (default: stdout)",
     )
     args = parser.parse_args()

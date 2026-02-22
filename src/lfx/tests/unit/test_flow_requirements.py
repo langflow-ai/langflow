@@ -6,7 +6,6 @@ import json
 from pathlib import Path
 
 import pytest
-
 from lfx.utils.flow_requirements import (
     MODULE_EXTRA_DEPS,
     _detect_providers_from_template,
@@ -710,7 +709,9 @@ class TestStarterProjects:
     def test_lfx_nightly_package_name(self, basic_prompting_flow):
         """Test specifying lfx-nightly as the package name."""
         result = generate_requirements_from_flow(
-            basic_prompting_flow, lfx_package="lfx-nightly", pin_versions=False,
+            basic_prompting_flow,
+            lfx_package="lfx-nightly",
+            pin_versions=False,
         )
         assert result[0] == "lfx-nightly"
         assert "lfx" not in result
