@@ -832,19 +832,22 @@ class TestResolveEmbeddingProviderPackages:
         packages = _resolve_embedding_provider_packages("NonexistentProvider")
         assert packages == set()
 
-    def test_azure_openai_embedding_resolves(self):
-        """Azure OpenAI shares langchain-openai with OpenAI."""
-        packages = _resolve_embedding_provider_packages("Azure OpenAI")
-        assert "langchain-openai" in packages
+    def test_language_only_provider_returns_empty(self):
+        """Providers without embedding support should return empty (not warn)."""
+        packages = _resolve_embedding_provider_packages("Anthropic")
+        assert packages == set()
 
     def test_ibm_watsonx_embedding_resolves(self):
         packages = _resolve_embedding_provider_packages("IBM WatsonX")
         assert "langchain-ibm" in packages
 
-    def test_ibm_watsonx_ai_variant_resolves(self):
-        """The 'IBM watsonx.ai' name variant should also resolve."""
-        packages = _resolve_embedding_provider_packages("IBM watsonx.ai")
-        assert "langchain-ibm" in packages
+    def test_all_embedding_providers_resolve(self):
+        """Every provider in EMBEDDING_PROVIDER_CLASS_MAPPING should resolve to a package."""
+        from lfx.base.models.unified_models import EMBEDDING_PROVIDER_CLASS_MAPPING
+
+        for provider in EMBEDDING_PROVIDER_CLASS_MAPPING:
+            packages = _resolve_embedding_provider_packages(provider)
+            assert len(packages) > 0, f"Embedding provider '{provider}' resolved to no packages"
 
     def test_embedding_only_flow(self):
         """A flow with only an embedding model should still get provider packages."""
@@ -971,3 +974,81 @@ class TestMainCLI:
             with pytest.raises(SystemExit) as exc_info:
                 main()
             assert exc_info.value.code == 1
+
+
+# ===================================================================
+# Typer CLI tests: lfx requirements
+# ===================================================================
+
+
+class TestTyperRequirementsCommand:
+    """Tests for the typer-based ``lfx requirements`` CLI command."""
+
+    @pytest.fixture
+    def runner(self):
+        from typer.testing import CliRunner
+
+        return CliRunner()
+
+    @pytest.fixture
+    def app(self):
+        from lfx.__main__ import app
+
+        return app
+
+    @pytest.fixture
+    def flow_file(self, tmp_path):
+        flow = _make_flow(_make_node("Simple", "import lfx"))
+        path = tmp_path / "flow.json"
+        path.write_text(json.dumps(flow), encoding="utf-8")
+        return path
+
+    def test_happy_path_stdout(self, runner, app, flow_file):
+        result = runner.invoke(app, ["requirements", str(flow_file), "--no-pin"])
+        assert result.exit_code == 0
+        assert "lfx" in result.output
+
+    def test_output_flag_writes_file(self, runner, app, flow_file, tmp_path):
+        out = tmp_path / "requirements.txt"
+        result = runner.invoke(app, ["requirements", str(flow_file), "-o", str(out), "--no-pin"])
+        assert result.exit_code == 0
+        assert out.exists()
+        assert "lfx" in out.read_text(encoding="utf-8")
+        assert "Requirements written to" in result.output
+
+    def test_no_lfx_flag(self, runner, app, flow_file):
+        result = runner.invoke(app, ["requirements", str(flow_file), "--no-lfx", "--no-pin"])
+        assert result.exit_code == 0
+        # With --no-lfx and only lfx imports, no packages should appear after header
+        lines = [l for l in result.output.strip().split("\n") if l and not l.startswith("#")]
+        assert "lfx" not in lines
+
+    def test_no_pin_flag(self, runner, app, flow_file):
+        result = runner.invoke(app, ["requirements", str(flow_file), "--no-pin"])
+        assert result.exit_code == 0
+        assert "==" not in result.output
+
+    def test_default_pins_versions(self, runner, app, flow_file):
+        result = runner.invoke(app, ["requirements", str(flow_file)])
+        assert result.exit_code == 0
+        assert "lfx==" in result.output
+
+    def test_lfx_package_flag(self, runner, app, flow_file):
+        result = runner.invoke(app, ["requirements", str(flow_file), "--lfx-package", "lfx-nightly", "--no-pin"])
+        assert result.exit_code == 0
+        assert "lfx-nightly" in result.output
+        # Should not contain bare "lfx" as a separate line
+        lines = [l for l in result.output.strip().split("\n") if l and not l.startswith("#")]
+        assert "lfx" not in lines
+
+    def test_file_not_found(self, runner, app, tmp_path):
+        result = runner.invoke(app, ["requirements", str(tmp_path / "missing.json")])
+        assert result.exit_code == 1
+        assert "Error" in result.output
+
+    def test_invalid_json(self, runner, app, tmp_path):
+        bad = tmp_path / "bad.json"
+        bad.write_text("not json", encoding="utf-8")
+        result = runner.invoke(app, ["requirements", str(bad)])
+        assert result.exit_code == 1
+        assert "Error" in result.output

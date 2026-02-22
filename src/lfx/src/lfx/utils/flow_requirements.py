@@ -27,10 +27,6 @@ Known limitations
   by lfx" filter always resolves against the ``lfx`` distribution installed in
   the current environment.  If the alternative distribution has different
   transitive dependencies, the output may include extra or missing packages.
-* **New embedding providers** — The ``_PROVIDER_EMBEDDING_CLASS`` mapping in
-  ``_resolve_embedding_provider_packages()`` must be updated manually when new
-  embedding providers are added to ``unified_models.py``.  Missing providers
-  will silently produce incomplete requirements.
 """
 
 from __future__ import annotations
@@ -79,6 +75,9 @@ MODULE_EXTRA_DEPS: dict[str, list[str]] = {
 }
 
 # Fields in a component template that may contain provider selection info
+# NOTE: Look back into how the dynamic components (LanguageModel, EmbeddingModel) are handled.
+# Currently, these two make dependency extraction more complex by requiring 
+# this "guesswork" on what models are being used.
 _MODEL_FIELDS = {"model", "agent_llm", "embeddings_model", "embedding_model"}
 
 
@@ -133,12 +132,12 @@ def _pin_version(package_name: str) -> str:
 
 
 @lru_cache(maxsize=1)
-def _get_lfx_transitive_dists(lfx_dist_name: str = "lfx") -> frozenset[str]:
+def _get_lfx_transitive_dists() -> frozenset[str]:
     """Compute the full transitive closure of distributions provided by lfx.
 
     Recursively walks ``importlib.metadata.requires()`` to build the set of
     all distribution names (normalized) that are already satisfied by
-    installing the lfx package.
+    installing the ``lfx`` package.
     """
 
     def _collect(dist_name: str, seen: set[str]) -> None:
@@ -158,19 +157,19 @@ def _get_lfx_transitive_dists(lfx_dist_name: str = "lfx") -> frozenset[str]:
                 _collect(child, seen)
 
     seen: set[str] = set()
-    _collect(lfx_dist_name, seen)
+    _collect("lfx", seen)
     return frozenset(seen)
 
 
 @lru_cache(maxsize=1)
-def _get_lfx_provided_imports(lfx_dist_name: str = "lfx") -> frozenset[str]:
+def _get_lfx_provided_imports() -> frozenset[str]:
     """Build the set of import names transitively provided by lfx.
 
     Combines ``packages_distributions()`` with the transitive dependency tree
     to determine which import names are already available after
     ``pip install lfx``.
     """
-    lfx_dists = _get_lfx_transitive_dists(lfx_dist_name)
+    lfx_dists = _get_lfx_transitive_dists()
     import_map = _get_import_to_dist_map()
 
     provided: set[str] = set()
@@ -329,47 +328,42 @@ def _resolve_embedding_provider_packages(provider_name: str) -> set[str]:
     internals, while the actual provider package (e.g. ``langchain-openai``) is
     imported at runtime via ``get_embedding_class()``.
 
-    This function bridges that gap by mapping the provider name to its
-    embedding class, then looking up the import module in
-    ``_EMBEDDING_CLASS_IMPORTS``.
+    This function bridges that gap by chaining two registries from
+    ``unified_models.py``:
+
+    1. ``EMBEDDING_PROVIDER_CLASS_MAPPING``: provider name → embedding class name
+    2. ``_EMBEDDING_CLASS_IMPORTS``: class name → (module_path, attr, install_hint)
+
+    Because both registries live in ``unified_models.py``, adding a new
+    embedding provider there automatically makes it visible here — no
+    separate mapping to maintain.
     """
     try:
-        from lfx.base.models.unified_models import _EMBEDDING_CLASS_IMPORTS
+        from lfx.base.models.unified_models import (
+            EMBEDDING_PROVIDER_CLASS_MAPPING,
+            _EMBEDDING_CLASS_IMPORTS,
+        )
     except ImportError:
         warnings.warn(
-            f"Could not import _EMBEDDING_CLASS_IMPORTS. "
+            "Could not import embedding registries from unified_models. "
             f"Embedding packages for provider '{provider_name}' will not be resolved.",
             stacklevel=2,
         )
         return set()
 
-    # Provider name → embedding class name.  Based on embedding_class_mapping
-    # in ``get_embedding_model_options()`` (unified_models.py), extended with
-    # additional provider name variants (e.g. "Azure OpenAI", "IBM watsonx.ai")
-    # that may appear in flow templates.
-    _PROVIDER_EMBEDDING_CLASS: dict[str, str] = {
-        "OpenAI": "OpenAIEmbeddings",
-        "Azure OpenAI": "OpenAIEmbeddings",
-        "Google Generative AI": "GoogleGenerativeAIEmbeddings",
-        "Ollama": "OllamaEmbeddings",
-        "IBM WatsonX": "WatsonxEmbeddings",
-        "IBM watsonx.ai": "WatsonxEmbeddings",
-    }
-
-    class_name = _PROVIDER_EMBEDDING_CLASS.get(provider_name)
+    class_name = EMBEDDING_PROVIDER_CLASS_MAPPING.get(provider_name)
     if not class_name:
-        warnings.warn(
-            f"Embedding provider '{provider_name}' is not in the local embedding class mapping. "
-            "Its embedding dependencies will not be included in requirements.",
-            stacklevel=2,
-        )
+        # This provider has no embedding support (e.g. Anthropic, Groq).
+        # This is expected — not a warning — since this function is called
+        # for every detected provider, including language-model-only ones.
         return set()
 
     import_info = _EMBEDDING_CLASS_IMPORTS.get(class_name)
     if not import_info:
         warnings.warn(
-            f"Embedding class '{class_name}' for provider '{provider_name}' is not "
-            "in _EMBEDDING_CLASS_IMPORTS. The import registry may need updating.",
+            f"Embedding class '{class_name}' for provider '{provider_name}' is in "
+            "EMBEDDING_PROVIDER_CLASS_MAPPING but not in _EMBEDDING_CLASS_IMPORTS. "
+            "The import registry in unified_models.py may need updating.",
             stacklevel=2,
         )
         return set()

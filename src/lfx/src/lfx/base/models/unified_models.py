@@ -41,6 +41,16 @@ _EMBEDDING_CLASS_IMPORTS: dict[str, tuple[str, str, str | None]] = {
     "WatsonxEmbeddings": ("langchain_ibm", "WatsonxEmbeddings", None),
 }
 
+# Canonical mapping of provider name → embedding class name.
+# Used by EmbeddingModelComponent and by flow_requirements to resolve
+# which PyPI package a given embedding provider needs at runtime.
+EMBEDDING_PROVIDER_CLASS_MAPPING: dict[str, str] = {
+    "OpenAI": "OpenAIEmbeddings",
+    "Google Generative AI": "GoogleGenerativeAIEmbeddings",
+    "Ollama": "OllamaEmbeddings",
+    "IBM WatsonX": "WatsonxEmbeddings",
+}
+
 _model_class_cache: dict[str, type] = {}
 _embedding_class_cache: dict[str, type] = {}
 
@@ -59,16 +69,23 @@ def get_model_class(class_name: str) -> type:
         raise ValueError(msg)
 
     module_path, attr_name, install_hint = import_info
+    pkg_hint = install_hint or module_path.split(".")[0].replace("_", "-")
     try:
         module = importlib.import_module(module_path)
     except ImportError as exc:
-        pkg_hint = install_hint or module_path.split(".")[0].replace("_", "-")
         msg = (
             f"Could not import '{module_path}' for model class '{class_name}'. "
             f"Install the missing package (e.g. uv pip install {pkg_hint})."
         )
         raise ImportError(msg) from exc
-    cls = getattr(module, attr_name)
+    try:
+        cls = getattr(module, attr_name)
+    except AttributeError as exc:
+        msg = (
+            f"Module '{module_path}' was imported but does not have attribute '{attr_name}'. "
+            f"This may indicate a version mismatch. "
+        )
+        raise AttributeError(msg) from exc
     _model_class_cache[class_name] = cls
     return cls
 
@@ -87,16 +104,23 @@ def get_embedding_class(class_name: str) -> type:
         raise ValueError(msg)
 
     module_path, attr_name, install_hint = import_info
+    pkg_hint = install_hint or module_path.split(".")[0].replace("_", "-")
     try:
         module = importlib.import_module(module_path)
     except ImportError as exc:
-        pkg_hint = install_hint or module_path.split(".")[0].replace("_", "-")
         msg = (
             f"Could not import '{module_path}' for embedding class '{class_name}'. "
             f"Install the missing package (e.g. uv pip install {pkg_hint})."
         )
         raise ImportError(msg) from exc
-    cls = getattr(module, attr_name)
+    try:
+        cls = getattr(module, attr_name)
+    except AttributeError as exc:
+        msg = (
+            f"Module '{module_path}' was imported but does not have attribute '{attr_name}'. "
+            f"This may indicate a version mismatch. "
+        )
+        raise AttributeError(msg) from exc
     _embedding_class_cache[class_name] = cls
     return cls
 
@@ -782,12 +806,6 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
             pass
 
     options = []
-    embedding_class_mapping = {
-        "OpenAI": "OpenAIEmbeddings",
-        "Google Generative AI": "GoogleGenerativeAIEmbeddings",
-        "Ollama": "OllamaEmbeddings",
-        "IBM WatsonX": "WatsonxEmbeddings",
-    }
 
     # Provider-specific param mappings
     param_mappings = {
@@ -865,7 +883,7 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
                 "category": provider,
                 "provider": provider,
                 "metadata": {
-                    "embedding_class": embedding_class_mapping.get(provider, "OpenAIEmbeddings"),
+                    "embedding_class": EMBEDDING_PROVIDER_CLASS_MAPPING.get(provider, "OpenAIEmbeddings"),
                     "param_mapping": param_mappings.get(provider, param_mappings["OpenAI"]),
                     "model_type": "embeddings",  # Mark as embedding model
                 },
@@ -876,7 +894,7 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
     # Add disabled providers (providers that exist in metadata but have no enabled models)
     if user_id:
         for provider, metadata in model_provider_metadata.items():
-            if provider not in providers_with_models and provider in embedding_class_mapping:
+            if provider not in providers_with_models and provider in EMBEDDING_PROVIDER_CLASS_MAPPING:
                 # This provider has no enabled models and supports embeddings, add it as a disabled provider entry
                 options.append(
                     {
