@@ -87,8 +87,6 @@ jest.mock("lodash", () => ({
   zip: jest.fn(),
 }));
 
-
-
 jest.mock("@/components/core/logCanvasControlsComponent", () => ({
   __esModule: true,
   default: () => null,
@@ -98,18 +96,15 @@ jest.mock("../../flowSidebarComponent", () => ({
   useSearchContext: () => ({ focusSearch: jest.fn(), isSearchFocused: false }),
 }));
 
-jest.mock(
-  "../../flowSidebarComponent/components/sidebarSegmentedNav",
-  () => ({ NAV_ITEMS: [] }),
-);
+jest.mock("../../flowSidebarComponent/components/sidebarSegmentedNav", () => ({
+  NAV_ITEMS: [],
+}));
 
 jest.mock("@xyflow/react", () => ({
   addEdge: jest.fn(),
   applyEdgeChanges: jest.fn((_, edges) => edges),
   applyNodeChanges: jest.fn((_, nodes) => nodes),
-  Panel: ({ children }: { children: React.ReactNode }) => (
-    <div>{children}</div>
-  ),
+  Panel: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   useStoreApi: () => ({ setState: jest.fn() }),
 }));
 
@@ -117,15 +112,12 @@ jest.mock("zustand/react/shallow", () => ({
   useShallow: (fn: (s: unknown) => unknown) => fn,
 }));
 
-jest.mock(
-  "@/components/core/canvasControlsComponent/CanvasControls",
-  () => ({
-    __esModule: true,
-    default: ({ children }: { children: React.ReactNode }) => (
-      <div data-testid="canvas-controls">{children}</div>
-    ),
-  }),
-);
+jest.mock("@/components/core/canvasControlsComponent/CanvasControls", () => ({
+  __esModule: true,
+  default: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="canvas-controls">{children}</div>
+  ),
+}));
 
 jest.mock("@/components/ui/button", () => ({
   Button: ({
@@ -161,8 +153,6 @@ jest.mock("@/components/common/genericIconComponent", () => ({
     </span>
   ),
 }));
-
-
 
 import useFlowStore from "@/stores/flowStore";
 import { MemoizedCanvasControls } from "../MemoizedComponents";
@@ -237,9 +227,9 @@ describe("Lasso mode integration: store ↔ MemoizedCanvasControls", () => {
       });
 
       render(<MemoizedCanvasControls {...defaultProps} />);
-      expect(
-        screen.getByTestId("lasso-mode-toggle").className,
-      ).toContain("bg-accent");
+      expect(screen.getByTestId("lasso-mode-toggle").className).toContain(
+        "bg-accent",
+      );
 
       act(() => {
         useFlowStore.getState().resetFlowState();

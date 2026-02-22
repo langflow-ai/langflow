@@ -28,20 +28,16 @@ jest.mock("../../flowSidebarComponent", () => ({
   useSearchContext: () => ({ focusSearch: jest.fn(), isSearchFocused: false }),
 }));
 
-jest.mock(
-  "../../flowSidebarComponent/components/sidebarSegmentedNav",
-  () => ({ NAV_ITEMS: [] }),
-);
+jest.mock("../../flowSidebarComponent/components/sidebarSegmentedNav", () => ({
+  NAV_ITEMS: [],
+}));
 
-jest.mock(
-  "@/components/core/canvasControlsComponent/CanvasControls",
-  () => ({
-    __esModule: true,
-    default: ({ children }: { children: React.ReactNode }) => (
-      <div data-testid="canvas-controls">{children}</div>
-    ),
-  }),
-);
+jest.mock("@/components/core/canvasControlsComponent/CanvasControls", () => ({
+  __esModule: true,
+  default: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="canvas-controls">{children}</div>
+  ),
+}));
 
 jest.mock("@/components/ui/button", () => ({
   Button: ({
@@ -103,9 +99,7 @@ describe("MemoizedCanvasControls", () => {
   describe("lasso toggle button rendering", () => {
     it("renders the lasso toggle button", () => {
       render(<MemoizedCanvasControls {...defaultProps} />);
-      expect(
-        screen.getByTestId("lasso-mode-toggle"),
-      ).toBeInTheDocument();
+      expect(screen.getByTestId("lasso-mode-toggle")).toBeInTheDocument();
     });
 
     it("renders the LassoSelect icon", () => {

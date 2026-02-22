@@ -112,9 +112,7 @@ describe("useFlowStore - lasso mode", () => {
 
   describe("initial state", () => {
     it("defaults to false", () => {
-      const { result } = renderHook(() =>
-        useFlowStore((s) => s.isLassoMode),
-      );
+      const { result } = renderHook(() => useFlowStore((s) => s.isLassoMode));
       expect(result.current).toBe(false);
     });
   });
@@ -147,13 +145,19 @@ describe("useFlowStore - lasso mode", () => {
     it("toggles correctly across multiple calls", () => {
       const { result } = renderHook(() => useFlowStore());
 
-      act(() => { result.current.setIsLassoMode(true); });
+      act(() => {
+        result.current.setIsLassoMode(true);
+      });
       expect(result.current.isLassoMode).toBe(true);
 
-      act(() => { result.current.setIsLassoMode(false); });
+      act(() => {
+        result.current.setIsLassoMode(false);
+      });
       expect(result.current.isLassoMode).toBe(false);
 
-      act(() => { result.current.setIsLassoMode(true); });
+      act(() => {
+        result.current.setIsLassoMode(true);
+      });
       expect(result.current.isLassoMode).toBe(true);
     });
   });
