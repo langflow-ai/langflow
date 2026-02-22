@@ -886,7 +886,7 @@
   },
   "GoogleGenerativeAIModel": {
     "versions": {
-      "0.3.0": "ffb6e75b6684"
+      "0.3.0": "049f38001189"
     }
   },
   "Google Generative AI Embeddings": {
@@ -1041,7 +1041,7 @@
   },
   "CSVAgent": {
     "versions": {
-      "0.3.0": "97947e212da9"
+      "0.3.0": "4978be110e63"
     }
   },
   "LangChainFakeEmbeddings": {
