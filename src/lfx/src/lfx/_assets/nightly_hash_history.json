@@ -1,0 +1,1782 @@
+{
+  "FAISS": {
+    "versions": {
+      "0.3.0.dev58": "2bd7a064d724"
+    }
+  },
+  "AddContentToPage": {
+    "versions": {
+      "0.3.0.dev58": "ffcd44201c09"
+    }
+  },
+  "NotionPageCreator": {
+    "versions": {
+      "0.3.0.dev58": "640438ed3d7b"
+    }
+  },
+  "NotionDatabaseProperties": {
+    "versions": {
+      "0.3.0.dev58": "adce99660f9e"
+    }
+  },
+  "NotionListPages": {
+    "versions": {
+      "0.3.0.dev58": "373f9ad32937"
+    }
+  },
+  "NotionUserList": {
+    "versions": {
+      "0.3.0.dev58": "8966397da1d5"
+    }
+  },
+  "NotionPageContent": {
+    "versions": {
+      "0.3.0.dev58": "ba15d6a01d04"
+    }
+  },
+  "NotionSearch": {
+    "versions": {
+      "0.3.0.dev58": "793b8818a3b4"
+    }
+  },
+  "NotionPageUpdate": {
+    "versions": {
+      "0.3.0.dev58": "32ccdf34df73"
+    }
+  },
+  "AgentQL": {
+    "versions": {
+      "0.3.0.dev58": "37de3210aed9"
+    }
+  },
+  "AIMLModel": {
+    "versions": {
+      "0.3.0.dev58": "db72277a0d5a"
+    }
+  },
+  "AIMLEmbeddings": {
+    "versions": {
+      "0.3.0.dev58": "dae370391ba3"
+    }
+  },
+  "ALTK Agent": {
+    "versions": {
+      "0.3.0.dev58": "d1caf0d1db88"
+    }
+  },
+  "AmazonBedrockConverseModel": {
+    "versions": {
+      "0.3.0.dev58": "54c335f8699f"
+    }
+  },
+  "AmazonBedrockEmbeddings": {
+    "versions": {
+      "0.3.0.dev58": "70d039ff79f0"
+    }
+  },
+  "AmazonBedrockModel": {
+    "versions": {
+      "0.3.0.dev58": "922093a831b6"
+    }
+  },
+  "s3bucketuploader": {
+    "versions": {
+      "0.3.0.dev58": "6e4ba2dafc3c"
+    }
+  },
+  "AnthropicModel": {
+    "versions": {
+      "0.3.0.dev58": "7c894c5a66ba"
+    }
+  },
+  "ApifyActors": {
+    "versions": {
+      "0.3.0.dev58": "e84290d462c2"
+    }
+  },
+  "ArXivComponent": {
+    "versions": {
+      "0.3.0.dev58": "219239ee2b48"
+    }
+  },
+  "AssemblyAIGetSubtitles": {
+    "versions": {
+      "0.3.0.dev58": "533d1fcf7c7a"
+    }
+  },
+  "AssemblyAILeMUR": {
+    "versions": {
+      "0.3.0.dev58": "8c96738ab967"
+    }
+  },
+  "AssemblyAIListTranscripts": {
+    "versions": {
+      "0.3.0.dev58": "267dcda48ad4"
+    }
+  },
+  "AssemblyAITranscriptionJobPoller": {
+    "versions": {
+      "0.3.0.dev58": "935c9296b149"
+    }
+  },
+  "AssemblyAITranscriptionJobCreator": {
+    "versions": {
+      "0.3.0.dev58": "7ff7b3f90298"
+    }
+  },
+  "AzureOpenAIModel": {
+    "versions": {
+      "0.3.0.dev58": "cc8d003556d8"
+    }
+  },
+  "AzureOpenAIEmbeddings": {
+    "versions": {
+      "0.3.0.dev58": "6b54f3243a6a"
+    }
+  },
+  "BaiduQianfanChatModel": {
+    "versions": {
+      "0.3.0.dev58": "a5fdfdb5757f"
+    }
+  },
+  "BingSearchAPI": {
+    "versions": {
+      "0.3.0.dev58": "84334607b325"
+    }
+  },
+  "Cassandra": {
+    "versions": {
+      "0.3.0.dev58": "833f277daab7"
+    }
+  },
+  "CassandraChatMemory": {
+    "versions": {
+      "0.3.0.dev58": "f6497182984e"
+    }
+  },
+  "CassandraGraph": {
+    "versions": {
+      "0.3.0.dev58": "26c63f80745e"
+    }
+  },
+  "Chroma": {
+    "versions": {
+      "0.3.0.dev58": "82d38624f19a"
+    }
+  },
+  "CleanlabEvaluator": {
+    "versions": {
+      "0.3.0.dev58": "06963c804ffe"
+    }
+  },
+  "CleanlabRAGEvaluator": {
+    "versions": {
+      "0.3.0.dev58": "f48b57ff7ca3"
+    }
+  },
+  "CleanlabRemediator": {
+    "versions": {
+      "0.3.0.dev58": "a5b19d338991"
+    }
+  },
+  "Clickhouse": {
+    "versions": {
+      "0.3.0.dev58": "ab991e83da44"
+    }
+  },
+  "CloudflareWorkersAIEmbeddings": {
+    "versions": {
+      "0.3.0.dev58": "1ea6e4857c14"
+    }
+  },
+  "CohereEmbeddings": {
+    "versions": {
+      "0.3.0.dev58": "9c0f413a2c64"
+    }
+  },
+  "CohereModel": {
+    "versions": {
+      "0.3.0.dev58": "594852e1d706"
+    }
+  },
+  "CohereRerank": {
+    "versions": {
+      "0.3.0.dev58": "a94a0d11eeac"
+    }
+  },
+  "CometAPIModel": {
+    "versions": {
+      "0.3.0.dev58": "4ec4a8852e9c"
+    }
+  },
+  "ComposioAgentQLAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "cca708a10ab6"
+    }
+  },
+  "ComposioAgiledAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "3294a951a1a8"
+    }
+  },
+  "ComposioAirtableAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "e47ad011c33c"
+    }
+  },
+  "ComposioApolloAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "3af16f5d6ceb"
+    }
+  },
+  "ComposioAsanaAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "290d6d61d049"
+    }
+  },
+  "ComposioAttioAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "de43b3cf5671"
+    }
+  },
+  "ComposioBitbucketAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "7528a8928646"
+    }
+  },
+  "ComposioBolnaAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "dde7d2ee80a2"
+    }
+  },
+  "ComposioBrightdataAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "49a04c5a23cb"
+    }
+  },
+  "ComposioCalendlyAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "4a282e413d55"
+    }
+  },
+  "ComposioCanvaAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "d149aa178e80"
+    }
+  },
+  "ComposioCanvasAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "6510d212a720"
+    }
+  },
+  "ComposioCodaAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "f7693920313f"
+    }
+  },
+  "ComposioAPI": {
+    "versions": {
+      "0.3.0.dev58": "764255821307"
+    }
+  },
+  "ComposioContentfulAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "36befb1ec8fc"
+    }
+  },
+  "ComposioDigicertAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "0fcbc1b899f8"
+    }
+  },
+  "ComposioDiscordAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "2ec988f25784"
+    }
+  },
+  "ComposioDropboxAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "d05825599def"
+    }
+  },
+  "ComposioElevenLabsAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "e0c91533558b"
+    }
+  },
+  "ComposioExaAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "3b5cecdefab8"
+    }
+  },
+  "ComposioFigmaAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "7443d213546b"
+    }
+  },
+  "ComposioFinageAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "50a2bdee4cd1"
+    }
+  },
+  "ComposioFirecrawlAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "2ab1c4b00071"
+    }
+  },
+  "ComposioFirefliesAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "233cd91dbdad"
+    }
+  },
+  "ComposioFixerAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "9e4c00f9dcd8"
+    }
+  },
+  "ComposioFlexisignAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "c69bbee0005d"
+    }
+  },
+  "ComposioFreshdeskAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "1dde03d615ca"
+    }
+  },
+  "ComposioGitHubAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "ee201105d924"
+    }
+  },
+  "ComposioGmailAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "d4b13ac8a3a1"
+    }
+  },
+  "ComposioGoogleBigQueryAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "f7d84aaae78f"
+    }
+  },
+  "ComposioGoogleCalendarAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "28adb6fff093"
+    }
+  },
+  "ComposioGoogleclassroomAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "85a5c37c13f6"
+    }
+  },
+  "ComposioGoogleDocsAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "ac2e88b6f706"
+    }
+  },
+  "ComposioGooglemeetAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "cdbf16c4b42f"
+    }
+  },
+  "ComposioGoogleSheetsAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "b0db7a3abe1f"
+    }
+  },
+  "ComposioGoogleTasksAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "2ba9c1661f41"
+    }
+  },
+  "ComposioHeygenAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "c72fd5d0350f"
+    }
+  },
+  "ComposioInstagramAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "a6691c905833"
+    }
+  },
+  "ComposioJiraAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "3e62396f3868"
+    }
+  },
+  "ComposioJotformAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "7c1c6a676814"
+    }
+  },
+  "ComposioKlaviyoAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "3be7e8a5e3fe"
+    }
+  },
+  "ComposioLinearAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "be2b2ebbeea7"
+    }
+  },
+  "ComposioListennotesAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "b85f2fe51906"
+    }
+  },
+  "ComposioMem0APIComponent": {
+    "versions": {
+      "0.3.0.dev58": "68871a483786"
+    }
+  },
+  "ComposioMiroAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "1e9c421e1ac4"
+    }
+  },
+  "ComposioMissiveAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "6def944a7739"
+    }
+  },
+  "ComposioNotionAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "590aa6ff30d1"
+    }
+  },
+  "ComposioOneDriveAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "497cc4625121"
+    }
+  },
+  "ComposioOutlookAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "bf6998d60b63"
+    }
+  },
+  "ComposioPandadocAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "21d92aabc1bf"
+    }
+  },
+  "ComposioPeopleDataLabsAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "bd05ce58f55c"
+    }
+  },
+  "ComposioPerplexityAIAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "e40b0651344f"
+    }
+  },
+  "ComposioRedditAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "a86794073c22"
+    }
+  },
+  "ComposioSerpAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "74b0a07ee54b"
+    }
+  },
+  "ComposioSlackAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "fa340cae1330"
+    }
+  },
+  "ComposioSlackbotAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "ddeb26bc04e6"
+    }
+  },
+  "ComposioSnowflakeAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "d0d1af5686d2"
+    }
+  },
+  "ComposioSupabaseAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "7ad58ce34cc0"
+    }
+  },
+  "ComposioTavilyAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "97af05e37911"
+    }
+  },
+  "ComposioTimelinesAIAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "76e70e2de4d3"
+    }
+  },
+  "ComposioTodoistAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "4dd9852f2058"
+    }
+  },
+  "ComposioWrikeAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "a5f2cf00ca08"
+    }
+  },
+  "ComposioYoutubeAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "d1af2ea00e8b"
+    }
+  },
+  "Confluence": {
+    "versions": {
+      "0.3.0.dev58": "8a7ef34b66e4"
+    }
+  },
+  "Couchbase": {
+    "versions": {
+      "0.3.0.dev58": "70ed475a6f48"
+    }
+  },
+  "CrewAIAgentComponent": {
+    "versions": {
+      "0.3.0.dev58": "a23f0923049d"
+    }
+  },
+  "HierarchicalCrewComponent": {
+    "versions": {
+      "0.3.0.dev58": "144be482cfb0"
+    }
+  },
+  "HierarchicalTaskComponent": {
+    "versions": {
+      "0.3.0.dev58": "25071652dc20"
+    }
+  },
+  "SequentialCrewComponent": {
+    "versions": {
+      "0.3.0.dev58": "42e59f6d6572"
+    }
+  },
+  "SequentialTaskComponent": {
+    "versions": {
+      "0.3.0.dev58": "b1f17b8fcc5c"
+    }
+  },
+  "SequentialTaskAgentComponent": {
+    "versions": {
+      "0.3.0.dev58": "0a5483ef82c3"
+    }
+  },
+  "Cuga": {
+    "versions": {
+      "0.3.0.dev58": "35e838f89d13"
+    }
+  },
+  "CustomComponent": {
+    "versions": {
+      "0.3.0.dev58": "d50a68a6fa57"
+    }
+  },
+  "APIRequest": {
+    "versions": {
+      "0.3.0.dev58": "7f013aba27c9"
+    }
+  },
+  "CSVtoData": {
+    "versions": {
+      "0.3.0.dev58": "85c7d6df7473"
+    }
+  },
+  "JSONtoData": {
+    "versions": {
+      "0.3.0.dev58": "0d9d78d496a2"
+    }
+  },
+  "MockDataGenerator": {
+    "versions": {
+      "0.3.0.dev58": "d21dce7b329b"
+    }
+  },
+  "NewsSearch": {
+    "versions": {
+      "0.3.0.dev58": "b8cb11f78518"
+    }
+  },
+  "RSSReaderSimple": {
+    "versions": {
+      "0.3.0.dev58": "6eb8fb48c9b5"
+    }
+  },
+  "SQLComponent": {
+    "versions": {
+      "0.3.0.dev58": "a8dd79af50b8"
+    }
+  },
+  "URLComponent": {
+    "versions": {
+      "0.3.0.dev58": "f773f55e3820"
+    }
+  },
+  "UnifiedWebSearch": {
+    "versions": {
+      "0.3.0.dev58": "cbeeaef8889a"
+    }
+  },
+  "Astra Assistant Agent": {
+    "versions": {
+      "0.3.0.dev58": "4716d3b7c350"
+    }
+  },
+  "AstraDBChatMemory": {
+    "versions": {
+      "0.3.0.dev58": "bafc81f78c76"
+    }
+  },
+  "AstraDBCQLToolComponent": {
+    "versions": {
+      "0.3.0.dev58": "70c4523f841d"
+    }
+  },
+  "AstraDBGraph": {
+    "versions": {
+      "0.3.0.dev58": "9f5d576b30ca"
+    }
+  },
+  "AstraDBTool": {
+    "versions": {
+      "0.3.0.dev58": "44719b6ed1a3"
+    }
+  },
+  "AstraVectorize": {
+    "versions": {
+      "0.3.0.dev58": "3d976690c262"
+    }
+  },
+  "AstraDB": {
+    "versions": {
+      "0.3.0.dev58": "d52094e54e96"
+    }
+  },
+  "AssistantsCreateAssistant": {
+    "versions": {
+      "0.3.0.dev58": "8d9869d9a89d"
+    }
+  },
+  "AssistantsCreateThread": {
+    "versions": {
+      "0.3.0.dev58": "5d40a73accfd"
+    }
+  },
+  "Dotenv": {
+    "versions": {
+      "0.3.0.dev58": "343ea9aaca1b"
+    }
+  },
+  "AssistantsGetAssistantName": {
+    "versions": {
+      "0.3.0.dev58": "1f60da161fd3"
+    }
+  },
+  "GetEnvVar": {
+    "versions": {
+      "0.3.0.dev58": "083f0a94f380"
+    }
+  },
+  "GraphRAG": {
+    "versions": {
+      "0.3.0.dev58": "4d83709a5f5f"
+    }
+  },
+  "HCD": {
+    "versions": {
+      "0.3.0.dev58": "25f009b9e171"
+    }
+  },
+  "AssistantsListAssistants": {
+    "versions": {
+      "0.3.0.dev58": "17e9c5c78a6e"
+    }
+  },
+  "AssistantsRun": {
+    "versions": {
+      "0.3.0.dev58": "5e219cd290d3"
+    }
+  },
+  "DeepSeekModelComponent": {
+    "versions": {
+      "0.3.0.dev58": "c8dac7a258d7"
+    }
+  },
+  "ChunkDoclingDocument": {
+    "versions": {
+      "0.3.0.dev58": "d84ce7ffc6cb"
+    }
+  },
+  "DoclingInline": {
+    "versions": {
+      "0.3.0.dev58": "519d12bd6451"
+    }
+  },
+  "DoclingRemote": {
+    "versions": {
+      "0.3.0.dev58": "5723576d00e5"
+    }
+  },
+  "ExportDoclingDocument": {
+    "versions": {
+      "0.3.0.dev58": "32577a7e396b"
+    }
+  },
+  "DuckDuckGoSearchComponent": {
+    "versions": {
+      "0.3.0.dev58": "2e522a5a4389"
+    }
+  },
+  "Elasticsearch": {
+    "versions": {
+      "0.3.0.dev58": "23ea4383039e"
+    }
+  },
+  "OpenSearchVectorStoreComponent": {
+    "versions": {
+      "0.3.0.dev58": "77834dd0fa75"
+    }
+  },
+  "OpenSearchVectorStoreComponentMultimodalMultiEmbedding": {
+    "versions": {
+      "0.3.0.dev58": "89f34f2ad64e"
+    }
+  },
+  "EmbeddingSimilarityComponent": {
+    "versions": {
+      "0.3.0.dev58": "d94c7d791f69"
+    }
+  },
+  "TextEmbedderComponent": {
+    "versions": {
+      "0.3.0.dev58": "541a2fb78066"
+    }
+  },
+  "ExaSearch": {
+    "versions": {
+      "0.3.0.dev58": "26039e2a8b78"
+    }
+  },
+  "Directory": {
+    "versions": {
+      "0.3.0.dev58": "c55e0e29079d"
+    }
+  },
+  "File": {
+    "versions": {
+      "0.3.0.dev58": "12a5841f1a03"
+    }
+  },
+  "KnowledgeIngestion": {
+    "versions": {
+      "0.3.0.dev58": "52a451e4f053"
+    }
+  },
+  "KnowledgeRetrieval": {
+    "versions": {
+      "0.3.0.dev58": "af0a162c3f80"
+    }
+  },
+  "SaveToFile": {
+    "versions": {
+      "0.3.0.dev58": "6d0e4842271e"
+    }
+  },
+  "FirecrawlCrawlApi": {
+    "versions": {
+      "0.3.0.dev58": "22fd75efce27"
+    }
+  },
+  "FirecrawlExtractApi": {
+    "versions": {
+      "0.3.0.dev58": "8083782c2c28"
+    }
+  },
+  "FirecrawlMapApi": {
+    "versions": {
+      "0.3.0.dev58": "e326e840049b"
+    }
+  },
+  "FirecrawlScrapeApi": {
+    "versions": {
+      "0.3.0.dev58": "857b7da04207"
+    }
+  },
+  "ConditionalRouter": {
+    "versions": {
+      "0.3.0.dev58": "e92b1b243e5f"
+    }
+  },
+  "DataConditionalRouter": {
+    "versions": {
+      "0.3.0.dev58": "6fa1bf4166a3"
+    }
+  },
+  "FlowTool": {
+    "versions": {
+      "0.3.0.dev58": "9348d79d19f4"
+    }
+  },
+  "Listen": {
+    "versions": {
+      "0.3.0.dev58": "93fc11377c96"
+    }
+  },
+  "LoopComponent": {
+    "versions": {
+      "0.3.0.dev58": "9f88705635cd"
+    }
+  },
+  "Notify": {
+    "versions": {
+      "0.3.0.dev58": "03d68ba28530"
+    }
+  },
+  "Pass": {
+    "versions": {
+      "0.3.0.dev58": "04d3e1ed3390"
+    }
+  },
+  "RunFlow": {
+    "versions": {
+      "0.3.0.dev58": "9e5eefa14766"
+    }
+  },
+  "SubFlow": {
+    "versions": {
+      "0.3.0.dev58": "8ba6fbc5ca3a"
+    }
+  },
+  "GitLoaderComponent": {
+    "versions": {
+      "0.3.0.dev58": "ac5de0564a4f"
+    }
+  },
+  "GitExtractorComponent": {
+    "versions": {
+      "0.3.0.dev58": "79f338765b69"
+    }
+  },
+  "GleanSearchAPIComponent": {
+    "versions": {
+      "0.3.0.dev58": "493ca281d420"
+    }
+  },
+  "GmailLoaderComponent": {
+    "versions": {
+      "0.3.0.dev58": "b973c5a1987b"
+    }
+  },
+  "BigQueryExecutor": {
+    "versions": {
+      "0.3.0.dev58": "7f61159743ec"
+    }
+  },
+  "GoogleDriveComponent": {
+    "versions": {
+      "0.3.0.dev58": "1727f517e814"
+    }
+  },
+  "GoogleDriveSearchComponent": {
+    "versions": {
+      "0.3.0.dev58": "8f8dbdf04aaf"
+    }
+  },
+  "GoogleGenerativeAIModel": {
+    "versions": {
+      "0.3.0.dev58": "049f38001189"
+    }
+  },
+  "Google Generative AI Embeddings": {
+    "versions": {
+      "0.3.0.dev58": "7756ad70a221"
+    }
+  },
+  "GoogleOAuthToken": {
+    "versions": {
+      "0.3.0.dev58": "151778572099"
+    }
+  },
+  "GoogleSearchAPICore": {
+    "versions": {
+      "0.3.0.dev58": "853c193aa41c"
+    }
+  },
+  "GoogleSerperAPICore": {
+    "versions": {
+      "0.3.0.dev58": "527183dcb201"
+    }
+  },
+  "GroqModel": {
+    "versions": {
+      "0.3.0.dev58": "2aee7de6ee88"
+    }
+  },
+  "HomeAssistantControl": {
+    "versions": {
+      "0.3.0.dev58": "32b34baf3c7d"
+    }
+  },
+  "ListHomeAssistantStates": {
+    "versions": {
+      "0.3.0.dev58": "c7bb91632474"
+    }
+  },
+  "HuggingFaceModel": {
+    "versions": {
+      "0.3.0.dev58": "ba9d7c28859d"
+    }
+  },
+  "HuggingFaceInferenceAPIEmbeddings": {
+    "versions": {
+      "0.3.0.dev58": "af0546658974"
+    }
+  },
+  "IBMwatsonxModel": {
+    "versions": {
+      "0.3.0.dev58": "769869108e5e"
+    }
+  },
+  "WatsonxEmbeddingsComponent": {
+    "versions": {
+      "0.3.0.dev58": "ffded413ea90"
+    }
+  },
+  "Combinatorial Reasoner": {
+    "versions": {
+      "0.3.0.dev58": "48557047ff23"
+    }
+  },
+  "ChatInput": {
+    "versions": {
+      "0.3.0.dev58": "7a26c54d89ed"
+    }
+  },
+  "ChatOutput": {
+    "versions": {
+      "0.3.0.dev58": "8c87e536cca4"
+    }
+  },
+  "TextInput": {
+    "versions": {
+      "0.3.0.dev58": "518f16485886"
+    }
+  },
+  "TextOutput": {
+    "versions": {
+      "0.3.0.dev58": "6aba888f4632"
+    }
+  },
+  "Webhook": {
+    "versions": {
+      "0.3.0.dev58": "eb561ef21f3d"
+    }
+  },
+  "JigsawStackAIScraper": {
+    "versions": {
+      "0.3.0.dev58": "08a0063e2564"
+    }
+  },
+  "JigsawStackAISearch": {
+    "versions": {
+      "0.3.0.dev58": "5e821ee44040"
+    }
+  },
+  "JigsawStackFileRead": {
+    "versions": {
+      "0.3.0.dev58": "84d122f46fb1"
+    }
+  },
+  "JigsawStackFileUpload": {
+    "versions": {
+      "0.3.0.dev58": "8261dc72a655"
+    }
+  },
+  "JigsawStackImageGeneration": {
+    "versions": {
+      "0.3.0.dev58": "463f8efbaa18"
+    }
+  },
+  "JigsawStackNSFW": {
+    "versions": {
+      "0.3.0.dev58": "88b5eee38906"
+    }
+  },
+  "JigsawStackObjectDetection": {
+    "versions": {
+      "0.3.0.dev58": "fceaf0286f20"
+    }
+  },
+  "JigsawStackSentiment": {
+    "versions": {
+      "0.3.0.dev58": "00d0377e5c2e"
+    }
+  },
+  "JigsawStackTextToSQL": {
+    "versions": {
+      "0.3.0.dev58": "30aa0cc15fb8"
+    }
+  },
+  "JigsawStackTextTranslate": {
+    "versions": {
+      "0.3.0.dev58": "46233e19961f"
+    }
+  },
+  "JigsawStackVOCR": {
+    "versions": {
+      "0.3.0.dev58": "a44491947ba7"
+    }
+  },
+  "CharacterTextSplitter": {
+    "versions": {
+      "0.3.0.dev58": "995b35c5296c"
+    }
+  },
+  "ConversationChain": {
+    "versions": {
+      "0.3.0.dev58": "b0e4044d3f08"
+    }
+  },
+  "CSVAgent": {
+    "versions": {
+      "0.3.0.dev58": "4978be110e63"
+    }
+  },
+  "LangChainFakeEmbeddings": {
+    "versions": {
+      "0.3.0.dev58": "faaa1be642a1"
+    }
+  },
+  "HtmlLinkExtractor": {
+    "versions": {
+      "0.3.0.dev58": "13cc6457f84c"
+    }
+  },
+  "JsonAgent": {
+    "versions": {
+      "0.3.0.dev58": "117a41e142c6"
+    }
+  },
+  "LangChain Hub Prompt": {
+    "versions": {
+      "0.3.0.dev58": "9f59bf236231"
+    }
+  },
+  "LanguageRecursiveTextSplitter": {
+    "versions": {
+      "0.3.0.dev58": "207a88b20a7e"
+    }
+  },
+  "SemanticTextSplitter": {
+    "versions": {
+      "0.3.0.dev58": "e9178757dea0"
+    }
+  },
+  "LLMCheckerChain": {
+    "versions": {
+      "0.3.0.dev58": "81aa2c9910db"
+    }
+  },
+  "LLMMathChain": {
+    "versions": {
+      "0.3.0.dev58": "422d8e0d4614"
+    }
+  },
+  "NaturalLanguageTextSplitter": {
+    "versions": {
+      "0.3.0.dev58": "aed1e0bb411e"
+    }
+  },
+  "OpenAIToolsAgent": {
+    "versions": {
+      "0.3.0.dev58": "b2ad248a3e6c"
+    }
+  },
+  "OpenAPIAgent": {
+    "versions": {
+      "0.3.0.dev58": "3b817f0cd966"
+    }
+  },
+  "RecursiveCharacterTextSplitter": {
+    "versions": {
+      "0.3.0.dev58": "9ed58a212804"
+    }
+  },
+  "RetrievalQA": {
+    "versions": {
+      "0.3.0.dev58": "16c80b234abf"
+    }
+  },
+  "RunnableExecutor": {
+    "versions": {
+      "0.3.0.dev58": "32135f41efe5"
+    }
+  },
+  "SelfQueryRetriever": {
+    "versions": {
+      "0.3.0.dev58": "a18169f36371"
+    }
+  },
+  "SpiderTool": {
+    "versions": {
+      "0.3.0.dev58": "08c823a20237"
+    }
+  },
+  "SQLAgent": {
+    "versions": {
+      "0.3.0.dev58": "8d02598705fc"
+    }
+  },
+  "SQLDatabase": {
+    "versions": {
+      "0.3.0.dev58": "7d07b7faa341"
+    }
+  },
+  "SQLGenerator": {
+    "versions": {
+      "0.3.0.dev58": "971a82407ec6"
+    }
+  },
+  "ToolCallingAgent": {
+    "versions": {
+      "0.3.0.dev58": "a5afe724de9c"
+    }
+  },
+  "VectorStoreInfo": {
+    "versions": {
+      "0.3.0.dev58": "62f06efeec2c"
+    }
+  },
+  "VectorStoreRouterAgent": {
+    "versions": {
+      "0.3.0.dev58": "b16515f6e722"
+    }
+  },
+  "XMLAgent": {
+    "versions": {
+      "0.3.0.dev58": "338332984901"
+    }
+  },
+  "LangWatchEvaluator": {
+    "versions": {
+      "0.3.0.dev58": "6db3bccd5945"
+    }
+  },
+  "BatchRunComponent": {
+    "versions": {
+      "0.3.0.dev58": "53935e54dfe7"
+    }
+  },
+  "GuardrailValidator": {
+    "versions": {
+      "0.3.0.dev58": "675232be19cc"
+    }
+  },
+  "Smart Transform": {
+    "versions": {
+      "0.3.0.dev58": "9912fe8c7f1b"
+    }
+  },
+  "SmartRouter": {
+    "versions": {
+      "0.3.0.dev58": "7bdefeec6280"
+    }
+  },
+  "LLMSelectorComponent": {
+    "versions": {
+      "0.3.0.dev58": "59de3f4015ff"
+    }
+  },
+  "StructuredOutput": {
+    "versions": {
+      "0.3.0.dev58": "058ca1f51e9f"
+    }
+  },
+  "LMStudioEmbeddingsComponent": {
+    "versions": {
+      "0.3.0.dev58": "ecd584b7a486"
+    }
+  },
+  "LMStudioModel": {
+    "versions": {
+      "0.3.0.dev58": "da4b3b155dc4"
+    }
+  },
+  "Maritalk": {
+    "versions": {
+      "0.3.0.dev58": "25c5da31181e"
+    }
+  },
+  "mem0_chat_memory": {
+    "versions": {
+      "0.3.0.dev58": "b6addbcccf9a"
+    }
+  },
+  "Milvus": {
+    "versions": {
+      "0.3.0.dev58": "2b5efe313b31"
+    }
+  },
+  "MistralModel": {
+    "versions": {
+      "0.3.0.dev58": "e21780948144"
+    }
+  },
+  "MistalAIEmbeddings": {
+    "versions": {
+      "0.3.0.dev58": "42ea92fd2df2"
+    }
+  },
+  "Agent": {
+    "versions": {
+      "0.3.0.dev58": "60401f4e0ff8"
+    }
+  },
+  "EmbeddingModel": {
+    "versions": {
+      "0.3.0.dev58": "3e0b64afc9a2"
+    }
+  },
+  "LanguageModelComponent": {
+    "versions": {
+      "0.3.0.dev58": "a2006b90cbd1"
+    }
+  },
+  "MCPTools": {
+    "versions": {
+      "0.3.0.dev58": "a3700ab467a1"
+    }
+  },
+  "Memory": {
+    "versions": {
+      "0.3.0.dev58": "efd064ef48ff"
+    }
+  },
+  "Prompt Template": {
+    "versions": {
+      "0.3.0.dev58": "5b3e6730923e"
+    }
+  },
+  "MongoDBAtlasVector": {
+    "versions": {
+      "0.3.0.dev58": "3a502cb4d313"
+    }
+  },
+  "needle": {
+    "versions": {
+      "0.3.0.dev58": "5f6cedaa0217"
+    }
+  },
+  "NotDiamond": {
+    "versions": {
+      "0.3.0.dev58": "a26ebf501f67"
+    }
+  },
+  "NovitaModel": {
+    "versions": {
+      "0.3.0.dev58": "2142c4dd2b64"
+    }
+  },
+  "NVIDIAModelComponent": {
+    "versions": {
+      "0.3.0.dev58": "fd6cae31c2a0"
+    }
+  },
+  "NVIDIAEmbeddingsComponent": {
+    "versions": {
+      "0.3.0.dev58": "0fded038082d"
+    }
+  },
+  "NvidiaIngestComponent": {
+    "versions": {
+      "0.3.0.dev58": "ff0c6660d991"
+    }
+  },
+  "NvidiaRerankComponent": {
+    "versions": {
+      "0.3.0.dev58": "cf3976b241f1"
+    }
+  },
+  "NvidiaSystemAssistComponent": {
+    "versions": {
+      "0.3.0.dev58": "1affc5dcebe1"
+    }
+  },
+  "OlivyaComponent": {
+    "versions": {
+      "0.3.0.dev58": "b5a5c201c4e0"
+    }
+  },
+  "OllamaModel": {
+    "versions": {
+      "0.3.0.dev58": "4fac4a29daff"
+    }
+  },
+  "OllamaEmbeddings": {
+    "versions": {
+      "0.3.0.dev58": "c1f138e1f771"
+    }
+  },
+  "OpenAIEmbeddings": {
+    "versions": {
+      "0.3.0.dev58": "8a658ed6d4c9"
+    }
+  },
+  "OpenAIModel": {
+    "versions": {
+      "0.3.0.dev58": "128d8ef661d4"
+    }
+  },
+  "OpenRouterComponent": {
+    "versions": {
+      "0.3.0.dev58": "83c3c312a7a2"
+    }
+  },
+  "PerplexityModel": {
+    "versions": {
+      "0.3.0.dev58": "b970844e376e"
+    }
+  },
+  "pgvector": {
+    "versions": {
+      "0.3.0.dev58": "50117607bf5e"
+    }
+  },
+  "Pinecone": {
+    "versions": {
+      "0.3.0.dev58": "564ca0a0e9ab"
+    }
+  },
+  "AlterMetadata": {
+    "versions": {
+      "0.3.0.dev58": "0b2fe62eaec4"
+    }
+  },
+  "CombineText": {
+    "versions": {
+      "0.3.0.dev58": "10ffb6543dd9"
+    }
+  },
+  "TypeConverterComponent": {
+    "versions": {
+      "0.3.0.dev58": "be7797f8df1c"
+    }
+  },
+  "CreateData": {
+    "versions": {
+      "0.3.0.dev58": "3e313525090d"
+    }
+  },
+  "CreateList": {
+    "versions": {
+      "0.3.0.dev58": "9ec770d03310"
+    }
+  },
+  "DataOperations": {
+    "versions": {
+      "0.3.0.dev58": "f5d9680f8644"
+    }
+  },
+  "DataToDataFrame": {
+    "versions": {
+      "0.3.0.dev58": "57b9f79028e9"
+    }
+  },
+  "DataFrameOperations": {
+    "versions": {
+      "0.3.0.dev58": "904f4eaebccd"
+    }
+  },
+  "DynamicCreateData": {
+    "versions": {
+      "0.3.0.dev58": "0457c4acdf45"
+    }
+  },
+  "ExtractaKey": {
+    "versions": {
+      "0.3.0.dev58": "eded3f4e1533"
+    }
+  },
+  "FilterData": {
+    "versions": {
+      "0.3.0.dev58": "04c50937216d"
+    }
+  },
+  "FilterDataValues": {
+    "versions": {
+      "0.3.0.dev58": "847522549c67"
+    }
+  },
+  "JSONCleaner": {
+    "versions": {
+      "0.3.0.dev58": "5c150997aec4"
+    }
+  },
+  "MergeDataComponent": {
+    "versions": {
+      "0.3.0.dev58": "a2ecb813aac5"
+    }
+  },
+  "MessagetoData": {
+    "versions": {
+      "0.3.0.dev58": "d0af1222aeaf"
+    }
+  },
+  "OutputParser": {
+    "versions": {
+      "0.3.0.dev58": "9beb62a3e8fb"
+    }
+  },
+  "ParseData": {
+    "versions": {
+      "0.3.0.dev58": "3fac44a9bb37"
+    }
+  },
+  "ParseDataFrame": {
+    "versions": {
+      "0.3.0.dev58": "9d4b05cf1564"
+    }
+  },
+  "ParseJSONData": {
+    "versions": {
+      "0.3.0.dev58": "5268ca4c42d6"
+    }
+  },
+  "ParserComponent": {
+    "versions": {
+      "0.3.0.dev58": "3cda25c3f7b5"
+    }
+  },
+  "RegexExtractorComponent": {
+    "versions": {
+      "0.3.0.dev58": "f67d7bd7f65e"
+    }
+  },
+  "SelectData": {
+    "versions": {
+      "0.3.0.dev58": "0512bd98ce4d"
+    }
+  },
+  "SplitText": {
+    "versions": {
+      "0.3.0.dev58": "29ae597d2d86"
+    }
+  },
+  "StoreMessage": {
+    "versions": {
+      "0.3.0.dev58": "9ad1aa08b597"
+    }
+  },
+  "TextOperations": {
+    "versions": {
+      "0.3.0.dev58": "2c2991ef0a37"
+    }
+  },
+  "UpdateData": {
+    "versions": {
+      "0.3.0.dev58": "d0790af3ac9b"
+    }
+  },
+  "PythonFunction": {
+    "versions": {
+      "0.3.0.dev58": "7da7d856a545"
+    }
+  },
+  "QdrantVectorStoreComponent": {
+    "versions": {
+      "0.3.0.dev58": "bcfc1728e7b1"
+    }
+  },
+  "Redis": {
+    "versions": {
+      "0.3.0.dev58": "fec4041f4017"
+    }
+  },
+  "RedisChatMemory": {
+    "versions": {
+      "0.3.0.dev58": "01ec6e1e34a8"
+    }
+  },
+  "SambaNovaModel": {
+    "versions": {
+      "0.3.0.dev58": "f12728900b8d"
+    }
+  },
+  "ScrapeGraphMarkdownifyApi": {
+    "versions": {
+      "0.3.0.dev58": "0f5f12091af6"
+    }
+  },
+  "ScrapeGraphSearchApi": {
+    "versions": {
+      "0.3.0.dev58": "002d2af653ef"
+    }
+  },
+  "ScrapeGraphSmartScraperApi": {
+    "versions": {
+      "0.3.0.dev58": "cb419bec02ed"
+    }
+  },
+  "SearchComponent": {
+    "versions": {
+      "0.3.0.dev58": "625d1f5b3290"
+    }
+  },
+  "Serp": {
+    "versions": {
+      "0.3.0.dev58": "dcc2ecb44ff6"
+    }
+  },
+  "SupabaseVectorStore": {
+    "versions": {
+      "0.3.0.dev58": "5045b81c340b"
+    }
+  },
+  "TavilyExtractComponent": {
+    "versions": {
+      "0.3.0.dev58": "fec95e2181d8"
+    }
+  },
+  "TavilySearchComponent": {
+    "versions": {
+      "0.3.0.dev58": "e602eaec8316"
+    }
+  },
+  "CalculatorTool": {
+    "versions": {
+      "0.3.0.dev58": "30008a17eb27"
+    }
+  },
+  "GoogleSearchAPI": {
+    "versions": {
+      "0.3.0.dev58": "5f47bcd2163c"
+    }
+  },
+  "GoogleSerperAPI": {
+    "versions": {
+      "0.3.0.dev58": "f51b15d26440"
+    }
+  },
+  "PythonCodeStructuredTool": {
+    "versions": {
+      "0.3.0.dev58": "99f294af525b"
+    }
+  },
+  "PythonREPLTool": {
+    "versions": {
+      "0.3.0.dev58": "695ab612478d"
+    }
+  },
+  "SearchAPI": {
+    "versions": {
+      "0.3.0.dev58": "4a9c8b914b68"
+    }
+  },
+  "SearXNGTool": {
+    "versions": {
+      "0.3.0.dev58": "154e292dad2b"
+    }
+  },
+  "SerpAPI": {
+    "versions": {
+      "0.3.0.dev58": "882d7b35a9d7"
+    }
+  },
+  "TavilyAISearch": {
+    "versions": {
+      "0.3.0.dev58": "70b5611e8fd6"
+    }
+  },
+  "WikidataAPI": {
+    "versions": {
+      "0.3.0.dev58": "4752066f8971"
+    }
+  },
+  "WikipediaAPI": {
+    "versions": {
+      "0.3.0.dev58": "d7ae953444c9"
+    }
+  },
+  "YahooFinanceTool": {
+    "versions": {
+      "0.3.0.dev58": "fda358f6395e"
+    }
+  },
+  "ConvertAstraToTwelveLabs": {
+    "versions": {
+      "0.3.0.dev58": "90ad7b9b59eb"
+    }
+  },
+  "TwelveLabsPegasusIndexVideo": {
+    "versions": {
+      "0.3.0.dev58": "a2c0865be096"
+    }
+  },
+  "SplitVideo": {
+    "versions": {
+      "0.3.0.dev58": "4d3a4a724aa5"
+    }
+  },
+  "TwelveLabsTextEmbeddings": {
+    "versions": {
+      "0.3.0.dev58": "5c7501f5088c"
+    }
+  },
+  "TwelveLabsPegasus": {
+    "versions": {
+      "0.3.0.dev58": "92cc032822a6"
+    }
+  },
+  "TwelveLabsVideoEmbeddings": {
+    "versions": {
+      "0.3.0.dev58": "294e3539629c"
+    }
+  },
+  "VideoFile": {
+    "versions": {
+      "0.3.0.dev58": "8dc827e42377"
+    }
+  },
+  "Unstructured": {
+    "versions": {
+      "0.3.0.dev58": "bbb4e71aee8e"
+    }
+  },
+  "Upstash": {
+    "versions": {
+      "0.3.0.dev58": "b5b2d78e8c44"
+    }
+  },
+  "CalculatorComponent": {
+    "versions": {
+      "0.3.0.dev58": "acbe2603b034"
+    }
+  },
+  "CurrentDate": {
+    "versions": {
+      "0.3.0.dev58": "4a93d7b489e6"
+    }
+  },
+  "IDGenerator": {
+    "versions": {
+      "0.3.0.dev58": "cddb8b4edbc3"
+    }
+  },
+  "PythonREPLComponent": {
+    "versions": {
+      "0.3.0.dev58": "80eeaf032b83"
+    }
+  },
+  "Vectara": {
+    "versions": {
+      "0.3.0.dev58": "a2309e046c06"
+    }
+  },
+  "VectaraRAG": {
+    "versions": {
+      "0.3.0.dev58": "123c9eef9191"
+    }
+  },
+  "LocalDB": {
+    "versions": {
+      "0.3.0.dev58": "767988a11f4a"
+    }
+  },
+  "VertexAiModel": {
+    "versions": {
+      "0.3.0.dev58": "d9f75281d3fa"
+    }
+  },
+  "VertexAIEmbeddings": {
+    "versions": {
+      "0.3.0.dev58": "3abd5c15264a"
+    }
+  },
+  "vLLMModel": {
+    "versions": {
+      "0.3.0.dev58": "ed6c1aa73200"
+    }
+  },
+  "vLLMEmbeddings": {
+    "versions": {
+      "0.3.0.dev58": "079b6a2dd397"
+    }
+  },
+  "VLMRunTranscription": {
+    "versions": {
+      "0.3.0.dev58": "c91e2349a3df"
+    }
+  },
+  "Weaviate": {
+    "versions": {
+      "0.3.0.dev58": "ccc9f1e0149d"
+    }
+  },
+  "WikidataComponent": {
+    "versions": {
+      "0.3.0.dev58": "59df9d399440"
+    }
+  },
+  "WikipediaComponent": {
+    "versions": {
+      "0.3.0.dev58": "cc13e26c79c4"
+    }
+  },
+  "WolframAlphaAPI": {
+    "versions": {
+      "0.3.0.dev58": "86caf22224ad"
+    }
+  },
+  "xAIModel": {
+    "versions": {
+      "0.3.0.dev58": "ef0eb1cfadeb"
+    }
+  },
+  "YfinanceComponent": {
+    "versions": {
+      "0.3.0.dev58": "d6bf628ab821"
+    }
+  },
+  "YouTubeChannelComponent": {
+    "versions": {
+      "0.3.0.dev58": "c889afb883fa"
+    }
+  },
+  "YouTubeCommentsComponent": {
+    "versions": {
+      "0.3.0.dev58": "20398e0d18df"
+    }
+  },
+  "YouTubePlaylistComponent": {
+    "versions": {
+      "0.3.0.dev58": "2d6ac9665d53"
+    }
+  },
+  "YouTubeSearchComponent": {
+    "versions": {
+      "0.3.0.dev58": "1c4a94a094e2"
+    }
+  },
+  "YouTubeTrendingComponent": {
+    "versions": {
+      "0.3.0.dev58": "1450a5529486"
+    }
+  },
+  "YouTubeVideoDetailsComponent": {
+    "versions": {
+      "0.3.0.dev58": "6c2be0d5450b"
+    }
+  },
+  "YouTubeTranscripts": {
+    "versions": {
+      "0.3.0.dev58": "0ed75539d58d"
+    }
+  },
+  "ZepChatMemory": {
+    "versions": {
+      "0.3.0.dev58": "ec825c33caf6"
+    }
+  }
+}
