@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import json
+import math
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import TYPE_CHECKING, cast
@@ -58,7 +59,7 @@ class Data(CrossModuleModel):
 
     @model_serializer(mode="plain", when_used="json")
     def serialize_model(self):
-        return {k: v.to_json() if hasattr(v, "to_json") else v for k, v in self.data.items()}
+        return _sanitize_nan({k: v.to_json() if hasattr(v, "to_json") else v for k, v in self.data.items()})
 
     def get_text(self):
         """Retrieves the text value from the data dictionary.
@@ -232,7 +233,7 @@ class Data(CrossModuleModel):
         return super().__dir__() + list(self.data.keys())
 
     def __str__(self) -> str:
-        # return a JSON string representation of the Data atributes
+        # return a JSON string representation of the Data attributes
         try:
             data = {k: v.to_json() if hasattr(v, "to_json") else v for k, v in self.data.items()}
             return serialize_data(data)  # use the custom serializer
@@ -293,7 +294,10 @@ def custom_serializer(obj):
         utc_date = obj.replace(tzinfo=timezone.utc)
         return utc_date.strftime("%Y-%m-%d %H:%M:%S %Z")
     if isinstance(obj, Decimal):
-        return float(obj)
+        result = float(obj)
+        if math.isnan(result) or math.isinf(result):
+            return None
+        return result
     if isinstance(obj, UUID):
         return str(obj)
     if isinstance(obj, BaseModel):
@@ -305,5 +309,21 @@ def custom_serializer(obj):
     raise TypeError(msg)
 
 
+def _sanitize_nan(obj):
+    """Recursively replace NaN and Infinity float values with None.
+
+    Walks dicts, lists, and tuples so that all nested float values are checked.
+    """
+    if isinstance(obj, dict):
+        return {k: _sanitize_nan(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_sanitize_nan(v) for v in obj]
+    if isinstance(obj, tuple):
+        return tuple(_sanitize_nan(v) for v in obj)
+    if isinstance(obj, float) and (math.isnan(obj) or math.isinf(obj)):
+        return None
+    return obj
+
+
 def serialize_data(data):
-    return json.dumps(data, indent=4, default=custom_serializer)
+    return json.dumps(_sanitize_nan(data), indent=4, default=custom_serializer)
