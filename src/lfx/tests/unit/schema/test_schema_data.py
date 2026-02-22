@@ -187,6 +187,32 @@ class TestDataNanSerialization:
         assert parsed["score"] is None
         assert parsed["text"] == "hello"
 
+    def test_nan_in_tuple(self):
+        """Test that NaN/Infinity inside a tuple is sanitized."""
+        data = {"values": (float("nan"), 1.0, float("inf"))}
+        result = serialize_data(data)
+        parsed = json.loads(result)
+
+        assert parsed["values"] == [None, 1.0, None]
+
+    def test_decimal_infinity_serialized_as_null(self):
+        """Test that Decimal('Infinity') is sanitized via custom_serializer."""
+        data = Data(data={"pos_inf": Decimal("Infinity"), "neg_inf": Decimal("-Infinity"), "normal": Decimal("2.5")})
+        result = serialize_data(data.data)
+        parsed = json.loads(result)
+
+        assert parsed["pos_inf"] is None
+        assert parsed["neg_inf"] is None
+        assert parsed["normal"] == 2.5
+
+    def test_decimal_infinity_via_model_dump_json(self):
+        """Test that Decimal('Infinity') is sanitized through model_dump_json()."""
+        data = Data(data={"value": Decimal("Infinity")})
+        result = data.model_dump_json()
+        parsed = json.loads(result)
+
+        assert parsed["value"] is None
+
     def test_normal_values_preserved(self):
         """Test that normal values pass through sanitization unchanged."""
         data = Data(

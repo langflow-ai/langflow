@@ -40,6 +40,7 @@ class Data(CrossModuleModel):
     @model_validator(mode="before")
     @classmethod
     def validate_data(cls, values):
+        """Validate and normalize input data before model construction."""
         if not isinstance(values, dict):
             msg = "Data must be a dictionary"
             raise ValueError(msg)  # noqa: TRY004
@@ -59,6 +60,7 @@ class Data(CrossModuleModel):
 
     @model_serializer(mode="plain", when_used="json")
     def serialize_model(self):
+        """Serialize data dict to JSON-safe format, sanitizing NaN/Infinity values."""
         return _sanitize_nan({k: v.to_json() if hasattr(v, "to_json") else v for k, v in self.data.items()})
 
     def get_text(self):
@@ -228,12 +230,12 @@ class Data(CrossModuleModel):
         # Create a new Data object with a deep copy of the data dictionary
         return Data(data=copy.deepcopy(self.data, memo), text_key=self.text_key, default_value=self.default_value)
 
-    # check which attributes the Data has by checking the keys in the data dictionary
     def __dir__(self):
+        """Return attribute list including data dictionary keys."""
         return super().__dir__() + list(self.data.keys())
 
     def __str__(self) -> str:
-        # return a JSON string representation of the Data attributes
+        """Return a JSON string representation of the Data attributes."""
         try:
             data = {k: v.to_json() if hasattr(v, "to_json") else v for k, v in self.data.items()}
             return serialize_data(data)  # use the custom serializer
@@ -242,9 +244,11 @@ class Data(CrossModuleModel):
             return str(self.data)
 
     def __contains__(self, key) -> bool:
+        """Check if a key exists in the data dictionary."""
         return key in self.data
 
     def __eq__(self, /, other):
+        """Check equality based on the data dictionary contents."""
         return isinstance(other, Data) and self.data == other.data
 
     def filter_data(self, filter_str: str) -> Data:
@@ -261,6 +265,7 @@ class Data(CrossModuleModel):
         return apply_json_filter(self.data, filter_str)
 
     def to_message(self) -> Message:
+        """Convert this Data to a Message using the text value."""
         from lfx.schema.message import Message  # Local import to avoid circular import
 
         if self.text_key in self.data:
@@ -268,6 +273,7 @@ class Data(CrossModuleModel):
         return Message(text=str(self.data))
 
     def to_dataframe(self) -> DataFrame:
+        """Convert this Data to a DataFrame."""
         from lfx.schema.dataframe import DataFrame  # Local import to avoid circular import
 
         data_dict = self.data
@@ -290,6 +296,7 @@ class Data(CrossModuleModel):
 
 
 def custom_serializer(obj):
+    """Handle serialization of non-standard types for json.dumps default parameter."""
     if isinstance(obj, datetime):
         utc_date = obj.replace(tzinfo=timezone.utc)
         return utc_date.strftime("%Y-%m-%d %H:%M:%S %Z")
@@ -310,9 +317,9 @@ def custom_serializer(obj):
 
 
 def _sanitize_nan(obj):
-    """Recursively replace NaN and Infinity float values with None.
+    """Recursively replace NaN and Infinity float/Decimal values with None.
 
-    Walks dicts, lists, and tuples so that all nested float values are checked.
+    Walks dicts, lists, and tuples so that all nested numeric values are checked.
     """
     if isinstance(obj, dict):
         return {k: _sanitize_nan(v) for k, v in obj.items()}
@@ -322,8 +329,11 @@ def _sanitize_nan(obj):
         return tuple(_sanitize_nan(v) for v in obj)
     if isinstance(obj, float) and (math.isnan(obj) or math.isinf(obj)):
         return None
+    if isinstance(obj, Decimal) and (obj.is_nan() or obj.is_infinite()):
+        return None
     return obj
 
 
 def serialize_data(data):
+    """Serialize data to a JSON string, sanitizing NaN/Infinity values."""
     return json.dumps(_sanitize_nan(data), indent=4, default=custom_serializer)
