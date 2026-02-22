@@ -310,6 +310,128 @@ async def test_load_langchain_object_with_cached_session(basic_graph_data):
 #     assert graph1 == graph2
 
 
+def test_tweak_no_node_id_boolean():
+    """Test that boolean tweaks at root level are applied to all matching nodes."""
+    graph_data = {
+        "data": {
+            "nodes": [
+                {
+                    "id": "node1",
+                    "data": {
+                        "node": {
+                            "template": {
+                                "stream": {"value": True, "type": "bool"},
+                                "param1": {"value": "hello", "type": "str"},
+                            }
+                        }
+                    },
+                },
+                {
+                    "id": "node2",
+                    "data": {
+                        "node": {
+                            "template": {
+                                "stream": {"value": True, "type": "bool"},
+                            }
+                        }
+                    },
+                },
+            ]
+        }
+    }
+    tweaks = {"stream": False}
+    expected_result = {
+        "data": {
+            "nodes": [
+                {
+                    "id": "node1",
+                    "data": {
+                        "node": {
+                            "template": {
+                                "stream": {"value": False, "type": "bool"},
+                                "param1": {"value": "hello", "type": "str"},
+                            }
+                        }
+                    },
+                },
+                {
+                    "id": "node2",
+                    "data": {
+                        "node": {
+                            "template": {
+                                "stream": {"value": False, "type": "bool"},
+                            }
+                        }
+                    },
+                },
+            ]
+        }
+    }
+    result = process_tweaks(graph_data, tweaks)
+    assert result == expected_result
+
+
+def test_tweak_no_node_id_numeric():
+    """Test that numeric tweaks at root level are applied to all matching nodes."""
+    graph_data = {
+        "data": {
+            "nodes": [
+                {
+                    "id": "node1",
+                    "data": {
+                        "node": {
+                            "template": {
+                                "temperature": {"value": 1.0, "type": "float"},
+                                "max_tokens": {"value": 100, "type": "int"},
+                            }
+                        }
+                    },
+                },
+                {
+                    "id": "node2",
+                    "data": {
+                        "node": {
+                            "template": {
+                                "temperature": {"value": 1.0, "type": "float"},
+                            }
+                        }
+                    },
+                },
+            ]
+        }
+    }
+    tweaks = {"temperature": 0.7, "max_tokens": 256}
+    expected_result = {
+        "data": {
+            "nodes": [
+                {
+                    "id": "node1",
+                    "data": {
+                        "node": {
+                            "template": {
+                                "temperature": {"value": 0.7, "type": "float"},
+                                "max_tokens": {"value": 256, "type": "int"},
+                            }
+                        }
+                    },
+                },
+                {
+                    "id": "node2",
+                    "data": {
+                        "node": {
+                            "template": {
+                                "temperature": {"value": 0.7, "type": "float"},
+                            }
+                        }
+                    },
+                },
+            ]
+        }
+    }
+    result = process_tweaks(graph_data, tweaks)
+    assert result == expected_result
+
+
 def test_apply_tweaks_code_override_prevention():
     """Test that code tweaks are prevented and logged as warning."""
     from unittest.mock import patch
