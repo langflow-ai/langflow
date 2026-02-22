@@ -53,6 +53,7 @@ EMBEDDING_PROVIDER_CLASS_MAPPING: dict[str, str] = {
     "Google Generative AI": "GoogleGenerativeAIEmbeddings",
     "Ollama": "OllamaEmbeddings",
     "IBM WatsonX": "WatsonxEmbeddings",
+    "IBM watsonx.ai": "WatsonxEmbeddings",  # Alias used by MODEL_PROVIDERS_DICT
 }
 
 _model_class_cache: dict[str, type] = {}
