@@ -4,6 +4,7 @@ import { useShallow } from "zustand/react/shallow";
 import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import FlowSettingsComponent from "@/components/core/flowSettingsComponent";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -38,6 +39,7 @@ export const MenuBar = memo((): JSX.Element => {
     currentFlowFolderId,
     currentFlowIcon,
     currentFlowGradient,
+    currentFlowState,
   } = useFlowStore(
     useShallow((state) => ({
       currentFlowName: state.currentFlow?.name,
@@ -45,6 +47,7 @@ export const MenuBar = memo((): JSX.Element => {
       currentFlowFolderId: state.currentFlow?.folder_id,
       currentFlowIcon: state.currentFlow?.icon,
       currentFlowGradient: state.currentFlow?.gradient,
+      currentFlowState: state.currentFlow?.state,
     })),
   );
   const { updated_at: updatedAt } = useFlowsManagerStore(
@@ -141,6 +144,16 @@ export const MenuBar = memo((): JSX.Element => {
               >
                 {currentFlowName || "Untitled Flow"}
               </span>
+              {currentFlowState === "PUBLISHED" && (
+                <Badge variant="successStatic" size="sm">
+                  Published
+                </Badge>
+              )}
+              {currentFlowState === "ARCHIVED" && (
+                <Badge variant="secondaryStatic" size="sm">
+                  Archived
+                </Badge>
+              )}
               <IconComponent
                 name="pencil"
                 className={cn(

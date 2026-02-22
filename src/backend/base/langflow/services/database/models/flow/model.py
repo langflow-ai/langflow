@@ -16,6 +16,7 @@ from sqlalchemy import Text, UniqueConstraint, text
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
 from langflow.schema.data import Data
+from langflow.services.database.models.flow_history.model import FlowStateEnum
 
 if TYPE_CHECKING:
     from langflow.services.database.models.folder.model import Folder
@@ -194,6 +195,19 @@ class Flow(FlowBase, table=True):  # type: ignore[call-arg]
     folder_id: UUID | None = Field(default=None, foreign_key="folder.id", nullable=True, index=True)
     fs_path: str | None = Field(default=None, nullable=True)
     folder: Optional["Folder"] = Relationship(back_populates="flows")
+    state: FlowStateEnum = Field(
+        default=FlowStateEnum.DRAFT,
+        sa_column=Column(
+            SQLEnum(
+                FlowStateEnum,
+                name="flow_state_enum",
+                values_callable=lambda enum: [member.value for member in enum],
+            ),
+            nullable=False,
+            server_default=text("'DRAFT'"),
+        ),
+    )
+    active_version_id: UUID | None = Field(default=None, nullable=True)
 
     def to_data(self):
         serialized = self.model_dump()
@@ -224,6 +238,8 @@ class FlowRead(FlowBase):
     user_id: UUID | None = Field()
     folder_id: UUID | None = Field()
     tags: list[str] | None = Field(None, description="The tags of the flow")
+    state: FlowStateEnum | None = Field(None, description="The state of the flow")
+    active_version_id: UUID | None = Field(None, description="The active history version ID")
 
 
 class FlowHeader(BaseModel):
@@ -244,6 +260,8 @@ class FlowHeader(BaseModel):
     mcp_enabled: bool | None = Field(None, description="Flag indicating whether the flow is exposed in the MCP server")
     action_name: str | None = Field(None, description="The name of the action associated with the flow")
     action_description: str | None = Field(None, description="The description of the action associated with the flow")
+    state: FlowStateEnum | None = Field(None, description="The state of the flow")
+    active_version_id: UUID | None = Field(None, description="The active history version ID")
 
     @field_validator("data", mode="before")
     @classmethod
@@ -264,6 +282,7 @@ class FlowUpdate(SQLModel):
     action_name: str | None = None
     action_description: str | None = None
     access_type: AccessTypeEnum | None = None
+    state: FlowStateEnum | None = None
     fs_path: str | None = None
 
     @field_validator("endpoint_name")

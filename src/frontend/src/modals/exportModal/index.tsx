@@ -1,5 +1,7 @@
 import { forwardRef, type ReactNode, useEffect, useState } from "react";
 import { track } from "@/customization/utils/analytics";
+import { api } from "@/controllers/API/api";
+import { getURL } from "@/controllers/API/helpers/constants";
 import useFlowStore from "@/stores/flowStore";
 import type { FlowType } from "@/types/flow";
 import IconComponent from "../../components/common/genericIconComponent";
@@ -28,8 +30,10 @@ const ExportModal = forwardRef(
   ): JSX.Element => {
     const version = useDarkStore((state) => state.version);
     const setSuccessData = useAlertStore((state) => state.setSuccessData);
+    const setErrorData = useAlertStore((state) => state.setErrorData);
     const setNoticeData = useAlertStore((state) => state.setNoticeData);
     const [checked, setChecked] = useState(false);
+    const [includeHistory, setIncludeHistory] = useState(false);
     const currentFlowOnPage = useFlowStore((state) => state.currentFlow);
     const currentFlow = props.flowData ?? currentFlowOnPage;
     const isBuilding = useFlowStore((state) => state.isBuilding);
@@ -57,17 +61,34 @@ const ExportModal = forwardRef(
         setOpen={setOpen}
         onSubmit={async () => {
           try {
-            const flowToExport: FlowType = {
-              id: currentFlow!.id,
-              data: currentFlow!.data!,
-              description,
-              name,
-              last_tested_version: version,
-              endpoint_name: currentFlow!.endpoint_name,
-              is_component: false,
-              tags: currentFlow!.tags,
-              locked,
-            };
+            let flowToExport: FlowType;
+
+            if (includeHistory && currentFlow?.id) {
+              // Fetch flow with history from the export endpoint
+              const response = await api.get(
+                `${getURL("FLOWS")}/${currentFlow.id}/history/export`,
+                { params: { include_history: true } },
+              );
+              flowToExport = {
+                ...response.data,
+                name,
+                description,
+                last_tested_version: version,
+                locked,
+              } as FlowType;
+            } else {
+              flowToExport = {
+                id: currentFlow!.id,
+                data: currentFlow!.data!,
+                description,
+                name,
+                last_tested_version: version,
+                endpoint_name: currentFlow!.endpoint_name,
+                is_component: false,
+                tags: currentFlow!.tags,
+                locked,
+              };
+            }
 
             if (checked) {
               await downloadFlow(flowToExport, name!, description);
@@ -91,7 +112,9 @@ const ExportModal = forwardRef(
               track("Flow Exported", { flowId: currentFlow!.id });
             }
           } catch (error) {
-            console.error("Error exporting flow:", error);
+            setErrorData({
+              title: "Failed to export flow",
+            });
           }
         }}
       >
@@ -128,6 +151,18 @@ const ExportModal = forwardRef(
           <span className="mt-1 text-xs text-destructive">
             {ALERT_SAVE_WITH_API}
           </span>
+          <div className="mt-3 flex items-center space-x-2">
+            <Checkbox
+              id="include-history"
+              checked={includeHistory}
+              onCheckedChange={(event: boolean) => {
+                setIncludeHistory(event);
+              }}
+            />
+            <label htmlFor="include-history" className="text-sm">
+              Include version history
+            </label>
+          </div>
         </BaseModal.Content>
 
         <BaseModal.Footer

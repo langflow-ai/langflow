@@ -476,6 +476,14 @@ async def update_flow(
 
         update_data = flow.model_dump(exclude_unset=True, exclude_none=True)
 
+        if "state" in update_data:
+            await logger.awarning(
+                "Flow %s state changed directly via PATCH to %s. "
+                "Prefer using the /history/{id}/activate endpoint for state transitions.",
+                flow_id,
+                update_data["state"],
+            )
+
         # Specifically handle endpoint_name when it's explicitly set to null or empty string
         if flow.endpoint_name is None or flow.endpoint_name == "":
             update_data["endpoint_name"] = None
@@ -743,11 +751,18 @@ async def upload_file(
     """Upload flows from a file."""
     contents = await file.read()
     data = orjson.loads(contents)
-    flow_list = FlowListCreate(**data) if "flows" in data else FlowListCreate(flows=[FlowCreate(**data)])
+
+    # Preserve raw flow dicts to extract history before FlowCreate consumes them
+    if "flows" in data:
+        raw_flow_dicts = data["flows"]
+        flow_list = FlowListCreate(**data)
+    else:
+        raw_flow_dicts = [data]
+        flow_list = FlowListCreate(flows=[FlowCreate(**data)])
 
     try:
         flow_reads = []
-        for flow in flow_list.flows:
+        for flow, raw_dict in zip(flow_list.flows, raw_flow_dicts):
             flow.user_id = current_user.id
             if folder_id:
                 flow.folder_id = folder_id
@@ -755,6 +770,23 @@ async def upload_file(
                 session=session, flow=flow, user_id=current_user.id, storage_service=storage_service
             )
             flow_reads.append(flow_read)
+
+            # Import version history if present in the uploaded JSON
+            if isinstance(raw_dict, dict) and "history" in raw_dict and isinstance(raw_dict["history"], list):
+                from langflow.services.database.models.flow_history.crud import create_flow_history_entry
+                from langflow.services.database.models.flow_history.model import FlowStateEnum
+
+                for h_entry in raw_dict["history"]:
+                    # All imported entries are set to DRAFT since they are
+                    # not the active version of this newly-created flow.
+                    await create_flow_history_entry(
+                        session,
+                        flow_id=flow_read.id,
+                        user_id=current_user.id,
+                        data=h_entry.get("data"),
+                        description=h_entry.get("description"),
+                        state=FlowStateEnum.DRAFT,
+                    )
     except Exception as e:
         if "UNIQUE constraint failed" in str(e):
             # Get the name of the column that failed
@@ -809,6 +841,7 @@ async def download_multiple_file(
     flow_ids: list[UUID],
     user: CurrentActiveUser,
     db: DbSession,
+    include_history: bool = False,
 ):
     """Download all flows as a zip file."""
     flows = (await db.exec(select(Flow).where(and_(Flow.user_id == user.id, Flow.id.in_(flow_ids))))).all()  # type: ignore[attr-defined]
@@ -817,6 +850,22 @@ async def download_multiple_file(
         raise HTTPException(status_code=404, detail="No flows found.")
 
     flows_without_api_keys = [remove_api_keys(flow.model_dump()) for flow in flows]
+
+    if include_history:
+        from langflow.services.database.models.flow_history.crud import get_flow_history_list
+
+        for flow_dict, flow_obj in zip(flows_without_api_keys, flows):
+            history_entries = await get_flow_history_list(db, flow_obj.id, user.id, limit=10000, offset=0)
+            flow_dict["history"] = [
+                {
+                    "version_number": e.version_number,
+                    "description": e.description,
+                    "state": e.state.value if hasattr(e.state, "value") else str(e.state),
+                    "data": e.data,
+                    "created_at": e.created_at.isoformat() if e.created_at else None,
+                }
+                for e in history_entries
+            ]
 
     if len(flows_without_api_keys) > 1:
         # Create a byte stream to hold the ZIP file
