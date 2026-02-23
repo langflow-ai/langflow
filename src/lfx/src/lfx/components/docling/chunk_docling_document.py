@@ -32,6 +32,7 @@ class ChunkDoclingDocumentComponent(Component):
             info=("Which chunker to use."),
             value="HybridChunker",
             real_time_refresh=True,
+            input_types=["Message"],
         ),
         DropdownInput(
             name="provider",
@@ -72,6 +73,7 @@ class ChunkDoclingDocumentComponent(Component):
             required=False,
             advanced=True,
             dynamic=True,
+            input_types=["Message"],
         ),
         BoolInput(
             name="merge_peers",

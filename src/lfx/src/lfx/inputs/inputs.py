@@ -479,12 +479,32 @@ class IntInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMixi
         Raises:
             ValueError: If the value is not of a valid type or if the input is missing a required key.
         """
-        if v and not isinstance(v, int | float):
-            msg = f"Invalid value type {type(v)} for input {info.data.get('name')}."
-            raise ValueError(msg)
+        if isinstance(v, int):
+            return v
         if isinstance(v, float):
-            v = int(v)
-        return v
+            return int(v)
+        if isinstance(v, Message):
+            v = v.text
+        elif isinstance(v, Data):
+            v = v.data.get(v.text_key, "")
+        if isinstance(v, str):
+            v = v.strip()
+            if not v:
+                return 0
+            try:
+                return int(v)
+            except ValueError:
+                pass
+            try:
+                return int(float(v))
+            except ValueError:
+                input_name = info.data.get("name", "unknown")
+                msg = f"Could not convert '{v}' to integer for input {input_name}."
+                raise ValueError(msg) from None
+        if not v:
+            return 0
+        msg = f"Invalid value type {type(v)} for input {info.data.get('name')}."
+        raise ValueError(msg)
 
 
 class FloatInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMixin, ToolModeMixin):
