@@ -182,9 +182,7 @@ async def activate_version(
     session.add(flow)
     await session.flush()
 
-    await logger.adebug(
-        "Activated version %s (%s) for flow %s", history_id, target_entry.version_tag, flow_id
-    )
+    await logger.adebug("Activated version %s (%s) for flow %s", history_id, target_entry.version_tag, flow_id)
 
     return FlowRead.model_validate(flow, from_attributes=True)
 

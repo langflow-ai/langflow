@@ -152,11 +152,7 @@ async def set_entry_state(
     state: FlowStateEnum,
 ) -> None:
     """Set the state of a single history entry using a targeted UPDATE."""
-    stmt = (
-        update(FlowHistory)
-        .where(FlowHistory.id == history_id)
-        .values(state=state)
-    )
+    stmt = update(FlowHistory).where(FlowHistory.id == history_id).values(state=state)
     result = await session.exec(stmt)
     if hasattr(result, "rowcount") and result.rowcount == 0:  # type: ignore[union-attr]
         await logger.awarning(
