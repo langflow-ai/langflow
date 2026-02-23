@@ -197,18 +197,15 @@ export const useProviderConfiguration = ({
     return providerVariables.some((v) => v.required);
   }, [selectedProvider, providerVariables]);
 
-  // Check if all required variables are filled (either configured or have new input)
+  // Check if all required variables are filled in the form currently
   const allRequiredFilled = useMemo(() => {
     return providerVariables
       .filter((v) => v.required)
       .every((v) => {
-        const hasNewValue = variableValues[v.variable_key]?.trim();
-        const isConfigured = globalVariables.some(
-          (gv) => gv.name === v.variable_key,
-        );
-        return hasNewValue || isConfigured;
+        const currentValue = variableValues[v.variable_key];
+        return currentValue !== undefined && currentValue.trim() !== "";
       });
-  }, [providerVariables, variableValues, globalVariables]);
+  }, [providerVariables, variableValues]);
 
   // Check if there are any new values to save
   const hasNewValuesToSave = useMemo(() => {
