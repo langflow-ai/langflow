@@ -10,6 +10,7 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import CurrentActiveUser, DbSession, DbSessionReadOnly
+from langflow.api.utils.core import remove_api_keys
 from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.flow_history.crud import (
     create_flow_history_entry,
@@ -26,6 +27,17 @@ from langflow.services.database.models.flow_history.model import (
 from langflow.services.deps import get_settings_service
 
 router = APIRouter(prefix="/flows/{flow_id}/history", tags=["Flow History"])
+
+
+def _strip_history_data(data: dict | None) -> dict | None:
+    """Strip API keys from a history entry's flow data dict."""
+    if data is None:
+        return None
+    data_copy = copy.deepcopy(data)
+    try:
+        return remove_api_keys({"data": data_copy}).get("data")
+    except (AttributeError, KeyError, TypeError):
+        return data_copy
 
 
 def _history_to_read(entry: FlowHistory) -> FlowHistoryRead:
@@ -92,7 +104,7 @@ async def export_flow_with_history(
             {
                 "version_number": e.version_number,
                 "description": e.description,
-                "data": e.data,
+                "data": _strip_history_data(e.data),
                 "created_at": e.created_at.isoformat() if e.created_at else None,
             }
             for e in entries
@@ -124,11 +136,18 @@ async def create_snapshot(
 ) -> FlowHistoryRead:
     flow = await _get_user_flow(session, flow_id, current_user.id)
     description = body.description if body else None
+    try:
+        data = copy.deepcopy(flow.data)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=422,
+            detail="Flow data could not be copied for snapshot. The data may be corrupted.",
+        ) from exc
     entry = await create_flow_history_entry(
         session,
         flow_id=flow.id,
         user_id=current_user.id,
-        data=copy.deepcopy(flow.data),
+        data=data,
         description=description,
     )
     return _history_to_read(entry)
@@ -152,6 +171,17 @@ async def activate_version(
     if target_entry.data is None:
         raise HTTPException(status_code=400, detail="Cannot activate a version with no data")
 
+    # Capture copies of both data dicts before the savepoint to avoid stale
+    # reads if pruning inside create_flow_history_entry deletes old entries.
+    try:
+        current_data = copy.deepcopy(flow.data)
+        target_data = copy.deepcopy(target_entry.data)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=422,
+            detail="Flow data could not be copied. The data may be corrupted.",
+        ) from exc
+
     # Wrap auto-snapshot + flow overwrite in a single savepoint for atomicity.
     # If the flow update fails, the auto-snapshot is also rolled back.
     async with session.begin_nested():
@@ -159,11 +189,11 @@ async def activate_version(
             session,
             flow_id=flow.id,
             user_id=current_user.id,
-            data=copy.deepcopy(flow.data),
+            data=current_data,
             description=f"Auto-saved before activating {target_entry.version_tag}",
         )
 
-        flow.data = copy.deepcopy(target_entry.data)
+        flow.data = target_data
         flow.updated_at = datetime.now(timezone.utc)
 
         session.add(flow)

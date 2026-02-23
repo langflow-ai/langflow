@@ -57,4 +57,4 @@ class FlowHistoryReadFull(FlowHistoryRead):
 class FlowHistoryCreate(BaseModel):
     """Schema for creating a history entry — user only provides description."""
 
-    description: str | None = None
+    description: str | None = Field(default=None, max_length=500)

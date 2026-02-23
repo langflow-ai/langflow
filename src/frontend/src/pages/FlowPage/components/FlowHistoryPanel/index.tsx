@@ -146,8 +146,8 @@ export default function FlowHistoryPanel({
   // Capture the original store state when the panel mounts so we can
   // restore it when the panel closes or the user switches to "Current Draft".
   const originalStoreRef = useRef({
-    nodes: useFlowStore.getState().nodes,
-    edges: useFlowStore.getState().edges,
+    nodes: cloneDeep(useFlowStore.getState().nodes),
+    edges: cloneDeep(useFlowStore.getState().edges),
   });
 
   // Disable auto-save while the panel is open. The store-swap for previewing
@@ -164,9 +164,17 @@ export default function FlowHistoryPanel({
       // latest draft changes. At this point the store still has the original
       // draft data, so the flushed save writes the correct state.
       if (typeof currentAutoSave.flush === "function") {
-        currentAutoSave.flush();
+        try {
+          currentAutoSave.flush();
+        } catch (err) {
+          console.warn("FlowHistoryPanel: failed to flush auto-save:", err);
+        }
       }
       useFlowStore.setState({ autoSaveFlow: undefined });
+    } else {
+      console.warn(
+        "FlowHistoryPanel: autoSaveFlow was already undefined on mount",
+      );
     }
 
     // Hide the inspection panel (bypass setInspectionPanelVisible to avoid
@@ -203,7 +211,7 @@ export default function FlowHistoryPanel({
       return { nodes: cloned.nodes, edges: cleaned };
     } catch (err) {
       console.error("Failed to process historical flow data for preview:", err);
-      return { nodes: [], edges: [] };
+      return { nodes: [], edges: [], error: true };
     }
   }, [selectedId, selectedEntryFull?.data]);
 
@@ -294,13 +302,26 @@ export default function FlowHistoryPanel({
   const doRestore = useCallback(
     async (historyId: string) => {
       setIsRestoring(true);
+      let updatedFlow: any;
       try {
         // The activate endpoint auto-saves the current draft before overwriting
         const response = await api.post(
           `${getURL("FLOWS")}/${flowId}/history/${historyId}/activate`,
         );
-        const updatedFlow = response.data;
+        updatedFlow = response.data;
+      } catch (err: any) {
+        // API call failed — server state is unchanged
+        const detail = err?.response?.data?.detail;
+        setErrorData({
+          title: "Failed to restore version",
+          ...(detail ? { list: [detail] } : {}),
+        });
+        setIsRestoring(false);
+        setRestoreConfirm(null);
+        return;
+      }
 
+      try {
         // Apply through the same shared pipeline as normal flow loading:
         // processFlows → setCurrentFlow (→ resetFlow) → refreshAllModelInputs
         applyFlowToCanvas(updatedFlow);
@@ -313,8 +334,6 @@ export default function FlowHistoryPanel({
         };
 
         setSuccessData({ title: "Version restored" });
-        // Close the history panel and return to the main editor
-        onClose();
 
         // Fit the canvas to the restored flow after React re-renders the new
         // nodes. This mirrors what happens on initial flow load (fitView prop).
@@ -325,13 +344,15 @@ export default function FlowHistoryPanel({
             maxZoom: 2,
           });
         });
-      } catch (err: any) {
-        const detail = err?.response?.data?.detail;
+      } catch {
+        // Server committed the change but client rendering failed
         setErrorData({
-          title: "Failed to restore version",
-          ...(detail ? { list: [detail] } : {}),
+          title:
+            "Version restored on server, but there was an issue rendering it. Please refresh the page.",
         });
       } finally {
+        // Close the history panel and return to the main editor
+        onClose();
         setIsRestoring(false);
         setRestoreConfirm(null);
       }
@@ -458,6 +479,10 @@ export default function FlowHistoryPanel({
                 name="Loader2"
                 className="h-6 w-6 animate-spin text-muted-foreground"
               />
+            </div>
+          ) : (processedPreview as any)?.error ? (
+            <div className="flex h-full items-center justify-center text-destructive">
+              This version's data could not be rendered for preview
             </div>
           ) : previewData.nodes.length > 0 ? (
             <ReactFlowProvider>
@@ -703,8 +728,7 @@ export default function FlowHistoryPanel({
             </div>
             <p className="text-sm text-muted-foreground">
               Restore <strong>{restoreConfirm.versionTag}</strong> as the
-              current working draft? Your current state will be auto-saved
-              first.
+              working draft? Your current state will be auto-saved.
             </p>
             <div className="flex justify-end gap-2">
               <Button

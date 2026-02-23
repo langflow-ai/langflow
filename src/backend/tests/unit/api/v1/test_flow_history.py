@@ -868,3 +868,266 @@ async def test_list_history_limit_exceeds_max(client: AsyncClient, logged_in_hea
         headers=logged_in_headers,
     )
     assert resp.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+async def test_export_strips_api_keys_from_history(client: AsyncClient, logged_in_headers):
+    """Export endpoint should strip API keys from history entry data."""
+    # Create a flow whose data contains an API key (must have password=True for remove_api_keys)
+    api_key_data = {
+        "nodes": [
+            {
+                "id": "node-1",
+                "data": {
+                    "node": {
+                        "template": {
+                            "api_key": {
+                                "value": "sk-secret-12345",
+                                "name": "api_key",
+                                "password": True,
+                            }
+                        }
+                    }
+                },
+            }
+        ],
+        "edges": [],
+    }
+    payload = {
+        "name": "api-key-export-test",
+        "description": "test",
+        "data": api_key_data,
+        "is_component": False,
+    }
+    resp = await client.post("api/v1/flows/", json=payload, headers=logged_in_headers)
+    assert resp.status_code == status.HTTP_201_CREATED
+    flow = resp.json()
+    flow_id = flow["id"]
+
+    # Snapshot the flow (captures the API key in data)
+    await _create_snapshot(client, logged_in_headers, flow_id, description="has-api-key")
+
+    # Export with history
+    resp = await client.get(f"api/v1/flows/{flow_id}/history/export", headers=logged_in_headers)
+    assert resp.status_code == status.HTTP_200_OK
+    exported = resp.json()
+
+    # The history entry's data should have the API key stripped (set to None)
+    history_data = exported["history"][0]["data"]
+    template = history_data["nodes"][0]["data"]["node"]["template"]
+    assert template["api_key"]["value"] is None
+
+
+async def test_download_strips_api_keys_from_history(client: AsyncClient, logged_in_headers):
+    """Download endpoint should strip API keys from history entry data."""
+    api_key_data = {
+        "nodes": [
+            {
+                "id": "node-1",
+                "data": {
+                    "node": {
+                        "template": {
+                            "openai_api_key": {
+                                "value": "sk-secret-99999",
+                                "name": "openai_api_key",
+                                "password": True,
+                            }
+                        }
+                    }
+                },
+            }
+        ],
+        "edges": [],
+    }
+    payload = {
+        "name": "api-key-download-test",
+        "description": "test",
+        "data": api_key_data,
+        "is_component": False,
+    }
+    resp = await client.post("api/v1/flows/", json=payload, headers=logged_in_headers)
+    assert resp.status_code == status.HTTP_201_CREATED
+    flow = resp.json()
+
+    await _create_snapshot(client, logged_in_headers, flow["id"], description="has-key")
+
+    resp = await client.post(
+        "api/v1/flows/download/",
+        json=[flow["id"]],
+        params={"include_history": True},
+        headers=logged_in_headers,
+    )
+    assert resp.status_code == status.HTTP_200_OK
+    result = resp.json()
+
+    history_data = result["history"][0]["data"]
+    template = history_data["nodes"][0]["data"]["node"]["template"]
+    assert template["openai_api_key"]["value"] is None
+
+
+async def test_create_snapshot_rejects_long_description(client: AsyncClient, logged_in_headers):
+    """POST with description > 500 chars should be rejected with 422."""
+    flow = await _create_flow(client, logged_in_headers)
+    long_description = "x" * 501
+
+    resp = await client.post(
+        f"api/v1/flows/{flow['id']}/history/",
+        json={"description": long_description},
+        headers=logged_in_headers,
+    )
+    assert resp.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+async def test_create_snapshot_accepts_max_description(client: AsyncClient, logged_in_headers):
+    """POST with description exactly 500 chars should succeed."""
+    flow = await _create_flow(client, logged_in_headers)
+    max_description = "x" * 500
+
+    snap = await _create_snapshot(client, logged_in_headers, flow["id"], description=max_description)
+    assert snap["description"] == max_description
+
+
+async def test_upload_with_non_dict_history_data_skips_entries(client: AsyncClient, logged_in_headers):
+    """Import should skip history entries with non-dict data values."""
+    import io
+
+    flow_json = {
+        "name": "non-dict-data-import",
+        "description": "test",
+        "data": {"nodes": [], "edges": []},
+        "is_component": False,
+        "history": [
+            {
+                "description": "valid-entry",
+                "data": {"nodes": [{"id": "n1"}], "edges": []},
+            },
+            {
+                "description": "string-data",
+                "data": "this-is-not-a-dict",
+            },
+            {
+                "description": "list-data",
+                "data": [1, 2, 3],
+            },
+        ],
+    }
+    file_bytes = json.dumps(flow_json).encode()
+    resp = await client.post(
+        "api/v1/flows/upload/",
+        files={"file": ("flow.json", io.BytesIO(file_bytes), "application/json")},
+        headers=logged_in_headers,
+    )
+    assert resp.status_code == status.HTTP_201_CREATED
+    new_flow_id = resp.json()[0]["id"]
+
+    entries = await _list_history(client, logged_in_headers, new_flow_id)
+    # Only the valid entry should be imported
+    assert len(entries) == 1
+    assert entries[0]["description"] == "valid-entry"
+
+
+async def test_upload_creates_flow_even_if_history_entries_fail(client: AsyncClient, logged_in_headers, monkeypatch):
+    """Flow should still be created even if individual history entries fail to import."""
+    import io
+
+    from langflow.services.deps import get_settings_service
+
+    settings = get_settings_service().settings
+    # Set data size limit very low so the second history entry exceeds it
+    monkeypatch.setattr(settings, "max_flow_history_data_size_bytes", 50)
+
+    flow_json = {
+        "name": "partial-history-import",
+        "description": "test",
+        "data": {"nodes": [], "edges": []},
+        "is_component": False,
+        "history": [
+            {
+                "description": "small-entry",
+                "data": {"nodes": [], "edges": []},
+            },
+            {
+                "description": "oversized-entry",
+                "data": {"nodes": [{"id": f"node-{i}", "data": {"big": "x" * 100}} for i in range(10)], "edges": []},
+            },
+        ],
+    }
+    file_bytes = json.dumps(flow_json).encode()
+    resp = await client.post(
+        "api/v1/flows/upload/",
+        files={"file": ("flow.json", io.BytesIO(file_bytes), "application/json")},
+        headers=logged_in_headers,
+    )
+    assert resp.status_code == status.HTTP_201_CREATED
+    new_flow_id = resp.json()[0]["id"]
+
+    # The flow itself was created
+    flow_resp = await client.get(f"api/v1/flows/{new_flow_id}", headers=logged_in_headers)
+    assert flow_resp.status_code == status.HTTP_200_OK
+
+    # Only the small entry should have been imported
+    entries = await _list_history(client, logged_in_headers, new_flow_id)
+    assert len(entries) == 1
+    assert entries[0]["description"] == "small-entry"
+
+async def test_activate_with_deeply_nested_data(client: AsyncClient, logged_in_headers):
+    """Activate should work correctly with deeply nested flow data."""
+    # Create deeply nested data
+    nested = {"level": 0}
+    current = nested
+    for i in range(1, 20):
+        current["child"] = {"level": i}
+        current = current["child"]
+
+    deep_data = {"nodes": [{"id": "deep-node", "data": nested}], "edges": []}
+    payload = {
+        "name": "deep-nested-test",
+        "description": "test",
+        "data": deep_data,
+        "is_component": False,
+    }
+    resp = await client.post("api/v1/flows/", json=payload, headers=logged_in_headers)
+    assert resp.status_code == status.HTTP_201_CREATED
+    flow = resp.json()
+    flow_id = flow["id"]
+
+    # Snapshot the deeply nested data
+    snap = await _create_snapshot(client, logged_in_headers, flow_id)
+
+    # Modify the flow
+    await _patch_flow_data(client, logged_in_headers, flow_id, {"nodes": [], "edges": []})
+
+    # Activate the old version — triggers deepcopy of both current and target data
+    resp = await client.post(
+        f"api/v1/flows/{flow_id}/history/{snap['id']}/activate",
+        headers=logged_in_headers,
+    )
+    assert resp.status_code == status.HTTP_200_OK
+    restored = resp.json()
+    assert restored["data"] == deep_data
+
+
+async def test_rapid_snapshots_with_low_limit(client: AsyncClient, logged_in_headers, monkeypatch):
+    """Creating many snapshots rapidly with a low limit should work without errors."""
+    from langflow.services.deps import get_settings_service
+
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "max_flow_history_entries_per_flow", 2)
+
+    flow = await _create_flow(client, logged_in_headers)
+    flow_id = flow["id"]
+
+    # Create 5 snapshots in quick succession
+    for i in range(5):
+        resp = await client.post(
+            f"api/v1/flows/{flow_id}/history/",
+            json={"description": f"rapid-{i}"},
+            headers=logged_in_headers,
+        )
+        assert resp.status_code == status.HTTP_201_CREATED
+
+    # Should have exactly 2 entries (the limit)
+    entries = await _list_history(client, logged_in_headers, flow_id)
+    assert len(entries) == 2
+    # The newest ones should survive
+    assert entries[0]["version_number"] == 5
+    assert entries[1]["version_number"] == 4
