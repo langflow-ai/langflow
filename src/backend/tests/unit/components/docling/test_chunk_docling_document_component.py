@@ -97,10 +97,10 @@ class TestChunkDoclingDocumentComponentHybridChunker:
                 captured["merge_peers"] = merge_peers
                 captured["always_emit_headings"] = always_emit_headings
 
-            def chunk(self, dl_doc=None, **_kwargs):
+            def chunk(self, _dl_doc=None, **_kwargs):
                 return []
 
-            def contextualize(self, chunk=None, **_kwargs):
+            def contextualize(self, _chunk=None, **_kwargs):
                 return ""
 
         class DummyTokenizer:
