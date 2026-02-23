@@ -13,6 +13,8 @@ import {
   useGetFlowHistoryEntry,
   usePostCreateSnapshot,
 } from "@/controllers/API/queries/flow-history";
+import { api } from "@/controllers/API/api";
+import { getURL } from "@/controllers/API/helpers/constants";
 import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
 import useApplyFlowToCanvas from "@/hooks/flows/use-apply-flow-to-canvas";
 import useAlertStore from "@/stores/alertStore";
@@ -357,30 +359,40 @@ export default function FlowHistoryPanel({
     [flowId, selectedId, deleteEntry, setSuccessData, setErrorData],
   );
 
-  const handleDownloadEntry = useCallback(
-    (entryId: string) => {
-      // For the selected entry we already have full data; for others we just
-      // download whatever is selected (the menu is on the selected entry).
-      const data =
-        entryId === CURRENT_DRAFT_ID
-          ? currentFlow?.data
-          : selectedEntryFull?.data;
-      if (!data) return;
-      const tag =
-        entryId === CURRENT_DRAFT_ID
-          ? "draft"
-          : (selectedEntryFull?.version_tag ?? "version");
-      const blob = new Blob([JSON.stringify(data, null, 2)], {
-        type: "application/json",
-      });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${currentFlow?.name || "flow"}_${tag}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
+  const handleExportEntry = useCallback(
+    async (entryId: string) => {
+      try {
+        let data: any;
+        let tag: string;
+
+        if (entryId === CURRENT_DRAFT_ID) {
+          data = currentFlow?.data;
+          tag = "draft";
+        } else {
+          // Fetch directly — avoids timing issues with the shared query hook
+          const response = await api.get(
+            `${getURL("FLOWS")}/${flowId}/history/${entryId}`,
+          );
+          data = response.data?.data;
+          tag = response.data?.version_tag ?? "version";
+        }
+
+        if (!data) return;
+
+        const blob = new Blob([JSON.stringify(data, null, 2)], {
+          type: "application/json",
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${currentFlow?.name || "flow"}_${tag}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch {
+        setErrorData({ title: "Failed to export version" });
+      }
     },
-    [selectedEntryFull, currentFlow],
+    [flowId, currentFlow, setErrorData],
   );
 
   const selectedHistoryEntry = history?.find((e) => e.id === selectedId);
@@ -605,7 +617,6 @@ export default function FlowHistoryPanel({
                     <DropdownMenuItem
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleSelectEntry(entry.id);
                         setRestoreConfirm({
                           historyId: entry.id,
                           versionTag: entry.version_tag,
@@ -621,7 +632,7 @@ export default function FlowHistoryPanel({
                     <DropdownMenuItem
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleDownloadEntry(entry.id);
+                        handleExportEntry(entry.id);
                       }}
                     >
                       <ForwardedIconComponent
