@@ -5,10 +5,10 @@ from uuid import UUID
 from fastapi import HTTPException
 from lfx.log import logger
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import col, delete, func, select, update
+from sqlmodel import col, delete, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from langflow.services.database.models.flow_history.model import FlowHistory, FlowStateEnum
+from langflow.services.database.models.flow_history.model import FlowHistory
 from langflow.services.deps import get_settings_service
 
 MAX_VERSION_RETRIES = 3
@@ -26,9 +26,20 @@ async def create_flow_history_entry(
     user_id: UUID,
     data: dict | None,
     description: str | None = None,
-    state: FlowStateEnum = FlowStateEnum.DRAFT,
 ) -> FlowHistory:
     """Create a history entry with retry on version number collision."""
+    if data is not None:
+        import orjson
+
+        data_size = len(orjson.dumps(data))
+        max_size = get_settings_service().settings.max_flow_history_data_size_bytes
+        if data_size > max_size:
+            raise HTTPException(
+                status_code=413,
+                detail=f"Flow data size ({data_size:,} bytes) exceeds the maximum allowed "
+                f"for history snapshots ({max_size:,} bytes)",
+            )
+
     entry: FlowHistory | None = None
     for attempt in range(MAX_VERSION_RETRIES):
         version_number = await get_next_version_number(session, flow_id)
@@ -37,7 +48,6 @@ async def create_flow_history_entry(
             user_id=user_id,
             data=data,
             description=description,
-            state=state,
             version_number=version_number,
         )
         try:
@@ -60,20 +70,23 @@ async def create_flow_history_entry(
             continue
 
     if entry is None:
-        msg = f"Failed to create history entry for flow {flow_id} after {MAX_VERSION_RETRIES} retries"
-        raise RuntimeError(msg)
+        raise HTTPException(
+            status_code=409,
+            detail=f"Failed to create history entry for flow {flow_id} after {MAX_VERSION_RETRIES} retries due to version number conflicts",
+        )
 
-    # Prune oldest entries beyond the configured limit, but never delete PUBLISHED entries
+    # Prune oldest entries beyond the configured limit.
+    # NOTE: Concurrent snapshot requests for the same flow could both insert
+    # before either prunes, temporarily exceeding the limit by one or more
+    # entries. This is acceptable — the excess self-corrects on the next
+    # snapshot, and serializing with SELECT FOR UPDATE would add contention
+    # for a non-critical constraint.
     max_entries = get_settings_service().settings.max_flow_history_entries_per_flow
     delete_older = delete(FlowHistory).where(
         FlowHistory.flow_id == flow_id,
-        FlowHistory.state != FlowStateEnum.PUBLISHED,
         col(FlowHistory.id).in_(
             select(FlowHistory.id)
-            .where(
-                FlowHistory.flow_id == flow_id,
-                FlowHistory.state != FlowStateEnum.PUBLISHED,
-            )
+            .where(FlowHistory.flow_id == flow_id)
             .order_by(col(FlowHistory.version_number).desc())
             .offset(max_entries)
         ),
@@ -115,48 +128,10 @@ async def delete_flow_history_entry(
     session: AsyncSession,
     history_id: UUID,
     user_id: UUID,
-    active_version_id: UUID | None,
 ) -> None:
-    if active_version_id and history_id == active_version_id:
-        raise HTTPException(status_code=400, detail="Cannot delete the active version")
-
     entry = await get_flow_history_entry(session, history_id, user_id)
     if not entry:
         raise HTTPException(status_code=404, detail="History entry not found")
 
     await session.delete(entry)
     await session.flush()
-
-
-async def archive_previously_published(
-    session: AsyncSession,
-    flow_id: UUID,
-    exclude_id: UUID,
-) -> None:
-    """Set all PUBLISHED entries to ARCHIVED (except exclude_id) using a single UPDATE."""
-    stmt = (
-        update(FlowHistory)
-        .where(
-            FlowHistory.flow_id == flow_id,
-            FlowHistory.state == FlowStateEnum.PUBLISHED,
-            FlowHistory.id != exclude_id,
-        )
-        .values(state=FlowStateEnum.ARCHIVED)
-    )
-    await session.exec(stmt)
-
-
-async def set_entry_state(
-    session: AsyncSession,
-    history_id: UUID,
-    state: FlowStateEnum,
-) -> None:
-    """Set the state of a single history entry using a targeted UPDATE."""
-    stmt = update(FlowHistory).where(FlowHistory.id == history_id).values(state=state)
-    result = await session.exec(stmt)
-    if hasattr(result, "rowcount") and result.rowcount == 0:  # type: ignore[union-attr]
-        await logger.awarning(
-            "set_entry_state affected 0 rows for history_id=%s state=%s (possible race condition)",
-            history_id,
-            state,
-        )

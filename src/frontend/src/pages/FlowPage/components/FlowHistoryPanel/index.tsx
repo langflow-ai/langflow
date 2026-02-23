@@ -123,7 +123,7 @@ export default function FlowHistoryPanel({
   } | null>(null);
   const [isRestoring, setIsRestoring] = useState(false);
 
-  const { data: history, isLoading } = useGetFlowHistory(
+  const { data: history, isLoading, isError: isListError } = useGetFlowHistory(
     { flowId },
     { refetchInterval: 10000 },
   );
@@ -135,7 +135,7 @@ export default function FlowHistoryPanel({
 
   // Declarative query for the selected history entry's full data
   const selectedHistoryId = selectedId !== CURRENT_DRAFT_ID ? selectedId : "";
-  const { data: selectedEntryFull, isLoading: isLoadingEntry } =
+  const { data: selectedEntryFull, isLoading: isLoadingEntry, isError: isEntryError } =
     useGetFlowHistoryEntry(
       { flowId, historyId: selectedHistoryId },
       { enabled: !!selectedHistoryId, gcTime: 0, staleTime: 0 },
@@ -287,8 +287,8 @@ export default function FlowHistoryPanel({
     );
   }, [flowId, description, createSnapshot, setSuccessData, setErrorData]);
 
-  // Restore = call the /activate endpoint (which auto-snapshots server-side,
-  // handles state transitions, and returns the updated flow).
+  // Restore = call the /activate endpoint (which auto-snapshots server-side
+  // and returns the updated flow).
   // Accepts historyId explicitly so the restore target can't drift if the
   // user somehow changes the selection while the dialog is open.
   const doRestore = useCallback(
@@ -448,7 +448,11 @@ export default function FlowHistoryPanel({
 
         {/* Canvas preview */}
         <div className="flex-1 bg-muted/20">
-          {isLoadingEntry ? (
+          {isEntryError ? (
+            <div className="flex h-full items-center justify-center text-destructive">
+              Failed to load version data
+            </div>
+          ) : isLoadingEntry ? (
             <div className="flex h-full items-center justify-center">
               <ForwardedIconComponent
                 name="Loader2"
@@ -569,7 +573,12 @@ export default function FlowHistoryPanel({
               />
             </div>
           )}
-          {!isLoading && (!history || history.length === 0) && (
+          {isListError && (
+            <div className="px-4 py-6 text-center text-xs text-destructive">
+              Failed to load version history
+            </div>
+          )}
+          {!isLoading && !isListError && (!history || history.length === 0) && (
             <div className="px-4 py-6 text-center text-xs text-muted-foreground">
               No saved versions yet
             </div>

@@ -1,19 +1,11 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from enum import Enum
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, field_serializer
-from sqlalchemy import Enum as SQLEnum
-from sqlalchemy import UniqueConstraint, text
+from sqlalchemy import UniqueConstraint
 from sqlmodel import JSON, Column, Field, SQLModel
-
-
-class FlowStateEnum(str, Enum):
-    DRAFT = "DRAFT"
-    PUBLISHED = "PUBLISHED"
-    ARCHIVED = "ARCHIVED"
 
 
 class FlowHistory(SQLModel, table=True):  # type: ignore[call-arg]
@@ -24,18 +16,6 @@ class FlowHistory(SQLModel, table=True):  # type: ignore[call-arg]
     flow_id: UUID = Field(index=True, foreign_key="flow.id")
     user_id: UUID = Field(index=True, foreign_key="user.id")
     data: dict | None = Field(default=None, sa_column=Column(JSON))
-    state: FlowStateEnum = Field(
-        default=FlowStateEnum.DRAFT,
-        sa_column=Column(
-            SQLEnum(
-                FlowStateEnum,
-                name="flow_state_enum",
-                values_callable=lambda enum: [member.value for member in enum],
-            ),
-            nullable=False,
-            server_default=text("'DRAFT'"),
-        ),
-    )
     version_number: int = Field(nullable=False)
     description: str | None = Field(default=None, nullable=True)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), nullable=False)
@@ -53,7 +33,6 @@ class FlowHistoryRead(BaseModel):
     id: UUID
     flow_id: UUID
     user_id: UUID
-    state: FlowStateEnum
     version_number: int
     version_tag: str
     description: str | None

@@ -12,19 +12,16 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from langflow.api.utils import CurrentActiveUser, DbSession, DbSessionReadOnly
 from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.flow_history.crud import (
-    archive_previously_published,
     create_flow_history_entry,
     delete_flow_history_entry,
     get_flow_history_entry,
     get_flow_history_list,
-    set_entry_state,
 )
 from langflow.services.database.models.flow_history.model import (
     FlowHistory,
     FlowHistoryCreate,
     FlowHistoryRead,
     FlowHistoryReadFull,
-    FlowStateEnum,
 )
 from langflow.services.deps import get_settings_service
 
@@ -36,7 +33,6 @@ def _history_to_read(entry: FlowHistory) -> FlowHistoryRead:
         id=entry.id,
         flow_id=entry.flow_id,
         user_id=entry.user_id,
-        state=entry.state,
         version_number=entry.version_number,
         version_tag=entry.version_tag,
         description=entry.description,
@@ -49,7 +45,6 @@ def _history_to_read_full(entry: FlowHistory) -> FlowHistoryReadFull:
         id=entry.id,
         flow_id=entry.flow_id,
         user_id=entry.user_id,
-        state=entry.state,
         version_number=entry.version_number,
         version_tag=entry.version_tag,
         description=entry.description,
@@ -97,7 +92,6 @@ async def export_flow_with_history(
             {
                 "version_number": e.version_number,
                 "description": e.description,
-                "state": e.state.value if hasattr(e.state, "value") else str(e.state),
                 "data": e.data,
                 "created_at": e.created_at.isoformat() if e.created_at else None,
             }
@@ -136,7 +130,6 @@ async def create_snapshot(
         user_id=current_user.id,
         data=copy.deepcopy(flow.data),
         description=description,
-        state=FlowStateEnum.DRAFT,
     )
     return _history_to_read(entry)
 
@@ -159,28 +152,22 @@ async def activate_version(
     if target_entry.data is None:
         raise HTTPException(status_code=400, detail="Cannot activate a version with no data")
 
-    # Auto-snapshot: save current draft before overwriting
-    await create_flow_history_entry(
-        session,
-        flow_id=flow.id,
-        user_id=current_user.id,
-        data=copy.deepcopy(flow.data),
-        description=f"Auto-saved before activating {target_entry.version_tag}",
-        state=FlowStateEnum.DRAFT,
-    )
+    # Wrap auto-snapshot + flow overwrite in a single savepoint for atomicity.
+    # If the flow update fails, the auto-snapshot is also rolled back.
+    async with session.begin_nested():
+        await create_flow_history_entry(
+            session,
+            flow_id=flow.id,
+            user_id=current_user.id,
+            data=copy.deepcopy(flow.data),
+            description=f"Auto-saved before activating {target_entry.version_tag}",
+        )
 
-    # Overwrite flow data with the activated version's data
-    flow.data = copy.deepcopy(target_entry.data)
-    flow.active_version_id = history_id
-    flow.updated_at = datetime.now(timezone.utc)
+        flow.data = copy.deepcopy(target_entry.data)
+        flow.updated_at = datetime.now(timezone.utc)
 
-    # Update states using targeted SQL UPDATEs (avoids loading all entries into memory)
-    await archive_previously_published(session, flow_id, exclude_id=history_id)
-    await set_entry_state(session, history_id, FlowStateEnum.PUBLISHED)
-
-    flow.state = FlowStateEnum.PUBLISHED
-    session.add(flow)
-    await session.flush()
+        session.add(flow)
+        await session.flush()
 
     await logger.adebug("Activated version %s (%s) for flow %s", history_id, target_entry.version_tag, flow_id)
 
@@ -194,12 +181,12 @@ async def delete_history_entry(
     current_user: CurrentActiveUser,
     session: DbSession,
 ) -> None:
-    flow = await _get_user_flow(session, flow_id, current_user.id)
+    await _get_user_flow(session, flow_id, current_user.id)
 
     # Verify entry belongs to this flow
     entry = await get_flow_history_entry(session, history_id, current_user.id)
     if not entry or entry.flow_id != flow_id:
         raise HTTPException(status_code=404, detail="History entry not found")
 
-    await delete_flow_history_entry(session, history_id, current_user.id, flow.active_version_id)
+    await delete_flow_history_entry(session, history_id, current_user.id)
     await logger.adebug("Deleted history entry %s for flow %s", history_id, flow_id)
