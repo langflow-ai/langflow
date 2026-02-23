@@ -22,6 +22,7 @@ from lfx.utils.async_helpers import run_until_complete
 from lfx.utils.util import transform_localhost_url
 
 HTTP_STATUS_OK = 200
+MIN_DEFAULT_MODELS = 5
 
 # Extract model names from metadata for fallback defaults
 WATSONX_DEFAULT_LLM_MODEL_NAMES = [m["name"] for m in WATSONX_LLM_METADATA]
@@ -311,7 +312,7 @@ def fetch_live_ollama_models(user_id: UUID | str | None, model_type: str = "llm"
                 icon="Ollama",
                 model_type=model_type if model_type == "llm" else "embeddings",
                 tool_calling=model_type == "llm",
-                default=i < 5,  # Mark first 5 as default
+                default=i < MIN_DEFAULT_MODELS,  # Mark first 5 as default
             )
             for i, name in enumerate(model_names)
         ]
@@ -352,7 +353,7 @@ def fetch_live_watsonx_models(user_id: UUID | str | None, model_type: str = "llm
                 icon="IBM",
                 model_type=model_type if model_type == "llm" else "embeddings",
                 tool_calling=model_type == "llm",
-                default=i < 5,  # Mark first 5 as default
+                default=i < MIN_DEFAULT_MODELS,  # Mark first 5 as default
             )
             for i, name in enumerate(model_names)
         ]

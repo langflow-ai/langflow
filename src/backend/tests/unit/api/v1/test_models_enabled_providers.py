@@ -504,13 +504,13 @@ async def test_list_models_returns_live_ollama_models_when_configured(client: As
         {"name": "mistral", "icon": "Ollama", "tool_calling": True},
     ]
 
-    async def mock_get_enabled_providers(*args, **kwargs):
+    async def mock_get_enabled_providers(*_args, **_kwargs):
         return {
             "enabled_providers": ["Ollama"],
             "provider_status": {"Ollama": True},
         }
 
-    def mock_get_live_models(user_id, provider, model_type="llm"):
+    def mock_get_live_models(_user_id, provider, model_type="llm"):
         if provider == "Ollama" and model_type == "llm":
             return live_ollama_models
         return []
@@ -541,7 +541,7 @@ async def test_list_models_returns_live_ollama_models_when_configured(client: As
 async def test_list_models_ollama_empty_when_live_fetch_returns_empty(client: AsyncClient, logged_in_headers):
     """When Ollama is configured but live fetch returns no models, static models remain as fallback."""
 
-    async def mock_get_enabled_providers(*args, **kwargs):
+    async def mock_get_enabled_providers(*_args, **_kwargs):
         return {
             "enabled_providers": ["Ollama"],
             "provider_status": {"Ollama": True},
