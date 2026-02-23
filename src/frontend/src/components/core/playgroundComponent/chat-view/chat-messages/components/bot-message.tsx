@@ -127,25 +127,39 @@ export const BotMessage = memo(
 
     return (
       <>
-        <div className="w-full py-4 word-break-break-word mt-2">
+        <div className="w-full word-break-break-word mt-2">
           <div
             className={cn(
               "group relative flex w-full flex-col gap-3 rounded-md px-2 py-3",
               editMessage ? "" : "hover:bg-muted",
             )}
           >
-            {/* Content: thinking (paragraph) -> steps dropdown -> answer with bot avatar */}
-            <div className="flex w-full flex-col gap-1 min-w-0">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-0.5">
-                {!thinkingActive && displayTime > 0 && (
-                  <ForwardedIconComponent
-                    name="Check"
-                    className="h-4 w-4 text-emerald-400"
-                  />
-                )}
-                <span className="w-full flex justify-between">
-                  {thinkingActive && displayTime > 0 ? (
-                    <>
+            <div className="flex w-full items-start gap-3">
+              {(thinkingActive || displayTime > 0 || chatMessage !== "") && (
+                <div
+                  className="relative hidden h-6 w-6 mt-[-1px] flex-shrink-0 items-center justify-center overflow-hidden rounded bg-white text-2xl @[45rem]/chat-panel:!flex border-0"
+                  style={
+                    chat.properties?.background_color
+                      ? { backgroundColor: chat.properties.background_color }
+                      : {}
+                  }
+                >
+                  <div className="flex h-5 w-5 items-center justify-center">
+                    <LangflowLogo className="h-4 w-4 text-black" />
+                  </div>
+                </div>
+              )}
+
+              <div className="flex w-full flex-col min-w-0">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-0.5">
+                  {!thinkingActive && displayTime > 0 && (
+                    <ForwardedIconComponent
+                      name="Check"
+                      className="h-4 w-4 text-emerald-400"
+                    />
+                  )}
+                  <span>
+                    {thinkingActive && displayTime > 0 ? (
                       <span>Running... {formatSeconds(displayTime)}</span>
                     ) : !thinkingActive && displayTime > 0 ? (
                       <span className="text-muted-foreground">
