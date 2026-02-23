@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useShallow } from "zustand/react/shallow";
 import {
   isCodeField,
   isInternalField,
@@ -24,18 +25,24 @@ export default function InspectionPanelFields({
   isEditingFields = false,
 }: InspectionPanelFieldsProps) {
   const isToolMode = data.node?.tool_mode;
-  const edges = useFlowStore((state) => state.edges);
 
-  const connectedFields = useMemo(() => {
-    const fields = new Set<string>();
-    for (const edge of edges) {
-      if (edge.target === data.id && edge.targetHandle) {
-        const parsed: targetHandleType = scapeJSONParse(edge.targetHandle);
-        if (parsed?.fieldName) fields.add(parsed.fieldName);
-      }
-    }
-    return fields;
-  }, [edges, data.id]);
+  const connectedFieldNames = useFlowStore(
+    useShallow(
+      (state) =>
+        state.edges
+          .filter((e) => e.target === data.id && e.targetHandle)
+          .map(
+            (e) =>
+              (scapeJSONParse(e.targetHandle!) as targetHandleType).fieldName,
+          )
+          .filter(Boolean) as string[],
+    ),
+  );
+
+  const connectedFields = useMemo(
+    () => new Set(connectedFieldNames),
+    [connectedFieldNames],
+  );
 
   // Get all editable fields (for edit mode)
   const allEditableFields = useMemo(() => {
@@ -74,7 +81,6 @@ export default function InspectionPanelFields({
           templateField,
           template,
           isToolMode,
-          connectedFields,
         );
       })
       .sort((a, b) =>
@@ -86,12 +92,7 @@ export default function InspectionPanelFields({
           false,
         ),
       );
-  }, [
-    data.node?.template,
-    data.node?.field_order,
-    isToolMode,
-    connectedFields,
-  ]);
+  }, [data.node?.template, data.node?.field_order, isToolMode]);
 
   // Edit mode - show all fields with simplified edit UI
   if (isEditingFields) {
