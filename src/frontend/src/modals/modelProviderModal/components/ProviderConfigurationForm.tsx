@@ -1,17 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { ProviderVariable } from "@/constants/providerConstants";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { cn } from "@/utils/utils";
 import { AnimatePresence, motion } from "framer-motion";
 import { useState } from "react";
+import MultiselectComponent from "@/components/core/parameterRenderComponent/components/multiselectComponent";
 import DisconnectWarning from "./DisconnectWarning";
 import { Provider } from "./types";
 
@@ -114,37 +108,31 @@ const ProviderConfigurationForm = ({
                 {variable.options && variable.options.length > 0 ? (
                   // Render dropdown for variables with predefined options
                   <div className="relative">
-                    <Select
+                    <MultiselectComponent
+                      id={variable.variable_key}
+                      editNode={false}
+                      disabled={isSaving || isDeleting}
                       value={
-                        variableValues[variable.variable_key] ||
-                        (isConfigured
-                          ? getConfiguredValue(variable.variable_key) || ""
-                          : "")
+                        variableValues[variable.variable_key]
+                          ? [variableValues[variable.variable_key]]
+                          : isConfigured && getConfiguredValue(variable.variable_key)
+                            ? [getConfiguredValue(variable.variable_key) as string]
+                            : []
                       }
-                      onValueChange={(value) =>
-                        onVariableChange(variable.variable_key, value)
-                      }
-                    >
-                      <SelectTrigger
-                        className={cn(
-                          "w-full",
-                          isConfigured && !hasNewValue && "pr-8",
-                        )}
-                      >
-                        <SelectValue
-                          placeholder={`Select ${variable.variable_name}`}
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {variable.options.map((option) => (
-                          <SelectItem key={option} value={option}>
-                            {option}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      options={variable.options}
+                      combobox={variable.combobox}
+                      hideOnSelection={true}
+                      handleOnNewValue={(val) => {
+                        const newArray = val.value as string[];
+                        if (newArray && newArray.length > 0) {
+                          onVariableChange(variable.variable_key, newArray[newArray.length - 1]);
+                        } else {
+                          onVariableChange(variable.variable_key, "");
+                        }
+                      }}
+                    />
                     {isConfigured && !hasNewValue && (
-                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-green-500 pointer-events-none">
+                      <span className="absolute right-8 top-1/2 -translate-y-1/2 text-green-500 pointer-events-none">
                         <ForwardedIconComponent
                           name="check"
                           className="h-4 w-4"
@@ -194,7 +182,6 @@ const ProviderConfigurationForm = ({
               </div>
             );
           })}
-          {/* Validation status */}
           {/* Validation status */}
           <AnimatePresence mode="wait">
             {validationState === "validating" && (
@@ -253,20 +240,8 @@ const ProviderConfigurationForm = ({
             )}
           </AnimatePresence>
           {/* Save button - only enabled when validation passes */}
-          <Button
-            onClick={onSave}
-            loading={isSaving}
-            disabled={!canSave || isSaving}
-            className="mt-2"
-          >
-            {isSaving
-              ? "Saving..."
-              : validationFailed
-                ? "Retry Save"
-                : "Save Configuration"}
-          </Button>
-          {selectedProvider.is_enabled && (
-            <div className="flex justify-end mt-2">
+          <div className="flex justify-end mt-2 gap-2">
+            {selectedProvider.is_enabled && (
               <Button
                 variant="destructive"
                 size="sm"
@@ -275,8 +250,20 @@ const ProviderConfigurationForm = ({
               >
                 Disconnect
               </Button>
-            </div>
           )}
+            <Button
+              onClick={onSave}
+              size="sm"
+              loading={isSaving}
+              disabled={!canSave || isSaving}
+            >
+              {isSaving
+                ? "Saving..."
+                : validationFailed
+                  ? "Retry Save"
+                  : "Save Configuration"}
+            </Button>
+          </div>
         </div>
       ) : (
         <div className="flex flex-col gap-2">

@@ -17,6 +17,8 @@ export interface ProviderVariable {
   is_list: boolean;
   /** Predefined options for dropdown selection */
   options: string[];
+  /** Whether the field should act as a combobox (allow custom input) */
+  combobox?: boolean;
 }
 
 /**
