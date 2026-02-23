@@ -18,7 +18,7 @@ from sqlmodel import Field, SQLModel
 from langflow.schema.serialize import UUIDstr
 
 
-class SSOUserProfile(SQLModel, table=True):
+class SSOUserProfile(SQLModel, table=True):  # type: ignore[call-arg]
     """SSO profile per user. Used by the SSO plugin for JIT provisioning and login."""
 
     __tablename__ = "sso_user_profile"
@@ -41,7 +41,7 @@ class SSOUserProfile(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
-class SSOConfig(SQLModel, table=True):
+class SSOConfig(SQLModel, table=True):  # type: ignore[call-arg]
     """SSO provider configuration (persisted in DB). Used by the SSO plugin."""
 
     __tablename__ = "sso_config"

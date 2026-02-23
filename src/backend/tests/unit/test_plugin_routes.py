@@ -156,7 +156,7 @@ class TestPluginAppWrapper:
         wrapper.get("/api/v1/sso/login")(lambda: "first")
 
         # Second plugin trying same path should fail
-        with pytest.raises(ValueError, match="conflicts with existing route.*/api/v1/sso/login"):
+        with pytest.raises(ValueError, match=r"conflicts with existing route.*/api/v1/sso/login"):
             wrapper.get("/api/v1/sso/login")(lambda: "second")
 
 
@@ -233,7 +233,8 @@ class TestLoadPluginRoutes:
             return "ok"
 
         def broken_register(_app_like):
-            raise RuntimeError("plugin broken")
+            err_msg = "plugin broken"
+            raise RuntimeError(err_msg)
 
         ep = MagicMock()
         ep.name = "broken_plugin"

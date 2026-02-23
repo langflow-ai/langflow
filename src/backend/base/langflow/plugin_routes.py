@@ -45,7 +45,8 @@ class _PluginAppWrapper:
                 continue
             key = (path, method)
             if key in self._reserved:
-                raise ValueError(f"Plugin route conflicts with existing route: {path} [{method}]")
+                msg = f"Plugin route conflicts with existing route: {path} [{method}]"
+                raise ValueError(msg)
             self._reserved.add(key)
 
     def include_router(self, router, prefix: str = "", **kwargs) -> None:
