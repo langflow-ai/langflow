@@ -126,9 +126,14 @@ class SplitTextComponent(Component):
         return build_config
 
     def _docs_to_data(self, docs, *, clean: bool = False) -> list[Data]:
-        return [
-            Data(text=doc.page_content) if clean else Data(text=doc.page_content, data=doc.metadata) for doc in docs
-        ]
+        result = []
+        for doc in docs:
+            if clean:
+                data_obj = Data(data={self.text_key: doc.page_content})
+            else:
+                data_obj = Data(data={self.text_key: doc.page_content, **doc.metadata})
+            result.append(data_obj)
+        return result
 
     def _fix_separator(self, separator: str) -> str:
         if separator == "/n/n":
@@ -168,26 +173,15 @@ class SplitTextComponent(Component):
             inputs = [inputs.to_data()]
         elif isinstance(inputs, Data):
             inputs = [inputs]
-
-        if not inputs:
+        elif not inputs:
             msg = "No data inputs provided"
             raise TypeError(msg)
 
         try:
-            documents = []
-            for item in inputs:
-                if isinstance(item, Data):
-                    item.text_key = self.text_key
-                    documents.append(item.to_lc_document())
+            return [item.to_lc_document() for item in inputs if isinstance(item, Data)]
         except AttributeError as e:
             msg = f"Invalid input type in collection: {e}"
             raise TypeError(msg) from e
-
-        if not documents:
-            msg = f"No valid Data inputs found in {type(inputs)}"
-            raise TypeError(msg)
-
-        return documents
 
     def _split_by_character(self, documents):
         if self.separator == "Custom":
