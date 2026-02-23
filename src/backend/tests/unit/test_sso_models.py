@@ -16,7 +16,7 @@ from langflow.services.database.models.auth.sso import SSOConfig, SSOUserProfile
 from langflow.services.database.models.user.model import User
 
 # Placeholder for User.password in tests (not a real secret)
-_TEST_PASSWORD = "hashed"
+_TEST_PASSWORD = "hashed"  # noqa: S105
 
 
 @pytest.fixture(name="sso_db_engine")
@@ -90,7 +90,7 @@ class TestSSOUserProfile:
 
         duplicate = SSOUserProfile(user_id=user.id, sso_provider="saml", sso_user_id="sub-2")
         sso_async_session.add(duplicate)
-        with pytest.raises(IntegrityError, match="UNIQUE constraint failed|unique constraint"):
+        with pytest.raises(IntegrityError, match=r"UNIQUE constraint failed|unique constraint"):
             await sso_async_session.commit()
 
     async def test_composite_unique_sso_provider_sso_user_id(self, sso_async_session):
@@ -108,7 +108,7 @@ class TestSSOUserProfile:
 
         duplicate = SSOUserProfile(user_id=user2.id, sso_provider="oidc", sso_user_id="sub-123")
         sso_async_session.add(duplicate)
-        with pytest.raises(IntegrityError, match="UNIQUE constraint failed|unique constraint"):
+        with pytest.raises(IntegrityError, match=r"UNIQUE constraint failed|unique constraint"):
             await sso_async_session.commit()
 
     async def test_cascade_delete_when_user_deleted(self, sso_async_session):
