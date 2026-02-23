@@ -461,7 +461,12 @@ async def test_snapshot_and_activate_with_complex_flow_data(client: AsyncClient,
 
 
 async def test_snapshot_preserves_full_node_metadata(client: AsyncClient, logged_in_headers):
-    """Verify that node template fields, positions, and edge handles survive snapshot."""
+    """Verify that node IDs, positions, and edge handles survive snapshot.
+
+    Note: the GET endpoint strips API keys server-side, so template password
+    field values will be None.  This test focuses on structural preservation
+    (IDs, positions, edge count) rather than exact template value equality.
+    """
     complex_json = json.loads(pytest.COMPLEX_EXAMPLE_PATH.read_text(encoding="utf-8"))
     complex_data = complex_json.get("data", complex_json)
 
@@ -479,11 +484,13 @@ async def test_snapshot_preserves_full_node_metadata(client: AsyncClient, logged
     full = await client.get(f"api/v1/flows/{flow['id']}/history/{snap['id']}", headers=logged_in_headers)
     snapshot_data = full.json()["data"]
 
+    assert len(snapshot_data["nodes"]) == len(complex_data["nodes"])
+    assert len(snapshot_data["edges"]) == len(complex_data["edges"])
+
     for i, original_node in enumerate(complex_data["nodes"]):
         snap_node = snapshot_data["nodes"][i]
         assert snap_node["id"] == original_node["id"]
         assert snap_node.get("position") == original_node.get("position")
-        assert snap_node.get("data") == original_node.get("data")
 
 
 # ---------------------------------------------------------------------------
@@ -1074,13 +1081,12 @@ async def test_download_strips_api_keys_from_history(client: AsyncClient, logged
     assert template["openai_api_key"]["value"] is None
 
 
-async def test_get_single_entry_preserves_api_keys_for_client_side_stripping(client: AsyncClient, logged_in_headers):
-    """GET /history/{id} should return full data including API keys.
+async def test_get_single_entry_strips_api_keys(client: AsyncClient, logged_in_headers):
+    """GET /history/{id} should strip API keys from the returned data.
 
-    The single-entry endpoint is used by the frontend's per-version export,
-    which applies removeApiKeys client-side (matching the main canvas export
-    flow). The server must NOT strip keys here — that's the export endpoint's
-    job (/history/export).
+    The single-entry endpoint is used by the frontend for previewing and
+    per-version export. API keys are stripped server-side to prevent leakage
+    through the preview path, matching the export endpoint's behaviour.
     """
     api_key_data = {
         "nodes": [
@@ -1113,7 +1119,7 @@ async def test_get_single_entry_preserves_api_keys_for_client_side_stripping(cli
 
     snap = await _create_snapshot(client, logged_in_headers, flow["id"])
 
-    # Fetch the single entry — data should still contain the API key
+    # Fetch the single entry — API key should be stripped (value set to None)
     resp = await client.get(
         f"api/v1/flows/{flow['id']}/history/{snap['id']}",
         headers=logged_in_headers,
@@ -1121,7 +1127,7 @@ async def test_get_single_entry_preserves_api_keys_for_client_side_stripping(cli
     assert resp.status_code == status.HTTP_200_OK
     entry_data = resp.json()["data"]
     template = entry_data["nodes"][0]["data"]["node"]["template"]
-    assert template["api_key"]["value"] == "sk-secret-99999"
+    assert template["api_key"]["value"] is None
 
 
 async def test_create_snapshot_rejects_long_description(client: AsyncClient, logged_in_headers):

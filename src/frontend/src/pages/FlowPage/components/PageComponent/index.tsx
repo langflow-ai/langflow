@@ -83,8 +83,19 @@ import {
 import getRandomName from "./utils/get-random-name";
 import isWrappedWithClass from "./utils/is-wrapped-with-class";
 
-import { ErrorBoundary } from "react-error-boundary";
+import { ErrorBoundary, type FallbackProps } from "react-error-boundary";
 import { nodeTypes, edgeTypes } from "../../consts";
+
+function PreviewErrorFallback(_props: FallbackProps) {
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-2 text-destructive">
+      <span>Failed to render preview</span>
+      <span className="text-xs text-muted-foreground">
+        This version may contain incompatible data. Try refreshing the page.
+      </span>
+    </div>
+  );
+}
 
 /**
  * Read-only ReactFlow canvas used to preview historical flow versions.
@@ -926,11 +937,10 @@ export default function Page({
                 className="absolute inset-0 z-50 bg-canvas ring-4 ring-inset ring-accent-indigo-foreground/20"
               >
                 <ErrorBoundary
-                  FallbackComponent={() => (
-                    <div className="flex h-full items-center justify-center text-destructive">
-                      Failed to render preview
-                    </div>
-                  )}
+                  FallbackComponent={PreviewErrorFallback}
+                  onError={(error, info) => {
+                    console.error("History preview render failed:", error, info);
+                  }}
                 >
                   <ReactFlowProvider>
                     <PreviewCanvas

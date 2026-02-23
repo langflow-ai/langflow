@@ -229,6 +229,15 @@ export default function FlowHistorySidebarContent({
     // the entry is loading — keep the canvas as-is.
   }, [processedPreview, selectedId]);
 
+  // Surface processedPreview errors as a user-visible toast.
+  useEffect(() => {
+    if (processedPreview?.error) {
+      setErrorData({
+        title: "This version's data could not be rendered for preview",
+      });
+    }
+  }, [processedPreview?.error, setErrorData]);
+
   // Push preview state to the preview store so PageComponent shows the
   // read-only overlay. The overlay is ALWAYS shown while the history panel
   // is open — even for Current Draft — making the canvas fully read-only.
@@ -399,7 +408,8 @@ export default function FlowHistorySidebarContent({
             maxZoom: 2,
           });
         });
-      } catch {
+      } catch (err) {
+        console.error("Failed to apply restored version to canvas:", err);
         setErrorData({
           title:
             "Version restored on server, but there was an issue rendering it. Please refresh the page.",

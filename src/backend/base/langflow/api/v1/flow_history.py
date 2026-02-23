@@ -6,6 +6,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query
 from lfx.log import logger
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -15,7 +16,7 @@ from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.flow_history.crud import (
     create_flow_history_entry,
     delete_flow_history_entry,
-    get_flow_history_entry,
+    get_flow_history_entry_or_raise,
     get_flow_history_list,
 )
 from langflow.services.database.models.flow_history.exceptions import (
@@ -38,22 +39,32 @@ router = APIRouter(prefix="/flows/{flow_id}/history", tags=["Flow History"])
 
 
 def strip_history_data(data: dict | None) -> dict | None:
-    """Strip API keys from a history entry's flow data dict."""
+    """Strip API keys from a history entry's flow data dict.
+
+    Returns None on unexpected failure to prevent secret leakage.
+    """
     if data is None:
         return None
     data_copy = copy.deepcopy(data)
     try:
         return remove_api_keys({"data": data_copy}).get("data")
-    except (AttributeError, KeyError, TypeError):
-        return data_copy
+    except Exception:
+        logger.warning(
+            "Failed to strip API keys from history data — excluding data from export to prevent secret leakage",
+            exc_info=True,
+        )
+        return None
 
 
 def _history_to_read(entry: FlowHistory) -> FlowHistoryRead:
     return FlowHistoryRead.model_validate(entry, from_attributes=True)
 
 
-def _history_to_read_full(entry: FlowHistory) -> FlowHistoryReadWithData:
-    return FlowHistoryReadWithData.model_validate(entry, from_attributes=True)
+def _history_to_read_full(entry: FlowHistory, *, strip_keys: bool = False) -> FlowHistoryReadWithData:
+    result = FlowHistoryReadWithData.model_validate(entry, from_attributes=True)
+    if strip_keys:
+        result.data = strip_history_data(result.data)
+    return result
 
 
 async def _get_user_flow(session: AsyncSession, flow_id: UUID, user_id: UUID) -> Flow:
@@ -129,10 +140,11 @@ async def get_single_flow_history(
     session: DbSessionReadOnly,
 ) -> FlowHistoryReadWithData:
     await _get_user_flow(session, flow_id, current_user.id)
-    entry = await get_flow_history_entry(session, history_id, current_user.id)
-    if not entry or entry.flow_id != flow_id:
-        raise HTTPException(status_code=404, detail="History entry not found")
-    return _history_to_read_full(entry)
+    try:
+        entry = await get_flow_history_entry_or_raise(session, history_id, current_user.id, flow_id=flow_id)
+    except FlowHistoryNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="History entry not found") from exc
+    return _history_to_read_full(entry, strip_keys=True)
 
 
 @router.post("/", status_code=201)
@@ -175,9 +187,10 @@ async def activate_version(
     flow = await _get_user_flow(session, flow_id, current_user.id)
 
     # Verify history entry belongs to this flow
-    target_entry = await get_flow_history_entry(session, history_id, current_user.id)
-    if not target_entry or target_entry.flow_id != flow_id:
-        raise HTTPException(status_code=404, detail="History entry not found")
+    try:
+        target_entry = await get_flow_history_entry_or_raise(session, history_id, current_user.id, flow_id=flow_id)
+    except FlowHistoryNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="History entry not found") from exc
 
     # Guard against activating a version with no data (check before auto-snapshot)
     if target_entry.data is None:
@@ -214,6 +227,16 @@ async def activate_version(
             await session.flush()
     except FlowHistoryError as exc:
         raise _translate_history_error(exc) from exc
+    except IntegrityError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail="Could not activate version — the flow was modified concurrently. Please try again.",
+        ) from exc
+    except SQLAlchemyError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail="Database error while activating version. Please try again.",
+        ) from exc
 
     await logger.adebug("Activated version %s (%s) for flow %s", history_id, f"v{target_entry.version_number}", flow_id)
 
@@ -229,12 +252,9 @@ async def delete_history_entry(
 ) -> None:
     await _get_user_flow(session, flow_id, current_user.id)
 
-    # Verify entry belongs to this flow
-    entry = await get_flow_history_entry(session, history_id, current_user.id)
-    if not entry or entry.flow_id != flow_id:
-        raise HTTPException(status_code=404, detail="History entry not found")
-
+    # Verify entry belongs to this flow, then delete
     try:
+        await get_flow_history_entry_or_raise(session, history_id, current_user.id, flow_id=flow_id)
         await delete_flow_history_entry(session, history_id, current_user.id)
     except FlowHistoryError as exc:
         raise _translate_history_error(exc) from exc

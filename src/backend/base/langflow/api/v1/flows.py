@@ -769,11 +769,24 @@ async def upload_file(
             # Import version history if present in the uploaded JSON
             if isinstance(raw_dict, dict) and "history" in raw_dict and isinstance(raw_dict["history"], list):
                 _max_entries = get_settings_service().settings.max_flow_history_entries_per_flow
+                _skipped = 0
+                _imported = 0
                 for h_entry in raw_dict["history"][:_max_entries]:
                     if not isinstance(h_entry, dict):
+                        _skipped += 1
+                        await logger.awarning(
+                            "Skipping malformed history entry (not a dict) during import for flow %s",
+                            flow_read.id,
+                        )
                         continue
                     raw_data = h_entry.get("data")
                     if raw_data is not None and not isinstance(raw_data, dict):
+                        _skipped += 1
+                        await logger.awarning(
+                            "Skipping history entry with non-dict data during import for flow %s: %s",
+                            flow_read.id,
+                            h_entry.get("description", "(no description)"),
+                        )
                         continue
                     try:
                         await create_flow_history_entry(
@@ -783,21 +796,30 @@ async def upload_file(
                             data=raw_data,
                             description=h_entry.get("description"),
                         )
+                        _imported += 1
                     except FlowHistoryError:
-                        # Expected domain errors (size limit, serialization) — warn-level
+                        _skipped += 1
                         await logger.awarning(
                             "Skipping history entry during import for flow %s: %s",
                             flow_read.id,
                             h_entry.get("description", "(no description)"),
                         )
                     except Exception:  # noqa: BLE001
-                        # Unexpected errors (DB failure, etc.) — error-level
+                        _skipped += 1
                         await logger.aerror(
                             "Unexpected error importing history entry for flow %s: %s",
                             flow_read.id,
                             h_entry.get("description", "(no description)"),
                             exc_info=True,
                         )
+                if _skipped:
+                    await logger.awarning(
+                        "Imported %d/%d history entries for flow %s (%d skipped)",
+                        _imported,
+                        _imported + _skipped,
+                        flow_read.id,
+                        _skipped,
+                    )
     except Exception as e:
         if "UNIQUE constraint failed" in str(e):
             # Get the name of the column that failed
@@ -865,16 +887,23 @@ async def download_multiple_file(
     if include_history:
         _max_entries = get_settings_service().settings.max_flow_history_entries_per_flow
         for flow_dict, flow_obj in zip(flows_without_api_keys, flows, strict=True):
-            history_entries = await get_flow_history_list(db, flow_obj.id, user.id, limit=_max_entries, offset=0)
-            flow_dict["history"] = [
-                {
-                    "version_number": e.version_number,
-                    "description": e.description,
-                    "data": strip_history_data(e.data),
-                    "created_at": e.created_at.isoformat() if e.created_at else None,
-                }
-                for e in history_entries
-            ]
+            try:
+                history_entries = await get_flow_history_list(db, flow_obj.id, user.id, limit=_max_entries, offset=0)
+                flow_dict["history"] = [
+                    {
+                        "version_number": e.version_number,
+                        "description": e.description,
+                        "data": strip_history_data(e.data),
+                        "created_at": e.created_at.isoformat() if e.created_at else None,
+                    }
+                    for e in history_entries
+                ]
+            except Exception:  # noqa: BLE001
+                await logger.awarning(
+                    "Failed to fetch history for flow %s during download — exporting without history",
+                    flow_obj.id,
+                    exc_info=True,
+                )
 
     if len(flows_without_api_keys) > 1:
         # Create a byte stream to hold the ZIP file
