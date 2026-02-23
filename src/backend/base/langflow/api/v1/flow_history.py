@@ -22,7 +22,7 @@ from langflow.services.database.models.flow_history.model import (
     FlowHistory,
     FlowHistoryCreate,
     FlowHistoryRead,
-    FlowHistoryReadFull,
+    FlowHistoryReadWithData,
 )
 from langflow.services.deps import get_settings_service
 
@@ -44,8 +44,8 @@ def _history_to_read(entry: FlowHistory) -> FlowHistoryRead:
     return FlowHistoryRead.model_validate(entry, from_attributes=True)
 
 
-def _history_to_read_full(entry: FlowHistory) -> FlowHistoryReadFull:
-    return FlowHistoryReadFull.model_validate(entry, from_attributes=True)
+def _history_to_read_full(entry: FlowHistory) -> FlowHistoryReadWithData:
+    return FlowHistoryReadWithData.model_validate(entry, from_attributes=True)
 
 
 async def _get_user_flow(session: AsyncSession, flow_id: UUID, user_id: UUID) -> Flow:
@@ -102,7 +102,7 @@ async def get_single_flow_history(
     history_id: UUID,
     current_user: CurrentActiveUser,
     session: DbSessionReadOnly,
-) -> FlowHistoryReadFull:
+) -> FlowHistoryReadWithData:
     await _get_user_flow(session, flow_id, current_user.id)
     entry = await get_flow_history_entry(session, history_id, current_user.id)
     if not entry or entry.flow_id != flow_id:
