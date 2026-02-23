@@ -5,13 +5,18 @@ CASCADE delete, unique constraints, and default values.
 """
 
 import pytest
-from langflow.services.database.models.auth.sso import SSOConfig, SSOUserProfile
-from langflow.services.database.models.user.model import User
 from sqlalchemy import event
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import StaticPool
 from sqlmodel import SQLModel, select
 from sqlmodel.ext.asyncio.session import AsyncSession
+
+from langflow.services.database.models.auth.sso import SSOConfig, SSOUserProfile
+from langflow.services.database.models.user.model import User
+
+# Placeholder for User.password in tests (not a real secret)
+_TEST_PASSWORD = "hashed"
 
 
 @pytest.fixture(name="sso_db_engine")
@@ -50,7 +55,7 @@ class TestSSOUserProfile:
 
     async def test_create_and_read_sso_user_profile(self, sso_async_session):
         """Create and read SSOUserProfile records."""
-        user = User(username="sso_user", password="hashed")
+        user = User(username="sso_user", password=_TEST_PASSWORD)
         sso_async_session.add(user)
         await sso_async_session.commit()
         await sso_async_session.refresh(user)
@@ -75,7 +80,7 @@ class TestSSOUserProfile:
 
     async def test_user_id_unique_constraint(self, sso_async_session):
         """Cannot create two SSO profiles for the same user."""
-        user = User(username="unique_user", password="hashed")
+        user = User(username="unique_user", password=_TEST_PASSWORD)
         sso_async_session.add(user)
         await sso_async_session.commit()
         await sso_async_session.refresh(user)
@@ -85,13 +90,13 @@ class TestSSOUserProfile:
 
         duplicate = SSOUserProfile(user_id=user.id, sso_provider="saml", sso_user_id="sub-2")
         sso_async_session.add(duplicate)
-        with pytest.raises(Exception):  # IntegrityError or similar
+        with pytest.raises(IntegrityError, match="UNIQUE constraint failed|unique constraint"):
             await sso_async_session.commit()
 
     async def test_composite_unique_sso_provider_sso_user_id(self, sso_async_session):
         """Same (sso_provider, sso_user_id) cannot be used for two different users."""
-        user1 = User(username="user1", password="hash")
-        user2 = User(username="user2", password="hash")
+        user1 = User(username="user1", password=_TEST_PASSWORD)
+        user2 = User(username="user2", password=_TEST_PASSWORD)
         sso_async_session.add(user1)
         sso_async_session.add(user2)
         await sso_async_session.commit()
@@ -103,12 +108,12 @@ class TestSSOUserProfile:
 
         duplicate = SSOUserProfile(user_id=user2.id, sso_provider="oidc", sso_user_id="sub-123")
         sso_async_session.add(duplicate)
-        with pytest.raises(Exception):  # IntegrityError
+        with pytest.raises(IntegrityError, match="UNIQUE constraint failed|unique constraint"):
             await sso_async_session.commit()
 
     async def test_cascade_delete_when_user_deleted(self, sso_async_session):
         """Deleting user deletes associated SSOUserProfile (CASCADE)."""
-        user = User(username="cascade_user", password="hash")
+        user = User(username="cascade_user", password=_TEST_PASSWORD)
         sso_async_session.add(user)
         await sso_async_session.commit()
         await sso_async_session.refresh(user)
@@ -127,7 +132,7 @@ class TestSSOUserProfile:
 
     async def test_default_timestamps_set(self, sso_async_session):
         """created_at and updated_at are set on create."""
-        user = User(username="ts_user", password="hash")
+        user = User(username="ts_user", password=_TEST_PASSWORD)
         sso_async_session.add(user)
         await sso_async_session.commit()
         await sso_async_session.refresh(user)

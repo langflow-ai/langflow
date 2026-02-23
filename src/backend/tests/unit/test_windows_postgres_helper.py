@@ -113,9 +113,11 @@ class TestWindowsPostgresHelper:
     def test_logging_includes_source_when_provided(self, mock_platform, caplog):
         """With source= provided, function succeeds and logs (no mock of logger)."""
         mock_platform.return_value = "Windows"
-        with patch.dict(os.environ, {LANGFLOW_DATABASE_URL: "postgresql://user:pass@localhost/db"}, clear=True):
-            with caplog.at_level(logging.DEBUG, logger="langflow"):
-                result = configure_windows_postgres_event_loop(source="test_source")
+        with (
+            patch.dict(os.environ, {LANGFLOW_DATABASE_URL: "postgresql://user:pass@localhost/db"}, clear=True),
+            caplog.at_level(logging.DEBUG, logger="langflow"),
+        ):
+            result = configure_windows_postgres_event_loop(source="test_source")
         assert result is True
 
     @patch("langflow.helpers.windows_postgres_helper.platform.system")
@@ -162,7 +164,9 @@ class TestWindowsPostgresHelper:
     def test_windows_without_policy_class_returns_false(self, mock_platform):
         """When WindowsSelectorEventLoopPolicy is unavailable, returns False."""
         mock_platform.return_value = "Windows"
-        with patch.dict(os.environ, {LANGFLOW_DATABASE_URL: "postgresql://user:pass@localhost/db"}, clear=True):
-            with patch.object(asyncio, "WindowsSelectorEventLoopPolicy", None, create=True):
-                result = configure_windows_postgres_event_loop()
+        with (
+            patch.dict(os.environ, {LANGFLOW_DATABASE_URL: "postgresql://user:pass@localhost/db"}, clear=True),
+            patch.object(asyncio, "WindowsSelectorEventLoopPolicy", None, create=True),
+        ):
+            result = configure_windows_postgres_event_loop()
         assert result is False
