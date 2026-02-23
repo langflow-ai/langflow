@@ -17,6 +17,7 @@ from lfx.base.models.google_generative_ai_constants import (
     GOOGLE_GENERATIVE_AI_MODELS_DETAILED,
 )
 from lfx.base.models.model_metadata import MODEL_PROVIDER_METADATA, get_provider_param_mapping
+from lfx.base.models.model_utils import _to_str, replace_with_live_models
 from lfx.base.models.ollama_constants import OLLAMA_EMBEDDING_MODELS_DETAILED, OLLAMA_MODELS_DETAILED
 from lfx.base.models.openai_constants import OPENAI_EMBEDDING_MODELS_DETAILED, OPENAI_MODELS_DETAILED
 from lfx.base.models.watsonx_constants import WATSONX_MODELS_DETAILED
@@ -806,6 +807,10 @@ def get_language_model_options(
             # If we can't get enabled providers, show all
             pass
 
+    # Replace static defaults with actual available models from configured instances
+    if enabled_providers:
+        replace_with_live_models(all_models, user_id, enabled_providers, "llm", model_provider_metadata)
+
     options = []
 
     # Track which providers have models
@@ -1016,6 +1021,10 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
         except Exception:  # noqa: BLE001, S110
             # If we can't get enabled providers, show all
             pass
+
+    # Replace static defaults with actual available models from configured instances
+    if enabled_providers:
+        replace_with_live_models(all_models, user_id, enabled_providers, "embeddings", model_provider_metadata)
 
     options = []
     embedding_class_mapping = {
@@ -1239,6 +1248,11 @@ def get_llm(
     watsonx_project_id=None,
     ollama_base_url=None,
 ) -> Any:
+    # Coerce provider-specific string params (Message/Data may leak through StrInput)
+    ollama_base_url = _to_str(ollama_base_url)
+    watsonx_url = _to_str(watsonx_url)
+    watsonx_project_id = _to_str(watsonx_project_id)
+
     # Check if model is already a BaseLanguageModel instance (from a connection)
     try:
         from langchain_core.language_models import BaseLanguageModel

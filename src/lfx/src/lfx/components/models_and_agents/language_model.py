@@ -54,14 +54,13 @@ class LanguageModelComponent(LCModelComponent):
             show=False,
             required=False,
         ),
-        MessageInput(
+        StrInput(
             name="ollama_base_url",
             display_name="Ollama API URL",
             info=f"Endpoint of the Ollama API (Ollama only). Defaults to {DEFAULT_OLLAMA_URL}",
             value=DEFAULT_OLLAMA_URL,
             show=False,
             real_time_refresh=True,
-            load_from_db=True,
         ),
         MessageInput(
             name="input_value",
