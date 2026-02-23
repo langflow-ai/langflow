@@ -3,7 +3,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from lfx.log import logger
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlmodel import col, delete, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -109,8 +109,12 @@ async def create_flow_history_entry(
         result = await session.exec(delete_older)
         if hasattr(result, "rowcount") and result.rowcount:  # type: ignore[union-attr]
             await logger.adebug("Pruned %d old history entries for flow %s", result.rowcount, flow_id)  # type: ignore[union-attr]
-    except Exception:  # noqa: BLE001
-        await logger.awarning("Failed to prune old history entries for flow %s", flow_id, exc_info=True)
+    except SQLAlchemyError:
+        await logger.awarning(
+            "Failed to prune old history entries for flow %s — history table may exceed configured limit",
+            flow_id,
+            exc_info=True,
+        )
 
     return entry
 
@@ -139,6 +143,23 @@ async def get_flow_history_entry(
 ) -> FlowHistory | None:
     result = await session.exec(select(FlowHistory).where(FlowHistory.id == history_id, FlowHistory.user_id == user_id))
     return result.first()
+
+
+async def get_flow_history_entry_or_raise(
+    session: AsyncSession,
+    history_id: UUID,
+    user_id: UUID,
+    flow_id: UUID | None = None,
+) -> FlowHistory:
+    """Get a history entry or raise FlowHistoryNotFoundError.
+
+    If flow_id is provided, also verifies the entry belongs to that flow.
+    """
+    entry = await get_flow_history_entry(session, history_id, user_id)
+    if not entry or (flow_id is not None and entry.flow_id != flow_id):
+        msg = f"History entry {history_id} not found"
+        raise FlowHistoryNotFoundError(msg)
+    return entry
 
 
 async def delete_flow_history_entry(

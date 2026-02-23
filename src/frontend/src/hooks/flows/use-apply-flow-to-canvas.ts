@@ -15,10 +15,11 @@ const useApplyFlowToCanvas = () => {
 
   const applyFlowToCanvas = useCallback(
     (flow: FlowType) => {
+      const hadNodes = (flow.data?.nodes?.length ?? 0) > 0;
       processFlows([flow]);
-      if (!flow.data?.nodes?.length) {
-        console.warn(
-          "useApplyFlowToCanvas: processFlows may have failed — flow.data.nodes is empty after processing",
+      if (hadNodes && !flow.data?.nodes?.length) {
+        throw new Error(
+          "useApplyFlowToCanvas: processFlows destroyed all nodes — aborting to prevent canvas wipe",
         );
       }
       setCurrentFlow(flow);

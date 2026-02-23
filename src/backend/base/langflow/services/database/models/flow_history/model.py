@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, computed_field, field_serializer
+from pydantic import BaseModel, Field as PydanticField, computed_field, field_serializer
 from sqlalchemy import CheckConstraint, Column, ForeignKey, UniqueConstraint
 from sqlmodel import JSON, Field, SQLModel
 
@@ -18,8 +18,8 @@ class FlowHistory(SQLModel, table=True):  # type: ignore[call-arg]
     )
     user_id: UUID = Field(index=True, foreign_key="user.id")
     data: dict | None = Field(default=None, sa_column=Column(JSON))
-    version_number: int = Field(nullable=False)
-    description: str | None = Field(default=None, nullable=True)
+    version_number: int = Field(nullable=False, ge=1)
+    description: str | None = Field(default=None, nullable=True, max_length=500)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), nullable=False)
 
     # The UniqueConstraint on (flow_id, version_number) creates an implicit composite
@@ -37,7 +37,7 @@ class FlowHistoryRead(BaseModel):
     id: UUID
     flow_id: UUID
     user_id: UUID
-    version_number: int
+    version_number: int = PydanticField(ge=1)
     description: str | None
     created_at: datetime
 
@@ -70,4 +70,4 @@ class FlowHistoryListResponse(BaseModel):
     """Wrapper for the list endpoint — includes entries and the configured max."""
 
     entries: list[FlowHistoryRead]
-    max_entries: int
+    max_entries: int = PydanticField(ge=1)
