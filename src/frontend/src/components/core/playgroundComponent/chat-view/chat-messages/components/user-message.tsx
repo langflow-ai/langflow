@@ -72,8 +72,14 @@ export const UserMessage = memo(
             flow_id,
             session_id: chat.session ?? "",
             properties: {
-              ...chat.properties,
               positive_feedback: evaluation,
+              ...(chat.properties?.state === "partial" ||
+              chat.properties?.state === "complete"
+                ? { state: chat.properties.state }
+                : {}),
+              ...(chat.properties?.source
+                ? { source: { id: chat.properties.source.id } }
+                : {}),
             },
           },
           refetch: true,
@@ -89,8 +95,10 @@ export const UserMessage = memo(
     };
 
     const editedFlag = chat.edit ? (
-      <div className="text-sm text-muted-foreground">(Edited)</div>
-    ) : null;
+      <div className="mt-2 text-xs text-muted-foreground text-right">
+        (Edited)
+      </div>
+      ) : null;
 
     const isEmoji = chat.properties?.icon?.match(
       /[\u2600-\u27BF\uD83C-\uDBFF\uDC00-\uDFFF]/,
@@ -101,7 +109,7 @@ export const UserMessage = memo(
         <div className="w-full py-4 word-break-break-word">
           <div
             className={cn(
-              "group relative flex w-full gap-4 rounded-md p-2 bg-muted @[45rem]/chat-panel:bg-transparent @[45rem]/chat-panel:p-2",
+              "group relative flex w-full gap-4 rounded-md px-2 py-3 bg-muted @[45rem]/chat-panel:bg-transparent @[45rem]/chat-panel:px-2 @[45rem]/chat-panel:py-3",
               editMessage ? "" : "hover:bg-muted",
             )}
           >
@@ -146,7 +154,7 @@ export const UserMessage = memo(
                       {(!isEmpty || !hasFiles) && (
                         <div
                           className={cn(
-                            "w-full items-baseline whitespace-pre-wrap break-words text-sm font-normal",
+                            "w-full items-baseline whitespace-pre-wrap break-words text-xs font-normal",
                             isEmpty ? "text-muted-foreground" : "text-primary",
                           )}
                           data-testid={`chat-message-${chat.sender_name}-${chatMessage}`}
