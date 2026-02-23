@@ -105,7 +105,10 @@ export default function FlowHistoryPanel({
   const [description, setDescription] = useState("");
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedId, setSelectedId] = useState<string>(CURRENT_DRAFT_ID);
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{
+    id: string;
+    versionTag: string;
+  } | null>(null);
   const [restoreConfirm, setRestoreConfirm] = useState<{
     historyId: string;
     versionTag: string;
@@ -218,11 +221,13 @@ export default function FlowHistoryPanel({
     };
   }, []);
 
-  // Escape key closes the panel (or dismiss restore prompt)
+  // Escape key closes the panel (or dismiss restore/delete prompts)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        if (restoreConfirm) {
+        if (deleteTarget) {
+          setDeleteTarget(null);
+        } else if (restoreConfirm) {
           setRestoreConfirm(null);
         } else {
           onClose();
@@ -231,7 +236,7 @@ export default function FlowHistoryPanel({
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose, restoreConfirm]);
+  }, [onClose, restoreConfirm, deleteTarget]);
 
   // The nodes/edges shown in the preview canvas
   const previewData = useMemo(() => {
@@ -337,14 +342,14 @@ export default function FlowHistoryPanel({
         {
           onSuccess: () => {
             setSuccessData({ title: "Version deleted" });
-            setConfirmDeleteId(null);
+            setDeleteTarget(null);
             if (selectedId === historyId) {
               setSelectedId(CURRENT_DRAFT_ID);
             }
           },
           onError: () => {
             setErrorData({ title: "Failed to delete version" });
-            setConfirmDeleteId(null);
+            setDeleteTarget(null);
           },
         },
       );
@@ -352,32 +357,41 @@ export default function FlowHistoryPanel({
     [flowId, selectedId, deleteEntry, setSuccessData, setErrorData],
   );
 
-  const handleDownloadEntry = useCallback(() => {
-    const data =
-      selectedId === CURRENT_DRAFT_ID
-        ? currentFlow?.data
-        : selectedEntryFull?.data;
-    if (!data) return;
-    const tag =
-      selectedId === CURRENT_DRAFT_ID
-        ? "draft"
-        : (selectedEntryFull?.version_tag ?? "version");
-    const blob = new Blob([JSON.stringify(data, null, 2)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${currentFlow?.name || "flow"}_${tag}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }, [selectedId, selectedEntryFull, currentFlow]);
+  const handleDownloadEntry = useCallback(
+    (entryId: string) => {
+      // For the selected entry we already have full data; for others we just
+      // download whatever is selected (the menu is on the selected entry).
+      const data =
+        entryId === CURRENT_DRAFT_ID
+          ? currentFlow?.data
+          : selectedEntryFull?.data;
+      if (!data) return;
+      const tag =
+        entryId === CURRENT_DRAFT_ID
+          ? "draft"
+          : (selectedEntryFull?.version_tag ?? "version");
+      const blob = new Blob([JSON.stringify(data, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${currentFlow?.name || "flow"}_${tag}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    },
+    [selectedEntryFull, currentFlow],
+  );
 
   const selectedHistoryEntry = history?.find((e) => e.id === selectedId);
   const isViewingDraft = selectedId === CURRENT_DRAFT_ID;
 
+  // Container ref for dropdown portals — keeps them inside this panel's
+  // stacking context instead of competing at document.body.
+  const panelRef = useRef<HTMLDivElement>(null);
+
   return (
-    <div className="fixed inset-0 z-[60] flex bg-background">
+    <div ref={panelRef} className="fixed inset-0 z-100 flex bg-background">
       {/* Main preview area */}
       <div className="flex flex-1 flex-col">
         {/* Top bar */}
@@ -406,114 +420,8 @@ export default function FlowHistoryPanel({
             )}
           </div>
 
-          {/* Actions dropdown — only for historical versions */}
-          {!isViewingDraft && selectedHistoryEntry && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
-                  Actions
-                  <ForwardedIconComponent
-                    name="ChevronDown"
-                    className="ml-1 h-3 w-3"
-                  />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem
-                  onClick={() =>
-                    setRestoreConfirm({
-                      historyId: selectedHistoryEntry.id,
-                      versionTag: selectedHistoryEntry.version_tag,
-                    })
-                  }
-                >
-                  <ForwardedIconComponent
-                    name="RotateCcw"
-                    className="mr-2 h-4 w-4"
-                  />
-                  Restore this version
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleDownloadEntry}>
-                  <ForwardedIconComponent
-                    name="Download"
-                    className="mr-2 h-4 w-4"
-                  />
-                  Download
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => setConfirmDeleteId(selectedHistoryEntry.id)}
-                  className="text-destructive focus:text-destructive"
-                >
-                  <ForwardedIconComponent
-                    name="Trash2"
-                    className="mr-2 h-4 w-4"
-                  />
-                  Delete version
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
         </div>
 
-        {/* Restore confirmation bar */}
-        {restoreConfirm && (
-          <div className="flex flex-wrap items-center gap-2 border-b bg-accent/30 px-4 py-3">
-            <span className="mr-2 text-sm font-medium">
-              Restore {restoreConfirm.versionTag}?
-            </span>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="default"
-                size="sm"
-                onClick={() => doRestore(true)}
-                loading={isRestoring}
-                disabled={isLoadingEntry}
-              >
-                Save current state & restore
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => doRestore(false)}
-                loading={isRestoring}
-                disabled={isLoadingEntry}
-              >
-                Restore without saving
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setRestoreConfirm(null)}
-              >
-                Cancel
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Delete confirmation bar */}
-        {confirmDeleteId && !restoreConfirm && (
-          <div className="flex items-center gap-2 border-b bg-destructive/10 px-4 py-2">
-            <span className="text-sm">Delete this version?</span>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => handleDelete(confirmDeleteId)}
-              loading={isDeleting}
-            >
-              Delete
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setConfirmDeleteId(null)}
-            >
-              Cancel
-            </Button>
-          </div>
-        )}
 
         {/* Canvas preview */}
         <div className="flex-1 bg-muted/20">
@@ -677,7 +585,10 @@ export default function FlowHistoryPanel({
                 <DropdownMenu>
                   <DropdownMenuTrigger
                     asChild
-                    onClick={(e) => e.stopPropagation()}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSelectEntry(entry.id);
+                    }}
                   >
                     <Button
                       variant="ghost"
@@ -690,7 +601,7 @@ export default function FlowHistoryPanel({
                       />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-44">
+                  <DropdownMenuContent align="end" className="w-44" container={panelRef.current}>
                     <DropdownMenuItem
                       onClick={(e) => {
                         e.stopPropagation();
@@ -707,11 +618,26 @@ export default function FlowHistoryPanel({
                       />
                       Restore
                     </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDownloadEntry(entry.id);
+                      }}
+                    >
+                      <ForwardedIconComponent
+                        name="Download"
+                        className="mr-2 h-3.5 w-3.5"
+                      />
+                      Export
+                    </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       onClick={(e) => {
                         e.stopPropagation();
-                        setConfirmDeleteId(entry.id);
+                        setDeleteTarget({
+                          id: entry.id,
+                          versionTag: entry.version_tag,
+                        });
                       }}
                       className="text-destructive focus:text-destructive"
                     >
@@ -728,6 +654,88 @@ export default function FlowHistoryPanel({
           })}
         </div>
       </div>
+
+      {/* Restore confirmation dialog */}
+      {restoreConfirm && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/40">
+          <div className="mx-4 flex w-full max-w-md flex-col gap-4 rounded-xl border bg-background p-6 shadow-lg">
+            <div className="flex items-center gap-2">
+              <ForwardedIconComponent
+                name="RotateCcw"
+                className="h-5 w-5 text-foreground"
+              />
+              <span className="text-lg font-semibold">Restore Version</span>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Restore <strong>{restoreConfirm.versionTag}</strong> as the
+              current working draft? You can save the current state first.
+            </p>
+            <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setRestoreConfirm(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => doRestore(false)}
+                loading={isRestoring}
+                disabled={isLoadingEntry}
+              >
+                Restore without saving
+              </Button>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => doRestore(true)}
+                loading={isRestoring}
+                disabled={isLoadingEntry}
+              >
+                Save current state & restore
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete confirmation dialog */}
+      {deleteTarget && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/40">
+          <div className="mx-4 flex w-full max-w-md flex-col gap-4 rounded-xl border bg-background p-6 shadow-lg">
+            <div className="flex items-center gap-2">
+              <ForwardedIconComponent
+                name="Trash2"
+                className="h-5 w-5 text-destructive"
+              />
+              <span className="text-lg font-semibold">Delete Version</span>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              This will permanently delete{" "}
+              <strong>{deleteTarget.versionTag}</strong>. This can't be undone.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setDeleteTarget(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => handleDelete(deleteTarget.id)}
+                loading={isDeleting}
+              >
+                Delete
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

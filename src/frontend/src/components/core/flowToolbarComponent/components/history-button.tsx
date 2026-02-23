@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import useFlowStore from "@/stores/flowStore";
 import FlowHistoryPanel from "@/pages/FlowPage/components/FlowHistoryPanel";
 import { useState } from "react";
+import { createPortal } from "react-dom";
 
 const HistoryButton = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -24,12 +25,15 @@ const HistoryButton = () => {
           </Button>
         </div>
       </ShadTooltip>
-      {isOpen && currentFlow?.id && (
-        <FlowHistoryPanel
-          flowId={currentFlow.id}
-          onClose={() => setIsOpen(false)}
-        />
-      )}
+      {isOpen &&
+        currentFlow?.id &&
+        createPortal(
+          <FlowHistoryPanel
+            flowId={currentFlow.id}
+            onClose={() => setIsOpen(false)}
+          />,
+          document.body,
+        )}
     </>
   );
 };
