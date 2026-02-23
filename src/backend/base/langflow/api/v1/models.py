@@ -4,8 +4,8 @@ import json
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from lfx.base.models.model_utils import replace_with_live_models
 from lfx.base.models.unified_models import (
-    get_live_models_for_provider,
     get_model_provider_metadata,
     get_model_provider_variable_mapping,
     get_model_providers,
@@ -205,33 +205,9 @@ async def list_models(
         has_active_model = any(prov_models_status.values())
         provider_dict["is_enabled"] = has_active_model
 
-    # Replace Ollama and IBM WatsonX with live models when the provider is configured
-    # so the UI shows only models actually available on the user's instance
-    for prov in ["Ollama", "IBM WatsonX"]:
-        if not provider_configured_status.get(prov, False):
-            continue
-        # Find the provider entry in filtered_models
-        for provider_dict in filtered_models:
-            if provider_dict.get("provider") != prov:
-                continue
-            if model_type is None:
-                live_llm = get_live_models_for_provider(current_user.id, prov, "llm")
-                live_emb = get_live_models_for_provider(current_user.id, prov, "embeddings")
-                live_models = live_llm + live_emb
-            else:
-                live_models = get_live_models_for_provider(
-                    current_user.id, prov, "llm" if model_type == "llm" else "embeddings"
-                )
-            # Convert to same shape as static catalog: list of {model_name, metadata}
-            provider_dict["models"] = [
-                {
-                    "model_name": m.get("name"),
-                    "metadata": {k: v for k, v in m.items() if k not in ("provider", "name")},
-                }
-                for m in live_models
-            ]
-            provider_dict["num_models"] = len(provider_dict["models"])
-            break
+    # Replace static models with live models for providers that support it
+    configured_providers = {p for p, configured in provider_configured_status.items() if configured}
+    replace_with_live_models(filtered_models, current_user.id, configured_providers, model_type)
 
     # Sort providers:
     # 1. Provider with default model first
@@ -561,6 +537,10 @@ async def get_enabled_models(
     # Get enabled providers status
     enabled_providers_result = await get_enabled_providers(session=session, current_user=current_user)
     provider_status = enabled_providers_result.get("provider_status", {})
+
+    # Replace static models with live models for providers that support it
+    configured_providers = {p for p, configured in provider_status.items() if configured}
+    replace_with_live_models(all_models_by_provider, current_user.id, configured_providers)
 
     # Get disabled and explicitly enabled models lists
     disabled_models = await _get_disabled_models(session=session, current_user=current_user)

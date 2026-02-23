@@ -4,19 +4,21 @@ from urllib.parse import urljoin
 from uuid import UUID
 
 import httpx
-from lfx.base.models.model_metadata import create_model_metadata
-from lfx.services.deps import get_variable_service, session_scope
-from lfx.utils.async_helpers import run_until_complete
 import requests
 
+from lfx.base.models.model_metadata import LIVE_MODEL_PROVIDERS, create_model_metadata
 from lfx.base.models.watsonx_constants import (
     IBM_WATSONX_URLS,
+)
+from lfx.base.models.watsonx_constants import (
     WATSONX_DEFAULT_EMBEDDING_MODELS as WATSONX_EMBEDDING_METADATA,
 )
 from lfx.base.models.watsonx_constants import (
     WATSONX_DEFAULT_LLM_MODELS as WATSONX_LLM_METADATA,
 )
 from lfx.log.logger import logger
+from lfx.services.deps import get_variable_service, session_scope
+from lfx.utils.async_helpers import run_until_complete
 from lfx.utils.util import transform_localhost_url
 
 HTTP_STATUS_OK = 200
@@ -252,9 +254,6 @@ def get_watsonx_embedding_models(
         return default_models
 
 
-
-
-
 def get_provider_variable_value(user_id: UUID | str | None, variable_key: str) -> str | None:
     """Get a variable value from global variables for a provider.
 
@@ -383,3 +382,77 @@ def get_live_models_for_provider(
         return fetch_live_watsonx_models(user_id, model_type)
     return []
 
+
+def _live_models_to_catalog_shape(live_models: list[dict]) -> list[dict]:
+    """Convert raw live model dicts to the unified catalog shape."""
+    return [
+        {
+            "model_name": m.get("name"),
+            "metadata": {k: v for k, v in m.items() if k not in ("provider", "name")},
+        }
+        for m in live_models
+    ]
+
+
+def replace_with_live_models(
+    provider_models: list[dict],
+    user_id: UUID | str | None,
+    enabled_providers: set[str] | list[str],
+    model_type: str | None = None,
+    provider_metadata: dict | None = None,
+) -> list[dict]:
+    """Replace static model entries with live models for providers in LIVE_MODEL_PROVIDERS.
+
+    Iterates over LIVE_MODEL_PROVIDERS; for each that is in *enabled_providers*,
+    fetches live models via get_live_models_for_provider and replaces (or appends)
+    the provider entry in *provider_models*.
+
+    Args:
+        provider_models: List of provider dicts (same shape as get_unified_models_detailed output).
+        user_id: Current user ID for credential lookup.
+        enabled_providers: Set/list of provider names that are currently enabled/configured.
+        model_type: ``"llm"``, ``"embeddings"``, or ``None`` (fetch both and concatenate).
+        provider_metadata: Optional dict of extra provider metadata to merge into the entry.
+
+    Returns:
+        The (possibly modified) provider_models list.
+    """
+    if not user_id or not enabled_providers:
+        return provider_models
+
+    for provider in LIVE_MODEL_PROVIDERS:
+        if provider not in enabled_providers:
+            continue
+
+        if model_type is None:
+            live_llm = get_live_models_for_provider(user_id, provider, "llm")
+            live_emb = get_live_models_for_provider(user_id, provider, "embeddings")
+            live_models = live_llm + live_emb
+        else:
+            live_models = get_live_models_for_provider(user_id, provider, model_type)
+
+        if not live_models:
+            continue
+
+        catalog_models = _live_models_to_catalog_shape(live_models)
+
+        # Try to find and replace existing provider entry
+        replaced = False
+        for provider_dict in provider_models:
+            if provider_dict.get("provider") == provider:
+                provider_dict["models"] = catalog_models
+                provider_dict["num_models"] = len(catalog_models)
+                replaced = True
+                break
+
+        if not replaced:
+            entry: dict = {
+                "provider": provider,
+                "models": catalog_models,
+                "num_models": len(catalog_models),
+            }
+            if provider_metadata and provider in provider_metadata:
+                entry.update(provider_metadata[provider])
+            provider_models.append(entry)
+
+    return provider_models

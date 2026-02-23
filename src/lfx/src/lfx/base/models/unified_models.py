@@ -17,7 +17,7 @@ from lfx.base.models.google_generative_ai_constants import (
     GOOGLE_GENERATIVE_AI_MODELS_DETAILED,
 )
 from lfx.base.models.model_metadata import MODEL_PROVIDER_METADATA, get_provider_param_mapping
-from lfx.base.models.model_utils import _to_str, get_live_models_for_provider
+from lfx.base.models.model_utils import _to_str, replace_with_live_models
 from lfx.base.models.ollama_constants import OLLAMA_EMBEDDING_MODELS_DETAILED, OLLAMA_MODELS_DETAILED
 from lfx.base.models.openai_constants import OPENAI_EMBEDDING_MODELS_DETAILED, OPENAI_MODELS_DETAILED
 from lfx.base.models.watsonx_constants import WATSONX_MODELS_DETAILED
@@ -807,30 +807,9 @@ def get_language_model_options(
             # If we can't get enabled providers, show all
             pass
 
-    # Fetch live models for Ollama and WatsonX if they are enabled
-    # This replaces static defaults with actual available models from the configured instances
-    if user_id and enabled_providers:
-        for provider in ["Ollama", "IBM WatsonX"]:
-            if provider in enabled_providers:
-                live_models = get_live_models_for_provider(user_id, provider, "llm")
-                if live_models:
-                    # Replace static models with live models for this provider
-                    all_models = [pm for pm in all_models if pm.get("provider") != provider]
-                    # Group live models by provider
-                    all_models.append(
-                        {
-                            "provider": provider,
-                            "models": [
-                                {
-                                    "model_name": m.get("name"),
-                                    "metadata": {k: v for k, v in m.items() if k not in ("provider", "name")},
-                                }
-                                for m in live_models
-                            ],
-                            "num_models": len(live_models),
-                            **model_provider_metadata.get(provider, {}),
-                        }
-                    )
+    # Replace static defaults with actual available models from configured instances
+    if enabled_providers:
+        replace_with_live_models(all_models, user_id, enabled_providers, "llm", model_provider_metadata)
 
     options = []
 
@@ -1043,30 +1022,9 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
             # If we can't get enabled providers, show all
             pass
 
-    # Fetch live models for Ollama and WatsonX if they are enabled
-    # This replaces static defaults with actual available models from the configured instances
-    if user_id and enabled_providers:
-        for provider in ["Ollama", "IBM WatsonX"]:
-            if provider in enabled_providers:
-                live_models = get_live_models_for_provider(user_id, provider, "embeddings")
-                if live_models:
-                    # Replace static models with live models for this provider
-                    all_models = [pm for pm in all_models if pm.get("provider") != provider]
-                    # Group live models by provider
-                    all_models.append(
-                        {
-                            "provider": provider,
-                            "models": [
-                                {
-                                    "model_name": m.get("name"),
-                                    "metadata": {k: v for k, v in m.items() if k not in ("provider", "name")},
-                                }
-                                for m in live_models
-                            ],
-                            "num_models": len(live_models),
-                            **model_provider_metadata.get(provider, {}),
-                        }
-                    )
+    # Replace static defaults with actual available models from configured instances
+    if enabled_providers:
+        replace_with_live_models(all_models, user_id, enabled_providers, "embeddings", model_provider_metadata)
 
     options = []
     embedding_class_mapping = {

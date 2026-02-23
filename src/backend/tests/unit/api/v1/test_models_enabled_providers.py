@@ -517,7 +517,7 @@ async def test_list_models_returns_live_ollama_models_when_configured(client: As
             side_effect=mock_get_enabled_providers,
         ),
         mock.patch(
-            "langflow.api.v1.models.get_live_models_for_provider",
+            "lfx.base.models.model_utils.get_live_models_for_provider",
             side_effect=[live_ollama_models, []],  # llm list, then embeddings list
         ),
     ):
@@ -549,7 +549,7 @@ async def test_list_models_ollama_empty_when_live_fetch_returns_empty(client: As
             side_effect=mock_get_enabled_providers,
         ),
         mock.patch(
-            "langflow.api.v1.models.get_live_models_for_provider",
+            "lfx.base.models.model_utils.get_live_models_for_provider",
             return_value=[],
         ),
     ):
