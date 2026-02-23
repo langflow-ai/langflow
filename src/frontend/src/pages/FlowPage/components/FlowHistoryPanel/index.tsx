@@ -34,12 +34,15 @@ import {
 } from "@xyflow/react";
 import {
   cleanEdges,
+  downloadFlow,
   processFlowEdges,
   processFlowNodes,
+  removeApiKeys,
   updateEdges,
 } from "@/utils/reactflowUtils";
 import { cn } from "@/utils/utils";
 import { cloneDeep } from "lodash";
+import { ErrorBoundary } from "react-error-boundary";
 import { nodeTypes, edgeTypes } from "../../consts";
 
 // ---------------------------------------------------------------------------
@@ -413,15 +416,16 @@ export default function FlowHistoryPanel({
           return;
         }
 
-        const blob = new Blob([JSON.stringify(data, null, 2)], {
-          type: "application/json",
-        });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `${currentFlow?.name || "flow"}_${tag}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
+        const flowName = `${currentFlow?.name || "flow"}_${tag}`;
+        const flowToExport = removeApiKeys({
+          id: currentFlow?.id ?? "",
+          data,
+          name: flowName,
+          description: currentFlow?.description ?? "",
+          is_component: false,
+        } as any);
+
+        await downloadFlow(flowToExport, flowName, flowToExport.description);
       } catch (err: any) {
         const detail = err?.response?.data?.detail;
         setErrorData({
@@ -489,12 +493,20 @@ export default function FlowHistoryPanel({
               This version's data could not be rendered for preview
             </div>
           ) : previewData.nodes.length > 0 ? (
-            <ReactFlowProvider>
-              <PreviewCanvas
-                nodes={previewData.nodes}
-                edges={previewData.edges}
-              />
-            </ReactFlowProvider>
+            <ErrorBoundary
+              FallbackComponent={() => (
+                <div className="flex h-full items-center justify-center text-destructive">
+                  Failed to render preview
+                </div>
+              )}
+            >
+              <ReactFlowProvider>
+                <PreviewCanvas
+                  nodes={previewData.nodes}
+                  edges={previewData.edges}
+                />
+              </ReactFlowProvider>
+            </ErrorBoundary>
           ) : (
             <div className="flex h-full items-center justify-center text-muted-foreground">
               No data to preview

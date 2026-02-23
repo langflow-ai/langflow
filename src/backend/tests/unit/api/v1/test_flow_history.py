@@ -964,6 +964,56 @@ async def test_download_strips_api_keys_from_history(client: AsyncClient, logged
     assert template["openai_api_key"]["value"] is None
 
 
+async def test_get_single_entry_preserves_api_keys_for_client_side_stripping(client: AsyncClient, logged_in_headers):
+    """GET /history/{id} should return full data including API keys.
+
+    The single-entry endpoint is used by the frontend's per-version export,
+    which applies removeApiKeys client-side (matching the main canvas export
+    flow). The server must NOT strip keys here — that's the export endpoint's
+    job (/history/export).
+    """
+    api_key_data = {
+        "nodes": [
+            {
+                "id": "node-1",
+                "data": {
+                    "node": {
+                        "template": {
+                            "api_key": {
+                                "value": "sk-secret-99999",
+                                "name": "api_key",
+                                "password": True,
+                            }
+                        }
+                    }
+                },
+            }
+        ],
+        "edges": [],
+    }
+    payload = {
+        "name": "single-entry-api-key-test",
+        "description": "test",
+        "data": api_key_data,
+        "is_component": False,
+    }
+    resp = await client.post("api/v1/flows/", json=payload, headers=logged_in_headers)
+    assert resp.status_code == status.HTTP_201_CREATED
+    flow = resp.json()
+
+    snap = await _create_snapshot(client, logged_in_headers, flow["id"])
+
+    # Fetch the single entry — data should still contain the API key
+    resp = await client.get(
+        f"api/v1/flows/{flow['id']}/history/{snap['id']}",
+        headers=logged_in_headers,
+    )
+    assert resp.status_code == status.HTTP_200_OK
+    entry_data = resp.json()["data"]
+    template = entry_data["nodes"][0]["data"]["node"]["template"]
+    assert template["api_key"]["value"] == "sk-secret-99999"
+
+
 async def test_create_snapshot_rejects_long_description(client: AsyncClient, logged_in_headers):
     """POST with description > 500 chars should be rejected with 422."""
     flow = await _create_flow(client, logged_in_headers)
@@ -1104,6 +1154,27 @@ async def test_activate_with_deeply_nested_data(client: AsyncClient, logged_in_h
     assert resp.status_code == status.HTTP_200_OK
     restored = resp.json()
     assert restored["data"] == deep_data
+
+
+async def test_version_number_is_always_positive(client: AsyncClient, logged_in_headers):
+    """get_next_version_number always returns >= 1, even for a brand-new flow."""
+    from langflow.services.database.models.flow_history.crud import get_next_version_number
+    from langflow.services.deps import session_scope
+
+    flow = await _create_flow(client, logged_in_headers)
+
+    async with session_scope() as session:
+        from uuid import UUID
+
+        next_ver = await get_next_version_number(session, UUID(flow["id"]))
+        assert next_ver >= 1
+
+    # After creating a snapshot, next version should still be >= 1
+    await _create_snapshot(client, logged_in_headers, flow["id"])
+    async with session_scope() as session:
+        next_ver = await get_next_version_number(session, UUID(flow["id"]))
+        assert next_ver >= 1
+        assert next_ver == 2
 
 
 async def test_rapid_snapshots_with_low_limit(client: AsyncClient, logged_in_headers, monkeypatch):

@@ -37,6 +37,7 @@ def upgrade() -> None:
             sa.ForeignKeyConstraint(["user_id"], ["user.id"]),
             sa.PrimaryKeyConstraint("id"),
             sa.UniqueConstraint("flow_id", "version_number", name="unique_flow_version_number"),
+            sa.CheckConstraint("version_number >= 1", name="check_version_number_positive"),
         )
         op.create_index(op.f("ix_flow_history_flow_id"), "flow_history", ["flow_id"])
         op.create_index(op.f("ix_flow_history_user_id"), "flow_history", ["user_id"])
