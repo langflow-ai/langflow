@@ -82,7 +82,8 @@
               "chunk_size",
               "separator",
               "text_key",
-              "keep_separator"
+              "keep_separator",
+              "clean_output"
             ],
             "frozen": false,
             "icon": "scissors-line-dashed",

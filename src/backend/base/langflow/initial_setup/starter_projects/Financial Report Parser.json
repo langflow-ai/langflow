@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-AT9yi",
+            "id": "ChatInput-MyPIB",
             "name": "message",
             "output_types": [
               "Message"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "StructuredOutput-il3eU",
+            "id": "StructuredOutput-ZOoVy",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__ChatInput-AT9yi{œdataTypeœ:œChatInputœ,œidœ:œChatInput-AT9yiœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-il3eU{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-il3eUœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-MyPIB{œdataTypeœ:œChatInputœ,œidœ:œChatInput-MyPIBœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-ZOoVy{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-ZOoVyœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-AT9yi",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-AT9yiœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "StructuredOutput-il3eU",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œStructuredOutput-il3eUœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-MyPIB",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-MyPIBœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "StructuredOutput-ZOoVy",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œStructuredOutput-ZOoVyœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "StructuredOutput",
-            "id": "StructuredOutput-il3eU",
+            "id": "StructuredOutput-ZOoVy",
             "name": "dataframe_output",
             "output_types": [
               "DataFrame"
@@ -43,7 +43,7 @@
           },
           "targetHandle": {
             "fieldName": "input_data",
-            "id": "ParserComponent-FWDxd",
+            "id": "ParserComponent-pxQmg",
             "inputTypes": [
               "DataFrame",
               "Data"
@@ -51,12 +51,12 @@
             "type": "other"
           }
         },
-        "id": "xy-edge__StructuredOutput-il3eU{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-il3eUœ,œnameœ:œdataframe_outputœ,œoutput_typesœ:[œDataFrameœ]}-ParserComponent-FWDxd{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-FWDxdœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-StructuredOutput-ZOoVy{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-ZOoVyœ,œnameœ:œdataframe_outputœ,œoutput_typesœ:[œDataFrameœ]}-ParserComponent-pxQmg{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-pxQmgœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "StructuredOutput-il3eU",
-        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-il3eUœ, œnameœ: œdataframe_outputœ, œoutput_typesœ: [œDataFrameœ]}",
-        "target": "ParserComponent-FWDxd",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-FWDxdœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
+        "source": "StructuredOutput-ZOoVy",
+        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-ZOoVyœ, œnameœ: œdataframe_outputœ, œoutput_typesœ: [œDataFrameœ]}",
+        "target": "ParserComponent-pxQmg",
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-pxQmgœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -64,7 +64,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ParserComponent",
-            "id": "ParserComponent-FWDxd",
+            "id": "ParserComponent-pxQmg",
             "name": "parsed_text",
             "output_types": [
               "Message"
@@ -72,7 +72,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-XvCBo",
+            "id": "ChatOutput-RZUAi",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -81,18 +81,18 @@
             "type": "str"
           }
         },
-        "id": "xy-edge__ParserComponent-FWDxd{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-FWDxdœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-XvCBo{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-XvCBoœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ParserComponent-pxQmg{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-pxQmgœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-RZUAi{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-RZUAiœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ParserComponent-FWDxd",
-        "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-FWDxdœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-XvCBo",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-XvCBoœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "ParserComponent-pxQmg",
+        "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-pxQmgœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-RZUAi",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-RZUAiœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatOutput-XvCBo",
+          "id": "ChatOutput-RZUAi",
           "node": {
             "base_classes": [
               "Message"
@@ -111,10 +111,9 @@
               "sender",
               "sender_name",
               "session_id",
+              "context_id",
               "data_template",
-              "background_color",
-              "chat_icon",
-              "text_color"
+              "clean_data"
             ],
             "frozen": false,
             "icon": "MessagesSquare",
@@ -364,9 +363,9 @@
           "showNode": false,
           "type": "ChatOutput"
         },
-        "id": "ChatOutput-XvCBo",
+        "id": "ChatOutput-RZUAi",
         "measured": {
-          "height": 48,
+          "height": 52,
           "width": 192
         },
         "position": {
@@ -378,7 +377,7 @@
       },
       {
         "data": {
-          "id": "ChatInput-AT9yi",
+          "id": "ChatInput-MyPIB",
           "node": {
             "base_classes": [
               "Message"
@@ -397,10 +396,8 @@
               "sender",
               "sender_name",
               "session_id",
-              "files",
-              "background_color",
-              "chat_icon",
-              "text_color"
+              "context_id",
+              "files"
             ],
             "frozen": false,
             "icon": "MessagesSquare",
@@ -644,9 +641,9 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-AT9yi",
+        "id": "ChatInput-MyPIB",
         "measured": {
-          "height": 48,
+          "height": 52,
           "width": 192
         },
         "position": {
@@ -658,9 +655,9 @@
       },
       {
         "data": {
-          "id": "note-khpnk",
+          "id": "note-WioUG",
           "node": {
-            "description": "### 💡 Add your OpenAI API key here",
+            "description": "### Configure your Model Provider",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -670,21 +667,24 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-khpnk",
+        "height": 324,
+        "id": "note-WioUG",
         "measured": {
           "height": 324,
-          "width": 324
+          "width": 366
         },
         "position": {
-          "x": 905.0310846743869,
-          "y": -389.43902326187924
+          "x": 1307.1189512668136,
+          "y": 123.76311712822923
         },
+        "resizing": false,
         "selected": false,
-        "type": "noteNode"
+        "type": "noteNode",
+        "width": 366
       },
       {
         "data": {
-          "id": "note-zgFqi",
+          "id": "note-dRvm6",
           "node": {
             "description": "This template extracts key financial metrics from a given financial report text. The extracted data is structured and formatted for chat consumption.\n\n## Quickstart\n\n1. Add your OpenAI API key to the **Language Model** component, or select a different provider and model.\n2. Open the **Playground** to start the chat and run the flow.\nFor this example, the **Chat Input** component is pre-loaded with a sample financial report. The **Language Model** component identifies and retrieves the gross profit, EBITDA, net income, and operating expenses information from the financial report. Then, the **Structured Output** component formats extracted data into a structured format for better readability and further processing. Finally, the **Parser** component converts extracted data into a messages to be returned to the user.",
             "display_name": "",
@@ -695,7 +695,7 @@
         },
         "dragging": false,
         "height": 688,
-        "id": "note-zgFqi",
+        "id": "note-dRvm6",
         "measured": {
           "height": 688,
           "width": 619
@@ -711,7 +711,7 @@
       },
       {
         "data": {
-          "id": "StructuredOutput-il3eU",
+          "id": "StructuredOutput-ZOoVy",
           "node": {
             "base_classes": [
               "Data",
@@ -725,7 +725,8 @@
             "documentation": "https://docs.langflow.org/components-processing#structured-output",
             "edited": false,
             "field_order": [
-              "llm",
+              "model",
+              "api_key",
               "input_value",
               "system_prompt",
               "schema_name",
@@ -733,6 +734,7 @@
             ],
             "frozen": false,
             "icon": "braces",
+            "last_updated": "2026-02-12T21:08:44.169Z",
             "legacy": false,
             "lf_version": "1.6.0",
             "metadata": {
@@ -766,7 +768,7 @@
                 "group_outputs": false,
                 "method": "build_structured_output",
                 "name": "structured_output",
-                "selected": null,
+                "selected": "Data",
                 "tool_mode": true,
                 "types": [
                   "Data"
@@ -798,7 +800,7 @@
                 "dynamic": false,
                 "info": "Model Provider API key",
                 "input_types": [],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "api_key",
                 "override_skip": false,
                 "password": true,
@@ -878,6 +880,310 @@
                 "list_add_label": "Add More",
                 "model_type": "language",
                 "name": "model",
+                "options": [
+                  {
+                    "category": "Anthropic",
+                    "icon": "Anthropic",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatAnthropic",
+                      "model_name_param": "model"
+                    },
+                    "name": "claude-opus-4-5-20251101",
+                    "provider": "Anthropic"
+                  },
+                  {
+                    "category": "Anthropic",
+                    "icon": "Anthropic",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatAnthropic",
+                      "model_name_param": "model"
+                    },
+                    "name": "claude-haiku-4-5-20251001",
+                    "provider": "Anthropic"
+                  },
+                  {
+                    "category": "Anthropic",
+                    "icon": "Anthropic",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatAnthropic",
+                      "model_name_param": "model"
+                    },
+                    "name": "claude-sonnet-4-5-20250929",
+                    "provider": "Anthropic"
+                  },
+                  {
+                    "category": "Anthropic",
+                    "icon": "Anthropic",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatAnthropic",
+                      "model_name_param": "model"
+                    },
+                    "name": "claude-opus-4-1-20250805",
+                    "provider": "Anthropic"
+                  },
+                  {
+                    "category": "Anthropic",
+                    "icon": "Anthropic",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatAnthropic",
+                      "model_name_param": "model"
+                    },
+                    "name": "claude-opus-4-20250514",
+                    "provider": "Anthropic"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5.1"
+                      ]
+                    },
+                    "name": "gpt-5.1",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5"
+                      ]
+                    },
+                    "name": "gpt-5",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5-mini"
+                      ]
+                    },
+                    "name": "gpt-5-mini",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5-nano"
+                      ]
+                    },
+                    "name": "gpt-5-nano",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5-chat-latest"
+                      ]
+                    },
+                    "name": "gpt-5-chat-latest",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "Google Generative AI",
+                    "icon": "GoogleGenerativeAI",
+                    "metadata": {
+                      "api_key_param": "google_api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatGoogleGenerativeAIFixed",
+                      "model_name_param": "model"
+                    },
+                    "name": "gemini-1.5-pro",
+                    "provider": "Google Generative AI"
+                  },
+                  {
+                    "category": "Google Generative AI",
+                    "icon": "GoogleGenerativeAI",
+                    "metadata": {
+                      "api_key_param": "google_api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatGoogleGenerativeAIFixed",
+                      "model_name_param": "model"
+                    },
+                    "name": "gemini-1.5-flash",
+                    "provider": "Google Generative AI"
+                  },
+                  {
+                    "category": "Google Generative AI",
+                    "icon": "GoogleGenerativeAI",
+                    "metadata": {
+                      "api_key_param": "google_api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatGoogleGenerativeAIFixed",
+                      "model_name_param": "model"
+                    },
+                    "name": "gemini-1.5-flash-8b",
+                    "provider": "Google Generative AI"
+                  },
+                  {
+                    "category": "Google Generative AI",
+                    "icon": "GoogleGenerativeAI",
+                    "metadata": {
+                      "api_key_param": "google_api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatGoogleGenerativeAIFixed",
+                      "model_name_param": "model"
+                    },
+                    "name": "gemini-2.0-flash-lite",
+                    "provider": "Google Generative AI"
+                  },
+                  {
+                    "category": "Google Generative AI",
+                    "icon": "GoogleGenerativeAI",
+                    "metadata": {
+                      "api_key_param": "google_api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatGoogleGenerativeAIFixed",
+                      "model_name_param": "model"
+                    },
+                    "name": "gemini-3-pro-preview",
+                    "provider": "Google Generative AI"
+                  },
+                  {
+                    "category": "Ollama",
+                    "icon": "Ollama",
+                    "metadata": {
+                      "api_key_param": "base_url",
+                      "base_url_param": "base_url",
+                      "context_length": 128000,
+                      "model_class": "ChatOllama",
+                      "model_name_param": "model"
+                    },
+                    "name": "llama3.3",
+                    "provider": "Ollama"
+                  },
+                  {
+                    "category": "Ollama",
+                    "icon": "Ollama",
+                    "metadata": {
+                      "api_key_param": "base_url",
+                      "base_url_param": "base_url",
+                      "context_length": 128000,
+                      "model_class": "ChatOllama",
+                      "model_name_param": "model"
+                    },
+                    "name": "qwq",
+                    "provider": "Ollama"
+                  },
+                  {
+                    "category": "Ollama",
+                    "icon": "Ollama",
+                    "metadata": {
+                      "api_key_param": "base_url",
+                      "base_url_param": "base_url",
+                      "context_length": 128000,
+                      "model_class": "ChatOllama",
+                      "model_name_param": "model"
+                    },
+                    "name": "llama3.2",
+                    "provider": "Ollama"
+                  },
+                  {
+                    "category": "Ollama",
+                    "icon": "Ollama",
+                    "metadata": {
+                      "api_key_param": "base_url",
+                      "base_url_param": "base_url",
+                      "context_length": 128000,
+                      "model_class": "ChatOllama",
+                      "model_name_param": "model"
+                    },
+                    "name": "llama3.1",
+                    "provider": "Ollama"
+                  },
+                  {
+                    "category": "Ollama",
+                    "icon": "Ollama",
+                    "metadata": {
+                      "api_key_param": "base_url",
+                      "base_url_param": "base_url",
+                      "context_length": 128000,
+                      "model_class": "ChatOllama",
+                      "model_name_param": "model"
+                    },
+                    "name": "mistral",
+                    "provider": "Ollama"
+                  },
+                  {
+                    "category": "IBM WatsonX",
+                    "icon": "WatsonxAI",
+                    "metadata": {
+                      "api_key_param": "apikey",
+                      "context_length": 128000,
+                      "model_class": "ChatWatsonx",
+                      "model_name_param": "model_id",
+                      "project_id_param": "project_id",
+                      "url_param": "url"
+                    },
+                    "name": "ibm/granite-3-2b-instruct",
+                    "provider": "IBM WatsonX"
+                  },
+                  {
+                    "category": "IBM WatsonX",
+                    "icon": "WatsonxAI",
+                    "metadata": {
+                      "api_key_param": "apikey",
+                      "context_length": 128000,
+                      "model_class": "ChatWatsonx",
+                      "model_name_param": "model_id",
+                      "project_id_param": "project_id",
+                      "url_param": "url"
+                    },
+                    "name": "ibm/granite-3-8b-instruct",
+                    "provider": "IBM WatsonX"
+                  },
+                  {
+                    "category": "IBM WatsonX",
+                    "icon": "WatsonxAI",
+                    "metadata": {
+                      "api_key_param": "apikey",
+                      "context_length": 128000,
+                      "model_class": "ChatWatsonx",
+                      "model_name_param": "model_id",
+                      "project_id_param": "project_id",
+                      "url_param": "url"
+                    },
+                    "name": "ibm/granite-13b-instruct-v2",
+                    "provider": "IBM WatsonX"
+                  }
+                ],
                 "override_skip": false,
                 "placeholder": "Setup Provider",
                 "real_time_refresh": true,
@@ -889,7 +1195,20 @@
                 "trace_as_input": true,
                 "track_in_telemetry": false,
                 "type": "model",
-                "value": ""
+                "value": [
+                  {
+                    "category": "Anthropic",
+                    "icon": "Anthropic",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatAnthropic",
+                      "model_name_param": "model"
+                    },
+                    "name": "claude-opus-4-5-20251101",
+                    "provider": "Anthropic"
+                  }
+                ]
               },
               "output_schema": {
                 "_input_type": "TableInput",
@@ -1032,21 +1351,21 @@
           "type": "StructuredOutput"
         },
         "dragging": false,
-        "id": "StructuredOutput-il3eU",
+        "id": "StructuredOutput-ZOoVy",
         "measured": {
-          "height": 349,
+          "height": 343,
           "width": 320
         },
         "position": {
           "x": 1322.636615615224,
           "y": 179.73895831803156
         },
-        "selected": true,
+        "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "ParserComponent-FWDxd",
+          "id": "ParserComponent-pxQmg",
           "node": {
             "base_classes": [
               "Message"
@@ -1217,9 +1536,9 @@
           "type": "ParserComponent"
         },
         "dragging": false,
-        "id": "ParserComponent-FWDxd",
+        "id": "ParserComponent-pxQmg",
         "measured": {
-          "height": 329,
+          "height": 303,
           "width": 320
         },
         "position": {
@@ -1231,16 +1550,16 @@
       }
     ],
     "viewport": {
-      "x": -129.99735024931374,
-      "y": 274.8803546176353,
-      "zoom": 0.5746305066300074
+      "x": -2270.965426018042,
+      "y": 243.36378726332543,
+      "zoom": 1.9944600091750162
     }
   },
   "description": "Extracts key financial metrics like Gross Profit, EBITDA, and Net Income from financial reports and structures them for easy analysis, using Structured Output Component",
   "endpoint_name": null,
-  "id": "f8c24175-895d-4255-8014-e3f79a09539f",
+  "id": "696f1320-1483-4950-87bb-14d7edf7b6e5",
   "is_component": false,
-  "last_tested_version": "1.6.0",
+  "last_tested_version": "1.8.0",
   "name": "Financial Report Parser",
   "tags": [
     "chatbots",
