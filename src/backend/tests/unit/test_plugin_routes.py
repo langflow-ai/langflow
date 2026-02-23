@@ -9,10 +9,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 from fastapi import FastAPI
 from fastapi.routing import APIRouter
-
 from langflow.plugin_routes import (
-    _PluginAppWrapper,
     _get_route_keys,
+    _PluginAppWrapper,
     load_plugin_routes,
 )
 
@@ -221,8 +220,7 @@ class TestLoadPluginRoutes:
 
         # Core route must still be the only one at that path
         routes_at_path = [
-            r for r in app.router.routes
-            if getattr(r, "path", None) == "/api/v1/flow" and hasattr(r, "methods")
+            r for r in app.router.routes if getattr(r, "path", None) == "/api/v1/flow" and hasattr(r, "methods")
         ]
         assert len(routes_at_path) == 1
 

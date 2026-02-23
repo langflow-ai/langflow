@@ -7,7 +7,6 @@ a wrapper so they cannot overwrite or shadow existing Langflow routes.
 from importlib.metadata import entry_points
 
 from fastapi import FastAPI
-
 from lfx.log.logger import logger
 
 
@@ -46,9 +45,7 @@ class _PluginAppWrapper:
                 continue
             key = (path, method)
             if key in self._reserved:
-                raise ValueError(
-                    f"Plugin route conflicts with existing route: {path} [{method}]"
-                )
+                raise ValueError(f"Plugin route conflicts with existing route: {path} [{method}]")
             self._reserved.add(key)
 
     def include_router(self, router, prefix: str = "", **kwargs) -> None:
