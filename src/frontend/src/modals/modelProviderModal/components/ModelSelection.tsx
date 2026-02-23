@@ -152,7 +152,11 @@ const ModelSelection = ({
           ) : modelType === "llm" ? (
             renderModelSection("Language Models", llmModels, "llm")
           ) : (
-            renderModelSection("Embedding Models", embeddingModels, "embeddings")
+            renderModelSection(
+              "Embedding Models",
+              embeddingModels,
+              "embeddings",
+            )
           )}
         </>
       )}

@@ -124,7 +124,11 @@ export const useProviderConfiguration = ({
       invalidateProviderQueries();
     }
     setSyncedSelectedProvider(selectedProvider);
-  }, [selectedProvider, invalidateProviderQueries, syncedSelectedProvider?.provider]);
+  }, [
+    selectedProvider,
+    invalidateProviderQueries,
+    syncedSelectedProvider?.provider,
+  ]);
 
   // Sync selectedProvider with fresh data when model providers are refetched
   useEffect(() => {
@@ -186,7 +190,6 @@ export const useProviderConfiguration = ({
     isDeleting ||
     isSaving ||
     validationState === "validating";
-
 
   // Helper to get configured value for a variable from globalVariables
   const getConfiguredValue = useCallback(
