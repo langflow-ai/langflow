@@ -22,7 +22,7 @@ from sqlmodel import and_, col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import CurrentActiveUser, DbSession, cascade_delete_flow, remove_api_keys, validate_is_component
-from langflow.api.v1.flow_history import _strip_history_data
+from langflow.api.v1.flow_history import strip_history_data
 from langflow.api.v1.schemas import FlowListCreate
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
@@ -37,6 +37,7 @@ from langflow.services.database.models.flow.model import (
 )
 from langflow.services.database.models.flow.utils import get_webhook_component_in_flow
 from langflow.services.database.models.flow_history.crud import create_flow_history_entry, get_flow_history_list
+from langflow.services.database.models.flow_history.exceptions import FlowHistoryError
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.folder.utils import get_default_folder_id
@@ -782,11 +783,20 @@ async def upload_file(
                             data=raw_data,
                             description=h_entry.get("description"),
                         )
-                    except Exception:  # noqa: BLE001
+                    except FlowHistoryError:
+                        # Expected domain errors (size limit, serialization) — warn-level
                         await logger.awarning(
                             "Skipping history entry during import for flow %s: %s",
                             flow_read.id,
                             h_entry.get("description", "(no description)"),
+                        )
+                    except Exception:  # noqa: BLE001
+                        # Unexpected errors (DB failure, etc.) — error-level
+                        await logger.aerror(
+                            "Unexpected error importing history entry for flow %s: %s",
+                            flow_read.id,
+                            h_entry.get("description", "(no description)"),
+                            exc_info=True,
                         )
     except Exception as e:
         if "UNIQUE constraint failed" in str(e):
@@ -860,7 +870,7 @@ async def download_multiple_file(
                 {
                     "version_number": e.version_number,
                     "description": e.description,
-                    "data": _strip_history_data(e.data),
+                    "data": strip_history_data(e.data),
                     "created_at": e.created_at.isoformat() if e.created_at else None,
                 }
                 for e in history_entries

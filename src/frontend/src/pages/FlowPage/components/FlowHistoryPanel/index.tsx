@@ -1,5 +1,6 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -125,12 +126,17 @@ export default function FlowHistoryPanel({
     versionTag: string;
   } | null>(null);
   const [isRestoring, setIsRestoring] = useState(false);
+  const [saveDraftOnRestore, setSaveDraftOnRestore] = useState(true);
+  const [pruneWarning, setPruneWarning] = useState(false);
 
   const {
-    data: history,
+    data: historyResponse,
     isLoading,
     isError: isListError,
   } = useGetFlowHistory({ flowId }, { refetchInterval: 10000 });
+
+  const history = historyResponse?.entries;
+  const maxEntries = historyResponse?.max_entries;
 
   const { mutate: createSnapshot, isPending: isCreating } =
     usePostCreateSnapshot();
@@ -157,50 +163,9 @@ export default function FlowHistoryPanel({
     edges: cloneDeep(useFlowStore.getState().edges),
   });
 
-  // Disable auto-save while the panel is open. The store-swap for previewing
-  // historical versions would cause auto-save to overwrite the working draft
-  // with historical data.
-  // Also hide the inspection panel so it doesn't pop up over the history view.
-  const autoSaveFnRef = useRef<any>(null);
-  const inspectionPanelWasVisible = useRef(false);
-  useLayoutEffect(() => {
-    const currentAutoSave = useFlowStore.getState().autoSaveFlow;
-    if (currentAutoSave) {
-      autoSaveFnRef.current = currentAutoSave;
-      // Flush (not cancel) any pending debounced save so the DB captures the
-      // latest draft changes. At this point the store still has the original
-      // draft data, so the flushed save writes the correct state.
-      if (typeof currentAutoSave.flush === "function") {
-        try {
-          currentAutoSave.flush();
-        } catch (err) {
-          console.warn("FlowHistoryPanel: failed to flush auto-save:", err);
-        }
-      }
-      useFlowStore.setState({ autoSaveFlow: undefined });
-    } else {
-      console.warn(
-        "FlowHistoryPanel: autoSaveFlow was already undefined on mount",
-      );
-    }
-
-    // Hide the inspection panel (bypass setInspectionPanelVisible to avoid
-    // persisting to localStorage — we'll restore the original value on close)
-    inspectionPanelWasVisible.current =
-      useFlowStore.getState().inspectionPanelVisible;
-    if (inspectionPanelWasVisible.current) {
-      useFlowStore.setState({ inspectionPanelVisible: false });
-    }
-
-    return () => {
-      if (autoSaveFnRef.current) {
-        useFlowStore.setState({ autoSaveFlow: autoSaveFnRef.current });
-      }
-      if (inspectionPanelWasVisible.current) {
-        useFlowStore.setState({ inspectionPanelVisible: true });
-      }
-    };
-  }, []);
+  // NOTE: Auto-save disabling and inspection panel hiding are managed by the
+  // parent HistoryButton component. This ensures cleanup runs even if this
+  // component crashes during render.
 
   // Process historical data through the same pipeline the main canvas uses
   // (processFlowEdges → processFlowNodes → updateEdges → cleanEdges).
@@ -249,11 +214,13 @@ export default function FlowHistoryPanel({
     };
   }, []);
 
-  // Escape key closes the panel (or dismiss restore/delete prompts)
+  // Escape key closes the panel (or dismiss restore/delete/prune prompts)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        if (deleteTarget) {
+        if (pruneWarning) {
+          setPruneWarning(false);
+        } else if (deleteTarget) {
           setDeleteTarget(null);
         } else if (restoreConfirm) {
           setRestoreConfirm(null);
@@ -264,7 +231,7 @@ export default function FlowHistoryPanel({
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose, restoreConfirm, deleteTarget]);
+  }, [onClose, restoreConfirm, deleteTarget, pruneWarning]);
 
   // The nodes/edges shown in the preview canvas
   const previewData = useMemo(() => {
@@ -282,7 +249,7 @@ export default function FlowHistoryPanel({
     setSelectedId(entryId);
   }, []);
 
-  const handleCreateSnapshot = useCallback(() => {
+  const doCreateSnapshot = useCallback(() => {
     createSnapshot(
       { flowId, description: description || null },
       {
@@ -290,6 +257,7 @@ export default function FlowHistoryPanel({
           setSuccessData({ title: "Version saved" });
           setDescription("");
           setShowCreateForm(false);
+          setPruneWarning(false);
         },
         onError: (err: any) => {
           const detail = err?.response?.data?.detail;
@@ -297,10 +265,19 @@ export default function FlowHistoryPanel({
             title: "Failed to save version",
             ...(detail ? { list: [detail] } : {}),
           });
+          setPruneWarning(false);
         },
       },
     );
   }, [flowId, description, createSnapshot, setSuccessData, setErrorData]);
+
+  const handleCreateSnapshot = useCallback(() => {
+    if (history && maxEntries && history.length >= maxEntries) {
+      setPruneWarning(true);
+      return;
+    }
+    doCreateSnapshot();
+  }, [history, maxEntries, doCreateSnapshot]);
 
   // Restore = call the /activate endpoint (which auto-snapshots server-side
   // and returns the updated flow).
@@ -311,9 +288,10 @@ export default function FlowHistoryPanel({
       setIsRestoring(true);
       let updatedFlow: any;
       try {
-        // The activate endpoint auto-saves the current draft before overwriting
         const response = await api.post(
           `${getURL("FLOWS")}/${flowId}/history/${historyId}/activate`,
+          null,
+          { params: { save_draft: saveDraftOnRestore } },
         );
         updatedFlow = response.data;
       } catch (err: any) {
@@ -364,7 +342,7 @@ export default function FlowHistoryPanel({
         setRestoreConfirm(null);
       }
     },
-    [flowId, applyFlowToCanvas, setSuccessData, setErrorData, onClose],
+    [flowId, saveDraftOnRestore, applyFlowToCanvas, setSuccessData, setErrorData, onClose],
   );
 
   const handleDelete = useCallback(
@@ -602,7 +580,7 @@ export default function FlowHistoryPanel({
           {/* History count */}
           {history && history.length > 0 && (
             <div className="border-b px-3 py-2 text-xs text-muted-foreground">
-              {history.length} version{history.length !== 1 ? "s" : ""}
+              {history.length}{maxEntries ? ` / ${maxEntries}` : ""} versions
             </div>
           )}
 
@@ -744,8 +722,17 @@ export default function FlowHistoryPanel({
             </div>
             <p className="text-sm text-muted-foreground">
               Restore <strong>{restoreConfirm.versionTag}</strong> as the
-              working draft? Your current state will be auto-saved.
+              working draft?
             </p>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <Checkbox
+                checked={saveDraftOnRestore}
+                onCheckedChange={(checked) =>
+                  setSaveDraftOnRestore(checked === true)
+                }
+              />
+              <span className="text-sm">Save current working draft</span>
+            </label>
             <div className="flex justify-end gap-2">
               <Button
                 variant="outline"
@@ -797,6 +784,64 @@ export default function FlowHistoryPanel({
                 loading={isDeleting}
               >
                 Delete
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Prune warning dialog */}
+      {pruneWarning && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/40">
+          <div className="mx-4 flex w-full max-w-md flex-col gap-4 rounded-xl border bg-background p-6 shadow-lg">
+            <div className="flex items-center gap-2">
+              <ForwardedIconComponent
+                name="AlertTriangle"
+                className="h-5 w-5 text-warning"
+              />
+              <span className="text-lg font-semibold">
+                Version Limit Reached
+              </span>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {(() => {
+                const pruneCount = (history?.length ?? 0) + 1 - (maxEntries ?? 0);
+                if (pruneCount <= 1) {
+                  return (
+                    <>
+                      You've reached the maximum of{" "}
+                      <strong>{maxEntries}</strong> saved versions. Saving a
+                      new version will automatically delete the oldest version.
+                      Do you want to continue?
+                    </>
+                  );
+                }
+                return (
+                  <>
+                    You have <strong>{history?.length}</strong> versions but
+                    the limit is <strong>{maxEntries}</strong>. Saving a new
+                    version will automatically delete the{" "}
+                    <strong>{pruneCount}</strong> oldest versions. Do you want
+                    to continue?
+                  </>
+                );
+              })()}
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPruneWarning(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={doCreateSnapshot}
+                loading={isCreating}
+              >
+                Continue
               </Button>
             </div>
           </div>

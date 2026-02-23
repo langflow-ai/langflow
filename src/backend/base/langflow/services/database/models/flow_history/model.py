@@ -22,6 +22,9 @@ class FlowHistory(SQLModel, table=True):  # type: ignore[call-arg]
     description: str | None = Field(default=None, nullable=True)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), nullable=False)
 
+    # The UniqueConstraint on (flow_id, version_number) creates an implicit composite
+    # btree index that also covers ORDER BY version_number DESC queries filtered by
+    # flow_id. No additional index is needed for the list/prune queries.
     __table_args__ = (
         UniqueConstraint("flow_id", "version_number", name="unique_flow_version_number"),
         CheckConstraint("version_number >= 1", name="check_version_number_positive"),
@@ -61,3 +64,10 @@ class FlowHistoryCreate(BaseModel):
     """Schema for creating a history entry — user only provides description."""
 
     description: str | None = Field(default=None, max_length=500)
+
+
+class FlowHistoryListResponse(BaseModel):
+    """Wrapper for the list endpoint — includes entries and the configured max."""
+
+    entries: list[FlowHistoryRead]
+    max_entries: int

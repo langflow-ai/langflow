@@ -1,5 +1,5 @@
 import type { useQueryFunctionType } from "@/types/api";
-import type { FlowHistoryEntry } from "@/types/flow/history";
+import type { FlowHistoryListResponse } from "@/types/flow/history";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -12,12 +12,12 @@ interface FlowHistoryParams {
 
 export const useGetFlowHistory: useQueryFunctionType<
   FlowHistoryParams,
-  FlowHistoryEntry[]
+  FlowHistoryListResponse
 > = ({ flowId, limit = 50, offset = 0 }, options) => {
   const { query } = UseRequestProcessor();
 
-  const getFlowHistoryFn = async (): Promise<FlowHistoryEntry[]> => {
-    const response = await api.get<FlowHistoryEntry[]>(
+  const getFlowHistoryFn = async (): Promise<FlowHistoryListResponse> => {
+    const response = await api.get<FlowHistoryListResponse>(
       `${getURL("FLOWS")}/${flowId}/history/`,
       { params: { limit, offset } },
     );
