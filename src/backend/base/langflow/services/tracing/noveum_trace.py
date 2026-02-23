@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 from collections import OrderedDict
 from datetime import datetime, timezone
@@ -179,8 +180,8 @@ class NoveumTracer(BaseTracer):
         # Clean up component name (remove ID suffix)
         name = trace_name.removesuffix(f" ({trace_id})")
 
-        # Serialize inputs for tracing
-        serialized_inputs = serialize(inputs)
+        # Serialize inputs for tracing and ensure JSON-serializable
+        serialized_inputs = self._ensure_json_serializable(serialize(inputs))
 
         # Create span attributes combining inputs and metadata
         span_attributes = {
@@ -188,17 +189,32 @@ class NoveumTracer(BaseTracer):
             "inputs": serialized_inputs,
         }
 
+        # Determine parent span based on incoming edges (execution flow)
+        parent_span_id = None
+        if vertex and vertex.incoming_edges:
+            # Find spans of components that triggered this one
+            for edge in vertex.incoming_edges:
+                parent_span = self.spans.get(edge.source_id)
+                if parent_span:
+                    parent_span_id = parent_span.span_id
+                    logger.debug(f"Found parent span {parent_span_id} for component {name} (from {edge.source_id})")
+                    break  # Use first found parent
+            
+            if parent_span_id is None and vertex.incoming_edges:
+                logger.debug(f"No parent span found for component {name} despite {len(vertex.incoming_edges)} incoming edges")
+
         try:
-            # Create component span under the main trace
+            # Create component span with proper parent relationship
             span = self.trace.create_span(
                 name=name,
                 attributes=span_attributes,
                 start_time=start_time,
+                parent_span_id=parent_span_id,
             )
 
             # Store the span for later retrieval
             self.spans[trace_id] = span
-            logger.debug(f"Created span {span.span_id} for component {name} in trace {self.trace.trace_id}")
+            logger.debug(f"Created span {span.span_id} for component {name} with parent {parent_span_id}")
 
         except Exception as e:  # noqa: BLE001
             logger.debug(f"Error creating span for component {trace_name}: {e}")
@@ -232,11 +248,11 @@ class NoveumTracer(BaseTracer):
             return
 
         try:
-            # Build output data
+            # Build output data with JSON-serializable validation
             output_data: dict = {}
-            output_data |= serialize(outputs) if outputs else {}
+            output_data |= self._ensure_json_serializable(serialize(outputs)) if outputs else {}
             output_data |= {"error": str(error)} if error else {}
-            output_data |= {"logs": [serialize(log) for log in logs]} if logs else {}
+            output_data |= {"logs": [self._ensure_json_serializable(serialize(log)) for log in logs]} if logs else {}
 
             # Set span attributes for outputs
             if output_data:
@@ -273,15 +289,15 @@ class NoveumTracer(BaseTracer):
             return
 
         try:
-            # Update trace attributes with final inputs/outputs
+            # Update trace attributes with final inputs/outputs (JSON-serializable)
             trace_attributes = {}
             
             if inputs:
-                trace_attributes["final_inputs"] = serialize(inputs)
+                trace_attributes["final_inputs"] = self._ensure_json_serializable(serialize(inputs))
             if outputs:
-                trace_attributes["final_outputs"] = serialize(outputs)
+                trace_attributes["final_outputs"] = self._ensure_json_serializable(serialize(outputs))
             if metadata:
-                trace_attributes["final_metadata"] = serialize(metadata)
+                trace_attributes["final_metadata"] = self._ensure_json_serializable(serialize(metadata))
             if error:
                 trace_attributes["error"] = str(error)
 
@@ -348,3 +364,62 @@ class NoveumTracer(BaseTracer):
             return config
 
         return {}
+
+    def _ensure_json_serializable(self, obj: Any, depth: int = 0, max_depth: int = 20) -> Any:
+        """Ensure object is JSON-serializable, replacing non-serializable parts.
+
+        This provides a first line of defense against non-serializable objects
+        before they reach the noveum-trace SDK.
+
+        Args:
+            obj: Object to validate and clean
+            depth: Current recursion depth
+            max_depth: Maximum recursion depth to prevent infinite loops
+
+        Returns:
+            JSON-serializable version of the object
+        """
+        # Prevent infinite recursion
+        if depth > max_depth:
+            logger.warning(f"Max recursion depth ({max_depth}) reached during JSON serialization")
+            return f"<Max depth exceeded: {type(obj).__name__}>"
+
+        # Quick test for primitives
+        if obj is None or isinstance(obj, (str, int, float, bool)):
+            return obj
+
+        # Try to serialize the entire object first
+        try:
+            json.dumps(obj)
+            return obj
+        except (TypeError, ValueError, OverflowError):
+            pass  # Continue to recursive cleaning
+
+        # Handle dictionaries recursively
+        if isinstance(obj, dict):
+            result = {}
+            for key, value in obj.items():
+                try:
+                    # Ensure key is string
+                    str_key = str(key) if not isinstance(key, str) else key
+                    result[str_key] = self._ensure_json_serializable(value, depth + 1, max_depth)
+                except Exception as e:  # noqa: BLE001
+                    logger.warning(f"Failed to serialize dict key '{key}': {e}")
+                    result[str(key)] = f"<Non-serializable: {type(value).__name__}>"
+            return result
+
+        # Handle lists and tuples recursively
+        if isinstance(obj, (list, tuple)):
+            result = []
+            for i, item in enumerate(obj):
+                try:
+                    result.append(self._ensure_json_serializable(item, depth + 1, max_depth))
+                except Exception as e:  # noqa: BLE001
+                    logger.warning(f"Failed to serialize list item at index {i}: {e}")
+                    result.append(f"<Non-serializable: {type(item).__name__}>")
+            return result
+
+        # For other types, return a type descriptor
+        type_name = type(obj).__name__
+        logger.debug(f"Replacing non-serializable object of type {type_name}")
+        return f"<Non-serializable: {type_name}>"
