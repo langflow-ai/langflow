@@ -19,8 +19,6 @@ import {
 } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useShallow } from "zustand/react/shallow";
-import { DefaultEdge } from "@/CustomEdges";
-import NoteNode from "@/CustomNodes/NoteNode";
 import FlowToolbar from "@/components/core/flowToolbarComponent";
 import {
   COLOR_OPTIONS,
@@ -36,7 +34,6 @@ import { useAddComponent } from "@/hooks/use-add-component";
 import InspectionPanel from "@/pages/FlowPage/components/InspectionPanel";
 import { nodeColorsName } from "@/utils/styleUtils";
 import { isSupportedNodeTypes } from "@/utils/utils";
-import GenericNode from "../../../../CustomNodes/GenericNode";
 import {
   INVALID_SELECTION_ERROR_ALERT,
   UPLOAD_ALERT_LIST,
@@ -83,14 +80,7 @@ import {
 import getRandomName from "./utils/get-random-name";
 import isWrappedWithClass from "./utils/is-wrapped-with-class";
 
-const nodeTypes = {
-  genericNode: GenericNode,
-  noteNode: NoteNode,
-};
-
-const edgeTypes = {
-  default: DefaultEdge,
-};
+import { nodeTypes, edgeTypes } from "../../consts";
 
 export default function Page({
   view,
