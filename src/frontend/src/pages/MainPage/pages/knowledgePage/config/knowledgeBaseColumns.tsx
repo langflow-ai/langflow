@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { KnowledgeBaseInfo } from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases";
 import { formatFileSize } from "@/utils/stringManipulation";
+import { FILE_ICONS } from "@/utils/styleUtils";
 import { cn } from "@/utils/utils";
 import {
   formatAverageChunkSize,
@@ -39,10 +40,41 @@ export const createKnowledgeBaseColumns = (
       flex: 2,
       sortable: true,
       headerCheckboxSelection: true,
-      checkboxSelection: false,
+      checkboxSelection: true,
       editable: false,
       cellClass: secondaryCellClass,
       cellStyle: { textTransform: "none" },
+      cellRenderer: (params: { data: KnowledgeBaseInfo; value: string }) => {
+        const sourceTypes = params.data.source_types ?? [];
+        const status = params.data.status ?? "empty";
+
+        let iconName = "File";
+        let iconColor: string | undefined = "text-muted-foreground";
+
+        if (status === "empty" || sourceTypes.length === 0) {
+          iconName = "File";
+          iconColor = "text-muted-foreground";
+        } else if (sourceTypes.length === 1) {
+          const type = sourceTypes[0] as keyof typeof FILE_ICONS;
+          iconName = FILE_ICONS[type]?.icon ?? "BookOpen";
+          iconColor = FILE_ICONS[type]?.color ?? undefined;
+        } else {
+          iconName = "Layers";
+          iconColor = undefined;
+        }
+
+        return (
+          <div className="flex items-center gap-4">
+            <div className="file-icon pointer-events-none relative">
+              <ForwardedIconComponent
+                name={iconName}
+                className={cn("-mx-[3px] h-6 w-6 shrink-0", iconColor)}
+              />
+            </div>
+            <span>{params.value}</span>
+          </div>
+        );
+      },
     },
     {
       headerName: "Size",

@@ -54,9 +54,13 @@ class KnowledgeBaseInfo(BaseModel):
     characters: int = 0
     chunks: int = 0
     avg_chunk_size: float = 0.0
+    chunk_size: int | None = None
+    chunk_overlap: int | None = None
+    separator: str | None = None
     status: str = "empty"
     failure_reason: str | None = None
     last_job_id: str | None = None
+    source_types: list[str] = []
 
 
 class BulkDeleteRequest(BaseModel):
@@ -258,7 +262,7 @@ def get_kb_metadata(kb_path: Path, *, fast: bool = False) -> dict:
     If essential fields are missing (backward compatibility), it will fall back
     to a full scan once and update the metadata file (backfill).
     """
-    metadata: dict[str, float | int | str] = {
+    metadata: dict[str, Any] = {
         "chunks": 0,
         "words": 0,
         "characters": 0,
@@ -267,6 +271,10 @@ def get_kb_metadata(kb_path: Path, *, fast: bool = False) -> dict:
         "embedding_model": "Unknown",
         "id": "",
         "size": 0,
+        "source_types": [],
+        "chunk_size": None,
+        "chunk_overlap": None,
+        "separator": None,
     }
 
     metadata_file = kb_path / "embedding_metadata.json"
@@ -433,6 +441,7 @@ async def _perform_ingestion(
     files_data: list[tuple[str, bytes]],
     chunk_size: int,
     chunk_overlap: int,
+    separator: str,
     source_name: str,
     current_user: CurrentActiveUser,
     embedding_provider: str,
@@ -445,10 +454,12 @@ async def _perform_ingestion(
         processed_files = []
         total_chunks_created = 0
 
-        text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=chunk_size,
-            chunk_overlap=chunk_overlap,
-        )
+        splitter_kwargs: dict = {"chunk_size": chunk_size, "chunk_overlap": chunk_overlap}
+        if separator:
+            # Support \n as a literal escape sequence entered by users
+            resolved_separator = separator.replace("\\n", "\n")
+            splitter_kwargs["separators"] = [resolved_separator]
+        text_splitter = RecursiveCharacterTextSplitter(**splitter_kwargs)
 
         # Build embeddings based on provider
         embeddings = await _build_embeddings(embedding_provider, embedding_model, current_user)
@@ -531,6 +542,16 @@ async def _perform_ingestion(
             embedding_metadata = {}
             if metadata_path.exists():
                 embedding_metadata = json.loads(metadata_path.read_text())
+
+            # Collect unique file extensions from successfully processed files
+            new_source_types = list({f.rsplit(".", 1)[-1].lower() for f in processed_files if "." in f})
+            existing_source_types = embedding_metadata.get("source_types", [])
+            full_metadata["source_types"] = list(set(existing_source_types + new_source_types))
+
+            # Persist chunk settings used for this ingestion
+            full_metadata["chunk_size"] = chunk_size
+            full_metadata["chunk_overlap"] = chunk_overlap
+            full_metadata["separator"] = separator
 
             # Merge updated fields
             embedding_metadata.update(full_metadata)
@@ -745,6 +766,7 @@ async def ingest_files_to_knowledge_base(
     source_name: Annotated[str, Form()] = "",
     chunk_size: Annotated[int, Form()] = 1000,
     chunk_overlap: Annotated[int, Form()] = 200,
+    separator: Annotated[str, Form()] = "",
 ) -> dict[str, object] | TaskResponse:
     """Upload and ingest files directly into a knowledge base.
 
@@ -828,6 +850,7 @@ async def ingest_files_to_knowledge_base(
             files_data=files_data,
             chunk_size=chunk_size,
             chunk_overlap=chunk_overlap,
+            separator=separator,
             source_name=source_name,
             current_user=current_user,
             embedding_provider=embedding_provider,
@@ -892,9 +915,13 @@ async def list_knowledge_bases(
                     characters=metadata["characters"],
                     chunks=chunks_count,
                     avg_chunk_size=metadata["avg_chunk_size"],
+                    chunk_size=metadata.get("chunk_size"),
+                    chunk_overlap=metadata.get("chunk_overlap"),
+                    separator=metadata.get("separator"),
                     status=status,
                     failure_reason=failure_reason,
                     last_job_id=None,
+                    source_types=metadata.get("source_types", []),
                 )
                 knowledge_bases.append(kb_info)
 
@@ -967,7 +994,11 @@ async def get_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -> K
             characters=metadata["characters"],
             chunks=chunks_count,
             avg_chunk_size=metadata["avg_chunk_size"],
+            chunk_size=metadata.get("chunk_size"),
+            chunk_overlap=metadata.get("chunk_overlap"),
+            separator=metadata.get("separator"),
             status=status,
+            source_types=metadata.get("source_types", []),
         )
 
     except HTTPException:

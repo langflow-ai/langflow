@@ -200,11 +200,11 @@ export function StepConfiguration({
                         variant="outline"
                         data-testid="kb-browse-btn"
                         className={cn(
-                          "w-full px-3",
+                          "w-full justify-between focus-visible:ring-1 focus-visible:ring-offset-0 focus-visible:ring-offset-background ",
                           validationErrors.files && "border-destructive",
                         )}
                       >
-                        <span className="flex items-center gap-2 mr-auto">
+                        <span className="flex items-center gap-2">
                           <ForwardedIconComponent
                             name="Upload"
                             className="h-4 w-4"

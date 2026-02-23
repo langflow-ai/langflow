@@ -205,7 +205,7 @@ const KnowledgeBasesTab = ({
             onClick={() => actions.setIsBulkDeleteModalOpen(true)}
           >
             <ForwardedIconComponent name="Trash2" className="h-4 w-4" />
-            Delete Knowledge
+            Delete ({quantitySelected})
           </Button>
         ) : (
           <Button

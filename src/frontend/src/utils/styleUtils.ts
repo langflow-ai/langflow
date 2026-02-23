@@ -205,6 +205,74 @@ export const FILE_ICONS = {
     icon: "File",
     color: "text-datatype-red dark:text-datatype-red-foreground",
   },
+  md: {
+    icon: "FileText",
+    color: "text-datatype-fuchsia dark:text-datatype-fuchsia-foreground",
+  },
+  mdx: {
+    icon: "FileText",
+    color: "text-datatype-fuchsia dark:text-datatype-fuchsia-foreground",
+  },
+  html: {
+    icon: "FileCode",
+    color: "text-datatype-yellow dark:text-datatype-yellow-foreground",
+  },
+  htm: {
+    icon: "FileCode",
+    color: "text-datatype-yellow dark:text-datatype-yellow-foreground",
+  },
+  xhtml: {
+    icon: "FileCode",
+    color: "text-datatype-yellow dark:text-datatype-yellow-foreground",
+  },
+  xml: {
+    icon: "FileCode",
+    color: "text-datatype-yellow dark:text-datatype-yellow-foreground",
+  },
+  adoc: {
+    icon: "FileText",
+    color: "text-datatype-cyan dark:text-datatype-cyan-foreground",
+  },
+  asciidoc: {
+    icon: "FileText",
+    color: "text-datatype-cyan dark:text-datatype-cyan-foreground",
+  },
+  asc: {
+    icon: "FileText",
+    color: "text-datatype-cyan dark:text-datatype-cyan-foreground",
+  },
+  py: {
+    icon: "FileCode",
+    color: "text-datatype-blue dark:text-datatype-blue-foreground",
+  },
+  js: {
+    icon: "FileCode",
+    color: "text-datatype-blue dark:text-datatype-blue-foreground",
+  },
+  ts: {
+    icon: "FileCode",
+    color: "text-datatype-blue dark:text-datatype-blue-foreground",
+  },
+  tsx: {
+    icon: "FileCode",
+    color: "text-datatype-blue dark:text-datatype-blue-foreground",
+  },
+  sh: {
+    icon: "FileCode",
+    color: "text-datatype-blue dark:text-datatype-blue-foreground",
+  },
+  sql: {
+    icon: "FileCode",
+    color: "text-datatype-blue dark:text-datatype-blue-foreground",
+  },
+  yaml: {
+    icon: "FileJson",
+    color: "text-datatype-violet dark:text-datatype-violet-foreground",
+  },
+  yml: {
+    icon: "FileJson",
+    color: "text-datatype-violet dark:text-datatype-violet-foreground",
+  },
 };
 
 export const SIDEBAR_CATEGORIES = [

@@ -134,23 +134,29 @@ export function useKnowledgeBaseForm({
           setSelectedEmbeddingModel([matchingModel]);
         }
       }
-      if (existingKnowledgeBase.chunkSize !== undefined) {
+      if (existingKnowledgeBase.chunkSize != null) {
         setChunkSize(existingKnowledgeBase.chunkSize);
+      } else {
+        setChunkSize(DEFAULT_CHUNK_SIZE);
       }
-      if (existingKnowledgeBase.chunkOverlap !== undefined) {
+      if (existingKnowledgeBase.chunkOverlap != null) {
         setChunkOverlap(existingKnowledgeBase.chunkOverlap);
+      } else {
+        setChunkOverlap(DEFAULT_CHUNK_OVERLAP);
       }
-      if (existingKnowledgeBase.separator !== undefined) {
+      if (existingKnowledgeBase.separator != null) {
         setSeparator(existingKnowledgeBase.separator);
+      } else {
+        setSeparator(DEFAULT_SEPARATOR);
       }
       // Always enable advanced mode in add-sources mode so the file
       // upload section is visible. Also enable when the KB already has
       // advanced chunking config.
       const hasAdvancedConfig =
         isAddSourcesMode ||
-        existingKnowledgeBase.chunkSize !== undefined ||
-        existingKnowledgeBase.chunkOverlap !== undefined ||
-        existingKnowledgeBase.separator !== undefined;
+        existingKnowledgeBase.chunkSize != null ||
+        existingKnowledgeBase.chunkOverlap != null ||
+        existingKnowledgeBase.separator != null;
       if (hasAdvancedConfig) {
         setShowAdvanced(true);
       }

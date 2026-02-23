@@ -20,6 +20,7 @@ export interface KnowledgeBaseInfo {
   separator?: string;
   status?: string;
   failure_reason?: string | null;
+  source_types?: string[];
 }
 
 export const useGetKnowledgeBases: useQueryFunctionType<
