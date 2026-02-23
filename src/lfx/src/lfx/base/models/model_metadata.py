@@ -47,6 +47,8 @@ def create_model_metadata(
     )
 
 
+LIVE_MODEL_PROVIDERS: list[str] = ["Ollama", "IBM WatsonX"]
+
 # Provider metadata configuration
 # Defines the variables (credentials, URLs, etc.) required for each model provider
 #

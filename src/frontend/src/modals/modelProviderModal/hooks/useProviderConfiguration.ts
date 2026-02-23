@@ -93,7 +93,24 @@ export const useProviderConfiguration = ({
   const { mutateAsync: validateProvider } = useValidateProvider();
   const { data: providerVariablesMapping = {} } = useGetProviderVariables();
   const { mutate: updateEnabledModels } = useUpdateEnabledModels({ retry: 0 });
-  const { data: modelProviders = [] } = useGetModelProviders({});
+  const { data: modelProviders = [] } = useGetModelProviders(
+    {},
+    {
+      refetchInterval:
+        syncedSelectedProvider?.provider?.toLowerCase() === "ollama"
+          ? 10000
+          : false,
+      staleTime: 1000 * 30, // 30 seconds
+    },
+  );
+
+  // Invalidate all provider-related caches after successful create/update
+  const invalidateProviderQueries = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["useGetModelProviders"] });
+    queryClient.invalidateQueries({ queryKey: ["useGetEnabledModels"] });
+    queryClient.invalidateQueries({ queryKey: ["useGetGlobalVariables"] });
+    queryClient.refetchQueries({ queryKey: ["flows"] });
+  }, [queryClient]);
 
   // Keep syncedSelectedProvider in sync with prop and reset state on provider change
   useEffect(() => {
@@ -102,9 +119,16 @@ export const useProviderConfiguration = ({
       setValidationState("idle");
       setValidationError(null);
       setValidationFailed(false);
+
+      // Force refetch models when switching providers
+      invalidateProviderQueries();
     }
     setSyncedSelectedProvider(selectedProvider);
-  }, [selectedProvider]);
+  }, [
+    selectedProvider,
+    invalidateProviderQueries,
+    syncedSelectedProvider?.provider,
+  ]);
 
   // Sync selectedProvider with fresh data when model providers are refetched
   useEffect(() => {
@@ -112,17 +136,22 @@ export const useProviderConfiguration = ({
       const freshProvider = modelProviders.find(
         (p) => p.provider === syncedSelectedProvider.provider,
       );
-      if (
-        freshProvider &&
-        (freshProvider.is_enabled !== syncedSelectedProvider.is_enabled ||
-          freshProvider.is_configured !== syncedSelectedProvider.is_configured)
-      ) {
-        setSyncedSelectedProvider({
-          ...syncedSelectedProvider,
-          is_enabled: freshProvider.is_enabled,
-          is_configured: freshProvider.is_configured,
-          models: freshProvider.models || syncedSelectedProvider.models,
-        });
+      if (freshProvider) {
+        const hasModelsChanged =
+          JSON.stringify(freshProvider.models) !==
+          JSON.stringify(syncedSelectedProvider.models);
+        const hasStatusChanged =
+          freshProvider.is_enabled !== syncedSelectedProvider.is_enabled ||
+          freshProvider.is_configured !== syncedSelectedProvider.is_configured;
+
+        if (hasModelsChanged || hasStatusChanged) {
+          setSyncedSelectedProvider({
+            ...syncedSelectedProvider,
+            is_enabled: freshProvider.is_enabled,
+            is_configured: freshProvider.is_configured,
+            models: freshProvider.models || syncedSelectedProvider.models,
+          });
+        }
       }
     }
   }, [modelProviders, syncedSelectedProvider]);
@@ -161,14 +190,6 @@ export const useProviderConfiguration = ({
     isDeleting ||
     isSaving ||
     validationState === "validating";
-
-  // Invalidate all provider-related caches after successful create/update
-  const invalidateProviderQueries = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ["useGetModelProviders"] });
-    queryClient.invalidateQueries({ queryKey: ["useGetEnabledModels"] });
-    queryClient.invalidateQueries({ queryKey: ["useGetGlobalVariables"] });
-    queryClient.refetchQueries({ queryKey: ["flows"] });
-  }, [queryClient]);
 
   // Helper to get configured value for a variable from globalVariables
   const getConfiguredValue = useCallback(

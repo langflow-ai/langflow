@@ -4,6 +4,7 @@ import json
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from lfx.base.models.model_utils import replace_with_live_models
 from lfx.base.models.unified_models import (
     get_model_provider_metadata,
     get_model_provider_variable_mapping,
@@ -203,6 +204,10 @@ async def list_models(
         prov_models_status = enabled_models_map.get(prov_name, {})
         has_active_model = any(prov_models_status.values())
         provider_dict["is_enabled"] = has_active_model
+
+    # Replace static models with live models for providers that support it
+    configured_providers = {p for p, configured in provider_configured_status.items() if configured}
+    replace_with_live_models(filtered_models, current_user.id, configured_providers, model_type)
 
     # Sort providers:
     # 1. Provider with default model first
@@ -532,6 +537,10 @@ async def get_enabled_models(
     # Get enabled providers status
     enabled_providers_result = await get_enabled_providers(session=session, current_user=current_user)
     provider_status = enabled_providers_result.get("provider_status", {})
+
+    # Replace static models with live models for providers that support it
+    configured_providers = {p for p, configured in provider_status.items() if configured}
+    replace_with_live_models(all_models_by_provider, current_user.id, configured_providers)
 
     # Get disabled and explicitly enabled models lists
     disabled_models = await _get_disabled_models(session=session, current_user=current_user)
