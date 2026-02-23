@@ -157,6 +157,12 @@ jobs:
                 # Join tags with | for OR logic
                 REGEX_PATTERN=$(IFS='|'; echo "${TAGS[*]}")
                 TEST_GREP='--grep="${REGEX_PATTERN}"'
+              else
+                # No path-specific changes detected - default to running release tests
+                # so that FE tests always run even for backend-only changes
+                SUITES='["release"]'
+                TEST_GREP='--grep="@release"'
+                echo "No path-specific changes detected - defaulting to release suite"
               fi
             else
               # Process input suites to tags

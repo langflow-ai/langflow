@@ -121,6 +121,7 @@ export function SessionMoreMenu({
           align={align}
           sideOffset={sideOffset}
           className={cn("p-0", contentClassName)}
+          onCloseAutoFocus={(e) => e.preventDefault()}
         >
           {showRename && (
             <SelectItem
