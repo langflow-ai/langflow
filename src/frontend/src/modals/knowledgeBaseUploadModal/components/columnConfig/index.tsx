@@ -1,5 +1,4 @@
 import type { AgGridReact } from "ag-grid-react";
-import { cloneDeep } from "lodash";
 import { useRef, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
@@ -54,7 +53,7 @@ export function ColumnConfig({
   const agGrid = useRef<AgGridReact>(null);
   const [isTableModalOpen, setIsTableModalOpen] = useState(false);
   const [tempColumnConfig, setTempColumnConfig] = useState<ColumnConfigRow[]>(
-    cloneDeep(columnConfig),
+    columnConfig.map((row) => ({ ...row })),
   );
 
   function setAllRows() {
@@ -88,7 +87,7 @@ export function ColumnConfig({
     if (agGrid.current) {
       const selectedNodes = agGrid.current.api.getSelectedNodes();
       if (selectedNodes.length > 0) {
-        const toDuplicate = selectedNodes.map((node) => cloneDeep(node.data));
+        const toDuplicate = selectedNodes.map((node) => ({ ...node.data }));
         setTempColumnConfig([...tempColumnConfig, ...toDuplicate]);
       }
     }
@@ -107,7 +106,7 @@ export function ColumnConfig({
   }
 
   function handleTableCancel() {
-    setTempColumnConfig(cloneDeep(columnConfig));
+    setTempColumnConfig(columnConfig.map((row) => ({ ...row })));
     setIsTableModalOpen(false);
   }
 
@@ -122,7 +121,7 @@ export function ColumnConfig({
       open={isTableModalOpen}
       setOpen={(open) => {
         if (open) {
-          setTempColumnConfig(cloneDeep(columnConfig));
+          setTempColumnConfig(columnConfig.map((row) => ({ ...row })));
         }
         setIsTableModalOpen(open);
       }}
