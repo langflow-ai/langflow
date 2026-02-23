@@ -10,7 +10,7 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import CurrentActiveUser, DbSession, DbSessionReadOnly
-from langflow.api.utils.core import remove_api_keys
+from langflow.api.utils.core import has_api_terms, remove_api_keys
 from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.flow_history.crud import (
     create_flow_history_entry,
@@ -33,11 +33,69 @@ def _strip_history_data(data: dict | None) -> dict | None:
     """Strip API keys from a history entry's flow data dict."""
     if data is None:
         return None
-    data_copy = copy.deepcopy(data)
     try:
-        return remove_api_keys({"data": data_copy}).get("data")
+        nodes = data.get("nodes", [])
+        if not isinstance(nodes, list):
+            raise TypeError
+
+        needs_modification = False
+        for node in nodes:
+            node_data = node.get("data")
+            if not isinstance(node_data, dict):
+                raise TypeError
+            node_inner = node_data.get("node")
+            if not isinstance(node_inner, dict):
+                raise TypeError
+            template = node_inner.get("template")
+            if not isinstance(template, dict):
+                continue
+
+            for value in template.values():
+                if (
+                    isinstance(value, dict)
+                    and "name" in value
+                    and has_api_terms(value["name"])
+                    and value.get("password")
+                ):
+                    needs_modification = True
+                    break
+            if needs_modification:
+                break
+
+        if not needs_modification:
+            return data
+
+        new_data = data.copy()
+        new_nodes = []
+        new_data["nodes"] = new_nodes
+
+        for node in nodes:
+            node_copy = node.copy()
+            node_data = node_copy["data"] = node["data"].copy()
+            node_inner = node_data["node"] = node_data["node"].copy()
+            template = node_inner["template"] = node_inner["template"].copy()
+
+            for key, value in template.items():
+                if (
+                    isinstance(value, dict)
+                    and "name" in value
+                    and has_api_terms(value["name"])
+                    and value.get("password")
+                ):
+                    value_copy = value.copy()
+                    value_copy["value"] = None
+                    template[key] = value_copy
+
+            new_nodes.append(node_copy)
+
+        return new_data
+
     except (AttributeError, KeyError, TypeError):
-        return data_copy
+        data_copy = copy.deepcopy(data)
+        try:
+            return remove_api_keys({"data": data_copy}).get("data")
+        except (AttributeError, KeyError, TypeError):
+            return data_copy
 
 
 def _history_to_read(entry: FlowHistory) -> FlowHistoryRead:
