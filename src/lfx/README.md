@@ -464,6 +464,54 @@ url_component = cp.URLComponent()
 chat_output = cp.ChatOutput()
 ```
 
+## Component category allowlist and blocklist
+
+You can restrict which component categories are available when loading flows by using an allowlist or a blocklist.
+
+### Environment variables
+
+Both settings are optional. When unset or empty, all categories from the component index are loaded.
+
+| Variable | Description |
+|----------|-------------|
+| `LANGFLOW_COMPONENT_CATEGORY_ALLOWLIST` | Comma-separated list of component category names to **include**. If empty (default), all categories are included. If set, only the listed categories are available. |
+| `LANGFLOW_COMPONENT_CATEGORY_BLOCKLIST` | Comma-separated list of component category names to **exclude**. If empty (default), no categories are excluded. Applied after the allowlist. |
+
+Category names are case-insensitive.
+
+### Component categories
+
+Category names in the allowlist and blocklist match the component index (e.g. top-level folders under `lfx.components`). The virtual keyword **`core`** in the allowlist or blocklist expands to the following core categories (aligned with the frontend sidebar):
+
+- `input_output`, `data_source`, `models_and_agents`, `llm_operations`, `files_and_knowledge`, `processing`, `flow_controls`, `utilities`, `prototypes`, `tools`, `agents`, `data`, `logic`, `helpers`, `models`, `vectorstores`, `inputs`, `outputs`, `prompts`, `chains`, `documentloaders`, `link_extractors`, `output_parsers`, `retrievers`, `textsplitters`, `toolkits`
+
+Provider-specific and other categories (e.g. `openai`, `anthropic`, `google`, `langchain_utilities`) are also valid; the full set depends on your LFX version and index.
+
+### How to use in LFX
+
+1. Set one or both environment variables before running `lfx serve` or `lfx run`. The filter is applied when the component index is loaded.
+
+Allowlist only — restrict to specific categories:
+
+   ```bash
+   export LANGFLOW_COMPONENT_CATEGORY_ALLOWLIST="openai,anthropic,google,processing,input_output"
+   uv run lfx serve my_flow.json
+   ```
+
+Blocklist only — load all categories except the ones you exclude:
+
+   ```bash
+   export LANGFLOW_COMPONENT_CATEGORY_BLOCKLIST="prototypes,langchain_utilities"
+   uv run lfx run my_flow.json "Hello"
+   ```
+
+Virtual `core` keyword — use `core` in the allowlist or blocklist to refer to all core categories at once (e.g. allow only core categories, or exclude all core from a broader set):
+
+   ```bash
+   export LANGFLOW_COMPONENT_CATEGORY_ALLOWLIST="core"
+   uv run lfx serve my_flow.json
+   ```
+
 ## License
 
 MIT License. See [LICENSE](../../LICENSE) for details.
