@@ -16,13 +16,6 @@ class SplitTextComponent(Component):
     name = "SplitText"
 
     inputs = [
-        HandleInput(
-            name="data_inputs",
-            display_name="Input",
-            info="The data with texts to split in chunks.",
-            input_types=["Data", "DataFrame", "Message"],
-            required=True,
-        ),
         TabInput(
             name="mode",
             display_name="Mode",
@@ -34,6 +27,13 @@ class SplitTextComponent(Component):
                 "then reassembles pieces up to the Chunk Size limit."
             ),
             real_time_refresh=True,
+        ),
+        HandleInput(
+            name="data_inputs",
+            display_name="Input",
+            info="The data with texts to split in chunks.",
+            input_types=["Data", "DataFrame", "Message"],
+            required=True,
         ),
         IntInput(
             name="chunk_size",
@@ -64,6 +64,13 @@ class SplitTextComponent(Component):
             show=False,
         ),
         MessageTextInput(
+            name="recursive_separators",
+            display_name="Separators",
+            info='The characters to split on.\nIf left empty defaults to ["\\n\\n", "\\n", " ", ""].',
+            is_list=True,
+            show=False
+        ),
+        MessageTextInput(
             name="text_key",
             display_name="Text Key",
             info="The key to use for the text column.",
@@ -85,6 +92,15 @@ class SplitTextComponent(Component):
             value=False,
             advanced=True,
         ),
+        BoolInput(
+            name="recursive_separators_bool",
+            display_name="Recursive Separators",
+            info="Enable to customize the separators used by the Recursive splitter.",
+            value=False,
+            advanced=True,
+            real_time_refresh=True,
+        ),
+       
     ]
 
     outputs = [
@@ -93,13 +109,20 @@ class SplitTextComponent(Component):
 
     def update_build_config(self, build_config, field_value, field_name=None):
         if field_name == "mode":
-            is_character_mode = field_value == "Character"
-            build_config["separator"]["show"] = is_character_mode
+            is_character = field_value == "Character"
+            build_config["separator"]["show"] = is_character
             build_config["custom_separator"]["show"] = (
-                is_character_mode and build_config["separator"]["value"] == "Custom"
+                is_character and build_config["separator"]["value"] == "Custom"
             )
-        if field_name == "separator":
+            build_config["recursive_separators_bool"]["show"] = not is_character
+            build_config["recursive_separators"]["show"] = (
+                not is_character and build_config["recursive_separators_bool"]["value"]
+            )
+        elif field_name == "separator":
             build_config["custom_separator"]["show"] = field_value == "Custom"
+        elif field_name == "recursive_separators_bool":
+            build_config["recursive_separators"]["show"] = field_value
+
         return build_config
 
     def _docs_to_data(self, docs, *, clean: bool = False) -> list[Data]:
@@ -182,9 +205,13 @@ class SplitTextComponent(Component):
         return splitter.split_documents(documents)
 
     def _split_by_recursive(self, documents):
+        separators = None
+        if self.recursive_separators_bool and self.recursive_separators:
+            separators = [unescape_string(s) for s in self.recursive_separators]
         splitter = RecursiveCharacterTextSplitter(
             chunk_size=self.chunk_size,
             chunk_overlap=self.chunk_overlap,
+            separators=separators,
         )
         return splitter.split_documents(documents)
 
