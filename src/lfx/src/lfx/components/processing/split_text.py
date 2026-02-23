@@ -84,6 +84,7 @@ class SplitTextComponent(Component):
             options=["False", "True", "Start", "End"],
             value="False",
             advanced=True,
+            show=False,
         ),
         BoolInput(
             name="clean_output",
@@ -111,6 +112,7 @@ class SplitTextComponent(Component):
             is_character = field_value == "Character"
             build_config["separator"]["show"] = is_character
             build_config["custom_separator"]["show"] = is_character and build_config["separator"]["value"] == "Custom"
+            build_config["keep_separator"]["show"] = is_character
             build_config["recursive_separators_bool"]["show"] = not is_character
             build_config["recursive_separators"]["show"] = (
                 not is_character and build_config["recursive_separators_bool"]["value"]
