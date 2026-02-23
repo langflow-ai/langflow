@@ -129,3 +129,53 @@ async def test_delete_user(client: AsyncClient, logged_in_headers_super_user):
     assert response.status_code == status.HTTP_200_OK
     assert isinstance(result, dict), "The result must be a dictionary"
     assert "detail" in result, "The result must have an 'detail' key"
+
+
+async def test_patch_user_self_deactivation_forbidden(client: AsyncClient, logged_in_headers, active_user):
+    """Test that a user cannot deactivate their own account."""
+    user_id = str(active_user.id)
+    response = await client.patch(
+        f"api/v1/users/{user_id}",
+        json={"is_active": False},
+        headers=logged_in_headers,
+    )
+    result = response.json()
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert "can't deactivate your own user account" in result["detail"]
+
+
+async def test_patch_user_self_deactivation_forbidden_superuser(
+    client: AsyncClient, logged_in_headers_super_user, active_super_user
+):
+    """Test that even a superuser cannot deactivate their own account."""
+    user_id = str(active_super_user.id)
+    response = await client.patch(
+        f"api/v1/users/{user_id}",
+        json={"is_active": False},
+        headers=logged_in_headers_super_user,
+    )
+    result = response.json()
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert "can't deactivate your own user account" in result["detail"]
+
+
+async def test_patch_user_deactivate_other_user_allowed(client: AsyncClient, logged_in_headers_super_user):
+    """Test that a superuser can deactivate another user's account."""
+    # Create a new user
+    basic_case = {"username": "user_to_deactivate", "password": "password123"}
+    create_response = await client.post("api/v1/users/", json=basic_case, headers=logged_in_headers_super_user)
+    assert create_response.status_code == status.HTTP_201_CREATED
+    user_id = create_response.json()["id"]
+
+    # Deactivate the other user
+    response = await client.patch(
+        f"api/v1/users/{user_id}",
+        json={"is_active": False},
+        headers=logged_in_headers_super_user,
+    )
+    result = response.json()
+
+    assert response.status_code == status.HTTP_200_OK
+    assert result["is_active"] is False

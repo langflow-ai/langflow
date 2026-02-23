@@ -101,10 +101,8 @@
               "sender",
               "sender_name",
               "session_id",
-              "files",
-              "background_color",
-              "chat_icon",
-              "text_color"
+              "context_id",
+              "files"
             ],
             "frozen": false,
             "icon": "MessagesSquare",
@@ -381,10 +379,9 @@
               "sender",
               "sender_name",
               "session_id",
+              "context_id",
               "data_template",
-              "background_color",
-              "chat_icon",
-              "text_color"
+              "clean_data"
             ],
             "frozen": false,
             "icon": "MessagesSquare",
@@ -706,7 +703,7 @@
         "data": {
           "id": "note-Y6FRA",
           "node": {
-            "description": "### 💡 Add your OpenAI API key here",
+            "description": "### Configure your Model Provider",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -723,8 +720,8 @@
           "width": 335
         },
         "position": {
-          "x": 572.2283687381639,
-          "y": -341.52394719582
+          "x": 543.2059070987524,
+          "y": -362.6311920244829
         },
         "resizing": false,
         "selected": false,
@@ -748,10 +745,10 @@
             "documentation": "",
             "edited": false,
             "field_order": [
-              "urls",
-              "curl",
+              "url_input",
+              "curl_input",
               "method",
-              "use_curl",
+              "mode",
               "query_params",
               "body",
               "headers",
@@ -1211,9 +1208,12 @@
             "field_order": [
               "model",
               "api_key",
+              "base_url_ibm_watsonx",
+              "project_id",
               "system_prompt",
               "context_id",
               "n_messages",
+              "max_tokens",
               "format_instructions",
               "output_schema",
               "tools",
