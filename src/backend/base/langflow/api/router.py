@@ -5,6 +5,7 @@ from langflow.api.v1 import (
     api_key_router,
     chat_router,
     endpoints_router,
+    deployment_router,
     files_router,
     flows_router,
     folders_router,
@@ -58,6 +59,7 @@ router_v1.include_router(mcp_projects_router)
 router_v1.include_router(openai_responses_router)
 router_v1.include_router(models_router)
 router_v1.include_router(model_options_router)
+router_v1.include_router(deployment_router)
 
 
 # Agentic flow execution - lazy import to avoid circular dependency
