@@ -2,6 +2,7 @@ import * as Form from "@radix-ui/react-form";
 import { Eye, EyeOff } from "lucide-react";
 import { useContext, useEffect, useState } from "react";
 import IconComponent from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
 import { CONTROL_NEW_USER } from "../../constants/constants";
@@ -240,18 +241,32 @@ export default function UserManagementModal({
                   <Form.Label className="data-[invalid]:label-invalid mr-3">
                     Active
                   </Form.Label>
-                  <Form.Control asChild>
-                    <Checkbox
-                      value={isActive}
-                      checked={isActive}
-                      id="is_active"
-                      className="relative top-0.5"
-                      onCheckedChange={(value) => {
-                        handleInput({ target: { name: "is_active", value } });
-                        setIsActive(value);
-                      }}
-                    />
-                  </Form.Control>
+                  {data?.id === userData?.id ? (
+                    <ShadTooltip content="You cannot deactivate your own account">
+                      <span className="inline-block cursor-not-allowed">
+                        <Checkbox
+                          value={isActive}
+                          checked={isActive}
+                          id="is_active"
+                          className="relative top-0.5 pointer-events-none opacity-50"
+                          disabled
+                        />
+                      </span>
+                    </ShadTooltip>
+                  ) : (
+                    <Form.Control asChild>
+                      <Checkbox
+                        value={isActive}
+                        checked={isActive}
+                        id="is_active"
+                        className="relative top-0.5"
+                        onCheckedChange={(value) => {
+                          handleInput({ target: { name: "is_active", value } });
+                          setIsActive(value);
+                        }}
+                      />
+                    </Form.Control>
+                  )}
                 </div>
               </Form.Field>
               {userData?.is_superuser && (
