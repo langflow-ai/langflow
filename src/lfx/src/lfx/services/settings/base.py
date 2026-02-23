@@ -280,6 +280,8 @@ class Settings(BaseSettings):
     """The maximum number of builds to keep per vertex. Older builds will be deleted."""
     max_flow_history_entries_per_flow: int = 50
     """The maximum number of version history entries to keep per flow. Older entries will be deleted."""
+    max_flow_history_data_size_bytes: int = 10 * 1024 * 1024
+    """Maximum serialized size (in bytes) for flow data stored in a history snapshot. Rejects if exceeded."""
     webhook_polling_interval: int = 0
     """The polling interval for the webhook in ms. Set to 0 to disable (SSE provides real-time updates)."""
     fs_flows_polling_interval: int = 10000

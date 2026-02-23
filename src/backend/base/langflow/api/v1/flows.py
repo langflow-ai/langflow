@@ -36,7 +36,6 @@ from langflow.services.database.models.flow.model import (
 )
 from langflow.services.database.models.flow.utils import get_webhook_component_in_flow
 from langflow.services.database.models.flow_history.crud import create_flow_history_entry, get_flow_history_list
-from langflow.services.database.models.flow_history.model import FlowStateEnum
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.folder.utils import get_default_folder_id
@@ -478,14 +477,6 @@ async def update_flow(
 
         update_data = flow.model_dump(exclude_unset=True, exclude_none=True)
 
-        if "state" in update_data:
-            await logger.awarning(
-                "Flow %s state changed directly via PATCH to %s. "
-                "Prefer using the /history/{id}/activate endpoint for state transitions.",
-                flow_id,
-                update_data["state"],
-            )
-
         # Specifically handle endpoint_name when it's explicitly set to null or empty string
         if flow.endpoint_name is None or flow.endpoint_name == "":
             update_data["endpoint_name"] = None
@@ -764,7 +755,7 @@ async def upload_file(
 
     try:
         flow_reads = []
-        for flow, raw_dict in zip(flow_list.flows, raw_flow_dicts, strict=False):
+        for flow, raw_dict in zip(flow_list.flows, raw_flow_dicts, strict=True):
             flow.user_id = current_user.id
             if folder_id:
                 flow.folder_id = folder_id
@@ -779,15 +770,12 @@ async def upload_file(
                 for h_entry in raw_dict["history"][:_max_entries]:
                     if not isinstance(h_entry, dict):
                         continue
-                    # All imported entries are set to DRAFT since they are
-                    # not the active version of this newly-created flow.
                     await create_flow_history_entry(
                         session,
                         flow_id=flow_read.id,
                         user_id=current_user.id,
                         data=h_entry.get("data"),
                         description=h_entry.get("description"),
-                        state=FlowStateEnum.DRAFT,
                     )
     except Exception as e:
         if "UNIQUE constraint failed" in str(e):
@@ -855,13 +843,12 @@ async def download_multiple_file(
 
     if include_history:
         _max_entries = get_settings_service().settings.max_flow_history_entries_per_flow
-        for flow_dict, flow_obj in zip(flows_without_api_keys, flows, strict=False):
+        for flow_dict, flow_obj in zip(flows_without_api_keys, flows, strict=True):
             history_entries = await get_flow_history_list(db, flow_obj.id, user.id, limit=_max_entries, offset=0)
             flow_dict["history"] = [
                 {
                     "version_number": e.version_number,
                     "description": e.description,
-                    "state": e.state.value if hasattr(e.state, "value") else str(e.state),
                     "data": e.data,
                     "created_at": e.created_at.isoformat() if e.created_at else None,
                 }
