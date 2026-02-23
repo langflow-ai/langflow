@@ -61,33 +61,8 @@ class TestChunkDoclingDocumentComponentBuildConfig:
 
 
 class TestChunkDoclingDocumentComponentHybridChunker:
-    @pytest.mark.parametrize(
-        ("merge_peers_input", "expected_merge_peers"),
-        [
-            (True, True),
-            (False, False),
-            (1, True),
-            (0, False),
-            (None, False),
-        ],
-    )
-    @pytest.mark.parametrize(
-        ("always_emit_headings_input", "expected_always_emit_headings"),
-        [
-            (True, True),
-            (False, False),
-            (1, True),
-            (0, False),
-            (None, False),
-        ],
-    )
-    def test_hybrid_chunker_receives_flags(
-        self,
-        monkeypatch,
-        merge_peers_input,
-        expected_merge_peers,
-        always_emit_headings_input,
-        expected_always_emit_headings,
+    def _run_chunk_documents_with_mocks(
+        self, monkeypatch, *, chunker_name, merge_peers_input, always_emit_headings_input
     ):
         captured = {}
 
@@ -101,6 +76,16 @@ class TestChunkDoclingDocumentComponentHybridChunker:
                 return []
 
             def contextualize(self, _chunk=None, **_kwargs):
+                return ""
+
+        class DummyHierarchicalChunker:
+            def __init__(self):
+                captured["hierarchical_called"] = True
+
+            def chunk(self, **_kwargs):
+                return []
+
+            def contextualize(self, **_kwargs):
                 return ""
 
         class DummyTokenizer:
@@ -120,11 +105,19 @@ class TestChunkDoclingDocumentComponentHybridChunker:
             "docling_core.transforms.chunker.tokenizer.huggingface",
             types.SimpleNamespace(HuggingFaceTokenizer=DummyTokenizer),
         )
+        monkeypatch.setattr(
+            "lfx.components.docling.chunk_docling_document.HierarchicalChunker",
+            DummyHierarchicalChunker,
+        )
+        monkeypatch.setattr(
+            "lfx.components.docling.chunk_docling_document.extract_docling_documents",
+            lambda *_args, **_kwargs: ([], None),
+        )
 
         component = ChunkDoclingDocumentComponent()
         component._attributes = {
             "data_inputs": None,
-            "chunker": "HybridChunker",
+            "chunker": chunker_name,
             "provider": "Hugging Face",
             "hf_model_name": "sentence-transformers/all-MiniLM-L6-v2",
             "max_tokens": 256,
@@ -132,15 +125,56 @@ class TestChunkDoclingDocumentComponentHybridChunker:
             "always_emit_headings": always_emit_headings_input,
             "doc_key": "doc",
         }
-
-        monkeypatch.setattr(
-            "lfx.components.docling.chunk_docling_document.extract_docling_documents",
-            lambda *_args, **_kwargs: ([], None),
-        )
-
         component.chunk_documents()
+        return captured
 
+    @pytest.mark.parametrize(
+        ("merge_peers_input", "expected_merge_peers"),
+        [
+            (True, True),
+            (False, False),
+            (1, True),
+            (0, False),
+            (None, False),
+        ],
+    )
+    def test_hybrid_chunker_receives_merge_peers(self, monkeypatch, merge_peers_input, expected_merge_peers):
+        captured = self._run_chunk_documents_with_mocks(
+            monkeypatch,
+            chunker_name="HybridChunker",
+            merge_peers_input=merge_peers_input,
+            always_emit_headings_input=False,
+        )
         assert captured["model_name"] == "sentence-transformers/all-MiniLM-L6-v2"
         assert captured["max_tokens"] == 256
         assert captured["merge_peers"] is expected_merge_peers
+
+    @pytest.mark.parametrize(
+        ("always_emit_headings_input", "expected_always_emit_headings"),
+        [
+            (True, True),
+            (False, False),
+            (1, True),
+            (0, False),
+            (None, False),
+        ],
+    )
+    def test_hybrid_chunker_receives_always_emit_headings(
+        self, monkeypatch, always_emit_headings_input, expected_always_emit_headings
+    ):
+        captured = self._run_chunk_documents_with_mocks(
+            monkeypatch,
+            chunker_name="HybridChunker",
+            merge_peers_input=True,
+            always_emit_headings_input=always_emit_headings_input,
+        )
         assert captured["always_emit_headings"] is expected_always_emit_headings
+
+    def test_hierarchical_chunker_instantiates_without_hybrid_kwargs(self, monkeypatch):
+        captured = self._run_chunk_documents_with_mocks(
+            monkeypatch,
+            chunker_name="HierarchicalChunker",
+            merge_peers_input=True,
+            always_emit_headings_input=True,
+        )
+        assert captured["hierarchical_called"] is True
