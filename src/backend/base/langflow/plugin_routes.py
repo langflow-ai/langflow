@@ -72,7 +72,7 @@ class _PluginAppWrapper:
         return self._app.post(path, **kwargs)
 
     def put(self, path: str, **kwargs):
-        self._check_and_reserve(path, {"PUT"})
+        self._check_and_reserve_one(path, "PUT")
         return self._app.put(path, **kwargs)
 
     def delete(self, path: str, **kwargs):
@@ -95,6 +95,16 @@ class _PluginAppWrapper:
         methods = kwargs.get("methods", ["GET"])
         self._check_and_reserve(path, set(methods))
         return self._app.add_api_route(path, endpoint, **kwargs)
+
+    def _check_and_reserve_one(self, path: str, method: str) -> None:
+        # Fast-path for the common single-method case to avoid allocating a temporary set
+        if method == "HEAD":
+            return
+        key = (path, method)
+        if key in self._reserved:
+            msg = f"Plugin route conflicts with existing route: {path} [{method}]"
+            raise ValueError(msg)
+        self._reserved.add(key)
 
 
 def load_plugin_routes(app: FastAPI) -> None:
