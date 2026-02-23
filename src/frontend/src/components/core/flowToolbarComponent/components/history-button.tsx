@@ -25,12 +25,10 @@ const HistoryButton = () => {
         </div>
       </ShadTooltip>
       {isOpen && currentFlow?.id && (
-        <div className="fixed inset-y-0 right-0 z-50 shadow-xl">
-          <FlowHistoryPanel
-            flowId={currentFlow.id}
-            onClose={() => setIsOpen(false)}
-          />
-        </div>
+        <FlowHistoryPanel
+          flowId={currentFlow.id}
+          onClose={() => setIsOpen(false)}
+        />
       )}
     </>
   );
