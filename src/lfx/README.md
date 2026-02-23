@@ -25,7 +25,7 @@ LFX includes two commands for executing flows:
   ```
 
 - Create an [OpenAI API key](https://platform.openai.com/api-keys).
-- Create a Langflow API key. For LFX, you can generate a secure token locally (see [Serve the simple agent starter flow with `lfx serve`](#serve-the-simple-agent-starter-flow-with-lfx-serve-serve)), or create one through the Langflow server UI or CLI.
+- Create a Langflow API key. For LFX, you can generate a secure token locally (see [Serve the simple agent starter flow with `lfx serve`](#serve-the-simple-agent-starter-flow-with-lfx-serve)), or create one through the Langflow server UI or CLI.
 
 ## Install LFX
 
@@ -45,7 +45,7 @@ LFX can be installed in multiple ways. If you have installed Langflow OSS versio
    cd langflow/src/lfx
    ```
 
-   From this directory, you can run `lfx` commands using `uv run lfx` as shown in [lfx serve](#serve-the-simple-agent-starter-flow-with-lfx-serve-serve) or [lfx run](#run-the-simple-agent-flow-with-lfx-run-run).
+   From this directory, you can run `lfx` commands using `uv run lfx` as shown in [lfx serve](#serve-the-simple-agent-starter-flow-with-lfx-serve) or [lfx run](#run-the-simple-agent-flow-with-lfx-run).
 
 ### Install from PyPI
 
@@ -68,13 +68,13 @@ LFX can be installed in multiple ways. If you have installed Langflow OSS versio
    uv pip install lfx-nightly
    ```
 
-   To run `lfx` commands, continue to [lfx serve](#serve-the-simple-agent-starter-flow-with-lfx-serve-serve) or [lfx run](#run-the-simple-agent-flow-with-lfx-run-run).
+   To run `lfx` commands, continue to [lfx serve](#serve-the-simple-agent-starter-flow-with-lfx-serve) or [lfx run](#run-the-simple-agent-flow-with-lfx-run).
 
 ### Run without installing
 
 Run LFX without installing it locally using `uvx`.
 
-1. Create a Langflow API key (see [Serve](#serve-the-simple-agent-starter-flow-with-lfx-serve-serve)), and set `LANGFLOW_API_KEY` in the same terminal session as `lfx`:
+1. Create a Langflow API key (see [Serve](#serve-the-simple-agent-starter-flow-with-lfx-serve)), and set `LANGFLOW_API_KEY` in the same terminal session as `lfx`:
 
    ```bash
    export LANGFLOW_API_KEY="sk..."
@@ -86,9 +86,9 @@ Run LFX without installing it locally using `uvx`.
    uvx lfx serve simple-agent-flow.json
    ```
 
-   This command downloads and runs LFX in a temporary environment without permanent installation. From the same environment, you can also run flows directly with [lfx run](#run-the-simple-agent-flow-with-lfx-run-run).
+   This command downloads and runs LFX in a temporary environment without permanent installation. From the same environment, you can also run flows directly with [lfx run](#run-the-simple-agent-flow-with-lfx-run).
 
-## Serve the simple agent starter flow with `lfx serve` {#serve}
+## Serve the simple agent starter flow with `lfx serve`
 
 To serve a flow as a REST API endpoint, set a `LANGFLOW_API_KEY` and run the flow JSON.
 
@@ -134,7 +134,7 @@ This example uses the **Agent** component's built-in OpenAI model, which require
 
    To find which dependencies your flow requires:
 
-   1. Run your flow with [lfx run](#run):
+   1. Run your flow with [lfx run](#run-the-simple-agent-flow-with-lfx-run):
 
       ```bash
       uv run lfx run simple-agent-flow.json "test input"
@@ -260,7 +260,7 @@ To view the LFX server's API docs and schema, see the `/docs` endpoint at `http:
 | `--flow-json` | Read inline flow JSON content as a string. Example: `uv run lfx serve --flow-json '{...}'`. |
 | `--stdin` | Read JSON flow content from `stdin`. Example: `cat flow.json | uv run lfx serve --stdin`. |
 
-## Run the simple agent flow with `lfx run` {#run}
+## Run the simple agent flow with `lfx run`
 
 The `lfx run` command runs a flow from a JSON file without serving it, and the output is sent to `stdout`. Input to `lfx run` can be a path to the JSON file, inline JSON passed with `--input-value`, or read from `stdin`. No Langflow API key is required.
 
@@ -280,7 +280,7 @@ This example uses the **Agent** component's built-in OpenAI model, which require
 
    To find which dependencies your flow requires:
 
-   1. Run your flow with [lfx run](#run):
+   1. Run your flow with [lfx run](#run-the-simple-agent-flow-with-lfx-run):
 
       ```bash
       uv run lfx run simple-agent-flow.json "test input"
