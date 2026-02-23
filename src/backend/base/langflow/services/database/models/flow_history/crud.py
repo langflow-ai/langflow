@@ -31,7 +31,13 @@ async def create_flow_history_entry(
     if data is not None:
         import orjson
 
-        data_size = len(orjson.dumps(data))
+        try:
+            data_size = len(orjson.dumps(data))
+        except (TypeError, orjson.JSONEncodeError) as exc:
+            raise HTTPException(
+                status_code=422,
+                detail="Flow data could not be serialized. The data may contain non-serializable values.",
+            ) from exc
         max_size = get_settings_service().settings.max_flow_history_data_size_bytes
         if data_size > max_size:
             raise HTTPException(
@@ -59,7 +65,11 @@ async def create_flow_history_entry(
             if "unique_flow_version_number" not in str(exc).lower():
                 raise  # Not a version collision — don't retry
             if attempt == MAX_VERSION_RETRIES - 1:
-                raise
+                msg = (
+                    f"Failed to create history entry for flow {flow_id} after "
+                    f"{MAX_VERSION_RETRIES} retries due to version number conflicts"
+                )
+                raise HTTPException(status_code=409, detail=msg) from exc
             await logger.awarning(
                 "Version number collision for flow %s (attempt %d/%d), retrying",
                 flow_id,
@@ -70,10 +80,11 @@ async def create_flow_history_entry(
             continue
 
     if entry is None:
-        raise HTTPException(
-            status_code=409,
-            detail=f"Failed to create history entry for flow {flow_id} after {MAX_VERSION_RETRIES} retries due to version number conflicts",
+        msg = (
+            f"Failed to create history entry for flow {flow_id} after "
+            f"{MAX_VERSION_RETRIES} retries due to version number conflicts"
         )
+        raise HTTPException(status_code=409, detail=msg)
 
     # Prune oldest entries beyond the configured limit.
     # NOTE: Concurrent snapshot requests for the same flow could both insert
@@ -81,19 +92,22 @@ async def create_flow_history_entry(
     # entries. This is acceptable — the excess self-corrects on the next
     # snapshot, and serializing with SELECT FOR UPDATE would add contention
     # for a non-critical constraint.
-    max_entries = get_settings_service().settings.max_flow_history_entries_per_flow
-    delete_older = delete(FlowHistory).where(
-        FlowHistory.flow_id == flow_id,
-        col(FlowHistory.id).in_(
-            select(FlowHistory.id)
-            .where(FlowHistory.flow_id == flow_id)
-            .order_by(col(FlowHistory.version_number).desc())
-            .offset(max_entries)
-        ),
-    )
-    result = await session.exec(delete_older)
-    if hasattr(result, "rowcount") and result.rowcount:  # type: ignore[union-attr]
-        await logger.adebug("Pruned %d old history entries for flow %s", result.rowcount, flow_id)  # type: ignore[union-attr]
+    try:
+        max_entries = get_settings_service().settings.max_flow_history_entries_per_flow
+        delete_older = delete(FlowHistory).where(
+            FlowHistory.flow_id == flow_id,
+            col(FlowHistory.id).in_(
+                select(FlowHistory.id)
+                .where(FlowHistory.flow_id == flow_id)
+                .order_by(col(FlowHistory.version_number).desc())
+                .offset(max_entries)
+            ),
+        )
+        result = await session.exec(delete_older)
+        if hasattr(result, "rowcount") and result.rowcount:  # type: ignore[union-attr]
+            await logger.adebug("Pruned %d old history entries for flow %s", result.rowcount, flow_id)  # type: ignore[union-attr]
+    except Exception:  # noqa: BLE001
+        await logger.awarning("Failed to prune old history entries for flow %s", flow_id, exc_info=True)
 
     return entry
 

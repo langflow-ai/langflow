@@ -22,6 +22,7 @@ from sqlmodel import and_, col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import CurrentActiveUser, DbSession, cascade_delete_flow, remove_api_keys, validate_is_component
+from langflow.api.v1.flow_history import _strip_history_data
 from langflow.api.v1.schemas import FlowListCreate
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
@@ -770,13 +771,23 @@ async def upload_file(
                 for h_entry in raw_dict["history"][:_max_entries]:
                     if not isinstance(h_entry, dict):
                         continue
-                    await create_flow_history_entry(
-                        session,
-                        flow_id=flow_read.id,
-                        user_id=current_user.id,
-                        data=h_entry.get("data"),
-                        description=h_entry.get("description"),
-                    )
+                    raw_data = h_entry.get("data")
+                    if raw_data is not None and not isinstance(raw_data, dict):
+                        continue
+                    try:
+                        await create_flow_history_entry(
+                            session,
+                            flow_id=flow_read.id,
+                            user_id=current_user.id,
+                            data=raw_data,
+                            description=h_entry.get("description"),
+                        )
+                    except Exception:  # noqa: BLE001
+                        await logger.awarning(
+                            "Skipping history entry during import for flow %s: %s",
+                            flow_read.id,
+                            h_entry.get("description", "(no description)"),
+                        )
     except Exception as e:
         if "UNIQUE constraint failed" in str(e):
             # Get the name of the column that failed
@@ -849,7 +860,7 @@ async def download_multiple_file(
                 {
                     "version_number": e.version_number,
                     "description": e.description,
-                    "data": e.data,
+                    "data": _strip_history_data(e.data),
                     "created_at": e.created_at.isoformat() if e.created_at else None,
                 }
                 for e in history_entries

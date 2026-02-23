@@ -16,6 +16,11 @@ const useApplyFlowToCanvas = () => {
   const applyFlowToCanvas = useCallback(
     (flow: FlowType) => {
       processFlows([flow]);
+      if (!flow.data?.nodes?.length) {
+        console.warn(
+          "useApplyFlowToCanvas: processFlows may have failed — flow.data.nodes is empty after processing",
+        );
+      }
       setCurrentFlow(flow);
       refreshAllModelInputs({ silent: true });
     },
