@@ -6,13 +6,13 @@ from typing import Any
 
 import httpx
 from docling_core.types.doc import DoclingDocument
+from pydantic import ValidationError
 
 from lfx.base.data import BaseFileComponent
 from lfx.inputs import IntInput, NestedDictInput, StrInput
 from lfx.inputs.inputs import FloatInput
 from lfx.schema import Data
 from lfx.utils.util import transform_localhost_url
-from pydantic import ValidationError
 
 
 class DoclingRemoteComponent(BaseFileComponent):
