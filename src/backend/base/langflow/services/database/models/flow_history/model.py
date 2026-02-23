@@ -51,7 +51,7 @@ class FlowHistoryRead(BaseModel):
         return value.isoformat()
 
 
-class FlowHistoryReadFull(FlowHistoryRead):
+class FlowHistoryReadWithData(FlowHistoryRead):
     """Schema for a single history entry — includes full data."""
 
     data: dict | None

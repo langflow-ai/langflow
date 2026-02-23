@@ -8,7 +8,7 @@ export type FlowHistoryEntry = {
   created_at: string;
 };
 
-export type FlowHistoryEntryFull = FlowHistoryEntry & {
+export type FlowHistoryEntryWithData = FlowHistoryEntry & {
   data: Record<string, any> | null;
 };
 
