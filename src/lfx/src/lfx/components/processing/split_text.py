@@ -68,7 +68,7 @@ class SplitTextComponent(Component):
             display_name="Separators",
             info='The characters to split on.\nIf left empty defaults to ["\\n\\n", "\\n", " ", ""].',
             is_list=True,
-            show=False
+            show=False,
         ),
         MessageTextInput(
             name="text_key",
@@ -100,7 +100,6 @@ class SplitTextComponent(Component):
             advanced=True,
             real_time_refresh=True,
         ),
-       
     ]
 
     outputs = [
@@ -111,9 +110,7 @@ class SplitTextComponent(Component):
         if field_name == "mode":
             is_character = field_value == "Character"
             build_config["separator"]["show"] = is_character
-            build_config["custom_separator"]["show"] = (
-                is_character and build_config["separator"]["value"] == "Custom"
-            )
+            build_config["custom_separator"]["show"] = is_character and build_config["separator"]["value"] == "Custom"
             build_config["recursive_separators_bool"]["show"] = not is_character
             build_config["recursive_separators"]["show"] = (
                 not is_character and build_config["recursive_separators_bool"]["value"]
