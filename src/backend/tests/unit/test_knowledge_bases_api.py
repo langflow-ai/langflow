@@ -6,15 +6,20 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pandas as pd
 import pytest
 from httpx import AsyncClient
-from langflow.api.v1.knowledge_bases import (
-    _perform_ingestion,
+from langflow.api.utils.kb_helpers import (
     calculate_text_metrics,
     detect_embedding_model,
     detect_embedding_provider,
     get_directory_size,
-    get_kb_metadata,
     get_text_columns,
 )
+from langflow.api.v1.knowledge_bases import (
+    _perform_ingestion,
+    get_kb_metadata,
+)
+
+# Note: get_kb_metadata, get_kb_root_path, _perform_ingestion are also in kb_helpers
+# but are imported into knowledge_bases.py for endpoints.
 
 
 @pytest.fixture
@@ -123,23 +128,17 @@ class TestGetKBMetaData:
         assert result["chunks"] == 10
         assert result["embedding_provider"] == "OpenAI"
 
-    @patch("langflow.api.v1.knowledge_bases.Chroma")
-    @patch("langflow.api.v1.knowledge_bases.detect_embedding_provider")
-    @patch("langflow.api.v1.knowledge_bases.detect_embedding_model")
-    @patch("langflow.api.v1.knowledge_bases.get_directory_size")
-    def test_get_kb_metadata_slow_path(self, mock_size, mock_model, mock_provider, mock_chroma, mock_kb_path):
+    @patch("langflow.api.utils.kb_helpers.detect_embedding_provider")
+    @patch("langflow.api.utils.kb_helpers.detect_embedding_model")
+    @patch("langflow.api.utils.kb_helpers.get_directory_size")
+    def test_get_kb_metadata_slow_path(self, mock_size, mock_model, mock_provider, mock_kb_path):
         mock_size.return_value = 2048
         mock_provider.return_value = "Anthropic"
         mock_model.return_value = "claude-embed"
 
-        mock_collection = MagicMock()
-        mock_collection.count.return_value = 5
-        mock_collection.get.return_value = {"documents": ["doc1", "doc2"], "metadatas": [{}, {}]}
-        mock_chroma.return_value._collection = mock_collection
-
         result = get_kb_metadata(mock_kb_path, fast=False)
 
-        assert result["chunks"] == 5
+        # Chunks is no longer updated by get_kb_metadata as it NEVER opens Chroma
         assert result["size"] == 2048
         assert result["embedding_provider"] == "Anthropic"
         assert (mock_kb_path / "embedding_metadata.json").exists()
@@ -271,7 +270,10 @@ class TestKnowledgeBaseAPI:
     @patch("langflow.api.v1.knowledge_bases.Chroma")
     async def test_get_chunks(self, mock_chroma, mock_root, client: AsyncClient, logged_in_headers, tmp_path):
         mock_root.return_value = tmp_path
-        (tmp_path / "activeuser" / "KB1").mkdir(parents=True, exist_ok=True)
+        kb_dir = tmp_path / "activeuser" / "KB1"
+        kb_dir.mkdir(parents=True, exist_ok=True)
+        # Add marker to bypass 'readonly database' guard
+        (kb_dir / "chroma.sqlite3").write_text("dummy")
 
         mock_collection = MagicMock()
         mock_collection.count.return_value = 1
@@ -291,10 +293,15 @@ class TestKnowledgeBaseAPI:
 class TestPerformIngestionTask:
     """Tests for the internal _perform_ingestion background task."""
 
-    @patch("langflow.api.v1.knowledge_bases.Chroma")
-    @patch("langflow.api.v1.knowledge_bases._build_embeddings")
-    @patch("langflow.api.v1.knowledge_bases.get_kb_metadata")
-    async def test_perform_ingestion_success(self, mock_meta, mock_build, mock_chroma, mock_kb_path, sample_text_file):
+    @patch("langflow.api.utils.kb_helpers.Chroma")
+    @patch("langflow.api.utils.kb_helpers._build_embeddings", new_callable=AsyncMock)
+    @patch("langflow.api.utils.kb_helpers.get_kb_metadata")
+    @patch("langflow.api.utils.kb_helpers.get_directory_size")
+    @patch("langflow.api.utils.kb_helpers._update_text_metrics")
+    async def test_perform_ingestion_success(
+        self, mock_update, mock_size, mock_meta, mock_build, mock_chroma, mock_kb_path, sample_text_file
+    ):
+        mock_update.return_value = None
         mock_embeddings = MagicMock()
         mock_build.return_value = mock_embeddings
 
@@ -303,6 +310,7 @@ class TestPerformIngestionTask:
         mock_chroma_inst.aadd_documents = AsyncMock()
 
         mock_meta.return_value = {"chunks": 5, "size": 100}
+        mock_size.return_value = 100
 
         file_name, file_content = sample_text_file
         files_data = [(file_name, file_content.encode())]
@@ -313,19 +321,22 @@ class TestPerformIngestionTask:
             files_data=files_data,
             chunk_size=100,
             chunk_overlap=20,
+            separator="\n",
             source_name="src",
             current_user=MagicMock(),
             embedding_provider="OpenAI",
             embedding_model="model",
             task_job_id=uuid.uuid4(),
+            job_service=AsyncMock(),
         )
 
         assert result["files_processed"] == 1
         mock_chroma_inst.aadd_documents.assert_called()
 
-    @patch("langflow.api.v1.knowledge_bases.Chroma")
-    @patch("langflow.api.v1.knowledge_bases._build_embeddings")
-    async def test_perform_ingestion_rollback(self, mock_build, mock_chroma, mock_kb_path):
+    @patch("langflow.api.utils.kb_helpers.Chroma")
+    @patch("langflow.api.utils.kb_helpers._build_embeddings", new_callable=AsyncMock)
+    @patch("langflow.api.utils.kb_helpers._cleanup_chroma_chunks_by_job", new_callable=AsyncMock)
+    async def test_perform_ingestion_rollback(self, mock_cleanup, mock_build, mock_chroma, mock_kb_path):
         # mock_build is used to satisfy the decorator, we just need it available
         assert mock_build is not None
         mock_chroma_inst = MagicMock()
@@ -343,14 +354,16 @@ class TestPerformIngestionTask:
                 files_data=files_data,
                 chunk_size=100,
                 chunk_overlap=20,
+                separator="\n",
                 source_name="src",
                 current_user=MagicMock(),
                 embedding_provider="OpenAI",
                 embedding_model="model",
                 task_job_id=job_id,
+                job_service=AsyncMock(),
             )
 
-        mock_chroma_inst.adelete.assert_called_once_with(where={"job_id": str(job_id)})
+        mock_cleanup.assert_called_once_with(job_id, mock_kb_path, "test_kb")
 
 
 class TestCancelIngestion:
@@ -429,27 +442,25 @@ class TestCancelIngestion:
         kb_path = tmp_path / "activeuser" / "Test_KB"
         kb_path.mkdir(parents=True, exist_ok=True)
 
-        job_id = uuid.uuid4()
         mock_job_service_inst = MagicMock()
         mock_job_service.return_value = mock_job_service_inst
         mock_job_service_inst.cancel_job = AsyncMock(return_value=False)
 
         response = await client.post(
-            f"api/v1/knowledge_bases/Test_KB/cancel/{job_id}",
+            "api/v1/knowledge_bases/Test_KB/cancel",
             headers=logged_in_headers,
         )
 
         assert response.status_code == 404
         data = response.json()
-        assert "not found" in data["detail"].lower()
+        assert "no ingestion job found" in data["detail"].lower()
 
     @patch("langflow.api.v1.knowledge_bases.get_kb_root_path")
     async def test_cancel_ingestion_kb_not_found(self, mock_root, client: AsyncClient, logged_in_headers, tmp_path):
         mock_root.return_value = tmp_path
-        job_id = uuid.uuid4()
 
         response = await client.post(
-            f"api/v1/knowledge_bases/NonExistent_KB/cancel/{job_id}",
+            "api/v1/knowledge_bases/NonExistent_KB/cancel",
             headers=logged_in_headers,
         )
 
