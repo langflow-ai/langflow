@@ -14,9 +14,7 @@ MAX_VERSION_RETRIES = 3
 
 
 async def get_next_version_number(session: AsyncSession, flow_id: UUID) -> int:
-    result = await session.exec(
-        select(func.max(FlowHistory.version_number)).where(FlowHistory.flow_id == flow_id)
-    )
+    result = await session.exec(select(func.max(FlowHistory.version_number)).where(FlowHistory.flow_id == flow_id))
     current_max = result.one()
     return (current_max or 0) + 1
 
@@ -98,9 +96,7 @@ async def get_flow_history_entry(
     history_id: UUID,
     user_id: UUID,
 ) -> FlowHistory | None:
-    result = await session.exec(
-        select(FlowHistory).where(FlowHistory.id == history_id, FlowHistory.user_id == user_id)
-    )
+    result = await session.exec(select(FlowHistory).where(FlowHistory.id == history_id, FlowHistory.user_id == user_id))
     return result.first()
 
 
@@ -145,9 +141,5 @@ async def set_entry_state(
     state: FlowStateEnum,
 ) -> None:
     """Set the state of a single history entry using a targeted UPDATE."""
-    stmt = (
-        update(FlowHistory)
-        .where(FlowHistory.id == history_id)
-        .values(state=state)
-    )
+    stmt = update(FlowHistory).where(FlowHistory.id == history_id).values(state=state)
     await session.exec(stmt)

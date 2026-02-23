@@ -12,16 +12,15 @@ Tests cover:
 """
 
 import json
-from pathlib import Path
 
 import pytest
 from fastapi import status
 from httpx import AsyncClient
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 async def _create_flow(client: AsyncClient, headers: dict, name: str = "history-test-flow") -> dict:
     """Create a minimal flow and return the JSON response."""
@@ -36,9 +35,7 @@ async def _create_flow(client: AsyncClient, headers: dict, name: str = "history-
     return resp.json()
 
 
-async def _create_snapshot(
-    client: AsyncClient, headers: dict, flow_id: str, description: str | None = None
-) -> dict:
+async def _create_snapshot(client: AsyncClient, headers: dict, flow_id: str, description: str | None = None) -> dict:
     """POST a snapshot and return the JSON response."""
     body = {"description": description} if description else {}
     resp = await client.post(f"api/v1/flows/{flow_id}/history/", json=body, headers=headers)
@@ -62,6 +59,7 @@ async def _patch_flow_data(client: AsyncClient, headers: dict, flow_id: str, dat
 # ---------------------------------------------------------------------------
 # Basic CRUD
 # ---------------------------------------------------------------------------
+
 
 async def test_create_snapshot(client: AsyncClient, logged_in_headers):
     flow = await _create_flow(client, logged_in_headers)
@@ -122,9 +120,7 @@ async def test_get_single_history_entry_includes_data(client: AsyncClient, logge
     flow = await _create_flow(client, logged_in_headers)
     snap = await _create_snapshot(client, logged_in_headers, flow["id"])
 
-    resp = await client.get(
-        f"api/v1/flows/{flow['id']}/history/{snap['id']}", headers=logged_in_headers
-    )
+    resp = await client.get(f"api/v1/flows/{flow['id']}/history/{snap['id']}", headers=logged_in_headers)
     assert resp.status_code == status.HTTP_200_OK
     full = resp.json()
 
@@ -159,9 +155,7 @@ async def test_delete_history_entry(client: AsyncClient, logged_in_headers):
     flow = await _create_flow(client, logged_in_headers)
     snap = await _create_snapshot(client, logged_in_headers, flow["id"])
 
-    resp = await client.delete(
-        f"api/v1/flows/{flow['id']}/history/{snap['id']}", headers=logged_in_headers
-    )
+    resp = await client.delete(f"api/v1/flows/{flow['id']}/history/{snap['id']}", headers=logged_in_headers)
     assert resp.status_code == status.HTTP_204_NO_CONTENT
 
     entries = await _list_history(client, logged_in_headers, flow["id"])
@@ -171,6 +165,7 @@ async def test_delete_history_entry(client: AsyncClient, logged_in_headers):
 # ---------------------------------------------------------------------------
 # Activate version
 # ---------------------------------------------------------------------------
+
 
 async def test_activate_version_overwrites_flow_data(client: AsyncClient, logged_in_headers):
     """Activating a historical version should replace the current flow.data."""
@@ -185,9 +180,7 @@ async def test_activate_version_overwrites_flow_data(client: AsyncClient, logged
     await _patch_flow_data(client, logged_in_headers, flow["id"], modified_data)
 
     # Activate the old snapshot
-    resp = await client.post(
-        f"api/v1/flows/{flow['id']}/history/{snap['id']}/activate", headers=logged_in_headers
-    )
+    resp = await client.post(f"api/v1/flows/{flow['id']}/history/{snap['id']}/activate", headers=logged_in_headers)
     assert resp.status_code == status.HTTP_200_OK
     updated_flow = resp.json()
 
@@ -205,9 +198,7 @@ async def test_activate_creates_auto_snapshot(client: AsyncClient, logged_in_hea
     await _patch_flow_data(client, logged_in_headers, flow["id"], {"nodes": [{"id": "x"}], "edges": []})
 
     # Activate — this should create an auto-snapshot first
-    await client.post(
-        f"api/v1/flows/{flow['id']}/history/{snap['id']}/activate", headers=logged_in_headers
-    )
+    await client.post(f"api/v1/flows/{flow['id']}/history/{snap['id']}/activate", headers=logged_in_headers)
 
     entries = await _list_history(client, logged_in_headers, flow["id"])
     # 1 manual snapshot + 1 auto-snapshot = 2
@@ -225,9 +216,7 @@ async def test_activate_sets_state_transitions(client: AsyncClient, logged_in_he
     s2 = await _create_snapshot(client, logged_in_headers, flow["id"], description="second")
 
     # Activate s1
-    await client.post(
-        f"api/v1/flows/{flow['id']}/history/{s1['id']}/activate", headers=logged_in_headers
-    )
+    await client.post(f"api/v1/flows/{flow['id']}/history/{s1['id']}/activate", headers=logged_in_headers)
 
     entries = await _list_history(client, logged_in_headers, flow["id"])
     states_by_id = {e["id"]: e["state"] for e in entries}
@@ -235,9 +224,7 @@ async def test_activate_sets_state_transitions(client: AsyncClient, logged_in_he
     assert states_by_id[s2["id"]] == "DRAFT"  # was never published, stays DRAFT
 
     # Now activate s2 → s1 should become ARCHIVED
-    await client.post(
-        f"api/v1/flows/{flow['id']}/history/{s2['id']}/activate", headers=logged_in_headers
-    )
+    await client.post(f"api/v1/flows/{flow['id']}/history/{s2['id']}/activate", headers=logged_in_headers)
 
     entries = await _list_history(client, logged_in_headers, flow["id"])
     states_by_id = {e["id"]: e["state"] for e in entries}
@@ -249,9 +236,7 @@ async def test_activate_updates_flow_pointer(client: AsyncClient, logged_in_head
     flow = await _create_flow(client, logged_in_headers)
     snap = await _create_snapshot(client, logged_in_headers, flow["id"])
 
-    resp = await client.post(
-        f"api/v1/flows/{flow['id']}/history/{snap['id']}/activate", headers=logged_in_headers
-    )
+    resp = await client.post(f"api/v1/flows/{flow['id']}/history/{snap['id']}/activate", headers=logged_in_headers)
     updated = resp.json()
     assert updated["active_version_id"] == snap["id"]
 
@@ -264,20 +249,17 @@ async def test_activate_updates_flow_pointer(client: AsyncClient, logged_in_head
 # Delete constraints
 # ---------------------------------------------------------------------------
 
+
 async def test_delete_active_version_is_blocked(client: AsyncClient, logged_in_headers):
     """Cannot delete the version that is currently active."""
     flow = await _create_flow(client, logged_in_headers)
     snap = await _create_snapshot(client, logged_in_headers, flow["id"])
 
     # Activate it
-    await client.post(
-        f"api/v1/flows/{flow['id']}/history/{snap['id']}/activate", headers=logged_in_headers
-    )
+    await client.post(f"api/v1/flows/{flow['id']}/history/{snap['id']}/activate", headers=logged_in_headers)
 
     # Try to delete — should be blocked
-    resp = await client.delete(
-        f"api/v1/flows/{flow['id']}/history/{snap['id']}", headers=logged_in_headers
-    )
+    resp = await client.delete(f"api/v1/flows/{flow['id']}/history/{snap['id']}", headers=logged_in_headers)
     assert resp.status_code == status.HTTP_400_BAD_REQUEST
     assert "active" in resp.json()["detail"].lower()
 
@@ -289,20 +271,17 @@ async def test_delete_non_active_version_after_activation(client: AsyncClient, l
     s2 = await _create_snapshot(client, logged_in_headers, flow["id"])
 
     # Activate s1
-    await client.post(
-        f"api/v1/flows/{flow['id']}/history/{s1['id']}/activate", headers=logged_in_headers
-    )
+    await client.post(f"api/v1/flows/{flow['id']}/history/{s1['id']}/activate", headers=logged_in_headers)
 
     # Delete s2 (not active) — should succeed
-    resp = await client.delete(
-        f"api/v1/flows/{flow['id']}/history/{s2['id']}", headers=logged_in_headers
-    )
+    resp = await client.delete(f"api/v1/flows/{flow['id']}/history/{s2['id']}", headers=logged_in_headers)
     assert resp.status_code == status.HTTP_204_NO_CONTENT
 
 
 # ---------------------------------------------------------------------------
 # Cascade deletion
 # ---------------------------------------------------------------------------
+
 
 async def test_deleting_flow_cascades_to_history(client: AsyncClient, logged_in_headers):
     flow = await _create_flow(client, logged_in_headers)
@@ -313,15 +292,14 @@ async def test_deleting_flow_cascades_to_history(client: AsyncClient, logged_in_
     assert resp.status_code == status.HTTP_200_OK
 
     # History endpoint for the deleted flow should 404
-    resp = await client.get(
-        f"api/v1/flows/{flow['id']}/history/", headers=logged_in_headers
-    )
+    resp = await client.get(f"api/v1/flows/{flow['id']}/history/", headers=logged_in_headers)
     assert resp.status_code == status.HTTP_404_NOT_FOUND
 
 
 # ---------------------------------------------------------------------------
 # Error / edge cases
 # ---------------------------------------------------------------------------
+
 
 async def test_get_history_for_nonexistent_flow(client: AsyncClient, logged_in_headers):
     fake_id = "00000000-0000-0000-0000-000000000000"
@@ -332,27 +310,21 @@ async def test_get_history_for_nonexistent_flow(client: AsyncClient, logged_in_h
 async def test_get_nonexistent_history_entry(client: AsyncClient, logged_in_headers):
     flow = await _create_flow(client, logged_in_headers)
     fake_id = "00000000-0000-0000-0000-000000000000"
-    resp = await client.get(
-        f"api/v1/flows/{flow['id']}/history/{fake_id}", headers=logged_in_headers
-    )
+    resp = await client.get(f"api/v1/flows/{flow['id']}/history/{fake_id}", headers=logged_in_headers)
     assert resp.status_code == status.HTTP_404_NOT_FOUND
 
 
 async def test_activate_nonexistent_history_entry(client: AsyncClient, logged_in_headers):
     flow = await _create_flow(client, logged_in_headers)
     fake_id = "00000000-0000-0000-0000-000000000000"
-    resp = await client.post(
-        f"api/v1/flows/{flow['id']}/history/{fake_id}/activate", headers=logged_in_headers
-    )
+    resp = await client.post(f"api/v1/flows/{flow['id']}/history/{fake_id}/activate", headers=logged_in_headers)
     assert resp.status_code == status.HTTP_404_NOT_FOUND
 
 
 async def test_delete_nonexistent_history_entry(client: AsyncClient, logged_in_headers):
     flow = await _create_flow(client, logged_in_headers)
     fake_id = "00000000-0000-0000-0000-000000000000"
-    resp = await client.delete(
-        f"api/v1/flows/{flow['id']}/history/{fake_id}", headers=logged_in_headers
-    )
+    resp = await client.delete(f"api/v1/flows/{flow['id']}/history/{fake_id}", headers=logged_in_headers)
     assert resp.status_code == status.HTTP_404_NOT_FOUND
 
 
@@ -363,9 +335,7 @@ async def test_activate_entry_belonging_to_different_flow(client: AsyncClient, l
     snap_a = await _create_snapshot(client, logged_in_headers, flow_a["id"])
 
     # Try to activate snap_a on flow_b
-    resp = await client.post(
-        f"api/v1/flows/{flow_b['id']}/history/{snap_a['id']}/activate", headers=logged_in_headers
-    )
+    resp = await client.post(f"api/v1/flows/{flow_b['id']}/history/{snap_a['id']}/activate", headers=logged_in_headers)
     assert resp.status_code == status.HTTP_404_NOT_FOUND
 
 
@@ -375,9 +345,7 @@ async def test_delete_entry_belonging_to_different_flow(client: AsyncClient, log
     flow_b = await _create_flow(client, logged_in_headers, name="flow-b-del")
     snap_a = await _create_snapshot(client, logged_in_headers, flow_a["id"])
 
-    resp = await client.delete(
-        f"api/v1/flows/{flow_b['id']}/history/{snap_a['id']}", headers=logged_in_headers
-    )
+    resp = await client.delete(f"api/v1/flows/{flow_b['id']}/history/{snap_a['id']}", headers=logged_in_headers)
     assert resp.status_code == status.HTTP_404_NOT_FOUND
 
 
@@ -390,6 +358,7 @@ async def test_unauthenticated_request_is_rejected(client: AsyncClient):
 # ---------------------------------------------------------------------------
 # Pagination
 # ---------------------------------------------------------------------------
+
 
 async def test_list_history_pagination(client: AsyncClient, logged_in_headers):
     flow = await _create_flow(client, logged_in_headers)
@@ -425,6 +394,7 @@ async def test_list_history_pagination(client: AsyncClient, logged_in_headers):
 # Multi-activate scenario (full lifecycle)
 # ---------------------------------------------------------------------------
 
+
 async def test_full_lifecycle(client: AsyncClient, logged_in_headers):
     """End-to-end: create, snapshot, edit, snapshot, activate old, verify."""
     # 1. Create flow with initial data
@@ -449,9 +419,7 @@ async def test_full_lifecycle(client: AsyncClient, logged_in_headers):
     await _patch_flow_data(client, logged_in_headers, flow_id, data_v3)
 
     # 6. Activate v1 — should auto-snapshot current state, then revert to v1's data
-    resp = await client.post(
-        f"api/v1/flows/{flow_id}/history/{v1['id']}/activate", headers=logged_in_headers
-    )
+    resp = await client.post(f"api/v1/flows/{flow_id}/history/{v1['id']}/activate", headers=logged_in_headers)
     assert resp.status_code == status.HTTP_200_OK
     activated_flow = resp.json()
     assert activated_flow["data"] == initial_data
@@ -463,9 +431,7 @@ async def test_full_lifecycle(client: AsyncClient, logged_in_headers):
 
     # 8. The auto-snapshot should contain data_v3
     auto = next(e for e in entries if "Auto-saved" in (e["description"] or ""))
-    auto_full = await client.get(
-        f"api/v1/flows/{flow_id}/history/{auto['id']}", headers=logged_in_headers
-    )
+    auto_full = await client.get(f"api/v1/flows/{flow_id}/history/{auto['id']}", headers=logged_in_headers)
     assert auto_full.json()["data"] == data_v3
 
     # 9. v1 should be PUBLISHED, v2 should be DRAFT (never activated)
@@ -474,9 +440,7 @@ async def test_full_lifecycle(client: AsyncClient, logged_in_headers):
     assert states[v2["id"]] == "DRAFT"
 
     # 10. Now activate v2
-    resp2 = await client.post(
-        f"api/v1/flows/{flow_id}/history/{v2['id']}/activate", headers=logged_in_headers
-    )
+    resp2 = await client.post(f"api/v1/flows/{flow_id}/history/{v2['id']}/activate", headers=logged_in_headers)
     assert resp2.status_code == status.HTTP_200_OK
     assert resp2.json()["data"] == data_v2
 
@@ -491,6 +455,7 @@ async def test_full_lifecycle(client: AsyncClient, logged_in_headers):
 # New flow fields
 # ---------------------------------------------------------------------------
 
+
 async def test_flow_has_state_and_active_version_id_fields(client: AsyncClient, logged_in_headers):
     """Newly created flows should have state=DRAFT and active_version_id=None."""
     flow = await _create_flow(client, logged_in_headers)
@@ -504,6 +469,7 @@ async def test_flow_has_state_and_active_version_id_fields(client: AsyncClient, 
 # ---------------------------------------------------------------------------
 # Realistic data payloads (starter project)
 # ---------------------------------------------------------------------------
+
 
 async def test_snapshot_and_activate_with_complex_flow_data(client: AsyncClient, logged_in_headers):
     """Snapshot / activate round-trip with a real multi-node flow from test data."""
@@ -566,9 +532,7 @@ async def test_snapshot_preserves_full_node_metadata(client: AsyncClient, logged
     snap = await _create_snapshot(client, logged_in_headers, flow["id"])
 
     # Fetch the full snapshot and compare node-by-node
-    full = await client.get(
-        f"api/v1/flows/{flow['id']}/history/{snap['id']}", headers=logged_in_headers
-    )
+    full = await client.get(f"api/v1/flows/{flow['id']}/history/{snap['id']}", headers=logged_in_headers)
     snapshot_data = full.json()["data"]
 
     for i, original_node in enumerate(complex_data["nodes"]):
@@ -581,6 +545,7 @@ async def test_snapshot_preserves_full_node_metadata(client: AsyncClient, logged
 # ---------------------------------------------------------------------------
 # History limit enforcement
 # ---------------------------------------------------------------------------
+
 
 async def test_history_limit_enforcement(client: AsyncClient, logged_in_headers, monkeypatch):
     """Creating snapshots beyond the configured limit prunes the oldest entries."""
@@ -623,6 +588,7 @@ async def test_history_limit_keeps_newest(client: AsyncClient, logged_in_headers
 # ---------------------------------------------------------------------------
 # Export / Import with history
 # ---------------------------------------------------------------------------
+
 
 async def test_download_with_history(client: AsyncClient, logged_in_headers):
     """Download with include_history=True should embed history entries in the response."""
@@ -829,6 +795,7 @@ async def test_round_trip_export_import(client: AsyncClient, logged_in_headers):
 # Pruning protects active (PUBLISHED) versions
 # ---------------------------------------------------------------------------
 
+
 async def test_pruning_preserves_published_entries(client: AsyncClient, logged_in_headers, monkeypatch):
     """PUBLISHED entries should survive pruning even when over the limit."""
     from langflow.services.deps import get_settings_service
@@ -841,9 +808,7 @@ async def test_pruning_preserves_published_entries(client: AsyncClient, logged_i
 
     # Create a snapshot and activate it (PUBLISHED)
     s1 = await _create_snapshot(client, logged_in_headers, flow_id, description="will-be-published")
-    await client.post(
-        f"api/v1/flows/{flow_id}/history/{s1['id']}/activate", headers=logged_in_headers
-    )
+    await client.post(f"api/v1/flows/{flow_id}/history/{s1['id']}/activate", headers=logged_in_headers)
 
     # Create more snapshots beyond the limit (limit=2, but we already have entries from activation)
     for i in range(4):
@@ -862,6 +827,7 @@ async def test_pruning_preserves_published_entries(client: AsyncClient, logged_i
 # Activate version with null data
 # ---------------------------------------------------------------------------
 
+
 async def test_activate_version_with_null_data(client: AsyncClient, logged_in_headers):
     """Activating a version whose data is None should return 400."""
     from uuid import UUID
@@ -877,17 +843,13 @@ async def test_activate_version_with_null_data(client: AsyncClient, logged_in_he
 
     # Manually set the snapshot's data to None in the DB
     async with session_scope() as session:
-        result = await session.exec(
-            select(FlowHistory).where(FlowHistory.id == UUID(snap["id"]))
-        )
+        result = await session.exec(select(FlowHistory).where(FlowHistory.id == UUID(snap["id"])))
         entry = result.first()
         if entry:
             entry.data = None
             session.add(entry)
 
-    resp = await client.post(
-        f"api/v1/flows/{flow_id}/history/{snap['id']}/activate", headers=logged_in_headers
-    )
+    resp = await client.post(f"api/v1/flows/{flow_id}/history/{snap['id']}/activate", headers=logged_in_headers)
     assert resp.status_code == status.HTTP_400_BAD_REQUEST
     assert "no data" in resp.json()["detail"].lower()
 
@@ -896,6 +858,7 @@ async def test_activate_version_with_null_data(client: AsyncClient, logged_in_he
 # Cross-user isolation
 # ---------------------------------------------------------------------------
 
+
 async def test_history_entry_scoped_to_flow(client: AsyncClient, logged_in_headers):
     """Getting a history entry via the wrong flow's endpoint should 404."""
     flow_a = await _create_flow(client, logged_in_headers, name="scope-a")
@@ -903,15 +866,14 @@ async def test_history_entry_scoped_to_flow(client: AsyncClient, logged_in_heade
     snap_a = await _create_snapshot(client, logged_in_headers, flow_a["id"])
 
     # Try to access snap_a through flow_b's endpoint
-    resp = await client.get(
-        f"api/v1/flows/{flow_b['id']}/history/{snap_a['id']}", headers=logged_in_headers
-    )
+    resp = await client.get(f"api/v1/flows/{flow_b['id']}/history/{snap_a['id']}", headers=logged_in_headers)
     assert resp.status_code == status.HTTP_404_NOT_FOUND
 
 
 # ---------------------------------------------------------------------------
 # Malformed history import
 # ---------------------------------------------------------------------------
+
 
 async def test_upload_with_malformed_history_entries(client: AsyncClient, logged_in_headers):
     """Import with history entries missing 'data' should still create entries (with None data)."""
@@ -953,6 +915,7 @@ async def test_upload_with_malformed_history_entries(client: AsyncClient, logged
 # Multi-flow download with history
 # ---------------------------------------------------------------------------
 
+
 async def test_download_multiple_flows_with_history(client: AsyncClient, logged_in_headers):
     """Downloading multiple flows with include_history should embed history in each."""
     flow_a = await _create_flow(client, logged_in_headers, name="multi-a")
@@ -989,6 +952,7 @@ async def test_download_multiple_flows_with_history(client: AsyncClient, logged_
 # ---------------------------------------------------------------------------
 # Edge case: limit boundary values
 # ---------------------------------------------------------------------------
+
 
 async def test_list_history_limit_of_one(client: AsyncClient, logged_in_headers):
     """Limit=1 should return exactly one entry."""

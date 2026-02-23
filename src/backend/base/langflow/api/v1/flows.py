@@ -762,7 +762,7 @@ async def upload_file(
 
     try:
         flow_reads = []
-        for flow, raw_dict in zip(flow_list.flows, raw_flow_dicts):
+        for flow, raw_dict in zip(flow_list.flows, raw_flow_dicts, strict=False):
             flow.user_id = current_user.id
             if folder_id:
                 flow.folder_id = folder_id
@@ -854,7 +854,7 @@ async def download_multiple_file(
     if include_history:
         from langflow.services.database.models.flow_history.crud import get_flow_history_list
 
-        for flow_dict, flow_obj in zip(flows_without_api_keys, flows):
+        for flow_dict, flow_obj in zip(flows_without_api_keys, flows, strict=False):
             history_entries = await get_flow_history_list(db, flow_obj.id, user.id, limit=10000, offset=0)
             flow_dict["history"] = [
                 {
