@@ -56,7 +56,7 @@ class AzureChatOpenAIComponent(LCModelComponent):
         SliderInput(
             name="temperature",
             display_name="Temperature",
-            value=0.7,
+            value=1.0,
             range_spec=RangeSpec(min=0, max=2, step=0.01),
             info="Controls randomness. Lower values are more deterministic, higher values are more creative.",
             advanced=True,
