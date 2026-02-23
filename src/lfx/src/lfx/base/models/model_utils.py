@@ -1,4 +1,5 @@
 import asyncio
+from typing import Any
 from urllib.parse import urljoin
 from uuid import UUID
 
@@ -23,6 +24,17 @@ HTTP_STATUS_OK = 200
 # Extract model names from metadata for fallback defaults
 WATSONX_DEFAULT_LLM_MODEL_NAMES = [m["name"] for m in WATSONX_LLM_METADATA]
 WATSONX_DEFAULT_EMBEDDING_MODEL_NAMES = [m["name"] for m in WATSONX_EMBEDDING_METADATA]
+
+
+def _to_str(value: Any) -> str | None:
+    """Safely coerce Message/Data or other values to string for URL/string params."""
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return value
+    if hasattr(value, "text"):
+        return value.text or None
+    return str(value) or None
 
 
 def get_model_name(llm, display_name: str | None = "Custom"):

@@ -17,9 +17,7 @@ from lfx.base.models.google_generative_ai_constants import (
     GOOGLE_GENERATIVE_AI_MODELS_DETAILED,
 )
 from lfx.base.models.model_metadata import MODEL_PROVIDER_METADATA, get_provider_param_mapping
-from lfx.base.models.model_utils import (
-    get_live_models_for_provider,
-)
+from lfx.base.models.model_utils import _to_str, get_live_models_for_provider
 from lfx.base.models.ollama_constants import OLLAMA_EMBEDDING_MODELS_DETAILED, OLLAMA_MODELS_DETAILED
 from lfx.base.models.openai_constants import OPENAI_EMBEDDING_MODELS_DETAILED, OPENAI_MODELS_DETAILED
 from lfx.base.models.watsonx_constants import WATSONX_MODELS_DETAILED
@@ -1292,6 +1290,11 @@ def get_llm(
     watsonx_project_id=None,
     ollama_base_url=None,
 ) -> Any:
+    # Coerce provider-specific string params (Message/Data may leak through StrInput)
+    ollama_base_url = _to_str(ollama_base_url)
+    watsonx_url = _to_str(watsonx_url)
+    watsonx_project_id = _to_str(watsonx_project_id)
+
     # Check if model is already a BaseLanguageModel instance (from a connection)
     try:
         from langchain_core.language_models import BaseLanguageModel
