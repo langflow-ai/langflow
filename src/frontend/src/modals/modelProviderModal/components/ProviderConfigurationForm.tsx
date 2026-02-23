@@ -115,8 +115,13 @@ const ProviderConfigurationForm = ({
                       value={
                         variableValues[variable.variable_key]
                           ? [variableValues[variable.variable_key]]
-                          : isConfigured && getConfiguredValue(variable.variable_key)
-                            ? [getConfiguredValue(variable.variable_key) as string]
+                          : isConfigured &&
+                              getConfiguredValue(variable.variable_key)
+                            ? [
+                                getConfiguredValue(
+                                  variable.variable_key,
+                                ) as string,
+                              ]
                             : []
                       }
                       options={variable.options}
@@ -125,7 +130,10 @@ const ProviderConfigurationForm = ({
                       handleOnNewValue={(val) => {
                         const newArray = val.value as string[];
                         if (newArray && newArray.length > 0) {
-                          onVariableChange(variable.variable_key, newArray[newArray.length - 1]);
+                          onVariableChange(
+                            variable.variable_key,
+                            newArray[newArray.length - 1],
+                          );
                         } else {
                           onVariableChange(variable.variable_key, "");
                         }
@@ -250,7 +258,7 @@ const ProviderConfigurationForm = ({
               >
                 Disconnect
               </Button>
-          )}
+            )}
             <Button
               onClick={onSave}
               size="sm"
