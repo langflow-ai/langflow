@@ -391,6 +391,7 @@ module.exports = {
             "Components/bundles-ibm",
             "Components/bundles-icosacomputing",
             "Components/bundles-langchain",
+            "Components/bundles-lite-llm",
             "Components/bundles-lmstudio",
             "Components/bundles-maritalk",
             "Components/bundles-mem0",
