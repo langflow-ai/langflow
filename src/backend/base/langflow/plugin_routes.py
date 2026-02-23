@@ -64,7 +64,7 @@ class _PluginAppWrapper:
         self._app.include_router(router, prefix=prefix, **kwargs)
 
     def get(self, path: str, **kwargs):
-        self._check_and_reserve(path, {"GET"})
+        self._check_and_reserve_single(path, "GET")
         return self._app.get(path, **kwargs)
 
     def post(self, path: str, **kwargs):
@@ -95,6 +95,13 @@ class _PluginAppWrapper:
         methods = kwargs.get("methods", ["GET"])
         self._check_and_reserve(path, set(methods))
         return self._app.add_api_route(path, endpoint, **kwargs)
+
+    def _check_and_reserve_single(self, path: str, method: str) -> None:
+        key = (path, method)
+        if key in self._reserved:
+            msg = f"Plugin route conflicts with existing route: {path} [{method}]"
+            raise ValueError(msg)
+        self._reserved.add(key)
 
 
 def load_plugin_routes(app: FastAPI) -> None:
