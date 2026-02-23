@@ -272,9 +272,11 @@ export default function FlowHistoryPanel({
     );
   }, [flowId, description, createSnapshot, setSuccessData, setErrorData]);
 
-  // Restore = PATCH flow data with historical data, then close panel
+  // Restore = PATCH flow data with historical data, then close panel.
+  // Accepts historyId explicitly so the restore target can't drift if the
+  // user somehow changes the selection while the dialog is open.
   const doRestore = useCallback(
-    async (saveFirst: boolean) => {
+    async (historyId: string, saveFirst: boolean) => {
       setIsRestoring(true);
       try {
         if (saveFirst) {
@@ -284,7 +286,11 @@ export default function FlowHistoryPanel({
           });
         }
 
-        const historicalData = selectedEntryFull?.data;
+        // Fetch the entry data directly to avoid relying on the shared query
+        const response = await api.get(
+          `${getURL("FLOWS")}/${flowId}/history/${historyId}`,
+        );
+        const historicalData = response.data?.data;
         if (!historicalData) {
           setErrorData({ title: "Cannot restore: version has no data" });
           return;
@@ -327,7 +333,6 @@ export default function FlowHistoryPanel({
     },
     [
       flowId,
-      selectedEntryFull,
       createSnapshotAsync,
       patchFlowAsync,
       applyFlowToCanvas,
@@ -377,7 +382,10 @@ export default function FlowHistoryPanel({
           tag = response.data?.version_tag ?? "version";
         }
 
-        if (!data) return;
+        if (!data) {
+          setErrorData({ title: "No data available to export" });
+          return;
+        }
 
         const blob = new Blob([JSON.stringify(data, null, 2)], {
           type: "application/json",
@@ -692,18 +700,16 @@ export default function FlowHistoryPanel({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => doRestore(false)}
+                onClick={() => doRestore(restoreConfirm.historyId, false)}
                 loading={isRestoring}
-                disabled={isLoadingEntry}
               >
                 Restore without saving
               </Button>
               <Button
                 variant="default"
                 size="sm"
-                onClick={() => doRestore(true)}
+                onClick={() => doRestore(restoreConfirm.historyId, true)}
                 loading={isRestoring}
-                disabled={isLoadingEntry}
               >
                 Save current state & restore
               </Button>

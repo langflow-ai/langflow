@@ -138,8 +138,6 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
 
     return () => {
       setOnFlowPage(false);
-      console.warn("unmounting");
-
       setCurrentFlow(undefined);
       // Reset playground state when leaving the flow
       setSlidingContainerOpen(false);
