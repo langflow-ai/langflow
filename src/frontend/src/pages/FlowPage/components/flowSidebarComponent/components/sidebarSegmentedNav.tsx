@@ -52,6 +52,12 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Sticky Notes",
     tooltip: "Add Sticky Notes",
   },
+  {
+    id: "history",
+    icon: "History",
+    label: "History",
+    tooltip: "Version History",
+  },
 ];
 
 const SidebarSegmentedNav = () => {

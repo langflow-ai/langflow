@@ -5,8 +5,10 @@ import {
   type OnNodeDrag,
   type OnSelectionChangeParams,
   ReactFlow,
+  ReactFlowProvider,
   reconnectEdge,
   type SelectionDragHandler,
+  useNodesInitialized,
 } from "@xyflow/react";
 import _, { cloneDeep } from "lodash";
 import {
@@ -44,6 +46,7 @@ import ExportModal from "../../../../modals/exportModal";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
+import useHistoryPreviewStore from "../../../../stores/historyPreviewStore";
 import { useShortcutsStore } from "../../../../stores/shortcuts";
 import { useTypesStore } from "../../../../stores/typesStore";
 import type { APIClassType } from "../../../../types/api";
@@ -80,7 +83,63 @@ import {
 import getRandomName from "./utils/get-random-name";
 import isWrappedWithClass from "./utils/is-wrapped-with-class";
 
+import { ErrorBoundary } from "react-error-boundary";
 import { nodeTypes, edgeTypes } from "../../consts";
+
+/**
+ * Read-only ReactFlow canvas used to preview historical flow versions.
+ * Defers edge rendering until nodes are fully initialized (handles measured)
+ * so edges connect to the correct handle positions.
+ * Must be rendered inside a ReactFlowProvider.
+ */
+function PreviewCanvas({
+  nodes: previewNodes,
+  edges: previewEdges,
+  nodeTypes: nTypes,
+  edgeTypes: eTypes,
+  label,
+}: {
+  nodes: AllNodeType[];
+  edges: EdgeType[];
+  nodeTypes: any;
+  edgeTypes: any;
+  label: string;
+}) {
+  const nodesInitialized = useNodesInitialized();
+  return (
+    <>
+      <ReactFlow<AllNodeType, EdgeType>
+        nodes={previewNodes}
+        edges={nodesInitialized ? previewEdges : []}
+        nodeTypes={nTypes}
+        edgeTypes={eTypes}
+        fitView
+        fitViewOptions={{ padding: 0.2, minZoom: 0.25, maxZoom: 2 }}
+        minZoom={0.25}
+        maxZoom={2}
+        nodesDraggable={false}
+        nodesConnectable={false}
+        nodesFocusable={false}
+        edgesFocusable={false}
+        elementsSelectable={false}
+        panOnDrag
+        zoomOnScroll
+        zoomOnPinch
+        proOptions={{ hideAttribution: true }}
+        className="theme-attribution"
+      >
+        <MemoizedBackground />
+      </ReactFlow>
+      <div className="absolute left-1/2 top-3 z-50 flex -translate-x-1/2 items-center gap-2 rounded-lg border border-accent-indigo-foreground/30 bg-accent-indigo/50 px-3 py-1.5 shadow-md backdrop-blur-sm">
+        <span className="text-xs font-medium text-accent-indigo-foreground">
+          {label === "Current Draft"
+            ? "Read-only \u2014 close Version History to edit"
+            : `Previewing ${label} (read-only)`}
+        </span>
+      </div>
+    </>
+  );
+}
 
 export default function Page({
   view,
@@ -106,6 +165,14 @@ export default function Page({
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
   const isEmptyFlow = useRef(nodes.length === 0);
+
+  // History preview — when non-null, overlay the main canvas with read-only
+  // historical nodes/edges instead of the live draft.
+  const previewNodes = useHistoryPreviewStore((s) => s.previewNodes);
+  const previewEdges = useHistoryPreviewStore((s) => s.previewEdges);
+  const previewLabel = useHistoryPreviewStore((s) => s.previewLabel);
+  const previewKey = useHistoryPreviewStore((s) => s.previewKey);
+  const isPreviewActive = previewNodes !== null;
   const onNodesChange = useFlowStore((state) => state.onNodesChange);
   const onEdgesChange = useFlowStore((state) => state.onEdgesChange);
   const setNodes = useFlowStore((state) => state.setNodes);
@@ -218,6 +285,7 @@ export default function Page({
   }, [autoSaveFlow]);
 
   function handleUndo(e: KeyboardEvent) {
+    if (isPreviewActive) return;
     if (!isWrappedWithClass(e, "noflow")) {
       e.preventDefault();
       (e as unknown as Event).stopImmediatePropagation();
@@ -226,6 +294,7 @@ export default function Page({
   }
 
   function handleRedo(e: KeyboardEvent) {
+    if (isPreviewActive) return;
     if (!isWrappedWithClass(e, "noflow")) {
       e.preventDefault();
       (e as unknown as Event).stopImmediatePropagation();
@@ -234,6 +303,7 @@ export default function Page({
   }
 
   function handleGroup(e: KeyboardEvent) {
+    if (isPreviewActive) return;
     if (selectionMenuVisible) {
       e.preventDefault();
       (e as unknown as Event).stopImmediatePropagation();
@@ -242,6 +312,7 @@ export default function Page({
   }
 
   function handleDuplicate(e: KeyboardEvent) {
+    if (isPreviewActive) return;
     e.preventDefault();
     e.stopPropagation();
     (e as unknown as Event).stopImmediatePropagation();
@@ -278,6 +349,7 @@ export default function Page({
   }
 
   function handleCut(e: KeyboardEvent) {
+    if (isPreviewActive) return;
     if (!isWrappedWithClass(e, "noflow")) {
       e.preventDefault();
       (e as unknown as Event).stopImmediatePropagation();
@@ -288,6 +360,7 @@ export default function Page({
   }
 
   function handlePaste(e: KeyboardEvent) {
+    if (isPreviewActive) return;
     if (!isWrappedWithClass(e, "noflow")) {
       e.preventDefault();
       (e as unknown as Event).stopImmediatePropagation();
@@ -305,6 +378,7 @@ export default function Page({
   }
 
   function handleDelete(e: KeyboardEvent) {
+    if (isPreviewActive) return;
     if (isLocked) return;
     if (!isWrappedWithClass(e, "nodelete") && lastSelection) {
       e.preventDefault();
@@ -844,6 +918,32 @@ export default function Page({
               <MemoizedBackground />
               {helperLineEnabled && <HelperLines helperLines={helperLines} />}
             </ReactFlow>
+            {/* History preview overlay — read-only ReactFlow showing a past version.
+                key={previewLabel} forces a full remount (and fitView) on version switch. */}
+            {isPreviewActive && (
+              <div
+                key={previewKey}
+                className="absolute inset-0 z-50 bg-canvas ring-4 ring-inset ring-accent-indigo-foreground/20"
+              >
+                <ErrorBoundary
+                  FallbackComponent={() => (
+                    <div className="flex h-full items-center justify-center text-destructive">
+                      Failed to render preview
+                    </div>
+                  )}
+                >
+                  <ReactFlowProvider>
+                    <PreviewCanvas
+                      nodes={previewNodes!}
+                      edges={previewEdges!}
+                      nodeTypes={nodeTypes}
+                      edgeTypes={edgeTypes}
+                      label={previewLabel!}
+                    />
+                  </ReactFlowProvider>
+                </ErrorBoundary>
+              </div>
+            )}
           </div>
           <div
             id="shadow-box"

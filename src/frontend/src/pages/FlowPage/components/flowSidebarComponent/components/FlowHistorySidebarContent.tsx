@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -19,6 +20,7 @@ import { getURL } from "@/controllers/API/helpers/constants";
 import useApplyFlowToCanvas from "@/hooks/flows/use-apply-flow-to-canvas";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
+import useHistoryPreviewStore from "@/stores/historyPreviewStore";
 import {
   useCallback,
   useEffect,
@@ -27,24 +29,14 @@ import {
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 import {
-  Background,
-  ReactFlow,
-  ReactFlowProvider,
-  useNodesInitialized,
-} from "@xyflow/react";
-import {
-  cleanEdges,
   downloadFlow,
-  processFlowEdges,
-  processFlowNodes,
+  processFlows,
   removeApiKeys,
-  updateEdges,
 } from "@/utils/reactflowUtils";
 import { cn } from "@/utils/utils";
 import { cloneDeep } from "lodash";
-import { ErrorBoundary } from "react-error-boundary";
-import { nodeTypes, edgeTypes } from "../../consts";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -62,57 +54,28 @@ function formatTimestamp(dateStr: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// Read-only canvas preview (uses real Langflow node types)
-// ---------------------------------------------------------------------------
-
-function PreviewCanvas({ nodes, edges }: { nodes: any[]; edges: any[] }) {
-  // Defer edges until nodes have been measured and handle bounds are known.
-  const nodesInitialized = useNodesInitialized();
-
-  return (
-    <ReactFlow
-      nodes={nodes}
-      edges={nodesInitialized ? edges : []}
-      nodeTypes={nodeTypes}
-      edgeTypes={edgeTypes}
-      nodesDraggable={false}
-      nodesConnectable={false}
-      nodesFocusable={false}
-      edgesFocusable={false}
-      elementsSelectable={false}
-      panOnDrag={true}
-      zoomOnScroll={true}
-      fitView
-      fitViewOptions={{ padding: 0.2, minZoom: 0.25, maxZoom: 2 }}
-      proOptions={{ hideAttribution: true }}
-    >
-      <Background size={2} gap={20} />
-    </ReactFlow>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
 const CURRENT_DRAFT_ID = "__current_draft__";
 
 // ---------------------------------------------------------------------------
-// Panel
+// Component
 // ---------------------------------------------------------------------------
 
-interface FlowHistoryPanelProps {
+interface FlowHistorySidebarContentProps {
   flowId: string;
-  onClose: () => void;
 }
 
-export default function FlowHistoryPanel({
+export default function FlowHistorySidebarContent({
   flowId,
-  onClose,
-}: FlowHistoryPanelProps) {
+}: FlowHistorySidebarContentProps) {
+  const queryClient = useQueryClient();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const applyFlowToCanvas = useApplyFlowToCanvas();
+  const setPreview = useHistoryPreviewStore((s) => s.setPreview);
+  const clearPreview = useHistoryPreviewStore((s) => s.clearPreview);
 
   const [description, setDescription] = useState("");
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -156,33 +119,85 @@ export default function FlowHistoryPanel({
 
   const currentFlow = useFlowStore((state) => state.currentFlow);
 
-  // Capture the original store state when the panel mounts so we can
-  // restore it when the panel closes or the user switches to "Current Draft".
+  // Capture the original store state when the sidebar mounts so we can
+  // restore it when the sidebar closes or the user switches to Current Draft.
   const originalStoreRef = useRef({
     nodes: cloneDeep(useFlowStore.getState().nodes),
     edges: cloneDeep(useFlowStore.getState().edges),
   });
 
-  // NOTE: Auto-save disabling and inspection panel hiding are managed by the
-  // parent HistoryButton component. This ensures cleanup runs even if this
-  // component crashes during render.
+  // Flag to temporarily disable the guard subscription during doRestore.
+  // Without this, applyFlowToCanvas triggers a store change that the guard
+  // detects and overwrites with the old preview data.
+  const guardDisabledRef = useRef(false);
 
-  // Process historical data through the same pipeline the main canvas uses
-  // (processFlowEdges → processFlowNodes → updateEdges → cleanEdges).
-  const processedPreview = useMemo(() => {
+  // Flush any pending debounced auto-save, then disable it while the history
+  // sidebar is open. The canvas is read-only in history mode (preview overlay
+  // always visible), so no new changes need saving.
+  //
+  // We flush (not cancel) on mount so that any recent edits are saved to the
+  // server before we snapshot. This is safe because the store still contains
+  // the real draft data at this point — preview data is set up by later effects.
+  const autoSaveFnRef = useRef<any>(null);
+  const inspectionPanelWasVisible = useRef(false);
+  useLayoutEffect(() => {
+    const currentAutoSave = useFlowStore.getState().autoSaveFlow as any;
+    if (currentAutoSave) {
+      // Flush pending debounce so latest edits are persisted to the server
+      if (typeof currentAutoSave.flush === "function") {
+        currentAutoSave.flush();
+      }
+      autoSaveFnRef.current = currentAutoSave;
+      useFlowStore.setState({ autoSaveFlow: undefined });
+    }
+
+    inspectionPanelWasVisible.current =
+      useFlowStore.getState().inspectionPanelVisible;
+    if (inspectionPanelWasVisible.current) {
+      useFlowStore.setState({ inspectionPanelVisible: false });
+    }
+
+    return () => {
+      // Restore store state BEFORE re-enabling auto-save so that an
+      // immediate auto-save trigger doesn't persist preview data.
+      useFlowStore.setState({
+        nodes: originalStoreRef.current.nodes,
+        edges: originalStoreRef.current.edges,
+      });
+      clearPreview();
+
+      if (autoSaveFnRef.current) {
+        useFlowStore.setState({ autoSaveFlow: autoSaveFnRef.current });
+        autoSaveFnRef.current = null;
+      }
+      if (inspectionPanelWasVisible.current) {
+        useFlowStore.setState({ inspectionPanelVisible: true });
+        inspectionPanelWasVisible.current = false;
+      }
+    };
+  }, [clearPreview]);
+
+  // Process historical data through the same pipeline used by
+  // useApplyFlowToCanvas for normal flow loading: processFlows().
+  // This avoids duplicating the 4-step processing pipeline.
+  const processedPreview = useMemo<{
+    nodes: any[];
+    edges: any[];
+    error?: boolean;
+  } | null>(() => {
     if (selectedId === CURRENT_DRAFT_ID || !selectedEntryFull?.data)
       return null;
 
     try {
-      const cloned = cloneDeep(selectedEntryFull.data);
-      const flow = { data: cloned } as any;
-      processFlowEdges(flow);
-      processFlowNodes(flow);
-      updateEdges(cloned.edges);
-      const { edges: cleaned } = cleanEdges(cloned.nodes, cloned.edges);
-      return { nodes: cloned.nodes, edges: cleaned };
+      const clonedData = cloneDeep(selectedEntryFull.data);
+      const flow = { data: clonedData, is_component: false } as any;
+      processFlows([flow]);
+      return { nodes: flow.data.nodes, edges: flow.data.edges };
     } catch (err) {
-      console.error("Failed to process historical flow data for preview:", err);
+      console.error(
+        "Failed to process historical flow data for preview:",
+        err,
+      );
       return { nodes: [], edges: [], error: true };
     }
   }, [selectedId, selectedEntryFull?.data]);
@@ -190,31 +205,82 @@ export default function FlowHistoryPanel({
   // Sync the global flow store with whatever version is being previewed.
   // GenericNode and its sub-components read edges/nodes from the store, so
   // this ensures handle visibility and connection state match the preview.
+  //
+  // Uses useLayoutEffect (not useEffect) to match the old FlowHistoryPanel —
+  // synchronous before paint prevents a flash of stale data.
+  //
+  // Important: when processedPreview is null but selectedId is NOT
+  // CURRENT_DRAFT_ID, the new entry is still loading. In that case we keep
+  // whatever is currently on the canvas (either the previous version's
+  // preview or the draft) instead of flashing back to the draft.
   useLayoutEffect(() => {
-    if (processedPreview) {
+    if (processedPreview && !processedPreview.error) {
       useFlowStore.setState({
         nodes: processedPreview.nodes,
         edges: processedPreview.edges,
       });
-    } else {
+    } else if (selectedId === CURRENT_DRAFT_ID || processedPreview?.error) {
       useFlowStore.setState({
         nodes: originalStoreRef.current.nodes,
         edges: originalStoreRef.current.edges,
       });
     }
+    // When selectedId is a history entry but processedPreview is null,
+    // the entry is loading — keep the canvas as-is.
+  }, [processedPreview, selectedId]);
+
+  // Push preview state to the preview store so PageComponent shows the
+  // read-only overlay. The overlay is ALWAYS shown while the history panel
+  // is open — even for Current Draft — making the canvas fully read-only.
+  useEffect(() => {
+    if (
+      processedPreview &&
+      !processedPreview.error &&
+      selectedId !== CURRENT_DRAFT_ID
+    ) {
+      const tag = selectedEntryFull?.version_tag ?? "";
+      setPreview(processedPreview.nodes, processedPreview.edges, tag);
+    } else if (selectedId === CURRENT_DRAFT_ID || processedPreview?.error) {
+      // Show draft data in the read-only overlay
+      setPreview(
+        originalStoreRef.current.nodes,
+        originalStoreRef.current.edges,
+        "Current Draft",
+      );
+    }
+    // When loading a new entry, keep the previous preview overlay visible.
+  }, [processedPreview, selectedId, selectedEntryFull?.version_tag, setPreview]);
+
+  // Guard: if something external (e.g. an in-flight save completing)
+  // overwrites the store while we're previewing, re-apply immediately.
+  //
+  // MUST be useLayoutEffect so that cleanup (unsubscribe) runs synchronously
+  // before the store-sync useLayoutEffect sets new state. If this were
+  // useEffect, the old subscription would still be active when the store-sync
+  // restores the draft, and it would immediately overwrite the draft with the
+  // old preview data.
+  useLayoutEffect(() => {
+    // Reset the guard-disabled flag at every effect boundary. doRestore
+    // sets it to true and relies on the next render cycle (which triggers
+    // this effect) to reset it, avoiding a race with async store writes
+    // from refreshAllModelInputs.
+    guardDisabledRef.current = false;
+
+    if (!processedPreview || processedPreview.error) return;
+
+    const unsub = useFlowStore.subscribe((state) => {
+      if (!guardDisabledRef.current && state.nodes !== processedPreview.nodes) {
+        useFlowStore.setState({
+          nodes: processedPreview.nodes,
+          edges: processedPreview.edges,
+        });
+      }
+    });
+
+    return unsub;
   }, [processedPreview]);
 
-  // Restore the original store state when the panel unmounts.
-  useEffect(() => {
-    return () => {
-      useFlowStore.setState({
-        nodes: originalStoreRef.current.nodes,
-        edges: originalStoreRef.current.edges,
-      });
-    };
-  }, []);
-
-  // Escape key closes the panel (or dismiss restore/delete/prune prompts)
+  // Escape key dismisses dialogs
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -224,27 +290,13 @@ export default function FlowHistoryPanel({
           setDeleteTarget(null);
         } else if (restoreConfirm) {
           setRestoreConfirm(null);
-        } else {
-          onClose();
         }
       }
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose, restoreConfirm, deleteTarget, pruneWarning]);
+  }, [restoreConfirm, deleteTarget, pruneWarning]);
 
-  // The nodes/edges shown in the preview canvas
-  const previewData = useMemo(() => {
-    if (selectedId === CURRENT_DRAFT_ID) {
-      return {
-        nodes: originalStoreRef.current.nodes,
-        edges: originalStoreRef.current.edges,
-      };
-    }
-    return processedPreview ?? { nodes: [], edges: [] };
-  }, [selectedId, processedPreview]);
-
-  // Select a history entry — data is fetched by useGetFlowHistoryEntry hook
   const handleSelectEntry = useCallback((entryId: string) => {
     setSelectedId(entryId);
   }, []);
@@ -254,6 +306,10 @@ export default function FlowHistoryPanel({
       { flowId, description: description || null },
       {
         onSuccess: () => {
+          // Immediately refresh the version list
+          queryClient.invalidateQueries({
+            queryKey: ["useGetFlowHistory"],
+          });
           setSuccessData({ title: "Version saved" });
           setDescription("");
           setShowCreateForm(false);
@@ -269,7 +325,7 @@ export default function FlowHistoryPanel({
         },
       },
     );
-  }, [flowId, description, createSnapshot, setSuccessData, setErrorData]);
+  }, [flowId, description, createSnapshot, queryClient, setSuccessData, setErrorData]);
 
   const handleCreateSnapshot = useCallback(() => {
     if (history && maxEntries && history.length >= maxEntries) {
@@ -279,10 +335,6 @@ export default function FlowHistoryPanel({
     doCreateSnapshot();
   }, [history, maxEntries, doCreateSnapshot]);
 
-  // Restore = call the /activate endpoint (which auto-snapshots server-side
-  // and returns the updated flow).
-  // Accepts historyId explicitly so the restore target can't drift if the
-  // user somehow changes the selection while the dialog is open.
   const doRestore = useCallback(
     async (historyId: string) => {
       setIsRestoring(true);
@@ -295,7 +347,6 @@ export default function FlowHistoryPanel({
         );
         updatedFlow = response.data;
       } catch (err: any) {
-        // API call failed — server state is unchanged
         const detail = err?.response?.data?.detail;
         setErrorData({
           title: "Failed to restore version",
@@ -306,22 +357,41 @@ export default function FlowHistoryPanel({
         return;
       }
 
+      // Kick off the history list refetch immediately so it runs in parallel
+      // with the canvas work below (applyFlowToCanvas is synchronous but heavy).
+      queryClient.invalidateQueries({
+        queryKey: ["useGetFlowHistory"],
+      });
+
       try {
-        // Apply through the same shared pipeline as normal flow loading:
-        // processFlows → setCurrentFlow (→ resetFlow) → refreshAllModelInputs
+        // Disable the guard so applyFlowToCanvas can write to the store
+        // without the subscription overwriting it with old preview data.
+        guardDisabledRef.current = true;
+
         applyFlowToCanvas(updatedFlow);
 
-        // Update the ref so the unmount cleanup restores the new data,
-        // not the pre-restore data.
+        // Update the ref so unmount cleanup restores the new (restored) data.
         originalStoreRef.current = {
           nodes: useFlowStore.getState().nodes,
           edges: useFlowStore.getState().edges,
         };
 
-        setSuccessData({ title: "Version restored" });
+        // Immediately show the new draft in the read-only overlay
+        setPreview(
+          originalStoreRef.current.nodes,
+          originalStoreRef.current.edges,
+          "Current Draft",
+        );
 
-        // Fit the canvas to the restored flow after React re-renders the new
-        // nodes. This mirrors what happens on initial flow load (fitView prop).
+        // Do NOT re-enable the guard here. Async operations from
+        // applyFlowToCanvas (e.g. refreshAllModelInputs) may fire after
+        // this and the old guard subscription would overwrite the restored
+        // data with stale preview. The guard useLayoutEffect will reset
+        // guardDisabledRef when it next runs (on re-render).
+
+        setSuccessData({ title: "Version restored" });
+        setSelectedId(CURRENT_DRAFT_ID);
+
         requestAnimationFrame(() => {
           useFlowStore.getState().reactFlowInstance?.fitView({
             padding: 0.2,
@@ -330,19 +400,24 @@ export default function FlowHistoryPanel({
           });
         });
       } catch {
-        // Server committed the change but client rendering failed
         setErrorData({
           title:
             "Version restored on server, but there was an issue rendering it. Please refresh the page.",
         });
       } finally {
-        // Close the history panel and return to the main editor
-        onClose();
         setIsRestoring(false);
         setRestoreConfirm(null);
       }
     },
-    [flowId, saveDraftOnRestore, applyFlowToCanvas, setSuccessData, setErrorData, onClose],
+    [
+      flowId,
+      saveDraftOnRestore,
+      applyFlowToCanvas,
+      setPreview,
+      queryClient,
+      setSuccessData,
+      setErrorData,
+    ],
   );
 
   const handleDelete = useCallback(
@@ -351,6 +426,9 @@ export default function FlowHistoryPanel({
         { flowId, historyId },
         {
           onSuccess: () => {
+            queryClient.invalidateQueries({
+              queryKey: ["useGetFlowHistory"],
+            });
             setSuccessData({ title: "Version deleted" });
             setDeleteTarget(null);
             if (selectedId === historyId) {
@@ -368,7 +446,7 @@ export default function FlowHistoryPanel({
         },
       );
     },
-    [flowId, selectedId, deleteEntry, setSuccessData, setErrorData],
+    [flowId, selectedId, deleteEntry, queryClient, setSuccessData, setErrorData],
   );
 
   const handleExportEntry = useCallback(
@@ -378,10 +456,16 @@ export default function FlowHistoryPanel({
         let tag: string;
 
         if (entryId === CURRENT_DRAFT_ID) {
-          data = currentFlow?.data;
+          // Use originalStoreRef instead of currentFlow?.data because during
+          // preview the store may contain preview data, and currentFlow.data
+          // may not reflect the actual draft nodes/edges.
+          data = {
+            ...currentFlow?.data,
+            nodes: originalStoreRef.current.nodes,
+            edges: originalStoreRef.current.edges,
+          };
           tag = "draft";
         } else {
-          // Fetch directly — avoids timing issues with the shared query hook
           const response = await api.get(
             `${getURL("FLOWS")}/${flowId}/history/${entryId}`,
           );
@@ -415,93 +499,33 @@ export default function FlowHistoryPanel({
     [flowId, currentFlow, setErrorData],
   );
 
-  const selectedHistoryEntry = history?.find((e) => e.id === selectedId);
   const isViewingDraft = selectedId === CURRENT_DRAFT_ID;
 
-  // Container ref for dropdown portals — keeps them inside this panel's
-  // stacking context instead of competing at document.body.
-  const panelRef = useRef<HTMLDivElement>(null);
-
   return (
-    <div ref={panelRef} className="fixed inset-0 z-100 flex bg-background">
-      {/* Main preview area */}
-      <div className="flex flex-1 flex-col">
-        {/* Top bar */}
-        <div className="flex items-center justify-between border-b bg-muted/30 px-4 py-2">
-          <div className="flex items-center gap-3">
-            {isViewingDraft ? (
-              <span className="text-sm font-medium">Current Draft</span>
-            ) : selectedHistoryEntry ? (
-              <>
-                <span className="text-sm font-medium">
-                  {selectedHistoryEntry.version_tag}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {formatTimestamp(selectedHistoryEntry.created_at)}
-                </span>
-                {selectedHistoryEntry.description && (
-                  <span className="text-sm text-muted-foreground">
-                    — {selectedHistoryEntry.description}
-                  </span>
-                )}
-              </>
-            ) : (
-              <span className="text-sm text-muted-foreground">
-                Select a version to preview
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Canvas preview */}
-        <div className="flex-1 bg-muted/20">
-          {isEntryError ? (
-            <div className="flex h-full items-center justify-center text-destructive">
-              Failed to load version data
-            </div>
-          ) : isLoadingEntry ? (
-            <div className="flex h-full items-center justify-center">
-              <ForwardedIconComponent
-                name="Loader2"
-                className="h-6 w-6 animate-spin text-muted-foreground"
-              />
-            </div>
-          ) : (processedPreview as any)?.error ? (
-            <div className="flex h-full items-center justify-center text-destructive">
-              This version's data could not be rendered for preview
-            </div>
-          ) : previewData.nodes.length > 0 ? (
-            <ErrorBoundary
-              FallbackComponent={() => (
-                <div className="flex h-full items-center justify-center text-destructive">
-                  Failed to render preview
-                </div>
-              )}
-            >
-              <ReactFlowProvider>
-                <PreviewCanvas
-                  nodes={previewData.nodes}
-                  edges={previewData.edges}
-                />
-              </ReactFlowProvider>
-            </ErrorBoundary>
-          ) : (
-            <div className="flex h-full items-center justify-center text-muted-foreground">
-              No data to preview
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Right sidebar */}
-      <div className="flex w-72 flex-col border-l bg-background">
-        {/* Sidebar header */}
-        <div className="flex items-center justify-between border-b px-4 py-3">
+    <>
+      <div className="flex h-full flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b px-3 py-3">
           <span className="text-sm font-semibold">Version History</span>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <ForwardedIconComponent name="X" className="h-4 w-4" />
-          </Button>
         </div>
+
+        {/* Error loading entry */}
+        {isEntryError && (
+          <div className="flex items-center gap-2 border-b bg-destructive/10 px-3 py-2">
+            <span className="text-xs text-destructive">
+              Failed to load version data
+            </span>
+          </div>
+        )}
+
+        {/* Error processing entry data */}
+        {processedPreview?.error && (
+          <div className="flex items-center gap-2 border-b bg-destructive/10 px-3 py-2">
+            <span className="text-xs text-destructive">
+              This version's data could not be rendered for preview
+            </span>
+          </div>
+        )}
 
         {/* Save Version */}
         <div className="border-b px-3 py-3">
@@ -557,7 +581,7 @@ export default function FlowHistoryPanel({
 
         {/* Version list */}
         <div className="flex-1 overflow-y-auto">
-          {/* Current Draft row — always first */}
+          {/* Current Draft row */}
           <div
             className={cn(
               "flex cursor-pointer items-center gap-3 border-b px-3 py-3 transition-colors hover:bg-accent/40",
@@ -580,7 +604,8 @@ export default function FlowHistoryPanel({
           {/* History count */}
           {history && history.length > 0 && (
             <div className="border-b px-3 py-2 text-xs text-muted-foreground">
-              {history.length}{maxEntries ? ` / ${maxEntries}` : ""} versions
+              {history.length}
+              {maxEntries ? ` / ${maxEntries}` : ""} versions
             </div>
           )}
 
@@ -597,11 +622,13 @@ export default function FlowHistoryPanel({
               Failed to load version history
             </div>
           )}
-          {!isLoading && !isListError && (!history || history.length === 0) && (
-            <div className="px-4 py-6 text-center text-xs text-muted-foreground">
-              No saved versions yet
-            </div>
-          )}
+          {!isLoading &&
+            !isListError &&
+            (!history || history.length === 0) && (
+              <div className="px-4 py-6 text-center text-xs text-muted-foreground">
+                No saved versions yet
+              </div>
+            )}
           {history?.map((entry) => {
             const isSelected = entry.id === selectedId;
             return (
@@ -613,10 +640,7 @@ export default function FlowHistoryPanel({
                 )}
                 onClick={() => handleSelectEntry(entry.id)}
               >
-                {/* Spacer for alignment with "Current Draft" dot */}
                 <div className="w-3 shrink-0" />
-
-                {/* Version info */}
                 <div className="min-w-0 flex-1">
                   <span className="text-sm font-medium">
                     {entry.version_tag}
@@ -632,7 +656,6 @@ export default function FlowHistoryPanel({
                   )}
                 </div>
 
-                {/* Three-dot menu */}
                 <DropdownMenu>
                   <DropdownMenuTrigger
                     asChild
@@ -652,11 +675,7 @@ export default function FlowHistoryPanel({
                       />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    align="end"
-                    className="w-44"
-                    container={panelRef.current}
-                  >
+                  <DropdownMenuContent align="end" className="w-44">
                     <DropdownMenuItem
                       onClick={(e) => {
                         e.stopPropagation();
@@ -709,144 +728,168 @@ export default function FlowHistoryPanel({
         </div>
       </div>
 
-      {/* Restore confirmation dialog */}
-      {restoreConfirm && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/40">
-          <div className="mx-4 flex w-full max-w-md flex-col gap-4 rounded-xl border bg-background p-6 shadow-lg">
-            <div className="flex items-center gap-2">
-              <ForwardedIconComponent
-                name="RotateCcw"
-                className="h-5 w-5 text-foreground"
-              />
-              <span className="text-lg font-semibold">Restore Version</span>
+      {/* Restore confirmation dialog — portaled to body */}
+      {restoreConfirm &&
+        createPortal(
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <div className="mx-4 flex w-full max-w-md flex-col gap-4 rounded-xl border bg-background p-6 shadow-lg">
+              <div className="flex items-center gap-2">
+                <ForwardedIconComponent
+                  name="RotateCcw"
+                  className="h-5 w-5 text-foreground"
+                />
+                <span className="text-lg font-semibold">Restore Version</span>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Restore <strong>{restoreConfirm.versionTag}</strong> as the
+                working draft?
+              </p>
+              <label className="flex cursor-pointer items-center gap-2">
+                <Checkbox
+                  checked={saveDraftOnRestore}
+                  onCheckedChange={(checked) =>
+                    setSaveDraftOnRestore(checked === true)
+                  }
+                />
+                <span className="text-sm">Save current working draft</span>
+              </label>
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setRestoreConfirm(null)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => doRestore(restoreConfirm.historyId)}
+                  loading={isRestoring}
+                >
+                  Restore
+                </Button>
+              </div>
             </div>
-            <p className="text-sm text-muted-foreground">
-              Restore <strong>{restoreConfirm.versionTag}</strong> as the
-              working draft?
-            </p>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <Checkbox
-                checked={saveDraftOnRestore}
-                onCheckedChange={(checked) =>
-                  setSaveDraftOnRestore(checked === true)
-                }
-              />
-              <span className="text-sm">Save current working draft</span>
-            </label>
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setRestoreConfirm(null)}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="default"
-                size="sm"
-                onClick={() => doRestore(restoreConfirm.historyId)}
-                loading={isRestoring}
-              >
-                Restore
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
 
-      {/* Delete confirmation dialog */}
-      {deleteTarget && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/40">
-          <div className="mx-4 flex w-full max-w-md flex-col gap-4 rounded-xl border bg-background p-6 shadow-lg">
-            <div className="flex items-center gap-2">
-              <ForwardedIconComponent
-                name="Trash2"
-                className="h-5 w-5 text-destructive"
-              />
-              <span className="text-lg font-semibold">Delete Version</span>
+      {/* Delete confirmation dialog — portaled to body */}
+      {deleteTarget &&
+        createPortal(
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <div className="mx-4 flex w-full max-w-md flex-col gap-4 rounded-xl border bg-background p-6 shadow-lg">
+              <div className="flex items-center gap-2">
+                <ForwardedIconComponent
+                  name="Trash2"
+                  className="h-5 w-5 text-destructive"
+                />
+                <span className="text-lg font-semibold">Delete Version</span>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                This will permanently delete{" "}
+                <strong>{deleteTarget.versionTag}</strong>. This can't be undone.
+              </p>
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setDeleteTarget(null)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => handleDelete(deleteTarget.id)}
+                  loading={isDeleting}
+                >
+                  Delete
+                </Button>
+              </div>
             </div>
-            <p className="text-sm text-muted-foreground">
-              This will permanently delete{" "}
-              <strong>{deleteTarget.versionTag}</strong>. This can't be undone.
-            </p>
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setDeleteTarget(null)}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => handleDelete(deleteTarget.id)}
-                loading={isDeleting}
-              >
-                Delete
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
 
-      {/* Prune warning dialog */}
-      {pruneWarning && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/40">
-          <div className="mx-4 flex w-full max-w-md flex-col gap-4 rounded-xl border bg-background p-6 shadow-lg">
-            <div className="flex items-center gap-2">
+      {/* Loading entry overlay — portaled to body so it doesn't push the version list */}
+      {isLoadingEntry &&
+        createPortal(
+          <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center">
+            <div className="pointer-events-auto flex items-center gap-2 rounded-lg border bg-background px-4 py-2 shadow-lg">
               <ForwardedIconComponent
-                name="AlertTriangle"
-                className="h-5 w-5 text-warning"
+                name="Loader2"
+                className="h-4 w-4 animate-spin text-muted-foreground"
               />
-              <span className="text-lg font-semibold">
-                Version Limit Reached
+              <span className="text-sm text-muted-foreground">
+                Loading preview...
               </span>
             </div>
-            <p className="text-sm text-muted-foreground">
-              {(() => {
-                const pruneCount = (history?.length ?? 0) + 1 - (maxEntries ?? 0);
-                if (pruneCount <= 1) {
+          </div>,
+          document.body,
+        )}
+
+      {/* Prune warning dialog — portaled to body */}
+      {pruneWarning &&
+        createPortal(
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <div className="mx-4 flex w-full max-w-md flex-col gap-4 rounded-xl border bg-background p-6 shadow-lg">
+              <div className="flex items-center gap-2">
+                <ForwardedIconComponent
+                  name="AlertTriangle"
+                  className="h-5 w-5 text-warning"
+                />
+                <span className="text-lg font-semibold">
+                  Version Limit Reached
+                </span>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {(() => {
+                  const pruneCount =
+                    (history?.length ?? 0) + 1 - (maxEntries ?? 0);
+                  if (pruneCount <= 1) {
+                    return (
+                      <>
+                        You've reached the maximum of{" "}
+                        <strong>{maxEntries}</strong> saved versions. Saving a
+                        new version will automatically delete the oldest
+                        version. Do you want to continue?
+                      </>
+                    );
+                  }
                   return (
                     <>
-                      You've reached the maximum of{" "}
-                      <strong>{maxEntries}</strong> saved versions. Saving a
-                      new version will automatically delete the oldest version.
-                      Do you want to continue?
+                      You have <strong>{history?.length}</strong> versions but
+                      the limit is <strong>{maxEntries}</strong>. Saving a new
+                      version will automatically delete the{" "}
+                      <strong>{pruneCount}</strong> oldest versions. Do you want
+                      to continue?
                     </>
                   );
-                }
-                return (
-                  <>
-                    You have <strong>{history?.length}</strong> versions but
-                    the limit is <strong>{maxEntries}</strong>. Saving a new
-                    version will automatically delete the{" "}
-                    <strong>{pruneCount}</strong> oldest versions. Do you want
-                    to continue?
-                  </>
-                );
-              })()}
-            </p>
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPruneWarning(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="default"
-                size="sm"
-                onClick={doCreateSnapshot}
-                loading={isCreating}
-              >
-                Continue
-              </Button>
+                })()}
+              </p>
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPruneWarning(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={doCreateSnapshot}
+                  loading={isCreating}
+                >
+                  Continue
+                </Button>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
-    </div>
+          </div>,
+          document.body,
+        )}
+    </>
   );
 }
