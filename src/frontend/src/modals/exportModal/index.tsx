@@ -111,9 +111,11 @@ const ExportModal = forwardRef(
               setOpen(false);
               track("Flow Exported", { flowId: currentFlow!.id });
             }
-          } catch (error) {
+          } catch (error: any) {
+            const detail = error?.response?.data?.detail;
             setErrorData({
               title: "Failed to export flow",
+              ...(detail ? { list: [detail] } : {}),
             });
           }
         }}

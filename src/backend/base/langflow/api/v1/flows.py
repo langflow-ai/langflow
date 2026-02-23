@@ -35,6 +35,8 @@ from langflow.services.database.models.flow.model import (
     FlowUpdate,
 )
 from langflow.services.database.models.flow.utils import get_webhook_component_in_flow
+from langflow.services.database.models.flow_history.crud import create_flow_history_entry, get_flow_history_list
+from langflow.services.database.models.flow_history.model import FlowStateEnum
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.folder.utils import get_default_folder_id
@@ -773,10 +775,10 @@ async def upload_file(
 
             # Import version history if present in the uploaded JSON
             if isinstance(raw_dict, dict) and "history" in raw_dict and isinstance(raw_dict["history"], list):
-                from langflow.services.database.models.flow_history.crud import create_flow_history_entry
-                from langflow.services.database.models.flow_history.model import FlowStateEnum
-
-                for h_entry in raw_dict["history"]:
+                _max_entries = get_settings_service().settings.max_flow_history_entries_per_flow
+                for h_entry in raw_dict["history"][:_max_entries]:
+                    if not isinstance(h_entry, dict):
+                        continue
                     # All imported entries are set to DRAFT since they are
                     # not the active version of this newly-created flow.
                     await create_flow_history_entry(
@@ -852,10 +854,9 @@ async def download_multiple_file(
     flows_without_api_keys = [remove_api_keys(flow.model_dump()) for flow in flows]
 
     if include_history:
-        from langflow.services.database.models.flow_history.crud import get_flow_history_list
-
+        _max_entries = get_settings_service().settings.max_flow_history_entries_per_flow
         for flow_dict, flow_obj in zip(flows_without_api_keys, flows, strict=False):
-            history_entries = await get_flow_history_list(db, flow_obj.id, user.id, limit=10000, offset=0)
+            history_entries = await get_flow_history_list(db, flow_obj.id, user.id, limit=_max_entries, offset=0)
             flow_dict["history"] = [
                 {
                     "version_number": e.version_number,
