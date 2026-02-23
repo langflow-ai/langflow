@@ -41,28 +41,11 @@ def _strip_history_data(data: dict | None) -> dict | None:
 
 
 def _history_to_read(entry: FlowHistory) -> FlowHistoryRead:
-    return FlowHistoryRead(
-        id=entry.id,
-        flow_id=entry.flow_id,
-        user_id=entry.user_id,
-        version_number=entry.version_number,
-        version_tag=entry.version_tag,
-        description=entry.description,
-        created_at=entry.created_at,
-    )
+    return FlowHistoryRead.model_validate(entry, from_attributes=True)
 
 
 def _history_to_read_full(entry: FlowHistory) -> FlowHistoryReadFull:
-    return FlowHistoryReadFull(
-        id=entry.id,
-        flow_id=entry.flow_id,
-        user_id=entry.user_id,
-        version_number=entry.version_number,
-        version_tag=entry.version_tag,
-        description=entry.description,
-        created_at=entry.created_at,
-        data=entry.data,
-    )
+    return FlowHistoryReadFull.model_validate(entry, from_attributes=True)
 
 
 async def _get_user_flow(session: AsyncSession, flow_id: UUID, user_id: UUID) -> Flow:
@@ -190,7 +173,7 @@ async def activate_version(
             flow_id=flow.id,
             user_id=current_user.id,
             data=current_data,
-            description=f"Auto-saved before activating {target_entry.version_tag}",
+            description=f"Auto-saved before activating v{target_entry.version_number}",
         )
 
         flow.data = target_data
@@ -199,7 +182,7 @@ async def activate_version(
         session.add(flow)
         await session.flush()
 
-    await logger.adebug("Activated version %s (%s) for flow %s", history_id, target_entry.version_tag, flow_id)
+    await logger.adebug("Activated version %s (%s) for flow %s", history_id, f"v{target_entry.version_number}", flow_id)
 
     return FlowRead.model_validate(flow, from_attributes=True)
 
