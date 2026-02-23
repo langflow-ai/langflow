@@ -5,15 +5,14 @@ CASCADE delete, unique constraints, and default values.
 """
 
 import pytest
+from langflow.services.database.models.auth.sso import SSOConfig, SSOUserProfile
+from langflow.services.database.models.user.model import User
 from sqlalchemy import event
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import StaticPool
 from sqlmodel import SQLModel, select
 from sqlmodel.ext.asyncio.session import AsyncSession
-
-from langflow.services.database.models.auth.sso import SSOConfig, SSOUserProfile
-from langflow.services.database.models.user.model import User
 
 # Placeholder for User.password in tests (not a real secret)
 _TEST_PASSWORD = "hashed"  # noqa: S105
