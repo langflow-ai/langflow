@@ -12,7 +12,6 @@ import platform
 from unittest.mock import patch
 
 import pytest
-
 from langflow.helpers.windows_postgres_helper import (
     LANGFLOW_DATABASE_URL,
     POSTGRESQL_PREFIXES,
@@ -38,8 +37,6 @@ class MockWindowsSelectorPolicy(asyncio.AbstractEventLoopPolicy):
 
     def set_child_watcher(self, watcher):
         pass
-
-
 
 
 class TestWindowsPostgresHelper:

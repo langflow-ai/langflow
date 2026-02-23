@@ -5,14 +5,13 @@ CASCADE delete, unique constraints, and default values.
 """
 
 import pytest
+from langflow.services.database.models.auth.sso import SSOConfig, SSOUserProfile
+from langflow.services.database.models.user.model import User
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import StaticPool
 from sqlmodel import SQLModel, select
 from sqlmodel.ext.asyncio.session import AsyncSession
-
-from langflow.services.database.models.auth.sso import SSOConfig, SSOUserProfile
-from langflow.services.database.models.user.model import User
 
 
 @pytest.fixture(name="sso_db_engine")
@@ -81,9 +80,7 @@ class TestSSOUserProfile:
         await sso_async_session.commit()
         await sso_async_session.refresh(user)
 
-        sso_async_session.add(
-            SSOUserProfile(user_id=user.id, sso_provider="oidc", sso_user_id="sub-1")
-        )
+        sso_async_session.add(SSOUserProfile(user_id=user.id, sso_provider="oidc", sso_user_id="sub-1"))
         await sso_async_session.commit()
 
         duplicate = SSOUserProfile(user_id=user.id, sso_provider="saml", sso_user_id="sub-2")
@@ -101,9 +98,7 @@ class TestSSOUserProfile:
         await sso_async_session.refresh(user1)
         await sso_async_session.refresh(user2)
 
-        sso_async_session.add(
-            SSOUserProfile(user_id=user1.id, sso_provider="oidc", sso_user_id="sub-123")
-        )
+        sso_async_session.add(SSOUserProfile(user_id=user1.id, sso_provider="oidc", sso_user_id="sub-123"))
         await sso_async_session.commit()
 
         duplicate = SSOUserProfile(user_id=user2.id, sso_provider="oidc", sso_user_id="sub-123")
