@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query
+from lfx.log import logger
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -25,6 +26,7 @@ from langflow.services.database.models.flow_history.model import (
     FlowHistoryReadFull,
     FlowStateEnum,
 )
+from langflow.services.deps import get_settings_service
 
 router = APIRouter(prefix="/flows/{flow_id}/history", tags=["Flow History"])
 
@@ -89,7 +91,8 @@ async def export_flow_with_history(
     flow_dict = FlowRead.model_validate(flow, from_attributes=True).model_dump()
 
     if include_history:
-        entries = await get_flow_history_list(session, flow_id, current_user.id, limit=10000, offset=0)
+        max_entries = get_settings_service().settings.max_flow_history_entries_per_flow
+        entries = await get_flow_history_list(session, flow_id, current_user.id, limit=max_entries, offset=0)
         flow_dict["history"] = [
             {
                 "version_number": e.version_number,
@@ -152,6 +155,10 @@ async def activate_version(
     if not target_entry or target_entry.flow_id != flow_id:
         raise HTTPException(status_code=404, detail="History entry not found")
 
+    # Guard against activating a version with no data (check before auto-snapshot)
+    if target_entry.data is None:
+        raise HTTPException(status_code=400, detail="Cannot activate a version with no data")
+
     # Auto-snapshot: save current draft before overwriting
     await create_flow_history_entry(
         session,
@@ -161,10 +168,6 @@ async def activate_version(
         description=f"Auto-saved before activating {target_entry.version_tag}",
         state=FlowStateEnum.DRAFT,
     )
-
-    # Guard against activating a version with no data
-    if target_entry.data is None:
-        raise HTTPException(status_code=400, detail="Cannot activate a version with no data")
 
     # Overwrite flow data with the activated version's data
     flow.data = copy.deepcopy(target_entry.data)
@@ -178,6 +181,10 @@ async def activate_version(
     flow.state = FlowStateEnum.PUBLISHED
     session.add(flow)
     await session.flush()
+
+    await logger.adebug(
+        "Activated version %s (%s) for flow %s", history_id, target_entry.version_tag, flow_id
+    )
 
     return FlowRead.model_validate(flow, from_attributes=True)
 
@@ -197,3 +204,4 @@ async def delete_history_entry(
         raise HTTPException(status_code=404, detail="History entry not found")
 
     await delete_flow_history_entry(session, history_id, current_user.id, flow.active_version_id)
+    await logger.adebug("Deleted history entry %s for flow %s", history_id, flow_id)

@@ -3,6 +3,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from fastapi import HTTPException
+from lfx.log import logger
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, delete, func, select, update
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -39,14 +40,22 @@ async def create_flow_history_entry(
             state=state,
             version_number=version_number,
         )
-        session.add(entry)
         try:
-            await session.flush()
+            async with session.begin_nested():
+                session.add(entry)
+                await session.flush()
             break
-        except IntegrityError:
-            await session.rollback()
+        except IntegrityError as exc:
+            if "unique_flow_version_number" not in str(exc).lower():
+                raise  # Not a version collision — don't retry
             if attempt == MAX_VERSION_RETRIES - 1:
                 raise
+            await logger.awarning(
+                "Version number collision for flow %s (attempt %d/%d), retrying",
+                flow_id,
+                attempt + 1,
+                MAX_VERSION_RETRIES,
+            )
             entry = None
             continue
 
@@ -69,7 +78,9 @@ async def create_flow_history_entry(
             .offset(max_entries)
         ),
     )
-    await session.exec(delete_older)
+    result = await session.exec(delete_older)
+    if hasattr(result, "rowcount") and result.rowcount:  # type: ignore[union-attr]
+        await logger.adebug("Pruned %d old history entries for flow %s", result.rowcount, flow_id)  # type: ignore[union-attr]
 
     return entry
 
@@ -141,5 +152,15 @@ async def set_entry_state(
     state: FlowStateEnum,
 ) -> None:
     """Set the state of a single history entry using a targeted UPDATE."""
-    stmt = update(FlowHistory).where(FlowHistory.id == history_id).values(state=state)
-    await session.exec(stmt)
+    stmt = (
+        update(FlowHistory)
+        .where(FlowHistory.id == history_id)
+        .values(state=state)
+    )
+    result = await session.exec(stmt)
+    if hasattr(result, "rowcount") and result.rowcount == 0:  # type: ignore[union-attr]
+        await logger.awarning(
+            "set_entry_state affected 0 rows for history_id=%s state=%s (possible race condition)",
+            history_id,
+            state,
+        )

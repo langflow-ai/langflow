@@ -10,7 +10,6 @@ from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
-
 from langflow.utils import migration
 
 # revision identifiers, used by Alembic.
@@ -39,7 +38,7 @@ def upgrade() -> None:
             sa.Column("version_number", sa.Integer(), nullable=False),
             sa.Column("description", sa.String(), nullable=True),
             sa.Column("created_at", sa.DateTime(), nullable=False),
-            sa.ForeignKeyConstraint(["flow_id"], ["flow.id"]),
+            sa.ForeignKeyConstraint(["flow_id"], ["flow.id"], ondelete="CASCADE"),
             sa.ForeignKeyConstraint(["user_id"], ["user.id"]),
             sa.PrimaryKeyConstraint("id"),
             sa.UniqueConstraint("flow_id", "version_number", name="unique_flow_version_number"),

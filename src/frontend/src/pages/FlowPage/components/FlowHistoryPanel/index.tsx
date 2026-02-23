@@ -15,7 +15,6 @@ import {
 } from "@/controllers/API/queries/flow-history";
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
-import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
 import useApplyFlowToCanvas from "@/hooks/flows/use-apply-flow-to-canvas";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
@@ -37,6 +36,7 @@ import { nodeTypes, edgeTypes } from "../../consts";
 
 function formatTimestamp(dateStr: string): string {
   const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return "Unknown date";
   return date.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
@@ -122,11 +122,10 @@ export default function FlowHistoryPanel({
     { refetchInterval: 10000 },
   );
 
-  const { mutate: createSnapshot, mutateAsync: createSnapshotAsync, isPending: isCreating } =
+  const { mutate: createSnapshot, isPending: isCreating } =
     usePostCreateSnapshot();
   const { mutate: deleteEntry, isPending: isDeleting } =
     useDeleteHistoryEntry();
-  const { mutateAsync: patchFlowAsync } = usePatchUpdateFlow();
 
   // Declarative query for the selected history entry's full data
   const selectedHistoryId = selectedId !== CURRENT_DRAFT_ID ? selectedId : "";
@@ -187,13 +186,18 @@ export default function FlowHistoryPanel({
   const processedPreview = useMemo(() => {
     if (selectedId === CURRENT_DRAFT_ID || !selectedEntryFull?.data) return null;
 
-    const cloned = cloneDeep(selectedEntryFull.data);
-    const flow = { data: cloned } as any;
-    processFlowEdges(flow);
-    processFlowNodes(flow);
-    updateEdges(cloned.edges);
-    const { edges: cleaned } = cleanEdges(cloned.nodes, cloned.edges);
-    return { nodes: cloned.nodes, edges: cleaned };
+    try {
+      const cloned = cloneDeep(selectedEntryFull.data);
+      const flow = { data: cloned } as any;
+      processFlowEdges(flow);
+      processFlowNodes(flow);
+      updateEdges(cloned.edges);
+      const { edges: cleaned } = cleanEdges(cloned.nodes, cloned.edges);
+      return { nodes: cloned.nodes, edges: cleaned };
+    } catch (err) {
+      console.error("Failed to process historical flow data for preview:", err);
+      return { nodes: [], edges: [] };
+    }
   }, [selectedId, selectedEntryFull?.data]);
 
   // Sync the global flow store with whatever version is being previewed.
@@ -265,45 +269,34 @@ export default function FlowHistoryPanel({
           setDescription("");
           setShowCreateForm(false);
         },
-        onError: () => {
-          setErrorData({ title: "Failed to save version" });
+        onError: (err: any) => {
+          const detail = err?.response?.data?.detail;
+          setErrorData({
+            title: "Failed to save version",
+            ...(detail ? { list: [detail] } : {}),
+          });
         },
       },
     );
   }, [flowId, description, createSnapshot, setSuccessData, setErrorData]);
 
-  // Restore = PATCH flow data with historical data, then close panel.
+  // Restore = call the /activate endpoint (which auto-snapshots server-side,
+  // handles state transitions, and returns the updated flow).
   // Accepts historyId explicitly so the restore target can't drift if the
   // user somehow changes the selection while the dialog is open.
   const doRestore = useCallback(
-    async (historyId: string, saveFirst: boolean) => {
+    async (historyId: string) => {
       setIsRestoring(true);
       try {
-        if (saveFirst) {
-          await createSnapshotAsync({
-            flowId,
-            description: "Auto-saved before restore",
-          });
-        }
-
-        // Fetch the entry data directly to avoid relying on the shared query
-        const response = await api.get(
-          `${getURL("FLOWS")}/${flowId}/history/${historyId}`,
+        // The activate endpoint auto-saves the current draft before overwriting
+        const response = await api.post(
+          `${getURL("FLOWS")}/${flowId}/history/${historyId}/activate`,
         );
-        const historicalData = response.data?.data;
-        if (!historicalData) {
-          setErrorData({ title: "Cannot restore: version has no data" });
-          return;
-        }
-
-        const result = await patchFlowAsync({
-          id: flowId,
-          data: historicalData as any,
-        });
+        const updatedFlow = response.data;
 
         // Apply through the same shared pipeline as normal flow loading:
         // processFlows → setCurrentFlow (→ resetFlow) → refreshAllModelInputs
-        applyFlowToCanvas(result);
+        applyFlowToCanvas(updatedFlow);
 
         // Update the ref so the unmount cleanup restores the new data,
         // not the pre-restore data.
@@ -325,16 +318,19 @@ export default function FlowHistoryPanel({
             maxZoom: 2,
           });
         });
-      } catch {
-        setErrorData({ title: "Failed to restore version" });
+      } catch (err: any) {
+        const detail = err?.response?.data?.detail;
+        setErrorData({
+          title: "Failed to restore version",
+          ...(detail ? { list: [detail] } : {}),
+        });
       } finally {
         setIsRestoring(false);
+        setRestoreConfirm(null);
       }
     },
     [
       flowId,
-      createSnapshotAsync,
-      patchFlowAsync,
       applyFlowToCanvas,
       setSuccessData,
       setErrorData,
@@ -354,8 +350,12 @@ export default function FlowHistoryPanel({
               setSelectedId(CURRENT_DRAFT_ID);
             }
           },
-          onError: () => {
-            setErrorData({ title: "Failed to delete version" });
+          onError: (err: any) => {
+            const detail = err?.response?.data?.detail;
+            setErrorData({
+              title: "Failed to delete version",
+              ...(detail ? { list: [detail] } : {}),
+            });
             setDeleteTarget(null);
           },
         },
@@ -396,8 +396,12 @@ export default function FlowHistoryPanel({
         a.download = `${currentFlow?.name || "flow"}_${tag}.json`;
         a.click();
         URL.revokeObjectURL(url);
-      } catch {
-        setErrorData({ title: "Failed to export version" });
+      } catch (err: any) {
+        const detail = err?.response?.data?.detail;
+        setErrorData({
+          title: "Failed to export version",
+          ...(detail ? { list: [detail] } : {}),
+        });
       }
     },
     [flowId, currentFlow, setErrorData],
@@ -687,9 +691,10 @@ export default function FlowHistoryPanel({
             </div>
             <p className="text-sm text-muted-foreground">
               Restore <strong>{restoreConfirm.versionTag}</strong> as the
-              current working draft? You can save the current state first.
+              current working draft? Your current state will be auto-saved
+              first.
             </p>
-            <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+            <div className="flex justify-end gap-2">
               <Button
                 variant="outline"
                 size="sm"
@@ -698,20 +703,12 @@ export default function FlowHistoryPanel({
                 Cancel
               </Button>
               <Button
-                variant="outline"
-                size="sm"
-                onClick={() => doRestore(restoreConfirm.historyId, false)}
-                loading={isRestoring}
-              >
-                Restore without saving
-              </Button>
-              <Button
                 variant="default"
                 size="sm"
-                onClick={() => doRestore(restoreConfirm.historyId, true)}
+                onClick={() => doRestore(restoreConfirm.historyId)}
                 loading={isRestoring}
               >
-                Save current state & restore
+                Restore
               </Button>
             </div>
           </div>

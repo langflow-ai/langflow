@@ -35,6 +35,7 @@ export type FlowType = {
   access_type?: "PUBLIC" | "PRIVATE" | "PROTECTED";
   mcp_enabled?: boolean;
   state?: "DRAFT" | "PUBLISHED" | "ARCHIVED";
+  active_version_id?: string | null;
 };
 
 export type GenericNodeType = Node<NodeDataType, "genericNode">;
