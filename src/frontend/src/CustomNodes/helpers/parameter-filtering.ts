@@ -40,6 +40,7 @@ export function shouldRenderInspectionPanelField(
   templateField: string,
   template: InputFieldType,
   isToolMode: boolean | undefined,
+  connectedFields: Set<string> = new Set(),
 ) {
   if (isInternalField(templateField)) return false;
   if (!template?.show) return false;
@@ -47,6 +48,12 @@ export function shouldRenderInspectionPanelField(
   if (isToolModeEnabled(template) && isToolMode) return false;
   // Only show advanced fields in the inspector panel
   if (!template?.advanced) return false;
+  // Hide handle-type fields (configured via canvas connections, not text input)
+  if (isHandleInput(template)) return false;
+  // Hide readonly fields
+  if (template?.readonly) return false;
+  // Hide fields that already have an incoming connection
+  if (connectedFields.has(templateField)) return false;
 
   return true;
 }

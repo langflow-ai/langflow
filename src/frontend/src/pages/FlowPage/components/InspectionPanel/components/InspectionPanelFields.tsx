@@ -1,18 +1,18 @@
 import { useMemo } from "react";
+import {
+  isCodeField,
+  isInternalField,
+  isToolModeEnabled,
+  shouldRenderInspectionPanelField,
+} from "@/CustomNodes/helpers/parameter-filtering";
 import { sortToolModeFields } from "@/CustomNodes/helpers/sort-tool-mode-field";
 import getFieldTitle from "@/CustomNodes/utils/get-field-title";
-import type { NodeDataType } from "@/types/flow";
-import InspectionPanelField from "./InspectionPanelField";
-import InspectionPanelEditField from "./InspectionPanelEditField";
-import {
-  shouldRenderInspectionPanelField,
-  isInternalField,
-  isCodeField,
-  isHandleInput,
-  isToolModeEnabled,
-} from "@/CustomNodes/helpers/parameter-filtering";
-import { cn } from "@/utils/utils";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import useFlowStore from "@/stores/flowStore";
+import type { NodeDataType } from "@/types/flow";
+import { cn } from "@/utils/utils";
+import InspectionPanelEditField from "./InspectionPanelEditField";
+import InspectionPanelField from "./InspectionPanelField";
 
 interface InspectionPanelFieldsProps {
   data: NodeDataType;
@@ -24,6 +24,18 @@ export default function InspectionPanelFields({
   isEditingFields = false,
 }: InspectionPanelFieldsProps) {
   const isToolMode = data.node?.tool_mode;
+  const edges = useFlowStore((state) => state.edges);
+
+  const connectedFields = useMemo(() => {
+    const fields = new Set<string>();
+    for (const edge of edges) {
+      if (edge.target === data.id) {
+        const fieldName = edge.data?.targetHandle?.fieldName;
+        if (fieldName) fields.add(fieldName);
+      }
+    }
+    return fields;
+  }, [edges, data.id]);
 
   // Get all editable fields (for edit mode)
   const allEditableFields = useMemo(() => {
@@ -56,6 +68,7 @@ export default function InspectionPanelFields({
           templateField,
           template,
           isToolMode,
+          connectedFields,
         );
       })
       .sort((a, b) =>
@@ -67,7 +80,12 @@ export default function InspectionPanelFields({
           false,
         ),
       );
-  }, [data.node?.template, data.node?.field_order, isToolMode]);
+  }, [
+    data.node?.template,
+    data.node?.field_order,
+    isToolMode,
+    connectedFields,
+  ]);
 
   // Edit mode - show all fields with simplified edit UI
   if (isEditingFields) {
