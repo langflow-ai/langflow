@@ -47,7 +47,7 @@ def upgrade() -> None:
             sa.Column("created_at", sa.DateTime(), nullable=False),
             sa.Column("updated_at", sa.DateTime(), nullable=False),
             sa.Column("created_by", sa.Uuid(), nullable=True),
-            sa.ForeignKeyConstraint(["created_by"], ["user.id"]),
+            sa.ForeignKeyConstraint(["created_by"], ["user.id"], ondelete="SET NULL"),
             sa.PrimaryKeyConstraint("id"),
         )
     if not migration.table_exists("sso_user_profile", conn):
@@ -66,8 +66,11 @@ def upgrade() -> None:
         )
         with op.batch_alter_table("sso_user_profile", schema=None) as batch_op:
             batch_op.create_index(batch_op.f("ix_sso_user_profile_email"), ["email"], unique=False)
-            batch_op.create_index(batch_op.f("ix_sso_user_profile_sso_provider"), ["sso_provider"], unique=False)
-            batch_op.create_index(batch_op.f("ix_sso_user_profile_sso_user_id"), ["sso_user_id"], unique=False)
+            batch_op.create_index(
+                batch_op.f("uq_sso_user_profile_provider_user"),
+                ["sso_provider", "sso_user_id"],
+                unique=True,
+            )
             batch_op.create_index(batch_op.f("ix_sso_user_profile_user_id"), ["user_id"], unique=True)
 
     # ### end Alembic commands ###
@@ -79,8 +82,7 @@ def downgrade() -> None:
     if migration.table_exists("sso_user_profile", conn):
         with op.batch_alter_table("sso_user_profile", schema=None) as batch_op:
             batch_op.drop_index(batch_op.f("ix_sso_user_profile_user_id"))
-            batch_op.drop_index(batch_op.f("ix_sso_user_profile_sso_user_id"))
-            batch_op.drop_index(batch_op.f("ix_sso_user_profile_sso_provider"))
+            batch_op.drop_index(batch_op.f("uq_sso_user_profile_provider_user"))
             batch_op.drop_index(batch_op.f("ix_sso_user_profile_email"))
         op.drop_table("sso_user_profile")
     if migration.table_exists("sso_config", conn):

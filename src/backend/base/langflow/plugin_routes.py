@@ -113,6 +113,15 @@ def load_plugin_routes(app: FastAPI) -> None:
     for ep in sorted(eps, key=lambda e: e.name):
         try:
             plugin_register = ep.load()
+        except Exception:  # noqa: BLE001
+            logger.error(
+                "Failed to load plugin entry point '%s' (broken import or missing dependency)",
+                ep.name,
+                exc_info=True,
+            )
+            continue
+
+        try:
             plugin_register(wrapper)
             logger.info(f"Loaded plugin: {ep.name}")
         except ValueError as e:
@@ -123,8 +132,8 @@ def load_plugin_routes(app: FastAPI) -> None:
                 exc_info=True,
             )
         except Exception:  # noqa: BLE001
-            logger.warning(
-                "Failed to load plugin entry point '%s'",
+            logger.error(
+                "Plugin '%s' failed during registration",
                 ep.name,
                 exc_info=True,
             )
