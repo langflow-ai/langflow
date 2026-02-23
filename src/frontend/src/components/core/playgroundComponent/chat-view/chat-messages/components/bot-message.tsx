@@ -145,7 +145,7 @@ export const BotMessage = memo(
 
     return (
       <>
-        <div className="w-full py-4 word-break-break-word">
+        <div className="w-full py-4 word-break-break-word mt-2">
           <div
             className={cn(
               "group relative flex w-full flex-col gap-3 rounded-md p-2",
@@ -153,8 +153,8 @@ export const BotMessage = memo(
             )}
           >
             {/* Content: thinking (paragraph) -> steps dropdown -> answer with bot avatar */}
-            <div className="flex w-full flex-col gap-4">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <div className="flex w-full flex-col gap-1 min-w-0">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-0.5">
                 {!thinkingActive && displayTime > 0 && (
                   <ForwardedIconComponent
                     name="Check"
