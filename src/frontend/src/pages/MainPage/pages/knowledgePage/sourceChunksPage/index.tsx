@@ -114,7 +114,6 @@ export const SourceChunksPage = () => {
                     placeholder="Search chunks..."
                     value={searchQuery}
                     onChange={(e) => handleSearchChange(e.target.value)}
-                    className="pl-9"
                     data-testid="chunks-search-input"
                   />
                 </div>
