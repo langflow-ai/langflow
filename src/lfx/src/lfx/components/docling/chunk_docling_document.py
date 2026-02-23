@@ -105,6 +105,7 @@ class ChunkDoclingDocumentComponent(Component):
     ]
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
+        """Update build_config to show/hide fields based on chunker and provider selection."""
         if field_name == "chunker":
             provider_type = build_config["provider"]["value"]
             is_hf = provider_type == "Hugging Face"
