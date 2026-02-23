@@ -426,8 +426,8 @@ function GenericNode({
             )}
             data-testid={
               editedNameDescription
-                ? "save-name-description-button"
-                : "edit-name-description-button"
+                ? "node-save-name-description-button"
+                : "node-edit-name-description-button"
             }
           >
             <ForwardedIconComponent
