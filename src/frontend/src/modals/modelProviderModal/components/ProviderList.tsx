@@ -43,8 +43,7 @@ const ProviderList = ({
           models: matchingModels,
           api_docs_url: provider.api_docs_url,
         };
-      })
-      .filter((provider) => provider.model_count > 0);
+      });
   }, [rawProviders, modelType]);
 
   const handleProviderSelect = (provider: Provider) => {
