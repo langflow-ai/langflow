@@ -47,6 +47,7 @@ from langflow.services.deps import (
 )
 from langflow.services.schema import ServiceType
 from langflow.services.utils import initialize_services, initialize_settings_service, teardown_services
+from langflow.plugin_routes import load_plugin_routes
 from langflow.utils.mcp_cleanup import cleanup_mcp_sessions
 
 if TYPE_CHECKING:
@@ -410,29 +411,6 @@ def get_lifespan(*, fix_migration=False, version=None):
     return lifespan
 
 
-def _load_plugin_routes(app: FastAPI) -> None:
-    """Discover and register additional routers from enterprise plugins.
-
-    Plugins register themselves via the ``langflow.plugins`` entry-point group.
-    Each entry point must expose a callable with the signature::
-
-        def register(app: FastAPI) -> None: ...
-
-    This is the primary mechanism for the enterprise package to inject its
-    SSO, RBAC, and observability API routes without modifying the OSS codebase.
-    """
-    from importlib.metadata import entry_points
-
-    eps = entry_points(group="langflow.plugins")
-    for ep in eps:
-        try:
-            plugin_register = ep.load()
-            plugin_register(app)
-            logger.info(f"Loaded enterprise plugin: {ep.name}")
-        except Exception:  # noqa: BLE001
-            logger.warning(f"Failed to load plugin entry point '{ep.name}'", exc_info=True)
-
-
 def create_app():
     """Create the FastAPI app and include the router."""
     from langflow.utils.version import get_version_info
@@ -541,11 +519,11 @@ def create_app():
     app.include_router(health_check_router)
     app.include_router(log_router)
 
-    # --- Enterprise plugin hook ---
-    # Discover and register additional routers provided by enterprise plugins
+    # --- plugin hook ---
+    # Discover and register additional routers provided by plugins
     # via the ``langflow.plugins`` entry-point group.
     # Each entry point must expose a callable ``register(app: FastAPI) -> None``.
-    _load_plugin_routes(app)
+    load_plugin_routes(app)
 
     @app.exception_handler(Exception)
     async def exception_handler(_request: Request, exc: Exception):
