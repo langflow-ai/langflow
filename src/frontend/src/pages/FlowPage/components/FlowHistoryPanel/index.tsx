@@ -14,9 +14,9 @@ import {
   usePostCreateSnapshot,
 } from "@/controllers/API/queries/flow-history";
 import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
+import useApplyFlowToCanvas from "@/hooks/flows/use-apply-flow-to-canvas";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
-import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Background, ReactFlow, ReactFlowProvider, useNodesInitialized } from "@xyflow/react";
 import {
@@ -27,22 +27,7 @@ import {
 } from "@/utils/reactflowUtils";
 import { cn } from "@/utils/utils";
 import { cloneDeep } from "lodash";
-import GenericNode from "@/CustomNodes/GenericNode";
-import NoteNode from "@/CustomNodes/NoteNode";
-import { DefaultEdge } from "@/CustomEdges";
-
-// ---------------------------------------------------------------------------
-// Shared node/edge type registrations (same as main canvas)
-// ---------------------------------------------------------------------------
-
-const nodeTypes = {
-  genericNode: GenericNode,
-  noteNode: NoteNode,
-};
-
-const edgeTypes = {
-  default: DefaultEdge,
-};
+import { nodeTypes, edgeTypes } from "../../consts";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -115,9 +100,7 @@ export default function FlowHistoryPanel({
 }: FlowHistoryPanelProps) {
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const setCurrentFlow = useFlowsManagerStore(
-    (state) => state.setCurrentFlow,
-  );
+  const applyFlowToCanvas = useApplyFlowToCanvas();
 
   const [description, setDescription] = useState("");
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -304,7 +287,10 @@ export default function FlowHistoryPanel({
           id: flowId,
           data: historicalData as any,
         });
-        setCurrentFlow(result);
+
+        // Apply through the same shared pipeline as normal flow loading:
+        // processFlows → setCurrentFlow (→ resetFlow) → refreshAllModelInputs
+        applyFlowToCanvas(result);
 
         // Update the ref so the unmount cleanup restores the new data,
         // not the pre-restore data.
@@ -316,6 +302,16 @@ export default function FlowHistoryPanel({
         setSuccessData({ title: "Version restored" });
         // Close the history panel and return to the main editor
         onClose();
+
+        // Fit the canvas to the restored flow after React re-renders the new
+        // nodes. This mirrors what happens on initial flow load (fitView prop).
+        requestAnimationFrame(() => {
+          useFlowStore.getState().reactFlowInstance?.fitView({
+            padding: 0.2,
+            minZoom: 0.25,
+            maxZoom: 2,
+          });
+        });
       } catch {
         setErrorData({ title: "Failed to restore version" });
       } finally {
@@ -327,7 +323,7 @@ export default function FlowHistoryPanel({
       selectedEntryFull,
       createSnapshotAsync,
       patchFlowAsync,
-      setCurrentFlow,
+      applyFlowToCanvas,
       setSuccessData,
       setErrorData,
       onClose,
