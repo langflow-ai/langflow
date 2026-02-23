@@ -41,6 +41,6 @@ export interface Trace {
   totalLatencyMs: number;
   totalTokens: number;
   totalCost: number;
-  sessionId?: string;
+  sessionId: string;
   spans: Span[];
 }

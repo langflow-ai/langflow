@@ -108,7 +108,7 @@ async def _fetch_traces(
                     "totalTokens": total_tokens,
                     "totalCost": trace.total_cost,
                     "flowId": str(trace.flow_id),
-                    "sessionId": trace.session_id,
+                    "sessionId": trace.session_id or str(trace.id),
                     "input": io_data.get("input"),
                     "output": io_data.get("output"),
                 }
@@ -187,7 +187,7 @@ async def _fetch_single_trace(trace_id: UUID) -> dict[str, Any] | None:
             "totalTokens": total_tokens or trace.total_tokens,
             "totalCost": trace.total_cost,
             "flowId": str(trace.flow_id),
-            "sessionId": trace.session_id,
+            "sessionId": trace.session_id or str(trace.id),
             "spans": span_tree,
         }
 

@@ -59,14 +59,15 @@ class NativeTracer(BaseTracer):
             trace_id: Unique ID for this trace run
             flow_id: Flow ID (if not provided, extracted from trace_name)
             user_id: Optional user ID
-            session_id: Optional session ID for grouping traces
+            session_id: Session ID for grouping traces (defaults to trace_id if not provided)
         """
         self.trace_name = trace_name
         self.trace_type = trace_type
         self.project_name = project_name
         self.trace_id = trace_id
         self.user_id = user_id
-        self.session_id = session_id
+        # Ensure session_id is always set, default to trace_id if not provided
+        self.session_id = session_id or str(trace_id)
         # Use provided flow_id or extract from trace_name as fallback
         self.flow_id = flow_id or (trace_name.split(" - ")[-1] if " - " in trace_name else trace_name)
 

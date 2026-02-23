@@ -68,7 +68,7 @@ interface TraceAccordionItemProps {
   totalLatencyMs: number;
   totalTokens: number;
   totalCost: number;
-  sessionId?: string;
+  sessionId: string;
   isExpanded: boolean;
 }
 
@@ -137,12 +137,10 @@ function TraceAccordionItem({
             >
               {traceStatus}
             </Badge>
-            {sessionId && (
-              <Badge variant="outline" size="sm" className="font-mono text-xs">
-                <IconComponent name="Hash" className="mr-1 h-3 w-3" />
-                {sessionId}
-              </Badge>
-            )}
+            <Badge variant="outline" size="sm" className="font-mono text-xs">
+              <IconComponent name="Hash" className="mr-1 h-3 w-3" />
+              {sessionId}
+            </Badge>
           </div>
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
@@ -217,6 +215,7 @@ export function TraceView({ flowId, initialTraceId }: TraceViewProps) {
   const [showFilters, setShowFilters] = useState<boolean>(false);
   const [showDateFilters, setShowDateFilters] = useState<boolean>(false);
   const [showTokenFilters, setShowTokenFilters] = useState<boolean>(false);
+  const [groupBy, setGroupBy] = useState<"none" | "session" | "flow">("none");
 
   // Sync expandedTraceId when initialTraceId changes
   useEffect(() => {
@@ -274,6 +273,21 @@ export function TraceView({ flowId, initialTraceId }: TraceViewProps) {
 
     return true;
   });
+
+  // Group traces by session_id or flow_id
+  const groupedTraces: Record<string, typeof traces> = {};
+  if (groupBy === "none") {
+    groupedTraces["all"] = traces;
+  } else {
+    traces.forEach((trace) => {
+      const key =
+        (groupBy === "session" ? trace.sessionId : trace.flowId) ?? "unknown";
+      if (!groupedTraces[key]) {
+        groupedTraces[key] = [];
+      }
+      groupedTraces[key].push(trace);
+    });
+  }
 
   const handleClearFilters = () => {
     setStatusFilter("all");
@@ -345,6 +359,28 @@ export function TraceView({ flowId, initialTraceId }: TraceViewProps) {
         {showFilters && (
           <div className="border-t border-border bg-muted/30 px- py-3">
             <div className="grid grid-cols-12 mr-2 pb-3" dir="rtl">
+              {/* Group By Filter */}
+              <div className="space-y-1">
+                <label className="mr-2 text-xs font-medium text-muted-foreground">
+                  Group By
+                </label>
+                <Select
+                  value={groupBy}
+                  onValueChange={(value) =>
+                    setGroupBy(value as "none" | "session" | "flow")
+                  }
+                >
+                  <SelectTrigger className="h-8 w-32 text-xs">
+                    <SelectValue placeholder="No grouping" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No Grouping</SelectItem>
+                    <SelectItem value="session">Session ID</SelectItem>
+                    <SelectItem value="flow">Flow ID</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               {/* Status Filter */}
               <div className="space-y-1">
                 <label className="mr-2 text-xs font-medium text-muted-foreground">
@@ -504,28 +540,51 @@ export function TraceView({ flowId, initialTraceId }: TraceViewProps) {
             </div>
           </div>
         ) : (
-          // Accordion list of traces
-          <Accordion
-            type="single"
-            collapsible
-            value={expandedTraceId}
-            onValueChange={setExpandedTraceId}
-          >
-            {traces.map((trace) => (
-              <TraceAccordionItem
-                key={trace.id}
-                traceId={trace.id}
-                traceName={trace.name}
-                traceStatus={trace.status}
-                traceStartTime={trace.startTime}
-                totalLatencyMs={trace.totalLatencyMs}
-                totalTokens={trace.totalTokens}
-                totalCost={trace.totalCost}
-                sessionId={trace.sessionId}
-                isExpanded={expandedTraceId === trace.id}
-              />
+          // Accordion list of traces (grouped or ungrouped)
+          <div className="space-y-4">
+            {Object.entries(groupedTraces).map(([groupKey, groupTraces]) => (
+              <div key={groupKey}>
+                {groupBy !== "none" && (
+                  <div className="sticky top-0 z-10 bg-background px-4 py-2 border-b border-border">
+                    <div className="flex items-center gap-2">
+                      <IconComponent
+                        name={groupBy === "session" ? "Hash" : "Workflow"}
+                        className="h-4 w-4 text-muted-foreground"
+                      />
+                      <span className="text-sm font-semibold">
+                        {groupBy === "session" ? "Session" : "Flow"}: {groupKey}
+                      </span>
+                      <Badge variant="secondary" size="sm">
+                        {groupTraces.length} trace
+                        {groupTraces.length !== 1 ? "s" : ""}
+                      </Badge>
+                    </div>
+                  </div>
+                )}
+                <Accordion
+                  type="single"
+                  collapsible
+                  value={expandedTraceId}
+                  onValueChange={setExpandedTraceId}
+                >
+                  {groupTraces.map((trace) => (
+                    <TraceAccordionItem
+                      key={trace.id}
+                      traceId={trace.id}
+                      traceName={trace.name}
+                      traceStatus={trace.status}
+                      traceStartTime={trace.startTime}
+                      totalLatencyMs={trace.totalLatencyMs}
+                      totalTokens={trace.totalTokens}
+                      totalCost={trace.totalCost}
+                      sessionId={trace.sessionId ?? "N/A"}
+                      isExpanded={expandedTraceId === trace.id}
+                    />
+                  ))}
+                </Accordion>
+              </div>
             ))}
-          </Accordion>
+          </div>
         )}
       </div>
     </div>
