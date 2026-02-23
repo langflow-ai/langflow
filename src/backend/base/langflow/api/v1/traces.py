@@ -53,20 +53,66 @@ async def _fetch_traces(
 
         traces = (await session.exec(stmt)).all()
 
+        # Get aggregated token counts per trace (leaf spans only to avoid double-counting)
+        trace_ids = [trace.id for trace in traces]
+        token_map: dict[str, int] = {}
+        if trace_ids:
+            from sqlalchemy import func
+
+            # Subquery: IDs of spans that are parents (i.e. have children)
+            parent_ids_subq = (
+                select(SpanTable.parent_span_id)
+                .where(SpanTable.parent_span_id != None)  # noqa: E711
+                .where(col(SpanTable.trace_id).in_(trace_ids))
+            ).subquery()
+
+            token_stmt = (
+                select(
+                    SpanTable.trace_id,
+                    func.coalesce(func.sum(SpanTable.total_tokens), 0).label("sum_tokens"),
+                )
+                .where(col(SpanTable.trace_id).in_(trace_ids))
+                .where(~col(SpanTable.id).in_(select(parent_ids_subq.c.parent_span_id)))
+                .group_by(col(SpanTable.trace_id))
+            )
+            token_rows = (await session.exec(token_stmt)).all()
+            for row in token_rows:
+                token_map[str(row[0])] = int(row[1] or 0)
+
+        # Fetch root span inputs/outputs for each trace
+        io_map: dict[str, dict[str, Any]] = {}
+        if trace_ids:
+            root_spans_stmt = (
+                select(SpanTable).where(col(SpanTable.trace_id).in_(trace_ids)).where(SpanTable.parent_span_id == None)  # noqa: E711
+            )
+            root_spans = (await session.exec(root_spans_stmt)).all()
+            for span in root_spans:
+                io_map[str(span.trace_id)] = {
+                    "input": span.inputs,
+                    "output": span.outputs,
+                }
+
         # Convert to response format
-        trace_list = [
-            {
-                "id": str(trace.id),
-                "name": trace.name,
-                "status": trace.status.value if trace.status else "success",
-                "startTime": trace.start_time.isoformat() if trace.start_time else "",
-                "totalLatencyMs": trace.total_latency_ms,
-                "totalTokens": trace.total_tokens,
-                "totalCost": trace.total_cost,
-                "flowId": str(trace.flow_id),
-            }
-            for trace in traces
-        ]
+        trace_list = []
+        for trace in traces:
+            tid = str(trace.id)
+            total_tokens = token_map.get(tid, trace.total_tokens)
+            io_data = io_map.get(tid, {})
+            trace_list.append(
+                {
+                    "id": tid,
+                    "name": trace.name,
+                    "status": trace.status.value if trace.status else "success",
+                    "startTime": trace.start_time.isoformat() if trace.start_time else "",
+                    "totalLatencyMs": trace.total_latency_ms,
+                    "totalTokens": total_tokens,
+                    "totalCost": trace.total_cost,
+                    "flowId": str(trace.flow_id),
+                    "sessionId": trace.session_id,
+                    "input": io_data.get("input"),
+                    "output": io_data.get("output"),
+                }
+            )
 
         return {"traces": trace_list, "total": len(trace_list)}
 
@@ -126,6 +172,10 @@ async def _fetch_single_trace(trace_id: UUID) -> dict[str, Any] | None:
         # Build hierarchical span tree
         span_tree = _build_span_tree(list(spans))
 
+        # Aggregate tokens from leaf spans only (parents already include children's tokens)
+        parent_ids = {s.parent_span_id for s in spans if s.parent_span_id}
+        total_tokens = sum(s.total_tokens or 0 for s in spans if s.id not in parent_ids)
+
         # Return trace with span tree in frontend-compatible format
         return {
             "id": str(trace.id),
@@ -134,11 +184,11 @@ async def _fetch_single_trace(trace_id: UUID) -> dict[str, Any] | None:
             "startTime": trace.start_time.isoformat() if trace.start_time else "",
             "endTime": trace.end_time.isoformat() if trace.end_time else None,
             "totalLatencyMs": trace.total_latency_ms,
-            "totalTokens": trace.total_tokens,
+            "totalTokens": total_tokens or trace.total_tokens,
             "totalCost": trace.total_cost,
             "flowId": str(trace.flow_id),
             "sessionId": trace.session_id,
-            "spans": span_tree,  # Return all root spans as flat list
+            "spans": span_tree,
         }
 
 

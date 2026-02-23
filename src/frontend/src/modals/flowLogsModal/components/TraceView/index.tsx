@@ -68,6 +68,7 @@ interface TraceAccordionItemProps {
   totalLatencyMs: number;
   totalTokens: number;
   totalCost: number;
+  sessionId?: string;
   isExpanded: boolean;
 }
 
@@ -79,6 +80,7 @@ function TraceAccordionItem({
   totalLatencyMs,
   totalTokens,
   totalCost,
+  sessionId,
   isExpanded,
 }: TraceAccordionItemProps) {
   const [selectedSpan, setSelectedSpan] = useState<Span | null>(null);
@@ -135,6 +137,12 @@ function TraceAccordionItem({
             >
               {traceStatus}
             </Badge>
+            {sessionId && (
+              <Badge variant="outline" size="sm" className="font-mono text-xs">
+                <IconComponent name="Hash" className="mr-1 h-3 w-3" />
+                {sessionId}
+              </Badge>
+            )}
           </div>
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
@@ -513,6 +521,7 @@ export function TraceView({ flowId, initialTraceId }: TraceViewProps) {
                 totalLatencyMs={trace.totalLatencyMs}
                 totalTokens={trace.totalTokens}
                 totalCost={trace.totalCost}
+                sessionId={trace.sessionId}
                 isExpanded={expandedTraceId === trace.id}
               />
             ))}
