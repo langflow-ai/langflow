@@ -3,8 +3,8 @@ import GenericNode from "@/CustomNodes/GenericNode";
 import NoteNode from "@/CustomNodes/NoteNode";
 
 /**
- * Shared ReactFlow node/edge type registrations used by both the main canvas
- * (PageComponent) and the history preview canvas (FlowHistoryPanel).
+ * Shared ReactFlow node/edge type registrations used by the main canvas
+ * (PageComponent).
  */
 export const nodeTypes = {
   genericNode: GenericNode,
