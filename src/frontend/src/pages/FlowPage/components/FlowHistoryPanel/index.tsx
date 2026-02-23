@@ -123,10 +123,11 @@ export default function FlowHistoryPanel({
   } | null>(null);
   const [isRestoring, setIsRestoring] = useState(false);
 
-  const { data: history, isLoading, isError: isListError } = useGetFlowHistory(
-    { flowId },
-    { refetchInterval: 10000 },
-  );
+  const {
+    data: history,
+    isLoading,
+    isError: isListError,
+  } = useGetFlowHistory({ flowId }, { refetchInterval: 10000 });
 
   const { mutate: createSnapshot, isPending: isCreating } =
     usePostCreateSnapshot();
@@ -135,11 +136,14 @@ export default function FlowHistoryPanel({
 
   // Declarative query for the selected history entry's full data
   const selectedHistoryId = selectedId !== CURRENT_DRAFT_ID ? selectedId : "";
-  const { data: selectedEntryFull, isLoading: isLoadingEntry, isError: isEntryError } =
-    useGetFlowHistoryEntry(
-      { flowId, historyId: selectedHistoryId },
-      { enabled: !!selectedHistoryId, gcTime: 0, staleTime: 0 },
-    );
+  const {
+    data: selectedEntryFull,
+    isLoading: isLoadingEntry,
+    isError: isEntryError,
+  } = useGetFlowHistoryEntry(
+    { flowId, historyId: selectedHistoryId },
+    { enabled: !!selectedHistoryId, gcTime: 0, staleTime: 0 },
+  );
 
   const currentFlow = useFlowStore((state) => state.currentFlow);
 
