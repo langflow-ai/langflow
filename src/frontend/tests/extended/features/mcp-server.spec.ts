@@ -55,6 +55,8 @@ test(
 
     await page.getByTestId("add-mcp-server-button").click();
 
+    await page.waitForTimeout(5000);
+
     await expect(page.getByTestId("dropdown_str_tool")).toBeVisible({
       timeout: 30000,
     });
@@ -232,7 +234,7 @@ test(
       .getByTestId(`add-component-button-${testName}`)
       .click({ timeout: 30000 });
 
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(5000);
 
     await expect(page.getByTestId("dropdown_str_tool")).toBeVisible({
       timeout: 30000,
@@ -662,7 +664,7 @@ test(
 
     await page.getByTestId("add-mcp-server-button").click();
 
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(5000);
 
     await page.waitForSelector(
       '[data-testid="dropdown_str_tool"]:not([disabled])',

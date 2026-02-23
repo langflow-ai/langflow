@@ -83,6 +83,7 @@ export type FileComponentType = {
 
 export type PromptAreaComponentType = {
   field_name?: string;
+  isDoubleBrackets?: boolean;
 };
 
 export type LinkComponentType = {
@@ -144,6 +145,7 @@ export type InputGlobalComponentType = {
 export type MultiselectComponentType = {
   options: string[];
   combobox?: boolean;
+  hideOnSelection?: boolean;
 };
 
 export type TabComponentType = {
