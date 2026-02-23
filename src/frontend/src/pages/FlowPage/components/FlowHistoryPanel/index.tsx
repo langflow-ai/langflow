@@ -18,8 +18,20 @@ import { getURL } from "@/controllers/API/helpers/constants";
 import useApplyFlowToCanvas from "@/hooks/flows/use-apply-flow-to-canvas";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Background, ReactFlow, ReactFlowProvider, useNodesInitialized } from "@xyflow/react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import {
+  Background,
+  ReactFlow,
+  ReactFlowProvider,
+  useNodesInitialized,
+} from "@xyflow/react";
 import {
   cleanEdges,
   processFlowEdges,
@@ -49,13 +61,7 @@ function formatTimestamp(dateStr: string): string {
 // Read-only canvas preview (uses real Langflow node types)
 // ---------------------------------------------------------------------------
 
-function PreviewCanvas({
-  nodes,
-  edges,
-}: {
-  nodes: any[];
-  edges: any[];
-}) {
+function PreviewCanvas({ nodes, edges }: { nodes: any[]; edges: any[] }) {
   // Defer edges until nodes have been measured and handle bounds are known.
   const nodesInitialized = useNodesInitialized();
 
@@ -184,7 +190,8 @@ export default function FlowHistoryPanel({
   // Process historical data through the same pipeline the main canvas uses
   // (processFlowEdges → processFlowNodes → updateEdges → cleanEdges).
   const processedPreview = useMemo(() => {
-    if (selectedId === CURRENT_DRAFT_ID || !selectedEntryFull?.data) return null;
+    if (selectedId === CURRENT_DRAFT_ID || !selectedEntryFull?.data)
+      return null;
 
     try {
       const cloned = cloneDeep(selectedEntryFull.data);
@@ -329,13 +336,7 @@ export default function FlowHistoryPanel({
         setRestoreConfirm(null);
       }
     },
-    [
-      flowId,
-      applyFlowToCanvas,
-      setSuccessData,
-      setErrorData,
-      onClose,
-    ],
+    [flowId, applyFlowToCanvas, setSuccessData, setErrorData, onClose],
   );
 
   const handleDelete = useCallback(
@@ -443,9 +444,7 @@ export default function FlowHistoryPanel({
               </span>
             )}
           </div>
-
         </div>
-
 
         {/* Canvas preview */}
         <div className="flex-1 bg-muted/20">
@@ -625,7 +624,11 @@ export default function FlowHistoryPanel({
                       />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-44" container={panelRef.current}>
+                  <DropdownMenuContent
+                    align="end"
+                    className="w-44"
+                    container={panelRef.current}
+                  >
                     <DropdownMenuItem
                       onClick={(e) => {
                         e.stopPropagation();

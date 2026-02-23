@@ -22,9 +22,8 @@ export const useGetFlowHistoryEntry: useQueryFunctionType<
     return response.data;
   };
 
-  return query(
-    ["useGetFlowHistoryEntry", { flowId, historyId }],
-    getEntryFn,
-    { enabled: !!historyId, ...options },
-  );
+  return query(["useGetFlowHistoryEntry", { flowId, historyId }], getEntryFn, {
+    enabled: !!historyId,
+    ...options,
+  });
 };

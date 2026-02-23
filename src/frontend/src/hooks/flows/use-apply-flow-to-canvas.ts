@@ -10,9 +10,7 @@ import { processFlows } from "@/utils/reactflowUtils";
  *   processFlows → setCurrentFlow (→ resetFlow) → refreshAllModelInputs
  */
 const useApplyFlowToCanvas = () => {
-  const setCurrentFlow = useFlowsManagerStore(
-    (state) => state.setCurrentFlow,
-  );
+  const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
   const { refreshAllModelInputs } = useRefreshModelInputs();
 
   const applyFlowToCanvas = useCallback(
