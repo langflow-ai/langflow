@@ -1,56 +1,108 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   useDeleteHistoryEntry,
   useGetFlowHistory,
-  usePostActivateVersion,
+  useGetFlowHistoryEntry,
   usePostCreateSnapshot,
 } from "@/controllers/API/queries/flow-history";
+import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import type { FlowHistoryEntry, FlowHistoryEntryFull } from "@/types/flow/history";
-import { useCallback, useState } from "react";
-import { api } from "@/controllers/API/api";
-import { getURL } from "@/controllers/API/helpers/constants";
-import FlowHistoryPreview from "../FlowHistoryPreview";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Background, ReactFlow, ReactFlowProvider, useNodesInitialized } from "@xyflow/react";
+import {
+  cleanEdges,
+  processFlowEdges,
+  processFlowNodes,
+  updateEdges,
+} from "@/utils/reactflowUtils";
+import { cn } from "@/utils/utils";
+import { cloneDeep } from "lodash";
+import GenericNode from "@/CustomNodes/GenericNode";
+import NoteNode from "@/CustomNodes/NoteNode";
+import { DefaultEdge } from "@/CustomEdges";
 
-function formatRelativeTime(dateStr: string): string {
+// ---------------------------------------------------------------------------
+// Shared node/edge type registrations (same as main canvas)
+// ---------------------------------------------------------------------------
+
+const nodeTypes = {
+  genericNode: GenericNode,
+  noteNode: NoteNode,
+};
+
+const edgeTypes = {
+  default: DefaultEdge,
+};
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function formatTimestamp(dateStr: string): string {
   const date = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMinutes = Math.floor(diffMs / 60000);
-  if (diffMinutes < 1) return "just now";
-  if (diffMinutes < 60) return `${diffMinutes}m ago`;
-  const diffHours = Math.floor(diffMinutes / 60);
-  if (diffHours < 24) return `${diffHours}h ago`;
-  const diffDays = Math.floor(diffHours / 24);
-  if (diffDays < 30) return `${diffDays}d ago`;
-  return date.toLocaleDateString();
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
-function StateBadge({ state }: { state: FlowHistoryEntry["state"] }) {
-  if (state === "PUBLISHED") {
-    return (
-      <Badge variant="successStatic" size="sm">
-        Active
-      </Badge>
-    );
-  }
-  if (state === "ARCHIVED") {
-    return (
-      <Badge variant="secondaryStatic" size="sm">
-        Archived
-      </Badge>
-    );
-  }
+// ---------------------------------------------------------------------------
+// Read-only canvas preview (uses real Langflow node types)
+// ---------------------------------------------------------------------------
+
+function PreviewCanvas({
+  nodes,
+  edges,
+}: {
+  nodes: any[];
+  edges: any[];
+}) {
+  // Defer edges until nodes have been measured and handle bounds are known.
+  const nodesInitialized = useNodesInitialized();
+
   return (
-    <Badge variant="gray" size="sm">
-      Draft
-    </Badge>
+    <ReactFlow
+      nodes={nodes}
+      edges={nodesInitialized ? edges : []}
+      nodeTypes={nodeTypes}
+      edgeTypes={edgeTypes}
+      nodesDraggable={false}
+      nodesConnectable={false}
+      nodesFocusable={false}
+      edgesFocusable={false}
+      elementsSelectable={false}
+      panOnDrag={true}
+      zoomOnScroll={true}
+      fitView
+      fitViewOptions={{ padding: 0.2, minZoom: 0.25, maxZoom: 2 }}
+      proOptions={{ hideAttribution: true }}
+    >
+      <Background size={2} gap={20} />
+    </ReactFlow>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+const CURRENT_DRAFT_ID = "__current_draft__";
+
+// ---------------------------------------------------------------------------
+// Panel
+// ---------------------------------------------------------------------------
 
 interface FlowHistoryPanelProps {
   flowId: string;
@@ -63,33 +115,156 @@ export default function FlowHistoryPanel({
 }: FlowHistoryPanelProps) {
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
+  const setCurrentFlow = useFlowsManagerStore(
+    (state) => state.setCurrentFlow,
+  );
 
   const [description, setDescription] = useState("");
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [confirmActivateId, setConfirmActivateId] = useState<string | null>(
-    null,
-  );
+  const [selectedId, setSelectedId] = useState<string>(CURRENT_DRAFT_ID);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-  const [previewEntry, setPreviewEntry] = useState<FlowHistoryEntryFull | null>(
-    null,
-  );
-  const [loadingPreviewId, setLoadingPreviewId] = useState<string | null>(null);
+  const [restoreConfirm, setRestoreConfirm] = useState<{
+    historyId: string;
+    versionTag: string;
+  } | null>(null);
+  const [isRestoring, setIsRestoring] = useState(false);
 
   const { data: history, isLoading } = useGetFlowHistory(
     { flowId },
     { refetchInterval: 10000 },
   );
 
-  const { mutate: createSnapshot, isPending: isCreating } =
+  const { mutate: createSnapshot, mutateAsync: createSnapshotAsync, isPending: isCreating } =
     usePostCreateSnapshot();
-  const { mutate: activateVersion, isPending: isActivating } =
-    usePostActivateVersion();
   const { mutate: deleteEntry, isPending: isDeleting } =
     useDeleteHistoryEntry();
+  const { mutateAsync: patchFlowAsync } = usePatchUpdateFlow();
+
+  // Declarative query for the selected history entry's full data
+  const selectedHistoryId = selectedId !== CURRENT_DRAFT_ID ? selectedId : "";
+  const { data: selectedEntryFull, isLoading: isLoadingEntry } =
+    useGetFlowHistoryEntry(
+      { flowId, historyId: selectedHistoryId },
+      { enabled: !!selectedHistoryId, gcTime: 0, staleTime: 0 },
+    );
 
   const currentFlow = useFlowStore((state) => state.currentFlow);
-  const activeVersionId = currentFlow?.active_version_id;
+
+  // Capture the original store state when the panel mounts so we can
+  // restore it when the panel closes or the user switches to "Current Draft".
+  const originalStoreRef = useRef({
+    nodes: useFlowStore.getState().nodes,
+    edges: useFlowStore.getState().edges,
+  });
+
+  // Disable auto-save while the panel is open. The store-swap for previewing
+  // historical versions would cause auto-save to overwrite the working draft
+  // with historical data.
+  // Also hide the inspection panel so it doesn't pop up over the history view.
+  const autoSaveFnRef = useRef<any>(null);
+  const inspectionPanelWasVisible = useRef(false);
+  useLayoutEffect(() => {
+    const currentAutoSave = useFlowStore.getState().autoSaveFlow;
+    if (currentAutoSave) {
+      autoSaveFnRef.current = currentAutoSave;
+      // Flush (not cancel) any pending debounced save so the DB captures the
+      // latest draft changes. At this point the store still has the original
+      // draft data, so the flushed save writes the correct state.
+      if (typeof currentAutoSave.flush === "function") {
+        currentAutoSave.flush();
+      }
+      useFlowStore.setState({ autoSaveFlow: undefined });
+    }
+
+    // Hide the inspection panel (bypass setInspectionPanelVisible to avoid
+    // persisting to localStorage — we'll restore the original value on close)
+    inspectionPanelWasVisible.current =
+      useFlowStore.getState().inspectionPanelVisible;
+    if (inspectionPanelWasVisible.current) {
+      useFlowStore.setState({ inspectionPanelVisible: false });
+    }
+
+    return () => {
+      if (autoSaveFnRef.current) {
+        useFlowStore.setState({ autoSaveFlow: autoSaveFnRef.current });
+      }
+      if (inspectionPanelWasVisible.current) {
+        useFlowStore.setState({ inspectionPanelVisible: true });
+      }
+    };
+  }, []);
+
+  // Process historical data through the same pipeline the main canvas uses
+  // (processFlowEdges → processFlowNodes → updateEdges → cleanEdges).
+  const processedPreview = useMemo(() => {
+    if (selectedId === CURRENT_DRAFT_ID || !selectedEntryFull?.data) return null;
+
+    const cloned = cloneDeep(selectedEntryFull.data);
+    const flow = { data: cloned } as any;
+    processFlowEdges(flow);
+    processFlowNodes(flow);
+    updateEdges(cloned.edges);
+    const { edges: cleaned } = cleanEdges(cloned.nodes, cloned.edges);
+    return { nodes: cloned.nodes, edges: cleaned };
+  }, [selectedId, selectedEntryFull?.data]);
+
+  // Sync the global flow store with whatever version is being previewed.
+  // GenericNode and its sub-components read edges/nodes from the store, so
+  // this ensures handle visibility and connection state match the preview.
+  useLayoutEffect(() => {
+    if (processedPreview) {
+      useFlowStore.setState({
+        nodes: processedPreview.nodes,
+        edges: processedPreview.edges,
+      });
+    } else {
+      useFlowStore.setState({
+        nodes: originalStoreRef.current.nodes,
+        edges: originalStoreRef.current.edges,
+      });
+    }
+  }, [processedPreview]);
+
+  // Restore the original store state when the panel unmounts.
+  useEffect(() => {
+    return () => {
+      useFlowStore.setState({
+        nodes: originalStoreRef.current.nodes,
+        edges: originalStoreRef.current.edges,
+      });
+    };
+  }, []);
+
+  // Escape key closes the panel (or dismiss restore prompt)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (restoreConfirm) {
+          setRestoreConfirm(null);
+        } else {
+          onClose();
+        }
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose, restoreConfirm]);
+
+  // The nodes/edges shown in the preview canvas
+  const previewData = useMemo(() => {
+    if (selectedId === CURRENT_DRAFT_ID) {
+      return {
+        nodes: originalStoreRef.current.nodes,
+        edges: originalStoreRef.current.edges,
+      };
+    }
+    return processedPreview ?? { nodes: [], edges: [] };
+  }, [selectedId, processedPreview]);
+
+  // Select a history entry — data is fetched by useGetFlowHistoryEntry hook
+  const handleSelectEntry = useCallback((entryId: string) => {
+    setSelectedId(entryId);
+  }, []);
 
   const handleCreateSnapshot = useCallback(() => {
     createSnapshot(
@@ -107,29 +282,55 @@ export default function FlowHistoryPanel({
     );
   }, [flowId, description, createSnapshot, setSuccessData, setErrorData]);
 
-  const handleActivate = useCallback(
-    (historyId: string) => {
-      activateVersion(
-        { flowId, historyId },
-        {
-          onSuccess: (updatedFlow) => {
-            setSuccessData({ title: "Version activated" });
-            setCurrentFlow(updatedFlow);
-            setConfirmActivateId(null);
-          },
-          onError: () => {
-            setErrorData({ title: "Failed to activate version" });
-            setConfirmActivateId(null);
-          },
-        },
-      );
+  // Restore = PATCH flow data with historical data, then close panel
+  const doRestore = useCallback(
+    async (saveFirst: boolean) => {
+      setIsRestoring(true);
+      try {
+        if (saveFirst) {
+          await createSnapshotAsync({
+            flowId,
+            description: "Auto-saved before restore",
+          });
+        }
+
+        const historicalData = selectedEntryFull?.data;
+        if (!historicalData) {
+          setErrorData({ title: "Cannot restore: version has no data" });
+          return;
+        }
+
+        const result = await patchFlowAsync({
+          id: flowId,
+          data: historicalData as any,
+        });
+        setCurrentFlow(result);
+
+        // Update the ref so the unmount cleanup restores the new data,
+        // not the pre-restore data.
+        originalStoreRef.current = {
+          nodes: useFlowStore.getState().nodes,
+          edges: useFlowStore.getState().edges,
+        };
+
+        setSuccessData({ title: "Version restored" });
+        // Close the history panel and return to the main editor
+        onClose();
+      } catch {
+        setErrorData({ title: "Failed to restore version" });
+      } finally {
+        setIsRestoring(false);
+      }
     },
     [
       flowId,
-      activateVersion,
+      selectedEntryFull,
+      createSnapshotAsync,
+      patchFlowAsync,
+      setCurrentFlow,
       setSuccessData,
       setErrorData,
-      setCurrentFlow,
+      onClose,
     ],
   );
 
@@ -141,6 +342,9 @@ export default function FlowHistoryPanel({
           onSuccess: () => {
             setSuccessData({ title: "Version deleted" });
             setConfirmDeleteId(null);
+            if (selectedId === historyId) {
+              setSelectedId(CURRENT_DRAFT_ID);
+            }
           },
           onError: () => {
             setErrorData({ title: "Failed to delete version" });
@@ -149,243 +353,384 @@ export default function FlowHistoryPanel({
         },
       );
     },
-    [flowId, deleteEntry, setSuccessData, setErrorData],
+    [flowId, selectedId, deleteEntry, setSuccessData, setErrorData],
   );
 
-  const handlePreview = useCallback(
-    async (entryId: string) => {
-      setLoadingPreviewId(entryId);
-      try {
-        const response = await api.get<FlowHistoryEntryFull>(
-          `${getURL("FLOWS")}/${flowId}/history/${entryId}`,
-        );
-        setPreviewEntry(response.data);
-      } catch {
-        setErrorData({ title: "Failed to load version preview" });
-      } finally {
-        setLoadingPreviewId(null);
-      }
-    },
-    [flowId, setErrorData],
-  );
+  const handleDownloadEntry = useCallback(() => {
+    const data =
+      selectedId === CURRENT_DRAFT_ID
+        ? currentFlow?.data
+        : selectedEntryFull?.data;
+    if (!data) return;
+    const tag =
+      selectedId === CURRENT_DRAFT_ID
+        ? "draft"
+        : (selectedEntryFull?.version_tag ?? "version");
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${currentFlow?.name || "flow"}_${tag}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [selectedId, selectedEntryFull, currentFlow]);
 
-  const handlePreviewActivate = useCallback(
-    (historyId: string) => {
-      activateVersion(
-        { flowId, historyId },
-        {
-          onSuccess: (updatedFlow) => {
-            setSuccessData({ title: "Version activated" });
-            setCurrentFlow(updatedFlow);
-            setPreviewEntry(null);
-          },
-          onError: () => {
-            setErrorData({ title: "Failed to activate version" });
-          },
-        },
-      );
-    },
-    [flowId, activateVersion, setSuccessData, setErrorData, setCurrentFlow],
-  );
-
-  if (previewEntry) {
-    return (
-      <FlowHistoryPreview
-        historyEntry={previewEntry}
-        onClose={() => setPreviewEntry(null)}
-        onActivate={handlePreviewActivate}
-        isActivating={isActivating}
-      />
-    );
-  }
+  const selectedHistoryEntry = history?.find((e) => e.id === selectedId);
+  const isViewingDraft = selectedId === CURRENT_DRAFT_ID;
 
   return (
-    <div className="flex h-full w-80 flex-col border-l bg-background">
-      {/* Header */}
-      <div className="flex items-center justify-between border-b px-4 py-3">
-        <div className="flex items-center gap-2">
-          <ForwardedIconComponent name="History" className="h-4 w-4" />
-          <span className="text-sm font-semibold">Version History</span>
-        </div>
-        <Button variant="ghost" size="icon" onClick={onClose}>
-          <ForwardedIconComponent name="X" className="h-4 w-4" />
-        </Button>
-      </div>
+    <div className="fixed inset-0 z-[60] flex bg-background">
+      {/* Main preview area */}
+      <div className="flex flex-1 flex-col">
+        {/* Top bar */}
+        <div className="flex items-center justify-between border-b bg-muted/30 px-4 py-2">
+          <div className="flex items-center gap-3">
+            {isViewingDraft ? (
+              <span className="text-sm font-medium">Current Draft</span>
+            ) : selectedHistoryEntry ? (
+              <>
+                <span className="text-sm font-medium">
+                  {selectedHistoryEntry.version_tag}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {formatTimestamp(selectedHistoryEntry.created_at)}
+                </span>
+                {selectedHistoryEntry.description && (
+                  <span className="text-sm text-muted-foreground">
+                    — {selectedHistoryEntry.description}
+                  </span>
+                )}
+              </>
+            ) : (
+              <span className="text-sm text-muted-foreground">
+                Select a version to preview
+              </span>
+            )}
+          </div>
 
-      {/* Save Version */}
-      <div className="border-b px-4 py-3">
-        {showCreateForm ? (
-          <div className="flex flex-col gap-2">
-            <input
-              type="text"
-              placeholder="Version description (optional)"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="h-8 rounded-md border bg-background px-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleCreateSnapshot();
-                if (e.key === "Escape") setShowCreateForm(false);
-              }}
-              autoFocus
-            />
-            <div className="flex gap-2">
+          {/* Actions dropdown — only for historical versions */}
+          {!isViewingDraft && selectedHistoryEntry && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  Actions
+                  <ForwardedIconComponent
+                    name="ChevronDown"
+                    className="ml-1 h-3 w-3"
+                  />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem
+                  onClick={() =>
+                    setRestoreConfirm({
+                      historyId: selectedHistoryEntry.id,
+                      versionTag: selectedHistoryEntry.version_tag,
+                    })
+                  }
+                >
+                  <ForwardedIconComponent
+                    name="RotateCcw"
+                    className="mr-2 h-4 w-4"
+                  />
+                  Restore this version
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleDownloadEntry}>
+                  <ForwardedIconComponent
+                    name="Download"
+                    className="mr-2 h-4 w-4"
+                  />
+                  Download
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => setConfirmDeleteId(selectedHistoryEntry.id)}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <ForwardedIconComponent
+                    name="Trash2"
+                    className="mr-2 h-4 w-4"
+                  />
+                  Delete version
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
+
+        {/* Restore confirmation bar */}
+        {restoreConfirm && (
+          <div className="flex flex-wrap items-center gap-2 border-b bg-accent/30 px-4 py-3">
+            <span className="mr-2 text-sm font-medium">
+              Restore {restoreConfirm.versionTag}?
+            </span>
+            <div className="flex items-center gap-2">
               <Button
                 variant="default"
-                size="xs"
-                onClick={handleCreateSnapshot}
-                loading={isCreating}
-                className="flex-1"
+                size="sm"
+                onClick={() => doRestore(true)}
+                loading={isRestoring}
+                disabled={isLoadingEntry}
               >
-                Save
+                Save current state & restore
               </Button>
               <Button
                 variant="outline"
-                size="xs"
-                onClick={() => setShowCreateForm(false)}
-                className="flex-1"
+                size="sm"
+                onClick={() => doRestore(false)}
+                loading={isRestoring}
+                disabled={isLoadingEntry}
+              >
+                Restore without saving
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setRestoreConfirm(null)}
               >
                 Cancel
               </Button>
             </div>
           </div>
-        ) : (
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => setShowCreateForm(true)}
-            className="w-full"
-          >
-            <ForwardedIconComponent name="Save" className="h-4 w-4" />
-            <span>Save Version</span>
-          </Button>
         )}
+
+        {/* Delete confirmation bar */}
+        {confirmDeleteId && !restoreConfirm && (
+          <div className="flex items-center gap-2 border-b bg-destructive/10 px-4 py-2">
+            <span className="text-sm">Delete this version?</span>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => handleDelete(confirmDeleteId)}
+              loading={isDeleting}
+            >
+              Delete
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setConfirmDeleteId(null)}
+            >
+              Cancel
+            </Button>
+          </div>
+        )}
+
+        {/* Canvas preview */}
+        <div className="flex-1 bg-muted/20">
+          {isLoadingEntry ? (
+            <div className="flex h-full items-center justify-center">
+              <ForwardedIconComponent
+                name="Loader2"
+                className="h-6 w-6 animate-spin text-muted-foreground"
+              />
+            </div>
+          ) : previewData.nodes.length > 0 ? (
+            <ReactFlowProvider>
+              <PreviewCanvas
+                nodes={previewData.nodes}
+                edges={previewData.edges}
+              />
+            </ReactFlowProvider>
+          ) : (
+            <div className="flex h-full items-center justify-center text-muted-foreground">
+              No data to preview
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* History list */}
-      <div className="flex-1 overflow-y-auto">
-        {isLoading && (
-          <div className="flex items-center justify-center py-8">
-            <ForwardedIconComponent
-              name="Loader2"
-              className="h-5 w-5 animate-spin text-muted-foreground"
-            />
-          </div>
-        )}
-        {!isLoading && (!history || history.length === 0) && (
-          <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-            No versions saved yet
-          </div>
-        )}
-        {history?.map((entry) => {
-          const isActive = entry.id === activeVersionId;
-          return (
-            <div
-              key={entry.id}
-              className={`border-b px-4 py-3 ${isActive ? "bg-accent/30" : ""}`}
+      {/* Right sidebar */}
+      <div className="flex w-72 flex-col border-l bg-background">
+        {/* Sidebar header */}
+        <div className="flex items-center justify-between border-b px-4 py-3">
+          <span className="text-sm font-semibold">Version History</span>
+          <Button variant="ghost" size="icon" onClick={onClose}>
+            <ForwardedIconComponent name="X" className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Save Version */}
+        <div className="border-b px-3 py-3">
+          {showCreateForm ? (
+            <div className="flex flex-col gap-2">
+              <input
+                type="text"
+                placeholder="Description (optional)"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="h-8 rounded-md border bg-background px-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleCreateSnapshot();
+                  if (e.key === "Escape") {
+                    e.stopPropagation();
+                    setShowCreateForm(false);
+                  }
+                }}
+                autoFocus
+              />
+              <div className="flex gap-2">
+                <Button
+                  variant="default"
+                  size="xs"
+                  onClick={handleCreateSnapshot}
+                  loading={isCreating}
+                  className="flex-1"
+                >
+                  Save
+                </Button>
+                <Button
+                  variant="outline"
+                  size="xs"
+                  onClick={() => setShowCreateForm(false)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setShowCreateForm(true)}
+              className="w-full"
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
+              <ForwardedIconComponent name="Save" className="h-4 w-4" />
+              <span>Save Version</span>
+            </Button>
+          )}
+        </div>
+
+        {/* Version list */}
+        <div className="flex-1 overflow-y-auto">
+          {/* Current Draft row — always first */}
+          <div
+            className={cn(
+              "flex cursor-pointer items-center gap-3 border-b px-3 py-3 transition-colors hover:bg-accent/40",
+              isViewingDraft && "bg-accent/60",
+            )}
+            onClick={() => handleSelectEntry(CURRENT_DRAFT_ID)}
+          >
+            <div className="flex w-3 shrink-0 justify-center">
+              <div className="h-2.5 w-2.5 rounded-full bg-blue-500" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className="text-sm font-medium">Current Draft</span>
+              <br />
+              <span className="text-xs text-muted-foreground">
+                Working version
+              </span>
+            </div>
+          </div>
+
+          {/* History count */}
+          {history && history.length > 0 && (
+            <div className="border-b px-3 py-2 text-xs text-muted-foreground">
+              {history.length} version{history.length !== 1 ? "s" : ""}
+            </div>
+          )}
+
+          {isLoading && (
+            <div className="flex items-center justify-center py-8">
+              <ForwardedIconComponent
+                name="Loader2"
+                className="h-5 w-5 animate-spin text-muted-foreground"
+              />
+            </div>
+          )}
+          {!isLoading && (!history || history.length === 0) && (
+            <div className="px-4 py-6 text-center text-xs text-muted-foreground">
+              No saved versions yet
+            </div>
+          )}
+          {history?.map((entry) => {
+            const isSelected = entry.id === selectedId;
+            return (
+              <div
+                key={entry.id}
+                className={cn(
+                  "flex cursor-pointer items-center gap-3 border-b px-3 py-3 transition-colors hover:bg-accent/40",
+                  isSelected && "bg-accent/60",
+                )}
+                onClick={() => handleSelectEntry(entry.id)}
+              >
+                {/* Spacer for alignment with "Current Draft" dot */}
+                <div className="w-3 shrink-0" />
+
+                {/* Version info */}
+                <div className="min-w-0 flex-1">
                   <span className="text-sm font-medium">
                     {entry.version_tag}
                   </span>
-                  <StateBadge state={entry.state} />
+                  <br />
+                  <span className="text-xs text-muted-foreground">
+                    {formatTimestamp(entry.created_at)}
+                  </span>
+                  {entry.description && (
+                    <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                      {entry.description}
+                    </p>
+                  )}
                 </div>
-                <span className="text-xs text-muted-foreground">
-                  {formatRelativeTime(entry.created_at)}
-                </span>
-              </div>
-              {entry.description && (
-                <p className="mt-1 text-xs text-muted-foreground line-clamp-2">
-                  {entry.description}
-                </p>
-              )}
-              <div className="mt-2 flex gap-1">
-                {/* Confirm Activate */}
-                {confirmActivateId === entry.id ? (
-                  <div className="flex w-full items-center gap-1">
-                    <span className="text-xs text-muted-foreground">
-                      Activate?
-                    </span>
-                    <Button
-                      variant="default"
-                      size="xs"
-                      onClick={() => handleActivate(entry.id)}
-                      loading={isActivating}
-                    >
-                      Yes
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="xs"
-                      onClick={() => setConfirmActivateId(null)}
-                    >
-                      No
-                    </Button>
-                  </div>
-                ) : confirmDeleteId === entry.id ? (
-                  <div className="flex w-full items-center gap-1">
-                    <span className="text-xs text-muted-foreground">
-                      Delete?
-                    </span>
-                    <Button
-                      variant="destructive"
-                      size="xs"
-                      onClick={() => handleDelete(entry.id)}
-                      loading={isDeleting}
-                    >
-                      Yes
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="xs"
-                      onClick={() => setConfirmDeleteId(null)}
-                    >
-                      No
-                    </Button>
-                  </div>
-                ) : (
-                  <>
+
+                {/* Three-dot menu */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    asChild
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <Button
                       variant="ghost"
-                      size="xs"
-                      onClick={() => handlePreview(entry.id)}
-                      loading={loadingPreviewId === entry.id}
+                      size="icon"
+                      className="h-7 w-7 shrink-0"
                     >
                       <ForwardedIconComponent
-                        name="Eye"
-                        className="mr-1 h-3 w-3"
+                        name="MoreVertical"
+                        className="h-4 w-4"
                       />
-                      Preview
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="xs"
-                      onClick={() => setConfirmActivateId(entry.id)}
-                      disabled={isActive}
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-44">
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSelectEntry(entry.id);
+                        setRestoreConfirm({
+                          historyId: entry.id,
+                          versionTag: entry.version_tag,
+                        });
+                      }}
                     >
                       <ForwardedIconComponent
                         name="RotateCcw"
-                        className="mr-1 h-3 w-3"
+                        className="mr-2 h-3.5 w-3.5"
                       />
-                      Activate
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="xs"
-                      onClick={() => setConfirmDeleteId(entry.id)}
-                      disabled={isActive}
+                      Restore
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setConfirmDeleteId(entry.id);
+                      }}
+                      className="text-destructive focus:text-destructive"
                     >
                       <ForwardedIconComponent
                         name="Trash2"
-                        className="mr-1 h-3 w-3"
+                        className="mr-2 h-3.5 w-3.5"
                       />
-                    </Button>
-                  </>
-                )}
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );
