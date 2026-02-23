@@ -9,8 +9,8 @@ import { sortToolModeFields } from "@/CustomNodes/helpers/sort-tool-mode-field";
 import getFieldTitle from "@/CustomNodes/utils/get-field-title";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import useFlowStore from "@/stores/flowStore";
-import type { NodeDataType } from "@/types/flow";
-import { cn } from "@/utils/utils";
+import type { NodeDataType, targetHandleType } from "@/types/flow";
+import { scapeJSONParse } from "@/utils/reactflowUtils";
 import InspectionPanelEditField from "./InspectionPanelEditField";
 import InspectionPanelField from "./InspectionPanelField";
 
@@ -29,9 +29,9 @@ export default function InspectionPanelFields({
   const connectedFields = useMemo(() => {
     const fields = new Set<string>();
     for (const edge of edges) {
-      if (edge.target === data.id) {
-        const fieldName = edge.data?.targetHandle?.fieldName;
-        if (fieldName) fields.add(fieldName);
+      if (edge.target === data.id && edge.targetHandle) {
+        const parsed: targetHandleType = scapeJSONParse(edge.targetHandle);
+        if (parsed?.fieldName) fields.add(parsed.fieldName);
       }
     }
     return fields;
@@ -46,6 +46,7 @@ export default function InspectionPanelFields({
         if (!template?.show) return false;
         if (isCodeField(templateField, template)) return false;
         if (isToolModeEnabled(template) && isToolMode) return false;
+        if (connectedFields.has(templateField)) return false;
         return true;
       })
       .sort((a, b) =>
@@ -57,7 +58,12 @@ export default function InspectionPanelFields({
           false,
         ),
       );
-  }, [data.node?.template, data.node?.field_order, isToolMode]);
+  }, [
+    data.node?.template,
+    data.node?.field_order,
+    isToolMode,
+    connectedFields,
+  ]);
 
   // Get only advanced fields (for normal mode)
   const advancedFields = useMemo(() => {
