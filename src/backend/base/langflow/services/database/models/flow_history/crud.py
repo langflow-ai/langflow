@@ -2,12 +2,17 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import HTTPException
 from lfx.log import logger
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, delete, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from langflow.services.database.models.flow_history.exceptions import (
+    FlowHistoryDataTooLargeError,
+    FlowHistoryNotFoundError,
+    FlowHistorySerializationError,
+    FlowHistoryVersionConflictError,
+)
 from langflow.services.database.models.flow_history.model import FlowHistory
 from langflow.services.deps import get_settings_service
 
@@ -27,24 +32,22 @@ async def create_flow_history_entry(
     data: dict | None,
     description: str | None = None,
 ) -> FlowHistory:
-    """Create a history entry with retry on version number collision."""
+    """Create a history entry with retry on version number collision.
+
+    NOTE: This function does NOT verify that user_id owns the flow.
+    Callers are responsible for checking ownership before calling this.
+    """
     if data is not None:
         import orjson
 
         try:
             data_size = len(orjson.dumps(data))
         except (TypeError, orjson.JSONEncodeError) as exc:
-            raise HTTPException(
-                status_code=422,
-                detail="Flow data could not be serialized. The data may contain non-serializable values.",
-            ) from exc
+            msg = "Flow data could not be serialized. The data may contain non-serializable values."
+            raise FlowHistorySerializationError(msg) from exc
         max_size = get_settings_service().settings.max_flow_history_data_size_bytes
         if data_size > max_size:
-            raise HTTPException(
-                status_code=413,
-                detail=f"Flow data size ({data_size:,} bytes) exceeds the maximum allowed "
-                f"for history snapshots ({max_size:,} bytes)",
-            )
+            raise FlowHistoryDataTooLargeError(data_size, max_size)
 
     entry: FlowHistory | None = None
     for attempt in range(MAX_VERSION_RETRIES):
@@ -69,7 +72,7 @@ async def create_flow_history_entry(
                     f"Failed to create history entry for flow {flow_id} after "
                     f"{MAX_VERSION_RETRIES} retries due to version number conflicts"
                 )
-                raise HTTPException(status_code=409, detail=msg) from exc
+                raise FlowHistoryVersionConflictError(msg) from exc
             await logger.awarning(
                 "Version number collision for flow %s (attempt %d/%d), retrying",
                 flow_id,
@@ -84,7 +87,7 @@ async def create_flow_history_entry(
             f"Failed to create history entry for flow {flow_id} after "
             f"{MAX_VERSION_RETRIES} retries due to version number conflicts"
         )
-        raise HTTPException(status_code=409, detail=msg)
+        raise FlowHistoryVersionConflictError(msg)
 
     # Prune oldest entries beyond the configured limit.
     # NOTE: Concurrent snapshot requests for the same flow could both insert
@@ -145,7 +148,8 @@ async def delete_flow_history_entry(
 ) -> None:
     entry = await get_flow_history_entry(session, history_id, user_id)
     if not entry:
-        raise HTTPException(status_code=404, detail="History entry not found")
+        msg = f"History entry {history_id} not found"
+        raise FlowHistoryNotFoundError(msg)
 
     await session.delete(entry)
     await session.flush()

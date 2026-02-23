@@ -328,6 +328,9 @@ async def cascade_delete_flow(session: AsyncSession, flow_id: uuid.UUID) -> None
         await session.exec(delete(MessageTable).where(MessageTable.flow_id == flow_id))
         await session.exec(delete(TransactionTable).where(TransactionTable.flow_id == flow_id))
         await session.exec(delete(VertexBuildTable).where(VertexBuildTable.flow_id == flow_id))
+        # Explicit delete despite FK CASCADE — SQLite doesn't enforce FK cascades
+        # by default (requires PRAGMA foreign_keys = ON), and this function follows
+        # the existing pattern of explicitly deleting all child records.
         await session.exec(delete(FlowHistory).where(FlowHistory.flow_id == flow_id))
         await session.exec(delete(Flow).where(Flow.id == flow_id))
     except Exception as e:

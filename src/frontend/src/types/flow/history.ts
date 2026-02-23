@@ -15,3 +15,8 @@ export type FlowHistoryEntryWithData = FlowHistoryEntry & {
 export type FlowHistoryCreate = {
   description?: string | null;
 };
+
+export type FlowHistoryListResponse = {
+  entries: FlowHistoryEntry[];
+  max_entries: number;
+};

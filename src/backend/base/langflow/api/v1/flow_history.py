@@ -18,9 +18,17 @@ from langflow.services.database.models.flow_history.crud import (
     get_flow_history_entry,
     get_flow_history_list,
 )
+from langflow.services.database.models.flow_history.exceptions import (
+    FlowHistoryDataTooLargeError,
+    FlowHistoryError,
+    FlowHistoryNotFoundError,
+    FlowHistorySerializationError,
+    FlowHistoryVersionConflictError,
+)
 from langflow.services.database.models.flow_history.model import (
     FlowHistory,
     FlowHistoryCreate,
+    FlowHistoryListResponse,
     FlowHistoryRead,
     FlowHistoryReadWithData,
 )
@@ -29,7 +37,7 @@ from langflow.services.deps import get_settings_service
 router = APIRouter(prefix="/flows/{flow_id}/history", tags=["Flow History"])
 
 
-def _strip_history_data(data: dict | None) -> dict | None:
+def strip_history_data(data: dict | None) -> dict | None:
     """Strip API keys from a history entry's flow data dict."""
     if data is None:
         return None
@@ -56,6 +64,19 @@ async def _get_user_flow(session: AsyncSession, flow_id: UUID, user_id: UUID) ->
     return flow
 
 
+def _translate_history_error(exc: FlowHistoryError) -> HTTPException:
+    """Translate a domain exception into an HTTPException."""
+    if isinstance(exc, FlowHistorySerializationError):
+        return HTTPException(status_code=422, detail=str(exc))
+    if isinstance(exc, FlowHistoryDataTooLargeError):
+        return HTTPException(status_code=413, detail=str(exc))
+    if isinstance(exc, FlowHistoryVersionConflictError):
+        return HTTPException(status_code=409, detail=str(exc))
+    if isinstance(exc, FlowHistoryNotFoundError):
+        return HTTPException(status_code=404, detail=str(exc))
+    return HTTPException(status_code=500, detail=str(exc))
+
+
 @router.get("/")
 async def list_flow_history(
     flow_id: UUID,
@@ -63,10 +84,14 @@ async def list_flow_history(
     session: DbSessionReadOnly,
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
-) -> list[FlowHistoryRead]:
+) -> FlowHistoryListResponse:
     await _get_user_flow(session, flow_id, current_user.id)
     entries = await get_flow_history_list(session, flow_id, current_user.id, limit, offset)
-    return [_history_to_read(e) for e in entries]
+    max_entries = get_settings_service().settings.max_flow_history_entries_per_flow
+    return FlowHistoryListResponse(
+        entries=[_history_to_read(e) for e in entries],
+        max_entries=max_entries,
+    )
 
 
 @router.get("/export")
@@ -87,7 +112,7 @@ async def export_flow_with_history(
             {
                 "version_number": e.version_number,
                 "description": e.description,
-                "data": _strip_history_data(e.data),
+                "data": strip_history_data(e.data),
                 "created_at": e.created_at.isoformat() if e.created_at else None,
             }
             for e in entries
@@ -126,13 +151,16 @@ async def create_snapshot(
             status_code=422,
             detail="Flow data could not be copied for snapshot. The data may be corrupted.",
         ) from exc
-    entry = await create_flow_history_entry(
-        session,
-        flow_id=flow.id,
-        user_id=current_user.id,
-        data=data,
-        description=description,
-    )
+    try:
+        entry = await create_flow_history_entry(
+            session,
+            flow_id=flow.id,
+            user_id=current_user.id,
+            data=data,
+            description=description,
+        )
+    except FlowHistoryError as exc:
+        raise _translate_history_error(exc) from exc
     return _history_to_read(entry)
 
 
@@ -142,6 +170,7 @@ async def activate_version(
     history_id: UUID,
     current_user: CurrentActiveUser,
     session: DbSession,
+    save_draft: bool = Query(default=True),
 ) -> FlowRead:
     flow = await _get_user_flow(session, flow_id, current_user.id)
 
@@ -157,7 +186,7 @@ async def activate_version(
     # Capture copies of both data dicts before the savepoint to avoid stale
     # reads if pruning inside create_flow_history_entry deletes old entries.
     try:
-        current_data = copy.deepcopy(flow.data)
+        current_data = copy.deepcopy(flow.data) if save_draft else None
         target_data = copy.deepcopy(target_entry.data)
     except Exception as exc:
         raise HTTPException(
@@ -167,20 +196,24 @@ async def activate_version(
 
     # Wrap auto-snapshot + flow overwrite in a single savepoint for atomicity.
     # If the flow update fails, the auto-snapshot is also rolled back.
-    async with session.begin_nested():
-        await create_flow_history_entry(
-            session,
-            flow_id=flow.id,
-            user_id=current_user.id,
-            data=current_data,
-            description=f"Auto-saved before activating v{target_entry.version_number}",
-        )
+    try:
+        async with session.begin_nested():
+            if save_draft and current_data is not None:
+                await create_flow_history_entry(
+                    session,
+                    flow_id=flow.id,
+                    user_id=current_user.id,
+                    data=current_data,
+                    description=f"Auto-saved before activating v{target_entry.version_number}",
+                )
 
-        flow.data = target_data
-        flow.updated_at = datetime.now(timezone.utc)
+            flow.data = target_data
+            flow.updated_at = datetime.now(timezone.utc)
 
-        session.add(flow)
-        await session.flush()
+            session.add(flow)
+            await session.flush()
+    except FlowHistoryError as exc:
+        raise _translate_history_error(exc) from exc
 
     await logger.adebug("Activated version %s (%s) for flow %s", history_id, f"v{target_entry.version_number}", flow_id)
 
@@ -201,5 +234,8 @@ async def delete_history_entry(
     if not entry or entry.flow_id != flow_id:
         raise HTTPException(status_code=404, detail="History entry not found")
 
-    await delete_flow_history_entry(session, history_id, current_user.id)
+    try:
+        await delete_flow_history_entry(session, history_id, current_user.id)
+    except FlowHistoryError as exc:
+        raise _translate_history_error(exc) from exc
     await logger.adebug("Deleted history entry %s for flow %s", history_id, flow_id)

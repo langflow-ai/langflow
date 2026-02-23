@@ -46,7 +46,10 @@ async def _create_snapshot(client: AsyncClient, headers: dict, flow_id: str, des
 async def _list_history(client: AsyncClient, headers: dict, flow_id: str) -> list[dict]:
     resp = await client.get(f"api/v1/flows/{flow_id}/history/", headers=headers)
     assert resp.status_code == status.HTTP_200_OK
-    return resp.json()
+    body = resp.json()
+    assert "entries" in body
+    assert "max_entries" in body
+    return body["entries"]
 
 
 async def _patch_flow_data(client: AsyncClient, headers: dict, flow_id: str, data: dict) -> dict:
@@ -86,6 +89,25 @@ async def test_list_history_empty(client: AsyncClient, logged_in_headers):
     flow = await _create_flow(client, logged_in_headers)
     entries = await _list_history(client, logged_in_headers, flow["id"])
     assert entries == []
+
+
+async def test_list_history_response_includes_max_entries(client: AsyncClient, logged_in_headers, monkeypatch):
+    """The list endpoint should return max_entries from settings."""
+    from langflow.services.deps import get_settings_service
+
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "max_flow_history_entries_per_flow", 25)
+
+    flow = await _create_flow(client, logged_in_headers)
+    await _create_snapshot(client, logged_in_headers, flow["id"])
+
+    resp = await client.get(f"api/v1/flows/{flow['id']}/history/", headers=logged_in_headers)
+    assert resp.status_code == status.HTTP_200_OK
+    body = resp.json()
+
+    assert body["max_entries"] == 25
+    assert isinstance(body["entries"], list)
+    assert len(body["entries"]) == 1
 
 
 async def test_list_history_returns_entries_newest_first(client: AsyncClient, logged_in_headers):
@@ -205,6 +227,28 @@ async def test_activate_creates_auto_snapshot(client: AsyncClient, logged_in_hea
     assert auto_snap is not None
 
 
+async def test_activate_skips_auto_snapshot_when_save_draft_false(client: AsyncClient, logged_in_headers):
+    """Activation with save_draft=false should NOT create an auto-snapshot."""
+    flow = await _create_flow(client, logged_in_headers)
+    snap = await _create_snapshot(client, logged_in_headers, flow["id"])
+
+    # Modify flow so we can verify the draft was NOT saved
+    await _patch_flow_data(client, logged_in_headers, flow["id"], {"nodes": [{"id": "x"}], "edges": []})
+
+    # Activate with save_draft=false
+    resp = await client.post(
+        f"api/v1/flows/{flow['id']}/history/{snap['id']}/activate",
+        params={"save_draft": False},
+        headers=logged_in_headers,
+    )
+    assert resp.status_code == status.HTTP_200_OK
+
+    entries = await _list_history(client, logged_in_headers, flow["id"])
+    # Only the 1 manual snapshot — no auto-snapshot created
+    assert len(entries) == 1
+    assert not any("Auto-saved" in (e["description"] or "") for e in entries)
+
+
 # ---------------------------------------------------------------------------
 # Cascade deletion
 # ---------------------------------------------------------------------------
@@ -301,7 +345,7 @@ async def test_list_history_pagination(client: AsyncClient, logged_in_headers):
         headers=logged_in_headers,
     )
     assert resp.status_code == status.HTTP_200_OK
-    page1 = resp.json()
+    page1 = resp.json()["entries"]
     assert len(page1) == 2
     assert page1[0]["version_number"] == 5  # newest first
     assert page1[1]["version_number"] == 4
@@ -312,7 +356,7 @@ async def test_list_history_pagination(client: AsyncClient, logged_in_headers):
         params={"limit": 2, "offset": 2},
         headers=logged_in_headers,
     )
-    page2 = resp.json()
+    page2 = resp.json()["entries"]
     assert len(page2) == 2
     assert page2[0]["version_number"] == 3
 
@@ -483,6 +527,72 @@ async def test_history_limit_keeps_newest(client: AsyncClient, logged_in_headers
     version_numbers = [e["version_number"] for e in entries]
     # Should have versions 5, 4, 3 (newest first) — versions 1 and 2 were pruned
     assert version_numbers == [5, 4, 3]
+
+
+async def test_pruning_deletes_oldest_by_data_content(client: AsyncClient, logged_in_headers, monkeypatch):
+    """Verify that pruned entries are truly the oldest by checking surviving data content."""
+    from langflow.services.deps import get_settings_service
+
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "max_flow_history_entries_per_flow", 2)
+
+    flow = await _create_flow(client, logged_in_headers)
+    flow_id = flow["id"]
+
+    # Create 3 snapshots, each with distinct flow data so we can verify which survived.
+    for i in range(3):
+        data = {"nodes": [{"id": f"node-from-snap-{i}"}], "edges": []}
+        await _patch_flow_data(client, logged_in_headers, flow_id, data)
+        await _create_snapshot(client, logged_in_headers, flow_id, description=f"snap-{i}")
+
+    # Only the 2 newest should survive (snap-1 and snap-2); snap-0 should be pruned.
+    entries = await _list_history(client, logged_in_headers, flow_id)
+    assert len(entries) == 2
+    assert entries[0]["description"] == "snap-2"
+    assert entries[1]["description"] == "snap-1"
+
+    # Fetch full data for each survivor and confirm it matches the expected snapshot data.
+    for entry, expected_idx in zip(entries, [2, 1]):
+        resp = await client.get(
+            f"api/v1/flows/{flow_id}/history/{entry['id']}",
+            headers=logged_in_headers,
+        )
+        assert resp.status_code == 200
+        assert resp.json()["data"]["nodes"][0]["id"] == f"node-from-snap-{expected_idx}"
+
+
+async def test_lowered_limit_prunes_excess_on_next_snapshot(client: AsyncClient, logged_in_headers, monkeypatch):
+    """Lowering the limit after entries exist should prune excess on the next snapshot."""
+    from langflow.services.deps import get_settings_service
+
+    settings = get_settings_service().settings
+
+    # Start with a generous limit and create 5 snapshots.
+    monkeypatch.setattr(settings, "max_flow_history_entries_per_flow", 10)
+    flow = await _create_flow(client, logged_in_headers)
+    flow_id = flow["id"]
+
+    for i in range(5):
+        await _create_snapshot(client, logged_in_headers, flow_id, description=f"snap-{i}")
+
+    entries = await _list_history(client, logged_in_headers, flow_id)
+    assert len(entries) == 5
+
+    # Now lower the limit to 2 — existing entries remain untouched until next snapshot.
+    monkeypatch.setattr(settings, "max_flow_history_entries_per_flow", 2)
+
+    entries_before = await _list_history(client, logged_in_headers, flow_id)
+    assert len(entries_before) == 5  # Still 5 — no pruning yet
+
+    # Create one more snapshot — should trigger pruning down to 2.
+    await _create_snapshot(client, logged_in_headers, flow_id, description="after-limit-change")
+
+    entries_after = await _list_history(client, logged_in_headers, flow_id)
+    assert len(entries_after) == 2
+
+    # The two survivors should be the newest: "after-limit-change" and "snap-4"
+    assert entries_after[0]["description"] == "after-limit-change"
+    assert entries_after[1]["description"] == "snap-4"
 
 
 async def test_snapshot_rejects_oversized_data(client: AsyncClient, logged_in_headers, monkeypatch):
@@ -844,8 +954,8 @@ async def test_list_history_limit_of_one(client: AsyncClient, logged_in_headers)
         headers=logged_in_headers,
     )
     assert resp.status_code == status.HTTP_200_OK
-    assert len(resp.json()) == 1
-    assert resp.json()[0]["version_number"] == 3  # newest
+    assert len(resp.json()["entries"]) == 1
+    assert resp.json()["entries"][0]["version_number"] == 3  # newest
 
 
 async def test_list_history_invalid_limit_zero(client: AsyncClient, logged_in_headers):
