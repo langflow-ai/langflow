@@ -99,7 +99,8 @@
             "documentation": "https://docs.langflow.org/components-io#text-input",
             "edited": false,
             "field_order": [
-              "input_value"
+              "input_value",
+              "use_global_variable"
             ],
             "frozen": false,
             "icon": "type",
@@ -242,10 +243,8 @@
               "sender",
               "sender_name",
               "session_id",
+              "context_id",
               "data_template",
-              "background_color",
-              "chat_icon",
-              "text_color",
               "clean_data"
             ],
             "frozen": false,

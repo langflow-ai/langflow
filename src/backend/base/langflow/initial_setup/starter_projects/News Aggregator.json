@@ -123,7 +123,7 @@
         "data": {
           "id": "note-40ntb",
           "node": {
-            "description": "### 💡 Add your OpenAI API key here",
+            "description": "### Configure your Model Provider",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -139,7 +139,7 @@
           "width": 324
         },
         "position": {
-          "x": 1173.6948654399118,
+          "x": 1139.270943086401,
           "y": 140.3910247692671
         },
         "selected": false,
@@ -149,7 +149,7 @@
         "data": {
           "id": "note-UXZI9",
           "node": {
-            "description": "### 💡 Add your AgentQL API key here",
+            "description": "### Add your AgentQL API key here",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -166,8 +166,8 @@
           "width": 324
         },
         "position": {
-          "x": 754.0235442608289,
-          "y": 35.586746852834835
+          "x": 747.5690588195457,
+          "y": 7.617309940607356
         },
         "selected": false,
         "type": "noteNode"
@@ -564,10 +564,8 @@
               "sender",
               "sender_name",
               "session_id",
-              "files",
-              "background_color",
-              "chat_icon",
-              "text_color"
+              "context_id",
+              "files"
             ],
             "frozen": false,
             "icon": "MessagesSquare",
@@ -869,10 +867,8 @@
               "sender",
               "sender_name",
               "session_id",
+              "context_id",
               "data_template",
-              "background_color",
-              "chat_icon",
-              "text_color",
               "clean_data"
             ],
             "frozen": false,
@@ -1149,9 +1145,12 @@
             "field_order": [
               "model",
               "api_key",
+              "base_url_ibm_watsonx",
+              "project_id",
               "system_prompt",
               "context_id",
               "n_messages",
+              "max_tokens",
               "format_instructions",
               "output_schema",
               "tools",
@@ -1726,6 +1725,7 @@
               "storage_location",
               "input",
               "file_name",
+              "append_mode",
               "local_format",
               "aws_format",
               "gdrive_format",
