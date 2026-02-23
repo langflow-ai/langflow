@@ -22,14 +22,14 @@ Guidelines for developing and maintaining Langflow documentation using Docusauru
 
 ### Prerequisites
 - **Node.js:** v22.12 LTS for runtime
-- **Package Manager:** Yarn for dependency management
+- **Package Manager:** npm for dependency management
 - **Documentation Framework:** Docusaurus v3
 
 ### Documentation Service
 ```bash
 cd docs
-yarn install      # Install dependencies
-yarn start        # Start dev server (usually port 3001)
+npm install       # Install dependencies
+npm run start     # Start dev server (usually port 3001)
 ```
 - Auto-reloads on documentation changes
 - Access at: http://localhost:3001/
@@ -373,8 +373,8 @@ module.exports = {
 ### Link Checking
 ```bash
 # Check for broken internal links
-yarn build
-yarn serve
+npm run build
+npm run serve
 # Manual testing or use link checker tools
 ```
 
@@ -419,8 +419,8 @@ yarn serve
 
 ### Local Testing
 ```bash
-yarn build    # Build static site
-yarn serve    # Serve built site locally
+npm run build    # Build static site
+npm run serve    # Serve built site locally
 ```
 
 ### Production Deployment
@@ -431,7 +431,7 @@ yarn serve    # Serve built site locally
 ---
 
 ## Documentation Development Checklist
-- [ ] Documentation service running with `yarn start`
+- [ ] Documentation service running with `npm run start`
 - [ ] Content follows markdown conventions
 - [ ] Code examples are tested and working
 - [ ] Images have descriptive alt text
@@ -440,4 +440,4 @@ yarn serve    # Serve built site locally
 - [ ] Content follows style guide
 - [ ] Screenshots are current and properly formatted
 - [ ] Cross-references between related topics
-- [ ] Build succeeds with `yarn build`
+- [ ] Build succeeds with `npm run build`
