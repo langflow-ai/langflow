@@ -6,6 +6,7 @@ from the native tracer, enabling the Trace View in the frontend.
 
 import asyncio
 import logging
+from datetime import datetime, timezone
 from typing import Annotated, Any
 from uuid import UUID
 
@@ -79,17 +80,43 @@ async def _fetch_traces(
             for row in token_rows:
                 token_map[str(row[0])] = int(row[1] or 0)
 
-        # Fetch root span inputs/outputs for each trace
+        # Fetch Chat Input span input_value and final output for each trace
         io_map: dict[str, dict[str, Any]] = {}
         if trace_ids:
-            root_spans_stmt = (
-                select(SpanTable).where(col(SpanTable.trace_id).in_(trace_ids)).where(SpanTable.parent_span_id == None)  # noqa: E711
-            )
-            root_spans = (await session.exec(root_spans_stmt)).all()
-            for span in root_spans:
-                io_map[str(span.trace_id)] = {
-                    "input": span.inputs,
-                    "output": span.outputs,
+            # Get all spans for these traces
+            all_spans_stmt = select(SpanTable).where(col(SpanTable.trace_id).in_(trace_ids))
+            all_spans = (await session.exec(all_spans_stmt)).all()
+
+            # Group spans by trace_id
+            spans_by_trace: dict[str, list[SpanTable]] = {}
+            for span in all_spans:
+                trace_id_str = str(span.trace_id)
+                if trace_id_str not in spans_by_trace:
+                    spans_by_trace[trace_id_str] = []
+                spans_by_trace[trace_id_str].append(span)
+
+            # For each trace, find Chat Input span and final output
+            for trace_id_str, spans in spans_by_trace.items():
+                # Find Chat Input span (by name)
+                chat_input_span = next((s for s in spans if "Chat Input" in s.name), None)
+                input_value = None
+                if chat_input_span and chat_input_span.inputs:
+                    input_value = chat_input_span.inputs.get("input_value")
+
+                # Find final output from root spans (ordered by end_time)
+                root_spans = [s for s in spans if s.parent_span_id is None and s.end_time]
+                output_value = None
+                if root_spans:
+                    # Sort by end_time descending to get the latest
+                    root_spans_sorted = sorted(
+                        root_spans, key=lambda s: s.end_time or datetime.min.replace(tzinfo=timezone.utc), reverse=True
+                    )
+                    if root_spans_sorted and root_spans_sorted[0].outputs:
+                        output_value = root_spans_sorted[0].outputs
+
+                io_map[trace_id_str] = {
+                    "input": {"input_value": input_value} if input_value else None,
+                    "output": output_value,
                 }
 
         # Convert to response format

@@ -41,6 +41,9 @@ export interface Trace {
   totalLatencyMs: number;
   totalTokens: number;
   totalCost: number;
+  flowId: string;
   sessionId: string;
+  input: Record<string, unknown> | null; // First input in chronological order
+  output: Record<string, unknown> | null; // Last output in chronological order
   spans: Span[];
 }

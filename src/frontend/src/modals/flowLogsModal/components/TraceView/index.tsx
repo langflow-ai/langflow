@@ -57,7 +57,65 @@ function formatTimestamp(timestamp: string): string {
 }
 
 /**
- * Single trace accordion item with span tree and detail panel
+ * Format input/output for display - extract text content
+ */
+function formatIOPreview(data: Record<string, unknown> | null): string {
+  if (!data) return "N/A";
+
+  // Handle if data is actually a string (shouldn't happen with Record type, but be safe)
+  if (typeof data === "string") {
+    const strData = data as string;
+    return strData.length > 150 ? strData.substring(0, 150) + "..." : strData;
+  }
+
+  // Try to extract meaningful text from common field names
+  const textFields = [
+    "input_value",
+    "message",
+    "text",
+    "content",
+    "query",
+    "question",
+    "prompt",
+    "input",
+    "output",
+    "result",
+    "response",
+  ];
+
+  for (const field of textFields) {
+    const value = data[field];
+    if (value && typeof value === "string") {
+      return value.length > 150 ? value.substring(0, 150) + "..." : value;
+    }
+  }
+
+  // Check if there's a nested object with text
+  for (const key of Object.keys(data)) {
+    const value = data[key];
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      const nestedData = value as Record<string, unknown>;
+      for (const field of textFields) {
+        if (nestedData[field] && typeof nestedData[field] === "string") {
+          const text = nestedData[field] as string;
+          return text.length > 150 ? text.substring(0, 150) + "..." : text;
+        }
+      }
+    }
+  }
+
+  // Fallback: stringify and truncate
+  try {
+    const str = JSON.stringify(data);
+    if (str === "{}") return "Empty";
+    return str.length > 150 ? str.substring(0, 150) + "..." : str;
+  } catch {
+    return "[Complex Object]";
+  }
+}
+
+/**
+ * Single trace accordion item with trace tree and detail panel
  * Fetches full trace details only when expanded
  */
 interface TraceAccordionItemProps {
@@ -69,6 +127,8 @@ interface TraceAccordionItemProps {
   totalTokens: number;
   totalCost: number;
   sessionId: string;
+  input: Record<string, unknown> | null;
+  output: Record<string, unknown> | null;
   isExpanded: boolean;
 }
 
@@ -81,6 +141,8 @@ function TraceAccordionItem({
   totalTokens,
   totalCost,
   sessionId,
+  input,
+  output,
   isExpanded,
 }: TraceAccordionItemProps) {
   const [selectedSpan, setSelectedSpan] = useState<Span | null>(null);
@@ -165,6 +227,31 @@ function TraceAccordionItem({
             )}
           </div>
         </div>
+        {/* Input/Output Preview Row */}
+        {(input || output) && (
+          <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+            {input && (
+              <div className="flex flex-col gap-1">
+                <span className="font-medium text-muted-foreground">
+                  Input:
+                </span>
+                <span className="truncate text-foreground/80">
+                  {formatIOPreview(input)}
+                </span>
+              </div>
+            )}
+            {output && (
+              <div className="flex flex-col gap-1">
+                <span className="font-medium text-muted-foreground">
+                  Output:
+                </span>
+                <span className="truncate text-foreground/80">
+                  {formatIOPreview(output)}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
       </AccordionTrigger>
       <AccordionContent className="px-0 pb-0">
         {isLoading ? (
@@ -199,7 +286,7 @@ function TraceAccordionItem({
 
 /**
  * Main TraceView component showing multiple traces as accordions
- * Each trace can be expanded to show its span tree and details
+ * Each trace can be expanded to show its trace tree and details
  */
 export function TraceView({ flowId, initialTraceId }: TraceViewProps) {
   const [expandedTraceId, setExpandedTraceId] = useState<string>(
@@ -578,6 +665,8 @@ export function TraceView({ flowId, initialTraceId }: TraceViewProps) {
                       totalTokens={trace.totalTokens}
                       totalCost={trace.totalCost}
                       sessionId={trace.sessionId ?? "N/A"}
+                      input={trace.input}
+                      output={trace.output}
                       isExpanded={expandedTraceId === trace.id}
                     />
                   ))}

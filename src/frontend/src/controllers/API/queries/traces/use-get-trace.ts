@@ -21,7 +21,9 @@ interface TraceApiResponse {
   totalTokens: number;
   totalCost: number;
   flowId: string;
-  sessionId?: string;
+  sessionId: string;
+  input: Record<string, unknown> | null;
+  output: Record<string, unknown> | null;
   spans: SpanApiResponse[];
 }
 
@@ -82,6 +84,10 @@ function convertTrace(apiTrace: TraceApiResponse): Trace | null {
     totalLatencyMs: apiTrace.totalLatencyMs,
     totalTokens: apiTrace.totalTokens,
     totalCost: apiTrace.totalCost,
+    flowId: apiTrace.flowId,
+    sessionId: apiTrace.sessionId,
+    input: apiTrace.input,
+    output: apiTrace.output,
     spans: apiTrace.spans.map(convertSpan),
   };
 }
