@@ -27,18 +27,15 @@ export const usePostCreateSnapshot: useMutationFunctionType<
     return response.data;
   };
 
-  const mutation: UseMutationResult<
-    FlowHistoryEntry,
-    any,
-    ICreateSnapshot
-  > = mutate(["usePostCreateSnapshot"], createSnapshotFn, {
-    ...options,
-    onSettled: (_, __, variables) => {
-      queryClient.refetchQueries({
-        queryKey: ["useGetFlowHistory", { flowId: variables?.flowId }],
-      });
-    },
-  });
+  const mutation: UseMutationResult<FlowHistoryEntry, any, ICreateSnapshot> =
+    mutate(["usePostCreateSnapshot"], createSnapshotFn, {
+      ...options,
+      onSettled: (_, __, variables) => {
+        queryClient.refetchQueries({
+          queryKey: ["useGetFlowHistory", { flowId: variables?.flowId }],
+        });
+      },
+    });
 
   return mutation;
 };
