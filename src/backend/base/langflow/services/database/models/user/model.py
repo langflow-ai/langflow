@@ -10,6 +10,7 @@ from langflow.schema.serialize import UUIDstr
 
 if TYPE_CHECKING:
     from langflow.services.database.models.api_key.model import ApiKey
+    from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
     from langflow.services.database.models.flow.model import Flow
     from langflow.services.database.models.folder.model import Folder
     from langflow.services.database.models.variable.model import Variable
@@ -39,6 +40,10 @@ class User(SQLModel, table=True):  # type: ignore[call-arg]
     store_api_key: str | None = Field(default=None, nullable=True)
     flows: list["Flow"] = Relationship(back_populates="user")
     variables: list["Variable"] = Relationship(
+        back_populates="user",
+        sa_relationship_kwargs={"cascade": "delete"},
+    )
+    deployment_provider_accounts: list["DeploymentProviderAccount"] = Relationship(
         back_populates="user",
         sa_relationship_kwargs={"cascade": "delete"},
     )

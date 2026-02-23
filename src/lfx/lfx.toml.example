@@ -40,5 +40,9 @@ shared_component_cache_service = "langflow.services.shared_component_cache.servi
 telemetry_service = "langflow.services.telemetry.service:TelemetryService"
 tracing_service = "langflow.services.tracing.service:TracingService"
 
+# Deployment Router Adapters (sub-services)
+[deployment.adapters]
+watsonx-orchestrate = "langflow.services.deployment.watsonx_orchestrate:WatsonxOrchestrateDeploymentService"
+
 # Note: settings_service is NOT configurable - it always uses the built-in implementation
 # Note: mcp_composer_service uses the lfx implementation by default
