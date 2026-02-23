@@ -510,7 +510,11 @@ async def test_list_models_returns_live_ollama_models_when_configured(client: As
             "provider_status": {"Ollama": True},
         }
 
-    # list_models with model_type=None fetches llm then embeddings and merges; so two calls
+    def mock_get_live_models(user_id, provider, model_type="llm"):
+        if provider == "Ollama" and model_type == "llm":
+            return live_ollama_models
+        return []
+
     with (
         mock.patch(
             "langflow.api.v1.models.get_enabled_providers",
@@ -518,7 +522,7 @@ async def test_list_models_returns_live_ollama_models_when_configured(client: As
         ),
         mock.patch(
             "lfx.base.models.model_utils.get_live_models_for_provider",
-            side_effect=[live_ollama_models, []],  # llm list, then embeddings list
+            side_effect=mock_get_live_models,
         ),
     ):
         response = await client.get("api/v1/models", headers=logged_in_headers)
@@ -535,7 +539,7 @@ async def test_list_models_returns_live_ollama_models_when_configured(client: As
 
 @pytest.mark.usefixtures("active_user")
 async def test_list_models_ollama_empty_when_live_fetch_returns_empty(client: AsyncClient, logged_in_headers):
-    """When Ollama is configured but live fetch returns no models, Ollama shows empty list (no static models)."""
+    """When Ollama is configured but live fetch returns no models, static models remain as fallback."""
 
     async def mock_get_enabled_providers(*args, **kwargs):
         return {
@@ -559,5 +563,5 @@ async def test_list_models_ollama_empty_when_live_fetch_returns_empty(client: As
     data = response.json()
     ollama_provider = next((p for p in data if p.get("provider") == "Ollama"), None)
     assert ollama_provider is not None
-    assert ollama_provider["models"] == []
-    assert ollama_provider["num_models"] == 0
+    assert len(ollama_provider["models"]) > 0
+    assert ollama_provider["num_models"] == len(ollama_provider["models"])

@@ -17,6 +17,7 @@ from lfx.io import (
     DropdownInput,
     FloatInput,
     IntInput,
+    MessageTextInput,
     Output,
     SecretStrInput,
     SliderInput,
