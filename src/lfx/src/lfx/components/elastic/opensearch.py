@@ -51,6 +51,7 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
         "bearer_prefix",
         "use_ssl",
         "verify_certs",
+        "request_timeout",
         "filter_expression",
         "engine",
         "space_type",
@@ -245,6 +246,17 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
                 "Disable for self-signed certificates in development environments."
             ),
         ),
+        IntInput(
+            name="request_timeout",
+            display_name="Request Timeout (seconds)",
+            value=60,
+            advanced=True,
+            info=(
+                "Time in seconds to wait for a response from OpenSearch (transport and per-request). "
+                "Used for the default transport timeout and for bulk ingest HTTP calls. "
+                "Increase for large bulk ingestion or slow clusters."
+            ),
+        ),
     ]
 
     # ---------- helper functions for index management ----------
@@ -309,6 +321,16 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
         if is_aoss and engine not in {"nmslib", "faiss"}:
             msg = "Amazon OpenSearch Service Serverless only supports `nmslib` or `faiss` engines"
             raise ValueError(msg)
+
+    def _get_request_timeout(self) -> int:
+        """Return the configured request timeout in seconds (default 60)."""
+        if not hasattr(self, "request_timeout") or self.request_timeout is None:
+            return 60
+        try:
+            t = int(self.request_timeout)
+            return t if t >= 1 else 60
+        except (TypeError, ValueError):
+            return 60
 
     def _is_aoss_enabled(self, http_auth: Any) -> bool:
         """Determine if Amazon OpenSearch Serverless (AOSS) is being used.
@@ -381,7 +403,12 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
             return_ids.append(_id)
         if metadatas:
             self.log(f"Sample metadata: {metadatas[0] if metadatas else {}}")
-        helpers.bulk(client, requests, max_chunk_bytes=max_chunk_bytes)
+        helpers.bulk(
+            client,
+            requests,
+            max_chunk_bytes=max_chunk_bytes,
+            request_timeout=self._get_request_timeout(),
+        )
         return return_ids
 
     # ---------- auth / client ----------
@@ -426,6 +453,7 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
             verify_certs=self.verify_certs,
             ssl_assert_hostname=False,
             ssl_show_warn=False,
+            timeout=self._get_request_timeout(),
             **auth_kwargs,
         )
 
