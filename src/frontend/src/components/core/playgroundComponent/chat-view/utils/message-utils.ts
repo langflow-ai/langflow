@@ -201,14 +201,25 @@ export const removeMessages = (
  * When flowId and sessionId are provided, only the message list for that
  * session is considered (fixes duration being applied to wrong session).
  */
-export const findLastBotMessage = (flowId?: string, sessionId?: string): {
+export const findLastBotMessage = (
+  flowId?: string,
+  sessionId?: string,
+): {
   message: Message;
   queryKey: unknown[];
 } | null => {
   const cache = queryClient.getQueryCache();
 
-  if (flowId != null && flowId !== "" && sessionId != null && sessionId !== "") {
-    const queryKey = [MESSAGES_QUERY_KEY, { id: flowId, session_id: sessionId }];
+  if (
+    flowId != null &&
+    flowId !== "" &&
+    sessionId != null &&
+    sessionId !== ""
+  ) {
+    const queryKey = [
+      MESSAGES_QUERY_KEY,
+      { id: flowId, session_id: sessionId },
+    ];
     const messages = queryClient.getQueryData<Message[]>(queryKey);
     if (!Array.isArray(messages)) return null;
     for (let i = messages.length - 1; i >= 0; i--) {

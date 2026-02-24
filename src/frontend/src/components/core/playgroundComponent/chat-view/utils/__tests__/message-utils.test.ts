@@ -64,8 +64,16 @@ describe("findLastBotMessage", () => {
   it("should_return_last_bot_message_for_given_flow_and_session_only", () => {
     const s1Key = ["useGetMessagesQuery", { id: "flow-1", session_id: "s1" }];
     const s2Key = ["useGetMessagesQuery", { id: "flow-1", session_id: "s2" }];
-    const msgS1 = buildMessage({ id: "m-s1", sender: "Machine", session_id: "s1" });
-    const msgS2 = buildMessage({ id: "m-s2", sender: "Machine", session_id: "s2" });
+    const msgS1 = buildMessage({
+      id: "m-s1",
+      sender: "Machine",
+      session_id: "s1",
+    });
+    const msgS2 = buildMessage({
+      id: "m-s2",
+      sender: "Machine",
+      session_id: "s2",
+    });
 
     queryClient.setQueryData(s1Key, [msgS1]);
     queryClient.setQueryData(s2Key, [msgS2]);

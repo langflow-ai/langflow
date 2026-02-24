@@ -266,10 +266,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       buildDuration:
         isBuilding && !current.isBuilding ? null : current.buildDuration,
       // Clear building session when build ends
-      buildingFlowId:
-        !isBuilding ? null : current.buildingFlowId,
-      buildingSessionId:
-        !isBuilding ? null : current.buildingSessionId,
+      buildingFlowId: !isBuilding ? null : current.buildingFlowId,
+      buildingSessionId: !isBuilding ? null : current.buildingSessionId,
     });
   },
   setBuildStartTime: (time) => {
