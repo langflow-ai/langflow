@@ -515,6 +515,8 @@ export const getLucideIconName = (name: string): string => {
     AlertTriangle: "triangle-alert",
     TerminalSquare: "square-terminal",
     Wand2: "wand-sparkles",
+    ListIdentDecrease: "list-indent-decrease",
+    ListIdentIncrease: "list-indent-increase",
   };
   const kebabCaseName = name
     .replace(/Icon/g, "")
