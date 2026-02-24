@@ -250,6 +250,7 @@ class TestLoadFilesMessage:
         # JSON content should be present in some form
         assert "parsed" in result_text or "Dict content" in result_text
 
+
 class TestResolvePathsFromValue:
     """Test cases for BaseFileComponent._resolve_paths_from_value method."""
 
@@ -266,7 +267,7 @@ class TestResolvePathsFromValue:
         assert len(paths) == 1
         resolved_data, path_str = paths[0]
         assert path_str == "/test/path.txt"
-        assert resolved_data is data # Should return the original Data object
+        assert resolved_data is data  # Should return the original Data object
 
     def test_resolve_stringified_json_array(self):
         """JSON array string should be parsed into individual paths."""

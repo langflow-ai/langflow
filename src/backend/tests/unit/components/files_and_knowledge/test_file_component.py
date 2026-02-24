@@ -733,6 +733,7 @@ class TestFileComponentStorageLocation:
         storage_input = next(i for i in FileComponent.inputs if i.name == "storage_location")
         assert storage_input.advanced is True
 
+
 class TestFileComponentValidateAndResolvePaths:
     """Tests for FileComponent._validate_and_resolve_paths method."""
 

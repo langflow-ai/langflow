@@ -606,6 +606,7 @@ class BaseFileComponent(Component, ABC):
                     # Attempt to safely evaluate if it's a strongly quoted string
                     try:
                         import ast
+
                         evaluated = ast.literal_eval(s)
                         if isinstance(evaluated, str) and evaluated.strip().startswith("["):
                             process_string(evaluated, original_data)
