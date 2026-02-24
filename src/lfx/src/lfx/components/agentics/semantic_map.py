@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from pydantic import create_model
 
-from lfx.components.agentics.inputs.base_component import BaseAgenticComponent
 from lfx.components.agentics.constants import (
     ERROR_AGENTICS_NOT_INSTALLED,
     TRANSDUCTION_AMAP,
@@ -17,6 +18,7 @@ from lfx.components.agentics.inputs import (
     get_generated_fields_input,
     get_model_provider_inputs,
 )
+from lfx.components.agentics.inputs.base_component import BaseAgenticComponent
 from lfx.io import (
     BoolInput,
     DataFrameInput,
@@ -28,11 +30,12 @@ from lfx.schema.dataframe import DataFrame
 
 class SemanticMap(BaseAgenticComponent):
     """Transform each row of input data using natural language instructions and a defined output schema.
-    
+
     This component processes input data row-by-row, applying LLM-based transformations to generate
     new columns or derive insights for each individual record.
     """
 
+    code_class_base_inheritance: ClassVar[str] = "Component"
     display_name = "aMap"
     description = "Augment the input dataframe adding new columns defined in the input schema. Rows are processed independently and in parallel using LLMs."
     documentation: str = "https://docs.langflow.org/bundles-agentics"
@@ -81,7 +84,7 @@ class SemanticMap(BaseAgenticComponent):
 
     async def aMap(self) -> DataFrame:
         """Transform input data row-by-row using LLM-based semantic processing.
-        
+
         Returns:
             DataFrame with transformed data following the output schema.
         """
@@ -126,4 +129,4 @@ class SemanticMap(BaseAgenticComponent):
                 output = source.merge_states(output)
 
             return DataFrame(output.to_dataframe().to_dict(orient="records"))
-        else: raise ValueError("BOTH Input DataFrame AND Output Schema inputs should be provided.")
+        raise ValueError("BOTH Input DataFrame AND Output Schema inputs should be provided.")

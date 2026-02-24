@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from pydantic import create_model
 
-from lfx.components.agentics.inputs.base_component import BaseAgenticComponent
 from lfx.components.agentics.constants import (
     ERROR_AGENTICS_NOT_INSTALLED,
     TRANSDUCTION_AREDUCE,
@@ -17,6 +18,7 @@ from lfx.components.agentics.inputs import (
     get_generated_fields_input,
     get_model_provider_inputs,
 )
+from lfx.components.agentics.inputs.base_component import BaseAgenticComponent
 from lfx.io import (
     BoolInput,
     DataFrameInput,
@@ -28,15 +30,14 @@ from lfx.schema.dataframe import DataFrame
 
 class SemanticAggregator(BaseAgenticComponent):
     """Aggregate or summarize entire input data using natural language instructions and a defined output schema.
-    
+
     This component processes all rows of input data collectively to produce aggregated results,
     such as summaries, statistics, or consolidated information based on LLM analysis.
     """
 
+    code_class_base_inheritance: ClassVar[str] = "Component"
     display_name = "aReduce"
-    description = (
-        "Analyze the entire input dataframe at once and generate a new dataframe following the instruction and the required schema"
-    )
+    description = "Analyze the entire input dataframe at once and generate a new dataframe following the instruction and the required schema"
     documentation: str = "https://docs.langflow.org/bundles-agentics"
     icon = "Agentics"
 
@@ -62,7 +63,7 @@ class SemanticAggregator(BaseAgenticComponent):
             info="Natural language instructions describing how to aggregate the input data into the output schema.",
             advanced=False,
             value="",
-            required=False
+            required=False,
         ),
     ]
 
@@ -78,7 +79,7 @@ class SemanticAggregator(BaseAgenticComponent):
 
     async def aReduce(self) -> DataFrame:
         """Aggregate input data using LLM-based semantic analysis.
-        
+
         Returns:
             DataFrame containing the aggregated results following the output schema.
         """
@@ -91,7 +92,6 @@ class SemanticAggregator(BaseAgenticComponent):
         llm = prepare_llm_from_component(self)
 
         if self.source and self.schema != []:
-
             source = AG.from_dataframe(DataFrame(self.source))
 
             schema_fields = build_schema_fields(self.schema)
@@ -116,4 +116,4 @@ class SemanticAggregator(BaseAgenticComponent):
                 output = AG(atype=atype, states=output[0].items)
 
             return DataFrame(output.to_dataframe().to_dict(orient="records"))
-        else: raise ValueError("BOTH Input DataFrame AND Output Schema inputs should be provided.") 
+        raise ValueError("BOTH Input DataFrame AND Output Schema inputs should be provided.")

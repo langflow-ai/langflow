@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from lfx.components.agentics.inputs.base_component import BaseAgenticComponent
+from typing import ClassVar
+
 from lfx.components.agentics.constants import ERROR_AGENTICS_NOT_INSTALLED
 from lfx.components.agentics.helpers import (
     build_schema_fields,
@@ -12,19 +13,21 @@ from lfx.components.agentics.inputs import (
     get_generated_fields_input,
     get_model_provider_inputs,
 )
+from lfx.components.agentics.inputs.base_component import BaseAgenticComponent
 from lfx.io import DataFrameInput, IntInput, MessageTextInput, Output
 from lfx.schema.dataframe import DataFrame
 
 
 class SyntheticDataGenerator(BaseAgenticComponent):
     """Generate synthetic data using either example data or a defined schema.
-    
+
     This component creates realistic synthetic data by either:
     1. Learning from an input DataFrame and generating similar rows, or
     2. Following a user-defined schema to create data from scratch.
 
     """
 
+    code_class_base_inheritance: ClassVar[str] = "Component"
     display_name = "aGenerate"
     description = "Generate mock data for user defined schema. If a dataframe is provided, the component will generate similar rows."
     documentation: str = "https://docs.langflow.org/bundles-agentics"
@@ -74,7 +77,7 @@ class SyntheticDataGenerator(BaseAgenticComponent):
 
     async def aGenerate(self) -> DataFrame:
         """Generate synthetic data using LLM-based generation.
-        
+
         Returns:
             DataFrame containing the generated synthetic data.
         """
@@ -99,7 +102,6 @@ class SyntheticDataGenerator(BaseAgenticComponent):
         else:
             msg = "Synthetic data generation requires either a sample DataFrame or schema definition (but not both)."
             raise ValueError(msg)
-
 
         output_states = await generate_prototypical_instances(
             atype,
