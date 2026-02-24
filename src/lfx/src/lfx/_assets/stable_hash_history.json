@@ -736,7 +736,7 @@
   },
   "OpenSearchVectorStoreComponent": {
     "versions": {
-      "0.3.0": "77834dd0fa75"
+      "0.3.0": "bbb284bfe1cc"
     }
   },
   "OpenSearchVectorStoreComponentMultimodalMultiEmbedding": {
