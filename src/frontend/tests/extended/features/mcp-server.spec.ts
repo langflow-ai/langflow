@@ -559,9 +559,7 @@ test(
     await page.waitForSelector('[data-testid="sidebar-nav-MCP Servers"]', {
       timeout: 30000,
     });
-    await page
-      .getByTestId("sidebar-nav-MCP Servers")
-      .click({ timeout: 10000 });
+    await page.getByTestId("sidebar-nav-MCP Servers").click({ timeout: 10000 });
 
     await page.waitForSelector('[data-testid="add-mcp-server-button-page"]', {
       timeout: 30000,
@@ -769,9 +767,7 @@ test(
       timeout: 30000,
     });
 
-    await page
-      .getByTestId("sidebar-nav-MCP Servers")
-      .click({ timeout: 10000 });
+    await page.getByTestId("sidebar-nav-MCP Servers").click({ timeout: 10000 });
 
     await page.waitForSelector('[data-testid="add-mcp-server-button-page"]', {
       timeout: 30000,
@@ -849,9 +845,7 @@ test(
       state: "visible",
     });
     await page.getByTestId("mcp-server-dropdown").click();
-    await page
-      .getByTestId(`list_item_${testName}`)
-      .click({ timeout: 10000 });
+    await page.getByTestId(`list_item_${testName}`).click({ timeout: 10000 });
 
     await page.waitForSelector(
       '[data-testid="dropdown_str_tool"]:not([disabled])',
@@ -863,13 +857,10 @@ test(
 
     await page.getByTestId("dropdown_str_tool").click();
 
-    await page.waitForSelector(
-      '[data-testid="get_current_time-0-option"]',
-      {
-        state: "visible",
-        timeout: 10000,
-      },
-    );
+    await page.waitForSelector('[data-testid="get_current_time-0-option"]', {
+      state: "visible",
+      timeout: 10000,
+    });
 
     const timeOptionCount = await page
       .getByTestId("get_current_time-0-option")
@@ -885,9 +876,7 @@ test(
       timeout: 30000,
     });
 
-    await page
-      .getByTestId("sidebar-nav-MCP Servers")
-      .click({ timeout: 10000 });
+    await page.getByTestId("sidebar-nav-MCP Servers").click({ timeout: 10000 });
 
     await page.waitForSelector('[data-testid="add-mcp-server-button-page"]', {
       timeout: 30000,
@@ -966,9 +955,7 @@ test(
       state: "visible",
     });
     await page.getByTestId("mcp-server-dropdown").click();
-    await page
-      .getByTestId(`list_item_${testName}`)
-      .click({ timeout: 10000 });
+    await page.getByTestId(`list_item_${testName}`).click({ timeout: 10000 });
 
     await page.waitForSelector(
       '[data-testid="dropdown_str_tool"]:not([disabled])',
