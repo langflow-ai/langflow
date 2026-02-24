@@ -71,6 +71,7 @@ dev = [
     "pyyaml>=6.0.2",
     "pyleak>=0.1.14",
     "mcp-server-fetch>=2025.1.17",
+    "onnxruntime<=1.23"
 ]
 
 [tool.uv.sources]
