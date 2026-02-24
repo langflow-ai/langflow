@@ -1091,12 +1091,12 @@
   },
   "OpenAIToolsAgent": {
     "versions": {
-      "0.3.0": "b2ad248a3e6c"
+      "0.3.0": "d5c605919623"
     }
   },
   "OpenAPIAgent": {
     "versions": {
-      "0.3.0": "3b817f0cd966"
+      "0.3.0": "f0820aed34a4"
     }
   },
   "RecursiveCharacterTextSplitter": {
