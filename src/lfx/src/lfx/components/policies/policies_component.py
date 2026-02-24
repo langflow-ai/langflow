@@ -21,7 +21,17 @@ from lfx.components.policies.guarded_tool import GuardedTool
 from lfx.components.policies.llm_wrapper import LangchainModelWrapper
 from lfx.components.policies.module_utils import unload_module
 from lfx.field_typing import LanguageModel, Tool
-from lfx.io import BoolInput, HandleInput, ModelInput, MultilineInput, Output, SecretStrInput, StrInput, TabInput
+from lfx.io import (
+    BoolInput,
+    CodeInput,
+    HandleInput,
+    ModelInput,
+    MultilineInput,
+    Output,
+    SecretStrInput,
+    StrInput,
+    TabInput,
+)
 from lfx.log.logger import logger
 
 if TYPE_CHECKING:
@@ -34,6 +44,7 @@ STEP1 = "Step_1"
 STEP2 = "Step_2"
 BUILD_MODE_GENERATE = "Generate"
 BUILD_MODE_CACHE = "Use Cache"
+GENERATED_GUARD_INFO_PREFIX = "Auto-generated ToolGuard code for "
 
 
 class PoliciesComponent(LCModelComponent):
@@ -48,6 +59,16 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
     inputs = cast(
         "list[InputTypes]",
         [
+            BoolInput(
+                name="refresh_generated_code",
+                display_name="Refresh Generated Code Fields",
+                info="Use refresh to rescan generated guard files and sync code inputs.",
+                value=False,
+                # advanced=True,
+                real_time_refresh=True,
+                refresh_button=True,
+                refresh_button_text="Refresh",
+            ),
             BoolInput(
                 name="active",
                 display_name="Active",
@@ -116,7 +137,7 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
 
     @property
     def work_dir(self) -> Path:
-        return TOOLGUARD_WORK_DIR / str(self.user_id) / self._to_snake_case(self.project)
+        return TOOLGUARD_WORK_DIR / self._to_snake_case(self.project)
 
     def build_model(self) -> LanguageModel:
         llm_model = get_llm(
@@ -130,10 +151,62 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             raise ValueError(msg)
         return llm_model
 
+    def _is_generated_guard_field(self, field: dict) -> bool:
+        if not isinstance(field, dict):
+            return False
+        return (
+            field.get("type") == "code"
+            and field.get("dynamic") is True
+            and isinstance(field.get("info"), str)
+            and field.get("info", "").startswith(GENERATED_GUARD_INFO_PREFIX)
+        )
+
+    def _sync_generated_guard_code_inputs(self, build_config: dict) -> dict:
+        logger.info("Syncing files...")
+        generated_field_names = {key for key, value in build_config.items() if self._is_generated_guard_field(value)}
+
+        step2_dir = self.work_dir / STEP2
+        # logger.info(f"step2_dir = {step2_dir}")
+        # logger.info(f"step2_dir.exists() = {step2_dir.exists()}")
+        # logger.info(f"step2_dir.is_dir() = {step2_dir.is_dir()}")
+        if not step2_dir.exists() or not step2_dir.is_dir():
+            for field_name in generated_field_names:
+                build_config.pop(field_name, None)
+            return build_config
+
+        python_files = sorted(path for path in step2_dir.rglob("*.py") if path.is_file())
+        next_generated_names: set[str] = set()
+        py_module = self._to_snake_case(self.project)
+        for file_path in python_files:
+            relative_name = file_path.relative_to(step2_dir).as_posix()
+            if not relative_name.startswith(py_module):
+                continue
+            logger.info("---" + relative_name)
+            next_generated_names.add(relative_name)
+            try:
+                code_value = file_path.read_text(encoding="utf-8")
+            except OSError:
+                code_value = ""
+
+            code_input = CodeInput(
+                name=relative_name,
+                display_name=relative_name,
+                value=code_value,
+                info=f"{GENERATED_GUARD_INFO_PREFIX}{relative_name}",
+                dynamic=True,
+                advanced=True,
+            )
+            build_config[relative_name] = code_input.to_dict()
+
+        stale_field_names = generated_field_names - next_generated_names
+        for field_name in stale_field_names:
+            build_config.pop(field_name, None)
+
+        return build_config
+
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         """Dynamically update build config with user-filtered model options."""
-        # logger.info(f"Updating build config with {field_name}={field_value}")
-        return update_model_options_in_build_config(
+        updated_build_config = update_model_options_in_build_config(
             component=self,
             build_config=build_config,
             cache_key_prefix="language_model_options",
@@ -141,6 +214,7 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             field_name=field_name,
             field_value=field_value,
         )
+        return self._sync_generated_guard_code_inputs(updated_build_config)
 
     async def _generate_guard_specs(self) -> list[ToolGuardSpec]:
         logger.info("Starting step 1")
