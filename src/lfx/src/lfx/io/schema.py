@@ -233,10 +233,10 @@ def create_input_schema(inputs: list["InputTypes"]) -> type[BaseModel]:
             field_type = eval(literal_string, {"Literal": Literal})  # noqa: S307
         if hasattr(input_model, "is_list") and input_model.is_list:
             field_type = list[field_type]  # type: ignore[valid-type]
-        if input_model.name:
-            name = input_model.name.replace("_", " ").title()
-        elif input_model.display_name:
+        if input_model.display_name:
             name = input_model.display_name
+        elif input_model.name:
+            name = input_model.name.replace("_", " ").title()
         else:
             msg = "Input name or display_name is required"
             raise ValueError(msg)
@@ -275,10 +275,10 @@ def create_input_schema_from_dict(inputs: list[dotdict], param_key: str | None =
             field_type = eval(literal_string, {"Literal": Literal})  # noqa: S307
         if hasattr(input_model, "is_list") and input_model.is_list:
             field_type = list[field_type]  # type: ignore[valid-type]
-        if input_model.name:
-            name = input_model.name.replace("_", " ").title()
-        elif input_model.display_name:
+        if input_model.display_name:
             name = input_model.display_name
+        elif input_model.name:
+            name = input_model.name.replace("_", " ").title()
         else:
             msg = "Input name or display_name is required"
             raise ValueError(msg)
