@@ -38,7 +38,6 @@ from langflow.initial_setup.setup import (
     sync_flows_from_fs,
 )
 from langflow.middleware import ContentSizeLimitMiddleware
-from langflow.plugin_routes import load_plugin_routes
 from langflow.services.deps import (
     get_queue_service,
     get_service,
@@ -518,12 +517,6 @@ def create_app():
     app.include_router(router)
     app.include_router(health_check_router)
     app.include_router(log_router)
-
-    # --- plugin hook ---
-    # Discover and register additional routers provided by plugins
-    # via the ``langflow.plugins`` entry-point group.
-    # Each entry point must expose a callable ``register(app: FastAPI) -> None``.
-    load_plugin_routes(app)
 
     @app.exception_handler(Exception)
     async def exception_handler(_request: Request, exc: Exception):
