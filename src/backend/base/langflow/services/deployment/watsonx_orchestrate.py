@@ -135,8 +135,11 @@ class ErrorPrefix(str, Enum):
     UPDATE_CONFIG = f"{ERROR_PREFIX} updating a deployment config {ERROR_SUFFIX_IN}"
     DELETE_CONFIG = f"{ERROR_PREFIX} deleting a deployment config {ERROR_SUFFIX_IN}"
 
+# NOTE: this key must match the value of the provider_key column
+# in the deployment_provider_account table.
+_WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY = "watsonx-orchestrate"
 
-@register_deployment_adapter("watsonx-orchestrate")
+@register_deployment_adapter(_WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY)
 class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
     """Deployment adapter for Watsonx Orchestrate.
 
@@ -147,7 +150,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
     """
 
     name = ServiceType.DEPLOYMENT_SERVICE.value
-    provider_name = "watsonx-orchestrate"
+    provider_name = _WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY
 
     def __init__(self, settings_service: SettingsService):
         super().__init__()
