@@ -4,7 +4,7 @@ from decimal import Decimal
 
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage
-from lfx.schema.data import Data, serialize_data
+from lfx.schema.data import Data, custom_serializer, serialize_data
 from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
 
 
@@ -212,6 +212,21 @@ class TestDataNanSerialization:
         parsed = json.loads(result)
 
         assert parsed["value"] is None
+
+    def test_custom_serializer_decimal_nan_returns_none(self):
+        """Test that custom_serializer handles Decimal NaN/Infinity directly."""
+        assert custom_serializer(Decimal("NaN")) is None
+        assert custom_serializer(Decimal("Infinity")) is None
+        assert custom_serializer(Decimal("-Infinity")) is None
+
+    def test_custom_serializer_signaling_nan_returns_none(self):
+        """Test that custom_serializer handles signaling NaN (sNaN) without crashing."""
+        assert custom_serializer(Decimal("sNaN")) is None
+
+    def test_custom_serializer_normal_decimal(self):
+        """Test that custom_serializer converts normal Decimals to float."""
+        assert custom_serializer(Decimal("1.5")) == 1.5
+        assert custom_serializer(Decimal("0")) == 0.0
 
     def test_normal_values_preserved(self):
         """Test that normal values pass through sanitization unchanged."""

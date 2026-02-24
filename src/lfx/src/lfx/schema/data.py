@@ -6,6 +6,7 @@ import copy
 import json
 import math
 from datetime import datetime, timezone
+import decimal
 from decimal import Decimal
 from typing import TYPE_CHECKING, cast
 from uuid import UUID
@@ -301,7 +302,10 @@ def custom_serializer(obj):
         utc_date = obj.replace(tzinfo=timezone.utc)
         return utc_date.strftime("%Y-%m-%d %H:%M:%S %Z")
     if isinstance(obj, Decimal):
-        result = float(obj)
+        try:
+            result = float(obj)
+        except (decimal.InvalidOperation, ValueError, OverflowError):
+            return None
         if math.isnan(result) or math.isinf(result):
             return None
         return result
