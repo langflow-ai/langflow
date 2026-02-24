@@ -126,7 +126,7 @@
   },
   "AzureOpenAIModel": {
     "versions": {
-      "0.3.0": "cc8d003556d8"
+      "0.3.0": "2ba26202203e"
     }
   },
   "AzureOpenAIEmbeddings": {
@@ -886,7 +886,7 @@
   },
   "GoogleGenerativeAIModel": {
     "versions": {
-      "0.3.0": "ffb6e75b6684"
+      "0.3.0": "049f38001189"
     }
   },
   "Google Generative AI Embeddings": {
@@ -1371,7 +1371,7 @@
   },
   "DataOperations": {
     "versions": {
-      "0.3.0": "f5d9680f8644"
+      "0.3.0": "1e5bfda1706b"
     }
   },
   "DataToDataFrame": {
