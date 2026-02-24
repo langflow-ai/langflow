@@ -226,7 +226,7 @@ class TestDataNanSerialization:
     def test_custom_serializer_normal_decimal(self):
         """Test that custom_serializer converts normal Decimals to float."""
         assert custom_serializer(Decimal("1.5")) == 1.5
-        assert custom_serializer(Decimal("0")) == 0.0
+        assert custom_serializer(Decimal(0)) == 0.0
 
     def test_normal_values_preserved(self):
         """Test that normal values pass through sanitization unchanged."""

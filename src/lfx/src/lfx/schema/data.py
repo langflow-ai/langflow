@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import copy
+import decimal
 import json
 import math
 from datetime import datetime, timezone
-import decimal
 from decimal import Decimal
 from typing import TYPE_CHECKING, cast
 from uuid import UUID
