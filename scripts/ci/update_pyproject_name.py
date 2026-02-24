@@ -21,7 +21,7 @@ def update_pyproject_name(pyproject_path: str, new_project_name: str) -> None:
     if not pattern.search(content):
         msg = f'Project name not found in "{filepath}"'
         raise ValueError(msg)
-    content = pattern.sub(rf'\1\g<2>{new_project_name}\3', content)
+    content = pattern.sub(rf"\1\g<2>{new_project_name}\3", content)
 
     # Update extra references in [complete] and [all] extras for nightly builds
     if new_project_name == "langflow-base-nightly":
