@@ -9,6 +9,7 @@ import re
 import zipfile
 from dataclasses import dataclass
 from enum import Enum
+from functools import lru_cache
 from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException, status
@@ -1535,5 +1536,6 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         return detail
 
     @staticmethod
+    @lru_cache(maxsize=2048)
     def _normalize_wxo_name(s: str) -> str:
         return _WXO_SANITIZE_RE.sub("", s.translate(_WXO_TRANSLATE))
