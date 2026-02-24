@@ -65,7 +65,7 @@ const CanvasControls = ({
             unstyled
             size="icon"
             data-testid="canvas_controls_toggle_inspector"
-            className="group rounded-none px-2 py-2 hover:bg-muted flex items-center justify-center disabled:pointer-events-none disabled:opacity-50"
+            className={`group rounded-none px-2 py-2 flex items-center justify-center disabled:pointer-events-none disabled:opacity-50 ${inspectionPanelVisible ? "bg-accent" : "hover:bg-muted"}`}
             title={
               !selectedNode
                 ? "Select a node to open the Inspector Panel"
@@ -77,8 +77,8 @@ const CanvasControls = ({
             onClick={() => setInspectionPanelVisible(!inspectionPanelVisible)}
           >
             <ForwardedIconComponent
-              name={inspectionPanelVisible ? "PanelRightClose" : "PanelRight"}
-              className="text-muted-foreground group-hover:text-primary !h-5 !w-5"
+              name="SlidersHorizontal"
+              className={`${inspectionPanelVisible ? "text-primary" : "text-muted-foreground group-hover:text-primary"} !h-5 !w-5`}
             />
           </Button>
         </Panel>
