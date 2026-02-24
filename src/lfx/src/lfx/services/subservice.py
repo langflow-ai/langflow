@@ -30,8 +30,7 @@ def register_sub_service(namespace: str, key: str, *, override: bool = True):
         registry = _decorator_subservice_registry.setdefault(namespace, {})
         if key in registry and not override:
             logger.debug(
-                f"Skipped sub-service registration for namespace='{namespace}' key='{key}' "
-                f"(override={override})."
+                f"Skipped sub-service registration for namespace='{namespace}' key='{key}' (override={override})."
             )
             return sub_service_class
 
@@ -66,15 +65,13 @@ class SubServiceRegistry:
         """Register a sub-service class under a key."""
         if key in self.sub_service_classes and not override:
             logger.debug(
-                f"Skipped sub-service registration for namespace='{self.namespace}' key='{key}' "
-                f"(override={override})."
+                f"Skipped sub-service registration for namespace='{self.namespace}' key='{key}' (override={override})."
             )
             return
 
         self.sub_service_classes[key] = sub_service_class
         logger.debug(
-            f"Registered sub-service: namespace='{self.namespace}' key='{key}' "
-            f"class='{sub_service_class.__name__}'"
+            f"Registered sub-service: namespace='{self.namespace}' key='{key}' class='{sub_service_class.__name__}'"
         )
 
     def get_sub_service_class(self, key: str) -> type[Any] | None:
@@ -106,8 +103,7 @@ class SubServiceRegistry:
                 self.register_sub_service_class(ep.name, sub_service_class, override=False)
             except Exception as exc:  # noqa: BLE001
                 logger.warning(
-                    f"Failed to load sub-service entry point group='{self.entry_point_group}' "
-                    f"name='{ep.name}': {exc}"
+                    f"Failed to load sub-service entry point group='{self.entry_point_group}' name='{ep.name}': {exc}"
                 )
 
     def _discover_from_decorators(self) -> None:
@@ -163,8 +159,7 @@ class SubServiceRegistry:
             self.register_sub_service_class(key, sub_service_class, override=True)
         except Exception as exc:  # noqa: BLE001
             logger.warning(
-                f"Failed to register sub-service namespace='{self.namespace}' key='{key}' "
-                f"from '{import_path}': {exc}"
+                f"Failed to register sub-service namespace='{self.namespace}' key='{key}' from '{import_path}': {exc}"
             )
 
 

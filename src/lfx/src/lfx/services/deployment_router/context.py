@@ -20,6 +20,3 @@ def set_current_deployment_provider_id(provider_id: UUID) -> None:
 
 def get_current_deployment_provider_id() -> UUID | None:
     return _current_deployment_provider_id.get()
-
-
-

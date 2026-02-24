@@ -387,10 +387,7 @@ class DeploymentUpdateE2E:
             response = await self._request("PATCH", path, json_body=scenario["payload"])
             status_code = response.status_code
             ok = status_code in scenario["expected"]
-            print(
-                f"[{scenario['name']}] status={status_code}, "
-                f"expected={sorted(scenario['expected'])}"
-            )
+            print(f"[{scenario['name']}] status={status_code}, expected={sorted(scenario['expected'])}")
 
             results.append(
                 ScenarioResult(
@@ -608,10 +605,7 @@ class DeploymentUpdateE2E:
         for result in results:
             expected = ",".join(str(item) for item in sorted(result.expected_statuses))
             verdict = "PASS" if result.ok else "FAIL"
-            print(
-                f"{verdict:<5} | {result.name:<46} | "
-                f"expected={expected:<8} got={result.actual_status:<4}"
-            )
+            print(f"{verdict:<5} | {result.name:<46} | expected={expected:<8} got={result.actual_status:<4}")
             if not result.ok:
                 print(f"       response: {result.response_excerpt}")
         print("-" * 90)
@@ -633,9 +627,7 @@ def _get_required_env(name: str) -> str:
 
 
 def _parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Run E2E deployment-update scenario matrix for watsonx adapter."
-    )
+    parser = argparse.ArgumentParser(description="Run E2E deployment-update scenario matrix for watsonx adapter.")
     parser.add_argument("--base-url", default=os.getenv("LANGFLOW_BASE_URL", "http://localhost:7860"))
     parser.add_argument("--timeout-seconds", type=float, default=float(os.getenv("E2E_TIMEOUT_SECONDS", "30")))
     parser.add_argument("--provider-key", default=os.getenv("WXO_PROVIDER_KEY", "watsonx-orchestrate"))

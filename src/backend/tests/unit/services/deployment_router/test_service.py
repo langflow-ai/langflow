@@ -234,4 +234,3 @@ async def test_resolve_adapter_key_returns_provider_key(monkeypatch):
 
     adapter_key = await service._resolve_adapter_key(provider_id=uuid4(), user_id=uuid4(), db=object())
     assert adapter_key == "watsonx-orchestrate"
-

@@ -157,6 +157,7 @@ def _to_provider_account_response(provider_account: DeploymentProviderAccount) -
         has_api_key=bool(provider_account.api_key),
     )
 
+
 # TODO: just use regex
 def _extract_watsonx_account_id_from_url(backend_url: str) -> str | None:
     parsed = urlparse(backend_url)
@@ -182,7 +183,7 @@ def _resolve_account_id(*, provider_key: str, backend_url: str, account_id: str 
     return None
 
 
-@router.post( # TODO: validate the provider backend url and api key
+@router.post(  # TODO: validate the provider backend url and api key
     "/providers/",
     response_model=DeploymentProviderAccountResponse,
     status_code=status.HTTP_201_CREATED,
