@@ -73,17 +73,10 @@ dev = [
     "mcp-server-fetch>=2025.1.17",
 ]
 
-[[tool.uv.index]]
-name = "pytorch-cpu"
-url = "https://download.pytorch.org/whl/cpu"
-explicit = true
-
 [tool.uv.sources]
 langflow-base = { workspace = true }
 langflow = { workspace = true }
 lfx = { workspace = true }
-torch = { index = "pytorch-cpu" }
-torchvision = { index = "pytorch-cpu" }
 
 [tool.uv.workspace]
 members = [
@@ -105,10 +98,6 @@ docling = [
     "tesserocr>=2.8.0",
     "rapidocr-onnxruntime>=1.4.4",
     "ocrmac>=1.0.0; sys_platform == 'darwin'",
-    # CPU-only PyTorch required for docling features
-    # Loose version ranges intentionally used to avoid conflicts with transitive dependencies (e.g., altk)
-    "torch>=2.0.0",
-    "torchvision>=0.15.0",
 ]
 
 audio = [
@@ -146,18 +135,6 @@ postgresql = [
 ]
 
 [tool.uv]
-# Ensure lockfile resolves packages for Linux, macOS, and Windows platforms
-# Required because we have platform-specific torch CPU wheels
-# Without this, builds fail with --frozen as they can't find compatible wheels
-# Note: Architecture names differ by OS (Linux: x86_64/aarch64, Windows: AMD64/ARM64)
-# Note: Windows ARM64 excluded due to lack of wheels for some dependencies (e.g., faiss-cpu)
-required-environments = [
-    "sys_platform == 'linux' and platform_machine == 'x86_64'",    # Linux Intel/AMD 64-bit
-    "sys_platform == 'linux' and platform_machine == 'aarch64'",   # Linux ARM 64-bit
-    "sys_platform == 'darwin'",                                     # macOS (both Intel and Apple Silicon)
-    "sys_platform == 'win32' and platform_machine == 'AMD64'",     # Windows Intel/AMD 64-bit
-]
-
 override-dependencies = [
     # temporary force a newer python-pptx
     "python-pptx>=1.0.2",
