@@ -2,6 +2,13 @@ import type { Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import {
+  closeAdvancedOptions,
+  disableInspectPanel,
+  enableInspectPanel,
+  openAdvancedOptions,
+} from "../../utils/open-advanced-options";
+import { unselectNodes } from "../../utils/unselect-nodes";
 
 // Helper function to verify prompt variables
 async function verifyPromptVariables(
@@ -10,7 +17,9 @@ async function verifyPromptVariables(
   expectedVars: string[],
   isFirstTime = true,
 ) {
-  await page.getByTestId("promptarea_prompt_template").click();
+  await unselectNodes(page);
+  await page.getByText("Prompt Template", { exact: true }).last().click();
+  await page.getByTestId("button_open_prompt_modal").click();
 
   // Use different selectors based on whether this is the first time or a subsequent edit
   if (isFirstTime) {
@@ -121,7 +130,8 @@ test(
 
     // Final verification - check that the template persists
     await page.getByTestId("div-generic-node").click();
-    await page.getByTestId("edit-button-modal").last().click();
+    await disableInspectPanel(page);
+    await openAdvancedOptions(page);
 
     const savedTemplate = await page
       .locator('//*[@id="promptarea_prompt_edit_template"]')
@@ -131,7 +141,8 @@ test(
     );
 
     // Close the final modal
-    await page.getByText("Close").last().click();
+    await closeAdvancedOptions(page);
+    await enableInspectPanel(page);
   },
 );
 
@@ -161,7 +172,7 @@ test(
     await page.mouse.up();
     await page.mouse.down();
     await adjustScreenView(page);
-    await page.getByTestId("promptarea_prompt_template").click();
+    await page.getByTestId("button_open_prompt_modal").click();
 
     await page
       .getByTestId("modal-promptarea_prompt_template")
@@ -198,6 +209,12 @@ test(
 
     await page.getByTestId("div-generic-node").click();
 
+    await page.waitForTimeout(500);
+
+    await adjustScreenView(page);
+
+    await page.getByTestId("div-generic-node").click();
+
     await page.getByTestId("more-options-modal").click();
     await page.getByTestId("save-button-modal").click();
 
@@ -218,7 +235,9 @@ test(
       expect(false).toBeTruthy();
     }
 
-    await page.getByTestId("edit-button-modal").last().click();
+    await disableInspectPanel(page);
+
+    await openAdvancedOptions(page);
 
     value =
       (await page
@@ -320,10 +339,10 @@ test(
       await page.locator('//*[@id="showprompt"]').isChecked(),
     ).toBeTruthy();
 
-    await page.getByText("Close").last().click();
+    await closeAdvancedOptions(page);
     await adjustScreenView(page, { numberOfZoomOut: 2 });
 
-    await page.getByTestId("edit-button-modal").last().click();
+    await openAdvancedOptions(page);
 
     await page.locator('//*[@id="showprompt1"]').click();
     expect(
@@ -355,6 +374,9 @@ test(
     if (value != "{prompt} example {prompt1}") {
       expect(false).toBeTruthy();
     }
+
+    await closeAdvancedOptions(page);
+    await enableInspectPanel(page);
   },
 );
 
@@ -393,32 +415,21 @@ test(
     // Click on the node to select it
     await page.getByTestId("div-generic-node").click();
 
-    // Wait for and click the edit button
-    await page.waitForSelector('[data-testid="edit-button-modal"]', {
-      timeout: 5000,
-    });
-    await page.getByTestId("edit-button-modal").last().click();
-
-    // Wait for the modal to open and the toggle to be visible
+    // Wait for toggle to be visible
     await page.waitForSelector(
-      '[data-testid="toggle_bool_edit_use_double_brackets"]',
+      '[data-testid="toggle_bool_use_double_brackets"]',
       {
         timeout: 5000,
       },
     );
 
     // Enable the "Use Double Brackets" toggle in the modal
-    await page.getByTestId("toggle_bool_edit_use_double_brackets").click();
+    await page.getByTestId("toggle_bool_use_double_brackets").click();
 
     // Verify the toggle is now checked
     expect(
-      await page
-        .getByTestId("toggle_bool_edit_use_double_brackets")
-        .isChecked(),
+      await page.getByTestId("toggle_bool_use_double_brackets").isChecked(),
     ).toBeTruthy();
-
-    // Close the modal
-    await page.getByText("Close").last().click();
 
     // Now test double bracket variable extraction - click the mustache prompt button
     await page.waitForSelector(
@@ -497,11 +508,12 @@ test(
     // Click on the node to select it
     await page.getByTestId("div-generic-node").click();
 
+    await disableInspectPanel(page);
     // Wait for and click the edit button
     await page.waitForSelector('[data-testid="edit-button-modal"]', {
       timeout: 5000,
     });
-    await page.getByTestId("edit-button-modal").last().click();
+    await openAdvancedOptions(page);
 
     // Wait for the modal to open and the toggle to be visible
     await page.waitForSelector(
@@ -522,7 +534,7 @@ test(
     ).toBeTruthy();
 
     // Close the modal
-    await page.getByText("Close").last().click();
+    await closeAdvancedOptions(page);
 
     // Test multiple double bracket variables - click the mustache prompt button
     await page.waitForSelector(
@@ -591,5 +603,138 @@ test(
 
     await page.getByTestId("textarea_str_age").fill("25");
     expect(await page.getByTestId("textarea_str_age").inputValue()).toBe("25");
+
+    await enableInspectPanel(page);
+  },
+);
+
+test(
+  "PromptTemplateComponent - Synchronized State",
+  { tag: ["@release", "@workspace"], timeout: 60000 },
+  async ({ page }) => {
+    await awaitBootstrapTest(page);
+
+    await page.waitForSelector('[data-testid="blank-flow"]', {
+      timeout: 30000,
+    });
+    await page.getByTestId("blank-flow").click();
+    await page.getByTestId("sidebar-search-input").click();
+    await page.getByTestId("sidebar-search-input").fill("prompt");
+
+    await page.waitForSelector(
+      '[data-testid="models_and_agentsPrompt Template"]',
+      {
+        timeout: 3000,
+      },
+    );
+
+    await page
+      .locator('//*[@id="models_and_agentsPrompt Template"]')
+      .dragTo(page.locator('//*[@id="react-flow-id"]'));
+    await page.mouse.up();
+    await page.mouse.down();
+    await adjustScreenView(page);
+
+    // Wait for the node to appear
+    await page.waitForSelector('[data-testid="div-generic-node"]', {
+      timeout: 5000,
+    });
+
+    // Click on the node to select it
+    await page.getByTestId("div-generic-node").click();
+
+    // Wait for toggle to be visible
+    await page.waitForSelector(
+      '[data-testid="toggle_bool_use_double_brackets"]',
+      {
+        timeout: 5000,
+      },
+    );
+
+    // Enable the "Use Double Brackets" toggle
+    await page.getByTestId("toggle_bool_use_double_brackets").click();
+
+    // Verify the toggle is now checked
+    expect(
+      await page.getByTestId("toggle_bool_use_double_brackets").isChecked(),
+    ).toBeTruthy();
+
+    await expect(page.getByText("{{+}}")).toBeVisible({
+      timeout: 5000,
+    });
+
+    await page.waitForSelector(
+      '[data-testid="button_open_mustache_prompt_modal"]',
+      {
+        timeout: 5000,
+      },
+    );
+    await page.getByTestId("button_open_mustache_prompt_modal").click();
+
+    // Wait for the prompt modal textarea
+    const mustacheTextareaId = "modal-mustachepromptarea_mustache_template";
+    await page.waitForSelector(`[data-testid="${mustacheTextareaId}"]`, {
+      timeout: 5000,
+    });
+
+    const testValue = "Hello {{name}}!";
+    await page.getByTestId(mustacheTextareaId).fill(testValue);
+
+    await page.getByTestId("genericModalBtnSave").click();
+
+    // Wait for modal to close
+    await page.waitForTimeout(500);
+
+    // Verify the accordion prompt component text content
+    await page.waitForSelector(
+      '[data-testid="mustachepromptarea_mustache_template"]',
+      { timeout: 5000 },
+    );
+    const accordionContent = await page
+      .getByTestId("mustachepromptarea_mustache_template")
+      .innerText();
+
+    // The content might contain hidden characters or specialized formatting
+    // We check if it contains our text, ignoring potential zero-width spaces or similar
+    // The actual text content should contain "Hello {{name}}!"
+    const cleanContent = accordionContent.replace(/[\u200B-\u200D\uFEFF]/g, "");
+    expect(cleanContent).toContain("Hello");
+    expect(cleanContent).toContain("{{name}}");
+    expect(cleanContent).toContain("!");
+
+    // Also verify that the variable highlighting span exists in the accordion
+    // Note: The structure might be complex inside the contenteditable
+    const highlightedSpan = await page.evaluate(() => {
+      const span = document.querySelector(
+        '[data-testid="mustachepromptarea_mustache_template"] span.chat-message-highlight',
+      );
+      return span ? span.textContent : null;
+    });
+    expect(highlightedSpan).toBe("{{name}}");
+
+    // NEW: Edit directly on the accordion component
+    const updatedTestValue = "Updated {{new_var}} content";
+    await page.getByTestId("mustachepromptarea_mustache_template").click();
+    await page.keyboard.press("ControlOrMeta+A");
+    await page.keyboard.press("Backspace");
+    await page.keyboard.type(updatedTestValue);
+
+    // Give it a moment to update state
+    await page.waitForTimeout(500);
+
+    // Open the modal again
+    await page.getByTestId("button_open_mustache_prompt_modal").click();
+
+    await page.getByTestId("edit-prompt-sanitized").click();
+
+    // Verify the changes reflected on the modal
+    const modalValue = await page.getByTestId(mustacheTextareaId).inputValue();
+    expect(modalValue).toBe(updatedTestValue);
+
+    // Verify variables in modal
+    const modalBadge = await page.locator('//*[@id="badge0"]').innerText();
+    expect(modalBadge).toBe("new_var");
+
+    await page.getByTestId("genericModalBtnSave").click();
   },
 );

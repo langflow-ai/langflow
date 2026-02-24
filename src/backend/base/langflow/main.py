@@ -38,6 +38,7 @@ from langflow.initial_setup.setup import (
     sync_flows_from_fs,
 )
 from langflow.middleware import ContentSizeLimitMiddleware
+from langflow.plugin_routes import load_plugin_routes
 from langflow.services.deps import (
     get_queue_service,
     get_service,
@@ -518,6 +519,12 @@ def create_app():
     app.include_router(health_check_router)
     app.include_router(log_router)
 
+    # --- plugin hook ---
+    # Discover and register additional routers provided by plugins
+    # via the ``langflow.plugins`` entry-point group.
+    # Each entry point must expose a callable ``register(app: FastAPI) -> None``.
+    load_plugin_routes(app)
+
     @app.exception_handler(Exception)
     async def exception_handler(_request: Request, exc: Exception):
         if isinstance(exc, HTTPException):
@@ -571,8 +578,8 @@ def setup_static_files(app: FastAPI, static_files_dir: Path) -> None:
 
     @app.exception_handler(404)
     async def custom_404_handler(_request, _exc):
-        # Return JSON for workflow API endpoints to prevent HTML responses
-        if _request.url.path.startswith("/api/v2/workflows"):
+        # Return JSON for all API endpoints to prevent HTML responses
+        if _request.url.path.startswith("/api"):
             # Extract detail from HTTPException if available
             detail = _exc.detail if isinstance(_exc, HTTPException) else "Not Found"
             return JSONResponse(
