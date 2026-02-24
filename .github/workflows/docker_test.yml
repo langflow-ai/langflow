@@ -70,6 +70,18 @@ jobs:
               exit 1
           fi
 
+      - name: Cleanup after main image
+        run: |
+          echo "=== Disk usage before cleanup ==="
+          df -h /
+          ${{ env.CONTAINER_RUNTIME }} rmi langflowai/langflow:latest-dev || true
+          ${{ env.CONTAINER_RUNTIME }} system prune -af || true
+          if command -v docker &> /dev/null; then
+            docker buildx prune -af || true
+          fi
+          echo "=== Disk usage after cleanup ==="
+          df -h /
+
       - name: Build backend image
         run: |
           ${{ env.CONTAINER_RUNTIME }} build -t langflowai/langflow-backend:latest-dev \
@@ -85,6 +97,19 @@ jobs:
               echo "Actual version: $version"
               exit 1
           fi
+
+      - name: Cleanup after backend image
+        run: |
+          echo "=== Disk usage before cleanup ==="
+          df -h /
+          ${{ env.CONTAINER_RUNTIME }} rmi langflowai/langflow-backend:latest-dev || true
+          ${{ env.CONTAINER_RUNTIME }} system prune -af || true
+          if command -v docker &> /dev/null; then
+            docker buildx prune -af || true
+          fi
+          echo "=== Disk usage after cleanup ==="
+          df -h /
+
       - name: Build frontend image
         run: |
           ${{ env.CONTAINER_RUNTIME }} build -t langflowai/langflow-frontend:latest-dev \
