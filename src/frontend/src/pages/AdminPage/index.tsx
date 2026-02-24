@@ -8,6 +8,7 @@ import {
   useUpdateUser,
 } from "@/controllers/API/queries/auth";
 import CustomLoader from "@/customization/components/custom-loader";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import IconComponent from "../../components/common/genericIconComponent";
 import ShadTooltip from "../../components/common/shadTooltipComponent";
 import { Button } from "../../components/ui/button";
@@ -51,6 +52,7 @@ export default function AdminPage() {
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { userData } = useContext(AuthContext);
+  const navigate = useCustomNavigate();
   const [totalRowsCount, setTotalRowsCount] = useState(0);
 
   const { mutate: mutateDeleteUser } = useDeleteUsers();
@@ -252,6 +254,9 @@ export default function AdminPage() {
         <div className="admin-page-panel flex h-full flex-col pb-8">
           <div className="main-page-nav-arrangement">
             <span className="main-page-nav-title">
+              <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+                <IconComponent name="ChevronLeft" className="w-5" />
+              </Button>
               <IconComponent name="Shield" className="w-6" />
               {ADMIN_HEADER_TITLE}
             </span>
@@ -259,7 +264,7 @@ export default function AdminPage() {
           <span className="admin-page-description-text">
             {ADMIN_HEADER_DESCRIPTION}
           </span>
-          <div className="flex w-full justify-between px-4">
+          <div className="flex w-full justify-between">
             <div className="flex w-96 items-center gap-4">
               <Input
                 placeholder="Search Username"
@@ -312,10 +317,10 @@ export default function AdminPage() {
               </div>
             </>
           ) : (
-            <>
+            <div className="flex flex-1 flex-col">
               <div
                 className={
-                  "m-4 h-fit overflow-x-hidden overflow-y-scroll rounded-md border-2 bg-background custom-scroll" +
+                  "my-4 flex-1 overflow-x-hidden overflow-y-scroll rounded-md border bg-background custom-scroll" +
                   (isPending ? " border-0" : "")
                 }
               >
@@ -336,7 +341,7 @@ export default function AdminPage() {
                     </TableRow>
                   </TableHeader>
                   {!isPending && (
-                    <TableBody>
+                    <TableBody className="border-b">
                       {filterUserList.map((user: UserInputType, index) => (
                         <TableRow key={index}>
                           <TableCell className="truncate py-2 font-medium">
@@ -495,14 +500,16 @@ export default function AdminPage() {
                 </Table>
               </div>
 
-              <PaginatorComponent
-                pageIndex={index}
-                pageSize={size}
-                totalRowsCount={totalRowsCount}
-                paginate={handleChangePagination}
-                rowsCount={PAGINATION_ROWS_COUNT}
-              ></PaginatorComponent>
-            </>
+              <div className="mt-auto">
+                <PaginatorComponent
+                  pageIndex={index}
+                  pageSize={size}
+                  totalRowsCount={totalRowsCount}
+                  paginate={handleChangePagination}
+                  rowsCount={PAGINATION_ROWS_COUNT}
+                ></PaginatorComponent>
+              </div>
+            </div>
           )}
         </div>
       )}

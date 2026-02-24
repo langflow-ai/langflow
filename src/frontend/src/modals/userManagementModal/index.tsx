@@ -52,9 +52,11 @@ export default function UserManagementModal({
         setIsActive(data.is_active);
         setIsSuperUser(data.is_superuser);
 
-        handleInput({ target: { name: "username", value: username } });
-        handleInput({ target: { name: "is_active", value: isActive } });
-        handleInput({ target: { name: "is_superuser", value: isSuperUser } });
+        handleInput({ target: { name: "username", value: data.username } });
+        handleInput({ target: { name: "is_active", value: data.is_active } });
+        handleInput({
+          target: { name: "is_superuser", value: data.is_superuser },
+        });
       }
     }
   }, [open]);
