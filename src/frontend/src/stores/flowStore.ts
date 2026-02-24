@@ -11,7 +11,10 @@ import { create } from "zustand";
 import { checkCodeValidity } from "@/CustomNodes/helpers/check-code-validity";
 import { MISSED_ERROR_ALERT } from "@/constants/alerts_constants";
 import { BROKEN_EDGES_WARNING } from "@/constants/constants";
-import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
+import {
+  ENABLE_DATASTAX_LANGFLOW,
+  ENABLE_INSPECTION_PANEL,
+} from "@/customization/feature-flags";
 import {
   track,
   trackDataLoaded,
@@ -37,6 +40,7 @@ import { buildFlowVerticesWithFallback } from "../utils/buildUtils";
 import {
   buildPositionDictionary,
   checkChatInput,
+  checkWebhookInput,
   cleanEdges,
   getConnectedSubgraph,
   getHandleId,
@@ -50,6 +54,7 @@ import {
 } from "../utils/reactflowUtils";
 import { getInputsAndOutputs } from "../utils/storeUtils";
 import useAlertStore from "./alertStore";
+import { filterSingletonComponent } from "./helpers/filter-singleton-component";
 import { useDarkStore } from "./darkStore";
 import useFlowsManagerStore from "./flowsManagerStore";
 import { useGlobalVariablesStore } from "./globalVariablesStore/globalVariables";
@@ -113,6 +118,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   nodes: [],
   edges: [],
   isBuilding: false,
+  buildStartTime: null,
+  buildDuration: null,
   stopBuilding: () => {
     get().buildController.abort();
     get().updateEdgesRunningByNodes(
@@ -248,7 +255,21 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
   },
   setIsBuilding: (isBuilding) => {
-    set({ isBuilding });
+    const current = get();
+    set({
+      isBuilding,
+      // Reset buildStartTime and buildDuration when a new build begins
+      buildStartTime:
+        isBuilding && !current.isBuilding ? null : current.buildStartTime,
+      buildDuration:
+        isBuilding && !current.isBuilding ? null : current.buildDuration,
+    });
+  },
+  setBuildStartTime: (time) => {
+    set({ buildStartTime: time });
+  },
+  setBuildDuration: (duration) => {
+    set({ buildDuration: duration });
   },
   setFlowState: (flowState) => {
     const newFlowState =
@@ -420,22 +441,19 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       selection.edges = selection.edges.concat(existingEdgesToCopy);
     }
 
-    if (
-      selection.nodes.some((node) => node.data.type === "ChatInput") &&
-      checkChatInput(get().nodes)
-    ) {
-      useAlertStore.getState().setNoticeData({
-        title: "You can only have one Chat Input component in a flow.",
-      });
-      selection.nodes = selection.nodes.filter(
-        (node) => node.data.type !== "ChatInput",
-      );
-      selection.edges = selection.edges.filter(
-        (edge) =>
-          selection.nodes.some((node) => edge.source === node.id) &&
-          selection.nodes.some((node) => edge.target === node.id),
-      );
-    }
+    filterSingletonComponent(
+      selection,
+      "ChatInput",
+      checkChatInput(get().nodes),
+      "You can only have one Chat Input component in a flow.",
+    );
+
+    filterSingletonComponent(
+      selection,
+      "Webhook",
+      checkWebhookInput(get().nodes),
+      "You can only have one Webhook component in a flow.",
+    );
 
     let minimumX = Infinity;
     let minimumY = Infinity;
@@ -486,6 +504,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           ...cloneDeep(node.data),
           id: newId,
         },
+        // Preserve width and height for noteNodes (sticky notes)
+        ...(node.width !== undefined && { width: node.width }),
+        ...(node.height !== undefined && { height: node.height }),
       } as AllNodeType;
 
       updateGroupRecursion(
@@ -1113,6 +1134,16 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   helperLineEnabled: false,
   setHelperLineEnabled: (helperLineEnabled: boolean) => {
     set({ helperLineEnabled });
+  },
+  inspectionPanelVisible: ENABLE_INSPECTION_PANEL
+    ? localStorage.getItem("inspectionPanelVisible") !== null
+      ? localStorage.getItem("inspectionPanelVisible") === "true"
+      : true
+    : false,
+  setInspectionPanelVisible: (visible: boolean) => {
+    if (!ENABLE_INSPECTION_PANEL) return;
+    localStorage.setItem("inspectionPanelVisible", String(visible));
+    set({ inspectionPanelVisible: visible });
   },
   setNewChatOnPlayground: (newChat: boolean) => {
     set({ newChatOnPlayground: newChat });

@@ -11,8 +11,17 @@ from opensearchpy import OpenSearch, helpers
 from opensearchpy.exceptions import OpenSearchException, RequestError
 
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
-from lfx.base.vectorstores.vector_store_connection_decorator import vector_store_connection
-from lfx.io import BoolInput, DropdownInput, HandleInput, IntInput, MultilineInput, SecretStrInput, StrInput, TableInput
+from lfx.io import (
+    BoolInput,
+    DropdownInput,
+    HandleInput,
+    IntInput,
+    MultilineInput,
+    Output,
+    SecretStrInput,
+    StrInput,
+    TableInput,
+)
 from lfx.log import logger
 from lfx.schema.data import Data
 
@@ -53,7 +62,6 @@ def get_embedding_field_name(model_name: str) -> str:
     return f"chunk_embedding_{normalize_model_name(model_name)}"
 
 
-@vector_store_connection
 class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreComponent):
     """OpenSearch Vector Store Component with Multi-Model Hybrid Search Capabilities.
 
@@ -84,7 +92,10 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
     display_name: str = "OpenSearch (Multi-Model Multi-Embedding)"
     icon: str = "OpenSearch"
     description: str = (
-        "Store and search documents using OpenSearch with multi-model hybrid semantic and keyword search."
+        "Store and search documents using OpenSearch with multi-model hybrid semantic and keyword search. "
+        "To search use the tools search_documents and raw_search. "
+        "Search documents takes a query for vector search, for example\n"
+        '  {search_query: "components in openrag"}'
     )
 
     # Keys we consider baseline
@@ -325,7 +336,58 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
                 "Disable for self-signed certificates in development environments."
             ),
         ),
+        # DictInput(name="query", display_name="Query", input_types=["Data"], is_list=False, tool_mode=True),
     ]
+    outputs = [
+        Output(
+            display_name="Search Results",
+            name="search_results",
+            method="search_documents",
+        ),
+        Output(display_name="Raw Search", name="raw_search", method="raw_search"),
+    ]
+
+    def raw_search(self, query: str | None = None) -> Data:
+        """Execute a raw OpenSearch query against the target index.
+
+        Args:
+            query (dict[str, Any]): The OpenSearch query DSL dictionary.
+
+        Returns:
+            Data: Search results as a Data object.
+
+        Raises:
+            ValueError: If 'query' is not a valid OpenSearch query (must be a non-empty dict).
+        """
+        raw_query = query if query is not None else self.search_query
+        if isinstance(raw_query, str):
+            raw_query = json.loads(raw_query)
+        client = self.build_client()
+        logger.info(f"query: {raw_query}")
+        resp = client.search(
+            index=self.index_name,
+            body=raw_query,
+            params={"terminate_after": 0},
+        )
+        # Remove any _source keys whose value is a list of floats (embedding vectors)
+        # Minimum length threshold to identify embedding vectors
+        min_vector_length = 100
+
+        def is_vector(val):
+            # Accepts if it's a list of numbers (float or int) and has reasonable vector length
+            return (
+                isinstance(val, list) and len(val) > min_vector_length and all(isinstance(x, (float, int)) for x in val)
+            )
+
+        if "hits" in resp and "hits" in resp["hits"]:
+            for hit in resp["hits"]["hits"]:
+                source = hit.get("_source")
+                if isinstance(source, dict):
+                    keys_to_remove = [k for k, v in source.items() if is_vector(v)]
+                    for k in keys_to_remove:
+                        source.pop(k)
+        logger.info(f"Raw search response (all embedding vectors removed): {resp}")
+        return Data(**resp)
 
     def _get_embedding_model_name(self, embedding_obj=None) -> str:
         """Get the embedding model name from component config or embedding object.
@@ -455,6 +517,11 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         This allows adding new embedding models without recreating the entire index.
         Also ensures the embedding_model tracking field exists.
 
+        Note: Some OpenSearch versions/configurations have issues with dynamically adding
+        knn_vector mappings (NullPointerException). This method checks if the field
+        already exists before attempting to add it, and gracefully skips if the field
+        is already properly configured.
+
         Args:
             client: OpenSearch client instance
             index_name: Target index name
@@ -465,6 +532,24 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
             ef_construction: Construction parameter
             m: HNSW parameter
         """
+        # First, check if the field already exists and is properly mapped
+        properties = self._get_index_properties(client)
+        if self._is_knn_vector_field(properties, field_name):
+            # Field already exists as knn_vector - verify dimensions match
+            existing_dim = self._get_field_dimension(properties, field_name)
+            if existing_dim is not None and existing_dim != dim:
+                logger.warning(
+                    f"Field '{field_name}' exists with dimension {existing_dim}, "
+                    f"but current embedding has dimension {dim}. Using existing mapping."
+                )
+            else:
+                logger.info(
+                    f"[OpenSearchMultimodal] Field '{field_name}' already exists"
+                    f"as knn_vector with matching dimensions - skipping mapping update"
+                )
+            return
+
+        # Field doesn't exist, try to add the mapping
         try:
             mapping = {
                 "properties": {
@@ -486,13 +571,26 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
             client.indices.put_mapping(index=index_name, body=mapping)
             logger.info(f"Added/updated embedding field mapping: {field_name}")
         except Exception as e:
-            logger.warning(f"Could not add embedding field mapping for {field_name}: {e}")
+            # Check if this is the known OpenSearch k-NN NullPointerException issue
+            error_str = str(e).lower()
+            if "null" in error_str or "nullpointerexception" in error_str:
+                logger.warning(
+                    f"[OpenSearchMultimodal] Could not add embedding field mapping for {field_name}"
+                    f"due to OpenSearch k-NN plugin issue: {e}. "
+                    f"This is a known issue with some OpenSearch versions. "
+                    f"[OpenSearchMultimodal] Skipping mapping update. "
+                    f"Please ensure the index has the correct mapping for KNN search to work."
+                )
+                # Skip and continue - ingestion will proceed, but KNN search may fail if mapping doesn't exist
+                return
+            logger.warning(f"[OpenSearchMultimodal] Could not add embedding field mapping for {field_name}: {e}")
             raise
 
+        # Verify the field was added correctly
         properties = self._get_index_properties(client)
         if not self._is_knn_vector_field(properties, field_name):
             msg = f"Field '{field_name}' is not mapped as knn_vector. Current mapping: {properties.get(field_name)}"
-            logger.aerror(msg)
+            logger.error(msg)
             raise ValueError(msg)
 
     def _validate_aoss_with_engines(self, *, is_aoss: bool, engine: str) -> None:
@@ -562,6 +660,7 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         Returns:
             List of document IDs that were successfully ingested
         """
+        logger.debug(f"[OpenSearchMultimodal] Bulk ingesting embeddings for {index_name}")
         if not mapping:
             mapping = {}
 
@@ -628,6 +727,7 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         Returns:
             Configured OpenSearch client ready for operations
         """
+        logger.debug("[OpenSearchMultimodal] Building OpenSearch client")
         auth_kwargs = self._build_auth_kwargs()
         return OpenSearch(
             hosts=[self.opensearch_url],
@@ -646,10 +746,10 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         # Check if we're in ingestion-only mode (no search query)
         has_search_query = bool((self.search_query or "").strip())
         if not has_search_query:
-            logger.debug("Ingestion-only mode activated: search operations will be skipped")
-            logger.debug("Starting ingestion mode...")
+            logger.debug("[OpenSearchMultimodal] Ingestion-only mode activated: search operations will be skipped")
+            logger.debug("[OpenSearchMultimodal] Starting ingestion mode...")
 
-        logger.warning(f"Embedding: {self.embedding}")
+        logger.debug(f"[OpenSearchMultimodal] Embedding: {self.embedding}")
         self._add_documents_to_vector_store(client=client)
         return client
 
@@ -666,16 +766,16 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         Args:
             client: OpenSearch client for performing operations
         """
-        logger.debug("[INGESTION] _add_documents_to_vector_store called")
+        logger.debug("[OpenSearchMultimodal][INGESTION] _add_documents_to_vector_store called")
         # Convert DataFrame to Data if needed using parent's method
         self.ingest_data = self._prepare_ingest_data()
 
         logger.debug(
-            f"[INGESTION] ingest_data type: "
+            f"[OpenSearchMultimodal][INGESTION] ingest_data type: "
             f"{type(self.ingest_data)}, length: {len(self.ingest_data) if self.ingest_data else 0}"
         )
         logger.debug(
-            f"[INGESTION] ingest_data content: "
+            f"[OpenSearchMultimodal][INGESTION] ingest_data content: "
             f"{self.ingest_data[:2] if self.ingest_data and len(self.ingest_data) > 0 else 'empty'}"
         )
 
@@ -700,8 +800,8 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
             self.log("Embedding returned None (fail-safe mode enabled). Skipping document ingestion.")
             return
 
-        logger.debug(f"[INGESTION] Valid embeddings after filtering: {len(embeddings_list)}")
-        self.log(f"Available embedding models: {len(embeddings_list)}")
+        logger.debug(f"[OpenSearchMultimodal][INGESTION] Valid embeddings after filtering: {len(embeddings_list)}")
+        self.log(f"[OpenSearchMultimodal][INGESTION] Available embedding models: {len(embeddings_list)}")
 
         # Select the embedding to use for ingestion
         selected_embedding = None

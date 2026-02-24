@@ -31,6 +31,8 @@ export type BaseInputProps<valueType = any> = {
   searchCategory?: string[];
   buttonMetadata?: { variant?: string; icon?: string };
   connectionLink?: string;
+  showParameter?: boolean;
+  inspectionPanel?: boolean;
 };
 
 // Generic type for composing input props
@@ -81,6 +83,7 @@ export type FileComponentType = {
 
 export type PromptAreaComponentType = {
   field_name?: string;
+  isDoubleBrackets?: boolean;
 };
 
 export type LinkComponentType = {

@@ -8,7 +8,7 @@ export async function openAddMcpServerModal(page: Page) {
   } else {
     // Otherwise use the dropdown
     await page.getByTestId("mcp-server-dropdown").click({ timeout: 3000 });
-    await page.getByText("Add MCP Server", { exact: true }).click({
+    await page.getByText("Add MCP Server", { exact: true }).last().click({
       timeout: 5000,
     });
   }
