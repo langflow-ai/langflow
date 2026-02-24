@@ -7,6 +7,7 @@ from the native tracer, enabling the Trace View in the frontend.
 import asyncio
 import logging
 import math
+import re
 from datetime import datetime, timezone
 from typing import Annotated, Any
 from uuid import UUID
@@ -26,6 +27,8 @@ from langflow.services.database.models.traces.model import (
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import session_scope
 
+_SANITIZE_RE = re.compile(r"[^ -~]+")
+
 logger = logging.getLogger(__name__)
 
 # Timeout for database operations (in seconds)
@@ -37,7 +40,7 @@ router = APIRouter(prefix="/monitor/traces", tags=["Traces"])
 def _sanitize_query_string(value: str | None, max_len: int = 50) -> str | None:
     if value is None:
         return None
-    cleaned = "".join(ch for ch in value if " " <= ch <= "~")
+    cleaned = _SANITIZE_RE.sub("", value)
     return cleaned.strip()[:max_len] if cleaned else None
 
 
