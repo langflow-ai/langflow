@@ -10,11 +10,7 @@ test("user must be able to move flow from folder", async ({ page }) => {
   await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
-  await page.waitForTimeout(1000);
-
   await renameFlow(page, { flowName: randomName });
-
-  await page.waitForTimeout(1000);
 
   await page.getByTestId("icon-ChevronLeft").click();
   await page.waitForSelector('[data-testid="add-project-button"]', {
@@ -27,8 +23,6 @@ test("user must be able to move flow from folder", async ({ page }) => {
   await page.waitForTimeout(1000);
 
   await page.getByTestId("sidebar-nav-Starter Project").click();
-
-  await page.waitForTimeout(500);
 
   await page.getByText(randomName).hover();
 

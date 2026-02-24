@@ -37,7 +37,7 @@ const NoInputView = ({
           </Button>
         )}
 
-        <p className="text-muted-foreground text-sm">
+        <p className="text-muted-foreground">
           Add a{" "}
           <a
             className="underline underline-offset-4"

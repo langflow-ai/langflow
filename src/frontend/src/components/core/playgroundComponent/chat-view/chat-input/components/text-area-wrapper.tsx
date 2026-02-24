@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import {
-  CHAT_INPUT_MIN_HEIGHT,
   CHAT_INPUT_MAX_HEIGHT,
+  CHAT_INPUT_MIN_HEIGHT,
 } from "@/constants/constants";
 import { useUtilityStore } from "@/stores/utilityStore";
 import type { FilePreviewType } from "@/types/components";
@@ -117,37 +117,6 @@ const TextAreaWrapper = ({
       resizeTextarea(textarea, chatValue, previousScrollHeightRef);
     }
   }, [chatValue, inputRef]);
-
-  const chatValueRef = useRef(chatValue);
-  const previousWidthRef = useRef<number>(0);
-
-  useEffect(() => {
-    chatValueRef.current = chatValue;
-  }, [chatValue]);
-
-  useEffect(() => {
-    const textarea = inputRef.current;
-    if (!textarea) return;
-
-    const resizeObserver = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        if (entry.contentRect.width !== previousWidthRef.current) {
-          previousWidthRef.current = entry.contentRect.width;
-          resizeTextarea(
-            textarea,
-            chatValueRef.current,
-            previousScrollHeightRef,
-          );
-        }
-      }
-    });
-
-    resizeObserver.observe(textarea);
-
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, [inputRef]);
 
   const handleChange = useCallback(
     (event: React.ChangeEvent<HTMLTextAreaElement>) => {

@@ -33,8 +33,6 @@ const ExportModal = forwardRef(
     const currentFlowOnPage = useFlowStore((state) => state.currentFlow);
     const currentFlow = props.flowData ?? currentFlowOnPage;
     const isBuilding = useFlowStore((state) => state.isBuilding);
-    const [locked, setLocked] = useState<boolean>(currentFlow?.locked ?? false);
-
     useEffect(() => {
       setName(currentFlow?.name ?? "");
       setDescription(currentFlow?.description ?? "");
@@ -57,20 +55,21 @@ const ExportModal = forwardRef(
         setOpen={setOpen}
         onSubmit={async () => {
           try {
-            const flowToExport: FlowType = {
-              id: currentFlow!.id,
-              data: currentFlow!.data!,
-              description,
-              name,
-              last_tested_version: version,
-              endpoint_name: currentFlow!.endpoint_name,
-              is_component: false,
-              tags: currentFlow!.tags,
-              locked,
-            };
-
             if (checked) {
-              await downloadFlow(flowToExport, name!, description);
+              await downloadFlow(
+                {
+                  id: currentFlow!.id,
+                  data: currentFlow!.data!,
+                  description,
+                  name,
+                  last_tested_version: version,
+                  endpoint_name: currentFlow!.endpoint_name,
+                  is_component: false,
+                  tags: currentFlow!.tags,
+                },
+                name!,
+                description,
+              );
 
               setNoticeData({
                 title: API_WARNING_NOTICE_ALERT,
@@ -79,7 +78,16 @@ const ExportModal = forwardRef(
               track("Flow Exported", { flowId: currentFlow!.id });
             } else {
               await downloadFlow(
-                removeApiKeys(flowToExport),
+                removeApiKeys({
+                  id: currentFlow!.id,
+                  data: currentFlow!.data!,
+                  description,
+                  name,
+                  last_tested_version: version,
+                  endpoint_name: currentFlow!.endpoint_name,
+                  is_component: false,
+                  tags: currentFlow!.tags,
+                }),
                 name!,
                 description,
               );
@@ -110,8 +118,6 @@ const ExportModal = forwardRef(
             description={description}
             setName={setName}
             setDescription={setDescription}
-            locked={locked}
-            setLocked={setLocked}
           />
           <div className="mt-3 flex items-center space-x-2">
             <Checkbox

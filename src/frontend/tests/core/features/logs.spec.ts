@@ -39,10 +39,9 @@ test(
       filledApiKey = await page.getByTestId("remove-icon-badge").count();
     }
 
-    await page.getByRole("button", { name: "Logs" }).first().click();
-    await expect(
-      page.getByText("No Data Available", { exact: true }),
-    ).toBeVisible();
+    await page.getByText("Logs").click();
+    await page.getByText("No Data Available", { exact: true }).isVisible();
+    await page.keyboard.press("Escape");
     await page.getByText("Close").last().click();
     await page.waitForTimeout(500);
 
@@ -62,7 +61,7 @@ test(
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
-    await page.getByRole("button", { name: "Logs" }).first().click();
+    await page.getByText("Logs").click();
 
     // Verify the new column headers are present (inside the dialog)
     const dialog = page.getByLabel("Dialog");
@@ -78,6 +77,7 @@ test(
     // Verify success status badge is displayed (scoped to dialog)
     await expect(dialog.locator("text=success").first()).toBeVisible();
 
+    await page.keyboard.press("Escape");
     await page.getByText("Close").last().click();
     await page.waitForTimeout(500);
 
