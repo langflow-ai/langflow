@@ -1,6 +1,9 @@
 import type { UseMutationResult } from "@tanstack/react-query";
 import buildQueryStringUrl from "@/controllers/utils/create-query-param-string";
-import type { useMutationFunctionType, useQueryFunctionType } from "@/types/api";
+import type {
+  useMutationFunctionType,
+  useQueryFunctionType,
+} from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -218,9 +221,13 @@ export const usePostCreateDeployment: useMutationFunctionType<
     DeploymentCreateResponse,
     Error,
     DeploymentCreatePayload
-  > = mutate(["usePostCreateDeployment", params.providerId], createDeploymentFn, {
-    ...options,
-  });
+  > = mutate(
+    ["usePostCreateDeployment", params.providerId],
+    createDeploymentFn,
+    {
+      ...options,
+    },
+  );
 
   return mutation;
 };

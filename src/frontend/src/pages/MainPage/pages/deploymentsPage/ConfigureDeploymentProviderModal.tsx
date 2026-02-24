@@ -1,10 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  type DeploymentProvider,
-  useDeleteDeploymentProvider,
-  usePatchUpdateDeploymentProvider,
-} from "@/controllers/API/queries/deployments/use-deployments";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,6 +10,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import {
+  type DeploymentProvider,
+  useDeleteDeploymentProvider,
+  usePatchUpdateDeploymentProvider,
+} from "@/controllers/API/queries/deployments/use-deployments";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import useAlertStore from "@/stores/alertStore";
 
@@ -42,9 +42,8 @@ export const ConfigureDeploymentProviderModal = ({
   const providerKey = provider?.provider_key || "";
   const isWatsonxProvider = providerKey === "watsonx-orchestrate";
 
-  const { mutate: updateProvider, isPending } = usePatchUpdateDeploymentProvider(
-    { providerId },
-  );
+  const { mutate: updateProvider, isPending } =
+    usePatchUpdateDeploymentProvider({ providerId });
   const { mutate: deleteProvider, isPending: isDeleting } =
     useDeleteDeploymentProvider({ providerId });
 
@@ -207,7 +206,9 @@ export const ConfigureDeploymentProviderModal = ({
 
           {!isWatsonxProvider && (
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium">Account ID (optional)</label>
+              <label className="text-sm font-medium">
+                Account ID (optional)
+              </label>
               <Input
                 value={accountId}
                 onChange={(event) => setAccountId(event.target.value)}

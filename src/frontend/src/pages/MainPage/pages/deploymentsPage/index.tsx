@@ -1,15 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
-import {
-  type DeploymentProvider,
-  type DeploymentCreatePayload,
-  useGetDeploymentConfigs,
-  useGetDeployments,
-  useGetDeploymentProviders,
-  useGetDeploymentSnapshots,
-  usePostCreateDeployment,
-} from "@/controllers/API/queries/deployments/use-deployments";
-import { useGetRefreshFlowsQuery } from "@/controllers/API/queries/flows/use-get-refresh-flows-query";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
 import { Button } from "@/components/ui/button";
@@ -21,20 +11,30 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  type DeploymentCreatePayload,
+  type DeploymentProvider,
+  useGetDeploymentConfigs,
+  useGetDeploymentProviders,
+  useGetDeploymentSnapshots,
+  useGetDeployments,
+  usePostCreateDeployment,
+} from "@/controllers/API/queries/deployments/use-deployments";
+import { useGetRefreshFlowsQuery } from "@/controllers/API/queries/flows/use-get-refresh-flows-query";
 import { StepperModal, StepperModalFooter } from "@/modals/stepperModal";
 import useAlertStore from "@/stores/alertStore";
 import type { FlowType } from "@/types/flow";
+import { ConfigureDeploymentProviderModal } from "./ConfigureDeploymentProviderModal";
 import { columnDefs } from "./columnDefs";
 import { TOGGLE_OPTIONS, TOTAL_STEPS } from "./constants";
 import { DeploymentProvidersView } from "./DeploymentProvidersView";
+import { RegisterDeploymentProviderModal } from "./RegisterDeploymentProviderModal";
 import { StepAttach } from "./steps/StepAttach";
 import { StepBasics } from "./steps/StepBasics";
 import { StepConfiguration } from "./steps/StepConfiguration";
 import { StepReview } from "./steps/StepReview";
 import { StepScope } from "./steps/StepScope";
 import { useDeploymentForm } from "./useDeploymentForm";
-import { ConfigureDeploymentProviderModal } from "./ConfigureDeploymentProviderModal";
-import { RegisterDeploymentProviderModal } from "./RegisterDeploymentProviderModal";
 
 type DeploymentTableRow = {
   name: string;
@@ -109,7 +109,9 @@ const ProviderOptionIcon = ({ provider }: { provider: DeploymentProvider }) => {
   );
 };
 
-const buildRawFlowPayload = (flow: FlowType): Record<string, unknown> | null => {
+const buildRawFlowPayload = (
+  flow: FlowType,
+): Record<string, unknown> | null => {
   if (!flow.data) {
     return null;
   }
@@ -187,7 +189,9 @@ const DeploymentsTab = () => {
   }, [providers, selectedProviderId]);
 
   const providerId = selectedProviderId || providers[0]?.id || "";
-  const selectedProvider = providers.find((provider) => provider.id === providerId);
+  const selectedProvider = providers.find(
+    (provider) => provider.id === providerId,
+  );
   const selectedProviderLabel = selectedProvider
     ? getProviderAccountLabel(selectedProvider)
     : "Select provider account";
@@ -245,9 +249,10 @@ const DeploymentsTab = () => {
         Array.isArray(deployment.provider_data.snapshot_ids)
           ? deployment.provider_data.snapshot_ids
           : [];
-      const mode = typeof deployment.provider_data?.mode === "string"
-        ? deployment.provider_data.mode
-        : undefined;
+      const mode =
+        typeof deployment.provider_data?.mode === "string"
+          ? deployment.provider_data.mode
+          : undefined;
 
       return {
         name: deployment.name,
@@ -267,7 +272,9 @@ const DeploymentsTab = () => {
       flows.map((flow) => ({
         id: flow.id,
         name: flow.name,
-        updatedDate: formatDateLabel(flow.updated_at || flow.date_created || null),
+        updatedDate: formatDateLabel(
+          flow.updated_at || flow.date_created || null,
+        ),
         snapshotDate: null,
       })),
     [flows],
@@ -435,209 +442,213 @@ const DeploymentsTab = () => {
         </div>
       ) : (
         <>
-      <div className="flex justify-between items-center">
-        <div className="relative flex h-9 items-center rounded-lg border border-border bg-background p-1">
-          <div
-            className="absolute h-7 rounded-md bg-muted shadow-sm transition-all duration-200"
-            style={{
-              width: activeView === "Live Deployments" ? 133 : 175,
-              left: activeView === "Live Deployments" ? "4px" : 141,
-            }}
-          />
-          {TOGGLE_OPTIONS.map((option) => (
-            <button
-              key={option}
-              onClick={() => setActiveView(option)}
-              className={`relative z-10 flex-1 whitespace-nowrap rounded-md px-3 py-1 text-center text-sm font-medium transition-colors ${
-                activeView === option
-                  ? "text-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {option}
-            </button>
-          ))}
-        </div>
-        <Button
-          className="flex items-center gap-2 font-semibold"
-          disabled={!providerId && activeView === "Live Deployments"}
-          onClick={() => {
-            if (activeView === "Deployment Providers") {
-              setRegisterProviderOpen(true);
-            } else {
-              handleOpenChange(true);
-            }
-          }}
-        >
-          <ForwardedIconComponent name="Plus" />{" "}
-          {activeView === "Deployment Providers"
-            ? "Add Provider"
-            : "New Deployment"}
-        </Button>
-      </div>
-
-      {activeView === "Deployment Providers" && (
-        <div className="pt-4">
-          <DeploymentProvidersView
-            providers={providers}
-            configurations={deploymentConfigs}
-            selectedProviderId={providerId || null}
-            onSelectProvider={setSelectedProviderId}
-            onConfigureProvider={handleConfigureProvider}
-            selectedProviderDeploymentCount={liveDeployments.length}
-            isLoadingProviders={providersQuery.isLoading}
-            isLoadingConfigurations={configsQuery.isLoading}
-          />
-        </div>
-      )}
-
-      {activeView === "Live Deployments" && (
-        <div className="flex h-full flex-col pt-4">
-          <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
-            <span className="text-muted-foreground">Provider Account:</span>
-            <Select
-              value={providerId || undefined}
-              onValueChange={setSelectedProviderId}
-              disabled={providers.length === 0}
-            >
-              <SelectTrigger
-                className="h-8 min-w-[250px] max-w-full flex-1 bg-background text-foreground sm:w-[360px] sm:flex-none"
-                title={selectedProviderLabel}
-              >
-                <span className="flex min-w-0 items-center gap-2">
-                  {selectedProvider && (
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-zinc-700">
-                      <ProviderOptionIcon provider={selectedProvider} />
-                    </span>
-                  )}
-                  <span className="truncate text-left">{selectedProviderLabel}</span>
-                </span>
-              </SelectTrigger>
-              <SelectContent>
-                {providers.map((provider) => (
-                  <SelectItem key={provider.id} value={provider.id}>
-                    <div className="flex items-center gap-2">
-                      <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-zinc-700">
-                        <ProviderOptionIcon provider={provider} />
-                      </div>
-                      <span className="truncate">{getProviderAccountLabel(provider)}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="relative h-full">
-            {deploymentsQuery.isLoading ? (
-              <DeploymentsTableSkeleton />
-            ) : (
-              <TableComponent
-                rowHeight={65}
-                cellSelection={false}
-                tableOptions={{ hide_options: true }}
-                columnDefs={columnDefs}
-                rowData={deploymentRows}
-                className="w-full ag-no-border"
-                pagination
-                quickFilterText=""
-                gridOptions={{
-                  ensureDomOrder: true,
-                  colResizeDefault: "shift",
+          <div className="flex justify-between items-center">
+            <div className="relative flex h-9 items-center rounded-lg border border-border bg-background p-1">
+              <div
+                className="absolute h-7 rounded-md bg-muted shadow-sm transition-all duration-200"
+                style={{
+                  width: activeView === "Live Deployments" ? 133 : 175,
+                  left: activeView === "Live Deployments" ? "4px" : 141,
                 }}
               />
-            )}
-            {!deploymentsQuery.isLoading && deploymentRows.length === 0 && (
-              <div className="px-1 pt-3 text-sm text-muted-foreground">
-                No deployments found for the selected provider.
-              </div>
-            )}
+              {TOGGLE_OPTIONS.map((option) => (
+                <button
+                  key={option}
+                  onClick={() => setActiveView(option)}
+                  className={`relative z-10 flex-1 whitespace-nowrap rounded-md px-3 py-1 text-center text-sm font-medium transition-colors ${
+                    activeView === option
+                      ? "text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+            <Button
+              className="flex items-center gap-2 font-semibold"
+              disabled={!providerId && activeView === "Live Deployments"}
+              onClick={() => {
+                if (activeView === "Deployment Providers") {
+                  setRegisterProviderOpen(true);
+                } else {
+                  handleOpenChange(true);
+                }
+              }}
+            >
+              <ForwardedIconComponent name="Plus" />{" "}
+              {activeView === "Deployment Providers"
+                ? "Add Provider"
+                : "New Deployment"}
+            </Button>
           </div>
-        </div>
-      )}
-      <StepperModal
-        open={newDeploymentOpen}
-        onOpenChange={handleOpenChange}
-        currentStep={currentStep}
-        totalSteps={TOTAL_STEPS}
-        title="Create Deployment"
-        contentClassName="bg-secondary"
-        icon="Rocket"
-        description="Deploy your Langflow workflows to watsonx Orchestrate"
-        showProgress
-        width="w-[800px]"
-        height="h-[700px]"
-        size="medium-h-full"
-        footer={
-          <StepperModalFooter
+
+          {activeView === "Deployment Providers" && (
+            <div className="pt-4">
+              <DeploymentProvidersView
+                providers={providers}
+                configurations={deploymentConfigs}
+                selectedProviderId={providerId || null}
+                onSelectProvider={setSelectedProviderId}
+                onConfigureProvider={handleConfigureProvider}
+                selectedProviderDeploymentCount={liveDeployments.length}
+                isLoadingProviders={providersQuery.isLoading}
+                isLoadingConfigurations={configsQuery.isLoading}
+              />
+            </div>
+          )}
+
+          {activeView === "Live Deployments" && (
+            <div className="flex h-full flex-col pt-4">
+              <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
+                <span className="text-muted-foreground">Provider Account:</span>
+                <Select
+                  value={providerId || undefined}
+                  onValueChange={setSelectedProviderId}
+                  disabled={providers.length === 0}
+                >
+                  <SelectTrigger
+                    className="h-8 min-w-[250px] max-w-full flex-1 bg-background text-foreground sm:w-[360px] sm:flex-none"
+                    title={selectedProviderLabel}
+                  >
+                    <span className="flex min-w-0 items-center gap-2">
+                      {selectedProvider && (
+                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-zinc-700">
+                          <ProviderOptionIcon provider={selectedProvider} />
+                        </span>
+                      )}
+                      <span className="truncate text-left">
+                        {selectedProviderLabel}
+                      </span>
+                    </span>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {providers.map((provider) => (
+                      <SelectItem key={provider.id} value={provider.id}>
+                        <div className="flex items-center gap-2">
+                          <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-zinc-700">
+                            <ProviderOptionIcon provider={provider} />
+                          </div>
+                          <span className="truncate">
+                            {getProviderAccountLabel(provider)}
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="relative h-full">
+                {deploymentsQuery.isLoading ? (
+                  <DeploymentsTableSkeleton />
+                ) : (
+                  <TableComponent
+                    rowHeight={65}
+                    cellSelection={false}
+                    tableOptions={{ hide_options: true }}
+                    columnDefs={columnDefs}
+                    rowData={deploymentRows}
+                    className="w-full ag-no-border"
+                    pagination
+                    quickFilterText=""
+                    gridOptions={{
+                      ensureDomOrder: true,
+                      colResizeDefault: "shift",
+                    }}
+                  />
+                )}
+                {!deploymentsQuery.isLoading && deploymentRows.length === 0 && (
+                  <div className="px-1 pt-3 text-sm text-muted-foreground">
+                    No deployments found for the selected provider.
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          <StepperModal
+            open={newDeploymentOpen}
+            onOpenChange={handleOpenChange}
             currentStep={currentStep}
             totalSteps={TOTAL_STEPS}
-            onBack={handleBack}
-            onNext={handleNext}
-            onSubmit={handleCreateDeployment}
-            nextDisabled={
-              (currentStep === 1 && !deploymentName.trim()) ||
-              (currentStep === 2 && selectedItems.size === 0) ||
-              (currentStep === 3 && !configName.trim())
+            title="Create Deployment"
+            contentClassName="bg-secondary"
+            icon="Rocket"
+            description="Deploy your Langflow workflows to watsonx Orchestrate"
+            showProgress
+            width="w-[800px]"
+            height="h-[700px]"
+            size="medium-h-full"
+            footer={
+              <StepperModalFooter
+                currentStep={currentStep}
+                totalSteps={TOTAL_STEPS}
+                onBack={handleBack}
+                onNext={handleNext}
+                onSubmit={handleCreateDeployment}
+                nextDisabled={
+                  (currentStep === 1 && !deploymentName.trim()) ||
+                  (currentStep === 2 && selectedItems.size === 0) ||
+                  (currentStep === 3 && !configName.trim())
+                }
+                submitLabel="Deployment"
+              />
             }
-            submitLabel="Deployment"
-          />
-        }
-      >
-        {currentStep === 1 && (
-          <StepBasics
-            deploymentName={deploymentName}
-            setDeploymentName={setDeploymentName}
-            deploymentDescription={deploymentDescription}
-            setDeploymentDescription={setDeploymentDescription}
-            deploymentType={deploymentType}
-            setDeploymentType={setDeploymentType}
-          />
-        )}
+          >
+            {currentStep === 1 && (
+              <StepBasics
+                deploymentName={deploymentName}
+                setDeploymentName={setDeploymentName}
+                deploymentDescription={deploymentDescription}
+                setDeploymentDescription={setDeploymentDescription}
+                deploymentType={deploymentType}
+                setDeploymentType={setDeploymentType}
+              />
+            )}
 
-        {currentStep === 2 && (
-          <StepAttach
-            attachTab={attachTab}
-            setAttachTab={setAttachTab}
-            selectedItems={selectedItems}
-            toggleItem={toggleItem}
-            flows={attachFlowItems}
-            snapshots={attachSnapshotItems}
-          />
-        )}
+            {currentStep === 2 && (
+              <StepAttach
+                attachTab={attachTab}
+                setAttachTab={setAttachTab}
+                selectedItems={selectedItems}
+                toggleItem={toggleItem}
+                flows={attachFlowItems}
+                snapshots={attachSnapshotItems}
+              />
+            )}
 
-        {currentStep === 3 && (
-          <StepConfiguration
-            configMode={configMode}
-            setConfigMode={setConfigMode}
-            configName={configName}
-            setConfigName={setConfigName}
-            keyFormat={keyFormat}
-            setKeyFormat={setKeyFormat}
-            envVars={envVars}
-            setEnvVars={setEnvVars}
-          />
-        )}
-        {currentStep === 4 && (
-          <StepScope
-            variableScope={variableScope}
-            setVariableScope={setVariableScope}
-          />
-        )}
-        {currentStep === 5 && (
-          <StepReview
-            deploymentType={deploymentType}
-            deploymentName={deploymentName}
-            deploymentDescription={deploymentDescription}
-            selectedItems={selectedReviewItems}
-            configMode={configMode}
-            configName={configName}
-            keyFormat={keyFormat}
-            envVars={envVars}
-            variableScope={variableScope}
-          />
-        )}
-      </StepperModal>
-      </>
+            {currentStep === 3 && (
+              <StepConfiguration
+                configMode={configMode}
+                setConfigMode={setConfigMode}
+                configName={configName}
+                setConfigName={setConfigName}
+                keyFormat={keyFormat}
+                setKeyFormat={setKeyFormat}
+                envVars={envVars}
+                setEnvVars={setEnvVars}
+              />
+            )}
+            {currentStep === 4 && (
+              <StepScope
+                variableScope={variableScope}
+                setVariableScope={setVariableScope}
+              />
+            )}
+            {currentStep === 5 && (
+              <StepReview
+                deploymentType={deploymentType}
+                deploymentName={deploymentName}
+                deploymentDescription={deploymentDescription}
+                selectedItems={selectedReviewItems}
+                configMode={configMode}
+                configName={configName}
+                keyFormat={keyFormat}
+                envVars={envVars}
+                variableScope={variableScope}
+              />
+            )}
+          </StepperModal>
+        </>
       )}
       <RegisterDeploymentProviderModal
         open={registerProviderOpen}

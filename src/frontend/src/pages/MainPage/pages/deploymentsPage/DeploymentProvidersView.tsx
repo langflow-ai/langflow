@@ -80,9 +80,7 @@ export const DeploymentProvidersView = ({
           const status = provider.has_api_key ? "Connected" : "Error";
           const providerName = normalizeProviderLabel(provider.provider_key);
           const iconName =
-            provider.provider_key === "watsonx-orchestrate"
-              ? "IBM"
-              : "Cloud";
+            provider.provider_key === "watsonx-orchestrate" ? "IBM" : "Cloud";
 
           return (
             <button
@@ -95,109 +93,109 @@ export const DeploymentProvidersView = ({
                   : "border-border hover:border-muted-foreground"
               }`}
             >
-            {/* Card Header */}
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-700">
-                {provider.provider_key === "langflow" ? (
-                  <LangflowLogo className="h-5 w-5 text-white" />
-                ) : (
-                  <ForwardedIconComponent
-                    name={iconName}
-                    className="h-5 w-5 text-white"
-                  />
-                )}
-              </div>
-              <div className="min-w-0 w-full">
-                <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5">
-                  <span className="text-sm font-semibold leading-tight">
-                    {providerName}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <span
-                      className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT_COLOR[status] ?? "bg-muted-foreground"}`}
+              {/* Card Header */}
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-700">
+                  {provider.provider_key === "langflow" ? (
+                    <LangflowLogo className="h-5 w-5 text-white" />
+                  ) : (
+                    <ForwardedIconComponent
+                      name={iconName}
+                      className="h-5 w-5 text-white"
                     />
-                    <span
-                      className={`text-xs ${STATUS_COLOR[status] ?? "text-muted-foreground"}`}
-                    >
-                      {status}
+                  )}
+                </div>
+                <div className="min-w-0 w-full">
+                  <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5">
+                    <span className="text-sm font-semibold leading-tight">
+                      {providerName}
                     </span>
+                    <span className="flex items-center gap-1">
+                      <span
+                        className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT_COLOR[status] ?? "bg-muted-foreground"}`}
+                      />
+                      <span
+                        className={`text-xs ${STATUS_COLOR[status] ?? "text-muted-foreground"}`}
+                      >
+                        {status}
+                      </span>
+                    </span>
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {provider.account_id || provider.provider_key}
                   </span>
                 </div>
-                <span className="text-xs text-muted-foreground">
-                  {provider.account_id || provider.provider_key}
-                </span>
               </div>
-            </div>
 
-            {/* Endpoint */}
-            <div className="flex flex-col gap-0.5">
-              <span className="text-xs text-muted-foreground">Endpoint</span>
-              <span className="truncate text-sm">{provider.backend_url}</span>
-            </div>
-
-            {/* Stats Row */}
-            <div className="grid grid-cols-2 gap-2">
+              {/* Endpoint */}
               <div className="flex flex-col gap-0.5">
-                <span className="text-xs text-muted-foreground">
-                  Last Verified
-                </span>
-                <span className="text-sm">
-                  {formatDate(provider.updated_at || provider.registered_at)}
-                </span>
+                <span className="text-xs text-muted-foreground">Endpoint</span>
+                <span className="truncate text-sm">{provider.backend_url}</span>
               </div>
-              <div className="flex flex-col gap-0.5 text-right">
-                <span className="text-xs text-muted-foreground">
-                  Deployments
-                </span>
-                <span className="text-sm">
-                  {isSelected ? selectedProviderDeploymentCount : "—"}
-                </span>
-              </div>
-            </div>
 
-            {/* Action Buttons */}
-            <div className="flex gap-2">
-              <Button
-                variant="secondary"
-                size="sm"
-                className="h-8 flex-1 gap-1.5 text-xs"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onConfigureProvider(provider);
-                }}
-              >
-                <ForwardedIconComponent
-                  name="Settings"
-                  className="h-3.5 w-3.5"
-                />
-                Configure
-              </Button>
-              {status === "Error" ? (
+              {/* Stats Row */}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-xs text-muted-foreground">
+                    Last Verified
+                  </span>
+                  <span className="text-sm">
+                    {formatDate(provider.updated_at || provider.registered_at)}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-0.5 text-right">
+                  <span className="text-xs text-muted-foreground">
+                    Deployments
+                  </span>
+                  <span className="text-sm">
+                    {isSelected ? selectedProviderDeploymentCount : "—"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2">
                 <Button
                   variant="secondary"
                   size="sm"
                   className="h-8 flex-1 gap-1.5 text-xs"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onConfigureProvider(provider);
+                  }}
                 >
                   <ForwardedIconComponent
-                    name="RefreshCcw"
+                    name="Settings"
                     className="h-3.5 w-3.5"
                   />
-                  Reconnect
+                  Configure
                 </Button>
-              ) : (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="h-8 flex-1 gap-1.5 text-xs"
-                >
-                  <ForwardedIconComponent
-                    name="CircleCheck"
-                    className="h-3.5 w-3.5"
-                  />
-                  Test Connection
-                </Button>
-              )}
-            </div>
+                {status === "Error" ? (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="h-8 flex-1 gap-1.5 text-xs"
+                  >
+                    <ForwardedIconComponent
+                      name="RefreshCcw"
+                      className="h-3.5 w-3.5"
+                    />
+                    Reconnect
+                  </Button>
+                ) : (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="h-8 flex-1 gap-1.5 text-xs"
+                  >
+                    <ForwardedIconComponent
+                      name="CircleCheck"
+                      className="h-3.5 w-3.5"
+                    />
+                    Test Connection
+                  </Button>
+                )}
+              </div>
             </button>
           );
         })}
@@ -235,18 +233,14 @@ export const DeploymentProvidersView = ({
             <div
               key={config.id}
               className={`grid grid-cols-[2fr_3fr_1.5fr_1.5fr_40px] items-center px-4 py-3 ${
-                i < configurations.length - 1
-                  ? "border-b border-border"
-                  : ""
+                i < configurations.length - 1 ? "border-b border-border" : ""
               }`}
             >
               <span className="text-sm font-semibold">{config.name}</span>
               <span className="truncate pr-4 text-sm text-muted-foreground">
                 {config.description || "No description"}
               </span>
-              <span className="text-sm text-muted-foreground">
-                —
-              </span>
+              <span className="text-sm text-muted-foreground">—</span>
               <span className="text-sm text-muted-foreground">
                 {config.provider_data?.environment?.toString() || "draft"}
               </span>

@@ -1,9 +1,6 @@
-import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import LangflowLogoColor from "@/assets/LangflowLogoColor.svg?react";
-import {
-  usePostCreateDeploymentProvider,
-} from "@/controllers/API/queries/deployments/use-deployments";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,6 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { usePostCreateDeploymentProvider } from "@/controllers/API/queries/deployments/use-deployments";
 import IBMSvg from "@/icons/IBM/ibm/IBM";
 import useAlertStore from "@/stores/alertStore";
 
@@ -49,7 +47,8 @@ export const RegisterDeploymentProviderModal = ({
   const queryClient = useQueryClient();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
-  const { mutate: createProvider, isPending } = usePostCreateDeploymentProvider();
+  const { mutate: createProvider, isPending } =
+    usePostCreateDeploymentProvider();
 
   const [providerKey, setProviderKey] = useState("");
   const [backendUrl, setBackendUrl] = useState("");
@@ -98,16 +97,16 @@ export const RegisterDeploymentProviderModal = ({
           await queryClient.invalidateQueries({
             queryKey: ["useGetDeploymentProviders"],
           });
-          setSuccessData({ title: "Deployment provider registered successfully" });
+          setSuccessData({
+            title: "Deployment provider registered successfully",
+          });
           onOpenChange(false);
           resetState();
         },
         onError: () => {
           setErrorData({
             title: "Could not register deployment provider",
-            list: [
-              "Check your backend URL/API key and try again.",
-            ],
+            list: ["Check your backend URL/API key and try again."],
           });
         },
       },
