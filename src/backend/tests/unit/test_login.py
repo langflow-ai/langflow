@@ -1,7 +1,6 @@
 import pytest
-from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.user import User
-from langflow.services.deps import session_scope
+from langflow.services.deps import get_auth_service, session_scope
 from sqlalchemy.exc import IntegrityError
 
 
@@ -9,7 +8,7 @@ from sqlalchemy.exc import IntegrityError
 def test_user():
     return User(
         username="testuser",
-        password=get_password_hash("testpassword"),  # Assuming password needs to be hashed
+        password=get_auth_service().get_password_hash("testpassword"),  # Assuming password needs to be hashed
         is_active=True,
         is_superuser=False,
     )

@@ -141,16 +141,21 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
 
       const templateFieldType = targetNode.data.node!.template[field]?.type;
       const rawInputTypes = targetNode.data.node!.template[field]?.input_types;
-      // For ModelInput types, default to ["LanguageModel"] when input_types is empty
-      // This matches the behavior in RenderInputParameters
+      const modelType = targetNode.data.node!.template[field]?.model_type;
+      // For ModelInput types, default based on model_type:
+      // - "embedding" -> ["Embeddings"]
+      // - "language" (default) -> ["LanguageModel"]
       const isModelType = templateFieldType === "model";
+      const defaultModelInputType =
+        modelType === "embedding" ? "Embeddings" : "LanguageModel";
       const inputTypes = rawInputTypes?.length
         ? rawInputTypes
         : isModelType
-          ? ["LanguageModel"]
+          ? [defaultModelInputType]
           : rawInputTypes;
       const hasProxy = targetNode.data.node!.template[field]?.proxy;
       const isToolMode = targetNode.data.node!.template[field]?.tool_mode;
+      const isAdvanced = targetNode.data.node!.template[field]?.advanced;
 
       if (
         !field &&
@@ -193,7 +198,8 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
 
       if (
         (scapedJSONStringfy(id) !== targetHandle ||
-          (targetNode.data.node?.tool_mode && isToolMode)) &&
+          (targetNode.data.node?.tool_mode && isToolMode) ||
+          isAdvanced) &&
         !isLoopInput
       ) {
         newEdges = newEdges.filter((e) => e.id !== edge.id);
@@ -1235,8 +1241,8 @@ export function filterFlow(
 
 export function findLastNode({ nodes, edges }: findLastNodeType) {
   /*
-		this function receives a flow and return the last node
-	*/
+    this function receives a flow and return the last node
+  */
   const lastNode = nodes.find((n) => !edges.some((e) => e.source === n.id));
   return lastNode;
 }
@@ -1330,7 +1336,7 @@ export function validateSelection(
 }
 function updateGroupNodeTemplate(template: APITemplateType) {
   /*this function receives a template, iterates for it's items
-	updating the visibility of all basic types setting it to advanced true*/
+  updating the visibility of all basic types setting it to advanced true*/
   Object.keys(template).forEach((key) => {
     const type = template[key].type;
     const input_types = template[key].input_types;
@@ -1356,10 +1362,10 @@ export function mergeNodeTemplates({
   edges: Edge[];
 }): APITemplateType {
   /* this function receives a flow and iterate throw each node
-		and merge the templates with only the visible fields
-		if there are two keys with the same name in the flow, we will update the display name of each one
-		to show from which node it came from
-	*/
+    and merge the templates with only the visible fields
+    if there are two keys with the same name in the flow, we will update the display name of each one
+    to show from which node it came from
+  */
   const template: APITemplateType = {};
   nodes.forEach((node) => {
     const nodeTemplate = cloneDeep(node.data.node!.template);
@@ -1396,8 +1402,8 @@ export function isTargetHandleConnected(
   nodeId: string,
 ) {
   /*
-		this function receives a flow and a handleId and check if there is a connection with this handle
-	*/
+    this function receives a flow and a handleId and check if there is a connection with this handle
+  */
   if (!field) return true;
   if (field.proxy) {
     if (
@@ -1436,8 +1442,8 @@ export function isTargetHandleConnected(
 
 export function generateNodeTemplate(Flow: FlowType) {
   /*
-		this function receives a flow and generate a template for the group node
-	*/
+    this function receives a flow and generate a template for the group node
+  */
   const template = mergeNodeTemplates({
     nodes: Flow.data!.nodes,
     edges: Flow.data!.edges,
@@ -2015,6 +2021,7 @@ export const createNewFlow = (
     folder_id: folderId,
     endpoint_name: flow?.endpoint_name ?? undefined,
     tags: flow?.tags ?? [],
+    locked: flow?.locked,
     mcp_enabled: true,
   };
 };
