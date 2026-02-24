@@ -11,6 +11,12 @@ This page describes the components that are available in the **LangChain** bundl
 
 ## CSV Agent
 
+:::warning Security
+Setting `allow_dangerous_code` to `true` allows the agent to execute arbitrary, LLM-generated Python code at runtime on the Langflow server.
+This code can do anything that Python can do, so use this option only with trusted data and in a secure environment.
+For more information, see [CVE-2024-21513](https://nvd.nist.gov/vuln/detail/CVE-2024-21513).
+:::
+
 This component is based on the [**Agent** core component](/agents).
 
 This component creates a CSV agent from a CSV file and LLM.
@@ -20,6 +26,7 @@ For more information, see the [LangChain CSV agent documentation](https://python
 
 | Name | Type | Description |
 |------|------|-------------|
+| allow_dangerous_code | Input parameter. | Default: `false`. Set to `true` to allow the agent to execute arbitrary Python code. For more information, see the [CSV Agent security warning](#csv-agent).
 | llm | LanguageModel | Input parameter. The language model to use for the agent. |
 | path | File | Input parameter. The path to the CSV file. |
 | agent_type | String | Input parameter. The type of agent to create. |
