@@ -741,7 +741,7 @@
   },
   "OpenSearchVectorStoreComponentMultimodalMultiEmbedding": {
     "versions": {
-      "0.3.0": "89f34f2ad64e"
+      "0.3.0": "b97ad5d84e6d"
     }
   },
   "EmbeddingSimilarityComponent": {

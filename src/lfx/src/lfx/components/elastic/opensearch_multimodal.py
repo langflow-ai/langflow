@@ -29,6 +29,7 @@ from lfx.schema.data import Data
 REQUEST_TIMEOUT = 30
 MAX_RETRIES = 3
 
+
 def normalize_model_name(model_name: str) -> str:
     """Normalize embedding model name for use as field suffix.
 
