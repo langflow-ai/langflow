@@ -95,15 +95,19 @@ class TestChunkDoclingDocumentComponentHybridChunker:
                 captured["max_tokens"] = max_tokens
                 return "tokenizer"
 
-        monkeypatch.setitem(
-            sys.modules,
-            "docling_core.transforms.chunker.hybrid_chunker",
-            types.SimpleNamespace(HybridChunker=DummyHybridChunker),
-        )
+        hybrid_chunker_module = types.ModuleType("docling_core.transforms.chunker.hybrid_chunker")
+        hybrid_chunker_module.HybridChunker = DummyHybridChunker
+        monkeypatch.setitem(sys.modules, "docling_core.transforms.chunker.hybrid_chunker", hybrid_chunker_module)
+
+        tokenizer_module = types.ModuleType("docling_core.transforms.chunker.tokenizer")
+        huggingface_tokenizer_module = types.ModuleType("docling_core.transforms.chunker.tokenizer.huggingface")
+        huggingface_tokenizer_module.HuggingFaceTokenizer = DummyTokenizer
+        tokenizer_module.huggingface = huggingface_tokenizer_module
+        monkeypatch.setitem(sys.modules, "docling_core.transforms.chunker.tokenizer", tokenizer_module)
         monkeypatch.setitem(
             sys.modules,
             "docling_core.transforms.chunker.tokenizer.huggingface",
-            types.SimpleNamespace(HuggingFaceTokenizer=DummyTokenizer),
+            huggingface_tokenizer_module,
         )
         monkeypatch.setattr(
             "lfx.components.docling.chunk_docling_document.HierarchicalChunker",
