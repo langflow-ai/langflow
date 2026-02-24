@@ -11,6 +11,8 @@ from opensearchpy import OpenSearch, helpers
 from opensearchpy.exceptions import OpenSearchException, RequestError
 
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
+from lfx.base.vectorstores.vector_store_connection_decorator import vector_store_connection
+
 from lfx.io import (
     BoolInput,
     DropdownInput,
@@ -62,6 +64,7 @@ def get_embedding_field_name(model_name: str) -> str:
     return f"chunk_embedding_{normalize_model_name(model_name)}"
 
 
+@vector_store_connection
 class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreComponent):
     """OpenSearch Vector Store Component with Multi-Model Hybrid Search Capabilities.
 
@@ -672,6 +675,19 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
             metadata = metadatas[i] if metadatas else {}
             if vector_dimensions is not None and "embedding_dimensions" not in metadata:
                 metadata = {**metadata, "embedding_dimensions": vector_dimensions}
+
+            # Normalize ACL fields that may arrive as JSON strings from flows
+            for key in ("allowed_users", "allowed_groups"):
+                value = metadata.get(key)
+                if isinstance(value, str):
+                    try:
+                        parsed = json.loads(value)
+                        if isinstance(parsed, list):
+                            metadata[key] = parsed
+                    except (json.JSONDecodeError, TypeError):
+                        # Leave value as-is if it isn't valid JSON
+                        pass
+
             _id = ids[i] if ids else str(uuid.uuid4())
             request = {
                 "_op_type": "index",
@@ -1654,7 +1670,7 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
                 }
             },
             "aggs": {
-                "data_sources": {"terms": {"field": "filename", "size": 20}},
+                "data_sources": {"terms": {"field": "filename.keyword", "size": 20}},
                 "document_types": {"terms": {"field": "mimetype", "size": 10}},
                 "owners": {"terms": {"field": "owner", "size": 10}},
                 "embedding_models": {"terms": {"field": "embedding_model", "size": 10}},
