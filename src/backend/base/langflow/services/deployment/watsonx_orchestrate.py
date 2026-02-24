@@ -1298,15 +1298,21 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
 
         runner_overridden = False
         for requirement in requirements:
-            module_name = (
-                requirement.strip().split("==")[0].split("=")[0].split(">=")[0].split("<=")[0].split("~=")[0].lower()
-            )
+            stripped_req = requirement.strip().lower()
+            # Parse module name once by finding first operator
+            for sep in ("==", ">=", "<=", "~=", "="):
+                if sep in stripped_req:
+                    module_name = stripped_req.split(sep)[0]
+                    break
+            else:
+                module_name = stripped_req
+
             if module_name and not module_name.startswith("#") and module_name in DEFAULT_LANGFLOW_RUNNER_MODULES:
                 runner_overridden = True
                 break
 
         if not runner_overridden:
-            requirements = DEFAULT_LANGFLOW_TOOL_REQUIREMENTS + list(requirements)
+            requirements = DEFAULT_LANGFLOW_TOOL_REQUIREMENTS + requirements
 
         requirements_content = "\n".join(requirements) + "\n"
         flow_content = json.dumps(flow_definition, indent=2)
@@ -1332,13 +1338,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         )
 
     def _dedupe_list(self, requirements: list[str]) -> list[str]:
-        seen = set()
-        result = []
-        for requirement in requirements:
-            if requirement not in seen:
-                result.append(requirement)
-                seen.add(requirement)
-        return result
+        return list(dict.fromkeys(requirements))
 
     def _resolve_snapshot_connections(
         self,
