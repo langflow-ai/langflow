@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import asyncio
+import copy
 import io
 import json
 import re
 import zipfile
 from dataclasses import dataclass
 from enum import Enum
+from functools import lru_cache
 from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException, status
@@ -1527,13 +1529,25 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         with a ``msg`` key, or a list of such dicts.  This helper normalises all
         three shapes into a single value suitable for inclusion in an error message.
         """
-        detail = json.loads(response_text).get("detail")
-        if detail and isinstance(detail, list):
-            detail = detail[0]
-        if isinstance(detail, dict):
-            detail = detail.get("msg") or detail
-        return detail
+        cached = _parse_detail_cached(response_text)
+        # Return a deep copy for mutable types to preserve original semantics
+        if isinstance(cached, dict):
+            return copy.deepcopy(cached)
+        return cached
 
     @staticmethod
     def _normalize_wxo_name(s: str) -> str:
         return _WXO_SANITIZE_RE.sub("", s.translate(_WXO_TRANSLATE))
+
+
+# Internal helper: cached parse of the "detail" value.
+# Cache size is deliberately bounded to avoid unbounded memory growth.
+@lru_cache(maxsize=1024)
+def _parse_detail_cached(response_text: str):
+    # Intentionally keep logic identical to original implementation.
+    detail = json.loads(response_text).get("detail")
+    if detail and isinstance(detail, list):
+        detail = detail[0]
+    if isinstance(detail, dict):
+        detail = detail.get("msg") or detail
+    return detail
