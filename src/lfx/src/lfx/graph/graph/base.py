@@ -663,7 +663,7 @@ class Graph:
         if not self._run_id:
             self.set_run_id()
         if self.tracing_service:
-            run_name = f"{self.flow_name} - {self._run_id}"
+            run_name = f"{self.flow_name} - {self.flow_id}"
             await self.tracing_service.start_tracers(
                 run_id=uuid.UUID(self._run_id),
                 run_name=run_name,
