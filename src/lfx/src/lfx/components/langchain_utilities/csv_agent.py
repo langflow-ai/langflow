@@ -11,8 +11,8 @@ from lfx.inputs.inputs import (
     DictInput,
     DropdownInput,
     FileInput,
-    ModelInput,
     MessageTextInput,
+    ModelInput,
 )
 from lfx.io import BoolInput, SecretStrInput, StrInput
 from lfx.schema.message import Message
@@ -124,6 +124,7 @@ class CSVAgentComponent(LCAgentComponent):
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
         """Dynamically update build config with user-filtered model options (tool-calling capable models)."""
+
         def get_tool_calling_model_options(user_id=None):
             return get_language_model_options(user_id=user_id, tool_calling=True)
 
