@@ -432,10 +432,7 @@ def replace_with_live_models(
         else:
             live_models = get_live_models_for_provider(user_id, provider, model_type)
 
-        if not live_models:
-            continue
-
-        catalog_models = _live_models_to_catalog_shape(live_models)
+        catalog_models = _live_models_to_catalog_shape(live_models) if live_models else []
 
         # Try to find and replace existing provider entry
         replaced = False
@@ -446,7 +443,7 @@ def replace_with_live_models(
                 replaced = True
                 break
 
-        if not replaced:
+        if not replaced and catalog_models:
             entry: dict = {
                 "provider": provider,
                 "models": catalog_models,

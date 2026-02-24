@@ -539,7 +539,7 @@ async def test_list_models_returns_live_ollama_models_when_configured(client: As
 
 @pytest.mark.usefixtures("active_user")
 async def test_list_models_ollama_empty_when_live_fetch_returns_empty(client: AsyncClient, logged_in_headers):
-    """When Ollama is configured but live fetch returns no models, static models remain as fallback."""
+    """When Ollama is configured but live fetch returns no models, Ollama should have no models (no static fallback)."""
 
     async def mock_get_enabled_providers(*_args, **_kwargs):
         return {
@@ -563,5 +563,5 @@ async def test_list_models_ollama_empty_when_live_fetch_returns_empty(client: As
     data = response.json()
     ollama_provider = next((p for p in data if p.get("provider") == "Ollama"), None)
     assert ollama_provider is not None
-    assert len(ollama_provider["models"]) > 0
-    assert ollama_provider["num_models"] == len(ollama_provider["models"])
+    assert len(ollama_provider["models"]) == 0
+    assert ollama_provider["num_models"] == 0
