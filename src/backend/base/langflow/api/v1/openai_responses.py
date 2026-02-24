@@ -217,6 +217,7 @@ async def run_flow_for_openai_responses(
                                         if isinstance(properties, dict) and "usage" in properties:
                                             usage_obj = properties.get("usage")
                                             if usage_obj and isinstance(usage_obj, dict):
+                                                # Convert None values to 0 for compatibility
                                                 stream_usage_data = {
                                                     "input_tokens": usage_obj.get("input_tokens") or 0,
                                                     "output_tokens": usage_obj.get("output_tokens") or 0,

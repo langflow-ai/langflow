@@ -1702,9 +1702,9 @@ class Component(CustomComponent):
 
                         stored_message.properties.usage = Usage(**usage_data)
                     stored_message = await self._update_stored_message(stored_message)
-                    # Note: We intentionally do NOT send a message event here with state="complete"
-                    # The frontend already has all the content from streaming tokens
-                    # Only the database is updated with the complete state
+                    # Send a final add_message event with state="complete" and usage data
+                    # This is needed for OpenAI Responses API to capture usage in streaming mode
+                    await self._send_message_event(stored_message, id_=self._stored_message_id)
                 else:
                     # Only send message event for non-streaming messages
                     await self._send_message_event(stored_message, id_=id_)
@@ -1853,15 +1853,9 @@ class Component(CustomComponent):
                 chunk.content, complete_message, message_id, message, first_chunk=first_chunk
             )
             first_chunk = False
-            # Capture usage metadata from chunks (usually on the last chunk)
             if hasattr(chunk, "usage_metadata") and chunk.usage_metadata:
-                usage_data = {
-                    "input_tokens": getattr(chunk.usage_metadata, "input_tokens", None),
-                    "output_tokens": getattr(chunk.usage_metadata, "output_tokens", None),
-                    "total_tokens": getattr(chunk.usage_metadata, "total_tokens", None),
-                }
+                usage_data = self._extract_usage_metadata(chunk.usage_metadata)
             elif hasattr(chunk, "response_metadata") and chunk.response_metadata:
-                # Fallback to response_metadata if available
                 metadata = chunk.response_metadata
                 if "token_usage" in metadata:
                     usage_data = {
@@ -1878,6 +1872,21 @@ class Component(CustomComponent):
                     if usage_data["input_tokens"] and usage_data["output_tokens"]:
                         usage_data["total_tokens"] = usage_data["input_tokens"] + usage_data["output_tokens"]
         return complete_message, usage_data
+
+    @staticmethod
+    def _extract_usage_metadata(um) -> dict:
+        """Extract usage from usage_metadata, handling both dict (TypedDict) and object forms."""
+        if isinstance(um, dict):
+            return {
+                "input_tokens": um.get("input_tokens"),
+                "output_tokens": um.get("output_tokens"),
+                "total_tokens": um.get("total_tokens"),
+            }
+        return {
+            "input_tokens": getattr(um, "input_tokens", None),
+            "output_tokens": getattr(um, "output_tokens", None),
+            "total_tokens": getattr(um, "total_tokens", None),
+        }
 
     async def _process_chunk(
         self, chunk: str, complete_message: str, message_id: str, message: Message, *, first_chunk: bool = False
