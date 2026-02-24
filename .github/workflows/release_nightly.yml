@@ -135,17 +135,17 @@ jobs:
           cache-dependency-glob: "uv.lock"
           python-version: ${{ env.PYTHON_VERSION }}
           prune-cache: false
-      
+
       - name: Download LFX artifact
         if: inputs.build_lfx
         uses: actions/download-artifact@v7
         with:
           name: dist-nightly-lfx
           path: lfx-dist
-      
+
       - name: Install the project
         run: uv sync
-      
+
       - name: Force reinstall LFX from built wheel
         if: inputs.build_lfx
         run: |
@@ -232,23 +232,23 @@ jobs:
           cache-dependency-glob: "uv.lock"
           python-version: ${{ env.PYTHON_VERSION }}
           prune-cache: false
-      
+
       - name: Download LFX artifact
         if: inputs.build_lfx
         uses: actions/download-artifact@v7
         with:
           name: dist-nightly-lfx
           path: lfx-dist
-      
+
       - name: Download base artifact
         uses: actions/download-artifact@v7
         with:
           name: dist-nightly-base
           path: base-dist
-      
+
       - name: Install the project
         run: uv sync
-      
+
       - name: Force reinstall packages from built wheels
         run: |
           # While workspace resolution installs from source, we want to test the exact
@@ -435,13 +435,13 @@ jobs:
   #     main_version: ${{ inputs.nightly_tag_main }}
   #   secrets: inherit
 
-  call_docker_build_main_ep:
-    name: Call Docker Build Workflow for Langflow with Entrypoint
-    if: ${{ always() && inputs.build_docker_ep }}
-    needs: [build-nightly-main, call_docker_build_main]
-    uses: ./.github/workflows/docker-build-v2.yml
-    with:
-      ref: ${{ inputs.nightly_tag_main }}
-      release_type: main-ep
-      push_to_registry: ${{ inputs.push_to_registry }}
-    secrets: inherit
+  # call_docker_build_main_ep:
+  #   name: Call Docker Build Workflow for Langflow with Entrypoint
+  #   if: ${{ always() && inputs.build_docker_ep }}
+  #   needs: [build-nightly-main, call_docker_build_main]
+  #   uses: ./.github/workflows/docker-build-v2.yml
+  #   with:
+  #     ref: ${{ inputs.nightly_tag_main }}
+  #     release_type: main-ep
+  #     push_to_registry: ${{ inputs.push_to_registry }}
+  #   secrets: inherit
