@@ -255,7 +255,7 @@ class TestTTSComponent:
 
         async def fake_tts(**kwargs):
             return
-            yield  # noqa: RET504 – make it an async generator
+            yield
 
         mock_client.text_to_speech.tts = fake_tts
         mock_get_client.return_value = mock_client
@@ -314,13 +314,10 @@ class TestTranslateComponent:
     @patch("lfx.components.camb.camb_translate.get_async_client")
     def test_translate_api_error_workaround(self, mock_get_client):
         from camb.core.api_error import ApiError
-
         from lfx.components.camb import CambTranslateComponent
 
         mock_client = MagicMock()
-        mock_client.translation.translation_stream = AsyncMock(
-            side_effect=ApiError(status_code=200, body="Hola mundo")
-        )
+        mock_client.translation.translation_stream = AsyncMock(side_effect=ApiError(status_code=200, body="Hola mundo"))
         mock_get_client.return_value = mock_client
 
         comp = CambTranslateComponent()
@@ -530,7 +527,6 @@ class TestVoiceCloneComponent:
 
         assert result.data["voice_id"] == 999
         assert result.data["status"] == "created"
-
 
     @patch("lfx.components.camb.camb_voice_clone.get_async_client")
     def test_clone_voice_missing_id(self, mock_get_client):

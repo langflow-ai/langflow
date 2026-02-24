@@ -27,11 +27,11 @@ _dynamic_imports = {
 
 __all__ = [
     "CambAudioSeparationComponent",
+    "CambTTSComponent",
     "CambTextToSoundComponent",
     "CambTranscribeComponent",
     "CambTranslateComponent",
     "CambTranslatedTTSComponent",
-    "CambTTSComponent",
     "CambVoiceCloneComponent",
     "CambVoiceListComponent",
 ]

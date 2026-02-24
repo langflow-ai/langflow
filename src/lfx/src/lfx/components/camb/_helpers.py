@@ -8,7 +8,9 @@ import tempfile
 from typing import Any
 
 
-async def poll_task(client: Any, get_status_fn: Any, task_id: str, max_attempts: int = 60, interval: float = 2.0) -> Any:
+async def poll_task(
+    client: Any, get_status_fn: Any, task_id: str, max_attempts: int = 60, interval: float = 2.0
+) -> Any:
     """Poll a CAMB.AI async task until completion."""
     for _ in range(max_attempts):
         status = await get_status_fn(task_id)
@@ -43,9 +45,19 @@ def add_wav_header(raw_data: bytes, sample_rate: int = 24000, channels: int = 1,
     data_size = len(raw_data)
     header = struct.pack(
         "<4sI4s4sIHHIIHH4sI",
-        b"RIFF", 36 + data_size, b"WAVE", b"fmt ", 16, 1,
-        channels, sample_rate, sample_rate * channels * bits_per_sample // 8,
-        channels * bits_per_sample // 8, bits_per_sample, b"data", data_size,
+        b"RIFF",
+        36 + data_size,
+        b"WAVE",
+        b"fmt ",
+        16,
+        1,
+        channels,
+        sample_rate,
+        sample_rate * channels * bits_per_sample // 8,
+        channels * bits_per_sample // 8,
+        bits_per_sample,
+        b"data",
+        data_size,
     )
     return header + raw_data
 

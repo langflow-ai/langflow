@@ -76,12 +76,14 @@ class CambTranscribeComponent(Component):
         segments = []
         if hasattr(transcription, "transcript") and transcription.transcript:
             for seg in transcription.transcript:
-                segments.append({
-                    "start": getattr(seg, "start", 0),
-                    "end": getattr(seg, "end", 0),
-                    "text": getattr(seg, "text", ""),
-                    "speaker": getattr(seg, "speaker", ""),
-                })
+                segments.append(
+                    {
+                        "start": getattr(seg, "start", 0),
+                        "end": getattr(seg, "end", 0),
+                        "text": getattr(seg, "text", ""),
+                        "speaker": getattr(seg, "speaker", ""),
+                    }
+                )
 
         full_text = " ".join(s["text"] for s in segments)
         if not full_text.strip():

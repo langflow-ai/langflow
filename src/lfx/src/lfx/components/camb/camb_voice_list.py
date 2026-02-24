@@ -43,7 +43,12 @@ class CambVoiceListComponent(Component):
                 if isinstance(v, dict):
                     voices.append({"id": v.get("id"), "voice_name": v.get("voice_name", v.get("name", "Unknown"))})
                 else:
-                    voices.append({"id": getattr(v, "id", None), "voice_name": getattr(v, "voice_name", getattr(v, "name", "Unknown"))})
+                    voices.append(
+                        {
+                            "id": getattr(v, "id", None),
+                            "voice_name": getattr(v, "voice_name", getattr(v, "name", "Unknown")),
+                        }
+                    )
 
         self.status = f"Found {len(voices)} voices"
         return Data(data={"voices": voices, "count": len(voices)})

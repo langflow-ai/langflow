@@ -95,9 +95,7 @@ class CambTranslatedTTSComponent(Component):
         async with httpx.AsyncClient() as http:
             resp = await http.get(url, headers={"x-api-key": self.api_key})
             if resp.status_code != 200:
-                return Data(
-                    data={"error": f"Failed to fetch TTS audio: HTTP {resp.status_code}"}
-                )
+                return Data(data={"error": f"Failed to fetch TTS audio: HTTP {resp.status_code}"})
             audio_data = resp.content
 
         if not audio_data:
