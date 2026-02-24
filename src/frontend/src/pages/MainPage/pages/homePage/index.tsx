@@ -73,7 +73,6 @@ const HomePage = ({
     is_flow: flowType === "flows",
     search,
   });
-
   const data = {
     flows: folderData?.flows?.items ?? [],
     name: folderData?.folder?.name ?? "",

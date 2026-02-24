@@ -1,12 +1,26 @@
 import { Checkbox } from "@/components/ui/checkbox";
 import { ATTACH_TABS, type AttachTab } from "../constants";
-import { MOCK_FLOWS, MOCK_SNAPSHOTS } from "../mockData";
+
+type FlowAttachItem = {
+  id: string;
+  name: string;
+  updatedDate: string;
+  snapshotDate: string | null;
+};
+
+type SnapshotAttachItem = {
+  id: string;
+  name: string;
+  updatedDate: string;
+};
 
 type StepAttachProps = {
   attachTab: AttachTab;
   setAttachTab: (v: AttachTab) => void;
   selectedItems: Set<string>;
   toggleItem: (id: string) => void;
+  flows: FlowAttachItem[];
+  snapshots: SnapshotAttachItem[];
 };
 
 export const StepAttach = ({
@@ -14,6 +28,8 @@ export const StepAttach = ({
   setAttachTab,
   selectedItems,
   toggleItem,
+  flows,
+  snapshots,
 }: StepAttachProps) => (
   <div className="flex h-full flex-col gap-4">
     <div>
@@ -38,7 +54,7 @@ export const StepAttach = ({
       ))}
     </div>
     <div className="flex flex-col gap-2 overflow-y-auto">
-      {(attachTab === "Flows" ? MOCK_FLOWS : MOCK_SNAPSHOTS).map((item) => (
+      {(attachTab === "Flows" ? flows : snapshots).map((item) => (
         <button
           key={item.id}
           onClick={() => toggleItem(item.id)}
@@ -68,6 +84,14 @@ export const StepAttach = ({
           </div>
         </button>
       ))}
+      {attachTab === "Flows" && flows.length === 0 && (
+        <p className="text-sm text-muted-foreground">No flows available.</p>
+      )}
+      {attachTab === "Snapshots" && snapshots.length === 0 && (
+        <p className="text-sm text-muted-foreground">
+          No snapshots available for this provider.
+        </p>
+      )}
     </div>
     {selectedItems.size === 0 && (
       <p className="mt-auto text-center text-sm text-muted-foreground">

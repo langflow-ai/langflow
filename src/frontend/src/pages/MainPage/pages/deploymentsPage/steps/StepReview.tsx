@@ -5,15 +5,15 @@ import type {
   KeyFormat,
   VariableScope,
 } from "../constants";
-import { MOCK_FLOWS, MOCK_SNAPSHOTS } from "../mockData";
 
 type EnvVar = { key: string; value: string };
+type SelectedItem = { name: string; kind: "Flow" | "Snapshot" };
 
 type StepReviewProps = {
   deploymentType: DeploymentType;
   deploymentName: string;
   deploymentDescription: string;
-  selectedItems: Set<string>;
+  selectedItems: SelectedItem[];
   configMode: ConfigMode;
   configName: string;
   keyFormat: KeyFormat;
@@ -32,14 +32,6 @@ export const StepReview = ({
   envVars,
   variableScope,
 }: StepReviewProps) => {
-  const allItems = [
-    ...MOCK_FLOWS.map((i) => ({ ...i, kind: "Flow" as const })),
-    ...MOCK_SNAPSHOTS.map((i) => ({ ...i, kind: "Snapshot" as const })),
-  ];
-  const selectedNames = allItems
-    .filter((i) => selectedItems.has(i.id))
-    .map((i) => ({ name: i.name, kind: i.kind }));
-
   const configModeLabel = {
     reuse: "Reuse existing Config",
     create: "Create new Config",
@@ -96,9 +88,9 @@ export const StepReview = ({
           <p className="mb-3 text-md font-semibold text-primary">
             Attached Items
           </p>
-          {selectedNames.length > 0 ? (
+          {selectedItems.length > 0 ? (
             <ul className="flex flex-col gap-1">
-              {selectedNames.map(({ name, kind }) => (
+              {selectedItems.map(({ name, kind }) => (
                 <li key={name} className="flex items-center gap-2 text-sm">
                   <ForwardedIconComponent
                     name={kind === "Flow" ? "Workflow" : "Camera"}
