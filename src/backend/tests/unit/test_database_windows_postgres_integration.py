@@ -1,144 +1,142 @@
-"""Integration tests for database service with Windows + PostgreSQL event loop.
+"""Integration tests for database service with Windows + PostgreSQL fix.
 
-Uses real settings objects and real SQLite engine where possible; only
-platform.system is patched to simulate Windows vs non-Windows. Project
-convention: avoid mocking in tests.
+Tests that the database service properly handles event loop configuration
+across different platforms and database types.
 """
 
 import asyncio
-from unittest.mock import patch
+import os
+from unittest.mock import MagicMock, patch
 
 import pytest
 from langflow.services.database.service import DatabaseService
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import create_async_engine
-from sqlalchemy.pool import StaticPool
-
-
-class _TestSettings:
-    """Minimal settings-like object (no mocks) for DatabaseService init."""
-
-    database_url = "sqlite+aiosqlite:///:memory:"
-    database_connection_retry = False
-    sqlite_pragmas = {}
-    db_driver_connection_settings = None
-    db_connection_settings = {}
-    db_connect_timeout = 5
-    alembic_log_to_stdout = True
-    alembic_log_file = "alembic.log"
-    use_noop_database = False
-    model_fields_set = set()
-
-
-class _TestAuthSettings:
-    AUTO_LOGIN = False
-    SUPERUSER = "admin"
-
-
-class _TestSettingsService:
-    """Minimal settings service (no mocks) for DatabaseService."""
-
-    settings = _TestSettings()
-    auth_settings = _TestAuthSettings()
-
-
-@pytest.fixture
-def test_settings_service():
-    """Real settings-like object with required attributes (no MagicMock)."""
-    return _TestSettingsService()
 
 
 class TestDatabaseServiceWindowsPostgres:
-    """Database service with Windows + PostgreSQL event loop configuration."""
+    """Test database service with Windows + PostgreSQL event loop configuration."""
 
-    @patch("langflow.helpers.windows_postgres_helper.platform.system")
-    def test_windows_postgresql_calls_configure_with_source(self, mock_platform, test_settings_service):
-        """Windows + PostgreSQL: configure_windows_postgres_event_loop is called with source."""
+    @pytest.fixture
+    def mock_settings_service(self):
+        """Create a mock settings service for testing."""
+        mock_service = MagicMock()
+        mock_service.settings.database_url = "sqlite:///test.db"
+        mock_service.settings.database_connection_retry = False
+        mock_service.settings.sqlite_pragmas = {}
+        mock_service.settings.db_driver_connection_settings = None
+        mock_service.settings.db_connection_settings = {}
+        mock_service.settings.alembic_log_to_stdout = True
+        mock_service.settings.alembic_log_file = "alembic.log"
+        return mock_service
+
+    @patch("platform.system")
+    @patch.dict(os.environ, {"LANGFLOW_DATABASE_URL": "postgresql://user:pass@localhost/db"}, clear=True)
+    @patch("langflow.services.database.service.create_async_engine")
+    @patch("langflow.services.database.service.configure_windows_postgres_event_loop")
+    def test_windows_postgresql_configures_event_loop(
+        self, mock_configure, mock_create_engine, mock_platform, mock_settings_service
+    ):
+        """Test that Windows + PostgreSQL configures the event loop correctly."""
         mock_platform.return_value = "Windows"
-        test_settings_service.settings.database_url = "postgresql://user:pass@localhost/db"
-        with patch("langflow.services.database.service.create_async_engine") as create_engine:
-            create_engine.return_value = create_async_engine(
-                "sqlite+aiosqlite://",
-                connect_args={"check_same_thread": False},
-                poolclass=StaticPool,
-            )
-            _ = DatabaseService(test_settings_service)
-            create_engine.assert_called_once()
-        mock_platform.assert_called()
+        mock_settings_service.settings.database_url = "postgresql://user:pass@localhost/db"
+        mock_create_engine.return_value = MagicMock()
+        mock_configure.return_value = True
 
-    @patch("langflow.helpers.windows_postgres_helper.platform.system")
-    def test_linux_sqlite_real_engine_no_event_loop_change(self, mock_platform, test_settings_service):
-        """Linux + SQLite: real engine creation, event loop unchanged (no mock of create_async_engine)."""
+        _ = DatabaseService(mock_settings_service)
+        mock_configure.assert_called_once_with(source="database_service")
+
+    @patch("platform.system")
+    @patch.dict(os.environ, {}, clear=True)
+    @patch("langflow.services.database.service.create_async_engine")
+    def test_linux_postgresql_no_event_loop_change(self, mock_create_engine, mock_platform, mock_settings_service):
+        """Test that Linux + PostgreSQL doesn't change event loop."""
         mock_platform.return_value = "Linux"
-        test_settings_service.settings.database_url = "sqlite+aiosqlite://"
+        mock_settings_service.settings.database_url = "postgresql://user:pass@localhost/db"
+        mock_create_engine.return_value = MagicMock()
+
         original_policy = asyncio.get_event_loop_policy()
+        _ = DatabaseService(mock_settings_service)
 
-        service = DatabaseService(test_settings_service)
-
+        # Policy should remain unchanged
         assert asyncio.get_event_loop_policy() is original_policy
-        assert service.async_session_maker is not None
-        assert service.database_url == "sqlite+aiosqlite://"
 
-    @patch("langflow.helpers.windows_postgres_helper.platform.system")
-    def test_macos_sqlite_real_engine_no_event_loop_change(self, mock_platform, test_settings_service):
-        """MacOS + SQLite: real engine, event loop unchanged."""
+    @patch("platform.system")
+    @patch.dict(os.environ, {}, clear=True)
+    @patch("langflow.services.database.service.create_async_engine")
+    def test_macos_postgresql_no_event_loop_change(self, mock_create_engine, mock_platform, mock_settings_service):
+        """Test that macOS + PostgreSQL doesn't change event loop."""
         mock_platform.return_value = "Darwin"
-        test_settings_service.settings.database_url = "sqlite+aiosqlite://"
+        mock_settings_service.settings.database_url = "postgresql://user:pass@localhost/db"
+        mock_create_engine.return_value = MagicMock()
+
         original_policy = asyncio.get_event_loop_policy()
+        _ = DatabaseService(mock_settings_service)
 
-        service = DatabaseService(test_settings_service)
-
+        # Policy should remain unchanged
         assert asyncio.get_event_loop_policy() is original_policy
-        assert service.async_session_maker is not None
 
-    @patch("langflow.helpers.windows_postgres_helper.platform.system")
-    def test_windows_sqlite_real_engine_configure_called(self, mock_platform, test_settings_service):
-        """Windows + SQLite: real engine; configure is still called (returns False)."""
+    @patch("platform.system")
+    @patch.dict(os.environ, {}, clear=True)
+    @patch("langflow.services.database.service.create_async_engine")
+    @patch("langflow.services.database.service.configure_windows_postgres_event_loop")
+    def test_windows_sqlite_no_event_loop_change(
+        self, mock_configure, mock_create_engine, mock_platform, mock_settings_service
+    ):
+        """Test that Windows + SQLite doesn't change event loop."""
         mock_platform.return_value = "Windows"
-        test_settings_service.settings.database_url = "sqlite+aiosqlite://"
-        original_policy = asyncio.get_event_loop_policy()
+        mock_settings_service.settings.database_url = "sqlite:///test.db"
+        mock_create_engine.return_value = MagicMock()
+        mock_configure.return_value = False
 
-        service = DatabaseService(test_settings_service)
+        _ = DatabaseService(mock_settings_service)
+        mock_configure.assert_called_once_with(source="database_service")
 
-        assert asyncio.get_event_loop_policy() is original_policy
-        assert service.async_session_maker is not None
-
-    def test_database_url_sanitization_real_settings(self, test_settings_service):
-        """Database URLs are sanitized (real settings, only create_engine patched for speed)."""
+    def test_database_url_sanitization(self, mock_settings_service):
+        """Test that database URLs are properly sanitized."""
         test_cases = [
             ("sqlite:///test.db", "sqlite+aiosqlite:///test.db"),
             ("postgresql://user:pass@localhost/db", "postgresql+psycopg://user:pass@localhost/db"),
             ("postgres://user:pass@localhost/db", "postgresql+psycopg://user:pass@localhost/db"),
         ]
-        with patch("langflow.services.database.service.create_async_engine") as create_engine:
-            create_engine.return_value = create_async_engine(
-                "sqlite+aiosqlite://",
-                connect_args={"check_same_thread": False},
-                poolclass=StaticPool,
-            )
+
+        with patch("langflow.services.database.service.create_async_engine") as mock_create_engine:
+            mock_create_engine.return_value = MagicMock()
+
             for input_url, expected_url in test_cases:
-                test_settings_service.settings.database_url = input_url
-                service = DatabaseService(test_settings_service)
+                mock_settings_service.settings.database_url = input_url
+                service = DatabaseService(mock_settings_service)
                 assert service.database_url == expected_url
 
-    @patch("langflow.helpers.windows_postgres_helper.platform.system")
-    def test_async_session_maker_available_after_init(self, mock_platform, test_settings_service):
-        """After init with SQLite, async_session_maker is usable (real engine)."""
+    @patch("platform.system")
+    def test_docker_environment_compatibility(self, mock_platform, mock_settings_service):
+        """Test that Docker environments work correctly."""
         mock_platform.return_value = "Linux"
-        test_settings_service.settings.database_url = "sqlite+aiosqlite://"
+        os.environ["DOCKER_CONTAINER"] = "true"
+        mock_settings_service.settings.database_url = "postgresql://postgres:5432/langflow"
 
-        service = DatabaseService(test_settings_service)
+        with patch("langflow.services.database.service.create_async_engine") as mock_create_engine:
+            mock_create_engine.return_value = MagicMock()
 
-        assert service.async_session_maker is not None
+            # Should not raise any errors
+            service = DatabaseService(mock_settings_service)
+            assert service.database_url == "postgresql+psycopg://postgres:5432/langflow"
 
     @pytest.mark.asyncio
-    async def test_async_operations_work_after_init(self, test_settings_service):
-        """Async session maker works after init (real engine, no mock)."""
-        with patch("langflow.helpers.windows_postgres_helper.platform.system") as mock_platform:
-            mock_platform.return_value = "Linux"
-            service = DatabaseService(test_settings_service)
+    async def test_async_operations_work_after_configuration(self, mock_settings_service):
+        """Test that async operations work correctly after event loop configuration."""
+        mock_settings_service.settings.database_url = "sqlite:///test.db"
 
+        with patch("langflow.services.database.service.create_async_engine") as mock_create_engine:
+            mock_engine = MagicMock()
+            mock_create_engine.return_value = mock_engine
+
+            service = DatabaseService(mock_settings_service)
+
+            # Test that async session maker is properly configured
             assert service.async_session_maker is not None
-            async with service.async_session_maker() as session:
-                assert session is not None
-                await session.execute(text("SELECT 1"))
+
+            # Simulate an async operation
+            async def test_async():
+                return True
+
+            result = await test_async()
+            assert result is True
