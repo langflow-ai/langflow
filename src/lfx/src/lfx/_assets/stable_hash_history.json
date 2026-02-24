@@ -126,7 +126,7 @@
   },
   "AzureOpenAIModel": {
     "versions": {
-      "0.3.0": "cc8d003556d8"
+      "0.3.0": "2ba26202203e"
     }
   },
   "AzureOpenAIEmbeddings": {
@@ -576,7 +576,7 @@
   },
   "APIRequest": {
     "versions": {
-      "0.3.0": "7f013aba27c9"
+      "0.3.0": "f102aadfb328"
     }
   },
   "CSVtoData": {
@@ -1371,7 +1371,7 @@
   },
   "DataOperations": {
     "versions": {
-      "0.3.0": "f5d9680f8644"
+      "0.3.0": "1e5bfda1706b"
     }
   },
   "DataToDataFrame": {
