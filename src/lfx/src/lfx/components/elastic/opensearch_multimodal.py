@@ -12,7 +12,6 @@ from opensearchpy.exceptions import OpenSearchException, RequestError
 
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from lfx.base.vectorstores.vector_store_connection_decorator import vector_store_connection
-
 from lfx.io import (
     BoolInput,
     DropdownInput,
@@ -27,6 +26,8 @@ from lfx.io import (
 from lfx.log import logger
 from lfx.schema.data import Data
 
+REQUEST_TIMEOUT = 30
+MAX_RETRIES = 3
 
 def normalize_model_name(model_name: str) -> str:
     """Normalize embedding model name for use as field suffix.
@@ -125,6 +126,8 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         "m",
         "num_candidates",
         "docs_metadata",
+        "request_timeout",
+        "max_retries",
     ]
 
     inputs = [
@@ -339,7 +342,24 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
                 "Disable for self-signed certificates in development environments."
             ),
         ),
-        # DictInput(name="query", display_name="Query", input_types=["Data"], is_list=False, tool_mode=True),
+        # ----- Timeout / Retry -----
+        StrInput(
+            name="request_timeout",
+            display_name="Request Timeout (seconds)",
+            value="30",
+            advanced=True,
+            info=(
+                "Time in seconds to wait for a response from OpenSearch. "
+                "Increase for large bulk ingestion or complex hybrid queries."
+            ),
+        ),
+        StrInput(
+            name="max_retries",
+            display_name="Max Retries",
+            value="3",
+            advanced=True,
+            info="Number of retries for failed connections before raising an error.",
+        ),
     ]
     outputs = [
         Output(
@@ -547,7 +567,7 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
                 )
             else:
                 logger.info(
-                    f"[OpenSearchMultimodal] Field '{field_name}' already exists"
+                    f"[OpenSearchMultimodel] Field '{field_name}' already exists"
                     f"as knn_vector with matching dimensions - skipping mapping update"
                 )
             return
@@ -578,15 +598,15 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
             error_str = str(e).lower()
             if "null" in error_str or "nullpointerexception" in error_str:
                 logger.warning(
-                    f"[OpenSearchMultimodal] Could not add embedding field mapping for {field_name}"
+                    f"[OpenSearchMultimodel] Could not add embedding field mapping for {field_name}"
                     f"due to OpenSearch k-NN plugin issue: {e}. "
                     f"This is a known issue with some OpenSearch versions. "
-                    f"[OpenSearchMultimodal] Skipping mapping update. "
+                    f"[OpenSearchMultimodel] Skipping mapping update. "
                     f"Please ensure the index has the correct mapping for KNN search to work."
                 )
                 # Skip and continue - ingestion will proceed, but KNN search may fail if mapping doesn't exist
                 return
-            logger.warning(f"[OpenSearchMultimodal] Could not add embedding field mapping for {field_name}: {e}")
+            logger.warning(f"[OpenSearchMultimodel] Could not add embedding field mapping for {field_name}: {e}")
             raise
 
         # Verify the field was added correctly
@@ -663,7 +683,7 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         Returns:
             List of document IDs that were successfully ingested
         """
-        logger.debug(f"[OpenSearchMultimodal] Bulk ingesting embeddings for {index_name}")
+        logger.debug(f"[OpenSearchMultimodel] Bulk ingesting embeddings for {index_name}")
         if not mapping:
             mapping = {}
 
@@ -708,6 +728,18 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         helpers.bulk(client, requests, max_chunk_bytes=max_chunk_bytes)
         return return_ids
 
+    # ---------- param helpers ----------
+    def _parse_int_param(self, attr_name: str, default: int) -> int:
+        """Parse a string attribute to int, returning *default* on failure."""
+        raw = getattr(self, attr_name, None)
+        if raw is None or str(raw).strip() == "":
+            return default
+        try:
+            return int(str(raw).strip())
+        except ValueError:
+            logger.warning(f"Invalid integer value '{raw}' for {attr_name}, using default {default}")
+            return default
+
     # ---------- auth / client ----------
     def _build_auth_kwargs(self) -> dict[str, Any]:
         """Build authentication configuration for OpenSearch client.
@@ -743,7 +775,7 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         Returns:
             Configured OpenSearch client ready for operations
         """
-        logger.debug("[OpenSearchMultimodal] Building OpenSearch client")
+        logger.debug("[OpenSearchMultimodel] Building OpenSearch client")
         auth_kwargs = self._build_auth_kwargs()
         return OpenSearch(
             hosts=[self.opensearch_url],
@@ -751,6 +783,9 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
             verify_certs=self.verify_certs,
             ssl_assert_hostname=False,
             ssl_show_warn=False,
+            timeout=self._parse_int_param("request_timeout", REQUEST_TIMEOUT),
+            max_retries=self._parse_int_param("max_retries", MAX_RETRIES),
+            retry_on_timeout=True,
             **auth_kwargs,
         )
 
@@ -762,10 +797,10 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         # Check if we're in ingestion-only mode (no search query)
         has_search_query = bool((self.search_query or "").strip())
         if not has_search_query:
-            logger.debug("[OpenSearchMultimodal] Ingestion-only mode activated: search operations will be skipped")
-            logger.debug("[OpenSearchMultimodal] Starting ingestion mode...")
+            logger.debug("[OpenSearchMultimodel] Ingestion-only mode activated: search operations will be skipped")
+            logger.debug("[OpenSearchMultimodel] Starting ingestion mode...")
 
-        logger.debug(f"[OpenSearchMultimodal] Embedding: {self.embedding}")
+        logger.debug(f"[OpenSearchMultimodel] Embedding: {self.embedding}")
         self._add_documents_to_vector_store(client=client)
         return client
 
@@ -782,16 +817,16 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         Args:
             client: OpenSearch client for performing operations
         """
-        logger.debug("[OpenSearchMultimodal][INGESTION] _add_documents_to_vector_store called")
+        logger.debug("[OpenSearchMultimodel][INGESTION] _add_documents_to_vector_store called")
         # Convert DataFrame to Data if needed using parent's method
         self.ingest_data = self._prepare_ingest_data()
 
         logger.debug(
-            f"[OpenSearchMultimodal][INGESTION] ingest_data type: "
+            f"[OpenSearchMultimodel][INGESTION] ingest_data type: "
             f"{type(self.ingest_data)}, length: {len(self.ingest_data) if self.ingest_data else 0}"
         )
         logger.debug(
-            f"[OpenSearchMultimodal][INGESTION] ingest_data content: "
+            f"[OpenSearchMultimodel][INGESTION] ingest_data content: "
             f"{self.ingest_data[:2] if self.ingest_data and len(self.ingest_data) > 0 else 'empty'}"
         )
 
@@ -816,8 +851,8 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
             self.log("Embedding returned None (fail-safe mode enabled). Skipping document ingestion.")
             return
 
-        logger.debug(f"[OpenSearchMultimodal][INGESTION] Valid embeddings after filtering: {len(embeddings_list)}")
-        self.log(f"[OpenSearchMultimodal][INGESTION] Available embedding models: {len(embeddings_list)}")
+        logger.debug(f"[OpenSearchMultimodel][INGESTION] Valid embeddings after filtering: {len(embeddings_list)}")
+        self.log(f"[OpenSearchMultimodel][INGESTION] Available embedding models: {len(embeddings_list)}")
 
         # Select the embedding to use for ingestion
         selected_embedding = None
