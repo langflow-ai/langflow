@@ -26,8 +26,8 @@ from lfx.io import (
 from lfx.log import logger
 from lfx.schema.data import Data
 
-REQUEST_TIMEOUT = 30
-MAX_RETRIES = 3
+REQUEST_TIMEOUT = 60
+MAX_RETRIES = 5
 
 
 def normalize_model_name(model_name: str) -> str:
@@ -347,7 +347,7 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         StrInput(
             name="request_timeout",
             display_name="Request Timeout (seconds)",
-            value="30",
+            value="60",
             advanced=True,
             info=(
                 "Time in seconds to wait for a response from OpenSearch. "
