@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import io
 import json
 import re
@@ -24,7 +25,7 @@ from ibm_watsonx_orchestrate_core.types.connections import (
     ConnectionSecurityScheme,
     KeyValueConnectionCredentials,
 )
-from ibm_watsonx_orchestrate_core.types.tools.langflow_tool import create_langflow_tool
+from ibm_watsonx_orchestrate_core.types.tools.langflow_tool import LangflowTool, create_langflow_tool
 from lfx.services.deployment.base import BaseDeploymentService
 from lfx.services.deployment.exceptions import (
     AuthSchemeError,
@@ -117,20 +118,22 @@ class WxOCredentials:
 
 
 ERROR_PREFIX = "An error occured while"
+ERROR_SUFFIX_IN = "in Watsonx Orchestrate."
+
 class ErrorPrefix(str, Enum):
-    CREATE = f"{ERROR_PREFIX} creating a deployment: "
-    LIST = f"{ERROR_PREFIX} listing deployments: "
-    GET = f"{ERROR_PREFIX} getting a deployment: "
-    UPDATE = f"{ERROR_PREFIX} updating a deployment: "
-    REDEPLOY = f"{ERROR_PREFIX} redeploying a deployment: "
-    CLONE = f"{ERROR_PREFIX} cloning a deployment: "
-    DELETE = f"{ERROR_PREFIX} deleting a deployment: "
-    HEALTH = f"{ERROR_PREFIX} getting a deployment health: "
-    CREATE_CONFIG = f"{ERROR_PREFIX} creating a deployment config: "
-    LIST_CONFIGS = f"{ERROR_PREFIX} listing deployment configs: "
-    GET_CONFIG = f"{ERROR_PREFIX} getting a deployment config: "
-    UPDATE_CONFIG = f"{ERROR_PREFIX} updating a deployment config: "
-    DELETE_CONFIG = f"{ERROR_PREFIX} deleting a deployment config: "
+    CREATE = f"{ERROR_PREFIX} creating a deployment {ERROR_SUFFIX_IN}"
+    LIST = f"{ERROR_PREFIX} listing deployments {ERROR_SUFFIX_IN}"
+    GET = f"{ERROR_PREFIX} getting a deployment {ERROR_SUFFIX_IN}"
+    UPDATE = f"{ERROR_PREFIX} updating a deployment {ERROR_SUFFIX_IN}"
+    REDEPLOY = f"{ERROR_PREFIX} redeploying a deployment {ERROR_SUFFIX_IN}"
+    CLONE = f"{ERROR_PREFIX} cloning a deployment {ERROR_SUFFIX_IN}"
+    DELETE = f"{ERROR_PREFIX} deleting a deployment {ERROR_SUFFIX_IN}"
+    HEALTH = f"{ERROR_PREFIX} getting a deployment health {ERROR_SUFFIX_IN}"
+    CREATE_CONFIG = f"{ERROR_PREFIX} creating a deployment config {ERROR_SUFFIX_IN}"
+    LIST_CONFIGS = f"{ERROR_PREFIX} listing deployment configs {ERROR_SUFFIX_IN}"
+    GET_CONFIG = f"{ERROR_PREFIX} getting a deployment config {ERROR_SUFFIX_IN}"
+    UPDATE_CONFIG = f"{ERROR_PREFIX} updating a deployment config {ERROR_SUFFIX_IN}"
+    DELETE_CONFIG = f"{ERROR_PREFIX} deleting a deployment config {ERROR_SUFFIX_IN}"
 
 
 @register_deployment_adapter("watsonx-orchestrate")
@@ -210,7 +213,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 msg = (
                     f"{ErrorPrefix.CREATE.value}. "
                     "One or more resources already exist. "
-                    "Pleasure the names and/or ids of the "
+                    "Please ensure the names and/or ids of the "
                     "following resources to be unique: "
                     f"(1) The deployment specification, "
                     f"(2) The deployment configuration, "
@@ -230,7 +233,13 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             msg = (
                 f"{ErrorPrefix.CREATE.value}. "
                 "An unexpected error occurred while "
-                "creating a deployment in Watsonx Orchestrate."
+                "creating a deployment in Watsonx Orchestrate. "
+                "Please ensure the names and/or ids of the "
+                "following resources to be unique: "
+                f"(1) The deployment specification, "
+                f"(2) The deployment configuration, "
+                f"(3) The deployment snapshot"
+
             )
             raise DeploymentError(message=msg) from None
 
@@ -296,10 +305,10 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                     )
                     for agent in data
                 ]
-                return DeploymentList(
-                    deployments=deployments,
-                    deployment_type=deployment_type,
-                )
+                # return DeploymentList(
+                #     deployments=deployments,
+                #     deployment_type=deployment_type,
+                # )
 
                 # by_flow_id = getattr(filter_options, "flow_id", None)
                 # by_project_id = getattr(filter_options, "project_id", None)
@@ -344,11 +353,12 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 #             },
                 #         )
                 #     )
-            msg = (
-                f"{ErrorPrefix.LIST.value}"
-                f"watsonx Orchestrate has no such deployment type '{deployment_type}'."
-            )
-            raise InvalidDeploymentTypeError(message=msg)
+            else:
+                msg = (
+                    f"{ErrorPrefix.LIST.value}"
+                    f"watsonx Orchestrate has no such deployment type '{deployment_type}'."
+                )
+                raise InvalidDeploymentTypeError(message=msg)
         except (ClientAPIException, HTTPException):
             msg = (
                 f"{ErrorPrefix.LIST.value}. "
@@ -614,31 +624,6 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 for app in apps
             ]
         )
-        # results: list[ConfigItemResult] = []
-        # for app in apps:
-        #     app_id = app.app_id
-        #     config = clients.connections.get_config(app_id=app_id, env=ConnectionEnvironment.DRAFT)
-        #     if not config:
-        #         continue
-        #     credentials = clients.connections.get_credentials(
-        #         app_id=app_id,
-        #         env=ConnectionEnvironment.DRAFT,
-        #         use_app_credentials=False,
-        #     )
-        #     results.append(
-        #         ConfigItemResult(
-        #             id=app_id,
-        #             name=app_id,
-        #             provider_data={
-        #                 "app_id": app_id,
-        #                 "environment": ConnectionEnvironment.DRAFT.value,
-        #                 "preference": config.preference.value,
-        #                 "security_scheme": config.security_scheme.value,
-        #                 "credentials_entered": bool(credentials),
-        #             },
-        #         )
-        #     )
-        # return apps
 
     async def get_deployment_config(
         self,
@@ -709,19 +694,18 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         db: Any,
     ) -> SnapshotResult:
         """Create an immutable WXO tool snapshot from a Langflow definition."""
-        if len(snapshot_items.raw_payloads) != 1:
-            msg = "create_snapshot expects exactly one flow payload."
-            raise ValueError(msg)
-        # today, only one snapshot is supported
-
         if snapshot_items.artifact_type == ArtifactType.FLOW:
-            created_snapshot = await self._create_langflow_flow_tool(
-                flow_payload=snapshot_items.raw_payloads[0],
-                user_id=user_id,
-                db=db,
+            clients = await self._get_provider_clients(user_id=user_id, db=db)
+            created_tool_ids = await self._create_and_upload_wxo_flow_tools(
+                tool_client=clients.tool,
+                flow_payloads=snapshot_items.raw_payloads,
+                connections={},
             )
+        else:
+            msg = f"Unsupported artifact type: {snapshot_items.artifact_type}"
+            raise ValueError(msg)
 
-        return SnapshotResult(ids=[created_snapshot])
+        return SnapshotResult(ids=created_tool_ids)
 
     async def list_snapshots(
         self,
@@ -860,31 +844,23 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         snapshot_reference_ids = snapshots.reference_ids
         snapshot_raw_payloads = snapshots.raw_payloads
 
-        if snapshot_reference_ids is not None and len(snapshot_reference_ids) > 1:
-            msg = "create_snapshot expects exactly one snapshot reference id."
-            raise ValueError(msg)
-
-        if snapshot_raw_payloads is not None and len(snapshot_raw_payloads) > 1:
-            msg = "create_snapshot expects exactly one snapshot payload."
-            raise ValueError(msg)
-        # today, only one snapshot is supported
-
         tool_ids: list[str]
         created_snapshot_ids: list[str] = []
 
         if snapshot_reference_ids is not None:
-            # the schema guarantees at least one id is present for reference mode
-            tool_ids = [snapshot_reference_ids[0]]
+            tool_ids = snapshot_reference_ids
         elif snapshot_raw_payloads is not None:
-            # the schema guarantees at least one payload item is present for payload mode
-            created_snapshot_id = await self._create_langflow_flow_tool(
-                flow_payload=snapshot_raw_payloads[0],
+            clients = await self._get_provider_clients(user_id=user_id, db=db)
+            connections = self._resolve_snapshot_connections(
+                connections_client=clients.connections,
                 config_id=app_id,
-                user_id=user_id,
-                db=db,
             )
-            tool_ids = [created_snapshot_id]
-            created_snapshot_ids = [created_snapshot_id]
+            created_snapshot_ids = await self._create_and_upload_wxo_flow_tools(
+                tool_client=clients.tool,
+                flow_payloads=snapshot_raw_payloads,
+                connections=connections,
+            )
+            tool_ids = created_snapshot_ids
         else:
             msg = "Either 'reference_ids' or 'raw_payloads' must be provided for snapshots."
             raise ValueError(msg)
@@ -1400,6 +1376,161 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 seen.add(requirement)
         return result
 
+    def _resolve_snapshot_connections(
+        self,
+        *,
+        connections_client: ConnectionsClient,
+        config_id: str | None,
+    ) -> dict[str, str]:
+        connections: dict[str, str] = {}
+        if config_id is not None:
+            app_id = self._require_non_empty_string(
+                config_id,
+                field_name="config_id",
+                error_message="Snapshot binding requires non-empty 'config_id'.",
+            )
+            connection = connections_client.get_draft_by_app_id(app_id=app_id)
+            if not connection:
+                msg = f"Connection '{app_id}' not found."
+                raise ValueError(msg)
+            connections = {app_id: connection.connection_id}
+        return connections
+
+    def _create_wxo_flow_tool(
+        self,
+        *,
+        flow_payload: BaseFlowArtifact,
+        connections: dict[str, str],
+    ) -> tuple[dict[str, Any], bytes]:
+        """Create a Watsonx Orchestrate flow tool specification.
+
+        Given a flow payload and connections dictionary,
+        create a Watsonx Orchestrate flow tool specification
+        and the supporting artifacts of the requirements.txt
+        and the flow json file.
+
+        Args:
+            flow_payload: The flow payload to create the tool specification for.
+            connections: The connections dictionary to create the tool specification for.
+
+        Returns:
+            Tuple[dict[str, Any], bytes]: a tuple containing:
+                - tool_payload: The Watsonx Orchestrate flow tool specification.
+                - artifacts: The supporting artifacts (the requirements.txt
+                    and the flow json file) for the tool.
+        """
+        flow_definition = flow_payload.model_dump()
+        flow_provider_data = flow_definition.pop("provider_data", None)
+
+        if not isinstance(flow_provider_data, dict):
+            msg = (
+                "Flow payload must include provider_data with a "
+                "non-empty project_id for Watsonx deployment."
+            )
+            raise TypeError(msg)
+
+        if not (project_id := flow_provider_data.get("project_id")):
+            msg = (
+                "Flow payload must include provider_data with a "
+                "non-empty project_id for Watsonx deployment."
+            )
+            raise TypeError(msg)
+
+        project_id = self._require_non_empty_string(
+            str(project_id),
+            field_name="project_id",
+            error_message=(
+                "Flow provider_data.project_id must be a non-empty string "
+                "for Watsonx deployment."
+            ),
+        )
+
+        flow_definition.update({
+            "name": self._normalize_wxo_name(flow_definition.get("name") or ""),
+            "id": str(flow_definition.get("id")),
+        })
+
+        # Fallback for flows that don't include last_tested_version in payload
+        if not flow_definition.get("last_tested_version"):
+            detected_version = (get_version_info() or {}).get("version")
+            if not detected_version:
+                msg = (
+                    "Unable to determine running Langflow version for snapshot "
+                    "creation."
+                )
+                raise ValueError(msg)
+            flow_definition["last_tested_version"] = detected_version
+
+        tool: LangflowTool = create_langflow_tool(
+            tool_definition=flow_definition,
+            connections=connections,
+            show_details=False,
+        )
+
+        tool_payload = tool.__tool_spec__.model_dump(
+            mode="json",
+            exclude_unset=True,
+            exclude_none=True,
+            by_alias=True,
+            )
+
+        (
+            tool_payload
+            .setdefault("binding", {})
+            .setdefault("langflow", {})
+            ["project_id"]
+        ) = project_id
+
+        artifacts: bytes = self._build_langflow_artifact_bytes(
+            tool=tool,
+            flow_definition=flow_definition,
+        )
+
+        return tool_payload, artifacts
+
+    async def _create_and_upload_wxo_flow_tools(
+        self,
+        *,
+        tool_client: ToolClient,
+        flow_payloads: list[BaseFlowArtifact],
+        connections: dict[str, str],
+    ) -> list[str]:
+        specs = [
+            self._create_wxo_flow_tool(
+                flow_payload=flow_payload,
+                connections=connections,
+            )
+            for flow_payload in flow_payloads
+        ]
+        return await asyncio.gather(
+            *(
+                self._upload_wxo_flow_tool(
+                    tool_client=tool_client,
+                    tool_payload=tool_payload,
+                    artifact_bytes=artifact_bytes,
+                )
+                for tool_payload, artifact_bytes in specs
+            )
+        )
+
+    async def _upload_wxo_flow_tool(
+        self,
+        *,
+        tool_client: ToolClient,
+        tool_payload: dict[str, Any],
+        artifact_bytes: bytes,
+    ) -> str:
+        tool_response = await asyncio.to_thread(tool_client.create, tool_payload)
+        tool_id = self._require_tool_id(tool_response)
+
+        await asyncio.to_thread(
+            self._upload_tool_artifact_bytes,
+            tool_client,
+            tool_id=tool_id,
+            artifact_bytes=artifact_bytes,
+        )
+        return tool_id
+
     async def _create_langflow_flow_tool(
         self,
         *,
@@ -1409,61 +1540,20 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         db: Any,
     ) -> str:
         clients = await self._get_provider_clients(user_id=user_id, db=db)
-        flow_definition = flow_payload.model_dump()
-        flow_provider_data = flow_definition.pop("provider_data", None)
-        if not isinstance(flow_provider_data, dict):
-            msg = "Flow payload must include provider_data with a non-empty project_id for Watsonx deployment."
-            raise TypeError(msg)
-        project_id = flow_provider_data.get("project_id")
-        normalized_project_id = self._require_non_empty_string(
-            str(project_id),
-            field_name="project_id",
-            error_message="Flow provider_data.project_id must be a non-empty string for Watsonx deployment.",
+        connections = self._resolve_snapshot_connections(
+            connections_client=clients.connections,
+            config_id=config_id,
         )
-
-        flow_definition["name"] = self._normalize_wxo_name(flow_definition.get("name") or "")
-        # print(flow_definition["name"])
-        flow_definition["id"] = str(flow_definition.get("id"))
-        # print(flow_definition["last_tested_version"]) # key error here
-        # right here
-        # Fallback for flows that don't include last_tested_version in payload
-        if not flow_definition.get("last_tested_version"):
-            version_info = get_version_info() or {}
-            detected_version = version_info.get("version")
-            if not detected_version:
-                msg = "Unable to determine running Langflow version for snapshot creation."
-                raise ValueError(msg)
-            flow_definition["last_tested_version"] = detected_version
-        # print(flow_definition["last_tested_version"])
-        connections: dict[str, str] = {}
-        if config_id is not None:
-            app_id = self._require_non_empty_string(
-                config_id,
-                field_name="config_id",
-                error_message="Snapshot binding requires non-empty 'config_id'.",
-            )
-            connection = clients.connections.get_draft_by_app_id(app_id=app_id)
-            if not connection:
-                msg = f"Connection '{app_id}' not found."
-                raise ValueError(msg)
-            connections = {app_id: connection.connection_id}
-
-        tool = create_langflow_tool(
-            tool_definition=flow_definition,
+        tool_payload, artifact_bytes = self._create_wxo_flow_tool(
+            flow_payload=flow_payload,
             connections=connections,
-            show_details=False,
         )
 
-        tool_payload = tool.__tool_spec__.model_dump(mode="json", exclude_unset=True, exclude_none=True, by_alias=True)
-        tool_payload.setdefault("binding", {}).setdefault("langflow", {})["project_id"] = normalized_project_id
-
-        tool_response = clients.tool.create(tool_payload)
-        tool_id = self._require_tool_id(tool_response)
-
-        artifact = self._build_langflow_artifact_bytes(tool=tool, flow_definition=flow_definition)
-        self._upload_tool_artifact_bytes(clients.tool, tool_id=tool_id, artifact_bytes=artifact)
-
-        return tool_id
+        return await self._upload_wxo_flow_tool(
+            tool_client=clients.tool,
+            tool_payload=tool_payload,
+            artifact_bytes=artifact_bytes,
+        )
 
     @staticmethod
     def get_authenticator(instance_url: str, api_key: str) -> None:

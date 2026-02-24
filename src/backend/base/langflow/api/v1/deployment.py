@@ -379,9 +379,7 @@ async def list_snapshots(
     artifact_type: Annotated[ArtifactType | None, Query()] = None,
 ):
     """List snapshots for a provider account."""
-    print("HAHA4")
     deployment_adapter = await _resolve_deployment_adapter(provider_id, user_id=user.id, db=db)
-    print("HAHA3")
     try:
         snapshot_list_result = await deployment_adapter.list_snapshots(
             user_id=user.id,
@@ -391,7 +389,6 @@ async def list_snapshots(
     except ValueError as exc:
         _raise_http_for_value_error(exc)
     except Exception as exc:
-        print(exc)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
     return SnapshotListResult(**snapshot_list_result.model_dump(exclude_unset=True))
 

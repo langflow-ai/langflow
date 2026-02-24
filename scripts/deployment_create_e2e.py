@@ -88,15 +88,19 @@ class DeploymentCreateE2E:
         try:
             await self._create_provider_account()
             ref_config_id = await self._create_reference_config()
-            ref_snapshot_id = await self._create_reference_snapshot()
+            ref_snapshot_id_primary = await self._create_reference_snapshot(label="snapshot-ref-primary")
+            ref_snapshot_id_secondary = await self._create_reference_snapshot(label="snapshot-ref-secondary")
+
+            snapshot_results = await self._run_snapshot_create_scenarios()
 
             scenario_results = await self._run_create_scenarios(
                 reference_config_id=ref_config_id,
-                reference_snapshot_id=ref_snapshot_id,
+                reference_snapshot_ids=[ref_snapshot_id_primary, ref_snapshot_id_secondary],
             )
-            self._print_summary(scenario_results)
+            all_results = [*snapshot_results, *scenario_results]
+            self._print_summary(all_results)
 
-            failing = [result for result in scenario_results if not result.ok]
+            failing = [result for result in all_results if not result.ok]
             if failing:
                 exit_code = 1
         finally:
@@ -140,9 +144,9 @@ class DeploymentCreateE2E:
         print(f"Reference config created: {config_id}")
         return config_id
 
-    async def _create_reference_snapshot(self) -> str:
+    async def _create_reference_snapshot(self, *, label: str) -> str:
         self._require_provider_id()
-        flow_payload = self._build_flow_payload(label="snapshot-ref")
+        flow_payload = self._build_flow_payload(label=label)
         payload = {
             "artifact_type": "flow",
             "raw_payloads": [flow_payload],
@@ -158,14 +162,79 @@ class DeploymentCreateE2E:
         print(f"Reference snapshot created: {snapshot_id}")
         return snapshot_id
 
+    async def _run_snapshot_create_scenarios(self) -> list[ScenarioResult]:
+        self._require_provider_id()
+        provider_id = self.provider_id
+
+        scenarios = [
+            {
+                "name": "snapshot_create_single_raw_payload",
+                "expected": {HTTP_CREATED},
+                "payload": {
+                    "artifact_type": "flow",
+                    "raw_payloads": [self._build_flow_payload(label="snapshot-single")],
+                },
+            },
+            {
+                "name": "snapshot_create_multiple_raw_payloads",
+                "expected": {HTTP_CREATED},
+                "payload": {
+                    "artifact_type": "flow",
+                    "raw_payloads": [
+                        self._build_flow_payload(label="snapshot-multi-a"),
+                        self._build_flow_payload(label="snapshot-multi-b"),
+                    ],
+                },
+            },
+        ]
+
+        results: list[ScenarioResult] = []
+        for index, scenario in enumerate(scenarios, start=1):
+            print(f"[snapshot {index}/{len(scenarios)}] Running {scenario['name']} ...")
+            response = await self._request(
+                "POST",
+                f"/api/v1/deployments/snapshots?provider_id={provider_id}",
+                json_body=scenario["payload"],
+            )
+            status_code = response.status_code
+            ok = status_code in scenario["expected"]
+            print(
+                f"[{scenario['name']}] status={status_code}, "
+                f"expected={sorted(scenario['expected'])}"
+            )
+
+            if status_code == HTTP_CREATED:
+                try:
+                    response_payload = response.json()
+                    for snapshot_id in (response_payload.get("ids") or []):
+                        self.created_snapshot_ids.add(str(snapshot_id))
+                    print(f"[{scenario['name']}] tracked_snapshot_ids={response_payload.get('ids') or []}")
+                except Exception as exc:  # noqa: BLE001
+                    print(f"[warning] snapshot create response parse failed: {exc}")
+
+            excerpt = self._excerpt_response(response)
+            results.append(
+                ScenarioResult(
+                    name=str(scenario["name"]),
+                    expected_statuses=set(scenario["expected"]),
+                    actual_status=status_code,
+                    ok=ok,
+                    response_excerpt=excerpt,
+                )
+            )
+
+        return results
+
     async def _run_create_scenarios(
         self,
         *,
         reference_config_id: str,
-        reference_snapshot_id: str,
+        reference_snapshot_ids: list[str],
     ) -> list[ScenarioResult]:
         self._require_provider_id()
         provider_id = self.provider_id
+        reference_snapshot_id = reference_snapshot_ids[0]
+        reference_snapshot_id_2 = reference_snapshot_ids[1]
 
         scenarios = [
             {
@@ -213,19 +282,19 @@ class DeploymentCreateE2E:
             },
             {
                 "name": "create_snapshot_with_two_reference_ids",
-                "expected": {HTTP_BAD_REQUEST, HTTP_INTERNAL_SERVER_ERROR},
+                "expected": {HTTP_CREATED},
                 "payload": self._build_create_payload(
                     deployment_type="agent",
                     snapshot={
                         "artifact_type": "flow",
-                        "reference_ids": [reference_snapshot_id, "dummy-extra-id"],
+                        "reference_ids": [reference_snapshot_id, reference_snapshot_id_2],
                     },
                     config={"reference_id": reference_config_id},
                 ),
             },
             {
                 "name": "create_snapshot_with_two_raw_payloads",
-                "expected": {HTTP_BAD_REQUEST, HTTP_INTERNAL_SERVER_ERROR},
+                "expected": {HTTP_CREATED},
                 "payload": self._build_create_payload(
                     deployment_type="agent",
                     snapshot={
