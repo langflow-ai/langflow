@@ -1154,17 +1154,16 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         data: dict[str, Any],
         deployment_type: DeploymentType,
         provider_data: dict[str, Any] | None = None,
-        provider_raw: bool = False, # noqa: FBT001,FBT002
     ) -> DeploymentItem:
         result = {
             "id": data.get("id"),
             "type": deployment_type.value,
             "name": data.get("name"),
+            "created_at": data.get("created_on"),
+            "updated_at": data.get("updated_at"),
         }
         if provider_data:
             result["provider_data"] = provider_data
-        if provider_raw:
-            result["provider_data"] = data if not provider_data else {**provider_data, "provider_raw": data}
 
         return DeploymentItem(
             **result
@@ -1194,7 +1193,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
 
     def _derive_agent_mode(self, agent: dict[str, Any]) -> str:
         environments = agent.get("environments", [])
-        # print(f"environments: {environments}")
+        print(f"environments: {environments}")
         if not isinstance(environments, list) or not environments:
             return "unknown"
 

@@ -7,20 +7,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { STATUS_DOT } from "./constants";
 
 export const columnDefs = [
   {
     headerName: "Name",
     field: "name",
     flex: 3,
-    cellRenderer: (params: { value: string; data: { url: string } }) => (
-      <div className="flex flex-col justify-center gap-0.5 py-2">
-        <span className="text-sm font-medium leading-tight">
+    cellRenderer: (params: { value: string }) => (
+      <div className="flex min-w-0 flex-col justify-center gap-0.5 py-2">
+        <span
+          className="truncate text-sm font-medium leading-tight"
+          title={params.value}
+        >
           {params.value}
-        </span>
-        <span className="truncate text-xs text-muted-foreground">
-          {params.data.url}
         </span>
       </div>
     ),
@@ -29,31 +28,48 @@ export const columnDefs = [
     headerName: "Type",
     field: "type",
     flex: 1,
-    cellRenderer: (params: { value: string }) => (
-      <div className="flex items-center">
-        <span className="inline-flex items-center gap-1.5 rounded-md border border-border bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-          {params.value === "MCP" ? (
-            <ForwardedIconComponent name="Mcp" className="h-3 w-3" />
-          ) : (
-            <ForwardedIconComponent name="Bot" className="h-3 w-3" />
-          )}
-          {params.value}
-        </span>
-      </div>
-    ),
+    cellRenderer: (params: { value: string }) => {
+      const isMcp = params.value === "MCP";
+      const badgeClass = isMcp
+        ? "border-border bg-muted text-muted-foreground"
+        : "border-border bg-muted text-fuchsia-700 dark:text-fuchsia-400";
+
+      return (
+        <div className="flex items-center">
+          <span
+            className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium ${badgeClass}`}
+          >
+            {isMcp ? (
+              <ForwardedIconComponent name="Mcp" className="h-3 w-3" />
+            ) : (
+              <ForwardedIconComponent name="Bot" className="h-3 w-3" />
+            )}
+            {params.value}
+          </span>
+        </div>
+      );
+    },
   },
   {
-    headerName: "Status",
-    field: "status",
+    headerName: "Environment",
+    field: "mode",
     flex: 1,
-    cellRenderer: (params: { value: string }) => (
-      <div className="flex items-center gap-1.5">
-        <span
-          className={`h-2 w-2 rounded-full ${STATUS_DOT[params.value] ?? "bg-muted-foreground"}`}
-        />
-        <span className="text-sm">{params.value}</span>
-      </div>
-    ),
+    cellRenderer: (params: { value: string }) => {
+      const isLive = params.value?.toLowerCase() === "live";
+      const badgeClass = isLive
+        ? "border-green-500/30 bg-green-500/10 text-green-600 dark:text-green-400"
+        : "border-yellow-500/30 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400";
+
+      return (
+        <div className="flex items-center">
+          <span
+            className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${badgeClass}`}
+          >
+            {params.value}
+          </span>
+        </div>
+      );
+    },
   },
   {
     headerName: "Attached",
@@ -66,40 +82,15 @@ export const columnDefs = [
     ),
   },
   {
-    headerName: "Config (AppID)",
-    field: "configs",
-    flex: 2,
-    cellRenderer: (params: {
-      value: { id: string; count: number | null }[];
-    }) => (
-      <div className="flex h-full flex-col items-start justify-center gap-1">
-        {params.value.map(
-          (cfg: { id: string; count: number | null }, i: number) => (
-            <div key={i} className="flex items-center gap-1">
-              <span className="inline-flex w-fit items-center rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
-                {cfg.id}
-              </span>
-              {cfg.count !== null && (
-                <span className="text-xs text-muted-foreground">
-                  ({cfg.count})
-                </span>
-              )}
-            </div>
-          ),
-        )}
-      </div>
-    ),
-  },
-  {
     headerName: "Last Modified",
     field: "modifiedDate",
     flex: 1.5,
     headerClass: "[&_.ag-header-cell-resize]:hidden",
-    cellRenderer: (params: { value: string; data: { modifiedBy: string } }) => (
+    cellRenderer: (params: { value: string; data: { createdDate: string } }) => (
       <div className="flex flex-col justify-center gap-0.5 py-2">
         <span className="text-sm leading-tight">{params.value}</span>
         <span className="text-xs text-muted-foreground">
-          by {params.data.modifiedBy}
+          Created: {params.data.createdDate}
         </span>
       </div>
     ),

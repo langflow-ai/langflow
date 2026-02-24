@@ -3,15 +3,12 @@ import {
   type AttachTab,
   type ConfigMode,
   type DeploymentType,
-  type DeploymentView,
   type KeyFormat,
   TOTAL_STEPS,
   type VariableScope,
 } from "./constants";
 
 export const useDeploymentForm = () => {
-  const [activeView, setActiveView] =
-    useState<DeploymentView>("Live Deployments");
   const [newDeploymentOpen, setNewDeploymentOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [deploymentType, setDeploymentType] = useState<DeploymentType>("Agent");
@@ -63,8 +60,6 @@ export const useDeploymentForm = () => {
   };
 
   return {
-    activeView,
-    setActiveView,
     newDeploymentOpen,
     setNewDeploymentOpen,
     currentStep,
