@@ -519,10 +519,7 @@ def create_app():
     app.include_router(health_check_router)
     app.include_router(log_router)
 
-    # --- plugin hook ---
-    # Discover and register additional routers provided by plugins
-    # via the ``langflow.plugins`` entry-point group.
-    # Each entry point must expose a callable ``register(app: FastAPI) -> None``.
+    # Discover and register additional routers from plugins (langflow.plugins entry-point)
     load_plugin_routes(app)
 
     @app.exception_handler(Exception)
