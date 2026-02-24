@@ -43,7 +43,12 @@ class TraceBase(SQLModel):
     total_tokens: int = Field(default=0, description="Total tokens used across all LLM calls")
     total_cost: float = Field(default=0.0, description="Estimated total cost")
     flow_id: UUID = Field(index=True, description="ID of the flow this trace belongs to")
-    session_id: str = Field(nullable=False, index=True, description="Session ID for grouping traces")
+    session_id: str | None = Field(
+        default=None,
+        nullable=True,
+        index=True,
+        description="Session ID for grouping traces",
+    )
 
     class Config:
         arbitrary_types_allowed = True
@@ -82,7 +87,7 @@ class TraceCreate(SQLModel):
 
     name: str
     flow_id: UUID
-    session_id: str
+    session_id: str | None = None
 
 
 class SpanBase(SQLModel):

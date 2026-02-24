@@ -21,14 +21,22 @@ import {
   useGetTraceQuery,
   useGetTracesQuery,
 } from "@/controllers/API/queries/traces";
+import { formatSmartTimestamp, parseApiTimestamp } from "@/utils/dateTime";
 import { cn } from "@/utils/utils";
 import { SpanDetail } from "./SpanDetail";
 import { SpanTree } from "./SpanTree";
-import type { Span, Trace } from "./types";
+import { getStatusIconProps } from "./statusHelpers";
+import type { Span } from "./types";
 
 interface TraceViewProps {
   flowId?: string | null;
   initialTraceId?: string | null;
+  onTraceClick?: (traceId: string) => void;
+}
+
+interface TraceDetailViewProps {
+  traceId: string | null;
+  flowName?: string | null;
 }
 
 /**
@@ -49,11 +57,11 @@ function formatTotalLatency(ms: number): string {
 }
 
 /**
- * Format timestamp to readable format
+ * Format timestamps using local timezone.
+ * Note: backend may send timezone-naive ISO strings; `formatSmartTimestamp` accounts for that.
  */
 function formatTimestamp(timestamp: string): string {
-  const date = new Date(timestamp);
-  return date.toLocaleString();
+  return formatSmartTimestamp(timestamp);
 }
 
 /**
@@ -130,6 +138,7 @@ interface TraceAccordionItemProps {
   input: Record<string, unknown> | null;
   output: Record<string, unknown> | null;
   isExpanded: boolean;
+  onTraceClick?: (traceId: string) => void;
 }
 
 function TraceAccordionItem({
@@ -144,6 +153,7 @@ function TraceAccordionItem({
   input,
   output,
   isExpanded,
+  onTraceClick,
 }: TraceAccordionItemProps) {
   const [selectedSpan, setSelectedSpan] = useState<Span | null>(null);
 
@@ -177,6 +187,19 @@ function TraceAccordionItem({
           "px-4 py-3 hover:bg-muted/50",
           traceStatus === "error" && "hover:bg-error/10",
         )}
+        onClick={(e) => {
+          if (!onTraceClick) return;
+          e.preventDefault();
+          e.stopPropagation();
+          onTraceClick(traceId);
+        }}
+        onKeyDown={(e) => {
+          if (!onTraceClick) return;
+          if (e.key !== "Enter" && e.key !== " ") return;
+          e.preventDefault();
+          e.stopPropagation();
+          onTraceClick(traceId);
+        }}
       >
         <div className="flex w-full items-center justify-between pr-4">
           <div className="flex items-center gap-3">
@@ -213,7 +236,7 @@ function TraceAccordionItem({
               <IconComponent name="Clock" className="h-3 w-3" />
               {formatTotalLatency(totalLatencyMs)}
             </span>
-            {totalTokens > 0 && (
+            {true && (
               <span className="flex items-center gap-1">
                 <IconComponent name="Coins" className="h-3 w-3" />
                 {totalTokens.toLocaleString()} tokens
@@ -285,10 +308,144 @@ function TraceAccordionItem({
 }
 
 /**
+ * Single-trace detail view used in the right-side panel.
+ * Matches the "Trace Detail" layout (header + span list + span details).
+ */
+export function TraceDetailView({ traceId, flowName }: TraceDetailViewProps) {
+  const [selectedSpan, setSelectedSpan] = useState<Span | null>(null);
+
+  const { data: trace, isLoading } = useGetTraceQuery(
+    { traceId: traceId ?? "" },
+    { enabled: !!traceId },
+  );
+
+  useEffect(() => {
+    setSelectedSpan(null);
+  }, [traceId]);
+
+  useEffect(() => {
+    if (!trace?.spans?.length) return;
+    setSelectedSpan((prev) => prev ?? trace.spans[0]);
+  }, [trace?.spans]);
+
+  const handleSelectSpan = useCallback((span: Span) => {
+    setSelectedSpan(span);
+  }, []);
+
+  if (!traceId) {
+    return (
+      <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+        No trace available for this run.
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="flex flex-col items-center gap-2 text-muted-foreground">
+          <Loading size={32} className="text-primary" />
+          <span className="text-sm">Loading trace...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!trace) {
+    return (
+      <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+        Failed to load trace details.
+      </div>
+    );
+  }
+
+  const headerTitle = `${trace.name || flowName || "Trace"}`;
+  const { colorClass, iconName, shouldSpin } = getStatusIconProps(trace.status);
+
+  return (
+    <div className="flex h-full flex-col overflow-hidden">
+      <div className="border-b border-border px-4 py-3 pr-12">
+        <div className="flex flex-nowrap items-center justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap">
+            <span className="shrink-0 text-sm font-medium">Trace Detais</span>
+            <span className="shrink-0 text-sm text-muted-foreground">—</span>
+            <span className="min-w-0 truncate text-sm text-muted-foreground">
+              {headerTitle}
+            </span>
+          </div>
+
+          <div className="flex shrink-0 items-center gap-3 whitespace-nowrap">
+            <Badge
+              variant={
+                trace.status === "success"
+                  ? "successStatic"
+                  : trace.status === "error"
+                    ? "errorStatic"
+                    : "secondaryStatic"
+              }
+              size="sm"
+            >
+              <IconComponent
+                name={iconName}
+                className={`mr-1 h-4 w-4 ${colorClass} ${shouldSpin ? "animate-spin" : ""}`}
+                aria-label={trace.status}
+                dataTestId={`flow-log-status-${trace.status}`}
+                skipFallback
+              />
+              {trace.status}
+            </Badge>
+
+            <Badge
+              variant="outline"
+              size="sm"
+              className="max-w-[280px] truncate font-mono text-xs"
+              title={trace.id}
+            >
+              <IconComponent name="Hash" className="mr-1 h-3 w-3" />
+              {trace.id}
+            </Badge>
+
+            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <IconComponent name="Clock" className="h-3 w-3" />
+                {formatTotalLatency(trace.totalLatencyMs)}
+              </span>
+              {trace.totalTokens > 0 && (
+                <span className="flex items-center gap-1">
+                  <IconComponent name="Coins" className="h-3 w-3" />
+                  {trace.totalTokens.toLocaleString()}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-1 overflow-hidden">
+        <div className="w-[320px] min-w-[280px] overflow-y-auto border-r border-border p-2">
+          <SpanTree
+            spans={trace.spans ?? []}
+            selectedSpanId={selectedSpan?.id ?? null}
+            onSelectSpan={handleSelectSpan}
+          />
+        </div>
+        <div className="flex-1 overflow-hidden">
+          <SpanDetail span={selectedSpan} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
  * Main TraceView component showing multiple traces as accordions
  * Each trace can be expanded to show its trace tree and details
  */
-export function TraceView({ flowId, initialTraceId }: TraceViewProps) {
+export function TraceView({
+  flowId,
+  initialTraceId,
+  onTraceClick,
+}: TraceViewProps) {
   const [expandedTraceId, setExpandedTraceId] = useState<string>(
     initialTraceId ?? "",
   );
@@ -328,7 +485,8 @@ export function TraceView({ flowId, initialTraceId }: TraceViewProps) {
 
     // Date range filter
     if (startDateFilter) {
-      const traceDate = new Date(trace.startTime);
+      const traceDate = parseApiTimestamp(trace.startTime);
+      if (!traceDate) return false;
       const startDate = new Date(startDateFilter);
       if (traceDate < startDate) {
         return false;
@@ -336,7 +494,8 @@ export function TraceView({ flowId, initialTraceId }: TraceViewProps) {
     }
 
     if (endDateFilter) {
-      const traceDate = new Date(trace.startTime);
+      const traceDate = parseApiTimestamp(trace.startTime);
+      if (!traceDate) return false;
       const endDate = new Date(endDateFilter);
       if (traceDate > endDate) {
         return false;
@@ -679,5 +838,3 @@ export function TraceView({ flowId, initialTraceId }: TraceViewProps) {
     </div>
   );
 }
-
-// Made with Bob

@@ -45,6 +45,8 @@ const DeleteAccountPage = lazy(() => import("./pages/DeleteAccountPage"));
 
 const PlaygroundPage = lazy(() => import("./pages/Playground"));
 
+const FlowInsightsPage = lazy(() => import("./pages/FlowInsightsPage"));
+
 const SignUp = lazy(() => import("./pages/SignUpPage"));
 
 const router = createBrowserRouter(
@@ -176,6 +178,7 @@ const router = createBrowserRouter(
                 <Route path="" element={<CustomDashboardWrapperPage />}>
                   <Route path="folder/:folderId/" element={<FlowPage />} />
                   <Route path="" element={<FlowPage />} />
+                  <Route path="insights" element={<FlowInsightsPage />} />
                 </Route>
                 <Route path="view" element={<ViewPage />} />
               </Route>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Separator } from "@/components/ui/separator";
@@ -9,7 +10,7 @@ import {
   type SidebarSection,
   useSidebar,
 } from "@/components/ui/sidebar";
-import FlowLogsModal from "@/modals/flowLogsModal";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { cn } from "@/utils/utils";
 import { useSearchContext } from "../index";
 
@@ -54,12 +55,6 @@ export const NAV_ITEMS: NavItem[] = [
     tooltip: "Add Sticky Notes",
   },
   {
-    id: "logs",
-    icon: "ScrollText",
-    label: "Logs",
-    tooltip: "Logs",
-  },
-  {
     id: "traces",
     icon: "Activity",
     label: "Traces",
@@ -70,6 +65,8 @@ export const NAV_ITEMS: NavItem[] = [
 const SidebarSegmentedNav = () => {
   const { activeSection, setActiveSection, toggleSidebar, open } = useSidebar();
   const { focusSearch, setSearch } = useSearchContext();
+  const { id } = useParams();
+  const navigate = useCustomNavigate();
   const [isAddNoteActive, setIsAddNoteActive] = useState(false);
   const handleAddNote = () => {
     window.dispatchEvent(new Event("lf:start-add-note"));
@@ -99,8 +96,11 @@ const SidebarSegmentedNav = () => {
                       return;
                     }
 
-                    // Skip activeSection logic for logs and traces
                     if (item.id === "logs" || item.id === "traces") {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (!id) return;
+                      navigate(`/flow/${id}/insights`);
                       return;
                     }
 
@@ -134,35 +134,11 @@ const SidebarSegmentedNav = () => {
                   )}
                   data-testid={`sidebar-nav-${item.id}`}
                 >
-                  {item.id === "logs" ? (
-                    <FlowLogsModal>
-                      <button className="flex h-full w-full items-center justify-center">
-                        <ForwardedIconComponent
-                          name={item.icon}
-                          className="h-5 w-5"
-                        />
-                        <span className="sr-only">{item.label}</span>
-                      </button>
-                    </FlowLogsModal>
-                  ) : item.id === "traces" ? (
-                    <FlowLogsModal defaultTab="traces">
-                      <button className="flex h-full w-full items-center justify-center">
-                        <ForwardedIconComponent
-                          name={item.icon}
-                          className="h-5 w-5"
-                        />
-                        <span className="sr-only">{item.label}</span>
-                      </button>
-                    </FlowLogsModal>
-                  ) : (
-                    <>
-                      <ForwardedIconComponent
-                        name={item.icon}
-                        className="h-5 w-5"
-                      />
-                      <span className="sr-only">{item.label}</span>
-                    </>
-                  )}
+                  <ForwardedIconComponent
+                    name={item.icon}
+                    className="h-5 w-5"
+                  />
+                  <span className="sr-only">{item.label}</span>
                 </SidebarMenuButton>
               </ShadTooltip>
             </SidebarMenuItem>

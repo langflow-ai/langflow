@@ -1,6 +1,7 @@
 import IconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/utils/utils";
+import { getStatusIconProps } from "./statusHelpers";
 import type { Span, SpanType } from "./types";
 
 interface SpanNodeProps {
@@ -78,6 +79,8 @@ export function SpanNode({
   const hasChildren = span.children.length > 0;
   const tokenStr = formatTokens(span.tokenUsage?.totalTokens);
 
+  const { colorClass, iconName, shouldSpin } = getStatusIconProps(span.status);
+
   return (
     <div
       className={cn(
@@ -152,13 +155,13 @@ export function SpanNode({
         size="xq"
         className="min-w-[16px]"
       >
-        {span.status === "running" ? (
-          <IconComponent name="Loader2" className="h-3 w-3 animate-spin" />
-        ) : span.status === "success" ? (
-          <IconComponent name="Check" className="h-3 w-3" />
-        ) : (
-          <IconComponent name="X" className="h-3 w-3" />
-        )}
+        <IconComponent
+          name={iconName}
+          className={`h-4 w-4 ${colorClass} ${shouldSpin ? "animate-spin" : ""}`}
+          aria-label={span.status}
+          dataTestId={`flow-log-status-${span.status}`}
+          skipFallback
+        />
       </Badge>
     </div>
   );

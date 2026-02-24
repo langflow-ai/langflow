@@ -6,11 +6,14 @@ from the native tracer, enabling the Trace View in the frontend.
 
 import asyncio
 import logging
+import math
 from datetime import datetime, timezone
 from typing import Annotated, Any
 from uuid import UUID
 
+import sqlalchemy as sa
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import func
 from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlmodel import col, select
 
@@ -31,35 +34,67 @@ DB_TIMEOUT = 5.0
 router = APIRouter(prefix="/monitor/traces", tags=["Traces"])
 
 
+def _sanitize_query_string(value: str | None, max_len: int = 50) -> str | None:
+    if value is None:
+        return None
+    cleaned = "".join(ch for ch in value if " " <= ch <= "~")
+    return cleaned.strip()[:max_len] if cleaned else None
+
+
 async def _fetch_traces(
     flow_id: UUID | None,
     session_id: str | None,
     status: SpanStatus | None,
+    query: str | None,
+    start_time: datetime | None,
+    end_time: datetime | None,
+    page: int,
+    size: int,
 ) -> dict[str, Any]:
     """Internal function to fetch traces with proper session management."""
-    async with session_scope() as session:
-        # Simple query - just get traces for this flow
-        stmt = select(TraceTable)
+    try:
+        async with session_scope() as session:
+            # Simple query - just get traces for this flow
+            stmt = select(TraceTable)
+            count_stmt = select(func.count()).select_from(TraceTable)
 
-        if flow_id:
-            stmt = stmt.where(TraceTable.flow_id == flow_id)
-        if session_id:
-            stmt = stmt.where(TraceTable.session_id == session_id)
-        if status:
-            stmt = stmt.where(TraceTable.status == status)
+            if flow_id:
+                stmt = stmt.where(TraceTable.flow_id == flow_id)
+                count_stmt = count_stmt.where(TraceTable.flow_id == flow_id)
+            if session_id:
+                stmt = stmt.where(TraceTable.session_id == session_id)
+                count_stmt = count_stmt.where(TraceTable.session_id == session_id)
+            if status:
+                stmt = stmt.where(TraceTable.status == status)
+                count_stmt = count_stmt.where(TraceTable.status == status)
+            if query:
+                search_value = f"%{query}%"
+                search_filter = sa.or_(
+                    TraceTable.name.ilike(search_value),
+                    sa.cast(TraceTable.id, sa.String).ilike(search_value),
+                    sa.cast(TraceTable.session_id, sa.String).ilike(search_value),
+                )
+                stmt = stmt.where(search_filter)
+                count_stmt = count_stmt.where(search_filter)
+            if start_time:
+                stmt = stmt.where(TraceTable.start_time >= start_time)
+                count_stmt = count_stmt.where(TraceTable.start_time >= start_time)
+            if end_time:
+                stmt = stmt.where(TraceTable.start_time <= end_time)
+                count_stmt = count_stmt.where(TraceTable.start_time <= end_time)
 
-        # Order by most recent first
-        stmt = stmt.order_by(col(TraceTable.start_time).desc())
-        stmt = stmt.limit(10)
+            # Order by most recent first
+            stmt = stmt.order_by(col(TraceTable.start_time).desc())
+            stmt = stmt.offset((page - 1) * size).limit(size)
 
-        traces = (await session.exec(stmt)).all()
+            total = (await session.exec(count_stmt)).one()
+
+            traces = (await session.exec(stmt)).all()
 
         # Get aggregated token counts per trace (leaf spans only to avoid double-counting)
         trace_ids = [trace.id for trace in traces]
         token_map: dict[str, int] = {}
         if trace_ids:
-            from sqlalchemy import func
-
             # Subquery: IDs of spans that are parents (i.e. have children)
             parent_ids_subq = (
                 select(SpanTable.parent_span_id)
@@ -141,7 +176,12 @@ async def _fetch_traces(
                 }
             )
 
-        return {"traces": trace_list, "total": len(trace_list)}
+        total_count = int(total)
+        total_pages = max(1, math.ceil(total_count / size)) if size else 1
+        return {"traces": trace_list, "total": total_count, "pages": total_pages}
+    except Exception:
+        logger.exception("Error fetching traces")
+        raise
 
 
 @router.get("", dependencies=[Depends(get_current_active_user)])
@@ -150,6 +190,11 @@ async def get_traces(
     flow_id: Annotated[UUID | None, Query()] = None,
     session_id: Annotated[str | None, Query()] = None,
     status: Annotated[SpanStatus | None, Query()] = None,
+    query: Annotated[str | None, Query()] = None,
+    start_time: Annotated[datetime | None, Query()] = None,
+    end_time: Annotated[datetime | None, Query()] = None,
+    page: Annotated[int, Query(ge=1)] = 1,
+    size: Annotated[int, Query(ge=1, le=200)] = 50,
 ) -> dict[str, Any]:
     """Get list of traces for a flow.
 
@@ -158,14 +203,20 @@ async def get_traces(
         flow_id: Filter by flow ID
         session_id: Filter by session ID
         status: Filter by trace status
+        query: Search query for trace name/id/session id
+        start_time: Filter traces starting on/after this time (ISO)
+        end_time: Filter traces starting on/before this time (ISO)
+        page: Page number (1-based)
+        size: Page size
 
     Returns:
         List of traces
     """
     try:
+        query = _sanitize_query_string(query)
         # Use timeout to prevent hanging if database has issues
         return await asyncio.wait_for(
-            _fetch_traces(flow_id, session_id, status),
+            _fetch_traces(flow_id, session_id, status, query, start_time, end_time, page, size),
             timeout=DB_TIMEOUT,
         )
     except asyncio.TimeoutError:

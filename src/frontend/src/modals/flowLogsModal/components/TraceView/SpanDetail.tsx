@@ -1,7 +1,7 @@
 import IconComponent from "@/components/common/genericIconComponent";
 import SimplifiedCodeTabComponent from "@/components/core/codeTabsComponent";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/utils/utils";
+import { getStatusIconProps } from "./statusHelpers";
 import type { Span, SpanType } from "./types";
 
 interface SpanDetailProps {
@@ -74,6 +74,10 @@ export function SpanDetail({ span }: SpanDetailProps) {
   const hasTokenUsage = span.tokenUsage && span.tokenUsage.totalTokens > 0;
   const isLlmSpan = span.type === "llm";
 
+  const { colorClass, iconName, shouldSpin } = getStatusIconProps(span.status);
+
+  console.log(span);
+
   return (
     <div className="flex h-full flex-col overflow-hidden">
       {/* Header */}
@@ -90,6 +94,13 @@ export function SpanDetail({ span }: SpanDetailProps) {
             }
             size="sm"
           >
+            <IconComponent
+              name={iconName}
+              className={`mr-1 h-4 w-4 ${colorClass} ${shouldSpin ? "animate-spin" : ""}`}
+              aria-label={span.status}
+              dataTestId={`flow-log-status-${span.status}`}
+              skipFallback
+            />
             {span.status}
           </Badge>
         </div>

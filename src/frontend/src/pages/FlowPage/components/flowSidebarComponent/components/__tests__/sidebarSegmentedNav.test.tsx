@@ -2,6 +2,8 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { SidebarSection } from "@/components/ui/sidebar";
 import SidebarSegmentedNav, { NAV_ITEMS } from "../sidebarSegmentedNav";
 
+const mockNavigate = jest.fn();
+
 // Mock the hooks and components
 const mockUseSidebar: {
   activeSection: SidebarSection;
@@ -63,6 +65,14 @@ jest.mock("@/components/ui/sidebar", () => ({
   SidebarMenuItem: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="sidebar-menu-item">{children}</div>
   ),
+}));
+
+jest.mock("react-router-dom", () => ({
+  useParams: () => ({ id: "flow_123" }),
+}));
+
+jest.mock("@/customization/hooks/use-custom-navigate", () => ({
+  useCustomNavigate: () => mockNavigate,
 }));
 
 jest.mock("../../index", () => ({
@@ -374,7 +384,7 @@ describe("SidebarSegmentedNav", () => {
   });
 
   it("exports NAV_ITEMS correctly", () => {
-    expect(NAV_ITEMS).toHaveLength(5);
+    expect(NAV_ITEMS).toHaveLength(6);
     expect(NAV_ITEMS[0]).toEqual({
       id: "search",
       icon: "search",
@@ -393,6 +403,38 @@ describe("SidebarSegmentedNav", () => {
       label: "Sticky Notes",
       tooltip: "Add Sticky Notes",
     });
+    expect(NAV_ITEMS[5]).toEqual({
+      id: "logs",
+      icon: "ScrollText",
+      label: "Logs",
+      tooltip: "Logs",
+    });
+    expect(NAV_ITEMS[6]).toEqual({
+      id: "traces",
+      icon: "Activity",
+      label: "Traces",
+      tooltip: "Traces",
+    });
+  });
+
+  it("navigates to logs insights page when clicking logs", () => {
+    render(<SidebarSegmentedNav />);
+
+    const logsButton = screen.getByTestId("sidebar-nav-traces");
+    fireEvent.click(logsButton);
+
+    expect(mockNavigate).toHaveBeenCalledWith("/flow/flow_123/insights");
+    expect(mockUseSidebar.setActiveSection).not.toHaveBeenCalled();
+  });
+
+  it("navigates to traces insights page when clicking traces", () => {
+    render(<SidebarSegmentedNav />);
+
+    const tracesButton = screen.getByTestId("sidebar-nav-traces");
+    fireEvent.click(tracesButton);
+
+    expect(mockNavigate).toHaveBeenCalledWith("/flow/flow_123/insights");
+    expect(mockUseSidebar.setActiveSection).not.toHaveBeenCalled();
   });
 
   describe("Add Note Functionality", () => {

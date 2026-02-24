@@ -21,12 +21,36 @@ interface TraceListItem {
   totalCost: number;
   flowId: string;
   sessionId?: string;
+  input: Record<string, unknown> | null;
+  output: Record<string, unknown> | null;
 }
 
 interface TracesResponse {
   traces: TraceListItem[];
   total: number;
+  pages?: number;
 }
+
+const sanitizeString = (value: string, maxLen = 50) => {
+  const filtered = Array.from(value)
+    .filter((ch) => {
+      const code = ch.charCodeAt(0);
+      return code >= 32 && code !== 127;
+    })
+    .join("");
+
+  return filtered.trim().slice(0, maxLen);
+};
+
+const sanitizeParams = (input: Record<string, unknown>) =>
+  Object.fromEntries(
+    Object.entries(input).map(([key, value]) => {
+      if (typeof value === "string") {
+        return [key, sanitizeString(value)];
+      }
+      return [key, value];
+    }),
+  );
 
 export const useGetTracesQuery: useQueryFunctionType<
   TracesQueryParams,
@@ -38,15 +62,15 @@ export const useGetTracesQuery: useQueryFunctionType<
     if (!flowId) return { traces: [], total: 0 };
 
     const config: { params: Record<string, unknown> } = {
-      params: { flow_id: flowId },
+      params: { flow_id: sanitizeString(flowId) },
     };
 
     if (sessionId) {
-      config.params.session_id = sessionId;
+      config.params.session_id = sanitizeString(sessionId);
     }
 
     if (params) {
-      config.params = { ...config.params, ...params };
+      config.params = sanitizeParams({ ...config.params, ...params });
     }
 
     const result = await api.get<TracesResponse>(`${getURL("TRACES")}`, config);
