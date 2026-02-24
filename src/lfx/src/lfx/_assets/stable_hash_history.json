@@ -1781,17 +1781,17 @@
   },
   "SemanticAggregator": {
     "versions": {
-      "0.3.0": "db571b1ff93a"
+      "0.3.0": "9688b3224a36"
     }
   },
   "SemanticMap": {
     "versions": {
-      "0.3.0": "55060f861203"
+      "0.3.0": "838d115a9549"
     }
   },
   "SyntheticDataGenerator": {
     "versions": {
-      "0.3.0": "756de495a955"
+      "0.3.0": "1638527dfc7a"
     }
   }
 }

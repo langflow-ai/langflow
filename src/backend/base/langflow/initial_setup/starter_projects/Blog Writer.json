@@ -1027,7 +1027,7 @@
                   },
                   {
                     "name": "bs4",
-                    "version": "4.14.3"
+                    "version": "4.12.3"
                   },
                   {
                     "name": "langchain_community",
