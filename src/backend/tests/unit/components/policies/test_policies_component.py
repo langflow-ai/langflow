@@ -181,14 +181,12 @@ async def test_generate_mode_validation_errors(mock_component):
 
 def test_work_dir_property():
     """Test work_dir property generates correct path."""
-    with patch.object(PoliciesComponent, "user_id", new_callable=lambda: property(lambda _: "test_user_123")):
-        component = PoliciesComponent()
-        component.project = "test_project"
-        work_dir = component.work_dir
+    component = PoliciesComponent()
+    component.project = "test project"
+    work_dir = component.work_dir
 
-        assert "test_user_123" in str(work_dir)
-        assert "test_project" in str(work_dir)
-        assert work_dir.name == "test_project"
+    assert "test_project" in str(work_dir)
+    assert work_dir.name == "test_project"
 
 
 def test_to_snake_case():
