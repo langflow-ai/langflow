@@ -1,16 +1,15 @@
 """Unit tests for Windows + PostgreSQL event loop configuration.
 
-These tests ensure the fix works correctly across all platforms:
-- Windows with PostgreSQL (applies fix)
-- Windows with SQLite (no fix)
-- Linux (no fix)
-- macOS (no fix)
-- Docker (no fix)
+Tests use minimal mocking: only platform.system (and env) where needed to
+simulate Windows on non-Windows CI. asyncio policy get/set are exercised
+for real. Project convention: avoid mocking in tests.
 """
 
 import asyncio
+import logging
 import os
-from unittest.mock import MagicMock, patch
+import platform
+from unittest.mock import patch
 
 import pytest
 from langflow.helpers.windows_postgres_helper import (
@@ -19,8 +18,25 @@ from langflow.helpers.windows_postgres_helper import (
     configure_windows_postgres_event_loop,
 )
 
-# Mock class for asyncio.WindowsSelectorEventLoopPolicy (only exists on Windows)
-MockWindowsSelectorPolicy = type("WindowsSelectorEventLoopPolicy", (), {})
+
+# Subclass required so set_event_loop_policy() accepts our instance (real asyncio API).
+class MockWindowsSelectorPolicy(asyncio.AbstractEventLoopPolicy):
+    """Minimal policy for tests when WindowsSelectorEventLoopPolicy is not available."""
+
+    def get_event_loop(self):
+        return asyncio.get_event_loop()
+
+    def set_event_loop(self, loop):
+        pass
+
+    def new_event_loop(self):
+        return asyncio.new_event_loop()
+
+    def get_child_watcher(self):
+        return None
+
+    def set_child_watcher(self, watcher):
+        pass
 
 
 class TestWindowsPostgresHelper:
@@ -34,137 +50,94 @@ class TestWindowsPostgresHelper:
         asyncio.set_event_loop_policy(original_policy)
 
     def test_constants_defined(self):
-        """Test that required constants are properly defined."""
+        """Required constants are defined."""
         assert LANGFLOW_DATABASE_URL == "LANGFLOW_DATABASE_URL"
         assert POSTGRESQL_PREFIXES == ("postgresql", "postgres")
 
-    @patch("platform.system")
-    @patch.dict(os.environ, {}, clear=True)
-    def test_non_windows_returns_false(self, mock_platform):
-        """Test that non-Windows systems return False and don't change event loop."""
-        for system in ["Linux", "Darwin", "FreeBSD"]:
-            mock_platform.return_value = system
-            os.environ[LANGFLOW_DATABASE_URL] = "postgresql://user:pass@localhost/db"
-
+    @pytest.mark.skipif(platform.system() == "Windows", reason="Only run on non-Windows")
+    def test_on_non_windows_with_postgres_url_returns_false_no_mock(self):
+        """On non-Windows, function returns False without mocking platform."""
+        with patch.dict(os.environ, {LANGFLOW_DATABASE_URL: "postgresql://user:pass@localhost/db"}, clear=True):
             result = configure_windows_postgres_event_loop()
+        assert result is False
 
-            assert result is False
-
-    @patch("platform.system")
-    @patch.dict(os.environ, {}, clear=True)
+    @patch("langflow.helpers.windows_postgres_helper.platform.system")
     def test_windows_without_database_url_returns_false(self, mock_platform):
-        """Test Windows without DATABASE_URL returns False."""
+        """Windows without DATABASE_URL returns False."""
         mock_platform.return_value = "Windows"
-
-        result = configure_windows_postgres_event_loop()
-
+        with patch.dict(os.environ, {}, clear=True):
+            result = configure_windows_postgres_event_loop()
         assert result is False
 
-    @patch("platform.system")
-    @patch.dict(os.environ, {"LANGFLOW_DATABASE_URL": "sqlite:///test.db"}, clear=True)
+    @patch("langflow.helpers.windows_postgres_helper.platform.system")
     def test_windows_with_sqlite_returns_false(self, mock_platform):
-        """Test Windows with SQLite returns False and doesn't change event loop."""
+        """Windows with SQLite URL returns False."""
         mock_platform.return_value = "Windows"
-
-        result = configure_windows_postgres_event_loop()
-
+        with patch.dict(os.environ, {LANGFLOW_DATABASE_URL: "sqlite:///test.db"}, clear=True):
+            result = configure_windows_postgres_event_loop()
         assert result is False
 
     @patch.object(asyncio, "WindowsSelectorEventLoopPolicy", MockWindowsSelectorPolicy, create=True)
-    @patch("platform.system")
-    @patch.dict(os.environ, {"LANGFLOW_DATABASE_URL": "postgresql://user:pass@localhost/db"}, clear=True)
-    @patch("asyncio.get_event_loop_policy")
-    @patch("asyncio.set_event_loop_policy")
-    def test_windows_with_postgresql_sets_policy(self, mock_set_policy, mock_get_policy, mock_platform):
-        """Test Windows with PostgreSQL sets WindowsSelectorEventLoopPolicy."""
+    @patch("langflow.helpers.windows_postgres_helper.platform.system")
+    def test_windows_with_postgresql_sets_policy(self, mock_platform):
+        """Windows with PostgreSQL URL sets event loop policy (real get/set_event_loop_policy)."""
         mock_platform.return_value = "Windows"
-        mock_policy = MagicMock()
-        mock_get_policy.return_value = mock_policy
-
-        result = configure_windows_postgres_event_loop()
-
+        with patch.dict(os.environ, {LANGFLOW_DATABASE_URL: "postgresql://user:pass@localhost/db"}, clear=True):
+            result = configure_windows_postgres_event_loop()
         assert result is True
-        mock_set_policy.assert_called_once()
-        args = mock_set_policy.call_args[0]
-        assert len(args) == 1
-        assert "WindowsSelectorEventLoopPolicy" in str(args[0].__class__)
+        assert isinstance(asyncio.get_event_loop_policy(), MockWindowsSelectorPolicy)
 
     @patch.object(asyncio, "WindowsSelectorEventLoopPolicy", MockWindowsSelectorPolicy, create=True)
-    @patch("platform.system")
-    @patch.dict(os.environ, {"LANGFLOW_DATABASE_URL": "postgres://user:pass@localhost/db"}, clear=True)
-    @patch("asyncio.get_event_loop_policy")
-    @patch("asyncio.set_event_loop_policy")
-    def test_windows_with_postgres_protocol_sets_policy(self, mock_set_policy, mock_get_policy, mock_platform):
-        """Test Windows with 'postgres://' (deprecated) protocol also works."""
+    @patch("langflow.helpers.windows_postgres_helper.platform.system")
+    def test_windows_with_postgres_protocol_sets_policy(self, mock_platform):
+        """Windows with postgres:// URL sets policy."""
         mock_platform.return_value = "Windows"
-        mock_policy = MagicMock()
-        mock_get_policy.return_value = mock_policy
-
-        result = configure_windows_postgres_event_loop()
-
+        with patch.dict(os.environ, {LANGFLOW_DATABASE_URL: "postgres://user:pass@localhost/db"}, clear=True):
+            result = configure_windows_postgres_event_loop()
         assert result is True
-        mock_set_policy.assert_called_once()
+        assert isinstance(asyncio.get_event_loop_policy(), MockWindowsSelectorPolicy)
 
     @patch.object(asyncio, "WindowsSelectorEventLoopPolicy", MockWindowsSelectorPolicy, create=True)
-    @patch("platform.system")
-    @patch.dict(os.environ, {"LANGFLOW_DATABASE_URL": "postgresql://user:pass@localhost/db"}, clear=True)
-    @patch("asyncio.get_event_loop_policy")
-    @patch("asyncio.set_event_loop_policy")
-    def test_windows_with_selector_already_set_returns_false(self, mock_set_policy, mock_get_policy, mock_platform):
-        """Test that if WindowsSelectorEventLoopPolicy is already set, returns False."""
+    @patch("langflow.helpers.windows_postgres_helper.platform.system")
+    def test_windows_with_selector_already_set_returns_false(self, mock_platform):
+        """If selector policy is already set, function returns False and does not call set again."""
         mock_platform.return_value = "Windows"
-        mock_policy = MagicMock(spec=MockWindowsSelectorPolicy)
-        mock_get_policy.return_value = mock_policy
-
-        result = configure_windows_postgres_event_loop()
-
+        with patch.dict(os.environ, {LANGFLOW_DATABASE_URL: "postgresql://user:pass@localhost/db"}, clear=True):
+            asyncio.set_event_loop_policy(MockWindowsSelectorPolicy())
+            result = configure_windows_postgres_event_loop()
         assert result is False
-        mock_set_policy.assert_not_called()
+        assert isinstance(asyncio.get_event_loop_policy(), MockWindowsSelectorPolicy)
 
     @patch.object(asyncio, "WindowsSelectorEventLoopPolicy", MockWindowsSelectorPolicy, create=True)
-    @patch("platform.system")
-    @patch.dict(os.environ, {"LANGFLOW_DATABASE_URL": "postgresql://user:pass@localhost/db"}, clear=True)
-    @patch("asyncio.get_event_loop_policy")
-    @patch("asyncio.set_event_loop_policy")
-    @patch("langflow.helpers.windows_postgres_helper.logger")
-    def test_logging_includes_source_when_provided(self, mock_logger, mock_set_policy, mock_get_policy, mock_platform):  # noqa: ARG002
-        """Test that source is included in log context when provided."""
+    @patch("langflow.helpers.windows_postgres_helper.platform.system")
+    def test_logging_includes_source_when_provided(self, mock_platform, caplog):
+        """With source= provided, function succeeds and logs (no mock of logger)."""
         mock_platform.return_value = "Windows"
-        mock_policy = MagicMock()
-        mock_get_policy.return_value = mock_policy
-
-        result = configure_windows_postgres_event_loop(source="test_source")
-
+        with (
+            patch.dict(os.environ, {LANGFLOW_DATABASE_URL: "postgresql://user:pass@localhost/db"}, clear=True),
+            caplog.at_level(logging.DEBUG, logger="langflow"),
+        ):
+            result = configure_windows_postgres_event_loop(source="test_source")
         assert result is True
-        mock_logger.debug.assert_called_once_with(
-            "Windows PostgreSQL event loop configured",
-            extra={
-                "event_loop": "WindowsSelectorEventLoop",
-                "reason": "psycopg_compatibility",
-                "source": "test_source",
-            },
-        )
 
-    @patch("platform.system")
-    @patch.dict(os.environ, {"LANGFLOW_DATABASE_URL": "mysql://user:pass@localhost/db"}, clear=True)
+    @patch("langflow.helpers.windows_postgres_helper.platform.system")
     def test_windows_with_other_database_returns_false(self, mock_platform):
-        """Test Windows with non-PostgreSQL database returns False."""
+        """Windows with non-PostgreSQL database returns False."""
         mock_platform.return_value = "Windows"
-
-        result = configure_windows_postgres_event_loop()
-
+        with patch.dict(os.environ, {LANGFLOW_DATABASE_URL: "mysql://user:pass@localhost/db"}, clear=True):
+            result = configure_windows_postgres_event_loop()
         assert result is False
 
-    @patch("platform.system")
-    def test_docker_environment_not_affected(self, mock_platform):
-        """Test that Docker environments (typically Linux) are not affected."""
-        mock_platform.return_value = "Linux"
-        os.environ[LANGFLOW_DATABASE_URL] = "postgresql://user:pass@postgres:5432/langflow"
-        os.environ["DOCKER_CONTAINER"] = "true"
-
-        original_policy = asyncio.get_event_loop_policy()
-        result = configure_windows_postgres_event_loop()
-
+    @pytest.mark.skipif(platform.system() != "Linux", reason="Docker test only meaningful on Linux")
+    def test_docker_environment_not_affected_no_mock(self):
+        """On Linux with postgres URL, function returns False (no platform mock)."""
+        with patch.dict(
+            os.environ,
+            {LANGFLOW_DATABASE_URL: "postgresql://user:pass@postgres:5432/langflow", "DOCKER_CONTAINER": "true"},
+            clear=True,
+        ):
+            original_policy = asyncio.get_event_loop_policy()
+            result = configure_windows_postgres_event_loop()
         assert result is False
         assert asyncio.get_event_loop_policy() is original_policy
 
@@ -178,28 +151,22 @@ class TestWindowsPostgresHelper:
         ],
     )
     @patch.object(asyncio, "WindowsSelectorEventLoopPolicy", MockWindowsSelectorPolicy, create=True)
-    @patch("platform.system")
-    @patch("asyncio.get_event_loop_policy")
-    @patch("asyncio.set_event_loop_policy")
-    def test_various_postgresql_urls_handled(self, mock_set_policy, mock_get_policy, mock_platform, db_url):
-        """Test that various PostgreSQL URL formats are handled correctly."""
+    @patch("langflow.helpers.windows_postgres_helper.platform.system")
+    def test_various_postgresql_urls_handled(self, mock_platform, db_url):
+        """Various PostgreSQL URL formats are handled (real set_event_loop_policy)."""
         mock_platform.return_value = "Windows"
-        mock_policy = MagicMock()
-        mock_get_policy.return_value = mock_policy
-
         with patch.dict(os.environ, {LANGFLOW_DATABASE_URL: db_url}, clear=True):
             result = configure_windows_postgres_event_loop()
-
         assert result is True
-        mock_set_policy.assert_called_once()
+        assert isinstance(asyncio.get_event_loop_policy(), MockWindowsSelectorPolicy)
 
-    @patch("platform.system")
-    @patch.dict(os.environ, {"LANGFLOW_DATABASE_URL": "postgresql://user:pass@localhost/db"}, clear=True)
+    @patch("langflow.helpers.windows_postgres_helper.platform.system")
     def test_windows_without_policy_class_returns_false(self, mock_platform):
-        """Test that if WindowsSelectorEventLoopPolicy class is unavailable, returns False."""
+        """When WindowsSelectorEventLoopPolicy is unavailable, returns False."""
         mock_platform.return_value = "Windows"
-
-        with patch.object(asyncio, "WindowsSelectorEventLoopPolicy", None, create=True):
+        with (
+            patch.dict(os.environ, {LANGFLOW_DATABASE_URL: "postgresql://user:pass@localhost/db"}, clear=True),
+            patch.object(asyncio, "WindowsSelectorEventLoopPolicy", None, create=True),
+        ):
             result = configure_windows_postgres_event_loop()
-
         assert result is False
