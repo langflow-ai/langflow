@@ -735,10 +735,16 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         if raw is None or str(raw).strip() == "":
             return default
         try:
-            return int(str(raw).strip())
+            value = int(str(raw).strip())
         except ValueError:
             logger.warning(f"Invalid integer value '{raw}' for {attr_name}, using default {default}")
             return default
+
+        if value < 0:
+            logger.warning(f"Negative value '{raw}' for {attr_name}, using default {default}")
+            return default
+
+        return value
 
     # ---------- auth / client ----------
     def _build_auth_kwargs(self) -> dict[str, Any]:
@@ -1365,6 +1371,29 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
 
         return None
 
+    def _get_filename_agg_field(self, index_properties: dict[str, Any] | None) -> str:
+        """Choose the appropriate field for filename aggregations."""
+        if not index_properties:
+            return "filename.keyword"
+
+        filename_def = index_properties.get("filename")
+        if not isinstance(filename_def, dict):
+            return "filename.keyword"
+
+        field_type = filename_def.get("type")
+        fields_def = filename_def.get("fields", {})
+
+        # Top-level keyword with no subfields
+        if field_type == "keyword" and not isinstance(fields_def, dict):
+            return "filename"
+
+        # Text field with keyword subfield
+        if isinstance(fields_def, dict) and "keyword" in fields_def:
+            return "filename.keyword"
+
+        # Fallback: aggregate on filename directly
+        return "filename"
+
     # ---------- search (multi-model hybrid) ----------
     def search(self, query: str | None = None) -> list[dict[str, Any]]:
         """Perform multi-model hybrid search combining multiple vector similarities and keyword matching.
@@ -1678,6 +1707,9 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         limit = (filter_obj or {}).get("limit", self.number_of_results)
         score_threshold = (filter_obj or {}).get("score_threshold", 0)
 
+        # Determine the best aggregation field for filename based on index mapping
+        filename_agg_field = self._get_filename_agg_field(index_properties)
+
         # Build multi-model hybrid query
         body = {
             "query": {
@@ -1705,7 +1737,7 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
                 }
             },
             "aggs": {
-                "data_sources": {"terms": {"field": "filename.keyword", "size": 20}},
+                "data_sources": {"terms": {"field": filename_agg_field, "size": 20}},
                 "document_types": {"terms": {"field": "mimetype", "size": 10}},
                 "owners": {"terms": {"field": "owner", "size": 10}},
                 "embedding_models": {"terms": {"field": "embedding_model", "size": 10}},
