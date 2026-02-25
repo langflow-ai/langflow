@@ -196,7 +196,8 @@ def validate_flow_custom_components(flow_data: dict | None) -> list[str]:
     if not flow_data:
         return []
 
-    nodes = flow_data.get("nodes", [])
+    # Avoid creating a new empty list each call when the key is missing
+    nodes = flow_data.get("nodes")
     if not nodes:
         return []
 
@@ -214,9 +215,20 @@ def validate_flows_custom_components(flows: list[dict]) -> dict[str, list[str]]:
         Only includes flows that have blocked components.
     """
     blocked_flows: dict[str, list[str]] = {}
+
     for flow in flows:
         name = flow.get("name", "Unknown Flow")
         data = flow.get("data")
+        if not data:
+            # Skip flows with no data to avoid an unnecessary function call
+            continue
+
+        # Skip flows that have no nodes without allocating a default list
+        nodes = data.get("nodes")
+        if not nodes:
+            continue
+
+        # Delegate to the single-flow validator to keep behavior centralized
         blocked = validate_flow_custom_components(data)
         if blocked:
             blocked_flows[name] = blocked
