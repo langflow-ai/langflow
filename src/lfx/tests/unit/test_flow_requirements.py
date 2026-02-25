@@ -189,9 +189,12 @@ class TestImportToPackage:
 
 
 class TestDynamicResolution:
-    def test_import_to_dist_map_returns_dict(self):
+    def test_import_to_dist_map_returns_mapping(self):
         result = _get_import_to_dist_map()
-        assert isinstance(result, dict)
+        # Returns a read-only MappingProxyType (not a plain dict)
+        from collections.abc import Mapping
+
+        assert isinstance(result, Mapping)
         assert len(result) > 0
 
     def test_import_to_dist_map_has_known_entries(self):
