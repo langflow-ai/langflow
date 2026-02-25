@@ -68,8 +68,9 @@ def update_projects_components_with_latest_component_versions(project_data, all_
             # Strip hash_history from component metadata before using in flows
             # hash_history is internal metadata for tracking component evolution
             # and should only exist in component_index.json, not in saved flows
-            if "metadata" in component and "hash_history" in component["metadata"]:
-                del component["metadata"]["hash_history"]
+            metadata = component.get("metadata")
+            if metadata and "hash_history" in metadata:
+                del metadata["hash_history"]
             all_types_dict_flat[key] = component
 
     # Legacy type aliases: maps old flow node type names to current all_types_dict keys.
@@ -86,9 +87,21 @@ def update_projects_components_with_latest_component_versions(project_data, all_
     node_changes_log = defaultdict(list)
     project_data_copy = deepcopy(project_data)
 
+    # Precompute attribute lists outside loops to avoid repeated filtering
+    # Skip specific field attributes that should respect the starter project template values.
+    # Currently we skip 'advanced' so that a field marked as advanced in the component code
+    # will NOT overwrite the value specified in the starter project template. This preserves
+    # the intended UX configuration of the starter projects.
+    # SKIPPED_FIELD_ATTRIBUTES = {"advanced"}
+    to_check_attributes = [attr for attr in FIELD_FORMAT_ATTRIBUTES if attr not in SKIPPED_FIELD_ATTRIBUTES]
+    node_format_attributes = NODE_FORMAT_ATTRIBUTES
+    agent_key_set = {"Agent", "LanguageModelComponent", "TypeConverterComponent"}
+
     for node in project_data_copy.get("nodes", []):
-        node_data = node.get("data").get("node")
-        node_type = node.get("data").get("type")
+        data = node.get("data")
+        # preserve original behavior: if data is None, this will raise as original code did
+        node_data = data.get("node")
+        node_type = data.get("type")
 
         if node_type in all_types_dict_flat:
             latest_node = all_types_dict_flat.get(node_type)
@@ -99,19 +112,23 @@ def update_projects_components_with_latest_component_versions(project_data, all_
             if node_type in SKIPPED_COMPONENTS:
                 continue
 
-            is_tool_or_agent = node_data.get("tool_mode", False) or node_data.get("key") in {
-                "Agent",
-                "LanguageModelComponent",
-                "TypeConverterComponent",
-            }
-            has_tool_outputs = any(output.get("types") == ["Tool"] for output in node_data.get("outputs", []))
+            is_tool_or_agent = node_data.get("tool_mode", False) or node_data.get("key") in agent_key_set
+
+            # Keep the original behavior for has_tool_outputs computation (uses get default)
+            has_tool_outputs = False
+            for output in node_data.get("outputs", []):
+                if output.get("types") == ["Tool"]:
+                    has_tool_outputs = True
+                    break
+
             if "outputs" in latest_node and not has_tool_outputs and not is_tool_or_agent:
                 # Set selected output as the previous selected output
+                # If node_data lacks "outputs", this next line will raise KeyError just like the original code
+                node_outputs = node_data["outputs"]
+                # Create name->output mapping for quick lookup
+                node_output_by_name = {output_["name"]: output_ for output_ in node_outputs}
                 for output in latest_node["outputs"]:
-                    node_data_output = next(
-                        (output_ for output_ in node_data["outputs"] if output_["name"] == output["name"]),
-                        None,
-                    )
+                    node_data_output = node_output_by_name.get(output["name"])
                     if node_data_output:
                         output["selected"] = node_data_output.get("selected")
                 node_data["outputs"] = latest_node["outputs"]
@@ -121,8 +138,9 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                 if node_type != "Prompt":
                     node_data["template"] = latest_template
                 else:
+                    node_template = node_data["template"]
                     for key, value in latest_template.items():
-                        if key not in node_data["template"]:
+                        if key not in node_template:
                             node_changes_log[node_type].append(
                                 {
                                     "attr": key,
@@ -130,19 +148,19 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                                     "new_value": value,
                                 }
                             )
-                            node_data["template"][key] = value
+                            node_template[key] = value
                         elif isinstance(value, dict) and value.get("value"):
                             node_changes_log[node_type].append(
                                 {
                                     "attr": key,
-                                    "old_value": node_data["template"][key],
+                                    "old_value": node_template[key],
                                     "new_value": value,
                                 }
                             )
-                            node_data["template"][key]["value"] = value["value"]
-                    for key in node_data["template"]:
+                            node_template[key]["value"] = value["value"]
+                    for key in list(node_template):
                         if key not in latest_template:
-                            node_data["template"][key]["input_types"] = DEFAULT_PROMPT_INTUT_TYPES
+                            node_template[key]["input_types"] = DEFAULT_PROMPT_INTUT_TYPES
                 node_changes_log[node_type].append(
                     {
                         "attr": "_type",
@@ -151,12 +169,9 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                     }
                 )
             else:
-                for attr in NODE_FORMAT_ATTRIBUTES:
-                    if (
-                        attr in latest_node
-                        # Check if it needs to be updated
-                        and latest_node[attr] != node_data.get(attr)
-                    ):
+                # Update node-level format attributes if changed
+                for attr in node_format_attributes:
+                    if attr in latest_node and latest_node[attr] != node_data.get(attr):
                         node_changes_log[node_type].append(
                             {
                                 "attr": attr,
@@ -166,12 +181,15 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                         )
                         node_data[attr] = latest_node[attr]
 
+                node_template = node_data["template"]
+                # Update template fields based on latest template
                 for field_name, field_dict in latest_template.items():
-                    if field_name not in node_data["template"]:
-                        node_data["template"][field_name] = field_dict
+                    if field_name not in node_template:
+                        node_template[field_name] = field_dict
                         continue
-                    # The idea here is to update some attributes of the field
-                    to_check_attributes = FIELD_FORMAT_ATTRIBUTES
+
+                    node_field = node_template.get(field_name)
+                    # Iterate through the attributes we want to potentially update
                     # Skip specific field attributes that should respect the starter project template values.
                     # Currently we skip 'advanced' so that a field marked as advanced in the component code
                     # will NOT overwrite the value specified in the starter project template. This preserves
@@ -180,30 +198,27 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                     # Iterate through the attributes we want to potentially update
                     for attr in to_check_attributes:
                         # Respect the template value by not updating if the attribute is in the skipped set
-                        if attr in SKIPPED_FIELD_ATTRIBUTES:
-                            continue
-                        if (
-                            attr in field_dict
-                            and attr in node_data["template"].get(field_name)
-                            # Check if it needs to be updated
-                            and field_dict[attr] != node_data["template"][field_name][attr]
-                        ):
-                            node_changes_log[node_type].append(
-                                {
-                                    "attr": f"{field_name}.{attr}",
-                                    "old_value": node_data["template"][field_name][attr],
-                                    "new_value": field_dict[attr],
-                                }
-                            )
-                            node_data["template"][field_name][attr] = field_dict[attr]
+                        # (we already filtered skipped attributes outside the loop)
+                        if attr in field_dict and node_field is not None and attr in node_field:
+                            if field_dict[attr] != node_field[attr]:
+                                node_changes_log[node_type].append(
+                                    {
+                                        "attr": f"{field_name}.{attr}",
+                                        "old_value": node_field[attr],
+                                        "new_value": field_dict[attr],
+                                    }
+                                )
+                                node_field[attr] = field_dict[attr]
+            # Remove fields that are not in the latest template
             # Remove fields that are not in the latest template
             if node_type != "Prompt":
-                for field_name in list(node_data["template"].keys()):
+                node_template = node_data["template"]
+                for field_name in list(node_template.keys()):
                     is_tool_mode_and_field_is_tools_metadata = (
                         node_data.get("tool_mode", False) and field_name == "tools_metadata"
                     )
                     if field_name not in latest_template and not is_tool_mode_and_field_is_tools_metadata:
-                        node_data["template"].pop(field_name)
+                        node_template.pop(field_name)
     log_node_changes(node_changes_log)
     return project_data_copy
 
