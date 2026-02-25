@@ -479,12 +479,32 @@ class IntInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMixi
         Raises:
             ValueError: If the value is not of a valid type or if the input is missing a required key.
         """
-        if v and not isinstance(v, int | float):
-            msg = f"Invalid value type {type(v)} for input {info.data.get('name')}."
-            raise ValueError(msg)
+        if isinstance(v, int):
+            return v
         if isinstance(v, float):
-            v = int(v)
-        return v
+            return int(v)
+        if isinstance(v, Message):
+            v = v.text
+        elif isinstance(v, Data):
+            v = v.data.get(v.text_key, "")
+        if isinstance(v, str):
+            v = v.strip()
+            if not v:
+                return 0
+            try:
+                return int(v)
+            except ValueError:
+                pass
+            try:
+                return int(float(v))
+            except ValueError:
+                input_name = info.data.get("name", "unknown")
+                msg = f"Could not convert '{v}' to integer for input {input_name}."
+                raise ValueError(msg) from None
+        if not v:
+            return 0
+        msg = f"Invalid value type {type(v)} for input {info.data.get('name')}."
+        raise ValueError(msg)
 
 
 class FloatInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMixin, ToolModeMixin):
@@ -515,12 +535,28 @@ class FloatInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMi
         Raises:
             ValueError: If the value is not of a valid type or if the input is missing a required key.
         """
-        if v and not isinstance(v, int | float):
-            msg = f"Invalid value type {type(v)} for input {info.data.get('name')}."
-            raise ValueError(msg)
+        if isinstance(v, float):
+            return v
         if isinstance(v, int):
-            v = float(v)
-        return v
+            return float(v)
+        if isinstance(v, Message):
+            v = v.text
+        elif isinstance(v, Data):
+            v = v.data.get(v.text_key, "")
+        if isinstance(v, str):
+            v = v.strip()
+            if not v:
+                return 0.0
+            try:
+                return float(v)
+            except ValueError:
+                input_name = info.data.get("name", "unknown")
+                msg = f"Could not convert '{v}' to float for input {input_name}."
+                raise ValueError(msg) from None
+        if not v:
+            return 0.0
+        msg = f"Invalid value type {type(v)} for input {info.data.get('name')}."
+        raise ValueError(msg)
 
 
 class BoolInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin, ToolModeMixin):
@@ -558,6 +594,35 @@ class NestedDictInput(
 
     field_type: SerializableFieldTypes = FieldTypes.NESTED_DICT
     value: dict | None = {}
+
+    @field_validator("value", mode="before")
+    @classmethod
+    def validate_value(cls, v: Any, info):
+        if v is None or isinstance(v, dict):
+            return v
+        if isinstance(v, Message):
+            v = v.text
+        elif isinstance(v, Data):
+            v = v.data.get(v.text_key, "")
+        if isinstance(v, str):
+            v = v.strip()
+            if not v:
+                return {}
+            import json
+
+            try:
+                parsed = json.loads(v)
+            except json.JSONDecodeError as e:
+                input_name = info.data.get("name", "unknown")
+                msg = f"Could not parse JSON string for input {input_name}: {e}"
+                raise ValueError(msg) from None
+            if not isinstance(parsed, dict):
+                input_name = info.data.get("name", "unknown")
+                msg = f"Expected a JSON object for input {input_name}, got {type(parsed).__name__}."
+                raise TypeError(msg)
+            return parsed
+        msg = f"Invalid value type {type(v)} for input {info.data.get('name')}."
+        raise TypeError(msg)
 
 
 class DictInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMixin):
