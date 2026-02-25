@@ -22,6 +22,7 @@ const ModelProvidersContent = ({ modelType }: ModelProvidersContentProps) => {
     isSaving,
     isPending,
     isDeleting,
+    isFetchingAfterSave,
     handleVariableChange,
     handleSaveAllVariables,
     handleActivateProvider,
@@ -82,6 +83,7 @@ const ModelProvidersContent = ({ modelType }: ModelProvidersContentProps) => {
           isSaving={isSaving}
           isPending={isPending}
           isDeleting={isDeleting}
+          isFetchingModels={isFetchingAfterSave}
           validationFailed={validationFailed}
           validationState={validationState}
           validationError={validationError}

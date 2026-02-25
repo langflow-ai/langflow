@@ -3,9 +3,15 @@ import { Input } from "@/components/ui/input";
 import { ProviderVariable } from "@/constants/providerConstants";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { cn } from "@/utils/utils";
-import { AnimatePresence, motion } from "framer-motion";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import MultiselectComponent from "@/components/core/parameterRenderComponent/components/multiselectComponent";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import useAlertStore from "@/stores/alertStore";
 import DisconnectWarning from "./DisconnectWarning";
 import { Provider } from "./types";
 
@@ -41,6 +47,7 @@ export interface ProviderConfigurationFormProps {
   isSaving: boolean;
   isPending: boolean;
   isDeleting: boolean;
+  isFetchingModels: boolean;
   validationFailed: boolean;
   validationState: "idle" | "validating" | "valid" | "invalid";
   validationError: string | null;
@@ -61,6 +68,7 @@ const ProviderConfigurationForm = ({
   isSaving,
   isPending,
   isDeleting,
+  isFetchingModels,
   validationFailed,
   validationState,
   validationError,
@@ -71,6 +79,20 @@ const ProviderConfigurationForm = ({
   const [editingSecret, setEditingSecret] = useState<Record<string, boolean>>(
     {},
   );
+
+  // True during validation, saving, and the post-save model refetch
+  const isLoading = isSaving || validationState === "validating" || isFetchingModels;
+
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+
+  useEffect(() => {
+    if (validationState === "invalid" && validationError) {
+      setErrorData({
+        title: "Validation Failed",
+        list: [validationError],
+      });
+    }
+  }, [validationState, validationError]);
 
   const isAlreadyConfigured = providerVariables
     .filter((v) => v.required)
@@ -159,120 +181,95 @@ const ProviderConfigurationForm = ({
                         }
                       }}
                     />
-                    {isConfigured && !hasNewValue && (
-                      <span className="absolute right-8 top-1/2 -translate-y-1/2 text-green-500 pointer-events-none">
-                        <ForwardedIconComponent
-                          name="check"
-                          className="h-4 w-4"
-                        />
-                      </span>
+                    {!isLoading && (
+                      <>
+                        {validationState === "invalid" && (
+                          <span className="absolute right-8 top-1/2 -translate-y-1/2 text-destructive pointer-events-none">
+                            <ForwardedIconComponent name="X" className="h-4 w-4" />
+                          </span>
+                        )}
+                        {validationState !== "invalid" &&
+                          (validationState === "valid" ||
+                            (isConfigured && !hasNewValue)) && (
+                            <span className="absolute right-8 top-1/2 -translate-y-1/2 text-green-500 pointer-events-none">
+                              <ForwardedIconComponent name="Check" className="h-4 w-4" />
+                            </span>
+                          )}
+                      </>
                     )}
                   </div>
                 ) : (
                   // Render input for text/secret variables
-                  <Input
-                    placeholder={`Add ${variable.variable_name.toLowerCase()}`}
-                    value={
-                      isConfigured && variable.is_secret && !isEditing && !hasNewValue
-                        ? getMaskedKeyPreview(selectedProvider.provider)
-                        : hasNewValue
-                          ? variableValues[variable.variable_key]
-                          : isConfigured && !variable.is_secret
-                            ? getConfiguredValue(variable.variable_key) ?? ""
-                            : variableValues[variable.variable_key] || ""
-                    }
-                    type={
-                      variable.is_secret && (isEditing || hasNewValue)
-                        ? "password"
-                        : "text"
-                    }
-                    onChange={(e) => {
-                      onVariableChange(variable.variable_key, e.target.value);
-                    }}
-                    onFocus={() => {
-                      if (isConfigured && variable.is_secret && !hasNewValue) {
-                        setEditingSecret((prev) => ({
-                          ...prev,
-                          [variable.variable_key]: true,
-                        }));
-                        onVariableChange(variable.variable_key, "");
-                      }
-                    }}
-                    onBlur={() => {
-                      if (!variableValues[variable.variable_key]) {
-                        setEditingSecret((prev) => ({
-                          ...prev,
-                          [variable.variable_key]: false,
-                        }));
-                      }
-                    }}
-                    endIcon={isConfigured && !hasNewValue && !isEditing ? "Check" : undefined}
-                    endIconClassName={cn(
-                      isConfigured && !hasNewValue && !isEditing && "text-green-500",
-                    )}
-                  />
+                  <TooltipProvider>
+                    <Tooltip open={validationState === "invalid" ? undefined : false}>
+                      <TooltipTrigger asChild>
+                        <Input
+                          placeholder={`Add ${variable.variable_name.toLowerCase()}`}
+                          value={
+                            isConfigured && variable.is_secret && !isEditing && !hasNewValue
+                              ? getMaskedKeyPreview(selectedProvider.provider)
+                              : hasNewValue
+                                ? variableValues[variable.variable_key]
+                                : isConfigured && !variable.is_secret
+                                  ? getConfiguredValue(variable.variable_key) ?? ""
+                                  : variableValues[variable.variable_key] || ""
+                          }
+                          type={
+                            variable.is_secret && (isEditing || hasNewValue)
+                              ? "password"
+                              : "text"
+                          }
+                          onChange={(e) => {
+                            onVariableChange(variable.variable_key, e.target.value);
+                          }}
+                          onFocus={() => {
+                            if (isConfigured && variable.is_secret && !hasNewValue) {
+                              setEditingSecret((prev) => ({
+                                ...prev,
+                                [variable.variable_key]: true,
+                              }));
+                              onVariableChange(variable.variable_key, "");
+                            }
+                          }}
+                          onBlur={() => {
+                            if (!variableValues[variable.variable_key]) {
+                              setEditingSecret((prev) => ({
+                                ...prev,
+                                [variable.variable_key]: false,
+                              }));
+                            }
+                          }}
+                          endIcon={
+                            validationState === "invalid" && !isLoading
+                              ? "X"
+                              : (validationState === "valid" ||
+                                  (isConfigured && !hasNewValue && !isEditing)) &&
+                                !isLoading
+                                ? "Check"
+                                : undefined
+                          }
+                          endIconClassName={cn(
+                            !isLoading && validationState === "invalid" && "text-destructive",
+                            !isLoading &&
+                              validationState !== "invalid" &&
+                              (validationState === "valid" ||
+                                (isConfigured && !hasNewValue && !isEditing)) &&
+                              "text-green-500",
+                          )}
+                        />
+                      </TooltipTrigger>
+                      {validationState === "invalid" && validationError && (
+                        <TooltipContent side="bottom" className="text-destructive border-destructive">
+                          {validationError}
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
+                  </TooltipProvider>
                 )}
               </div>
             );
           })}
-          {/* Validation status */}
-          <AnimatePresence mode="wait">
-            {validationState === "validating" && (
-              <motion.div
-                key="validating"
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="overflow-hidden"
-              >
-                <div className="flex items-center gap-2 text-muted-foreground text-xs pb-2">
-                  <ForwardedIconComponent
-                    name="Loader2"
-                    className="h-3 w-3 animate-spin shrink-0"
-                  />
-                  <span>Validating credentials...</span>
-                </div>
-              </motion.div>
-            )}
-            {validationState === "valid" && (
-              <motion.div
-                key="valid"
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="overflow-hidden"
-              >
-                <div className="flex items-center gap-2 text-green-600 text-xs pb-2">
-                  <ForwardedIconComponent
-                    name="Check"
-                    className="h-3 w-3 shrink-0"
-                  />
-                  <span>Credentials validated successfully</span>
-                </div>
-              </motion.div>
-            )}
-            {validationState === "invalid" && validationError && (
-              <motion.div
-                key="invalid"
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="overflow-hidden"
-              >
-                <div className="flex items-center gap-2 text-destructive text-xs pb-2">
-                  <ForwardedIconComponent
-                    name="AlertCircle"
-                    className="h-3 w-3 shrink-0"
-                  />
-                  <span>{validationError}</span>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-          {/* Save button - only enabled when validation passes */}
+          {/* Save button */}
           <div className="flex justify-end mt-2 gap-2">
             {selectedProvider.is_enabled && (
               <Button
@@ -287,16 +284,18 @@ const ProviderConfigurationForm = ({
             <Button
               onClick={onSave}
               size="sm"
-              loading={isSaving}
-              disabled={!canSave || isSaving}
+              loading={isLoading || isFetchingModels}
+              disabled={!canSave || isLoading || isFetchingModels}
             >
-              {isSaving
-                ? "Saving..."
-                : validationFailed
-                  ? "Retry Save"
-                  : isAlreadyConfigured
-                    ? "Replace Configuration"
-                    : "Save Configuration"}
+              {isLoading
+                ? isSaving ? "Saving..." : "Validating..."
+                : isFetchingModels
+                  ? "Updating..."
+                  : validationFailed
+                    ? "Retry Save"
+                    : isAlreadyConfigured
+                      ? "Replace Configuration"
+                      : "Save Configuration"}
             </Button>
           </div>
         </div>

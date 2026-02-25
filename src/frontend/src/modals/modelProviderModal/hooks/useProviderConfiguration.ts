@@ -57,6 +57,7 @@ interface UseProviderConfigurationReturn {
   hasNewValuesToSave: boolean;
   requiresConfiguration: boolean;
   canSave: boolean;
+  isFetchingAfterSave: boolean;
 
   // Cache invalidation
   invalidateProviderQueries: () => void;
@@ -75,6 +76,7 @@ export const useProviderConfiguration = ({
   const [validationState, setValidationState] =
     useState<ValidationState>("idle");
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [isFetchingAfterSave, setIsFetchingAfterSave] = useState(false);
   const validationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
@@ -93,7 +95,7 @@ export const useProviderConfiguration = ({
   const { mutateAsync: validateProvider } = useValidateProvider();
   const { data: providerVariablesMapping = {} } = useGetProviderVariables();
   const { mutate: updateEnabledModels } = useUpdateEnabledModels({ retry: 0 });
-  const { data: modelProviders = [] } = useGetModelProviders(
+  const { data: modelProviders = [], isFetching: isFetchingModels } = useGetModelProviders(
     {},
     {
       refetchInterval:
@@ -111,6 +113,23 @@ export const useProviderConfiguration = ({
     queryClient.invalidateQueries({ queryKey: ["useGetGlobalVariables"] });
     queryClient.refetchQueries({ queryKey: ["flows"] });
   }, [queryClient]);
+
+  // Clear isFetchingAfterSave (and typed values) once the models refetch settles
+  const clearValuesAfterFetchRef = useRef(false);
+  const pendingSuccessTitleRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!isFetchingModels && isFetchingAfterSave) {
+      setIsFetchingAfterSave(false);
+      if (clearValuesAfterFetchRef.current) {
+        clearValuesAfterFetchRef.current = false;
+        setVariableValues({});
+      }
+      if (pendingSuccessTitleRef.current) {
+        setSuccessData({ title: pendingSuccessTitleRef.current });
+        pendingSuccessTitleRef.current = null;
+      }
+    }
+  }, [isFetchingModels, isFetchingAfterSave]);
 
   // Keep syncedSelectedProvider in sync with prop and reset state on provider change
   useEffect(() => {
@@ -172,7 +191,6 @@ export const useProviderConfiguration = ({
         {
           variable_name: "API Key",
           variable_key: staticVariableKey,
-          description: `Your ${providerName} API key`,
           required: true,
           is_secret: true,
           is_list: false,
@@ -224,9 +242,14 @@ export const useProviderConfiguration = ({
       .filter((v) => v.required)
       .every((v) => {
         const currentValue = variableValues[v.variable_key];
-        return currentValue !== undefined && currentValue.trim() !== "";
+        const hasNewValue =
+          currentValue !== undefined && currentValue.trim() !== "";
+        const isAlreadyConfigured = globalVariables.some(
+          (gv) => gv.name === v.variable_key,
+        );
+        return hasNewValue || isAlreadyConfigured;
       });
-  }, [providerVariables, variableValues]);
+  }, [providerVariables, variableValues, globalVariables]);
 
   // Check if there are any new values to save
   const hasNewValuesToSave = useMemo(() => {
@@ -299,37 +322,12 @@ export const useProviderConfiguration = ({
     }
   }, [selectedProvider, getVariablesForValidation, validateProvider]);
 
-  // Debounced validation when all required fields are filled
-  useEffect(() => {
-    // Clear any pending validation
-    if (validationTimeoutRef.current) {
-      clearTimeout(validationTimeoutRef.current);
-    }
+  // Debounced validation removed — validation now happens only on save button click
 
-    // Only validate if we have new values AND all required are filled
-    if (hasNewValuesToSave && allRequiredFilled && selectedProvider) {
-      setValidationState("idle");
-      validationTimeoutRef.current = setTimeout(() => {
-        validateCredentials();
-      }, 600);
-    } else {
-      setValidationState("idle");
-      setValidationError(null);
-    }
-
-    return () => {
-      if (validationTimeoutRef.current) {
-        clearTimeout(validationTimeoutRef.current);
-      }
-    };
-  }, [hasNewValuesToSave, allRequiredFilled, selectedProvider, variableValues]);
-
-  // Can save only when validation passes
+  // Can save when all required fields are filled and there are new values
   const canSave = useMemo(() => {
-    return (
-      hasNewValuesToSave && allRequiredFilled && validationState === "valid"
-    );
-  }, [hasNewValuesToSave, allRequiredFilled, validationState]);
+    return hasNewValuesToSave && allRequiredFilled;
+  }, [hasNewValuesToSave, allRequiredFilled]);
 
   // Handle variable input change
   const handleVariableChange = useCallback((key: string, value: string) => {
@@ -342,7 +340,7 @@ export const useProviderConfiguration = ({
     }));
   }, []);
 
-  // Save all variables in parallel
+  // Save all variables in parallel — validates first, then saves if valid
   const handleSaveAllVariables = useCallback(async () => {
     if (!selectedProvider) return;
 
@@ -352,6 +350,9 @@ export const useProviderConfiguration = ({
 
     if (variablesToSave.length === 0) return;
 
+    // Validate first
+    const isValid = await validateCredentials();
+    if (!isValid) return;
     setIsSaving(true);
     setValidationFailed(false);
 
@@ -381,12 +382,11 @@ export const useProviderConfiguration = ({
         }),
       );
 
-      // All succeeded
-      setSuccessData({
-        title: `${selectedProvider.provider} Configuration Saved`,
-      });
+      // All succeeded — defer toast and value clear until after models refetch
+      pendingSuccessTitleRef.current = `${selectedProvider.provider} Configuration Saved`;
+      setIsFetchingAfterSave(true);
+      clearValuesAfterFetchRef.current = true;
       invalidateProviderQueries();
-      setVariableValues({});
     } catch (error: any) {
       setValidationFailed(true);
       setErrorData({
@@ -604,6 +604,7 @@ export const useProviderConfiguration = ({
     hasNewValuesToSave,
     requiresConfiguration,
     canSave,
+    isFetchingAfterSave,
 
     // Cache invalidation
     invalidateProviderQueries,
