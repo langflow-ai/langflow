@@ -451,6 +451,9 @@ async def _perform_ingestion(
         metadata = get_kb_metadata(kb_path, fast=True)
         _update_text_metrics(kb_path, metadata, chroma=chroma)
         metadata["size"] = get_directory_size(kb_path)
+        metadata["chunk_size"] = chunk_size
+        metadata["chunk_overlap"] = chunk_overlap
+        metadata["separator"] = separator or None
         metadata_path = kb_path / "embedding_metadata.json"
         new_source_types = list({f.rsplit(".", 1)[-1].lower() for f in processed_files if "." in f})
         existing_source_types = metadata.get("source_types", [])
