@@ -154,7 +154,7 @@ export const UserMessage = memo(
                       {(!isEmpty || !hasFiles) && (
                         <div
                           className={cn(
-                            "w-full items-baseline whitespace-pre-wrap break-words text-xs font-normal",
+                            "w-full items-baseline whitespace-pre-wrap break-words text-sm font-normal",
                             isEmpty ? "text-muted-foreground" : "text-primary",
                           )}
                           data-testid={`chat-message-${chat.sender_name}-${chatMessage}`}
