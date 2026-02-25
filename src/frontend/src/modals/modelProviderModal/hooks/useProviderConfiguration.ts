@@ -16,6 +16,7 @@ import { useGetProviderVariables } from "@/controllers/API/queries/models/use-ge
 import { useUpdateEnabledModels } from "@/controllers/API/queries/models/use-update-enabled-models";
 import { EnabledModelsResponse } from "@/controllers/API/queries/models/use-get-enabled-models";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
+import { useDebounce } from "@/hooks/use-debounce";
 import useAlertStore from "@/stores/alertStore";
 import { Provider } from "../components/types";
 
@@ -533,15 +534,69 @@ export const useProviderConfiguration = ({
     invalidateProviderQueries,
   ]);
 
+  const pendingModelToggles = useRef<Record<string, boolean>>({});
+  const fallbackModelData = useRef<EnabledModelsResponse | undefined>(undefined);
+
+  const flushModelToggles = useDebounce(() => {
+    if (!syncedSelectedProvider?.provider) return;
+    const providerName = syncedSelectedProvider.provider;
+
+    const updates = Object.entries(pendingModelToggles.current).map(
+      ([modelName, enabled]) => ({
+        provider: providerName,
+        model_id: modelName,
+        enabled,
+      })
+    );
+
+    if (updates.length === 0) return;
+
+    // Capture the fallback data
+    const previousData = fallbackModelData.current;
+
+    // Clear buffer
+    pendingModelToggles.current = {};
+    fallbackModelData.current = undefined;
+
+    updateEnabledModels(
+      { updates },
+      {
+        onError: (error: any) => {
+          if (previousData) {
+            queryClient.setQueryData(["useGetEnabledModels"], previousData);
+          }
+          const errorMessage =
+            error?.response?.data?.detail ||
+            error?.message ||
+            "Failed to update model status";
+          setErrorData({
+            title: "Error updating model status",
+            list: [errorMessage],
+          });
+        },
+        onSettled: () => {
+          queryClient.invalidateQueries({
+            queryKey: ["useGetEnabledModels"],
+          });
+          queryClient.invalidateQueries({
+            queryKey: ["useGetModelProviders"],
+          });
+        },
+      }
+    );
+  }, 1000);
+
   const handleModelToggle = useCallback(
     (modelName: string, enabled: boolean) => {
       if (!syncedSelectedProvider?.provider) return;
 
       const providerName = syncedSelectedProvider.provider;
 
-      const previousData = queryClient.getQueryData<EnabledModelsResponse>([
-        "useGetEnabledModels",
-      ]);
+      if (Object.keys(pendingModelToggles.current).length === 0) {
+        fallbackModelData.current = queryClient.getQueryData<EnabledModelsResponse>([
+          "useGetEnabledModels",
+        ]);
+      }
 
       queryClient.setQueryData<EnabledModelsResponse>(
         ["useGetEnabledModels"],
@@ -560,36 +615,10 @@ export const useProviderConfiguration = ({
         },
       );
 
-      updateEnabledModels(
-        {
-          updates: [{ provider: providerName, model_id: modelName, enabled }],
-        },
-        {
-          onError: (error: any) => {
-            if (previousData) {
-              queryClient.setQueryData(["useGetEnabledModels"], previousData);
-            }
-            const errorMessage =
-              error?.response?.data?.detail ||
-              error?.message ||
-              "Failed to update model status";
-            setErrorData({
-              title: "Error updating model status",
-              list: [errorMessage],
-            });
-          },
-          onSettled: () => {
-            queryClient.invalidateQueries({
-              queryKey: ["useGetEnabledModels"],
-            });
-            queryClient.invalidateQueries({
-              queryKey: ["useGetModelProviders"],
-            });
-          },
-        },
-      );
+      pendingModelToggles.current[modelName] = enabled;
+      flushModelToggles();
     },
-    [syncedSelectedProvider, queryClient, updateEnabledModels, setErrorData],
+    [syncedSelectedProvider, queryClient, flushModelToggles]
   );
 
   return {
