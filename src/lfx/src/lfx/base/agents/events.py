@@ -12,6 +12,7 @@ from lfx.schema.content_block import ContentBlock
 from lfx.schema.content_types import TextContent, ToolContent
 from lfx.schema.log import OnTokenFunctionType, SendMessageFunctionType
 from lfx.schema.message import Message
+from lfx.schema.properties import Usage
 
 
 class ExceptionWithMessageError(Exception):
@@ -330,6 +331,38 @@ async def handle_on_chain_stream(
     return agent_message, start_time
 
 
+def _extract_usage_from_message(message: AIMessageChunk) -> Usage | None:
+    """Extract usage information from an AIMessageChunk."""
+    if not hasattr(message, "usage_metadata") or not message.usage_metadata:
+        return None
+
+    usage_metadata = message.usage_metadata
+    return Usage(
+        input_tokens=usage_metadata.get("input_tokens", 0),
+        output_tokens=usage_metadata.get("output_tokens", 0),
+        total_tokens=usage_metadata.get("total_tokens", 0),
+    )
+
+
+async def handle_on_chat_model_end(
+    event: dict[str, Any],
+    agent_message: Message,
+    send_message_callback: SendMessageFunctionType,  # noqa: ARG001
+    send_token_callback: OnTokenFunctionType | None,  # noqa: ARG001
+    start_time: float,
+    *,
+    had_streaming: bool = False,  # noqa: ARG001
+    message_id: str | None = None,  # noqa: ARG001
+) -> tuple[Message, float]:
+    """Handle chat model end event to extract usage information."""
+    data_output = event["data"].get("output")
+    if data_output and isinstance(data_output, AIMessageChunk):
+        usage = _extract_usage_from_message(data_output)
+        if usage:
+            agent_message.properties.usage = usage
+    return agent_message, start_time
+
+
 class ToolEventHandler(Protocol):
     async def __call__(
         self,
@@ -363,6 +396,7 @@ CHAIN_EVENT_HANDLERS: dict[str, ChainEventHandler] = {
     "on_chain_end": handle_on_chain_end,
     "on_chain_stream": handle_on_chain_stream,
     "on_chat_model_stream": handle_on_chain_stream,
+    "on_chat_model_end": handle_on_chat_model_end,
 }
 
 TOOL_EVENT_HANDLERS: dict[str, ToolEventHandler] = {

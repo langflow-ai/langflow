@@ -113,6 +113,10 @@ class OpenAIModelComponent(LCModelComponent):
             model_kwargs = dict(model_kwargs)  # Make a copy
             del model_kwargs["api_key"]
 
+        # Add stream_options to enable usage tracking in streaming mode
+        if "stream_options" not in model_kwargs:
+            model_kwargs["stream_options"] = {"include_usage": True}
+
         parameters = {
             "api_key": api_key_value,
             "model_name": self.model_name,
