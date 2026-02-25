@@ -7,7 +7,6 @@ from datetime import datetime, timezone
 from http import HTTPStatus
 from typing import Annotated, Any
 
-import chromadb
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from langchain_chroma import Chroma
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -17,6 +16,7 @@ from pydantic import BaseModel
 from langflow.api.utils import CurrentActiveUser
 from langflow.api.utils.kb_helpers import (
     _cleanup_chroma_chunks_by_job,
+    _get_fresh_chroma_client,
     _perform_ingestion,
     _teardown_kb_storage,
     get_directory_size,
@@ -126,7 +126,7 @@ async def create_knowledge_base(
         # Initialize Chroma storage and collection immediately
         # This ensures files exist for read operations and avoids 'readonly' errors later
         try:
-            client = chromadb.PersistentClient(path=str(kb_path))
+            client = _get_fresh_chroma_client(kb_path)
             client.create_collection(name=kb_name)
             # Explicitly delete reference to help release handle
             client = None
@@ -593,8 +593,9 @@ async def get_knowledge_base_chunks(
             )
 
         # Create vector store
+        client = _get_fresh_chroma_client(kb_path)
         chroma = Chroma(
-            persist_directory=str(kb_path),
+            client=client,
             collection_name=kb_name,
         )
 

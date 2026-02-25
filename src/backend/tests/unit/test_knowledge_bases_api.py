@@ -168,8 +168,12 @@ class TestPreviewChunks:
 class TestKnowledgeBaseAPI:
     """Tests for KR CRUD endpoints."""
 
+    @patch("langflow.api.v1.knowledge_bases._get_fresh_chroma_client")
     @patch("langflow.api.v1.knowledge_bases.get_kb_root_path")
-    async def test_create_knowledge_base(self, mock_root, client: AsyncClient, logged_in_headers, tmp_path):
+    async def test_create_knowledge_base(
+        self, mock_root, mock_fresh_client, client: AsyncClient, logged_in_headers, tmp_path
+    ):
+        mock_fresh_client.return_value = MagicMock()
         mock_root.return_value = tmp_path
         kb_name = "New_KB"
         response = await client.post(
@@ -266,9 +270,13 @@ class TestKnowledgeBaseAPI:
         data = response.json()
         assert "id" in data
 
+    @patch("langflow.api.v1.knowledge_bases._get_fresh_chroma_client")
     @patch("langflow.api.v1.knowledge_bases.get_kb_root_path")
     @patch("langflow.api.v1.knowledge_bases.Chroma")
-    async def test_get_chunks(self, mock_chroma, mock_root, client: AsyncClient, logged_in_headers, tmp_path):
+    async def test_get_chunks(
+        self, mock_chroma, mock_root, mock_fresh_client, client: AsyncClient, logged_in_headers, tmp_path
+    ):
+        mock_fresh_client.return_value = MagicMock()
         mock_root.return_value = tmp_path
         kb_dir = tmp_path / "activeuser" / "KB1"
         kb_dir.mkdir(parents=True, exist_ok=True)
@@ -293,14 +301,24 @@ class TestKnowledgeBaseAPI:
 class TestPerformIngestionTask:
     """Tests for the internal _perform_ingestion background task."""
 
+    @patch("langflow.api.utils.kb_helpers._get_fresh_chroma_client")
     @patch("langflow.api.utils.kb_helpers.Chroma")
     @patch("langflow.api.utils.kb_helpers._build_embeddings", new_callable=AsyncMock)
     @patch("langflow.api.utils.kb_helpers.get_kb_metadata")
     @patch("langflow.api.utils.kb_helpers.get_directory_size")
     @patch("langflow.api.utils.kb_helpers._update_text_metrics")
     async def test_perform_ingestion_success(
-        self, mock_update, mock_size, mock_meta, mock_build, mock_chroma, mock_kb_path, sample_text_file
+        self,
+        mock_update,
+        mock_size,
+        mock_meta,
+        mock_build,
+        mock_chroma,
+        mock_fresh_client,
+        mock_kb_path,
+        sample_text_file,
     ):
+        mock_fresh_client.return_value = MagicMock()
         mock_update.return_value = None
         mock_embeddings = MagicMock()
         mock_build.return_value = mock_embeddings
@@ -333,10 +351,14 @@ class TestPerformIngestionTask:
         assert result["files_processed"] == 1
         mock_chroma_inst.aadd_documents.assert_called()
 
+    @patch("langflow.api.utils.kb_helpers._get_fresh_chroma_client")
     @patch("langflow.api.utils.kb_helpers.Chroma")
     @patch("langflow.api.utils.kb_helpers._build_embeddings", new_callable=AsyncMock)
     @patch("langflow.api.utils.kb_helpers._cleanup_chroma_chunks_by_job", new_callable=AsyncMock)
-    async def test_perform_ingestion_rollback(self, mock_cleanup, mock_build, mock_chroma, mock_kb_path):
+    async def test_perform_ingestion_rollback(
+        self, mock_cleanup, mock_build, mock_chroma, mock_fresh_client, mock_kb_path
+    ):
+        mock_fresh_client.return_value = MagicMock()
         # mock_build is used to satisfy the decorator, we just need it available
         assert mock_build is not None
         mock_chroma_inst = MagicMock()

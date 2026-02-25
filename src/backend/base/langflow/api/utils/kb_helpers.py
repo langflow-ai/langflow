@@ -6,7 +6,10 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
+import chromadb
 import pandas as pd
+from chromadb.api.shared_system_client import SharedSystemClient
+from chromadb.config import Settings
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -18,6 +21,19 @@ from langflow.api.utils import CurrentActiveUser
 from langflow.services.database.models.jobs.model import JobStatus
 from langflow.services.deps import get_settings_service
 from langflow.services.jobs.service import JobService
+
+MAX_RETRY_ATTEMPTS = 4
+
+
+class IngestionCancelledError(Exception):
+    """Custom error for when an ingestion job is cancelled."""
+
+
+async def _is_job_cancelled(job_service: JobService, job_id: uuid.UUID) -> bool:
+    """Helper to check if a job has been cancelled."""
+    job = await job_service.get_job_by_job_id(job_id)
+    return job is not None and job.status == JobStatus.CANCELLED
+
 
 _KNOWLEDGE_BASES_DIR: Path | None = None
 
@@ -267,6 +283,41 @@ def get_kb_metadata(kb_path: Path, *, fast: bool = False) -> dict:
     return metadata
 
 
+def _get_fresh_chroma_client(kb_path: Path) -> chromadb.PersistentClient:
+    """Get a fresh Chroma client with a unique session ID to avoid 'readonly' errors.
+
+    This bypasses Chroma's internal client cache by clearing the existing system for this path
+    before creating a new one with unique telemetry settings.
+
+    NOTE: This is a hacky way to avoid the 'readonly' error in Chroma.
+    If we don't do this, Chroma will keep the old client open and we will get a 'readonly' error
+    when we try to open a new client for the same path and this causing Zombie clients to stay around
+    in memory and not being garbage collected.
+    """
+    path_key = str(kb_path)
+
+    # Check if a client already exists for this path in the shared registry
+    # Use a try-except to handle potential internal changes in chromadb
+    try:
+        if path_key in SharedSystemClient._identifier_to_system:  # noqa: SLF001
+            # We remove it from the registry to force the next call to create a new System.
+            # CRITICAL: We DO NOT call old_system.stop() here. Stopping the system
+            # would crash any other active ingestion jobs using this path in the same process.
+            # The old system will be naturally GC'd when its last reference is cleared.
+            del SharedSystemClient._identifier_to_system[path_key]  # noqa: SLF001
+    except Exception as e:  # noqa: BLE001
+        logger.debug(f"Failed to clear existing Chroma registry entry for {path_key}: {e}")
+
+    return chromadb.PersistentClient(
+        path=path_key,
+        settings=Settings(
+            is_persistent=True,
+            persist_directory=path_key,
+            chroma_otel_service_name=str(uuid.uuid4()),
+        ),
+    )
+
+
 def _update_text_metrics(kb_path: Path, metadata: dict, chroma: Chroma | None = None) -> None:
     """Internal helper to calculate chunks, words, and characters.
 
@@ -275,8 +326,8 @@ def _update_text_metrics(kb_path: Path, metadata: dict, chroma: Chroma | None = 
     try:
         if chroma is None:
             # Only open a new connection if none exists.
-            # Warning: This can cause conflicts if another connection is open in the same thread.
-            chroma = Chroma(persist_directory=str(kb_path), collection_name=kb_path.name)
+            client = _get_fresh_chroma_client(kb_path)
+            chroma = Chroma(client=client, collection_name=kb_path.name)
 
         collection = chroma._collection  # noqa: SLF001
         metadata["chunks"] = collection.count()
@@ -338,8 +389,9 @@ async def _cleanup_chroma_chunks_by_job(
 ):
     """Clean up ChromaDB chunks associated with a specific job ID."""
     try:
+        client = _get_fresh_chroma_client(kb_path)
         chroma = Chroma(
-            persist_directory=str(kb_path),
+            client=client,
             collection_name=kb_name,
         )
         await chroma.adelete(where={"job_id": str(job_id)})
@@ -380,8 +432,9 @@ async def _perform_ingestion(
         embeddings = await _build_embeddings(embedding_provider, embedding_model, current_user)
 
         # Create or update vector store
+        client = _get_fresh_chroma_client(kb_path)
         chroma = Chroma(
-            persist_directory=str(kb_path),
+            client=client,
             embedding_function=embeddings,
             collection_name=kb_name,
         )
@@ -389,63 +442,50 @@ async def _perform_ingestion(
         batch_size = 200
         job_id_str = str(task_job_id)
         for file_name, file_content in files_data:
-            try:
-                await logger.ainfo(f"Starting ingestion of {file_name} for {kb_name}")
-                text_content = file_content.decode("utf-8", errors="ignore")
-                if not text_content.strip():
-                    continue
+            await logger.ainfo(f"Starting ingestion of {file_name} for {kb_name}")
+            content = file_content.decode("utf-8", errors="ignore")
+            if not content.strip():
+                continue
 
-                chunks = text_splitter.split_text(text_content)
-                file_chunks_count = len(chunks)
+            chunks = text_splitter.split_text(content)
+            for i in range(0, len(chunks), batch_size):
+                if await _is_job_cancelled(job_service, task_job_id):
+                    raise IngestionCancelledError
 
-                for i in range(0, file_chunks_count, batch_size):
-                    # Check for cancellation before expensive operations
-                    current_job = await job_service.get_job_by_job_id(task_job_id)
-                    if current_job and current_job.status == JobStatus.CANCELLED:
-                        await logger.awarning(
-                            f"Job {task_job_id} was cancelled, stopping ingestion early. Cleaning up chunks..."
-                        )
-                        await _cleanup_chroma_chunks_by_job(task_job_id, kb_path, kb_name)
-                        chroma = None
-                        return {"message": "Job cancelled"}
+                batch = chunks[i : i + batch_size]
+                docs = [
+                    Document(
+                        page_content=c,
+                        metadata={
+                            "source": source_name or file_name,
+                            "file_name": file_name,
+                            "chunk_index": i + j,
+                            "total_chunks": len(chunks),
+                            "ingested_at": datetime.now(timezone.utc).isoformat(),
+                            "job_id": job_id_str,
+                        },
+                    )
+                    for j, c in enumerate(batch)
+                ]
 
-                    batch_chunks = chunks[i : i + batch_size]
-                    batch_docs = [
-                        Document(
-                            page_content=chunk,
-                            metadata={
-                                "source": source_name or file_name,
-                                "file_name": file_name,
-                                "chunk_index": i + j,
-                                "total_chunks": file_chunks_count,
-                                "ingested_at": datetime.now(timezone.utc).isoformat(),
-                                "job_id": job_id_str,
-                            },
-                        )
-                        for j, chunk in enumerate(batch_chunks)
-                    ]
+                # Reliable addition with exponential backoff for SQLite locks
+                for attempt in range(5):
+                    if await _is_job_cancelled(job_service, task_job_id):
+                        raise IngestionCancelledError
+                    try:
+                        await chroma.aadd_documents(docs)
+                        break
+                    except Exception as e:
+                        if attempt == MAX_RETRY_ATTEMPTS:
+                            raise
+                        wait = (attempt + 1) * 2
+                        await logger.awarning(f"Write failed, retrying in {wait}s: {e}")
+                        await asyncio.sleep(wait)
 
-                    # Retry mechanism for document addition to handle SQLite locks
-                    max_retries = 5
-                    for attempt in range(max_retries):
-                        try:
-                            await chroma.aadd_documents(batch_docs)
-                            break
-                        except Exception:
-                            if attempt == max_retries - 1:
-                                raise
-                            wait_time = (attempt + 1) * 2
-                            await logger.awarning(f"Write attempt {attempt + 1} failed, retrying in {wait_time}s")
-                            await asyncio.sleep(wait_time)
+                await asyncio.sleep(0.01)
 
-                    await asyncio.sleep(0.01)
-
-                total_chunks_created += file_chunks_count
-                processed_files.append(file_name)
-
-            except Exception as file_error:
-                await logger.aerror(f"Error processing file {file_name}: {file_error}")
-                raise
+            total_chunks_created += len(chunks)
+            processed_files.append(file_name)
 
         # Finalize metadata
         metadata = get_kb_metadata(kb_path, fast=True)
@@ -467,14 +507,13 @@ async def _perform_ingestion(
             "chunks_created": total_chunks_created,
         }
 
+    except IngestionCancelledError:
+        await logger.awarning(f"Ingestion job {task_job_id} was cancelled. Cleaning up partial data...")
+        await _cleanup_chroma_chunks_by_job(task_job_id, kb_path, kb_name)
+        return {"message": "Job cancelled"}
     except Exception as e:
-        # Check if job was cancelled during execution
-        current_job = await job_service.get_job_by_job_id(task_job_id)
-        if current_job and current_job.status == JobStatus.CANCELLED:
-            await logger.ainfo(f"Ingestion job {task_job_id} finished after cancellation.")
-        else:
-            await logger.aerror(f"Error in background ingestion: {e!s}. Initiating rollback...")
-            await _cleanup_chroma_chunks_by_job(task_job_id, kb_path, kb_name)
+        await logger.aerror(f"Error in background ingestion: {e!s}. Initiating rollback...")
+        await _cleanup_chroma_chunks_by_job(task_job_id, kb_path, kb_name)
         raise
     finally:
         chroma = None
@@ -487,7 +526,8 @@ def _teardown_kb_storage(kb_path: Path, kb_name: str) -> None:
         # Only attempt if the directory contains vector store markers
         has_data = any((kb_path / m).exists() for m in ["chroma", "chroma.sqlite3", "index"])
         if has_data:
-            chroma = Chroma(persist_directory=str(kb_path), collection_name=kb_name)
+            client = _get_fresh_chroma_client(kb_path)
+            chroma = Chroma(client=client, collection_name=kb_name)
             # Try to delete the collection via API to clean up internal management state
             with contextlib.suppress(Exception):
                 chroma.delete_collection()
