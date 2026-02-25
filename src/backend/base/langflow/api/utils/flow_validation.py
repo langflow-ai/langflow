@@ -40,6 +40,9 @@ def _get_invalid_components(
     blocked: list[str] = []
     outdated: list[str] = []
 
+    # Cache of code -> computed hash to avoid repeated sha256 work on identical code strings.
+    code_hash_cache: dict[str, str] = {}
+
     for node in nodes:
         node_data = node.get("data", {})
         node_info = node_data.get("node", {})
@@ -55,17 +58,24 @@ def _get_invalid_components(
         if not node_code:
             continue
 
-        display_name = node_info.get("display_name") or component_type
-        node_id = node_data.get("id") or node.get("id", "unknown")
-        label = f"{display_name} ({node_id})"
-
         expected_hash = type_to_current_hash.get(component_type)
         if expected_hash is None:
             # Unknown type — truly custom component, no upgrade path
+            display_name = node_info.get("display_name") or component_type
+            node_id = node_data.get("id") or node.get("id", "unknown")
+            label = f"{display_name} ({node_id})"
             blocked.append(label)
         else:
-            node_hash = _compute_code_hash(node_code)
+            # Compute or reuse hashed code
+            node_hash = code_hash_cache.get(node_code)
+            if node_hash is None:
+                node_hash = _compute_code_hash(node_code)
+                code_hash_cache[node_code] = node_hash
+
             if node_hash != expected_hash:
+                display_name = node_info.get("display_name") or component_type
+                node_id = node_data.get("id") or node.get("id", "unknown")
+                label = f"{display_name} ({node_id})"
                 outdated.append(label)
 
         # Recursively check nested flows (e.g., group nodes / sub-flows)
