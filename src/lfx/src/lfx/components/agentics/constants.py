@@ -53,6 +53,11 @@ ERROR_AGENTICS_NOT_INSTALLED = (
     "Agentics-py is not installed. Please install it with `uv pip install agentics-py==0.3.1`."
 )
 ERROR_API_KEY_REQUIRED = "{provider} API key is required. Please configure it in your settings or provide it directly."
-ERROR_UNSUPPORTED_PROVIDER = f"Unsupported provider: {{provider}}. Supported providers: {', '.join(SUPPORTED_PROVIDERS)}"
-ERROR_UNSUPPORTED_OPERATION = "Unsupported operation type: {operation_type}. Valid operations: merge, compose, concatenate."
+ERROR_UNSUPPORTED_PROVIDER = (
+    f"Unsupported provider: {{provider}}. Supported providers: {', '.join(SUPPORTED_PROVIDERS)}"
+)
+ERROR_UNSUPPORTED_OPERATION = (
+    "Unsupported operation type: {operation_type}. Valid operations: merge, compose, concatenate."
+)
 ERROR_MODEL_NOT_SELECTED = "No model selected. Please select a language model from the available options."
+ERROR_INPUT_SCHEMA_REQUIRED = "BOTH Input DataFrame AND Output Schema inputs should be provided."

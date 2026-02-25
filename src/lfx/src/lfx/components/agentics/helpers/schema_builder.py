@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 
 def build_schema_fields(fields: list[dict[str, Any]]) -> list[tuple[str, str, str, bool]]:
     """Convert field definitions to schema tuples for Pydantic model creation.
-    
+
     Transforms user-defined field specifications into the format required by
     the Agentics framework's create_pydantic_model function. Handles list types
     by wrapping the base type in list[] notation.

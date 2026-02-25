@@ -13,4 +13,3 @@ from lfx.components.agentics.semantic_map import SemanticMap
 from lfx.components.agentics.synthetic_data_generator import SyntheticDataGenerator
 
 __all__ = ["SemanticAggregator", "SemanticMap", "SyntheticDataGenerator"]
-

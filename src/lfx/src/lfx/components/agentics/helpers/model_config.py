@@ -13,7 +13,7 @@ from lfx.components.agentics.constants import (
 
 def validate_model_selection(model: Any) -> tuple[str, str]:
     """Validate and extract model name and provider from component input.
-    
+
     Ensures the model selection is properly formatted and contains required fields.
 
     Args:
@@ -45,7 +45,7 @@ def update_provider_fields_visibility(
     field_name: str | None,
 ) -> dict:
     """Update visibility of provider-specific fields based on the selected model.
-    
+
     Dynamically shows/hides fields like WatsonX project_id or Ollama base_url
     depending on which provider is currently selected.
 
@@ -73,7 +73,7 @@ def update_provider_fields_visibility(
 
 def _update_watsonx_fields(build_config: dict, provider: str) -> None:
     """Update visibility and requirements for IBM WatsonX-specific fields.
-    
+
     Shows base_url and project_id fields only when WatsonX is selected.
     """
     is_watsonx = provider == PROVIDER_IBM_WATSONX
@@ -89,7 +89,7 @@ def _update_watsonx_fields(build_config: dict, provider: str) -> None:
 
 def _update_ollama_fields(build_config: dict, provider: str) -> None:
     """Update visibility for Ollama-specific fields.
-    
+
     Shows ollama_base_url field only when Ollama is selected.
     """
     is_ollama = provider == PROVIDER_OLLAMA

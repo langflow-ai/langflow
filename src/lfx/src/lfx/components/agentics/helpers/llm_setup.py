@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
 def prepare_llm_from_component(component: Component) -> LLM:
     """Prepare and configure an LLM instance from component settings.
-    
+
     Extracts model selection, validates configuration, retrieves API keys,
     and creates a fully configured LLM instance ready for use.
 

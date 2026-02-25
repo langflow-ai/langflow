@@ -55,7 +55,7 @@ GENERATED_FIELDS_DEFAULT_VALUE = []
 
 def get_model_provider_inputs() -> list:
     """Return the standard set of model provider configuration inputs.
-    
+
     Includes model selection, API key, and provider-specific fields for
     WatsonX and Ollama.
     """
@@ -86,7 +86,7 @@ def get_api_key_input() -> SecretStrInput:
 
 def get_watsonx_inputs() -> list:
     """Return IBM WatsonX-specific configuration inputs.
-    
+
     Includes API endpoint selection and project ID fields.
     """
     return [
@@ -125,11 +125,12 @@ def get_ollama_url_input() -> MessageInput:
 def get_generated_fields_input(
     name: str = "schema",
     display_name: str = "Schema",
-    info: str = "Define the structure of data to generate. Specify column names, descriptions, and types.",
+    info: str = ("Define the structure of data to generate. Specify column names, descriptions, and types."),
+    *,
     required: bool = True,
 ) -> TableInput:
     """Return the output schema table input for defining generated fields.
-    
+
     Allows users to specify field names, descriptions, types, and whether
     fields should be lists.
     """

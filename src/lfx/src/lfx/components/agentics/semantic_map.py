@@ -8,6 +8,7 @@ from pydantic import create_model
 
 from lfx.components.agentics.constants import (
     ERROR_AGENTICS_NOT_INSTALLED,
+    ERROR_INPUT_SCHEMA_REQUIRED,
     TRANSDUCTION_AMAP,
 )
 from lfx.components.agentics.helpers import (
@@ -37,7 +38,10 @@ class SemanticMap(BaseAgenticComponent):
 
     code_class_base_inheritance: ClassVar[str] = "Component"
     display_name = "aMap"
-    description = "Augment the input dataframe adding new columns defined in the input schema. Rows are processed independently and in parallel using LLMs."
+    description = (
+        "Augment the input dataframe adding new columns defined in the input schema. "
+        "Rows are processed independently and in parallel using LLMs."
+    )
     documentation: str = "https://docs.langflow.org/bundles-agentics"
     icon = "Agentics"
 
@@ -46,13 +50,15 @@ class SemanticMap(BaseAgenticComponent):
         DataFrameInput(
             name="source",
             display_name="Input DataFrame",
-            info="Input DataFrame to transform. The schema is automatically inferred from column names and types.",
+            info=("Input DataFrame to transform. The schema is automatically inferred from column names and types."),
         ),
         get_generated_fields_input(),
         BoolInput(
             name="return_multiple_instances",
             display_name="As List",
-            info="If True, generate multiple instances of the provided schema for each input row concatenating all them.",
+            info=(
+                "If True, generate multiple instances of the provided schema for each input row concatenating all them."
+            ),
             advanced=False,
             value=False,
         ),
@@ -66,7 +72,10 @@ class SemanticMap(BaseAgenticComponent):
         BoolInput(
             name="append_to_input_columns",
             display_name="Keep Source Columns",
-            info="Keep original input columns in the output. If disabled, only newly generated columns are returned. This is ignored if As List is set to True.",
+            info=(
+                "Keep original input columns in the output. If disabled, only newly "
+                "generated columns are returned. This is ignored if As List is set to True."
+            ),
             value=True,
             advanced=True,
         ),
@@ -82,7 +91,7 @@ class SemanticMap(BaseAgenticComponent):
         ),
     ]
 
-    async def aMap(self) -> DataFrame:
+    async def aMap(self) -> DataFrame:  # noqa: N802
         """Transform input data row-by-row using LLM-based semantic processing.
 
         Returns:
@@ -101,12 +110,12 @@ class SemanticMap(BaseAgenticComponent):
             schema_fields = build_schema_fields(self.schema)
             atype = create_pydantic_model(schema_fields, name="Target")
             if self.return_multiple_instances:
-                FinalAtype = create_model("ListOfTarget", items=(list[atype], ...))
+                final_atype = create_model("ListOfTarget", items=(list[atype], ...))
             else:
-                FinalAtype = atype
+                final_atype = atype
 
             target = AG(
-                atype=FinalAtype,
+                atype=final_atype,
                 transduction_type=TRANSDUCTION_AMAP,
                 llm=llm,
             )
@@ -117,16 +126,11 @@ class SemanticMap(BaseAgenticComponent):
 
             output = await (target << source)
             if self.return_multiple_instances:
-                appended_states = []
-
-                for state in output:
-                    for item_state in state.items:
-                        appended_states.append(item_state)
-
+                appended_states = [item_state for state in output for item_state in state.items]
                 output = AG(atype=atype, states=appended_states)
 
             elif self.append_to_input_columns:
                 output = source.merge_states(output)
 
             return DataFrame(output.to_dataframe().to_dict(orient="records"))
-        raise ValueError("BOTH Input DataFrame AND Output Schema inputs should be provided.")
+        raise ValueError(ERROR_INPUT_SCHEMA_REQUIRED)

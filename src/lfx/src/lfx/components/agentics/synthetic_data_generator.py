@@ -29,7 +29,10 @@ class SyntheticDataGenerator(BaseAgenticComponent):
 
     code_class_base_inheritance: ClassVar[str] = "Component"
     display_name = "aGenerate"
-    description = "Generate mock data for user defined schema. If a dataframe is provided, the component will generate similar rows."
+    description = (
+        "Generate mock data for user defined schema. If a dataframe is provided, "
+        "the component will generate similar rows."
+    )
     documentation: str = "https://docs.langflow.org/bundles-agentics"
     icon = "Agentics"
 
@@ -38,13 +41,19 @@ class SyntheticDataGenerator(BaseAgenticComponent):
         get_generated_fields_input(
             name="schema",
             display_name="Schema",
-            info="Define the structure of data to generate. Specify column names, descriptions, and types. Used only when input DataFrame is not provided.",
+            info=(
+                "Define the structure of data to generate. Specify column names, "
+                "descriptions, and types. Used only when input DataFrame is not provided."
+            ),
             required=False,
         ),
         DataFrameInput(
             name="source",
             display_name="Input DataFrame",
-            info="Provide example DataFrame to learn from and generate similar data. Only the first 50 rows will be used as examples.",
+            info=(
+                "Provide example DataFrame to learn from and generate similar data. "
+                "Only the first 50 rows will be used as examples."
+            ),
             required=False,
             advanced=False,
             value=None,
@@ -75,7 +84,7 @@ class SyntheticDataGenerator(BaseAgenticComponent):
         ),
     ]
 
-    async def aGenerate(self) -> DataFrame:
+    async def aGenerate(self) -> DataFrame:  # noqa: N802
         """Generate synthetic data using LLM-based generation.
 
         Returns:

@@ -80,7 +80,7 @@ def _create_watsonx_llm(
     project_id: str | None,
 ) -> LLM:
     """Create IBM WatsonX LLM instance with default parameters.
-    
+
     Configures temperature, max_tokens, and max_input_tokens to WatsonX defaults.
     """
     from crewai import LLM
@@ -98,7 +98,7 @@ def _create_watsonx_llm(
 
 def _create_ollama_llm(model_name: str, base_url: str | None) -> LLM:
     """Create Ollama LLM instance for local model deployment.
-    
+
     Uses the provided base URL or defaults to localhost:11434.
     """
     from crewai import LLM

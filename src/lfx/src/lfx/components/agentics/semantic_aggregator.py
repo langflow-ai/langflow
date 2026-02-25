@@ -8,6 +8,7 @@ from pydantic import create_model
 
 from lfx.components.agentics.constants import (
     ERROR_AGENTICS_NOT_INSTALLED,
+    ERROR_INPUT_SCHEMA_REQUIRED,
     TRANSDUCTION_AREDUCE,
 )
 from lfx.components.agentics.helpers import (
@@ -37,7 +38,10 @@ class SemanticAggregator(BaseAgenticComponent):
 
     code_class_base_inheritance: ClassVar[str] = "Component"
     display_name = "aReduce"
-    description = "Analyze the entire input dataframe at once and generate a new dataframe following the instruction and the required schema"
+    description = (
+        "Analyze the entire input dataframe at once and generate a new dataframe "
+        "following the instruction and the required schema"
+    )
     documentation: str = "https://docs.langflow.org/bundles-agentics"
     icon = "Agentics"
 
@@ -77,7 +81,7 @@ class SemanticAggregator(BaseAgenticComponent):
         ),
     ]
 
-    async def aReduce(self) -> DataFrame:
+    async def aReduce(self) -> DataFrame:  # noqa: N802
         """Aggregate input data using LLM-based semantic analysis.
 
         Returns:
@@ -97,12 +101,12 @@ class SemanticAggregator(BaseAgenticComponent):
             schema_fields = build_schema_fields(self.schema)
             atype = create_pydantic_model(schema_fields, name="Target")
             if self.return_multiple_instances:
-                FinalAtype = create_model("ListOfTarget", items=(list[atype], ...))
+                final_atype = create_model("ListOfTarget", items=(list[atype], ...))
             else:
-                FinalAtype = atype
+                final_atype = atype
 
             target = AG(
-                atype=FinalAtype,
+                atype=final_atype,
                 transduction_type=TRANSDUCTION_AREDUCE,
                 instructions=self.instructions
                 if not self.return_multiple_instances
@@ -116,4 +120,4 @@ class SemanticAggregator(BaseAgenticComponent):
                 output = AG(atype=atype, states=output[0].items)
 
             return DataFrame(output.to_dataframe().to_dict(orient="records"))
-        raise ValueError("BOTH Input DataFrame AND Output Schema inputs should be provided.")
+        raise ValueError(ERROR_INPUT_SCHEMA_REQUIRED)
