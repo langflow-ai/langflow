@@ -74,10 +74,17 @@ dev = [
     "onnxruntime>=1.20,<=1.23" # >=1.24 does not support Python 3.10
 ]
 
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
 [tool.uv.sources]
 langflow-base = { workspace = true }
 langflow = { workspace = true }
 lfx = { workspace = true }
+torch = { index = "pytorch-cpu" }
+torchvision = { index = "pytorch-cpu" }
 
 [tool.uv.workspace]
 members = [
@@ -99,6 +106,10 @@ docling = [
     "tesserocr>=2.8.0",
     "rapidocr-onnxruntime>=1.4.4",
     "ocrmac>=1.0.0; sys_platform == 'darwin'",
+    # CPU-only PyTorch required for docling features
+    # Loose version ranges intentionally used to avoid conflicts with transitive dependencies (e.g., altk)
+    "torch>=2.0.0",
+    "torchvision>=0.15.0",
 ]
 
 audio = [
