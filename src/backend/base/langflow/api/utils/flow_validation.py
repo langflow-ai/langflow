@@ -45,7 +45,22 @@ def _get_blocked_by_edited_flag(nodes: list[dict]) -> list[str]:
 
 
 def _collect_all_template_codes(all_types_dict: dict[str, Any]) -> set[str]:
-    """Build a set of all known template code strings from the server cache."""
+    """Build a set of all known template code strings from the server cache.
+
+    A small function-local cache is used to avoid recomputing the set when the
+    exact same all_types_dict object is passed repeatedly during validation.
+    The cache is stored as attributes on the function object to avoid module-
+    level globals while still keeping the optimization benefit.
+    """
+    # Retrieve cached values stored on the function object (if any).
+    cache_id = getattr(_collect_all_template_codes, "_cached_all_types_dict_id", None)
+    cached_codes = getattr(_collect_all_template_codes, "_cached_codes", None)
+
+    all_types_id = id(all_types_dict)
+    if cache_id is not None and all_types_id == cache_id and cached_codes is not None:
+        # Return a fresh set copy to preserve the original function contract.
+        return set(cached_codes)
+
     codes: set[str] = set()
     for category_components in all_types_dict.values():
         if not isinstance(category_components, dict):
@@ -59,7 +74,11 @@ def _collect_all_template_codes(all_types_dict: dict[str, Any]) -> set[str]:
                 code_value = code_field.get("value")
                 if code_value:
                     codes.add(code_value)
-    return codes
+
+    # Cache a lightweight frozenset and the source dict id on the function object.
+    _collect_all_template_codes._cached_all_types_dict_id = all_types_id
+    _collect_all_template_codes._cached_codes = frozenset(codes)
+    return set(_collect_all_template_codes._cached_codes)
 
 
 def _get_blocked_by_code(nodes: list[dict], known_codes: set[str]) -> list[str]:
@@ -144,6 +163,9 @@ def _get_outdated_components(nodes: list[dict], all_types_dict: dict[str, Any]) 
     outdated: list[str] = []
     known_codes = _collect_all_template_codes(all_types_dict)
 
+    # Build a one-time mapping of component type -> current code to avoid repeated lookups.
+    current_code_map = _build_current_code_map(all_types_dict)
+
     for node in nodes:
         node_data = node.get("data", {})
         node_info = node_data.get("node", {})
@@ -164,7 +186,7 @@ def _get_outdated_components(nodes: list[dict], all_types_dict: dict[str, Any]) 
             continue
 
         # Check if the code matches the CURRENT template for this specific type
-        current_code = _find_template_code(component_type, all_types_dict)
+        current_code = current_code_map.get(component_type)
         if current_code and node_code != current_code:
             display_name = node_info.get("display_name") or component_type
             node_id = node_data.get("id") or node.get("id", "unknown")
@@ -280,3 +302,39 @@ def check_flow_and_raise(
         )
         msg = "Flow build blocked: server is still initializing component templates. Please try again in a few seconds."
         raise ValueError(msg)
+
+
+def _build_current_code_map(all_types_dict: dict[str, Any]) -> dict[str, str | None]:
+    """Build a mapping of component type -> current template code (value).
+
+    This consolidates the per-type lookup into a single pass over all_types_dict,
+    avoiding repeated full scans for each node.
+    """
+    current_map: dict[str, str | None] = {}
+    for category_components in all_types_dict.values():
+        if not isinstance(category_components, dict):
+            continue
+        for comp_name, component_data in category_components.items():
+            if not isinstance(component_data, dict):
+                continue
+            template = component_data.get("template", {})
+            code_field = template.get("code", {})
+            if isinstance(code_field, dict):
+                code_value = code_field.get("value")
+                # Only store when there's a value; None implies no template code.
+                if code_value:
+                    current_map[comp_name] = code_value
+
+    # Respect legacy aliases: map old names to the same code as their current name when present.
+    # _LEGACY_TYPE_ALIASES is defined in the same module (see read-only snippet).
+    try:
+        aliases = _LEGACY_TYPE_ALIASES  # type: ignore[name-defined]
+    except Exception:
+        aliases = {}
+
+    if isinstance(aliases, dict):
+        for old_name, new_name in aliases.items():
+            if old_name not in current_map:
+                current_map[old_name] = current_map.get(new_name)
+
+    return current_map
