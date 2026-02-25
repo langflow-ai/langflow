@@ -70,7 +70,7 @@ async def _fetch_traces(
             if query:
                 search_value = f"%{query}%"
                 search_filter = sa.or_(
-                    TraceTable.name.ilike(search_value),
+                    sa.cast(TraceTable.name, sa.String).ilike(search_value),
                     sa.cast(TraceTable.id, sa.String).ilike(search_value),
                     sa.cast(TraceTable.session_id, sa.String).ilike(search_value),
                 )
@@ -297,7 +297,6 @@ async def get_trace(
         )
         if result is None:
             raise HTTPException(status_code=404, detail="Trace not found")
-        return result  # noqa: TRY300
     except HTTPException:
         raise
     except asyncio.TimeoutError:
@@ -309,6 +308,8 @@ async def get_trace(
     except Exception as e:
         logger.debug("Error getting trace: %s", e)
         raise HTTPException(status_code=500, detail=str(e)) from e
+    else:
+        return result
 
 
 def _build_span_tree(spans: list[SpanTable]) -> list[dict[str, Any]]:

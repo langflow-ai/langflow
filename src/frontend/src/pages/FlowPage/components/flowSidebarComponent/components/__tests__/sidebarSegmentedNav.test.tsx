@@ -404,12 +404,6 @@ describe("SidebarSegmentedNav", () => {
       tooltip: "Add Sticky Notes",
     });
     expect(NAV_ITEMS[5]).toEqual({
-      id: "logs",
-      icon: "ScrollText",
-      label: "Logs",
-      tooltip: "Logs",
-    });
-    expect(NAV_ITEMS[6]).toEqual({
       id: "traces",
       icon: "Activity",
       label: "Traces",

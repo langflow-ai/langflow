@@ -1,6 +1,16 @@
 import { render, screen } from "@testing-library/react";
 import LogCanvasControls from "../index";
 
+jest.mock("react-router-dom", () => ({
+  __esModule: true,
+  useParams: () => ({ id: "flow_123" }),
+}));
+
+jest.mock("@/customization/hooks/use-custom-navigate", () => ({
+  __esModule: true,
+  useCustomNavigate: () => jest.fn(),
+}));
+
 jest.mock("@/modals/flowLogsModal", () => ({
   __esModule: true,
   default: ({ children }) => <div data-testid="logs-modal">{children}</div>,
