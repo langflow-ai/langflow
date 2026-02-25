@@ -93,23 +93,26 @@ export default function InputFileComponent({
           (file) =>
             new Promise<{ file_name: string; file_path: string } | null>(
               async (resolve) => {
-                const data = await mutateAsync(
-                  { file, id: currentFlowId },
-                  {
-                    onError: (error) => {
-                      console.error(CONSOLE_ERROR_MSG);
-                      setErrorData({
-                        title: "Error uploading file",
-                        list: [error.response?.data?.detail],
-                      });
-                      resolve(null);
+                try {
+                  const data = await mutateAsync(
+                    { file, id: currentFlowId },
+                    {
+                      onError: (error) => {
+                        console.error(CONSOLE_ERROR_MSG);
+                        setErrorData({
+                          title: "Error uploading file",
+                          list: [error.response?.data?.detail],
+                        });
+                      },
                     },
-                  },
-                );
-                resolve({
-                  file_name: file.name,
-                  file_path: data.file_path,
-                });
+                  );
+                  resolve({
+                    file_name: file.name,
+                    file_path: data.file_path,
+                  });
+                } catch {
+                  resolve(null);
+                }
               },
             ),
         ),
