@@ -96,10 +96,10 @@ export const HelpDropdownView = ({
         />
         {ENABLE_INSPECTION_PANEL && (
           <DropdownControlButton
-            iconName="SlidersHorizontal"
+            iconName="PanelRightClose"
             testId="canvas_controls_dropdown_toggle_inspector"
-            onClick={onToggleInspectionPanel!}
-            toggleValue={inspectionPanelVisible!}
+            onClick={onToggleInspectionPanel}
+            toggleValue={inspectionPanelVisible}
             label="Show Inspector Panel"
             hasToogle={true}
           />

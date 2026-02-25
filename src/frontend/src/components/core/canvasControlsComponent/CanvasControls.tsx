@@ -77,7 +77,7 @@ const CanvasControls = ({
             onClick={() => setInspectionPanelVisible(!inspectionPanelVisible)}
           >
             <ForwardedIconComponent
-              name="SlidersHorizontal"
+              name={inspectionPanelVisible ? "PanelRightClose" : "PanelRight"}
               className={`${inspectionPanelVisible ? "text-primary" : "text-muted-foreground group-hover:text-primary"} !h-5 !w-5`}
             />
           </Button>
