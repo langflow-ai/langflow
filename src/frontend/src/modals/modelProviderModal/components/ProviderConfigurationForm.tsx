@@ -51,6 +51,29 @@ export interface ProviderConfigurationFormProps {
   isFetchingAfterDisconnect: boolean;
 }
 
+// Generate a stable random placeholder for a given variable type
+const getPlaceholder = (variableName: string, provider: string) => {
+  const name = variableName.toLowerCase();
+  const providerLower = provider.toLowerCase();
+  
+  if (providerLower === "ollama" && name.includes("url")) {
+    return "http://localhost:11434";
+  }
+
+  if (name.includes("api key") || name.includes("apikey") || name.includes("token")) {
+    if (providerLower.includes("anthropic")) return "sk-ant-api03-...";
+    if (providerLower.includes("google")) return "AIza...";
+    if (providerLower.includes("watson")) return "a1b2c3d4...";
+    return "sk-...";
+  }
+  
+  if (name.includes("project id") || name.includes("projectid")) {
+    return "1234...";
+  }
+
+  return `Add ${variableName.toLowerCase()}`;
+};
+
 const ProviderConfigurationForm = ({
   selectedProvider,
   providerVariables,
@@ -213,7 +236,7 @@ const ProviderConfigurationForm = ({
                 ) : (
                   // Render input for text/secret variables
                   <Input
-                    placeholder={`Add ${variable.variable_name.toLowerCase()}`}
+                    placeholder={getPlaceholder(variable.variable_name, selectedProvider.provider)}
                     value={
                       isConfigured &&
                       variable.is_secret &&
