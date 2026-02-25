@@ -19,14 +19,13 @@ const ProviderListItem = ({
   const hasModels = provider.model_count && provider.model_count > 0;
   const isEnabled = provider.is_enabled;
   const isConfigured = provider.is_configured;
-  const isActive = isEnabled || isConfigured || !!hasModels;
+  const isActive = isEnabled || isConfigured;
 
   return (
     <div
       data-testid={`provider-item-${provider.provider}`}
       className={cn(
-        "flex items-center justify-between rounded-lg px-2 py-3 transition-colors hover:bg-muted/50",
-        isActive ? "cursor-pointer" : "cursor-not-allowed opacity-60",
+        "flex items-center justify-between rounded-lg px-2 py-3 transition-colors hover:bg-muted/50 cursor-pointer",
         isSelected && "bg-muted/50",
       )}
       onClick={() => onSelect(provider)}
