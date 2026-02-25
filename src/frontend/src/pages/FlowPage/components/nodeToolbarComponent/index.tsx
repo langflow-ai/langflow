@@ -245,7 +245,9 @@ const NodeToolbarComponent = memo(
         return;
       }
       if (!allowCustomComponents) {
-        setNoticeData({ title: `Custom component editing is disabled by administrator` });
+        setNoticeData({
+          title: `Custom component editing is disabled by administrator`,
+        });
         return;
       }
       setOpenModal((state) => !state);

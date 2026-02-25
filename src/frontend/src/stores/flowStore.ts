@@ -762,7 +762,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     }
 
     // Block build when custom components are disabled and there are outdated components
-    const allowCustomComponents = useUtilityStore.getState().allowCustomComponents;
+    const allowCustomComponents =
+      useUtilityStore.getState().allowCustomComponents;
     if (!allowCustomComponents && get().componentsToUpdate.length > 0) {
       const outdatedNames = get()
         .componentsToUpdate.map((c) => c.display_name ?? c.id)
@@ -910,9 +911,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
             ?.map((element) => element.id)
             .filter(Boolean) as string[]) ?? get().nodes.map((n) => n.id);
         useFlowStore.getState().updateBuildStatus(idList, BuildStatus.ERROR);
-        const isCustomComponentBlocked = list.some(
-          (msg) =>
-            msg.toLowerCase().includes("custom components are not allowed"),
+        const isCustomComponentBlocked = list.some((msg) =>
+          msg.toLowerCase().includes("custom components are not allowed"),
         );
         if (!isCustomComponentBlocked && get().componentsToUpdate.length > 0)
           setErrorData({

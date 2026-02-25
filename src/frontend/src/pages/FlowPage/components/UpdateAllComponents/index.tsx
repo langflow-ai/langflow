@@ -241,8 +241,7 @@ export default function UpdateAllComponents() {
                     className="shrink-0 text-sm"
                     onClick={handleDismissAllComponents}
                   >
-                    Dismiss{" "}
-                    {componentsToUpdateFiltered.length > 1 ? "All" : ""}
+                    Dismiss {componentsToUpdateFiltered.length > 1 ? "All" : ""}
                   </Button>
                 )}
                 <Button

@@ -371,7 +371,13 @@ function GenericNode({
       !allowCustomComponents
         ? isOutdated || hasBreakingChange
         : (isOutdated || hasBreakingChange) && !isUserEdited && !dismissAll,
-    [isOutdated, hasBreakingChange, isUserEdited, dismissAll, allowCustomComponents],
+    [
+      isOutdated,
+      hasBreakingChange,
+      isUserEdited,
+      dismissAll,
+      allowCustomComponents,
+    ],
   );
 
   const shouldShowLegacyComponent = useMemo(

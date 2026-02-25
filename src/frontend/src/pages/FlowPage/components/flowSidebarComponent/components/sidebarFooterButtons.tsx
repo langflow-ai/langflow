@@ -2,7 +2,10 @@ import { useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { SidebarMenuButton, useSidebar } from "@/components/ui/sidebar";
-import { useGetConfig, isFullConfig } from "@/controllers/API/queries/config/use-get-config";
+import {
+  useGetConfig,
+  isFullConfig,
+} from "@/controllers/API/queries/config/use-get-config";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import AddMcpServerModal from "@/modals/addMcpServerModal";
@@ -23,7 +26,10 @@ const SidebarMenuButtons = ({
   };
 
   // Hide custom component button when custom components are blocked
-  if (!allowCustomComponents && !(ENABLE_NEW_SIDEBAR && activeSection === "mcp")) {
+  if (
+    !allowCustomComponents &&
+    !(ENABLE_NEW_SIDEBAR && activeSection === "mcp")
+  ) {
     return null;
   }
 
