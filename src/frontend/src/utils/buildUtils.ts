@@ -691,11 +691,100 @@ async function onEvent(
       return true;
     }
     case "end_vertex": {
-      return processEndVertexEvent(data, buildResults, {
-        onBuildUpdate,
-        onBuildError,
-        onBuildStart,
-      });
+      const buildData = data.build_data;
+      const startTimeMs = verticesStartTimeMs.get(buildData.id);
+      if (startTimeMs) {
+        const delta = Date.now() - startTimeMs;
+        if (delta < MIN_VISUAL_BUILD_TIME_MS) {
+          // Ensure a minimum visual build time for a smoother UI experience.
+          await new Promise((resolve) =>
+            setTimeout(resolve, MIN_VISUAL_BUILD_TIME_MS - delta),
+          );
+        }
+      }
+
+      if (onBuildUpdate) {
+        if (!buildData.valid) {
+          // Aggregate error messages from the build outputs.
+          const errorMessages = Object.keys(buildData.data.outputs).flatMap(
+            (key) => {
+              const outputs = buildData.data.outputs[key];
+              if (Array.isArray(outputs)) {
+                return outputs
+                  .filter((log) => isErrorLogType(log.message))
+                  .map((log) => log.message.errorMessage);
+              }
+              if (!isErrorLogType(outputs.message)) {
+                return [];
+              }
+              return [outputs.message.errorMessage];
+            },
+          );
+          onBuildError &&
+            onBuildError("Error Building Component", errorMessages, [
+              { id: buildData.id },
+            ]);
+          onBuildUpdate(buildData, BuildStatus.ERROR, "");
+          buildResults.push(false);
+          return false;
+        } else {
+          onBuildUpdate(buildData, BuildStatus.BUILT, "");
+          buildResults.push(true);
+        }
+      }
+
+      await useFlowStore.getState().clearEdgesRunningByNodes();
+
+      // Check if this vertex is a ChatOutput - if so, save segment duration and reset timer
+      const flowState = useFlowStore.getState();
+      const node = flowState.nodes.find((n) => n.id === buildData.id);
+      const nodeType = node?.data?.type as string | undefined;
+
+      if (nodeType && isOutputType(nodeType) && flowState.buildStartTime) {
+        const segmentDurationMs = Date.now() - flowState.buildStartTime;
+
+        // Find and update the last bot message for the current build session only
+        const found = findLastBotMessage(
+          flowState.buildingFlowId ?? undefined,
+          flowState.buildingSessionId ?? undefined,
+        );
+        if (found && !found.message.properties?.build_duration) {
+          updateMessageProperties(found.message.id!, found.queryKey, {
+            build_duration: segmentDurationMs,
+          });
+          // Persist to backend
+          api
+            .put(`${getURL("MESSAGES")}/${found.message.id}`, {
+              ...found.message,
+              properties: {
+                ...found.message.properties,
+                build_duration: segmentDurationMs,
+              },
+            })
+            .catch((err: unknown) => {
+              console.warn("Failed to persist build_duration", {
+                messageId: found.message.id,
+                error: err instanceof Error ? err.message : String(err),
+              });
+            });
+        }
+
+        // Reset timer for the next segment
+        flowState.setBuildStartTime(Date.now());
+      }
+
+      if (buildData.next_vertices_ids) {
+        if (isStringArray(buildData.next_vertices_ids)) {
+          useFlowStore
+            .getState()
+            .setCurrentBuildingNodeId(buildData.next_vertices_ids ?? []);
+          useFlowStore
+            .getState()
+            .updateEdgesRunningByNodes(buildData.next_vertices_ids ?? [], true);
+        }
+        onStartVertices(buildData.next_vertices_ids);
+      }
+      return true;
     }
     case "build_start": {
       // There are two types of build_start events:
