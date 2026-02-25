@@ -535,7 +535,9 @@ export const useProviderConfiguration = ({
   ]);
 
   const pendingModelToggles = useRef<Record<string, boolean>>({});
-  const fallbackModelData = useRef<EnabledModelsResponse | undefined>(undefined);
+  const fallbackModelData = useRef<EnabledModelsResponse | undefined>(
+    undefined,
+  );
 
   const flushModelToggles = useDebounce(() => {
     if (!syncedSelectedProvider?.provider) return;
@@ -546,7 +548,7 @@ export const useProviderConfiguration = ({
         provider: providerName,
         model_id: modelName,
         enabled,
-      })
+      }),
     );
 
     if (updates.length === 0) return;
@@ -582,7 +584,7 @@ export const useProviderConfiguration = ({
             queryKey: ["useGetModelProviders"],
           });
         },
-      }
+      },
     );
   }, 1000);
 
@@ -593,9 +595,10 @@ export const useProviderConfiguration = ({
       const providerName = syncedSelectedProvider.provider;
 
       if (Object.keys(pendingModelToggles.current).length === 0) {
-        fallbackModelData.current = queryClient.getQueryData<EnabledModelsResponse>([
-          "useGetEnabledModels",
-        ]);
+        fallbackModelData.current =
+          queryClient.getQueryData<EnabledModelsResponse>([
+            "useGetEnabledModels",
+          ]);
       }
 
       queryClient.setQueryData<EnabledModelsResponse>(
@@ -618,7 +621,7 @@ export const useProviderConfiguration = ({
       pendingModelToggles.current[modelName] = enabled;
       flushModelToggles();
     },
-    [syncedSelectedProvider, queryClient, flushModelToggles]
+    [syncedSelectedProvider, queryClient, flushModelToggles],
   );
 
   return {
