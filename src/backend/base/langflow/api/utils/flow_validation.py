@@ -14,6 +14,10 @@ from typing import Any
 
 from lfx.log.logger import logger
 
+# Reuse module-level empty containers as .get defaults to avoid allocating a new {} / [] per call.
+_EMPTY_DICT: dict = {}
+_EMPTY_LIST: list = []
+
 
 def _get_blocked_by_edited_flag(nodes: list[dict]) -> list[str]:
     """Fallback: walk nodes and return display names of any with edited=True.
@@ -25,8 +29,8 @@ def _get_blocked_by_edited_flag(nodes: list[dict]) -> list[str]:
     """
     blocked: list[str] = []
     for node in nodes:
-        node_data = node.get("data", {})
-        node_info = node_data.get("node", {})
+        node_data = node.get("data", _EMPTY_DICT)
+        node_info = node_data.get("node", _EMPTY_DICT)
 
         if node_info.get("edited", False):
             display_name = node_info.get("display_name") or node_data.get("type", "Unknown")
@@ -34,10 +38,10 @@ def _get_blocked_by_edited_flag(nodes: list[dict]) -> list[str]:
             blocked.append(f"{display_name} ({node_id})")
 
         # Recursively check nested flows (e.g., group nodes / sub-flows)
-        flow_data = node_info.get("flow", {})
+        flow_data = node_info.get("flow", _EMPTY_DICT)
         if flow_data and isinstance(flow_data, dict):
-            nested_data = flow_data.get("data", {})
-            nested_nodes = nested_data.get("nodes", [])
+            nested_data = flow_data.get("data", _EMPTY_DICT)
+            nested_nodes = nested_data.get("nodes", _EMPTY_LIST)
             if nested_nodes:
                 blocked.extend(_get_blocked_by_edited_flag(nested_nodes))
 
