@@ -601,7 +601,7 @@ async def create_response(
         check_flow_and_raise(
             flow.data,
             allow_custom_components=settings_service.settings.allow_custom_components,
-            all_types_dict=component_cache.all_types_dict,
+            type_to_current_hash=component_cache.type_to_current_hash or None,
         )
     except ValueError as exc:
         error_response = create_openai_error(

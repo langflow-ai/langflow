@@ -97,13 +97,13 @@ async def retrieve_vertices_order(
     run_id = str(uuid.uuid4())
     try:
         allow_custom = settings_service.settings.allow_custom_components
-        types_dict = component_cache.all_types_dict
+        hash_dict = component_cache.type_to_current_hash or None
         try:
             if data:
                 check_flow_and_raise(
                     data.model_dump(),
                     allow_custom_components=allow_custom,
-                    all_types_dict=types_dict,
+                    type_to_current_hash=hash_dict,
                 )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -114,7 +114,9 @@ async def retrieve_vertices_order(
             flow = await session.get(Flow, flow_id)
             if flow and flow.data:
                 try:
-                    check_flow_and_raise(flow.data, allow_custom_components=allow_custom, all_types_dict=types_dict)
+                    check_flow_and_raise(
+                        flow.data, allow_custom_components=allow_custom, type_to_current_hash=hash_dict
+                    )
                 except ValueError as exc:
                     raise HTTPException(status_code=400, detail=str(exc)) from exc
             graph = await build_graph_from_db(flow_id=flow_id, session=session, chat_service=chat_service)
@@ -204,12 +206,14 @@ async def build_flow(
 
     settings_service = get_settings_service()
     allow_custom = settings_service.settings.allow_custom_components
-    types_dict = component_cache.all_types_dict
+    hash_dict = component_cache.type_to_current_hash or None
     try:
         if data:
-            check_flow_and_raise(data.model_dump(), allow_custom_components=allow_custom, all_types_dict=types_dict)
+            check_flow_and_raise(
+                data.model_dump(), allow_custom_components=allow_custom, type_to_current_hash=hash_dict
+            )
         if flow and flow.data:
-            check_flow_and_raise(flow.data, allow_custom_components=allow_custom, all_types_dict=types_dict)
+            check_flow_and_raise(flow.data, allow_custom_components=allow_custom, type_to_current_hash=hash_dict)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -349,7 +353,7 @@ async def build_vertex(
                         check_flow_and_raise(
                             flow.data,
                             allow_custom_components=settings_service.settings.allow_custom_components,
-                            all_types_dict=component_cache.all_types_dict,
+                            type_to_current_hash=component_cache.type_to_current_hash or None,
                         )
                     except ValueError as exc:
                         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -673,19 +677,19 @@ async def build_public_tmp(
     try:
         settings_service = get_settings_service()
         allow_custom = settings_service.settings.allow_custom_components
-        types_dict = component_cache.all_types_dict
+        hash_dict = component_cache.type_to_current_hash or None
         if data:
             check_flow_and_raise(
                 data.model_dump(),
                 allow_custom_components=allow_custom,
-                all_types_dict=types_dict,
+                type_to_current_hash=hash_dict,
             )
 
         # Also validate the stored flow data (don't execute unvalidated code from DB)
         async with session_scope() as session:
             flow = await session.get(Flow, flow_id)
             if flow and flow.data:
-                check_flow_and_raise(flow.data, allow_custom_components=allow_custom, all_types_dict=types_dict)
+                check_flow_and_raise(flow.data, allow_custom_components=allow_custom, type_to_current_hash=hash_dict)
 
         # Verify this is a public flow and get the associated user
         client_id = request.cookies.get("client_id")

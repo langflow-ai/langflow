@@ -28,7 +28,7 @@ from lfx.services.settings.service import SettingsService
 from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession, extract_global_variables_from_headers, parse_value
-from langflow.api.utils.flow_validation import check_flow_and_raise, code_matches_any_template
+from langflow.api.utils.flow_validation import check_flow_and_raise, code_hash_matches_any_template
 from langflow.api.v1.schemas import (
     ConfigResponse,
     CustomComponentRequest,
@@ -455,7 +455,7 @@ async def _run_flow_internal(
         check_flow_and_raise(
             flow.data,
             allow_custom_components=settings_service.settings.allow_custom_components,
-            all_types_dict=component_cache.all_types_dict,
+            type_to_current_hash=component_cache.type_to_current_hash or None,
         )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
@@ -771,7 +771,7 @@ async def webhook_run_flow(
         check_flow_and_raise(
             flow.data,
             allow_custom_components=settings_service.settings.allow_custom_components,
-            all_types_dict=component_cache.all_types_dict,
+            type_to_current_hash=component_cache.type_to_current_hash or None,
         )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
@@ -903,7 +903,7 @@ async def experimental_run_flow(
         check_flow_and_raise(
             flow.data,
             allow_custom_components=settings_service.settings.allow_custom_components,
-            all_types_dict=component_cache.all_types_dict,
+            type_to_current_hash=component_cache.type_to_current_hash or None,
         )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
@@ -1045,8 +1045,8 @@ async def custom_component(
     if not settings_service.settings.allow_custom_components:
         # Allow updating to a known server template (core component update),
         # but block truly custom code.
-        is_known_template = component_cache.all_types_dict and code_matches_any_template(
-            raw_code.code, component_cache.all_types_dict
+        is_known_template = component_cache.all_known_hashes and code_hash_matches_any_template(
+            raw_code.code, component_cache.all_known_hashes
         )
         if not is_known_template:
             raise HTTPException(
@@ -1088,8 +1088,8 @@ async def custom_component_update(
     """
     settings_service = get_settings_service()
     if not settings_service.settings.allow_custom_components:
-        is_known_template = component_cache.all_types_dict and code_matches_any_template(
-            code_request.code, component_cache.all_types_dict
+        is_known_template = component_cache.all_known_hashes and code_hash_matches_any_template(
+            code_request.code, component_cache.all_known_hashes
         )
         if not is_known_template:
             raise HTTPException(

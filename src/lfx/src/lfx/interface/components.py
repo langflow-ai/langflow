@@ -36,6 +36,10 @@ class ComponentCache:
         """
         self.all_types_dict: dict[str, Any] | None = None
         self.fully_loaded_components: dict[str, bool] = {}
+        # Precomputed code hashes for fast flow validation.
+        # Populated by get_and_cache_all_types_dict().
+        self.type_to_current_hash: dict[str, str] = {}
+        self.all_known_hashes: set[str] = set()
 
 
 # Singleton instance
@@ -597,6 +601,47 @@ async def _determine_loading_strategy(settings_service: "SettingsService") -> di
     return component_cache.all_types_dict or {}
 
 
+# Legacy type aliases: maps old flow node type names to current component keys.
+# SYNC: Keep in sync with backend flow_validation.py and frontend reactflowUtils.ts
+_LEGACY_TYPE_ALIASES: dict[str, str] = {
+    "Prompt": "Prompt Template",
+}
+
+
+def _build_code_hash_lookups(cache: ComponentCache) -> None:
+    """Populate type_to_current_hash and all_known_hashes from all_types_dict.
+
+    Called once after all_types_dict is fully populated. Builds:
+    - type_to_current_hash: {component_type: 12-char SHA256 prefix}
+    - all_known_hashes: set of all known code hashes
+    """
+    if not cache.all_types_dict:
+        return
+
+    type_to_hash: dict[str, str] = {}
+    all_hashes: set[str] = set()
+
+    for category_components in cache.all_types_dict.values():
+        if not isinstance(category_components, dict):
+            continue
+        for component_name, component_data in category_components.items():
+            if not isinstance(component_data, dict):
+                continue
+            code_hash = component_data.get("metadata", {}).get("code_hash")
+            if code_hash:
+                type_to_hash[component_name] = code_hash
+                all_hashes.add(code_hash)
+
+    # Add legacy aliases so old flow node types resolve correctly
+    for old_name, new_name in _LEGACY_TYPE_ALIASES.items():
+        if old_name not in type_to_hash and new_name in type_to_hash:
+            type_to_hash[old_name] = type_to_hash[new_name]
+
+    cache.type_to_current_hash = type_to_hash
+    cache.all_known_hashes = all_hashes
+    logger.debug(f"Built code hash lookups: {len(type_to_hash)} types, {len(all_hashes)} unique hashes")
+
+
 async def get_and_cache_all_types_dict(
     settings_service: "SettingsService",
     telemetry_service: Any | None = None,
@@ -628,6 +673,10 @@ async def get_and_cache_all_types_dict(
         }
         component_count = sum(len(comps) for comps in component_cache.all_types_dict.values())
         await logger.adebug(f"Loaded {component_count} components")
+
+        # Precompute code hash lookups for fast flow validation
+        _build_code_hash_lookups(component_cache)
+
     return component_cache.all_types_dict
 
 

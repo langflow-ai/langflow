@@ -95,7 +95,13 @@ const useSaveFlow = () => {
                         return flow;
                       }),
                     );
-                    setCurrentFlow(updatedFlow);
+                    // Only update useFlowStore.currentFlow when on the flow page.
+                    // When saving from the list page (e.g., renaming via settings modal),
+                    // setting this would leave stale unprocessed flow data in the store,
+                    // causing a crash when the user later navigates to the flow page.
+                    if (useFlowStore.getState().onFlowPage) {
+                      setCurrentFlow(updatedFlow);
+                    }
                     resolve();
                   } else {
                     setErrorData({
