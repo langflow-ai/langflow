@@ -9,7 +9,24 @@ import MultiselectComponent from "@/components/core/parameterRenderComponent/com
 import DisconnectWarning from "./DisconnectWarning";
 import { Provider } from "./types";
 
-const MASKED_VALUE = "••••••••";
+const PROVIDER_KEY_PREVIEW: Record<
+  string,
+  { prefix: string; totalLength: number }
+> = {
+  OpenAI: { prefix: "sk-proj-", totalLength: 164 },
+  Anthropic: { prefix: "sk-ant-", totalLength: 108 },
+  "Google Generative AI": { prefix: "AIza", totalLength: 39 },
+  "IBM watsonx": { prefix: "", totalLength: 44 },
+};
+
+const getMaskedKeyPreview = (providerName: string): string => {
+  const config = PROVIDER_KEY_PREVIEW[providerName] || {
+    prefix: "",
+    totalLength: 40,
+  };
+  const maskedLength = Math.max(config.totalLength - config.prefix.length, 8);
+  return `${config.prefix}${"•".repeat(maskedLength)}`;
+};
 
 export interface ProviderConfigurationFormProps {
   selectedProvider: Provider | null;
@@ -51,6 +68,9 @@ const ProviderConfigurationForm = ({
   requiresConfiguration,
 }: ProviderConfigurationFormProps) => {
   const [showDisconnectWarning, setShowDisconnectWarning] = useState(false);
+  const [editingSecret, setEditingSecret] = useState<Record<string, boolean>>(
+    {},
+  );
 
   const isAlreadyConfigured = providerVariables
     .filter((v) => v.required)
@@ -95,6 +115,7 @@ const ProviderConfigurationForm = ({
           {providerVariables.map((variable) => {
             const isConfigured = isVariableConfigured(variable.variable_key);
             const hasNewValue = variableValues[variable.variable_key]?.trim();
+            const isEditing = editingSecret[variable.variable_key];
 
             return (
               <div key={variable.variable_key} className="flex flex-col gap-1">
@@ -150,39 +171,44 @@ const ProviderConfigurationForm = ({
                 ) : (
                   // Render input for text/secret variables
                   <Input
-                    placeholder={
-                      isConfigured && !hasNewValue
-                        ? variable.is_secret
-                          ? MASKED_VALUE
-                          : `Add ${variable.variable_name.toLowerCase()}`
-                        : `Add ${variable.variable_name.toLowerCase()}`
+                    placeholder={`Add ${variable.variable_name.toLowerCase()}`}
+                    value={
+                      isConfigured && variable.is_secret && !isEditing && !hasNewValue
+                        ? getMaskedKeyPreview(selectedProvider.provider)
+                        : hasNewValue
+                          ? variableValues[variable.variable_key]
+                          : isConfigured && !variable.is_secret
+                            ? getConfiguredValue(variable.variable_key) ?? ""
+                            : variableValues[variable.variable_key] || ""
                     }
-                    defaultValue={
-                      isConfigured
-                        ? (variable.is_secret
-                            ? MASKED_VALUE
-                            : getConfiguredValue(variable.variable_key)) || ""
-                        : ""
-                    }
-                    value={variableValues[variable.variable_key] || ""}
                     type={
-                      variable.is_secret && hasNewValue ? "password" : "text"
+                      variable.is_secret && (isEditing || hasNewValue)
+                        ? "password"
+                        : "text"
                     }
                     onChange={(e) => {
-                      // Clear masked value on focus/type for secrets
-                      const newValue =
-                        e.target.value === MASKED_VALUE ? "" : e.target.value;
-                      onVariableChange(variable.variable_key, newValue);
+                      onVariableChange(variable.variable_key, e.target.value);
                     }}
                     onFocus={() => {
-                      // Clear masked value when user focuses on a configured secret field
                       if (isConfigured && variable.is_secret && !hasNewValue) {
+                        setEditingSecret((prev) => ({
+                          ...prev,
+                          [variable.variable_key]: true,
+                        }));
                         onVariableChange(variable.variable_key, "");
                       }
                     }}
-                    endIcon={isConfigured && !hasNewValue ? "Check" : undefined}
+                    onBlur={() => {
+                      if (!variableValues[variable.variable_key]) {
+                        setEditingSecret((prev) => ({
+                          ...prev,
+                          [variable.variable_key]: false,
+                        }));
+                      }
+                    }}
+                    endIcon={isConfigured && !hasNewValue && !isEditing ? "Check" : undefined}
                     endIconClassName={cn(
-                      isConfigured && !hasNewValue && "text-green-500",
+                      isConfigured && !hasNewValue && !isEditing && "text-green-500",
                     )}
                   />
                 )}
@@ -269,7 +295,7 @@ const ProviderConfigurationForm = ({
                 : validationFailed
                   ? "Retry Save"
                   : isAlreadyConfigured
-                    ? "Replace API Key"
+                    ? "Replace Configuration"
                     : "Save Configuration"}
             </Button>
           </div>
