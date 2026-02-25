@@ -28,6 +28,7 @@ from lfx.services.settings.service import SettingsService
 from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession, extract_global_variables_from_headers, parse_value
+from langflow.api.utils.flow_validation import check_flow_and_raise, code_hash_matches_any_template
 from langflow.api.v1.schemas import (
     ConfigResponse,
     CustomComponentRequest,
@@ -43,6 +44,7 @@ from langflow.events.event_manager import create_stream_tokens_event_manager
 from langflow.exceptions.api import APIException, InvalidChatInputError
 from langflow.exceptions.serialization import SerializationError
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
+from langflow.interface.components import component_cache
 from langflow.interface.initialize.loading import update_params_with_load_from_db_fields
 from langflow.processing.process import process_tweaks, run_graph_internal
 from langflow.schema.graph import Tweaks
@@ -448,6 +450,16 @@ async def _run_flow_internal(
     if flow is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
 
+    settings_service = get_settings_service()
+    try:
+        check_flow_and_raise(
+            flow.data,
+            allow_custom_components=settings_service.settings.allow_custom_components,
+            type_to_current_hash=component_cache.type_to_current_hash or None,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
     # Extract request-level variables from headers with prefix X-LANGFLOW-GLOBAL-VAR-*
     request_variables = extract_global_variables_from_headers(http_request.headers)
 
@@ -754,6 +766,16 @@ async def webhook_run_flow(
     await logger.adebug("Received webhook request")
     error_msg = ""
 
+    settings_service = get_settings_service()
+    try:
+        check_flow_and_raise(
+            flow.data,
+            allow_custom_components=settings_service.settings.allow_custom_components,
+            type_to_current_hash=component_cache.type_to_current_hash or None,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
     # Get the appropriate user for webhook execution based on auth settings
     webhook_user = await get_auth_service().get_webhook_user(flow_id_or_name, request)
 
@@ -875,6 +897,16 @@ async def experimental_run_flow(
     """  # noqa: E501
     # Get the flow from the id or name
     await check_flow_user_permission(flow=flow, api_key_user=api_key_user)
+
+    settings_service = get_settings_service()
+    try:
+        check_flow_and_raise(
+            flow.data,
+            allow_custom_components=settings_service.settings.allow_custom_components,
+            type_to_current_hash=component_cache.type_to_current_hash or None,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
     session_service = get_session_service()
     flow_id_str = str(flow.id)
@@ -1009,6 +1041,19 @@ async def custom_component(
     raw_code: CustomComponentRequest,
     user: CurrentActiveUser,
 ) -> CustomComponentResponse:
+    settings_service = get_settings_service()
+    if not settings_service.settings.allow_custom_components:
+        # Allow updating to a known server template (core component update),
+        # but block truly custom code.
+        is_known_template = component_cache.all_known_hashes and code_hash_matches_any_template(
+            raw_code.code, component_cache.all_known_hashes
+        )
+        if not is_known_template:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Custom component creation is disabled",
+            )
+
     component = Component(_code=raw_code.code)
 
     built_frontend_node, component_instance = build_custom_component_template(component, user_id=user.id)
@@ -1041,6 +1086,17 @@ async def custom_component_update(
         HTTPException: If an error occurs during component building or updating.
         SerializationError: If serialization of the updated component node fails.
     """
+    settings_service = get_settings_service()
+    if not settings_service.settings.allow_custom_components:
+        is_known_template = component_cache.all_known_hashes and code_hash_matches_any_template(
+            code_request.code, component_cache.all_known_hashes
+        )
+        if not is_known_template:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Custom component creation is disabled",
+            )
+
     try:
         component = Component(_code=code_request.code)
         component_node, cc_instance = build_custom_component_template(

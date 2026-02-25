@@ -1,3 +1,4 @@
+import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
 import { usePostValidateCode } from "@/controllers/API/queries/nodes/use-post-validate-code";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 import { clearHandlesFromAdvancedFields } from "@/utils/reactflowUtils";
@@ -44,6 +45,9 @@ export default function CodeAreaModal({
   setOpen: mySetOpen,
   componentId,
 }: codeAreaModalPropsType): JSX.Element {
+  const { data: config } = useGetConfig();
+  const isBlocked = !(config?.allow_custom_components ?? true);
+
   const [code, setCode] = useState(value);
   const [open, setOpen] =
     mySetOpen !== undefined && myOpen !== undefined
@@ -228,7 +232,7 @@ export default function CodeAreaModal({
           <div className="h-full w-full">
             <AceEditor
               ref={codeRef}
-              readOnly={readonly}
+              readOnly={readonly || isBlocked}
               value={code}
               mode="python"
               setOptions={{ fontFamily: "monospace" }}
@@ -241,7 +245,9 @@ export default function CodeAreaModal({
               theme={dark ? "monokai" : "github"}
               name="CodeEditor"
               onChange={(value) => {
-                setCode(value);
+                if (!isBlocked) {
+                  setCode(value);
+                }
               }}
               className="h-full min-w-full rounded-lg border-[1px] border-gray-300 custom-scroll dark:border-gray-600"
             />
@@ -272,7 +278,7 @@ export default function CodeAreaModal({
               onClick={processCode}
               type="submit"
               id="checkAndSaveBtn"
-              disabled={readonly}
+              disabled={readonly || isBlocked}
               data-testid="checkAndSaveBtn"
             >
               Check & Save

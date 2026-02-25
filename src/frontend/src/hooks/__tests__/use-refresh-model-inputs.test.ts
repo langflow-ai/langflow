@@ -10,6 +10,15 @@ const mockQueryClient = {
   invalidateQueries: jest.fn().mockResolvedValue(undefined),
 };
 let mockNodes: AllNodeType[] = [];
+let mockComponentsToUpdate: Array<{
+  id: string;
+  display_name: string;
+  outdated: boolean;
+  breakingChange: boolean;
+  userEdited: boolean;
+}> = [];
+let mockAllowCustomComponents = true;
+let mockTemplates: Record<string, any> = {};
 
 // Mock dependencies
 jest.mock("@tanstack/react-query", () => ({
@@ -43,7 +52,20 @@ jest.mock("@/stores/flowStore", () => ({
     getState: () => ({
       nodes: mockNodes,
       setNode: mockSetNode,
+      componentsToUpdate: mockComponentsToUpdate,
     }),
+  },
+}));
+
+jest.mock("@/stores/utilityStore", () => ({
+  useUtilityStore: {
+    getState: () => ({ allowCustomComponents: mockAllowCustomComponents }),
+  },
+}));
+
+jest.mock("@/stores/typesStore", () => ({
+  useTypesStore: {
+    getState: () => ({ templates: mockTemplates }),
   },
 }));
 
@@ -287,6 +309,9 @@ describe("refreshAllModelInputs", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockNodes = [];
+    mockComponentsToUpdate = [];
+    mockAllowCustomComponents = true;
+    mockTemplates = {};
   });
 
   it("should show success message when no model nodes exist", async () => {
@@ -468,6 +493,184 @@ describe("refreshAllModelInputs", () => {
 });
 
 // ============================================================================
+// Outdated Component Guard Tests
+// ============================================================================
+
+describe("refreshAllModelInputs — outdated component guard", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockNodes = [];
+    mockComponentsToUpdate = [];
+    mockAllowCustomComponents = true;
+    mockTemplates = {};
+  });
+
+  it("should skip API call for outdated nodes when allowCustomComponents is false", async () => {
+    const modelNode = createMockModelNode("node-1");
+    mockNodes = [modelNode];
+    mockAllowCustomComponents = false;
+    mockComponentsToUpdate = [
+      {
+        id: "node-1",
+        display_name: "OpenAI Chat",
+        outdated: true,
+        breakingChange: false,
+        userEdited: false,
+      },
+    ];
+
+    await refreshAllModelInputs(mockQueryClient as any);
+
+    expect(api.post).not.toHaveBeenCalled();
+    expect(mockSetNode).not.toHaveBeenCalled();
+  });
+
+  it("should NOT skip API call when allowCustomComponents is true even if outdated", async () => {
+    const modelNode = createMockModelNode("node-1");
+    mockNodes = [modelNode];
+    mockAllowCustomComponents = true;
+    mockTemplates = {};
+    mockComponentsToUpdate = [
+      {
+        id: "node-1",
+        display_name: "OpenAI Chat",
+        outdated: true,
+        breakingChange: false,
+        userEdited: false,
+      },
+    ];
+
+    (api.post as jest.Mock).mockResolvedValue({
+      data: {
+        template: {
+          model: {
+            type: "model",
+            value: "gpt-4",
+            options: ["gpt-4"],
+            required: true,
+            list: false,
+            show: true,
+            readonly: false,
+          },
+        },
+      },
+    });
+
+    await refreshAllModelInputs(mockQueryClient as any);
+
+    expect(api.post).toHaveBeenCalledTimes(1);
+  });
+
+  it("should NOT skip API call for user-edited outdated nodes", async () => {
+    const modelNode = createMockModelNode("node-1");
+    mockNodes = [modelNode];
+    mockAllowCustomComponents = false;
+    mockComponentsToUpdate = [
+      {
+        id: "node-1",
+        display_name: "OpenAI Chat",
+        outdated: true,
+        breakingChange: false,
+        userEdited: true,
+      },
+    ];
+
+    (api.post as jest.Mock).mockResolvedValue({
+      data: {
+        template: {
+          model: {
+            type: "model",
+            value: "gpt-4",
+            options: ["gpt-4"],
+            required: true,
+            list: false,
+            show: true,
+            readonly: false,
+          },
+        },
+      },
+    });
+
+    await refreshAllModelInputs(mockQueryClient as any);
+
+    expect(api.post).toHaveBeenCalledTimes(1);
+  });
+
+  it("should skip only outdated nodes, refresh non-outdated ones", async () => {
+    const outdatedNode = createMockModelNode("node-outdated");
+    const freshNode = createMockModelNode("node-fresh");
+    mockNodes = [outdatedNode, freshNode];
+    mockAllowCustomComponents = false;
+    mockComponentsToUpdate = [
+      {
+        id: "node-outdated",
+        display_name: "Outdated",
+        outdated: true,
+        breakingChange: false,
+        userEdited: false,
+      },
+    ];
+
+    (api.post as jest.Mock).mockResolvedValue({
+      data: {
+        template: {
+          model: {
+            type: "model",
+            value: "gpt-4",
+            options: ["gpt-4"],
+            required: true,
+            list: false,
+            show: true,
+            readonly: false,
+          },
+        },
+      },
+    });
+
+    await refreshAllModelInputs(mockQueryClient as any);
+
+    // Only the fresh node should have been refreshed
+    expect(api.post).toHaveBeenCalledTimes(1);
+  });
+
+  it("should skip via template code mismatch even when componentsToUpdate is empty", async () => {
+    const modelNode = createMockModelNode("node-1");
+    mockNodes = [modelNode];
+    mockAllowCustomComponents = false;
+    mockComponentsToUpdate = []; // Empty — simulating race condition
+    mockTemplates = {
+      ChatOpenAI: {
+        template: { code: { value: "new_server_code" } },
+      },
+    };
+
+    await refreshAllModelInputs(mockQueryClient as any);
+
+    expect(api.post).not.toHaveBeenCalled();
+  });
+
+  it("should suppress 403 as fallback when guards miss (templates not loaded)", async () => {
+    const modelNode = createMockModelNode("node-1");
+    mockNodes = [modelNode];
+    mockAllowCustomComponents = false;
+    mockComponentsToUpdate = [];
+    mockTemplates = {}; // Not loaded yet
+
+    const consoleWarnSpy = jest.spyOn(console, "warn").mockImplementation();
+    (api.post as jest.Mock).mockRejectedValue({
+      response: { status: 403, data: { detail: "Custom components not allowed" } },
+    });
+
+    // Should not throw — 403 is silently suppressed
+    await refreshAllModelInputs(mockQueryClient as any);
+
+    expect(api.post).toHaveBeenCalledTimes(1);
+    // The per-node catch logs a warning but doesn't propagate
+    consoleWarnSpy.mockRestore();
+  });
+});
+
+// ============================================================================
 // Hook Tests
 // ============================================================================
 
@@ -475,6 +678,9 @@ describe("useRefreshModelInputs", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockNodes = [];
+    mockComponentsToUpdate = [];
+    mockAllowCustomComponents = true;
+    mockTemplates = {};
   });
 
   it("should return refresh function and deprecated alias", () => {

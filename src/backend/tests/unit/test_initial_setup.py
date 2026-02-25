@@ -631,6 +631,95 @@ def test_update_projects_handles_components_without_metadata():
     assert updated_project["nodes"][0]["data"]["node"]["template"]["code"]["value"] == "test code"
 
 
+def test_update_projects_resolves_prompt_via_legacy_alias():
+    """Test that 'Prompt' type nodes get updated via the _LEGACY_TYPE_ALIASES mapping.
+
+    PromptComponent was renamed from 'Prompt' to 'Prompt Template', but 19 starter projects
+    still reference the old 'Prompt' type. The _LEGACY_TYPE_ALIASES dict maps old names to
+    current names so these nodes get their code updated at startup.
+    """
+    all_types_dict = {
+        "models_and_agents": {
+            "Prompt Template": {
+                "template": {
+                    "code": {"value": "new_prompt_code_v2"},
+                    "_type": "Component",
+                },
+                "display_name": "Prompt Template",
+            }
+        }
+    }
+
+    project_data = {
+        "nodes": [
+            {
+                "data": {
+                    "type": "Prompt",  # Old type name, doesn't match key "Prompt Template"
+                    "node": {
+                        "template": {
+                            "code": {"value": "old_prompt_code_v1"},
+                            "_type": "Component",
+                        },
+                        "outputs": [],
+                    },
+                }
+            }
+        ]
+    }
+
+    updated_project = update_projects_components_with_latest_component_versions(project_data, all_types_dict)
+    updated_code = updated_project["nodes"][0]["data"]["node"]["template"]["code"]["value"]
+    assert updated_code == "new_prompt_code_v2", (
+        f"Expected code to be updated to 'new_prompt_code_v2' but got '{updated_code}'. "
+        "The 'Prompt' type should resolve via _LEGACY_TYPE_ALIASES to 'Prompt Template'."
+    )
+
+
+def test_update_projects_direct_key_takes_precedence_over_alias():
+    """Test that a direct key match is preferred over the legacy alias."""
+    all_types_dict = {
+        "category": {
+            "Prompt": {
+                "template": {
+                    "code": {"value": "direct_match_code"},
+                    "_type": "Component",
+                },
+                "display_name": "Prompt",
+            },
+            "Prompt Template": {
+                "template": {
+                    "code": {"value": "renamed_code"},
+                    "_type": "Component",
+                },
+                "display_name": "Prompt Template",
+            },
+        }
+    }
+
+    project_data = {
+        "nodes": [
+            {
+                "data": {
+                    "type": "Prompt",
+                    "node": {
+                        "template": {
+                            "code": {"value": "old_code"},
+                            "_type": "Component",
+                        },
+                        "outputs": [],
+                    },
+                }
+            }
+        ]
+    }
+
+    updated_project = update_projects_components_with_latest_component_versions(project_data, all_types_dict)
+    updated_code = updated_project["nodes"][0]["data"]["node"]["template"]["code"]["value"]
+    assert updated_code == "direct_match_code", (
+        "Direct key match ('Prompt') should take precedence over the alias to 'Prompt Template'"
+    )
+
+
 def test_update_projects_handles_components_without_hash_history():
     """Test that components with metadata but no hash_history are handled gracefully."""
     all_types_dict = {

@@ -32,6 +32,7 @@ import { useGetBuildsQuery } from "@/controllers/API/queries/_builds";
 import CustomLoader from "@/customization/components/custom-loader";
 import { track } from "@/customization/utils/analytics";
 import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
+import useSaveFlow from "@/hooks/flows/use-save-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { useAddComponent } from "@/hooks/use-add-component";
 import { nodeColorsName } from "@/utils/styleUtils";
@@ -101,6 +102,7 @@ export default function Page({
 }): JSX.Element {
   const uploadFlow = useUploadFlow();
   const autoSaveFlow = useAutoSaveFlow();
+  const saveFlow = useSaveFlow();
   const types = useTypesStore((state) => state.types);
   const templates = useTypesStore((state) => state.templates);
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
@@ -224,8 +226,8 @@ export default function Page({
   }, [showCanvas]);
 
   useEffect(() => {
-    useFlowStore.setState({ autoSaveFlow });
-  }, [autoSaveFlow]);
+    useFlowStore.setState({ autoSaveFlow, saveFlow });
+  }, [autoSaveFlow, saveFlow]);
 
   function handleUndo(e: KeyboardEvent) {
     if (!isWrappedWithClass(e, "noflow")) {

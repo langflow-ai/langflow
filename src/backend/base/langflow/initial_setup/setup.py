@@ -72,6 +72,17 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                 del component["metadata"]["hash_history"]
             all_types_dict_flat[key] = component
 
+    # Legacy type aliases: maps old flow node type names to current all_types_dict keys.
+    # PromptComponent was renamed from "Prompt" to "Prompt Template" but starter projects
+    # still reference the old "Prompt" type. Add aliases so those nodes get their code updated.
+    # SYNC: Keep in sync with api/utils/flow_validation.py and frontend reactflowUtils.ts
+    _LEGACY_TYPE_ALIASES = {
+        "Prompt": "Prompt Template",
+    }
+    for old_name, new_name in _LEGACY_TYPE_ALIASES.items():
+        if old_name not in all_types_dict_flat and new_name in all_types_dict_flat:
+            all_types_dict_flat[old_name] = all_types_dict_flat[new_name]
+
     node_changes_log = defaultdict(list)
     project_data_copy = deepcopy(project_data)
 

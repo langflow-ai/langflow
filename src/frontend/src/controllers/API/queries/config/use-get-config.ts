@@ -18,6 +18,7 @@ interface BaseConfig {
   max_file_size_upload: number;
   event_delivery: EventDeliveryType;
   voice_mode_available: boolean;
+  allow_custom_components: boolean;
 }
 
 // Public config = base config (unauthenticated users get only base fields)
@@ -77,6 +78,9 @@ export const useGetConfig: useQueryFunctionType<
   const setHideGettingStartedProgress = useUtilityStore(
     (state) => state.setHideGettingStartedProgress,
   );
+  const setAllowCustomComponents = useUtilityStore(
+    (state) => state.setAllowCustomComponents,
+  );
 
   const { query } = UseRequestProcessor();
 
@@ -97,6 +101,7 @@ export const useGetConfig: useQueryFunctionType<
       // Set fields present in both public and full config
       setMaxFileSizeUpload(data.max_file_size_upload);
       setEventDelivery(data.event_delivery ?? EventDeliveryType.POLLING);
+      setAllowCustomComponents(data.allow_custom_components ?? true);
 
       // Set authenticated-only fields if present (full config)
       if (isFullConfig(data)) {

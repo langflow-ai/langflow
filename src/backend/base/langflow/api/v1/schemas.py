@@ -380,6 +380,7 @@ class PublicConfigResponse(BaseConfigResponse):
     """
 
     type: Literal["public"] = "public"
+    allow_custom_components: bool
 
     @classmethod
     def from_settings(cls, settings: Settings) -> "PublicConfigResponse":
@@ -396,6 +397,7 @@ class PublicConfigResponse(BaseConfigResponse):
             event_delivery=settings.event_delivery,
             voice_mode_available=settings.voice_mode_available,
             frontend_timeout=settings.frontend_timeout,
+            allow_custom_components=settings.allow_custom_components,
         )
 
 
@@ -418,6 +420,7 @@ class ConfigResponse(BaseConfigResponse):
     webhook_auth_enable: bool
     default_folder_name: str
     hide_getting_started_progress: bool
+    allow_custom_components: bool
 
     @classmethod
     def from_settings(cls, settings: Settings, auth_settings) -> "ConfigResponse":
@@ -451,6 +454,7 @@ class ConfigResponse(BaseConfigResponse):
             webhook_auth_enable=auth_settings.WEBHOOK_AUTH_ENABLE,
             default_folder_name=DEFAULT_FOLDER_NAME,
             hide_getting_started_progress=os.getenv("HIDE_GETTING_STARTED_PROGRESS", "").lower() == "true",
+            allow_custom_components=settings.allow_custom_components,
         )
 
 

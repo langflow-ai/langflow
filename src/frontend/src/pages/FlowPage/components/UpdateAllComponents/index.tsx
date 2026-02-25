@@ -1,4 +1,5 @@
 import { useUpdateNodeInternals } from "@xyflow/react";
+import { cloneDeep } from "lodash";
 import { AnimatePresence, motion } from "framer-motion";
 import { useMemo, useRef, useState } from "react";
 import { processNodeAdvancedFields } from "@/CustomNodes/helpers/process-node-advanced-fields";
@@ -9,9 +10,14 @@ import { Button } from "@/components/ui/button";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 import UpdateComponentModal from "@/modals/updateComponentModal";
 import useAlertStore from "@/stores/alertStore";
-import useFlowStore from "@/stores/flowStore";
+import useFlowStore, {
+  registerNodeUpdate,
+  completeNodeUpdate,
+} from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useTypesStore } from "@/stores/typesStore";
+import { useUtilityStore } from "@/stores/utilityStore";
+import type { NodeDataType } from "@/types/flow";
 import { cn } from "@/utils/utils";
 
 const ERROR_MESSAGE_UPDATING_COMPONENTS = "Error updating components";
@@ -46,9 +52,13 @@ export default function UpdateAllComponents() {
 
   const dismissedNodes = useFlowStore((state) => state.dismissedNodes);
   const addDismissedNodes = useFlowStore((state) => state.addDismissedNodes);
+  const allowCustomComponents = useUtilityStore(
+    (state) => state.allowCustomComponents,
+  );
 
-  const dismissed = useMemo(
+  const allDismissed = useMemo(
     () =>
+      componentsToUpdate.length > 0 &&
       componentsToUpdate.every((component) =>
         dismissedNodes.includes(component.id),
       ),
@@ -57,11 +67,13 @@ export default function UpdateAllComponents() {
 
   const componentsToUpdateFiltered = useMemo(
     () =>
-      componentsToUpdate.filter(
-        (component) =>
-          !dismissedNodes.includes(component.id) && !component.userEdited,
-      ),
-    [componentsToUpdate, dismissedNodes],
+      allowCustomComponents
+        ? componentsToUpdate.filter(
+            (component) =>
+              !dismissedNodes.includes(component.id) && !component.userEdited,
+          )
+        : componentsToUpdate,
+    [componentsToUpdate, dismissedNodes, allowCustomComponents],
   );
 
   const edgesUpdateRef = useRef({
@@ -107,48 +119,61 @@ export default function UpdateAllComponents() {
     let updatedCount = 0;
     const updates: UpdateNodesType[] = [];
 
-    const updatePromises = componentsToUpdateFiltered
-      .filter((component) => ids?.includes(component.id) ?? true)
-      .map((nodeUpdate) => {
-        const node = nodes.find((n) => n.id === nodeUpdate.id);
-        if (!node || node.type !== "genericNode") return Promise.resolve();
+    const nodesToUpdate = componentsToUpdateFiltered.filter(
+      (component) => ids?.includes(component.id) ?? true,
+    );
 
-        const thisNodeTemplate = templates[node.data.type]?.template;
-        if (!thisNodeTemplate?.code) return Promise.resolve();
+    // Register all pending updates so buildFlow will wait for them
+    for (const nodeUpdate of nodesToUpdate) {
+      registerNodeUpdate(nodeUpdate.id);
+    }
 
-        const currentCode = thisNodeTemplate.code.value;
+    const updatePromises = nodesToUpdate.map((nodeUpdate) => {
+      const node = nodes.find((n) => n.id === nodeUpdate.id);
+      if (!node || node.type !== "genericNode") {
+        completeNodeUpdate(nodeUpdate.id);
+        return Promise.resolve();
+      }
 
-        return new Promise((resolve) => {
-          validateComponentCode({
-            code: currentCode,
-            frontend_node: node.data.node!,
+      const thisNodeTemplate = templates[node.data.type]?.template;
+      if (!thisNodeTemplate?.code) {
+        completeNodeUpdate(nodeUpdate.id);
+        return Promise.resolve();
+      }
+
+      const currentCode = thisNodeTemplate.code.value;
+
+      return new Promise((resolve) => {
+        validateComponentCode({
+          code: currentCode,
+          frontend_node: node.data.node!,
+        })
+          .then(({ data: resData, type }) => {
+            if (resData && type) {
+              const newNode = processNodeAdvancedFields(
+                resData,
+                edges,
+                nodeUpdate.id,
+              );
+
+              updates.push({
+                nodeId: nodeUpdate.id,
+                newNode,
+                code: currentCode,
+                name: "code",
+                type,
+              });
+
+              updatedCount++;
+            }
+            resolve(null);
           })
-            .then(({ data: resData, type }) => {
-              if (resData && type) {
-                const newNode = processNodeAdvancedFields(
-                  resData,
-                  edges,
-                  nodeUpdate.id,
-                );
-
-                updates.push({
-                  nodeId: nodeUpdate.id,
-                  newNode,
-                  code: currentCode,
-                  name: "code",
-                  type,
-                });
-
-                updatedCount++;
-              }
-              resolve(null);
-            })
-            .catch((error) => {
-              console.error(error);
-              resolve(null);
-            });
-        });
+          .catch((error) => {
+            console.error(error);
+            resolve(null);
+          });
       });
+    });
 
     Promise.all(updatePromises)
       .then(() => {
@@ -168,6 +193,10 @@ export default function UpdateAllComponents() {
         console.error(error);
       })
       .finally(() => {
+        // Complete all pending updates regardless of success/failure
+        for (const nodeUpdate of nodesToUpdate) {
+          completeNodeUpdate(nodeUpdate.id);
+        }
         setLoadingUpdate(false);
       });
   };
@@ -189,45 +218,62 @@ export default function UpdateAllComponents() {
   const handleDismissAllComponents = (
     e: React.MouseEvent<HTMLButtonElement>,
   ) => {
-    addDismissedNodes(
-      componentsToUpdateFiltered.map((component) => component.id),
+    const ids = componentsToUpdateFiltered.map((component) => component.id);
+    addDismissedNodes(ids);
+    setNodes((oldNodes) =>
+      oldNodes.map((node) => {
+        if (ids.includes(node.id) && node.data?.node) {
+          const newNode = cloneDeep(node);
+          (newNode.data as NodeDataType).node!.edited = true;
+          return newNode;
+        }
+        return node;
+      }),
     );
     e.stopPropagation();
   };
 
   if (componentsToUpdateFiltered.length === 0) return null;
 
+  const shouldHide =
+    (allowCustomComponents && allDismissed) ||
+    isBuilding ||
+    buildInfo?.error ||
+    buildInfo?.success;
+
+  const showDismissedWarning = !allowCustomComponents && allDismissed;
+
   return (
     <AnimatePresence mode="wait">
-      {!dismissed &&
-        !isBuilding &&
-        !buildInfo?.error &&
-        !buildInfo?.success && (
-          <div className="absolute bottom-2 left-1/2 z-50 w-[530px] -translate-x-1/2">
-            <motion.div
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              variants={CONTAINER_VARIANTS}
-              transition={{ duration: 0.2, ease: "easeOut" }}
-              className={cn(
-                "flex items-center justify-between gap-8 rounded-lg border bg-background px-4 py-2 text-sm font-medium shadow-md",
+      {!shouldHide && (
+        <div className="absolute bottom-2 left-1/2 z-50 w-[530px] -translate-x-1/2">
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            variants={CONTAINER_VARIANTS}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className={cn(
+              "flex items-center justify-between gap-8 rounded-lg border bg-background px-4 py-2 text-sm font-medium shadow-md",
+              (showDismissedWarning ||
+                !allowCustomComponents ||
                 componentsToUpdateFiltered.some(
                   (component) => component.breakingChange,
-                ) && "border-accent-amber-foreground",
-              )}
-            >
-              <div className="flex items-center gap-3">
-                <span>
-                  Update
-                  {componentsToUpdateFiltered.length > 1 ? "s are" : " is"}{" "}
-                  available for{" "}
-                  {componentsToUpdateFiltered.length +
-                    " component" +
-                    (componentsToUpdateFiltered.length > 1 ? "s" : "")}
-                </span>
-              </div>
-              <div className="flex items-center gap-4">
+                )) &&
+                "border-accent-amber-foreground",
+            )}
+          >
+            <div className="flex items-center gap-3">
+              <span>
+                {showDismissedWarning
+                  ? "Upgrade is required to execute flow"
+                  : !allowCustomComponents
+                    ? `${componentsToUpdateFiltered.length} component${componentsToUpdateFiltered.length > 1 ? "s" : ""} must be updated before this flow can run`
+                    : `Update${componentsToUpdateFiltered.length > 1 ? "s are" : " is"} available for ${componentsToUpdateFiltered.length} component${componentsToUpdateFiltered.length > 1 ? "s" : ""}`}
+              </span>
+            </div>
+            <div className="flex items-center gap-4">
+              {!allDismissed && (
                 <Button
                   variant="link"
                   size="icon"
@@ -236,26 +282,27 @@ export default function UpdateAllComponents() {
                 >
                   Dismiss {componentsToUpdateFiltered.length > 1 ? "All" : ""}
                 </Button>
-                <Button
-                  size="sm"
-                  className="shrink-0"
-                  onClick={() => handleUpdateAllComponents()}
-                  loading={loadingUpdate}
-                  data-testid="update-all-button"
-                >
-                  {breakingChanges.length > 0 ? "Review All" : "Update All"}
-                </Button>
-              </div>
-              <UpdateComponentModal
-                isMultiple={true}
-                open={isOpen}
-                setOpen={setIsOpen}
-                onUpdateNode={(ids) => handleUpdateAllComponents(true, ids)}
-                components={componentsToUpdateFiltered}
-              />
-            </motion.div>
-          </div>
-        )}
+              )}
+              <Button
+                size="sm"
+                className="shrink-0"
+                onClick={() => handleUpdateAllComponents()}
+                loading={loadingUpdate}
+                data-testid="update-all-button"
+              >
+                {breakingChanges.length > 0 ? "Review All" : "Update All"}
+              </Button>
+            </div>
+            <UpdateComponentModal
+              isMultiple={true}
+              open={isOpen}
+              setOpen={setIsOpen}
+              onUpdateNode={(ids) => handleUpdateAllComponents(true, ids)}
+              components={componentsToUpdateFiltered}
+            />
+          </motion.div>
+        </div>
+      )}
     </AnimatePresence>
   );
 }

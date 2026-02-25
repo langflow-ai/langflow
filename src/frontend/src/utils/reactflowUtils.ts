@@ -1800,14 +1800,31 @@ export function typesGenerator(data: APIObjectType) {
     }, {});
 }
 
+// Legacy type aliases: maps old flow node type names to current component keys.
+// PromptComponent was renamed from "Prompt" to "Prompt Template" but existing flows
+// still reference the old "Prompt" type.
+// SYNC: Keep in sync with backend api/utils/flow_validation.py and initial_setup/setup.py
+const LEGACY_TYPE_ALIASES: Record<string, string> = {
+  Prompt: "Prompt Template",
+};
+
 export function templatesGenerator(data: APIObjectType) {
-  return Object.keys(data).reduce((acc, curr) => {
+  const templates = Object.keys(data).reduce((acc, curr) => {
     Object.keys(data[curr]).forEach((c: keyof APIKindType) => {
       //prevent wrong overwriting of the component template by a group of the same type
       if (!data[curr][c].flow) acc[c] = data[curr][c];
     });
     return acc;
   }, {});
+
+  // Add aliases so old flow nodes (e.g., type="Prompt") can find the current template
+  for (const [oldName, newName] of Object.entries(LEGACY_TYPE_ALIASES)) {
+    if (!(oldName in templates) && newName in templates) {
+      templates[oldName] = templates[newName];
+    }
+  }
+
+  return templates;
 }
 
 /**

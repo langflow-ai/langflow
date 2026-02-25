@@ -14,8 +14,12 @@ import { ICON_STROKE_WIDTH } from "../../constants/constants";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 import { useChangeOnUnfocus } from "../../shared/hooks/use-change-on-unfocus";
 import useAlertStore from "../../stores/alertStore";
-import useFlowStore from "../../stores/flowStore";
+import useFlowStore, {
+  registerNodeUpdate,
+  completeNodeUpdate,
+} from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
+import { useUtilityStore } from "../../stores/utilityStore";
 import { useShortcutsStore } from "../../stores/shortcuts";
 import { useTypesStore } from "../../stores/typesStore";
 import type { OutputFieldType, VertexBuildTypeAPI } from "../../types/api";
@@ -92,6 +96,10 @@ function GenericNode({
   const addDismissedNodes = useFlowStore((state) => state.addDismissedNodes);
   const removeDismissedNodes = useFlowStore(
     (state) => state.removeDismissedNodes,
+  );
+
+  const allowCustomComponents = useUtilityStore(
+    (state) => state.allowCustomComponents,
   );
 
   const dismissedNodesLegacy = useFlowStore(
@@ -175,6 +183,7 @@ function GenericNode({
 
       const currentCode = thisNodeTemplate.code.value;
       if (data.node) {
+        registerNodeUpdate(data.id);
         validateComponentCode(
           { code: currentCode, frontend_node: data.node },
           {
@@ -189,6 +198,7 @@ function GenericNode({
                 removeDismissedNodes([data.id]);
                 setLoadingUpdate(false);
               }
+              completeNodeUpdate(data.id);
             },
             onError: (error) => {
               setErrorData({
@@ -200,6 +210,7 @@ function GenericNode({
               });
               console.error(error);
               setLoadingUpdate(false);
+              completeNodeUpdate(data.id);
             },
           },
         );
@@ -362,8 +373,17 @@ function GenericNode({
   const rightClickedNodeId = useFlowStore((state) => state.rightClickedNodeId);
 
   const shouldShowUpdateComponent = useMemo(
-    () => (isOutdated || hasBreakingChange) && !isUserEdited && !dismissAll,
-    [isOutdated, hasBreakingChange, isUserEdited, dismissAll],
+    () =>
+      !allowCustomComponents
+        ? isOutdated || hasBreakingChange
+        : (isOutdated || hasBreakingChange) && !isUserEdited && !dismissAll,
+    [
+      isOutdated,
+      hasBreakingChange,
+      isUserEdited,
+      dismissAll,
+      allowCustomComponents,
+    ],
   );
 
   const shouldShowLegacyComponent = useMemo(
@@ -480,10 +500,14 @@ function GenericNode({
     () => handleUpdateCode(true),
     [handleUpdateCode],
   );
-  const memoizedSetDismissAll = useCallback(
-    () => addDismissedNodes([data.id]),
-    [addDismissedNodes, data.id],
-  );
+  const memoizedSetDismissAll = useCallback(() => {
+    addDismissedNodes([data.id]);
+    setNode(data.id, (old) => {
+      const newNode = cloneDeep(old);
+      (newNode.data as NodeDataType).node!.edited = true;
+      return newNode;
+    });
+  }, [addDismissedNodes, data.id, setNode]);
 
   const memoizedSetDismissAllLegacy = useCallback(
     () => addDismissedNodesLegacy([data.id]),
@@ -516,6 +540,8 @@ function GenericNode({
             handleUpdateCode={() => handleUpdateCode()}
             loadingUpdate={loadingUpdate}
             setDismissAll={memoizedSetDismissAll}
+            dismissed={dismissAll}
+            isRequired={!allowCustomComponents}
           />
         ) : shouldShowLegacyComponent ? (
           <NodeLegacyComponent
