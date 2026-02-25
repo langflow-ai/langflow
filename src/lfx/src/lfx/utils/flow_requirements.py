@@ -135,13 +135,13 @@ def _pin_version(package_name: str) -> str:
     """Return ``package_name==X.Y.Z`` if the package is installed, else bare name."""
     try:
         version = md.version(package_name)
-        return f"{package_name}=={version}"
     except md.PackageNotFoundError:
         warnings.warn(
             f"Could not determine installed version for '{package_name}'. It will be included without a version pin.",
             stacklevel=2,
         )
         return package_name
+    return f"{package_name}=={version}"
 
 
 @lru_cache(maxsize=1)
@@ -243,7 +243,7 @@ def _extract_imports(source: str) -> set[str]:
                 imports.add(alias.name.split(".")[0])
         elif isinstance(node, ast.ImportFrom):
             if node.level > 0:
-                # Relative import – skip (internal to the component)
+                # Relative import - skip (internal to the component)
                 continue
             if node.module:
                 imports.add(node.module.split(".")[0])
@@ -452,7 +452,7 @@ def _extract_component_requirements(node: dict) -> tuple[set[str], set[str]]:
                 # Skip stdlib
                 if imp in STDLIB_MODULES:
                     continue
-                # Skip lfx / langflow internal imports – lfx provides these
+                # Skip lfx / langflow internal imports - lfx provides these
                 # interfaces at runtime so they should never be listed as
                 # separate requirements.
                 if imp in _INTERNAL_IMPORT_NAMES:

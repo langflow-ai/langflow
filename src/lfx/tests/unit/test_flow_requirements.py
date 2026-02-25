@@ -643,7 +643,7 @@ class TestGenerateRequirementsTxt:
         node = _make_node("A", "from langchain_openai import ChatOpenAI")
         flow = _make_flow(node)
         txt = generate_requirements_txt(flow, pin_versions=False)
-        lines = [l for l in txt.strip().split("\n") if l and not l.startswith("#")]
+        lines = [line for line in txt.strip().split("\n") if line and not line.startswith("#")]
         assert "lfx" in lines
         assert "langchain-openai" in lines
 
@@ -964,7 +964,7 @@ class TestTyperRequirementsCommand:
         result = runner.invoke(app, ["requirements", str(flow_file), "--no-lfx", "--no-pin"])
         assert result.exit_code == 0
         # With --no-lfx and only lfx imports, no packages should appear after header
-        lines = [l for l in result.output.strip().split("\n") if l and not l.startswith("#")]
+        lines = [line for line in result.output.strip().split("\n") if line and not line.startswith("#")]
         assert "lfx" not in lines
 
     def test_no_pin_flag(self, runner, app, flow_file):
@@ -982,7 +982,7 @@ class TestTyperRequirementsCommand:
         assert result.exit_code == 0
         assert "lfx-nightly" in result.output
         # Should not contain bare "lfx" as a separate line
-        lines = [l for l in result.output.strip().split("\n") if l and not l.startswith("#")]
+        lines = [line for line in result.output.strip().split("\n") if line and not line.startswith("#")]
         assert "lfx" not in lines
 
     def test_file_not_found(self, runner, app, tmp_path):
