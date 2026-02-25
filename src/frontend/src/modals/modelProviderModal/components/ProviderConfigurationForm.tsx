@@ -78,7 +78,8 @@ const ProviderConfigurationForm = ({
   );
 
   // True during validation, saving, and the post-save model refetch
-  const isLoading = isSaving || validationState === "validating" || isFetchingModels;
+  const isLoading =
+    isSaving || validationState === "validating" || isFetchingModels;
 
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
@@ -155,12 +156,12 @@ const ProviderConfigurationForm = ({
                         variableValues[variable.variable_key]
                           ? [variableValues[variable.variable_key]]
                           : isConfigured &&
-                            getConfiguredValue(variable.variable_key)
+                              getConfiguredValue(variable.variable_key)
                             ? [
-                              getConfiguredValue(
-                                variable.variable_key,
-                              ) as string,
-                            ]
+                                getConfiguredValue(
+                                  variable.variable_key,
+                                ) as string,
+                              ]
                             : []
                       }
                       options={variable.options}
@@ -191,7 +192,8 @@ const ProviderConfigurationForm = ({
                                 <ForwardedIconComponent
                                   name="X"
                                   className="h-4 w-4 text-destructive cursor-default"
-                                /></div>
+                                />
+                              </div>
                             </ShadTooltip>
                           </span>
                         )}
@@ -199,7 +201,10 @@ const ProviderConfigurationForm = ({
                           (validationState === "valid" ||
                             (isConfigured && !hasNewValue)) && (
                             <span className="absolute right-8 top-1/2 -translate-y-1/2 text-green-500 pointer-events-none">
-                              <ForwardedIconComponent name="Check" className="h-4 w-4" />
+                              <ForwardedIconComponent
+                                name="Check"
+                                className="h-4 w-4"
+                              />
                             </span>
                           )}
                       </>
@@ -210,12 +215,15 @@ const ProviderConfigurationForm = ({
                   <Input
                     placeholder={`Add ${variable.variable_name.toLowerCase()}`}
                     value={
-                      isConfigured && variable.is_secret && !isEditing && !hasNewValue
+                      isConfigured &&
+                      variable.is_secret &&
+                      !isEditing &&
+                      !hasNewValue
                         ? getMaskedKeyPreview(selectedProvider.provider)
                         : hasNewValue
                           ? variableValues[variable.variable_key]
                           : isConfigured && !variable.is_secret
-                            ? getConfiguredValue(variable.variable_key) ?? ""
+                            ? (getConfiguredValue(variable.variable_key) ?? "")
                             : variableValues[variable.variable_key] || ""
                     }
                     type={
@@ -254,7 +262,8 @@ const ProviderConfigurationForm = ({
                             <ForwardedIconComponent
                               name="X"
                               className="h-4 w-4 text-destructive cursor-default"
-                            /></div>
+                            />
+                          </div>
                         </ShadTooltip>
                       ) : !isLoading &&
                         (validationState === "valid" ||

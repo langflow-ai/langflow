@@ -78,7 +78,8 @@ export const useProviderConfiguration = ({
     useState<ValidationState>("idle");
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isFetchingAfterSave, setIsFetchingAfterSave] = useState(false);
-  const [isFetchingAfterDisconnect, setIsFetchingAfterDisconnect] = useState(false);
+  const [isFetchingAfterDisconnect, setIsFetchingAfterDisconnect] =
+    useState(false);
   const validationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
@@ -97,16 +98,17 @@ export const useProviderConfiguration = ({
   const { mutateAsync: validateProvider } = useValidateProvider();
   const { data: providerVariablesMapping = {} } = useGetProviderVariables();
   const { mutate: updateEnabledModels } = useUpdateEnabledModels({ retry: 0 });
-  const { data: modelProviders = [], isFetching: isFetchingModels } = useGetModelProviders(
-    {},
-    {
-      refetchInterval:
-        syncedSelectedProvider?.provider?.toLowerCase() === "ollama"
-          ? 10000
-          : false,
-      staleTime: 1000 * 30, // 30 seconds
-    },
-  );
+  const { data: modelProviders = [], isFetching: isFetchingModels } =
+    useGetModelProviders(
+      {},
+      {
+        refetchInterval:
+          syncedSelectedProvider?.provider?.toLowerCase() === "ollama"
+            ? 10000
+            : false,
+        staleTime: 1000 * 30, // 30 seconds
+      },
+    );
 
   // Invalidate all provider-related caches after successful create/update
   const invalidateProviderQueries = useCallback(() => {
