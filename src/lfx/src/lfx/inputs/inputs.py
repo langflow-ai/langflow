@@ -798,12 +798,10 @@ class FileInput(BaseInputMixin, ListableInputMixin, FileMixin, MetadataTraceMixi
 
     Attributes:
         field_type (SerializableFieldTypes): The field type of the input. Defaults to FieldTypes.FILE.
-        input_types (list[str]): List of input types for the field. Defaults to ["Message"].
     """
 
     field_type: SerializableFieldTypes = FieldTypes.FILE
     track_in_telemetry: CoalesceBool = False  # Never track file paths (may contain PII)
-    input_types: list[str] = ["Message", "Data"]
 
 
 class McpInput(BaseInputMixin, MetadataTraceMixin):
