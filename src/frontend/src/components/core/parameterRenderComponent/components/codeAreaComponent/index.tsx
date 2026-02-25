@@ -57,7 +57,6 @@ export default function CodeAreaComponent({
 }: InputProps<string>): JSX.Element | null {
   const { data: config } = useGetConfig();
   const isBlocked = !(config?.allow_custom_components ?? true);
-  const effectiveDisabled = disabled || isBlocked;
 
   const renderCodeText = () => (
     <span

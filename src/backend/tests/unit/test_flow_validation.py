@@ -349,17 +349,21 @@ class TestCheckFlowAndRaise:
         # Should not raise
         check_flow_and_raise(flow_data, allow_custom_components=False, all_types_dict=atd)
 
-    def test_fallback_blocks_edited_flag(self):
-        """Fallback path (no all_types_dict): edited=True is blocked."""
-        flow_data = {"nodes": [_make_node(edited=True, display_name="Edited")]}
-        with pytest.raises(ValueError, match="custom components are not allowed"):
+    def test_fail_closed_when_all_types_dict_is_none(self):
+        """When all_types_dict is None (cache not loaded), all flows are blocked.
+
+        This is the fail-closed behavior: if we can't verify code against templates,
+        we block execution rather than falling back to the client-controlled edited flag.
+        """
+        flow_data = {"nodes": [_make_node(edited=False)]}
+        with pytest.raises(ValueError, match="server is still initializing"):
             check_flow_and_raise(flow_data, allow_custom_components=False)
 
-    def test_fallback_allows_unedited(self):
-        """Fallback path: edited=False is allowed (best-effort only)."""
-        flow_data = {"nodes": [_make_node(edited=False)]}
-        # Should not raise
-        check_flow_and_raise(flow_data, allow_custom_components=False)
+    def test_fail_closed_blocks_edited_true_without_cache(self):
+        """Fail-closed blocks even edited=True nodes when cache is unavailable."""
+        flow_data = {"nodes": [_make_node(edited=True, display_name="Edited")]}
+        with pytest.raises(ValueError, match="server is still initializing"):
+            check_flow_and_raise(flow_data, allow_custom_components=False)
 
     def test_security_edited_false_custom_code_blocked(self):
         """Security test: a node with edited=False but custom code MUST be blocked.
@@ -449,6 +453,42 @@ class TestEndpointValidationCoverage:
 
         source = self._read_function_source(experimental_run_flow)
         assert "check_flow_and_raise" in source, "experimental_run_flow must call check_flow_and_raise"
+
+    def test_v2_workflow_sync_validates(self):
+        """V2 sync workflow must call check_flow_and_raise before building graph."""
+        from langflow.api.v2.workflow import execute_sync_workflow
+
+        source = self._read_function_source(execute_sync_workflow)
+        assert "check_flow_and_raise" in source, (
+            "execute_sync_workflow must call check_flow_and_raise to prevent custom code bypass via V2 API"
+        )
+
+    def test_v2_workflow_background_validates(self):
+        """V2 background workflow must call check_flow_and_raise before building graph."""
+        from langflow.api.v2.workflow import execute_workflow_background
+
+        source = self._read_function_source(execute_workflow_background)
+        assert "check_flow_and_raise" in source, (
+            "execute_workflow_background must call check_flow_and_raise to prevent custom code bypass via V2 API"
+        )
+
+    def test_openai_responses_validates(self):
+        """OpenAI Responses API must call check_flow_and_raise before running flow."""
+        from langflow.api.v1.openai_responses import create_response
+
+        source = self._read_function_source(create_response)
+        assert "check_flow_and_raise" in source, (
+            "create_response must call check_flow_and_raise to prevent custom code bypass via OpenAI API"
+        )
+
+    def test_mcp_call_tool_validates(self):
+        """MCP handle_call_tool must call check_flow_and_raise before running flow."""
+        from langflow.api.v1.mcp_utils import handle_call_tool
+
+        source = self._read_function_source(handle_call_tool)
+        assert "check_flow_and_raise" in source, (
+            "handle_call_tool must call check_flow_and_raise to prevent custom code bypass via MCP"
+        )
 
     def test_custom_component_create_checks_allow_custom(self):
         """POST /custom_component must check allow_custom_components."""

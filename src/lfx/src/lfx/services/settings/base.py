@@ -340,9 +340,9 @@ class Settings(BaseSettings):
 
     # Custom Component Security
     allow_custom_components: bool = True
-    """If set to False, blocks execution of custom (user-edited) components.
-    Only core (unedited) components will be allowed to run.
-    Components are identified as custom when their `edited` flag is True in the flow JSON.
+    """If set to False, blocks execution of components whose code does not match a known
+    server template. The server validates node code against its component template cache;
+    the client-side 'edited' flag is only used as a fallback during startup.
     Set via LANGFLOW_ALLOW_CUSTOM_COMPONENTS environment variable."""
 
     # SSRF Protection

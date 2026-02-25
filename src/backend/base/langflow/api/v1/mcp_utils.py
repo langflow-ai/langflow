@@ -20,10 +20,12 @@ from lfx.utils.helpers import build_content_type_from_extension
 from mcp import types
 from sqlmodel import select
 
+from langflow.api.utils.flow_validation import check_flow_and_raise
 from langflow.api.v1.endpoints import simple_run_flow
 from langflow.api.v1.schemas import SimplifiedAPIRequest
 from langflow.helpers.flow import json_schema_from_flow
 from langflow.schema.message import Message
+from langflow.interface.components import component_cache
 from langflow.services.database.models import Flow
 from langflow.services.database.models.file.model import File as UserFile
 from langflow.services.database.models.user.model import User
@@ -266,6 +268,13 @@ async def handle_call_tool(
 
             try:
                 try:
+                    settings_service = get_settings_service()
+                    check_flow_and_raise(
+                        flow.data,
+                        allow_custom_components=settings_service.settings.allow_custom_components,
+                        all_types_dict=component_cache.all_types_dict,
+                    )
+
                     result = await simple_run_flow(
                         flow=flow,
                         input_request=input_request,

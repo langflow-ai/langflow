@@ -11,6 +11,7 @@ from lfx.log.logger import logger
 from lfx.schema.openai_responses_schemas import create_openai_error, create_openai_error_chunk
 
 from langflow.api.utils import extract_global_variables_from_headers
+from langflow.api.utils.flow_validation import check_flow_and_raise
 from langflow.api.v1.endpoints import consume_and_yield, run_flow_generator, simple_run_flow
 from langflow.api.v1.schemas import SimplifiedAPIRequest
 from langflow.events.event_manager import create_stream_tokens_event_manager
@@ -22,10 +23,11 @@ from langflow.schema import (
     OpenAIResponsesStreamChunk,
 )
 from langflow.schema.content_types import ToolContent
+from langflow.interface.components import component_cache
 from langflow.services.auth.utils import api_key_security
 from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.database.models.user.model import UserRead
-from langflow.services.deps import get_telemetry_service
+from langflow.services.deps import get_settings_service, get_telemetry_service
 from langflow.services.telemetry.schema import RunPayload
 from langflow.services.telemetry.service import TelemetryService
 
@@ -591,6 +593,21 @@ async def create_response(
             message=f"Flow with id '{request.model}' not found",
             type_="invalid_request_error",
             code="flow_not_found",
+        )
+        return OpenAIErrorResponse(error=error_response["error"])
+
+    settings_service = get_settings_service()
+    try:
+        check_flow_and_raise(
+            flow.data,
+            allow_custom_components=settings_service.settings.allow_custom_components,
+            all_types_dict=component_cache.all_types_dict,
+        )
+    except ValueError as exc:
+        error_response = create_openai_error(
+            message=str(exc),
+            type_="invalid_request_error",
+            code="custom_components_blocked",
         )
         return OpenAIErrorResponse(error=error_response["error"])
 

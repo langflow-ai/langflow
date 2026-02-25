@@ -97,6 +97,7 @@ def _get_blocked_by_code(nodes: list[dict], known_codes: set[str]) -> list[str]:
 # Legacy type aliases: maps old flow node type names to current all_types_dict keys.
 # PromptComponent was renamed from "Prompt" to "Prompt Template" but existing flows
 # still reference the old "Prompt" type.
+# SYNC: Keep in sync with initial_setup/setup.py and frontend reactflowUtils.ts
 _LEGACY_TYPE_ALIASES: dict[str, str] = {
     "Prompt": "Prompt Template",
 }
@@ -134,7 +135,7 @@ def code_matches_any_template(code: str, all_types_dict: dict[str, Any]) -> bool
 
 
 def _get_outdated_components(nodes: list[dict], all_types_dict: dict[str, Any]) -> list[str]:
-    """Walk nodes and return display names of non-edited nodes whose code doesn't match the current template.
+    """Walk nodes and return display names of any whose code matches a known template but not the CURRENT template for their type.
 
     These are core components from a previous Langflow version that need updating.
     Distinct from blocked components (unknown code) — these have code that matches
@@ -270,10 +271,14 @@ def check_flow_and_raise(
             msg = f"Flow build blocked: outdated components must be updated before running: {outdated_names}"
             raise ValueError(msg)
     else:
-        # Fallback: trust the edited flag (all_types_dict not yet loaded)
-        blocked = _get_blocked_by_edited_flag(nodes)
-        if blocked:
-            blocked_names = ", ".join(blocked)
-            logger.warning(f"Flow build blocked: custom components are not allowed: {blocked_names}")
-            msg = f"Flow build blocked: custom components are not allowed: {blocked_names}"
-            raise ValueError(msg)
+        # Fail closed: template cache not available, cannot verify code safety.
+        # This typically happens during server startup before the component cache is populated.
+        logger.error(
+            "Flow validation requested but component template cache is not yet loaded. "
+            "Blocking execution as a safety measure."
+        )
+        msg = (
+            "Flow build blocked: server is still initializing component templates. "
+            "Please try again in a few seconds."
+        )
+        raise ValueError(msg)

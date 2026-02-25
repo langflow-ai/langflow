@@ -98,19 +98,25 @@ async def retrieve_vertices_order(
     try:
         allow_custom = settings_service.settings.allow_custom_components
         types_dict = component_cache.all_types_dict
-        if data:
-            check_flow_and_raise(
-                data.model_dump(),
-                allow_custom_components=allow_custom,
-                all_types_dict=types_dict,
-            )
+        try:
+            if data:
+                check_flow_and_raise(
+                    data.model_dump(),
+                    allow_custom_components=allow_custom,
+                    all_types_dict=types_dict,
+                )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-        # First, we need to check if the flow_id is in the cache
+        # If no client-side data was provided, load and validate the flow from the database
         if not data:
             # Validate the DB flow before building (don't execute unvalidated code)
             flow = await session.get(Flow, flow_id)
             if flow and flow.data:
-                check_flow_and_raise(flow.data, allow_custom_components=allow_custom, all_types_dict=types_dict)
+                try:
+                    check_flow_and_raise(flow.data, allow_custom_components=allow_custom, all_types_dict=types_dict)
+                except ValueError as exc:
+                    raise HTTPException(status_code=400, detail=str(exc)) from exc
             graph = await build_graph_from_db(flow_id=flow_id, session=session, chat_service=chat_service)
         else:
             graph = await build_and_cache_graph_from_data(
@@ -699,6 +705,8 @@ async def build_public_tmp(
             queue_service=queue_service,
             flow_name=flow_name or f"{client_id}_{flow_id}",
         )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         await logger.aexception("Error building public flow")
         if isinstance(exc, HTTPException):

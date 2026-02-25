@@ -1803,6 +1803,7 @@ export function typesGenerator(data: APIObjectType) {
 // Legacy type aliases: maps old flow node type names to current component keys.
 // PromptComponent was renamed from "Prompt" to "Prompt Template" but existing flows
 // still reference the old "Prompt" type.
+// SYNC: Keep in sync with backend api/utils/flow_validation.py and initial_setup/setup.py
 const LEGACY_TYPE_ALIASES: Record<string, string> = {
   Prompt: "Prompt Template",
 };
