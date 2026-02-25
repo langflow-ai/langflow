@@ -826,13 +826,13 @@ test(
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
-    
+
     await openAdvancedOptions(page);
 
     await openAdvancedOptions(page);
-    
+
     await page.getByTestId("showfile_path").click();
-    
+
     await closeAdvancedOptions(page);
 
     await adjustScreenView(page);
