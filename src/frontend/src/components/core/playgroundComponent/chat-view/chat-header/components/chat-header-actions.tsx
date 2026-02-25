@@ -47,6 +47,7 @@ export function ChatHeaderActions({
           className={actionButtonClasses}
           title="Close and go back to flow"
           aria-label="Close and go back to flow"
+          data-testid="playground-close-button"
         >
           <ForwardedIconComponent
             name="X"
