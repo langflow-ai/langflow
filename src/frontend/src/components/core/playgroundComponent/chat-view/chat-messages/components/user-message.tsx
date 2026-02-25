@@ -98,7 +98,7 @@ export const UserMessage = memo(
       <div className="mt-2 text-xs text-muted-foreground text-right">
         (Edited)
       </div>
-      ) : null;
+    ) : null;
 
     const isEmoji = chat.properties?.icon?.match(
       /[\u2600-\u27BF\uD83C-\uDBFF\uDC00-\uDFFF]/,
