@@ -1,6 +1,6 @@
 import * as dotenv from "dotenv";
 import path from "path";
-import { test } from "../../fixtures";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { uploadFile } from "../../utils/upload-file";
@@ -40,6 +40,9 @@ withEventDeliveryModes(
       .last()
       .isVisible();
 
+    // Create a new session first
+    await page.getByTestId("new-chat").click();
+
     await page.waitForSelector('[data-testid="input-chat-playground"]', {
       timeout: 100000,
     });
@@ -54,15 +57,6 @@ withEventDeliveryModes(
     });
 
     await page.getByText("this is a test file").last().isVisible();
-
-    // Close fullscreen so the chat-header-more-menu is visible
-    await page.getByTestId("playground-close-button").click();
-    await page.getByTestId("chat-header-more-menu").click();
-    await page.getByTestId("clear-chat-option").click();
-    await page.waitForSelector('[data-testid="input-chat-playground"]', {
-      timeout: 100000,
-    });
-
-    await page.getByTestId("input-chat-playground").last().isVisible();
+    expect(await page.getByTestId("div-chat-message).last().count()).toBe(1)"));
   },
 );

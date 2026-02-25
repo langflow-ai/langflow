@@ -288,6 +288,8 @@ test(
 
     await page.getByRole("button", { name: "Playground", exact: true }).click();
 
+    // Create a new session first
+    await page.getByTestId("new-chat").click();
     await page.waitForSelector("text=Run Flow", {
       timeout: 30000,
     });
@@ -365,12 +367,14 @@ test(
       await page
         .getByRole("button", { name: "Playground", exact: true })
         .click();
-      // Close fullscreen so the more menu is visible
-      await page.getByTestId("playground-close-button").click();
-      await page.getByTestId("chat-header-more-menu").click();
-      await page.getByTestId("clear-chat-option").click();
+      // Use the chat header more menu to clear chat (stays in fullscreen)
+      await page
+        .locator('[data-testid^="session-"][data-testid$="-more-menu"]')
+        .last()
+        .click();
+      // await page.getByTestId("clear-chat-option").click();
       // await page.getByTestId("icon-MoreHorizontal").last().click();
-      // await page.getByText("Delete", { exact: true }).last().click();
+      await page.getByText("Delete", { exact: true }).last().click();
 
       await page.waitForSelector("text=Run Flow", {
         timeout: 30000,
