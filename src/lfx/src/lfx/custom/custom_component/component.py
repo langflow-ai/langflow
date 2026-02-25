@@ -1824,9 +1824,13 @@ class Component(CustomComponent):
         complete_message += chunk
         if self._event_manager:
             if first_chunk:
-                # Send the initial message only on the first chunk
+                # Send the initial message event to create the message
+                # bubble in the frontend.  Use empty text so the content
+                # is delivered exclusively through token events — sending
+                # the same text via both channels causes duplication in
+                # consumers like the OpenAI Responses endpoint (#10719).
                 msg_copy = message.model_copy()
-                msg_copy.text = complete_message
+                msg_copy.text = ""
                 await self._send_message_event(msg_copy, id_=message_id)
             await asyncio.to_thread(
                 self._event_manager.on_token,
