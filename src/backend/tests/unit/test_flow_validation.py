@@ -9,10 +9,13 @@ Covers:
 - check_flow_and_raise integration
 - Nested/group node recursion
 - Security: edited=False with custom code still gets blocked
-- Security: all execution endpoints validate flows before exec()
+- Security: all execution endpoints validate flows before graph building and execution
 """
 
+import inspect
+
 import pytest
+
 from langflow.api.utils.flow_validation import (
     _collect_all_template_codes,
     _find_template_code,
@@ -24,6 +27,17 @@ from langflow.api.utils.flow_validation import (
     validate_flow_custom_components,
     validate_flows_custom_components,
 )
+from langflow.api.v1.chat import build_flow, build_public_tmp, build_vertex, retrieve_vertices_order
+from langflow.api.v1.endpoints import (
+    _run_flow_internal,
+    custom_component,
+    custom_component_update,
+    experimental_run_flow,
+    webhook_run_flow,
+)
+from langflow.api.v1.mcp_utils import handle_call_tool
+from langflow.api.v1.openai_responses import create_response
+from langflow.api.v2.workflow import execute_sync_workflow, execute_workflow_background
 
 # ==================== Fixtures ====================
 
@@ -386,126 +400,80 @@ class TestCheckFlowAndRaise:
 
 
 class TestEndpointValidationCoverage:
-    """Verify that all execution endpoints have calls to validate custom code blocking.
+    """Source-level tests verifying all execution endpoints call check_flow_and_raise.
 
-    These are source-level tests that inspect the endpoint code to ensure
-    validation is present. This catches regressions if someone adds a new
-    endpoint or refactors an existing one without adding validation.
+    This catches regressions if someone adds a new endpoint or refactors
+    an existing one without adding validation.
     """
 
-    def _read_function_source(self, func) -> str:
-        import inspect
-
+    @staticmethod
+    def _source(func) -> str:
         return inspect.getsource(func)
 
     def test_build_flow_validates_both_data_and_db_flow(self):
-        """build_flow should validate both user-provided data AND stored flow.data."""
-        from langflow.api.v1.chat import build_flow
-
-        source = self._read_function_source(build_flow)
-        # Should have TWO check_flow_and_raise calls (one for data, one for flow.data)
+        source = self._source(build_flow)
         assert source.count("check_flow_and_raise") >= 2, (
             "build_flow must call check_flow_and_raise for both user-provided data and DB flow.data"
         )
 
     def test_retrieve_vertices_order_validates_db_flow(self):
-        """Deprecated retrieve_vertices_order must validate DB flow when data is None."""
-        from langflow.api.v1.chat import retrieve_vertices_order
-
-        source = self._read_function_source(retrieve_vertices_order)
+        source = self._source(retrieve_vertices_order)
         assert source.count("check_flow_and_raise") >= 2, (
             "retrieve_vertices_order must validate DB flow.data when user provides no data"
         )
 
     def test_build_vertex_validates_db_flow(self):
-        """Deprecated build_vertex must validate DB flow before building from cache miss."""
-        from langflow.api.v1.chat import build_vertex
-
-        source = self._read_function_source(build_vertex)
+        source = self._source(build_vertex)
         assert "check_flow_and_raise" in source, "build_vertex must call check_flow_and_raise before building from DB"
 
     def test_build_public_tmp_validates_db_flow(self):
-        """build_public_tmp must validate stored flow data, not just user-provided data."""
-        from langflow.api.v1.chat import build_public_tmp
-
-        source = self._read_function_source(build_public_tmp)
+        source = self._source(build_public_tmp)
         assert source.count("check_flow_and_raise") >= 2, (
             "build_public_tmp must validate both user-provided data and DB flow.data"
         )
 
     def test_run_flow_validates(self):
-        """Run flow internal must call check_flow_and_raise."""
-        from langflow.api.v1.endpoints import _run_flow_internal
-
-        source = self._read_function_source(_run_flow_internal)
+        source = self._source(_run_flow_internal)
         assert "check_flow_and_raise" in source, "_run_flow_internal must call check_flow_and_raise"
 
     def test_webhook_run_flow_validates(self):
-        """webhook_run_flow must call check_flow_and_raise."""
-        from langflow.api.v1.endpoints import webhook_run_flow
-
-        source = self._read_function_source(webhook_run_flow)
+        source = self._source(webhook_run_flow)
         assert "check_flow_and_raise" in source, "webhook_run_flow must call check_flow_and_raise"
 
     def test_experimental_run_flow_validates(self):
-        """experimental_run_flow must call check_flow_and_raise."""
-        from langflow.api.v1.endpoints import experimental_run_flow
-
-        source = self._read_function_source(experimental_run_flow)
+        source = self._source(experimental_run_flow)
         assert "check_flow_and_raise" in source, "experimental_run_flow must call check_flow_and_raise"
 
     def test_v2_workflow_sync_validates(self):
-        """V2 sync workflow must call check_flow_and_raise before building graph."""
-        from langflow.api.v2.workflow import execute_sync_workflow
-
-        source = self._read_function_source(execute_sync_workflow)
+        source = self._source(execute_sync_workflow)
         assert "check_flow_and_raise" in source, (
             "execute_sync_workflow must call check_flow_and_raise to prevent custom code bypass via V2 API"
         )
 
     def test_v2_workflow_background_validates(self):
-        """V2 background workflow must call check_flow_and_raise before building graph."""
-        from langflow.api.v2.workflow import execute_workflow_background
-
-        source = self._read_function_source(execute_workflow_background)
+        source = self._source(execute_workflow_background)
         assert "check_flow_and_raise" in source, (
             "execute_workflow_background must call check_flow_and_raise to prevent custom code bypass via V2 API"
         )
 
     def test_openai_responses_validates(self):
-        """OpenAI Responses API must call check_flow_and_raise before running flow."""
-        from langflow.api.v1.openai_responses import create_response
-
-        source = self._read_function_source(create_response)
+        source = self._source(create_response)
         assert "check_flow_and_raise" in source, (
             "create_response must call check_flow_and_raise to prevent custom code bypass via OpenAI API"
         )
 
     def test_mcp_call_tool_validates(self):
-        """MCP handle_call_tool must call check_flow_and_raise before running flow."""
-        from langflow.api.v1.mcp_utils import handle_call_tool
-
-        source = self._read_function_source(handle_call_tool)
+        source = self._source(handle_call_tool)
         assert "check_flow_and_raise" in source, (
             "handle_call_tool must call check_flow_and_raise to prevent custom code bypass via MCP"
         )
 
     def test_custom_component_create_checks_allow_custom(self):
-        """POST /custom_component must check allow_custom_components."""
-        from langflow.api.v1.endpoints import custom_component
-
-        source = self._read_function_source(custom_component)
+        source = self._source(custom_component)
         assert "allow_custom_components" in source, "custom_component must check allow_custom_components setting"
 
     def test_custom_component_update_checks_allow_custom(self):
-        """POST /custom_component/update must check allow_custom_components.
-
-        This was a CRITICAL vulnerability — the update endpoint had no validation,
-        allowing arbitrary code execution via exec() even with custom components disabled.
-        """
-        from langflow.api.v1.endpoints import custom_component_update
-
-        source = self._read_function_source(custom_component_update)
+        source = self._source(custom_component_update)
         assert "allow_custom_components" in source, (
             "custom_component_update must check allow_custom_components setting. "
             "Without this check, arbitrary code can be executed via POST /custom_component/update."

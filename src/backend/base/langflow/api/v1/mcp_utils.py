@@ -267,14 +267,18 @@ async def handle_call_tool(
                 progress_task = asyncio.create_task(send_progress_updates(server.request_context.meta.progressToken))
 
             try:
+                settings_service = get_settings_service()
                 try:
-                    settings_service = get_settings_service()
                     check_flow_and_raise(
                         flow.data,
                         allow_custom_components=settings_service.settings.allow_custom_components,
                         all_types_dict=component_cache.all_types_dict,
                     )
+                except ValueError as exc:
+                    collected_results.append(types.TextContent(type="text", text=f"Flow build blocked: {exc!s}"))
+                    return collected_results
 
+                try:
                     result = await simple_run_flow(
                         flow=flow,
                         input_request=input_request,

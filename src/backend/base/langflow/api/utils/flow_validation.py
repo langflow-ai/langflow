@@ -4,8 +4,8 @@ When `allow_custom_components` is False, components are validated against the se
 known component templates. Any node whose code does not match a known template is
 blocked — the client-side `edited` flag is NOT trusted for security decisions.
 
-The `edited` flag is only used as a fallback when the server template cache
-(`all_types_dict`) is unavailable.
+When the server template cache (`all_types_dict`) is unavailable, execution is
+blocked entirely (fail-closed).
 """
 
 from __future__ import annotations
@@ -233,7 +233,8 @@ def check_flow_and_raise(
 
     When all_types_dict is available, every node's code is checked against the server's
     known templates — the client-side `edited` flag is NOT trusted. If all_types_dict is
-    not available, falls back to checking the `edited` flag (best-effort).
+    not available, execution is blocked entirely (fail-closed) until the template cache
+    is populated.
 
     Args:
         flow_data: The flow's data dict.
@@ -253,7 +254,7 @@ def check_flow_and_raise(
     if not nodes:
         return
 
-    if all_types_dict:
+    if all_types_dict is not None:
         # Primary path: verify code against server templates (ignores edited flag)
         known_codes = _collect_all_template_codes(all_types_dict)
         blocked = _get_blocked_by_code(nodes, known_codes)
