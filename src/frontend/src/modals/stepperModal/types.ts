@@ -38,6 +38,7 @@ export interface StepperModalProps {
   width?: string;
   sidePanel?: ReactNode;
   sidePanelOpen?: boolean;
+  stepLabels?: string[];
 }
 
 export interface StepperModalFooterProps {

@@ -239,7 +239,7 @@ class DeploymentCreateE2E:
         scenarios = [
             {
                 "name": "create_ref_snapshot_ref_config",
-                "expected": {HTTP_CREATED},
+                "expected": {HTTP_BAD_REQUEST},
                 "payload": self._build_create_payload(
                     deployment_type="agent",
                     snapshot={"artifact_type": "flow", "reference_ids": [reference_snapshot_id]},
@@ -257,7 +257,7 @@ class DeploymentCreateE2E:
             },
             {
                 "name": "create_raw_snapshot_ref_config",
-                "expected": {HTTP_CREATED},
+                "expected": {HTTP_BAD_REQUEST},
                 "payload": self._build_create_payload(
                     deployment_type="agent",
                     snapshot={"artifact_type": "flow", "raw_payloads": [self._build_flow_payload(label="flow-raw")]},
@@ -289,7 +289,7 @@ class DeploymentCreateE2E:
                         "artifact_type": "flow",
                         "reference_ids": [reference_snapshot_id, reference_snapshot_id_2],
                     },
-                    config={"reference_id": reference_config_id},
+                    config={"raw_payload": self._build_config_payload(label="cfg-raw-for-two-refs")},
                 ),
             },
             {
@@ -304,7 +304,7 @@ class DeploymentCreateE2E:
                             self._build_flow_payload(label="flow-b"),
                         ],
                     },
-                    config={"reference_id": reference_config_id},
+                    config={"raw_payload": self._build_config_payload(label="cfg-raw-for-two-raw")},
                 ),
             },
             {
@@ -334,11 +334,11 @@ class DeploymentCreateE2E:
             },
             {
                 "name": "create_with_unsupported_mcp_type",
-                "expected": {HTTP_INTERNAL_SERVER_ERROR},
+                "expected": {HTTP_BAD_REQUEST},
                 "payload": self._build_create_payload(
                     deployment_type="mcp",
                     snapshot={"artifact_type": "flow", "reference_ids": [reference_snapshot_id]},
-                    config={"reference_id": reference_config_id},
+                    config={"raw_payload": self._build_config_payload(label="cfg-raw-for-mcp")},
                 ),
             },
         ]

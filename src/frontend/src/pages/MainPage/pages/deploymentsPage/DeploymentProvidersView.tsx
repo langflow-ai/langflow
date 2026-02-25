@@ -21,7 +21,7 @@ import type {
   DeploymentConfigItem,
   DeploymentProvider,
 } from "@/controllers/API/queries/deployments/use-deployments";
-import { columnDefs } from "./columnDefs";
+import { buildDeploymentColumnDefs } from "./columnDefs";
 
 const STATUS_COLOR: Record<string, string> = {
   Connected: "text-green-500",
@@ -48,14 +48,22 @@ type DeploymentProvidersViewProps = {
   isLoadingDeployments: boolean;
   isLoadingProviders: boolean;
   isLoadingConfigurations: boolean;
+  onTestAgent: (deployment: {
+    id: string;
+    name: string;
+    deploymentType: "agent" | "mcp";
+    mode?: string;
+  }) => void;
 };
 
 export type ProviderListMode = "deployments" | "configurations";
 
 export type DeploymentListRow = {
+  id: string;
   name: string;
   url: string;
   type: string;
+  deploymentType: "agent" | "mcp";
   mode: string;
   attached: number;
   modifiedDate: string;
@@ -216,7 +224,9 @@ export const DeploymentProvidersView = ({
   isLoadingDeployments,
   isLoadingProviders,
   isLoadingConfigurations,
+  onTestAgent,
 }: DeploymentProvidersViewProps) => {
+  const deploymentColumnDefs = buildDeploymentColumnDefs({ onTestAgent });
   const configurationRows: ConfigurationListRow[] = configurations.map((config) => ({
     id: config.id,
     name: config.name,
@@ -234,7 +244,9 @@ export const DeploymentProvidersView = ({
           const status = provider.has_api_key ? "Connected" : "Error";
           const providerName = normalizeProviderLabel(provider.provider_key);
           const iconName =
-            provider.provider_key === "watsonx-orchestrate" ? "IBM" : "Cloud";
+            provider.provider_key === "watsonx-orchestrate"
+              ? "WatsonxOrchestrate"
+              : "Cloud";
 
           return (
             <button
@@ -249,13 +261,23 @@ export const DeploymentProvidersView = ({
             >
               {/* Card Header */}
               <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-700">
+                <div
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
+                    provider.provider_key === "watsonx-orchestrate"
+                      ? "bg-transparent"
+                      : "bg-zinc-700"
+                  }`}
+                >
                   {provider.provider_key === "langflow" ? (
                     <LangflowLogo className="h-5 w-5 text-white" />
                   ) : (
                     <ForwardedIconComponent
                       name={iconName}
-                      className="h-5 w-5 text-white"
+                      className={
+                        provider.provider_key === "watsonx-orchestrate"
+                          ? "h-7 w-7 object-contain"
+                          : "h-5 w-5 text-white"
+                      }
                     />
                   )}
                 </div>
@@ -392,7 +414,7 @@ export const DeploymentProvidersView = ({
                     rowHeight={65}
                     cellSelection={false}
                     tableOptions={{ hide_options: true }}
-                    columnDefs={columnDefs}
+                    columnDefs={deploymentColumnDefs}
                     rowData={deploymentRows}
                     className="w-full ag-no-border"
                     pagination

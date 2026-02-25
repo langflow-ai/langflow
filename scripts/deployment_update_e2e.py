@@ -27,7 +27,9 @@ HTTP_CREATED = 201
 HTTP_ACCEPTED = 202
 HTTP_NO_CONTENT = 204
 HTTP_BAD_REQUEST = 400
+HTTP_CONFLICT = 409
 HTTP_UNPROCESSABLE_CONTENT = 422
+HTTP_INTERNAL_SERVER_ERROR = 500
 HTTP_NOT_FOUND = 404
 
 _INVALID_WXO_NAME_CHARS = re.compile(r"[^A-Za-z0-9_]")
@@ -76,6 +78,7 @@ class DeploymentUpdateE2E:
         self.reference_config_id: str | None = None
         self.alternate_config_id: str | None = None
         self.reference_deployment_id: str | None = None
+        self.reference_deployment_name: str | None = None
 
         self.run_suffix = datetime.now(UTC).strftime("%Y%m%d%H%M%S") + "-" + uuid4().hex[:8]
 
@@ -178,9 +181,10 @@ class DeploymentUpdateE2E:
     async def _create_reference_deployment(self) -> None:
         self._require_provider_id()
         self._require_reference_ids()
+        deployment_name = self._mk_name("dep-update-ref")
         payload = {
             "spec": {
-                "name": self._mk_name("dep-update-ref"),
+                "name": deployment_name,
                 "description": "reference deployment for update e2e scenarios",
                 "type": "agent",
             },
@@ -189,7 +193,7 @@ class DeploymentUpdateE2E:
                 "reference_ids": [self.reference_snapshot_id],
             },
             "config": {
-                "reference_id": self.reference_config_id,
+                "raw_payload": self._build_config_payload(label="cfg-ref-deployment"),
             },
         }
         response = await self._request(
@@ -199,6 +203,7 @@ class DeploymentUpdateE2E:
         )
         self._expect_status(response, {HTTP_CREATED}, "create reference deployment")
         self.reference_deployment_id = str(response.json()["id"])
+        self.reference_deployment_name = deployment_name
         self.created_deployment_ids.add(self.reference_deployment_id)
         print(f"Reference deployment created: {self.reference_deployment_id}")
 
@@ -206,6 +211,9 @@ class DeploymentUpdateE2E:
         self._require_provider_id()
         self._require_reference_ids()
         self._require_reference_deployment_id()
+        if not self.reference_deployment_name:
+            msg = "Reference deployment name has not been set."
+            raise RuntimeError(msg)
 
         provider_id = self.provider_id
         deployment_id = self.reference_deployment_id
@@ -278,28 +286,28 @@ class DeploymentUpdateE2E:
             },
             {
                 "name": "update_config_set_new_reference",
-                "expected": {HTTP_OK},
+                "expected": {HTTP_CONFLICT},
                 "deployment_id": deployment_id,
                 "provider_id": provider_id,
                 "payload": {"config": {"config_id": self.alternate_config_id}},
             },
             {
                 "name": "update_config_unbind",
-                "expected": {HTTP_OK},
+                "expected": {HTTP_CONFLICT},
                 "deployment_id": deployment_id,
                 "provider_id": provider_id,
                 "payload": {"config": {"config_id": None}},
             },
             {
-                "name": "update_config_bind_reference_again",
-                "expected": {HTTP_OK},
+                "name": "update_config_bind_current_reference_again",
+                "expected": {HTTP_CONFLICT},
                 "deployment_id": deployment_id,
                 "provider_id": provider_id,
-                "payload": {"config": {"config_id": self.reference_config_id}},
+                "payload": {"config": {"config_id": self.reference_deployment_name}},
             },
             {
                 "name": "update_config_unknown_reference",
-                "expected": {HTTP_BAD_REQUEST},
+                "expected": {HTTP_CONFLICT},
                 "deployment_id": deployment_id,
                 "provider_id": provider_id,
                 "payload": {"config": {"config_id": missing_deployment_id}},
@@ -320,7 +328,7 @@ class DeploymentUpdateE2E:
             },
             {
                 "name": "update_combined_spec_snapshot_config",
-                "expected": {HTTP_OK},
+                "expected": {HTTP_CONFLICT},
                 "deployment_id": deployment_id,
                 "provider_id": provider_id,
                 "payload": {
@@ -329,7 +337,7 @@ class DeploymentUpdateE2E:
                         "description": "combined update scenario",
                     },
                     "snapshot": {"add": [self.reference_snapshot_id]},
-                    "config": {"config_id": self.reference_config_id},
+                    "config": {"config_id": self.alternate_config_id},
                 },
             },
             {

@@ -8,7 +8,26 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-export const columnDefs = [
+type DeploymentRow = {
+  id: string;
+  name: string;
+  type: string;
+  deploymentType: "agent" | "mcp";
+  mode?: string;
+};
+
+type BuildDeploymentColumnDefsParams = {
+  onTestAgent: (deployment: {
+    id: string;
+    name: string;
+    deploymentType: "agent" | "mcp";
+    mode?: string;
+  }) => void;
+};
+
+export const buildDeploymentColumnDefs = ({
+  onTestAgent,
+}: BuildDeploymentColumnDefsParams) => [
   {
     headerName: "Name",
     field: "name",
@@ -102,7 +121,7 @@ export const columnDefs = [
     sortable: false,
     filter: false,
     resizable: false,
-    cellRenderer: () => (
+    cellRenderer: (params: { data?: DeploymentRow }) => (
       <div className="flex h-full items-center justify-end">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -117,6 +136,28 @@ export const columnDefs = [
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-44">
+            {params.data?.type !== "MCP" && (
+              <>
+                <DropdownMenuItem
+                  className="gap-2"
+                  onClick={() => {
+                    if (!params.data) {
+                      return;
+                    }
+                    onTestAgent({
+                      id: params.data.id,
+                      name: params.data.name,
+                      deploymentType: params.data.deploymentType,
+                      mode: params.data.mode,
+                    });
+                  }}
+                >
+                  <ForwardedIconComponent name="Bot" className="h-4 w-4" />
+                  Test Agent
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+              </>
+            )}
             <DropdownMenuItem className="gap-2">
               <ForwardedIconComponent name="Copy" className="h-4 w-4" />
               Duplicate

@@ -23,6 +23,9 @@ if TYPE_CHECKING:
         DeploymentCreateResult,
         DeploymentDeleteResult,
         DeploymentDetailItem,
+        DeploymentExecution,
+        DeploymentExecutionResult,
+        DeploymentExecutionStatus,
         DeploymentItem,
         DeploymentList,
         DeploymentListFilterOptions,
@@ -340,6 +343,28 @@ class DeploymentServiceProtocol(Protocol):
         db: Any,
     ) -> DeploymentStatusResult:
         """Return provider-reported health/status for the deployment."""
+        ...
+
+    @abstractmethod
+    async def create_execution(
+        self,
+        *,
+        user_id: UUID | str,
+        execution: DeploymentExecution,
+        db: Any,
+    ) -> DeploymentExecutionResult:
+        """Run a provider-agnostic deployment execution."""
+        ...
+
+    @abstractmethod
+    async def get_execution(
+        self,
+        *,
+        user_id: UUID | str,
+        execution_status: DeploymentExecutionStatus,
+        db: Any,
+    ) -> DeploymentExecutionResult:
+        """Get provider-agnostic deployment execution state/output."""
         ...
 
     @abstractmethod

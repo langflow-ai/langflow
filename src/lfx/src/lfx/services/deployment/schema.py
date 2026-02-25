@@ -445,6 +445,66 @@ class DeploymentStatusResult(BaseModel):
     provider_data: dict | None = Field(None, description="The provider health payload")
 
 
+class DeploymentExecution(BaseModel):
+    """Provider-agnostic deployment execution payload."""
+
+    deployment_id: UUID | str = Field(description="The id of the deployment to execute.")
+    deployment_type: DeploymentType = Field(description="The deployment type to execute.")
+    input: str | dict[str, Any] | None = Field(
+        None,
+        description="Provider-agnostic execution input payload.",
+    )
+    provider_input: dict[str, Any] | None = Field(
+        None,
+        description="Provider-specific execution options and overrides.",
+    )
+
+    @field_validator("deployment_id")
+    @classmethod
+    def validate_deployment_id(cls, value: UUID | str) -> UUID | str:
+        if isinstance(value, str):
+            return _normalize_and_validate_id(value, field_name="deployment_id")
+        return value
+
+
+class DeploymentExecutionResult(BaseModel):
+    """Model representing a deployment execution response."""
+
+    execution_id: str | None = Field(
+        default=None,
+        description="Opaque execution identifier for status polling.",
+    )
+    deployment_id: UUID | str = Field(description="The id of the deployment that was executed.")
+    deployment_type: DeploymentType = Field(description="The deployment type that was executed.")
+    status: str | None = Field(default=None, description="Normalized execution status.")
+    output: str | dict[str, Any] | None = Field(
+        default=None,
+        description="Provider-agnostic output payload, when available.",
+    )
+    provider_result: dict | None = Field(
+        default=None,
+        description="Provider-specific execution metadata and identifiers.",
+    )
+
+
+class DeploymentExecutionStatus(BaseModel):
+    """Provider-agnostic execution status lookup payload."""
+
+    deployment_id: UUID | str = Field(description="The id of the deployment execution owner.")
+    deployment_type: DeploymentType = Field(description="The deployment type that is being executed.")
+    provider_input: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Provider-specific identifiers for status retrieval (e.g., task_id/run_id/thread_id).",
+    )
+
+    @field_validator("deployment_id")
+    @classmethod
+    def validate_deployment_id(cls, value: UUID | str) -> UUID | str:
+        if isinstance(value, str):
+            return _normalize_and_validate_id(value, field_name="deployment_id")
+        return value
+
+
 class ConfigListFilterOptions(BaseModel):
     """Filter options for deployment config list operations."""
 

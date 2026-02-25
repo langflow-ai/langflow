@@ -10,7 +10,9 @@ from lfx.services.deployment.exceptions import (
     DeploymentConflictError,
     DeploymentError,
     DeploymentNotFoundError,
+    DeploymentSupportError,
     InvalidContentError,
+    InvalidDeploymentOperationError,
     InvalidDeploymentTypeError,
 )
 from lfx.services.deployment.schema import (
@@ -23,6 +25,9 @@ from lfx.services.deployment.schema import (
     DeploymentCreate,
     DeploymentCreateResult,
     DeploymentDetailItem,
+    DeploymentExecution,
+    DeploymentExecutionResult,
+    DeploymentExecutionStatus,
     DeploymentItem,
     DeploymentList,
     DeploymentListFilterOptions,
@@ -284,6 +289,23 @@ def _raise_http_for_value_error(exc: ValueError) -> None:
     raise HTTPException(status_code=status_code, detail=str(exc)) from exc
 
 
+def _build_execution_lookup(
+    *,
+    execution_id: str,
+    deployment_id: str,
+    deployment_type: DeploymentType,
+) -> DeploymentExecutionStatus:
+    provider_input: dict[str, str] = {}
+    if execution_id:
+        provider_input["run_id"] = execution_id
+
+    return DeploymentExecutionStatus(
+        deployment_id=deployment_id,
+        deployment_type=deployment_type,
+        provider_input=provider_input,
+    )
+
+
 @router.post("", response_model=DeploymentCreateResult, status_code=status.HTTP_201_CREATED)
 async def create_deployment(
     user: CurrentActiveUser,
@@ -301,6 +323,12 @@ async def create_deployment(
         )
     except DeploymentConflictError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=exc.message) from exc
+    except InvalidDeploymentOperationError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
+    except DeploymentSupportError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
+    except InvalidDeploymentTypeError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
     except InvalidContentError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=exc.message) from exc
     except DeploymentError as exc:
@@ -547,6 +575,82 @@ async def get_deployment_config(
     return ConfigItemResult(**config.model_dump(exclude_unset=True))
 
 
+@router.post("/executions", response_model=DeploymentExecutionResult, status_code=status.HTTP_201_CREATED)
+async def create_deployment_execution(
+    provider_id: ProviderIdQuery,
+    payload: DeploymentExecution,
+    db: DbSession,
+    user: CurrentActiveUser,
+):
+    """Create a provider-agnostic deployment execution."""
+    deployment_adapter = await _resolve_deployment_adapter(provider_id, user_id=user.id, db=db)
+    try:
+        execution_result = await deployment_adapter.create_execution(
+            execution=payload,
+            user_id=user.id,
+            db=db,
+        )
+    except InvalidDeploymentTypeError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
+    except DeploymentSupportError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
+    except InvalidContentError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=exc.message) from exc
+    except ValueError as exc:
+        _raise_http_for_value_error(exc)
+    except DeploymentNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=exc.message) from exc
+    except DeploymentError as exc:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=exc.message) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+    result_payload = execution_result.model_dump(exclude_unset=True)
+    provider_result = execution_result.provider_result if isinstance(execution_result.provider_result, dict) else {}
+    result_payload["execution_id"] = provider_result.get("run_id")
+    return DeploymentExecutionResult(**result_payload)
+
+
+@router.get("/executions/{execution_id}", response_model=DeploymentExecutionResult)
+async def get_deployment_execution(
+    execution_id: str,
+    provider_id: ProviderIdQuery,
+    deployment_id: Annotated[str, Query(description="Deployment id for execution polling.")],
+    deployment_type: Annotated[DeploymentType, Query(description="Deployment type for execution polling.")],
+    db: DbSession,
+    user: CurrentActiveUser,
+):
+    """Get provider-agnostic deployment execution state/output."""
+    deployment_adapter = await _resolve_deployment_adapter(provider_id, user_id=user.id, db=db)
+    execution_status = _build_execution_lookup(
+        execution_id=execution_id,
+        deployment_id=deployment_id,
+        deployment_type=deployment_type,
+    )
+    try:
+        execution_result = await deployment_adapter.get_execution(
+            execution_status=execution_status,
+            user_id=user.id,
+            db=db,
+        )
+    except InvalidDeploymentTypeError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
+    except DeploymentSupportError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
+    except InvalidContentError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=exc.message) from exc
+    except ValueError as exc:
+        _raise_http_for_value_error(exc)
+    except DeploymentNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=exc.message) from exc
+    except DeploymentError as exc:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=exc.message) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+    result_payload = execution_result.model_dump(exclude_unset=True)
+    result_payload["execution_id"] = execution_id
+    return DeploymentExecutionResult(**result_payload)
+
+
 @router.patch("/configs/{config_id}", response_model=ConfigResult)
 async def update_deployment_config(
     config_id: str,
@@ -651,6 +755,14 @@ async def update_deployment(
         )
     except ValueError as exc:
         _raise_http_for_value_error(exc)
+    except DeploymentConflictError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=exc.message) from exc
+    except InvalidDeploymentOperationError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
+    except DeploymentSupportError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
+    except InvalidDeploymentTypeError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
     except DeploymentNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=exc.message) from exc
     except DeploymentError as exc:

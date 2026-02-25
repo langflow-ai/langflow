@@ -102,7 +102,7 @@ export type DeploymentCreatePayload = {
       environment_variables: Record<
         string,
         {
-          source: "raw";
+          source: "raw" | "variable";
           value: string;
         }
       >;
@@ -116,6 +116,22 @@ export type DeploymentCreateResponse = {
   description?: string;
   type?: string;
   provider_result?: Record<string, unknown>;
+};
+
+export type DeploymentExecutionPayload = {
+  deployment_id: string;
+  deployment_type: "agent" | "mcp";
+  input?: string | Record<string, unknown>;
+  provider_input?: Record<string, unknown>;
+};
+
+export type DeploymentExecutionResponse = {
+  execution_id?: string | null;
+  deployment_id: string;
+  deployment_type: "agent" | "mcp";
+  status?: string | null;
+  output?: string | Record<string, unknown> | null;
+  provider_result?: Record<string, unknown> | null;
 };
 
 type ProviderScopedParams = {
@@ -226,6 +242,83 @@ export const usePostCreateDeployment: useMutationFunctionType<
   > = mutate(
     ["usePostCreateDeployment", params.providerId],
     createDeploymentFn,
+    {
+      ...options,
+    },
+  );
+
+  return mutation;
+};
+
+export const usePostCreateDeploymentExecution: useMutationFunctionType<
+  ProviderScopedParams,
+  DeploymentExecutionPayload,
+  DeploymentExecutionResponse
+> = (params, options) => {
+  const { mutate } = UseRequestProcessor();
+
+  const createDeploymentExecutionFn = async (
+    payload: DeploymentExecutionPayload,
+  ): Promise<DeploymentExecutionResponse> => {
+    const url = addProviderId(`${getURL("DEPLOYMENTS")}/executions`, params.providerId);
+    const { data } = await api.post<DeploymentExecutionResponse>(url, payload);
+    return data;
+  };
+
+  const mutation: UseMutationResult<
+    DeploymentExecutionResponse,
+    Error,
+    DeploymentExecutionPayload
+  > = mutate(
+    ["usePostCreateDeploymentExecution", params.providerId],
+    createDeploymentExecutionFn,
+    {
+      ...options,
+    },
+  );
+
+  return mutation;
+};
+
+export const useGetDeploymentExecutionById: useMutationFunctionType<
+  ProviderScopedParams,
+  {
+    executionId: string;
+    deploymentId: string;
+    deploymentType: "agent" | "mcp";
+  },
+  DeploymentExecutionResponse
+> = (params, options) => {
+  const { mutate } = UseRequestProcessor();
+
+  const getDeploymentExecutionByIdFn = async (
+    payload: {
+      executionId: string;
+      deploymentId: string;
+      deploymentType: "agent" | "mcp";
+    },
+  ): Promise<DeploymentExecutionResponse> => {
+    const baseUrl = `${getURL("DEPLOYMENTS")}/executions/${payload.executionId}`;
+    const url = buildQueryStringUrl(baseUrl, {
+      provider_id: params.providerId,
+      deployment_id: payload.deploymentId,
+      deployment_type: payload.deploymentType,
+    });
+    const { data } = await api.get<DeploymentExecutionResponse>(url);
+    return data;
+  };
+
+  const mutation: UseMutationResult<
+    DeploymentExecutionResponse,
+    Error,
+    {
+      executionId: string;
+      deploymentId: string;
+      deploymentType: "agent" | "mcp";
+    }
+  > = mutate(
+    ["useGetDeploymentExecutionById", params.providerId],
+    getDeploymentExecutionByIdFn,
     {
       ...options,
     },

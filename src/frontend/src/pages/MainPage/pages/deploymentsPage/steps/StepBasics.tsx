@@ -43,7 +43,7 @@ export const StepBasics = ({
         placeholder="Describe what this deployment does..."
         value={deploymentDescription}
         onChange={(e) => setDeploymentDescription(e.target.value)}
-        rows={6}
+        rows={3}
         className="resize-none placeholder:text-placeholder-foreground"
       />
     </div>
@@ -74,7 +74,7 @@ export const StepBasics = ({
             onClick={() => setDeploymentType(type)}
             className={`flex h-full flex-col gap-3 rounded-xl border p-4 text-left transition-colors ${
               deploymentType === type
-                ? "border-primary bg-background"
+                ? "border-2 border-primary"
                 : "border-border hover:border-muted-foreground"
             }`}
           >

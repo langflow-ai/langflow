@@ -37,9 +37,9 @@ export const StepScope = ({
         <button
           key={id}
           onClick={() => setVariableScope(id)}
-          className={`flex items-start gap-3 rounded-lg border bg-background p-4 text-left transition-colors ${
+          className={`flex items-start gap-3 rounded-lg border p-4 text-left transition-colors ${
             variableScope === id
-              ? "border-primary"
+              ? "border-2 border-primary"
               : "border-border hover:border-muted-foreground"
           }`}
         >
@@ -55,7 +55,7 @@ export const StepScope = ({
         </button>
       ))}
     </div>
-    <div className="flex-1 rounded-lg border border-border bg-background p-4">
+    <div className="flex-1 rounded-lg bg-muted/40 p-4">
       <div className="flex items-center gap-3">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted">
           <ForwardedIconComponent

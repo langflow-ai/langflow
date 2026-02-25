@@ -50,6 +50,13 @@ class InvalidContentError(DeploymentError):
         super().__init__(message, error_code="unprocessable_content_error")
 
 
+class InvalidDeploymentOperationError(DeploymentError):
+    """Raised when a deployment operation is invalid for current adapter semantics."""
+
+    def __init__(self, message: str = "Invalid deployment operation"):
+        super().__init__(message, error_code="invalid_deployment_operation")
+
+
 class DeploymentSupportError(DeploymentError):
     """Raised when a deployment type is unsupported."""
 

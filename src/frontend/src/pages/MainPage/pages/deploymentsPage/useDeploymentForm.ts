@@ -1,9 +1,7 @@
 import { useState } from "react";
 import {
-  type AttachTab,
-  type ConfigMode,
   type DeploymentType,
-  type KeyFormat,
+  type EnvVar,
   TOTAL_STEPS,
   type VariableScope,
 } from "./constants";
@@ -16,11 +14,7 @@ export const useDeploymentForm = () => {
   const [deploymentDescription, setDeploymentDescription] = useState("");
   const [deploymentUrl, setDeploymentUrl] = useState("");
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
-  const [attachTab, setAttachTab] = useState<AttachTab>("Flows");
-  const [configMode, setConfigMode] = useState<ConfigMode>("reuse");
-  const [configName, setConfigName] = useState("");
-  const [keyFormat, setKeyFormat] = useState<KeyFormat>("assisted");
-  const [envVars, setEnvVars] = useState<{ key: string; value: string }[]>([]);
+  const [envVars, setEnvVars] = useState<EnvVar[]>([]);
   const [variableScope, setVariableScope] = useState<VariableScope>("coarse");
 
   const resetForm = () => {
@@ -30,10 +24,6 @@ export const useDeploymentForm = () => {
     setDeploymentUrl("");
     setDeploymentType("Agent");
     setSelectedItems(new Set());
-    setAttachTab("Flows");
-    setConfigMode("reuse");
-    setConfigName("");
-    setKeyFormat("assisted");
     setEnvVars([]);
     setVariableScope("coarse");
   };
@@ -72,14 +62,6 @@ export const useDeploymentForm = () => {
     deploymentUrl,
     setDeploymentUrl,
     selectedItems,
-    attachTab,
-    setAttachTab,
-    configMode,
-    setConfigMode,
-    configName,
-    setConfigName,
-    keyFormat,
-    setKeyFormat,
     envVars,
     setEnvVars,
     variableScope,

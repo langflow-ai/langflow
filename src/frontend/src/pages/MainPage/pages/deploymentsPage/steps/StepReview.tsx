@@ -1,24 +1,13 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import type {
-  ConfigMode,
-  DeploymentType,
-  KeyFormat,
-  VariableScope,
-} from "../constants";
-
-type EnvVar = { key: string; value: string };
-type SelectedItem = { name: string; kind: "Flow" | "Snapshot" };
+import type { DeploymentType, EnvVar } from "../constants";
+type SelectedItem = { name: string };
 
 type StepReviewProps = {
   deploymentType: DeploymentType;
   deploymentName: string;
   deploymentDescription: string;
   selectedItems: SelectedItem[];
-  configMode: ConfigMode;
-  configName: string;
-  keyFormat: KeyFormat;
   envVars: EnvVar[];
-  variableScope: VariableScope;
 };
 
 export const StepReview = ({
@@ -26,28 +15,14 @@ export const StepReview = ({
   deploymentName,
   deploymentDescription,
   selectedItems,
-  configMode,
-  configName,
-  keyFormat,
   envVars,
-  variableScope,
 }: StepReviewProps) => {
-  const configModeLabel = {
-    reuse: "Reuse existing Config",
-    create: "Create new Config",
-    modify: "Modify selected Config",
-  }[configMode];
+  const configuredEnvVars = envVars.filter(
+    ({ key, value }) => key.trim() !== "" || value.trim() !== "",
+  );
 
-  const keyFormatLabel = {
-    assisted: "Assisted Prefix",
-    auto: "Auto-Prefix",
-    manual: "Manual",
-  }[keyFormat];
-
-  const scopeLabel =
-    variableScope === "coarse"
-      ? "Coarse (Shared Config)"
-      : "Granular (Per-Flow Config)";
+  const getObfuscatedValue = (value: string): string =>
+    value.trim() ? "********" : "Not set";
 
   return (
     <div className="flex h-full flex-col gap-4 overflow-y-auto">
@@ -58,7 +33,7 @@ export const StepReview = ({
         </p>
       </div>
       <div className="grid grid-cols-2 gap-3">
-        <div className="flex h-full flex-col rounded-lg border border-border bg-background p-4">
+        <div className="flex h-full flex-col rounded-lg bg-muted/40 p-4">
           <p className="mb-3 text-md font-semibold text-primary">Deployment</p>
           <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
             <dt className="text-muted-foreground">Type</dt>
@@ -84,16 +59,16 @@ export const StepReview = ({
             </div>
           )}
         </div>
-        <div className="rounded-lg border border-border bg-background p-4">
+        <div className="rounded-lg bg-muted/40 p-4">
           <p className="mb-3 text-md font-semibold text-primary">
-            Attached Items
+            Attached Flows
           </p>
           {selectedItems.length > 0 ? (
             <ul className="flex flex-col gap-1">
-              {selectedItems.map(({ name, kind }) => (
+              {selectedItems.map(({ name }) => (
                 <li key={name} className="flex items-center gap-2 text-sm">
                   <ForwardedIconComponent
-                    name={kind === "Flow" ? "Workflow" : "Camera"}
+                    name="Workflow"
                     className="h-3.5 w-3.5 shrink-0 text-muted-foreground"
                   />
                   <span className="font-medium">{name}</span>
@@ -107,26 +82,39 @@ export const StepReview = ({
           )}
         </div>
       </div>
-      <div className="flex-1 rounded-lg border border-border bg-background p-4">
+      <div className="flex-1 rounded-lg bg-muted/40 p-4">
         <p className="mb-3 text-md font-semibold text-primary">Configuration</p>
         <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
-          <dt className="text-muted-foreground">Mode</dt>
-          <dd className="font-medium">{configModeLabel}</dd>
-          <dt className="text-muted-foreground">Config Name</dt>
-          <dd className="font-mono font-medium">{configName}</dd>
-          <dt className="text-muted-foreground">Key Format</dt>
-          <dd className="font-medium">{keyFormatLabel}</dd>
           <dt className="text-muted-foreground">Env Variables</dt>
           <dd className="font-medium">
-            {envVars.length > 0 ? (
-              `${envVars.length} variable${envVars.length > 1 ? "s" : ""}`
+            {configuredEnvVars.length > 0 ? (
+              `${configuredEnvVars.length} variable${configuredEnvVars.length > 1 ? "s" : ""}`
             ) : (
               <span className="italic text-muted-foreground">None</span>
             )}
           </dd>
-          <dt className="text-muted-foreground">Variable Scope</dt>
-          <dd className="font-medium">{scopeLabel}</dd>
         </dl>
+        {configuredEnvVars.length > 0 && (
+          <div className="mt-3 max-h-52 space-y-2 overflow-y-auto rounded-md border border-border/70 bg-background/50 p-2">
+            {configuredEnvVars.map(({ key, value }, index) => (
+              <div
+                key={`${key || "env"}-${index}`}
+                className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-sm bg-muted/30 px-2 py-1.5 text-sm"
+              >
+                <span
+                  className="truncate font-medium"
+                  title={key || "Unnamed variable"}
+                >
+                  {key || "Unnamed variable"}
+                </span>
+                <span className="text-muted-foreground">=</span>
+                <span className="truncate text-right font-mono text-muted-foreground">
+                  {getObfuscatedValue(value)}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
