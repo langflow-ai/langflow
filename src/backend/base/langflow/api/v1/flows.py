@@ -22,7 +22,6 @@ from sqlmodel import and_, col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import CurrentActiveUser, DbSession, cascade_delete_flow, remove_api_keys, validate_is_component
-from langflow.api.v1.flow_history import strip_history_data
 from langflow.api.v1.schemas import FlowListCreate
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
@@ -36,8 +35,10 @@ from langflow.services.database.models.flow.model import (
     FlowUpdate,
 )
 from langflow.services.database.models.flow.utils import get_webhook_component_in_flow
-from langflow.services.database.models.flow_history.crud import create_flow_history_entry, get_flow_history_list
-from langflow.services.database.models.flow_history.exceptions import FlowHistoryError
+
+# TODO: Full-history import/export is planned as a follow-up feature. When implemented,
+# re-add imports for create_flow_history_entry, get_flow_history_list, strip_history_data,
+# and FlowHistoryError from the flow_history modules.
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.folder.utils import get_default_folder_id
@@ -747,17 +748,18 @@ async def upload_file(
     contents = await file.read()
     data = orjson.loads(contents)
 
-    # Preserve raw flow dicts to extract history before FlowCreate consumes them
     if "flows" in data:
-        raw_flow_dicts = data["flows"]
         flow_list = FlowListCreate(**data)
     else:
-        raw_flow_dicts = [data]
         flow_list = FlowListCreate(flows=[FlowCreate(**data)])
+
+    # TODO: Full-history import is planned as a follow-up feature.
+    # When implemented, extract raw flow dicts here to read embedded "history"
+    # arrays and create FlowHistory entries for each imported flow.
 
     try:
         flow_reads = []
-        for flow, raw_dict in zip(flow_list.flows, raw_flow_dicts, strict=True):
+        for flow in flow_list.flows:
             flow.user_id = current_user.id
             if folder_id:
                 flow.folder_id = folder_id
@@ -765,61 +767,6 @@ async def upload_file(
                 session=session, flow=flow, user_id=current_user.id, storage_service=storage_service
             )
             flow_reads.append(flow_read)
-
-            # Import version history if present in the uploaded JSON
-            if isinstance(raw_dict, dict) and "history" in raw_dict and isinstance(raw_dict["history"], list):
-                _max_entries = get_settings_service().settings.max_flow_history_entries_per_flow
-                _skipped = 0
-                _imported = 0
-                for h_entry in raw_dict["history"][:_max_entries]:
-                    if not isinstance(h_entry, dict):
-                        _skipped += 1
-                        await logger.awarning(
-                            "Skipping malformed history entry (not a dict) during import for flow %s",
-                            flow_read.id,
-                        )
-                        continue
-                    raw_data = h_entry.get("data")
-                    if raw_data is not None and not isinstance(raw_data, dict):
-                        _skipped += 1
-                        await logger.awarning(
-                            "Skipping history entry with non-dict data during import for flow %s: %s",
-                            flow_read.id,
-                            h_entry.get("description", "(no description)"),
-                        )
-                        continue
-                    try:
-                        await create_flow_history_entry(
-                            session,
-                            flow_id=flow_read.id,
-                            user_id=current_user.id,
-                            data=raw_data,
-                            description=h_entry.get("description"),
-                        )
-                        _imported += 1
-                    except FlowHistoryError:
-                        _skipped += 1
-                        await logger.awarning(
-                            "Skipping history entry during import for flow %s: %s",
-                            flow_read.id,
-                            h_entry.get("description", "(no description)"),
-                        )
-                    except Exception:  # noqa: BLE001
-                        _skipped += 1
-                        await logger.aerror(
-                            "Unexpected error importing history entry for flow %s: %s",
-                            flow_read.id,
-                            h_entry.get("description", "(no description)"),
-                            exc_info=True,
-                        )
-                if _skipped:
-                    await logger.awarning(
-                        "Imported %d/%d history entries for flow %s (%d skipped)",
-                        _imported,
-                        _imported + _skipped,
-                        flow_read.id,
-                        _skipped,
-                    )
     except Exception as e:
         if "UNIQUE constraint failed" in str(e):
             # Get the name of the column that failed
@@ -874,36 +821,17 @@ async def download_multiple_file(
     flow_ids: list[UUID],
     user: CurrentActiveUser,
     db: DbSession,
-    include_history: bool = False,
 ):
     """Download all flows as a zip file."""
+    # TODO: Full-history download (include_history parameter) is planned as a follow-up feature.
+    # When implemented, add an include_history: bool = False parameter and embed history
+    # entries in each flow dict using get_flow_history_list and strip_history_data.
     flows = (await db.exec(select(Flow).where(and_(Flow.user_id == user.id, Flow.id.in_(flow_ids))))).all()  # type: ignore[attr-defined]
 
     if not flows:
         raise HTTPException(status_code=404, detail="No flows found.")
 
     flows_without_api_keys = [remove_api_keys(flow.model_dump()) for flow in flows]
-
-    if include_history:
-        _max_entries = get_settings_service().settings.max_flow_history_entries_per_flow
-        for flow_dict, flow_obj in zip(flows_without_api_keys, flows, strict=True):
-            try:
-                history_entries = await get_flow_history_list(db, flow_obj.id, user.id, limit=_max_entries, offset=0)
-                flow_dict["history"] = [
-                    {
-                        "version_number": e.version_number,
-                        "description": e.description,
-                        "data": strip_history_data(e.data),
-                        "created_at": e.created_at.isoformat() if e.created_at else None,
-                    }
-                    for e in history_entries
-                ]
-            except Exception:  # noqa: BLE001
-                await logger.awarning(
-                    "Failed to fetch history for flow %s during download — exporting without history",
-                    flow_obj.id,
-                    exc_info=True,
-                )
 
     if len(flows_without_api_keys) > 1:
         # Create a byte stream to hold the ZIP file
