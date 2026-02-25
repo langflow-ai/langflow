@@ -1043,6 +1043,10 @@ def get_llm(
         except (TypeError, ValueError):
             pass  # Skip invalid max_tokens (e.g. empty string from form input)
 
+    # Enable streaming usage for providers that support it
+    if provider in ["OpenAI", "Anthropic"]:
+        kwargs["stream_usage"] = True
+
     # Add provider-specific parameters
     if provider == "IBM WatsonX":
         # For watsonx, url and project_id are required parameters
