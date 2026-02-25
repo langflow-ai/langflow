@@ -1,4 +1,4 @@
-<!-- markdownlint-disable MD030 -->
+<!-- markdownlint-disable MD030 --> 
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="./docs/static/img/langflow-logo-color-blue-bg.svg">
