@@ -14,6 +14,10 @@ from typing import Any
 
 from lfx.log.logger import logger
 
+# Reuse shared empty containers as .get defaults to reduce per-iteration allocations.
+_EMPTY_DICT: dict = {}
+_EMPTY_LIST: list = []
+
 
 def _get_blocked_by_edited_flag(nodes: list[dict]) -> list[str]:
     """Fallback: walk nodes and return display names of any with edited=True.
@@ -71,11 +75,11 @@ def _get_blocked_by_code(nodes: list[dict], known_codes: set[str]) -> list[str]:
     """
     blocked: list[str] = []
     for node in nodes:
-        node_data = node.get("data", {})
-        node_info = node_data.get("node", {})
+        node_data = node.get("data", _EMPTY_DICT)
+        node_info = node_data.get("node", _EMPTY_DICT)
 
-        node_template = node_info.get("template", {})
-        node_code_field = node_template.get("code", {})
+        node_template = node_info.get("template", _EMPTY_DICT)
+        node_code_field = node_template.get("code", _EMPTY_DICT)
         node_code = node_code_field.get("value") if isinstance(node_code_field, dict) else None
 
         if node_code and node_code not in known_codes:
@@ -84,10 +88,10 @@ def _get_blocked_by_code(nodes: list[dict], known_codes: set[str]) -> list[str]:
             blocked.append(f"{display_name} ({node_id})")
 
         # Recursively check nested flows (e.g., group nodes / sub-flows)
-        flow_data = node_info.get("flow", {})
+        flow_data = node_info.get("flow", _EMPTY_DICT)
         if flow_data and isinstance(flow_data, dict):
-            nested_data = flow_data.get("data", {})
-            nested_nodes = nested_data.get("nodes", [])
+            nested_data = flow_data.get("data", _EMPTY_DICT)
+            nested_nodes = nested_data.get("nodes", _EMPTY_LIST)
             if nested_nodes:
                 blocked.extend(_get_blocked_by_code(nested_nodes, known_codes))
 
