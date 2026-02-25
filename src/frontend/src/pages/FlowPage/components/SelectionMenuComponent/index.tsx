@@ -75,10 +75,11 @@ export default function SelectionMenu({
             <ShadTooltip content={errors[0]} side={"top"}>
               <Button
                 unstyled
-                className={`${disable
+                className={`${
+                  disable
                     ? "flex h-full w-full cursor-not-allowed items-center justify-between text-sm text-muted-foreground"
                     : "flex h-full w-full items-center justify-between text-sm"
-                  }`}
+                }`}
                 onClick={onClick}
                 disabled={disable}
                 data-testid="error-group-node"
@@ -95,10 +96,11 @@ export default function SelectionMenu({
           ) : (
             <Button
               unstyled
-              className={`${disable
+              className={`${
+                disable
                   ? "flex h-full w-full cursor-not-allowed items-center justify-between text-sm text-muted-foreground"
                   : "flex h-full w-full items-center justify-between text-sm"
-                }`}
+              }`}
               onClick={onClick}
               disabled={disable}
               data-testid="group-node"

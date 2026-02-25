@@ -107,7 +107,11 @@ export default function FloatComponent({
           onKeyDown={(event) => handleKeyDown(event, localValue, "")}
           onInput={handleInputChange}
           disabled={disabled}
-          placeholder={editNode ? t("placeholder.floatNumber", "Float number") : t("placeholder.typeFloat", "Type a float number")}
+          placeholder={
+            editNode
+              ? t("placeholder.floatNumber", "Float number")
+              : t("placeholder.typeFloat", "Type a float number")
+          }
           data-testid={id}
           ref={inputRef}
           onBlur={handleBlur}

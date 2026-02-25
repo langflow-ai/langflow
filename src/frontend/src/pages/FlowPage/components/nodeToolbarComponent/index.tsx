@@ -152,10 +152,10 @@ const NodeToolbarComponent = memo(
       if (data.node?.tool_mode !== undefined) {
         setToolMode(
           data.node?.tool_mode ||
-          data.node?.outputs?.some(
-            (output) => output.name === "component_as_tool",
-          ) ||
-          false,
+            data.node?.outputs?.some(
+              (output) => output.name === "component_as_tool",
+            ) ||
+            false,
         );
       }
     }, [data.node?.tool_mode, data.node?.outputs]);
@@ -567,7 +567,9 @@ const NodeToolbarComponent = memo(
                       toolMode ? "text-primary" : "",
                     )}
                   />
-                  <span className="text-mmd font-medium">{t("nodeToolbar.toolMode")}</span>
+                  <span className="text-mmd font-medium">
+                    {t("nodeToolbar.toolMode")}
+                  </span>
                   <ToggleShadComponent
                     value={toolMode}
                     editNode={false}
@@ -675,7 +677,11 @@ const NodeToolbarComponent = memo(
                       style={
                         hasBreakingChange ? "text-accent-amber-foreground" : ""
                       }
-                      value={isUserEdited ? t("nodeToolbar.restore") : t("nodeToolbar.update")}
+                      value={
+                        isUserEdited
+                          ? t("nodeToolbar.restore")
+                          : t("nodeToolbar.update")
+                      }
                       icon={isUserEdited ? "RefreshCcwDot" : "CircleArrowUp"}
                       dataTestId="update-button-modal"
                     />
@@ -715,15 +721,20 @@ const NodeToolbarComponent = memo(
                 {(isMinimal || !showNode) && (
                   <SelectItem
                     value={"show"}
-                    data-testid={`${showNode ? "minimize" : "expand"
-                      }-button-modal`}
+                    data-testid={`${
+                      showNode ? "minimize" : "expand"
+                    }-button-modal`}
                   >
                     <ToolbarSelectItem
                       shortcut={
                         shortcuts.find((obj) => obj.name === "Minimize")
                           ?.shortcut!
                       }
-                      value={showNode ? t("nodeToolbar.minimize") : t("nodeToolbar.expand")}
+                      value={
+                        showNode
+                          ? t("nodeToolbar.minimize")
+                          : t("nodeToolbar.expand")
+                      }
                       icon={showNode ? "Minimize2" : "Maximize2"}
                     />
                   </SelectItem>

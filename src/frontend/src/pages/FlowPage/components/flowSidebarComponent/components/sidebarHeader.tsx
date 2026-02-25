@@ -47,7 +47,10 @@ export const SidebarHeaderComponent = memo(function SidebarHeaderComponent({
             </h3>
             <DisclosureTrigger>
               <div>
-                <ShadTooltip content={t("sidebar.componentSettings")} styleClasses="z-50">
+                <ShadTooltip
+                  content={t("sidebar.componentSettings")}
+                  styleClasses="z-50"
+                >
                   <Button
                     variant={showConfig ? "ghostActive" : "ghost"}
                     size="iconMd"

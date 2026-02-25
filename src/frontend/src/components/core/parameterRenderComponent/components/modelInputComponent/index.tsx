@@ -284,7 +284,9 @@ export default function ModelInputComponent({
         onClick={() => setOpenManageProvidersDialog(true)}
       >
         <ForwardedIconComponent name="Brain" className="h-4 w-4" />
-        <div className="text-[13px]">{placeholder || t("node.setupProvider", "配置提供商")}</div>
+        <div className="text-[13px]">
+          {placeholder || t("node.setupProvider", "配置提供商")}
+        </div>
       </Button>
     ) : (
       <div className="flex w-full flex-col">

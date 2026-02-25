@@ -58,10 +58,20 @@ export const getNavItems = (t: (key: string) => string): NavItem[] => [
 // Keep backward compat export
 export const NAV_ITEMS: NavItem[] = [
   { id: "search", icon: "search", label: "Search", tooltip: "Search" },
-  { id: "components", icon: "component", label: "Components", tooltip: "Components" },
+  {
+    id: "components",
+    icon: "component",
+    label: "Components",
+    tooltip: "Components",
+  },
   { id: "mcp", icon: "Mcp", label: "MCP", tooltip: "MCP" },
   { id: "bundles", icon: "blocks", label: "Bundles", tooltip: "Bundles" },
-  { id: "add_note", icon: "sticky-note", label: "Sticky Notes", tooltip: "Add Sticky Notes" },
+  {
+    id: "add_note",
+    icon: "sticky-note",
+    label: "Sticky Notes",
+    tooltip: "Add Sticky Notes",
+  },
 ];
 
 const SidebarSegmentedNav = () => {

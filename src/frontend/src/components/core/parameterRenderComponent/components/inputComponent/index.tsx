@@ -47,8 +47,10 @@ export default function InputComponent({
   inspectionPanel = false,
 }: InputComponentType): JSX.Element {
   const { t } = useTranslation();
-  const resolvedPlaceholder = placeholder ?? t("placeholder.typeSomething", "Type something...");
-  const resolvedOptionsPlaceholder = optionsPlaceholder ?? t("placeholder.searchOptions", "Search options...");
+  const resolvedPlaceholder =
+    placeholder ?? t("placeholder.typeSomething", "Type something...");
+  const resolvedOptionsPlaceholder =
+    optionsPlaceholder ?? t("placeholder.searchOptions", "Search options...");
   const [pwdVisible, setPwdVisible] = useState(false);
   const [cursor, setCursor] = useState<number | null>(null);
   const refInput = useRef<HTMLInputElement>(null);
@@ -94,7 +96,11 @@ export default function InputComponent({
               password && !editNode ? "pr-10" : "",
               className!,
             )}
-            placeholder={password && editNode ? t("placeholder.typeKey", "Key") : resolvedPlaceholder}
+            placeholder={
+              password && editNode
+                ? t("placeholder.typeKey", "Key")
+                : resolvedPlaceholder
+            }
             onChange={(e) => {
               setCursor(e.target.selectionStart);
               if (onChangeFolderName) {

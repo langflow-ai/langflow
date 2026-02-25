@@ -134,10 +134,11 @@ const HeaderComponent = ({
                 onClick={() => {
                   setFlowType(type as "flows" | "components" | "mcp");
                 }}
-                className={`border-b ${flowType === type
-                  ? "border-b-2 border-foreground text-foreground"
-                  : "border-border text-muted-foreground hover:text-foreground"
-                  } text-nowrap px-2 pb-2 pt-1 text-mmd`}
+                className={`border-b ${
+                  flowType === type
+                    ? "border-b-2 border-foreground text-foreground"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                } text-nowrap px-2 pb-2 pt-1 text-mmd`}
               >
                 <div className={flowType === type ? "-mb-px" : ""}>
                   {type === "mcp"
@@ -166,10 +167,11 @@ const HeaderComponent = ({
                 <div className="relative mr-2 flex h-fit rounded-lg border border-muted bg-muted">
                   {/* Sliding Indicator */}
                   <div
-                    className={`absolute top-[2px] h-[32px] w-8 transform rounded-md bg-background shadow-md transition-transform duration-300 ${view === "list"
-                      ? "left-[2px] translate-x-0"
-                      : "left-[6px] translate-x-full"
-                      }`}
+                    className={`absolute top-[2px] h-[32px] w-8 transform rounded-md bg-background shadow-md transition-transform duration-300 ${
+                      view === "list"
+                        ? "left-[2px] translate-x-0"
+                        : "left-[6px] translate-x-full"
+                    }`}
                   ></div>
 
                   {/* Buttons */}
@@ -178,10 +180,11 @@ const HeaderComponent = ({
                       key={viewType}
                       unstyled
                       size="icon"
-                      className={`group relative z-10 m-[2px] flex-1 rounded-lg p-2 ${view === viewType
-                        ? "text-foreground"
-                        : "text-muted-foreground hover:bg-muted"
-                        }`}
+                      className={`group relative z-10 m-[2px] flex-1 rounded-lg p-2 ${
+                        view === viewType
+                          ? "text-foreground"
+                          : "text-muted-foreground hover:bg-muted"
+                      }`}
                       onClick={() => setView(viewType as "list" | "grid")}
                     >
                       <ForwardedIconComponent

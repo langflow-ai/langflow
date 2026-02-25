@@ -84,7 +84,9 @@ const IOKeyPairInput = ({
               value={item.key.trim()}
               className={classNames(item.error ? "input-invalid" : "")}
               placeholder={
-                item.error ? t("placeholder.typeKey", "Duplicate or empty key") : t("placeholder.typeKey", "Type key...")
+                item.error
+                  ? t("placeholder.typeKey", "Duplicate or empty key")
+                  : t("placeholder.typeKey", "Type key...")
               }
               onChange={(event) => handleKeyChange(item.id, event.target.value)}
               disabled={!isInputField}

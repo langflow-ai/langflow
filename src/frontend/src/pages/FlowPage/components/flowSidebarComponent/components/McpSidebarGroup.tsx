@@ -45,7 +45,9 @@ const McpEmptyState = ({ isLoading }: { isLoading?: boolean }) => {
   return (
     <>
       <div className="flex flex-col h-full w-full items-center justify-center py-8 px-4 text-center min-h-[200px]">
-        <p className="text-muted-foreground mb-4">{t("sidebar.noMcpServers", "暂无 MCP 服务器")}</p>
+        <p className="text-muted-foreground mb-4">
+          {t("sidebar.noMcpServers", "暂无 MCP 服务器")}
+        </p>
         <Button
           variant="outline"
           size="sm"

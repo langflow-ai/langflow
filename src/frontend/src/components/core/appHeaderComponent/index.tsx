@@ -111,10 +111,11 @@ export default function AppHeader(): JSX.Element {
                   <span className={getNotificationBadge()} />
                   <ForwardedIconComponent
                     name="Bell"
-                    className={`side-bar-button-size h-4 w-4 ${activeState === "notifications"
+                    className={`side-bar-button-size h-4 w-4 ${
+                      activeState === "notifications"
                         ? "text-primary"
                         : "text-muted-foreground group-hover:text-primary"
-                      }`}
+                    }`}
                     strokeWidth={2}
                   />
                   <span className="hidden whitespace-nowrap">
