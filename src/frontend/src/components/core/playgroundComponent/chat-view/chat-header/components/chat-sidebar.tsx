@@ -3,6 +3,8 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import useFlowStore from "@/stores/flowStore";
+import { useBulkDeleteSessions } from "@/controllers/API/queries/messages/use-bulk-delete-sessions";
+import { cn } from "@/utils/utils";
 import { useGetFlowId } from "../../../hooks/use-get-flow-id";
 import { SessionSelector } from "./session-selector";
 
@@ -14,6 +16,7 @@ interface ChatSidebarProps {
   onDeleteSession?: (sessionId: string) => void;
   onOpenLogs?: (sessionId: string) => void;
   onRenameSession?: (oldId: string, newId: string) => Promise<void>;
+  onLocalCleanupAfterDelete?: (sessionIds: string[]) => void;
 }
 
 export function ChatSidebar({
@@ -24,15 +27,40 @@ export function ChatSidebar({
   onDeleteSession,
   onOpenLogs,
   onRenameSession,
+  onLocalCleanupAfterDelete,
 }: ChatSidebarProps) {
   const [openMenuSession, setOpenMenuSession] = useState<string | null>(null);
+  const [selectedSessions, setSelectedSessions] = useState<Set<string>>(new Set());
   const currentFlowId = useGetFlowId();
   const isShareablePlayground = useFlowStore((state) => state.playgroundPage);
+  const { mutate: bulkDeleteSessions, isPending: isDeletingSessions } = useBulkDeleteSessions();
+
+  const sessionIds = useMemo(() => sessions, [sessions]);
+
+  // Filter out the default session (currentFlowId) from selectable sessions
+  const selectableSessions = useMemo(
+    () => sessionIds.filter((session) => session !== currentFlowId),
+    [sessionIds, currentFlowId]
+  );
 
   const visibleSession = currentSessionId;
 
+  // Check if all selectable sessions are selected
+  const allSelected = selectableSessions.length > 0 &&
+    selectableSessions.every((session) => selectedSessions.has(session));
+
   const handleDeleteSession = (session: string) => {
     onDeleteSession?.(session);
+    // Remove from selected sessions if it was selected
+    setSelectedSessions((prev) => {
+      const newSet = new Set(prev);
+      newSet.delete(session);
+      return newSet;
+    });
+    // If deleted session was the current one, switch to default
+    if (session === currentSessionId) {
+      onSessionSelect?.(currentFlowId);
+    }
   };
 
   const handleSessionClick = (session: string) => {
@@ -41,6 +69,45 @@ export function ChatSidebar({
 
   const handleRename = async (sessionId: string, newSessionId: string) => {
     await onRenameSession?.(sessionId, newSessionId);
+  };
+
+  const handleSelectAll = () => {
+    if (allSelected) {
+      // Deselect all
+      setSelectedSessions(new Set());
+    } else {
+      // Select all selectable sessions
+      setSelectedSessions(new Set(selectableSessions));
+    }
+  };
+
+  const handleToggleSession = (session: string) => {
+    setSelectedSessions((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(session)) {
+        newSet.delete(session);
+      } else {
+        newSet.add(session);
+      }
+      return newSet;
+    });
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedSessions.size === 0) return;
+
+    const sessionsToDelete = Array.from(selectedSessions);
+    bulkDeleteSessions(
+      { sessionIds: sessionsToDelete },
+      {
+        onSuccess: () => {
+          // Clear selection after successful deletion
+          setSelectedSessions(new Set());
+          // Perform local cleanup without making additional API calls
+          onLocalCleanupAfterDelete?.(sessionsToDelete);
+        },
+      }
+    );
   };
 
   return (
@@ -75,27 +142,85 @@ export function ChatSidebar({
         </div>
       ) : (
         <div className="flex flex-col gap-1">
-          {sessions.map((session) => (
-            <SessionSelector
-              key={session}
-              session={session}
-              currentFlowId={currentFlowId}
-              deleteSession={handleDeleteSession}
-              toggleVisibility={() => handleSessionClick(session)}
-              isVisible={visibleSession === session}
-              updateVisibleSession={handleSessionClick}
-              inspectSession={onOpenLogs}
-              handleRename={handleRename}
-              selectedView={undefined}
-              setSelectedView={() => {}}
-              menuOpen={openMenuSession === session}
-              onMenuOpenChange={(open) => {
-                setOpenMenuSession(open ? session : null);
-              }}
-            />
-          ))}
+          {sessionIds.map((session, index) => {
+            const isDefaultSession = session === currentFlowId;
+            const isFirstNonDefaultSession =
+              index > 0 && sessionIds[index - 1] === currentFlowId;
+            
+            return (
+              <div key={session}>
+                {/* Show Select All controls after the default session */}
+                {isFirstNonDefaultSession && selectableSessions.length > 0 && (
+                  <div className="flex items-center justify-between px-2 py-1 mb-1">
+                    <div
+                      className="flex items-center gap-2 cursor-pointer"
+                      onClick={handleSelectAll}
+                      data-testid="select-all-checkbox"
+                    >
+                      <div className="flex items-center justify-center w-4 h-4 flex-shrink-0">
+                        <ForwardedIconComponent
+                          name={allSelected ? "SquareCheck" : "Square"}
+                          className={cn(
+                            "h-4 w-4",
+                            allSelected ? "text-status-red" : "text-muted-foreground"
+                          )}
+                        />
+                      </div>
+                      <span className="text-sm text-muted-foreground select-none">
+                        Select All
+                      </span>
+                    </div>
+                    <div className="w-8 h-8 flex items-center justify-center">
+                      {selectedSessions.size > 0 && (
+                        <ShadTooltip
+                          styleClasses="z-50"
+                          content={`Delete ${selectedSessions.size} session${selectedSessions.size > 1 ? 's' : ''}`}
+                          side="top"
+                        >
+                          <Button
+                            data-testid="bulk-delete-button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 text-status-red hover:text-status-red hover:bg-error-background"
+                            onClick={handleBulkDelete}
+                            disabled={isDeletingSessions}
+                          >
+                            <ForwardedIconComponent
+                              name="Trash2"
+                              className="h-4 w-4"
+                            />
+                          </Button>
+                        </ShadTooltip>
+                      )}
+                    </div>
+                  </div>
+                )}
+                <SessionSelector
+                  session={session}
+                  currentFlowId={currentFlowId}
+                  deleteSession={handleDeleteSession}
+                  toggleVisibility={() => handleSessionClick(session)}
+                  isVisible={visibleSession === session}
+                  updateVisibleSession={handleSessionClick}
+                  inspectSession={onOpenLogs}
+                  handleRename={handleRename}
+                  selectedView={undefined}
+                  setSelectedView={() => {}}
+                  menuOpen={openMenuSession === session}
+                  onMenuOpenChange={(open) => {
+                    setOpenMenuSession(open ? session : null);
+                  }}
+                  isSelected={selectedSessions.has(session)}
+                  onToggleSelect={() => handleToggleSession(session)}
+                  showCheckbox={selectableSessions.includes(session)}
+                />
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
   );
 }
+
+// Made with Bob
