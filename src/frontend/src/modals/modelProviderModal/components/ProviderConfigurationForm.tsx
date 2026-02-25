@@ -5,12 +5,7 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { cn } from "@/utils/utils";
 import { useEffect, useState } from "react";
 import MultiselectComponent from "@/components/core/parameterRenderComponent/components/multiselectComponent";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import useAlertStore from "@/stores/alertStore";
 import DisconnectWarning from "./DisconnectWarning";
 import { Provider } from "./types";
@@ -158,12 +153,12 @@ const ProviderConfigurationForm = ({
                         variableValues[variable.variable_key]
                           ? [variableValues[variable.variable_key]]
                           : isConfigured &&
-                              getConfiguredValue(variable.variable_key)
+                            getConfiguredValue(variable.variable_key)
                             ? [
-                                getConfiguredValue(
-                                  variable.variable_key,
-                                ) as string,
-                              ]
+                              getConfiguredValue(
+                                variable.variable_key,
+                              ) as string,
+                            ]
                             : []
                       }
                       options={variable.options}
@@ -184,8 +179,18 @@ const ProviderConfigurationForm = ({
                     {!isLoading && (
                       <>
                         {validationState === "invalid" && (
-                          <span className="absolute right-8 top-1/2 -translate-y-1/2 text-destructive pointer-events-none">
-                            <ForwardedIconComponent name="X" className="h-4 w-4" />
+                          <span className="absolute w-4 h-4 right-9 top-1/2 -translate-y-1/2 pointer-events-auto">
+                            <ShadTooltip
+                              content={validationError}
+                              side="top"
+                              styleClasses="text-destructive border-destructive"
+                            >
+                              <div>
+                                <ForwardedIconComponent
+                                  name="X"
+                                  className="h-4 w-4 text-destructive cursor-default"
+                                /></div>
+                            </ShadTooltip>
                           </span>
                         )}
                         {validationState !== "invalid" &&
@@ -200,71 +205,65 @@ const ProviderConfigurationForm = ({
                   </div>
                 ) : (
                   // Render input for text/secret variables
-                  <TooltipProvider>
-                    <Tooltip open={validationState === "invalid" ? undefined : false}>
-                      <TooltipTrigger asChild>
-                        <Input
-                          placeholder={`Add ${variable.variable_name.toLowerCase()}`}
-                          value={
-                            isConfigured && variable.is_secret && !isEditing && !hasNewValue
-                              ? getMaskedKeyPreview(selectedProvider.provider)
-                              : hasNewValue
-                                ? variableValues[variable.variable_key]
-                                : isConfigured && !variable.is_secret
-                                  ? getConfiguredValue(variable.variable_key) ?? ""
-                                  : variableValues[variable.variable_key] || ""
-                          }
-                          type={
-                            variable.is_secret && (isEditing || hasNewValue)
-                              ? "password"
-                              : "text"
-                          }
-                          onChange={(e) => {
-                            onVariableChange(variable.variable_key, e.target.value);
-                          }}
-                          onFocus={() => {
-                            if (isConfigured && variable.is_secret && !hasNewValue) {
-                              setEditingSecret((prev) => ({
-                                ...prev,
-                                [variable.variable_key]: true,
-                              }));
-                              onVariableChange(variable.variable_key, "");
-                            }
-                          }}
-                          onBlur={() => {
-                            if (!variableValues[variable.variable_key]) {
-                              setEditingSecret((prev) => ({
-                                ...prev,
-                                [variable.variable_key]: false,
-                              }));
-                            }
-                          }}
-                          endIcon={
-                            validationState === "invalid" && !isLoading
-                              ? "X"
-                              : (validationState === "valid" ||
-                                  (isConfigured && !hasNewValue && !isEditing)) &&
-                                !isLoading
-                                ? "Check"
-                                : undefined
-                          }
-                          endIconClassName={cn(
-                            !isLoading && validationState === "invalid" && "text-destructive",
-                            !isLoading &&
-                              validationState !== "invalid" &&
-                              (validationState === "valid" ||
-                                (isConfigured && !hasNewValue && !isEditing)) &&
-                              "text-green-500",
-                          )}
+                  <Input
+                    placeholder={`Add ${variable.variable_name.toLowerCase()}`}
+                    value={
+                      isConfigured && variable.is_secret && !isEditing && !hasNewValue
+                        ? getMaskedKeyPreview(selectedProvider.provider)
+                        : hasNewValue
+                          ? variableValues[variable.variable_key]
+                          : isConfigured && !variable.is_secret
+                            ? getConfiguredValue(variable.variable_key) ?? ""
+                            : variableValues[variable.variable_key] || ""
+                    }
+                    type={
+                      variable.is_secret && (isEditing || hasNewValue)
+                        ? "password"
+                        : "text"
+                    }
+                    onChange={(e) => {
+                      onVariableChange(variable.variable_key, e.target.value);
+                    }}
+                    onFocus={() => {
+                      if (isConfigured && variable.is_secret && !hasNewValue) {
+                        setEditingSecret((prev) => ({
+                          ...prev,
+                          [variable.variable_key]: true,
+                        }));
+                        onVariableChange(variable.variable_key, "");
+                      }
+                    }}
+                    onBlur={() => {
+                      if (!variableValues[variable.variable_key]) {
+                        setEditingSecret((prev) => ({
+                          ...prev,
+                          [variable.variable_key]: false,
+                        }));
+                      }
+                    }}
+                    endIcon={
+                      !isLoading && validationState === "invalid" ? (
+                        <ShadTooltip
+                          content={validationError}
+                          side="top"
+                          styleClasses="text-destructive border-destructive"
+                        >
+                          <div>
+                            <ForwardedIconComponent
+                              name="X"
+                              className="h-4 w-4 text-destructive cursor-default"
+                            /></div>
+                        </ShadTooltip>
+                      ) : !isLoading &&
+                        (validationState === "valid" ||
+                          (isConfigured && !hasNewValue && !isEditing)) ? (
+                        <ForwardedIconComponent
+                          name="Check"
+                          className="h-4 w-4 text-green-500 pointer-events-none"
                         />
-                      </TooltipTrigger>
-                      {validationState === "invalid" && validationError && (
-                        <TooltipContent side="bottom" className="text-destructive border-destructive">
-                          {validationError}
-                        </TooltipContent>
-                      )}
-                    </Tooltip>
-                  </TooltipProvider>
+                      ) : undefined
+                    }
+                  />
                 )}
               </div>
             );
