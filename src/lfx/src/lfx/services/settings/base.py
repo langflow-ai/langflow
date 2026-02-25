@@ -338,6 +338,13 @@ class Settings(BaseSettings):
     update_starter_projects: bool = True
     """If set to True, Langflow will update starter projects."""
 
+    # Custom Component Security
+    allow_custom_components: bool = True
+    """If set to False, blocks execution of custom (user-edited) components.
+    Only core (unedited) components will be allowed to run.
+    Components are identified as custom when their `edited` flag is True in the flow JSON.
+    Set via LANGFLOW_ALLOW_CUSTOM_COMPONENTS environment variable."""
+
     # SSRF Protection
     ssrf_protection_enabled: bool = False
     """If set to True, Langflow will enable SSRF (Server-Side Request Forgery) protection.

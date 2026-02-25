@@ -12,6 +12,7 @@ import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useTypesStore } from "@/stores/typesStore";
+import { useUtilityStore } from "@/stores/utilityStore";
 import { cn } from "@/utils/utils";
 
 const ERROR_MESSAGE_UPDATING_COMPONENTS = "Error updating components";
@@ -46,22 +47,28 @@ export default function UpdateAllComponents() {
 
   const dismissedNodes = useFlowStore((state) => state.dismissedNodes);
   const addDismissedNodes = useFlowStore((state) => state.addDismissedNodes);
+  const allowCustomComponents = useUtilityStore(
+    (state) => state.allowCustomComponents,
+  );
 
   const dismissed = useMemo(
     () =>
+      allowCustomComponents &&
       componentsToUpdate.every((component) =>
         dismissedNodes.includes(component.id),
       ),
-    [dismissedNodes, componentsToUpdate],
+    [dismissedNodes, componentsToUpdate, allowCustomComponents],
   );
 
   const componentsToUpdateFiltered = useMemo(
     () =>
-      componentsToUpdate.filter(
-        (component) =>
-          !dismissedNodes.includes(component.id) && !component.userEdited,
-      ),
-    [componentsToUpdate, dismissedNodes],
+      allowCustomComponents
+        ? componentsToUpdate.filter(
+            (component) =>
+              !dismissedNodes.includes(component.id) && !component.userEdited,
+          )
+        : componentsToUpdate,
+    [componentsToUpdate, dismissedNodes, allowCustomComponents],
   );
 
   const edgesUpdateRef = useRef({
@@ -212,30 +219,32 @@ export default function UpdateAllComponents() {
               transition={{ duration: 0.2, ease: "easeOut" }}
               className={cn(
                 "flex items-center justify-between gap-8 rounded-lg border bg-background px-4 py-2 text-sm font-medium shadow-md",
-                componentsToUpdateFiltered.some(
-                  (component) => component.breakingChange,
-                ) && "border-accent-amber-foreground",
+                (!allowCustomComponents ||
+                  componentsToUpdateFiltered.some(
+                    (component) => component.breakingChange,
+                  )) &&
+                  "border-accent-amber-foreground",
               )}
             >
               <div className="flex items-center gap-3">
                 <span>
-                  Update
-                  {componentsToUpdateFiltered.length > 1 ? "s are" : " is"}{" "}
-                  available for{" "}
-                  {componentsToUpdateFiltered.length +
-                    " component" +
-                    (componentsToUpdateFiltered.length > 1 ? "s" : "")}
+                  {!allowCustomComponents
+                    ? `${componentsToUpdateFiltered.length} component${componentsToUpdateFiltered.length > 1 ? "s" : ""} must be updated before this flow can run`
+                    : `Update${componentsToUpdateFiltered.length > 1 ? "s are" : " is"} available for ${componentsToUpdateFiltered.length} component${componentsToUpdateFiltered.length > 1 ? "s" : ""}`}
                 </span>
               </div>
               <div className="flex items-center gap-4">
-                <Button
-                  variant="link"
-                  size="icon"
-                  className="shrink-0 text-sm"
-                  onClick={handleDismissAllComponents}
-                >
-                  Dismiss {componentsToUpdateFiltered.length > 1 ? "All" : ""}
-                </Button>
+                {allowCustomComponents && (
+                  <Button
+                    variant="link"
+                    size="icon"
+                    className="shrink-0 text-sm"
+                    onClick={handleDismissAllComponents}
+                  >
+                    Dismiss{" "}
+                    {componentsToUpdateFiltered.length > 1 ? "All" : ""}
+                  </Button>
+                )}
                 <Button
                   size="sm"
                   className="shrink-0"

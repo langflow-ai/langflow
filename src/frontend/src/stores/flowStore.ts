@@ -60,6 +60,7 @@ import useFlowsManagerStore from "./flowsManagerStore";
 import { useGlobalVariablesStore } from "./globalVariablesStore/globalVariables";
 import { useTweaksStore } from "./tweaksStore";
 import { useTypesStore } from "./typesStore";
+import { useUtilityStore } from "./utilityStore";
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
 const useFlowStore = create<FlowStoreType>((set, get) => ({
@@ -760,6 +761,22 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       throw new Error("Invalid components");
     }
 
+    // Block build when custom components are disabled and there are outdated components
+    const allowCustomComponents = useUtilityStore.getState().allowCustomComponents;
+    if (!allowCustomComponents && get().componentsToUpdate.length > 0) {
+      const outdatedNames = get()
+        .componentsToUpdate.map((c) => c.display_name ?? c.id)
+        .join(", ");
+      setErrorData({
+        title: "Outdated components must be updated before building",
+        list: [
+          `The following components are outdated and must be updated: ${outdatedNames}`,
+        ],
+      });
+      get().setIsBuilding(false);
+      throw new Error("Outdated components must be updated");
+    }
+
     function validateSubgraph() {}
     function handleBuildUpdate(
       vertexBuildData: VertexBuildTypeAPI,
@@ -893,7 +910,11 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
             ?.map((element) => element.id)
             .filter(Boolean) as string[]) ?? get().nodes.map((n) => n.id);
         useFlowStore.getState().updateBuildStatus(idList, BuildStatus.ERROR);
-        if (get().componentsToUpdate.length > 0)
+        const isCustomComponentBlocked = list.some(
+          (msg) =>
+            msg.toLowerCase().includes("custom components are not allowed"),
+        );
+        if (!isCustomComponentBlocked && get().componentsToUpdate.length > 0)
           setErrorData({
             title:
               "There are outdated components in the flow. The error could be related to them.",

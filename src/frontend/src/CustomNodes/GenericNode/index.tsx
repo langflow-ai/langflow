@@ -16,6 +16,7 @@ import { useChangeOnUnfocus } from "../../shared/hooks/use-change-on-unfocus";
 import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
+import { useUtilityStore } from "../../stores/utilityStore";
 import { useShortcutsStore } from "../../stores/shortcuts";
 import { useTypesStore } from "../../stores/typesStore";
 import type { OutputFieldType, VertexBuildTypeAPI } from "../../types/api";
@@ -92,6 +93,10 @@ function GenericNode({
   const addDismissedNodes = useFlowStore((state) => state.addDismissedNodes);
   const removeDismissedNodes = useFlowStore(
     (state) => state.removeDismissedNodes,
+  );
+
+  const allowCustomComponents = useUtilityStore(
+    (state) => state.allowCustomComponents,
   );
 
   const dismissedNodesLegacy = useFlowStore(
@@ -362,8 +367,11 @@ function GenericNode({
   const rightClickedNodeId = useFlowStore((state) => state.rightClickedNodeId);
 
   const shouldShowUpdateComponent = useMemo(
-    () => (isOutdated || hasBreakingChange) && !isUserEdited && !dismissAll,
-    [isOutdated, hasBreakingChange, isUserEdited, dismissAll],
+    () =>
+      !allowCustomComponents
+        ? isOutdated || hasBreakingChange
+        : (isOutdated || hasBreakingChange) && !isUserEdited && !dismissAll,
+    [isOutdated, hasBreakingChange, isUserEdited, dismissAll, allowCustomComponents],
   );
 
   const shouldShowLegacyComponent = useMemo(
@@ -516,6 +524,8 @@ function GenericNode({
             handleUpdateCode={() => handleUpdateCode()}
             loadingUpdate={loadingUpdate}
             setDismissAll={memoizedSetDismissAll}
+            canDismiss={allowCustomComponents}
+            isRequired={!allowCustomComponents}
           />
         ) : shouldShowLegacyComponent ? (
           <NodeLegacyComponent

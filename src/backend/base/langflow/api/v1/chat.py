@@ -28,6 +28,8 @@ from langflow.api.utils import (
     parse_exception,
     verify_public_flow_and_get_user,
 )
+from langflow.api.utils.flow_validation import check_flow_and_raise
+from langflow.interface.components import component_cache
 from langflow.api.v1.schemas import (
     CancelFlowResponse,
     FlowDataRequest,
@@ -43,6 +45,7 @@ from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import (
     get_chat_service,
     get_queue_service,
+    get_settings_service,
     get_telemetry_service,
     session_scope,
 )
@@ -88,10 +91,19 @@ async def retrieve_vertices_order(
     """
     chat_service = get_chat_service()
     telemetry_service = get_telemetry_service()
+    settings_service = get_settings_service()
     start_time = time.perf_counter()
     components_count = None
     run_id = str(uuid.uuid4())
     try:
+        # Validate custom components if blocking is enabled
+        if data:
+            check_flow_and_raise(
+                data.model_dump(),
+                allow_custom_components=settings_service.settings.allow_custom_components,
+                all_types_dict=component_cache.all_types_dict,
+            )
+
         # First, we need to check if the flow_id is in the cache
         if not data:
             graph = await build_graph_from_db(flow_id=flow_id, session=session, chat_service=chat_service)
@@ -178,6 +190,20 @@ async def build_flow(
         flow = await session.get(Flow, flow_id)
         if not flow:
             raise HTTPException(status_code=404, detail=f"Flow with id {flow_id} not found")
+
+    # Validate custom components if blocking is enabled
+    settings_service = get_settings_service()
+    allow_custom = settings_service.settings.allow_custom_components
+    types_dict = component_cache.all_types_dict
+    try:
+        if data:
+            check_flow_and_raise(
+                data.model_dump(), allow_custom_components=allow_custom, all_types_dict=types_dict
+            )
+        if flow and flow.data:
+            check_flow_and_raise(flow.data, allow_custom_components=allow_custom, all_types_dict=types_dict)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     job_id = await start_flow_build(
         flow_id=flow_id,
@@ -625,6 +651,16 @@ async def build_public_tmp(
         Dict with job_id that can be used to poll for build status
     """
     try:
+        # Validate custom components if blocking is enabled
+        settings_service = get_settings_service()
+        allow_custom = settings_service.settings.allow_custom_components
+        if data:
+            check_flow_and_raise(
+                data.model_dump(),
+                allow_custom_components=allow_custom,
+                all_types_dict=component_cache.all_types_dict,
+            )
+
         # Verify this is a public flow and get the associated user
         client_id = request.cookies.get("client_id")
         owner_user, new_flow_id = await verify_public_flow_and_get_user(flow_id=flow_id, client_id=client_id)

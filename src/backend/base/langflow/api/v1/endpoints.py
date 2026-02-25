@@ -28,6 +28,8 @@ from lfx.services.settings.service import SettingsService
 from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession, extract_global_variables_from_headers, parse_value
+from langflow.api.utils.flow_validation import check_flow_and_raise, code_matches_any_template
+from langflow.interface.components import component_cache
 from langflow.api.v1.schemas import (
     ConfigResponse,
     CustomComponentRequest,
@@ -448,6 +450,17 @@ async def _run_flow_internal(
     if flow is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
 
+    # Validate custom components if blocking is enabled
+    settings_service = get_settings_service()
+    try:
+        check_flow_and_raise(
+            flow.data,
+            allow_custom_components=settings_service.settings.allow_custom_components,
+            all_types_dict=component_cache.all_types_dict,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
     # Extract request-level variables from headers with prefix X-LANGFLOW-GLOBAL-VAR-*
     request_variables = extract_global_variables_from_headers(http_request.headers)
 
@@ -754,6 +767,17 @@ async def webhook_run_flow(
     await logger.adebug("Received webhook request")
     error_msg = ""
 
+    # Validate custom components if blocking is enabled
+    settings_service = get_settings_service()
+    try:
+        check_flow_and_raise(
+            flow.data,
+            allow_custom_components=settings_service.settings.allow_custom_components,
+            all_types_dict=component_cache.all_types_dict,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
     # Get the appropriate user for webhook execution based on auth settings
     webhook_user = await get_auth_service().get_webhook_user(flow_id_or_name, request)
 
@@ -875,6 +899,17 @@ async def experimental_run_flow(
     """  # noqa: E501
     # Get the flow from the id or name
     await check_flow_user_permission(flow=flow, api_key_user=api_key_user)
+
+    # Validate custom components if blocking is enabled
+    settings_service = get_settings_service()
+    try:
+        check_flow_and_raise(
+            flow.data,
+            allow_custom_components=settings_service.settings.allow_custom_components,
+            all_types_dict=component_cache.all_types_dict,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
     session_service = get_session_service()
     flow_id_str = str(flow.id)
@@ -1009,6 +1044,20 @@ async def custom_component(
     raw_code: CustomComponentRequest,
     user: CurrentActiveUser,
 ) -> CustomComponentResponse:
+    settings_service = get_settings_service()
+    if not settings_service.settings.allow_custom_components:
+        # Allow updating to a known server template (core component update),
+        # but block truly custom code.
+        is_known_template = (
+            component_cache.all_types_dict
+            and code_matches_any_template(raw_code.code, component_cache.all_types_dict)
+        )
+        if not is_known_template:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Custom component creation is disabled by administrator",
+            )
+
     component = Component(_code=raw_code.code)
 
     built_frontend_node, component_instance = build_custom_component_template(component, user_id=user.id)

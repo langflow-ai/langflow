@@ -1804,7 +1804,23 @@ export function templatesGenerator(data: APIObjectType) {
   return Object.keys(data).reduce((acc, curr) => {
     Object.keys(data[curr]).forEach((c: keyof APIKindType) => {
       //prevent wrong overwriting of the component template by a group of the same type
-      if (!data[curr][c].flow) acc[c] = data[curr][c];
+      if (!data[curr][c].flow) {
+        acc[c] = data[curr][c];
+
+        // Also index by class name (without "Component" suffix) derived from metadata.module.
+        // This handles renamed components where the flow node type (e.g., "Prompt") differs
+        // from the current all_types_dict key (e.g., "Prompt Template").
+        const module = data[curr][c].metadata?.module;
+        if (module) {
+          const className = module.split(".").pop() ?? "";
+          const shortName = className.endsWith("Component")
+            ? className.slice(0, -"Component".length)
+            : className;
+          if (shortName && shortName !== c && !acc[shortName]) {
+            acc[shortName] = data[curr][c];
+          }
+        }
+      }
     });
     return acc;
   }, {});

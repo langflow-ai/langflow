@@ -7,6 +7,7 @@ import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import ToggleShadComponent from "@/components/core/parameterRenderComponent/components/toggleShadComponent";
 import { Button } from "@/components/ui/button";
+import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import { usePostRetrieveVertexOrder } from "@/controllers/API/queries/vertex";
 import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
@@ -107,11 +108,15 @@ const NodeToolbarComponent = memo(
       Object.values(flow).includes(data.node?.display_name!),
     );
 
+    const { data: config } = useGetConfig();
+    const allowCustomComponents = config?.allow_custom_components ?? true;
+
     const nodeLength = useMemo(() => getNodeLength(data), [data]);
     const hasCode = useMemo(
       () => Object.keys(data.node!.template).includes("code"),
       [data.node],
     );
+    const canEditCode = hasCode && allowCustomComponents;
     const isGroup = useMemo(
       () => (data.node?.flow ? true : false),
       [data.node],
@@ -237,9 +242,14 @@ const NodeToolbarComponent = memo(
     const handleCodeModal = useCallback(() => {
       if (!hasCode) {
         setNoticeData({ title: `You can not access ${data.id} code` });
+        return;
+      }
+      if (!allowCustomComponents) {
+        setNoticeData({ title: `Custom component editing is disabled by administrator` });
+        return;
       }
       setOpenModal((state) => !state);
-    }, [hasCode, data.id]);
+    }, [hasCode, allowCustomComponents, data.id]);
 
     const saveComponent = useCallback(() => {
       if (isSaved) {
@@ -486,7 +496,7 @@ const NodeToolbarComponent = memo(
     const renderToolbarButtons = useMemo(
       () => (
         <>
-          {hasCode && (
+          {canEditCode && (
             <ToolbarButton
               className={isCustomComponent ? "animate-pulse-pink" : ""}
               icon="Code"

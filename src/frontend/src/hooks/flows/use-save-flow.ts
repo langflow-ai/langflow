@@ -105,10 +105,12 @@ const useSaveFlow = () => {
                     reject(new Error("Flows variable undefined"));
                   }
                 },
-                onError: (e) => {
+                onError: (e: any) => {
+                  const detail =
+                    e.response?.data?.detail || e.message || "Unknown error";
                   setErrorData({
                     title: "Failed to save flow",
-                    list: [e.message],
+                    list: [detail],
                   });
                   setSaveLoading(false);
                   reject(e);
