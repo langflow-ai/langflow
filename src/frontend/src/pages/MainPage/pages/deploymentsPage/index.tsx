@@ -5,7 +5,9 @@ import {
   type DeploymentCreatePayload,
   type DeploymentProvider,
   type DeploymentCreateResponse,
+  type DeploymentListItem,
   useGetDeploymentConfigs,
+  useGetDeploymentById,
   useGetDeploymentProviders,
   useGetDeploymentSnapshots,
   useGetDeployments,
@@ -150,6 +152,11 @@ type TestDeploymentTarget = {
   deploymentType: "agent" | "mcp";
   mode?: string;
 };
+type CreatedDeploymentUiMeta = {
+  deploymentId: string;
+  attachedCount: number;
+  createdAt: string;
+};
 
 const DeploymentsTab = () => {
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -168,6 +175,10 @@ const DeploymentsTab = () => {
     "agent" | "mcp" | null
   >(null);
   const [createdDeploymentId, setCreatedDeploymentId] = useState("");
+  const [createdDeploymentItem, setCreatedDeploymentItem] =
+    useState<DeploymentListItem | null>(null);
+  const [createdDeploymentUiMeta, setCreatedDeploymentUiMeta] =
+    useState<CreatedDeploymentUiMeta | null>(null);
   const [testAgentModalOpen, setTestAgentModalOpen] = useState(false);
   const [testDeploymentTarget, setTestDeploymentTarget] =
     useState<TestDeploymentTarget | null>(null);
@@ -233,8 +244,19 @@ const DeploymentsTab = () => {
     },
   );
   const createDeploymentMutation = usePostCreateDeployment({ providerId });
+  const getDeploymentByIdMutation = useGetDeploymentById({ providerId });
 
-  const liveDeployments = deploymentsQuery.data?.deployments || [];
+  const liveDeployments = useMemo(() => {
+    const deployments = deploymentsQuery.data?.deployments || [];
+    if (!createdDeploymentItem) {
+      return deployments;
+    }
+
+    const deploymentsWithoutCreated = deployments.filter(
+      (deployment) => deployment.id !== createdDeploymentItem.id,
+    );
+    return [createdDeploymentItem, ...deploymentsWithoutCreated];
+  }, [deploymentsQuery.data?.deployments, createdDeploymentItem]);
   const deploymentConfigs = configsQuery.data?.configs || [];
   const flows = useMemo<FlowType[]>(() => {
     const data = flowsQuery.data;
@@ -246,6 +268,10 @@ const DeploymentsTab = () => {
 
   const deploymentRows = useMemo<DeploymentListRow[]>(() => {
     return liveDeployments.map((deployment) => {
+      const createdMeta =
+        createdDeploymentUiMeta?.deploymentId === deployment.id
+          ? createdDeploymentUiMeta
+          : null;
       const snapshotIds =
         deployment.provider_data?.snapshot_ids &&
         Array.isArray(deployment.provider_data.snapshot_ids)
@@ -264,16 +290,16 @@ const DeploymentsTab = () => {
         deploymentType:
           deployment.type.toUpperCase() === "MCP" ? "mcp" : "agent",
         mode: mapProviderModeToLabel(mode),
-        attached: snapshotIds.length,
+        attached: snapshotIds.length || createdMeta?.attachedCount || 0,
         modifiedDate: formatDateLabel(
-          deployment.updated_at ?? deployment.created_at ?? null,
+          deployment.updated_at ?? deployment.created_at ?? createdMeta?.createdAt ?? null,
         ),
         createdDate: formatDateLabel(
-          deployment.created_at ?? deployment.updated_at ?? null,
+          deployment.created_at ?? deployment.updated_at ?? createdMeta?.createdAt ?? null,
         ),
       };
     });
-  }, [liveDeployments]);
+  }, [createdDeploymentUiMeta, liveDeployments]);
 
   const attachFlowItems = useMemo(
     () =>
@@ -324,6 +350,11 @@ const DeploymentsTab = () => {
     }
   }, [newDeploymentOpen]);
 
+  useEffect(() => {
+    setCreatedDeploymentItem(null);
+    setCreatedDeploymentUiMeta(null);
+  }, [providerId]);
+
   const selectedReviewItems = useMemo(() => {
     return attachFlowItems
       .filter((item) => selectedItems.has(item.id))
@@ -349,6 +380,8 @@ const DeploymentsTab = () => {
     }
 
     const selectedFlows = flows.filter((flow) => selectedItems.has(flow.id));
+    const selectedFlowCount = selectedFlows.length;
+    const requestedAt = new Date().toISOString();
     const invalidProjectFlows = selectedFlows
       .filter((flow) => !flow.folder_id?.trim())
       .map((flow) => flow.name || flow.id);
@@ -417,16 +450,35 @@ const DeploymentsTab = () => {
     setCreatedDeploymentId("");
     setCreatedDeploymentName(trimmedDeploymentName);
     setCreatedDeploymentType(payload.spec.type);
+    setCreatedDeploymentUiMeta(null);
     handleSubmit();
 
     createDeploymentMutation.mutate(payload, {
       onSuccess: async (response: DeploymentCreateResponse) => {
         setCreatedDeploymentId(response.id);
-        await Promise.all([
-          deploymentsQuery.refetch(),
-          configsQuery.refetch(),
-          snapshotsQuery.refetch(),
-        ]);
+        const providerResult = response.provider_result;
+        const resultSnapshotIds = Array.isArray(
+          (providerResult as Record<string, unknown> | undefined)?.bound_snapshot_ids,
+        )
+          ? (
+              (providerResult as Record<string, unknown>).bound_snapshot_ids as unknown[]
+            ).filter((id): id is string => typeof id === "string" && id.trim().length > 0)
+          : Array.isArray(
+                (providerResult as Record<string, unknown> | undefined)?.created_snapshot_ids,
+              )
+            ? (
+                (providerResult as Record<string, unknown>).created_snapshot_ids as unknown[]
+              ).filter((id): id is string => typeof id === "string" && id.trim().length > 0)
+            : [];
+        setCreatedDeploymentUiMeta({
+          deploymentId: response.id,
+          attachedCount: resultSnapshotIds.length || selectedFlowCount,
+          createdAt: requestedAt,
+        });
+        const deployment = await getDeploymentByIdMutation.mutateAsync({
+          deploymentId: response.id,
+        });
+        setCreatedDeploymentItem(deployment);
         setCreationState("success");
       },
       onError: () => {

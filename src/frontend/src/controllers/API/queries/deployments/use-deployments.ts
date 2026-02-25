@@ -40,6 +40,7 @@ export type DeploymentListItem = {
   id: string;
   type: string;
   name: string;
+  description?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
   provider_data?: {
@@ -246,6 +247,37 @@ export const usePostCreateDeployment: useMutationFunctionType<
       ...options,
     },
   );
+
+  return mutation;
+};
+
+export const useGetDeploymentById: useMutationFunctionType<
+  ProviderScopedParams,
+  {
+    deploymentId: string;
+  },
+  DeploymentListItem
+> = (params, options) => {
+  const { mutate } = UseRequestProcessor();
+
+  const getDeploymentByIdFn = async (payload: {
+    deploymentId: string;
+  }): Promise<DeploymentListItem> => {
+    const baseUrl = `${getURL("DEPLOYMENTS")}/${payload.deploymentId}`;
+    const url = addProviderId(baseUrl, params.providerId);
+    const { data } = await api.get<DeploymentListItem>(url);
+    return data;
+  };
+
+  const mutation: UseMutationResult<
+    DeploymentListItem,
+    Error,
+    {
+      deploymentId: string;
+    }
+  > = mutate(["useGetDeploymentById", params.providerId], getDeploymentByIdFn, {
+    ...options,
+  });
 
   return mutation;
 };
