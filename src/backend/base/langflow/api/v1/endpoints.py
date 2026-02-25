@@ -95,15 +95,23 @@ async def parse_input_request_from_body(http_request: Request) -> SimplifiedAPIR
 
 
 @router.get("/all", dependencies=[Depends(get_current_active_user)])
-async def get_all():
+async def get_all(request: Request):
     """Retrieve all component types with compression for better performance.
 
     Returns a compressed response containing all available component types.
+    Supports Accept-Language header for localization (currently: zh-CN).
     """
+    from langflow.i18n.component_translator import translate_component_dict
     from langflow.interface.components import get_and_cache_all_types_dict
 
     try:
         all_types = await get_and_cache_all_types_dict(settings_service=get_settings_service())
+
+        # Apply i18n translation if Accept-Language header requests a non-English language
+        lang = request.headers.get("Accept-Language", "en")
+        if lang and not lang.lower().startswith("en"):
+            all_types = translate_component_dict(all_types, lang)
+
         # Return compressed response using our utility function
         return compress_response(all_types)
 

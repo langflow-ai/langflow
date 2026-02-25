@@ -6,6 +6,7 @@ import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { NodeDataType } from "@/types/flow";
 import { cn } from "@/utils/utils";
+import { translateNodeField } from "@/i18n/nodeTranslations";
 
 interface EditableHeaderContentProps {
   data: NodeDataType;
@@ -196,7 +197,7 @@ export default function EditableHeaderContent({
       />
     ) : (
       <span className="font-medium text-sm">
-        {data.node?.display_name ?? data.type}
+        {translateNodeField(data.node?.display_name ?? data.type)}
       </span>
     ),
     descriptionElement: editMode ? (

@@ -5,6 +5,7 @@ import axios, {
 } from "axios";
 import * as fetchIntercept from "fetch-intercept";
 import { useEffect } from "react";
+import i18n from "@/i18n";
 import { IS_AUTO_LOGIN } from "@/constants/constants";
 import { baseURL } from "@/customization/constants";
 import { useCustomApiHeaders } from "@/customization/hooks/use-custom-api-headers";
@@ -162,6 +163,9 @@ function ApiInterceptor() {
           for (const [key, value] of Object.entries(customHeaders)) {
             config.headers[key] = value;
           }
+          // 附加当前界面语言的 Accept-Language 头，用于后端 i18n 翻译
+          const currentLang = i18n.language || "zh-CN";
+          config.headers["Accept-Language"] = currentLang;
         }
 
         return {
