@@ -40,6 +40,7 @@ import sys
 import warnings
 from functools import lru_cache
 from pathlib import Path
+from types import MappingProxyType
 
 # ---------------------------------------------------------------------------
 # Standard-library module names (3.10+)
@@ -74,11 +75,22 @@ MODULE_EXTRA_DEPS: dict[str, list[str]] = {
     "bs4": ["lxml", "tabulate"],
 }
 
+# Import names that are internal to the lfx/langflow runtime and should
+# never appear as separate requirements.
+_INTERNAL_IMPORT_NAMES: frozenset[str] = frozenset({"lfx", "langflow", "langflow_base"})
+
 # Fields in a component template that may contain provider selection info
 # NOTE: Look back into how the dynamic components (LanguageModel, EmbeddingModel) are handled.
 # Currently, these two make dependency extraction more complex by requiring
 # this "guesswork" on what models are being used.
 _MODEL_FIELDS = {"model", "agent_llm", "embeddings_model", "embedding_model"}
+
+# Fallback provider → package mapping for providers whose component class may
+# not be importable in every environment (e.g. Azure OpenAI shares
+# langchain-openai with the regular OpenAI provider).
+_PROVIDER_PACKAGE_FALLBACKS: dict[str, set[str]] = {
+    "Azure OpenAI": {"langchain-openai"},
+}
 
 
 # ===================================================================
@@ -87,28 +99,31 @@ _MODEL_FIELDS = {"model", "agent_llm", "embeddings_model", "embedding_model"}
 
 
 @lru_cache(maxsize=1)
-def _get_import_to_dist_map() -> dict[str, list[str]]:
+def _get_import_to_dist_map() -> MappingProxyType[str, list[str]]:
     """Return the mapping of importable names → distribution names.
 
     Uses ``importlib.metadata.packages_distributions()`` which reverse-maps
     every importable top-level name to the distribution(s) that provide it.
     For example: ``{'PIL': ['pillow'], 'yaml': ['PyYAML'], ...}``.
+
+    Returns a read-only ``MappingProxyType`` so that callers cannot
+    accidentally mutate the cached result.
     """
     try:
-        return dict(md.packages_distributions())
+        return MappingProxyType(md.packages_distributions())
     except AttributeError:
         warnings.warn(
             "importlib.metadata.packages_distributions() not available. "
             "Package resolution will use heuristic fallbacks.",
             stacklevel=2,
         )
-        return {}
+        return MappingProxyType({})
     except (OSError, ValueError) as exc:
         warnings.warn(
             f"Failed to read package metadata: {exc}. Package resolution will use heuristic fallbacks.",
             stacklevel=2,
         )
-        return {}
+        return MappingProxyType({})
 
 
 def _normalize_dist(name: str) -> str:
@@ -267,6 +282,9 @@ def _resolve_provider_packages(provider_name: str) -> set[str]:
 
     provider_info = MODEL_PROVIDERS_DICT.get(provider_name)
     if not provider_info:
+        fallback = _PROVIDER_PACKAGE_FALLBACKS.get(provider_name)
+        if fallback:
+            return set(fallback)
         warnings.warn(
             f"Provider '{provider_name}' was detected in the flow but is not "
             "registered in MODEL_PROVIDERS_DICT (its package may not be installed). "
@@ -306,7 +324,7 @@ def _resolve_provider_packages(provider_name: str) -> set[str]:
     lfx_provided = _get_lfx_provided_imports()
     packages: set[str] = set()
     for imp in imports:
-        if imp in STDLIB_MODULES or imp in {"lfx", "langflow", "langflow_base"}:
+        if imp in STDLIB_MODULES or imp in _INTERNAL_IMPORT_NAMES:
             continue
         if imp in MODULE_EXTRA_DEPS:
             for extra in MODULE_EXTRA_DEPS[imp]:
@@ -372,7 +390,7 @@ def _resolve_embedding_provider_packages(provider_name: str) -> set[str]:
         return {install_hint}
 
     top_level = module_path.split(".")[0]
-    if top_level in STDLIB_MODULES or top_level in {"lfx", "langflow", "langflow_base"}:
+    if top_level in STDLIB_MODULES or top_level in _INTERNAL_IMPORT_NAMES:
         return set()
 
     lfx_provided = _get_lfx_provided_imports()
@@ -437,7 +455,7 @@ def _extract_component_requirements(node: dict) -> tuple[set[str], set[str]]:
                 # Skip lfx / langflow internal imports – lfx provides these
                 # interfaces at runtime so they should never be listed as
                 # separate requirements.
-                if imp in {"lfx", "langflow", "langflow_base"}:
+                if imp in _INTERNAL_IMPORT_NAMES:
                     continue
 
                 # Always check extra runtime deps (e.g. bs4 → lxml, tabulate)
@@ -579,69 +597,3 @@ def generate_requirements_from_file(
         include_lfx=include_lfx,
         pin_versions=pin_versions,
     )
-
-
-# ---------------------------------------------------------------------------
-# CLI entry point
-# ---------------------------------------------------------------------------
-def main() -> None:
-    """CLI entry point: ``python -m lfx.utils.flow_requirements <flow.json>``."""
-    import argparse
-
-    parser = argparse.ArgumentParser(
-        description="Generate requirements.txt from a Langflow flow JSON.",
-    )
-    parser.add_argument("flow_json", help="Path to the Langflow flow JSON file")
-    parser.add_argument(
-        "--lfx-package",
-        default="lfx",
-        help="Name of the LFX package (default: lfx)",
-    )
-    parser.add_argument(
-        "--no-lfx",
-        action="store_true",
-        help="Exclude the LFX package from output",
-    )
-    parser.add_argument(
-        "--no-pin",
-        action="store_true",
-        help="Do not pin package versions",
-    )
-    parser.add_argument(
-        "-o",
-        "--output",
-        help="Output file path (default: stdout)",
-    )
-    args = parser.parse_args()
-
-    flow_path = Path(args.flow_json)
-    if not flow_path.exists():
-        print(f"Error: File not found: {flow_path}", file=sys.stderr)
-        sys.exit(1)
-
-    try:
-        flow = json.loads(flow_path.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError) as e:
-        print(f"Error: Could not read flow JSON: {e}", file=sys.stderr)
-        sys.exit(1)
-
-    content = generate_requirements_txt(
-        flow,
-        lfx_package=args.lfx_package,
-        include_lfx=not args.no_lfx,
-        pin_versions=not args.no_pin,
-    )
-
-    if args.output:
-        try:
-            Path(args.output).write_text(content, encoding="utf-8")
-        except OSError as e:
-            print(f"Error: Could not write to {args.output}: {e}", file=sys.stderr)
-            sys.exit(1)
-        print(f"Requirements written to {args.output}")
-    else:
-        print(content)
-
-
-if __name__ == "__main__":
-    main()

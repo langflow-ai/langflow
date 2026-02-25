@@ -21,7 +21,6 @@ from lfx.utils.flow_requirements import (
     generate_requirements_from_file,
     generate_requirements_from_flow,
     generate_requirements_txt,
-    main,
 )
 
 
@@ -657,10 +656,11 @@ class TestStarterProjects:
             pytest.skip("Simple Agent.json not found")
         return json.loads(path.read_text(encoding="utf-8"))
 
-    def test_basic_prompting_lfx_only(self, basic_prompting_flow):
-        """Basic Prompting (no model selected) should only need lfx."""
+    def test_basic_prompting_includes_anthropic(self, basic_prompting_flow):
+        """Basic Prompting (Anthropic pre-selected) should need lfx + anthropic deps."""
         result = generate_requirements_from_flow(basic_prompting_flow, pin_versions=False)
-        assert result == ["lfx"]
+        assert "lfx" in result
+        assert "langchain-anthropic" in result
 
     def test_basic_prompting_with_openai_provider(self, basic_prompting_flow):
         """When OpenAI is selected as provider, langchain-openai should be added."""
@@ -704,7 +704,8 @@ class TestStarterProjects:
         if not path.exists():
             pytest.skip("Basic Prompting.json not found")
         result = generate_requirements_from_file(path, pin_versions=False)
-        assert result == ["lfx"]
+        assert "lfx" in result
+        assert "langchain-anthropic" in result
 
     def test_lfx_nightly_package_name(self, basic_prompting_flow):
         """Test specifying lfx-nightly as the package name."""
@@ -903,78 +904,6 @@ class TestErrorHandling:
         flow = {"data": {"nodes": [{"type": "genericNode", "data": {}}]}}
         result = generate_requirements_from_flow(flow, pin_versions=False)
         assert result == ["lfx"]
-
-
-# ===================================================================
-# CLI main() tests
-# ===================================================================
-
-
-class TestMainCLI:
-    """Tests for the argparse main() entry point."""
-
-    def test_happy_path(self, tmp_path, capsys):
-        """main() should print requirements to stdout."""
-        flow_file = tmp_path / "flow.json"
-        flow = _make_flow(_make_node("Simple", "import lfx"))
-        flow_file.write_text(json.dumps(flow), encoding="utf-8")
-
-        with pytest.MonkeyPatch.context() as mp:
-            mp.setattr("sys.argv", ["flow_requirements", str(flow_file), "--no-pin"])
-            main()
-
-        captured = capsys.readouterr()
-        assert "lfx" in captured.out
-
-    def test_output_flag(self, tmp_path, capsys):
-        """main() with -o should write to file."""
-        flow_file = tmp_path / "flow.json"
-        output_file = tmp_path / "requirements.txt"
-        flow = _make_flow(_make_node("Simple", "import lfx"))
-        flow_file.write_text(json.dumps(flow), encoding="utf-8")
-
-        with pytest.MonkeyPatch.context() as mp:
-            mp.setattr("sys.argv", ["flow_requirements", str(flow_file), "-o", str(output_file), "--no-pin"])
-            main()
-
-        assert output_file.exists()
-        content = output_file.read_text(encoding="utf-8")
-        assert "lfx" in content
-        captured = capsys.readouterr()
-        assert "Requirements written to" in captured.out
-
-    def test_no_lfx_flag(self, tmp_path, capsys):
-        """--no-lfx should exclude lfx from output."""
-        flow_file = tmp_path / "flow.json"
-        flow = _make_flow(_make_node("Simple", "import lfx"))
-        flow_file.write_text(json.dumps(flow), encoding="utf-8")
-
-        with pytest.MonkeyPatch.context() as mp:
-            mp.setattr("sys.argv", ["flow_requirements", str(flow_file), "--no-lfx", "--no-pin"])
-            main()
-
-        captured = capsys.readouterr()
-        # With --no-lfx and only lfx imports, output should just be the header
-        assert "lfx\n" not in captured.out
-
-    def test_file_not_found(self, tmp_path):
-        """main() should exit(1) on missing file."""
-        with pytest.MonkeyPatch.context() as mp:
-            mp.setattr("sys.argv", ["flow_requirements", str(tmp_path / "missing.json")])
-            with pytest.raises(SystemExit) as exc_info:
-                main()
-            assert exc_info.value.code == 1
-
-    def test_invalid_json(self, tmp_path):
-        """main() should exit(1) on invalid JSON."""
-        bad_file = tmp_path / "bad.json"
-        bad_file.write_text("not json", encoding="utf-8")
-
-        with pytest.MonkeyPatch.context() as mp:
-            mp.setattr("sys.argv", ["flow_requirements", str(bad_file)])
-            with pytest.raises(SystemExit) as exc_info:
-                main()
-            assert exc_info.value.code == 1
 
 
 # ===================================================================
