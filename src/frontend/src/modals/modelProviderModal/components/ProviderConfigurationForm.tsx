@@ -55,18 +55,22 @@ export interface ProviderConfigurationFormProps {
 const getPlaceholder = (variableName: string, provider: string) => {
   const name = variableName.toLowerCase();
   const providerLower = provider.toLowerCase();
-  
+
   if (providerLower === "ollama" && name.includes("url")) {
     return "http://localhost:11434";
   }
 
-  if (name.includes("api key") || name.includes("apikey") || name.includes("token")) {
+  if (
+    name.includes("api key") ||
+    name.includes("apikey") ||
+    name.includes("token")
+  ) {
     if (providerLower.includes("anthropic")) return "sk-ant-...";
     if (providerLower.includes("google")) return "AIza...";
     if (providerLower.includes("watson")) return "a1b2c3d4...";
     return "sk-...";
   }
-  
+
   if (name.includes("project id") || name.includes("projectid")) {
     return "1234...";
   }
@@ -236,14 +240,17 @@ const ProviderConfigurationForm = ({
                 ) : (
                   // Render input for text/secret variables
                   <Input
-                    placeholder={getPlaceholder(variable.variable_name, selectedProvider.provider)}
+                    placeholder={getPlaceholder(
+                      variable.variable_name,
+                      selectedProvider.provider,
+                    )}
                     value={
                       isConfigured &&
                       variable.is_secret &&
                       !isEditing &&
                       !hasNewValue
                         ? getMaskedKeyPreview(selectedProvider.provider)
-                        : (variable.variable_key in variableValues)
+                        : variable.variable_key in variableValues
                           ? variableValues[variable.variable_key]
                           : isConfigured && !variable.is_secret
                             ? (getConfiguredValue(variable.variable_key) ?? "")
