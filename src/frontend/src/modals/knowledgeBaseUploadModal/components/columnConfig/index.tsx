@@ -1,5 +1,5 @@
 import type { AgGridReact } from "ag-grid-react";
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import TableModal from "@/modals/tableModal";
@@ -52,17 +52,32 @@ export function ColumnConfig({
   const AgColumns = FormatColumns(COLUMN_CONFIG_COLUMNS);
   const agGrid = useRef<AgGridReact>(null);
   const [isTableModalOpen, setIsTableModalOpen] = useState(false);
-  const [tempColumnConfig, setTempColumnConfig] = useState<ColumnConfigRow[]>(
-    columnConfig.map((row) => ({ ...row })),
+  const nextRowId = useRef(0);
+
+  function withRowId(row: ColumnConfigRow) {
+    return { ...row, _rowId: String(nextRowId.current++) };
+  }
+
+  const [tempColumnConfig, setTempColumnConfig] = useState(() =>
+    columnConfig.map((row) => withRowId(row)),
   );
 
-  function getGridRows(): ColumnConfigRow[] {
-    const rows: ColumnConfigRow[] = [];
+  function getGridRows() {
+    const rows: Array<ColumnConfigRow & { _rowId: string }> = [];
     if (agGrid.current && !agGrid.current.api.isDestroyed()) {
       agGrid.current.api.forEachNode((node) => rows.push(node.data));
     }
     return rows;
   }
+
+  function syncFromGrid() {
+    setTempColumnConfig(getGridRows());
+  }
+
+  const getRowId = useCallback(
+    (params: { data: { _rowId: string } }) => params.data._rowId,
+    [],
+  );
 
   function addRow() {
     if (agGrid.current && !agGrid.current.api.isDestroyed()) {
@@ -70,7 +85,7 @@ export function ColumnConfig({
     }
     setTempColumnConfig([
       ...getGridRows(),
-      { column_name: "", vectorize: false, identifier: false },
+      withRowId({ column_name: "", vectorize: false, identifier: false }),
     ]);
   }
 
@@ -82,7 +97,7 @@ export function ColumnConfig({
         agGrid.current.api.applyTransaction({
           remove: selectedNodes.map((node) => node.data),
         });
-        setTempColumnConfig(getGridRows());
+        syncFromGrid();
       }
     }
   }
@@ -92,7 +107,9 @@ export function ColumnConfig({
       agGrid.current.api.stopEditing();
       const selectedNodes = agGrid.current.api.getSelectedNodes();
       if (selectedNodes.length > 0) {
-        const toDuplicate = selectedNodes.map((node) => ({ ...node.data }));
+        const toDuplicate = selectedNodes.map((node) =>
+          withRowId({ ...node.data }),
+        );
         setTempColumnConfig([...getGridRows(), ...toDuplicate]);
       }
     }
@@ -102,7 +119,10 @@ export function ColumnConfig({
     if (agGrid.current && !agGrid.current.api.isDestroyed()) {
       agGrid.current.api.stopEditing();
       const rows: ColumnConfigRow[] = [];
-      agGrid.current.api.forEachNode((node) => rows.push(node.data));
+      agGrid.current.api.forEachNode((node) => {
+        const { _rowId, ...rest } = node.data;
+        rows.push(rest);
+      });
       onColumnConfigChange(rows);
     } else {
       onColumnConfigChange(tempColumnConfig);
@@ -111,13 +131,13 @@ export function ColumnConfig({
   }
 
   function handleTableCancel() {
-    setTempColumnConfig(columnConfig.map((row) => ({ ...row })));
+    setTempColumnConfig(columnConfig.map((row) => withRowId(row)));
     setIsTableModalOpen(false);
   }
 
   const editable = COLUMN_CONFIG_COLUMNS.map((column) => ({
     field: column.name,
-    onUpdate: () => {},
+    onUpdate: () => syncFromGrid(),
     editableCell: true,
   }));
 
@@ -126,7 +146,7 @@ export function ColumnConfig({
       open={isTableModalOpen}
       setOpen={(open) => {
         if (open) {
-          setTempColumnConfig(columnConfig.map((row) => ({ ...row })));
+          setTempColumnConfig(columnConfig.map((row) => withRowId(row)));
         }
         setIsTableModalOpen(open);
       }}
@@ -144,6 +164,7 @@ export function ColumnConfig({
       className="h-full w-full"
       columnDefs={AgColumns}
       rowData={tempColumnConfig}
+      getRowId={getRowId}
       context={{}}
       stopEditingWhenCellsLoseFocus={true}
       autoSizeStrategy={{

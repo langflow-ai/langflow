@@ -53,16 +53,24 @@ class KnowledgeBaseInfo(BaseModel):
     failure_reason: str | None = None
     last_job_id: str | None = None
     source_types: list[str] = []
+    column_config: list[dict] | None = None
 
 
 class BulkDeleteRequest(BaseModel):
     kb_names: list[str]
 
 
+class ColumnConfigItem(BaseModel):
+    column_name: str
+    vectorize: bool = False
+    identifier: bool = False
+
+
 class CreateKnowledgeBaseRequest(BaseModel):
     name: str
     embedding_provider: str
     embedding_model: str
+    column_config: list[ColumnConfigItem] | None = None
 
 
 class AddSourceRequest(BaseModel):
@@ -126,6 +134,11 @@ async def create_knowledge_base(
         except Exception as e:  # noqa: BLE001
             logger.warning(f"Initial Chroma setup for {kb_name} failed: {e}")
 
+        # Serialize column_config for persistence
+        column_config_dicts = None
+        if request.column_config:
+            column_config_dicts = [item.model_dump() for item in request.column_config]
+
         # Save full embedding metadata to prevent immediate backfill
         embedding_metadata = {
             "id": str(kb_id),
@@ -137,9 +150,16 @@ async def create_knowledge_base(
             "characters": 0,
             "avg_chunk_size": 0.0,
             "size": 0,
+            "column_config": column_config_dicts,
         }
         metadata_path = kb_path / "embedding_metadata.json"
         metadata_path.write_text(json.dumps(embedding_metadata, indent=2))
+
+        # Write schema.json for text-metric helpers (get_text_columns)
+        if column_config_dicts:
+            schema_data = [{**col, "data_type": "string"} for col in column_config_dicts]
+            schema_path = kb_path / "schema.json"
+            schema_path.write_text(json.dumps(schema_data, indent=2))
 
         return KnowledgeBaseInfo(
             id=str(kb_id),
@@ -152,6 +172,7 @@ async def create_knowledge_base(
             characters=0,
             chunks=0,
             avg_chunk_size=0.0,
+            column_config=column_config_dicts,
         )
 
     except HTTPException:
@@ -280,6 +301,7 @@ async def ingest_files_to_knowledge_base(
     chunk_size: Annotated[int, Form()] = 1000,
     chunk_overlap: Annotated[int, Form()] = 200,
     separator: Annotated[str, Form()] = "",
+    column_config: Annotated[str, Form()] = "",
 ) -> dict[str, object] | TaskResponse:
     """Upload and ingest files directly into a knowledge base.
 
@@ -311,6 +333,24 @@ async def ingest_files_to_knowledge_base(
 
         if not kb_path.exists() or not kb_path.is_dir():
             raise HTTPException(status_code=404, detail=f"Knowledge base '{kb_name}' not found")
+
+        # Parse and persist column_config from FormData if provided
+        if column_config:
+            try:
+                column_config_parsed = json.loads(column_config)
+                if isinstance(column_config_parsed, list):
+                    # Update embedding_metadata.json
+                    cc_metadata_path = kb_path / "embedding_metadata.json"
+                    if cc_metadata_path.exists():
+                        existing_meta = json.loads(cc_metadata_path.read_text())
+                        existing_meta["column_config"] = column_config_parsed
+                        cc_metadata_path.write_text(json.dumps(existing_meta, indent=2))
+                    # Write schema.json for text-metric helpers
+                    schema_data = [{**col, "data_type": "string"} for col in column_config_parsed]
+                    schema_path = kb_path / "schema.json"
+                    schema_path.write_text(json.dumps(schema_data, indent=2))
+            except (json.JSONDecodeError, TypeError):
+                pass  # Ignore malformed column_config; use existing schema
 
         # Read embedding metadata (Pass fast=False to ensure legacy KBs are migrated/detected)
         metadata = get_kb_metadata(kb_path, fast=False)
@@ -436,6 +476,7 @@ async def list_knowledge_bases(
                     failure_reason=failure_reason,
                     last_job_id=None,
                     source_types=metadata.get("source_types", []),
+                    column_config=metadata.get("column_config"),
                 )
                 knowledge_bases.append(kb_info)
 
@@ -513,6 +554,7 @@ async def get_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -> K
             separator=metadata.get("separator"),
             status=status,
             source_types=metadata.get("source_types", []),
+            column_config=metadata.get("column_config"),
         )
 
     except HTTPException:

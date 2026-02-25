@@ -21,6 +21,11 @@ export interface KnowledgeBaseInfo {
   status?: string;
   failure_reason?: string | null;
   source_types?: string[];
+  column_config?: Array<{
+    column_name: string;
+    vectorize: boolean;
+    identifier: boolean;
+  }>;
 }
 
 export const useGetKnowledgeBases: useQueryFunctionType<

@@ -54,6 +54,7 @@ export const useOptimisticKnowledgeBase = () => {
             chunks: 0,
             avg_chunk_size: 0,
             status: newStatus,
+            column_config: submitted.columnConfig,
           },
         ];
       },

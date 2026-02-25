@@ -146,6 +146,7 @@ const KnowledgeBasesTab = ({
       chunkSize: actions.knowledgeBaseForAddSources.chunk_size,
       chunkOverlap: actions.knowledgeBaseForAddSources.chunk_overlap,
       separator: actions.knowledgeBaseForAddSources.separator,
+      columnConfig: actions.knowledgeBaseForAddSources.column_config,
     };
   }, [actions.knowledgeBaseForAddSources]);
 

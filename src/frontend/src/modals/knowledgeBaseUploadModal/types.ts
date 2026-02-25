@@ -11,6 +11,7 @@ export interface KnowledgeBaseUploadModalProps {
     chunkSize?: number;
     chunkOverlap?: number;
     separator?: string;
+    columnConfig?: ColumnConfigRow[];
   };
   hideAdvanced?: boolean;
   existingKnowledgeBaseNames?: string[];
