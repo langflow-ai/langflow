@@ -365,8 +365,8 @@ test(
       await page
         .getByRole("button", { name: "Playground", exact: true })
         .click();
-      // Exit fullscreen so the more menu is visible
-      await page.getByRole("button", { name: "Exit fullscreen" }).click();
+      // Close fullscreen so the more menu is visible
+      await page.getByTestId("playground-close-button").click();
       await page.getByTestId("chat-header-more-menu").click();
       await page.getByTestId("clear-chat-option").click();
       // await page.getByTestId("icon-MoreHorizontal").last().click();

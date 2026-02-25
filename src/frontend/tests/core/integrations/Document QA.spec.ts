@@ -55,8 +55,8 @@ withEventDeliveryModes(
 
     await page.getByText("this is a test file").last().isVisible();
 
-    // Exit fullscreen so the chat-header-more-menu is visible
-    await page.getByRole("button", { name: "Exit fullscreen" }).click();
+    // Close fullscreen so the chat-header-more-menu is visible
+    await page.getByTestId("playground-close-button").click();
     await page.getByTestId("chat-header-more-menu").click();
     await page.getByTestId("clear-chat-option").click();
     await page.waitForSelector('[data-testid="input-chat-playground"]', {
