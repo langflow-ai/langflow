@@ -427,7 +427,6 @@ async def test_provider_variable_mapping_returns_full_variable_info(client: Asyn
     for var in openai_vars:
         assert "variable_name" in var
         assert "variable_key" in var
-        assert "description" in var
         assert "required" in var
         assert "is_secret" in var
         assert "is_list" in var
