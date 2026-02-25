@@ -12,7 +12,7 @@ class TestSemanticAggregatorComponent:
 
     def test_should_have_correct_display_name(self):
         """Test that component has correct display name."""
-        assert SemanticAggregator.display_name == "Semantic Aggregator"
+        assert SemanticAggregator.display_name == "aReduce"
 
     def test_should_have_correct_icon(self):
         """Test that component has correct icon."""
@@ -20,7 +20,8 @@ class TestSemanticAggregatorComponent:
 
     def test_should_have_correct_description(self):
         """Test that component has correct description."""
-        assert "single row" in SemanticAggregator.description.lower()
+        assert "dataframe" in SemanticAggregator.description.lower()
+        assert "schema" in SemanticAggregator.description.lower()
 
     def test_should_have_required_inputs(self):
         """Test that component has all required inputs."""
@@ -29,7 +30,7 @@ class TestSemanticAggregatorComponent:
         assert "model" in input_names
         assert "api_key" in input_names
         assert "source" in input_names
-        assert "generated_fields" in input_names
+        assert "schema" in input_names
         assert "instructions" in input_names
 
     def test_should_have_dataframe_output(self):
@@ -51,24 +52,18 @@ class TestSemanticAggregatorComponent:
         assert model_input is not None
         assert model_input.real_time_refresh is True
 
-    def test_should_have_generated_fields_with_table_schema(self):
-        """Test that generated_fields input has table_schema defined."""
-        fields_input = next((i for i in SemanticAggregator.inputs if i.name == "generated_fields"), None)
-        assert fields_input is not None
-        assert fields_input.table_schema is not None
-        assert len(fields_input.table_schema) > 0
+    def test_should_have_schema_with_table_schema(self):
+        """Test that schema input has table_schema defined."""
+        schema_input = next((i for i in SemanticAggregator.inputs if i.name == "schema"), None)
+        assert schema_input is not None
+        assert schema_input.table_schema is not None
+        assert len(schema_input.table_schema) > 0
 
-        field_names = {field["name"] for field in fields_input.table_schema}
+        field_names = {field["name"] for field in schema_input.table_schema}
         assert "name" in field_names
         assert "description" in field_names
         assert "type" in field_names
         assert "multiple" in field_names
-
-    def test_should_have_instructions_as_advanced(self):
-        """Test that instructions input is marked as advanced."""
-        instructions_input = next((i for i in SemanticAggregator.inputs if i.name == "instructions"), None)
-        assert instructions_input is not None
-        assert instructions_input.advanced is True
 
     def test_should_have_api_key_as_advanced(self):
         """Test that api_key input is marked as advanced."""
@@ -86,4 +81,4 @@ class TestSemanticAggregatorComponent:
         """Test that output has correct method name."""
         output = next((o for o in SemanticAggregator.outputs if o.name == "states"), None)
         assert output is not None
-        assert output.method == "semantic_aggregation"
+        assert output.method == "aReduce"

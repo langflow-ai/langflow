@@ -12,7 +12,7 @@ class TestSyntheticDataGeneratorComponent:
 
     def test_should_have_correct_display_name(self):
         """Test that component has correct display name."""
-        assert SyntheticDataGenerator.display_name == "SyntheticDataGen"
+        assert SyntheticDataGenerator.display_name == "aGenerate"
 
     def test_should_have_correct_icon(self):
         """Test that component has correct icon."""
@@ -20,7 +20,8 @@ class TestSyntheticDataGeneratorComponent:
 
     def test_should_have_correct_description(self):
         """Test that component has correct description."""
-        assert "fake data" in SyntheticDataGenerator.description.lower()
+        assert "mock data" in SyntheticDataGenerator.description.lower()
+        assert "schema" in SyntheticDataGenerator.description.lower()
 
     def test_should_have_required_inputs(self):
         """Test that component has all required inputs."""
@@ -31,10 +32,10 @@ class TestSyntheticDataGeneratorComponent:
         assert "schema" in input_names
         assert "batch_size" in input_names
 
-    def test_should_not_have_source_input(self):
-        """Test that component does not have source input (generates data)."""
+    def test_should_have_source_input_optional(self):
+        """Test that component has optional source input for learning from examples."""
         input_names = {i.name for i in SyntheticDataGenerator.inputs}
-        assert "source" not in input_names
+        assert "source" in input_names
 
     def test_should_have_dataframe_output(self):
         """Test that component has DataFrame output."""
@@ -90,4 +91,4 @@ class TestSyntheticDataGeneratorComponent:
         """Test that output has correct method name."""
         output = next((o for o in SyntheticDataGenerator.outputs if o.name == "states"), None)
         assert output is not None
-        assert output.method == "generate"
+        assert output.method == "aGenerate"

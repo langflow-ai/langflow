@@ -12,7 +12,7 @@ class TestSemanticMapComponent:
 
     def test_should_have_correct_display_name(self):
         """Test that component has correct display name."""
-        assert SemanticMap.display_name == "SemanticMap"
+        assert SemanticMap.display_name == "aMap"
 
     def test_should_have_correct_icon(self):
         """Test that component has correct icon."""
@@ -25,7 +25,7 @@ class TestSemanticMapComponent:
         assert "model" in input_names
         assert "api_key" in input_names
         assert "source" in input_names
-        assert "generated_fields" in input_names
+        assert "schema" in input_names
         assert "instructions" in input_names
         assert "append_to_input_columns" in input_names
 
@@ -48,14 +48,14 @@ class TestSemanticMapComponent:
         assert model_input is not None
         assert model_input.real_time_refresh is True
 
-    def test_should_have_generated_fields_with_table_schema(self):
-        """Test that generated_fields input has table_schema defined."""
-        fields_input = next((i for i in SemanticMap.inputs if i.name == "generated_fields"), None)
-        assert fields_input is not None
-        assert fields_input.table_schema is not None
-        assert len(fields_input.table_schema) > 0
+    def test_should_have_schema_with_table_schema(self):
+        """Test that schema input has table_schema defined."""
+        schema_input = next((i for i in SemanticMap.inputs if i.name == "schema"), None)
+        assert schema_input is not None
+        assert schema_input.table_schema is not None
+        assert len(schema_input.table_schema) > 0
 
-        field_names = {field["name"] for field in fields_input.table_schema}
+        field_names = {field["name"] for field in schema_input.table_schema}
         assert "name" in field_names
         assert "description" in field_names
         assert "type" in field_names
