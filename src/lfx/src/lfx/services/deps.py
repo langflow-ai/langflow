@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from lfx.services.interfaces import (
+        AuthServiceProtocol,
         CacheServiceProtocol,
         ChatServiceProtocol,
         DatabaseServiceProtocol,
@@ -127,6 +128,16 @@ def get_transaction_service() -> TransactionServiceProtocol | None:
     from lfx.services.schema import ServiceType
 
     return get_service(ServiceType.TRANSACTION_SERVICE)
+
+
+def get_auth_service() -> AuthServiceProtocol | None:
+    """Retrieves the auth service instance.
+
+    Returns the pluggable auth service (minimal LFX or full Langflow when configured).
+    """
+    from lfx.services.schema import ServiceType
+
+    return get_service(ServiceType.AUTH_SERVICE)
 
 
 async def get_session():

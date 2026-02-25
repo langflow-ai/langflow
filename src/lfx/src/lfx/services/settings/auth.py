@@ -112,6 +112,25 @@ class AuthSettings(BaseSettings):
     COOKIE_DOMAIN: str | None = None
     """The domain attribute of the cookies. If None, the domain is not set."""
 
+    # SSO Feature Flags
+    SSO_ENABLED: bool = Field(
+        default=False,
+        description="Enable SSO authentication. Disabled by default. Set to true to enable SSO.",
+    )
+    """If True, SSO authentication is enabled. Configuration must be provided via SSO_CONFIG_FILE."""
+
+    SSO_PROVIDER: str = Field(
+        default="jwt",
+        description="SSO provider type: jwt (default), oidc, saml, ldap",
+    )
+    """The authentication provider to use. Default is 'jwt' for standard authentication."""
+
+    SSO_CONFIG_FILE: str | None = Field(
+        default=None,
+        description="Path to SSO configuration file (YAML format). Required when SSO_ENABLED=true.",
+    )
+    """Path to YAML configuration file for SSO settings. Contains provider-specific configuration."""
+
     pwd_context: CryptContext = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
     model_config = SettingsConfigDict(validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_")

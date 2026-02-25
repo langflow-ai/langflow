@@ -78,7 +78,8 @@ ENV PATH="/app/.venv/bin:$PATH"
 
 # Create home directory and ensure proper ownership
 # The user needs write access to /app/data (home) and /app (workdir)
-RUN mkdir -p /app/data && chown -R 1000:0 /app/data && chown -R 1000:0 /app
+# Note: .venv is already owned by 1000:0 via COPY --chown above, so no recursive chown needed
+RUN mkdir -p /app/data && chown -R 1000:0 /app/data && chown 1000:0 /app
 
 LABEL org.opencontainers.image.title=langflow-backend
 LABEL org.opencontainers.image.authors=['Langflow']

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import { StickToBottom } from "use-stick-to-bottom";
+import { SafariScrollFix } from "@/components/common/safari-scroll-fix";
 import useFlowStore from "@/stores/flowStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { ChatMessageType } from "@/types/chat";
@@ -50,7 +51,7 @@ export const Messages = ({
   );
 
   const messagesContent = (
-    <div className="flex flex-col flex-grow place-self-center w-full relative overflow-x-hidden @[70rem]/chat-panel:pl-[75px] pl-0">
+    <div className="flex flex-col flex-grow place-self-center w-full relative overflow-x-hidden">
       {chatHistory && (isBuilding || chatHistory.length > 0) && (
         <>
           {chatHistory.map((chat: ChatMessageType, index) => {
@@ -94,13 +95,13 @@ export const Messages = ({
         "flex w-full flex-col rounded-md",
         visibleSession ? "h-[95%]" : "h-full",
       )}
-      resize="smooth"
+      resize="instant"
       initial="instant"
-      mass={1}
     >
-      <StickToBottom.Content className="flex flex-col min-h-full">
+      <StickToBottom.Content className="flex flex-col min-h-full ">
         {messagesContent}
       </StickToBottom.Content>
+      <SafariScrollFix />
     </StickToBottom>
   );
 };

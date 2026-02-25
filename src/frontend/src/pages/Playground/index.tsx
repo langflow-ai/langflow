@@ -12,7 +12,7 @@ import { type CookieOptions, getCookie, setCookie } from "@/utils/utils";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { getInputsAndOutputs } from "../../utils/storeUtils";
 export default function PlaygroundPage() {
-  useGetConfig();
+  useGetConfig({});
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
   const currentSavedFlow = useFlowsManagerStore((state) => state.currentFlow);
   const setClientId = useUtilityStore((state) => state.setClientId);
