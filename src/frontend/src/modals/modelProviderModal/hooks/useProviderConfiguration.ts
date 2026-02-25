@@ -513,10 +513,6 @@ export const useProviderConfiguration = ({
       });
       setIsFetchingAfterDisconnect(true);
       invalidateProviderQueries();
-      setVariableValues({});
-      setSyncedSelectedProvider((prev) =>
-        prev ? { ...prev, is_enabled: false, is_configured: false } : null,
-      );
     } catch (error: any) {
       setErrorData({
         title: "Error Disconnecting Provider",
