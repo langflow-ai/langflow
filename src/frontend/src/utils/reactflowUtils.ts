@@ -1800,30 +1800,30 @@ export function typesGenerator(data: APIObjectType) {
     }, {});
 }
 
+// Legacy type aliases: maps old flow node type names to current component keys.
+// PromptComponent was renamed from "Prompt" to "Prompt Template" but existing flows
+// still reference the old "Prompt" type.
+const LEGACY_TYPE_ALIASES: Record<string, string> = {
+  Prompt: "Prompt Template",
+};
+
 export function templatesGenerator(data: APIObjectType) {
-  return Object.keys(data).reduce((acc, curr) => {
+  const templates = Object.keys(data).reduce((acc, curr) => {
     Object.keys(data[curr]).forEach((c: keyof APIKindType) => {
       //prevent wrong overwriting of the component template by a group of the same type
-      if (!data[curr][c].flow) {
-        acc[c] = data[curr][c];
-
-        // Also index by class name (without "Component" suffix) derived from metadata.module.
-        // This handles renamed components where the flow node type (e.g., "Prompt") differs
-        // from the current all_types_dict key (e.g., "Prompt Template").
-        const module = data[curr][c].metadata?.module;
-        if (module) {
-          const className = module.split(".").pop() ?? "";
-          const shortName = className.endsWith("Component")
-            ? className.slice(0, -"Component".length)
-            : className;
-          if (shortName && shortName !== c && !acc[shortName]) {
-            acc[shortName] = data[curr][c];
-          }
-        }
-      }
+      if (!data[curr][c].flow) acc[c] = data[curr][c];
     });
     return acc;
   }, {});
+
+  // Add aliases so old flow nodes (e.g., type="Prompt") can find the current template
+  for (const [oldName, newName] of Object.entries(LEGACY_TYPE_ALIASES)) {
+    if (!(oldName in templates) && newName in templates) {
+      templates[oldName] = templates[newName];
+    }
+  }
+
+  return templates;
 }
 
 /**

@@ -72,15 +72,15 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                 del component["metadata"]["hash_history"]
             all_types_dict_flat[key] = component
 
-            # Also index by class name (without "Component" suffix) derived from metadata.module.
-            # This handles renamed components where the flow node type (e.g., "Prompt") differs
-            # from the current all_types_dict key (e.g., "Prompt Template").
-            module = component.get("metadata", {}).get("module", "")
-            if module:
-                class_name = module.rsplit(".", 1)[-1]
-                short_name = class_name.removesuffix("Component") or class_name
-                if short_name != key and short_name not in all_types_dict_flat:
-                    all_types_dict_flat[short_name] = component
+    # Legacy type aliases: maps old flow node type names to current all_types_dict keys.
+    # PromptComponent was renamed from "Prompt" to "Prompt Template" but 19 starter projects
+    # still reference the old "Prompt" type. Add aliases so those nodes get their code updated.
+    _LEGACY_TYPE_ALIASES = {
+        "Prompt": "Prompt Template",
+    }
+    for old_name, new_name in _LEGACY_TYPE_ALIASES.items():
+        if old_name not in all_types_dict_flat and new_name in all_types_dict_flat:
+            all_types_dict_flat[old_name] = all_types_dict_flat[new_name]
 
     node_changes_log = defaultdict(list)
     project_data_copy = deepcopy(project_data)

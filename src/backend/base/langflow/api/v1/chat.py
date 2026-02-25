@@ -96,7 +96,6 @@ async def retrieve_vertices_order(
     components_count = None
     run_id = str(uuid.uuid4())
     try:
-        # Validate custom components if blocking is enabled
         if data:
             check_flow_and_raise(
                 data.model_dump(),
@@ -191,7 +190,6 @@ async def build_flow(
         if not flow:
             raise HTTPException(status_code=404, detail=f"Flow with id {flow_id} not found")
 
-    # Validate custom components if blocking is enabled
     settings_service = get_settings_service()
     allow_custom = settings_service.settings.allow_custom_components
     types_dict = component_cache.all_types_dict
@@ -649,7 +647,6 @@ async def build_public_tmp(
         Dict with job_id that can be used to poll for build status
     """
     try:
-        # Validate custom components if blocking is enabled
         settings_service = get_settings_service()
         allow_custom = settings_service.settings.allow_custom_components
         if data:

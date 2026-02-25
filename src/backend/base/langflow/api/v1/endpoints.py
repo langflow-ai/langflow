@@ -450,7 +450,6 @@ async def _run_flow_internal(
     if flow is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
 
-    # Validate custom components if blocking is enabled
     settings_service = get_settings_service()
     try:
         check_flow_and_raise(
@@ -767,7 +766,6 @@ async def webhook_run_flow(
     await logger.adebug("Received webhook request")
     error_msg = ""
 
-    # Validate custom components if blocking is enabled
     settings_service = get_settings_service()
     try:
         check_flow_and_raise(
@@ -900,7 +898,6 @@ async def experimental_run_flow(
     # Get the flow from the id or name
     await check_flow_user_permission(flow=flow, api_key_user=api_key_user)
 
-    # Validate custom components if blocking is enabled
     settings_service = get_settings_service()
     try:
         check_flow_and_raise(
