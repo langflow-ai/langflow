@@ -17,6 +17,7 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
         """Return the default kwargs for the component."""
         return {
             "data_inputs": [Data(text="Hello World")],
+            "mode": "Character",
             "chunk_overlap": 200,
             "chunk_size": 1000,
             "separator": "\n",
@@ -42,6 +43,7 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
         component.set_attributes(
             {
                 "data_inputs": [Data(text=test_text)],
+                "mode": "Character",
                 "chunk_overlap": 0,
                 "chunk_size": 15,
                 "separator": "\n",
@@ -73,6 +75,7 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
         component.set_attributes(
             {
                 "data_inputs": [Data(text=test_text)],
+                "mode": "Character",
                 "chunk_overlap": 5,  # Small overlap to test functionality
                 "chunk_size": 20,
                 "separator": "\n",
@@ -103,6 +106,7 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
         component.set_attributes(
             {
                 "data_inputs": [Data(text=test_text)],
+                "mode": "Character",
                 "chunk_overlap": 0,
                 "chunk_size": 10,
                 "separator": "|",
@@ -134,6 +138,7 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
         component.set_attributes(
             {
                 "data_inputs": [Data(text=test_text, data=test_metadata)],
+                "mode": "Character",
                 "chunk_overlap": 0,
                 "chunk_size": 7,
                 "separator": "\n",
@@ -170,6 +175,7 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
         component.set_attributes(
             {
                 "data_inputs": [Data(text=test_text, data=test_metadata)],
+                "mode": "Character",
                 "chunk_overlap": 0,
                 "chunk_size": 7,
                 "separator": "\n",
@@ -193,6 +199,7 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
         component.set_attributes(
             {
                 "data_inputs": [Data(text="")],
+                "mode": "Character",
                 "chunk_overlap": 0,
                 "chunk_size": 10,
                 "separator": "\n",
@@ -212,6 +219,7 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
         component.set_attributes(
             {
                 "data_inputs": [Data(text=test_text)],
+                "mode": "Character",
                 "chunk_overlap": 0,
                 "chunk_size": 100,
                 "separator": "\n",
@@ -232,6 +240,7 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
         component.set_attributes(
             {
                 "data_inputs": [Data(text=text) for text in test_texts],
+                "mode": "Character",
                 "chunk_overlap": 0,
                 "chunk_size": 10,
                 "separator": "\n",
@@ -256,6 +265,7 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
         component.set_attributes(
             {
                 "data_inputs": data_frame,
+                "mode": "Character",
                 "chunk_overlap": 0,
                 "chunk_size": 10,
                 "separator": "\n",
@@ -272,6 +282,377 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
         assert "Another text" in results["text"][2], f"Expected 'Another text', got '{results['text'][2]}'"
         assert "Another line" in results["text"][3], f"Expected 'Another line', got '{results['text'][3]}'"
 
+    # -------------------------------------------------------------------------
+    # Recursive mode
+    # -------------------------------------------------------------------------
+
+    def test_recursive_mode_splits_by_chunk_size(self):
+        """Recursive mode splits text by chunk size even without newlines."""
+        component = SplitTextComponent()
+        test_text = "a" * 100
+        component.set_attributes(
+            {
+                "data_inputs": [Data(text=test_text)],
+                "mode": "Recursive",
+                "chunk_size": 30,
+                "chunk_overlap": 0,
+                "session_id": "test_session",
+                "sender": "test_sender",
+                "sender_name": "test_sender_name",
+            }
+        )
+
+        results = component.split_text()
+        assert isinstance(results, DataFrame)
+        assert len(results) > 1, "Expected multiple chunks from Recursive mode"
+        for _, row in results.iterrows():
+            assert len(row["text"]) <= 30, f"Chunk exceeds chunk_size: {len(row['text'])}"
+
+    def test_recursive_mode_respects_overlap(self):
+        """Recursive mode produces overlapping chunks when chunk_overlap > 0."""
+        component = SplitTextComponent()
+        test_text = "word " * 40
+        component.set_attributes(
+            {
+                "data_inputs": [Data(text=test_text)],
+                "mode": "Recursive",
+                "chunk_size": 50,
+                "chunk_overlap": 10,
+                "session_id": "test_session",
+                "sender": "test_sender",
+                "sender_name": "test_sender_name",
+            }
+        )
+
+        results = component.split_text()
+        assert isinstance(results, DataFrame)
+        assert len(results) > 1, "Expected multiple chunks"
+
+    def test_recursive_mode_with_custom_separators(self):
+        """Recursive mode uses custom separators when toggle is enabled."""
+        component = SplitTextComponent()
+        test_text = "Section one||Section two||Section three"
+        component.set_attributes(
+            {
+                "data_inputs": [Data(text=test_text)],
+                "mode": "Recursive",
+                "chunk_size": 15,
+                "chunk_overlap": 0,
+                "recursive_separators_bool": True,
+                "recursive_separators": ["||"],
+                "session_id": "test_session",
+                "sender": "test_sender",
+                "sender_name": "test_sender_name",
+            }
+        )
+
+        results = component.split_text()
+        assert isinstance(results, DataFrame)
+        assert len(results) == 3, f"Expected 3 chunks split by '||', got {len(results)}"
+        assert "Section one" in results["text"][0]
+        assert "Section two" in results["text"][1]
+        assert "Section three" in results["text"][2]
+
+    # -------------------------------------------------------------------------
+    # Character mode
+    # -------------------------------------------------------------------------
+
+    def test_character_mode_with_message_input(self):
+        """Character mode correctly splits a Message input."""
+        from lfx.schema.message import Message
+
+        component = SplitTextComponent()
+        component.set_attributes(
+            {
+                "data_inputs": Message(text="First line\nSecond line\nThird line"),
+                "mode": "Character",
+                "chunk_size": 15,
+                "chunk_overlap": 0,
+                "separator": "\n",
+                "session_id": "test_session",
+                "sender": "test_sender",
+                "sender_name": "test_sender_name",
+            }
+        )
+
+        results = component.split_text()
+        assert isinstance(results, DataFrame)
+        assert len(results) == 3, f"Expected 3 chunks, got {len(results)}"
+
+    def test_character_mode_custom_separator_field(self):
+        """Character mode splits using the custom_separator field when separator='Custom'."""
+        component = SplitTextComponent()
+        # Each piece ("First", "Second", "Third") is 5-6 chars; chunk_size=8 prevents merging
+        # because any two pieces combined (e.g. "First"+"Second" = 11) exceed chunk_size.
+        test_text = "First||Second||Third"
+        component.set_attributes(
+            {
+                "data_inputs": [Data(text=test_text)],
+                "mode": "Character",
+                "chunk_size": 8,
+                "chunk_overlap": 0,
+                "separator": "Custom",
+                "custom_separator": "||",
+                "session_id": "test_session",
+                "sender": "test_sender",
+                "sender_name": "test_sender_name",
+            }
+        )
+
+        results = component.split_text()
+        assert isinstance(results, DataFrame)
+        assert len(results) == 3, f"Expected 3 chunks split by '||', got {len(results)}"
+        assert results["text"][0] == "First"
+        assert results["text"][1] == "Second"
+        assert results["text"][2] == "Third"
+
+    def test_character_mode_default_separator(self):
+        """Character mode with default separator splits on double newline."""
+        component = SplitTextComponent()
+        test_text = "Paragraph one.\n\nParagraph two.\n\nParagraph three."
+        component.set_attributes(
+            {
+                "data_inputs": [Data(text=test_text)],
+                "mode": "Character",
+                "chunk_size": 20,
+                "chunk_overlap": 0,
+                "session_id": "test_session",
+                "sender": "test_sender",
+                "sender_name": "test_sender_name",
+            }
+        )
+
+        results = component.split_text()
+        assert isinstance(results, DataFrame)
+        assert len(results) == 3, f"Expected 3 paragraphs, got {len(results)}"
+
+    def test_empty_dataframe_raises_error(self):
+        """An empty DataFrame input raises TypeError."""
+        component = SplitTextComponent()
+        component.set_attributes(
+            {
+                "data_inputs": DataFrame(),
+                "mode": "Recursive",
+                "chunk_size": 1000,
+                "chunk_overlap": 0,
+                "session_id": "test_session",
+                "sender": "test_sender",
+                "sender_name": "test_sender_name",
+            }
+        )
+
+        with pytest.raises(TypeError):
+            component.split_text()
+
+    def test_recursive_mode_with_two_custom_separators(self):
+        """Recursive mode applies separators in cascade: splits by '||' first, then '::' for oversized pieces."""
+        component = SplitTextComponent()
+        # "Part Alpha::Part Beta" (21 chars) exceeds chunk_size=12, so it gets split further by "::"
+        test_text = "Section one||Part Alpha::Part Beta||Section two"
+        component.set_attributes(
+            {
+                "data_inputs": [Data(text=test_text)],
+                "mode": "Recursive",
+                "chunk_size": 12,
+                "chunk_overlap": 0,
+                "recursive_separators_bool": True,
+                "recursive_separators": ["||", "::"],
+                "session_id": "test_session",
+                "sender": "test_sender",
+                "sender_name": "test_sender_name",
+            }
+        )
+
+        results = component.split_text()
+        assert isinstance(results, DataFrame)
+        assert len(results) == 4, f"Expected 4 chunks, got {len(results)}"
+        # keep_separator=True (RecursiveCharacterTextSplitter default) prepends the separator
+        # to each chunk, so we use `in` to check content without caring about the prefix.
+        assert "Section one" in results["text"][0]
+        assert "Part Alpha" in results["text"][1]
+        assert "Part Beta" in results["text"][2]
+        assert "Section two" in results["text"][3]
+
+    def test_recursive_mode_empty_separators_list_uses_defaults(self):
+        """When recursive_separators_bool=True but the list is empty, falls back to LangChain defaults."""
+        component = SplitTextComponent()
+        test_text = "a" * 100
+        component.set_attributes(
+            {
+                "data_inputs": [Data(text=test_text)],
+                "mode": "Recursive",
+                "chunk_size": 30,
+                "chunk_overlap": 0,
+                "recursive_separators_bool": True,
+                "recursive_separators": [],
+                "session_id": "test_session",
+                "sender": "test_sender",
+                "sender_name": "test_sender_name",
+            }
+        )
+
+        results = component.split_text()
+        assert isinstance(results, DataFrame)
+        assert len(results) > 1, "Expected multiple chunks even with empty separators list"
+        for _, row in results.iterrows():
+            assert len(row["text"]) <= 30, f"Chunk exceeds chunk_size: {len(row['text'])}"
+
+    # -------------------------------------------------------------------------
+    # text_key — output column name
+    # -------------------------------------------------------------------------
+
+    def test_text_key_renames_output_column_recursive(self):
+        """text_key correctly names the output column in Recursive mode."""
+        component = SplitTextComponent()
+        component.set_attributes(
+            {
+                "data_inputs": [Data(text="Some text to split into chunks")],
+                "mode": "Recursive",
+                "chunk_size": 10,
+                "chunk_overlap": 0,
+                "text_key": "content",
+                "session_id": "test_session",
+                "sender": "test_sender",
+                "sender_name": "test_sender_name",
+            }
+        )
+
+        results = component.split_text()
+        assert isinstance(results, DataFrame)
+        assert "content" in results.columns, f"Expected 'content' column, got {list(results.columns)}"
+        assert "text" not in results.columns, "Column 'text' should not be present"
+
+    def test_text_key_renames_output_column_character(self):
+        """text_key correctly names the output column in Character mode."""
+        component = SplitTextComponent()
+        component.set_attributes(
+            {
+                "data_inputs": [Data(text="First line\nSecond line")],
+                "mode": "Character",
+                "chunk_size": 1000,
+                "chunk_overlap": 0,
+                "separator": "\n",
+                "text_key": "content",
+                "session_id": "test_session",
+                "sender": "test_sender",
+                "sender_name": "test_sender_name",
+            }
+        )
+
+        results = component.split_text()
+        assert isinstance(results, DataFrame)
+        assert "content" in results.columns, f"Expected 'content' column, got {list(results.columns)}"
+        assert "text" not in results.columns, "Column 'text' should not be present"
+
+    def test_text_key_with_clean_output_recursive(self):
+        """text_key with clean_output=True keeps only the renamed column in Recursive mode."""
+        component = SplitTextComponent()
+        test_metadata = {"source": "test.txt"}
+        component.set_attributes(
+            {
+                "data_inputs": [Data(text="Some text to split", data=test_metadata)],
+                "mode": "Recursive",
+                "chunk_size": 10,
+                "chunk_overlap": 0,
+                "text_key": "content",
+                "clean_output": True,
+                "session_id": "test_session",
+                "sender": "test_sender",
+                "sender_name": "test_sender_name",
+            }
+        )
+
+        results = component.split_text()
+        assert isinstance(results, DataFrame)
+        assert list(results.columns) == ["content"], f"Expected only ['content'], got {list(results.columns)}"
+        assert "source" not in results.columns
+
+    def test_text_key_with_clean_output_character(self):
+        """text_key with clean_output=True keeps only the renamed column in Character mode."""
+        component = SplitTextComponent()
+        test_metadata = {"source": "test.txt"}
+        component.set_attributes(
+            {
+                "data_inputs": [Data(text="First line\nSecond line", data=test_metadata)],
+                "mode": "Character",
+                "chunk_size": 1000,
+                "chunk_overlap": 0,
+                "separator": "\n",
+                "text_key": "content",
+                "clean_output": True,
+                "session_id": "test_session",
+                "sender": "test_sender",
+                "sender_name": "test_sender_name",
+            }
+        )
+
+        results = component.split_text()
+        assert isinstance(results, DataFrame)
+        assert list(results.columns) == ["content"], f"Expected only ['content'], got {list(results.columns)}"
+        assert "source" not in results.columns
+
+    # -------------------------------------------------------------------------
+    # update_build_config
+    # -------------------------------------------------------------------------
+
+    def test_update_build_config_mode_to_character(self):
+        """Switching to Character shows separator, keep_separator and hides recursive fields."""
+        component = SplitTextComponent()
+        build_config = {
+            "separator": {"show": False, "value": "/n/n"},
+            "custom_separator": {"show": False},
+            "keep_separator": {"show": False},
+            "recursive_separators_bool": {"show": True, "value": False},
+            "recursive_separators": {"show": False},
+        }
+
+        result = component.update_build_config(build_config, "Character", "mode")
+
+        assert result["separator"]["show"] is True
+        assert result["keep_separator"]["show"] is True
+        assert result["recursive_separators_bool"]["show"] is False
+        assert result["recursive_separators"]["show"] is False
+
+    def test_update_build_config_mode_to_recursive(self):
+        """Switching to Recursive hides separator, keep_separator and shows recursive_separators_bool."""
+        component = SplitTextComponent()
+        build_config = {
+            "separator": {"show": True, "value": "/n"},
+            "custom_separator": {"show": False},
+            "keep_separator": {"show": True},
+            "recursive_separators_bool": {"show": False, "value": False},
+            "recursive_separators": {"show": False},
+        }
+
+        result = component.update_build_config(build_config, "Recursive", "mode")
+
+        assert result["separator"]["show"] is False
+        assert result["keep_separator"]["show"] is False
+        assert result["recursive_separators_bool"]["show"] is True
+        assert result["recursive_separators"]["show"] is False
+
+    def test_update_build_config_recursive_toggle_on(self):
+        """Enabling recursive_separators_bool shows the recursive_separators field."""
+        component = SplitTextComponent()
+        build_config = {
+            "recursive_separators": {"show": False},
+        }
+
+        result = component.update_build_config(build_config, field_value=True, field_name="recursive_separators_bool")
+
+        assert result["recursive_separators"]["show"] is True
+
+    def test_update_build_config_recursive_toggle_off(self):
+        """Disabling recursive_separators_bool hides the recursive_separators field."""
+        component = SplitTextComponent()
+        build_config = {
+            "recursive_separators": {"show": True},
+        }
+
+        result = component.update_build_config(build_config, field_value=False, field_name="recursive_separators_bool")
+
+        assert result["recursive_separators"]["show"] is False
+
     def test_with_url_loader(self):
         """Test splitting text with URL loader."""
         component = SplitTextComponent()
@@ -285,6 +666,7 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
         component.set_attributes(
             {
                 "data_inputs": data_frame,
+                "mode": "Character",
                 "chunk_overlap": 200,
                 "chunk_size": 1000,
                 "separator": "\n",
