@@ -166,7 +166,7 @@ export default function IntComponent({
           onKeyDown={(event) => handleKeyDown(event, value, "")}
           onInput={handleInputChange}
           disabled={disabled || readonly}
-          placeholder={editNode ? "Integer number" : "Type an integer number"}
+          placeholder={editNode ? "整数" : "请输入整数"}
           data-testid={id}
           ref={inputRef}
         />
@@ -187,9 +187,9 @@ export default function IntComponent({
             onClickCapture={
               isAtOrBelowMin
                 ? (e: React.MouseEvent) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }
+                  e.preventDefault();
+                  e.stopPropagation();
+                }
                 : undefined
             }
           >

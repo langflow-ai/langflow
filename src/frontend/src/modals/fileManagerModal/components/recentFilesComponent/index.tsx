@@ -148,7 +148,7 @@ export default function RecentFilesComponent({
         <div className="flex-1">
           <Input
             icon="Search"
-            placeholder="Search files..."
+            placeholder="搜索文件..."
             inputClassName="h-8"
             data-testid="search-files-input"
             value={searchQuery}

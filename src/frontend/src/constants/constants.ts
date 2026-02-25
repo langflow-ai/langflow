@@ -933,12 +933,12 @@ export const GRADIENT_CLASS =
 export const GRADIENT_CLASS_DISABLED =
   "linear-gradient(to right, hsl(var(--muted) / 0.3), hsl(var(--muted)))";
 
-export const RECEIVING_INPUT_VALUE = "Receiving input";
-export const SELECT_AN_OPTION = "Select an option";
+export const RECEIVING_INPUT_VALUE = "接收输入中";
+export const SELECT_AN_OPTION = "请选择";
 
 export const ICON_STROKE_WIDTH = 1.5;
 
-export const DEFAULT_PLACEHOLDER = "Type something...";
+export const DEFAULT_PLACEHOLDER = "请输入...";
 
 export const DEFAULT_TOOLSET_PLACEHOLDER = "Used as a tool";
 

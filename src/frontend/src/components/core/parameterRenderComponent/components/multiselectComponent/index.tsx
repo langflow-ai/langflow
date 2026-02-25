@@ -123,7 +123,7 @@ export default function MultiselectComponent({
       >
         <span className="truncate" data-testid={`value-dropdown-${id}`}>
           {treatedValue.length > 0 &&
-          options.find((option) => treatedValue.includes(option))
+            options.find((option) => treatedValue.includes(option))
             ? treatedValue.join(", ")
             : "Choose an option..."}
         </span>
@@ -145,7 +145,7 @@ export default function MultiselectComponent({
         onChange={(event) => {
           setSearchValue(event.target.value);
         }}
-        placeholder="Search options..."
+        placeholder="搜索选项..."
         className="flex h-9 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
       />
       <Button

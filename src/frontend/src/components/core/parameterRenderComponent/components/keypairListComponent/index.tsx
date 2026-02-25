@@ -130,7 +130,7 @@ const KeypairListComponent = ({
           type="text"
           value={key.trim()}
           className={getInputClassName(editNode, duplicateKey)}
-          placeholder="Type key..."
+          placeholder="请输入键..."
           onChange={(event) => handleChangeKey(event, index)}
         />
         <Input
@@ -140,7 +140,7 @@ const KeypairListComponent = ({
           disabled={disabled}
           value={obj[key]}
           className={editNode ? "input-edit-node" : ""}
-          placeholder="Type a value..."
+          placeholder="请输入值..."
           onChange={(event) => handleChangeValue(event, index)}
         />
         <div className="hit-area-icon">

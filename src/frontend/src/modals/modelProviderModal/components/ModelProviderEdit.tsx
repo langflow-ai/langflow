@@ -35,7 +35,7 @@ const ModelProviderEdit = ({
         />
       </div>
       <Input
-        placeholder="Authorization Name"
+        placeholder="授权名称"
         value={
           providerName
             ? PROVIDER_VARIABLE_MAPPING[providerName]
@@ -53,7 +53,7 @@ const ModelProviderEdit = ({
         />
       </div>
       <Input
-        placeholder="Enter your API key"
+        placeholder="请输入 API 密钥"
         type="password"
         value={apiKey}
         required

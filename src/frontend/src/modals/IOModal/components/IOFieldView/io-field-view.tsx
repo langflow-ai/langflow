@@ -60,11 +60,11 @@ export default function IOFieldView({
 
   const { handleOnNewValue } = node?.data.node
     ? useHandleNewValue({
-        node: node.data.node,
-        nodeId: node.id,
-        name: "input_value",
-      })
-    : { handleOnNewValue: (value: any, options?: any) => {} };
+      node: node.data.node,
+      nodeId: node.id,
+      name: "input_value",
+    })
+    : { handleOnNewValue: (value: any, options?: any) => { } };
 
   function handleOutputType() {
     if (!node) return <>"No node found!"</>;
@@ -74,10 +74,9 @@ export default function IOFieldView({
           case IOInputTypes.TEXT:
             return (
               <Textarea
-                className={`w-full custom-scroll ${
-                  left ? "min-h-32" : "h-full"
-                }`}
-                placeholder={"Enter text..."}
+                className={`w-full custom-scroll ${left ? "min-h-32" : "h-full"
+                  }`}
+                placeholder={"请输入文本..."}
                 value={node.data.node!.template["input_value"].value}
                 onChange={(e) => {
                   e.target.value;
@@ -154,10 +153,9 @@ export default function IOFieldView({
           default:
             return (
               <Textarea
-                className={`w-full custom-scroll ${
-                  left ? "min-h-32" : "h-full"
-                }`}
-                placeholder={"Enter text..."}
+                className={`w-full custom-scroll ${left ? "min-h-32" : "h-full"
+                  }`}
+                placeholder={"请输入文本..."}
                 value={node.data.node!.template["input_value"]}
                 onChange={(e) => {
                   e.target.value;
@@ -261,8 +259,8 @@ export default function IOFieldView({
                   rows={
                     Array.isArray(flowPoolNode?.data?.artifacts)
                       ? (flowPoolNode?.data?.artifacts?.map(
-                          (artifact) => artifact.data,
-                        ) ?? [])
+                        (artifact) => artifact.data,
+                      ) ?? [])
                       : [flowPoolNode?.data?.artifacts]
                   }
                   columnMode="union"
@@ -273,10 +271,9 @@ export default function IOFieldView({
           default:
             return (
               <Textarea
-                className={`w-full custom-scroll ${
-                  left ? "min-h-32" : "h-full"
-                }`}
-                placeholder={"Empty"}
+                className={`w-full custom-scroll ${left ? "min-h-32" : "h-full"
+                  }`}
+                placeholder={"空"}
                 // update to real value on flowPool
                 value={
                   (flowPool[node.id] ?? [])[

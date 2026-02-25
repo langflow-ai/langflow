@@ -134,7 +134,7 @@ const IOKeyPairInputWithVariables = ({
                 value={item.value}
                 onChange={(newValue) => handleValueChange(item.id, newValue)}
                 disabled={!isInputField}
-                placeholder="Type a value..."
+                placeholder="请输入值..."
                 selectedOption={selectedGlobalVariables[item.id] || ""}
                 setSelectedOption={(option) =>
                   handleGlobalVariableSelect(item.id, option)
@@ -151,7 +151,7 @@ const IOKeyPairInputWithVariables = ({
               <Input
                 type="text"
                 value={item.value}
-                placeholder="Type a value..."
+                placeholder="请输入值..."
                 onChange={(event) =>
                   handleValueChange(item.id, event.target.value)
                 }

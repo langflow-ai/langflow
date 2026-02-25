@@ -108,7 +108,7 @@ export default function TemplateContentComponent({
         />
         <Input
           type="search"
-          placeholder="Search..."
+          placeholder="搜索..."
           icon={"SearchIcon"}
           data-testid="search-input-template"
           value={searchQuery}

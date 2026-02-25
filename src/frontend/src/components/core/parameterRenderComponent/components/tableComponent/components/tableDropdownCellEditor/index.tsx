@@ -18,7 +18,7 @@ export default function TableDropdownCellEditor({
         value={value}
         options={values}
         password={false}
-        placeholder={"Select an option"}
+        placeholder={"请选择"}
         id="apply-to-fields"
       />
     </div>
