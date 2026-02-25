@@ -128,9 +128,7 @@ describe("ProviderList", () => {
       // OpenAI has embedding models
       expect(screen.getByTestId("provider-item-OpenAI")).toBeInTheDocument();
       // Anthropic has no embedding models but still renders (shows "no models" alert)
-      expect(
-        screen.getByTestId("provider-item-Anthropic"),
-      ).toBeInTheDocument();
+      expect(screen.getByTestId("provider-item-Anthropic")).toBeInTheDocument();
     });
   });
 
