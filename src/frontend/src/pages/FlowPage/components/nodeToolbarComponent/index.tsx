@@ -246,7 +246,7 @@ const NodeToolbarComponent = memo(
       }
       if (!allowCustomComponents) {
         setNoticeData({
-          title: `Custom component editing is disabled by administrator`,
+          title: `Custom component editing is disabled`,
         });
         return;
       }

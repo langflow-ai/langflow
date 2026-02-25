@@ -1051,7 +1051,7 @@ async def custom_component(
         if not is_known_template:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Custom component creation is disabled by administrator",
+                detail="Custom component creation is disabled",
             )
 
     component = Component(_code=raw_code.code)
@@ -1094,7 +1094,7 @@ async def custom_component_update(
         if not is_known_template:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Custom component creation is disabled by administrator",
+                detail="Custom component creation is disabled",
             )
 
     try:
