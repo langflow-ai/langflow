@@ -2,6 +2,7 @@ import type { ColDef } from "ag-grid-community";
 import type { AgGridReact } from "ag-grid-react";
 import { cloneDeep } from "lodash";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
@@ -37,6 +38,7 @@ export default function ToolsTable({
   isAction: boolean;
   placeholder: string;
 }) {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRows, setSelectedRows] = useState<any[] | null>(null);
   const agGrid = useRef<AgGridReact>(null);
@@ -329,7 +331,7 @@ export default function ToolsTable({
         <div className="flex-none px-4">
           <Input
             icon="Search"
-            placeholder="搜索工具..."
+            placeholder={t("placeholder.searchTools", "Search tools...")}
             inputClassName="h-8"
             value={searchQuery}
             onChange={handleSearchChange}
@@ -377,7 +379,7 @@ export default function ToolsTable({
                     value={sidebarName}
                     onChange={handleNameChange}
                     maxLength={46}
-                    placeholder="编辑名称..."
+                    placeholder={t("placeholder.editName", "Edit name...")}
                     data-testid="input_update_name"
                   />
                   <div className="text-xs text-muted-foreground">
@@ -398,7 +400,7 @@ export default function ToolsTable({
                     id="sidebar-desc-input"
                     value={sidebarDescription}
                     onChange={handleDescriptionChange}
-                    placeholder="编辑描述..."
+                    placeholder={t("placeholder.editDescription", "Edit description...")}
                     className="h-24"
                     data-testid="input_update_description"
                   />
@@ -461,7 +463,7 @@ export default function ToolsTable({
                         <Input
                           id="sidebar-desc-input"
                           disabled
-                          placeholder="由智能体控制的输入"
+                          placeholder={t("placeholder.agentControlledInput", "Input controlled by the agent")}
                           onChange={(e) => { }}
                         />
                       </div>

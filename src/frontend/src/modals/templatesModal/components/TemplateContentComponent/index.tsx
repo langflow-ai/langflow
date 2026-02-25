@@ -1,6 +1,7 @@
 import Fuse from "fuse.js";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { ENABLE_KNOWLEDGE_BASES } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
@@ -24,6 +25,7 @@ export default function TemplateContentComponent({
   loading,
   onFlowCreating,
 }: TemplateContentComponentProps) {
+  const { t } = useTranslation();
   const allExamples = useFlowsManagerStore((state) => state.examples);
 
   const examples = useMemo(() => {
@@ -108,7 +110,7 @@ export default function TemplateContentComponent({
         />
         <Input
           type="search"
-          placeholder="搜索..."
+          placeholder={t("placeholder.search", "Search...")}
           icon={"SearchIcon"}
           data-testid="search-input-template"
           value={searchQuery}

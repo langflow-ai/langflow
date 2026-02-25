@@ -345,5 +345,27 @@
         "noModelsEnabled": "未启用任何模型",
         "manageModelProviders": "管理模型提供商",
         "logs": "日志"
+    },
+    "placeholder": {
+        "typeSomething": "请输入...",
+        "searchOptions": "搜索选项...",
+        "typeKey": "请输入键...",
+        "typeValue": "请输入值...",
+        "floatNumber": "浮点数",
+        "typeFloat": "请输入浮点数",
+        "integerNumber": "整数",
+        "typeInteger": "请输入整数",
+        "searchTools": "搜索工具...",
+        "selectOption": "请选择",
+        "receivingInput": "接收输入中",
+        "enterText": "请输入文本...",
+        "empty": "空",
+        "searchFiles": "搜索文件...",
+        "search": "搜索...",
+        "authorizationName": "授权名称",
+        "enterApiKey": "请输入 API 密钥",
+        "editName": "编辑名称...",
+        "editDescription": "编辑描述...",
+        "agentControlledInput": "由智能体控制的输入"
     }
 }

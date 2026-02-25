@@ -355,5 +355,27 @@
         "noModelsEnabled": "No Models Enabled",
         "manageModelProviders": "Manage Model Providers",
         "logs": "Logs"
+    },
+    "placeholder": {
+        "typeSomething": "Type something...",
+        "searchOptions": "Search options...",
+        "typeKey": "Type key...",
+        "typeValue": "Type a value...",
+        "floatNumber": "Float number",
+        "typeFloat": "Type a float number",
+        "integerNumber": "Integer number",
+        "typeInteger": "Type an integer number",
+        "searchTools": "Search tools...",
+        "selectOption": "Select an option",
+        "receivingInput": "Receiving input",
+        "enterText": "Enter text...",
+        "empty": "Empty",
+        "searchFiles": "Search files...",
+        "search": "Search...",
+        "authorizationName": "Authorization Name",
+        "enterApiKey": "Enter your API key",
+        "editName": "Edit name...",
+        "editDescription": "Edit description...",
+        "agentControlledInput": "Input controlled by the agent"
     }
 }

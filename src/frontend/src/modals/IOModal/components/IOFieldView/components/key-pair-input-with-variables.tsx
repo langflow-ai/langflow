@@ -1,5 +1,6 @@
 import { nanoid } from "nanoid";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import IconComponent from "../../../../../components/common/genericIconComponent";
 import InputComponent from "../../../../../components/core/parameterRenderComponent/components/inputComponent";
 import { Input } from "../../../../../components/ui/input";
@@ -32,6 +33,7 @@ const IOKeyPairInputWithVariables = ({
   testId,
   enableGlobalVariables = false,
 }: IOKeyPairInputWithVariablesProps) => {
+  const { t } = useTranslation();
   const { data: globalVariables = [] } = useGetGlobalVariables();
   const [selectedGlobalVariables, setSelectedGlobalVariables] = useState<
     Record<string, string>
@@ -134,7 +136,7 @@ const IOKeyPairInputWithVariables = ({
                 value={item.value}
                 onChange={(newValue) => handleValueChange(item.id, newValue)}
                 disabled={!isInputField}
-                placeholder="请输入值..."
+                placeholder={t("placeholder.typeValue", "Type a value...")}
                 selectedOption={selectedGlobalVariables[item.id] || ""}
                 setSelectedOption={(option) =>
                   handleGlobalVariableSelect(item.id, option)
@@ -151,7 +153,7 @@ const IOKeyPairInputWithVariables = ({
               <Input
                 type="text"
                 value={item.value}
-                placeholder="请输入值..."
+                placeholder={t("placeholder.typeValue", "Type a value...")}
                 onChange={(event) =>
                   handleValueChange(item.id, event.target.value)
                 }

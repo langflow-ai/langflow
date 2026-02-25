@@ -7,6 +7,7 @@ import {
 } from "@chakra-ui/number-input";
 import { MinusIcon, PlusIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { cn } from "@/utils/utils";
 import { handleKeyDown } from "../../../../../utils/reactflowUtils";
@@ -23,6 +24,7 @@ export default function IntComponent({
   readonly,
   showParameter = true,
 }: InputProps<number, IntComponentType>): JSX.Element | null {
+  const { t } = useTranslation();
   const min = -Infinity;
   // Clear component state when disabled
   useEffect(() => {
@@ -166,7 +168,7 @@ export default function IntComponent({
           onKeyDown={(event) => handleKeyDown(event, value, "")}
           onInput={handleInputChange}
           disabled={disabled || readonly}
-          placeholder={editNode ? "整数" : "请输入整数"}
+          placeholder={editNode ? t("placeholder.integerNumber", "Integer number") : t("placeholder.typeInteger", "Type an integer number")}
           data-testid={id}
           ref={inputRef}
         />

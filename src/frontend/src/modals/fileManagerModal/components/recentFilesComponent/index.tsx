@@ -1,5 +1,6 @@
 import Fuse from "fuse.js";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
 import { IS_MAC } from "@/constants/constants";
 import { usePostRenameFileV2 } from "@/controllers/API/queries/file-management/use-put-rename-file";
@@ -21,6 +22,7 @@ export default function RecentFilesComponent({
   types: string[];
   isList: boolean;
 }) {
+  const { t } = useTranslation();
   const filesWithDisabled = useMemo(
     () =>
       files.map((file) => {
@@ -148,7 +150,7 @@ export default function RecentFilesComponent({
         <div className="flex-1">
           <Input
             icon="Search"
-            placeholder="搜索文件..."
+            placeholder={t("placeholder.searchFiles", "Search files...")}
             inputClassName="h-8"
             data-testid="search-files-input"
             value={searchQuery}

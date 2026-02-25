@@ -1,4 +1,5 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
 import { PROVIDER_VARIABLE_MAPPING } from "@/constants/providerConstants";
 
@@ -25,6 +26,7 @@ const ModelProviderEdit = ({
   onApiBaseChange,
   providerName, // Reserved for future provider-specific behavior
 }: ModelProviderEditProps) => {
+  const { t } = useTranslation();
   return (
     <div className="flex flex-col gap-4 p-4" data-testid="model-provider-edit">
       <div className="text-[13px] -mb-1 font-medium flex items-center gap-1">
@@ -35,7 +37,7 @@ const ModelProviderEdit = ({
         />
       </div>
       <Input
-        placeholder="授权名称"
+        placeholder={t("placeholder.authorizationName", "Authorization Name")}
         value={
           providerName
             ? PROVIDER_VARIABLE_MAPPING[providerName]
@@ -53,7 +55,7 @@ const ModelProviderEdit = ({
         />
       </div>
       <Input
-        placeholder="请输入 API 密钥"
+        placeholder={t("placeholder.enterApiKey", "Enter your API key")}
         type="password"
         value={apiKey}
         required

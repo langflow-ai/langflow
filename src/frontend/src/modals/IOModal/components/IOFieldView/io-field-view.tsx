@@ -1,5 +1,6 @@
 import { cloneDeep } from "lodash";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import useHandleNewValue from "@/CustomNodes/hooks/use-handle-new-value";
 import CustomIOFileInput from "@/customization/components/custom-file-input";
 import type { AllNodeType } from "@/types/flow";
@@ -34,6 +35,7 @@ export default function IOFieldView({
   left,
 }: IOFieldViewProps): JSX.Element | undefined {
   const nodes = useFlowStore((state) => state.nodes);
+  const { t } = useTranslation();
   const setNode = useFlowStore((state) => state.setNode);
   const flowPool = useFlowStore((state) => state.flowPool);
   const node: AllNodeType | undefined = nodes.find(
@@ -76,7 +78,7 @@ export default function IOFieldView({
               <Textarea
                 className={`w-full custom-scroll ${left ? "min-h-32" : "h-full"
                   }`}
-                placeholder={"请输入文本..."}
+                placeholder={t("placeholder.enterText", "Enter text...")}
                 value={node.data.node!.template["input_value"].value}
                 onChange={(e) => {
                   e.target.value;
@@ -155,7 +157,7 @@ export default function IOFieldView({
               <Textarea
                 className={`w-full custom-scroll ${left ? "min-h-32" : "h-full"
                   }`}
-                placeholder={"请输入文本..."}
+                placeholder={t("placeholder.enterText", "Enter text...")}
                 value={node.data.node!.template["input_value"]}
                 onChange={(e) => {
                   e.target.value;
@@ -273,7 +275,7 @@ export default function IOFieldView({
               <Textarea
                 className={`w-full custom-scroll ${left ? "min-h-32" : "h-full"
                   }`}
-                placeholder={"空"}
+                placeholder={t("placeholder.empty", "Empty")}
                 // update to real value on flowPool
                 value={
                   (flowPool[node.id] ?? [])[

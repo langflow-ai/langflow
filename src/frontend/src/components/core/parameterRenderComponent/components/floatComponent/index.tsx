@@ -7,6 +7,7 @@ import {
 } from "@chakra-ui/number-input";
 import { MinusIcon, PlusIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/utils/utils";
 import { handleKeyDown } from "../../../../../utils/reactflowUtils";
 import type { FloatComponentType, InputProps } from "../../types";
@@ -20,6 +21,7 @@ export default function FloatComponent({
   id = "",
   showParameter = true,
 }: InputProps<number, FloatComponentType>): JSX.Element | null {
+  const { t } = useTranslation();
   const step = rangeSpec?.step ?? 0.1;
   const min = rangeSpec?.min;
   const max = rangeSpec?.max;
@@ -105,7 +107,7 @@ export default function FloatComponent({
           onKeyDown={(event) => handleKeyDown(event, localValue, "")}
           onInput={handleInputChange}
           disabled={disabled}
-          placeholder={editNode ? "浮点数" : "请输入浮点数"}
+          placeholder={editNode ? t("placeholder.floatNumber", "Float number") : t("placeholder.typeFloat", "Type a float number")}
           data-testid={id}
           ref={inputRef}
           onBlur={handleBlur}
