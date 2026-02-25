@@ -74,9 +74,8 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
         "max_tokens_field_name": "max_tokens",
         "variables": [
             {
-                "variable_name": "API Key",
+                "variable_name": "OpenAI API Key",
                 "variable_key": "OPENAI_API_KEY",
-                "description": "Your OpenAI API key",
                 "required": True,
                 "is_secret": True,
                 "is_list": False,
@@ -101,9 +100,8 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
         "max_tokens_field_name": "max_tokens",
         "variables": [
             {
-                "variable_name": "API Key",
+                "variable_name": "Anthropic API Key",
                 "variable_key": "ANTHROPIC_API_KEY",
-                "description": "Your Anthropic API key",
                 "required": True,
                 "is_secret": True,
                 "is_list": False,
@@ -128,9 +126,8 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
         "max_tokens_field_name": "max_output_tokens",
         "variables": [
             {
-                "variable_name": "API Key",
+                "variable_name": "Google API Key",
                 "variable_key": "GOOGLE_API_KEY",
-                "description": "Your Google AI API key",
                 "required": True,
                 "is_secret": True,
                 "is_list": False,
@@ -155,9 +152,8 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
         "max_tokens_field_name": "max_tokens",
         "variables": [
             {
-                "variable_name": "Base URL",
+                "variable_name": "Ollama Base URL",
                 "variable_key": "OLLAMA_BASE_URL",
-                "description": "Ollama server URL (default: http://localhost:11434)",
                 "required": True,
                 "is_secret": False,
                 "is_list": False,
@@ -184,7 +180,6 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
             {
                 "variable_name": "API Key",
                 "variable_key": "WATSONX_APIKEY",
-                "description": "IBM WatsonX API key",
                 "required": True,
                 "is_secret": True,
                 "is_list": False,
@@ -200,7 +195,6 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
             {
                 "variable_name": "Project ID",
                 "variable_key": "WATSONX_PROJECT_ID",
-                "description": "WatsonX project ID",
                 "required": True,
                 "is_secret": False,
                 "is_list": False,
@@ -214,9 +208,8 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
                 },
             },
             {
-                "variable_name": "URL",
+                "variable_name": "Endpoint URL",
                 "variable_key": "WATSONX_URL",
-                "description": "WatsonX API endpoint URL",
                 "required": True,
                 "is_secret": False,
                 "is_list": False,

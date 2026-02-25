@@ -52,6 +52,10 @@ const ProviderConfigurationForm = ({
 }: ProviderConfigurationFormProps) => {
   const [showDisconnectWarning, setShowDisconnectWarning] = useState(false);
 
+  const isAlreadyConfigured = providerVariables
+    .filter((v) => v.required)
+    .every((v) => isVariableConfigured(v.variable_key));
+
   if (!selectedProvider) return null;
 
   return (
@@ -100,11 +104,6 @@ const ProviderConfigurationForm = ({
                     <span className="text-red-500 ml-1">*</span>
                   )}
                 </label>
-                {variable.description && (
-                  <span className="text-[11px] text-muted-foreground/70 mb-1">
-                    {variable.description}
-                  </span>
-                )}
                 {variable.options && variable.options.length > 0 ? (
                   // Render dropdown for variables with predefined options
                   <div className="relative">
@@ -269,7 +268,9 @@ const ProviderConfigurationForm = ({
                 ? "Saving..."
                 : validationFailed
                   ? "Retry Save"
-                  : "Save Configuration"}
+                  : isAlreadyConfigured
+                    ? "Replace API Key"
+                    : "Save Configuration"}
             </Button>
           </div>
         </div>

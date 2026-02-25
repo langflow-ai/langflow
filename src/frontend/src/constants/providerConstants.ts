@@ -7,8 +7,6 @@ export interface ProviderVariable {
   variable_name: string;
   /** Environment variable key (e.g., "OPENAI_API_KEY", "WATSONX_PROJECT_ID") */
   variable_key: string;
-  /** Help text describing the variable */
-  description: string;
   /** Whether this variable is required */
   required: boolean;
   /** Whether to treat as credential (masked input) */
