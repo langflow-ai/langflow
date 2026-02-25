@@ -23,6 +23,7 @@ const ModelProvidersContent = ({ modelType }: ModelProvidersContentProps) => {
     isPending,
     isDeleting,
     isFetchingAfterSave,
+    isFetchingAfterDisconnect,
     handleVariableChange,
     handleSaveAllVariables,
     handleActivateProvider,
@@ -84,6 +85,7 @@ const ModelProvidersContent = ({ modelType }: ModelProvidersContentProps) => {
           isPending={isPending}
           isDeleting={isDeleting}
           isFetchingModels={isFetchingAfterSave}
+          isFetchingAfterDisconnect={isFetchingAfterDisconnect}
           validationFailed={validationFailed}
           validationState={validationState}
           validationError={validationError}
@@ -97,7 +99,12 @@ const ModelProvidersContent = ({ modelType }: ModelProvidersContentProps) => {
             availableModels={syncedSelectedProvider?.models || []}
             onModelToggle={handleModelToggle}
             providerName={syncedSelectedProvider?.provider}
-            isEnabledModel={syncedSelectedProvider?.is_configured}
+            isEnabledModel={
+              !!(
+                syncedSelectedProvider?.is_enabled ||
+                syncedSelectedProvider?.is_configured
+              )
+            }
           />
         </div>
       </div>

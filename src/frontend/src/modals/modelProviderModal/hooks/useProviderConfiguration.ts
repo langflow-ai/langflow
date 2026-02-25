@@ -58,6 +58,7 @@ interface UseProviderConfigurationReturn {
   requiresConfiguration: boolean;
   canSave: boolean;
   isFetchingAfterSave: boolean;
+  isFetchingAfterDisconnect: boolean;
 
   // Cache invalidation
   invalidateProviderQueries: () => void;
@@ -77,6 +78,7 @@ export const useProviderConfiguration = ({
     useState<ValidationState>("idle");
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isFetchingAfterSave, setIsFetchingAfterSave] = useState(false);
+  const [isFetchingAfterDisconnect, setIsFetchingAfterDisconnect] = useState(false);
   const validationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
@@ -114,22 +116,37 @@ export const useProviderConfiguration = ({
     queryClient.refetchQueries({ queryKey: ["flows"] });
   }, [queryClient]);
 
-  // Clear isFetchingAfterSave (and typed values) once the models refetch settles
+  // Clear isFetchingAfterSave/Disconnect once the models refetch settles
+  // We use fetchingSeenRef to avoid clearing prematurely on the first render
+  // before react-query has actually started the refetch (isFetchingModels lags by 1 tick).
   const clearValuesAfterFetchRef = useRef(false);
   const pendingSuccessTitleRef = useRef<string | null>(null);
+  const fetchingSeenRef = useRef(false);
   useEffect(() => {
-    if (!isFetchingModels && isFetchingAfterSave) {
-      setIsFetchingAfterSave(false);
-      if (clearValuesAfterFetchRef.current) {
-        clearValuesAfterFetchRef.current = false;
-        setVariableValues({});
+    const isWaiting = isFetchingAfterSave || isFetchingAfterDisconnect;
+    if (isFetchingModels && isWaiting) {
+      // Mark that we've seen the refetch actually start
+      fetchingSeenRef.current = true;
+    }
+    if (!isFetchingModels && fetchingSeenRef.current && isWaiting) {
+      // Refetch has completed — now safe to clear
+      fetchingSeenRef.current = false;
+      if (isFetchingAfterSave) {
+        setIsFetchingAfterSave(false);
+        if (clearValuesAfterFetchRef.current) {
+          clearValuesAfterFetchRef.current = false;
+          setVariableValues({});
+        }
+        if (pendingSuccessTitleRef.current) {
+          setSuccessData({ title: pendingSuccessTitleRef.current });
+          pendingSuccessTitleRef.current = null;
+        }
       }
-      if (pendingSuccessTitleRef.current) {
-        setSuccessData({ title: pendingSuccessTitleRef.current });
-        pendingSuccessTitleRef.current = null;
+      if (isFetchingAfterDisconnect) {
+        setIsFetchingAfterDisconnect(false);
       }
     }
-  }, [isFetchingModels, isFetchingAfterSave]);
+  }, [isFetchingModels, isFetchingAfterSave, isFetchingAfterDisconnect]);
 
   // Keep syncedSelectedProvider in sync with prop and reset state on provider change
   useEffect(() => {
@@ -494,6 +511,7 @@ export const useProviderConfiguration = ({
       setSuccessData({
         title: `${syncedSelectedProvider.provider} Disconnected`,
       });
+      setIsFetchingAfterDisconnect(true);
       invalidateProviderQueries();
       setVariableValues({});
       setSyncedSelectedProvider((prev) =>
@@ -605,6 +623,7 @@ export const useProviderConfiguration = ({
     requiresConfiguration,
     canSave,
     isFetchingAfterSave,
+    isFetchingAfterDisconnect,
 
     // Cache invalidation
     invalidateProviderQueries,

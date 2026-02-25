@@ -48,6 +48,7 @@ export interface ProviderConfigurationFormProps {
   validationError: string | null;
   canSave: boolean;
   requiresConfiguration: boolean;
+  isFetchingAfterDisconnect: boolean;
 }
 
 const ProviderConfigurationForm = ({
@@ -69,6 +70,7 @@ const ProviderConfigurationForm = ({
   validationError,
   canSave,
   requiresConfiguration,
+  isFetchingAfterDisconnect,
 }: ProviderConfigurationFormProps) => {
   const [showDisconnectWarning, setShowDisconnectWarning] = useState(false);
   const [editingSecret, setEditingSecret] = useState<Record<string, boolean>>(
@@ -275,7 +277,8 @@ const ProviderConfigurationForm = ({
                 variant="destructive"
                 size="sm"
                 onClick={() => setShowDisconnectWarning(true)}
-                disabled={isDeleting || isSaving}
+                loading={isDeleting || isFetchingAfterDisconnect}
+                disabled={isDeleting || isFetchingAfterDisconnect || isSaving}
               >
                 Disconnect
               </Button>
@@ -286,15 +289,11 @@ const ProviderConfigurationForm = ({
               loading={isLoading || isFetchingModels}
               disabled={!canSave || isLoading || isFetchingModels}
             >
-              {isLoading
-                ? isSaving ? "Saving..." : "Validating..."
-                : isFetchingModels
-                  ? "Updating..."
-                  : validationFailed
-                    ? "Retry Save"
-                    : isAlreadyConfigured
-                      ? "Replace Configuration"
-                      : "Save Configuration"}
+              {validationFailed
+                ? "Retry Save"
+                : isAlreadyConfigured
+                  ? "Replace Configuration"
+                  : "Save Configuration"}
             </Button>
           </div>
         </div>
