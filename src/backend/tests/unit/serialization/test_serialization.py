@@ -137,8 +137,8 @@ class TestSerializationHypothesis:
     @given(data=st.one_of(st.integers(), st.floats(allow_nan=True), st.booleans(), st.none()))
     def test_primitive_types(self, data: float | bool | None) -> None:  # noqa: FBT001
         result: int | float | bool | None = serialize(data)
-        if isinstance(data, float) and math.isnan(data) and isinstance(result, float):
-            assert math.isnan(result)
+        if isinstance(data, float) and (math.isnan(data) or math.isinf(data)):
+            assert result is None
         else:
             assert result == data
 
