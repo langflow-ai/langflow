@@ -56,46 +56,51 @@ export function ColumnConfig({
     columnConfig.map((row) => ({ ...row })),
   );
 
-  function setAllRows() {
+  function getGridRows(): ColumnConfigRow[] {
+    const rows: ColumnConfigRow[] = [];
     if (agGrid.current && !agGrid.current.api.isDestroyed()) {
-      const rows: ColumnConfigRow[] = [];
       agGrid.current.api.forEachNode((node) => rows.push(node.data));
-      setTempColumnConfig(rows);
     }
+    return rows;
   }
 
   function addRow() {
+    if (agGrid.current && !agGrid.current.api.isDestroyed()) {
+      agGrid.current.api.stopEditing();
+    }
     setTempColumnConfig([
-      ...tempColumnConfig,
+      ...getGridRows(),
       { column_name: "", vectorize: false, identifier: false },
     ]);
   }
 
   function deleteRow() {
     if (agGrid.current) {
+      agGrid.current.api.stopEditing();
       const selectedNodes = agGrid.current.api.getSelectedNodes();
       if (selectedNodes.length > 0) {
         agGrid.current.api.applyTransaction({
           remove: selectedNodes.map((node) => node.data),
         });
-        setAllRows();
+        setTempColumnConfig(getGridRows());
       }
     }
   }
 
   function duplicateRow() {
     if (agGrid.current) {
+      agGrid.current.api.stopEditing();
       const selectedNodes = agGrid.current.api.getSelectedNodes();
       if (selectedNodes.length > 0) {
         const toDuplicate = selectedNodes.map((node) => ({ ...node.data }));
-        setTempColumnConfig([...tempColumnConfig, ...toDuplicate]);
+        setTempColumnConfig([...getGridRows(), ...toDuplicate]);
       }
     }
   }
 
   function handleTableSave() {
-    setAllRows();
     if (agGrid.current && !agGrid.current.api.isDestroyed()) {
+      agGrid.current.api.stopEditing();
       const rows: ColumnConfigRow[] = [];
       agGrid.current.api.forEachNode((node) => rows.push(node.data));
       onColumnConfigChange(rows);
@@ -112,7 +117,7 @@ export function ColumnConfig({
 
   const editable = COLUMN_CONFIG_COLUMNS.map((column) => ({
     field: column.name,
-    onUpdate: () => setAllRows(),
+    onUpdate: () => {},
     editableCell: true,
   }));
 
@@ -139,6 +144,7 @@ export function ColumnConfig({
       className="h-full w-full"
       columnDefs={AgColumns}
       rowData={tempColumnConfig}
+      context={{}}
       stopEditingWhenCellsLoseFocus={true}
       autoSizeStrategy={{
         type: "fitGridWidth",

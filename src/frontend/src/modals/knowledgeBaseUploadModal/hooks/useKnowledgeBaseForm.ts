@@ -1,27 +1,27 @@
-import { type AxiosError } from "axios";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import type { ModelOption } from "@/components/core/parameterRenderComponent/components/modelInputComponent";
-import { api } from "@/controllers/API/api";
-import { getURL } from "@/controllers/API/helpers/constants";
-import { useCreateKnowledgeBase } from "@/controllers/API/queries/knowledge-bases/use-create-knowledge-base";
-import { useGetIngestionJobStatus } from "@/controllers/API/queries/knowledge-bases/use-get-ingestion-job-status";
-import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
-import useAlertStore from "@/stores/alertStore";
+import { type AxiosError } from 'axios';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { ModelOption } from '@/components/core/parameterRenderComponent/components/modelInputComponent';
+import { api } from '@/controllers/API/api';
+import { getURL } from '@/controllers/API/helpers/constants';
+import { useCreateKnowledgeBase } from '@/controllers/API/queries/knowledge-bases/use-create-knowledge-base';
+import { useGetIngestionJobStatus } from '@/controllers/API/queries/knowledge-bases/use-get-ingestion-job-status';
+import { useGetModelProviders } from '@/controllers/API/queries/models/use-get-model-providers';
+import useAlertStore from '@/stores/alertStore';
 import {
   DEFAULT_CHUNK_OVERLAP,
   DEFAULT_CHUNK_SIZE,
   DEFAULT_SEPARATOR,
   KB_NAME_REGEX,
   MAX_TOTAL_FILE_SIZE,
-} from "../constants";
+} from '../constants';
 import type {
   ChunkPreview,
   ColumnConfigRow,
   KnowledgeBaseFormData,
   KnowledgeBaseUploadModalProps,
   WizardStep,
-} from "../types";
-import { formatFileSize } from "../utils";
+} from '../types';
+import { formatFileSize } from '../utils';
 
 export function useKnowledgeBaseForm({
   open,
@@ -30,13 +30,13 @@ export function useKnowledgeBaseForm({
   existingKnowledgeBase,
   hideAdvanced,
   existingKnowledgeBaseNames,
-}: Pick<Required<KnowledgeBaseUploadModalProps>, "open" | "setOpen"> &
+}: Pick<Required<KnowledgeBaseUploadModalProps>, 'open' | 'setOpen'> &
   Pick<
     KnowledgeBaseUploadModalProps,
-    | "onSubmit"
-    | "existingKnowledgeBase"
-    | "hideAdvanced"
-    | "existingKnowledgeBaseNames"
+    | 'onSubmit'
+    | 'existingKnowledgeBase'
+    | 'hideAdvanced'
+    | 'existingKnowledgeBaseNames'
   >) {
   const isAddSourcesMode = !!existingKnowledgeBase;
 
@@ -52,11 +52,11 @@ export function useKnowledgeBaseForm({
     for (const provider of modelProviders) {
       if (!provider.is_enabled) continue;
       for (const model of provider.models) {
-        if (model.metadata?.model_type !== "embeddings") continue;
+        if (model.metadata?.model_type !== 'embeddings') continue;
         options.push({
           id: model.model_name,
           name: model.model_name,
-          icon: provider.icon || "Bot",
+          icon: provider.icon || 'Bot',
           provider: provider.provider,
           metadata: model.metadata,
         });
@@ -66,13 +66,13 @@ export function useKnowledgeBaseForm({
   }, [modelProviders]);
 
   // Form state - Step 1
-  const [sourceName, setSourceName] = useState("");
+  const [sourceName, setSourceName] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const [chunkSize, setChunkSize] = useState(0);
   const [chunkOverlap, setChunkOverlap] = useState(0);
-  const [separator, setSeparator] = useState("");
+  const [separator, setSeparator] = useState('');
   const [columnConfig, setColumnConfig] = useState<ColumnConfigRow[]>([
-    { column_name: "text", vectorize: true, identifier: true },
+    { column_name: 'text', vectorize: true, identifier: true },
   ]);
 
   // Validation state
@@ -98,8 +98,8 @@ export function useKnowledgeBaseForm({
   const [ingestionJobId, setIngestionJobId] = useState<string | null>(null);
 
   // Alert store
-  const setSuccessData = useAlertStore((state) => state.setSuccessData);
-  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const setSuccessData = useAlertStore(state => state.setSuccessData);
+  const setErrorData = useAlertStore(state => state.setErrorData);
 
   // Create knowledge base mutation
   const createKnowledgeBase = useCreateKnowledgeBase();
@@ -115,8 +115,8 @@ export function useKnowledgeBaseForm({
     if (!ingestionJobStatus || !ingestionJobId) return;
 
     if (
-      ingestionJobStatus.status === "completed" ||
-      ingestionJobStatus.status === "failed"
+      ingestionJobStatus.status === 'completed' ||
+      ingestionJobStatus.status === 'failed'
     ) {
       setIngestionJobId(null);
     }
@@ -128,7 +128,7 @@ export function useKnowledgeBaseForm({
       setSourceName(existingKnowledgeBase.name);
       if (existingKnowledgeBase.embeddingModel) {
         const matchingModel = embeddingModelOptions.find(
-          (opt) => opt.id === existingKnowledgeBase.embeddingModel,
+          opt => opt.id === existingKnowledgeBase.embeddingModel
         );
         if (matchingModel) {
           setSelectedEmbeddingModel([matchingModel]);
@@ -164,13 +164,13 @@ export function useKnowledgeBaseForm({
   }, [existingKnowledgeBase, open, embeddingModelOptions]);
 
   const resetForm = useCallback(() => {
-    setSourceName("");
+    setSourceName('');
     setFiles([]);
     setChunkSize(0);
     setChunkOverlap(0);
-    setSeparator("");
+    setSeparator('');
     setColumnConfig([
-      { column_name: "text", vectorize: true, identifier: true },
+      { column_name: 'text', vectorize: true, identifier: true },
     ]);
     setSelectedEmbeddingModel([]);
     setChunkPreviews([]);
@@ -184,12 +184,12 @@ export function useKnowledgeBaseForm({
   }, []);
 
   const toggleAdvanced = useCallback(() => {
-    setShowAdvanced((prev) => {
+    setShowAdvanced(prev => {
       if (prev) {
         // Hiding advanced: reset chunk settings and close panel
         setChunkSize(0);
         setChunkOverlap(0);
-        setSeparator("");
+        setSeparator('');
         setIsFilePanelOpen(false);
       } else {
         // Showing advanced: apply defaults
@@ -212,15 +212,15 @@ export function useKnowledgeBaseForm({
     try {
       const selectedFile = files[selectedPreviewFileIndex] || files[0];
       const formData = new FormData();
-      formData.append("files", selectedFile);
-      formData.append("chunk_size", chunkSize.toString());
-      formData.append("chunk_overlap", chunkOverlap.toString());
-      formData.append("separator", separator);
+      formData.append('files', selectedFile);
+      formData.append('chunk_size', chunkSize.toString());
+      formData.append('chunk_overlap', chunkOverlap.toString());
+      formData.append('separator', separator);
 
       const response = await api.post(
-        `${getURL("KNOWLEDGE_BASES")}/preview-chunks`,
+        `${getURL('KNOWLEDGE_BASES')}/preview-chunks`,
         formData,
-        { headers: { "Content-Type": "multipart/form-data" } },
+        { headers: { 'Content-Type': 'multipart/form-data' } }
       );
 
       const filePreview = response.data?.files?.[0];
@@ -233,7 +233,7 @@ export function useKnowledgeBaseForm({
               start: number;
               end: number;
             },
-            i: number,
+            i: number
           ) => ({
             content: chunk.content,
             index: i,
@@ -242,11 +242,11 @@ export function useKnowledgeBaseForm({
               start: chunk.start,
               end: chunk.end,
             },
-          }),
+          })
         ) ?? [];
       setChunkPreviews(previews);
     } catch (error) {
-      console.error("Error generating preview:", error);
+      console.error('Error generating preview:', error);
       setChunkPreviews([]);
     } finally {
       setIsGeneratingPreview(false);
@@ -262,28 +262,28 @@ export function useKnowledgeBaseForm({
 
   const getValidationErrors = useCallback((): Record<string, string> => {
     const errors: Record<string, string> = {};
-    const trimmedName = sourceName.trim().replace(/\s+/g, "_");
+    const trimmedName = sourceName.trim().replace(/\s+/g, '_');
     if (!trimmedName) {
-      errors.sourceName = "Name is required";
+      errors.sourceName = 'Name is required';
     } else if (trimmedName.length < 3 || trimmedName.length > 512) {
-      errors.sourceName = "Name must be between 3 and 512 characters";
+      errors.sourceName = 'Name must be between 3 and 512 characters';
     } else if (!KB_NAME_REGEX.test(trimmedName)) {
       errors.sourceName =
-        "Name must only contain [a-zA-Z0-9._-] and start/end with [a-zA-Z0-9]";
+        'Name must only contain [a-zA-Z0-9._-] and start/end with [a-zA-Z0-9]';
     } else if (
       !isAddSourcesMode &&
       existingKnowledgeBaseNames?.some(
-        (name) => name.toLowerCase() === trimmedName.toLowerCase(),
+        name => name.toLowerCase() === trimmedName.toLowerCase()
       )
     ) {
-      errors.sourceName = "A knowledge base with this name already exists";
+      errors.sourceName = 'A knowledge base with this name already exists';
     }
     if (!isAddSourcesMode && selectedEmbeddingModel.length === 0) {
-      errors.embeddingModel = "Embedding model is required";
+      errors.embeddingModel = 'Embedding model is required';
     }
     const totalBytes = files.reduce((acc, file) => acc + file.size, 0);
     if (totalBytes > MAX_TOTAL_FILE_SIZE) {
-      errors.files = "Total file size exceeds the 1 GB limit";
+      errors.files = 'Total file size exceeds the 1 GB limit';
     }
     return errors;
   }, [
@@ -306,7 +306,7 @@ export function useKnowledgeBaseForm({
     }
 
     const selectedModel = selectedEmbeddingModel[0];
-    const kbName = sourceName.trim().replace(/\s+/g, "_");
+    const kbName = sourceName.trim().replace(/\s+/g, '_');
     setIsSubmitting(true);
 
     try {
@@ -314,8 +314,9 @@ export function useKnowledgeBaseForm({
       if (!isAddSourcesMode) {
         await createKnowledgeBase.mutateAsync({
           name: kbName,
-          embedding_provider: selectedModel.provider || "Unknown",
+          embedding_provider: selectedModel.provider || 'Unknown',
           embedding_model: selectedModel.id || selectedModel.name,
+          column_config: columnConfig,
         });
       }
 
@@ -341,27 +342,27 @@ export function useKnowledgeBaseForm({
       // Fire-and-forget: kick off ingestion without blocking the modal
       if (files.length > 0) {
         const formData = new FormData();
-        files.forEach((file) => {
-          formData.append("files", file);
+        files.forEach(file => {
+          formData.append('files', file);
         });
-        formData.append("source_name", sourceName);
-        formData.append("chunk_size", chunkSize.toString());
-        formData.append("chunk_overlap", chunkOverlap.toString());
-        formData.append("separator", separator);
-        formData.append("column_config", JSON.stringify(columnConfig));
+        formData.append('source_name', sourceName);
+        formData.append('chunk_size', chunkSize.toString());
+        formData.append('chunk_overlap', chunkOverlap.toString());
+        formData.append('separator', separator);
+        formData.append('column_config', JSON.stringify(columnConfig));
 
         // Don't await — fire and forget. Polling will track status.
         api
-          .post(`${getURL("KNOWLEDGE_BASES")}/${kbName}/ingest`, formData, {
-            headers: { "Content-Type": "multipart/form-data" },
+          .post(`${getURL('KNOWLEDGE_BASES')}/${kbName}/ingest`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
           })
           .catch((ingestError: unknown) => {
             const err = ingestError as AxiosError<{ detail?: string }>;
-            console.warn("Failed to ingest files:", err);
+            console.warn('Failed to ingest files:', err);
             setErrorData({
               title: `Failed to start ingestion for "${sourceName}"`,
               list: [
-                err?.response?.data?.detail || err?.message || "Unknown error",
+                err?.response?.data?.detail || err?.message || 'Unknown error',
               ],
             });
           });
@@ -395,7 +396,7 @@ export function useKnowledgeBaseForm({
       const errorMessage =
         err?.response?.data?.detail ||
         err?.message ||
-        "Failed to create knowledge base";
+        'Failed to create knowledge base';
       setErrorData({ title: errorMessage });
     } finally {
       setIsSubmitting(false);
@@ -405,23 +406,23 @@ export function useKnowledgeBaseForm({
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = e.target.files;
     if (selectedFiles && selectedFiles.length > 0) {
-      setFiles((prev) => [...prev, ...Array.from(selectedFiles)]);
+      setFiles(prev => [...prev, ...Array.from(selectedFiles)]);
       setIsFilePanelOpen(true);
     }
-    e.target.value = "";
+    e.target.value = '';
   };
 
   const handleFolderSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = e.target.files;
     if (selectedFiles && selectedFiles.length > 0) {
-      setFiles((prev) => [...prev, ...Array.from(selectedFiles)]);
+      setFiles(prev => [...prev, ...Array.from(selectedFiles)]);
       setIsFilePanelOpen(true);
     }
-    e.target.value = "";
+    e.target.value = '';
   };
 
   const handleRemoveFile = (index: number) => {
-    setFiles((prev) => prev.filter((_, i) => i !== index));
+    setFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleNext = () => {
