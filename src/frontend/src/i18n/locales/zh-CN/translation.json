@@ -307,5 +307,43 @@
         "settingsDesc": "管理 Langflow 的全局设置",
         "admin": "管理员",
         "adminDesc": "在此管理所有应用用户"
+    },
+    "category": {
+        "saved": "已保存",
+        "input_output": "输入 & 输出",
+        "data_sources": "数据源",
+        "models_and_agents": "模型 & 智能体",
+        "llm_operations": "LLM 操作",
+        "files": "文件",
+        "files_and_knowledge": "文件 & 知识库",
+        "processing": "处理",
+        "flow_control": "流程控制",
+        "utilities": "实用工具",
+        "prototypes": "原型",
+        "tools": "工具",
+        "agents": "智能体",
+        "data": "数据",
+        "logic": "逻辑",
+        "helpers": "助手",
+        "models": "模型",
+        "vector_stores": "向量存储",
+        "inputs": "输入",
+        "outputs": "输出",
+        "prompts": "提示词",
+        "chains": "链",
+        "loaders": "加载器",
+        "link_extractors": "链接提取器",
+        "output_parsers": "输出解析器",
+        "retrievers": "检索器",
+        "text_splitters": "文本分割器",
+        "toolkits": "工具包"
+    },
+    "node": {
+        "setupProvider": "配置提供商",
+        "selectModel": "选择模型",
+        "loadingModels": "加载模型中",
+        "noModelsEnabled": "未启用任何模型",
+        "manageModelProviders": "管理模型提供商",
+        "logs": "日志"
     }
 }

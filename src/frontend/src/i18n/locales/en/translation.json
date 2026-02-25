@@ -317,5 +317,43 @@
         "settingsDesc": "Manage the general settings for Langflow",
         "admin": "Admin",
         "adminDesc": "Manage all users of the app here"
+    },
+    "category": {
+        "saved": "Saved",
+        "input_output": "Input & Output",
+        "data_sources": "Data Sources",
+        "models_and_agents": "Models & Agents",
+        "llm_operations": "LLM Operations",
+        "files": "Files",
+        "files_and_knowledge": "Files & Knowledge",
+        "processing": "Processing",
+        "flow_control": "Flow Control",
+        "utilities": "Utilities",
+        "prototypes": "Prototypes",
+        "tools": "Tools",
+        "agents": "Agents",
+        "data": "Data",
+        "logic": "Logic",
+        "helpers": "Helpers",
+        "models": "Models",
+        "vector_stores": "Vector Stores",
+        "inputs": "Inputs",
+        "outputs": "Outputs",
+        "prompts": "Prompts",
+        "chains": "Chains",
+        "loaders": "Loaders",
+        "link_extractors": "Link Extractors",
+        "output_parsers": "Output Parsers",
+        "retrievers": "Retrievers",
+        "text_splitters": "Text Splitters",
+        "toolkits": "Toolkits"
+    },
+    "node": {
+        "setupProvider": "Setup Provider",
+        "selectModel": "Select a model",
+        "loadingModels": "Loading models",
+        "noModelsEnabled": "No Models Enabled",
+        "manageModelProviders": "Manage Model Providers",
+        "logs": "Logs"
     }
 }

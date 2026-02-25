@@ -3,6 +3,7 @@ import dynamicIconImports from "lucide-react/dynamicIconImports";
 import { lazy } from "react";
 import { FaApple, FaDiscord, FaGithub } from "react-icons/fa";
 import { ENABLE_KNOWLEDGE_BASES } from "@/customization/feature-flags";
+import i18n from "@/i18n";
 import { BotMessageSquareIcon } from "@/icons/BotMessageSquare";
 import { fontAwesomeIcons, isFontAwesomeIcon } from "@/icons/fontAwesomeIcons";
 import { GradientSave } from "@/icons/GradientSparkles";
@@ -208,45 +209,47 @@ export const FILE_ICONS = {
 };
 
 export const SIDEBAR_CATEGORIES = [
-  { display_name: "Saved", name: "saved_components", icon: "GradientSave" },
-  { display_name: "Input & Output", name: "input_output", icon: "Cable" },
-  { display_name: "Data Sources", name: "data_source", icon: "Database" },
-  { display_name: "Models & Agents", name: "models_and_agents", icon: "Bot" },
+  { display_name: i18n.t("category.saved", "已保存"), name: "saved_components", icon: "GradientSave" },
+  { display_name: i18n.t("category.input_output", "输入 & 输出"), name: "input_output", icon: "Cable" },
+  { display_name: i18n.t("category.data_sources", "数据源"), name: "data_source", icon: "Database" },
+  { display_name: i18n.t("category.models_and_agents", "模型 & 智能体"), name: "models_and_agents", icon: "Bot" },
   {
-    display_name: "LLM Operations",
+    display_name: i18n.t("category.llm_operations", "LLM 操作"),
     name: "llm_operations",
     icon: "BrainCircuit",
   },
   {
-    display_name: ENABLE_KNOWLEDGE_BASES ? "Files & Knowledge" : "Files",
+    display_name: ENABLE_KNOWLEDGE_BASES
+      ? i18n.t("category.files_and_knowledge", "文件 & 知识库")
+      : i18n.t("category.files", "文件"),
     name: "files_and_knowledge",
     icon: "Layers",
   },
-  { display_name: "Processing", name: "processing", icon: "ListFilter" },
+  { display_name: i18n.t("category.processing", "处理"), name: "processing", icon: "ListFilter" },
   {
-    display_name: "Flow Control",
+    display_name: i18n.t("category.flow_control", "流程控制"),
     name: "flow_controls",
     icon: "ArrowRightLeft",
   },
-  { display_name: "Utilities", name: "utilities", icon: "Wand2" },
-  { display_name: "Prototypes", name: "prototypes", icon: "FlaskConical" },
-  { display_name: "Tools", name: "tools", icon: "Hammer" },
-  { display_name: "Agents", name: "agents", icon: "Bot" },
-  { display_name: "Data", name: "data", icon: "Database" },
-  { display_name: "Logic", name: "logic", icon: "ArrowRightLeft" },
-  { display_name: "Helpers", name: "helpers", icon: "Wand2" },
-  { display_name: "Models", name: "models", icon: "BrainCog" },
-  { display_name: "Vector Stores", name: "vectorstores", icon: "Layers" },
-  { display_name: "Inputs", name: "inputs", icon: "Download" },
-  { display_name: "Outputs", name: "outputs", icon: "Upload" },
-  { display_name: "Prompts", name: "prompts", icon: "braces" },
-  { display_name: "Chains", name: "chains", icon: "Link" },
-  { display_name: "Loaders", name: "documentloaders", icon: "Paperclip" },
-  { display_name: "Link Extractors", name: "link_extractors", icon: "Link2" },
-  { display_name: "Output Parsers", name: "output_parsers", icon: "Compass" },
-  { display_name: "Retrievers", name: "retrievers", icon: "FileSearch" },
-  { display_name: "Text Splitters", name: "textsplitters", icon: "Scissors" },
-  { display_name: "Toolkits", name: "toolkits", icon: "Package2" },
+  { display_name: i18n.t("category.utilities", "实用工具"), name: "utilities", icon: "Wand2" },
+  { display_name: i18n.t("category.prototypes", "原型"), name: "prototypes", icon: "FlaskConical" },
+  { display_name: i18n.t("category.tools", "工具"), name: "tools", icon: "Hammer" },
+  { display_name: i18n.t("category.agents", "智能体"), name: "agents", icon: "Bot" },
+  { display_name: i18n.t("category.data", "数据"), name: "data", icon: "Database" },
+  { display_name: i18n.t("category.logic", "逻辑"), name: "logic", icon: "ArrowRightLeft" },
+  { display_name: i18n.t("category.helpers", "助手"), name: "helpers", icon: "Wand2" },
+  { display_name: i18n.t("category.models", "模型"), name: "models", icon: "BrainCog" },
+  { display_name: i18n.t("category.vector_stores", "向量存储"), name: "vectorstores", icon: "Layers" },
+  { display_name: i18n.t("category.inputs", "输入"), name: "inputs", icon: "Download" },
+  { display_name: i18n.t("category.outputs", "输出"), name: "outputs", icon: "Upload" },
+  { display_name: i18n.t("category.prompts", "提示词"), name: "prompts", icon: "braces" },
+  { display_name: i18n.t("category.chains", "链"), name: "chains", icon: "Link" },
+  { display_name: i18n.t("category.loaders", "加载器"), name: "documentloaders", icon: "Paperclip" },
+  { display_name: i18n.t("category.link_extractors", "链接提取器"), name: "link_extractors", icon: "Link2" },
+  { display_name: i18n.t("category.output_parsers", "输出解析器"), name: "output_parsers", icon: "Compass" },
+  { display_name: i18n.t("category.retrievers", "检索器"), name: "retrievers", icon: "FileSearch" },
+  { display_name: i18n.t("category.text_splitters", "文本分割器"), name: "textsplitters", icon: "Scissors" },
+  { display_name: i18n.t("category.toolkits", "工具包"), name: "toolkits", icon: "Package2" },
 ];
 
 export const SIDEBAR_BUNDLES = [

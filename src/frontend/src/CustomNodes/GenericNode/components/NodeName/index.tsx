@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Input } from "@/components/ui/input";
+import { translateNodeField } from "@/i18n/nodeTranslations";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { cn } from "@/utils/utils";
@@ -101,7 +102,7 @@ export default function NodeName({
             className={cn("cursor-grab truncate text-base")}
             data-testid="node-name"
           >
-            {display_name}
+            {translateNodeField(display_name ?? "")}
           </span>
           {legacy && (
             <div className="shrink-0">

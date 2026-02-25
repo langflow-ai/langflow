@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
@@ -59,6 +60,7 @@ export default function ModelInputComponent({
   inspectionPanel,
 }: BaseInputProps<any> & ModelInputComponentType): JSX.Element | null {
   const { setErrorData } = useAlertStore();
+  const { t } = useTranslation();
   const refButton = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   const [refreshOptions, setRefreshOptions] = useState(false);
@@ -254,7 +256,7 @@ export default function ModelInputComponent({
       size="xs"
       disabled
     >
-      <LoadingTextComponent text="Loading models" />
+      <LoadingTextComponent text={t("node.loadingModels", "加载模型中")} />
     </Button>
   );
 
@@ -282,7 +284,7 @@ export default function ModelInputComponent({
         onClick={() => setOpenManageProvidersDialog(true)}
       >
         <ForwardedIconComponent name="Brain" className="h-4 w-4" />
-        <div className="text-[13px]">{placeholder || "Setup Provider"}</div>
+        <div className="text-[13px]">{placeholder || t("node.setupProvider", "配置提供商")}</div>
       </Button>
     ) : (
       <div className="flex w-full flex-col">
@@ -315,7 +317,7 @@ export default function ModelInputComponent({
                       !selectedModel?.name && "text-muted-foreground",
                     )}
                   >
-                    {selectedModel?.name || "Select a model"}
+                    {selectedModel?.name || t("node.selectModel", "选择模型")}
                   </div>
                 )}
               </span>
@@ -405,7 +407,7 @@ export default function ModelInputComponent({
   const renderManageProvidersButton = () => (
     <div className="bottom-0 bg-background">
       {renderFooterButton(
-        "Manage Model Providers",
+        t("node.manageModelProviders", "管理模型提供商"),
         "Settings",
         () => setOpenManageProvidersDialog(true),
         "manage-model-providers",
@@ -419,7 +421,7 @@ export default function ModelInputComponent({
         disabled
         className="w-full px-4 py-2 text-[13px] text-muted-foreground"
       >
-        No Models Enabled
+        {t("node.noModelsEnabled", "未启用任何模型")}
       </CommandItem>
     </CommandList>
   );
