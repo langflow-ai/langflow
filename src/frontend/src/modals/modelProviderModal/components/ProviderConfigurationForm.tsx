@@ -61,7 +61,7 @@ const getPlaceholder = (variableName: string, provider: string) => {
   }
 
   if (name.includes("api key") || name.includes("apikey") || name.includes("token")) {
-    if (providerLower.includes("anthropic")) return "sk-ant-api03-...";
+    if (providerLower.includes("anthropic")) return "sk-ant-...";
     if (providerLower.includes("google")) return "AIza...";
     if (providerLower.includes("watson")) return "a1b2c3d4...";
     return "sk-...";
@@ -243,11 +243,11 @@ const ProviderConfigurationForm = ({
                       !isEditing &&
                       !hasNewValue
                         ? getMaskedKeyPreview(selectedProvider.provider)
-                        : hasNewValue
+                        : (variable.variable_key in variableValues)
                           ? variableValues[variable.variable_key]
                           : isConfigured && !variable.is_secret
                             ? (getConfiguredValue(variable.variable_key) ?? "")
-                            : variableValues[variable.variable_key] || ""
+                            : ""
                     }
                     type={
                       variable.is_secret && (isEditing || hasNewValue)
