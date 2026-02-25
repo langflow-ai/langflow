@@ -5,6 +5,8 @@ import { getURL } from "@/controllers/API/helpers/constants";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { useUtilityStore } from "@/stores/utilityStore";
+import { useTypesStore } from "@/stores/typesStore";
 import type {
   APIClassType,
   APITemplateType,
@@ -202,6 +204,30 @@ async function refreshSingleNode(
   const modelFieldKey = findModelFieldKey(nodeData.template);
   if (!modelFieldKey) return;
 
+  // Skip refresh for outdated components when custom components are not allowed
+  // (the old code would be rejected by the backend with 403)
+  const allowCustomComponents =
+    useUtilityStore.getState().allowCustomComponents;
+  if (!allowCustomComponents) {
+    // Check componentsToUpdate (fast path)
+    const componentsToUpdate = useFlowStore.getState().componentsToUpdate;
+    const isOutdated = componentsToUpdate.some(
+      (c) => c.id === node.id && c.outdated && !c.userEdited,
+    );
+    if (isOutdated) return;
+
+    // Also check code directly against templates (covers race where
+    // componentsToUpdate hasn't been populated yet due to templates loading)
+    const nodeType = node.data?.type;
+    if (nodeType) {
+      const templates = useTypesStore.getState().templates;
+      const serverCode = templates[nodeType]?.template?.code?.value;
+      if (serverCode && serverCode !== nodeData.template.code?.value) {
+        return;
+      }
+    }
+  }
+
   const currentModelValue = nodeData.template[modelFieldKey]?.value;
 
   try {
@@ -211,16 +237,26 @@ async function refreshSingleNode(
       folderId,
     );
 
-    const response = await api.post<APIClassType>(
-      getURL("CUSTOM_COMPONENT", { update: "update" }),
-      {
-        code: nodeData.template.code?.value,
-        template: requestPayload,
-        field: modelFieldKey,
-        field_value: currentModelValue,
-        tool_mode: nodeData.tool_mode,
-      },
-    );
+    let response;
+    try {
+      response = await api.post<APIClassType>(
+        getURL("CUSTOM_COMPONENT", { update: "update" }),
+        {
+          code: nodeData.template.code?.value,
+          template: requestPayload,
+          field: modelFieldKey,
+          field_value: currentModelValue,
+          tool_mode: nodeData.tool_mode,
+        },
+      );
+    } catch (e: any) {
+      // Suppress 403 from outdated component code — fallback for race
+      // conditions where guards above couldn't detect the outdated state.
+      if (!allowCustomComponents && e?.response?.status === 403) {
+        return;
+      }
+      throw e;
+    }
 
     const responseData = response.data;
     if (!responseData?.template) return;

@@ -62,6 +62,42 @@ import { useTweaksStore } from "./tweaksStore";
 import { useTypesStore } from "./typesStore";
 import { useUtilityStore } from "./utilityStore";
 
+// Tracks in-progress node update operations (e.g. validateComponentCode calls).
+// buildFlow awaits these so "Run" doesn't race against a pending "Update".
+const pendingNodeUpdates = new Map<
+  string,
+  { promise: Promise<void>; resolve: () => void }
+>();
+
+export function registerNodeUpdate(nodeId: string): void {
+  // If there's already a pending update for this node, leave it
+  if (pendingNodeUpdates.has(nodeId)) return;
+  let resolveRef: () => void;
+  const promise = new Promise<void>((r) => {
+    resolveRef = r;
+  });
+  pendingNodeUpdates.set(nodeId, { promise, resolve: resolveRef! });
+}
+
+export function completeNodeUpdate(nodeId: string): void {
+  const entry = pendingNodeUpdates.get(nodeId);
+  if (entry) {
+    entry.resolve();
+    pendingNodeUpdates.delete(nodeId);
+  }
+}
+
+export async function waitForNodeUpdates(
+  timeoutMs: number = 10_000,
+): Promise<void> {
+  if (pendingNodeUpdates.size === 0) return;
+  const promises = Array.from(pendingNodeUpdates.values()).map((e) => e.promise);
+  await Promise.race([
+    Promise.all(promises),
+    new Promise<void>((resolve) => setTimeout(resolve, timeoutMs)),
+  ]);
+}
+
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
 const useFlowStore = create<FlowStoreType>((set, get) => ({
   playgroundPage: false,
@@ -87,6 +123,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     }
   },
   autoSaveFlow: undefined,
+  saveFlow: undefined,
   componentsToUpdate: [],
   setComponentsToUpdate: (change) => {
     const newChange =
@@ -761,7 +798,25 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       throw new Error("Invalid components");
     }
 
+    // Wait for any in-progress component updates (e.g. user clicked "Update"
+    // then immediately clicked "Run") before checking outdated state.
+    await waitForNodeUpdates();
+
+    // Flush the flow to the DB so the backend sees updated node code.
+    // autoSaveFlow is debounced, so a recent setNode may not have saved yet.
+    if (get().saveFlow) {
+      try {
+        await get().saveFlow!();
+      } catch {
+        // Save failure shouldn't block the build — the backend will
+        // validate the DB data and report its own error if needed.
+      }
+    }
+
     // Block build when custom components are disabled and there are outdated components
+    // Recalculate from current nodes to avoid stale componentsToUpdate
+    // (setNode does not trigger updateComponentsToUpdate, only setNodes does)
+    get().updateComponentsToUpdate(get().nodes);
     const allowCustomComponents =
       useUtilityStore.getState().allowCustomComponents;
     if (!allowCustomComponents && get().componentsToUpdate.length > 0) {

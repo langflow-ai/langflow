@@ -9,6 +9,9 @@ import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { useUtilityStore } from "@/stores/utilityStore";
+import { useTypesStore } from "@/stores/typesStore";
+
 interface IPostTemplateValue {
   value: any;
   tool_mode?: boolean;
@@ -47,6 +50,31 @@ export const usePostTemplateValue: useMutationFunctionType<
     const template = node.template;
 
     if (!template) return;
+
+    const allowCustomComponents =
+      useUtilityStore.getState().allowCustomComponents;
+
+    if (!allowCustomComponents) {
+      // Check componentsToUpdate first (fast path)
+      const componentsToUpdate = useFlowStore.getState().componentsToUpdate;
+      const isOutdated = componentsToUpdate.some(
+        (c) => c.id === nodeId && c.outdated && !c.userEdited,
+      );
+      if (isOutdated) return undefined;
+
+      // Also check code directly against templates (covers race where
+      // componentsToUpdate hasn't been populated yet due to templates loading)
+      const nodeType =
+        useFlowStore.getState().getNode(nodeId)?.data?.type;
+      if (nodeType) {
+        const templates = useTypesStore.getState().templates;
+        const serverCode = templates[nodeType]?.template?.code?.value;
+        if (serverCode && serverCode !== template.code?.value) {
+          return undefined;
+        }
+      }
+    }
+
     const preparedTemplate = {
       ...template,
       ...(flowId ? { _frontend_node_flow_id: { value: flowId } } : {}),
@@ -54,16 +82,29 @@ export const usePostTemplateValue: useMutationFunctionType<
       is_refresh: payload.is_refresh,
     };
     const lastUpdated = new Date().toISOString();
-    const response = await api.post<APIClassType>(
-      getURL("CUSTOM_COMPONENT", { update: "update" }),
-      {
-        code: template.code.value,
-        template: preparedTemplate,
-        field: parameterId,
-        field_value: payload.value,
-        tool_mode: payload.tool_mode,
-      },
-    );
+
+    let response;
+    try {
+      response = await api.post<APIClassType>(
+        getURL("CUSTOM_COMPONENT", { update: "update" }),
+        {
+          code: template.code.value,
+          template: preparedTemplate,
+          field: parameterId,
+          field_value: payload.value,
+          tool_mode: payload.tool_mode,
+        },
+      );
+    } catch (e: any) {
+      // Suppress 403 from outdated component code when custom components
+      // are disabled — this is a fallback for race conditions where the
+      // guards above couldn't detect the outdated state in time.
+      if (!allowCustomComponents && e?.response?.status === 403) {
+        return undefined;
+      }
+      throw e;
+    }
+
     const newTemplate = response.data;
     newTemplate.last_updated = lastUpdated;
     const newNode = getNode(nodeId)?.data?.node as APIClassType | undefined;

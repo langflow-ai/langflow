@@ -14,7 +14,10 @@ import { ICON_STROKE_WIDTH } from "../../constants/constants";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 import { useChangeOnUnfocus } from "../../shared/hooks/use-change-on-unfocus";
 import useAlertStore from "../../stores/alertStore";
-import useFlowStore from "../../stores/flowStore";
+import useFlowStore, {
+  registerNodeUpdate,
+  completeNodeUpdate,
+} from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useUtilityStore } from "../../stores/utilityStore";
 import { useShortcutsStore } from "../../stores/shortcuts";
@@ -180,6 +183,7 @@ function GenericNode({
 
       const currentCode = thisNodeTemplate.code.value;
       if (data.node) {
+        registerNodeUpdate(data.id);
         validateComponentCode(
           { code: currentCode, frontend_node: data.node },
           {
@@ -194,6 +198,7 @@ function GenericNode({
                 removeDismissedNodes([data.id]);
                 setLoadingUpdate(false);
               }
+              completeNodeUpdate(data.id);
             },
             onError: (error) => {
               setErrorData({
@@ -205,6 +210,7 @@ function GenericNode({
               });
               console.error(error);
               setLoadingUpdate(false);
+              completeNodeUpdate(data.id);
             },
           },
         );
@@ -494,10 +500,14 @@ function GenericNode({
     () => handleUpdateCode(true),
     [handleUpdateCode],
   );
-  const memoizedSetDismissAll = useCallback(
-    () => addDismissedNodes([data.id]),
-    [addDismissedNodes, data.id],
-  );
+  const memoizedSetDismissAll = useCallback(() => {
+    addDismissedNodes([data.id]);
+    setNode(data.id, (old) => {
+      const newNode = cloneDeep(old);
+      (newNode.data as NodeDataType).node!.edited = true;
+      return newNode;
+    });
+  }, [addDismissedNodes, data.id, setNode]);
 
   const memoizedSetDismissAllLegacy = useCallback(
     () => addDismissedNodesLegacy([data.id]),
@@ -530,7 +540,7 @@ function GenericNode({
             handleUpdateCode={() => handleUpdateCode()}
             loadingUpdate={loadingUpdate}
             setDismissAll={memoizedSetDismissAll}
-            canDismiss={allowCustomComponents}
+            dismissed={dismissAll}
             isRequired={!allowCustomComponents}
           />
         ) : shouldShowLegacyComponent ? (

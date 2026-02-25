@@ -97,7 +97,12 @@ jest.mock("@/utils/utils", () => ({
 // The store should handle missing utilities gracefully
 
 import type { AllNodeType, EdgeType } from "@/types/flow";
-import useFlowStore from "../flowStore";
+import { checkCodeValidity } from "@/CustomNodes/helpers/check-code-validity";
+import useFlowStore, {
+  registerNodeUpdate,
+  completeNodeUpdate,
+  waitForNodeUpdates,
+} from "../flowStore";
 
 describe("useFlowStore", () => {
   // Mock data
@@ -554,6 +559,171 @@ describe("useFlowStore", () => {
       expect(result.current.inputs).toHaveLength(1);
       expect(result.current.outputs).toHaveLength(1);
       expect(result.current.hasIO).toBe(true);
+    });
+  });
+
+  describe("componentsToUpdate staleness — setNode vs updateComponentsToUpdate", () => {
+    const outdatedEntry = {
+      id: "node-1",
+      icon: "icon-1",
+      display_name: "Outdated Component",
+      outdated: true,
+      breakingChange: false,
+      userEdited: false,
+    };
+
+    const updatedNode: AllNodeType = {
+      id: "node-1",
+      type: "genericNode",
+      position: { x: 0, y: 0 },
+      data: {
+        node: {
+          display_name: "Updated Component",
+          template: { code: { value: "new_code" } },
+        },
+      },
+    } as AllNodeType;
+
+    it("setNode should NOT clear stale componentsToUpdate entries", () => {
+      const { result } = renderHook(() => useFlowStore());
+
+      act(() => {
+        // Seed with a node and a stale componentsToUpdate entry
+        useFlowStore.setState({
+          nodes: [updatedNode],
+          componentsToUpdate: [outdatedEntry],
+        });
+      });
+
+      // Update the node via setNode (singular) — simulates useUpdateNodeCode path
+      act(() => {
+        result.current.setNode("node-1", (old) => ({
+          ...old,
+          data: { ...old.data, node: { ...old.data.node, template: { code: { value: "new_code" } } } },
+        }));
+      });
+
+      // componentsToUpdate is still stale — setNode does not recalculate it
+      expect(result.current.componentsToUpdate).toEqual([outdatedEntry]);
+    });
+
+    it("updateComponentsToUpdate should clear entries when nodes are no longer outdated", () => {
+      const { result } = renderHook(() => useFlowStore());
+      const mockedCheckCodeValidity = checkCodeValidity as jest.Mock;
+
+      act(() => {
+        useFlowStore.setState({
+          nodes: [updatedNode],
+          componentsToUpdate: [outdatedEntry],
+        });
+      });
+
+      // checkCodeValidity returns not-outdated for the updated node
+      mockedCheckCodeValidity.mockReturnValue({
+        outdated: false,
+        breakingChange: false,
+        userEdited: false,
+      });
+
+      act(() => {
+        result.current.updateComponentsToUpdate(result.current.nodes);
+      });
+
+      expect(result.current.componentsToUpdate).toEqual([]);
+    });
+
+    it("updateComponentsToUpdate should re-populate entries when nodes are still outdated", () => {
+      const { result } = renderHook(() => useFlowStore());
+      const mockedCheckCodeValidity = checkCodeValidity as jest.Mock;
+
+      act(() => {
+        useFlowStore.setState({
+          nodes: [updatedNode],
+          componentsToUpdate: [],
+        });
+      });
+
+      // checkCodeValidity returns outdated
+      mockedCheckCodeValidity.mockReturnValue({
+        outdated: true,
+        breakingChange: false,
+        userEdited: false,
+      });
+
+      act(() => {
+        result.current.updateComponentsToUpdate(result.current.nodes);
+      });
+
+      expect(result.current.componentsToUpdate).toHaveLength(1);
+      expect(result.current.componentsToUpdate[0].id).toBe("node-1");
+      expect(result.current.componentsToUpdate[0].outdated).toBe(true);
+    });
+  });
+
+  describe("pending node update tracking — registerNodeUpdate / completeNodeUpdate / waitForNodeUpdates", () => {
+    it("waitForNodeUpdates resolves immediately when no updates are pending", async () => {
+      await expect(waitForNodeUpdates()).resolves.toBeUndefined();
+    });
+
+    it("waitForNodeUpdates waits until completeNodeUpdate is called", async () => {
+      registerNodeUpdate("n1");
+
+      let resolved = false;
+      const p = waitForNodeUpdates().then(() => {
+        resolved = true;
+      });
+
+      // Should still be waiting
+      await Promise.resolve(); // flush microtasks
+      expect(resolved).toBe(false);
+
+      completeNodeUpdate("n1");
+      await p;
+      expect(resolved).toBe(true);
+    });
+
+    it("waitForNodeUpdates waits for multiple pending updates", async () => {
+      registerNodeUpdate("a");
+      registerNodeUpdate("b");
+
+      let resolved = false;
+      const p = waitForNodeUpdates().then(() => {
+        resolved = true;
+      });
+
+      completeNodeUpdate("a");
+      await Promise.resolve();
+      expect(resolved).toBe(false);
+
+      completeNodeUpdate("b");
+      await p;
+      expect(resolved).toBe(true);
+    });
+
+    it("waitForNodeUpdates times out if updates never complete", async () => {
+      registerNodeUpdate("stuck");
+
+      const start = Date.now();
+      await waitForNodeUpdates(200); // short timeout for test
+      const elapsed = Date.now() - start;
+
+      expect(elapsed).toBeGreaterThanOrEqual(150);
+      // Clean up
+      completeNodeUpdate("stuck");
+    });
+
+    it("duplicate registerNodeUpdate for same ID is a no-op", async () => {
+      registerNodeUpdate("x");
+      registerNodeUpdate("x"); // should not replace the first
+
+      let resolved = false;
+      const p = waitForNodeUpdates().then(() => {
+        resolved = true;
+      });
+
+      completeNodeUpdate("x");
+      await p;
+      expect(resolved).toBe(true);
     });
   });
 });
