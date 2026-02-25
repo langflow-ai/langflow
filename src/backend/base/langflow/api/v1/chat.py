@@ -96,15 +96,21 @@ async def retrieve_vertices_order(
     components_count = None
     run_id = str(uuid.uuid4())
     try:
+        allow_custom = settings_service.settings.allow_custom_components
+        types_dict = component_cache.all_types_dict
         if data:
             check_flow_and_raise(
                 data.model_dump(),
-                allow_custom_components=settings_service.settings.allow_custom_components,
-                all_types_dict=component_cache.all_types_dict,
+                allow_custom_components=allow_custom,
+                all_types_dict=types_dict,
             )
 
         # First, we need to check if the flow_id is in the cache
         if not data:
+            # Validate the DB flow before building (don't execute unvalidated code)
+            flow = await session.get(Flow, flow_id)
+            if flow and flow.data:
+                check_flow_and_raise(flow.data, allow_custom_components=allow_custom, all_types_dict=types_dict)
             graph = await build_graph_from_db(flow_id=flow_id, session=session, chat_service=chat_service)
         else:
             graph = await build_and_cache_graph_from_data(
@@ -328,7 +334,19 @@ async def build_vertex(
             # If there's no cache
             await logger.awarning(f"No cache found for {flow_id_str}. Building graph starting at {vertex_id}")
 
+            # Validate the DB flow before building (don't execute unvalidated code)
+            settings_service = get_settings_service()
             async with session_scope() as session:
+                flow = await session.get(Flow, flow_id)
+                if flow and flow.data:
+                    try:
+                        check_flow_and_raise(
+                            flow.data,
+                            allow_custom_components=settings_service.settings.allow_custom_components,
+                            all_types_dict=component_cache.all_types_dict,
+                        )
+                    except ValueError as exc:
+                        raise HTTPException(status_code=400, detail=str(exc)) from exc
                 graph = await build_graph_from_db(
                     flow_id=flow_id,
                     session=session,
@@ -649,12 +667,19 @@ async def build_public_tmp(
     try:
         settings_service = get_settings_service()
         allow_custom = settings_service.settings.allow_custom_components
+        types_dict = component_cache.all_types_dict
         if data:
             check_flow_and_raise(
                 data.model_dump(),
                 allow_custom_components=allow_custom,
-                all_types_dict=component_cache.all_types_dict,
+                all_types_dict=types_dict,
             )
+
+        # Also validate the stored flow data (don't execute unvalidated code from DB)
+        async with session_scope() as session:
+            flow = await session.get(Flow, flow_id)
+            if flow and flow.data:
+                check_flow_and_raise(flow.data, allow_custom_components=allow_custom, all_types_dict=types_dict)
 
         # Verify this is a public flow and get the associated user
         client_id = request.cookies.get("client_id")

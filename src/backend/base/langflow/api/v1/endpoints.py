@@ -1086,6 +1086,17 @@ async def custom_component_update(
         HTTPException: If an error occurs during component building or updating.
         SerializationError: If serialization of the updated component node fails.
     """
+    settings_service = get_settings_service()
+    if not settings_service.settings.allow_custom_components:
+        is_known_template = component_cache.all_types_dict and code_matches_any_template(
+            code_request.code, component_cache.all_types_dict
+        )
+        if not is_known_template:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Custom component creation is disabled by administrator",
+            )
+
     try:
         component = Component(_code=code_request.code)
         component_node, cc_instance = build_custom_component_template(
