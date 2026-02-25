@@ -169,7 +169,7 @@ formatter-cmds = ["ruff check --exit-zero --fix $file", "ruff format $file"]
 pytest-cmd = "pytest -p no:profiling -p no:sugar -p no:xdist -p no:cov -p no:split"
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatchling.build"]
 build-backend = "hatchling.build"
 
 

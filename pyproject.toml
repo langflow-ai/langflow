@@ -387,5 +387,5 @@ mypy_path = "langflow"
 ignore_missing_imports = true
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatchling.build"]
 build-backend = "hatchling.build"
