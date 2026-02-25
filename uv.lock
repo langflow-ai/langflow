@@ -5801,7 +5801,7 @@ dev = [
     { name = "locust", specifier = "~=2.40.5" },
     { name = "mcp-server-fetch", specifier = ">=2025.1.17" },
     { name = "mypy", specifier = ">=1.11.0" },
-    { name = "onnxruntime", specifier = "<=1.23" },
+    { name = "onnxruntime", specifier = ">=1.20,<=1.23" },
     { name = "packaging", specifier = ">=24.1,<25.0" },
     { name = "pandas-stubs", specifier = ">=2.1.4.231227" },
     { name = "pre-commit", specifier = ">=3.7.0" },
