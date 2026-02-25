@@ -141,10 +141,12 @@ class BaseFileComponent(Component, ABC):
         ),
         HandleInput(
             name="file_path",
-            display_name="Server File Path",
+            display_name="File Path",
             info=(
-                f"Data object with a '{SERVER_FILE_PATH_FIELDNAME}' property pointing to server file"
-                " or a Message object with a path to the file. Supercedes 'Path' but supports same file types."
+                f"Data object (or list of Data objects) with a '{SERVER_FILE_PATH_FIELDNAME}' property pointing to"
+                " a file or a Message object with a path to the file or list of paths to the file. The file can be"
+                " hosted on the server or on Langflow's file system."
+                " Supercedes 'Path' but supports same file types."
             ),
             required=False,
             input_types=["Data", "Message"],
@@ -169,8 +171,8 @@ class BaseFileComponent(Component, ABC):
             name="delete_server_file_after_processing",
             display_name="Delete Server File After Processing",
             advanced=True,
-            value=True,
-            info="If true, the Server File Path will be deleted after processing.",
+            value=False,
+            info="If true, the File Path will be deleted after processing, if it is hosted on the Server.",
         ),
         BoolInput(
             name="ignore_unsupported_extensions",
@@ -233,11 +235,19 @@ class BaseFileComponent(Component, ABC):
                 temp_dir.cleanup()
             # Delete files marked for deletion
             for file in final_files:
-                if file.delete_after_processing and file.path.exists():
-                    if file.path.is_dir():
-                        shutil.rmtree(file.path)
-                    else:
-                        file.path.unlink()
+                if file.delete_after_processing:
+                    path_str = str(file.path)
+
+                    # Only delete local files; skip files stored in the Langflow storage service
+                    parsed_storage = parse_storage_path(path_str)
+                    if parsed_storage:
+                        self.log(f"Skipping deletion of storage service file: {path_str}")
+                    elif file.path.exists():
+                        # Standard local file deletion
+                        if file.path.is_dir():
+                            shutil.rmtree(file.path)
+                        else:
+                            file.path.unlink()
 
     def load_files_core(self) -> list[Data]:
         """Load files and return as Data objects.
@@ -598,7 +608,9 @@ class BaseFileComponent(Component, ABC):
                     if isinstance(loaded, list):
                         for inner in loaded:
                             if isinstance(inner, str):
-                                process_string(inner, original_data)
+                                # Pass None so each path gets its own fresh Data object,
+                                # not a shared reference to original_data
+                                process_string(inner, None)
                             else:
                                 process_item(inner)
                         return
@@ -628,7 +640,15 @@ class BaseFileComponent(Component, ABC):
             return []
 
         # Use the helper to resolve paths from self.file_path (HandleInput)
-        return [data_obj for data_obj, _ in self._resolve_paths_from_value(self.file_path)]
+        results = []
+        for data_obj, path_str in self._resolve_paths_from_value(self.file_path):
+            if self.SERVER_FILE_PATH_FIELDNAME not in data_obj.data:
+                # Create a new Data to avoid mutating a shared reference
+                resolved_data_obj = Data(data={**data_obj.data, self.SERVER_FILE_PATH_FIELDNAME: path_str})
+            else:
+                resolved_data_obj = data_obj
+            results.append(resolved_data_obj)
+        return results
 
     def _validate_and_resolve_paths(self) -> list[BaseFile]:
         """Validate that all input paths exist and are valid, and create BaseFile instances.
@@ -678,26 +698,26 @@ class BaseFileComponent(Component, ABC):
         file_path = self._file_path_as_list()
 
         if self.path and not file_path:
-            # Use the helper to resolve paths from self.path
-            for data_obj, path_str in self._resolve_paths_from_value(self.path):
-                add_file(data=data_obj, path=path_str, delete_after_processing=False)
+            # Handle standard single/multiple local file paths
+            paths = self.path if isinstance(self.path, list) else [self.path]
+            for path in paths:
+                if isinstance(path, Data):
+                    path_str = getattr(path, "get_text", lambda: None)() or path.data.get("text")
+                    if path_str:
+                        add_file(data=path, path=path_str, delete_after_processing=False)
+                elif isinstance(path, str | Path):
+                    data_obj = Data(data={self.SERVER_FILE_PATH_FIELDNAME: str(path)})
+                    add_file(data=data_obj, path=path, delete_after_processing=False)
         elif file_path:
-            for obj in file_path:
-                server_file_path = obj.data.get(self.SERVER_FILE_PATH_FIELDNAME)
-                if server_file_path:
+            # Handle tool-mode/dynamic file paths (already resolved into Data objects)
+            for data_obj in file_path:
+                path_str = data_obj.data.get(self.SERVER_FILE_PATH_FIELDNAME)
+                if path_str:
                     add_file(
-                        data=obj,
-                        path=server_file_path,
+                        data=data_obj,
+                        path=path_str,
                         delete_after_processing=self.delete_server_file_after_processing,
                     )
-                elif not self.ignore_unspecified_files:
-                    msg = f"Data object missing '{self.SERVER_FILE_PATH_FIELDNAME}' property."
-                    self.log(msg)
-                    if not self.silent_errors:
-                        raise ValueError(msg)
-                else:
-                    msg = f"Ignoring Data object missing '{self.SERVER_FILE_PATH_FIELDNAME}' property:\n{obj}"
-                    self.log(msg)
 
         return resolved_files
 

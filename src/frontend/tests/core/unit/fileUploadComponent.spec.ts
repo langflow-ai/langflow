@@ -5,6 +5,10 @@ import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { generateRandomFilename } from "../../utils/generate-filename";
+import {
+  closeAdvancedOptions,
+  openAdvancedOptions,
+} from "../../utils/open-advanced-options";
 
 // Run tests in this file serially to avoid database conflicts with shared file state
 test.describe.configure({ mode: "serial" });
@@ -822,6 +826,15 @@ test(
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
+    
+    await openAdvancedOptions(page);
+
+    await openAdvancedOptions(page);
+    
+    await page.getByTestId("showfile_path").click();
+    
+    await closeAdvancedOptions(page);
+
     await adjustScreenView(page);
 
     // Upload Files
@@ -871,6 +884,8 @@ test(
       .trim();
     const folderId = cleanPath?.split("/").slice(-2)[0];
 
+    await page.getByTestId(`remove-file-button-${file1}`).click();
+
     // Add Text Input Component
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("Text Input");
@@ -893,7 +908,7 @@ test(
     await page
       .getByTestId("handle-textinput-shownode-output text-right")
       .click();
-    await page.getByTestId("handle-file-shownode-files-left").click();
+    await page.getByTestId("handle-file-shownode-file path-left").click();
 
     // Add Chat Output Component
     await page.getByTestId("sidebar-search-input").click();
