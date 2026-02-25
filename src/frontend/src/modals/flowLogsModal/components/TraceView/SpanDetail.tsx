@@ -2,56 +2,13 @@ import IconComponent from "@/components/common/genericIconComponent";
 import SimplifiedCodeTabComponent from "@/components/core/codeTabsComponent";
 import { Badge } from "@/components/ui/badge";
 import { getStatusIconProps } from "./statusHelpers";
-import type { Span, SpanType } from "./types";
-
-interface SpanDetailProps {
-  span: Span | null;
-}
-
-/**
- * Get display name for span type
- */
-function getSpanTypeLabel(type: SpanType): string {
-  const labelMap: Record<SpanType, string> = {
-    agent: "Agent",
-    chain: "Chain",
-    llm: "LLM",
-    tool: "Tool",
-    retriever: "Retriever",
-    embedding: "Embedding",
-    parser: "Parser",
-  };
-  return labelMap[type] || type;
-}
-
-/**
- * Format a cost value as currency
- */
-function formatCost(cost: number | undefined): string {
-  if (cost === undefined || cost === 0) return "$0.00";
-  if (cost < 0.01) return `$${cost.toFixed(6)}`;
-  return `$${cost.toFixed(4)}`;
-}
-
-/**
- * Format latency in human-readable format
- */
-function formatLatency(ms: number): string {
-  if (ms < 1000) return `${ms}ms`;
-  if (ms < 60000) return `${(ms / 1000).toFixed(2)}s`;
-  return `${(ms / 60000).toFixed(2)}m`;
-}
-
-/**
- * Format JSON data for display
- */
-function formatJsonData(data: Record<string, unknown>): string {
-  try {
-    return JSON.stringify(data, null, 2);
-  } catch {
-    return String(data);
-  }
-}
+import {
+  formatCost,
+  formatJsonData,
+  formatSpanDetailLatency,
+  getSpanTypeLabel,
+} from "./traceViewHelpers";
+import type { SpanDetailProps } from "./traceViewTypes";
 
 /**
  * Detail panel showing full information about a selected span
@@ -134,7 +91,7 @@ export function SpanDetail({ span }: SpanDetailProps) {
         <div className="mb-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
           <MetricCard
             label="Latency"
-            value={formatLatency(span.latencyMs)}
+            value={formatSpanDetailLatency(span.latencyMs)}
             icon="Clock"
           />
           {(hasTokenUsage || isLlmSpan) && (

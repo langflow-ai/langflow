@@ -178,10 +178,12 @@ async def _fetch_traces(
 
         total_count = int(total)
         total_pages = max(1, math.ceil(total_count / size)) if size else 1
-        return {"traces": trace_list, "total": total_count, "pages": total_pages}
+        result = {"traces": trace_list, "total": total_count, "pages": total_pages}
     except Exception:
         logger.exception("Error fetching traces")
         raise
+    else:
+        return result
 
 
 @router.get("", dependencies=[Depends(get_current_active_user)])

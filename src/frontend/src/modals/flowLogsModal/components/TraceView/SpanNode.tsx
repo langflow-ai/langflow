@@ -2,67 +2,13 @@ import IconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/utils/utils";
 import { getStatusIconProps } from "./statusHelpers";
-import type { Span, SpanType } from "./types";
-
-interface SpanNodeProps {
-  span: Span;
-  depth: number;
-  isExpanded: boolean;
-  isSelected: boolean;
-  onToggle: () => void;
-  onSelect: () => void;
-}
-
-/**
- * Get the icon name for each span type
- */
-function getSpanIcon(type: SpanType): string {
-  const iconMap: Record<SpanType, string> = {
-    agent: "Bot",
-    chain: "Link",
-    llm: "MessageSquare",
-    tool: "Wrench",
-    retriever: "Search",
-    embedding: "Hash",
-    parser: "FileText",
-  };
-  return iconMap[type] || "Circle";
-}
-
-/**
- * Get the badge variant based on status
- */
-function getStatusVariant(
-  status: Span["status"],
-): "successStatic" | "errorStatic" | "secondaryStatic" {
-  switch (status) {
-    case "success":
-      return "successStatic";
-    case "error":
-      return "errorStatic";
-    case "running":
-      return "secondaryStatic";
-    default:
-      return "secondaryStatic";
-  }
-}
-
-/**
- * Format latency in a human-readable way
- */
-function formatLatency(ms: number): string {
-  if (ms < 1000) return `${ms}ms`;
-  return `${(ms / 1000).toFixed(1)}s`;
-}
-
-/**
- * Format token count with abbreviation for large numbers
- */
-function formatTokens(tokens: number | undefined): string | null {
-  if (!tokens) return null;
-  if (tokens < 1000) return `${tokens}`;
-  return `${(tokens / 1000).toFixed(1)}k`;
-}
+import {
+  formatSpanNodeLatency,
+  formatTokens,
+  getSpanIcon,
+  getStatusVariant,
+} from "./traceViewHelpers";
+import type { SpanNodeProps } from "./traceViewTypes";
 
 /**
  * Single span row in the trace tree
@@ -146,7 +92,7 @@ export function SpanNode({
 
       {/* Latency */}
       <span className="min-w-[48px] text-right text-xs text-muted-foreground">
-        {formatLatency(span.latencyMs)}
+        {formatSpanNodeLatency(span.latencyMs)}
       </span>
 
       {/* Status badge */}
