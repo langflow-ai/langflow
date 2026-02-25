@@ -164,7 +164,7 @@ export function FlowPageSlidingContainerContent({
       onDrop={onDrop}
     >
       <div className="flex-1 flex overflow-hidden">
-        <AnimatedConditional isOpen={sidebarOpen} width="218px">
+        <AnimatedConditional isOpen={sidebarOpen} width="236px">
           <div className="h-full overflow-y-auto border-r border-border w-218">
             <div className="p-4">
               <ChatSidebar
