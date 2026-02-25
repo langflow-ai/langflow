@@ -174,13 +174,12 @@ export default function FlowLogsModal({
                 rowData={rows}
                 headerHeight={rows.length === 0 ? 0 : undefined}
                 onCellClicked={handleCellClicked}
-              ></TableComponent>
+              />
               {!isLoading && (data?.pagination.total ?? 0) >= 10 && (
                 <div className="flex justify-end px-3 py-4">
                   <PaginatorComponent
                     pageIndex={data?.pagination.page ?? 1}
                     pageSize={data?.pagination.size ?? 10}
-                    rowsCount={[12, 24, 48, 96]}
                     totalRowsCount={data?.pagination.total ?? 0}
                     paginate={handlePageChange}
                     pages={data?.pagination.pages}

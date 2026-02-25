@@ -96,7 +96,7 @@ const SidebarSegmentedNav = () => {
                       return;
                     }
 
-                    if (item.id === "logs" || item.id === "traces") {
+                    if (item.id === "traces") {
                       e.preventDefault();
                       e.stopPropagation();
                       if (!id) return;
