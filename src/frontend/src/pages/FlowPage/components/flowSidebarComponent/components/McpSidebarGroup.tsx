@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,6 +36,7 @@ type McpSidebarGroupProps = {
 
 const McpEmptyState = ({ isLoading }: { isLoading?: boolean }) => {
   const [addMcpOpen, setAddMcpOpen] = useState(false);
+  const { t } = useTranslation();
 
   const handleAddMcpServerClick = () => {
     setAddMcpOpen(true);
@@ -43,7 +45,7 @@ const McpEmptyState = ({ isLoading }: { isLoading?: boolean }) => {
   return (
     <>
       <div className="flex flex-col h-full w-full items-center justify-center py-8 px-4 text-center min-h-[200px]">
-        <p className="text-muted-foreground mb-4">No MCP Servers Added</p>
+        <p className="text-muted-foreground mb-4">{t("sidebar.noMcpServers", "暂无 MCP 服务器")}</p>
         <Button
           variant="outline"
           size="sm"
@@ -51,7 +53,7 @@ const McpEmptyState = ({ isLoading }: { isLoading?: boolean }) => {
           onClick={handleAddMcpServerClick}
           data-testid="add-mcp-server-button-sidebar"
         >
-          <span>Add MCP Server</span>
+          <span>{t("sidebar.addMcpServer")}</span>
         </Button>
       </div>
       <AddMcpServerModal open={addMcpOpen} setOpen={setAddMcpOpen} />
@@ -73,6 +75,7 @@ const McpSidebarGroup = ({
   setShowConfig,
 }: McpSidebarGroupProps) => {
   // Use props instead of hook call
+  const { t } = useTranslation();
   const isLoading = mcpLoading;
   const isSuccess = mcpSuccess;
 
@@ -111,7 +114,7 @@ const McpSidebarGroup = ({
     <SidebarGroup className={`p-3 pr-2${!hasMcpServers ? " h-full" : ""}`}>
       {hasMcpServers && (
         <SidebarGroupLabel className="cursor-default w-full flex items-center justify-between">
-          <span>MCP Servers</span>
+          <span>{t("sidebar.mcpServers")}</span>
           {showSearchConfigTrigger && (
             <SearchConfigTrigger
               showConfig={showConfig}
@@ -122,7 +125,7 @@ const McpSidebarGroup = ({
       )}
       <SidebarGroupContent className="h-full">
         <SidebarMenu className={!hasMcpServers ? " h-full" : ""}>
-          {isLoading && <span>Loading...</span>}
+          {isLoading && <span>{t("common.loading")}</span>}
           {isSuccess && !hasMcpServers && (
             <McpEmptyState isLoading={isLoading} />
           )}

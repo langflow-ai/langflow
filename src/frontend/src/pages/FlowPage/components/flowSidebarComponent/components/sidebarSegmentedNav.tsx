@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Separator } from "@/components/ui/separator";
@@ -21,18 +22,18 @@ interface NavItem {
   tooltip: string;
 }
 
-export const NAV_ITEMS: NavItem[] = [
+export const getNavItems = (t: (key: string) => string): NavItem[] => [
   {
     id: "search",
     icon: "search",
-    label: "Search",
-    tooltip: "Search",
+    label: t("sidebar.search"),
+    tooltip: t("sidebar.search"),
   },
   {
     id: "components",
     icon: "component",
-    label: "Components",
-    tooltip: "Components",
+    label: t("sidebar.components"),
+    tooltip: t("sidebar.components"),
   },
   {
     id: "mcp",
@@ -43,20 +44,31 @@ export const NAV_ITEMS: NavItem[] = [
   {
     id: "bundles",
     icon: "blocks",
-    label: "Bundles",
-    tooltip: "Bundles",
+    label: t("sidebar.bundles"),
+    tooltip: t("sidebar.bundles"),
   },
   {
     id: "add_note",
     icon: "sticky-note",
-    label: "Sticky Notes",
-    tooltip: "Add Sticky Notes",
+    label: t("sidebar.stickyNotes"),
+    tooltip: t("sidebar.addStickyNote"),
   },
+];
+
+// Keep backward compat export
+export const NAV_ITEMS: NavItem[] = [
+  { id: "search", icon: "search", label: "Search", tooltip: "Search" },
+  { id: "components", icon: "component", label: "Components", tooltip: "Components" },
+  { id: "mcp", icon: "Mcp", label: "MCP", tooltip: "MCP" },
+  { id: "bundles", icon: "blocks", label: "Bundles", tooltip: "Bundles" },
+  { id: "add_note", icon: "sticky-note", label: "Sticky Notes", tooltip: "Add Sticky Notes" },
 ];
 
 const SidebarSegmentedNav = () => {
   const { activeSection, setActiveSection, toggleSidebar, open } = useSidebar();
   const { focusSearch, setSearch } = useSearchContext();
+  const { t } = useTranslation();
+  const navItems = getNavItems(t);
   const [isAddNoteActive, setIsAddNoteActive] = useState(false);
   const handleAddNote = () => {
     window.dispatchEvent(new Event("lf:start-add-note"));
@@ -72,7 +84,7 @@ const SidebarSegmentedNav = () => {
   return (
     <div className="flex h-full flex-col border-r border-border bg-background">
       <SidebarMenu className="gap-2 py-1">
-        {NAV_ITEMS.map((item) => (
+        {navItems.map((item) => (
           <div key={item.id}>
             {item.id === "add_note" && <Separator className="w-full" />}
             <SidebarMenuItem className="px-1">

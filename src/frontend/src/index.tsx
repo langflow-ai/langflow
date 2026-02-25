@@ -1,3 +1,5 @@
+// 初始化 i18n（必须在 App 渲染之前）
+import "./i18n/index";
 import ReactDOM from "react-dom/client";
 import reportWebVitals from "./reportWebVitals";
 

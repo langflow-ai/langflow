@@ -11,6 +11,7 @@ import {
   useState,
 } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
+import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
@@ -151,6 +152,7 @@ interface FlowSidebarComponentProps {
 
 export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
   const rawData = useTypesStore((state) => state.data);
+  const { t } = useTranslation();
 
   // Filter out knowledge components from files_and_knowledge category when ENABLE_KNOWLEDGE_BASES is OFF
   const data = useMemo(() => {
@@ -212,12 +214,12 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
   const fallbackSearchInputRef = useRef<HTMLInputElement | null>(null);
   const {
     search = "",
-    setSearch = () => {},
+    setSearch = () => { },
     searchInputRef = fallbackSearchInputRef,
     isSearchFocused = false,
-    handleInputFocus = () => {},
-    handleInputBlur = () => {},
-    handleInputChange: originalHandleInputChange = () => {},
+    handleInputFocus = () => { },
+    handleInputBlur = () => { },
+    handleInputChange: originalHandleInputChange = () => { },
   } = context;
 
   const handleInputChange = useCallback(
@@ -346,7 +348,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
 
     return Object.keys(searchFilteredData).toSorted((a, b) =>
       searchResults.fuseCategories.indexOf(b) <
-      searchResults.fuseCategories.indexOf(a)
+        searchResults.fuseCategories.indexOf(a)
         ? 1
         : -1,
     );
@@ -738,7 +740,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
                             className="h-4 w-4"
                           />
                         </span>
-                        Discover more components
+                        {t("store.discoverMore")}
                       </Button>
                     )}
                   </>
@@ -753,8 +755,8 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
             )}
           </SidebarContent>
           {ENABLE_NEW_SIDEBAR &&
-          activeSection === "mcp" &&
-          !hasMcpServers ? null : (
+            activeSection === "mcp" &&
+            !hasMcpServers ? null : (
             <SidebarFooter className="border-t group-data-[collapsible=icon]:hidden p-1 gap-1">
               <SidebarMenuButtons
                 customComponent={customComponent}

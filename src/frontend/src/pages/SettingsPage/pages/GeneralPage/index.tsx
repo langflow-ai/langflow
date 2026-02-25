@@ -24,6 +24,7 @@ import type {
   inputHandlerEventType,
   patchUserInputStateType,
 } from "../../../../types/components";
+import LanguageSelectorComponent from "@/components/core/languageSelectorComponent";
 import useScrollToElement from "../hooks/use-scroll-to-element";
 import GeneralPageHeaderComponent from "./components/GeneralPageHeader";
 import PasswordFormComponent from "./components/PasswordForm";
@@ -160,6 +161,11 @@ export const GeneralPage = () => {
             handlePatchPassword={handlePatchPassword}
           />
         )}
+      </div>
+
+      {/* 语言选择 */}
+      <div className="flex flex-col gap-2">
+        <LanguageSelectorComponent />
       </div>
 
       <CustomTermsLinks />

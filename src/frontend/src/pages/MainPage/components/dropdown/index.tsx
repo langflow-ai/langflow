@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import useAlertStore from "@/stores/alertStore";
@@ -20,12 +21,16 @@ const DropdownComponent = ({
 }: DropdownComponentProps) => {
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
+  const { t } = useTranslation();
   const { handleDuplicate } = useDuplicateFlow({ flow: flowData });
 
   const duplicateFlow = () => {
     handleDuplicate().then(() =>
       setSuccessData({
-        title: `${flowData.is_component ? "Component" : "Flow"} duplicated successfully`,
+        title: t(
+          "main.duplicateSuccess",
+          `${flowData.is_component ? t("sidebar.components") : t("main.allFlows")} 复制成功`,
+        ),
       }),
     );
   };
@@ -54,7 +59,7 @@ const DropdownComponent = ({
           aria-hidden="true"
           className="mr-2 h-4 w-4"
         />
-        Edit details
+        {t("common.edit")}
       </DropdownMenuItem>
       <DropdownMenuItem
         onClick={(e) => {
@@ -69,7 +74,7 @@ const DropdownComponent = ({
           aria-hidden="true"
           className="mr-2 h-4 w-4"
         />
-        Export
+        {t("toolbar.export")}
       </DropdownMenuItem>
       <DropdownMenuItem
         onClick={(e) => {
@@ -84,7 +89,7 @@ const DropdownComponent = ({
           aria-hidden="true"
           className="mr-2 h-4 w-4"
         />
-        Duplicate
+        {t("common.duplicate")}
       </DropdownMenuItem>
       <DropdownMenuItem
         onClick={(e) => {
@@ -99,7 +104,7 @@ const DropdownComponent = ({
           aria-hidden="true"
           className="mr-2 h-4 w-4"
         />
-        Delete
+        {t("common.delete")}
       </DropdownMenuItem>
     </>
   );

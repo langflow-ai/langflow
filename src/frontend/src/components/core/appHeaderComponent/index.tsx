@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import AlertDropdown from "@/alerts/alertDropDown";
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import { AssistantButton } from "@/components/common/assistant";
@@ -22,6 +23,7 @@ export default function AppHeader(): JSX.Element {
   const [activeState, setActiveState] = useState<"notifications" | null>(null);
   const notificationRef = useRef<HTMLButtonElement | null>(null);
   const notificationContentRef = useRef<HTMLDivElement | null>(null);
+  const { t } = useTranslation();
   useTheme();
 
   useEffect(() => {
@@ -90,7 +92,7 @@ export default function AppHeader(): JSX.Element {
           onClose={() => setActiveState(null)}
         >
           <ShadTooltip
-            content="Notifications and errors"
+            content={t("appHeader.notifications")}
             side="bottom"
             styleClasses="z-10"
           >
@@ -109,15 +111,14 @@ export default function AppHeader(): JSX.Element {
                   <span className={getNotificationBadge()} />
                   <ForwardedIconComponent
                     name="Bell"
-                    className={`side-bar-button-size h-4 w-4 ${
-                      activeState === "notifications"
+                    className={`side-bar-button-size h-4 w-4 ${activeState === "notifications"
                         ? "text-primary"
                         : "text-muted-foreground group-hover:text-primary"
-                    }`}
+                      }`}
                     strokeWidth={2}
                   />
                   <span className="hidden whitespace-nowrap">
-                    Notifications
+                    {t("appHeader.notificationsLabel")}
                   </span>
                 </div>
               </Button>

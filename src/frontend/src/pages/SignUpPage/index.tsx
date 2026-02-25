@@ -1,5 +1,6 @@
 import * as Form from "@radix-ui/react-form";
 import { type FormEvent, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import InputComponent from "@/components/core/parameterRenderComponent/components/inputComponent";
 import { useAddUser } from "@/controllers/API/queries/auth";
@@ -11,7 +12,6 @@ import { Input } from "../../components/ui/input";
 import { SIGNUP_ERROR_ALERT } from "../../constants/alerts_constants";
 import {
   CONTROL_INPUT_STATE,
-  SIGN_UP_SUCCESS,
 } from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
 import type {
@@ -21,6 +21,7 @@ import type {
 } from "../../types/components";
 
 export default function SignUp(): JSX.Element {
+  const { t } = useTranslation();
   const [inputState, setInputState] =
     useState<signUpInputStateType>(CONTROL_INPUT_STATE);
 
@@ -57,7 +58,7 @@ export default function SignUp(): JSX.Element {
       onSuccess: (user) => {
         track("User Signed Up", user);
         setSuccessData({
-          title: SIGN_UP_SUCCESS,
+          title: t("auth.signUpSuccess"),
         });
         navigate("/login");
       },
@@ -95,12 +96,13 @@ export default function SignUp(): JSX.Element {
             className="mb-4 h-10 w-10 scale-[1.5]"
           />
           <span className="mb-6 text-2xl font-semibold text-primary">
-            Sign up for Langflow
+            {t("auth.signInTo").replace("登录", "注册")}
           </span>
           <div className="mb-3 w-full">
             <Form.Field name="username">
               <Form.Label className="data-[invalid]:label-invalid">
-                Username <span className="font-medium text-destructive">*</span>
+                {t("auth.username")}{" "}
+                <span className="font-medium text-destructive">*</span>
               </Form.Label>
 
               <Form.Control asChild>
@@ -112,19 +114,20 @@ export default function SignUp(): JSX.Element {
                   value={username}
                   className="w-full"
                   required
-                  placeholder="Username"
+                  placeholder={t("auth.username")}
                 />
               </Form.Control>
 
               <Form.Message match="valueMissing" className="field-invalid">
-                Please enter your username
+                {t("auth.usernameRequired")}
               </Form.Message>
             </Form.Field>
           </div>
           <div className="mb-3 w-full">
             <Form.Field name="password" serverInvalid={password != cnfPassword}>
               <Form.Label className="data-[invalid]:label-invalid">
-                Password <span className="font-medium text-destructive">*</span>
+                {t("auth.password")}{" "}
+                <span className="font-medium text-destructive">*</span>
               </Form.Label>
               <InputComponent
                 onChange={(value) => {
@@ -134,17 +137,17 @@ export default function SignUp(): JSX.Element {
                 isForm
                 password={true}
                 required
-                placeholder="Password"
+                placeholder={t("auth.password")}
                 className="w-full"
               />
 
               <Form.Message className="field-invalid" match="valueMissing">
-                Please enter a password
+                {t("auth.passwordRequired")}
               </Form.Message>
 
               {password != cnfPassword && (
                 <Form.Message className="field-invalid">
-                  Passwords do not match
+                  {t("auth.passwordMismatch", "两次密码输入不一致")}
                 </Form.Message>
               )}
             </Form.Field>
@@ -155,7 +158,7 @@ export default function SignUp(): JSX.Element {
               serverInvalid={password != cnfPassword}
             >
               <Form.Label className="data-[invalid]:label-invalid">
-                Confirm your password{" "}
+                {t("auth.confirmPassword")}{" "}
                 <span className="font-medium text-destructive">*</span>
               </Form.Label>
 
@@ -167,12 +170,12 @@ export default function SignUp(): JSX.Element {
                 isForm
                 password={true}
                 required
-                placeholder="Confirm your password"
+                placeholder={t("auth.confirmPassword")}
                 className="w-full"
               />
 
               <Form.Message className="field-invalid" match="valueMissing">
-                Please confirm your password
+                {t("auth.confirmPasswordRequired", "请确认您的密码")}
               </Form.Message>
             </Form.Field>
           </div>
@@ -186,14 +189,15 @@ export default function SignUp(): JSX.Element {
                   handleSignup();
                 }}
               >
-                Sign up
+                {t("auth.signUp")}
               </Button>
             </Form.Submit>
           </div>
           <div className="w-full">
             <CustomLink to="/login">
               <Button className="w-full" variant="outline">
-                Already have an account?&nbsp;<b>Sign in</b>
+                {t("auth.hasAccount", "已有账户？")}&nbsp;
+                <b>{t("auth.signIn")}</b>
               </Button>
             </CustomLink>
           </div>

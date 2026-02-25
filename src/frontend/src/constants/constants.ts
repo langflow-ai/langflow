@@ -1,4 +1,9 @@
 // src/constants/constants.ts
+import i18n from "../i18n/index";
+
+// 获取翻译文本的辅助函数，自动跟随当前语言
+const t = (key: string, fallback?: string): string =>
+  i18n.t(key, fallback ?? key);
 
 import {
   BASE_URL_API as CUSTOM_BASE_URL_API,
@@ -7,8 +12,8 @@ import {
 import { customDefaultShortcuts } from "../customization/constants";
 import type { languageMap } from "../types/components";
 
-export const DEFAULT_SESSION_NAME = "Default Session";
-export const NEW_SESSION_NAME = "New Session";
+export const DEFAULT_SESSION_NAME = () => t("session.default", "Default Session");
+export const NEW_SESSION_NAME = () => t("session.new", "New Session");
 export const SLIDING_TRANSITION_MS = 300;
 
 const getEnvVar = <T = string | undefined>(
@@ -581,7 +586,7 @@ export const NOUNS: string[] = [
  * @constant
  *
  */
-export const USER_PROJECTS_HEADER = "My Collection";
+export const USER_PROJECTS_HEADER = () => t("main.myCollection", "My Collection");
 
 // This will be dynamically set based on the RUN_WITH_OPENRAG feature flag
 // The actual value is determined by the backend configuration
@@ -595,15 +600,15 @@ export const MAX_MCP_SERVER_NAME_LENGTH = 30;
  * @constant
  *
  */
-export const ADMIN_HEADER_TITLE = "Admin Page";
+export const ADMIN_HEADER_TITLE = () => t("admin.title", "Admin Page");
 
 /**
  * Header description for admin page
  * @constant
  *
  */
-export const ADMIN_HEADER_DESCRIPTION =
-  "Navigate through this section to efficiently oversee all application users. From here, you can seamlessly manage user accounts.";
+export const ADMIN_HEADER_DESCRIPTION = () =>
+  t("admin.desc", "Navigate through this section to efficiently oversee all application users. From here, you can seamlessly manage user accounts.");
 
 export const BASE_URL_API = CUSTOM_BASE_URL_API || "/api/v1/";
 
@@ -657,26 +662,26 @@ export const CONTROL_NEW_USER = {
 
 export const tabsCode = [];
 
-export const FETCH_ERROR_MESSAGE = "Couldn't establish a connection.";
-export const FETCH_ERROR_DESCRIPION =
-  "Check if everything is working properly and try again.";
+export const FETCH_ERROR_MESSAGE = () => t("errors.connectionFailed", "Couldn't establish a connection.");
+export const FETCH_ERROR_DESCRIPION = () =>
+  t("errors.checkConnection", "Check if everything is working properly and try again.");
 
-export const TIMEOUT_ERROR_MESSAGE =
-  "Please wait a few moments while the server processes your request.";
-export const TIMEOUT_ERROR_DESCRIPION = "Server is busy.";
+export const TIMEOUT_ERROR_MESSAGE = () =>
+  t("errors.requestProcessing", "Please wait a few moments while the server processes your request.");
+export const TIMEOUT_ERROR_DESCRIPION = () => t("errors.serverBusy", "Server is busy.");
 
-export const SIGN_UP_SUCCESS = "Account created! Await admin activation. ";
+export const SIGN_UP_SUCCESS = () => t("auth.signUpSuccess", "Account created! Await admin activation.");
 
-export const API_PAGE_PARAGRAPH =
-  "Your secret Langflow API keys are listed below. Do not share your API key with others, or expose it in the browser or other client-side code.";
+export const API_PAGE_PARAGRAPH = () =>
+  t("settings.apiKeysDesc", "Your secret Langflow API keys are listed below. Do not share your API key with others, or expose it in the browser or other client-side code.");
 
-export const API_PAGE_USER_KEYS =
-  "This user does not have any keys assigned at the moment.";
+export const API_PAGE_USER_KEYS = () =>
+  t("settings.noKeys", "This user does not have any keys assigned at the moment.");
 
-export const LAST_USED_SPAN_1 = "The last time this key was used.";
+export const LAST_USED_SPAN_1 = () => t("settings.lastUsed", "The last time this key was used.");
 
-export const LAST_USED_SPAN_2 =
-  "Accurate to within the hour from the most recent usage.";
+export const LAST_USED_SPAN_2 = () =>
+  t("settings.lastUsedPrecise", "Accurate to within the hour from the most recent usage.");
 
 export const LANGFLOW_SUPPORTED_TYPES = new Set([
   "str",
@@ -725,51 +730,51 @@ export const OUTPUT_TYPES = new Set([
   // "TableOutput",
 ]);
 
-export const CHAT_FIRST_INITIAL_TEXT =
-  "Start a conversation and click the agent's memories";
+export const CHAT_FIRST_INITIAL_TEXT = () =>
+  t("chat.firstInitial", "Start a conversation and click the agent's memories");
 
-export const TOOLTIP_OUTDATED_NODE =
-  "Your component is outdated. Click to update (data may be lost)";
+export const TOOLTIP_OUTDATED_NODE = () =>
+  t("tooltip.outdatedNode", "Your component is outdated. Click to update (data may be lost)");
 
-export const CHAT_SECOND_INITIAL_TEXT = "to inspect previous messages.";
+export const CHAT_SECOND_INITIAL_TEXT = () => t("chat.secondInitial", "to inspect previous messages.");
 
-export const TOOLTIP_OPEN_HIDDEN_OUTPUTS = "Expand hidden outputs";
-export const TOOLTIP_HIDDEN_OUTPUTS = "Collapse hidden outputs";
+export const TOOLTIP_OPEN_HIDDEN_OUTPUTS = () => t("tooltip.expandOutputs", "Expand hidden outputs");
+export const TOOLTIP_HIDDEN_OUTPUTS = () => t("tooltip.collapseOutputs", "Collapse hidden outputs");
 
-export const ZERO_NOTIFICATIONS = "No new notifications";
+export const ZERO_NOTIFICATIONS = () => t("common.noNotifications", "No new notifications");
 
-export const SUCCESS_BUILD = "Built successfully ✨";
+export const SUCCESS_BUILD = () => t("common.buildSuccess", "Built successfully ✨");
 
-export const ALERT_SAVE_WITH_API =
-  "Caution: Unchecking this box only removes API keys from fields specifically designated for API keys.";
+export const ALERT_SAVE_WITH_API = () =>
+  t("flow.alertSaveWithApi", "Caution: Unchecking this box only removes API keys from fields specifically designated for API keys.");
 
-export const SAVE_WITH_API_CHECKBOX = "Save with my API keys";
-export const EDIT_TEXT_MODAL_TITLE = "Edit Text";
-export const EDIT_TEXT_PLACEHOLDER = "Type message here.";
-export const INPUT_HANDLER_HOVER = "Avaliable input components:";
-export const OUTPUT_HANDLER_HOVER = "Avaliable output components:";
-export const TEXT_INPUT_MODAL_TITLE = "Inputs";
-export const OUTPUTS_MODAL_TITLE = "Outputs";
-export const LANGFLOW_CHAT_TITLE = "Langflow Chat";
-export const CHAT_INPUT_PLACEHOLDER =
-  "No chat input variables found. Click to run your flow.";
-export const CHAT_INPUT_PLACEHOLDER_SEND = "Send a message...";
-export const EDIT_CODE_TITLE = "Edit Code";
-export const MY_COLLECTION_DESC =
-  "Manage your projects. Download and upload entire collections.";
-export const STORE_DESC = "Explore community-shared flows and components.";
-export const STORE_TITLE = "Langflow Store";
-export const NO_API_KEY = "You don't have an API key.";
-export const INSERT_API_KEY = "Insert your Langflow API key.";
-export const INVALID_API_KEY = "Your API key is not valid. ";
-export const CREATE_API_KEY = `Don't have an API key? Sign up at`;
-export const STATUS_BUILD = "Build to validate status.";
-export const STATUS_MISSING_FIELDS_ERROR =
-  "Please fill all the required fields.";
-export const STATUS_INACTIVE = "Execution blocked";
-export const STATUS_BUILDING = "Building...";
-export const SAVED_HOVER = "Last saved: ";
-export const RUN_TIMESTAMP_PREFIX = "Last Run: ";
+export const SAVE_WITH_API_CHECKBOX = () => t("flow.saveWithApiCheckbox", "Save with my API keys");
+export const EDIT_TEXT_MODAL_TITLE = () => t("flow.editText", "Edit Text");
+export const EDIT_TEXT_PLACEHOLDER = () => t("flow.editTextPlaceholder", "Type message here.");
+export const INPUT_HANDLER_HOVER = () => t("tooltip.availableInputs", "Available input components:");
+export const OUTPUT_HANDLER_HOVER = () => t("tooltip.availableOutputs", "Available output components:");
+export const TEXT_INPUT_MODAL_TITLE = () => t("chat.inputsTitle", "Inputs");
+export const OUTPUTS_MODAL_TITLE = () => t("chat.outputsTitle", "Outputs");
+export const LANGFLOW_CHAT_TITLE = () => t("chat.title", "Langflow Chat");
+export const CHAT_INPUT_PLACEHOLDER = () =>
+  t("chat.inputPlaceholder", "No chat input variables found. Click to run your flow.");
+export const CHAT_INPUT_PLACEHOLDER_SEND = () => t("chat.sendPlaceholder", "Send a message...");
+export const EDIT_CODE_TITLE = () => t("flow.editCode", "Edit Code");
+export const MY_COLLECTION_DESC = () =>
+  t("main.myCollectionDesc", "Manage your projects. Download and upload entire collections.");
+export const STORE_DESC = () => t("store.desc", "Explore community-shared flows and components.");
+export const STORE_TITLE = () => t("store.title", "Langflow Store");
+export const NO_API_KEY = () => t("store.noApiKey", "You don't have an API key.");
+export const INSERT_API_KEY = () => t("store.insertApiKey", "Insert your Langflow API key.");
+export const INVALID_API_KEY = () => t("store.invalidApiKey", "Your API key is not valid.");
+export const CREATE_API_KEY = () => t("store.createApiKey", "Don't have an API key? Sign up at");
+export const STATUS_BUILD = () => t("flow.statusBuild", "Build to validate status.");
+export const STATUS_MISSING_FIELDS_ERROR = () =>
+  t("flow.statusMissingFields", "Please fill all the required fields.");
+export const STATUS_INACTIVE = () => t("flow.statusInactive", "Execution blocked");
+export const STATUS_BUILDING = () => t("common.building", "Building...");
+export const SAVED_HOVER = () => t("flow.savedHover", "Last saved: ");
+export const RUN_TIMESTAMP_PREFIX = () => t("common.lastRun", "Last Run: ");
 
 export const PRIORITY_SIDEBAR_ORDER = [
   "saved_components",

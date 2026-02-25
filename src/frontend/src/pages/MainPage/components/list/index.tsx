@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import useDragStart from "@/components/core/cardComponent/hooks/use-on-drag-start";
@@ -42,6 +43,7 @@ const ListComponent = ({
   const { deleteFlow } = useDeleteFlow();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { folderId } = useParams();
+  const { t } = useTranslation();
   const [openSettings, setOpenSettings] = useState(false);
   const [openExportModal, setOpenExportModal] = useState(false);
   const isComponent = flowData.is_component ?? false;
@@ -64,13 +66,13 @@ const ListComponent = ({
     deleteFlow({ id: [flowData.id] })
       .then(() => {
         setSuccessData({
-          title: "Selected items deleted successfully",
+          title: t("main.deleteItemSuccess", "已删除所选项目"),
         });
       })
       .catch(() => {
         setErrorData({
-          title: "Error deleting items",
-          list: ["Please try again"],
+          title: t("common.error"),
+          list: [t("errors.tryAgain", "请重试")],
         });
       });
   };
@@ -110,15 +112,13 @@ const ListComponent = ({
         draggable
         onDragStart={onDragStart}
         onClick={handleClick}
-        className={`flex flex-row bg-background ${
-          isComponent ? "cursor-default" : "cursor-pointer"
-        } group justify-between rounded-lg border-none px-4 py-3 shadow-none hover:bg-muted`}
+        className={`flex flex-row bg-background ${isComponent ? "cursor-default" : "cursor-pointer"
+          } group justify-between rounded-lg border-none px-4 py-3 shadow-none hover:bg-muted`}
         data-testid="list-card"
       >
         <div
-          className={`flex min-w-0 ${
-            isComponent ? "cursor-default" : "cursor-pointer"
-          } items-center gap-4`}
+          className={`flex min-w-0 ${isComponent ? "cursor-default" : "cursor-pointer"
+            } items-center gap-4`}
         >
           <div className="group/checkbox relative flex items-center">
             <div
@@ -170,7 +170,7 @@ const ListComponent = ({
               </div>
               <div className="flex min-w-0 flex-shrink text-xs text-muted-foreground">
                 <span className="truncate">
-                  Edited {timeElapsed(flowData.updated_at)} ago
+                  {t("main.editedAgo", { time: timeElapsed(flowData.updated_at) })}
                 </span>
               </div>
             </div>

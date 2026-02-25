@@ -1,5 +1,6 @@
 import { debounce } from "lodash";
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
@@ -38,6 +39,7 @@ const HeaderComponent = ({
 }: HeaderComponentProps) => {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const isMCPEnabled = ENABLE_MCP;
+  const { t } = useTranslation();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   // Debounce the setSearch function from the parent
   const debouncedSetSearch = useCallback(
@@ -78,7 +80,7 @@ const HeaderComponent = ({
 
   const handleDownload = () => {
     downloadFlows({ ids: selectedFlows });
-    setSuccessData({ title: "Flows downloaded successfully" });
+    setSuccessData({ title: t("main.downloadSuccess", "下载成功") });
   };
 
   const flows = useFlowsManagerStore((state) => state.flows);
@@ -89,7 +91,7 @@ const HeaderComponent = ({
       { flow_ids: selectedFlows },
       {
         onSuccess: () => {
-          setSuccessData({ title: "Flows deleted successfully" });
+          setSuccessData({ title: t("main.deleteSuccess", "删除成功") });
           if (flows) {
             setFlows(flows.filter((flow) => !selectedFlows.includes(flow.id)));
           }
@@ -132,16 +134,17 @@ const HeaderComponent = ({
                 onClick={() => {
                   setFlowType(type as "flows" | "components" | "mcp");
                 }}
-                className={`border-b ${
-                  flowType === type
-                    ? "border-b-2 border-foreground text-foreground"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                } text-nowrap px-2 pb-2 pt-1 text-mmd`}
+                className={`border-b ${flowType === type
+                  ? "border-b-2 border-foreground text-foreground"
+                  : "border-border text-muted-foreground hover:text-foreground"
+                  } text-nowrap px-2 pb-2 pt-1 text-mmd`}
               >
                 <div className={flowType === type ? "-mb-px" : ""}>
                   {type === "mcp"
-                    ? "MCP Server"
-                    : type.charAt(0).toUpperCase() + type.slice(1)}
+                    ? t("sidebar.mcpServers")
+                    : type === "components"
+                      ? t("sidebar.components")
+                      : t("main.allFlows")}
                 </div>
               </Button>
             ))}
@@ -154,7 +157,7 @@ const HeaderComponent = ({
                   icon="Search"
                   data-testid="search-store-input"
                   type="text"
-                  placeholder={`Search ${flowType}...`}
+                  placeholder={`${t("common.search")} ${flowType === "components" ? t("sidebar.components") : t("main.allFlows")}...`}
                   className="mr-2 !text-mmd"
                   inputClassName="!text-mmd"
                   value={debouncedSearch}
@@ -163,11 +166,10 @@ const HeaderComponent = ({
                 <div className="relative mr-2 flex h-fit rounded-lg border border-muted bg-muted">
                   {/* Sliding Indicator */}
                   <div
-                    className={`absolute top-[2px] h-[32px] w-8 transform rounded-md bg-background shadow-md transition-transform duration-300 ${
-                      view === "list"
-                        ? "left-[2px] translate-x-0"
-                        : "left-[6px] translate-x-full"
-                    }`}
+                    className={`absolute top-[2px] h-[32px] w-8 transform rounded-md bg-background shadow-md transition-transform duration-300 ${view === "list"
+                      ? "left-[2px] translate-x-0"
+                      : "left-[6px] translate-x-full"
+                      }`}
                   ></div>
 
                   {/* Buttons */}
@@ -176,11 +178,10 @@ const HeaderComponent = ({
                       key={viewType}
                       unstyled
                       size="icon"
-                      className={`group relative z-10 m-[2px] flex-1 rounded-lg p-2 ${
-                        view === viewType
-                          ? "text-foreground"
-                          : "text-muted-foreground hover:bg-muted"
-                      }`}
+                      className={`group relative z-10 m-[2px] flex-1 rounded-lg p-2 ${view === viewType
+                        ? "text-foreground"
+                        : "text-muted-foreground hover:bg-muted"
+                        }`}
                       onClick={() => setView(viewType as "list" | "grid")}
                     >
                       <ForwardedIconComponent
@@ -233,7 +234,7 @@ const HeaderComponent = ({
                     </Button>
                   </DeleteConfirmationModal>
                 </div>
-                <ShadTooltip content="New Flow" side="bottom">
+                <ShadTooltip content={t("flow.newFlow")} side="bottom">
                   <Button
                     variant="default"
                     size="iconMd"
@@ -248,7 +249,7 @@ const HeaderComponent = ({
                       className="h-4 w-4"
                     />
                     <span className="hidden whitespace-nowrap font-semibold md:inline">
-                      New Flow
+                      {t("flow.newFlow")}
                     </span>
                   </Button>
                 </ShadTooltip>

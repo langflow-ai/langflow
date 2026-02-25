@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useBlocker, useParams } from "react-router-dom";
 import { FlowPageSlidingContainerContent } from "@/components/core/playgroundComponent/sliding-container/components/flow-page-sliding-container";
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -40,6 +41,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const currentSavedFlow = useFlowsManagerStore((state) => state.currentFlow);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const [isLoading, setIsLoading] = useState(false);
+  const { t } = useTranslation();
 
   const changesNotSaved =
     customStringify(currentFlow) !== customStringify(currentSavedFlow) &&
@@ -74,7 +76,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
       if (proceed) {
         blocker.proceed && blocker.proceed();
         setSuccessData({
-          title: "Flow saved successfully!",
+          title: t("flow.savedSuccessfully"),
         });
       }
     }, 1200);
@@ -82,7 +84,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
       if (!autoSaving || saving === false) {
         blocker.proceed && blocker.proceed();
         setSuccessData({
-          title: "Flow saved successfully!",
+          title: t("flow.savedSuccessfully"),
         });
       }
       proceed = true;
@@ -257,8 +259,8 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
                     className={cn(
                       "flex flex-1 min-w-0 overflow-hidden transition-all duration-300",
                       isSlidingContainerOpen &&
-                        !isFullscreen &&
-                        "rounded-xl m-2 mr-0",
+                      !isFullscreen &&
+                      "rounded-xl m-2 mr-0",
                     )}
                   >
                     <div className="h-full w-full">
@@ -288,12 +290,12 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
               lastSaved={
                 updatedAt
                   ? new Date(updatedAt).toLocaleString("en-US", {
-                      hour: "numeric",
-                      minute: "numeric",
-                      second: "numeric",
-                      month: "numeric",
-                      day: "numeric",
-                    })
+                    hour: "numeric",
+                    minute: "numeric",
+                    second: "numeric",
+                    month: "numeric",
+                    day: "numeric",
+                  })
                   : undefined
               }
               autoSave={autoSaving}

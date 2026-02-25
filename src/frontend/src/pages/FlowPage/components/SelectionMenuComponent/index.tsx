@@ -1,6 +1,7 @@
 import { NodeToolbar } from "@xyflow/react";
 import { useEffect, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
+import { useTranslation } from "react-i18next";
 import ShadTooltip from "../../../../components/common/shadTooltipComponent";
 import { Button } from "../../../../components/ui/button";
 import { GradientGroup } from "../../../../icons/GradientSparkles";
@@ -14,6 +15,7 @@ export default function SelectionMenu({
 }) {
   const edges = useFlowStore((state) => state.edges);
   const unselectAll = useFlowStore((state) => state.unselectAll);
+  const { t } = useTranslation();
   const [disable, setDisable] = useState<boolean>(
     lastSelection && edges.length > 0
       ? validateSelection(lastSelection!, edges).length > 0
@@ -73,11 +75,10 @@ export default function SelectionMenu({
             <ShadTooltip content={errors[0]} side={"top"}>
               <Button
                 unstyled
-                className={`${
-                  disable
+                className={`${disable
                     ? "flex h-full w-full cursor-not-allowed items-center justify-between text-sm text-muted-foreground"
                     : "flex h-full w-full items-center justify-between text-sm"
-                }`}
+                  }`}
                 onClick={onClick}
                 disabled={disable}
                 data-testid="error-group-node"
@@ -88,17 +89,16 @@ export default function SelectionMenu({
                   className="text-primary"
                   disabled={disable}
                 />
-                Group
+                {t("selectionMenu.group")}
               </Button>
             </ShadTooltip>
           ) : (
             <Button
               unstyled
-              className={`${
-                disable
+              className={`${disable
                   ? "flex h-full w-full cursor-not-allowed items-center justify-between text-sm text-muted-foreground"
                   : "flex h-full w-full items-center justify-between text-sm"
-              }`}
+                }`}
               onClick={onClick}
               disabled={disable}
               data-testid="group-node"
@@ -109,7 +109,7 @@ export default function SelectionMenu({
                 className="text-primary"
                 disabled={disable}
               />
-              Group
+              {t("selectionMenu.group")}
             </Button>
           )}
         </div>

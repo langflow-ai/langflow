@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { useFolderStore } from "@/stores/foldersStore";
@@ -8,6 +9,7 @@ type EmptyFolderProps = {
 
 export const EmptyFolder = ({ setOpenModal }: EmptyFolderProps) => {
   const folders = useFolderStore((state) => state.folders);
+  const { t } = useTranslation();
 
   return (
     <div className="m-0 flex w-full justify-center">
@@ -16,10 +18,12 @@ export const EmptyFolder = ({ setOpenModal }: EmptyFolderProps) => {
           className="pt-5 font-chivo text-2xl font-semibold"
           data-testid="mainpage_title"
         >
-          {folders?.length > 1 ? "Empty project" : "Start building"}
+          {folders?.length > 1
+            ? t("main.emptyProject", "空项目")
+            : t("main.startBuilding", "开始构建")}
         </h3>
         <p className="pb-5 text-sm text-secondary-foreground">
-          Begin with a template, or start from scratch.
+          {t("main.startBuildingDesc", "从模板开始，或从头创建。")}
         </p>
         <Button
           variant="default"
@@ -32,7 +36,9 @@ export const EmptyFolder = ({ setOpenModal }: EmptyFolderProps) => {
             aria-hidden="true"
             className="h-4 w-4"
           />
-          <span className="whitespace-nowrap font-semibold">New Flow</span>
+          <span className="whitespace-nowrap font-semibold">
+            {t("flow.newFlow")}
+          </span>
         </Button>
       </div>
     </div>

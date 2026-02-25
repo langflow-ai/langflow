@@ -1,3 +1,4 @@
+import i18n from "@/i18n";
 import type { UniqueInputsComponents } from "../types";
 
 export const getDisabledTooltip = (
@@ -5,10 +6,10 @@ export const getDisabledTooltip = (
   uniqueInputsComponents: UniqueInputsComponents,
 ) => {
   if (SBItemName === "ChatInput" && uniqueInputsComponents.chatInput) {
-    return "Chat input already added";
+    return i18n.t("sidebar.chatInputAdded");
   }
   if (SBItemName === "Webhook" && uniqueInputsComponents.webhookInput) {
-    return "Webhook already added";
+    return i18n.t("sidebar.webhookAdded");
   }
   return "";
 };
