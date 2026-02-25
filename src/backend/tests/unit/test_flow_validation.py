@@ -15,7 +15,6 @@ Covers:
 import inspect
 
 import pytest
-
 from langflow.api.utils.flow_validation import (
     _collect_all_template_codes,
     _find_template_code,

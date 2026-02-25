@@ -278,8 +278,5 @@ def check_flow_and_raise(
             "Flow validation requested but component template cache is not yet loaded. "
             "Blocking execution as a safety measure."
         )
-        msg = (
-            "Flow build blocked: server is still initializing component templates. "
-            "Please try again in a few seconds."
-        )
+        msg = "Flow build blocked: server is still initializing component templates. Please try again in a few seconds."
         raise ValueError(msg)

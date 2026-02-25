@@ -16,6 +16,7 @@ from langflow.api.v1.endpoints import consume_and_yield, run_flow_generator, sim
 from langflow.api.v1.schemas import SimplifiedAPIRequest
 from langflow.events.event_manager import create_stream_tokens_event_manager
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
+from langflow.interface.components import component_cache
 from langflow.schema import (
     OpenAIErrorResponse,
     OpenAIResponsesRequest,
@@ -23,7 +24,6 @@ from langflow.schema import (
     OpenAIResponsesStreamChunk,
 )
 from langflow.schema.content_types import ToolContent
-from langflow.interface.components import component_cache
 from langflow.services.auth.utils import api_key_security
 from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.database.models.user.model import UserRead
