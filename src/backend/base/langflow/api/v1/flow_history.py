@@ -105,31 +105,9 @@ async def list_flow_history(
     )
 
 
-@router.get("/export")
-async def export_flow_with_history(
-    flow_id: UUID,
-    current_user: CurrentActiveUser,
-    session: DbSessionReadOnly,
-    include_history: bool = True,
-) -> dict:
-    """Return the flow as a dict with optional version history embedded."""
-    flow = await _get_user_flow(session, flow_id, current_user.id)
-    flow_dict = FlowRead.model_validate(flow, from_attributes=True).model_dump()
-
-    if include_history:
-        max_entries = get_settings_service().settings.max_flow_history_entries_per_flow
-        entries = await get_flow_history_list(session, flow_id, current_user.id, limit=max_entries, offset=0)
-        flow_dict["history"] = [
-            {
-                "version_number": e.version_number,
-                "description": e.description,
-                "data": strip_history_data(e.data),
-                "created_at": e.created_at.isoformat() if e.created_at else None,
-            }
-            for e in entries
-        ]
-
-    return flow_dict
+# TODO: Full-history export endpoint (export flow with all history entries embedded).
+# This is planned as a follow-up feature. The per-version export (exporting a single
+# version as a standalone flow) is available via the GET /{history_id} endpoint.
 
 
 @router.get("/{history_id}")
