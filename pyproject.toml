@@ -71,6 +71,7 @@ dev = [
     "pyyaml>=6.0.2",
     "pyleak>=0.1.14",
     "mcp-server-fetch>=2025.1.17",
+    "onnxruntime>=1.20,<=1.23" # >=1.24 does not support Python 3.10
 ]
 
 [tool.uv.sources]
