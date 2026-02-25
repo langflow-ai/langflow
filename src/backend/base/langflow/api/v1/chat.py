@@ -29,7 +29,6 @@ from langflow.api.utils import (
     verify_public_flow_and_get_user,
 )
 from langflow.api.utils.flow_validation import check_flow_and_raise
-from langflow.interface.components import component_cache
 from langflow.api.v1.schemas import (
     CancelFlowResponse,
     FlowDataRequest,
@@ -39,6 +38,7 @@ from langflow.api.v1.schemas import (
     VerticesOrderResponse,
 )
 from langflow.exceptions.component import ComponentBuildError
+from langflow.interface.components import component_cache
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.chat.service import ChatService
 from langflow.services.database.models.flow.model import Flow
@@ -197,9 +197,7 @@ async def build_flow(
     types_dict = component_cache.all_types_dict
     try:
         if data:
-            check_flow_and_raise(
-                data.model_dump(), allow_custom_components=allow_custom, all_types_dict=types_dict
-            )
+            check_flow_and_raise(data.model_dump(), allow_custom_components=allow_custom, all_types_dict=types_dict)
         if flow and flow.data:
             check_flow_and_raise(flow.data, allow_custom_components=allow_custom, all_types_dict=types_dict)
     except ValueError as exc:

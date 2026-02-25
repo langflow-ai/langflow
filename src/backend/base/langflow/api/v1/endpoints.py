@@ -29,7 +29,6 @@ from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession, extract_global_variables_from_headers, parse_value
 from langflow.api.utils.flow_validation import check_flow_and_raise, code_matches_any_template
-from langflow.interface.components import component_cache
 from langflow.api.v1.schemas import (
     ConfigResponse,
     CustomComponentRequest,
@@ -45,6 +44,7 @@ from langflow.events.event_manager import create_stream_tokens_event_manager
 from langflow.exceptions.api import APIException, InvalidChatInputError
 from langflow.exceptions.serialization import SerializationError
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
+from langflow.interface.components import component_cache
 from langflow.interface.initialize.loading import update_params_with_load_from_db_fields
 from langflow.processing.process import process_tweaks, run_graph_internal
 from langflow.schema.graph import Tweaks
@@ -1048,9 +1048,8 @@ async def custom_component(
     if not settings_service.settings.allow_custom_components:
         # Allow updating to a known server template (core component update),
         # but block truly custom code.
-        is_known_template = (
-            component_cache.all_types_dict
-            and code_matches_any_template(raw_code.code, component_cache.all_types_dict)
+        is_known_template = component_cache.all_types_dict and code_matches_any_template(
+            raw_code.code, component_cache.all_types_dict
         )
         if not is_known_template:
             raise HTTPException(
