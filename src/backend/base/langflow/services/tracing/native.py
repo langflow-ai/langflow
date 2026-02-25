@@ -233,8 +233,11 @@ class NativeTracer(BaseTracer):
             loop = asyncio.get_running_loop()
             self._flush_task = loop.create_task(self._flush_to_database(error))
         except RuntimeError:
-            # No running event loop, try to run synchronously
-            logger.warning("No running event loop, skipping database flush")
+            # No running event loop - log error since trace data will be lost
+            logger.error(
+                "No running event loop for trace flush - trace data will be lost. "
+                f"Flow: {self.flow_id}, Spans: {len(self.completed_spans)}"
+            )
 
     async def wait_for_flush(self) -> None:
         """Wait for the flush task to complete.
@@ -255,9 +258,6 @@ class NativeTracer(BaseTracer):
             from lfx.services.deps import session_scope
 
             from langflow.services.database.models.traces.model import SpanTable, TraceTable
-
-            # Ensure tables exist (for development - in prod use migrations)
-            await self._ensure_tables_exist()
 
             # Parse flow_id
             try:
@@ -331,13 +331,14 @@ class NativeTracer(BaseTracer):
                         completion_tokens=span_data.get("completion_tokens"),
                         total_tokens=span_data.get("total_tokens"),
                     )
-                    session.add(span)
+                    await session.merge(span)
 
                 await session.commit()
                 logger.debug(f"Flushed {len(self.completed_spans)} spans to database")
 
-        except Exception as e:  # noqa: BLE001
-            logger.debug(f"Error flushing to database: {e}")
+        except Exception:
+            logger.exception("Error flushing trace data to database")
+            raise
 
     @override
     def get_langchain_callback(self) -> BaseCallbackHandler | None:
@@ -462,31 +463,6 @@ class NativeTracer(BaseTracer):
                 "parent_span_id": span_info.get("parent_span_id"),
             }
         )
-
-    async def _ensure_tables_exist(self) -> None:
-        """Ensure trace and span tables exist in the database."""
-        try:
-            from langflow.services.deps import get_db_service
-
-            db_service = get_db_service()
-
-            # Use run_sync to create tables if they don't exist
-            from sqlmodel import SQLModel
-
-            async with db_service.engine.begin() as conn:
-                # Only create trace and span tables
-                await conn.run_sync(
-                    lambda c: SQLModel.metadata.create_all(
-                        c,
-                        tables=[
-                            SQLModel.metadata.tables.get("trace"),
-                            SQLModel.metadata.tables.get("span"),
-                        ],
-                        checkfirst=True,
-                    )
-                )
-        except Exception as e:  # noqa: BLE001
-            logger.debug(f"Error ensuring tables exist: {e}")
 
     @staticmethod
     def _map_trace_type(trace_type: str) -> SpanType:

@@ -18,6 +18,7 @@ from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlmodel import col, select
 
 from langflow.services.auth.utils import get_current_active_user
+from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.traces.model import (
     SpanStatus,
     SpanTable,
@@ -42,6 +43,7 @@ def _sanitize_query_string(value: str | None, max_len: int = 50) -> str | None:
 
 
 async def _fetch_traces(
+    user_id: UUID,
     flow_id: UUID | None,
     session_id: str | None,
     status: SpanStatus | None,
@@ -54,9 +56,18 @@ async def _fetch_traces(
     """Internal function to fetch traces with proper session management."""
     try:
         async with session_scope() as session:
-            # Simple query - just get traces for this flow
-            stmt = select(TraceTable)
-            count_stmt = select(func.count()).select_from(TraceTable)
+            # Join with Flow table to filter by user_id for authorization
+            stmt = (
+                select(TraceTable)
+                .join(Flow, col(TraceTable.flow_id) == col(Flow.id))
+                .where(col(Flow.user_id) == user_id)
+            )
+            count_stmt = (
+                select(func.count())
+                .select_from(TraceTable)
+                .join(Flow, col(TraceTable.flow_id) == col(Flow.id))
+                .where(col(Flow.user_id) == user_id)
+            )
 
             if flow_id:
                 stmt = stmt.where(TraceTable.flow_id == flow_id)
@@ -91,94 +102,96 @@ async def _fetch_traces(
 
             traces = (await session.exec(stmt)).all()
 
-        # Get aggregated token counts per trace (leaf spans only to avoid double-counting)
-        trace_ids = [trace.id for trace in traces]
-        token_map: dict[str, int] = {}
-        if trace_ids:
-            # Subquery: IDs of spans that are parents (i.e. have children)
-            parent_ids_subq = (
-                select(SpanTable.parent_span_id)
-                .where(SpanTable.parent_span_id != None)  # noqa: E711
-                .where(col(SpanTable.trace_id).in_(trace_ids))
-            ).subquery()
+            # Get aggregated token counts per trace (leaf spans only to avoid double-counting)
+            trace_ids = [trace.id for trace in traces]
+            token_map: dict[str, int] = {}
+            if trace_ids:
+                # Subquery: IDs of spans that are parents (i.e. have children)
+                parent_ids_subq = (
+                    select(SpanTable.parent_span_id)
+                    .where(SpanTable.parent_span_id != None)  # noqa: E711
+                    .where(col(SpanTable.trace_id).in_(trace_ids))
+                ).subquery()
 
-            token_stmt = (
-                select(
-                    SpanTable.trace_id,
-                    func.coalesce(func.sum(SpanTable.total_tokens), 0).label("sum_tokens"),
-                )
-                .where(col(SpanTable.trace_id).in_(trace_ids))
-                .where(~col(SpanTable.id).in_(select(parent_ids_subq.c.parent_span_id)))
-                .group_by(col(SpanTable.trace_id))
-            )
-            token_rows = (await session.exec(token_stmt)).all()
-            for row in token_rows:
-                token_map[str(row[0])] = int(row[1] or 0)
-
-        # Fetch Chat Input span input_value and final output for each trace
-        io_map: dict[str, dict[str, Any]] = {}
-        if trace_ids:
-            # Get all spans for these traces
-            all_spans_stmt = select(SpanTable).where(col(SpanTable.trace_id).in_(trace_ids))
-            all_spans = (await session.exec(all_spans_stmt)).all()
-
-            # Group spans by trace_id
-            spans_by_trace: dict[str, list[SpanTable]] = {}
-            for span in all_spans:
-                trace_id_str = str(span.trace_id)
-                if trace_id_str not in spans_by_trace:
-                    spans_by_trace[trace_id_str] = []
-                spans_by_trace[trace_id_str].append(span)
-
-            # For each trace, find Chat Input span and final output
-            for trace_id_str, spans in spans_by_trace.items():
-                # Find Chat Input span (by name)
-                chat_input_span = next((s for s in spans if "Chat Input" in s.name), None)
-                input_value = None
-                if chat_input_span and chat_input_span.inputs:
-                    input_value = chat_input_span.inputs.get("input_value")
-
-                # Find final output from root spans (ordered by end_time)
-                root_spans = [s for s in spans if s.parent_span_id is None and s.end_time]
-                output_value = None
-                if root_spans:
-                    # Sort by end_time descending to get the latest
-                    root_spans_sorted = sorted(
-                        root_spans, key=lambda s: s.end_time or datetime.min.replace(tzinfo=timezone.utc), reverse=True
+                token_stmt = (
+                    select(
+                        SpanTable.trace_id,
+                        func.coalesce(func.sum(SpanTable.total_tokens), 0).label("sum_tokens"),
                     )
-                    if root_spans_sorted and root_spans_sorted[0].outputs:
-                        output_value = root_spans_sorted[0].outputs
+                    .where(col(SpanTable.trace_id).in_(trace_ids))
+                    .where(~col(SpanTable.id).in_(select(parent_ids_subq.c.parent_span_id)))
+                    .group_by(col(SpanTable.trace_id))
+                )
+                token_rows = (await session.exec(token_stmt)).all()
+                for row in token_rows:
+                    token_map[str(row[0])] = int(row[1] or 0)
 
-                io_map[trace_id_str] = {
-                    "input": {"input_value": input_value} if input_value else None,
-                    "output": output_value,
-                }
+            # Fetch Chat Input span input_value and final output for each trace
+            io_map: dict[str, dict[str, Any]] = {}
+            if trace_ids:
+                # Get all spans for these traces
+                all_spans_stmt = select(SpanTable).where(col(SpanTable.trace_id).in_(trace_ids))
+                all_spans = (await session.exec(all_spans_stmt)).all()
 
-        # Convert to response format
-        trace_list = []
-        for trace in traces:
-            tid = str(trace.id)
-            total_tokens = token_map.get(tid, trace.total_tokens)
-            io_data = io_map.get(tid, {})
-            trace_list.append(
-                {
-                    "id": tid,
-                    "name": trace.name,
-                    "status": trace.status.value if trace.status else "success",
-                    "startTime": trace.start_time.isoformat() if trace.start_time else "",
-                    "totalLatencyMs": trace.total_latency_ms,
-                    "totalTokens": total_tokens,
-                    "totalCost": trace.total_cost,
-                    "flowId": str(trace.flow_id),
-                    "sessionId": trace.session_id or str(trace.id),
-                    "input": io_data.get("input"),
-                    "output": io_data.get("output"),
-                }
-            )
+                # Group spans by trace_id
+                spans_by_trace: dict[str, list[SpanTable]] = {}
+                for span in all_spans:
+                    trace_id_str = str(span.trace_id)
+                    if trace_id_str not in spans_by_trace:
+                        spans_by_trace[trace_id_str] = []
+                    spans_by_trace[trace_id_str].append(span)
 
-        total_count = int(total)
-        total_pages = max(1, math.ceil(total_count / size)) if size else 1
-        result = {"traces": trace_list, "total": total_count, "pages": total_pages}
+                # For each trace, find Chat Input span and final output
+                for trace_id_str, spans in spans_by_trace.items():
+                    # Find Chat Input span (by name)
+                    chat_input_span = next((s for s in spans if "Chat Input" in s.name), None)
+                    input_value = None
+                    if chat_input_span and chat_input_span.inputs:
+                        input_value = chat_input_span.inputs.get("input_value")
+
+                    # Find final output from root spans (ordered by end_time)
+                    root_spans = [s for s in spans if s.parent_span_id is None and s.end_time]
+                    output_value = None
+                    if root_spans:
+                        # Sort by end_time descending to get the latest
+                        root_spans_sorted = sorted(
+                            root_spans,
+                            key=lambda s: s.end_time or datetime.min.replace(tzinfo=timezone.utc),
+                            reverse=True,
+                        )
+                        if root_spans_sorted and root_spans_sorted[0].outputs:
+                            output_value = root_spans_sorted[0].outputs
+
+                    io_map[trace_id_str] = {
+                        "input": {"input_value": input_value} if input_value else None,
+                        "output": output_value,
+                    }
+
+            # Convert to response format
+            trace_list = []
+            for trace in traces:
+                tid = str(trace.id)
+                total_tokens = token_map.get(tid, trace.total_tokens)
+                io_data = io_map.get(tid, {})
+                trace_list.append(
+                    {
+                        "id": tid,
+                        "name": trace.name,
+                        "status": trace.status.value if trace.status else "success",
+                        "startTime": trace.start_time.isoformat() if trace.start_time else "",
+                        "totalLatencyMs": trace.total_latency_ms,
+                        "totalTokens": total_tokens,
+                        "totalCost": trace.total_cost,
+                        "flowId": str(trace.flow_id),
+                        "sessionId": trace.session_id or str(trace.id),
+                        "input": io_data.get("input"),
+                        "output": io_data.get("output"),
+                    }
+                )
+
+            total_count = int(total)
+            total_pages = max(1, math.ceil(total_count / size)) if size else 1
+            result = {"traces": trace_list, "total": total_count, "pages": total_pages}
     except Exception:
         logger.exception("Error fetching traces")
         raise
@@ -186,9 +199,9 @@ async def _fetch_traces(
         return result
 
 
-@router.get("", dependencies=[Depends(get_current_active_user)])
+@router.get("")
 async def get_traces(
-    current_user: Annotated[User, Depends(get_current_active_user)],  # noqa: ARG001
+    current_user: Annotated[User, Depends(get_current_active_user)],
     flow_id: Annotated[UUID | None, Query()] = None,
     session_id: Annotated[str | None, Query()] = None,
     status: Annotated[SpanStatus | None, Query()] = None,
@@ -218,7 +231,7 @@ async def get_traces(
         query = _sanitize_query_string(query)
         # Use timeout to prevent hanging if database has issues
         return await asyncio.wait_for(
-            _fetch_traces(flow_id, session_id, status, query, start_time, end_time, page, size),
+            _fetch_traces(current_user.id, flow_id, session_id, status, query, start_time, end_time, page, size),
             timeout=DB_TIMEOUT,
         )
     except asyncio.TimeoutError:
@@ -228,17 +241,22 @@ async def get_traces(
         # Table doesn't exist or other SQL error
         logger.debug("Database error getting traces (table may not exist): %s", e)
         return {"traces": [], "total": 0}
-    except Exception as e:  # noqa: BLE001
-        # Log error but return empty list - broad catch needed for graceful degradation
-        logger.debug("Error getting traces: %s", e)
-        return {"traces": [], "total": 0}
+    except Exception:
+        # Log unexpected errors at error level and re-raise
+        logger.exception("Unexpected error getting traces")
+        raise
 
 
-async def _fetch_single_trace(trace_id: UUID) -> dict[str, Any] | None:
+async def _fetch_single_trace(user_id: UUID, trace_id: UUID) -> dict[str, Any] | None:
     """Internal function to fetch a single trace with its spans."""
     async with session_scope() as session:
-        # Get trace (simple query without JOIN for now)
-        stmt = select(TraceTable).where(TraceTable.id == trace_id)
+        # Get trace with authorization check
+        stmt = (
+            select(TraceTable)
+            .join(Flow, col(TraceTable.flow_id) == col(Flow.id))
+            .where(col(TraceTable.id) == trace_id)
+            .where(col(Flow.user_id) == user_id)
+        )
         trace = (await session.exec(stmt)).first()
 
         if not trace:
@@ -275,7 +293,7 @@ async def _fetch_single_trace(trace_id: UUID) -> dict[str, Any] | None:
 @router.get("/{trace_id}")
 async def get_trace(
     trace_id: UUID,
-    current_user: Annotated[User, Depends(get_current_active_user)],  # noqa: ARG001
+    current_user: Annotated[User, Depends(get_current_active_user)],
 ) -> dict[str, Any]:
     """Get a single trace with its hierarchical span tree.
 
@@ -294,7 +312,7 @@ async def get_trace(
     """
     try:
         result = await asyncio.wait_for(
-            _fetch_single_trace(trace_id),
+            _fetch_single_trace(current_user.id, trace_id),
             timeout=DB_TIMEOUT,
         )
         if result is None:
@@ -379,10 +397,10 @@ def _span_to_dict(span: SpanTable) -> dict[str, Any]:
     }
 
 
-@router.delete("/{trace_id}", status_code=204, dependencies=[Depends(get_current_active_user)])
+@router.delete("/{trace_id}", status_code=204)
 async def delete_trace(
     trace_id: UUID,
-    current_user: Annotated[User, Depends(get_current_active_user)],  # noqa: ARG001
+    current_user: Annotated[User, Depends(get_current_active_user)],
 ) -> None:
     """Delete a trace and all its spans.
 
@@ -395,7 +413,13 @@ async def delete_trace(
     """
     try:
         async with session_scope() as session:
-            stmt = select(TraceTable).where(TraceTable.id == trace_id)
+            # Verify user owns the flow before deleting
+            stmt = (
+                select(TraceTable)
+                .join(Flow, col(TraceTable.flow_id) == col(Flow.id))
+                .where(col(TraceTable.id) == trace_id)
+                .where(col(Flow.user_id) == current_user.id)
+            )
             trace = (await session.exec(stmt)).first()
 
             if not trace:
@@ -409,10 +433,10 @@ async def delete_trace(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.delete("", status_code=204, dependencies=[Depends(get_current_active_user)])
+@router.delete("", status_code=204)
 async def delete_traces_by_flow(
     flow_id: Annotated[UUID, Query()],
-    current_user: Annotated[User, Depends(get_current_active_user)],  # noqa: ARG001
+    current_user: Annotated[User, Depends(get_current_active_user)],
 ) -> None:
     """Delete all traces for a flow.
 
@@ -425,6 +449,13 @@ async def delete_traces_by_flow(
     """
     try:
         async with session_scope() as session:
+            # Verify user owns the flow before deleting traces
+            flow_stmt = select(Flow).where(col(Flow.id) == flow_id).where(col(Flow.user_id) == current_user.id)
+            flow = (await session.exec(flow_stmt)).first()
+
+            if not flow:
+                raise HTTPException(status_code=404, detail="Flow not found")
+
             # Get all traces for this flow
             stmt = select(TraceTable).where(TraceTable.flow_id == flow_id)
             traces = (await session.exec(stmt)).all()
