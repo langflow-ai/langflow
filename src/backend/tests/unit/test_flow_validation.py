@@ -13,7 +13,6 @@ Covers:
 """
 
 import pytest
-
 from langflow.api.utils.flow_validation import (
     _collect_all_template_codes,
     _find_template_code,
@@ -25,7 +24,6 @@ from langflow.api.utils.flow_validation import (
     validate_flow_custom_components,
     validate_flows_custom_components,
 )
-
 
 # ==================== Fixtures ====================
 
@@ -125,10 +123,12 @@ class TestCollectAllTemplateCodes:
         assert _collect_all_template_codes({}) == set()
 
     def test_collects_codes(self):
-        atd = _make_all_types_dict({
-            "A": {"code": "code_a"},
-            "B": {"code": "code_b"},
-        })
+        atd = _make_all_types_dict(
+            {
+                "A": {"code": "code_a"},
+                "B": {"code": "code_b"},
+            }
+        )
         codes = _collect_all_template_codes(atd)
         assert codes == {"code_a", "code_b"}
 
@@ -194,17 +194,21 @@ class TestFindTemplateCode:
 
     def test_legacy_alias_prompt(self):
         """'Prompt' should resolve to 'Prompt Template' via legacy alias."""
-        atd = _make_all_types_dict({
-            "Prompt Template": {"code": "prompt_code"},
-        })
+        atd = _make_all_types_dict(
+            {
+                "Prompt Template": {"code": "prompt_code"},
+            }
+        )
         assert _find_template_code("Prompt", atd) == "prompt_code"
 
     def test_direct_match_takes_precedence_over_alias(self):
         """If both direct key and alias target exist, direct key wins."""
-        atd = _make_all_types_dict({
-            "Prompt": {"code": "direct_code"},
-            "Prompt Template": {"code": "renamed_code"},
-        })
+        atd = _make_all_types_dict(
+            {
+                "Prompt": {"code": "direct_code"},
+                "Prompt Template": {"code": "renamed_code"},
+            }
+        )
         assert _find_template_code("Prompt", atd) == "direct_code"
 
 
@@ -229,10 +233,12 @@ class TestGetOutdatedComponents:
 
     def test_old_known_code_detected_as_outdated(self):
         """Node has code from a previous version of the same component type."""
-        atd = _make_all_types_dict({
-            "ChatInput": {"code": "v2_code"},
-            "OldComponent": {"code": "v1_code"},  # Old code exists as another component
-        })
+        atd = _make_all_types_dict(
+            {
+                "ChatInput": {"code": "v2_code"},
+                "OldComponent": {"code": "v1_code"},  # Old code exists as another component
+            }
+        )
         nodes = [_make_node(code="v1_code", node_type="ChatInput", display_name="Chat Input")]
         result = _get_outdated_components(nodes, atd)
         assert len(result) == 1
@@ -246,27 +252,29 @@ class TestGetOutdatedComponents:
 
     def test_renamed_component_outdated_detection(self):
         """Outdated detection works for renamed components via legacy alias (Prompt → Prompt Template)."""
-        atd = _make_all_types_dict({
-            "Prompt Template": {"code": "v2_prompt_code"},
-            "SomeOther": {"code": "v1_prompt_code"},  # Old Prompt code matches this
-        })
+        atd = _make_all_types_dict(
+            {
+                "Prompt Template": {"code": "v2_prompt_code"},
+                "SomeOther": {"code": "v1_prompt_code"},  # Old Prompt code matches this
+            }
+        )
         nodes = [_make_node(code="v1_prompt_code", node_type="Prompt", display_name="Prompt")]
         result = _get_outdated_components(nodes, atd)
         assert len(result) == 1
         assert "Prompt" in result[0]
 
     def test_nested_outdated_detection(self):
-        atd = _make_all_types_dict({
-            "ChatInput": {"code": "v2"},
-            "Legacy": {"code": "v1"},
-        })
+        atd = _make_all_types_dict(
+            {
+                "ChatInput": {"code": "v2"},
+                "Legacy": {"code": "v1"},
+            }
+        )
         inner = _make_node(code="v1", node_type="ChatInput", display_name="Nested Chat")
         outer = _make_node(code="v2", node_type="ChatInput", nested_nodes=[inner])
         result = _get_outdated_components([outer], atd)
         assert len(result) == 1
         assert "Nested Chat" in result[0]
-
-
 
 
 class TestValidateFlowCustomComponents:
@@ -285,8 +293,6 @@ class TestValidateFlowCustomComponents:
         result = validate_flow_custom_components(flow_data)
         assert len(result) == 1
         assert "Edited" in result[0]
-
-
 
 
 class TestValidateFlowsCustomComponents:
@@ -326,10 +332,12 @@ class TestCheckFlowAndRaise:
 
     def test_blocks_outdated_components(self):
         """Primary path: outdated code (known but wrong version) is blocked."""
-        atd = _make_all_types_dict({
-            "ChatInput": {"code": "v2_code"},
-            "Legacy": {"code": "v1_code"},
-        })
+        atd = _make_all_types_dict(
+            {
+                "ChatInput": {"code": "v2_code"},
+                "Legacy": {"code": "v1_code"},
+            }
+        )
         flow_data = {"nodes": [_make_node(code="v1_code", node_type="ChatInput")]}
         with pytest.raises(ValueError, match="outdated components must be updated"):
             check_flow_and_raise(flow_data, allow_custom_components=False, all_types_dict=atd)
@@ -410,9 +418,7 @@ class TestEndpointValidationCoverage:
         from langflow.api.v1.chat import build_vertex
 
         source = self._read_function_source(build_vertex)
-        assert "check_flow_and_raise" in source, (
-            "build_vertex must call check_flow_and_raise before building from DB"
-        )
+        assert "check_flow_and_raise" in source, "build_vertex must call check_flow_and_raise before building from DB"
 
     def test_build_public_tmp_validates_db_flow(self):
         """build_public_tmp must validate stored flow data, not just user-provided data."""
@@ -424,40 +430,32 @@ class TestEndpointValidationCoverage:
         )
 
     def test_run_flow_validates(self):
-        """run flow internal must call check_flow_and_raise."""
+        """Run flow internal must call check_flow_and_raise."""
         from langflow.api.v1.endpoints import _run_flow_internal
 
         source = self._read_function_source(_run_flow_internal)
-        assert "check_flow_and_raise" in source, (
-            "_run_flow_internal must call check_flow_and_raise"
-        )
+        assert "check_flow_and_raise" in source, "_run_flow_internal must call check_flow_and_raise"
 
     def test_webhook_run_flow_validates(self):
         """webhook_run_flow must call check_flow_and_raise."""
         from langflow.api.v1.endpoints import webhook_run_flow
 
         source = self._read_function_source(webhook_run_flow)
-        assert "check_flow_and_raise" in source, (
-            "webhook_run_flow must call check_flow_and_raise"
-        )
+        assert "check_flow_and_raise" in source, "webhook_run_flow must call check_flow_and_raise"
 
     def test_experimental_run_flow_validates(self):
         """experimental_run_flow must call check_flow_and_raise."""
         from langflow.api.v1.endpoints import experimental_run_flow
 
         source = self._read_function_source(experimental_run_flow)
-        assert "check_flow_and_raise" in source, (
-            "experimental_run_flow must call check_flow_and_raise"
-        )
+        assert "check_flow_and_raise" in source, "experimental_run_flow must call check_flow_and_raise"
 
     def test_custom_component_create_checks_allow_custom(self):
         """POST /custom_component must check allow_custom_components."""
         from langflow.api.v1.endpoints import custom_component
 
         source = self._read_function_source(custom_component)
-        assert "allow_custom_components" in source, (
-            "custom_component must check allow_custom_components setting"
-        )
+        assert "allow_custom_components" in source, "custom_component must check allow_custom_components setting"
 
     def test_custom_component_update_checks_allow_custom(self):
         """POST /custom_component/update must check allow_custom_components.
@@ -472,6 +470,4 @@ class TestEndpointValidationCoverage:
             "custom_component_update must check allow_custom_components setting. "
             "Without this check, arbitrary code can be executed via POST /custom_component/update."
         )
-        assert "code_matches_any_template" in source, (
-            "custom_component_update must verify code against known templates"
-        )
+        assert "code_matches_any_template" in source, "custom_component_update must verify code against known templates"
