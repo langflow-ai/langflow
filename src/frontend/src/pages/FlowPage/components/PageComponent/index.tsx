@@ -5,10 +5,8 @@ import {
   type OnNodeDrag,
   type OnSelectionChangeParams,
   ReactFlow,
-  ReactFlowProvider,
   reconnectEdge,
   type SelectionDragHandler,
-  useNodesInitialized,
 } from "@xyflow/react";
 import _, { cloneDeep } from "lodash";
 import {
@@ -60,14 +58,17 @@ import {
   generateNodeFromFlow,
   getNodeId,
   isValidConnection,
+  processFlows,
   scapeJSONParse,
   updateIds,
   validateSelection,
 } from "../../../../utils/reactflowUtils";
+import { edgeTypes, nodeTypes } from "../../consts";
 import ConnectionLineComponent from "../ConnectionLineComponent";
 import FlowBuildingComponent from "../flowBuildingComponent";
 import SelectionMenu from "../SelectionMenuComponent";
 import UpdateAllComponents from "../UpdateAllComponents";
+import HistoryPreviewOverlay from "./components/HistoryPreviewOverlay";
 import HelperLines from "./components/helper-lines";
 import {
   getHelperLines,
@@ -82,75 +83,6 @@ import {
 } from "./MemoizedComponents";
 import getRandomName from "./utils/get-random-name";
 import isWrappedWithClass from "./utils/is-wrapped-with-class";
-
-import { ErrorBoundary, type FallbackProps } from "react-error-boundary";
-import { nodeTypes, edgeTypes } from "../../consts";
-
-function PreviewErrorFallback(_props: FallbackProps) {
-  return (
-    <div className="flex h-full flex-col items-center justify-center gap-2 text-destructive">
-      <span>Failed to render preview</span>
-      <span className="text-xs text-muted-foreground">
-        This version may contain incompatible data. Try refreshing the page.
-      </span>
-    </div>
-  );
-}
-
-/**
- * Read-only ReactFlow canvas used to preview historical flow versions.
- * Defers edge rendering until nodes are fully initialized (handles measured)
- * so edges connect to the correct handle positions.
- * Must be rendered inside a ReactFlowProvider.
- */
-function PreviewCanvas({
-  nodes: previewNodes,
-  edges: previewEdges,
-  nodeTypes: nTypes,
-  edgeTypes: eTypes,
-  label,
-}: {
-  nodes: AllNodeType[];
-  edges: EdgeType[];
-  nodeTypes: any;
-  edgeTypes: any;
-  label: string;
-}) {
-  const nodesInitialized = useNodesInitialized();
-  return (
-    <>
-      <ReactFlow<AllNodeType, EdgeType>
-        nodes={previewNodes}
-        edges={nodesInitialized ? previewEdges : []}
-        nodeTypes={nTypes}
-        edgeTypes={eTypes}
-        fitView
-        fitViewOptions={{ padding: 0.2, minZoom: 0.25, maxZoom: 2 }}
-        minZoom={0.25}
-        maxZoom={2}
-        nodesDraggable={false}
-        nodesConnectable={false}
-        nodesFocusable={false}
-        edgesFocusable={false}
-        elementsSelectable={false}
-        panOnDrag
-        zoomOnScroll
-        zoomOnPinch
-        proOptions={{ hideAttribution: true }}
-        className="theme-attribution"
-      >
-        <MemoizedBackground />
-      </ReactFlow>
-      <div className="absolute left-1/2 top-3 z-50 flex -translate-x-1/2 items-center gap-2 rounded-lg border border-accent-indigo-foreground/30 bg-accent-indigo/50 px-3 py-1.5 shadow-md backdrop-blur-sm">
-        <span className="text-xs font-medium text-accent-indigo-foreground">
-          {label === "Current Draft"
-            ? "Read-only \u2014 close Version History to edit"
-            : `Previewing ${label} (read-only)`}
-        </span>
-      </div>
-    </>
-  );
-}
 
 export default function Page({
   view,
@@ -177,13 +109,8 @@ export default function Page({
   const edges = useFlowStore((state) => state.edges);
   const isEmptyFlow = useRef(nodes.length === 0);
 
-  // History preview — when non-null, overlay the main canvas with read-only
-  // historical nodes/edges instead of the live draft.
-  const previewNodes = useHistoryPreviewStore((s) => s.previewNodes);
-  const previewEdges = useHistoryPreviewStore((s) => s.previewEdges);
   const previewLabel = useHistoryPreviewStore((s) => s.previewLabel);
-  const previewKey = useHistoryPreviewStore((s) => s.previewKey);
-  const isPreviewActive = previewNodes !== null;
+  const isPreviewActive = previewLabel !== null;
   const onNodesChange = useFlowStore((state) => state.onNodesChange);
   const onEdgesChange = useFlowStore((state) => state.onEdgesChange);
   const setNodes = useFlowStore((state) => state.setNodes);
@@ -888,27 +815,38 @@ export default function Page({
               edges={edges}
               onNodesChange={onNodesChangeWithHelperLines}
               onEdgesChange={onEdgesChange}
-              onConnect={isLocked ? undefined : onConnectMod}
+              onConnect={isLocked || isPreviewActive ? undefined : onConnectMod}
               disableKeyboardA11y={true}
-              nodesFocusable={!isLocked}
-              edgesFocusable={!isLocked}
+              nodesFocusable={!isLocked && !isPreviewActive}
+              edgesFocusable={!isLocked && !isPreviewActive}
+              nodesDraggable={!isPreviewActive}
+              nodesConnectable={!isPreviewActive}
+              elementsSelectable={!isPreviewActive}
               onInit={setReactFlowInstance}
               nodeTypes={nodeTypes}
-              onReconnect={isLocked ? undefined : onEdgeUpdate}
-              onReconnectStart={isLocked ? undefined : onEdgeUpdateStart}
-              onReconnectEnd={isLocked ? undefined : onEdgeUpdateEnd}
-              onNodeDrag={onNodeDrag}
-              onNodeDragStart={onNodeDragStart}
-              onSelectionDragStart={onSelectionDragStart}
+              onReconnect={
+                isLocked || isPreviewActive ? undefined : onEdgeUpdate
+              }
+              onReconnectStart={
+                isLocked || isPreviewActive ? undefined : onEdgeUpdateStart
+              }
+              onReconnectEnd={
+                isLocked || isPreviewActive ? undefined : onEdgeUpdateEnd
+              }
+              onNodeDrag={isPreviewActive ? undefined : onNodeDrag}
+              onNodeDragStart={isPreviewActive ? undefined : onNodeDragStart}
+              onSelectionDragStart={
+                isPreviewActive ? undefined : onSelectionDragStart
+              }
               elevateEdgesOnSelect={false}
-              onSelectionEnd={onSelectionEnd}
-              onSelectionStart={onSelectionStart}
+              onSelectionEnd={isPreviewActive ? undefined : onSelectionEnd}
+              onSelectionStart={isPreviewActive ? undefined : onSelectionStart}
               connectionRadius={30}
               edgeTypes={edgeTypes}
               connectionLineComponent={ConnectionLineComponent}
-              onDragOver={onDragOver}
-              onNodeDragStop={onNodeDragStop}
-              onDrop={onDrop}
+              onDragOver={isPreviewActive ? undefined : onDragOver}
+              onNodeDragStop={isPreviewActive ? undefined : onNodeDragStop}
+              onDrop={isPreviewActive ? undefined : onDrop}
               onSelectionChange={onSelectionChange}
               deleteKeyCode={[]}
               fitView={isEmptyFlow.current ? false : true}
@@ -933,31 +871,7 @@ export default function Page({
               <MemoizedBackground />
               {helperLineEnabled && <HelperLines helperLines={helperLines} />}
             </ReactFlow>
-            {/* History preview overlay — read-only ReactFlow showing a past version.
-                key={previewLabel} forces a full remount (and fitView) on version switch. */}
-            {isPreviewActive && (
-              <div
-                key={previewKey}
-                className="absolute inset-0 z-50 bg-canvas ring-4 ring-inset ring-accent-indigo-foreground/20"
-              >
-                <ErrorBoundary
-                  FallbackComponent={PreviewErrorFallback}
-                  onError={(error, info) => {
-                    console.error("History preview render failed:", error, info);
-                  }}
-                >
-                  <ReactFlowProvider>
-                    <PreviewCanvas
-                      nodes={previewNodes!}
-                      edges={previewEdges!}
-                      nodeTypes={nodeTypes}
-                      edgeTypes={edgeTypes}
-                      label={previewLabel!}
-                    />
-                  </ReactFlowProvider>
-                </ErrorBoundary>
-              </div>
-            )}
+            {isPreviewActive && <HistoryPreviewOverlay />}
           </div>
           <div
             id="shadow-box"
