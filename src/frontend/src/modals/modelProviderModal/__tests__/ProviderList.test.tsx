@@ -125,11 +125,12 @@ describe("ProviderList", () => {
     it("should filter providers by embeddings model type", () => {
       render(<ProviderList modelType="embeddings" />);
 
-      // Only OpenAI has embedding models
+      // OpenAI has embedding models
       expect(screen.getByTestId("provider-item-OpenAI")).toBeInTheDocument();
+      // Anthropic has no embedding models but still renders (shows "no models" alert)
       expect(
-        screen.queryByTestId("provider-item-Anthropic"),
-      ).not.toBeInTheDocument();
+        screen.getByTestId("provider-item-Anthropic"),
+      ).toBeInTheDocument();
     });
   });
 
