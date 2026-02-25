@@ -266,6 +266,9 @@ export async function buildFlowVertices({
     postData["inputs"] = inputs;
   }
 
+  // Scope build_duration updates to this flow/session (fixes wrong session showing duration)
+  useFlowStore.getState().setBuildingSession(flowId, session ?? null);
+
   try {
     // If event_delivery is direct, we'll stream from the build endpoint directly
     if (eventDelivery === EventDeliveryType.DIRECT) {
@@ -557,8 +560,11 @@ async function onEvent(
       if (nodeType && isOutputType(nodeType) && flowState.buildStartTime) {
         const segmentDurationMs = Date.now() - flowState.buildStartTime;
 
-        // Find and update the last bot message with this segment's duration
-        const found = findLastBotMessage();
+        // Find and update the last bot message for the current build session only
+        const found = findLastBotMessage(
+          flowState.buildingFlowId ?? undefined,
+          flowState.buildingSessionId ?? undefined,
+        );
         if (found && !found.message.properties?.build_duration) {
           updateMessageProperties(found.message.id!, found.queryKey, {
             build_duration: segmentDurationMs,
@@ -628,11 +634,15 @@ async function onEvent(
       const allNodesValid = buildResults.every((result) => result);
       if (data?.build_duration != null) {
         const durationMs = data.build_duration * 1000;
-        useFlowStore.getState().setBuildDuration(durationMs);
+        const flowState = useFlowStore.getState();
+        flowState.setBuildDuration(durationMs);
 
-        // Only set build_duration on last message if it doesn't already have one
+        // Only set build_duration on last message of the current build session
         // (nested agents set their own segment duration in add_message)
-        const found = findLastBotMessage();
+        const found = findLastBotMessage(
+          flowState.buildingFlowId ?? undefined,
+          flowState.buildingSessionId ?? undefined,
+        );
         if (found && !found.message.properties?.build_duration) {
           updateMessageProperties(found.message.id!, found.queryKey, {
             build_duration: durationMs,
