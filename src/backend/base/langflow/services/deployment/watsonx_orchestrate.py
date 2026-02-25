@@ -176,7 +176,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         """Create a deployment in Watsonx Orchestrate."""
         try:
             deployment_spec: BaseDeploymentData = deployment.spec
-            deployment_spec.name = self._normalize_wxo_name(deployment_spec.name)
+            deployment_spec.name = self._validate_wxo_name(deployment_spec.name)
             clients = await self._get_provider_clients(user_id=user_id, db=db)
             # absorb read-before-write race for now
             self._assert_create_resources_available(
@@ -232,32 +232,25 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                     )
                 raise InvalidDeploymentTypeError(message=msg)
 
-        except (ClientAPIException, HTTPException) as e:
-            status_code = (
-                e.response.status_code
-                if isinstance(e, ClientAPIException)
-                else e.status_code
-            )
-            if isinstance(e, ClientAPIException):
-                status_code = e.response.status_code
-                error_detail = self._extract_error_detail(e.response.text)
+        except (ClientAPIException, HTTPException) as exc:
+            if isinstance(exc, ClientAPIException):
+                status_code = exc.response.status_code
+                error_detail = self._extract_error_detail(exc.response.text)
             else:
-                status_code = e.status_code
-                error_detail = self._extract_error_detail(e.detail)
-
+                status_code = exc.status_code
+                error_detail = self._extract_error_detail(str(exc.detail))
             if status_code == status.HTTP_409_CONFLICT:
                 msg = (
                     f"{ErrorPrefix.CREATE.value}. "
                     "One or more resources already exist. "
                     "Please ensure the names and/or ids of the "
                     "following resources to be unique: "
-                    f"(1) The deployment specification, "
-                    f"(2) The deployment configuration, "
-                    f"(3) The deployment snapshot. "
+                    "(1) The deployment specification, "
+                    "(2) The deployment configuration, "
+                    "(3) The deployment snapshot. "
                     f"error details: {error_detail}"
                 )
                 raise DeploymentConflictError(message=msg) from None
-
             if status_code == status.HTTP_422_UNPROCESSABLE_CONTENT:
                 msg = (
                     f"{ErrorPrefix.CREATE.value}. "
@@ -266,16 +259,13 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                     f"error details: {error_detail}"
                 )
                 raise InvalidContentError(message=msg) from None
-
             msg = (
                 f"{ErrorPrefix.CREATE.value}. "
                 "An unexpected error occurred while "
                 "creating a deployment in Watsonx Orchestrate. "
                 f"error details: {error_detail}"
-
             )
             raise DeploymentError(message=msg) from None
-
         except InvalidDeploymentTypeError:
             raise
         except DeploymentError:
@@ -452,8 +442,9 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         if update_data.spec:
             spec_updates = update_data.spec.model_dump(exclude_unset=True)
             if "name" in spec_updates:
-                update_payload["name"] = spec_updates["name"]
-                update_payload["display_name"] = spec_updates["name"]
+                normalized_name = self._validate_wxo_name(spec_updates["name"])
+                update_payload["name"] = normalized_name
+                update_payload["display_name"] = normalized_name
             if "description" in spec_updates:
                 update_payload["description"] = spec_updates["description"]
 
@@ -720,7 +711,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         """Create/update a WXO draft key-value connection config plus runtime credentials."""
         clients = await self._get_provider_clients(user_id=user_id, db=db)
 
-        app_id = config.name
+        app_id = self._validate_wxo_name(config.name)
 
         clients.connections.create(payload={"app_id": app_id})
 
@@ -1246,10 +1237,8 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         tool_ids: list[str],
     ) -> dict[str, Any]:
         return {
-            # Name must start with a letter and contain only alphanumeric characters and underscores
-            # WxO will raise an error if the name is not valid. So we won't validate it here.
             "name": data.name,
-            "description": data.description,
+            "description": str(data.description or "").strip() or f"Langflow deployment {data.name}",
             "tools": tool_ids,
             "style": "default",
             "llm": "groq/openai/gpt-oss-120b",
@@ -1986,12 +1975,28 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         with a ``msg`` key, or a list of such dicts.  This helper normalises all
         three shapes into a single value suitable for inclusion in an error message.
         """
-        detail = json.loads(response_text).get("detail")
+        try:
+            detail = json.loads(response_text).get("detail")
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return response_text
         if detail and isinstance(detail, list):
             detail = detail[0]
         if isinstance(detail, dict):
             detail = detail.get("msg") or detail
         return detail
+
+    def _validate_wxo_name(self, name: str) -> str:
+        """Normalize and validate a WXO resource name."""
+        normalized_name = self._normalize_wxo_name(str(name))
+        if not normalized_name:
+            msg = "Deployment name must include at least one alphanumeric character."
+            raise InvalidContentError(message=msg)
+        if not normalized_name[0].isalpha():
+            msg = (
+                "Deployment name must start with a letter. "
+            )
+            raise InvalidContentError(message=msg)
+        return normalized_name
 
     def _prefix_flow_global_variable_references(
         self,
@@ -2025,8 +2030,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         _walk(flow_definition)
         return flow_definition
 
-    @staticmethod
-    def _normalize_wxo_name(s: str) -> str:
+    def _normalize_wxo_name(self, s: str) -> str:
         return _WXO_SANITIZE_RE.sub("", s.translate(_WXO_TRANSLATE))
 
 
