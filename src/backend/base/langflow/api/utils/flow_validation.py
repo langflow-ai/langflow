@@ -53,8 +53,10 @@ def _collect_all_template_codes(all_types_dict: dict[str, Any]) -> set[str]:
         for component_data in category_components.values():
             if not isinstance(component_data, dict):
                 continue
-            template = component_data.get("template", {})
-            code_field = template.get("code", {})
+            template = component_data.get("template")
+            if not isinstance(template, dict):
+                continue
+            code_field = template.get("code")
             if isinstance(code_field, dict):
                 code_value = code_field.get("value")
                 if code_value:
@@ -109,20 +111,32 @@ def _find_template_code(component_type: str, all_types_dict: dict[str, Any]) -> 
     Tries a direct key match first, then falls back to _LEGACY_TYPE_ALIASES
     (handles renamed components like "Prompt" → "Prompt Template").
     """
-    # Try direct match, then alias
-    types_to_try = [component_type]
     alias = _LEGACY_TYPE_ALIASES.get(component_type)
-    if alias:
-        types_to_try.append(alias)
 
-    for lookup_type in types_to_try:
+    # First pass: try direct component_type across all categories
+    for category_components in all_types_dict.values():
+        if not isinstance(category_components, dict):
+            continue
+        component_data = category_components.get(component_type)
+        if component_data and isinstance(component_data, dict):
+            template = component_data.get("template")
+            if not isinstance(template, dict):
+                continue
+            code_field = template.get("code")
+            if isinstance(code_field, dict):
+                return code_field.get("value")
+
+    # Second pass: try alias if present
+    if alias:
         for category_components in all_types_dict.values():
             if not isinstance(category_components, dict):
                 continue
-            component_data = category_components.get(lookup_type)
+            component_data = category_components.get(alias)
             if component_data and isinstance(component_data, dict):
-                template = component_data.get("template", {})
-                code_field = template.get("code", {})
+                template = component_data.get("template")
+                if not isinstance(template, dict):
+                    continue
+                code_field = template.get("code")
                 if isinstance(code_field, dict):
                     return code_field.get("value")
     return None
