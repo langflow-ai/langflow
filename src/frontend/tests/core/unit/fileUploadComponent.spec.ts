@@ -302,7 +302,7 @@ test(
       await expect(page.getByText('{"test":"content"}')).toBeVisible({
         timeout: 10000,
       });
-      await page.getByTestId("playground-btn-flow-io").click();
+      await page.getByTestId("playground-close-button").click();
       await page.getByTestId("button_open_file_management").click();
       await page.getByTestId(`context-menu-button-${renamedJsonFile}`).click();
       await page.getByTestId("btn-delete-file").click();
@@ -365,6 +365,8 @@ test(
       await page
         .getByRole("button", { name: "Playground", exact: true })
         .click();
+      // Exit fullscreen so the more menu is visible
+      await page.getByRole("button", { name: "Exit fullscreen" }).click();
       await page.getByTestId("chat-header-more-menu").click();
       await page.getByTestId("clear-chat-option").click();
       // await page.getByTestId("icon-MoreHorizontal").last().click();
