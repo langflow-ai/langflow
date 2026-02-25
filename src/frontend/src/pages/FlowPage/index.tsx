@@ -263,7 +263,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
         onOpenChange={(open) => {
           const wasOpen = isSlidingContainerOpen;
           setSlidingContainerOpen(open);
-           if (open && !wasOpen) {
+          if (open && !wasOpen) {
             setIsFullscreen(true);
           }
         }}

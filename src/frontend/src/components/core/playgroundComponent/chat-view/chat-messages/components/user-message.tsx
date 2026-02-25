@@ -98,7 +98,7 @@ export const UserMessage = memo(
       <div className="mt-2 text-xs text-muted-foreground text-right">
         (Edited)
       </div>
-      ) : null;
+    ) : null;
 
     const isEmoji = chat.properties?.icon?.match(
       /[\u2600-\u27BF\uD83C-\uDBFF\uDC00-\uDFFF]/,
@@ -154,7 +154,7 @@ export const UserMessage = memo(
                       {(!isEmpty || !hasFiles) && (
                         <div
                           className={cn(
-                            "w-full items-baseline whitespace-pre-wrap break-words text-xs font-normal",
+                            "w-full items-baseline whitespace-pre-wrap break-words text-sm font-normal",
                             isEmpty ? "text-muted-foreground" : "text-primary",
                           )}
                           data-testid={`chat-message-${chat.sender_name}-${chatMessage}`}
