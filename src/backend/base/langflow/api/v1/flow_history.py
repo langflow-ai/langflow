@@ -45,7 +45,20 @@ def strip_history_data(data: dict | None) -> dict | None:
     """
     if data is None:
         return None
-    data_copy = copy.deepcopy(data)
+
+    try:
+        data_copy = _fast_deepcopy(data)
+    except Exception:
+        # If our fast path fails for some unexpected type, fall back to the safe deepcopy
+        try:
+            data_copy = copy.deepcopy(data)
+        except Exception:
+            logger.warning(
+                "Failed to strip API keys from history data — excluding data from export to prevent secret leakage",
+                exc_info=True,
+            )
+            return None
+
     try:
         return remove_api_keys({"data": data_copy}).get("data")
     except Exception:
@@ -237,3 +250,58 @@ async def delete_history_entry(
     except FlowHistoryError as exc:
         raise _translate_history_error(exc) from exc
     await logger.adebug("Deleted history entry %s for flow %s", history_id, flow_id)
+
+
+def _fast_deepcopy(obj, memo: dict | None = None):
+    """A faster deepcopy for common container types with safe fallback.
+
+    Handles dict, list, tuple, set and primitive immutables directly, using
+    a memo dict to preserve cycle handling. Falls back to copy.deepcopy
+    for other types to preserve full deepcopy semantics.
+    """
+    if memo is None:
+        memo = {}
+
+    obj_id = id(obj)
+    if obj_id in memo:
+        return memo[obj_id]
+
+    # Primitive immutable types - return as-is
+    if isinstance(obj, (str, bytes, int, float, bool, type(None))):
+        return obj
+
+    # Dictionaries
+    if isinstance(obj, dict):
+        dup: dict = {}
+        memo[obj_id] = dup
+        for k, v in obj.items():
+            # Keys are usually primitives; support non-primitive keys as well
+            new_k = _fast_deepcopy(k, memo) if not isinstance(k, (str, bytes, int, float, bool, type(None))) else k
+            dup[new_k] = _fast_deepcopy(v, memo)
+        return dup
+
+    # Lists
+    if isinstance(obj, list):
+        dup_list: list = []
+        memo[obj_id] = dup_list
+        for item in obj:
+            dup_list.append(_fast_deepcopy(item, memo))
+        return dup_list
+
+    # Tuples
+    if isinstance(obj, tuple):
+        # Create tuple after copying elements
+        dup_tuple = tuple(_fast_deepcopy(item, memo) for item in obj)
+        memo[obj_id] = dup_tuple
+        return dup_tuple
+
+    # Sets
+    if isinstance(obj, set):
+        dup_set: set = set()
+        memo[obj_id] = dup_set
+        for item in obj:
+            dup_set.add(_fast_deepcopy(item, memo))
+        return dup_set
+
+    # Fallback for other object types to preserve behavior
+    return copy.deepcopy(obj, memo)
