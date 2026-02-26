@@ -210,9 +210,7 @@ describe("FlowHistorySidebarContent store behavior", () => {
     const fakeAutoSave = jest.fn();
     storeState.autoSaveFlow = fakeAutoSave;
 
-    const { unmount } = render(
-      <FlowHistorySidebarContent flowId="flow-1" />,
-    );
+    const { unmount } = render(<FlowHistorySidebarContent flowId="flow-1" />);
 
     // Auto-save should be disabled on mount
     expect(setStateMock).toHaveBeenCalledWith(
@@ -230,9 +228,7 @@ describe("FlowHistorySidebarContent store behavior", () => {
   it("hides inspection panel on mount and restores on unmount", () => {
     storeState.inspectionPanelVisible = true;
 
-    const { unmount } = render(
-      <FlowHistorySidebarContent flowId="flow-1" />,
-    );
+    const { unmount } = render(<FlowHistorySidebarContent flowId="flow-1" />);
 
     expect(setStateMock).toHaveBeenCalledWith(
       expect.objectContaining({ inspectionPanelVisible: false }),
@@ -248,9 +244,7 @@ describe("FlowHistorySidebarContent store behavior", () => {
   it("does not restore inspection panel if it was already hidden", () => {
     storeState.inspectionPanelVisible = false;
 
-    const { unmount } = render(
-      <FlowHistorySidebarContent flowId="flow-1" />,
-    );
+    const { unmount } = render(<FlowHistorySidebarContent flowId="flow-1" />);
 
     unmount();
 
@@ -262,9 +256,7 @@ describe("FlowHistorySidebarContent store behavior", () => {
   });
 
   it("restores original nodes/edges on unmount", () => {
-    const { unmount } = render(
-      <FlowHistorySidebarContent flowId="flow-1" />,
-    );
+    const { unmount } = render(<FlowHistorySidebarContent flowId="flow-1" />);
 
     // Clear mock calls from mount
     setStateMock.mockClear();
@@ -281,9 +273,7 @@ describe("FlowHistorySidebarContent store behavior", () => {
   });
 
   it("clears preview store on unmount", () => {
-    const { unmount } = render(
-      <FlowHistorySidebarContent flowId="flow-1" />,
-    );
+    const { unmount } = render(<FlowHistorySidebarContent flowId="flow-1" />);
 
     unmount();
 
@@ -382,9 +372,7 @@ describe("FlowHistorySidebarContent store behavior", () => {
     }
 
     expect(
-      screen.getByText(
-        "This version's data could not be rendered for preview",
-      ),
+      screen.getByText("This version's data could not be rendered for preview"),
     ).toBeTruthy();
   });
 
