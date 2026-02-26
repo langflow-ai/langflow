@@ -197,7 +197,12 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     })),
   );
 
-  const { activeSection, setOpen, setActiveSection, open: sidebarOpen } = useSidebar();
+  const {
+    activeSection,
+    setOpen,
+    setActiveSection,
+    open: sidebarOpen,
+  } = useSidebar();
   const addComponent = useAddComponent();
 
   // Get MCP servers for search functionality (only when new sidebar is enabled)
@@ -596,11 +601,10 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
   const showMcp =
     (ENABLE_NEW_SIDEBAR && activeSection === "mcp") ||
     (hasSearchInput && hasMcpComponents && ENABLE_NEW_SIDEBAR);
-  const showHistory = ENABLE_NEW_SIDEBAR && activeSection === "history" && sidebarOpen;
+  const showHistory =
+    ENABLE_NEW_SIDEBAR && activeSection === "history" && sidebarOpen;
 
-  const currentFlowForHistory = useFlowStore(
-    (state) => state.currentFlow,
-  );
+  const currentFlowForHistory = useFlowStore((state) => state.currentFlow);
 
   const [category, component] = getFilterComponent?.split(".") ?? ["", ""];
 
@@ -639,9 +643,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
           )}
         >
           {showHistory && currentFlowForHistory?.id ? (
-            <FlowHistorySidebarContent
-              flowId={currentFlowForHistory.id}
-            />
+            <FlowHistorySidebarContent flowId={currentFlowForHistory.id} />
           ) : (
             <>
               <SidebarHeaderComponent

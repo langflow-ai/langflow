@@ -559,7 +559,7 @@ async def test_pruning_deletes_oldest_by_data_content(client: AsyncClient, logge
     assert entries[1]["description"] == "snap-1"
 
     # Fetch full data for each survivor and confirm it matches the expected snapshot data.
-    for entry, expected_idx in zip(entries, [2, 1]):
+    for entry, expected_idx in zip(entries, [2, 1], strict=False):
         resp = await client.get(
             f"api/v1/flows/{flow_id}/history/{entry['id']}",
             headers=logged_in_headers,
