@@ -61,7 +61,7 @@ test(
 
     await page.getByText("OpenAI", { exact: true }).last().click();
 
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(1000);
 
     if (await page.getByTestId("remove-icon-badge").isVisible()) {
       await page.getByTestId("remove-icon-badge").click();
