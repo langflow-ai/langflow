@@ -5,6 +5,7 @@ import uuid
 from typing import Any
 
 from opensearchpy import OpenSearch, helpers
+from opensearchpy.exceptions import RequestError
 
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from lfx.base.vectorstores.vector_store_connection_decorator import vector_store_connection
@@ -106,11 +107,12 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
         DropdownInput(
             name="engine",
             display_name="Vector Engine",
-            options=["jvector", "nmslib", "faiss", "lucene"],
-            value="jvector",
+            options=["nmslib", "faiss", "lucene", "jvector"],
+            value="nmslib",
             info=(
-                "Vector search engine for similarity calculations. 'jvector' is recommended for most use cases. "
-                "Note: Amazon OpenSearch Serverless only supports 'nmslib' or 'faiss'."
+                "Vector search engine for similarity calculations. 'nmslib' works with standard OpenSearch installations. "
+                "'jvector' requires OpenSearch 2.9+. 'lucene' requires index.knn: true on the index. "
+                "Amazon OpenSearch Serverless only supports 'nmslib' or 'faiss'."
             ),
             advanced=True,
         ),
@@ -195,20 +197,20 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
             name="username",
             display_name="Username",
             value="admin",
-            show=False,
+            show=True,
         ),
         SecretStrInput(
             name="password",
             display_name="OpenSearch Password",
             value="admin",
-            show=False,
+            show=True,
         ),
         SecretStrInput(
             name="jwt_token",
             display_name="JWT Token",
             value="JWT",
             load_from_db=False,
-            show=True,
+            show=False,
             info=(
                 "Valid JSON Web Token for authentication. "
                 "Will be sent in the Authorization header (with optional 'Bearer ' prefix)."
@@ -552,6 +554,26 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
             m=m,
             vector_field=self.vector_field,
         )
+
+        # Ensure index exists with proper KNN mapping (index.knn: true is required for vector search)
+        try:
+            if not client.indices.exists(index=self.index_name):
+                self.log(f"Creating index '{self.index_name}' with KNN mapping (index.knn: true)")
+                client.indices.create(index=self.index_name, body=mapping)
+        except RequestError as creation_error:
+            error_msg = str(creation_error).lower()
+            if "invalid engine" in error_msg or "illegal_argument" in error_msg:
+                if "jvector" in error_msg:
+                    raise ValueError(
+                        "The 'jvector' engine is not available in your OpenSearch installation. "
+                        "Use 'nmslib' or 'faiss' for standard OpenSearch, or upgrade to OpenSearch 2.9+ for jvector."
+                    ) from creation_error
+                if "index.knn" in error_msg:
+                    raise ValueError(
+                        "The index has index.knn: false. Delete the existing index and let the component recreate it, "
+                        "or create a new index with a different name. The index must have index.knn: true for vector search."
+                    ) from creation_error
+            raise
 
         self.log(f"Indexing {len(texts)} documents into '{self.index_name}' with proper KNN mapping...")
 

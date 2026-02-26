@@ -177,11 +177,12 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         DropdownInput(
             name="engine",
             display_name="Vector Engine",
-            options=["jvector", "nmslib", "faiss", "lucene"],
-            value="jvector",
+            options=["nmslib", "faiss", "lucene", "jvector"],
+            value="nmslib",
             info=(
-                "Vector search engine for similarity calculations. 'jvector' is recommended for most use cases. "
-                "Note: Amazon OpenSearch Serverless only supports 'nmslib' or 'faiss'."
+                "Vector search engine for similarity calculations. 'nmslib' works with standard OpenSearch installations. "
+                "'jvector' requires OpenSearch 2.9+. 'lucene' requires index.knn: true on the index. "
+                "Amazon OpenSearch Serverless only supports 'nmslib' or 'faiss'."
             ),
             advanced=True,
         ),
@@ -594,6 +595,19 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
             }
             client.indices.put_mapping(index=index_name, body=mapping)
             logger.info(f"Added/updated embedding field mapping: {field_name}")
+        except RequestError as e:
+            error_str = str(e).lower()
+            if "invalid engine" in error_str and "jvector" in error_str:
+                raise ValueError(
+                    "The 'jvector' engine is not available in your OpenSearch installation. "
+                    "Use 'nmslib' or 'faiss' for standard OpenSearch, or upgrade to OpenSearch 2.9+ for jvector."
+                ) from e
+            if "index.knn" in error_str:
+                raise ValueError(
+                    "The index has index.knn: false. Delete the existing index and let the component recreate it, "
+                    "or create a new index with a different name. The index must have index.knn: true for vector search."
+                ) from e
+            raise
         except Exception as e:
             # Check if this is the known OpenSearch k-NN NullPointerException issue
             error_str = str(e).lower()
@@ -1143,14 +1157,29 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
             vector_field=dynamic_field_name,  # Use dynamic field name
         )
 
-        # Ensure index exists with baseline mapping
+        # Ensure index exists with baseline mapping (index.knn: true is required for vector search)
         try:
             if not client.indices.exists(index=self.index_name):
                 self.log(f"Creating index '{self.index_name}' with base mapping")
                 client.indices.create(index=self.index_name, body=mapping)
         except RequestError as creation_error:
-            if creation_error.error != "resource_already_exists_exception":
+            if creation_error.error == "resource_already_exists_exception":
+                pass  # Index was created concurrently
+            else:
+                error_msg = str(creation_error).lower()
+                if "invalid engine" in error_msg or "illegal_argument" in error_msg:
+                    if "jvector" in error_msg:
+                        raise ValueError(
+                            "The 'jvector' engine is not available in your OpenSearch installation. "
+                            "Use 'nmslib' or 'faiss' for standard OpenSearch, or upgrade to OpenSearch 2.9+ for jvector."
+                        ) from creation_error
+                    if "index.knn" in error_msg:
+                        raise ValueError(
+                            "The index has index.knn: false. Delete the existing index and let the component recreate it, "
+                            "or create a new index with a different name. The index must have index.knn: true for vector search."
+                        ) from creation_error
                 logger.warning(f"Failed to create index '{self.index_name}': {creation_error}")
+                raise
 
         # Ensure the dynamic field exists in the index
         self._ensure_embedding_field_mapping(
@@ -1908,6 +1937,9 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
                 build_config["jwt_token"]["required"] = is_jwt
                 build_config["jwt_header"]["required"] = is_jwt
                 build_config["bearer_prefix"]["required"] = False
+
+                if is_basic:
+                    build_config["jwt_token"]["value"] = ""
 
                 return build_config
 
