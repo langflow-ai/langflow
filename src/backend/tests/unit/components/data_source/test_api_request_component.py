@@ -191,6 +191,25 @@ class TestAPIRequestComponent(ComponentTestBaseWithoutClient):
         assert result.data["status_code"] == 200
         assert result.data["redirection_history"] == [{"url": redirect_url, "status_code": 303}]
 
+    @respx.mock
+    async def test_get_request_does_not_send_body(self, component):
+        """GET requests must not include a body (HTTP spec); avoids 413 with Cloudflare etc."""
+        url = "https://example.com/api/test"
+        respx.get(url).mock(return_value=Response(200, json={"ok": True}))
+
+        await component.make_request(
+            client=httpx.AsyncClient(),
+            method="GET",
+            url=url,
+            body={"unused": "get-must-not-send-this"},
+        )
+
+        assert len(respx.calls) == 1
+        request = respx.calls[0].request
+        assert request.method == "GET"
+        assert request.content == b""
+        assert request.headers.get("content-type") is None
+
     async def test_process_headers(self, component):
         # Test header processing
         headers_list = [
