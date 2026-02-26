@@ -93,7 +93,8 @@ def _build_output_function(component: Component, output_method: Callable, event_
                 # Emit end_vertex with outputs and logs so frontend can display them for tool components
                 from datetime import datetime, timezone
 
-                log_list = [log.model_dump() for log in component._logs] if component._logs else []
+                component_logs = component.get_logs()
+                log_list = [log.model_dump() for log in component_logs] if component_logs else []
 
                 # Build tool metadata for proper display (name, description, tags)
                 tool_info = {
@@ -154,7 +155,8 @@ def _build_output_async_function(
                 # Emit end_vertex with outputs and logs so frontend can display them for tool components
                 from datetime import datetime, timezone
 
-                log_list = [log.model_dump() for log in component._logs] if component._logs else []
+                component_logs = component.get_logs()
+                log_list = [log.model_dump() for log in component_logs] if component_logs else []
 
                 # Build tool metadata for proper display (name, description, tags)
                 tool_info = {
