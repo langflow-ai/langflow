@@ -188,6 +188,27 @@ export const nodeColorsName: { [char: string]: string } = {
   DataFrame: "pink",
 };
 
+/**
+ * Colors that correspond to coercible types (Data, Message, DataFrame):
+ * - Data = "red"
+ * - Message = "indigo"
+ * - DataFrame = "pink"
+ */
+const COERCIBLE_COLORS = new Set(["red", "indigo", "pink"]);
+
+/**
+ * Unified color for coercible types when auto-coercion is enabled.
+ */
+export const COERCION_UNIFIED_COLOR_NAME = "pink";
+
+/**
+ * Check if any color in the array is a coercible type's color.
+ * Used to determine if a handle should show the unified coercion color.
+ */
+export const hasCoercibleColor = (colors: string[]): boolean => {
+  return colors.some((c) => COERCIBLE_COLORS.has(c));
+};
+
 export const FILE_ICONS = {
   json: {
     icon: "FileJson",

@@ -353,6 +353,13 @@ class SimplifiedAPIRequest(BaseModel):
 #     viewport: Viewport;
 # }
 # import ReactFlowJsonObject
+class CoercionSettingsRequest(BaseModel):
+    """Settings for auto-coercion between Data, Message, and DataFrame types."""
+
+    enabled: bool = False
+    auto_parse: bool = False
+
+
 class FlowDataRequest(BaseModel):
     nodes: list[dict]
     edges: list[dict]
