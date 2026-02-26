@@ -110,8 +110,8 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
             options=["nmslib", "faiss", "lucene", "jvector"],
             value="nmslib",
             info=(
-                "Vector search engine for similarity calculations. 'nmslib' works with standard OpenSearch installations. "
-                "'jvector' requires OpenSearch 2.9+. 'lucene' requires index.knn: true on the index. "
+                "Vector search engine for similarity calculations. 'nmslib' works with standard "
+                "OpenSearch. 'jvector' requires OpenSearch 2.9+. 'lucene' requires index.knn: true. "
                 "Amazon OpenSearch Serverless only supports 'nmslib' or 'faiss'."
             ),
             advanced=True,
@@ -330,9 +330,10 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
             return 60
         try:
             t = int(self.request_timeout)
-            return t if t >= 1 else 60
         except (TypeError, ValueError):
             return 60
+        else:
+            return t if t >= 1 else 60
 
     def _is_aoss_enabled(self, http_auth: Any) -> bool:
         """Determine if Amazon OpenSearch Serverless (AOSS) is being used.
@@ -564,15 +565,17 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
             error_msg = str(creation_error).lower()
             if "invalid engine" in error_msg or "illegal_argument" in error_msg:
                 if "jvector" in error_msg:
-                    raise ValueError(
+                    msg = (
                         "The 'jvector' engine is not available in your OpenSearch installation. "
-                        "Use 'nmslib' or 'faiss' for standard OpenSearch, or upgrade to OpenSearch 2.9+ for jvector."
-                    ) from creation_error
+                        "Use 'nmslib' or 'faiss' for standard OpenSearch, or upgrade to OpenSearch 2.9+."
+                    )
+                    raise ValueError(msg) from creation_error
                 if "index.knn" in error_msg:
-                    raise ValueError(
-                        "The index has index.knn: false. Delete the existing index and let the component recreate it, "
-                        "or create a new index with a different name. The index must have index.knn: true for vector search."
-                    ) from creation_error
+                    msg = (
+                        "The index has index.knn: false. Delete the existing index and let the "
+                        "component recreate it, or create a new index with a different name."
+                    )
+                    raise ValueError(msg) from creation_error
             raise
 
         self.log(f"Indexing {len(texts)} documents into '{self.index_name}' with proper KNN mapping...")

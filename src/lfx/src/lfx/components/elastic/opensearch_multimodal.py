@@ -180,8 +180,8 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
             options=["nmslib", "faiss", "lucene", "jvector"],
             value="nmslib",
             info=(
-                "Vector search engine for similarity calculations. 'nmslib' works with standard OpenSearch installations. "
-                "'jvector' requires OpenSearch 2.9+. 'lucene' requires index.knn: true on the index. "
+                "Vector search engine for similarity calculations. 'nmslib' works with standard "
+                "OpenSearch. 'jvector' requires OpenSearch 2.9+. 'lucene' requires index.knn: true. "
                 "Amazon OpenSearch Serverless only supports 'nmslib' or 'faiss'."
             ),
             advanced=True,
@@ -598,15 +598,17 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         except RequestError as e:
             error_str = str(e).lower()
             if "invalid engine" in error_str and "jvector" in error_str:
-                raise ValueError(
+                msg = (
                     "The 'jvector' engine is not available in your OpenSearch installation. "
-                    "Use 'nmslib' or 'faiss' for standard OpenSearch, or upgrade to OpenSearch 2.9+ for jvector."
-                ) from e
+                    "Use 'nmslib' or 'faiss' for standard OpenSearch, or upgrade to OpenSearch 2.9+."
+                )
+                raise ValueError(msg) from e
             if "index.knn" in error_str:
-                raise ValueError(
-                    "The index has index.knn: false. Delete the existing index and let the component recreate it, "
-                    "or create a new index with a different name. The index must have index.knn: true for vector search."
-                ) from e
+                msg = (
+                    "The index has index.knn: false. Delete the existing index and let the "
+                    "component recreate it, or create a new index with a different name."
+                )
+                raise ValueError(msg) from e
             raise
         except Exception as e:
             # Check if this is the known OpenSearch k-NN NullPointerException issue
@@ -1169,15 +1171,17 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
                 error_msg = str(creation_error).lower()
                 if "invalid engine" in error_msg or "illegal_argument" in error_msg:
                     if "jvector" in error_msg:
-                        raise ValueError(
+                        msg = (
                             "The 'jvector' engine is not available in your OpenSearch installation. "
-                            "Use 'nmslib' or 'faiss' for standard OpenSearch, or upgrade to OpenSearch 2.9+ for jvector."
-                        ) from creation_error
+                            "Use 'nmslib' or 'faiss' for standard OpenSearch, or upgrade to 2.9+."
+                        )
+                        raise ValueError(msg) from creation_error
                     if "index.knn" in error_msg:
-                        raise ValueError(
-                            "The index has index.knn: false. Delete the existing index and let the component recreate it, "
-                            "or create a new index with a different name. The index must have index.knn: true for vector search."
-                        ) from creation_error
+                        msg = (
+                            "The index has index.knn: false. Delete the existing index and let the "
+                            "component recreate it, or create a new index with a different name."
+                        )
+                        raise ValueError(msg) from creation_error
                 logger.warning(f"Failed to create index '{self.index_name}': {creation_error}")
                 raise
 
