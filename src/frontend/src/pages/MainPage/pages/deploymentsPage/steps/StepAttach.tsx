@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Checkbox } from "@/components/ui/checkbox";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { Checkbox } from "@/components/ui/checkbox";
 
 type CheckpointAttachItem = {
   id: string;
@@ -25,7 +25,9 @@ export const StepAttach = ({
   toggleItem,
   flows,
 }: StepAttachProps) => {
-  const [expandedFlowIds, setExpandedFlowIds] = useState<Set<string>>(new Set());
+  const [expandedFlowIds, setExpandedFlowIds] = useState<Set<string>>(
+    new Set(),
+  );
 
   useEffect(() => {
     const firstFlowId = flows[0]?.flowId;
@@ -67,10 +69,13 @@ export const StepAttach = ({
                     name={isExpanded ? "ChevronDown" : "ChevronRight"}
                     className="h-4 w-4 shrink-0 text-muted-foreground"
                   />
-                  <span className="truncate text-sm font-semibold">{flow.flowName}</span>
+                  <span className="truncate text-sm font-semibold">
+                    {flow.flowName}
+                  </span>
                 </div>
                 <span className="text-xs text-muted-foreground">
-                  {flow.checkpoints.length} checkpoint{flow.checkpoints.length === 1 ? "" : "s"}
+                  {flow.checkpoints.length} checkpoint
+                  {flow.checkpoints.length === 1 ? "" : "s"}
                 </span>
               </button>
               {isExpanded && (
@@ -93,7 +98,9 @@ export const StepAttach = ({
                         />
                         <div className="flex flex-col gap-0.5">
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-semibold">{checkpoint.name}</span>
+                            <span className="text-sm font-semibold">
+                              {checkpoint.name}
+                            </span>
                             <span className="inline-flex items-center rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
                               Checkpoint
                             </span>

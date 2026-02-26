@@ -113,9 +113,7 @@ class _CreateCaptureAdapter:
         )
 
 
-async def test_deployments_lazy_sync_prunes_stale_rows(
-    client, logged_in_headers, active_user, monkeypatch
-):
+async def test_deployments_lazy_sync_prunes_stale_rows(client, logged_in_headers, active_user, monkeypatch):
     provider = await _create_provider(client, logged_in_headers, "tenant-lazy-sync")
 
     async with session_scope() as session:
@@ -331,9 +329,7 @@ async def test_create_deployment_resolves_history_ids_to_raw_snapshot_payloads(
         assert attachment is not None
 
 
-async def test_create_deployment_rejects_snapshot_raw_payloads_from_api(
-    client, logged_in_headers, monkeypatch
-):
+async def test_create_deployment_rejects_snapshot_raw_payloads_from_api(client, logged_in_headers, monkeypatch):
     provider = await _create_provider(client, logged_in_headers, "tenant-create-raw-payload-reject")
 
     capture_adapter = _CreateCaptureAdapter()
@@ -462,7 +458,4 @@ async def test_detect_deployment_environment_variables_includes_valid_global_var
         headers=logged_in_headers,
     )
     assert response.status_code == status.HTTP_200_OK
-    assert response.json()["variables"] == [
-        {"key": "api_key", "global_variable_name": "OPENAI_API_KEY"}
-    ]
-
+    assert response.json()["variables"] == [{"key": "api_key", "global_variable_name": "OPENAI_API_KEY"}]

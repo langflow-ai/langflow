@@ -143,11 +143,7 @@ async def get_flow_history_list(
             )
             .distinct()
         )
-    result = await session.exec(
-        stmt.order_by(col(FlowHistory.version_number).desc())
-        .offset(offset)
-        .limit(limit)
-    )
+    result = await session.exec(stmt.order_by(col(FlowHistory.version_number).desc()).offset(offset).limit(limit))
     return list(result.all())
 
 

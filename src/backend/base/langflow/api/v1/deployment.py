@@ -233,6 +233,7 @@ def _to_provider_account_response(provider_account: DeploymentProviderAccount) -
         has_api_key=bool(provider_account.api_key),
     )
 
+
 # TODO: just use regex
 def _extract_watsonx_account_id_from_url(backend_url: str) -> str | None:
     parsed = urlparse(backend_url)
@@ -258,7 +259,7 @@ def _resolve_account_id(*, provider_key: str, backend_url: str, account_id: str 
     return None
 
 
-@router.post( # TODO: validate the provider backend url and api key
+@router.post(  # TODO: validate the provider backend url and api key
     "/providers/",
     response_model=DeploymentProviderAccountResponse,
     status_code=status.HTTP_201_CREATED,
@@ -450,17 +451,11 @@ def _collect_secret_template_field_keys(payload: Any, output: dict[str, str | No
         for node in nodes:
             if not isinstance(node, dict):
                 continue
-            template = (
-                node.get("data", {})
-                .get("node", {})
-                .get("template")
-            )
+            template = node.get("data", {}).get("node", {}).get("template")
             if isinstance(template, dict):
                 for field_name, field_data in template.items():
                     if not (
-                        _is_secret_template_field(field_data)
-                        and isinstance(field_name, str)
-                        and field_name.strip()
+                        _is_secret_template_field(field_data) and isinstance(field_name, str) and field_name.strip()
                     ):
                         continue
                     if not (isinstance(field_data, dict) and field_data.get("load_from_db") is True):
@@ -525,8 +520,7 @@ async def _build_adapter_deployment_create_payload(
 
     if snapshot.raw_payloads is not None:
         msg = (
-            "Deployment create only accepts snapshot.reference_ids. "
-            "Raw payloads are not allowed on this API endpoint."
+            "Deployment create only accepts snapshot.reference_ids. Raw payloads are not allowed on this API endpoint."
         )
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=msg)
 
@@ -547,9 +541,7 @@ async def _build_adapter_deployment_create_payload(
         except FlowHistoryNotFoundError as exc:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
-        flow = (
-            await db.exec(select(Flow).where(Flow.id == history_entry.flow_id, Flow.user_id == user_id))
-        ).first()
+        flow = (await db.exec(select(Flow).where(Flow.id == history_entry.flow_id, Flow.user_id == user_id))).first()
         if flow is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
         if flow.folder_id is None:
@@ -724,11 +716,7 @@ async def detect_deployment_environment_variables(
     existing_variable_names = set(await variable_service.list_variables(user.id, db))
     variables = []
     for key, ref in sorted(detected_by_key.items()):
-        if not (
-            isinstance(ref, str)
-            and _is_valid_variable_reference_name(ref)
-            and ref in existing_variable_names
-        ):
+        if not (isinstance(ref, str) and _is_valid_variable_reference_name(ref) and ref in existing_variable_names):
             continue
         variables.append(DetectedDeploymentEnvVar(key=key, global_variable_name=ref))
     return DetectDeploymentEnvVarsResponse(variables=variables)

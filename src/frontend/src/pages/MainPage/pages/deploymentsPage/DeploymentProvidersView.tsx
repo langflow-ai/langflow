@@ -1,8 +1,8 @@
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
 import type { DeploymentProvider } from "@/controllers/API/queries/deployments/use-deployments";
 import { buildDeploymentColumnDefs } from "./columnDefs";
 

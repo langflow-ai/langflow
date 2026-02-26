@@ -198,15 +198,12 @@ class DeploymentCreateE2E:
             )
             status_code = response.status_code
             ok = status_code in scenario["expected"]
-            print(
-                f"[{scenario['name']}] status={status_code}, "
-                f"expected={sorted(scenario['expected'])}"
-            )
+            print(f"[{scenario['name']}] status={status_code}, expected={sorted(scenario['expected'])}")
 
             if status_code == HTTP_CREATED:
                 try:
                     response_payload = response.json()
-                    for snapshot_id in (response_payload.get("ids") or []):
+                    for snapshot_id in response_payload.get("ids") or []:
                         self.created_snapshot_ids.add(str(snapshot_id))
                     print(f"[{scenario['name']}] tracked_snapshot_ids={response_payload.get('ids') or []}")
                 except Exception as exc:  # noqa: BLE001
@@ -354,10 +351,7 @@ class DeploymentCreateE2E:
 
             status_code = response.status_code
             ok = status_code in scenario["expected"]
-            print(
-                f"[{scenario['name']}] status={status_code}, "
-                f"expected={sorted(scenario['expected'])}"
-            )
+            print(f"[{scenario['name']}] status={status_code}, expected={sorted(scenario['expected'])}")
             if status_code == HTTP_CREATED:
                 try:
                     response_payload = response.json()
@@ -369,7 +363,7 @@ class DeploymentCreateE2E:
                     if created_config_id:
                         self.created_config_ids.add(str(created_config_id))
 
-                    for snapshot_id in (provider_result.get("created_snapshot_ids") or []):
+                    for snapshot_id in provider_result.get("created_snapshot_ids") or []:
                         self.created_snapshot_ids.add(str(snapshot_id))
 
                     print(
@@ -446,8 +440,7 @@ class DeploymentCreateE2E:
                                 },
                             },
                         },
-                    }
-                    ,
+                    },
                     {
                         "id": chat_output_node_id,
                         "type": "genericNode",
@@ -479,7 +472,7 @@ class DeploymentCreateE2E:
                                 },
                             },
                         },
-                    }
+                    },
                 ],
                 "edges": [],
                 "viewport": {"x": 0, "y": 0, "zoom": 1},
@@ -602,10 +595,7 @@ class DeploymentCreateE2E:
         for result in results:
             expected = ",".join(str(item) for item in sorted(result.expected_statuses))
             verdict = "PASS" if result.ok else "FAIL"
-            print(
-                f"{verdict:<5} | {result.name:<46} | "
-                f"expected={expected:<8} got={result.actual_status:<4}"
-            )
+            print(f"{verdict:<5} | {result.name:<46} | expected={expected:<8} got={result.actual_status:<4}")
             if not result.ok:
                 print(f"       response: {result.response_excerpt}")
         print("-" * 90)
@@ -630,9 +620,7 @@ def _get_required_env(name: str) -> str:
 
 
 def _parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Run E2E deployment-create scenario matrix for watsonx adapter."
-    )
+    parser = argparse.ArgumentParser(description="Run E2E deployment-create scenario matrix for watsonx adapter.")
     parser.add_argument("--base-url", default=os.getenv("LANGFLOW_BASE_URL", "http://localhost:7860"))
     parser.add_argument("--timeout-seconds", type=float, default=float(os.getenv("E2E_TIMEOUT_SECONDS", "30")))
     parser.add_argument("--provider-key", default=os.getenv("WXO_PROVIDER_KEY", "watsonx-orchestrate"))

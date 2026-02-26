@@ -628,7 +628,7 @@ async def test_pruning_deletes_oldest_by_data_content(client: AsyncClient, logge
     assert entries[1]["description"] == "snap-1"
 
     # Fetch full data for each survivor and confirm it matches the expected snapshot data.
-    for entry, expected_idx in zip(entries, [2, 1]):
+    for entry, expected_idx in zip(entries, [2, 1], strict=False):
         resp = await client.get(
             f"api/v1/flows/{flow_id}/history/{entry['id']}",
             headers=logged_in_headers,
@@ -826,9 +826,7 @@ async def test_get_single_entry_strips_api_keys(client: AsyncClient, logged_in_h
     assert template["api_key"]["value"] is None
 
 
-async def test_get_single_entry_preserves_valid_load_from_db_reference(
-    client: AsyncClient, logged_in_headers
-):
+async def test_get_single_entry_preserves_valid_load_from_db_reference(client: AsyncClient, logged_in_headers):
     variable_payload = {
         "name": "OPENAI_API_KEY_REF",
         "value": "dummy",
@@ -878,9 +876,7 @@ async def test_get_single_entry_preserves_valid_load_from_db_reference(
     assert template["api_key"]["value"] == "OPENAI_API_KEY_REF"
 
 
-async def test_get_single_entry_masks_invalid_or_unknown_load_from_db_reference(
-    client: AsyncClient, logged_in_headers
-):
+async def test_get_single_entry_masks_invalid_or_unknown_load_from_db_reference(client: AsyncClient, logged_in_headers):
     flow_data = {
         "nodes": [
             {

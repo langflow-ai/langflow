@@ -56,9 +56,7 @@ async def test_deployment_provider_account_crud(client: AsyncClient, logged_in_h
     delete_response = await client.delete(f"api/v1/deployments/providers/{created['id']}", headers=logged_in_headers)
     assert delete_response.status_code == status.HTTP_204_NO_CONTENT
 
-    not_found_response = await client.get(
-        f"api/v1/deployments/providers/{created['id']}", headers=logged_in_headers
-    )
+    not_found_response = await client.get(f"api/v1/deployments/providers/{created['id']}", headers=logged_in_headers)
     assert not_found_response.status_code == status.HTTP_404_NOT_FOUND
 
 
@@ -82,9 +80,7 @@ async def test_deployment_provider_account_is_user_scoped(
     assert other_user_login.status_code == status.HTTP_200_OK
     other_user_headers = {"Authorization": f"Bearer {other_user_login.json()['access_token']}"}
 
-    other_user_get = await client.get(
-        f"api/v1/deployments/providers/{created['id']}", headers=other_user_headers
-    )
+    other_user_get = await client.get(f"api/v1/deployments/providers/{created['id']}", headers=other_user_headers)
     assert other_user_get.status_code == status.HTTP_404_NOT_FOUND
 
 

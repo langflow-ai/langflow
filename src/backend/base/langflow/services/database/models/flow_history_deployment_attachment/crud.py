@@ -87,4 +87,3 @@ async def delete_deployment_attachments_by_deployment_id(
     )
     result = await db.exec(stmt)
     return int(result.rowcount or 0)
-

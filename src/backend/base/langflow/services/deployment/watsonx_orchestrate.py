@@ -104,6 +104,7 @@ SUPPORTED_ADAPTER_DEPLOYMENT_TYPES = {DEFAULT_ADAPTER_DEPLOYMENT_TYPE}
 _WXO_SANITIZE_RE = re.compile(r"[^a-zA-Z0-9_]")
 _WXO_TRANSLATE = str.maketrans({" ": "_", "-": "_"})
 
+
 class WxOAuthURL(str, Enum):
     MCSP = "https://iam.platform.saas.ibm.com"
     IBM_IAM = "https://iam.cloud.ibm.com"
@@ -127,6 +128,7 @@ class WxOCredentials:
 ERROR_PREFIX = "An error occured while"
 ERROR_SUFFIX_IN = "in Watsonx Orchestrate."
 
+
 class ErrorPrefix(str, Enum):
     CREATE = f"{ERROR_PREFIX} creating a deployment {ERROR_SUFFIX_IN}"
     LIST = f"{ERROR_PREFIX} listing deployments {ERROR_SUFFIX_IN}"
@@ -142,9 +144,11 @@ class ErrorPrefix(str, Enum):
     UPDATE_CONFIG = f"{ERROR_PREFIX} updating a deployment config {ERROR_SUFFIX_IN}"
     DELETE_CONFIG = f"{ERROR_PREFIX} deleting a deployment config {ERROR_SUFFIX_IN}"
 
+
 # NOTE: this key must match the value of the provider_key column
 # in the deployment_provider_account table.
 _WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY = "watsonx-orchestrate"
+
 
 @register_deployment_adapter(_WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY)
 class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
@@ -194,17 +198,12 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             tool_ids: list[str] = []
             created_snapshot_ids: list[str] = []
 
-            if (
-                deployment.snapshot and
-                deployment.snapshot.artifact_type == ArtifactType.FLOW
-                ):
-                tool_ids, created_snapshot_ids = (
-                    await self._process_flow_snapshots(
-                        user_id=user_id,
-                        app_id=app_id,
-                        snapshots=deployment.snapshot,
-                        db=db,
-                    )
+            if deployment.snapshot and deployment.snapshot.artifact_type == ArtifactType.FLOW:
+                tool_ids, created_snapshot_ids = await self._process_flow_snapshots(
+                    user_id=user_id,
+                    app_id=app_id,
+                    snapshots=deployment.snapshot,
+                    db=db,
                 )
                 if app_id is not None and tool_ids:
                     connection = self._validate_connection(clients.connections, app_id=app_id)
@@ -216,20 +215,18 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                     )
 
             if deployment_spec.type == DeploymentType.AGENT:
-                deployment_response: AgentUpsertResponse = (
-                    await self._create_agent_deployment(
-                        data=deployment_spec,
-                        tool_ids=tool_ids,
-                        user_id=user_id,
-                        db=db,
-                    )
-                ) # note: tool_ids can be empty here if an incompatible artifact type is provided
+                deployment_response: AgentUpsertResponse = await self._create_agent_deployment(
+                    data=deployment_spec,
+                    tool_ids=tool_ids,
+                    user_id=user_id,
+                    db=db,
+                )  # note: tool_ids can be empty here if an incompatible artifact type is provided
             else:
                 msg = (
                     f"{ErrorPrefix.CREATE.value}"
                     f"Deployment type '{deployment_spec.type.value}' "
                     "is not supported for watsonx Orchestrate."
-                    )
+                )
                 raise InvalidDeploymentTypeError(message=msg)
 
         # except (ClientAPIException, HTTPException) as exc:
@@ -293,8 +290,8 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
     async def list_deployment_types(
         self,
         *,
-        user_id: UUID | str, # noqa: ARG002 - not used yet, might be, e.g., RBAC
-        db: Any, # noqa: ARG002 - not used
+        user_id: UUID | str,  # noqa: ARG002 - not used yet, might be, e.g., RBAC
+        db: Any,  # noqa: ARG002 - not used
     ) -> list[DeploymentType]:
         """List deployment types supported by the provider."""
         return [DeploymentType.AGENT]
@@ -303,7 +300,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         self,
         *,
         user_id: UUID | str,
-        deployment_type: DeploymentType | None = None, # TODO: remove this argument
+        deployment_type: DeploymentType | None = None,  # TODO: remove this argument
         db: Any,
         filter_options: DeploymentListFilterOptions | None = None,
     ) -> DeploymentList:
@@ -399,10 +396,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 #         )
                 #     )
             else:
-                msg = (
-                    f"{ErrorPrefix.LIST.value}"
-                    f"watsonx Orchestrate has no such deployment type '{deployment_type}'."
-                )
+                msg = f"{ErrorPrefix.LIST.value}watsonx Orchestrate has no such deployment type '{deployment_type}'."
                 raise InvalidDeploymentTypeError(message=msg)
         except (ClientAPIException, HTTPException) as exc:
             if isinstance(exc, ClientAPIException):
@@ -415,7 +409,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 f"error details: {error_detail}"
             )
             raise DeploymentError(message=msg) from None
-        except Exception as exc: # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
             msg = (
                 f"{ErrorPrefix.LIST.value}. "
                 "An unexpected error occurred while listing deployments from Watsonx Orchestrate. "
@@ -486,11 +480,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 update_payload["tools"] = updated_tool_ids
 
         if update_data.config is not None and "config_id" in update_data.config.model_fields_set:
-            config_id = (
-                str(update_data.config.config_id)
-                if update_data.config.config_id is not None
-                else None
-            )
+            config_id = str(update_data.config.config_id) if update_data.config.config_id is not None else None
             if config_id is None:
                 msg = (
                     "Unbinding deployment configuration/connection via patch is not allowed for "
@@ -546,7 +536,6 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         """Undeploy a deployment."""
         raise NotImplementedError
 
-
     async def delete_deployment(
         self,
         *,
@@ -563,7 +552,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             if status_code == status.HTTP_404_NOT_FOUND:
                 msg = f"{ErrorPrefix.DELETE.value}deployment id '{deployment_id}' not found."
                 raise DeploymentNotFoundError(msg) from None
-        except Exception: # noqa: BLE001
+        except Exception:  # noqa: BLE001
             msg = f"An unexpected error occurred while deleting deployment '{deployment_id}'."
             raise DeploymentError(msg) from None
 
@@ -749,16 +738,13 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             security_scheme=ConnectionSecurityScheme.KEY_VALUE,
         )
         clients.connections.create_config(
-            app_id=app_id,
-            payload=wxo_config.model_dump(exclude_unset=True, exclude_none=True)
-            )
+            app_id=app_id, payload=wxo_config.model_dump(exclude_unset=True, exclude_none=True)
+        )
 
-        runtime_credentials: KeyValueConnectionCredentials = (
-            await self._resolve_runtime_credentials(
-                environment_variables=config.environment_variables or {},
-                user_id=user_id,
-                db=db,
-            )
+        runtime_credentials: KeyValueConnectionCredentials = await self._resolve_runtime_credentials(
+            environment_variables=config.environment_variables or {},
+            user_id=user_id,
+            db=db,
         )
         clients.connections.create_credentials(
             app_id=app_id,
@@ -897,7 +883,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             # - SDK: ToolClient.get() proxies GET /tools.
             # - API: tools list endpoint returns list of tool objects.
             tools = clients.tool.get()
-            snapshots = [ # unfortunately, the API does not support filtering by binding type
+            snapshots = [  # unfortunately, the API does not support filtering by binding type
                 SnapshotItem(
                     id=tool.get("id"),
                     name=tool.get("name"),
@@ -1023,18 +1009,12 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         """Fail fast when deployment name conflicts with existing agent/config."""
         existing_agents = clients.agent.get_draft_by_name(deployment_name)
         if existing_agents:
-            msg = (
-                f"{ErrorPrefix.CREATE.value}. "
-                f"Deployment '{deployment_name}' already exists."
-            )
+            msg = f"{ErrorPrefix.CREATE.value}. Deployment '{deployment_name}' already exists."
             raise DeploymentConflictError(message=msg)
 
         existing_connection = clients.connections.get_draft_by_app_id(app_id=deployment_name)
         if existing_connection:
-            msg = (
-                f"{ErrorPrefix.CREATE.value}. "
-                f"Deployment config '{deployment_name}' already exists."
-            )
+            msg = f"{ErrorPrefix.CREATE.value}. Deployment config '{deployment_name}' already exists."
             raise DeploymentConflictError(message=msg)
 
     async def _process_flow_snapshots(
@@ -1085,8 +1065,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
 
         authenticator: Authenticator = self.get_authenticator(
             instance_url=instance_url,
-            api_key=credentials.api_key
-,
+            api_key=credentials.api_key,
         )
 
         self._client_managers[cache_key] = WxOClient(
@@ -1130,13 +1109,10 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
 
         # please ensure that when raising or re-raising an exception,
         # that the message does not leak sensitive information
-        except CredentialResolutionError: # custom exception managed by us , so we re-raise
+        except CredentialResolutionError:  # custom exception managed by us , so we re-raise
             raise
-        except Exception: # noqa: BLE001
-            msg = (
-                "An unexpected error occurred while resolving "
-                "Watsonx Orchestrate client credentials."
-                )
+        except Exception:  # noqa: BLE001
+            msg = "An unexpected error occurred while resolving Watsonx Orchestrate client credentials."
             raise CredentialResolutionError(message=msg) from None
 
         return WxOCredentials(instance_url=instance_url, api_key=api_key)
@@ -1211,7 +1187,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             "Failed to find a necessary credential for the "
             "watsonX Orchestrate deployment provider. "
             "Please ensure all credentials are provided and valid."
-            )
+        )
         raise CredentialResolutionError(message=msg)
 
     def _validate_connection(self, connections_client: ConnectionsClient, *, app_id: str) -> GetConnectionResponse:
@@ -1244,9 +1220,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
     ) -> None:
         """Require exactly one of the resource id or payload to be present and non-empty and non-null."""
         if (not _id) == (not payload):
-            msg = (
-                f"{msg_prefix}Exactly one of {resource} id or payload should be present and non-empty and non-null."
-            )
+            msg = f"{msg_prefix}Exactly one of {resource} id or payload should be present and non-empty and non-null."
             raise ValueError(msg)
 
     def _build_agent_payload(
@@ -1262,7 +1236,6 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             "style": "default",
             "llm": "groq/openai/gpt-oss-120b",
         }
-
 
     def _extract_agent_tool_ids(self, agent: dict[str, Any]) -> list[str]:
         # Shape source:
@@ -1286,11 +1259,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             return
 
         tools = clients.tool.get_drafts_by_ids(tool_ids)
-        tools_by_id = {
-            str(tool.get("id")): tool
-            for tool in tools
-            if isinstance(tool, dict) and tool.get("id")
-        }
+        tools_by_id = {str(tool.get("id")): tool for tool in tools if isinstance(tool, dict) and tool.get("id")}
 
         for tool_id in tool_ids:
             tool = tools_by_id.get(tool_id)
@@ -1359,16 +1328,14 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         if provider_data:
             result["provider_data"] = provider_data
 
-        return DeploymentItem(
-            **result
-        )
+        return DeploymentItem(**result)
 
     def _get_deployment_detail_metadata(
         self,
         data: dict[str, Any],
         deployment_type: DeploymentType,
         provider_data: dict[str, Any] | None = None,
-        provider_raw: bool = False, # noqa: FBT001,FBT002
+        provider_raw: bool = False,  # noqa: FBT001,FBT002
     ) -> DeploymentDetailItem:
         result = {
             "id": data.get("id"),
@@ -1381,9 +1348,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         if provider_raw:
             result["provider_data"] = data if not provider_data else {**provider_data, "provider_raw": data}
 
-        return DeploymentDetailItem(
-            **result
-        )
+        return DeploymentDetailItem(**result)
 
     def _derive_agent_mode(self, agent: dict[str, Any]) -> str:
         environments = agent.get("environments", [])
@@ -1689,7 +1654,6 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             msg = f"Snapshot '{snapshot_id}' flow artifact contains invalid JSON."
             raise ValueError(msg) from exc
 
-
     def _require_non_empty_string(
         self,
         s: Any,
@@ -1697,7 +1661,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         field_name: str,
         error_message: str | None = None,
     ) -> str:
-        if isinstance(s, str) and (_value:=s.strip()):
+        if isinstance(s, str) and (_value := s.strip()):
             return _value
         msg = error_message or f"Expected non-empty string for '{field_name}'."
         raise ValueError(msg)
@@ -1717,7 +1681,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         flow_filename: str | None = None,
     ) -> bytes:
         filename = flow_filename or f"{tool.__tool_spec__.name}.json"
-        lfx_requirement = "lfx==0.3.0rc2" # hack: lets figure out to handle dev environments
+        lfx_requirement = "lfx==0.3.0rc2"  # hack: lets figure out to handle dev environments
         requirements = generate_requirements_from_flow(
             flow_definition,
             include_lfx=False,
@@ -1773,8 +1737,6 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
 
         return "lfx"
 
-
-
     def _resolve_snapshot_connections(
         self,
         *,
@@ -1823,35 +1785,28 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         flow_definition = flow_payload.model_dump()
         flow_provider_data = flow_definition.pop("provider_data", None)
         if not isinstance(flow_provider_data, dict):
-            msg = (
-                "Flow payload must include provider_data with a "
-                "non-empty project_id for Watsonx deployment."
-            )
+            msg = "Flow payload must include provider_data with a non-empty project_id for Watsonx deployment."
             raise InvalidContentError(message=msg)
 
         if not (project_id := flow_provider_data.get("project_id")):
-            msg = (
-                "Flow payload must include provider_data with a "
-                "non-empty project_id for Watsonx deployment."
-            )
+            msg = "Flow payload must include provider_data with a non-empty project_id for Watsonx deployment."
             raise InvalidContentError(message=msg)
 
         try:
             project_id = self._require_non_empty_string(
                 str(project_id),
                 field_name="project_id",
-                error_message=(
-                    "Flow provider_data.project_id must be a non-empty string "
-                    "for Watsonx deployment."
-                ),
+                error_message=("Flow provider_data.project_id must be a non-empty string for Watsonx deployment."),
             )
         except ValueError as exc:
             raise InvalidContentError(message=str(exc)) from exc
 
-        flow_definition.update({
-            "name": self._normalize_wxo_name(flow_definition.get("name") or ""),
-            "id": str(flow_definition.get("id")),
-        })
+        flow_definition.update(
+            {
+                "name": self._normalize_wxo_name(flow_definition.get("name") or ""),
+                "id": str(flow_definition.get("id")),
+            }
+        )
         if app_id is not None:
             flow_definition = self._prefix_flow_global_variable_references(
                 flow_definition,
@@ -1862,10 +1817,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         if not flow_definition.get("last_tested_version"):
             detected_version = (get_version_info() or {}).get("version")
             if not detected_version:
-                msg = (
-                    "Unable to determine running Langflow version for snapshot "
-                    "creation."
-                )
+                msg = "Unable to determine running Langflow version for snapshot creation."
                 raise ValueError(msg)
             flow_definition["last_tested_version"] = detected_version
 
@@ -1880,17 +1832,12 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             exclude_unset=True,
             exclude_none=True,
             by_alias=True,
-            )
+        )
         current_name = str(tool_payload.get("name") or "").strip()
         if current_name:
             tool_payload["name"] = f"lf_{uuid4().hex[:6]}_{current_name}"
 
-        (
-            tool_payload
-            .setdefault("binding", {})
-            .setdefault("langflow", {})
-            ["project_id"]
-        ) = project_id
+        (tool_payload.setdefault("binding", {}).setdefault("langflow", {})["project_id"]) = project_id
 
         artifacts: bytes = self._build_langflow_artifact_bytes(
             tool=tool,
@@ -1976,7 +1923,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             from ibm_cloud_sdk_core.authenticators import IAMAuthenticator
 
             return IAMAuthenticator(apikey=api_key, url=WxOAuthURL.IBM_IAM.value)
-        elif ".ibm.com" in instance_url: # noqa: RET505 - explicitness
+        elif ".ibm.com" in instance_url:  # noqa: RET505 - explicitness
             from ibm_cloud_sdk_core.authenticators import MCSPAuthenticator
 
             return MCSPAuthenticator(apikey=api_key, url=WxOAuthURL.MCSP.value)
@@ -2009,9 +1956,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             msg = "Deployment name must include at least one alphanumeric character."
             raise InvalidContentError(message=msg)
         if not normalized_name[0].isalpha():
-            msg = (
-                "Deployment name must start with a letter. "
-            )
+            msg = "Deployment name must start with a letter. "
             raise InvalidContentError(message=msg)
         return normalized_name
 
@@ -2051,7 +1996,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         return _WXO_SANITIZE_RE.sub("", s.translate(_WXO_TRANSLATE))
 
 
-@func.ttl_cache(maxsize=1, ttl=2) # only used for lfx
+@func.ttl_cache(maxsize=1, ttl=2)  # only used for lfx
 def _pin_requirement_name(package_name: str) -> str:
     version = md.version(package_name)
     return f"{package_name}=={version}"

@@ -5,14 +5,14 @@ import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
 import {
   type DeploymentCreatePayload,
-  type DeploymentProvider,
   type DeploymentCreateResponse,
   type DeploymentListItem,
+  type DeploymentProvider,
   useGetDeploymentById,
   useGetDeploymentProviders,
   useGetDeployments,
-  usePostDetectDeploymentEnvVars,
   usePostCreateDeployment,
+  usePostDetectDeploymentEnvVars,
 } from "@/controllers/API/queries/deployments/use-deployments";
 import { useGetRefreshFlowsQuery } from "@/controllers/API/queries/flows/use-get-refresh-flows-query";
 import { StepperModal, StepperModalFooter } from "@/modals/stepperModal";
@@ -21,16 +21,16 @@ import type { FlowType } from "@/types/flow";
 import type { FlowHistoryEntry } from "@/types/flow/history";
 import { ConfigureDeploymentProviderModal } from "./ConfigureDeploymentProviderModal";
 import { type EnvVar, TOTAL_STEPS } from "./constants";
+import { DeploymentCreationStatusView } from "./DeploymentCreationStatusView";
 import {
-  DeploymentProvidersView,
   type DeploymentListRow,
+  DeploymentProvidersView,
 } from "./DeploymentProvidersView";
 import { RegisterDeploymentProviderModal } from "./RegisterDeploymentProviderModal";
 import { StepAttach } from "./steps/StepAttach";
 import { StepBasics } from "./steps/StepBasics";
 import { StepConfiguration } from "./steps/StepConfiguration";
 import { StepReview } from "./steps/StepReview";
-import { DeploymentCreationStatusView } from "./DeploymentCreationStatusView";
 import { TestAgentModal } from "./TestAgentModal";
 import { useDeploymentForm } from "./useDeploymentForm";
 
@@ -145,12 +145,11 @@ const DeploymentsTab = () => {
     useState<TestDeploymentTarget | null>(null);
   const [providerToConfigure, setProviderToConfigure] =
     useState<DeploymentProvider | null>(null);
-  const [checkpointGroups, setCheckpointGroups] = useState<FlowCheckpointGroup[]>(
-    [],
-  );
-  const [attachedCountByDeploymentId, setAttachedCountByDeploymentId] = useState<
-    Record<string, number>
-  >({});
+  const [checkpointGroups, setCheckpointGroups] = useState<
+    FlowCheckpointGroup[]
+  >([]);
+  const [attachedCountByDeploymentId, setAttachedCountByDeploymentId] =
+    useState<Record<string, number>>({});
 
   const providersQuery = useGetDeploymentProviders({
     refetchOnWindowFocus: false,
@@ -198,7 +197,8 @@ const DeploymentsTab = () => {
   );
   const createDeploymentMutation = usePostCreateDeployment({ providerId });
   const getDeploymentByIdMutation = useGetDeploymentById({ providerId });
-  const { mutateAsync: detectDeploymentEnvVars } = usePostDetectDeploymentEnvVars();
+  const { mutateAsync: detectDeploymentEnvVars } =
+    usePostDetectDeploymentEnvVars();
 
   const liveDeployments = useMemo(() => {
     const deployments = deploymentsQuery.data?.deployments || [];
@@ -222,11 +222,13 @@ const DeploymentsTab = () => {
   const deploymentRows = useMemo<DeploymentListRow[]>(() => {
     return liveDeployments.map((deployment) => {
       const providerDeploymentId =
-        typeof deployment.resource_key === "string" && deployment.resource_key.trim().length > 0
+        typeof deployment.resource_key === "string" &&
+        deployment.resource_key.trim().length > 0
           ? deployment.resource_key
           : deployment.id;
       const internalDeploymentId =
-        typeof deployment.resource_key === "string" && deployment.resource_key.trim().length > 0
+        typeof deployment.resource_key === "string" &&
+        deployment.resource_key.trim().length > 0
           ? deployment.id
           : undefined;
       const createdMeta =
@@ -259,10 +261,16 @@ const DeploymentsTab = () => {
           snapshotIds.length ??
           0,
         modifiedDate: formatDateLabel(
-          deployment.updated_at ?? deployment.created_at ?? createdMeta?.createdAt ?? null,
+          deployment.updated_at ??
+            deployment.created_at ??
+            createdMeta?.createdAt ??
+            null,
         ),
         createdDate: formatDateLabel(
-          deployment.created_at ?? deployment.updated_at ?? createdMeta?.createdAt ?? null,
+          deployment.created_at ??
+            deployment.updated_at ??
+            createdMeta?.createdAt ??
+            null,
         ),
       };
     });
@@ -293,7 +301,9 @@ const DeploymentsTab = () => {
         flowName: flow.name,
         checkpoints: entries.map((entry) => ({
           id: entry.id,
-          name: entry.version_tag ? `Version ${entry.version_tag}` : "Checkpoint",
+          name: entry.version_tag
+            ? `Version ${entry.version_tag}`
+            : "Checkpoint",
           updatedDate: formatDateLabel(entry.created_at),
         })),
       }));
@@ -317,11 +327,14 @@ const DeploymentsTab = () => {
 
       const internalDeploymentIds = liveDeployments
         .map((deployment) =>
-          typeof deployment.resource_key === "string" && deployment.resource_key.trim().length > 0
+          typeof deployment.resource_key === "string" &&
+          deployment.resource_key.trim().length > 0
             ? deployment.id
             : null,
         )
-        .filter((id): id is string => typeof id === "string" && id.trim().length > 0);
+        .filter(
+          (id): id is string => typeof id === "string" && id.trim().length > 0,
+        );
 
       const nextCounts: Record<string, number> = {};
 
@@ -445,7 +458,13 @@ const DeploymentsTab = () => {
       return;
     }
     setEnvVars(detectedEnvVars);
-  }, [currentStep, detectedEnvVars, envVars.length, newDeploymentOpen, setEnvVars]);
+  }, [
+    currentStep,
+    detectedEnvVars,
+    envVars.length,
+    newDeploymentOpen,
+    setEnvVars,
+  ]);
 
   const selectedReviewItems = useMemo(() => {
     return checkpointGroups
@@ -538,17 +557,27 @@ const DeploymentsTab = () => {
         setCreatedDeploymentId(response.id);
         const providerResult = response.provider_result;
         const resultSnapshotIds = Array.isArray(
-          (providerResult as Record<string, unknown> | undefined)?.bound_snapshot_ids,
+          (providerResult as Record<string, unknown> | undefined)
+            ?.bound_snapshot_ids,
         )
           ? (
-              (providerResult as Record<string, unknown>).bound_snapshot_ids as unknown[]
-            ).filter((id): id is string => typeof id === "string" && id.trim().length > 0)
+              (providerResult as Record<string, unknown>)
+                .bound_snapshot_ids as unknown[]
+            ).filter(
+              (id): id is string =>
+                typeof id === "string" && id.trim().length > 0,
+            )
           : Array.isArray(
-                (providerResult as Record<string, unknown> | undefined)?.created_snapshot_ids,
+                (providerResult as Record<string, unknown> | undefined)
+                  ?.created_snapshot_ids,
               )
             ? (
-                (providerResult as Record<string, unknown>).created_snapshot_ids as unknown[]
-              ).filter((id): id is string => typeof id === "string" && id.trim().length > 0)
+                (providerResult as Record<string, unknown>)
+                  .created_snapshot_ids as unknown[]
+              ).filter(
+                (id): id is string =>
+                  typeof id === "string" && id.trim().length > 0,
+              )
             : [];
         setCreatedDeploymentUiMeta({
           deploymentId: response.id,
@@ -594,8 +623,8 @@ const DeploymentsTab = () => {
                 name: createdDeploymentName,
                 deploymentType: "agent",
                 mode:
-                  deploymentRows.find((row) => row.id === createdDeploymentId)?.mode ||
-                  undefined,
+                  deploymentRows.find((row) => row.id === createdDeploymentId)
+                    ?.mode || undefined,
               });
               setTestAgentModalOpen(true);
               return;
@@ -685,10 +714,9 @@ const DeploymentsTab = () => {
                 onBack={handleBack}
                 onNext={() => {
                   if (currentStep === 2) {
-                    const selKey = Array.from(selectedItems)
-                      .sort()
-                      .join(",");
-                    const selectionChanged = selKey !== prevSelectedKeyRef.current;
+                    const selKey = Array.from(selectedItems).sort().join(",");
+                    const selectionChanged =
+                      selKey !== prevSelectedKeyRef.current;
                     const shouldSeedDetectedVars =
                       selectionChanged ||
                       (envVars.length === 0 && detectedEnvVars.length > 0);

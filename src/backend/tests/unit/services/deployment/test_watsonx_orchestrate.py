@@ -3,16 +3,16 @@ from __future__ import annotations
 import importlib.metadata as md
 from types import SimpleNamespace
 
-import pytest
 import langflow.services.deployment.watsonx_orchestrate as watsonx_orchestrate_module
+import pytest
 from langflow.services.deployment.watsonx_orchestrate import (
     WatsonxOrchestrateDeploymentService,
 )
 from lfx.services.deployment.exceptions import (
     DeploymentConflictError,
     InvalidContentError,
-    InvalidDeploymentTypeError,
     InvalidDeploymentOperationError,
+    InvalidDeploymentTypeError,
 )
 from lfx.services.deployment.schema import (
     BaseConfigData,
@@ -50,18 +50,10 @@ class FakeAgentClient:
         return self._deployment
 
     def get_drafts_by_ids(self, deployment_ids: list[str]):
-        return [
-            agent
-            for agent in self._listed_agents
-            if str(agent.get("id") or "").strip() in set(deployment_ids)
-        ]
+        return [agent for agent in self._listed_agents if str(agent.get("id") or "").strip() in set(deployment_ids)]
 
     def get_drafts_by_names(self, agent_names: list[str]):
-        return [
-            agent
-            for agent in self._listed_agents
-            if str(agent.get("name") or "").strip() in set(agent_names)
-        ]
+        return [agent for agent in self._listed_agents if str(agent.get("name") or "").strip() in set(agent_names)]
 
     def get_draft_by_name(self, agent_name: str):
         return [agent for agent in self._listed_agents if agent.get("name") == agent_name]
@@ -196,9 +188,7 @@ async def test_update_deployment_denies_config_replacement(monkeypatch):
 
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
 
-    update_data = DeploymentUpdate(
-        config=ConfigDeploymentBindingUpdate(config_id="replacement-config")
-    )
+    update_data = DeploymentUpdate(config=ConfigDeploymentBindingUpdate(config_id="replacement-config"))
 
     with pytest.raises(DeploymentConflictError, match="Replacing deployment configuration/connection"):
         await service.update_deployment(
@@ -263,9 +253,7 @@ async def test_update_deployment_denies_config_unbind(monkeypatch):
 
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
 
-    update_data = DeploymentUpdate(
-        config=ConfigDeploymentBindingUpdate(config_id=None)
-    )
+    update_data = DeploymentUpdate(config=ConfigDeploymentBindingUpdate(config_id=None))
 
     with pytest.raises(DeploymentConflictError, match="Unbinding deployment configuration/connection"):
         await service.update_deployment(

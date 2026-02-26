@@ -107,4 +107,3 @@ async def delete_deployment_row_by_id(
     stmt = delete(Deployment).where(Deployment.id == deployment_uuid)
     result = await db.exec(stmt)
     return int(result.rowcount or 0)
-

@@ -178,7 +178,12 @@ export const useGetDeployments: useQueryFunctionType<
   };
 
   return query(
-    ["useGetDeployments", params.providerId, params.page ?? 1, params.pageSize ?? 20],
+    [
+      "useGetDeployments",
+      params.providerId,
+      params.page ?? 1,
+      params.pageSize ?? 20,
+    ],
     getDeploymentsFn,
     options,
   );
@@ -283,7 +288,10 @@ export const usePostCreateDeploymentExecution: useMutationFunctionType<
   const createDeploymentExecutionFn = async (
     payload: DeploymentExecutionPayload,
   ): Promise<DeploymentExecutionResponse> => {
-    const url = addProviderId(`${getURL("DEPLOYMENTS")}/executions`, params.providerId);
+    const url = addProviderId(
+      `${getURL("DEPLOYMENTS")}/executions`,
+      params.providerId,
+    );
     const { data } = await api.post<DeploymentExecutionResponse>(url, payload);
     return data;
   };
@@ -314,13 +322,11 @@ export const useGetDeploymentExecutionById: useMutationFunctionType<
 > = (params, options) => {
   const { mutate } = UseRequestProcessor();
 
-  const getDeploymentExecutionByIdFn = async (
-    payload: {
-      executionId: string;
-      deploymentId: string;
-      deploymentType: "agent" | "mcp";
-    },
-  ): Promise<DeploymentExecutionResponse> => {
+  const getDeploymentExecutionByIdFn = async (payload: {
+    executionId: string;
+    deploymentId: string;
+    deploymentType: "agent" | "mcp";
+  }): Promise<DeploymentExecutionResponse> => {
     const baseUrl = `${getURL("DEPLOYMENTS")}/executions/${payload.executionId}`;
     const url = buildQueryStringUrl(baseUrl, {
       provider_id: params.providerId,
