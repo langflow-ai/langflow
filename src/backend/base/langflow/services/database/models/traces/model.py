@@ -98,7 +98,7 @@ class TraceCreate(SQLModel):
 class SpanBase(SQLModel):
     """Base model for spans (individual execution steps)."""
 
-    name: str = Field(nullable=False, description="Name of the span (component/operation name)")
+    name: str = Field(nullable=False, description="Name of the span following OTel convention: '{operation} {model}'")
     span_type: SpanType = Field(default=SpanType.CHAIN, description="Type of operation")
     status: SpanStatus = Field(default=SpanStatus.UNSET, description="Execution status")
     start_time: datetime = Field(

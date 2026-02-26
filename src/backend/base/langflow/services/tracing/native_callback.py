@@ -83,10 +83,13 @@ class NativeCallbackHandler(BaseCallbackHandler):
         """Called when LLM starts running."""
         span_id = self._get_span_id(run_id)
         serialized = serialized or {}
-        name = serialized.get("name") or (serialized.get("id", ["LLM"])[-1] if serialized.get("id") else "LLM")
+        operation = serialized.get("name") or (serialized.get("id", ["LLM"])[-1] if serialized.get("id") else "LLM")
         model_name = kwargs.get("invocation_params", {}).get("model_name") or kwargs.get("invocation_params", {}).get(
             "model"
         )
+
+        # Format name according to OTel convention: "{operation} {model}"
+        name = f"{operation} {model_name}" if model_name else operation
 
         self.tracer.add_langchain_span(
             span_id=span_id,
@@ -111,12 +114,15 @@ class NativeCallbackHandler(BaseCallbackHandler):
         """Called when chat model starts running."""
         span_id = self._get_span_id(run_id)
         serialized = serialized or {}
-        name = serialized.get("name") or (
+        operation = serialized.get("name") or (
             serialized.get("id", ["ChatModel"])[-1] if serialized.get("id") else "ChatModel"
         )
         model_name = kwargs.get("invocation_params", {}).get("model_name") or kwargs.get("invocation_params", {}).get(
             "model"
         )
+
+        # Format name according to OTel convention: "{operation} {model}"
+        name = f"{operation} {model_name}" if model_name else operation
 
         # Convert messages to serializable format
         formatted_messages = [
