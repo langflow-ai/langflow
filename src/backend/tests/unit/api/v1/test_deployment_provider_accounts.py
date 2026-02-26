@@ -88,7 +88,7 @@ async def test_deployment_provider_account_is_user_scoped(
     assert other_user_get.status_code == status.HTTP_404_NOT_FOUND
 
 
-async def test_deployment_provider_account_defaults_and_derives_watsonx_values(
+async def test_deployment_provider_account_requires_provider_key(
     client: AsyncClient,
     logged_in_headers,
 ):
@@ -101,7 +101,4 @@ async def test_deployment_provider_account_defaults_and_derives_watsonx_values(
         ),
         headers=logged_in_headers,
     )
-    assert create_response.status_code == status.HTTP_201_CREATED
-    created = create_response.json()
-    assert created["provider_key"] == "watsonx-orchestrate"
-    assert created["account_id"] == "20250430-1824-1871-40a1-cbba522cb662"
+    assert create_response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY

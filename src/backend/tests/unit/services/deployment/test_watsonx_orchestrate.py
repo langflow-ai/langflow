@@ -21,6 +21,7 @@ from lfx.services.deployment.schema import (
     ConfigItem,
     DeploymentExecution,
     DeploymentExecutionStatus,
+    DeploymentListFilterOptions,
     DeploymentType,
     DeploymentUpdate,
     EnvVarValueSpec,
@@ -49,13 +50,24 @@ class FakeAgentClient:
         return self._deployment
 
     def get_drafts_by_ids(self, deployment_ids: list[str]):
-        deployment_id = self._deployment.get("id")
-        if deployment_id in deployment_ids:
-            return [self._deployment]
-        return []
+        return [
+            agent
+            for agent in self._listed_agents
+            if str(agent.get("id") or "").strip() in set(deployment_ids)
+        ]
+
+    def get_drafts_by_names(self, agent_names: list[str]):
+        return [
+            agent
+            for agent in self._listed_agents
+            if str(agent.get("name") or "").strip() in set(agent_names)
+        ]
 
     def get_draft_by_name(self, agent_name: str):
         return [agent for agent in self._listed_agents if agent.get("name") == agent_name]
+
+    def get(self):
+        return self._listed_agents
 
     def update(self, deployment_id: str, payload: dict):
         self.update_calls.append((deployment_id, payload))
@@ -195,6 +207,39 @@ async def test_update_deployment_denies_config_replacement(monkeypatch):
             update_data=update_data,
             db=object(),
         )
+
+
+@pytest.mark.anyio
+async def test_list_deployments_filters_with_provider_draft_filters(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient(
+            {"id": "dep-1", "tools": []},
+            listed_agents=[
+                {"id": "dep-1", "name": "deployment-1", "tools": []},
+                {"id": "dep-2", "name": "deployment-2", "tools": []},
+                {"id": "dep-3", "name": "deployment-3", "tools": []},
+            ],
+        ),
+        tool=FakeToolClient([]),
+        connections=FakeConnectionsClient(),
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    result = await service.list_deployments(
+        user_id="user-1",
+        deployment_type=DeploymentType.AGENT,
+        db=object(),
+        filter_options=DeploymentListFilterOptions(
+            provider_filter={"ids": ["dep-2"], "names": ["deployment-3"]},
+        ),
+    )
+
+    assert sorted(item.id for item in result.deployments) == ["dep-2", "dep-3"]
 
 
 @pytest.mark.anyio

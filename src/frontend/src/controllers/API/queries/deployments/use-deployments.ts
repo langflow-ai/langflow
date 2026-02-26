@@ -34,10 +34,14 @@ export type DeploymentProviderUpdatePayload = {
 
 export type DeploymentProvidersResponse = {
   deployment_providers: DeploymentProvider[];
+  page: number;
+  page_size: number;
+  total: number;
 };
 
 export type DeploymentListItem = {
   id: string;
+  resource_key?: string | null;
   type: string;
   name: string;
   description?: string | null;
@@ -53,35 +57,9 @@ export type DeploymentListItem = {
 export type DeploymentListResponse = {
   deployments: DeploymentListItem[];
   deployment_type?: string | null;
-};
-
-export type DeploymentConfigItem = {
-  id: string;
-  name: string;
-  description?: string | null;
-  provider_data?: {
-    [key: string]: unknown;
-  };
-};
-
-export type DeploymentConfigsResponse = {
-  configs: DeploymentConfigItem[];
-};
-
-export type DeploymentSnapshotItem = {
-  id: string;
-  name: string;
-  description?: string | null;
-  provider_data?: {
-    langflow_id?: string;
-    project_id?: string;
-    [key: string]: unknown;
-  };
-};
-
-export type DeploymentSnapshotsResponse = {
-  snapshots: DeploymentSnapshotItem[];
-  artifact_type: string;
+  page: number;
+  page_size: number;
+  total: number;
 };
 
 export type DeploymentCreatePayload = {
@@ -92,8 +70,7 @@ export type DeploymentCreatePayload = {
   };
   snapshot?: {
     artifact_type: "flow";
-    reference_ids?: string[];
-    raw_payloads?: Record<string, unknown>[];
+    reference_ids: string[];
   };
   config?: {
     reference_id?: string;
@@ -135,8 +112,24 @@ export type DeploymentExecutionResponse = {
   provider_result?: Record<string, unknown> | null;
 };
 
+export type DetectDeploymentEnvVarsPayload = {
+  reference_ids: string[];
+};
+
+export type DetectDeploymentEnvVarsResponse = {
+  variables: Array<{
+    key: string;
+    global_variable_name?: string | null;
+  }>;
+};
+
 type ProviderScopedParams = {
   providerId: string;
+};
+
+type PaginationParams = {
+  page?: number;
+  pageSize?: number;
 };
 
 const addProviderId = (url: string, providerId: string): string =>
@@ -144,79 +137,49 @@ const addProviderId = (url: string, providerId: string): string =>
 
 export const useGetDeploymentProviders: useQueryFunctionType<
   undefined,
-  DeploymentProvidersResponse
+  DeploymentProvidersResponse,
+  PaginationParams
 > = (options) => {
   const { query } = UseRequestProcessor();
 
   const getProvidersFn = async (): Promise<DeploymentProvidersResponse> => {
+    const page = options?.page ?? 1;
+    const pageSize = options?.pageSize ?? 20;
     const { data } = await api.get<DeploymentProvidersResponse>(
-      `${getURL("DEPLOYMENTS")}/providers/`,
+      buildQueryStringUrl(`${getURL("DEPLOYMENTS")}/providers/`, {
+        page,
+        page_size: pageSize,
+      }),
     );
     return data;
   };
 
-  return query(["useGetDeploymentProviders"], getProvidersFn, options);
+  return query(
+    ["useGetDeploymentProviders", options?.page ?? 1, options?.pageSize ?? 20],
+    getProvidersFn,
+    options,
+  );
 };
 
 export const useGetDeployments: useQueryFunctionType<
-  ProviderScopedParams,
+  ProviderScopedParams & PaginationParams,
   DeploymentListResponse
 > = (params, options) => {
   const { query } = UseRequestProcessor();
 
   const getDeploymentsFn = async (): Promise<DeploymentListResponse> => {
-    const url = addProviderId(getURL("DEPLOYMENTS"), params.providerId);
+    const url = buildQueryStringUrl(getURL("DEPLOYMENTS"), {
+      provider_id: params.providerId,
+      page: params.page ?? 1,
+      page_size: params.pageSize ?? 20,
+    });
     const { data } = await api.get<DeploymentListResponse>(url);
     return data;
   };
 
   return query(
-    ["useGetDeployments", params.providerId],
+    ["useGetDeployments", params.providerId, params.page ?? 1, params.pageSize ?? 20],
     getDeploymentsFn,
-    options,
-  );
-};
-
-export const useGetDeploymentConfigs: useQueryFunctionType<
-  ProviderScopedParams,
-  DeploymentConfigsResponse
-> = (params, options) => {
-  const { query } = UseRequestProcessor();
-
-  const getConfigsFn = async (): Promise<DeploymentConfigsResponse> => {
-    const url = addProviderId(
-      `${getURL("DEPLOYMENTS")}/configs`,
-      params.providerId,
-    );
-    const { data } = await api.get<DeploymentConfigsResponse>(url);
-    return data;
-  };
-
-  return query(
-    ["useGetDeploymentConfigs", params.providerId],
-    getConfigsFn,
-    options,
-  );
-};
-
-export const useGetDeploymentSnapshots: useQueryFunctionType<
-  ProviderScopedParams,
-  DeploymentSnapshotsResponse
-> = (params, options) => {
-  const { query } = UseRequestProcessor();
-
-  const getSnapshotsFn = async (): Promise<DeploymentSnapshotsResponse> => {
-    const url = addProviderId(
-      `${getURL("DEPLOYMENTS")}/snapshots`,
-      params.providerId,
-    );
-    const { data } = await api.get<DeploymentSnapshotsResponse>(url);
-    return data;
-  };
-
-  return query(
-    ["useGetDeploymentSnapshots", params.providerId],
-    getSnapshotsFn,
     options,
   );
 };
@@ -247,6 +210,34 @@ export const usePostCreateDeployment: useMutationFunctionType<
       ...options,
     },
   );
+
+  return mutation;
+};
+
+export const usePostDetectDeploymentEnvVars: useMutationFunctionType<
+  undefined,
+  DetectDeploymentEnvVarsPayload,
+  DetectDeploymentEnvVarsResponse
+> = (options) => {
+  const { mutate } = UseRequestProcessor();
+
+  const detectDeploymentEnvVarsFn = async (
+    payload: DetectDeploymentEnvVarsPayload,
+  ): Promise<DetectDeploymentEnvVarsResponse> => {
+    const { data } = await api.post<DetectDeploymentEnvVarsResponse>(
+      `${getURL("DEPLOYMENTS")}/variables/detections`,
+      payload,
+    );
+    return data;
+  };
+
+  const mutation: UseMutationResult<
+    DetectDeploymentEnvVarsResponse,
+    Error,
+    DetectDeploymentEnvVarsPayload
+  > = mutate(["usePostDetectDeploymentEnvVars"], detectDeploymentEnvVarsFn, {
+    ...options,
+  });
 
   return mutation;
 };

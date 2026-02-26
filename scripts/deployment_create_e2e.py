@@ -256,8 +256,8 @@ class DeploymentCreateE2E:
                 ),
             },
             {
-                "name": "create_raw_snapshot_ref_config",
-                "expected": {HTTP_BAD_REQUEST},
+                "name": "create_raw_snapshot_ref_config_rejected",
+                "expected": {HTTP_UNPROCESSABLE_CONTENT},
                 "payload": self._build_create_payload(
                     deployment_type="agent",
                     snapshot={"artifact_type": "flow", "raw_payloads": [self._build_flow_payload(label="flow-raw")]},
@@ -265,8 +265,8 @@ class DeploymentCreateE2E:
                 ),
             },
             {
-                "name": "create_raw_snapshot_raw_config",
-                "expected": {HTTP_CREATED},
+                "name": "create_raw_snapshot_raw_config_rejected",
+                "expected": {HTTP_UNPROCESSABLE_CONTENT},
                 "payload": self._build_create_payload(
                     deployment_type="agent",
                     snapshot={"artifact_type": "flow", "raw_payloads": [self._build_flow_payload(label="flow-raw2")]},
@@ -293,8 +293,8 @@ class DeploymentCreateE2E:
                 ),
             },
             {
-                "name": "create_snapshot_with_two_raw_payloads",
-                "expected": {HTTP_CREATED},
+                "name": "create_snapshot_with_two_raw_payloads_rejected",
+                "expected": {HTTP_UNPROCESSABLE_CONTENT},
                 "payload": self._build_create_payload(
                     deployment_type="agent",
                     snapshot={

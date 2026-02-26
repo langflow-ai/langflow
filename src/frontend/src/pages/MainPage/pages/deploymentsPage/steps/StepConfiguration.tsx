@@ -78,7 +78,7 @@ export const StepConfiguration = ({
         {detectedVarCount > 0 && (
           <p className="text-xs text-muted-foreground">
             {detectedVarCount} variable{detectedVarCount > 1 ? "s" : ""}{" "}
-            auto-detected from your selected flows.
+            auto-detected from your selected checkpoints.
           </p>
         )}
         <div className="flex h-full min-h-0 flex-col rounded-lg bg-muted/40">

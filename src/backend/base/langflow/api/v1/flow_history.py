@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import copy
 from datetime import datetime, timezone
+import re
+from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query
@@ -11,7 +13,7 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import CurrentActiveUser, DbSession, DbSessionReadOnly
-from langflow.api.utils.core import remove_api_keys
+from langflow.api.utils.core import has_api_terms, remove_api_keys
 from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.flow_history.crud import (
     create_flow_history_entry,
@@ -33,9 +35,10 @@ from langflow.services.database.models.flow_history.model import (
     FlowHistoryRead,
     FlowHistoryReadWithData,
 )
-from langflow.services.deps import get_settings_service
+from langflow.services.deps import get_settings_service, get_variable_service
 
 router = APIRouter(prefix="/flows/{flow_id}/history", tags=["Flow History"])
+_VARIABLE_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 
 def strip_history_data(data: dict | None) -> dict | None:
@@ -54,6 +57,56 @@ def strip_history_data(data: dict | None) -> dict | None:
             exc_info=True,
         )
         return None
+
+
+def _is_valid_variable_reference_name(value: str) -> bool:
+    return bool(_VARIABLE_NAME_RE.fullmatch(value))
+
+
+def _restore_valid_global_variable_references(
+    *,
+    original_data: dict[str, Any] | None,
+    stripped_data: dict[str, Any] | None,
+    allowed_variable_names: set[str],
+) -> dict[str, Any] | None:
+    if not isinstance(original_data, dict) or not isinstance(stripped_data, dict):
+        return stripped_data
+
+    original_nodes = original_data.get("nodes")
+    stripped_nodes = stripped_data.get("nodes")
+    if not isinstance(original_nodes, list) or not isinstance(stripped_nodes, list):
+        return stripped_data
+
+    for original_node, stripped_node in zip(original_nodes, stripped_nodes, strict=False):
+        if not isinstance(original_node, dict) or not isinstance(stripped_node, dict):
+            continue
+
+        original_template = original_node.get("data", {}).get("node", {}).get("template")
+        stripped_template = stripped_node.get("data", {}).get("node", {}).get("template")
+        if not isinstance(original_template, dict) or not isinstance(stripped_template, dict):
+            continue
+
+        for field_name, stripped_field in stripped_template.items():
+            original_field = original_template.get(field_name)
+            if not isinstance(stripped_field, dict) or not isinstance(original_field, dict):
+                continue
+            if not (
+                isinstance(original_field.get("name"), str)
+                and has_api_terms(original_field["name"])
+                and original_field.get("password")
+                and original_field.get("load_from_db") is True
+            ):
+                continue
+
+            reference_value = original_field.get("value")
+            if (
+                isinstance(reference_value, str)
+                and _is_valid_variable_reference_name(reference_value)
+                and reference_value in allowed_variable_names
+            ):
+                stripped_field["value"] = reference_value
+
+    return stripped_data
 
 
 def _history_to_read(entry: FlowHistory) -> FlowHistoryRead:
@@ -95,9 +148,17 @@ async def list_flow_history(
     session: DbSessionReadOnly,
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
+    deployment_id: UUID | None = Query(default=None),
 ) -> FlowHistoryListResponse:
     await _get_user_flow(session, flow_id, current_user.id)
-    entries = await get_flow_history_list(session, flow_id, current_user.id, limit, offset)
+    entries = await get_flow_history_list(
+        session,
+        flow_id,
+        current_user.id,
+        limit,
+        offset,
+        deployment_id=deployment_id,
+    )
     max_entries = get_settings_service().settings.max_flow_history_entries_per_flow
     return FlowHistoryListResponse(
         entries=[_history_to_read(e) for e in entries],
@@ -122,7 +183,24 @@ async def get_single_flow_history(
         entry = await get_flow_history_entry_or_raise(session, history_id, current_user.id, flow_id=flow_id)
     except FlowHistoryNotFoundError as exc:
         raise HTTPException(status_code=404, detail="History entry not found") from exc
-    return _history_to_read_full(entry, strip_keys=True)
+    result = _history_to_read_full(entry, strip_keys=True)
+    if isinstance(entry.data, dict) and isinstance(result.data, dict):
+        try:
+            variable_names = await get_variable_service().list_variables(current_user.id, session)
+            allowed_variable_names = {
+                name for name in variable_names if isinstance(name, str) and _is_valid_variable_reference_name(name)
+            }
+            result.data = _restore_valid_global_variable_references(
+                original_data=entry.data,
+                stripped_data=result.data,
+                allowed_variable_names=allowed_variable_names,
+            )
+        except Exception:
+            logger.warning(
+                "Failed to validate global-variable references in history response; returning masked data only",
+                exc_info=True,
+            )
+    return result
 
 
 @router.post("/", status_code=201)

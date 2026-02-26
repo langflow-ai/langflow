@@ -14,6 +14,9 @@ from langflow.services.database.models.flow_history.exceptions import (
     FlowHistoryVersionConflictError,
 )
 from langflow.services.database.models.flow_history.model import FlowHistory
+from langflow.services.database.models.flow_history_deployment_attachment.model import (
+    FlowHistoryDeploymentAttachment,
+)
 from langflow.services.deps import get_settings_service
 
 MAX_VERSION_RETRIES = 3
@@ -125,11 +128,23 @@ async def get_flow_history_list(
     user_id: UUID,
     limit: int = 50,
     offset: int = 0,
+    deployment_id: UUID | None = None,
 ) -> list[FlowHistory]:
+    stmt = select(FlowHistory).where(FlowHistory.flow_id == flow_id, FlowHistory.user_id == user_id)
+    if deployment_id is not None:
+        stmt = (
+            stmt.join(
+                FlowHistoryDeploymentAttachment,
+                FlowHistoryDeploymentAttachment.history_id == FlowHistory.id,
+            )
+            .where(
+                FlowHistoryDeploymentAttachment.user_id == user_id,
+                FlowHistoryDeploymentAttachment.deployment_id == deployment_id,
+            )
+            .distinct()
+        )
     result = await session.exec(
-        select(FlowHistory)
-        .where(FlowHistory.flow_id == flow_id, FlowHistory.user_id == user_id)
-        .order_by(col(FlowHistory.version_number).desc())
+        stmt.order_by(col(FlowHistory.version_number).desc())
         .offset(offset)
         .limit(limit)
     )

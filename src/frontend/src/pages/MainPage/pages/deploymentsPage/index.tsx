@@ -1,28 +1,29 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
+import { api } from "@/controllers/API/api";
+import { getURL } from "@/controllers/API/helpers/constants";
 import {
   type DeploymentCreatePayload,
   type DeploymentProvider,
   type DeploymentCreateResponse,
   type DeploymentListItem,
-  useGetDeploymentConfigs,
   useGetDeploymentById,
   useGetDeploymentProviders,
-  useGetDeploymentSnapshots,
   useGetDeployments,
+  usePostDetectDeploymentEnvVars,
   usePostCreateDeployment,
 } from "@/controllers/API/queries/deployments/use-deployments";
 import { useGetRefreshFlowsQuery } from "@/controllers/API/queries/flows/use-get-refresh-flows-query";
 import { StepperModal, StepperModalFooter } from "@/modals/stepperModal";
 import useAlertStore from "@/stores/alertStore";
 import type { FlowType } from "@/types/flow";
+import type { FlowHistoryEntry } from "@/types/flow/history";
 import { ConfigureDeploymentProviderModal } from "./ConfigureDeploymentProviderModal";
 import { type EnvVar, TOTAL_STEPS } from "./constants";
 import {
   DeploymentProvidersView,
   type DeploymentListRow,
-  type ProviderListMode,
 } from "./DeploymentProvidersView";
 import { RegisterDeploymentProviderModal } from "./RegisterDeploymentProviderModal";
 import { StepAttach } from "./steps/StepAttach";
@@ -60,56 +61,16 @@ const mapProviderModeToLabel = (mode?: string): string => {
   return "Draft";
 };
 
-const buildRawFlowPayload = (
-  flow: FlowType,
-): Record<string, unknown> | null => {
-  if (!flow.data || !flow.folder_id) {
-    return null;
-  }
-
-  return {
-    id: flow.id,
-    name: flow.name,
-    description: flow.description || "",
-    data: flow.data,
-    tags: flow.tags || [],
-    provider_data: {
-      project_id: flow.folder_id,
-    },
-  };
+type CheckpointAttachItem = {
+  id: string;
+  name: string;
+  updatedDate: string;
 };
 
-/**
- * Walk every node in the given flows and collect field names that
- * reference global / environment variables (`load_from_db === true`).
- */
-const extractEnvVarsFromFlows = (flows: FlowType[]): EnvVar[] => {
-  const seen = new Set<string>();
-
-  for (const flow of flows) {
-    if (!flow.data?.nodes) continue;
-    for (const node of flow.data.nodes) {
-      const template =
-        node.type === "genericNode"
-          ? (node.data as Record<string, any>)?.node?.template
-          : undefined;
-      if (!template) continue;
-      for (const fieldName of Object.keys(template)) {
-        const field = template[fieldName];
-        if (
-          field?.load_from_db &&
-          typeof field.value === "string" &&
-          field.value
-        ) {
-          seen.add(field.value);
-        }
-      }
-    }
-  }
-
-  return Array.from(seen)
-    .sort()
-    .map((key) => ({ key, value: key, globalVar: true }));
+type FlowCheckpointGroup = {
+  flowId: string;
+  flowName: string;
+  checkpoints: CheckpointAttachItem[];
 };
 
 const validateEnvVars = (envVars: EnvVar[]): string[] => {
@@ -166,8 +127,8 @@ const DeploymentsTab = () => {
   );
   const [registerProviderOpen, setRegisterProviderOpen] = useState(false);
   const [configureProviderOpen, setConfigureProviderOpen] = useState(false);
-  const [providerListMode, setProviderListMode] =
-    useState<ProviderListMode>("deployments");
+  const [deploymentsPage, setDeploymentsPage] = useState(1);
+  const [deploymentsPageSize] = useState(20);
   const [creationState, setCreationState] =
     useState<DeploymentCreationState>("idle");
   const [createdDeploymentName, setCreatedDeploymentName] = useState("");
@@ -184,6 +145,12 @@ const DeploymentsTab = () => {
     useState<TestDeploymentTarget | null>(null);
   const [providerToConfigure, setProviderToConfigure] =
     useState<DeploymentProvider | null>(null);
+  const [checkpointGroups, setCheckpointGroups] = useState<FlowCheckpointGroup[]>(
+    [],
+  );
+  const [attachedCountByDeploymentId, setAttachedCountByDeploymentId] = useState<
+    Record<string, number>
+  >({});
 
   const providersQuery = useGetDeploymentProviders({
     refetchOnWindowFocus: false,
@@ -216,21 +183,7 @@ const DeploymentsTab = () => {
   };
 
   const deploymentsQuery = useGetDeployments(
-    { providerId },
-    {
-      enabled: Boolean(providerId),
-      refetchOnWindowFocus: false,
-    },
-  );
-  const configsQuery = useGetDeploymentConfigs(
-    { providerId },
-    {
-      enabled: Boolean(providerId),
-      refetchOnWindowFocus: false,
-    },
-  );
-  const snapshotsQuery = useGetDeploymentSnapshots(
-    { providerId },
+    { providerId, page: deploymentsPage, pageSize: deploymentsPageSize },
     {
       enabled: Boolean(providerId),
       refetchOnWindowFocus: false,
@@ -245,6 +198,7 @@ const DeploymentsTab = () => {
   );
   const createDeploymentMutation = usePostCreateDeployment({ providerId });
   const getDeploymentByIdMutation = useGetDeploymentById({ providerId });
+  const { mutateAsync: detectDeploymentEnvVars } = usePostDetectDeploymentEnvVars();
 
   const liveDeployments = useMemo(() => {
     const deployments = deploymentsQuery.data?.deployments || [];
@@ -257,7 +211,6 @@ const DeploymentsTab = () => {
     );
     return [createdDeploymentItem, ...deploymentsWithoutCreated];
   }, [deploymentsQuery.data?.deployments, createdDeploymentItem]);
-  const deploymentConfigs = configsQuery.data?.configs || [];
   const flows = useMemo<FlowType[]>(() => {
     const data = flowsQuery.data;
     if (!data) {
@@ -268,8 +221,16 @@ const DeploymentsTab = () => {
 
   const deploymentRows = useMemo<DeploymentListRow[]>(() => {
     return liveDeployments.map((deployment) => {
+      const providerDeploymentId =
+        typeof deployment.resource_key === "string" && deployment.resource_key.trim().length > 0
+          ? deployment.resource_key
+          : deployment.id;
+      const internalDeploymentId =
+        typeof deployment.resource_key === "string" && deployment.resource_key.trim().length > 0
+          ? deployment.id
+          : undefined;
       const createdMeta =
-        createdDeploymentUiMeta?.deploymentId === deployment.id
+        createdDeploymentUiMeta?.deploymentId === providerDeploymentId
           ? createdDeploymentUiMeta
           : null;
       const snapshotIds =
@@ -283,14 +244,20 @@ const DeploymentsTab = () => {
           : undefined;
 
       return {
-        id: deployment.id,
+        id: providerDeploymentId,
         name: deployment.name,
-        url: `Deployment ID: ${deployment.id}`,
+        url: `Deployment ID: ${providerDeploymentId}`,
         type: deployment.type.toUpperCase() === "MCP" ? "MCP" : "Agent",
         deploymentType:
           deployment.type.toUpperCase() === "MCP" ? "mcp" : "agent",
         mode: mapProviderModeToLabel(mode),
-        attached: snapshotIds.length || createdMeta?.attachedCount || 0,
+        attached:
+          (internalDeploymentId
+            ? attachedCountByDeploymentId[internalDeploymentId]
+            : undefined) ??
+          createdMeta?.attachedCount ??
+          snapshotIds.length ??
+          0,
         modifiedDate: formatDateLabel(
           deployment.updated_at ?? deployment.created_at ?? createdMeta?.createdAt ?? null,
         ),
@@ -299,19 +266,104 @@ const DeploymentsTab = () => {
         ),
       };
     });
-  }, [createdDeploymentUiMeta, liveDeployments]);
+  }, [attachedCountByDeploymentId, createdDeploymentUiMeta, liveDeployments]);
 
-  const attachFlowItems = useMemo(
-    () =>
-      flows.map((flow) => ({
-        id: flow.id,
-        name: flow.name,
-        updatedDate: formatDateLabel(
-          flow.updated_at || flow.date_created || null,
-        ),
-      })),
-    [flows],
-  );
+  useEffect(() => {
+    let cancelled = false;
+    const loadCheckpoints = async () => {
+      if (flows.length === 0) {
+        setCheckpointGroups([]);
+        return;
+      }
+      const responses = await Promise.all(
+        flows.map(async (flow) => {
+          try {
+            const response = await api.get<{ entries: FlowHistoryEntry[] }>(
+              `${getURL("FLOWS")}/${flow.id}/history/`,
+              { params: { limit: 20, offset: 0 } },
+            );
+            return { flow, entries: response.data.entries ?? [] };
+          } catch {
+            return { flow, entries: [] as FlowHistoryEntry[] };
+          }
+        }),
+      );
+      const groups = responses.map(({ flow, entries }) => ({
+        flowId: flow.id,
+        flowName: flow.name,
+        checkpoints: entries.map((entry) => ({
+          id: entry.id,
+          name: entry.version_tag ? `Version ${entry.version_tag}` : "Checkpoint",
+          updatedDate: formatDateLabel(entry.created_at),
+        })),
+      }));
+      if (!cancelled) {
+        setCheckpointGroups(groups);
+      }
+    };
+    loadCheckpoints();
+    return () => {
+      cancelled = true;
+    };
+  }, [flows]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadAttachedCounts = async () => {
+      if (!providerId || liveDeployments.length === 0 || flows.length === 0) {
+        setAttachedCountByDeploymentId({});
+        return;
+      }
+
+      const internalDeploymentIds = liveDeployments
+        .map((deployment) =>
+          typeof deployment.resource_key === "string" && deployment.resource_key.trim().length > 0
+            ? deployment.id
+            : null,
+        )
+        .filter((id): id is string => typeof id === "string" && id.trim().length > 0);
+
+      const nextCounts: Record<string, number> = {};
+
+      await Promise.all(
+        internalDeploymentIds.map(async (deploymentId) => {
+          const perFlowCounts = await Promise.all(
+            flows.map(async (flow) => {
+              try {
+                const response = await api.get<{ entries: FlowHistoryEntry[] }>(
+                  `${getURL("FLOWS")}/${flow.id}/history/`,
+                  {
+                    params: {
+                      limit: 100,
+                      offset: 0,
+                      deployment_id: deploymentId,
+                    },
+                  },
+                );
+                return response.data.entries?.length ?? 0;
+              } catch {
+                return 0;
+              }
+            }),
+          );
+
+          nextCounts[deploymentId] = perFlowCounts.reduce(
+            (total, count) => total + count,
+            0,
+          );
+        }),
+      );
+
+      if (!cancelled) {
+        setAttachedCountByDeploymentId(nextCounts);
+      }
+    };
+
+    void loadAttachedCounts();
+    return () => {
+      cancelled = true;
+    };
+  }, [flows, liveDeployments, providerId]);
 
   const {
     newDeploymentOpen,
@@ -332,34 +384,80 @@ const DeploymentsTab = () => {
     toggleItem,
   } = useDeploymentForm();
 
-  const selectedFlowObjects = useMemo(
-    () => flows.filter((f) => selectedItems.has(f.id)),
-    [flows, selectedItems],
-  );
-
-  const detectedEnvVars = useMemo(
-    () => extractEnvVarsFromFlows(selectedFlowObjects),
-    [selectedFlowObjects],
-  );
+  const [detectedEnvVars, setDetectedEnvVars] = useState<EnvVar[]>([]);
 
   const prevSelectedKeyRef = useRef("");
 
   useEffect(() => {
     if (!newDeploymentOpen) {
       prevSelectedKeyRef.current = "";
+      setDetectedEnvVars([]);
     }
   }, [newDeploymentOpen]);
 
   useEffect(() => {
     setCreatedDeploymentItem(null);
     setCreatedDeploymentUiMeta(null);
+    setAttachedCountByDeploymentId({});
+    setDeploymentsPage(1);
   }, [providerId]);
 
+  useEffect(() => {
+    if (!newDeploymentOpen || selectedItems.size === 0) {
+      setDetectedEnvVars([]);
+      return;
+    }
+
+    let cancelled = false;
+    const checkpointIds = Array.from(selectedItems);
+    const detect = async () => {
+      try {
+        const response = await detectDeploymentEnvVars({
+          reference_ids: checkpointIds,
+        });
+        if (!cancelled) {
+          setDetectedEnvVars(
+            (response.variables || []).map((item) => ({
+              key: item.global_variable_name ?? item.key,
+              value: item.global_variable_name ?? "",
+              globalVar: Boolean(item.global_variable_name),
+              deploymentKey: item.key,
+            })),
+          );
+        }
+      } catch {
+        if (!cancelled) {
+          setDetectedEnvVars([]);
+        }
+      }
+    };
+    void detect();
+    return () => {
+      cancelled = true;
+    };
+  }, [newDeploymentOpen, selectedItems, detectDeploymentEnvVars]);
+
+  useEffect(() => {
+    if (!newDeploymentOpen || currentStep < 3) {
+      return;
+    }
+    if (envVars.length > 0 || detectedEnvVars.length === 0) {
+      return;
+    }
+    setEnvVars(detectedEnvVars);
+  }, [currentStep, detectedEnvVars, envVars.length, newDeploymentOpen, setEnvVars]);
+
   const selectedReviewItems = useMemo(() => {
-    return attachFlowItems
+    return checkpointGroups
+      .flatMap((group) =>
+        group.checkpoints.map((checkpoint) => ({
+          id: checkpoint.id,
+          name: `${group.flowName} (${checkpoint.name})`,
+        })),
+      )
       .filter((item) => selectedItems.has(item.id))
       .map((item) => ({ name: item.name }));
-  }, [attachFlowItems, selectedItems]);
+  }, [checkpointGroups, selectedItems]);
 
   const handleCreateDeployment = () => {
     if (!providerId) {
@@ -379,22 +477,9 @@ const DeploymentsTab = () => {
       return;
     }
 
-    const selectedFlows = flows.filter((flow) => selectedItems.has(flow.id));
-    const selectedFlowCount = selectedFlows.length;
+    const selectedCheckpointIds = Array.from(selectedItems);
+    const selectedFlowCount = selectedCheckpointIds.length;
     const requestedAt = new Date().toISOString();
-    const invalidProjectFlows = selectedFlows
-      .filter((flow) => !flow.folder_id?.trim())
-      .map((flow) => flow.name || flow.id);
-    if (invalidProjectFlows.length > 0) {
-      setErrorData({
-        title: "Missing flow project metadata",
-        list: [
-          "Each selected flow must belong to a project before deployment.",
-          `Missing project_id for: ${invalidProjectFlows.join(", ")}`,
-        ],
-      });
-      return;
-    }
 
     const trimmedDeploymentName = deploymentName.trim();
     const trimmedDescription = deploymentDescription.trim();
@@ -407,22 +492,17 @@ const DeploymentsTab = () => {
       },
     };
 
-    const selectedRawFlows = selectedFlows
-      .map(buildRawFlowPayload)
-      .filter((flowPayload): flowPayload is Record<string, unknown> =>
-        Boolean(flowPayload),
-      );
-    if (selectedRawFlows.length > 0) {
+    if (selectedCheckpointIds.length > 0) {
       payload.snapshot = {
         artifact_type: "flow",
-        raw_payloads: selectedRawFlows,
+        reference_ids: selectedCheckpointIds,
       };
     }
 
     const environmentVariables = envVars.reduce<
       Record<string, { source: "raw" | "variable"; value: string }>
     >((acc, item) => {
-      const key = item.key.trim();
+      const key = (item.deploymentKey ?? item.key).trim();
       const value = item.value.trim();
       if (!key || !value) {
         return acc;
@@ -562,17 +642,17 @@ const DeploymentsTab = () => {
           <div className="pt-4">
             <DeploymentProvidersView
               providers={providers}
-              configurations={deploymentConfigs}
               deploymentRows={deploymentRows}
               selectedProviderId={providerId || null}
               onSelectProvider={setSelectedProviderId}
               onConfigureProvider={handleConfigureProvider}
-              listMode={providerListMode}
-              onListModeChange={setProviderListMode}
               selectedProviderDeploymentCount={liveDeployments.length}
               isLoadingDeployments={deploymentsQuery.isLoading}
               isLoadingProviders={providersQuery.isLoading}
-              isLoadingConfigurations={configsQuery.isLoading}
+              page={deploymentsPage}
+              pageSize={deploymentsPageSize}
+              total={deploymentsQuery.data?.total ?? 0}
+              onPageChange={setDeploymentsPage}
               onTestAgent={(deployment) => {
                 if (
                   !deployment.id.trim() ||
@@ -644,7 +724,7 @@ const DeploymentsTab = () => {
               <StepAttach
                 selectedItems={selectedItems}
                 toggleItem={toggleItem}
-                flows={attachFlowItems}
+                flows={checkpointGroups}
               />
             )}
 

@@ -125,6 +125,75 @@ async def test_list_history_returns_entries_newest_first(client: AsyncClient, lo
     assert entries[2]["version_number"] == 1
 
 
+async def test_list_history_supports_deployment_id_filter(
+    client: AsyncClient,
+    logged_in_headers,
+    active_user,
+):
+    from uuid import UUID, uuid4
+
+    from langflow.services.database.models.deployment.model import Deployment
+    from langflow.services.database.models.flow_history_deployment_attachment.model import (
+        FlowHistoryDeploymentAttachment,
+    )
+    from langflow.services.database.models.folder.model import Folder
+    from langflow.services.deps import session_scope
+
+    provider_resp = await client.post(
+        "api/v1/deployments/providers/",
+        json={
+            "account_id": "tenant-history-filter",
+            "provider_key": "watsonx-orchestrate",
+            "backend_url": "https://example.ibm.com",
+            "api_key": "secret-api-key",
+        },
+        headers=logged_in_headers,
+    )
+    assert provider_resp.status_code == status.HTTP_201_CREATED
+    provider_id = UUID(provider_resp.json()["id"])
+
+    flow = await _create_flow(client, logged_in_headers, name="history-filter-flow")
+    snap_1 = await _create_snapshot(client, logged_in_headers, flow["id"], description="attached")
+    snap_2 = await _create_snapshot(client, logged_in_headers, flow["id"], description="not-attached")
+
+    async with session_scope() as session:
+        folder = Folder(name=f"proj-{uuid4().hex[:8]}", user_id=active_user.id)
+        session.add(folder)
+        await session.flush()
+
+        deployment = Deployment(
+            resource_key=f"dep-{uuid4().hex[:8]}",
+            user_id=active_user.id,
+            project_id=folder.id,
+            provider_account_id=provider_id,
+            name=f"deployment-{uuid4().hex[:8]}",
+        )
+        session.add(deployment)
+        await session.flush()
+
+        session.add(
+            FlowHistoryDeploymentAttachment(
+                user_id=active_user.id,
+                history_id=UUID(snap_1["id"]),
+                deployment_id=deployment.id,
+            )
+        )
+        await session.flush()
+        deployment_row_id = str(deployment.id)
+
+    resp = await client.get(
+        f"api/v1/flows/{flow['id']}/history/",
+        params={"deployment_id": deployment_row_id},
+        headers=logged_in_headers,
+    )
+    assert resp.status_code == status.HTTP_200_OK
+    body = resp.json()
+
+    assert [entry["id"] for entry in body["entries"]] == [snap_1["id"]]
+    assert body["max_entries"] >= 1
+    assert snap_2["id"] not in [entry["id"] for entry in body["entries"]]
+
+
 async def test_version_numbers_auto_increment(client: AsyncClient, logged_in_headers):
     flow = await _create_flow(client, logged_in_headers)
 
@@ -754,6 +823,101 @@ async def test_get_single_entry_strips_api_keys(client: AsyncClient, logged_in_h
     assert resp.status_code == status.HTTP_200_OK
     entry_data = resp.json()["data"]
     template = entry_data["nodes"][0]["data"]["node"]["template"]
+    assert template["api_key"]["value"] is None
+
+
+async def test_get_single_entry_preserves_valid_load_from_db_reference(
+    client: AsyncClient, logged_in_headers
+):
+    variable_payload = {
+        "name": "OPENAI_API_KEY_REF",
+        "value": "dummy",
+        "type": "generic",
+        "default_fields": ["field"],
+    }
+    create_var = await client.post("api/v1/variables/", json=variable_payload, headers=logged_in_headers)
+    assert create_var.status_code == status.HTTP_201_CREATED
+
+    flow_data = {
+        "nodes": [
+            {
+                "id": "node-1",
+                "data": {
+                    "node": {
+                        "template": {
+                            "api_key": {
+                                "value": "OPENAI_API_KEY_REF",
+                                "name": "api_key",
+                                "password": True,
+                                "load_from_db": True,
+                            }
+                        }
+                    }
+                },
+            }
+        ],
+        "edges": [],
+    }
+    flow_payload = {
+        "name": "history-load-from-db-preserve",
+        "description": "test",
+        "data": flow_data,
+        "is_component": False,
+    }
+    flow_resp = await client.post("api/v1/flows/", json=flow_payload, headers=logged_in_headers)
+    assert flow_resp.status_code == status.HTTP_201_CREATED
+    flow = flow_resp.json()
+    snap = await _create_snapshot(client, logged_in_headers, flow["id"])
+
+    resp = await client.get(
+        f"api/v1/flows/{flow['id']}/history/{snap['id']}",
+        headers=logged_in_headers,
+    )
+    assert resp.status_code == status.HTTP_200_OK
+    template = resp.json()["data"]["nodes"][0]["data"]["node"]["template"]
+    assert template["api_key"]["value"] == "OPENAI_API_KEY_REF"
+
+
+async def test_get_single_entry_masks_invalid_or_unknown_load_from_db_reference(
+    client: AsyncClient, logged_in_headers
+):
+    flow_data = {
+        "nodes": [
+            {
+                "id": "node-1",
+                "data": {
+                    "node": {
+                        "template": {
+                            "api_key": {
+                                "value": "bad-ref-name!",
+                                "name": "api_key",
+                                "password": True,
+                                "load_from_db": True,
+                            }
+                        }
+                    }
+                },
+            }
+        ],
+        "edges": [],
+    }
+    flow_payload = {
+        "name": "history-load-from-db-mask-invalid",
+        "description": "test",
+        "data": flow_data,
+        "is_component": False,
+    }
+    flow_resp = await client.post("api/v1/flows/", json=flow_payload, headers=logged_in_headers)
+    assert flow_resp.status_code == status.HTTP_201_CREATED
+    flow = flow_resp.json()
+    snap = await _create_snapshot(client, logged_in_headers, flow["id"])
+
+    resp = await client.get(
+        f"api/v1/flows/{flow['id']}/history/{snap['id']}",
+        headers=logged_in_headers,
+    )
+    assert resp.status_code == status.HTTP_200_OK
+    template = resp.json()["data"]["nodes"][0]["data"]["node"]["template"]
     assert template["api_key"]["value"] is None
 
 

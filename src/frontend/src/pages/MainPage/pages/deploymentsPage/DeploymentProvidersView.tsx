@@ -1,26 +1,9 @@
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import type {
-  DeploymentConfigItem,
-  DeploymentProvider,
-} from "@/controllers/API/queries/deployments/use-deployments";
+import type { DeploymentProvider } from "@/controllers/API/queries/deployments/use-deployments";
 import { buildDeploymentColumnDefs } from "./columnDefs";
 
 const STATUS_COLOR: Record<string, string> = {
@@ -37,17 +20,17 @@ const STATUS_DOT_COLOR: Record<string, string> = {
 
 type DeploymentProvidersViewProps = {
   providers: DeploymentProvider[];
-  configurations: DeploymentConfigItem[];
   deploymentRows: DeploymentListRow[];
   selectedProviderId: string | null;
   onSelectProvider: (providerId: string) => void;
   onConfigureProvider: (provider: DeploymentProvider) => void;
-  listMode: ProviderListMode;
-  onListModeChange: (mode: ProviderListMode) => void;
   selectedProviderDeploymentCount: number;
   isLoadingDeployments: boolean;
   isLoadingProviders: boolean;
-  isLoadingConfigurations: boolean;
+  page: number;
+  pageSize: number;
+  total: number;
+  onPageChange: (page: number) => void;
   onTestAgent: (deployment: {
     id: string;
     name: string;
@@ -55,8 +38,6 @@ type DeploymentProvidersViewProps = {
     mode?: string;
   }) => void;
 };
-
-export type ProviderListMode = "deployments" | "configurations";
 
 export type DeploymentListRow = {
   id: string;
@@ -68,14 +49,6 @@ export type DeploymentListRow = {
   attached: number;
   modifiedDate: string;
   createdDate: string;
-};
-
-type ConfigurationListRow = {
-  id: string;
-  name: string;
-  description: string;
-  usedBy: string;
-  created: string;
 };
 
 const DEPLOYMENT_SKELETON_ROWS = 6;
@@ -110,82 +83,6 @@ const DeploymentsTableSkeleton = () => {
   );
 };
 
-const configurationColumnDefs = [
-  {
-    headerName: "Name",
-    field: "name",
-    flex: 2,
-    cellRenderer: (params: { value: string }) => (
-      <span className="block min-w-0 truncate text-sm font-semibold" title={params.value}>
-        {params.value}
-      </span>
-    ),
-  },
-  {
-    headerName: "Description",
-    field: "description",
-    flex: 3,
-    cellRenderer: (params: { value: string }) => (
-      <span className="block min-w-0 truncate text-sm text-muted-foreground" title={params.value}>
-        {params.value}
-      </span>
-    ),
-  },
-  {
-    headerName: "Used By",
-    field: "usedBy",
-    flex: 1.5,
-    cellRenderer: (params: { value: string }) => (
-      <span className="text-sm text-muted-foreground">{params.value}</span>
-    ),
-  },
-  {
-    headerName: "Created",
-    field: "created",
-    flex: 1.5,
-    cellRenderer: (params: { value: string }) => (
-      <span className="text-sm text-muted-foreground">{params.value}</span>
-    ),
-  },
-  {
-    headerName: "",
-    field: "actions",
-    width: 48,
-    sortable: false,
-    filter: false,
-    resizable: false,
-    cellRenderer: () => (
-      <div className="flex h-full items-center justify-end">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              unstyled
-              className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-            >
-              <ForwardedIconComponent name="EllipsisVertical" className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-44">
-            <DropdownMenuItem className="gap-2">
-              <ForwardedIconComponent name="Pencil" className="h-4 w-4" />
-              Edit
-            </DropdownMenuItem>
-            <DropdownMenuItem className="gap-2">
-              <ForwardedIconComponent name="Copy" className="h-4 w-4" />
-              Duplicate
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="gap-2 text-destructive focus:text-destructive">
-              <ForwardedIconComponent name="Trash2" className="h-4 w-4" />
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-    ),
-  },
-];
-
 const formatDate = (date: string | null): string => {
   if (!date) {
     return "Not verified";
@@ -213,27 +110,21 @@ const normalizeProviderLabel = (providerKey: string): string => {
 
 export const DeploymentProvidersView = ({
   providers,
-  configurations,
   deploymentRows,
   selectedProviderId,
   onSelectProvider,
   onConfigureProvider,
-  listMode,
-  onListModeChange,
   selectedProviderDeploymentCount,
   isLoadingDeployments,
   isLoadingProviders,
-  isLoadingConfigurations,
+  page,
+  pageSize,
+  total,
+  onPageChange,
   onTestAgent,
 }: DeploymentProvidersViewProps) => {
   const deploymentColumnDefs = buildDeploymentColumnDefs({ onTestAgent });
-  const configurationRows: ConfigurationListRow[] = configurations.map((config) => ({
-    id: config.id,
-    name: config.name,
-    description: config.description || "No description",
-    usedBy: "—",
-    created: config.provider_data?.environment?.toString() || "draft",
-  }));
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
     <div className="flex flex-col gap-6 pb-4">
@@ -386,64 +277,44 @@ export const DeploymentProvidersView = ({
       {/* Provider Resource List */}
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold">
-            {listMode === "deployments" ? "Deployments" : "Configurations"}
-          </h2>
-          <Select
-            value={listMode}
-            onValueChange={(value) => onListModeChange(value as ProviderListMode)}
-          >
-            <SelectTrigger className="h-8 w-[210px] bg-background text-foreground">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="deployments">Deployments</SelectItem>
-              <SelectItem value="configurations">Configurations</SelectItem>
-            </SelectContent>
-          </Select>
+          <h2 className="text-base font-semibold">Deployments</h2>
+          <div className="flex items-center gap-2 text-sm">
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={page <= 1}
+              onClick={() => onPageChange(Math.max(1, page - 1))}
+            >
+              Prev
+            </Button>
+            <span className="text-muted-foreground">
+              Page {page} / {totalPages}
+            </span>
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={page >= totalPages}
+              onClick={() => onPageChange(Math.min(totalPages, page + 1))}
+            >
+              Next
+            </Button>
+          </div>
         </div>
 
         <div className="rounded-lg">
-          {listMode === "deployments" ? (
-            <>
-              <div className="relative h-[560px]">
-                {isLoadingDeployments ? (
-                  <DeploymentsTableSkeleton />
-                ) : (
-                  <TableComponent
-                    rowHeight={65}
-                    cellSelection={false}
-                    tableOptions={{ hide_options: true }}
-                    columnDefs={deploymentColumnDefs}
-                    rowData={deploymentRows}
-                    className="w-full ag-no-border"
-                    pagination
-                    quickFilterText=""
-                    gridOptions={{
-                      ensureDomOrder: true,
-                      colResizeDefault: "shift",
-                      domLayout: "normal",
-                    }}
-                  />
-                )}
-              </div>
-              {!isLoadingDeployments && deploymentRows.length === 0 && (
-                <div className="px-1 pt-3 text-sm text-muted-foreground">
-                  No deployments found for the selected provider.
-                </div>
-              )}
-            </>
-          ) : (
-            <>
-              <div className="relative h-[560px]">
+          <>
+            <div className="relative h-[560px]">
+              {isLoadingDeployments ? (
+                <DeploymentsTableSkeleton />
+              ) : (
                 <TableComponent
-                  rowHeight={60}
+                  rowHeight={65}
                   cellSelection={false}
                   tableOptions={{ hide_options: true }}
-                  columnDefs={configurationColumnDefs}
-                  rowData={configurationRows}
+                  columnDefs={deploymentColumnDefs}
+                  rowData={deploymentRows}
                   className="w-full ag-no-border"
-                  pagination
+                  pagination={false}
                   quickFilterText=""
                   gridOptions={{
                     ensureDomOrder: true,
@@ -451,14 +322,14 @@ export const DeploymentProvidersView = ({
                     domLayout: "normal",
                   }}
                 />
-              </div>
-              {!isLoadingConfigurations && configurations.length === 0 && (
-                <div className="px-4 py-4 text-sm text-muted-foreground">
-                  No deployment configurations found for the selected provider.
-                </div>
               )}
-            </>
-          )}
+            </div>
+            {!isLoadingDeployments && deploymentRows.length === 0 && (
+              <div className="px-1 pt-3 text-sm text-muted-foreground">
+                No deployments found for the selected provider.
+              </div>
+            )}
+          </>
         </div>
       </div>
     </div>

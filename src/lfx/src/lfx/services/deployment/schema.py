@@ -124,19 +124,18 @@ def validate_value_matches_artifact_type(value: SnapshotList, artifact_type: Art
 class SnapshotItems(BaseModel):
     """Snapshot input for deployment create.
 
-    Exactly one of `reference_ids` or `raw_payloads` must be provided.
+    Accept either snapshot reference IDs or raw artifact payloads.
     """
+    model_config = ConfigDict(extra="forbid")
 
     artifact_type: ArtifactType = Field(description="The type of the snapshot items being referenced.")
     reference_ids: list[str] | None = Field(
         None,
-        min_length=1,
         description="Snapshot reference ids to use for this deployment.",
     )
-    # SnapshotList enforces min_length=1 when this field is provided.
     raw_payloads: SnapshotList | None = Field(
         None,
-        description="Snapshot payload items to create and bind for this deployment.",
+        description="Raw snapshot payloads to create and bind for this deployment.",
     )
 
     @field_validator("reference_ids")
@@ -359,6 +358,9 @@ class DeploymentList(BaseModel):
     """Model representing a result for a deployment list operation."""
     deployments: list[DeploymentItem] = Field(description="The list of deployments")
     deployment_type: DeploymentType | None = Field(None, description="The type of the deployment")
+    page: int = Field(default=1, ge=1, description="Current page number (1-based).")
+    page_size: int = Field(default=20, ge=1, description="Requested page size.")
+    total: int | None = Field(default=None, ge=0, description="Total known rows for the query.")
     provider_result: dict | None = Field(
         None, description="The result of the deployment list operation from the provider"
         )
