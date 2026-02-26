@@ -234,7 +234,7 @@ class DatabaseService(Service):
         """If the database is PostgreSQL, ensure it is version 15 or higher.
 
         Langflow's schema uses UNIQUE NULLS DISTINCT, which is only supported in PostgreSQL 15+.
-        Raises RuntimeError with a clear message if the version is too old.
+        Logs the message and raises SystemExit(1) if the version is too old.
         """
         # Start with DATABASE_URL: only run this check when PostgreSQL is configured
         if not self.database_url.startswith(("postgresql", "postgres")):
@@ -251,7 +251,8 @@ class DatabaseService(Service):
             # server_version_num is major*10000 + minor*100 + patch
             if int(version_num_str) < MIN_POSTGRESQL_MAJOR_VERSION * 10000:
                 msg = f"Running PostgreSQL {version_str}. {POSTGRESQL_VERSION_REQUIRED_MESSAGE}"
-                raise RuntimeError(msg) from None
+                logger.error(msg)
+                raise SystemExit(1) from None
 
     async def assign_orphaned_flows_to_superuser(self) -> None:
         """Assign orphaned flows to the default superuser when auto login is enabled."""
