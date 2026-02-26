@@ -249,3 +249,113 @@ class TestLoadFilesMessage:
         assert "Field extraction" in result_text
         # JSON content should be present in some form
         assert "parsed" in result_text or "Dict content" in result_text
+
+
+class TestResolvePathsFromValue:
+    """Test cases for BaseFileComponent._resolve_paths_from_value method."""
+
+    def setup_method(self):
+        """Set up test fixtures."""
+        self.component = TestFileComponent()
+        self.component.set_attributes({"file_path": None, "path": []})
+
+    def test_resolve_data_object_with_text_field(self):
+        """Data object with text field containing path should be resolved."""
+        data = Data(data={"text": "/test/path.txt"})
+        paths = self.component._resolve_paths_from_value(data)
+
+        assert len(paths) == 1
+        resolved_data, path_str = paths[0]
+        assert path_str == "/test/path.txt"
+        assert resolved_data is data  # Should return the original Data object
+
+    def test_resolve_stringified_json_array(self):
+        """JSON array string should be parsed into individual paths."""
+        json_str = '["/path/a.txt", "/path/b.txt"]'
+        paths = self.component._resolve_paths_from_value(json_str)
+
+        assert len(paths) == 2
+        assert paths[0][1] == "/path/a.txt"
+        assert paths[1][1] == "/path/b.txt"
+        assert paths[0][0].data["file_path"] == "/path/a.txt"
+
+    def test_resolve_double_encoded_json(self):
+        """Double-encoded JSON should be handled gracefully."""
+        # A JSON string that encodes another JSON string
+        double_encoded = json.dumps(json.dumps(["/path/double.txt"]))
+        paths = self.component._resolve_paths_from_value(double_encoded)
+
+        assert len(paths) == 1
+        assert paths[0][1] == "/path/double.txt"
+
+    def test_resolve_malformed_json_fallback(self):
+        """Malformed JSON should be treated as literal string."""
+        malformed = '["/path/a.txt", missing_quote]'
+        paths = self.component._resolve_paths_from_value(malformed)
+
+        assert len(paths) == 1
+        assert paths[0][1] == '["/path/a.txt", missing_quote]'
+
+    def test_resolve_empty_values(self):
+        """Empty string, None, and empty list should return empty list."""
+        assert self.component._resolve_paths_from_value("") == []
+        assert self.component._resolve_paths_from_value(None) == []
+        assert self.component._resolve_paths_from_value([]) == []
+
+    def test_resolve_path_object(self):
+        """Path objects should be resolved to strings."""
+        path_obj = Path("/test/path_obj.txt")
+        paths = self.component._resolve_paths_from_value(path_obj)
+
+        assert len(paths) == 1
+        assert paths[0][1] == "/test/path_obj.txt"
+
+    def test_resolve_mixed_list(self):
+        """List containing mix of Data objects and strings."""
+        data1 = Data(data={"text": "/list/data1.txt"})
+        data2 = Data(data={"text": "/list/data2.txt"})
+        mixed_list = [data1, "/list/str.txt", data2]
+
+        paths = self.component._resolve_paths_from_value(mixed_list)
+
+        assert len(paths) == 3
+        assert paths[0][1] == "/list/data1.txt"
+        assert paths[1][1] == "/list/str.txt"
+        assert paths[2][1] == "/list/data2.txt"
+
+    def test_resolve_data_object_no_fields(self):
+        """Data object with no recognized path fields should not yield a path."""
+        data = Data(data={"other_field": "value"})
+        paths = self.component._resolve_paths_from_value(data)
+
+        # Assuming it gets skipped or yields an empty string if get_text() returns None
+        # From tracing the code, it uses format_text() which might return a repr if text isn't found,
+        # or None if get_text() is overridden. Let's see what it actually does.
+        # In base_file, if path_str is empty we skip processing.
+        # But wait, data.data.get("text") might be None. get_text() usually returns data.get("text", "").
+        assert len(paths) == 0
+
+
+class TestFilePathAsList:
+    """Test cases for BaseFileComponent._file_path_as_list method."""
+
+    def setup_method(self):
+        """Set up test fixtures."""
+        self.component = TestFileComponent()
+
+    def test_file_path_none(self):
+        """If file_path is None, returns an empty list."""
+        self.component.set_attributes({"file_path": None, "path": []})
+        result = self.component._file_path_as_list()
+        assert result == []
+
+    def test_file_path_single_data(self):
+        """If file_path is a single Data object, returns list with it."""
+        data = Data(data={"text": "/test/file.txt"})
+        self.component.set_attributes({"file_path": data, "path": []})
+        result = self.component._file_path_as_list()
+
+        assert len(result) == 1
+        assert result[0] is not data  # It creates a new copy to avoid shared mutation
+        assert result[0].data["text"] == "/test/file.txt"
+        assert result[0].data["file_path"] == "/test/file.txt"

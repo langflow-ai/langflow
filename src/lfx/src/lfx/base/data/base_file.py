@@ -1,4 +1,5 @@
 import ast
+import contextlib
 import shutil
 import tarfile
 from abc import ABC, abstractmethod
@@ -140,10 +141,12 @@ class BaseFileComponent(Component, ABC):
         ),
         HandleInput(
             name="file_path",
-            display_name="Server File Path",
+            display_name="File Path",
             info=(
-                f"Data object with a '{SERVER_FILE_PATH_FIELDNAME}' property pointing to server file"
-                " or a Message object with a path to the file. Supercedes 'Path' but supports same file types."
+                f"Data object (or list of Data objects) with a '{SERVER_FILE_PATH_FIELDNAME}' property pointing to"
+                " a file or a Message object with a path to the file or list of paths to the file. The file can be"
+                " hosted on the server or on Langflow's file system."
+                " Supercedes 'Path' but supports same file types."
             ),
             required=False,
             input_types=["Data", "Message"],
@@ -168,8 +171,8 @@ class BaseFileComponent(Component, ABC):
             name="delete_server_file_after_processing",
             display_name="Delete Server File After Processing",
             advanced=True,
-            value=True,
-            info="If true, the Server File Path will be deleted after processing.",
+            value=False,
+            info="If true, the File Path will be deleted after processing, if it is hosted on the Server.",
         ),
         BoolInput(
             name="ignore_unsupported_extensions",
@@ -232,11 +235,19 @@ class BaseFileComponent(Component, ABC):
                 temp_dir.cleanup()
             # Delete files marked for deletion
             for file in final_files:
-                if file.delete_after_processing and file.path.exists():
-                    if file.path.is_dir():
-                        shutil.rmtree(file.path)
-                    else:
-                        file.path.unlink()
+                if file.delete_after_processing:
+                    path_str = str(file.path)
+
+                    # Only delete local files; skip files stored in the Langflow storage service
+                    parsed_storage = parse_storage_path(path_str)
+                    if parsed_storage:
+                        self.log(f"Skipping deletion of storage service file: {path_str}")
+                    elif file.path.exists():
+                        # Standard local file deletion
+                        if file.path.is_dir():
+                            shutil.rmtree(file.path)
+                        else:
+                            file.path.unlink()
 
     def load_files_core(self) -> list[Data]:
         """Load files and return as Data objects.
@@ -560,38 +571,84 @@ class BaseFileComponent(Component, ABC):
 
         return updated_base_files
 
+    def _resolve_paths_from_value(self, value: Any) -> list[tuple[Data, str]]:
+        """Resolve all paths from a given value, handling Data/Message objects and stringified JSON lists.
+
+        Returns:
+            list[tuple[Data, str]]: A list of tuples containing (Data object, path string).
+        """
+        if not value:
+            return []
+
+        raw_items = value if isinstance(value, list) else [value]
+        final_paths: list[tuple[Data, str]] = []
+
+        def process_item(item: Any):
+            if isinstance(item, Data):
+                path_str = getattr(item, "get_text", lambda: None)() or item.data.get("text")
+                if path_str:
+                    process_string(path_str, item)
+                else:
+                    self.log(f"Data object has no text/path, skipping: {item}")
+            elif isinstance(item, str):
+                process_string(item, None)
+            elif isinstance(item, Path):
+                final_paths.append((Data(data={self.SERVER_FILE_PATH_FIELDNAME: str(item)}), str(item)))
+            else:
+                self.log(f"Ignoring unsupported item type in path resolution: {type(item).__name__}")
+
+        def process_string(s: str, original_data: Data | None):
+            s = s.strip()
+            if s.startswith(("[", '"[', "'[")):
+                try:
+                    loaded = orjson.loads(s)
+                    if isinstance(loaded, str) and loaded.strip().startswith("["):
+                        with contextlib.suppress(orjson.JSONDecodeError):
+                            loaded = orjson.loads(loaded)
+                    if isinstance(loaded, list):
+                        for inner in loaded:
+                            if isinstance(inner, str):
+                                # Pass None so each path gets its own fresh Data object,
+                                # not a shared reference to original_data
+                                process_string(inner, None)
+                            else:
+                                process_item(inner)
+                        return
+                except orjson.JSONDecodeError:
+                    # Attempt to safely evaluate if it's a strongly quoted string
+                    try:
+                        import ast
+
+                        evaluated = ast.literal_eval(s)
+                        if isinstance(evaluated, str) and evaluated.strip().startswith("["):
+                            process_string(evaluated, original_data)
+                            return
+                    except (SyntaxError, ValueError):
+                        pass
+                    self.log(f"String looks like JSON but failed to parse, treating as literal path: {s[:100]}...")
+
+            data_obj = original_data or Data(data={self.SERVER_FILE_PATH_FIELDNAME: s})
+            final_paths.append((data_obj, s))
+
+        for item in raw_items:
+            process_item(item)
+
+        return final_paths
+
     def _file_path_as_list(self) -> list[Data]:
-        file_path = self.file_path
-        if not file_path:
+        if not self.file_path:
             return []
 
-        def _message_to_data(message: Message) -> Data:
-            return Data(**{self.SERVER_FILE_PATH_FIELDNAME: message.text})
-
-        if isinstance(file_path, Data):
-            file_path = [file_path]
-        elif isinstance(file_path, Message):
-            file_path = [_message_to_data(file_path)]
-        elif not isinstance(file_path, list):
-            msg = f"Expected list of Data objects in file_path but got {type(file_path)}."
-            self.log(msg)
-            if not self.silent_errors:
-                raise ValueError(msg)
-            return []
-
-        file_paths = []
-        for obj in file_path:
-            data_obj = _message_to_data(obj) if isinstance(obj, Message) else obj
-
-            if not isinstance(data_obj, Data):
-                msg = f"Expected Data object in file_path but got {type(data_obj)}."
-                self.log(msg)
-                if not self.silent_errors:
-                    raise ValueError(msg)
-                continue
-            file_paths.append(data_obj)
-
-        return file_paths
+        # Use the helper to resolve paths from self.file_path (HandleInput)
+        results = []
+        for data_obj, path_str in self._resolve_paths_from_value(self.file_path):
+            if self.SERVER_FILE_PATH_FIELDNAME not in data_obj.data:
+                # Create a new Data to avoid mutating a shared reference
+                resolved_data_obj = Data(data={**data_obj.data, self.SERVER_FILE_PATH_FIELDNAME: path_str})
+            else:
+                resolved_data_obj = data_obj
+            results.append(resolved_data_obj)
+        return results
 
     def _validate_and_resolve_paths(self) -> list[BaseFile]:
         """Validate that all input paths exist and are valid, and create BaseFile instances.
@@ -641,31 +698,26 @@ class BaseFileComponent(Component, ABC):
         file_path = self._file_path_as_list()
 
         if self.path and not file_path:
-            # Wrap self.path into a Data object
-            if isinstance(self.path, list):
-                for path in self.path:
-                    data_obj = Data(data={self.SERVER_FILE_PATH_FIELDNAME: path})
+            # Handle standard single/multiple local file paths
+            paths = self.path if isinstance(self.path, list) else [self.path]
+            for path in paths:
+                if isinstance(path, Data):
+                    path_str = getattr(path, "get_text", lambda: None)() or path.data.get("text")
+                    if path_str:
+                        add_file(data=path, path=path_str, delete_after_processing=False)
+                elif isinstance(path, str | Path):
+                    data_obj = Data(data={self.SERVER_FILE_PATH_FIELDNAME: str(path)})
                     add_file(data=data_obj, path=path, delete_after_processing=False)
-            else:
-                data_obj = Data(data={self.SERVER_FILE_PATH_FIELDNAME: self.path})
-                add_file(data=data_obj, path=self.path, delete_after_processing=False)
         elif file_path:
-            for obj in file_path:
-                server_file_path = obj.data.get(self.SERVER_FILE_PATH_FIELDNAME)
-                if server_file_path:
+            # Handle tool-mode/dynamic file paths (already resolved into Data objects)
+            for data_obj in file_path:
+                path_str = data_obj.data.get(self.SERVER_FILE_PATH_FIELDNAME)
+                if path_str:
                     add_file(
-                        data=obj,
-                        path=server_file_path,
+                        data=data_obj,
+                        path=path_str,
                         delete_after_processing=self.delete_server_file_after_processing,
                     )
-                elif not self.ignore_unspecified_files:
-                    msg = f"Data object missing '{self.SERVER_FILE_PATH_FIELDNAME}' property."
-                    self.log(msg)
-                    if not self.silent_errors:
-                        raise ValueError(msg)
-                else:
-                    msg = f"Ignoring Data object missing '{self.SERVER_FILE_PATH_FIELDNAME}' property:\n{obj}"
-                    self.log(msg)
 
         return resolved_files
 

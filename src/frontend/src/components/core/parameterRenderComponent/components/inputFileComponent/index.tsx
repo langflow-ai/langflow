@@ -19,6 +19,7 @@ import IconComponent, {
 } from "../../../../common/genericIconComponent";
 import { Button } from "../../../../ui/button";
 import type { FileComponentType, InputProps } from "../../types";
+import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
 
 export default function InputFileComponent({
   value,
@@ -30,6 +31,7 @@ export default function InputFileComponent({
   tempFile = true,
   editNode = false,
   id,
+  placeholder,
 }: InputProps<string, FileComponentType>): JSX.Element {
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -37,8 +39,8 @@ export default function InputFileComponent({
 
   // Clear component state
   useEffect(() => {
-    if (disabled && value !== "") {
-      handleOnNewValue({ value: "", file_path: "" }, { skipSnapshot: true });
+    if (disabled && value.length !== 0) {
+      handleOnNewValue({ value: [], file_path: [] }, { skipSnapshot: true });
     }
   }, [disabled, handleOnNewValue]);
 
@@ -273,7 +275,9 @@ export default function InputFileComponent({
                         )}
                         data-testid="button_open_file_management"
                       >
-                        {selectedFiles.length !== 0 ? (
+                        {disabled ? (
+                          getPlaceholder(disabled, placeholder)
+                        ) : selectedFiles.length !== 0 ? (
                           <ForwardedIconComponent
                             name="Plus"
                             className="icon-size"

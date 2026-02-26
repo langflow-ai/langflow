@@ -155,37 +155,48 @@ class VideoFileComponent(BaseFileComponent):
                 self.log("DEBUG: No video file path provided")
                 return DataFrame()
 
-            self.log(f"DEBUG: Loading video from path: {self.file_path}")
+            # Use the base class helper to resolve paths
+            resolved_paths = self._resolve_paths_from_value(self.file_path)
 
-            # Verify file exists
-            file_path_obj = Path(self.file_path)
-            if not file_path_obj.exists():
-                self.log(f"DEBUG: Video file not found at path: {self.file_path}")
+            video_data_list = []
+            for _, path_str in resolved_paths:
+                # Resolve to absolute path
+                resolved_path = Path(self.resolve_path(path_str))
+
+                if not resolved_path.exists():
+                    msg = f"Video file not found at path: {resolved_path}"
+                    self.log(f"WARNING: {msg}")
+                    if not getattr(self, "silent_errors", False):
+                        raise FileNotFoundError(msg)
+                    continue
+
+                file_size = resolved_path.stat().st_size
+                video_data_list.append(
+                    {
+                        "text": str(resolved_path),
+                        "metadata": {"source": str(resolved_path), "type": "video", "size": file_size},
+                    }
+                )
+
+            if not video_data_list:
                 return DataFrame()
 
-            # Verify file size
-            file_size = file_path_obj.stat().st_size
-            self.log(f"DEBUG: Video file size: {file_size} bytes")
-
-            # Create a proper Data object with the video path
-            video_data = {
-                "text": self.file_path,
-                "metadata": {"source": self.file_path, "type": "video", "size": file_size},
-            }
-
-            self.log(f"DEBUG: Created video data: {video_data}")
-            result = DataFrame(data=[video_data])
-
-            # Log the result to verify it's a proper Data object
-            self.log("DEBUG: Returning list with Data objects")
+            result = DataFrame(data=video_data_list)
+            self.log(f"DEBUG: Returning {len(video_data_list)} video Data objects")
         except (FileNotFoundError, PermissionError, OSError) as e:
             self.log(f"DEBUG: File error in video load_files: {e!s}", "ERROR")
+            if not getattr(self, "silent_errors", False):
+                raise
             return DataFrame()
         except ImportError as e:
             self.log(f"DEBUG: Import error in video load_files: {e!s}", "ERROR")
+            if not getattr(self, "silent_errors", False):
+                raise
             return DataFrame()
         except (ValueError, TypeError) as e:
             self.log(f"DEBUG: Value or type error in video load_files: {e!s}", "ERROR")
+            if not getattr(self, "silent_errors", False):
+                raise
             return DataFrame()
         else:
             return result

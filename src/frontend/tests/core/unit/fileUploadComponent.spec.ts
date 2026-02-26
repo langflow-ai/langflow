@@ -5,6 +5,10 @@ import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { generateRandomFilename } from "../../utils/generate-filename";
+import {
+  closeAdvancedOptions,
+  openAdvancedOptions,
+} from "../../utils/open-advanced-options";
 
 // Run tests in this file serially to avoid database conflicts with shared file state
 test.describe.configure({ mode: "serial" });
@@ -786,5 +790,181 @@ test(
     // Verify that only the TXT file was selected in the component
     await expect(page.getByText(`${txtFileName}.txt`)).toBeVisible();
     await expect(page.getByText(`${psdFileName}.psd`)).not.toBeVisible();
+  },
+);
+
+test(
+  "should be able to use text input for file paths",
+  {
+    tag: ["@release", "@workspace"],
+  },
+  async ({ page }) => {
+    const file1 = generateRandomFilename();
+    const file2 = generateRandomFilename();
+    const fileContent1 = "content of file 1";
+    const fileContent2 = "content of file 2";
+
+    await awaitBootstrapTest(page);
+    await page.getByTestId("blank-flow").click();
+
+    await addLegacyComponents(page);
+
+    // Add Read File Component
+    await page.getByTestId("sidebar-search-input").click();
+    await page.getByTestId("sidebar-search-input").fill("Read File");
+    await page.waitForSelector('[data-testid="files_and_knowledgeRead File"]', {
+      timeout: 1000,
+    });
+
+    // Get flow ID from URL
+    const url = page.url();
+    const flowId = url.split("/").slice(-1)[0];
+
+    await page
+      .getByTestId("files_and_knowledgeRead File")
+      .first()
+      .dragTo(page.locator('//*[@id="react-flow-id"]'));
+    await page.mouse.up();
+    await page.mouse.down();
+
+    await openAdvancedOptions(page);
+
+    await openAdvancedOptions(page);
+
+    await page.getByTestId("showfile_path").click();
+
+    await closeAdvancedOptions(page);
+
+    await adjustScreenView(page);
+
+    // Upload Files
+    await page.getByTestId("button_open_file_management").click();
+    const drag = await page.getByTestId("drag-files-component");
+    const fileChooserPromise = page.waitForEvent("filechooser");
+    await drag.click();
+    const fileChooser = await fileChooserPromise;
+    await fileChooser.setFiles([
+      {
+        name: `${file1}.txt`,
+        mimeType: "text/plain",
+        buffer: Buffer.from(fileContent1),
+      },
+      {
+        name: `${file2}.txt`,
+        mimeType: "text/plain",
+        buffer: Buffer.from(fileContent2),
+      },
+    ]);
+    // Verify that only the TXT file was selected in the component
+    await expect(page.getByText(`${file1}.txt`).first()).toBeVisible();
+    await expect(page.getByText(`${file2}.txt`).first()).toBeVisible();
+
+    await expect(page.getByText("Files uploaded successfully")).toBeVisible();
+    await page.getByTestId("select-files-modal-button").click();
+
+    await adjustScreenView(page);
+
+    await page.getByTestId(`remove-file-button-${file2}`).click();
+
+    await page.getByTestId("dropdown-output-file").click();
+    await page.getByTestId("dropdown-item-output-file-file path").click();
+    await page.getByTestId("button_run_read file").click();
+    await expect(page.getByText("Built successfully")).toBeVisible({
+      timeout: 30000,
+    });
+    await page.getByTestId("output-inspection-file path-file").click();
+    const filePaths = await page.getByTestId("textarea").textContent();
+    await page.getByText("Close").last().click();
+
+    const cleanPath = filePaths
+      ?.replace(/"/g, "")
+      .replace("[", "")
+      .replace("]", "")
+      .split(",")[0]
+      .trim();
+    const folderId = cleanPath?.split("/").slice(-2)[0];
+
+    await page.getByTestId(`remove-file-button-${file1}`).click();
+
+    // Add Text Input Component
+    await page.getByTestId("sidebar-search-input").click();
+    await page.getByTestId("sidebar-search-input").fill("Text Input");
+    await page.waitForSelector('[data-testid="input_outputText Input"]', {
+      timeout: 1000,
+    });
+
+    await adjustScreenView(page, { numberOfZoomOut: 3 });
+    await page
+      .getByTestId("input_outputText Input")
+      .first()
+      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+        targetPosition: { x: 100, y: 100 },
+      });
+    await page.mouse.up();
+    await page.mouse.down();
+    await adjustScreenView(page);
+
+    // Connect Text Input to Read File
+    await page
+      .getByTestId("handle-textinput-shownode-output text-right")
+      .click();
+    await page.getByTestId("handle-file-shownode-file path-left").click();
+
+    // Add Chat Output Component
+    await page.getByTestId("sidebar-search-input").click();
+    await page.getByTestId("sidebar-search-input").fill("Chat Output");
+    await page.waitForSelector('[data-testid="input_outputChat Output"]', {
+      timeout: 1000,
+    });
+    await page
+      .getByTestId("input_outputChat Output")
+      .first()
+      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+        targetPosition: { x: 500, y: 100 },
+      });
+    await page.mouse.up();
+    await page.mouse.down();
+    await adjustScreenView(page);
+
+    // Connect Read File to Chat Output
+    await page.getByTestId("handle-file-shownode-raw content-right").click();
+    await page
+      .getByTestId("handle-chatoutput-noshownode-inputs-target")
+      .click();
+
+    // Test Case 1: Multiple Files
+    const multipleFiles = JSON.stringify([
+      `${folderId}/${file1}.txt`,
+      `${folderId}/${file2}.txt`,
+    ]);
+    await page.getByTestId("textarea_str_input_value").fill(multipleFiles);
+
+    await page.getByRole("button", { name: "Playground", exact: true }).click();
+
+    await page.waitForSelector("text=Run Flow", {
+      timeout: 30000,
+    });
+
+    await page.getByText("Run Flow", { exact: true }).last().click();
+
+    // Verify
+    await expect(page.getByText(fileContent1)).toBeVisible();
+    await expect(page.getByText(fileContent2)).toBeVisible();
+
+    await page.getByRole("button", { name: "Playground", exact: true }).click();
+
+    // Test Case 2: Single File
+    const singleFile = `${folderId}/${file1}.txt`;
+    await page.getByTestId("textarea_str_input_value").fill(singleFile);
+
+    await page.getByRole("button", { name: "Playground", exact: true }).click();
+
+    await page.waitForSelector("text=Run Flow", {
+      timeout: 30000,
+    });
+
+    await page.getByText("Run Flow", { exact: true }).last().click();
+
+    await expect(page.getByText(fileContent1)).toBeVisible();
   },
 );
