@@ -333,8 +333,8 @@ async def get_trace(
         logger.debug("Database error getting trace: %s", e)
         raise HTTPException(status_code=500, detail="Database error") from e
     except Exception as e:
-        logger.debug("Error getting trace: %s", e)
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        logger.exception("Error getting trace")
+        raise HTTPException(status_code=500, detail="Internal server error") from e
     else:
         return result
 
@@ -437,7 +437,8 @@ async def delete_trace(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        logger.exception("Error deleting trace")
+        raise HTTPException(status_code=500, detail="Internal server error") from e
 
 
 @router.delete("", status_code=204)
@@ -473,4 +474,5 @@ async def delete_traces_by_flow(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        logger.exception("Error deleting traces by flow")
+        raise HTTPException(status_code=500, detail="Internal server error") from e
