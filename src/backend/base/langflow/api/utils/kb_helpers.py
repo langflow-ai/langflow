@@ -2,6 +2,7 @@ import asyncio
 import contextlib
 import gc
 import json
+import re
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -18,6 +19,8 @@ from langflow.api.utils import CurrentActiveUser
 from langflow.services.database.models.jobs.model import JobStatus
 from langflow.services.deps import get_settings_service
 from langflow.services.jobs.service import JobService
+
+_WORD_RE = re.compile(r"\S+")
 
 _KNOWLEDGE_BASES_DIR: Path | None = None
 
@@ -196,9 +199,10 @@ def calculate_text_metrics(df: pd.DataFrame, text_columns: list[str]) -> tuple[i
         if col not in df.columns:
             continue
 
+        # Keep the original fillna("") after astype(str) to match original semantics
         text_series = df[col].astype(str).fillna("")
         total_characters += int(text_series.str.len().sum())
-        total_words += int(text_series.str.split().str.len().sum())
+        total_words += int(text_series.str.count(_WORD_RE).sum())
 
     return total_words, total_characters
 
