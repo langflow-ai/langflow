@@ -7,7 +7,6 @@ from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from langflow.services.tracing.noveum_trace import NoveumTracer
 
 
@@ -85,8 +84,10 @@ def mock_span():
 class TestNoveumTracerInit:
     """Test NoveumTracer initialization."""
 
-    @patch.dict(os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"})
-    def test_init_successful_with_config(self, mock_noveum_modules, sample_trace_id, sample_trace_name):
+    @patch.dict(
+        os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"}
+    )
+    def test_init_successful_with_config(self, mock_noveum_modules, sample_trace_id, sample_trace_name):  # noqa: ARG002
         """Test successful initialization with valid config."""
         tracer = NoveumTracer(
             trace_name=sample_trace_name,
@@ -116,8 +117,10 @@ class TestNoveumTracerInit:
         assert tracer._ready is False
         assert tracer.flow_id == "flow_123"
 
-    @patch.dict(os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"})
-    def test_init_with_user_id_and_session_id(self, mock_noveum_modules, sample_trace_id, sample_trace_name):
+    @patch.dict(
+        os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"}
+    )
+    def test_init_with_user_id_and_session_id(self, mock_noveum_modules, sample_trace_id, sample_trace_name):  # noqa: ARG002
         """Test initialization with user_id and session_id."""
         tracer = NoveumTracer(
             trace_name=sample_trace_name,
@@ -223,7 +226,9 @@ class TestNoveumTracerGetConfig:
 class TestNoveumTracerSetupNoveum:
     """Test setup_noveum method."""
 
-    @patch.dict(os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"})
+    @patch.dict(
+        os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"}
+    )
     def test_setup_noveum_successful(self, mock_noveum_modules, sample_trace_id, sample_trace_name):
         """Test successful setup_noveum."""
         tracer = NoveumTracer(
@@ -251,10 +256,12 @@ class TestNoveumTracerSetupNoveum:
         mock_client_instance.start_trace.assert_called_once()
         assert mock_noveum_module._client == mock_client_instance
 
-    @patch.dict(os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"})
+    @patch.dict(
+        os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"}
+    )
     def test_setup_noveum_with_user_id_and_session_id(self, mock_noveum_modules, sample_trace_id, sample_trace_name):
         """Test setup_noveum with user_id and session_id."""
-        tracer = NoveumTracer(
+        _tracer = NoveumTracer(
             trace_name=sample_trace_name,
             trace_type="chain",
             project_name="test_project",
@@ -273,10 +280,12 @@ class TestNoveumTracerSetupNoveum:
         assert attributes["trace_type"] == "chain"
         assert attributes["flow_id"] == "flow_123"
 
-    @patch.dict(os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"})
+    @patch.dict(
+        os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"}
+    )
     def test_setup_noveum_without_user_id_and_session_id(self, mock_noveum_modules, sample_trace_id, sample_trace_name):
         """Test setup_noveum without user_id and session_id."""
-        tracer = NoveumTracer(
+        _tracer = NoveumTracer(
             trace_name=sample_trace_name,
             trace_type="chain",
             project_name="test_project",
@@ -293,40 +302,50 @@ class TestNoveumTracerSetupNoveum:
         assert attributes["trace_type"] == "chain"
         assert attributes["flow_id"] == "flow_123"
 
-    @patch.dict(os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"})
+    @patch.dict(
+        os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"}
+    )
     def test_setup_noveum_import_error(self, sample_trace_id, sample_trace_name):
         """Test setup_noveum with ImportError."""
-        with patch("langflow.services.tracing.noveum_trace.noveum_trace", None):
-            with patch("langflow.services.tracing.noveum_trace.logger") as mock_logger:
-                tracer = NoveumTracer(
-                    trace_name=sample_trace_name,
-                    trace_type="chain",
-                    project_name="test_project",
-                    trace_id=sample_trace_id,
-                )
+        with (
+            patch("langflow.services.tracing.noveum_trace.noveum_trace", None),
+            patch("langflow.services.tracing.noveum_trace.logger") as mock_logger,
+        ):
+            tracer = NoveumTracer(
+                trace_name=sample_trace_name,
+                trace_type="chain",
+                project_name="test_project",
+                trace_id=sample_trace_id,
+            )
 
-                assert tracer._ready is False
-                mock_logger.exception.assert_called()
+            assert tracer._ready is False
+            mock_logger.exception.assert_called()
 
-    @patch.dict(os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"})
+    @patch.dict(
+        os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"}
+    )
     def test_setup_noveum_general_exception(self, sample_trace_id, sample_trace_name):
         """Test setup_noveum with general exception."""
-        with patch("langflow.services.tracing.noveum_trace.NoveumClient", side_effect=Exception("Test error")):
-            with patch("langflow.services.tracing.noveum_trace.logger") as mock_logger:
-                tracer = NoveumTracer(
-                    trace_name=sample_trace_name,
-                    trace_type="chain",
-                    project_name="test_project",
-                    trace_id=sample_trace_id,
-                )
+        with (
+            patch("langflow.services.tracing.noveum_trace.NoveumClient", side_effect=Exception("Test error")),
+            patch("langflow.services.tracing.noveum_trace.logger") as mock_logger,
+        ):
+            tracer = NoveumTracer(
+                trace_name=sample_trace_name,
+                trace_type="chain",
+                project_name="test_project",
+                trace_id=sample_trace_id,
+            )
 
-                assert tracer._ready is False
-                mock_logger.debug.assert_called()
+            assert tracer._ready is False
+            mock_logger.debug.assert_called()
 
-    @patch.dict(os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"})
+    @patch.dict(
+        os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"}
+    )
     def test_setup_noveum_with_client_lock(self, mock_noveum_modules, sample_trace_id, sample_trace_name):
         """Test setup_noveum with _client_lock attribute."""
-        tracer = NoveumTracer(
+        _tracer = NoveumTracer(
             trace_name=sample_trace_name,
             trace_type="chain",
             project_name="test_project",
@@ -337,7 +356,9 @@ class TestNoveumTracerSetupNoveum:
         assert hasattr(mock_noveum_module, "_client_lock")
         assert mock_noveum_module._client is not None
 
-    @patch.dict(os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"})
+    @patch.dict(
+        os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"}
+    )
     def test_setup_noveum_without_client_lock(self, sample_trace_id, sample_trace_name):
         """Test setup_noveum without _client_lock attribute (fallback path)."""
         mock_noveum_module = MagicMock()
@@ -371,7 +392,9 @@ class TestNoveumTracerSetupNoveum:
 class TestNoveumTracerAddTrace:
     """Test add_trace method."""
 
-    @patch.dict(os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"})
+    @patch.dict(
+        os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"}
+    )
     def test_add_trace_successful(self, mock_noveum_modules, sample_trace_id, sample_trace_name):
         """Test successful span creation."""
         tracer = NoveumTracer(
@@ -408,7 +431,9 @@ class TestNoveumTracerAddTrace:
         assert call_kwargs["attributes"]["custom_meta"] == "value"
         assert "inputs" in call_kwargs["attributes"]
 
-    @patch.dict(os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"})
+    @patch.dict(
+        os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"}
+    )
     def test_add_trace_not_ready(self, sample_trace_id, sample_trace_name):
         """Test add_trace when tracer is not ready."""
         tracer = NoveumTracer(
@@ -428,7 +453,9 @@ class TestNoveumTracerAddTrace:
 
         assert len(tracer.spans) == 0
 
-    @patch.dict(os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"})
+    @patch.dict(
+        os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"}
+    )
     def test_add_trace_name_cleanup(self, mock_noveum_modules, sample_trace_id, sample_trace_name):
         """Test name cleanup in add_trace."""
         tracer = NoveumTracer(
@@ -464,7 +491,9 @@ class TestNoveumTracerAddTrace:
         call_kwargs = mock_trace.create_span.call_args[1]
         assert call_kwargs["name"] == "My Component"
 
-    @patch.dict(os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"})
+    @patch.dict(
+        os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"}
+    )
     def test_add_trace_metadata_merging(self, mock_noveum_modules, sample_trace_id, sample_trace_name):
         """Test metadata merging in add_trace."""
         tracer = NoveumTracer(
@@ -493,7 +522,9 @@ class TestNoveumTracerAddTrace:
         assert attributes["trace_type"] == "custom_type"
         assert attributes["custom_key"] == "custom_value"
 
-    @patch.dict(os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"})
+    @patch.dict(
+        os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"}
+    )
     def test_add_trace_input_serialization(self, mock_noveum_modules, sample_trace_id, sample_trace_name):
         """Test input serialization in add_trace."""
         tracer = NoveumTracer(
@@ -522,7 +553,9 @@ class TestNoveumTracerAddTrace:
             call_kwargs = mock_trace.create_span.call_args[1]
             assert call_kwargs["attributes"]["inputs"] == {"serialized": "inputs"}
 
-    @patch.dict(os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"})
+    @patch.dict(
+        os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"}
+    )
     def test_add_trace_exception_handling(self, mock_noveum_modules, sample_trace_id, sample_trace_name):
         """Test exception handling in add_trace."""
         tracer = NoveumTracer(
@@ -550,8 +583,10 @@ class TestNoveumTracerAddTrace:
 class TestNoveumTracerEndTrace:
     """Test end_trace method."""
 
-    @patch.dict(os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"})
-    def test_end_trace_successful(self, mock_noveum_modules, sample_trace_id, sample_trace_name, mock_span):
+    @patch.dict(
+        os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"}
+    )
+    def test_end_trace_successful(self, mock_noveum_modules, sample_trace_id, sample_trace_name, mock_span):  # noqa: ARG002
         """Test successful span finishing."""
         tracer = NoveumTracer(
             trace_name=sample_trace_name,
@@ -577,7 +612,9 @@ class TestNoveumTracerEndTrace:
         mock_span.set_attributes.assert_called_once()
         mock_span.finish.assert_called_once_with(end_time=end_time)
 
-    @patch.dict(os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"})
+    @patch.dict(
+        os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"}
+    )
     def test_end_trace_not_ready(self, sample_trace_id, sample_trace_name):
         """Test end_trace when tracer is not ready."""
         tracer = NoveumTracer(
@@ -597,8 +634,10 @@ class TestNoveumTracerEndTrace:
 
         assert "component_123" in tracer.spans
 
-    @patch.dict(os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"})
-    def test_end_trace_missing_span(self, mock_noveum_modules, sample_trace_id, sample_trace_name):
+    @patch.dict(
+        os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"}
+    )
+    def test_end_trace_missing_span(self, mock_noveum_modules, sample_trace_id, sample_trace_name):  # noqa: ARG002
         """Test end_trace with missing span."""
         tracer = NoveumTracer(
             trace_name=sample_trace_name,
@@ -617,8 +656,10 @@ class TestNoveumTracerEndTrace:
             mock_logger.debug.assert_called()
             assert "nonexistent_component" not in tracer.spans
 
-    @patch.dict(os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"})
-    def test_end_trace_with_outputs(self, mock_noveum_modules, sample_trace_id, sample_trace_name, mock_span):
+    @patch.dict(
+        os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"}
+    )
+    def test_end_trace_with_outputs(self, mock_noveum_modules, sample_trace_id, sample_trace_name, mock_span):  # noqa: ARG002
         """Test end_trace with outputs."""
         tracer = NoveumTracer(
             trace_name=sample_trace_name,
@@ -643,8 +684,10 @@ class TestNoveumTracerEndTrace:
             call_kwargs = mock_span.set_attributes.call_args[0][0]
             assert call_kwargs["outputs"]["serialized"] == "outputs"
 
-    @patch.dict(os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"})
-    def test_end_trace_with_error(self, mock_noveum_modules, sample_trace_id, sample_trace_name, mock_span):
+    @patch.dict(
+        os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"}
+    )
+    def test_end_trace_with_error(self, mock_noveum_modules, sample_trace_id, sample_trace_name, mock_span):  # noqa: ARG002
         """Test end_trace with error."""
         tracer = NoveumTracer(
             trace_name=sample_trace_name,
@@ -667,8 +710,10 @@ class TestNoveumTracerEndTrace:
         assert call_kwargs["outputs"]["error"] == "Test error"
         mock_span.set_status.assert_called_once_with("error", "Test error")
 
-    @patch.dict(os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"})
-    def test_end_trace_with_logs(self, mock_noveum_modules, sample_trace_id, sample_trace_name, mock_span):
+    @patch.dict(
+        os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"}
+    )
+    def test_end_trace_with_logs(self, mock_noveum_modules, sample_trace_id, sample_trace_name, mock_span):  # noqa: ARG002
         """Test end_trace with logs."""
         tracer = NoveumTracer(
             trace_name=sample_trace_name,
@@ -695,8 +740,10 @@ class TestNoveumTracerEndTrace:
             assert "logs" in call_kwargs["outputs"]
             assert len(call_kwargs["outputs"]["logs"]) == 2
 
-    @patch.dict(os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"})
-    def test_end_trace_exception_handling(self, mock_noveum_modules, sample_trace_id, sample_trace_name, mock_span):
+    @patch.dict(
+        os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"}
+    )
+    def test_end_trace_exception_handling(self, mock_noveum_modules, sample_trace_id, sample_trace_name, mock_span):  # noqa: ARG002
         """Test exception handling in end_trace."""
         tracer = NoveumTracer(
             trace_name=sample_trace_name,
@@ -722,7 +769,9 @@ class TestNoveumTracerEndTrace:
 class TestNoveumTracerEnd:
     """Test end method."""
 
-    @patch.dict(os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"})
+    @patch.dict(
+        os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"}
+    )
     def test_end_successful(self, mock_noveum_modules, sample_trace_id, sample_trace_name):
         """Test successful trace finalization."""
         tracer = NoveumTracer(
@@ -751,7 +800,9 @@ class TestNoveumTracerEnd:
         mock_client_instance.flush.assert_called_once()
         mock_client_instance.shutdown.assert_called_once()
 
-    @patch.dict(os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"})
+    @patch.dict(
+        os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"}
+    )
     def test_end_not_ready(self, sample_trace_id, sample_trace_name):
         """Test end when tracer is not ready."""
         tracer = NoveumTracer(
@@ -766,7 +817,9 @@ class TestNoveumTracerEnd:
 
         # Should return early without doing anything
 
-    @patch.dict(os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"})
+    @patch.dict(
+        os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"}
+    )
     def test_end_with_error(self, mock_noveum_modules, sample_trace_id, sample_trace_name):
         """Test end with error."""
         tracer = NoveumTracer(
@@ -785,7 +838,9 @@ class TestNoveumTracerEnd:
         assert call_kwargs["error"] == "Test error"
         mock_trace.set_status.assert_called_once_with("error", "Test error")
 
-    @patch.dict(os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"})
+    @patch.dict(
+        os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"}
+    )
     def test_end_without_inputs_outputs_metadata(self, mock_noveum_modules, sample_trace_id, sample_trace_name):
         """Test end without inputs/outputs/metadata."""
         tracer = NoveumTracer(
@@ -807,7 +862,9 @@ class TestNoveumTracerEnd:
         # But finish_trace should still be called
         mock_client_instance.finish_trace.assert_called_once()
 
-    @patch.dict(os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"})
+    @patch.dict(
+        os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"}
+    )
     def test_end_flush_handling(self, mock_noveum_modules, sample_trace_id, sample_trace_name):
         """Test end flush handling."""
         tracer = NoveumTracer(
@@ -824,7 +881,9 @@ class TestNoveumTracerEnd:
 
         mock_client_instance.flush.assert_called_once()
 
-    @patch.dict(os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"})
+    @patch.dict(
+        os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"}
+    )
     def test_end_without_flush(self, mock_noveum_modules, sample_trace_id, sample_trace_name):
         """Test end when flush method doesn't exist."""
         tracer = NoveumTracer(
@@ -842,7 +901,9 @@ class TestNoveumTracerEnd:
 
         mock_client_instance.finish_trace.assert_called_once()
 
-    @patch.dict(os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"})
+    @patch.dict(
+        os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"}
+    )
     def test_end_shutdown_exception_handling(self, mock_noveum_modules, sample_trace_id, sample_trace_name):
         """Test end shutdown exception handling."""
         tracer = NoveumTracer(
@@ -862,7 +923,9 @@ class TestNoveumTracerEnd:
             mock_logger.debug.assert_called()
             mock_client_instance.finish_trace.assert_called_once()  # Should still be called
 
-    @patch.dict(os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"})
+    @patch.dict(
+        os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"}
+    )
     def test_end_general_exception_handling(self, mock_noveum_modules, sample_trace_id, sample_trace_name):
         """Test end general exception handling."""
         tracer = NoveumTracer(
@@ -884,7 +947,9 @@ class TestNoveumTracerEnd:
 class TestNoveumTracerGetLangchainCallback:
     """Test get_langchain_callback method."""
 
-    @patch.dict(os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"})
+    @patch.dict(
+        os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"}
+    )
     def test_get_langchain_callback_when_ready(self, mock_noveum_modules, sample_trace_id, sample_trace_name):
         """Test get_langchain_callback when ready."""
         tracer = NoveumTracer(
@@ -899,7 +964,9 @@ class TestNoveumTracerGetLangchainCallback:
         assert callback is not None
         assert callback == mock_noveum_modules["callback_handler"]
 
-    @patch.dict(os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"})
+    @patch.dict(
+        os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"}
+    )
     def test_get_langchain_callback_when_not_ready(self, sample_trace_id, sample_trace_name):
         """Test get_langchain_callback when not ready."""
         tracer = NoveumTracer(
@@ -918,8 +985,10 @@ class TestNoveumTracerGetLangchainCallback:
 class TestNoveumTracerReadyProperty:
     """Test ready property."""
 
-    @patch.dict(os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"})
-    def test_ready_property_true(self, mock_noveum_modules, sample_trace_id, sample_trace_name):
+    @patch.dict(
+        os.environ, {"NOVEUM_API_KEY": "test_key", "NOVEUM_PROJECT": "test_project", "NOVEUM_ENVIRONMENT": "test_env"}
+    )
+    def test_ready_property_true(self, mock_noveum_modules, sample_trace_id, sample_trace_name):  # noqa: ARG002
         """Test ready property returns True when _ready is True."""
         tracer = NoveumTracer(
             trace_name=sample_trace_name,
