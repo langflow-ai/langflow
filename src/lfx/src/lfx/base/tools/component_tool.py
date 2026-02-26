@@ -94,11 +94,16 @@ def _build_output_function(component: Component, output_method: Callable, event_
                 from datetime import datetime, timezone
 
                 log_list = [log.model_dump() for log in component._logs] if component._logs else []
-                serialized_result = serialize(result)
 
-                # Emit under component_as_tool so logs appear when user clicks on tool output
+                # Build tool metadata for proper display (name, description, tags)
+                tool_info = {
+                    "name": output_method.__name__,
+                    "description": component.description or "",
+                    "tags": [output_method.__name__],
+                }
+
                 logs = {TOOL_OUTPUT_NAME: log_list}
-                outputs = {TOOL_OUTPUT_NAME: {"message": serialized_result, "type": "tool_output"}}
+                outputs = {TOOL_OUTPUT_NAME: {"message": tool_info, "type": "tool_output"}}
 
                 event_manager.send_event(
                     event_type="end_vertex",
@@ -150,11 +155,16 @@ def _build_output_async_function(
                 from datetime import datetime, timezone
 
                 log_list = [log.model_dump() for log in component._logs] if component._logs else []
-                serialized_result = serialize(result)
 
-                # Emit under component_as_tool so logs appear when user clicks on tool output
+                # Build tool metadata for proper display (name, description, tags)
+                tool_info = {
+                    "name": output_method.__name__,
+                    "description": component.description or "",
+                    "tags": [output_method.__name__],
+                }
+
                 logs = {TOOL_OUTPUT_NAME: log_list}
-                outputs = {TOOL_OUTPUT_NAME: {"message": serialized_result, "type": "tool_output"}}
+                outputs = {TOOL_OUTPUT_NAME: {"message": tool_info, "type": "tool_output"}}
 
                 await asyncio.to_thread(
                     event_manager.send_event,
