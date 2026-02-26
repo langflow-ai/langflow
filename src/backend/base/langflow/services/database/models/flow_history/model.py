@@ -3,7 +3,8 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, Field as PydanticField, computed_field, field_serializer
+from pydantic import BaseModel, computed_field, field_serializer
+from pydantic import Field as PydanticField
 from sqlalchemy import CheckConstraint, Column, ForeignKey, UniqueConstraint
 from sqlmodel import JSON, Field, SQLModel
 
