@@ -235,6 +235,12 @@ test(
     // Create a new flow with MCP component
     await page.getByTestId("blank-flow").click();
     await page.getByTestId("sidebar-nav-mcp").click();
+    await page.waitForSelector(
+      '[data-testid="add-component-button-lf-starter_project"]',
+      {
+        timeout: 30000,
+      },
+    );
     await page.getByTestId("add-component-button-lf-starter_project").click();
 
     await adjustScreenView(page, { numberOfZoomOut: 3 });
