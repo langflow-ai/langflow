@@ -16,8 +16,8 @@ try:
     import noveum_trace
     from noveum_trace import NoveumClient
     from noveum_trace.core import _register_client
-    from noveum_trace.integrations.langchain import NoveumTraceCallbackHandler
     from noveum_trace.core.context import set_current_trace
+    from noveum_trace.integrations.langchain import NoveumTraceCallbackHandler
 except ImportError:
     noveum_trace = None  # type: ignore[assignment]
     NoveumClient = None  # type: ignore[assignment, misc]
@@ -47,7 +47,7 @@ class NoveumTracer(BaseTracer):
         project_name: str,
         trace_id: UUID,
         user_id: str | None = None,
-        session_id: str | None = None,      
+        session_id: str | None = None,
     ) -> None:
         """Initialize the Noveum.ai tracer.
 
@@ -87,8 +87,9 @@ class NoveumTracer(BaseTracer):
         """
         try:
             if noveum_trace is None:
-                raise ImportError("noveum_trace not available")
-            
+                msg = "noveum_trace not available"
+                raise ImportError(msg)
+
             # Always create a new client for this tracer
             logger.debug("Creating new NoveumClient instance")
             self._client = NoveumClient(
@@ -97,16 +98,16 @@ class NoveumTracer(BaseTracer):
                 environment=config["environment"],
                 endpoint=config.get("endpoint"),
             )
-            
+
             _register_client(self._client)
-            
+
             if hasattr(noveum_trace, "_client_lock"):
                 with noveum_trace._client_lock:
                     noveum_trace._client = self._client
             else:
                 # Fallback: set directly if lock doesn't exist
                 noveum_trace._client = self._client
-            
+
             logger.debug("setup_noveum was called, a new trace will be created.")
 
             # Create the main trace for this graph run
@@ -115,7 +116,7 @@ class NoveumTracer(BaseTracer):
                 "trace_type": self.trace_type,
                 "flow_id": self.flow_id,
             }
-            
+
             # Add user_id and session_id to metadata if provided
             if self.user_id:
                 trace_attributes["user_id"] = self.user_id
@@ -136,17 +137,16 @@ class NoveumTracer(BaseTracer):
 
             logger.debug("Noveum.ai Trace initialized successfully")
             logger.debug(f"Trace {self.trace.trace_id} set in context for callback handler")
-            return True
 
         except ImportError:
-            logger.exception(
-                "Could not import noveum_trace. Please install it with `pip install noveum-trace`."
-            )
+            logger.exception("Could not import noveum_trace. Please install it with `pip install noveum-trace`.")
             return False
 
         except Exception as e:  # noqa: BLE001
             logger.debug(f"Error setting up Noveum.ai Trace: {e}")
             return False
+        else:
+            return True
 
     @override
     def add_trace(
@@ -199,9 +199,11 @@ class NoveumTracer(BaseTracer):
                     parent_span_id = parent_span.span_id
                     logger.debug(f"Found parent span {parent_span_id} for component {name} (from {edge.source_id})")
                     break  # Use first found parent
-            
+
             if parent_span_id is None and vertex.incoming_edges:
-                logger.debug(f"No parent span found for component {name} despite {len(vertex.incoming_edges)} incoming edges")
+                logger.debug(
+                    f"No parent span found for component {name} despite {len(vertex.incoming_edges)} incoming edges"
+                )
 
         try:
             # Create component span with proper parent relationship
@@ -291,7 +293,7 @@ class NoveumTracer(BaseTracer):
         try:
             # Update trace attributes with final inputs/outputs (JSON-serializable)
             trace_attributes = {}
-            
+
             if inputs:
                 trace_attributes["final_inputs"] = self._ensure_json_serializable(serialize(inputs))
             if outputs:
@@ -391,9 +393,10 @@ class NoveumTracer(BaseTracer):
         # Try to serialize the entire object first
         try:
             json.dumps(obj)
-            return obj
         except (TypeError, ValueError, OverflowError):
             pass  # Continue to recursive cleaning
+        else:
+            return obj
 
         # Handle dictionaries recursively
         if isinstance(obj, dict):
@@ -410,14 +413,14 @@ class NoveumTracer(BaseTracer):
 
         # Handle lists and tuples recursively
         if isinstance(obj, (list, tuple)):
-            result = []
+            result_list = []
             for i, item in enumerate(obj):
                 try:
-                    result.append(self._ensure_json_serializable(item, depth + 1, max_depth))
+                    result_list.append(self._ensure_json_serializable(item, depth + 1, max_depth))
                 except Exception as e:  # noqa: BLE001
                     logger.warning(f"Failed to serialize list item at index {i}: {e}")
-                    result.append(f"<Non-serializable: {type(item).__name__}>")
-            return result
+                    result_list.append(f"<Non-serializable: {type(item).__name__}>")
+            return result_list
 
         # For other types, return a type descriptor
         type_name = type(obj).__name__
