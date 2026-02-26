@@ -221,6 +221,10 @@ class Component(CustomComponent):
     def get_output_logs(self) -> dict[str, Any]:
         return self._output_logs
 
+    def get_logs(self) -> list[Log]:
+        """Return the current list of logs for this component."""
+        return self._logs
+
     def _build_source(self, id_: str | None, display_name: str | None, source: str | None) -> Source:
         source_dict = {}
         if id_:
