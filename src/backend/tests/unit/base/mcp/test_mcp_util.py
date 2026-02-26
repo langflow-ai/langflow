@@ -1161,6 +1161,25 @@ class TestMCPUtilityFunctions:
         instance2 = model_class.model_validate({})
         assert instance2.model_dump() == {}
 
+    def test_create_input_schema_generic_object_maps_to_dict(self):
+        """Test schema with type object and no properties maps to dict for free-form params."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "params": {"type": "object", "description": "Free-form parameters"},
+            },
+        }
+        model_class = util.create_input_schema_from_json_schema(schema)
+        # Should accept arbitrary key-value dict (not just empty)
+        instance = model_class(params={"search": "test", "per_page": 20})
+        assert instance.params == {"search": "test", "per_page": 20}
+        # Empty dict also valid
+        instance_empty = model_class(params={})
+        assert instance_empty.params == {}
+        # None valid for optional field
+        instance_none = model_class(params=None)
+        assert instance_none.params is None
+
     @pytest.mark.asyncio
     async def test_validate_connection_params(self):
         """Test connection parameter validation."""
