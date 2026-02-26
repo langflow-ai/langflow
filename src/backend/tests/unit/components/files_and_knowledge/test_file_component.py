@@ -732,3 +732,43 @@ class TestFileComponentStorageLocation:
         """Test that storage_location is in advanced controls."""
         storage_input = next(i for i in FileComponent.inputs if i.name == "storage_location")
         assert storage_input.advanced is True
+
+
+class TestFileComponentValidateAndResolvePaths:
+    """Tests for FileComponent._validate_and_resolve_paths method."""
+
+    def test_json_array_via_file_path_str(self, tmp_path):
+        """Test parsing a JSON array string via file_path_str."""
+        # Create test files
+        file1 = tmp_path / "file1.txt"
+        file2 = tmp_path / "file2.txt"
+        file1.write_text("content1")
+        file2.write_text("content2")
+
+        component = FileComponent()
+        # Set file_path_str to a JSON array of paths
+        component.file_path_str = json.dumps([str(file1), str(file2)])
+
+        # Call the method
+        resolved_files = component._validate_and_resolve_paths()
+
+        assert len(resolved_files) == 2
+        assert str(resolved_files[0].path) == str(file1)
+        assert str(resolved_files[1].path) == str(file2)
+
+    def test_double_encoded_json_via_file_path_str(self, tmp_path):
+        """Test parsing double-encoded JSON via file_path_str."""
+        test_file = tmp_path / "double_encoded.txt"
+        test_file.write_text("content")
+
+        component = FileComponent()
+        # Create double-encoded JSON string
+        inner_json = json.dumps([str(test_file)])
+        double_encoded = json.dumps(inner_json)
+        component.file_path_str = double_encoded
+
+        # Call the method
+        resolved_files = component._validate_and_resolve_paths()
+
+        assert len(resolved_files) == 1
+        assert str(resolved_files[0].path) == str(test_file)
