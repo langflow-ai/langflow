@@ -1,17 +1,8 @@
 body {
   margin: 0;
   font-family:
-    'Inter',
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    'Roboto',
-    'Oxygen',
-    'Ubuntu',
-    'Cantarell',
-    'Fira Sans',
-    'Droid Sans',
-    'Helvetica Neue',
+    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -19,7 +10,7 @@ body {
 
 code {
   font-family:
-    source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+    source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
 }
 pre {
   font-family: inherit;
@@ -33,10 +24,10 @@ pre {
 .AccordionContent {
   overflow: hidden;
 }
-.AccordionContent[data-state='open'] {
+.AccordionContent[data-state="open"] {
   animation: slideDown 300ms ease-out;
 }
-.AccordionContent[data-state='closed'] {
+.AccordionContent[data-state="closed"] {
   animation: slideUp 300ms ease-out;
 }
 
@@ -99,7 +90,7 @@ input .ag-cell-edit-input {
   outline-color: transparent !important;
 }
 
-input[type='search']::-webkit-search-cancel-button {
+input[type="search"]::-webkit-search-cancel-button {
   -webkit-appearance: none;
   appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23666666'%3E%3Cpath d='M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z'/%3E%3C/svg%3E");
@@ -109,13 +100,13 @@ input[type='search']::-webkit-search-cancel-button {
   display: block;
 }
 
-input[class^='ag-']:not([type]),
-input[class^='ag-'][type='text'],
-input[class^='ag-'][type='number'],
-input[class^='ag-'][type='tel'],
-input[class^='ag-'][type='date'],
-input[class^='ag-'][type='datetime-local'],
-textarea[class^='ag-'] {
+input[class^="ag-"]:not([type]),
+input[class^="ag-"][type="text"],
+input[class^="ag-"][type="number"],
+input[class^="ag-"][type="tel"],
+input[class^="ag-"][type="date"],
+input[class^="ag-"][type="datetime-local"],
+textarea[class^="ag-"] {
   border: 1px solid transparent !important;
   outline: none !important;
   outline-color: transparent !important;
@@ -124,12 +115,12 @@ textarea[class^='ag-'] {
   box-shadow: none !important; /* Standard syntax */
 }
 
-input[class^='ag-'][type='text']:focus,
-input[class^='ag-'][type='number']:focus,
-input[class^='ag-'][type='tel']:focus,
-input[class^='ag-'][type='date']:focus,
-input[class^='ag-'][type='datetime-local']:focus,
-textarea[class^='ag-']:focus {
+input[class^="ag-"][type="text"]:focus,
+input[class^="ag-"][type="number"]:focus,
+input[class^="ag-"][type="tel"]:focus,
+input[class^="ag-"][type="date"]:focus,
+input[class^="ag-"][type="datetime-local"]:focus,
+textarea[class^="ag-"]:focus {
   border: 1px solid transparent !important;
   outline-color: transparent !important;
   outline: none !important;
@@ -267,11 +258,11 @@ pre {
   color: inherit !important;
 }
 
-[type='search']:not(:placeholder-shown)::-webkit-search-cancel-button {
+[type="search"]:not(:placeholder-shown)::-webkit-search-cancel-button {
   opacity: 1 !important;
 }
 
-input[type='search']::-webkit-search-cancel-button {
+input[type="search"]::-webkit-search-cancel-button {
   -webkit-appearance: none;
   height: 16px;
   width: 16px;
@@ -417,7 +408,7 @@ input[type='search']::-webkit-search-cancel-button {
   display: none;
 }
 
-.cm-search.cm-panel button[name='close'] {
+.cm-search.cm-panel button[name="close"] {
   position: unset !important;
   margin-left: auto !important;
   border-radius: var(--radius) !important;
