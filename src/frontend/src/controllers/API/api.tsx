@@ -246,6 +246,7 @@ export type StreamingRequestParams = {
   method: string;
   url: string;
   onData: (event: object) => Promise<boolean>;
+  onDataBatch?: (events: object[]) => Promise<boolean>;
   body?: object;
   onError?: (statusCode: number) => void;
   onNetworkError?: (error: Error) => void;
@@ -267,6 +268,7 @@ async function performStreamingRequest({
   method,
   url,
   onData,
+  onDataBatch,
   body,
   onError,
   onNetworkError,
@@ -310,25 +312,39 @@ async function performStreamingRequest({
       }
       const decodedChunk = textDecoder.decode(value);
       const all = decodedChunk.split("\n\n");
+
+      // Parse all complete events from this chunk first
+      const parsedEvents: object[] = [];
       for (const string of all) {
         if (string.endsWith("}")) {
           const allString = current.join("") + string;
-          let data: object;
           try {
             const sanitizedJson = sanitizeJsonString(allString);
-            data = JSON.parse(sanitizedJson);
+            parsedEvents.push(JSON.parse(sanitizedJson));
             current = [];
           } catch (_e) {
             current.push(string);
-            continue;
           }
+        } else {
+          current.push(string);
+        }
+      }
+
+      // Dispatch: batch callback processes all chunk events at once,
+      // otherwise fall back to per-event processing.
+      if (onDataBatch && parsedEvents.length > 0) {
+        const shouldContinue = await onDataBatch(parsedEvents);
+        if (!shouldContinue) {
+          buildController.abort();
+          return;
+        }
+      } else {
+        for (const data of parsedEvents) {
           const shouldContinue = await onData(data);
           if (!shouldContinue) {
             buildController.abort();
             return;
           }
-        } else {
-          current.push(string);
         }
       }
     }

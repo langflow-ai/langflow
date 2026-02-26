@@ -556,4 +556,183 @@ describe("useFlowStore", () => {
       expect(result.current.hasIO).toBe(true);
     });
   });
+
+  describe("clearAndSetEdgesRunning", () => {
+    const createEdge = (
+      id: string,
+      sourceHandleId: string,
+      overrides: Partial<any> = {},
+    ) =>
+      ({
+        id,
+        source: `src-${id}`,
+        target: `tgt-${id}`,
+        animated: false,
+        className: "",
+        data: { sourceHandle: { id: sourceHandleId } },
+        ...overrides,
+      }) as any;
+
+    it("should clear all edge animations when no nextIds provided", () => {
+      const { result } = renderHook(() => useFlowStore());
+
+      act(() => {
+        useFlowStore.setState({
+          edges: [
+            createEdge("e1", "n1", { animated: true, className: "running" }),
+            createEdge("e2", "n2", { animated: true, className: "running" }),
+          ],
+        });
+      });
+
+      act(() => {
+        result.current.clearAndSetEdgesRunning();
+      });
+
+      expect(result.current.edges.every((e) => !e.animated)).toBe(true);
+      expect(result.current.edges.every((e) => e.className === "")).toBe(true);
+    });
+
+    it("should set matching edges to animated/running when nextIds provided", () => {
+      const { result } = renderHook(() => useFlowStore());
+
+      act(() => {
+        useFlowStore.setState({
+          edges: [
+            createEdge("e1", "n1"),
+            createEdge("e2", "n2"),
+            createEdge("e3", "n3"),
+          ],
+          stopNodeId: null,
+        });
+      });
+
+      act(() => {
+        result.current.clearAndSetEdgesRunning(["n1", "n3"]);
+      });
+
+      const edges = result.current.edges;
+      expect(edges[0].animated).toBe(true);
+      expect(edges[0].className).toBe("running");
+      expect(edges[1].animated).toBe(false);
+      expect(edges[1].className).toBe("");
+      expect(edges[2].animated).toBe(true);
+      expect(edges[2].className).toBe("running");
+    });
+
+    it("should not animate edges matching stopNodeId", () => {
+      const { result } = renderHook(() => useFlowStore());
+
+      act(() => {
+        useFlowStore.setState({
+          edges: [createEdge("e1", "n1"), createEdge("e2", "n2")],
+          stopNodeId: "n1",
+        });
+      });
+
+      act(() => {
+        result.current.clearAndSetEdgesRunning(["n1", "n2"]);
+      });
+
+      const edges = result.current.edges;
+      // n1 matches stopNodeId, so it should NOT be animated
+      expect(edges[0].animated).toBe(false);
+      expect(edges[0].className).toBe("");
+      // n2 is fine
+      expect(edges[1].animated).toBe(true);
+      expect(edges[1].className).toBe("running");
+    });
+
+    it("should handle empty edges array", () => {
+      const { result } = renderHook(() => useFlowStore());
+
+      act(() => {
+        useFlowStore.setState({ edges: [] });
+      });
+
+      act(() => {
+        result.current.clearAndSetEdgesRunning(["n1"]);
+      });
+
+      expect(result.current.edges).toEqual([]);
+    });
+
+    it("should create new edge objects (immutability check)", () => {
+      const { result } = renderHook(() => useFlowStore());
+      const originalEdge = createEdge("e1", "n1");
+
+      act(() => {
+        useFlowStore.setState({ edges: [originalEdge], stopNodeId: null });
+      });
+
+      const edgeBefore = result.current.edges[0];
+
+      act(() => {
+        result.current.clearAndSetEdgesRunning(["n1"]);
+      });
+
+      const edgeAfter = result.current.edges[0];
+      // Should be a different object reference (spread creates new object)
+      expect(edgeAfter).not.toBe(edgeBefore);
+      expect(edgeAfter.animated).toBe(true);
+    });
+  });
+
+  describe("addDataToFlowPool", () => {
+    const mockVertexData = {
+      id: "node-1",
+      data: { results: {} },
+      valid: true,
+    } as any;
+
+    const mockVertexData2 = {
+      id: "node-1",
+      data: { results: { other: true } },
+      valid: true,
+    } as any;
+
+    it("should add data to new nodeId entry", () => {
+      const { result } = renderHook(() => useFlowStore());
+
+      act(() => {
+        result.current.addDataToFlowPool(mockVertexData, "node-1");
+      });
+
+      expect(result.current.flowPool["node-1"]).toEqual([mockVertexData]);
+    });
+
+    it("should append data to existing nodeId entry", () => {
+      const { result } = renderHook(() => useFlowStore());
+
+      act(() => {
+        result.current.addDataToFlowPool(mockVertexData, "node-1");
+      });
+
+      act(() => {
+        result.current.addDataToFlowPool(mockVertexData2, "node-1");
+      });
+
+      expect(result.current.flowPool["node-1"]).toHaveLength(2);
+      expect(result.current.flowPool["node-1"][0]).toEqual(mockVertexData);
+      expect(result.current.flowPool["node-1"][1]).toEqual(mockVertexData2);
+    });
+
+    it("should not mutate previous flowPool reference", () => {
+      const { result } = renderHook(() => useFlowStore());
+
+      act(() => {
+        result.current.addDataToFlowPool(mockVertexData, "node-1");
+      });
+
+      const poolAfterFirst = result.current.flowPool;
+
+      act(() => {
+        result.current.addDataToFlowPool(mockVertexData2, "node-1");
+      });
+
+      const poolAfterSecond = result.current.flowPool;
+      // The pool object reference should change (immutable update)
+      expect(poolAfterSecond).not.toBe(poolAfterFirst);
+    });
+  });
 });
