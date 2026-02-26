@@ -84,19 +84,6 @@ class TestKnowledgeBaseHelpers:
         assert words == 5
         assert chars == 22
 
-    def test_get_text_columns_with_schema(self):
-        df = pd.DataFrame({"col1": ["a"], "col2": [1]})
-        schema = [{"column_name": "col1", "vectorize": True, "data_type": "string"}]
-        cols = KBAnalysisHelper._get_text_columns(df, schema)
-        assert cols == ["col1"]
-
-    def test_get_text_columns_no_schema(self):
-        df = pd.DataFrame({"text": ["a"], "content": ["b"], "other": [1]})
-        cols = KBAnalysisHelper._get_text_columns(df, None)
-        assert "text" in cols
-        assert "content" in cols
-        assert "other" not in cols
-
 
 class TestGetKBMetaData:
     """Tests for KBAnalysisHelper.get_metadata function."""
@@ -484,7 +471,6 @@ class TestPerformIngestionTask:
         self, mock_cleanup, mock_build, mock_chroma, mock_fresh_client, mock_kb_path
     ):
         mock_fresh_client.return_value = MagicMock()
-        assert mock_build is not None
         mock_chroma_inst = MagicMock()
         mock_chroma.return_value = mock_chroma_inst
         mock_chroma_inst.aadd_documents = AsyncMock(side_effect=Exception("Chroma error"))
@@ -509,6 +495,7 @@ class TestPerformIngestionTask:
                 job_service=AsyncMock(),
             )
 
+        mock_build.assert_called_once()
         mock_cleanup.assert_called_once_with(job_id, mock_kb_path, "test_kb")
 
 

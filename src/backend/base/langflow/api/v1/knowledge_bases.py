@@ -8,6 +8,7 @@ from http import HTTPStatus
 from pathlib import Path
 from typing import Annotated, Any
 
+import chromadb.errors
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from langchain_chroma import Chroma
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -79,7 +80,7 @@ async def create_knowledge_base(
             # Explicitly delete reference to help release handle
             client = None
             gc.collect()
-        except Exception as e:  # noqa: BLE001
+        except (OSError, ValueError, chromadb.errors.ChromaError) as e:
             logger.warning("Initial Chroma setup for %s failed: %s", kb_name, e)
 
         # Serialize column_config for persistence
@@ -129,7 +130,7 @@ async def create_knowledge_base(
         # Clean up if something went wrong
         if kb_path.exists():
             shutil.rmtree(kb_path)
-        await logger.aerror(f"Error creating knowledge base: {e!s}")
+        await logger.aerror("Error creating knowledge base: %s", e)
         raise HTTPException(status_code=500, detail="Internal error creating knowledge base") from e
 
 
@@ -223,7 +224,7 @@ async def preview_chunks(
                     }
                 )
 
-            except Exception as file_error:  # noqa: BLE001
+            except (OSError, ValueError, TypeError) as file_error:
                 logger.warning("Error previewing file %s: %s", uploaded_file.filename, file_error)
                 file_previews.append(
                     {
@@ -236,7 +237,8 @@ async def preview_chunks(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error previewing chunks: {e!s}") from e
+        await logger.aerror("Error previewing chunks: %s", e)
+        raise HTTPException(status_code=500, detail="Error previewing chunks.") from e
     else:
         return {"files": file_previews}
 
@@ -294,7 +296,7 @@ async def ingest_files_to_knowledge_base(
                     schema_path = kb_path / "schema.json"
                     schema_path.write_text(json.dumps(schema_data, indent=2))
             except (json.JSONDecodeError, TypeError):
-                pass  # Ignore malformed column_config; use existing schema
+                await logger.awarning("Malformed column_config received, using existing schema")
 
         # Read embedding metadata (Pass fast=False to ensure legacy KBs are migrated/detected)
         metadata = KBAnalysisHelper.get_metadata(kb_path, fast=False)
@@ -319,8 +321,8 @@ async def ingest_files_to_knowledge_base(
                     embedding_metadata = json.loads(metadata_path.read_text())
                     embedding_metadata["id"] = str(asset_id)
                     metadata_path.write_text(json.dumps(embedding_metadata, indent=2))
-                except (OSError, json.JSONDecodeError) as e:
-                    await logger.awarning(f"Could not update metadata with asset_id: {e}")
+                except (OSError, json.JSONDecodeError):
+                    await logger.awarning("Could not update metadata with asset_id")
         else:
             asset_id = uuid.UUID(asset_id_str)
 
@@ -360,7 +362,8 @@ async def ingest_files_to_knowledge_base(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error ingesting files to knowledge base: {e!s}") from e
+        await logger.aerror("Error ingesting files to knowledge base: %s", e)
+        raise HTTPException(status_code=500, detail="Error ingesting files to knowledge base.") from e
 
 
 @router.get("", status_code=HTTPStatus.OK)
@@ -457,7 +460,8 @@ async def list_knowledge_bases(
                     pass
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error listing knowledge bases: {e!s}") from e
+        await logger.aerror("Error listing knowledge bases: %s", e)
+        raise HTTPException(status_code=500, detail="Error listing knowledge bases.") from e
     else:
         return knowledge_bases
 
@@ -498,7 +502,8 @@ async def get_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -> K
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error getting knowledge base '{kb_name}': {e!s}") from e
+        await logger.aerror("Error getting knowledge base '%s': %s", kb_name, e)
+        raise HTTPException(status_code=500, detail="Error getting knowledge base.") from e
 
 
 @router.get("/{kb_name}/chunks", status_code=HTTPStatus.OK)
@@ -584,7 +589,8 @@ async def get_knowledge_base_chunks(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error getting chunks for '{kb_name}': {e!s}") from e
+        await logger.aerror("Error getting chunks for '%s': %s", kb_name, e)
+        raise HTTPException(status_code=500, detail="Error getting chunks.") from e
     finally:
         chroma = None
         gc.collect()
@@ -605,7 +611,8 @@ async def delete_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error deleting knowledge base '{kb_name}': {e!s}") from e
+        await logger.aerror("Error deleting knowledge base '%s': %s", kb_name, e)
+        raise HTTPException(status_code=500, detail="Error deleting knowledge base.") from e
     else:
         return {"message": f"Knowledge base '{kb_name}' deleted successfully"}
 
@@ -639,7 +646,9 @@ async def delete_knowledge_bases_bulk(request: BulkDeleteRequest, current_user: 
                 # Continue with other deletions even if one fails
 
         if not_found_kbs and deleted_count == 0:
-            raise HTTPException(status_code=404, detail=f"Knowledge bases not found: {', '.join(not_found_kbs)}")
+            raise HTTPException(
+                status_code=404, detail="Knowledge bases not found: {}".format(", ".join(not_found_kbs))
+            )
 
         result = {
             "message": f"Successfully deleted {deleted_count} knowledge base(s)",
@@ -652,7 +661,8 @@ async def delete_knowledge_bases_bulk(request: BulkDeleteRequest, current_user: 
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error deleting knowledge bases: {e!s}") from e
+        await logger.aerror("Error deleting knowledge bases: %s", e)
+        raise HTTPException(status_code=500, detail="Error deleting knowledge bases.") from e
     else:
         return result
 
@@ -709,6 +719,7 @@ async def cancel_ingestion(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error cancelling ingestion: {e!s}") from e
+        await logger.aerror("Error cancelling ingestion: %s", e)
+        raise HTTPException(status_code=500, detail="Error cancelling ingestion.") from e
     else:
         return {"message": message}

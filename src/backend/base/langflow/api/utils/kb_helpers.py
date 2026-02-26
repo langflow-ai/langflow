@@ -8,6 +8,7 @@ from functools import lru_cache
 from pathlib import Path
 
 import chromadb
+import chromadb.errors
 import pandas as pd
 from chromadb.api.shared_system_client import SharedSystemClient
 from chromadb.config import Settings
@@ -66,7 +67,7 @@ class KBStorageHelper:
         try:
             if path_key in SharedSystemClient._identifier_to_system:  # noqa: SLF001
                 del SharedSystemClient._identifier_to_system[path_key]  # noqa: SLF001
-        except Exception as e:  # noqa: BLE001
+        except KeyError as e:
             logger.debug(f"Failed to clear existing Chroma registry entry for {path_key}: {e}")
 
         return chromadb.PersistentClient(
@@ -90,7 +91,7 @@ class KBStorageHelper:
                     chroma.delete_collection()
                 chroma = None
                 gc.collect()
-        except Exception as e:  # noqa: BLE001
+        except (OSError, ValueError, TypeError, chromadb.errors.ChromaError) as e:
             logger.debug(f"Storage teardown failed for {kb_path.name} (ignoring): {e}")
 
 
@@ -144,7 +145,7 @@ class KBAnalysisHelper:
                     metadata["embedding_model"] = KBAnalysisHelper._detect_embedding_model(kb_path)
 
                 metadata_file.write_text(json.dumps(metadata, indent=2))
-            except Exception as e:  # noqa: BLE001
+            except (OSError, ValueError, TypeError, json.JSONDecodeError) as e:
                 logger.debug(f"Metadata backfill failed for {kb_path}: {e}")
 
         return metadata
@@ -164,21 +165,14 @@ class KBAnalysisHelper:
                 results = collection.get(include=["documents", "metadatas"])
                 source_chunks = pd.DataFrame({"document": results["documents"], "metadata": results["metadatas"]})
 
-                schema_file = kb_path / "schema.json"
-                schema_data = None
-                if schema_file.exists():
-                    with schema_file.open("r", encoding="utf-8") as f:
-                        schema_data = json.load(f)
-
-                text_columns = KBAnalysisHelper._get_text_columns(source_chunks, schema_data)
-                if text_columns:
-                    words, characters = KBAnalysisHelper._calculate_text_metrics(source_chunks, text_columns)
-                    metadata["words"] = words
-                    metadata["characters"] = characters
-                    metadata["avg_chunk_size"] = (
-                        round(characters / metadata["chunks"], 1) if metadata["chunks"] > 0 else 0.0
-                    )
-        except Exception as e:  # noqa: BLE001
+                # Chroma collections always return the text content within the 'documents' field
+                words, characters = KBAnalysisHelper._calculate_text_metrics(source_chunks, ["document"])
+                metadata["words"] = words
+                metadata["characters"] = characters
+                metadata["avg_chunk_size"] = (
+                    round(characters / metadata["chunks"], 1) if metadata["chunks"] > 0 else 0.0
+                )
+        except (OSError, ValueError, TypeError, json.JSONDecodeError, chromadb.errors.ChromaError) as e:
             logger.debug(f"Metrics update failed for {kb_path.name}: {e}")
 
     @staticmethod
@@ -277,25 +271,6 @@ class KBAnalysisHelper:
                 continue
 
         return "Unknown"
-
-    @staticmethod
-    def _get_text_columns(df: pd.DataFrame, schema_data: list | None = None) -> list[str]:
-        """Internal helper to identify text columns."""
-        if schema_data:
-            text_columns = [
-                col["column_name"]
-                for col in schema_data
-                if col.get("vectorize", False) and col.get("data_type") == "string"
-            ]
-            if text_columns:
-                return [col for col in text_columns if col in df.columns]
-
-        common_names = ["text", "content", "document", "chunk"]
-        text_columns = [col for col in df.columns if col.lower() in common_names]
-        if text_columns:
-            return text_columns
-
-        return [col for col in df.columns if df[col].dtype == "object"]
 
     @staticmethod
     def _calculate_text_metrics(df: pd.DataFrame, text_columns: list[str]) -> tuple[int, int]:
@@ -444,7 +419,7 @@ class KBIngestionHelper:
             )
             await chroma.adelete(where={"job_id": str(job_id)})
             await logger.ainfo(f"Cleaned up chunks for job {job_id} in knowledge base '{kb_name}'")
-        except Exception as cleanup_error:  # noqa: BLE001
+        except (OSError, ValueError, TypeError, chromadb.errors.ChromaError) as cleanup_error:
             await logger.aerror(f"Failed to clean up chunks for job {job_id}: {cleanup_error}")
         finally:
             chroma = None
