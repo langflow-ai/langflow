@@ -155,7 +155,7 @@ class TestLiteLLMProxyComponent(ComponentTestBaseWithoutClient):
             "lfx.components.litellm.litellm_proxy.httpx.get",
             return_value=_mock_models_response(models=[{"id": "gpt-4o"}]),
         )
-        with pytest.raises(ValueError, match="invalid-model-name.*not found"):
+        with pytest.raises(ValueError, match=r"invalid-model-name.*not found"):
             component._validate_proxy_connection("sk-test-key")
 
     def test_validate_proxy_connection_connect_error(self, component_class, default_kwargs, mocker):

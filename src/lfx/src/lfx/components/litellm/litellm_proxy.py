@@ -108,7 +108,8 @@ class LiteLLMProxyComponent(LCModelComponent):
             msg = f"Connection to LiteLLM Proxy at {base_url} timed out."
             raise ValueError(msg) from e
 
-        if response.status_code == 401:
+        http_unauthorized = 401
+        if response.status_code == http_unauthorized:
             msg = "Authentication failed. Check that your Virtual Key is valid and not expired."
             raise ValueError(msg)
 
