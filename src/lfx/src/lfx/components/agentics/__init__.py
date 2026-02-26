@@ -11,9 +11,9 @@ from lfx.components.agentics.constants import ERROR_AGENTICS_NOT_INSTALLED
 __all__: list[str] = []
 
 try:
+    import crewai  # noqa: F401
     from agentics import AG  # noqa: F401
     from agentics.core.atype import create_pydantic_model  # noqa: F401
-    import crewai  # noqa: F401
 except ImportError as e:
     raise ImportError(ERROR_AGENTICS_NOT_INSTALLED) from e
 
