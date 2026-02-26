@@ -5,6 +5,13 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+try:
+    import agentics  # noqa: F401
+    import crewai  # noqa: F401
+except ImportError:
+    pytest.skip("agentics-py and crewai not installed", allow_module_level=True)
+
 from lfx.components.agentics.constants import (
     PROVIDER_ANTHROPIC,
     PROVIDER_OLLAMA,

@@ -3,6 +3,13 @@
 from __future__ import annotations
 
 import pytest
+
+try:
+    import agentics  # noqa: F401
+    import crewai  # noqa: F401
+except ImportError:
+    pytest.skip("agentics-py and crewai not installed", allow_module_level=True)
+
 from lfx.components.agentics.synthetic_data_generator import SyntheticDataGenerator
 
 
