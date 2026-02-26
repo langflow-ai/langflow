@@ -175,7 +175,6 @@ class TestComponentToolEventEmission:
         """Verify end_vertex event is emitted with proper data structure when event_manager is present."""
         from unittest.mock import MagicMock
 
-        from lfx.base.tools.constants import TOOL_OUTPUT_NAME
         from lfx.events.event_manager import create_default_event_manager
 
         calculator_component = CalculatorToolComponent()
