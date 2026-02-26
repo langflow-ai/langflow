@@ -356,4 +356,6 @@ class TestFilePathAsList:
         result = self.component._file_path_as_list()
 
         assert len(result) == 1
-        assert result[0] is data
+        assert result[0] is not data  # It creates a new copy to avoid shared mutation
+        assert result[0].data["text"] == "/test/file.txt"
+        assert result[0].data["file_path"] == "/test/file.txt"
