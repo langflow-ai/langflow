@@ -25,21 +25,18 @@ class TestFlowExecutionResult:
     def test_should_create_with_defaults(self):
         """Should create with empty result and no error by default."""
         result = FlowExecutionResult()
-
         assert result.result == {}
         assert result.error is None
 
     def test_should_detect_error_when_set(self):
         """Should return has_error=True when error is set."""
         result = FlowExecutionResult(error=ValueError("test error"))
-
         assert result.has_error is True
         assert result.has_result is False
 
     def test_should_detect_result_when_set(self):
         """Should return has_result=True when result is non-empty."""
         result = FlowExecutionResult(result={"key": "value"})
-
         assert result.has_result is True
         assert result.has_error is False
 
@@ -49,21 +46,18 @@ class TestFlowExecutionResult:
             result={"partial": "data"},
             error=RuntimeError("partial failure"),
         )
-
         assert result.has_result is True
         assert result.has_error is True
 
     def test_should_return_false_for_empty_dict_result(self):
         """Should return has_result=False for empty dict."""
         result = FlowExecutionResult(result={})
-
         assert result.has_result is False
 
     def test_should_store_exception_details(self):
         """Should preserve exception details."""
         error = ValueError("detailed message")
         result = FlowExecutionResult(error=error)
-
         assert result.error is error
         assert str(result.error) == "detailed message"
 
@@ -74,14 +68,12 @@ class TestIntentResult:
     def test_should_create_with_translation_and_intent(self):
         """Should create with translation and intent fields."""
         result = IntentResult(translation="hello world", intent="question")
-
         assert result.translation == "hello world"
         assert result.intent == "question"
 
     def test_should_support_generate_component_intent(self):
         """Should support generate_component as valid intent value."""
         result = IntentResult(translation="create a component", intent="generate_component")
-
         assert result.intent == "generate_component"
 
     def test_should_be_equality_comparable(self):
@@ -89,14 +81,12 @@ class TestIntentResult:
         result1 = IntentResult(translation="test", intent="question")
         result2 = IntentResult(translation="test", intent="question")
         result3 = IntentResult(translation="test", intent="generate_component")
-
         assert result1 == result2
         assert result1 != result3
 
     def test_should_allow_empty_translation(self):
         """Should allow empty string as translation."""
         result = IntentResult(translation="", intent="question")
-
         assert result.translation == ""
 
 
@@ -172,9 +162,7 @@ class TestValidationRetryTemplate:
         """Should format correctly with error and code values."""
         error = "SyntaxError: invalid syntax"
         code = "def broken():"
-
         result = VALIDATION_RETRY_TEMPLATE.format(error=error, code=code)
-
         assert error in result
         assert code in result
 
@@ -199,9 +187,7 @@ class TestValidationRetryTemplate:
         code = """def example():
     if True:
     print("wrong indent")"""
-
         result = VALIDATION_RETRY_TEMPLATE.format(error=error, code=code)
-
         assert error in result
         assert "def example():" in result
         assert 'print("wrong indent")' in result

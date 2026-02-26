@@ -10,12 +10,12 @@ interface FieldInfo {
   type: string;
 }
 
-function formatType(rawType: string): string {
+export function formatType(rawType: string): string {
   // e.g. "MessageTextInput" -> "Text", "IntInput" -> "Int", "StrInput" -> "Str"
   return rawType.replace(/Input$/, "").replace(/^Message/, "");
 }
 
-function parseComponentInfo(code: string | undefined) {
+export function parseComponentInfo(code: string | undefined) {
   if (!code) return { description: null, inputs: [] as FieldInfo[], outputs: [] as FieldInfo[] };
 
   // Extract description

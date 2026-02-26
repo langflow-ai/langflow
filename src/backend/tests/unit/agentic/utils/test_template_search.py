@@ -1,4 +1,8 @@
-"""Unit tests for template_search module using real templates."""
+"""Tests for template search module.
+
+Tests list_templates, get_template_by_id, get_all_tags, get_templates_count,
+template structure validation, search functionality, edge cases, and integration scenarios.
+"""
 
 import tempfile
 
@@ -30,7 +34,6 @@ class TestListTemplates:
         for template in templates:
             assert "id" in template
             assert "name" in template
-            # Should only have requested fields
             assert len(template) == 2
 
     def test_list_with_multiple_fields(self):
@@ -43,27 +46,21 @@ class TestListTemplates:
             assert "name" in template
             assert "description" in template
             assert "tags" in template
-            # Should not have data field
             assert "data" not in template
 
     def test_search_by_query_case_insensitive(self):
         """Test that search is case-insensitive."""
-        # Search for "basic" in different cases
         results_lower = list_templates(query="basic")
         results_upper = list_templates(query="BASIC")
         results_mixed = list_templates(query="BaSiC")
 
-        # All should return same number of results
         assert len(results_lower) == len(results_upper) == len(results_mixed)
 
     def test_search_by_query_matches_name(self):
         """Test searching templates by query string in name."""
-        # Search for "agent" which should exist in template names
         results = list_templates(query="agent")
 
-        # Should find at least one result
         assert len(results) > 0
-        # Verify results contain the search term in name or description
         for result in results:
             name_match = "agent" in result.get("name", "").lower()
             desc_match = "agent" in result.get("description", "").lower()
@@ -71,14 +68,11 @@ class TestListTemplates:
 
     def test_search_by_query_matches_description(self):
         """Test searching templates by query string in description."""
-        # Get all templates first
         all_templates = list_templates()
         assert len(all_templates) > 0
 
-        # Pick a word from a description
         sample_desc = all_templates[0].get("description", "")
         if sample_desc:
-            # Get first word that's reasonably long
             words = [w for w in sample_desc.lower().split() if len(w) > 4]
             if words:
                 search_word = words[0]
@@ -87,16 +81,13 @@ class TestListTemplates:
 
     def test_filter_by_single_tag(self):
         """Test filtering templates by a single tag."""
-        # Get all available tags first
         all_tags = get_all_tags()
         assert len(all_tags) > 0
 
-        # Test with first available tag
         test_tag = all_tags[0]
         results = list_templates(tags=[test_tag])
 
         assert len(results) > 0
-        # Verify all results have the requested tag
         for result in results:
             assert test_tag in result.get("tags", [])
 
@@ -104,12 +95,10 @@ class TestListTemplates:
         """Test filtering by multiple tags (OR logic)."""
         all_tags = get_all_tags()
         if len(all_tags) >= 2:
-            # Use first two tags
             test_tags = all_tags[:2]
             results = list_templates(tags=test_tags)
 
             assert len(results) > 0
-            # Verify each result has at least one of the requested tags
             for result in results:
                 result_tags = result.get("tags", [])
                 assert any(tag in result_tags for tag in test_tags)
@@ -133,14 +122,10 @@ class TestListTemplates:
         """Test combining query search with tag filtering."""
         all_tags = get_all_tags()
         if "agents" in all_tags:
-            # Combine query and tag filter
             results = list_templates(query="agent", tags=["agents"])
 
-            # Should return results that match both criteria
             for result in results:
-                # Must have the tag
                 assert "agents" in result.get("tags", [])
-                # Must match query in name or description
                 name_match = "agent" in result.get("name", "").lower()
                 desc_match = "agent" in result.get("description", "").lower()
                 assert name_match or desc_match
@@ -160,12 +145,11 @@ class TestListTemplates:
         results = list_templates(fields=None)
 
         assert len(results) > 0
-        # Check that multiple fields are present
         for result in results:
             assert "id" in result
             assert "name" in result
             assert "description" in result
-            assert len(result) > 3  # Should have many fields
+            assert len(result) > 3
 
     def test_nonexistent_directory(self):
         """Test handling of nonexistent directory."""
@@ -178,7 +162,6 @@ class TestGetTemplateById:
 
     def test_get_existing_template(self):
         """Test retrieving an existing template by ID."""
-        # Get first template ID
         templates = list_templates(fields=["id"])
         assert len(templates) > 0
 
@@ -215,7 +198,6 @@ class TestGetTemplateById:
         template = get_template_by_id(first_id, fields=None)
 
         assert template is not None
-        # Should have multiple fields
         assert "id" in template
         assert "name" in template
         assert len(template) > 3
@@ -225,7 +207,6 @@ class TestGetTemplateById:
         templates = list_templates(fields=["id"])
         assert len(templates) >= 2
 
-        # Get first two templates
         for template_id in [t["id"] for t in templates[:2]]:
             result = get_template_by_id(template_id)
             assert result is not None
@@ -260,12 +241,10 @@ class TestGetAllTags:
         all_tags = get_all_tags()
         templates = list_templates()
 
-        # Collect all tags from templates
         template_tags = set()
         for template in templates:
             template_tags.update(template.get("tags", []))
 
-        # Should match
         assert set(all_tags) == template_tags
 
 
@@ -349,9 +328,7 @@ class TestSearchFunctionality:
 
         for term in common_terms:
             results = list_templates(query=term)
-            # At least some terms should have results
             if results:
-                # Verify results actually contain the term
                 for result in results:
                     name_lower = result.get("name", "").lower()
                     desc_lower = result.get("description", "").lower()
@@ -359,11 +336,9 @@ class TestSearchFunctionality:
 
     def test_search_partial_words(self):
         """Test that partial word search works."""
-        # Get a template name
         templates = list_templates(fields=["name"])
         if templates:
             full_name = templates[0]["name"]
-            # Search for part of the name
             partial = full_name[:5].lower()
             if len(partial) >= 3:
                 results = list_templates(query=partial)
@@ -377,7 +352,6 @@ class TestSearchFunctionality:
             results = list_templates(tags=[tag])
             assert len(results) > 0, f"No templates found for tag: {tag}"
 
-            # Verify all results have the tag
             for result in results:
                 assert tag in result.get("tags", []), f"Result missing tag {tag}"
 
@@ -390,7 +364,6 @@ class TestEdgeCases:
         results = list_templates(query="")
         all_templates = list_templates()
 
-        # Empty string should return all templates
         assert len(results) == len(all_templates)
 
     def test_empty_tags_list(self):
@@ -403,20 +376,17 @@ class TestEdgeCases:
     def test_whitespace_only_query(self):
         """Test handling of whitespace-only query."""
         results = list_templates(query="   ")
-        # Whitespace-only should match nothing
         assert len(results) == 0
 
     def test_special_characters_in_query(self):
         """Test handling of special characters in query."""
         results = list_templates(query="@#$%^&*()")
-        # Special chars unlikely to match
         assert len(results) == 0
 
     def test_very_long_query(self):
         """Test handling of very long query strings."""
         long_query = "a" * 10000
         results = list_templates(query=long_query)
-        # Very long query unlikely to match
         assert len(results) == 0
 
     def test_field_selection_with_nonexistent_fields(self):
@@ -451,7 +421,6 @@ class TestPerformance:
         large_field_list = [f"field_{i}" for i in range(100)]
         large_field_list.extend(["id", "name", "description"])
 
-        # Should not crash, just return available fields
         results = list_templates(fields=large_field_list)
         assert len(results) > 0
 
@@ -459,13 +428,11 @@ class TestPerformance:
         """Test filtering with many tags (most don't exist)."""
         many_tags = [f"tag_{i}" for i in range(100)]
 
-        # Add one real tag
         real_tags = get_all_tags()
         if real_tags:
             many_tags.append(real_tags[0])
 
             results = list_templates(tags=many_tags)
-            # Should return results for the one real tag
             assert len(results) > 0
 
     def test_repeated_calls_consistency(self):
@@ -474,10 +441,8 @@ class TestPerformance:
         results2 = list_templates()
         results3 = list_templates()
 
-        # Should return same count
         assert len(results1) == len(results2) == len(results3)
 
-        # Should have same IDs
         ids1 = {t["id"] for t in results1}
         ids2 = {t["id"] for t in results2}
         ids3 = {t["id"] for t in results3}
@@ -490,16 +455,13 @@ class TestIntegrationScenarios:
 
     def test_discover_templates_workflow(self):
         """Test a complete workflow of discovering templates."""
-        # Step 1: Get all available tags
         tags = get_all_tags()
         assert len(tags) > 0
 
-        # Step 2: Get templates for a specific tag
         if tags:
             templates_for_tag = list_templates(tags=[tags[0]], fields=["id", "name"])
             assert len(templates_for_tag) > 0
 
-            # Step 3: Get full details for one template
             if templates_for_tag:
                 template_id = templates_for_tag[0]["id"]
                 full_template = get_template_by_id(template_id)
@@ -508,16 +470,13 @@ class TestIntegrationScenarios:
 
     def test_search_and_filter_workflow(self):
         """Test searching and then filtering results."""
-        # Step 1: Search for templates
         search_results = list_templates(query="agent")
 
         if search_results:
-            # Step 2: Get tags from results
             result_tags = set()
             for result in search_results:
                 result_tags.update(result.get("tags", []))
 
-            # Step 3: Filter by one of those tags
             if result_tags:
                 filtered = list_templates(tags=[next(iter(result_tags))])
                 assert len(filtered) > 0
@@ -527,12 +486,9 @@ class TestIntegrationScenarios:
         all_templates = list_templates(fields=["id", "name"])
 
         if len(all_templates) > 5:
-            # Simulate getting first page (first 5)
             page1 = all_templates[:5]
-            # Simulate getting second page (next 5)
             page2 = all_templates[5:10]
 
-            # Pages should not overlap
             page1_ids = {t["id"] for t in page1}
             page2_ids = {t["id"] for t in page2}
             assert page1_ids.isdisjoint(page2_ids)

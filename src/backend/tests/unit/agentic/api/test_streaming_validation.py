@@ -1,6 +1,10 @@
 """Tests for streaming validation flow in the agentic module.
 
 These tests validate the retry logic and SSE event emission for component generation.
+
+These tests use 5+ mocks because the streaming validation architecture requires
+coordinating intent classification, flow execution streaming, code extraction,
+and validation — all of which are external dependencies that must be isolated.
 """
 
 import json
@@ -23,7 +27,6 @@ from langflow.agentic.services.flow_types import (
     IntentResult,
 )
 
-# Sample valid Langflow component code
 VALID_COMPONENT_CODE = """from langflow.custom import Component
 from langflow.io import MessageTextInput, Output
 from langflow.schema.message import Message
@@ -45,7 +48,6 @@ class HelloWorldComponent(Component):
         return Message(text=f"Hello, {self.input_value}!")
 """
 
-# Invalid component code (syntax error but has inputs/outputs to pass extraction)
 INVALID_COMPONENT_CODE = """from langflow.custom import Component
 from langflow.io import MessageTextInput, Output
 
@@ -61,7 +63,6 @@ class BrokenComponent(Component)  # Missing colon here
     ]
 """
 
-# Incomplete code that got cut off (simulating rate limit/token limit)
 CUTOFF_COMPONENT_CODE = """from __future__ import annotations
 
 from langflow.custom import Component
@@ -95,8 +96,7 @@ class TestSSEEventFormatting:
         assert result.startswith("data: ")
         assert result.endswith("\n\n")
 
-        # Parse the JSON
-        json_str = result[6:-2]  # Remove "data: " and "\n\n"
+        json_str = result[6:-2]
         data = json.loads(json_str)
 
         assert data["event"] == "progress"
@@ -213,26 +213,21 @@ class TestStreamingValidationFlow:
                 )
             ]
 
-        # Should have progress events + complete event
         assert len(events) >= 2
 
-        # Parse all events
         parsed_events = []
         for event in events:
-            json_str = event[6:-2]  # Remove "data: " and "\n\n"
+            json_str = event[6:-2]
             parsed_events.append(json.loads(json_str))
 
-        # Should have generating_component progress (component generation mode)
         generating_events = [
             e for e in parsed_events if e.get("event") == "progress" and e.get("step") == "generating_component"
         ]
         assert len(generating_events) == 1
 
-        # Should have validating progress
         validating_events = [e for e in parsed_events if e.get("event") == "progress" and e.get("step") == "validating"]
         assert len(validating_events) == 1
 
-        # Should have complete event with validated=True
         complete_events = [e for e in parsed_events if e.get("event") == "complete"]
         assert len(complete_events) == 1
         assert complete_events[0]["data"]["validated"] is True
@@ -264,20 +259,16 @@ class TestStreamingValidationFlow:
                 )
             ]
 
-        # Parse events
         parsed_events = [json.loads(e[6:-2]) for e in events]
 
-        # Should have 2 generating_component events (attempt 1 and 2)
         generating_events = [
             e for e in parsed_events if e.get("event") == "progress" and e.get("step") == "generating_component"
         ]
         assert len(generating_events) == 2
 
-        # Should have 2 validating events
         validating_events = [e for e in parsed_events if e.get("event") == "progress" and e.get("step") == "validating"]
         assert len(validating_events) == 2
 
-        # Should have complete event with validated=True (after retry)
         complete_events = [e for e in parsed_events if e.get("event") == "complete"]
         assert len(complete_events) == 1
         assert complete_events[0]["data"]["validated"] is True
@@ -304,19 +295,17 @@ class TestStreamingValidationFlow:
                     flow_filename="test.json",
                     input_value="create a component",
                     global_variables={},
-                    max_retries=2,  # Will try 3 times total (1 + 2 retries)
+                    max_retries=2,
                 )
             ]
 
         parsed_events = [json.loads(e[6:-2]) for e in events]
 
-        # Should have 3 generating_component events (max_retries + 1)
         generating_events = [
             e for e in parsed_events if e.get("event") == "progress" and e.get("step") == "generating_component"
         ]
         assert len(generating_events) == 3
 
-        # Should have complete event with validated=False
         complete_events = [e for e in parsed_events if e.get("event") == "complete"]
         assert len(complete_events) == 1
         assert complete_events[0]["data"]["validated"] is False
@@ -350,15 +339,12 @@ class TestStreamingValidationFlow:
 
         parsed_events = [json.loads(e[6:-2]) for e in events]
 
-        # For question intent, should have generating event (not generating_component)
         generating_events = [e for e in parsed_events if e.get("event") == "progress" and e.get("step") == "generating"]
         assert len(generating_events) == 1
 
-        # Should NOT have validating event
         validating_events = [e for e in parsed_events if e.get("event") == "progress" and e.get("step") == "validating"]
         assert len(validating_events) == 0
 
-        # Complete event should NOT have validated field
         complete_events = [e for e in parsed_events if e.get("event") == "complete"]
         assert len(complete_events) == 1
         assert "validated" not in complete_events[0]["data"]
@@ -394,7 +380,6 @@ class TestStreamingValidationFlow:
 
         parsed_events = [json.loads(e[6:-2]) for e in events]
 
-        # Should have error event
         error_events = [e for e in parsed_events if e.get("event") == "error"]
         assert len(error_events) == 1
         assert "rate limit" in error_events[0]["message"].lower()
@@ -431,7 +416,6 @@ class TestValidationRetryBehavior:
                 side_effect=mock_streaming,
             ),
         ):
-            # Consume the generator to trigger the mock calls
             _ = [
                 event
                 async for event in execute_flow_with_validation_streaming(
@@ -442,16 +426,10 @@ class TestValidationRetryBehavior:
                 )
             ]
 
-        # Should have captured 2 inputs
         assert len(captured_inputs) == 2
-
-        # First input is the original user input (translation is used only for intent classification)
         assert captured_inputs[0] == "create a component"
-
-        # Second input should contain error context
         assert "error" in captured_inputs[1].lower()
         assert "fix" in captured_inputs[1].lower() or "correct" in captured_inputs[1].lower()
-        # Should include the broken code
         assert INVALID_COMPONENT_CODE.strip() in captured_inputs[1] or "BrokenComponent" in captured_inputs[1]
 
 
@@ -530,11 +508,7 @@ class TestNonStreamingValidation:
 
 
 class TestResponseWithTextAndCode:
-    """Tests for handling responses that contain both text and code.
-
-    This is the main issue being debugged - LLM responses that include
-    explanatory text along with code blocks.
-    """
+    """Tests for handling responses that contain both text and code."""
 
     @pytest.mark.asyncio
     async def test_extracts_code_from_response_with_text_before(self):
@@ -573,11 +547,9 @@ This component will process your input."""
 
         parsed_events = [json.loads(e[6:-2]) for e in events]
 
-        # Should have validating event
         validating_events = [e for e in parsed_events if e.get("event") == "progress" and e.get("step") == "validating"]
         assert len(validating_events) == 1
 
-        # Should have complete event with validated=True
         complete_events = [e for e in parsed_events if e.get("event") == "complete"]
         assert len(complete_events) == 1
         assert complete_events[0]["data"]["validated"] is True
@@ -614,7 +586,6 @@ This component will process your input."""
 
         parsed_events = [json.loads(e[6:-2]) for e in events]
 
-        # Should validate and pass
         complete_events = [e for e in parsed_events if e.get("event") == "complete"]
         assert len(complete_events) == 1
         assert complete_events[0]["data"]["validated"] is True
@@ -674,7 +645,7 @@ This component will process your input."""
                     flow_filename="test.json",
                     input_value="create a component",
                     global_variables={},
-                    max_retries=0,  # No retries - fail immediately
+                    max_retries=0,
                 )
             ]
 
@@ -690,15 +661,11 @@ This component will process your input."""
 
 
 class TestRealWorldScenarios:
-    """Tests for real-world scenarios the user encountered.
-
-    These tests simulate the exact patterns seen in production.
-    """
+    """Tests for real-world scenarios the user encountered."""
 
     @pytest.mark.asyncio
     async def test_response_with_apology_and_cutoff_code(self):
         """Should handle response with apology text and cut-off/incomplete code."""
-        # This simulates the exact response the user showed
         response_with_apology = {
             "result": f"""I apologize for the rate limit issue. Let me create the component.
 
@@ -724,29 +691,21 @@ Here's the implementation:
                     flow_filename="test.json",
                     input_value="create a sentiment analyzer",
                     global_variables={},
-                    max_retries=0,  # Test with no retries to see immediate behavior
+                    max_retries=0,
                 )
             ]
 
         parsed_events = [json.loads(e[6:-2]) for e in events]
 
-        # Should have validating event (code was extracted)
         validating_events = [e for e in parsed_events if e.get("event") == "progress" and e.get("step") == "validating"]
         assert len(validating_events) == 1, "Code should be extracted and validation attempted"
 
-        # Should have complete event
         complete_events = [e for e in parsed_events if e.get("event") == "complete"]
         assert len(complete_events) == 1
 
         complete_data = complete_events[0]["data"]
-
-        # Validation should FAIL because code is incomplete
         assert complete_data["validated"] is False, "Incomplete code should fail validation"
-
-        # Should have validation error
         assert complete_data.get("validation_error") is not None, "Should have validation error"
-
-        # Should include the extracted code
         assert "component_code" in complete_data, "Should include extracted code"
         assert "SentimentAnalyzer" in complete_data["component_code"]
 
@@ -776,23 +735,20 @@ Here's the implementation:
                     flow_filename="test.json",
                     input_value="create a component",
                     global_variables={},
-                    max_retries=2,  # Will try 3 times
+                    max_retries=2,
                 )
             ]
 
         parsed_events = [json.loads(e[6:-2]) for e in events]
 
-        # Should have 3 generating_component events
         generating_events = [
             e for e in parsed_events if e.get("event") == "progress" and e.get("step") == "generating_component"
         ]
         assert len(generating_events) == 3
 
-        # Should have 3 validating events
         validating_events = [e for e in parsed_events if e.get("event") == "progress" and e.get("step") == "validating"]
         assert len(validating_events) == 3
 
-        # Complete event should have validated=False
         complete_events = [e for e in parsed_events if e.get("event") == "complete"]
         complete_data = complete_events[0]["data"]
 
@@ -835,14 +791,12 @@ Here's the implementation:
         complete_events = [e for e in parsed_events if e.get("event") == "complete"]
         complete_data = complete_events[0]["data"]
 
-        # Should eventually succeed
         assert complete_data["validated"] is True
         assert complete_data["validation_attempts"] == 2
         assert complete_data["class_name"] == "HelloWorldComponent"
 
     def test_code_extraction_from_exact_user_response(self):
         """Test extraction from the exact response pattern user showed."""
-        # Exact pattern from user's screenshot
         user_response = """I apologize for the rate limit issue. Let me create the component.
 
 Here's the implementation:
@@ -867,13 +821,11 @@ class SentimentComponent(Component):
 
     def run(self):"""
 
-        # Should extract the code
         code = extract_python_code(user_response)
         assert code is not None, "Should extract code from user response"
         assert "SentimentComponent" in code
         assert "from __future__" in code
 
-        # Validate should fail due to incomplete code
         validation = validate_component_code(code)
         assert validation.is_valid is False, "Incomplete code should fail validation"
         assert validation.error is not None
