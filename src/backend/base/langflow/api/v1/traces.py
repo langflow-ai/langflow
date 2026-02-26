@@ -309,13 +309,8 @@ async def get_trace(
         current_user: The authenticated user (required for authorization).
 
     Returns:
-        Dictionary containing the trace and its hierarchical span tree.
-
-    Args:
-        trace_id: The trace ID to retrieve
-
-    Returns:
-        Trace with nested span tree structured for frontend consumption
+        Dictionary containing the trace and its hierarchical span tree
+        structured for frontend consumption.
     """
     try:
         result = await asyncio.wait_for(
@@ -414,9 +409,6 @@ async def delete_trace(
     Args:
         trace_id: The ID of the trace to delete.
         current_user: The authenticated user (required for authorization).
-
-    Args:
-        trace_id: The trace ID to delete
     """
     try:
         async with session_scope() as session:
@@ -451,9 +443,6 @@ async def delete_traces_by_flow(
     Args:
         flow_id: The ID of the flow whose traces should be deleted.
         current_user: The authenticated user (required for authorization).
-
-    Args:
-        flow_id: The flow ID to delete traces for
     """
     try:
         async with session_scope() as session:
