@@ -67,15 +67,10 @@ const getPlaceholder = (variableName: string, provider: string) => {
   ) {
     if (providerLower.includes("anthropic")) return "sk-ant-...";
     if (providerLower.includes("google")) return "AIza...";
-    if (providerLower.includes("watson")) return "a1b2c3d4...";
-    return "sk-...";
+    if (providerLower.includes("openai")) return "sk-proj-...";
   }
 
-  if (name.includes("project id") || name.includes("projectid")) {
-    return "1234...";
-  }
-
-  return `Add ${variableName.toLowerCase()}`;
+  return `Enter your ${variableName}`;
 };
 
 const ProviderConfigurationForm = ({
@@ -123,14 +118,20 @@ const ProviderConfigurationForm = ({
     .filter((v) => v.required)
     .every((v) => isVariableConfigured(v.variable_key));
 
+  const isSingleVariableProvider = providerVariables.length === 1;
+
   if (!selectedProvider) return null;
 
   return (
     <div className="flex flex-col gap-1 p-4">
       <div className="flex flex-row gap-1 min-w-[300px]">
         <span className="text-[13px] font-semibold mr-auto">
-          {selectedProvider.provider || "Unknown Provider"}
-          {requiresConfiguration && " Configuration"}
+          {isSingleVariableProvider ? <>
+            {providerVariables[0].variable_name}
+            {providerVariables[0].required && (
+              <span className="text-red-500 ml-1">*</span>
+            )}
+          </> : `${selectedProvider.provider || "Unknown Provider"} ${requiresConfiguration && " Configuration"}`}
         </span>
       </div>
       <span className="text-[13px] text-muted-foreground pt-1 pb-2">
@@ -166,12 +167,13 @@ const ProviderConfigurationForm = ({
 
             return (
               <div key={variable.variable_key} className="flex flex-col gap-1">
-                <label className="text-[12px] font-medium text-muted-foreground">
-                  {variable.variable_name}
-                  {variable.required && (
-                    <span className="text-red-500 ml-1">*</span>
-                  )}
-                </label>
+                {!isSingleVariableProvider && (
+                  <label className="text-[12px] font-medium text-muted-foreground">
+                    {variable.variable_name}
+                    {variable.required && (
+                      <span className="text-red-500 ml-1">*</span>
+                    )}
+                  </label>)}
                 {variable.options && variable.options.length > 0 ? (
                   // Render dropdown for variables with predefined options
                   <div className="relative">
@@ -183,12 +185,12 @@ const ProviderConfigurationForm = ({
                         variableValues[variable.variable_key]
                           ? [variableValues[variable.variable_key]]
                           : isConfigured &&
-                              getConfiguredValue(variable.variable_key)
+                            getConfiguredValue(variable.variable_key)
                             ? [
-                                getConfiguredValue(
-                                  variable.variable_key,
-                                ) as string,
-                              ]
+                              getConfiguredValue(
+                                variable.variable_key,
+                              ) as string,
+                            ]
                             : []
                       }
                       options={variable.options}
@@ -246,9 +248,9 @@ const ProviderConfigurationForm = ({
                     )}
                     value={
                       isConfigured &&
-                      variable.is_secret &&
-                      !isEditing &&
-                      !hasNewValue
+                        variable.is_secret &&
+                        !isEditing &&
+                        !hasNewValue
                         ? getMaskedKeyPreview(selectedProvider.provider)
                         : variable.variable_key in variableValues
                           ? variableValues[variable.variable_key]
