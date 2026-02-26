@@ -1,11 +1,23 @@
 from unittest.mock import MagicMock, patch
 
+import httpx
 import pytest
 from lfx.components.litellm.litellm_proxy import LiteLLMProxyComponent
 from lfx.inputs.inputs import IntInput, SecretStrInput, SliderInput, StrInput
 from pydantic.v1 import SecretStr
 
 from tests.base import ComponentTestBaseWithoutClient
+
+
+def _mock_models_response(models=None, status_code=200):
+    """Create a mock httpx response for the /models endpoint."""
+    if models is None:
+        models = [{"id": "gpt-4o"}, {"id": "claude-3-opus"}]
+    response = MagicMock(spec=httpx.Response)
+    response.status_code = status_code
+    response.json.return_value = {"data": models}
+    response.raise_for_status = MagicMock()
+    return response
 
 
 class TestLiteLLMProxyComponent(ComponentTestBaseWithoutClient):
@@ -51,9 +63,18 @@ class TestLiteLLMProxyComponent(ComponentTestBaseWithoutClient):
             matching = [inp for inp in inputs if isinstance(inp, input_type) and inp.name == name]
             assert matching, f"Missing or incorrect input: {name}"
 
+    def test_temperature_range_max_is_one(self):
+        component = LiteLLMProxyComponent()
+        temp_input = next(inp for inp in component.inputs if inp.name == "temperature")
+        assert temp_input.range_spec.max == 1
+
     def test_build_model(self, component_class, default_kwargs, mocker):
         component = component_class(**default_kwargs)
 
+        mocker.patch(
+            "lfx.components.litellm.litellm_proxy.httpx.get",
+            return_value=_mock_models_response(),
+        )
         mock_chat_openai = mocker.patch(
             "lfx.components.litellm.litellm_proxy.ChatOpenAI",
             return_value=MagicMock(),
@@ -76,6 +97,10 @@ class TestLiteLLMProxyComponent(ComponentTestBaseWithoutClient):
         default_kwargs["api_key"] = SecretStr("sk-secret-key")
         component = component_class(**default_kwargs)
 
+        mocker.patch(
+            "lfx.components.litellm.litellm_proxy.httpx.get",
+            return_value=_mock_models_response(),
+        )
         mock_chat_openai = mocker.patch(
             "lfx.components.litellm.litellm_proxy.ChatOpenAI",
             return_value=MagicMock(),
@@ -90,6 +115,10 @@ class TestLiteLLMProxyComponent(ComponentTestBaseWithoutClient):
         default_kwargs["max_tokens"] = 0
         component = component_class(**default_kwargs)
 
+        mocker.patch(
+            "lfx.components.litellm.litellm_proxy.httpx.get",
+            return_value=_mock_models_response(),
+        )
         mock_chat_openai = mocker.patch(
             "lfx.components.litellm.litellm_proxy.ChatOpenAI",
             return_value=MagicMock(),
@@ -98,6 +127,65 @@ class TestLiteLLMProxyComponent(ComponentTestBaseWithoutClient):
 
         _args, kwargs = mock_chat_openai.call_args
         assert kwargs["max_tokens"] is None
+
+    # --- Validation tests ---
+
+    def test_validate_proxy_connection_success(self, component_class, default_kwargs, mocker):
+        component = component_class(**default_kwargs)
+        mocker.patch(
+            "lfx.components.litellm.litellm_proxy.httpx.get",
+            return_value=_mock_models_response(),
+        )
+        # Should not raise
+        component._validate_proxy_connection("sk-test-key")
+
+    def test_validate_proxy_connection_auth_failure(self, component_class, default_kwargs, mocker):
+        component = component_class(**default_kwargs)
+        mocker.patch(
+            "lfx.components.litellm.litellm_proxy.httpx.get",
+            return_value=_mock_models_response(status_code=401),
+        )
+        with pytest.raises(ValueError, match="Authentication failed"):
+            component._validate_proxy_connection("sk-invalid-key")
+
+    def test_validate_proxy_connection_model_not_found(self, component_class, default_kwargs, mocker):
+        default_kwargs["model_name"] = "invalid-model-name"
+        component = component_class(**default_kwargs)
+        mocker.patch(
+            "lfx.components.litellm.litellm_proxy.httpx.get",
+            return_value=_mock_models_response(models=[{"id": "gpt-4o"}]),
+        )
+        with pytest.raises(ValueError, match="invalid-model-name.*not found"):
+            component._validate_proxy_connection("sk-test-key")
+
+    def test_validate_proxy_connection_connect_error(self, component_class, default_kwargs, mocker):
+        component = component_class(**default_kwargs)
+        mocker.patch(
+            "lfx.components.litellm.litellm_proxy.httpx.get",
+            side_effect=httpx.ConnectError("Connection refused"),
+        )
+        with pytest.raises(ValueError, match="Could not connect"):
+            component._validate_proxy_connection("sk-test-key")
+
+    def test_validate_proxy_connection_timeout(self, component_class, default_kwargs, mocker):
+        component = component_class(**default_kwargs)
+        mocker.patch(
+            "lfx.components.litellm.litellm_proxy.httpx.get",
+            side_effect=httpx.TimeoutException("Timed out"),
+        )
+        with pytest.raises(ValueError, match="timed out"):
+            component._validate_proxy_connection("sk-test-key")
+
+    def test_validate_proxy_connection_empty_models_list(self, component_class, default_kwargs, mocker):
+        component = component_class(**default_kwargs)
+        mocker.patch(
+            "lfx.components.litellm.litellm_proxy.httpx.get",
+            return_value=_mock_models_response(models=[]),
+        )
+        # Empty models list should not raise (proxy may not report models)
+        component._validate_proxy_connection("sk-test-key")
+
+    # --- Exception message tests ---
 
     def test_get_exception_message_auth_error(self, component_class, default_kwargs):
         component = component_class(**default_kwargs)

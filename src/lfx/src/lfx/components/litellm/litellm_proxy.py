@@ -1,3 +1,4 @@
+import httpx
 from langchain_openai import ChatOpenAI
 from pydantic.v1 import SecretStr
 
@@ -41,7 +42,7 @@ class LiteLLMProxyComponent(LCModelComponent):
             name="temperature",
             display_name="Temperature",
             value=0.7,
-            range_spec=RangeSpec(min=0, max=2, step=0.01),
+            range_spec=RangeSpec(min=0, max=1, step=0.01),
             advanced=True,
             info="Controls randomness. Lower values are more deterministic.",
         ),
@@ -74,6 +75,8 @@ class LiteLLMProxyComponent(LCModelComponent):
         if isinstance(api_key, SecretStr):
             api_key = api_key.get_secret_value()
 
+        self._validate_proxy_connection(api_key)
+
         return ChatOpenAI(
             base_url=self.api_base,
             api_key=api_key,
@@ -84,6 +87,39 @@ class LiteLLMProxyComponent(LCModelComponent):
             max_retries=self.max_retries,
             streaming=self.stream,
         )
+
+    def _validate_proxy_connection(self, api_key: str) -> None:
+        """Validate the proxy connection, API key, and model availability."""
+        base_url = self.api_base.rstrip("/")
+        models_url = f"{base_url}/models"
+
+        try:
+            response = httpx.get(
+                models_url,
+                headers={"Authorization": f"Bearer {api_key}"},
+                timeout=10,
+            )
+        except httpx.ConnectError as e:
+            msg = f"Could not connect to LiteLLM Proxy at {base_url}. Verify the URL is correct and the proxy is running."
+            raise ValueError(msg) from e
+        except httpx.TimeoutException as e:
+            msg = f"Connection to LiteLLM Proxy at {base_url} timed out."
+            raise ValueError(msg) from e
+
+        if response.status_code == 401:
+            msg = "Authentication failed. Check that your Virtual Key is valid and not expired."
+            raise ValueError(msg)
+
+        response.raise_for_status()
+
+        data = response.json()
+        available_models = [m.get("id", "") for m in data.get("data", [])]
+        if available_models and self.model_name not in available_models:
+            msg = (
+                f"Model '{self.model_name}' not found on the LiteLLM Proxy. "
+                f"Available models: {', '.join(available_models)}"
+            )
+            raise ValueError(msg)
 
     def _get_exception_message(self, e: Exception) -> str | None:
         """Extract meaningful error messages from OpenAI client exceptions."""
