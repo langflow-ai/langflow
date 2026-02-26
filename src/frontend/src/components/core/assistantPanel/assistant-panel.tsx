@@ -63,11 +63,13 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
       const target = e.target as Node;
       // Don't close if clicking inside the panel
       if (panelRef.current && panelRef.current.contains(target)) return;
-      // Don't close if clicking inside a dropdown portal or popover
+      // Don't close if clicking inside a dropdown portal, popover, or dialog
       const el = e.target as HTMLElement;
       if (el.closest?.("[role='menu']") || el.closest?.("[data-radix-popper-content-wrapper]")) return;
-      // Don't close if any panel dropdown is currently open (portals render outside panelRef)
+      if (el.closest?.("[role='dialog']") || el.closest?.("[data-radix-dialog-overlay]")) return;
+      // Don't close if any panel dropdown or dialog is currently open (portals render outside panelRef)
       if (document.querySelector("[data-radix-popper-content-wrapper]")) return;
+      if (document.querySelector("[role='dialog']")) return;
       // Don't close if clicking the canvas controls (let the toggle button handle it)
       if (el.closest?.("[data-testid='main_canvas_controls']")) return;
       onClose();
