@@ -386,17 +386,14 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         """
         raw_query = query if query is not None else self.search_query
 
-        if raw_query is None:
-            msg = "Raw search requires a query. Provide JSON DSL, a dict, or a plain text query."
-            raise ValueError(msg)
+        if raw_query is None or (isinstance(raw_query, str) and not raw_query.strip()):
+            self.log("No query provided for raw search - returning empty results")
+            return Data(data={})
 
         if isinstance(raw_query, dict):
             query_body = raw_query
         elif isinstance(raw_query, str):
             s = raw_query.strip()
-            if not s:
-                msg = "Raw search query string is empty."
-                raise ValueError(msg)
 
             # First, optimistically try to parse as JSON DSL
             try:
