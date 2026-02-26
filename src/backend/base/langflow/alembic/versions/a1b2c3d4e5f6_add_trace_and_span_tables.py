@@ -44,6 +44,7 @@ def upgrade() -> None:
             sa.Column("flow_id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
             sa.Column("session_id", sa.String(), nullable=True),
             sa.PrimaryKeyConstraint("id"),
+            sa.ForeignKeyConstraint(["flow_id"], ["flow.id"], name="fk_trace_flow_id"),
         )
         op.create_index("ix_trace_flow_id", "trace", ["flow_id"])
         op.create_index("ix_trace_session_id", "trace", ["session_id"])
