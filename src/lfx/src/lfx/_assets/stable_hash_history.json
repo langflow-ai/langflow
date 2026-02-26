@@ -1779,19 +1779,9 @@
       "0.3.0": "675232be19cc"
     }
   },
-  "SemanticAggregator": {
+  "LiteLLMProxyModel": {
     "versions": {
-      "0.3.0": "4e631c501d33"
-    }
-  },
-  "SemanticMap": {
-    "versions": {
-      "0.3.0": "9fe34c926467"
-    }
-  },
-  "SyntheticDataGenerator": {
-    "versions": {
-      "0.3.0": "efd180878996"
+      "0.3.0": "89b5d2281c93"
     }
   }
 }
