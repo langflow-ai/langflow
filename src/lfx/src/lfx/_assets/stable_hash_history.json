@@ -1778,5 +1778,10 @@
     "versions": {
       "0.3.0": "675232be19cc"
     }
+  },
+  "LiteLLMProxyModel": {
+    "versions": {
+      "0.3.0": "89b5d2281c93"
+    }
   }
 }
