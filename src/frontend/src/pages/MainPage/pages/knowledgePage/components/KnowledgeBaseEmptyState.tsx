@@ -1,10 +1,10 @@
-import { useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
-import ForwardedIconComponent from '@/components/common/genericIconComponent';
-import { Button } from '@/components/ui/button';
-import Loading from '@/components/ui/loading';
-import KnowledgeBaseUploadModal from '@/modals/knowledgeBaseUploadModal/KnowledgeBaseUploadModal';
-import useAlertStore from '@/stores/alertStore';
+import { useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { Button } from "@/components/ui/button";
+import Loading from "@/components/ui/loading";
+import KnowledgeBaseUploadModal from "@/modals/knowledgeBaseUploadModal/KnowledgeBaseUploadModal";
+import useAlertStore from "@/stores/alertStore";
 
 const KnowledgeBaseEmptyState = ({
   handleCreateKnowledge,
@@ -13,7 +13,7 @@ const KnowledgeBaseEmptyState = ({
 }) => {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
-  const setSuccessData = useAlertStore(state => state.setSuccessData);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const queryClient = useQueryClient();
 
   if (isCreating) {
@@ -48,16 +48,16 @@ const KnowledgeBaseEmptyState = ({
 
       <KnowledgeBaseUploadModal
         open={isUploadModalOpen}
-        setOpen={open => {
+        setOpen={(open) => {
           setIsUploadModalOpen(open);
           if (!open) {
             setIsCreating(true);
             queryClient.invalidateQueries({
-              queryKey: ['useGetKnowledgeBases'],
+              queryKey: ["useGetKnowledgeBases"],
             });
           }
         }}
-        onSubmit={data => {
+        onSubmit={(data) => {
           setSuccessData({
             title: `Knowledge base "${data.sourceName}" created`,
           });
