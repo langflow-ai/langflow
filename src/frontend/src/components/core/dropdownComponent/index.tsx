@@ -1,44 +1,44 @@
-import { PopoverAnchor } from "@radix-ui/react-popover";
-import Fuse from "fuse.js";
-import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
-import NodeDialog from "@/CustomNodes/GenericNode/components/NodeDialogComponent";
-import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
-import LoadingTextComponent from "@/components/common/loadingTextComponent";
-import { RECEIVING_INPUT_VALUE, SELECT_AN_OPTION } from "@/constants/constants";
-import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
-import KnowledgeBaseUploadModal from "@/modals/knowledgeBaseUploadModal";
-import useAlertStore from "@/stores/alertStore";
-import useFlowStore from "@/stores/flowStore";
-import { useTypesStore } from "@/stores/typesStore";
-import { scapedJSONStringfy } from "@/utils/reactflowUtils";
+import { PopoverAnchor } from '@radix-ui/react-popover';
+import Fuse from 'fuse.js';
+import { type ChangeEvent, useEffect, useMemo, useRef, useState } from 'react';
+import NodeDialog from '@/CustomNodes/GenericNode/components/NodeDialogComponent';
+import { mutateTemplate } from '@/CustomNodes/helpers/mutate-template';
+import LoadingTextComponent from '@/components/common/loadingTextComponent';
+import { RECEIVING_INPUT_VALUE, SELECT_AN_OPTION } from '@/constants/constants';
+import { usePostTemplateValue } from '@/controllers/API/queries/nodes/use-post-template-value';
+import KnowledgeBaseUploadModal from '@/modals/knowledgeBaseUploadModal/KnowledgeBaseUploadModal';
+import useAlertStore from '@/stores/alertStore';
+import useFlowStore from '@/stores/flowStore';
+import { useTypesStore } from '@/stores/typesStore';
+import { scapedJSONStringfy } from '@/utils/reactflowUtils';
 import {
   convertStringToHTML,
   getStatusColor,
-} from "@/utils/stringManipulation";
-import type { DropDownComponent } from "../../../types/components";
+} from '@/utils/stringManipulation';
+import type { DropDownComponent } from '../../../types/components';
 import {
   cn,
   filterNullOptions,
   formatName,
   groupByFamily,
-} from "../../../utils/utils";
-import { default as ForwardedIconComponent } from "../../common/genericIconComponent";
-import ShadTooltip from "../../common/shadTooltipComponent";
-import { Button } from "../../ui/button";
+} from '../../../utils/utils';
+import { default as ForwardedIconComponent } from '../../common/genericIconComponent';
+import ShadTooltip from '../../common/shadTooltipComponent';
+import { Button } from '../../ui/button';
 import {
   Command,
   CommandGroup,
   CommandItem,
   CommandList,
   CommandSeparator,
-} from "../../ui/command";
+} from '../../ui/command';
 import {
   Popover,
   PopoverContent,
   PopoverContentWithoutPortal,
   PopoverTrigger,
-} from "../../ui/popover";
-import type { BaseInputProps } from "../parameterRenderComponent/types";
+} from '../../ui/popover';
+import type { BaseInputProps } from '../parameterRenderComponent/types';
 
 export default function Dropdown({
   disabled,
@@ -50,7 +50,7 @@ export default function Dropdown({
   onSelect,
   placeholder,
   editNode = false,
-  id = "",
+  id = '',
   children,
   nodeId,
   nodeClass,
@@ -65,15 +65,15 @@ export default function Dropdown({
 }: BaseInputProps & DropDownComponent): JSX.Element {
   const validOptions = useMemo(
     () => filterNullOptions(options),
-    [options, value],
+    [options, value]
   );
 
   // Initialize state and refs
   const [open, setOpen] = useState(children ? true : false);
   const [openDialog, setOpenDialog] = useState(false);
   const [waitingForResponse, setWaitingForResponse] = useState(false);
-  const [customValue, setCustomValue] = useState("");
-  const nodes = useFlowStore((state) => state.nodes);
+  const [customValue, setCustomValue] = useState('');
+  const nodes = useFlowStore(state => state.nodes);
 
   const [filteredOptions, setFilteredOptions] = useState(() => {
     // Include the current value in filteredOptions if it's a custom value not in validOptions
@@ -91,7 +91,7 @@ export default function Dropdown({
     // We should only reset the value if it's not in options and not in filteredOptions
     // and not a recently added custom value
     if (!options.includes(value) && !filteredOptions.includes(value)) {
-      if (value) onSelect("", undefined, true);
+      if (value) onSelect('', undefined, true);
       return null;
     }
     return value;
@@ -101,7 +101,7 @@ export default function Dropdown({
 
   const sourceOptions = dialogInputs?.fields ? dialogInputs : externalOptions;
   const { firstWord } = formatName(name);
-  const fuse = new Fuse(validOptions, { keys: ["name", "value"] });
+  const fuse = new Fuse(validOptions, { keys: ['name', 'value'] });
   const PopoverContentDropdown =
     children || editNode || inspectionPanel
       ? PopoverContent
@@ -114,22 +114,22 @@ export default function Dropdown({
     nodeId: nodeId,
     node: nodeClass,
   });
-  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const setErrorData = useAlertStore(state => state.setErrorData);
 
   // Utility functions
   const filterMetadataKeys = (
     metadata: Record<string, any> = {},
     excludeKeys: string[] = [
-      "api_endpoint",
-      "icon",
-      "status",
-      "org_id",
-      "id",
-      "updated_at",
-    ],
+      'api_endpoint',
+      'icon',
+      'status',
+      'org_id',
+      'id',
+      'updated_at',
+    ]
   ) => {
     return Object.fromEntries(
-      Object.entries(metadata).filter(([key]) => !excludeKeys.includes(key)),
+      Object.entries(metadata).filter(([key]) => !excludeKeys.includes(key))
     );
   };
 
@@ -141,7 +141,7 @@ export default function Dropdown({
       // If search is cleared, show all options
       // Preserve any custom values that were in filteredOptions
       const customValuesInFiltered = filteredOptions.filter(
-        (option) => !validOptions.includes(option) && option === customValue,
+        option => !validOptions.includes(option) && option === customValue
       );
       setFilteredOptions([...validOptions, ...customValuesInFiltered]);
       setFilteredMetadata(optionsMetaData);
@@ -150,14 +150,14 @@ export default function Dropdown({
 
     // Search existing options
     const searchValues = fuse.search(value);
-    let filtered = searchValues.map((search) => search.item);
+    let filtered = searchValues.map(search => search.item);
 
     // If the search value exactly matches one of the custom options, include it
     const customOptions = filteredOptions.filter(
-      (option) => !validOptions.includes(option),
+      option => !validOptions.includes(option)
     );
     const matchingCustomOption = customOptions.find(
-      (option) => option.toLowerCase() === value.toLowerCase(),
+      option => option.toLowerCase() === value.toLowerCase()
     );
 
     // Include matching custom options or allow adding the current search if combobox is true
@@ -166,7 +166,7 @@ export default function Dropdown({
     } else if (
       combobox &&
       value &&
-      !filtered.some((opt) => opt.toLowerCase() === value.toLowerCase())
+      !filtered.some(opt => opt.toLowerCase() === value.toLowerCase())
     ) {
       // If combobox is enabled and we're typing a new value, include it in the filtered list
       filtered = [value, ...filtered];
@@ -186,7 +186,7 @@ export default function Dropdown({
       });
 
       // Map each filtered option to its metadata (or undefined for custom values)
-      const newMetadata = filtered.map((option) => metadataMap[option]);
+      const newMetadata = filtered.map(option => metadataMap[option]);
       setFilteredMetadata(newMetadata);
     } else {
       setFilteredMetadata(undefined);
@@ -204,7 +204,7 @@ export default function Dropdown({
       handleNodeClass,
       postTemplateValue,
       setErrorData,
-      name,
+      name
     );
 
     setWaitingForResponse(false);
@@ -224,7 +224,7 @@ export default function Dropdown({
       undefined, // parameterName
       undefined, // callback
       undefined, // toolMode
-      true, // isRefresh
+      true // isRefresh
     )?.then(() => {
       setTimeout(() => {
         setRefreshOptions(false);
@@ -240,20 +240,20 @@ export default function Dropdown({
       .filter(
         ([key, value]) =>
           value !== null &&
-          key !== "icon" &&
-          key !== "id" &&
-          key !== "updated_at",
+          key !== 'icon' &&
+          key !== 'id' &&
+          key !== 'updated_at'
       )
       .map(([key, value]) => {
         const displayValue =
-          typeof value === "string" && value.length > 20
+          typeof value === 'string' && value.length > 20
             ? `${value.substring(0, 30)}...`
             : String(value);
         return `${key}: ${displayValue}`;
       });
 
     return metadataEntries.length > 0
-      ? `${firstWord}: ${option}\n${metadataEntries.join("\n")}`
+      ? `${firstWord}: ${option}\n${metadataEntries.join('\n')}`
       : option;
   };
 
@@ -267,8 +267,8 @@ export default function Dropdown({
 
   // Effects
   useEffect(() => {
-    if (disabled && value !== "") {
-      onSelect("", undefined, true);
+    if (disabled && value !== '') {
+      onSelect('', undefined, true);
     }
   }, [disabled]);
 
@@ -276,7 +276,7 @@ export default function Dropdown({
     if (open) {
       // Check if filteredOptions contains any custom values not in validOptions
       const customValuesInFiltered = filteredOptions.filter(
-        (option) => !validOptions.includes(option) && option === customValue,
+        option => !validOptions.includes(option) && option === customValue
       );
 
       // If there are custom values, preserve them when resetting filtered options
@@ -293,7 +293,7 @@ export default function Dropdown({
           });
 
           const newMetadata = [...validOptions, ...customValuesInFiltered].map(
-            (option) => metadataMap[option],
+            option => metadataMap[option]
           );
           setFilteredMetadata(newMetadata);
         }
@@ -303,12 +303,12 @@ export default function Dropdown({
       }
     }
     if (!combobox && value && !validOptions.includes(value)) {
-      onSelect("", undefined, true);
+      onSelect('', undefined, true);
     }
   }, [open, validOptions]);
 
   const handleInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "Enter") {
+    if (event.key === 'Enter') {
       if (open && customValue) {
         const newOptions = [...validOptions];
         if (!newOptions.includes(customValue)) {
@@ -335,9 +335,7 @@ export default function Dropdown({
   );
 
   const renderSelectedIcon = () => {
-    const selectedIndex = filteredOptions.findIndex(
-      (option) => option === value,
-    );
+    const selectedIndex = filteredOptions.findIndex(option => option === value);
     const iconMetadata =
       selectedIndex >= 0 ? filteredMetadata?.[selectedIndex]?.icon : undefined;
 
@@ -369,9 +367,9 @@ export default function Dropdown({
           data-testid={id}
           className={cn(
             editNode
-              ? "dropdown-component-outline input-edit-node"
-              : "dropdown-component-false-outline py-2",
-            "no-focus-visible w-full justify-between font-normal disabled:bg-muted disabled:text-muted-foreground",
+              ? 'dropdown-component-outline input-edit-node'
+              : 'dropdown-component-false-outline py-2',
+            'no-focus-visible w-full justify-between font-normal disabled:bg-muted disabled:text-muted-foreground'
           )}
         >
           <span
@@ -389,7 +387,7 @@ export default function Dropdown({
                       value
                     ) : // this logic is used for the agents component, if you update make sure to test the agent component
                     sourceOptions?.fields?.data?.node?.name ===
-                      "connect_other_models" ? (
+                      'connect_other_models' ? (
                       <span className="text-muted-foreground">
                         <LoadingTextComponent
                           text={placeholder || SELECT_AN_OPTION}
@@ -412,12 +410,12 @@ export default function Dropdown({
           </span>
 
           <ForwardedIconComponent
-            name={disabled ? "Lock" : "ChevronsUpDown"}
+            name={disabled ? 'Lock' : 'ChevronsUpDown'}
             className={cn(
-              "ml-2 h-4 w-4 shrink-0 text-foreground",
+              'ml-2 h-4 w-4 shrink-0 text-foreground',
               disabled
-                ? "text-placeholder-foreground hover:text-placeholder-foreground"
-                : "hover:text-foreground",
+                ? 'text-placeholder-foreground hover:text-placeholder-foreground'
+                : 'hover:text-foreground'
             )}
           />
         </Button>
@@ -461,12 +459,12 @@ export default function Dropdown({
               <div>
                 <CommandItem
                   value={option}
-                  onSelect={(currentValue) => {
+                  onSelect={currentValue => {
                     onSelect(
                       currentValue,
                       undefined,
                       undefined,
-                      filteredMetadata?.[index],
+                      filteredMetadata?.[index]
                     );
                     setOpen(false);
                     setWaitingForResponse(false);
@@ -480,13 +478,13 @@ export default function Dropdown({
                   >
                     {filteredMetadata?.[index]?.icon && (
                       <ForwardedIconComponent
-                        name={filteredMetadata?.[index]?.icon || "Unknown"}
+                        name={filteredMetadata?.[index]?.icon || 'Unknown'}
                         className="h-4 w-4 shrink-0 text-primary"
                       />
                     )}
                     <div
-                      className={cn("flex w-full", {
-                        "pl-2": !filteredMetadata?.[index]?.icon,
+                      className={cn('flex w-full', {
+                        'pl-2': !filteredMetadata?.[index]?.icon,
                       })}
                     >
                       <div className="text-[13px] mr-2 whitespace-nowrap flex-shrink-0">
@@ -495,7 +493,7 @@ export default function Dropdown({
                       {filteredMetadata?.[index]?.status && (
                         <span
                           className={`flex items-center pl-2 text-xs ${getStatusColor(
-                            filteredMetadata?.[index]?.status,
+                            filteredMetadata?.[index]?.status
                           )}`}
                         >
                           <LoadingTextComponent
@@ -509,17 +507,16 @@ export default function Dropdown({
                       {filteredMetadata && filteredMetadata?.length > 0 && (
                         <div className="ml-auto flex items-center overflow-hidden pl-2 text-muted-foreground">
                           {Object.entries(
-                            filterMetadataKeys(filteredMetadata?.[index] || {}),
+                            filterMetadataKeys(filteredMetadata?.[index] || {})
                           )
                             .filter(
-                              ([key, value]) =>
-                                value !== null && key !== "icon",
+                              ([key, value]) => value !== null && key !== 'icon'
                             )
                             .map(([key, value], i, arr) => (
                               <div
                                 key={key}
-                                className={cn("flex items-center", {
-                                  "flex-1 overflow-hidden":
+                                className={cn('flex items-center', {
+                                  'flex-1 overflow-hidden':
                                     i === arr.length - 1,
                                 })}
                               >
@@ -537,16 +534,16 @@ export default function Dropdown({
                         </div>
                       )}
                       <div
-                        className={cn("pl-2", {
-                          "ml-auto":
+                        className={cn('pl-2', {
+                          'ml-auto':
                             !filteredMetadata || filteredMetadata.length === 0,
                         })}
                       >
                         <ForwardedIconComponent
                           name="Check"
                           className={cn(
-                            "h-4 w-4 shrink-0 text-primary",
-                            value === option ? "opacity-100" : "opacity-0",
+                            'h-4 w-4 shrink-0 text-primary',
+                            value === option ? 'opacity-100' : 'opacity-0'
                           )}
                         />
                       </div>
@@ -570,12 +567,12 @@ export default function Dropdown({
         <CommandGroup className="p-0">
           <CommandItem
             className="flex w-full cursor-pointer items-center justify-start gap-2 truncate rounded-none py-2.5 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground"
-            onSelect={(value) => {
+            onSelect={value => {
               if (dialogInputs?.fields) {
                 setOpenDialog(true);
               } else {
                 handleSourceOptions(
-                  sourceOptions?.fields?.data?.node?.name! || value,
+                  sourceOptions?.fields?.data?.node?.name! || value
                 );
               }
             }}
@@ -605,22 +602,22 @@ export default function Dropdown({
               <div className="flex items-center gap-2 pl-1 text-[13px] font-semibold">
                 <ForwardedIconComponent
                   name="RefreshCcw"
-                  className={cn("h-3 w-3")}
+                  className={cn('h-3 w-3')}
                 />
                 Refresh list
               </div>
             </CommandItem>
           )}
           {dialogInputs?.fields?.data?.node?.display_name ===
-            "Create Knowledge" ||
-          dialogInputs?.fields?.data?.node?.name === "create_knowledge_base" ? (
+            'Create Knowledge' ||
+          dialogInputs?.fields?.data?.node?.name === 'create_knowledge_base' ? (
             <KnowledgeBaseUploadModal
               open={openDialog}
-              setOpen={(isOpen) => {
+              setOpen={isOpen => {
                 setOpenDialog(isOpen);
                 if (!isOpen) setOpen(false);
               }}
-              onSubmit={(data) => {
+              onSubmit={data => {
                 setOpenDialog(false);
                 setOpen(false);
                 setPendingSelect(data.sourceName);
@@ -636,7 +633,7 @@ export default function Dropdown({
                 setOpenDialog(false);
                 setOpen(false);
               }}
-              onCreated={(createdValue) => {
+              onCreated={createdValue => {
                 setPendingSelect(createdValue);
               }}
               nodeId={nodeId!}
@@ -655,7 +652,7 @@ export default function Dropdown({
       avoidCollisions={!!children || inspectionPanel}
       className="noflow nowheel nopan nodelete nodrag p-0"
       style={
-        children ? {} : { minWidth: refButton?.current?.clientWidth ?? "200px" }
+        children ? {} : { minWidth: refButton?.current?.clientWidth ?? '200px' }
       }
     >
       <Command className="flex flex-col">
@@ -675,7 +672,7 @@ export default function Dropdown({
                 <div className="flex items-center gap-2 pl-1">
                   <ForwardedIconComponent
                     name="RefreshCcw"
-                    className={cn("refresh-icon h-3 w-3 text-primary")}
+                    className={cn('refresh-icon h-3 w-3 text-primary')}
                   />
                   Refresh list
                 </div>
