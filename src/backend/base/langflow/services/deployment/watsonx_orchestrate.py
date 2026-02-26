@@ -746,6 +746,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             user_id=user_id,
             db=db,
         )
+
         clients.connections.create_credentials(
             app_id=app_id,
             env=ConnectionEnvironment.DRAFT,
@@ -1692,6 +1693,8 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         requirements_content = "\n".join(requirements) + "\n"
         flow_content = json.dumps(flow_definition, indent=2)
 
+        # print(f"requirements_content: {requirements_content}")
+
         buffer = io.BytesIO()
         with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zip_tool_artifacts:
             zip_tool_artifacts.writestr(filename, flow_content)
@@ -1812,7 +1815,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 flow_definition,
                 app_id=app_id,
             )
-        print(f"flow_definition: {flow_definition}")
+        # print(f"flow_definition: {flow_definition}")
         # Fallback for flows that don't include last_tested_version in payload
         if not flow_definition.get("last_tested_version"):
             detected_version = (get_version_info() or {}).get("version")

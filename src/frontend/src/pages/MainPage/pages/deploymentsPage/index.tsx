@@ -521,7 +521,7 @@ const DeploymentsTab = () => {
     const environmentVariables = envVars.reduce<
       Record<string, { source: "raw" | "variable"; value: string }>
     >((acc, item) => {
-      const key = (item.deploymentKey ?? item.key).trim();
+      const key = item.key.trim();
       const value = item.value.trim();
       if (!key || !value) {
         return acc;
@@ -726,12 +726,23 @@ const DeploymentsTab = () => {
                       setEnvVars(detectedEnvVars);
                     }
                   }
+                  if (currentStep === 3) {
+                    const envVarValidationErrors = validateEnvVars(envVars);
+                    if (envVarValidationErrors.length > 0) {
+                      setErrorData({
+                        title: "Invalid environment variables",
+                        list: envVarValidationErrors,
+                      });
+                      return;
+                    }
+                  }
                   handleNext();
                 }}
                 onSubmit={handleCreateDeployment}
                 nextDisabled={
                   (currentStep === 1 && !deploymentName.trim()) ||
-                  (currentStep === 2 && selectedItems.size === 0)
+                  (currentStep === 2 && selectedItems.size === 0) ||
+                  (currentStep === 3 && validateEnvVars(envVars).length > 0)
                 }
                 submitLabel="Deploy"
               />

@@ -690,7 +690,7 @@ async def _apply_checkpoint_patch_attachments(
         )
 
 
-@router.post(
+@router.post( # TODO: move this to the flows API
     "/variables/detections",
     response_model=DetectDeploymentEnvVarsResponse,
 )
