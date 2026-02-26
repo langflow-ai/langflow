@@ -12,7 +12,6 @@ import type {
   AssistantMessage,
   AssistantModel,
 } from "../assistant-panel.types";
-import { useAssistantSessionId } from "./use-assistant-session-id";
 
 const uid = new ShortUniqueId();
 
@@ -34,9 +33,6 @@ export function useAssistantChat(): UseAssistantChatReturn {
   const sessionIdRef = useRef<string>(uid.randomUUID(16));
 
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
-  const { sessionId, resetSessionId } = useAssistantSessionId(
-    currentFlowId || "",
-  );
   const addComponent = useAddComponent();
   const { mutateAsync: validateComponent } = usePostValidateComponentCode();
 
@@ -44,11 +40,8 @@ export function useAssistantChat(): UseAssistantChatReturn {
     async (content: string, model: AssistantModel | null) => {
       if (isProcessing) return;
 
-      // Validate model has required fields to prevent backend from using wrong provider
       if (!model?.provider || !model?.name) {
-        console.warn(
-          "AssistantChat: No model selected, request may use default provider",
-        );
+        return;
       }
 
       const userMessage: AssistantMessage = {
@@ -197,7 +190,7 @@ export function useAssistantChat(): UseAssistantChatReturn {
         setIsProcessing(false);
       }
     },
-    [isProcessing, currentFlowId, sessionId],
+    [isProcessing, currentFlowId],
   );
 
   const handleApprove = useCallback(
@@ -206,6 +199,7 @@ export function useAssistantChat(): UseAssistantChatReturn {
       if (!message?.result?.componentCode) return;
 
       try {
+        // Backend builds the full frontend_node from code validation; empty placeholder is expected
         const response = await validateComponent({
           code: message.result.componentCode,
           frontend_node: {} as APIClassType,
@@ -214,8 +208,8 @@ export function useAssistantChat(): UseAssistantChatReturn {
         if (response.data) {
           addComponent(response.data, response.type || "CustomComponent");
         }
-      } catch {
-        // Error is already visible to user via component validation UI
+      } catch (error) {
+        console.error("Failed to validate or add component to canvas:", error);
       }
     },
     [messages, validateComponent, addComponent],

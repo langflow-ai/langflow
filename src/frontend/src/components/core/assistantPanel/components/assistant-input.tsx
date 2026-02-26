@@ -4,7 +4,7 @@ import type { AgenticStepType } from "@/controllers/API/queries/agentic";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/utils/utils";
-import { ASSISTANT_PLACEHOLDER } from "../assistant-panel.constants";
+import { getAssistantPlaceholder } from "../assistant-panel.constants";
 import type { AssistantModel } from "../assistant-panel.types";
 import { getRandomPlaceholderMessage } from "../helpers/messages";
 import { ModelSelector } from "./model-selector";
@@ -67,6 +67,7 @@ export function AssistantInput({
   autoFocus = false,
 }: AssistantInputProps) {
   const [message, setMessage] = useState("");
+  const [idlePlaceholder] = useState(getAssistantPlaceholder);
 
   // Show animated placeholder only during post-generation steps (when thinking animation is done)
   const isPostGenerationStep =
@@ -103,7 +104,7 @@ export function AssistantInput({
     if (autoFocus && textareaRef.current && !disabled && !isProcessing) {
       textareaRef.current.focus();
     }
-  }, [autoFocus]);
+  }, [autoFocus, disabled, isProcessing]);
 
   // Save to localStorage when model changes
   useEffect(() => {
@@ -157,7 +158,7 @@ export function AssistantInput({
             placeholder={
               isProcessing
                 ? (isPostGenerationStep ? "" : "Working on it...")
-                : (placeholder ?? ASSISTANT_PLACEHOLDER)
+                : (placeholder ?? idlePlaceholder)
             }
             disabled={disabled || isProcessing}
             className={cn(

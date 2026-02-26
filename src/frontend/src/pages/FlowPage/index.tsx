@@ -141,8 +141,6 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
 
     return () => {
       setOnFlowPage(false);
-      console.warn("unmounting");
-
       setCurrentFlow(undefined);
       // Reset playground state when leaving the flow
       setSlidingContainerOpen(false);
@@ -227,30 +225,6 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
 
   return (
     <>
-      {/* TODO: will be revert - original main layout without playground panel */}
-      {/*
-      <div className="flow-page-positioning">
-        {currentFlow && (
-          <div className="flex h-full overflow-hidden">
-            <SidebarProvider
-              width="17.5rem"
-              defaultOpen={!isMobile}
-              segmentedSidebar={ENABLE_NEW_SIDEBAR}
-            >
-              <FlowSearchProvider>
-                {!view && <FlowSidebarComponent isLoading={isLoading} />}
-                <main className="flex w-full overflow-hidden">
-                  <div className="h-full w/full">
-                    <Page setIsLoading={setIsLoading} />
-                  </div>
-                </main>
-              </FlowSearchProvider>
-            </SidebarProvider>
-          </div>
-        )}
-      </div>
-      */}
-
       {/* Assistant Panel - single instance that handles both modes internally */}
       <AssistantPanel
         isOpen={assistantOpen}

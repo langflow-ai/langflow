@@ -43,6 +43,10 @@ _EMBEDDING_CLASS_IMPORTS: dict[str, tuple[str, str]] = {
 _model_class_cache: dict[str, type] = {}
 _embedding_class_cache: dict[str, type] = {}
 
+# Default max_tokens when no valid value is provided.
+# Some providers (e.g. Anthropic) require max_tokens and default to a low limit without it.
+DEFAULT_MAX_TOKENS = 16384
+
 
 def get_model_class(class_name: str) -> type:
     """Import and return a single model class by name.
@@ -1093,9 +1097,6 @@ def get_llm(
         kwargs["temperature"] = temperature
 
     # Add max_tokens with provider-specific field name
-    # Default to 16384 when no valid value is provided, since some providers
-    # (e.g. Anthropic) require max_tokens and default to a low limit without it
-    DEFAULT_MAX_TOKENS = 16384
     max_tokens_param = metadata.get("max_tokens_field_name", "max_tokens")
     max_tokens_int = None
     if max_tokens is not None and max_tokens != "":

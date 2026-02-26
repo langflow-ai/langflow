@@ -1,6 +1,7 @@
 # Feature: Langflow Assistant
 
 > Generated on: 2026-01-21
+> Updated on: 2026-02-16
 > Status: Draft
 > Owner: Engineering Team
 
@@ -94,7 +95,10 @@ The core aggregate managing a user's interaction session with the assistant.
 - **Invariants**:
   - A session must have a valid `flow_id` to generate components
   - Only one message can be in `streaming` status at a time
-  - `session_id` isolates memory between requests
+  - `session_id` is generated once per session on the frontend and reused across all requests in the same session
+  - A new `session_id` is only generated when the user explicitly clicks "New session"
+  - `session_id` must be passed with every request to maintain conversation memory
+  - The TranslationFlow must NOT share the assistant's `session_id` (it is stateless)
 
 #### ComponentGeneration
 
@@ -205,6 +209,29 @@ The frontend implements automatic model selection to ensure a valid model is alw
 - **Then** the first available model should be automatically selected
 - **And** the selected model should be persisted for future sessions
 
+### Scenario: Maintain conversation memory across messages
+- **Given** the assistant panel is open
+- **And** I have previously generated a component
+- **When** I ask a follow-up question like "can you use dataframe output instead?"
+- **Then** the assistant should remember the previous component
+- **And** it should generate a modified version of the component
+- **And** I should see the same progress indicators as the initial generation
+- **And** I should see the component card with "Approve" and "View Code" buttons
+
+### Scenario: Follow-up modification classified as component generation
+- **Given** I have generated a component in the current session
+- **When** I send a modification request like "add error handling" or "use X instead"
+- **Then** the intent should be classified as "generate_component" (not "question")
+- **And** the progress card should appear immediately (no token streaming)
+- **And** the validation pipeline should run as normal
+
+### Scenario: New session resets conversation memory
+- **Given** I have messages in the assistant chat
+- **When** I click "+ New session" in the header (direct button next to the close button)
+- **Then** all messages should be cleared
+- **And** a new session ID should be generated
+- **And** subsequent messages should not reference previous conversation
+
 ### Scenario: Preserve chat history across view mode changes
 - **Given** I have messages in the assistant chat
 - **And** the assistant is in sidebar mode
@@ -259,10 +286,36 @@ The frontend implements automatic model selection to ensure a valid model is alw
 - **And** the progress indicators should disappear
 - **And** I should be able to send a new message
 
+### Scenario: Open assistant with keyboard shortcut
+- **Given** I am on the flow page with focus on the canvas (not in a text input)
+- **When** I press the **A** key
+- **Then** the assistant panel should open
+- **And** the text input should be auto-focused so I can start typing immediately
+- **And** pressing **A** again (when not focused on the input) should close it
+
+### Scenario: Close assistant with Escape
+- **Given** the assistant panel is open
+- **When** I press **Escape**
+- **Then** the assistant panel should close
+- **And** this should work whether focus is on the canvas or inside the assistant's text input
+
+### Scenario: Input placeholder during generation
+- **Given** a component generation or Q&A response is in progress
+- **Then** the input placeholder should show "Working on it..." instead of the random suggestion text
+- **And** once generation completes, the placeholder should return to normal
+
+### Scenario: Streaming content hides raw code for misclassified intent
+- **Given** a follow-up request was misclassified as "question" instead of "generate_component"
+- **And** the LLM response streams component code (tokens visible as raw markdown)
+- **When** the streaming content matches a Python class extending Component
+- **Then** the raw code should be hidden and replaced with the progress card (ReasoningUI)
+- **And** the user should never see raw component code streaming in the chat
+
 ### Scenario: Clear conversation history
 - **Given** I have multiple messages in the chat
-- **When** I click the clear history button
+- **When** I click the clear history / new session button
 - **Then** all messages should be removed
+- **And** a new `session_id` should be generated
 - **And** the empty state should appear (sidebar mode)
 - **And** any in-progress generation should be cancelled
 
@@ -397,6 +450,133 @@ The `AssistantPanel` component uses a **single-instance pattern** where the same
 
 ---
 
+### ADR-005: Frontend-Owned Session Persistence
+
+**Status**: Accepted
+
+#### Context
+The assistant had no conversation memory — every message was treated as a new session because the frontend never sent a `session_id`. The backend generated a new UUID per request (`request.session_id or str(uuid.uuid4())`), so the Agent's memory component never found previous messages.
+
+#### Decision
+The frontend generates a `session_id` once (via `useRef`) when the `useAssistantChat` hook initializes, and includes it in every `postAssistStream` request. A new `session_id` is only generated when the user clicks "New session" (`handleClearHistory`).
+
+#### Consequences
+
+**Benefits:**
+- Conversation memory works across follow-up messages
+- Users can iterate on component designs within a session
+- "New session" provides a clean slate when needed
+
+**Trade-offs:**
+- Session memory is only frontend-scoped (lost on page refresh)
+- Long sessions accumulate message history that may affect LLM context
+
+**Key Files:**
+- `src/frontend/.../hooks/use-assistant-chat.ts` — `sessionIdRef` stores the ID, passed in every request
+- `src/backend/.../agentic/api/router.py` — falls back to `uuid.uuid4()` only if no `session_id` is sent
+
+---
+
+### ADR-006: TranslationFlow Session Isolation
+
+**Status**: Accepted
+
+#### Context
+The TranslationFlow (intent classification) and LangflowAssistant flow shared the same `session_id`. This caused cross-flow contamination: the TranslationFlow's JSON intent responses were stored alongside the assistant's messages. On subsequent requests, the TranslationFlow's LLM saw messages from both flows in its history, causing intent classification to fail and default to `"question"`.
+
+#### Decision
+1. Pass `session_id=None` when calling `classify_intent` — the TranslationFlow is stateless and does not need conversation memory.
+2. Set `should_store_message=False` on both ChatInput and ChatOutput in the TranslationFlow — it should never persist messages.
+
+#### Consequences
+
+**Benefits:**
+- Intent classification is stateless and deterministic per message
+- No cross-flow contamination in the assistant's message history
+- TranslationFlow works identically on 1st and Nth request
+
+**Trade-offs:**
+- TranslationFlow has no context about previous turns (addressed by improved prompt, see ADR-007)
+
+**Key Files:**
+- `src/backend/.../agentic/services/assistant_service.py` — `session_id=None` in `classify_intent` call
+- `src/backend/.../agentic/flows/translation_flow.py` — `should_store_message=False`
+
+---
+
+### ADR-007: Intent-Independent Code Extraction with Improved Classification
+
+**Status**: Accepted
+
+#### Context
+Follow-up modification requests like "can you use dataframe output instead?" were classified as `"question"` because the TranslationFlow prompt only recognized explicit creation verbs (create/build/generate). This caused the Q&A path to be taken — tokens were streamed and no code extraction/validation occurred, so the component card never appeared.
+
+#### Decision
+Two-layer fix:
+
+1. **Primary: Improved intent classification** — Updated the TranslationFlow prompt to recognize modification and follow-up patterns (e.g., "use X instead", "add Y", "change Z") as `"generate_component"`. This ensures the correct UX path (progress card, no token streaming) for modifications.
+
+2. **Fallback: Intent-independent code extraction** — The streaming assistant service now always attempts code extraction from the response, regardless of intent classification. If a response classified as `"question"` happens to contain valid Langflow component code (`"class " in code and "Component" in code`), it is extracted, validated, and returned with the component card. This is a safety net for edge cases the prompt doesn't catch.
+
+#### Consequences
+
+**Benefits:**
+- Follow-up modifications show the same clean UX as initial generation
+- No risk of showing raw code to the user for any response that contains a component
+- Graceful degradation: if intent classification misses a case, the fallback catches it
+
+**Trade-offs:**
+- Fallback path still briefly streams tokens before showing the card (slightly jarring UX)
+- Code extraction runs on all responses (negligible performance cost — regex on a string)
+
+**Key Files:**
+- `src/backend/.../agentic/flows/translation_flow.py` — expanded `TRANSLATION_PROMPT` with modification examples
+- `src/backend/.../agentic/services/assistant_service.py` — removed `if not is_component_request: return` early exit
+
+---
+
+### ADR-008: Fixed-Width Zoom Percentage Display
+
+**Status**: Accepted
+
+#### Context
+The zoom percentage in the canvas controls bar (e.g., "65%", "150%", "200%") caused the entire controls bar to shift width when the zoom changed between values with different character counts. This created a visually distracting layout jump.
+
+#### Decision
+Apply a fixed width (`w-11`, 44px) with `text-center` to the zoom percentage display. Reduce the button's outer padding (`px-0.5`) to remove dead space between the redo icon and the percentage, and add `gap-0.5` between the percentage text and the chevron icon.
+
+#### Key Files:
+- `src/frontend/.../canvasControlsComponent/CanvasControlsDropdown.tsx` — fixed-width zoom display
+
+---
+
+### ADR-009: GPU-Accelerated Panel Open Transition
+
+**Status**: Accepted
+
+#### Context
+Opening the assistant panel felt sluggish when there were previous chat messages. The root cause was `transition-all duration-300` on the panel container, which forced the browser to transition every CSS property (including height, width, border, shadow) across the entire message DOM on every open/close.
+
+#### Decision
+1. Replace `transition-all` with `transition-[opacity,transform]` — only animate the two properties needed for the fade+slide effect.
+2. Reduce `duration-300` to `duration-200` for a snappier feel.
+3. Add `will-change-[opacity,transform]` to hint the browser to GPU-accelerate these properties, avoiding expensive repaints on the message list.
+
+#### Consequences
+
+**Benefits:**
+- Panel opens instantly regardless of message count
+- No layout thrashing from transitioning height/width/shadow/border
+- GPU-composited animation avoids main-thread repaints
+
+**Trade-offs:**
+- Size changes (compact → expanded) are no longer animated (they snap instantly, which is actually preferable)
+
+**Key Files:**
+- `src/frontend/.../assistantPanel/assistant-panel.tsx` — `containerClasses` transition properties
+
+---
+
 ## 6. Technical Specification
 
 ### 6.1 Dependencies
@@ -427,7 +607,7 @@ The `AssistantPanel` component uses a **single-instance pattern** where the same
   "provider": "string - Optional. Model provider (openai, anthropic, etc.)",
   "model_name": "string - Optional. Specific model name (gpt-4o, claude-3-opus, etc.)",
   "max_retries": "integer - Optional. Max validation retries (default: 3)",
-  "session_id": "string - Optional. Session ID for conversation memory"
+  "session_id": "string - Required for conversation memory. Generated once per session by the frontend, reused across all requests. New ID on 'New session' only. Backend falls back to uuid4() if omitted."
 }
 ```
 
@@ -609,7 +789,8 @@ Event: `cancelled`
 
 - No database migrations required
 - Configuration stored in existing `variables` table (API keys)
-- Session state is ephemeral (not persisted)
+- Session messages are persisted in the message store (keyed by `session_id`), enabling conversation memory within a session
+- Session ID is frontend-scoped (generated per hook instance, reset on "New session")
 
 ### 8.3 Rollback Plan
 
@@ -628,9 +809,17 @@ Event: `cancelled`
 - [ ] Verify component code is displayed on completion
 - [ ] Click "Add to Canvas" and verify component appears
 - [ ] Submit a Q&A question and verify streaming response
+- [ ] Submit a follow-up modification (e.g., "use dataframe output instead") and verify the progress card appears (not raw code)
+- [ ] Verify conversation memory: ask a follow-up that references the previous component
+- [ ] Click "New session" and verify the assistant does not remember the previous conversation
 - [ ] Cancel a generation in progress
 - [ ] Clear conversation history
+- [ ] Press **A** on the canvas to open the assistant and verify the input is auto-focused
+- [ ] Press **Escape** to close the assistant (from both canvas and input focus)
+- [ ] Verify the input placeholder shows "Working on it..." during generation (not a random suggestion)
 - [ ] Toggle between sidebar and floating view modes
+- [ ] Verify zoom percentage display doesn't shift the controls bar when zooming between 60% and 200%
+- [ ] Open the assistant panel with previous messages and verify it opens instantly (no lag)
 
 ---
 
@@ -675,7 +864,7 @@ C4Container
     Container(validation_service, "ValidationService", "Python", "Validates component code")
   }
 
-  Container_Ext(flows, "Assistant Flows", "JSON", "LangflowAssistant.json, TranslationFlow.json")
+  Container_Ext(flows, "Assistant Flows", "JSON/Python", "LangflowAssistant.json, translation_flow.py")
   System_Ext(llm, "LLM Provider", "External API")
 
   Rel(user, assistant_panel, "Enters prompts")
@@ -693,20 +882,19 @@ C4Container
 
 ```mermaid
 flowchart TD
-    A[User Input] --> B{Intent Classification}
-    B -->|generate_component| C[Execute LangflowAssistant Flow]
-    B -->|question| D[Execute Q&A Flow]
+    A[User Input] --> B{Intent Classification<br/>TranslationFlow - stateless}
+    B -->|generate_component| C[Execute LangflowAssistant Flow<br/>no token streaming]
+    B -->|question| D[Execute LangflowAssistant Flow<br/>with token streaming]
 
-    D --> E[Stream Tokens]
-    E --> F[Complete Response]
+    C --> G[Extract Component Code]
+    D --> G
 
-    C --> G[Extract Code]
-    G --> H{Code Found?}
-    H -->|No| F
+    G --> H{Component Code Found?<br/>class + Component check}
+    H -->|No| F[Complete Response<br/>plain text / Q&A]
     H -->|Yes| I[Validate Code]
 
     I --> J{Valid?}
-    J -->|Yes| K[Return Validated Component]
+    J -->|Yes| K[Return Validated Component<br/>component card with Approve]
     J -->|No| L{Retries Left?}
 
     L -->|Yes| M[Retry with Error Context]
@@ -725,13 +913,17 @@ flowchart TD
 └──────────┘    │    (or "generating")   │    └──────────┬──────────┘
                 └────────────────────────┘               │
                                                          │
+                                                ┌────────▼────────┐
+                                                │  Extract Code   │ ← runs for ALL responses
+                                                └────────┬────────┘
+                                                         │
                          ┌───────────────────────────────┼───────────────────┐
-                         │ Q&A Response                  │ Component Code    │
+                         │ No Component Code             │ Component Code    │
                          ▼                               ▼                   │
                 ┌────────────────┐             ┌─────────────────┐           │
                 │    complete    │             │ extracting_code │           │
-                └────────────────┘             └────────┬────────┘           │
-                                                        │                    │
+                │  (plain text)  │             └────────┬────────┘           │
+                └────────────────┘                      │                    │
                                                         ▼                    │
                                                ┌─────────────────┐           │
                                                │   validating    │           │
