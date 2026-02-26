@@ -90,6 +90,38 @@ def _build_output_function(component: Component, output_method: Callable, event_
             component.set(*args, **kwargs)
             result = output_method()
             if event_manager:
+                # Emit end_vertex with outputs and logs so frontend can display them for tool components
+                from datetime import datetime, timezone
+
+                log_list = [log.model_dump() for log in component._logs] if component._logs else []
+                serialized_result = serialize(result)
+
+                # Emit under component_as_tool so logs appear when user clicks on tool output
+                logs = {TOOL_OUTPUT_NAME: log_list}
+                outputs = {TOOL_OUTPUT_NAME: {"message": serialized_result, "type": "tool_output"}}
+
+                event_manager.send_event(
+                    event_type="end_vertex",
+                    data={
+                        "build_data": {
+                            "id": component.get_id(),
+                            "valid": True,
+                            "inactivated_vertices": None,
+                            "next_vertices_ids": [],
+                            "top_level_vertices": [],
+                            "timestamp": datetime.now(timezone.utc).isoformat(),
+                            "params": None,
+                            "messages": [],
+                            "artifacts": None,
+                            "data": {
+                                "results": {},
+                                "outputs": outputs,
+                                "logs": logs,
+                                "messages": [],
+                            },
+                        }
+                    },
+                )
                 event_manager.on_build_end(data={"id": component.get_id()})
         except Exception as e:
             raise ToolException(e) from e
@@ -114,6 +146,39 @@ def _build_output_async_function(
             component.set(*args, **kwargs)
             result = await output_method()
             if event_manager:
+                # Emit end_vertex with outputs and logs so frontend can display them for tool components
+                from datetime import datetime, timezone
+
+                log_list = [log.model_dump() for log in component._logs] if component._logs else []
+                serialized_result = serialize(result)
+
+                # Emit under component_as_tool so logs appear when user clicks on tool output
+                logs = {TOOL_OUTPUT_NAME: log_list}
+                outputs = {TOOL_OUTPUT_NAME: {"message": serialized_result, "type": "tool_output"}}
+
+                await asyncio.to_thread(
+                    event_manager.send_event,
+                    event_type="end_vertex",
+                    data={
+                        "build_data": {
+                            "id": component.get_id(),
+                            "valid": True,
+                            "inactivated_vertices": None,
+                            "next_vertices_ids": [],
+                            "top_level_vertices": [],
+                            "timestamp": datetime.now(timezone.utc).isoformat(),
+                            "params": None,
+                            "messages": [],
+                            "artifacts": None,
+                            "data": {
+                                "results": {},
+                                "outputs": outputs,
+                                "logs": logs,
+                                "messages": [],
+                            },
+                        }
+                    },
+                )
                 await asyncio.to_thread(event_manager.on_build_end, data={"id": component.get_id()})
         except Exception as e:
             raise ToolException(e) from e
