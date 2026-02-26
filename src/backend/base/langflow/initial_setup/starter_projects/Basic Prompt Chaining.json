@@ -291,27 +291,6 @@
                 "type": "prompt",
                 "value": "You are a seasoned business analyst with a strong background in tech product development and market research. Your analytical skills are unparalleled, allowing you to dissect product concepts and evaluate their market viability with precision. You have a keen eye for identifying potential challenges and opportunities that others might overlook. Your insights have been crucial in shaping successful product strategies for numerous tech companies.\n\nYour task is to:\n\n1. Evaluate the concept in terms of market potential and technical feasibility\n2. Identify two potential challenges for developing this product\n3. Suggest one improvement or expansion to the concept\n\n\nPlease structure your response as follows:\n\nConcept Evaluation:\n[concept_evaluation]\n\nPotential Challenges:\n1. [challenge_1]\n2. [challenge_2]\n...\n\nImprovement Suggestion:\n[improvement_suggestion]\n\nProvide an objective and well-founded analysis, considering market and technological factors in your evaluation.\n"
               },
-              "use_double_brackets": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Use Double Brackets",
-                "dynamic": false,
-                "info": "Use {{variable}} syntax instead of {variable}.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "use_double_brackets",
-                "override_skip": false,
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": true,
-                "type": "bool",
-                "value": false
-              },
               "tool_placeholder": {
                 "_input_type": "MessageTextInput",
                 "advanced": true,
@@ -333,6 +312,27 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": ""
+              },
+              "use_double_brackets": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Use Double Brackets",
+                "dynamic": false,
+                "info": "Use {{variable}} syntax instead of {variable}.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "use_double_brackets",
+                "override_skip": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": false
               }
             },
             "tool_mode": false
@@ -663,7 +663,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.128.1"
+                    "version": "0.133.1"
                   },
                   {
                     "name": "lfx",
@@ -997,27 +997,6 @@
                 "type": "prompt",
                 "value": "You are an accomplished product manager with a track record of bringing innovative tech products from concept to market. Your strategic thinking and ability to balance technical feasibility with market demands have resulted in several successful product launches. You excel at distilling complex ideas into clear, actionable plans and have a talent for identifying the most critical features that will drive product adoption and success.\n\nBased on the analysis of the innovative product, create a simplified development plan that includes:\n\n1. Product overview (1-2 sentences)\n2. Three main features to be developed\n3. A basic market launch strategy\n\n\nPlease structure your plan as follows:\n\nProduct Overview:\n[product_overview]\n\nMain Features:\n1. [feature_1]\n2. [feature_2]\n3. [feature_3]\n...\n\nLaunch Strategy:\n[launch_strategy]\n\nYour plan should be concise, realistic, and aligned with the information provided in the previous steps.\n"
               },
-              "use_double_brackets": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Use Double Brackets",
-                "dynamic": false,
-                "info": "Use {{variable}} syntax instead of {variable}.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "use_double_brackets",
-                "override_skip": false,
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": true,
-                "type": "bool",
-                "value": false
-              },
               "tool_placeholder": {
                 "_input_type": "MessageTextInput",
                 "advanced": true,
@@ -1039,6 +1018,27 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": ""
+              },
+              "use_double_brackets": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Use Double Brackets",
+                "dynamic": false,
+                "info": "Use {{variable}} syntax instead of {variable}.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "use_double_brackets",
+                "override_skip": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": false
               }
             },
             "tool_mode": false
@@ -1159,27 +1159,6 @@
                 "type": "prompt",
                 "value": "You are a visionary product innovator at a cutting-edge tech startup. Your expertise lies in identifying emerging market trends and translating them into groundbreaking product concepts. Your creative thinking and deep understanding of technology allow you to envision products that not only meet current needs but also anticipate future demands. Your ideas often challenge conventional thinking and push the boundaries of what's possible with current technology.\n\nPlease create a product concept, providing:\n\n1. Product name\n2. Brief description (2-3 sentences)\n3. Main innovative feature\n4. Target audience\n\nStructure your response like this:\n\nProduct Name: [product_name]\n\nDescription: [product_description]\n\nMain Innovation: [main_innovation]\n\nTarget Audience: [target_audience]\n\nBe creative and bold in your idea, but keep it realistic and aligned with the provided market trend."
               },
-              "use_double_brackets": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Use Double Brackets",
-                "dynamic": false,
-                "info": "Use {{variable}} syntax instead of {variable}.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "use_double_brackets",
-                "override_skip": false,
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": true,
-                "type": "bool",
-                "value": false
-              },
               "tool_placeholder": {
                 "_input_type": "MessageTextInput",
                 "advanced": true,
@@ -1201,6 +1180,27 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": ""
+              },
+              "use_double_brackets": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Use Double Brackets",
+                "dynamic": false,
+                "info": "Use {{variable}} syntax instead of {variable}.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "use_double_brackets",
+                "override_skip": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": false
               }
             },
             "tool_mode": false
