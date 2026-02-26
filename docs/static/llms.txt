@@ -1,0 +1,35 @@
+# Langflow Documentation
+
+> Official documentation for Langflow, a low-code platform for building and deploying AI-powered agents and workflows with a visual builder, API, and MCP server. Technical documentation for developers, data scientists, and teams building RAG and multi-agent applications.
+
+Langflow is open source (MIT). Run locally with `uv run langflow run` (Python 3.10–3.13, default http://127.0.0.1:7860). Also available as Langflow Desktop (Windows, macOS). Key areas: get started (installation, quickstart, tutorials), flows (build, run via API or webhooks, test, import/export), agents and MCP, develop (config, storage, observability), deploy (Docker, Kubernetes, cloud), components reference, and API reference.
+
+## Docs
+
+- [About Langflow](https://docs.langflow.org/about-langflow): Platform overview and introduction
+- [Install Langflow](https://docs.langflow.org/get-started-installation): Installation options (OSS, Docker, from source)
+- [Quickstart](https://docs.langflow.org/get-started-quickstart): Get up and running quickly
+- [Use the visual editor](https://docs.langflow.org/concepts-overview): Visual flow builder overview
+- [Trigger flows with the API](https://docs.langflow.org/concepts-publish): Run flows via the Langflow API
+- [Agents](https://docs.langflow.org/agents): Agents and tools
+- [MCP client and server](https://docs.langflow.org/mcp-client): Model Context Protocol integration
+- [Deployment overview](https://docs.langflow.org/deployment-overview): How to deploy Langflow
+- [Security](https://docs.langflow.org/security): Deployment and security guidance
+- [Release notes](https://docs.langflow.org/release-notes): Version history and release notes
+
+## Community
+
+- [GitHub repository](https://github.com/langflow-ai/langflow): Source code and issues
+- [Langflow website](https://langflow.org): Main product site
+- [Langflow Desktop](https://langflow.org/desktop): Desktop app download
+- [Discord](https://discord.com/invite/EqksyE2EX9): Community chat
+- [Twitter/X](https://x.com/langflow_ai): Updates and news
+- [YouTube](https://www.youtube.com/@Langflow): Tutorials and demos
+
+## Optional
+
+- [Build flows](https://docs.langflow.org/concepts-flows): Concepts for building flows
+- [Test flows](https://docs.langflow.org/concepts-playground): Playground and testing
+- [Components overview](https://docs.langflow.org/concepts-components): Component reference introduction
+- [API reference](https://docs.langflow.org/api-reference-api-examples): Get started with the Langflow API
+- [Troubleshooting](https://docs.langflow.org/troubleshoot): Troubleshooting guide

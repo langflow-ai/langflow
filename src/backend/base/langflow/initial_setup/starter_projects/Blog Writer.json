@@ -170,7 +170,9 @@
             "documentation": "",
             "edited": false,
             "field_order": [
-              "template"
+              "template",
+              "use_double_brackets",
+              "tool_placeholder"
             ],
             "frozen": false,
             "icon": "prompts",
@@ -373,7 +375,8 @@
             "documentation": "",
             "edited": false,
             "field_order": [
-              "input_value"
+              "input_value",
+              "use_global_variable"
             ],
             "frozen": false,
             "icon": "type",
@@ -513,11 +516,13 @@
             "edited": false,
             "field_order": [
               "input_value",
-              "store_message",
+              "should_store_message",
               "sender",
               "sender_name",
               "session_id",
-              "data_template"
+              "context_id",
+              "data_template",
+              "clean_data"
             ],
             "frozen": false,
             "icon": "MessagesSquare",
@@ -533,7 +538,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.128.1"
+                    "version": "0.133.1"
                   },
                   {
                     "name": "lfx",
@@ -811,9 +816,9 @@
             "documentation": "",
             "edited": false,
             "field_order": [
+              "input_data",
               "mode",
               "pattern",
-              "input_data",
               "sep"
             ],
             "frozen": false,
@@ -1035,7 +1040,7 @@
                   },
                   {
                     "name": "markitdown",
-                    "version": "0.1.4"
+                    "version": "0.1.5"
                   },
                   {
                     "name": "lfx",
@@ -1405,7 +1410,8 @@
               "input_value",
               "system_message",
               "stream",
-              "temperature"
+              "temperature",
+              "max_tokens"
             ],
             "frozen": false,
             "icon": "brain-circuit",
