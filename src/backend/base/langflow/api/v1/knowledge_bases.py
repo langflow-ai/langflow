@@ -5,95 +5,46 @@ import shutil
 import uuid
 from datetime import datetime, timezone
 from http import HTTPStatus
+from pathlib import Path
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from langchain_chroma import Chroma
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from lfx.log import logger
-from pydantic import BaseModel
 
 from langflow.api.utils import CurrentActiveUser
-from langflow.api.utils.kb_helpers import (
-    _cleanup_chroma_chunks_by_job,
-    _get_fresh_chroma_client,
-    _perform_ingestion,
-    _teardown_kb_storage,
-    get_directory_size,
-    get_kb_metadata,
-    get_kb_root_path,
-)
+from langflow.api.utils.kb_helpers import KBAnalysisHelper, KBIngestionHelper, KBStorageHelper
 from langflow.api.v1.schemas import TaskResponse
+from langflow.schema.knowledge_base import (
+    BulkDeleteRequest,
+    ChunkInfo,
+    CreateKnowledgeBaseRequest,
+    KnowledgeBaseInfo,
+    PaginatedChunkResponse,
+)
 from langflow.services.database.models.jobs.model import JobStatus, JobType
 from langflow.services.deps import get_job_service, get_settings_service, get_task_service
 from langflow.services.jobs.service import JobService
 from langflow.services.task.service import TaskService
+from langflow.utils.kb_constants import (
+    CHUNK_PREVIEW_MULTIPLIER,
+    MIN_KB_NAME_LENGTH,
+)
 
 router = APIRouter(tags=["Knowledge Bases"], prefix="/knowledge_bases", include_in_schema=False)
 
 
-# Helper methods moved to utils/kb_helpers.py
-
-
-class KnowledgeBaseInfo(BaseModel):
-    id: str
-    dir_name: str = ""
-    name: str
-    embedding_provider: str | None = "Unknown"
-    embedding_model: str | None = "Unknown"
-    size: int = 0
-    words: int = 0
-    characters: int = 0
-    chunks: int = 0
-    avg_chunk_size: float = 0.0
-    chunk_size: int | None = None
-    chunk_overlap: int | None = None
-    separator: str | None = None
-    status: str = "empty"
-    failure_reason: str | None = None
-    last_job_id: str | None = None
-    source_types: list[str] = []
-    column_config: list[dict] | None = None
-
-
-class BulkDeleteRequest(BaseModel):
-    kb_names: list[str]
-
-
-class ColumnConfigItem(BaseModel):
-    column_name: str
-    vectorize: bool = False
-    identifier: bool = False
-
-
-class CreateKnowledgeBaseRequest(BaseModel):
-    name: str
-    embedding_provider: str
-    embedding_model: str
-    column_config: list[ColumnConfigItem] | None = None
-
-
-class AddSourceRequest(BaseModel):
-    source_name: str
-    files: list[str]  # List of file paths or file IDs
-
-
-class ChunkInfo(BaseModel):
-    id: str
-    content: str
-    char_count: int
-    metadata: dict | None = None
-
-
-class PaginatedChunkResponse(BaseModel):
-    chunks: list[ChunkInfo]
-    total: int
-    page: int
-    limit: int
-    total_pages: int
-
-
-# Helper methods moved to utils/kb_helpers.py
+def _resolve_kb_path(kb_name: str, current_user: CurrentActiveUser) -> Path:
+    """Resolve and validate KB path, raising 404 if not found."""
+    kb_root_path = KBStorageHelper.get_root_path()
+    if not kb_root_path:
+        raise HTTPException(status_code=500, detail="Knowledge base root path not configured")
+    kb_user = current_user.username
+    kb_path = kb_root_path / kb_user / kb_name
+    if not kb_path.exists() or not kb_path.is_dir():
+        raise HTTPException(status_code=404, detail=f"Knowledge base '{kb_name}' not found")
+    return kb_path
 
 
 @router.post("", status_code=HTTPStatus.CREATED)
@@ -104,16 +55,13 @@ async def create_knowledge_base(
 ) -> KnowledgeBaseInfo:
     """Create a new knowledge base with embedding configuration."""
     try:
-        kb_root_path = get_kb_root_path()
+        kb_root_path = KBStorageHelper.get_root_path()
         kb_user = current_user.username
         kb_name = request.name.strip().replace(" ", "_")
-
-        # Validate KB name
-        min_kb_name_length = 3
-        if not kb_name or len(kb_name) < min_kb_name_length:
-            raise HTTPException(status_code=400, detail="Knowledge base name must be at least 3 characters")
-
         kb_path = kb_root_path / kb_user / kb_name
+        # Validate KB name
+        if not kb_name or len(kb_name) < MIN_KB_NAME_LENGTH:
+            raise HTTPException(status_code=400, detail="Knowledge base name must be at least 3 characters")
 
         # Check if KB already exists
         if kb_path.exists():
@@ -126,13 +74,13 @@ async def create_knowledge_base(
         # Initialize Chroma storage and collection immediately
         # This ensures files exist for read operations and avoids 'readonly' errors later
         try:
-            client = _get_fresh_chroma_client(kb_path)
+            client = KBStorageHelper.get_fresh_chroma_client(kb_path)
             client.create_collection(name=kb_name)
             # Explicitly delete reference to help release handle
             client = None
             gc.collect()
         except Exception as e:  # noqa: BLE001
-            logger.warning(f"Initial Chroma setup for {kb_name} failed: {e}")
+            logger.warning("Initial Chroma setup for %s failed: %s", kb_name, e)
 
         # Serialize column_config for persistence
         column_config_dicts = None
@@ -181,7 +129,8 @@ async def create_knowledge_base(
         # Clean up if something went wrong
         if kb_path.exists():
             shutil.rmtree(kb_path)
-        raise HTTPException(status_code=500, detail=f"Error creating knowledge base: {e!s}") from e
+        await logger.aerror(f"Error creating knowledge base: {e!s}")
+        raise HTTPException(status_code=500, detail="Internal error creating knowledge base") from e
 
 
 @router.post("/preview-chunks", status_code=HTTPStatus.OK)
@@ -234,7 +183,7 @@ async def preview_chunks(
 
                 # Only process enough text for the requested preview chunks
                 # to avoid splitting the entire file (which is slow for large files)
-                preview_text_limit = max_chunks * chunk_size * 3
+                preview_text_limit = max_chunks * chunk_size * CHUNK_PREVIEW_MULTIPLIER
                 preview_text = text_content[:preview_text_limit]
                 chunks = text_splitter.split_text(preview_text)
 
@@ -327,12 +276,7 @@ async def ingest_files_to_knowledge_base(
             content = await uploaded_file.read()
             files_data.append((uploaded_file.filename or "unknown", content))
 
-        kb_root_path = get_kb_root_path()
-        kb_user = current_user.username
-        kb_path = kb_root_path / kb_user / kb_name
-
-        if not kb_path.exists() or not kb_path.is_dir():
-            raise HTTPException(status_code=404, detail=f"Knowledge base '{kb_name}' not found")
+        kb_path = _resolve_kb_path(kb_name, current_user)
 
         # Parse and persist column_config from FormData if provided
         if column_config:
@@ -353,7 +297,7 @@ async def ingest_files_to_knowledge_base(
                 pass  # Ignore malformed column_config; use existing schema
 
         # Read embedding metadata (Pass fast=False to ensure legacy KBs are migrated/detected)
-        metadata = get_kb_metadata(kb_path, fast=False)
+        metadata = KBAnalysisHelper.get_metadata(kb_path, fast=False)
         if not metadata:
             raise HTTPException(
                 status_code=400,
@@ -397,7 +341,7 @@ async def ingest_files_to_knowledge_base(
         await task_service.fire_and_forget_task(
             job_service.execute_with_status,
             job_id=job_id,
-            run_coro_func=_perform_ingestion,
+            run_coro_func=KBIngestionHelper.perform_ingestion,
             kb_name=kb_name,
             kb_path=kb_path,
             files_data=files_data,
@@ -427,9 +371,8 @@ async def list_knowledge_bases(
 ) -> list[KnowledgeBaseInfo]:
     """List all available knowledge bases."""
     try:
-        kb_root_path = get_kb_root_path()
-        kb_user = current_user.username
-        kb_path = kb_root_path / kb_user
+        kb_root_path = KBStorageHelper.get_root_path()
+        kb_path = kb_root_path / current_user.username
 
         if not kb_path.exists():
             return []
@@ -443,7 +386,7 @@ async def list_knowledge_bases(
                 continue
             try:
                 # Use deep update (fast=False) to ensure legacy KBs are migrated on first view
-                metadata = get_kb_metadata(kb_dir, fast=False)
+                metadata = KBAnalysisHelper.get_metadata(kb_dir, fast=False)
 
                 # Extract KB ID from metadata (stored as string, convert to UUID)
                 kb_id_str = metadata.get("id")
@@ -523,18 +466,13 @@ async def list_knowledge_bases(
 async def get_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -> KnowledgeBaseInfo:
     """Get detailed information about a specific knowledge base."""
     try:
-        kb_root_path = get_kb_root_path()
-        kb_user = current_user.username
-        kb_path = kb_root_path / kb_user / kb_name
-
-        if not kb_path.exists() or not kb_path.is_dir():
-            raise HTTPException(status_code=404, detail=f"Knowledge base '{kb_name}' not found")
+        kb_path = _resolve_kb_path(kb_name, current_user)
 
         # Get size of the directory
-        size = get_directory_size(kb_path)
+        size = KBStorageHelper.get_directory_size(kb_path)
 
         # Get metadata from KB files
-        metadata = get_kb_metadata(kb_path)
+        metadata = KBAnalysisHelper.get_metadata(kb_path)
 
         chunks_count = metadata["chunks"]
         status = "ready" if chunks_count > 0 else "empty"
@@ -573,12 +511,7 @@ async def get_knowledge_base_chunks(
 ) -> PaginatedChunkResponse:
     """Get chunks from a specific knowledge base with pagination."""
     try:
-        kb_root_path = get_kb_root_path()
-        kb_user = current_user.username
-        kb_path = kb_root_path / kb_user / kb_name
-
-        if not kb_path.exists() or not kb_path.is_dir():
-            raise HTTPException(status_code=404, detail=f"Knowledge base '{kb_name}' not found")
+        kb_path = _resolve_kb_path(kb_name, current_user)
 
         # Guard: If no physical chroma data exists, return empty response immediately
         # This prevents 'readonly database' errors when trying to initialize Chroma on an empty directory
@@ -593,7 +526,7 @@ async def get_knowledge_base_chunks(
             )
 
         # Create vector store
-        client = _get_fresh_chroma_client(kb_path)
+        client = KBStorageHelper.get_fresh_chroma_client(kb_path)
         chroma = Chroma(
             client=client,
             collection_name=kb_name,
@@ -661,19 +594,13 @@ async def get_knowledge_base_chunks(
 async def delete_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -> dict[str, str]:
     """Delete a specific knowledge base."""
     try:
-        kb_root_path = get_kb_root_path()
-        kb_user = current_user.username
-        kb_path = kb_root_path / kb_user / kb_name
-        if not kb_path.exists() or not kb_path.is_dir():
-            raise HTTPException(status_code=404, detail=f"Knowledge base '{kb_name}' not found")
+        kb_path = _resolve_kb_path(kb_name, current_user)
 
         # Explicitly teardown KB storage to flush Chroma handles before directory deletion
-        _teardown_kb_storage(kb_path, kb_name)
+        KBStorageHelper.teardown_storage(kb_path, kb_name)
 
         # Delete the entire knowledge base directory
         shutil.rmtree(kb_path)
-        # Final GC collect after removal to ensure zombie handles are flushed
-        gc.collect()
 
     except HTTPException:
         raise
@@ -688,9 +615,8 @@ async def delete_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -
 async def delete_knowledge_bases_bulk(request: BulkDeleteRequest, current_user: CurrentActiveUser) -> dict[str, object]:
     """Delete multiple knowledge bases."""
     try:
-        kb_root_path = get_kb_root_path()
-        kb_user = current_user.username
-        kb_user_path = kb_root_path / kb_user
+        kb_root_path = KBStorageHelper.get_root_path()
+        kb_user_path = kb_root_path / current_user.username
         deleted_count = 0
         not_found_kbs = []
 
@@ -703,12 +629,10 @@ async def delete_knowledge_bases_bulk(request: BulkDeleteRequest, current_user: 
 
             try:
                 # Explicitly teardown KB storage to flush Chroma handles before directory deletion
-                _teardown_kb_storage(kb_path, kb_name)
+                KBStorageHelper.teardown_storage(kb_path, kb_name)
 
                 # Delete the entire knowledge base directory
                 shutil.rmtree(kb_path)
-                # Final GC collect after removal to ensure zombie handles are flushed
-                gc.collect()
                 deleted_count += 1
             except (OSError, PermissionError) as e:
                 await logger.aexception("Error deleting knowledge base '%s': %s", kb_name, e)
@@ -733,9 +657,6 @@ async def delete_knowledge_bases_bulk(request: BulkDeleteRequest, current_user: 
         return result
 
 
-# Helper methods moved to utils/kb_helpers.py
-
-
 @router.post("/{kb_name}/cancel", status_code=HTTPStatus.OK)
 async def cancel_ingestion(
     kb_name: str,
@@ -745,15 +666,10 @@ async def cancel_ingestion(
 ) -> dict[str, str]:
     """Cancel the ongoing ingestion task for a knowledge base."""
     try:
-        kb_root_path = get_kb_root_path()
-        kb_user = current_user.username
-        kb_path = kb_root_path / kb_user / kb_name
-
-        if not kb_path.exists() or not kb_path.is_dir():
-            raise HTTPException(status_code=404, detail=f"Knowledge base '{kb_name}' not found")
+        kb_path = _resolve_kb_path(kb_name, current_user)
 
         # Get KB metadata to extract asset_id
-        metadata = get_kb_metadata(kb_path, fast=True)
+        metadata = KBAnalysisHelper.get_metadata(kb_path, fast=True)
         asset_id_str = metadata.get("id")
 
         if not asset_id_str:
@@ -782,8 +698,7 @@ async def cancel_ingestion(
         await job_service.update_job_status(job.job_id, JobStatus.CANCELLED)
 
         # Clean up any partially ingested chunks from this job
-        await _cleanup_chroma_chunks_by_job(job.job_id, kb_path, kb_name)
-        gc.collect()
+        await KBIngestionHelper.cleanup_chroma_chunks_by_job(job.job_id, kb_path, kb_name)
 
         if revoked:
             message = f"Ingestion job for {job.job_id} cancelled successfully."
