@@ -790,14 +790,14 @@ export default function Page({
           <div id="react-flow-id" className="h-full w-full bg-canvas relative">
             {!view && (
               <>
-                <MemoizedLogCanvasControls />
+                {!isPreviewActive && <MemoizedLogCanvasControls />}
                 <MemoizedCanvasControls
                   selectedNode={selectedNode}
                   setIsAddingNote={setIsAddingNote}
                   shadowBoxWidth={shadowBoxWidth}
                   shadowBoxHeight={shadowBoxHeight}
                 />
-                <FlowToolbar />
+                {!isPreviewActive && <FlowToolbar />}
                 {inspectionPanelVisible && (
                   <InspectionPanel selectedNode={selectedNode} />
                 )}
