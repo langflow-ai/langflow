@@ -795,7 +795,7 @@
             "legacy": false,
             "lf_version": "1.1.1",
             "metadata": {
-              "code_hash": "29ae597d2d86",
+              "code_hash": "8e4c500608aa",
               "dependencies": {
                 "dependencies": [
                   {
@@ -835,7 +835,7 @@
                 "advanced": false,
                 "display_name": "Chunk Overlap",
                 "dynamic": false,
-                "info": "Number of characters to overlap between chunks.",
+                "info": "Number of characters to overlap between consecutive chunks.",
                 "list": false,
                 "name": "chunk_overlap",
                 "placeholder": "",
@@ -850,7 +850,7 @@
                 "advanced": false,
                 "display_name": "Chunk Size",
                 "dynamic": false,
-                "info": "The maximum length of each chunk. Text is first split by separator, then chunks are merged up to this size. Individual splits larger than this won't be further divided.",
+                "info": "The maximum number of characters in each chunk.",
                 "list": false,
                 "name": "chunk_size",
                 "placeholder": "",
@@ -897,7 +897,32 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langchain_text_splitters import CharacterTextSplitter\n\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.io import BoolInput, DropdownInput, HandleInput, IntInput, MessageTextInput, Output\nfrom lfx.schema.data import Data\nfrom lfx.schema.dataframe import DataFrame\nfrom lfx.schema.message import Message\nfrom lfx.utils.util import unescape_string\n\n\nclass SplitTextComponent(Component):\n    display_name: str = \"Split Text\"\n    description: str = \"Split text into chunks based on specified criteria.\"\n    documentation: str = \"https://docs.langflow.org/split-text\"\n    icon = \"scissors-line-dashed\"\n    name = \"SplitText\"\n\n    inputs = [\n        HandleInput(\n            name=\"data_inputs\",\n            display_name=\"Input\",\n            info=\"The data with texts to split in chunks.\",\n            input_types=[\"Data\", \"DataFrame\", \"Message\"],\n            required=True,\n        ),\n        IntInput(\n            name=\"chunk_overlap\",\n            display_name=\"Chunk Overlap\",\n            info=\"Number of characters to overlap between chunks.\",\n            value=200,\n        ),\n        IntInput(\n            name=\"chunk_size\",\n            display_name=\"Chunk Size\",\n            info=(\n                \"The maximum length of each chunk. Text is first split by separator, \"\n                \"then chunks are merged up to this size. \"\n                \"Individual splits larger than this won't be further divided.\"\n            ),\n            value=1000,\n        ),\n        MessageTextInput(\n            name=\"separator\",\n            display_name=\"Separator\",\n            info=(\n                \"The character to split on. Use \\\\n for newline. \"\n                \"Examples: \\\\n\\\\n for paragraphs, \\\\n for lines, . for sentences\"\n            ),\n            value=\"\\n\",\n        ),\n        MessageTextInput(\n            name=\"text_key\",\n            display_name=\"Text Key\",\n            info=\"The key to use for the text column.\",\n            value=\"text\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"keep_separator\",\n            display_name=\"Keep Separator\",\n            info=\"Whether to keep the separator in the output chunks and where to place it.\",\n            options=[\"False\", \"True\", \"Start\", \"End\"],\n            value=\"False\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"clean_output\",\n            display_name=\"Clean Output\",\n            info=\"When enabled, only the text column is included in the output. Metadata columns are removed.\",\n            value=False,\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Chunks\", name=\"dataframe\", method=\"split_text\"),\n    ]\n\n    def _docs_to_data(self, docs, *, clean: bool = False) -> list[Data]:\n        return [\n            Data(text=doc.page_content) if clean else Data(text=doc.page_content, data=doc.metadata) for doc in docs\n        ]\n\n    def _fix_separator(self, separator: str) -> str:\n        \"\"\"Fix common separator issues and convert to proper format.\"\"\"\n        if separator == \"/n\":\n            return \"\\n\"\n        if separator == \"/t\":\n            return \"\\t\"\n        return separator\n\n    def split_text_base(self):\n        separator = self._fix_separator(self.separator)\n        separator = unescape_string(separator)\n\n        if isinstance(self.data_inputs, DataFrame):\n            if not len(self.data_inputs):\n                msg = \"DataFrame is empty\"\n                raise TypeError(msg)\n\n            self.data_inputs.text_key = self.text_key\n            try:\n                documents = self.data_inputs.to_lc_documents()\n            except Exception as e:\n                msg = f\"Error converting DataFrame to documents: {e}\"\n                raise TypeError(msg) from e\n        elif isinstance(self.data_inputs, Message):\n            self.data_inputs = [self.data_inputs.to_data()]\n            return self.split_text_base()\n        else:\n            if not self.data_inputs:\n                msg = \"No data inputs provided\"\n                raise TypeError(msg)\n\n            documents = []\n            if isinstance(self.data_inputs, Data):\n                self.data_inputs.text_key = self.text_key\n                documents = [self.data_inputs.to_lc_document()]\n            else:\n                try:\n                    documents = [input_.to_lc_document() for input_ in self.data_inputs if isinstance(input_, Data)]\n                    if not documents:\n                        msg = f\"No valid Data inputs found in {type(self.data_inputs)}\"\n                        raise TypeError(msg)\n                except AttributeError as e:\n                    msg = f\"Invalid input type in collection: {e}\"\n                    raise TypeError(msg) from e\n        try:\n            # Convert string 'False'/'True' to boolean\n            keep_sep = self.keep_separator\n            if isinstance(keep_sep, str):\n                if keep_sep.lower() == \"false\":\n                    keep_sep = False\n                elif keep_sep.lower() == \"true\":\n                    keep_sep = True\n                # 'start' and 'end' are kept as strings\n\n            splitter = CharacterTextSplitter(\n                chunk_overlap=self.chunk_overlap,\n                chunk_size=self.chunk_size,\n                separator=separator,\n                keep_separator=keep_sep,\n            )\n            return splitter.split_documents(documents)\n        except Exception as e:\n            msg = f\"Error splitting text: {e}\"\n            raise TypeError(msg) from e\n\n    def split_text(self) -> DataFrame:\n        docs = self.split_text_base()\n        df = DataFrame(self._docs_to_data(docs, clean=self.clean_output))\n        return df if self.clean_output else df.smart_column_order()\n"
+                "value": "from langchain_text_splitters import CharacterTextSplitter, RecursiveCharacterTextSplitter\n\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.io import BoolInput, DropdownInput, HandleInput, IntInput, MessageTextInput, Output, TabInput\nfrom lfx.schema.data import Data\nfrom lfx.schema.dataframe import DataFrame\nfrom lfx.schema.message import Message\nfrom lfx.utils.util import unescape_string\n\n\nclass SplitTextComponent(Component):\n    display_name: str = \"Split Text\"\n    description: str = \"Split text into chunks based on specified criteria.\"\n    documentation: str = \"https://docs.langflow.org/split-text\"\n    icon = \"scissors-line-dashed\"\n    name = \"SplitText\"\n\n    inputs = [\n        TabInput(\n            name=\"mode\",\n            display_name=\"Mode\",\n            options=[\"Recursive\", \"Character\"],\n            value=\"Recursive\",\n            info=(\n                \"Recursive (default): Tries multiple separators in cascade to guarantee chunk size.\\n\"\n                \"Character: Splits by a single configurable separator, \"\n                \"then reassembles pieces up to the Chunk Size limit.\"\n            ),\n            real_time_refresh=True,\n        ),\n        HandleInput(\n            name=\"data_inputs\",\n            display_name=\"Input\",\n            info=\"The data with texts to split in chunks.\",\n            input_types=[\"Data\", \"DataFrame\", \"Message\"],\n            required=True,\n        ),\n        IntInput(\n            name=\"chunk_size\",\n            display_name=\"Chunk Size\",\n            info=\"The maximum number of characters in each chunk.\",\n            value=1000,\n        ),\n        IntInput(\n            name=\"chunk_overlap\",\n            display_name=\"Chunk Overlap\",\n            info=\"Number of characters to overlap between consecutive chunks.\",\n            value=200,\n        ),\n        DropdownInput(\n            name=\"separator\",\n            display_name=\"Separator\",\n            info=\"The character to split on.\",\n            options=[\"/n/n\", \"/n\", \".\", \",\", '\" \"', '\"\"', \"Custom\"],\n            value=\"/n/n\",\n            show=False,\n            real_time_refresh=True,\n        ),\n        MessageTextInput(\n            name=\"custom_separator\",\n            display_name=\"Custom Separator\",\n            info=\"Enter a custom separator. Use \\\\n for newline, \\\\t for tab.\",\n            value=\"\",\n            show=False,\n        ),\n        MessageTextInput(\n            name=\"recursive_separators\",\n            display_name=\"Separators\",\n            info='The characters to split on.\\nIf left empty defaults to [\"\\\\n\\\\n\", \"\\\\n\", \" \", \"\"].',\n            is_list=True,\n            show=False,\n        ),\n        MessageTextInput(\n            name=\"text_key\",\n            display_name=\"Text Key\",\n            info=\"The key to use for the text column.\",\n            value=\"text\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"keep_separator\",\n            display_name=\"Keep Separator\",\n            info=\"Whether to keep the separator in the output chunks and where to place it.\",\n            options=[\"False\", \"True\", \"Start\", \"End\"],\n            value=\"False\",\n            advanced=True,\n            show=False,\n        ),\n        BoolInput(\n            name=\"clean_output\",\n            display_name=\"Clean Output\",\n            info=\"When enabled, only the text column is included in the output. Metadata columns are removed.\",\n            value=False,\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"recursive_separators_bool\",\n            display_name=\"Recursive Separators\",\n            info=\"Enable to customize the separators used by the Recursive splitter.\",\n            value=False,\n            advanced=True,\n            real_time_refresh=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Chunks\", name=\"dataframe\", method=\"split_text\"),\n    ]\n\n    def update_build_config(self, build_config, field_value, field_name=None):\n        if field_name == \"mode\":\n            is_character = field_value == \"Character\"\n            build_config[\"separator\"][\"show\"] = is_character\n            build_config[\"custom_separator\"][\"show\"] = is_character and build_config[\"separator\"][\"value\"] == \"Custom\"\n            build_config[\"keep_separator\"][\"show\"] = is_character\n            build_config[\"recursive_separators_bool\"][\"show\"] = not is_character\n            build_config[\"recursive_separators\"][\"show\"] = (\n                not is_character and build_config[\"recursive_separators_bool\"][\"value\"]\n            )\n        elif field_name == \"separator\":\n            build_config[\"custom_separator\"][\"show\"] = field_value == \"Custom\"\n        elif field_name == \"recursive_separators_bool\":\n            build_config[\"recursive_separators\"][\"show\"] = field_value\n\n        return build_config\n\n    def _docs_to_data(self, docs, *, clean: bool = False) -> list[Data]:\n        result = []\n        for doc in docs:\n            if clean:\n                data_obj = Data(data={self.text_key: doc.page_content})\n            else:\n                data_obj = Data(data={self.text_key: doc.page_content, **doc.metadata})\n            result.append(data_obj)\n        return result\n\n    def _fix_separator(self, separator: str) -> str:\n        if separator == \"/n/n\":\n            return \"\\n\\n\"\n        if separator == \"/n\":\n            return \"\\n\"\n        if separator == \"/t\":\n            return \"\\t\"\n        if separator == '\" \"':\n            return \" \"\n        if separator == '\"\"':\n            return \"\"\n        return separator\n\n    def _parse_keep_separator(self, value: str) -> bool | str:\n        if value.lower() == \"false\":\n            return False\n        if value.lower() == \"true\":\n            return True\n        return value  # 'start' or 'end' kept as string\n\n    def _get_documents(self):\n        inputs = self.data_inputs\n\n        if isinstance(inputs, DataFrame):\n            if not len(inputs):\n                msg = \"DataFrame is empty\"\n                raise TypeError(msg)\n            inputs.text_key = self.text_key\n            try:\n                return inputs.to_lc_documents()\n            except Exception as e:\n                msg = f\"Error converting DataFrame to documents: {e}\"\n                raise TypeError(msg) from e\n\n        if isinstance(inputs, Message):\n            inputs = [inputs.to_data()]\n        elif isinstance(inputs, Data):\n            inputs = [inputs]\n        elif not inputs:\n            msg = \"No data inputs provided\"\n            raise TypeError(msg)\n\n        try:\n            return [item.to_lc_document() for item in inputs if isinstance(item, Data)]\n        except AttributeError as e:\n            msg = f\"Invalid input type in collection: {e}\"\n            raise TypeError(msg) from e\n\n    def _split_by_character(self, documents):\n        if self.separator == \"Custom\":\n            separator = unescape_string(self.custom_separator)\n        else:\n            separator = unescape_string(self._fix_separator(self.separator))\n        keep_sep = self._parse_keep_separator(self.keep_separator)\n        splitter = CharacterTextSplitter(\n            separator=separator,\n            chunk_size=self.chunk_size,\n            chunk_overlap=self.chunk_overlap,\n            keep_separator=keep_sep,\n            length_function=len,\n        )\n        return splitter.split_documents(documents)\n\n    def _split_by_recursive(self, documents):\n        separators = None\n        if self.recursive_separators_bool and self.recursive_separators:\n            separators = [unescape_string(s) for s in self.recursive_separators]\n        splitter = RecursiveCharacterTextSplitter(\n            chunk_size=self.chunk_size,\n            chunk_overlap=self.chunk_overlap,\n            separators=separators,\n        )\n        return splitter.split_documents(documents)\n\n    def split_text_base(self):\n        try:\n            documents = self._get_documents()\n            if self.mode == \"Recursive\":\n                return self._split_by_recursive(documents)\n            return self._split_by_character(documents)\n        except TypeError:\n            raise\n        except Exception as e:\n            msg = f\"Error splitting text: {e}\"\n            raise TypeError(msg) from e\n\n    def split_text(self) -> DataFrame:\n        docs = self.split_text_base()\n        df = DataFrame(self._docs_to_data(docs, clean=self.clean_output))\n        return df if self.clean_output else df.smart_column_order()\n"
+              },
+              "custom_separator": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "display_name": "Custom Separator",
+                "dynamic": false,
+                "info": "Enter a custom separator. Use \\n for newline, \\t for tab.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "custom_separator",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
               },
               "data_inputs": {
                 "advanced": false,
@@ -944,11 +969,80 @@
                 "type": "str",
                 "value": "False"
               },
+              "mode": {
+                "_input_type": "TabInput",
+                "advanced": false,
+                "display_name": "Mode",
+                "dynamic": false,
+                "info": "Recursive (default): Tries multiple separators in cascade to guarantee chunk size.\nCharacter: Splits by a single configurable separator, then reassembles pieces up to the Chunk Size limit.",
+                "name": "mode",
+                "options": [
+                  "Recursive",
+                  "Character"
+                ],
+                "override_skip": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "tab",
+                "value": "Recursive"
+              },
+              "recursive_separators": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "display_name": "Separators",
+                "dynamic": false,
+                "info": "The characters to split on.\nIf left empty defaults to [\"\\n\\n\", \"\\n\", \" \", \"\"].",
+                "input_types": [
+                  "Message"
+                ],
+                "list": true,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "recursive_separators",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "recursive_separators_bool": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Recursive Separators",
+                "dynamic": false,
+                "info": "Enable to customize the separators used by the Recursive splitter.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "recursive_separators_bool",
+                "override_skip": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": false
+              },
               "separator": {
                 "advanced": false,
                 "display_name": "Separator",
                 "dynamic": false,
-                "info": "The character to split on. Use \\n for newline. Examples: \\n\\n for paragraphs, \\n for lines, . for sentences",
+                "info": "The character to split on.",
                 "input_types": [
                   "Message"
                 ],
