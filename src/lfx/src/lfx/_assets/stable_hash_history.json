@@ -736,12 +736,12 @@
   },
   "OpenSearchVectorStoreComponent": {
     "versions": {
-      "0.3.0": "b9052a62e01e"
+      "0.3.0": "8584cc9e92e2"
     }
   },
   "OpenSearchVectorStoreComponentMultimodalMultiEmbedding": {
     "versions": {
-      "0.3.0": "41beb22fc465"
+      "0.3.0": "4e9b8a706420"
     }
   },
   "EmbeddingSimilarityComponent": {
