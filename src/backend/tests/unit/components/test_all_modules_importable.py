@@ -369,8 +369,6 @@ class TestDirectModuleImports:
                 if any(
                     pkg in error_msg
                     for pkg in [
-                        "agentics",
-                        "crewai",
                         "langchain_openai",
                         "langchain_anthropic",
                         "langchain_google",
