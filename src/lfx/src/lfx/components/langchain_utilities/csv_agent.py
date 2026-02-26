@@ -92,6 +92,7 @@ class CSVAgentComponent(LCAgentComponent):
             name="allow_dangerous_code",
             display_name="Allow Dangerous Code",
             value=False,
+            required=True,
             info=(
                 "SECURITY WARNING: Enabling this allows the agent to execute arbitrary Python code "
                 "on the server, which can lead to remote code execution vulnerabilities. "
