@@ -195,8 +195,7 @@ class TestClassifyIntent:
 
             call_kwargs = mock_execute.call_args[1]
             assert "session_id" not in call_kwargs, (
-                "session_id must not be passed to TranslationFlow "
-                "to prevent polluting conversation memory"
+                "session_id must not be passed to TranslationFlow to prevent polluting conversation memory"
             )
 
     @pytest.mark.asyncio
