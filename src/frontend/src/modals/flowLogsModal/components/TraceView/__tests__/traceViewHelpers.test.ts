@@ -1,13 +1,22 @@
 import {
   formatCost,
+  formatIOPreview,
   formatJsonData,
   formatSpanDetailLatency,
   formatSpanNodeLatency,
+  formatTimestamp,
   formatTokens,
+  formatTotalCost,
+  formatTotalLatency,
   getSpanIcon,
   getSpanTypeLabel,
+  getStatusIconProps,
   getStatusVariant,
 } from "../traceViewHelpers";
+
+jest.mock("@/utils/dateTime", () => ({
+  formatSmartTimestamp: jest.fn(() => "mocked-timestamp"),
+}));
 
 describe("traceViewHelpers", () => {
   describe("getSpanIcon", () => {
@@ -77,6 +86,80 @@ describe("traceViewHelpers", () => {
       const obj: { self?: unknown } = {};
       obj.self = obj;
       expect(formatJsonData(obj)).toBe("[object Object]");
+    });
+  });
+
+  describe("formatTotalCost", () => {
+    it("formats total cost", () => {
+      expect(formatTotalCost(0)).toBe("$0.00");
+      expect(formatTotalCost(0.005)).toBe("$0.005000");
+      expect(formatTotalCost(0.12)).toBe("$0.1200");
+    });
+  });
+
+  describe("formatTotalLatency", () => {
+    it("formats total latency", () => {
+      expect(formatTotalLatency(800)).toBe("800ms");
+      expect(formatTotalLatency(1200)).toBe("1.20s");
+    });
+  });
+
+  describe("formatTimestamp", () => {
+    it("delegates to formatSmartTimestamp", () => {
+      expect(formatTimestamp("2024-01-01T00:00:00")).toBe("mocked-timestamp");
+    });
+  });
+
+  describe("formatIOPreview", () => {
+    it("returns N/A for null", () => {
+      expect(formatIOPreview(null)).toBe("N/A");
+    });
+
+    it("truncates string input", () => {
+      const value = "a".repeat(200);
+      expect(formatIOPreview(value as unknown as Record<string, unknown>)).toBe(
+        `${"a".repeat(150)}...`,
+      );
+    });
+
+    it("returns value from known text fields", () => {
+      expect(formatIOPreview({ message: "hello" })).toBe("hello");
+    });
+
+    it("returns nested value from known text fields", () => {
+      expect(formatIOPreview({ nested: { text: "nested" } })).toBe("nested");
+    });
+
+    it("returns Empty for empty object", () => {
+      expect(formatIOPreview({})).toBe("Empty");
+    });
+
+    it("returns fallback on circular data", () => {
+      const obj: { self?: unknown } = {};
+      obj.self = obj;
+      expect(formatIOPreview(obj)).toBe("[Complex Object]");
+    });
+  });
+
+  describe("getStatusIconProps", () => {
+    it("maps statuses to icons", () => {
+      expect(getStatusIconProps("success")).toEqual({
+        colorClass: "text-status-green",
+        iconName: "CircleCheck",
+        shouldSpin: false,
+      });
+
+      expect(getStatusIconProps("error")).toEqual({
+        colorClass: "text-status-red",
+        iconName: "CircleX",
+        shouldSpin: false,
+      });
+
+      expect(getStatusIconProps("running")).toEqual({
+        colorClass: "text-muted-foreground",
+        iconName: "Loader2",
+        shouldSpin: true,
+      });
     });
   });
 });

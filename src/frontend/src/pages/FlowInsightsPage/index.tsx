@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import PageLayout from "@/components/common/pageLayout";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
@@ -10,11 +10,6 @@ export default function FlowInsightsPage() {
   const [searchParams] = useSearchParams();
   const navigate = useCustomNavigate();
   const flows = useFlowsManagerStore((state) => state.flows);
-
-  const defaultTab = useMemo(() => {
-    const tab = searchParams.get("tab");
-    return tab === "traces" ? "traces" : "logs";
-  }, [searchParams]);
 
   const initialTraceId = searchParams.get("traceId");
 
@@ -32,10 +27,12 @@ export default function FlowInsightsPage() {
       description="Inspect component executions and traces."
       backTo={id ? `/flow/${id}/` : undefined}
     >
-      <div className="flex w-full flex-1 flex-col overflow-hidden">
+      <div
+        className="flex w-full flex-1 flex-col overflow-hidden"
+        data-testid="flow-insights-page"
+      >
         <FlowInsightsContent
           flowId={id}
-          defaultTab={defaultTab}
           initialTraceId={initialTraceId}
           refreshOnMount
         />

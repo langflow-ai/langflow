@@ -26,23 +26,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useGetTracesQuery } from "@/controllers/API/queries/traces";
+import { TraceListItem } from "@/controllers/API/queries/traces/types";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { cn } from "@/utils/utils";
 import { createFlowTracesColumns } from "../config/flowTraceColumns";
-import { TraceDetailView, TraceView } from "./TraceView";
-
-interface TraceListItem {
-  id: string;
-  name: string;
-  status: string;
-  startTime: string;
-  endTime?: string;
-  totalLatencyMs: number;
-  totalTokens: number;
-  totalCost: number;
-  flowId: string;
-  sessionId?: string;
-}
+import { TraceView } from "./TraceView";
+import { TraceDetailView } from "./TraceView/TraceDetailView";
 
 const downloadJson = (fileName: string, value: unknown) => {
   const blob = new Blob([JSON.stringify(value, null, 2)], {
@@ -77,12 +66,9 @@ export function FlowInsightsContent({
   initialTraceId,
   refreshOnMount,
 }: {
-  defaultTab?: "logs" | "traces";
   flowId?: string | null;
   initialTraceId?: string | null;
   refreshOnMount?: boolean;
-  navigateOnTraceClick?: boolean;
-  onNavigate?: () => void;
 }): JSX.Element {
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const [pageIndex, setPageIndex] = useState(1);
@@ -353,6 +339,7 @@ export function FlowInsightsContent({
               key="Executions"
               readOnlyEdit
               className="h-max-full h-full w-full"
+              data-testid="flow-insights-trace-table"
               pagination={false}
               columnDefs={columns}
               autoSizeStrategy={{ type: "fitGridWidth" }}
@@ -386,6 +373,7 @@ export function FlowInsightsContent({
             "data-[state=open]:animate-in data-[state=closed]:animate-out " +
             "data-[state=open]:slide-in-from-right-1/2 data-[state=closed]:slide-out-to-right-1/2"
           }
+          data-testid="flow-insights-trace-panel"
         >
           <div className="flex h-full flex-col overflow-hidden">
             <div className="flex-1 overflow-hidden">

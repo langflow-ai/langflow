@@ -1,3 +1,5 @@
+import { formatSmartTimestamp } from "@/utils/dateTime";
+import { StatusIconProps } from "./traceViewTypes";
 import type { Span, SpanType } from "./types";
 
 export const getSpanIcon = (type: SpanType): string => {
@@ -70,4 +72,91 @@ export const formatJsonData = (data: Record<string, unknown>): string => {
   } catch {
     return String(data);
   }
+};
+
+export const formatTotalCost = (cost: number): string => {
+  if (cost === 0) return "$0.00";
+  if (cost < 0.01) return `$${cost.toFixed(6)}`;
+  return `$${cost.toFixed(4)}`;
+};
+
+export const formatTotalLatency = (ms: number): string => {
+  if (ms < 1000) return `${ms}ms`;
+  return `${(ms / 1000).toFixed(2)}s`;
+};
+
+export const formatTimestamp = (timestamp: string): string => {
+  return formatSmartTimestamp(timestamp);
+};
+
+export const formatIOPreview = (
+  data: Record<string, unknown> | null,
+): string => {
+  if (!data) return "N/A";
+
+  if (typeof data === "string") {
+    const strData = data as string;
+    return strData.length > 150 ? strData.substring(0, 150) + "..." : strData;
+  }
+
+  const textFields = [
+    "input_value",
+    "message",
+    "text",
+    "content",
+    "query",
+    "question",
+    "prompt",
+    "input",
+    "output",
+    "result",
+    "response",
+  ];
+
+  for (const field of textFields) {
+    const value = data[field];
+    if (value && typeof value === "string") {
+      return value.length > 150 ? value.substring(0, 150) + "..." : value;
+    }
+  }
+
+  for (const key of Object.keys(data)) {
+    const value = data[key];
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      const nestedData = value as Record<string, unknown>;
+      for (const field of textFields) {
+        if (nestedData[field] && typeof nestedData[field] === "string") {
+          const text = nestedData[field] as string;
+          return text.length > 150 ? text.substring(0, 150) + "..." : text;
+        }
+      }
+    }
+  }
+
+  try {
+    const str = JSON.stringify(data);
+    if (str === "{}") return "Empty";
+    return str.length > 150 ? str.substring(0, 150) + "..." : str;
+  } catch {
+    return "[Complex Object]";
+  }
+};
+
+export const getStatusIconProps = (
+  status: string | null | undefined,
+): StatusIconProps => {
+  const normalized = status ?? "";
+  const isSuccess = normalized === "success";
+  const isError = normalized === "error";
+  const isRunning = normalized === "running";
+
+  return {
+    colorClass: isError
+      ? "text-status-red"
+      : isSuccess
+        ? "text-status-green"
+        : "text-muted-foreground",
+    iconName: isRunning ? "Loader2" : isSuccess ? "CircleCheck" : "CircleX",
+    shouldSpin: isRunning,
+  };
 };

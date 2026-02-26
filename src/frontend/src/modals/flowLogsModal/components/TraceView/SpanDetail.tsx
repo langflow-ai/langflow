@@ -1,12 +1,12 @@
 import IconComponent from "@/components/common/genericIconComponent";
 import SimplifiedCodeTabComponent from "@/components/core/codeTabsComponent";
 import { Badge } from "@/components/ui/badge";
-import { getStatusIconProps } from "./statusHelpers";
 import {
   formatCost,
   formatJsonData,
   formatSpanDetailLatency,
   getSpanTypeLabel,
+  getStatusIconProps,
 } from "./traceViewHelpers";
 import type { SpanDetailProps } from "./traceViewTypes";
 
@@ -17,7 +17,10 @@ import type { SpanDetailProps } from "./traceViewTypes";
 export function SpanDetail({ span }: SpanDetailProps) {
   if (!span) {
     return (
-      <div className="flex h-full items-center justify-center text-muted-foreground">
+      <div
+        className="flex h-full items-center justify-center text-muted-foreground"
+        data-testid="span-detail-empty"
+      >
         <div className="text-center">
           <IconComponent name="MousePointer" className="mx-auto mb-2 h-8 w-8" />
           <p className="text-sm">Select a span to view details</p>
@@ -33,10 +36,11 @@ export function SpanDetail({ span }: SpanDetailProps) {
 
   const { colorClass, iconName, shouldSpin } = getStatusIconProps(span.status);
 
-  console.log(span);
-
   return (
-    <div className="flex h-full flex-col overflow-hidden">
+    <div
+      className="flex h-full flex-col overflow-hidden"
+      data-testid="span-detail"
+    >
       {/* Header */}
       <div className="border-b border-border px-4 py-3">
         <div className="flex items-center gap-2">

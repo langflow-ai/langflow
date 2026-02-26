@@ -42,6 +42,71 @@ def _sanitize_query_string(value: str | None, max_len: int = 50) -> str | None:
     return cleaned.strip()[:max_len] if cleaned else None
 
 
+async def _fetch_trace_token_totals(session, trace_ids: list[UUID]) -> dict[str, int]:
+    token_map: dict[str, int] = {}
+    if not trace_ids:
+        return token_map
+
+    parent_ids_subq = (
+        select(SpanTable.parent_span_id)
+        .where(SpanTable.parent_span_id != None)  # noqa: E711
+        .where(col(SpanTable.trace_id).in_(trace_ids))
+    ).subquery()
+
+    token_stmt = (
+        select(
+            SpanTable.trace_id,
+            func.coalesce(func.sum(SpanTable.total_tokens), 0).label("sum_tokens"),
+        )
+        .where(col(SpanTable.trace_id).in_(trace_ids))
+        .where(~col(SpanTable.id).in_(select(parent_ids_subq.c.parent_span_id)))
+        .group_by(col(SpanTable.trace_id))
+    )
+    token_rows = (await session.exec(token_stmt)).all()
+    for row in token_rows:
+        token_map[str(row[0])] = int(row[1] or 0)
+
+    return token_map
+
+
+async def _fetch_trace_io_map(session, trace_ids: list[UUID]) -> dict[str, dict[str, Any]]:
+    io_map: dict[str, dict[str, Any]] = {}
+    if not trace_ids:
+        return io_map
+
+    all_spans_stmt = select(SpanTable).where(col(SpanTable.trace_id).in_(trace_ids))
+    all_spans = (await session.exec(all_spans_stmt)).all()
+
+    spans_by_trace: dict[str, list[SpanTable]] = {}
+    for span in all_spans:
+        trace_id_str = str(span.trace_id)
+        spans_by_trace.setdefault(trace_id_str, []).append(span)
+
+    for trace_id_str, spans in spans_by_trace.items():
+        chat_input_span = next((s for s in spans if "Chat Input" in s.name), None)
+        input_value = None
+        if chat_input_span and chat_input_span.inputs:
+            input_value = chat_input_span.inputs.get("input_value")
+
+        root_spans = [s for s in spans if s.parent_span_id is None and s.end_time]
+        output_value = None
+        if root_spans:
+            root_spans_sorted = sorted(
+                root_spans,
+                key=lambda s: s.end_time or datetime.min.replace(tzinfo=timezone.utc),
+                reverse=True,
+            )
+            if root_spans_sorted and root_spans_sorted[0].outputs:
+                output_value = root_spans_sorted[0].outputs
+
+        io_map[trace_id_str] = {
+            "input": {"input_value": input_value} if input_value else None,
+            "output": output_value,
+        }
+
+    return io_map
+
+
 async def _fetch_traces(
     user_id: UUID,
     flow_id: UUID | None,
@@ -104,68 +169,10 @@ async def _fetch_traces(
 
             # Get aggregated token counts per trace (leaf spans only to avoid double-counting)
             trace_ids = [trace.id for trace in traces]
-            token_map: dict[str, int] = {}
-            if trace_ids:
-                # Subquery: IDs of spans that are parents (i.e. have children)
-                parent_ids_subq = (
-                    select(SpanTable.parent_span_id)
-                    .where(SpanTable.parent_span_id != None)  # noqa: E711
-                    .where(col(SpanTable.trace_id).in_(trace_ids))
-                ).subquery()
-
-                token_stmt = (
-                    select(
-                        SpanTable.trace_id,
-                        func.coalesce(func.sum(SpanTable.total_tokens), 0).label("sum_tokens"),
-                    )
-                    .where(col(SpanTable.trace_id).in_(trace_ids))
-                    .where(~col(SpanTable.id).in_(select(parent_ids_subq.c.parent_span_id)))
-                    .group_by(col(SpanTable.trace_id))
-                )
-                token_rows = (await session.exec(token_stmt)).all()
-                for row in token_rows:
-                    token_map[str(row[0])] = int(row[1] or 0)
+            token_map = await _fetch_trace_token_totals(session, trace_ids)
 
             # Fetch Chat Input span input_value and final output for each trace
-            io_map: dict[str, dict[str, Any]] = {}
-            if trace_ids:
-                # Get all spans for these traces
-                all_spans_stmt = select(SpanTable).where(col(SpanTable.trace_id).in_(trace_ids))
-                all_spans = (await session.exec(all_spans_stmt)).all()
-
-                # Group spans by trace_id
-                spans_by_trace: dict[str, list[SpanTable]] = {}
-                for span in all_spans:
-                    trace_id_str = str(span.trace_id)
-                    if trace_id_str not in spans_by_trace:
-                        spans_by_trace[trace_id_str] = []
-                    spans_by_trace[trace_id_str].append(span)
-
-                # For each trace, find Chat Input span and final output
-                for trace_id_str, spans in spans_by_trace.items():
-                    # Find Chat Input span (by name)
-                    chat_input_span = next((s for s in spans if "Chat Input" in s.name), None)
-                    input_value = None
-                    if chat_input_span and chat_input_span.inputs:
-                        input_value = chat_input_span.inputs.get("input_value")
-
-                    # Find final output from root spans (ordered by end_time)
-                    root_spans = [s for s in spans if s.parent_span_id is None and s.end_time]
-                    output_value = None
-                    if root_spans:
-                        # Sort by end_time descending to get the latest
-                        root_spans_sorted = sorted(
-                            root_spans,
-                            key=lambda s: s.end_time or datetime.min.replace(tzinfo=timezone.utc),
-                            reverse=True,
-                        )
-                        if root_spans_sorted and root_spans_sorted[0].outputs:
-                            output_value = root_spans_sorted[0].outputs
-
-                    io_map[trace_id_str] = {
-                        "input": {"input_value": input_value} if input_value else None,
-                        "output": output_value,
-                    }
+            io_map = await _fetch_trace_io_map(session, trace_ids)
 
             # Convert to response format
             trace_list = []

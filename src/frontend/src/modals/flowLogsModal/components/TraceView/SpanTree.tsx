@@ -64,7 +64,12 @@ export function SpanTree({
   );
 
   return (
-    <div className="flex flex-col" role="tree" aria-label="Trace spans">
+    <div
+      className="flex flex-col"
+      role="tree"
+      aria-label="Trace spans"
+      data-testid="span-tree"
+    >
       {spans.map((span) => renderSpan(span, 0))}
     </div>
   );

@@ -43,7 +43,7 @@ export interface Trace {
   totalCost: number;
   flowId: string;
   sessionId: string;
-  input: Record<string, unknown> | null; // First input in chronological order
-  output: Record<string, unknown> | null; // Last output in chronological order
+  input: Record<string, unknown> | null;
+  output: Record<string, unknown> | null;
   spans: Span[];
 }

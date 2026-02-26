@@ -18,6 +18,7 @@ const LogCanvasControls = () => {
         variant="primary"
         size="sm"
         className="flex items-center !gap-1.5"
+        data-testid="open-flow-insights"
         onClick={() => {
           if (!id) return;
           navigate(`/flow/${id}/insights`);

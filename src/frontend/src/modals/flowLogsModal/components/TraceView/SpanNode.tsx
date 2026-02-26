@@ -1,11 +1,11 @@
 import IconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/utils/utils";
-import { getStatusIconProps } from "./statusHelpers";
 import {
   formatSpanNodeLatency,
   formatTokens,
   getSpanIcon,
+  getStatusIconProps,
   getStatusVariant,
 } from "./traceViewHelpers";
 import type { SpanNodeProps } from "./traceViewTypes";
@@ -36,6 +36,7 @@ export function SpanNode({
       )}
       style={{ paddingLeft: `${depth * 16 + 8}px` }}
       onClick={onSelect}
+      data-testid={`span-node-${span.id}`}
       role="treeitem"
       aria-selected={isSelected}
       aria-expanded={hasChildren ? isExpanded : undefined}
