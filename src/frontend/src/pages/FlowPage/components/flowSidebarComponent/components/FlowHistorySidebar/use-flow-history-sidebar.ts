@@ -253,7 +253,6 @@ export function useFlowHistorySidebar(flowId: string) {
             edges: updatedFlow.data?.edges ?? [],
           },
         };
-        processFlows([flow]);
         applyFlowToCanvas(flow);
         clearPreview();
         setSuccessData({ title: "Version restored" });

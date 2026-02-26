@@ -20,12 +20,7 @@ import useApplyFlowToCanvas from "@/hooks/flows/use-apply-flow-to-canvas";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useHistoryPreviewStore from "@/stores/historyPreviewStore";
-import {
-  downloadFlow,
-  processFlows,
-  removeApiKeys,
-} from "@/utils/reactflowUtils";
-import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
+import { downloadFlow, removeApiKeys } from "@/utils/reactflowUtils";
 
 interface PreviewVersionMenuProps {
   historyId: string;
@@ -45,7 +40,6 @@ export default function PreviewVersionMenu({
   const clearPreview = useHistoryPreviewStore((s) => s.clearPreview);
   const setPreview = useHistoryPreviewStore((s) => s.setPreview);
   const currentFlow = useFlowStore((s) => s.currentFlow);
-  const originalStoreRef_nodes = useFlowStore((s) => s.nodes);
 
   const { mutate: deleteEntry, isPending: isDeleting } =
     useDeleteHistoryEntry();
@@ -75,7 +69,6 @@ export default function PreviewVersionMenu({
           edges: updatedFlow.data?.edges ?? [],
         },
       };
-      processFlows([flow]);
       applyFlowToCanvas(flow);
       clearPreview();
       setSuccessData({ title: "Version restored" });

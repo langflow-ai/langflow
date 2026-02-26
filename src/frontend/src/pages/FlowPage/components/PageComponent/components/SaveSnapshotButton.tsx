@@ -31,28 +31,26 @@ export default function SaveSnapshotButton({
 
   const handleSave = () => {
     setIsSavingDisplay(true);
-    setTimeout(() => {
-      createSnapshot(
-        { flowId, description: null },
-        {
-          onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["useGetFlowHistory"] });
-            setSuccessData({ title: "Version saved" });
-            setIsSavingDisplay(false);
-            setSavedSuccess(true);
-            setTimeout(() => setSavedSuccess(false), 1500);
-          },
-          onError: (err: any) => {
-            const detail = err?.response?.data?.detail;
-            setErrorData({
-              title: "Failed to save version",
-              ...(detail ? { list: [detail] } : {}),
-            });
-            setIsSavingDisplay(false);
-          },
+    createSnapshot(
+      { flowId, description: null },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ["useGetFlowHistory"] });
+          setSuccessData({ title: "Version saved" });
+          setIsSavingDisplay(false);
+          setSavedSuccess(true);
+          setTimeout(() => setSavedSuccess(false), 1500);
         },
-      );
-    }, 2000);
+        onError: (err: any) => {
+          const detail = err?.response?.data?.detail;
+          setErrorData({
+            title: "Failed to save version",
+            ...(detail ? { list: [detail] } : {}),
+          });
+          setIsSavingDisplay(false);
+        },
+      },
+    );
   };
 
   return (

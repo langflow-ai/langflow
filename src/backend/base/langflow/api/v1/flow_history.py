@@ -41,7 +41,7 @@ router = APIRouter(prefix="/flows/{flow_id}/history", tags=["Flow History"])
 def strip_history_data(data: dict | None) -> dict | None:
     """Strip API keys from a history entry's flow data dict.
 
-    Returns None on unexpected failure to prevent secret leakage.
+    Returns None if stripping fails, to prevent accidental secret leakage.
     """
     if data is None:
         return None
