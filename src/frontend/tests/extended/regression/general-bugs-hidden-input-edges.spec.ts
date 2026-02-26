@@ -29,15 +29,9 @@ test(
     await openAdvancedOptions(page);
 
     const input_value = page.getByTestId("showinput_value");
-    await expect(input_value).toBeVisible();
 
-    await expect(input_value).toBeDisabled();
-
-    await input_value.hover();
-
-    await expect(
-      page.getByText("Cannot change visibility of connected handles"),
-    ).toBeVisible();
+    // Connected fields should not appear in edit mode
+    await expect(input_value).toBeHidden();
 
     await closeAdvancedOptions(page);
 
@@ -53,6 +47,8 @@ test(
       .click();
     await openAdvancedOptions(page);
 
+    // After disconnecting, the field should appear and be enabled
+    await expect(input_value).toBeVisible();
     await expect(input_value).toBeEnabled();
 
     await input_value.click();

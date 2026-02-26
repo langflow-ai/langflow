@@ -292,6 +292,8 @@ test(
 
     await page.getByRole("button", { name: "Playground", exact: true }).click();
 
+    // Create a new session first
+    await page.getByTestId("new-chat").click();
     await page.waitForSelector("text=Run Flow", {
       timeout: 30000,
     });
@@ -306,7 +308,7 @@ test(
       await expect(page.getByText('{"test":"content"}')).toBeVisible({
         timeout: 10000,
       });
-      await page.getByTestId("playground-btn-flow-io").click();
+      await page.getByTestId("playground-close-button").click();
       await page.getByTestId("button_open_file_management").click();
       await page.getByTestId(`context-menu-button-${renamedJsonFile}`).click();
       await page.getByTestId("btn-delete-file").click();
@@ -369,10 +371,14 @@ test(
       await page
         .getByRole("button", { name: "Playground", exact: true })
         .click();
-      await page.getByTestId("chat-header-more-menu").click();
-      await page.getByTestId("clear-chat-option").click();
+      // Use the chat header more menu to clear chat (stays in fullscreen)
+      await page
+        .locator('[data-testid^="session-"][data-testid$="-more-menu"]')
+        .last()
+        .click();
+      // await page.getByTestId("clear-chat-option").click();
       // await page.getByTestId("icon-MoreHorizontal").last().click();
-      // await page.getByText("Delete", { exact: true }).last().click();
+      await page.getByText("Delete", { exact: true }).last().click();
 
       await page.waitForSelector("text=Run Flow", {
         timeout: 30000,
@@ -905,10 +911,16 @@ test(
     await adjustScreenView(page);
 
     // Connect Text Input to Read File
-    await page
-      .getByTestId("handle-textinput-shownode-output text-right")
-      .click();
-    await page.getByTestId("handle-file-shownode-file path-left").click();
+    const sourceHandle = page.getByTestId(
+      "handle-textinput-shownode-output text-right",
+    );
+    const targetHandle = page.getByTestId(
+      "handle-file-shownode-file path-left",
+    );
+    await sourceHandle.waitFor({ state: "visible", timeout: 10000 });
+    await targetHandle.waitFor({ state: "visible", timeout: 10000 });
+    await sourceHandle.click();
+    await targetHandle.click();
 
     // Add Chat Output Component
     await page.getByTestId("sidebar-search-input").click();
@@ -951,13 +963,17 @@ test(
     await expect(page.getByText(fileContent1)).toBeVisible();
     await expect(page.getByText(fileContent2)).toBeVisible();
 
-    await page.getByRole("button", { name: "Playground", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Playground", exact: true })
+      .click({ force: true });
 
     // Test Case 2: Single File
     const singleFile = `${folderId}/${file1}.txt`;
     await page.getByTestId("textarea_str_input_value").fill(singleFile);
 
-    await page.getByRole("button", { name: "Playground", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Playground", exact: true })
+      .click({ force: true });
 
     await page.waitForSelector("text=Run Flow", {
       timeout: 30000,
@@ -965,6 +981,6 @@ test(
 
     await page.getByText("Run Flow", { exact: true }).last().click();
 
-    await expect(page.getByText(fileContent1)).toBeVisible();
+    await expect(page.getByText(fileContent1).last()).toBeVisible();
   },
 );

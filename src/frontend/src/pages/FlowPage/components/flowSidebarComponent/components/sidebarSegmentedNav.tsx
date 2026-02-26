@@ -75,7 +75,7 @@ const SidebarSegmentedNav = () => {
         {NAV_ITEMS.map((item) => (
           <div key={item.id}>
             {item.id === "add_note" && <Separator className="w-full" />}
-            <SidebarMenuItem className="px-1">
+            <SidebarMenuItem className="px-1 pt-1">
               <ShadTooltip content={item.tooltip} side="right">
                 <SidebarMenuButton
                   size="md"

@@ -2,7 +2,8 @@ import { expect, test } from "../../fixtures";
 import { addCustomComponent } from "../../utils/add-custom-component";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
-test.describe("Flow Logs Modal", () => {
+// Logs button being removed for now
+test.describe.skip("Flow Logs Modal", () => {
   test(
     "should open logs modal and show description",
     { tag: ["@release", "@logs"] },

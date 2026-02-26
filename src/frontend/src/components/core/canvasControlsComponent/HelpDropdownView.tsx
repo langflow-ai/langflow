@@ -6,8 +6,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
-import DropdownControlButton from "./DropdownControlButton";
 import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
+import DropdownControlButton from "./DropdownControlButton";
 
 export type HelpDropdownViewProps = {
   isOpen: boolean;
@@ -96,10 +96,10 @@ export const HelpDropdownView = ({
         />
         {ENABLE_INSPECTION_PANEL && (
           <DropdownControlButton
-            iconName={inspectionPanelVisible ? "PanelRight" : "PanelRightClose"}
+            iconName="PanelRightClose"
             testId="canvas_controls_dropdown_toggle_inspector"
-            onClick={onToggleInspectionPanel!}
-            toggleValue={inspectionPanelVisible!}
+            onClick={onToggleInspectionPanel}
+            toggleValue={inspectionPanelVisible}
             label="Show Inspector Panel"
             hasToogle={true}
           />
