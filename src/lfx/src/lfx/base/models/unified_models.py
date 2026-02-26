@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib
 from functools import lru_cache
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
@@ -22,40 +23,129 @@ from lfx.log.logger import logger
 from lfx.services.deps import get_variable_service, session_scope
 from lfx.utils.async_helpers import run_until_complete
 
+# Mapping from class name to (module_path, attribute_name, install_hint | None).
+# Only the provider package that is actually needed gets imported at runtime.
+# install_hint overrides the auto-derived pip name for internal module paths.
+_MODEL_CLASS_IMPORTS: dict[str, tuple[str, str, str | None]] = {
+    "ChatOpenAI": ("langchain_openai", "ChatOpenAI", None),
+    "ChatAnthropic": ("langchain_anthropic", "ChatAnthropic", None),
+    "ChatGoogleGenerativeAIFixed": (
+        "lfx.base.models.google_generative_ai_model",
+        "ChatGoogleGenerativeAIFixed",
+        "langchain-google-genai",
+    ),
+    "ChatOllama": ("langchain_ollama", "ChatOllama", None),
+    "ChatWatsonx": ("langchain_ibm", "ChatWatsonx", None),
+}
 
-@lru_cache(maxsize=1)
-def get_model_classes():
-    """Lazy load model classes to avoid importing optional dependencies at module level."""
-    from langchain_anthropic import ChatAnthropic  # type: ignore  # noqa: PGH003
-    from langchain_ibm import ChatWatsonx  # type: ignore  # noqa: PGH003
-    from langchain_ollama import ChatOllama  # type: ignore  # noqa: PGH003
-    from langchain_openai import ChatOpenAI  # type: ignore  # noqa: PGH003
+_EMBEDDING_CLASS_IMPORTS: dict[str, tuple[str, str, str | None]] = {
+    "OpenAIEmbeddings": ("langchain_openai", "OpenAIEmbeddings", None),
+    "GoogleGenerativeAIEmbeddings": ("langchain_google_genai", "GoogleGenerativeAIEmbeddings", None),
+    "OllamaEmbeddings": ("langchain_ollama", "OllamaEmbeddings", None),
+    "WatsonxEmbeddings": ("langchain_ibm", "WatsonxEmbeddings", None),
+}
 
-    from lfx.base.models.google_generative_ai_model import ChatGoogleGenerativeAIFixed
+# Canonical mapping of provider name → embedding class name.
+# Used by EmbeddingModelComponent and by flow_requirements to resolve
+# which PyPI package a given embedding provider needs at runtime.
+EMBEDDING_PROVIDER_CLASS_MAPPING: dict[str, str] = {
+    "OpenAI": "OpenAIEmbeddings",
+    "Google Generative AI": "GoogleGenerativeAIEmbeddings",
+    "Ollama": "OllamaEmbeddings",
+    "IBM WatsonX": "WatsonxEmbeddings",
+    "IBM watsonx.ai": "WatsonxEmbeddings",  # Alias used by MODEL_PROVIDERS_DICT
+}
 
-    return {
-        "ChatOpenAI": ChatOpenAI,
-        "ChatAnthropic": ChatAnthropic,
-        "ChatGoogleGenerativeAIFixed": ChatGoogleGenerativeAIFixed,
-        "ChatOllama": ChatOllama,
-        "ChatWatsonx": ChatWatsonx,
-    }
+_model_class_cache: dict[str, type] = {}
+_embedding_class_cache: dict[str, type] = {}
 
 
-@lru_cache(maxsize=1)
-def get_embedding_classes():
-    """Lazy load embedding classes to avoid importing optional dependencies at module level."""
-    from langchain_google_genai import GoogleGenerativeAIEmbeddings  # type: ignore  # noqa: PGH003
-    from langchain_ibm import WatsonxEmbeddings  # type: ignore  # noqa: PGH003
-    from langchain_ollama import OllamaEmbeddings  # type: ignore  # noqa: PGH003
-    from langchain_openai import OpenAIEmbeddings  # type: ignore  # noqa: PGH003
+def get_model_class(class_name: str) -> type:
+    """Import and return a single model class by name.
 
-    return {
-        "GoogleGenerativeAIEmbeddings": GoogleGenerativeAIEmbeddings,
-        "OpenAIEmbeddings": OpenAIEmbeddings,
-        "OllamaEmbeddings": OllamaEmbeddings,
-        "WatsonxEmbeddings": WatsonxEmbeddings,
-    }
+    Only imports the provider package that is actually needed.
+    """
+    if class_name in _model_class_cache:
+        return _model_class_cache[class_name]
+
+    import_info = _MODEL_CLASS_IMPORTS.get(class_name)
+    if import_info is None:
+        msg = f"Unknown model class: {class_name}"
+        raise ValueError(msg)
+
+    module_path, attr_name, install_hint = import_info
+    pkg_hint = install_hint or module_path.split(".")[0].replace("_", "-")
+    try:
+        module = importlib.import_module(module_path)
+    except ImportError as exc:
+        msg = (
+            f"Could not import '{module_path}' for model class '{class_name}'. "
+            f"Install the missing package (e.g. uv pip install {pkg_hint})."
+        )
+        raise ImportError(msg) from exc
+    try:
+        cls = getattr(module, attr_name)
+    except AttributeError as exc:
+        msg = (
+            f"Module '{module_path}' was imported but does not have attribute '{attr_name}'. "
+            f"This may indicate a version mismatch. "
+        )
+        raise AttributeError(msg) from exc
+    _model_class_cache[class_name] = cls
+    return cls
+
+
+def get_embedding_class(class_name: str) -> type:
+    """Import and return a single embedding class by name.
+
+    Only imports the provider package that is actually needed.
+    """
+    if class_name in _embedding_class_cache:
+        return _embedding_class_cache[class_name]
+
+    import_info = _EMBEDDING_CLASS_IMPORTS.get(class_name)
+    if import_info is None:
+        msg = f"Unknown embedding class: {class_name}"
+        raise ValueError(msg)
+
+    module_path, attr_name, install_hint = import_info
+    pkg_hint = install_hint or module_path.split(".")[0].replace("_", "-")
+    try:
+        module = importlib.import_module(module_path)
+    except ImportError as exc:
+        msg = (
+            f"Could not import '{module_path}' for embedding class '{class_name}'. "
+            f"Install the missing package (e.g. uv pip install {pkg_hint})."
+        )
+        raise ImportError(msg) from exc
+    try:
+        cls = getattr(module, attr_name)
+    except AttributeError as exc:
+        msg = (
+            f"Module '{module_path}' was imported but does not have attribute '{attr_name}'. "
+            f"This may indicate a version mismatch. "
+        )
+        raise AttributeError(msg) from exc
+    _embedding_class_cache[class_name] = cls
+    return cls
+
+
+def get_model_classes() -> dict[str, type]:
+    """Return all model classes, importing every provider package.
+
+    .. deprecated::
+        Use :func:`get_model_class` instead to import only the provider you need.
+    """
+    return {name: get_model_class(name) for name in _MODEL_CLASS_IMPORTS}
+
+
+def get_embedding_classes() -> dict[str, type]:
+    """Return all embedding classes, importing every provider package.
+
+    .. deprecated::
+        Use :func:`get_embedding_class` instead to import only the provider you need.
+    """
+    return {name: get_embedding_class(name) for name in _EMBEDDING_CLASS_IMPORTS}
 
 
 @lru_cache(maxsize=1)
@@ -547,21 +637,8 @@ def get_language_model_options(
             pass
 
     options = []
-    model_class_mapping = {
-        "OpenAI": "ChatOpenAI",
-        "Anthropic": "ChatAnthropic",
-        "Google Generative AI": "ChatGoogleGenerativeAIFixed",
-        "Ollama": "ChatOllama",
-        "IBM WatsonX": "ChatWatsonx",
-    }
-
-    api_key_param_mapping = {
-        "OpenAI": "api_key",
-        "Anthropic": "api_key",
-        "Google Generative AI": "google_api_key",
-        "Ollama": "base_url",
-        "IBM WatsonX": "apikey",
-    }
+    model_class_mapping = {p: m["model_class"] for p, m in model_provider_metadata.items()}
+    api_key_param_mapping = {p: m["api_key_param"] for p, m in model_provider_metadata.items()}
 
     # Track which providers have models
     providers_with_models = set()
@@ -734,12 +811,6 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
             pass
 
     options = []
-    embedding_class_mapping = {
-        "OpenAI": "OpenAIEmbeddings",
-        "Google Generative AI": "GoogleGenerativeAIEmbeddings",
-        "Ollama": "OllamaEmbeddings",
-        "IBM WatsonX": "WatsonxEmbeddings",
-    }
 
     # Provider-specific param mappings
     param_mappings = {
@@ -817,7 +888,7 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
                 "category": provider,
                 "provider": provider,
                 "metadata": {
-                    "embedding_class": embedding_class_mapping.get(provider, "OpenAIEmbeddings"),
+                    "embedding_class": EMBEDDING_PROVIDER_CLASS_MAPPING.get(provider, "OpenAIEmbeddings"),
                     "param_mapping": param_mappings.get(provider, param_mappings["OpenAI"]),
                     "model_type": "embeddings",  # Mark as embedding model
                 },
@@ -828,7 +899,7 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
     # Add disabled providers (providers that exist in metadata but have no enabled models)
     if user_id:
         for provider, metadata in model_provider_metadata.items():
-            if provider not in providers_with_models and provider in embedding_class_mapping:
+            if provider not in providers_with_models and provider in EMBEDDING_PROVIDER_CLASS_MAPPING:
                 # This provider has no enabled models and supports embeddings, add it as a disabled provider entry
                 options.append(
                     {
@@ -873,22 +944,9 @@ def normalize_model_names_to_dicts(model_names: list[str] | str) -> list[dict[st
         # If we can't get models, just create basic dicts
         return [{"name": name} for name in model_names]
 
-    # Model class mapping for runtime metadata
-    model_class_mapping = {
-        "OpenAI": "ChatOpenAI",
-        "Anthropic": "ChatAnthropic",
-        "Google Generative AI": "ChatGoogleGenerativeAIFixed",
-        "Ollama": "ChatOllama",
-        "IBM WatsonX": "ChatWatsonx",
-    }
-
-    api_key_param_mapping = {
-        "OpenAI": "api_key",
-        "Anthropic": "api_key",
-        "Google Generative AI": "google_api_key",
-        "Ollama": "base_url",
-        "IBM WatsonX": "apikey",
-    }
+    # Derive mappings from the canonical provider metadata
+    model_class_mapping = {p: m["model_class"] for p, m in model_provider_metadata.items()}
+    api_key_param_mapping = {p: m["api_key_param"] for p, m in model_provider_metadata.items()}
 
     # Build a lookup map of model_name -> full model data with runtime metadata
     model_lookup = {}
@@ -1012,10 +1070,11 @@ def get_llm(
         raise ValueError(msg)
 
     # Get model class from metadata
-    model_class = get_model_classes().get(metadata.get("model_class"))
-    if model_class is None:
+    model_class_name = metadata.get("model_class")
+    if not model_class_name:
         msg = f"No model class defined for {model_name}"
         raise ValueError(msg)
+    model_class = get_model_class(model_class_name)
     model_name_param = metadata.get("model_name_param", "model")
 
     # Check if this is a reasoning model that doesn't support temperature
@@ -1042,6 +1101,10 @@ def get_llm(
                 kwargs[max_tokens_param] = max_tokens_int
         except (TypeError, ValueError):
             pass  # Skip invalid max_tokens (e.g. empty string from form input)
+
+    # Enable streaming usage for providers that support it
+    if provider in ["OpenAI", "Anthropic"]:
+        kwargs["stream_usage"] = True
 
     # Add provider-specific parameters
     if provider == "IBM WatsonX":

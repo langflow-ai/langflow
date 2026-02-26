@@ -126,7 +126,7 @@
   },
   "AzureOpenAIModel": {
     "versions": {
-      "0.3.0": "cc8d003556d8"
+      "0.3.0": "2ba26202203e"
     }
   },
   "AzureOpenAIEmbeddings": {
@@ -576,7 +576,7 @@
   },
   "APIRequest": {
     "versions": {
-      "0.3.0": "7f013aba27c9"
+      "0.3.0": "f102aadfb328"
     }
   },
   "CSVtoData": {
@@ -706,7 +706,7 @@
   },
   "ChunkDoclingDocument": {
     "versions": {
-      "0.3.0": "d84ce7ffc6cb"
+      "0.3.0": "49d762d97039"
     }
   },
   "DoclingInline": {
@@ -716,7 +716,7 @@
   },
   "DoclingRemote": {
     "versions": {
-      "0.3.0": "5723576d00e5"
+      "0.3.0": "409d771a961e"
     }
   },
   "ExportDoclingDocument": {
@@ -1166,7 +1166,7 @@
   },
   "BatchRunComponent": {
     "versions": {
-      "0.3.0": "53935e54dfe7"
+      "0.3.0": "8b1ec3b03475"
     }
   },
   "Smart Transform": {
@@ -1231,7 +1231,7 @@
   },
   "EmbeddingModel": {
     "versions": {
-      "0.3.0": "3e0b64afc9a2"
+      "0.3.0": "c5ce0982da48"
     }
   },
   "LanguageModelComponent": {
@@ -1371,7 +1371,7 @@
   },
   "DataOperations": {
     "versions": {
-      "0.3.0": "f5d9680f8644"
+      "0.3.0": "1e5bfda1706b"
     }
   },
   "DataToDataFrame": {
