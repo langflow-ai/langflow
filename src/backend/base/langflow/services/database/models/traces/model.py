@@ -22,18 +22,23 @@ class SpanType(str, Enum):
 
 
 class SpanStatus(str, Enum):
-    """Status of a span execution."""
+    """OpenTelemetry status codes.
 
-    SUCCESS = "success"
+    - UNSET: Default status, span has not ended yet
+    - OK: Span completed successfully
+    - ERROR: Span completed with an error
+    """
+
+    UNSET = "unset"
+    OK = "ok"
     ERROR = "error"
-    RUNNING = "running"
 
 
 class TraceBase(SQLModel):
     """Base model for traces."""
 
     name: str = Field(nullable=False, description="Name of the trace (usually flow name)")
-    status: SpanStatus = Field(default=SpanStatus.RUNNING, description="Overall trace status")
+    status: SpanStatus = Field(default=SpanStatus.UNSET, description="Overall trace status")
     start_time: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         description="When the trace started",
@@ -95,7 +100,7 @@ class SpanBase(SQLModel):
 
     name: str = Field(nullable=False, description="Name of the span (component/operation name)")
     span_type: SpanType = Field(default=SpanType.CHAIN, description="Type of operation")
-    status: SpanStatus = Field(default=SpanStatus.RUNNING, description="Execution status")
+    status: SpanStatus = Field(default=SpanStatus.UNSET, description="Execution status")
     start_time: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         description="When the span started",

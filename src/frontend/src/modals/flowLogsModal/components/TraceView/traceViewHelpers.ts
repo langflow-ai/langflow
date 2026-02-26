@@ -19,11 +19,11 @@ export const getStatusVariant = (
   status: Span["status"],
 ): "successStatic" | "errorStatic" | "secondaryStatic" => {
   switch (status) {
-    case "success":
+    case "ok":
       return "successStatic";
     case "error":
       return "errorStatic";
-    case "running":
+    case "unset":
       return "secondaryStatic";
     default:
       return "secondaryStatic";
@@ -146,17 +146,17 @@ export const getStatusIconProps = (
   status: string | null | undefined,
 ): StatusIconProps => {
   const normalized = status ?? "";
-  const isSuccess = normalized === "success";
+  const isOk = normalized === "ok";
   const isError = normalized === "error";
-  const isRunning = normalized === "running";
+  const isUnset = normalized === "unset";
 
   return {
     colorClass: isError
       ? "text-status-red"
-      : isSuccess
+      : isOk
         ? "text-status-green"
         : "text-muted-foreground",
-    iconName: isRunning ? "Loader2" : isSuccess ? "CircleCheck" : "CircleX",
-    shouldSpin: isRunning,
+    iconName: isUnset ? "Loader2" : isOk ? "CircleCheck" : "CircleX",
+    shouldSpin: isUnset,
   };
 };

@@ -198,7 +198,7 @@ class NativeTracer(BaseTracer):
                 "start_time": start_time,
                 "end_time": end_time,
                 "latency_ms": latency_ms,
-                "status": SpanStatus.ERROR if error else SpanStatus.SUCCESS,
+                "status": SpanStatus.ERROR if error else SpanStatus.OK,
                 "error": str(error) if error else None,
                 "prompt_tokens": tokens.get("prompt_tokens") or None,
                 "completion_tokens": tokens.get("completion_tokens") or None,
@@ -271,7 +271,7 @@ class NativeTracer(BaseTracer):
 
             # Determine overall trace status - error if any span has error or if top-level error
             has_span_errors = any(span.get("status") == SpanStatus.ERROR for span in self.completed_spans)
-            trace_status = SpanStatus.ERROR if (error or has_span_errors) else SpanStatus.SUCCESS
+            trace_status = SpanStatus.ERROR if (error or has_span_errors) else SpanStatus.OK
 
             # Calculate total tokens from all spans
             total_tokens = sum(span.get("total_tokens") or 0 for span in self.completed_spans)
@@ -454,7 +454,7 @@ class NativeTracer(BaseTracer):
                 "start_time": start_time,
                 "end_time": end_time,
                 "latency_ms": latency_ms or actual_latency,
-                "status": SpanStatus.ERROR if error else SpanStatus.SUCCESS,
+                "status": SpanStatus.ERROR if error else SpanStatus.OK,
                 "error": error,
                 "model_name": span_info.get("model_name"),
                 "prompt_tokens": prompt_tokens,

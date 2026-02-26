@@ -7,7 +7,7 @@ export type SpanType =
   | "parser"
   | "agent";
 
-export type SpanStatus = "success" | "error" | "running";
+export type SpanStatus = "unset" | "ok" | "error";
 
 export interface TokenUsage {
   promptTokens: number;

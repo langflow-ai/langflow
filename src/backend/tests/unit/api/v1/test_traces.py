@@ -60,7 +60,7 @@ def test_span_to_dict_without_token_usage():
     span = SpanTable(
         name="Basic Span",
         span_type=SpanType.CHAIN,
-        status=SpanStatus.RUNNING,
+        status=SpanStatus.UNSET,
         start_time=start_time,
         end_time=None,
         latency_ms=0,
@@ -75,7 +75,7 @@ def test_span_to_dict_without_token_usage():
     result = _span_to_dict(span)
 
     assert result["type"] == "chain"
-    assert result["status"] == "running"
+    assert result["status"] == "unset"
     assert result["startTime"] == start_time.isoformat()
     assert result["endTime"] is None
     assert result["inputs"] == {}
@@ -99,7 +99,7 @@ def test_build_span_tree_links_children():
         trace_id=trace_id,
         name="Parent",
         span_type=SpanType.CHAIN,
-        status=SpanStatus.SUCCESS,
+        status=SpanStatus.OK,
         start_time=start_time,
         latency_ms=10,
     )
@@ -108,7 +108,7 @@ def test_build_span_tree_links_children():
         parent_span_id=parent_id,
         name="Child",
         span_type=SpanType.TOOL,
-        status=SpanStatus.SUCCESS,
+        status=SpanStatus.OK,
         start_time=start_time,
         latency_ms=5,
     )
@@ -116,7 +116,7 @@ def test_build_span_tree_links_children():
         trace_id=trace_id,
         name="Other Root",
         span_type=SpanType.LLM,
-        status=SpanStatus.RUNNING,
+        status=SpanStatus.UNSET,
         start_time=start_time,
         latency_ms=15,
     )
@@ -144,7 +144,7 @@ async def test_fetch_trace_token_totals(async_session):
             trace_id=trace_id,
             name="Parent",
             span_type=SpanType.CHAIN,
-            status=SpanStatus.SUCCESS,
+            status=SpanStatus.OK,
             total_tokens=100,
         ),
         SpanTable(
@@ -152,14 +152,14 @@ async def test_fetch_trace_token_totals(async_session):
             parent_span_id=parent_id,
             name="Child",
             span_type=SpanType.LLM,
-            status=SpanStatus.SUCCESS,
+            status=SpanStatus.OK,
             total_tokens=5,
         ),
         SpanTable(
             trace_id=trace_id,
             name="Leaf",
             span_type=SpanType.TOOL,
-            status=SpanStatus.SUCCESS,
+            status=SpanStatus.OK,
             total_tokens=7,
         ),
     ]
@@ -184,14 +184,14 @@ async def test_fetch_trace_io_map(async_session):
             trace_id=trace_id,
             name="Chat Input",
             span_type=SpanType.CHAIN,
-            status=SpanStatus.SUCCESS,
+            status=SpanStatus.OK,
             inputs={"input_value": "hello"},
         ),
         SpanTable(
             trace_id=trace_id,
             name="Root A",
             span_type=SpanType.CHAIN,
-            status=SpanStatus.SUCCESS,
+            status=SpanStatus.OK,
             end_time=base_time,
             outputs={"output": "first"},
         ),
@@ -199,7 +199,7 @@ async def test_fetch_trace_io_map(async_session):
             trace_id=trace_id,
             name="Root B",
             span_type=SpanType.CHAIN,
-            status=SpanStatus.SUCCESS,
+            status=SpanStatus.OK,
             end_time=base_time.replace(minute=1),
             outputs={"output": "latest"},
         ),

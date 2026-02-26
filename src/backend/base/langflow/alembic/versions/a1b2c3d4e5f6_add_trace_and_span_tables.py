@@ -32,9 +32,9 @@ def upgrade() -> None:
             sa.Column("name", sa.String(), nullable=False),
             sa.Column(
                 "status",
-                sa.Enum("SUCCESS", "ERROR", "RUNNING", name="spanstatus"),
+                sa.Enum("unset", "ok", "error", name="spanstatus"),
                 nullable=False,
-                server_default="RUNNING",
+                server_default="unset",
             ),
             sa.Column("start_time", sa.DateTime(), nullable=False),
             sa.Column("end_time", sa.DateTime(), nullable=True),
@@ -64,9 +64,9 @@ def upgrade() -> None:
             ),
             sa.Column(
                 "status",
-                sa.Enum("SUCCESS", "ERROR", "RUNNING", name="spanstatus"),
+                sa.Enum("unset", "ok", "error", name="spanstatus"),
                 nullable=False,
-                server_default="RUNNING",
+                server_default="unset",
             ),
             sa.Column("start_time", sa.DateTime(), nullable=False),
             sa.Column("end_time", sa.DateTime(), nullable=True),
