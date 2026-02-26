@@ -71,7 +71,8 @@ def has_api_terms(word: str):
 
 def remove_api_keys(flow: dict):
     """Remove api keys from flow data."""
-    for node in flow.get("data", {}).get("nodes", []):
+    nodes = flow.get("data", {}).get("nodes", [])
+    for node in nodes:
         node_data = node.get("data")
         if not isinstance(node_data, dict):
             continue
@@ -82,7 +83,15 @@ def remove_api_keys(flow: dict):
         if not isinstance(template, dict):
             continue
         for value in template.values():
-            if isinstance(value, dict) and "name" in value and has_api_terms(value["name"]) and value.get("password"):
+            if not isinstance(value, dict) or "name" not in value:
+                continue
+            # Inline has_api_terms logic to avoid a function call per value
+            name = value["name"]
+            if (
+                "api" in name
+                and ("key" in name or ("token" in name and "tokens" not in name))
+                and value.get("password")
+            ):
                 value["value"] = None
 
     return flow
