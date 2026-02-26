@@ -58,9 +58,9 @@ def upgrade() -> None:
             sa.Column("name", sa.String(), nullable=False),
             sa.Column(
                 "span_type",
-                sa.Enum("CHAIN", "LLM", "TOOL", "RETRIEVER", "EMBEDDING", "PARSER", "AGENT", name="spantype"),
+                sa.Enum("chain", "llm", "tool", "retriever", "embedding", "parser", "agent", name="spantype"),
                 nullable=False,
-                server_default="CHAIN",
+                server_default="chain",
             ),
             sa.Column(
                 "status",
