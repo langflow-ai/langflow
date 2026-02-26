@@ -126,12 +126,16 @@ const ProviderConfigurationForm = ({
     <div className="flex flex-col gap-1 p-4">
       <div className="flex flex-row gap-1 min-w-[300px]">
         <span className="text-[13px] font-semibold mr-auto">
-          {isSingleVariableProvider ? <>
-            {providerVariables[0].variable_name}
-            {providerVariables[0].required && (
-              <span className="text-red-500 ml-1">*</span>
-            )}
-          </> : `${selectedProvider.provider || "Unknown Provider"} ${requiresConfiguration && " Configuration"}`}
+          {isSingleVariableProvider ? (
+            <>
+              {providerVariables[0].variable_name}
+              {providerVariables[0].required && (
+                <span className="text-red-500 ml-1">*</span>
+              )}
+            </>
+          ) : (
+            `${selectedProvider.provider || "Unknown Provider"} ${requiresConfiguration && " Configuration"}`
+          )}
         </span>
       </div>
       <span className="text-[13px] text-muted-foreground pt-1 pb-2">
@@ -173,7 +177,8 @@ const ProviderConfigurationForm = ({
                     {variable.required && (
                       <span className="text-red-500 ml-1">*</span>
                     )}
-                  </label>)}
+                  </label>
+                )}
                 {variable.options && variable.options.length > 0 ? (
                   // Render dropdown for variables with predefined options
                   <div className="relative">
@@ -185,12 +190,12 @@ const ProviderConfigurationForm = ({
                         variableValues[variable.variable_key]
                           ? [variableValues[variable.variable_key]]
                           : isConfigured &&
-                            getConfiguredValue(variable.variable_key)
+                              getConfiguredValue(variable.variable_key)
                             ? [
-                              getConfiguredValue(
-                                variable.variable_key,
-                              ) as string,
-                            ]
+                                getConfiguredValue(
+                                  variable.variable_key,
+                                ) as string,
+                              ]
                             : []
                       }
                       options={variable.options}
@@ -248,9 +253,9 @@ const ProviderConfigurationForm = ({
                     )}
                     value={
                       isConfigured &&
-                        variable.is_secret &&
-                        !isEditing &&
-                        !hasNewValue
+                      variable.is_secret &&
+                      !isEditing &&
+                      !hasNewValue
                         ? getMaskedKeyPreview(selectedProvider.provider)
                         : variable.variable_key in variableValues
                           ? variableValues[variable.variable_key]
