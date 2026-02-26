@@ -150,6 +150,16 @@ const KnowledgeBasesTab = ({
     };
   }, [actions.knowledgeBaseForAddSources]);
 
+  const sortedKnowledgeBases = useMemo(
+    () =>
+      knowledgeBases
+        ? [...knowledgeBases].sort((a, b) =>
+            a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
+          )
+        : [],
+    [knowledgeBases],
+  );
+
   const columnDefs = createKnowledgeBaseColumns({
     onViewChunks: onRowClick,
     onDelete: actions.handleDelete,
@@ -231,7 +241,7 @@ const KnowledgeBasesTab = ({
             onSelectionChanged={handleSelectionChange}
             onRowClicked={handleRowClick}
             columnDefs={columnDefs}
-            rowData={knowledgeBases}
+            rowData={sortedKnowledgeBases}
             className={cn(
               "ag-no-border ag-knowledge-table group w-full",
               isShiftPressed && quantitySelected > 0 && "no-select-cells",

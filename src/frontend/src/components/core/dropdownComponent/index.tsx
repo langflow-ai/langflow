@@ -263,7 +263,7 @@ export default function Dropdown({
       onSelect(pendingSelect);
       setPendingSelect(null);
     }
-  }, [options, pendingSelect]);
+  }, [options, pendingSelect, onSelect]);
 
   // Effects
   useEffect(() => {

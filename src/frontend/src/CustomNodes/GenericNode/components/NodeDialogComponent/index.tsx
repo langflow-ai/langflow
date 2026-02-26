@@ -22,7 +22,10 @@ interface NodeDialogProps {
   open: boolean;
   onClose: () => void;
   onCreated?: (value: string) => void;
-  dialogInputs: any;
+  dialogInputs: {
+    fields: { data: { node: APIClassType } };
+    functionality: string;
+  };
   nodeId: string;
   name: string;
   nodeClass: APIClassType;

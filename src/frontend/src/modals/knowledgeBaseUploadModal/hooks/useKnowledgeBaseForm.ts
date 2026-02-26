@@ -251,8 +251,12 @@ export function useKnowledgeBaseForm({
           }),
         ) ?? [];
       setChunkPreviews(previews);
-    } catch (error) {
-      console.error("Error generating preview:", error);
+    } catch (error: unknown) {
+      const err = error as AxiosError<{ detail?: string }>;
+      setErrorData({
+        title: "Failed to generate chunk preview",
+        list: [err?.response?.data?.detail || err?.message || "Unknown error"],
+      });
       setChunkPreviews([]);
     } finally {
       setIsGeneratingPreview(false);
@@ -364,7 +368,6 @@ export function useKnowledgeBaseForm({
           })
           .catch((ingestError: unknown) => {
             const err = ingestError as AxiosError<{ detail?: string }>;
-            console.warn("Failed to ingest files:", err);
             setErrorData({
               title: `Failed to start ingestion for "${sourceName}"`,
               list: [
