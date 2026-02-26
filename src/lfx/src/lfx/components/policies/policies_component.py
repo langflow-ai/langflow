@@ -15,7 +15,8 @@ from toolguard.buildtime import (
     generate_guards_code,
 )
 from toolguard.extra.langchain_to_oas import langchain_tools_to_openapi
-from toolguard.runtime import load_toolguards
+from toolguard.runtime import load_toolguards, load_toolguards_from_memory
+from toolguard.runtime.runtime import RESULTS_FILENAME
 
 from lfx.base.models import LCModelComponent
 from lfx.components.policies.wrapped_tool import LangchainModelWrapper, WrappedTool
@@ -45,6 +46,13 @@ GENERATED_GUARD_INFO_PREFIX = "Auto-generated ToolGuard code for "
 
 
 class PoliciesComponent(LCModelComponent):
+    """Component for building tool protection code from textual business policies and instructions.
+
+    This component uses ToolGuard to generate and apply policy-based guards to tools,
+    ensuring that tool execution complies with defined business policies.
+    Powered by ALTK ToolGuard (https://github.com/AgentToolkit/toolguard).
+    """
+
     display_name = "Policies"
     description = """Component for building tool protection code from textual business policies and instructions.
 Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
