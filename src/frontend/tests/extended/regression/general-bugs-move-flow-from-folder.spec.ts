@@ -42,7 +42,7 @@ test("user must be able to move flow from folder", async ({ page }) => {
 
   await page.getByTestId("sidebar-nav-New Project").click();
 
-  await page.waitForSelector('[data-testid="list-card"]',);
+  await page.waitForSelector('[data-testid="list-card"]');
 
   const flowNameCount = await page.getByText(randomName).count();
   expect(flowNameCount).toBeGreaterThan(0);
