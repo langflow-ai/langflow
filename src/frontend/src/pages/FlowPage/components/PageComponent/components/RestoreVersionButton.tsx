@@ -3,6 +3,7 @@ import { useState } from "react";
 import { createPortal } from "react-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
+import { useSidebar } from "@/components/ui/sidebar";
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
 import useApplyFlowToCanvas from "@/hooks/flows/use-apply-flow-to-canvas";
@@ -25,6 +26,13 @@ export default function RestoreVersionButton({
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const clearPreview = useHistoryPreviewStore((s) => s.clearPreview);
   const applyFlowToCanvas = useApplyFlowToCanvas();
+  const { setActiveSection, open, toggleSidebar } = useSidebar();
+
+  const handleDismiss = () => {
+    setActiveSection("components");
+    if (!open) toggleSidebar();
+    clearPreview();
+  };
 
   const [showConfirm, setShowConfirm] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
@@ -80,6 +88,13 @@ export default function RestoreVersionButton({
           </div>
           <div className="flex items-center gap-2 ml-auto">
             <button
+              onClick={() => handleDismiss()}
+              disabled={isRestoring}
+              className="group flex items-center gap-2 rounded-lg border border-accent-indigo-foreground/30 bg-accent-indigo/60 px-3 py-1.5 font-semibold text-accent-indigo-foreground shadow-sm transition-all duration-200 hover:bg-accent-indigo/80 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Keep Building
+            </button>
+            <button
               onClick={() => setShowConfirm(true)}
               disabled={isRestoring}
               className="group flex items-center gap-2 rounded-lg border border-accent-indigo-foreground/30 bg-accent-indigo/60 px-3 py-1.5 font-semibold text-accent-indigo-foreground shadow-sm transition-all duration-200 hover:bg-accent-indigo/80 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
@@ -109,9 +124,11 @@ export default function RestoreVersionButton({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setShowConfirm(false)}
+                  onClick={() => {
+                    setShowConfirm(false);
+                  }}
                 >
-                  Keep Building
+                  Cancel
                 </Button>
                 <Button size="sm" onClick={handleRestore} loading={isRestoring}>
                   Restore
