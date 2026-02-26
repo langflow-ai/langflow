@@ -372,7 +372,7 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         Output(display_name="Raw Search", name="raw_search", method="raw_search"),
     ]
 
-    def raw_search(self, query: str | None = None) -> Data:
+    def raw_search(self, query: str | dict | None = None) -> Data:
         """Execute a raw OpenSearch query against the target index.
 
         Args:
@@ -385,13 +385,43 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
             ValueError: If 'query' is not a valid OpenSearch query (must be a non-empty dict).
         """
         raw_query = query if query is not None else self.search_query
-        if isinstance(raw_query, str):
-            raw_query = json.loads(raw_query)
+
+        if raw_query is None:
+            msg = "Raw search requires a query. Provide JSON DSL, a dict, or a plain text query."
+            raise ValueError(msg)
+
+        if isinstance(raw_query, dict):
+            query_body = raw_query
+        elif isinstance(raw_query, str):
+            s = raw_query.strip()
+            if not s:
+                msg = "Raw search query string is empty."
+                raise ValueError(msg)
+
+            # First, optimistically try to parse as JSON DSL
+            try:
+                query_body = json.loads(s)
+            except json.JSONDecodeError:
+                # Fallback: treat as a basic text query over common fields
+                query_body = {
+                    "query": {
+                        "multi_match": {
+                            "query": s,
+                            "fields": ["text^2", "filename^1.5"],
+                            "type": "best_fields",
+                            "fuzziness": "AUTO",
+                        }
+                    }
+                }
+        else:
+            msg = f"Unsupported raw_search query type: {type(raw_query)!r}"
+            raise TypeError(msg)
+
         client = self.build_client()
-        logger.info(f"query: {raw_query}")
+        logger.info(f"query: {query_body}")
         resp = client.search(
             index=self.index_name,
-            body=raw_query,
+            body=query_body,
             params={"terminate_after": 0},
         )
         # Remove any _source keys whose value is a list of floats (embedding vectors)
