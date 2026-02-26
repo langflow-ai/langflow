@@ -131,7 +131,6 @@ local = [
 clickhouse-connect = [
     "clickhouse-connect==0.7.19"
 ]
-
 nv-ingest = [
     # NOTE: These must be removed in order to run `uv lock --upgrade` or `uv sync --upgrade`
     # due to incompatibility with <3.12 and how uv handles lockfile creation.
