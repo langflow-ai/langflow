@@ -8,7 +8,6 @@ import { getURL } from "@/controllers/API/helpers/constants";
 import useApplyFlowToCanvas from "@/hooks/flows/use-apply-flow-to-canvas";
 import useAlertStore from "@/stores/alertStore";
 import useHistoryPreviewStore from "@/stores/historyPreviewStore";
-import { processFlows } from "@/utils/reactflowUtils";
 
 interface RestoreVersionButtonProps {
   flowId: string;
@@ -48,7 +47,6 @@ export default function RestoreVersionButton({
           edges: updatedFlow.data?.edges ?? [],
         },
       };
-      processFlows([flow]);
       applyFlowToCanvas(flow);
       clearPreview();
       setSuccessData({ title: "Version restored" });
@@ -81,13 +79,6 @@ export default function RestoreVersionButton({
             </p>
           </div>
           <div className="flex items-center gap-2 ml-auto">
-            <button
-              onClick={clearPreview}
-              disabled={isRestoring}
-              className="group flex items-center gap-2 rounded-lg border border-accent-indigo-foreground/30 bg-accent-indigo/60 px-3 py-1.5 font-semibold text-accent-indigo-foreground shadow-sm transition-all duration-200 hover:bg-accent-indigo/80 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              Keep Building
-            </button>
             <button
               onClick={() => setShowConfirm(true)}
               disabled={isRestoring}
