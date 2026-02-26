@@ -981,6 +981,6 @@ test(
 
     await page.getByText("Run Flow", { exact: true }).last().click();
 
-    await expect(page.getByText(fileContent1)).toBeVisible();
+    await expect(page.getByText(fileContent1).last()).toBeVisible();
   },
 );
