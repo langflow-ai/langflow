@@ -6,96 +6,114 @@ slug: /bundles-agentics
 import Icon from "@site/src/components/icon";
 import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 
-[Agentics](https://github.com/IBM/agentics/) uses LLMs to transform tabular data:
-add or fill columns row-by-row (map), collapse many rows into one (reduce),
-filter rows by natural-language conditions, or generate synthetic rows.
-For example, turn a table of customer reviews into sentiment scores per row, or into a single summary, by just providing the slot definitions, as illustrated below:
+The [Agentics](https://github.com/IBM/agentics/) component bundle uses LLMs to transform tabular data. Add or fill columns row-by-row with the [**aMap** component](#amap-component), collapse many rows into one with [**aReduce** component](#areduce-component), or generate synthetic rows with the [**aGenerate** component](#agenerate-component).
 
-**Input DataFrame:**
+Define the structure of generated data in the components' **Schema** table.
+For example:
 
-| review_id | text |
-|-----------|------|
-| 1 | Great product, fast shipping! |
-| 2 | Terrible quality, broke after one use |
+| Column | Type | Description | Required |
+|--------|------|-------------|----------|
+| Name | String | The name of the output field | Yes |
+| Type | Dropdown | `str`, `int`, `float`, `bool`, or `dict` | Yes |
+| Description | String | What this field represents and how it should be generated | No |
+| As List | Boolean | If true, field is a list of -componentthe specified type (e.g. list[str]) | No |
 
-**Output DataFrame:**
-
-| review_id | text | sentiment | confidence | key_topics |
-|-----------|------|-----------|------------|------------|
-| 1 | Great product, fast shipping! | positive | 0.95 | product quality, shipping |
-| 2 | Terrible quality, broke after one use | negative | 0.92 | quality, durability |
-
-
-Agentics is particularly useful to process batch data from databases, spreadsheets and CSV files.
-It can also be used to process data from APIs, web scraping, or any other source that can be transformed
-into a table.
-
-Agentics is based on logical transduction, a new form of logical/functional programming that can
-be used to instruct agentics workflows by using a declarative syntax, as described in the [Transduction is All You Need for Structured Data Workflows](https://arxiv.org/abs/2508.15610) paper.
-
-Agentics implements a map-reduce paradigm, enabling asynchronous execution of multiple rows in batches that can be processed in parallel, often achieving >10x speedup if compared to synchronous execution.
-
-The **Agentics** bundle in Langflow provides components that abstract the power of these operations inside your flows.
+All Agentics components return a **DataFrame**.
 
 ## Prerequisites
 
-### Installation
-
 1. Install the Agentics package in Langflow's virtual environment:
 
-```bash
-uv pip install agentics-py==0.3.1
-```
-
-:::info Python Version
-Agentics requires Python 3.9 or higher. Ensure your Langflow environment meets this requirement.
-:::
+   ```bash
+   uv pip install agentics-py==0.3.1
+   ```
 
 2. Restart Langflow so the Agentics components are available:
 
-```bash
-uv run langflow run
-```
+   ```bash
+   uv run langflow run
+   ```
 
-### LLM Provider Configuration
+3. Agentics components require an LLM. Configure your LLM provider API keys as [global variables](/configuration-global-variables) or environment variables.
+Supported providers include OpenAI, Anthropic, Google Generative AI, IBM WatsonX, and Ollama.
 
-Agentics components require an LLM provider. Supported providers include:
-- **OpenAI** - Requires `OPENAI_API_KEY` environment variable
-- **Anthropic** - Requires `ANTHROPIC_API_KEY` environment variable
-- **Google Generative AI** - Requires `GOOGLE_API_KEY` environment variable
-- **IBM WatsonX** - Requires WatsonX credentials
-- **Ollama** - Requires local Ollama installation (default: `http://localhost:11434`)
+## aGenerate component
 
-Configure your API keys as [global variables](/configuration-global-variables) or environment variables before using Agentics components.
+aGenerate generates synthetic data from a schema or from an example DataFrame. Use it for test data, augmentation, or documentation examples.
 
-## Use Cases and Examples
+For example, this schema definition creates the following DataFrame output:
 
-### Customer Review Sentiment Analysis (aMap)
+**Schema definition:**
+- `customer_name` (str): Full name
+- `email` (str): Email address
+- `age` (int): Age between 18–80
+- `purchase_categories` (str, As List): List of product categories purchased
 
-Transform customer reviews into structured sentiment data:
+**Output DataFrame (example, 10 rows generated):**
+| customer_name | email | age | purchase_categories |
+|---------------|-------|-----|---------------------|
+| Sarah Johnson | sarah.j@email.com | 34 | Electronics, Books, Home & Garden |
+| Michael Chen | m.chen@email.com | 28 | Sports, Clothing, Electronics |
+| ... | ... | ... | ... |
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Language Model | Dropdown | Select the LLM provider and model. Use guided experience. |
+| Input DataFrame | DataFrame | Optional. Example DataFrame to learn from; only first 50 rows used. If not provided, Schema is used. |
+| Schema | Table | Define columns to generate when no Input DataFrame is provided. See [Output Schema Format](#output-schema-format). |
+| Instructions | String | **Advanced.** Optional instructions for generation. |
+| Number of Rows to Generate | Integer | How many synthetic rows to create. Default: 10. |
+
+## aMap component
+
+aMap transforms each row of input data using natural language instructions and a defined output schema (one row in, one row out).
+Use **aMap** for enriching data with LLM-generated columns such as sentiment, categories, and entity extraction.
+
+Rows are processed concurrently; default batch size is 10. Token usage scales with number of rows.
+
+For example, **aMap** keeps each input row and fills in `sentiment`, `confidence`, and `key_topics` with the connected LLM.
 
 **Input DataFrame:**
-
 | review_id | text |
 |-----------|------|
 | 1 | Great product, fast shipping! |
 | 2 | Terrible quality, broke after one use |
 
-**Generated Fields Configuration:**
+**Schema definition:**
 - `sentiment` (str): "positive", "negative", or "neutral"
-- `confidence` (float): Confidence score 0-1
+- `confidence` (float): Confidence score 0–1
 - `key_topics` (str, As List): Main topics mentioned
 
 **Output DataFrame:**
-
 | review_id | text | sentiment | confidence | key_topics |
 |-----------|------|-----------|------------|------------|
 | 1 | Great product, fast shipping! | positive | 0.95 | product quality, shipping |
 | 2 | Terrible quality, broke after one use | negative | 0.92 | quality, durability |
 
-### Sales Data Summary (aReduce)
+### Parameters
 
-Aggregate multiple sales records into a single summary:
+| Name | Type | Description |
+|------|------|-------------|
+| Language Model | Dropdown | Select the LLM provider and model. Use guided experience. |
+| Input DataFrame | DataFrame | Input DataFrame (list of dicts or DataFrame). Each row is processed independently. |
+| Schema | Table | Define the structure and types for generated columns. See [Output Schema Format](#output-schema-format). |
+| Instructions | String | Natural language instructions for transforming each row into the output schema. |
+| As List | Boolean | If true, generate multiple instances of the schema per row and concatenate. |
+| Keep Source Columns | Boolean | If `true`, append new columns to original data; if false, return only generated columns. Ignored if As List is true. Default: `true`. |
+
+## aReduce component
+
+aReduce aggregates all rows in the input DataFrame into a single row following the output schema.
+Use **aReduce** for summaries, reports, or consolidated insights.
+To aggregate rows into a list, set `As List` to `true` in the component.
+
+All rows are sent in one request; token usage can be high for large DataFrames.
+Consider filtering or sampling first.
+
+For example, **aReduce** takes all input rows and produces a single row with LLM-generated aggregates.
+It sums revenue into `total_revenue`, identifies the best-selling product in `best_selling_product`, and writes a short `summary` of the sales.
 
 **Input DataFrame:**
 
@@ -105,385 +123,35 @@ Aggregate multiple sales records into a single summary:
 | 2024-01-02 | Widget B | 800 | 30 |
 | 2024-01-03 | Widget A | 1500 | 60 |
 
-**Generated Fields Configuration:**
+**Schema definition:**
 - `total_revenue` (float): Sum of all revenue
 - `best_selling_product` (str): Product with highest units
 - `summary` (str): Natural language summary
 
 **Output DataFrame:**
-
 | total_revenue | best_selling_product | summary |
 |---------------|---------------------|---------|
 | 3500 | Widget A | Over 3 days, Widget A was the best seller with 110 units, generating $2700 in revenue. |
 
-### Test Data Generation (aGenerate)
-
-Generate realistic test data for development:
-
-**Schema Definition:**
-- `customer_name` (str): Full name
-- `email` (str): Email address
-- `age` (int): Age between 18-80
-- `purchase_categories` (str, As List): List of product categories purchased
-
-**Output DataFrame (10 rows generated):**
-
-| customer_name | email | age | purchase_categories |
-|---------------|-------|-----|---------------------|
-| Sarah Johnson | sarah.j@email.com | 34 | Electronics, Books, Home & Garden |
-| Michael Chen | m.chen@email.com | 28 | Sports, Clothing, Electronics |
-| ... | ... | ... | ... |
-
-## Components Overview
-
-The Agentics bundle includes four specialized components for data transformation and DataFrame operations:
-
-| Component | Purpose | Input Rows | Output Rows |
-|-----------|---------|------------|-------------|
-| aMap | Add columns to each row | N | N |
-| aReduce | Summarize all rows | N | 1 |
-| aGenerate | Generate fake data | 0 | N |
-| DataFrame Combiner | Combine two DataFrames | N + M | Variable |
-
-## Parameters
-
-<PartialParams />
-
-### aMap
-
-Transforms each row of input data using natural language instructions and a defined output schema. This component processes input data row-by-row, applying LLM-based transformations to generate new columns or derive insights for each individual record.
-
-**Use when:** You need to enrich existing data with LLM-generated insights (e.g., sentiment analysis, categorization, entity extraction).
-
-#### aMap Parameters
+### Parameters
 
 | Name | Type | Description |
 |------|------|-------------|
-| Language Model | Dropdown | Select the LLM provider and model. Click the dropdown to see available models from configured providers. |
-| Input DataFrame | DataFrame | Input DataFrame to transform. The schema is automatically inferred from column names and types. Each row will be processed independently. |
-| Output Schema | Table | Define the structure and data types for the generated output. See [Output Schema Format](#output-schema-format) below. |
-| Instructions | String | Natural language instructions describing how to transform each input row into the output schema. Be specific for better results. |
-| As List | Boolean | If True, generate multiple instances of the provided schema for each input row concatenating all them. |
-| Keep Source Columns | Boolean | **Advanced.** Keep original input columns in the output. If disabled, only newly generated columns are returned. This is ignored if As List is set to True. |
-
-**Performance Notes:**
-- Rows are processed concurrently for better performance
-- Default batch size: 10 rows per API call
-- Token usage scales linearly with number of rows
-
-**Example Instructions:**
-```
-Analyze the review text and determine:
-1. Overall sentiment (positive/negative/neutral)
-2. Confidence level of the sentiment
-3. Key topics mentioned in the review
-```
-
-### aReduce
-
-Aggregates or summarizes entire input data using natural language instructions and a defined output schema. This component processes all rows of input data collectively to produce aggregated results, such as summaries, statistics, or consolidated information based on LLM analysis.
-
-**Use when:** You need to summarize, analyze, or extract insights from multiple rows (e.g., creating reports, finding patterns, generating summaries).
-
-#### aReduce Parameters
-
-| Name | Type | Description |
-|------|------|-------------|
-| Language Model | Dropdown | Select the LLM provider and model from configured providers. |
-| Input DataFrame | DataFrame | **Required.** Input DataFrame to aggregate. The schema is automatically inferred from column names and types. All rows are analyzed together. |
-| Output Schema | Table | Define the structure and data types for the generated output. See [Output Schema Format](#output-schema-format) below. |
-| As List | Boolean | If True, generate a list of instances of the provided schema. |
-| Instructions | String | Natural language instructions describing how to aggregate the input data into the output schema. If not provided, the LLM infers from field descriptions. |
-
-**Performance Notes:**
-- All rows are sent to the LLM in a single request
-- Token usage can be high for large DataFrames
-- Consider filtering or sampling large datasets first
-
-**Example Instructions:**
-```
-Analyze all sales records and provide:
-1. Total revenue across all products
-2. The best-selling product by units
-3. A brief summary of sales trends
-```
-
-### aGenerate
-
-Generates synthetic data using either example data or a defined schema. This component creates realistic synthetic data by either learning from an input DataFrame and generating similar rows, or following a user-defined schema to create data from scratch.
-
-**Use when:** You need test data, want to augment training datasets, or need to generate examples for documentation.
-
-#### aGenerate Parameters
-
-| Name | Type | Description |
-|------|------|-------------|
-| Language Model | Dropdown | Select the LLM provider and model from configured providers. |
-| Input DataFrame | DataFrame | Provide example DataFrame to learn from and generate similar data. Only the first 50 rows will be used as examples. |
-| Schema | Table | Define the structure of data to generate. Specify column names, descriptions, and types. Used only when input DataFrame is not provided. See [Output Schema Format](#output-schema-format) below. |
-| Instructions | String | **Advanced.** Optional natural language instructions to guide the synthetic data generation process. |
-| Number of Rows to Generate | Integer | How many synthetic rows to generate. Default: 10. Maximum depends on LLM context limits. |
-
-**Performance Notes:**
-- Generation happens in batches (default: 10 instances per batch)
-- Token usage scales with schema complexity and number of instances
-- More detailed field descriptions produce more realistic data
-
-**Example Schema:**
-```
-name: customer_name, type: str, description: "Full name of a realistic customer"
-email: email_address, type: str, description: "Valid email format matching the customer name"
-age: age, type: int, description: "Age between 18 and 80"
-preferences: preferences, type: dict, description: "Customer preferences including favorite_category and budget_range"
-```
-
-### DataFrame Combiner
-
-Combines two DataFrames with potentially different schemas using merge, compose, or concatenate operations. Supports three combination methods: Merge creates a unified schema by merging both input schemas, Compose creates a nested schema pairing input and output schemas, and Concatenate stacks all rows from both DataFrames.
-
-**Use when:** You need to combine data from multiple sources, join related datasets, or append rows from different DataFrames.
-
-#### DataFrame Combiner Parameters
-
-| Name | Type | Description |
-|------|------|-------------|
-| Left DataFrame | DataFrame | The first DataFrame to combine. |
-| Right DataFrame | DataFrame | The second DataFrame to combine. |
-| Combination Method | Dropdown | **Required.** Merge: unifies schemas \| Compose: creates nested schema \| Concatenate: stacks all rows vertically. |
-
-#### Combination Method
-
-**merge**
-- Combines DataFrames by matching row indices
-- Adds columns from the right DataFrame to corresponding rows in the left DataFrame
-- Output has the same number of rows as the left DataFrame
-- Similar to a SQL LEFT JOIN on row position
-
-**Example:**
-
-Left DataFrame:
-
-| id | name |
-|----|------|
-| 1 | Alice |
-| 2 | Bob |
-
-Right DataFrame:
-
-| age | city |
-|-----|------|
-| 30 | NYC |
-| 25 | LA |
-
-Output (merge):
-
-| id | name | age | city |
-|----|------|-----|------|
-| 1 | Alice | 30 | NYC |
-| 2 | Bob | 25 | LA |
-
-**compose**
-- Creates a composite structure with both DataFrames as nested fields
-- Each row contains both a `target` field (from left DataFrame) and a `source` field (from right DataFrame)
-- Output has the same number of rows as the left DataFrame
-- Each row pairs one left row with one right row by index
-- Useful for maintaining relationships between related data
-
-**Example:**
-
-Left DataFrame:
-
-| id | name |
-|----|------|
-| 1 | Alice |
-| 2 | Bob |
-
-Right DataFrame:
-
-| score | grade |
-|-------|-------|
-| 95 | A |
-| 82 | B |
-
-Output (compose):
-
-| target | source |
-|--------|--------|
-| `{"id": 1, "name": "Alice"}` | `{"score": 95, "grade": "A"}` |
-| `{"id": 2, "name": "Bob"}` | `{"score": 82, "grade": "B"}` |
-
-**concatenate**
-- Appends rows from the right DataFrame to the left DataFrame
-- Output has left_rows + right_rows
-- Similar to SQL UNION ALL
-- Columns must be compatible
-
-**Example:**
-
-Left DataFrame:
-
-| product | price |
-|---------|-------|
-| Widget A | 10 |
-
-Right DataFrame:
-
-| product | price |
-|---------|-------|
-| Widget B | 15 |
-
-Output (concatenate):
-
-| product | price |
-|---------|-------|
-| Widget A | 10 |
-| Widget B | 15 |
-
-**Performance Notes:**
-- No LLM calls required (fast and free)
-- All operations are O(n) where n is the number of rows
-- Merge and compose pair rows by index (same output size as left DataFrame)
-- Concatenate appends rows (output size = left + right rows)
-
-## Output Schema Format
-
-The **Output Schema** parameter is a table where each row defines an output column:
-
-| Column | Type | Description | Required |
-|--------|------|-------------|----------|
-| Name | String | The name of the output field (e.g., 'summary', 'category', 'score') | Yes |
-| Type | Dropdown | The data type for this field: `str`, `int`, `float`, `bool`, or `dict` | Yes |
-| Description | String | A clear description of what this field represents and how it should be generated | No |
-| As List | Boolean | Enable to make this field a list of the specified type (e.g., list[str]) | No |
-
-### Type Descriptions
-
-- **str**: Text data (e.g., names, descriptions, categories)
-- **int**: Integer numbers (e.g., counts, IDs, ages)
-- **float**: Decimal numbers (e.g., prices, scores, percentages)
-- **bool**: True/False values (e.g., flags, binary classifications)
-- **dict**: Nested JSON objects (e.g., structured data, complex attributes)
-
-### Examples
-
-**Simple fields:**
-```
-name: sentiment, type: str, description: "positive, negative, or neutral"
-name: confidence, type: float, description: "confidence score between 0 and 1"
-```
-
-**List fields:**
-```
-name: topics, type: str, As List: true, description: "main topics discussed"
-name: scores, type: float, As List: true, description: "individual scores for each criterion"
-```
-
-**Nested structures:**
-```
-name: metadata, type: dict, description: "JSON object with keys: author, date, category"
-name: analysis, type: dict, description: "nested object containing sentiment, topics, and entities"
-```
-
-## Output Format
-
-All Agentics components return data as a **list of dictionaries**, which displays as a table in Langflow:
-
-**Example Output:**
-
-| column1 | column2 | column3 |
-|---------|---------|---------|
-| value1 | 123 | true |
-| value2 | 456 | false |
-
-**JSON Representation:**
-```json
-[
-  {"column1": "value1", "column2": 123, "column3": true},
-  {"column1": "value2", "column2": 456, "column3": false}
-]
-```
-
-This format is compatible with:
-- DataFrame components in Langflow
-- JSON processing components
-- API endpoints
-- Database insert operations
-- CSV export tools
-
-## Performance Considerations
-
-### Token Usage
-
-- **aMap**: Tokens per row × number of rows
-- **aReduce**: All rows sent in one request (can be large)
-- **aGenerate**: Tokens per instance × number of instances
-
-### Batch Size Recommendations
-
-| Dataset Size | Recommended Batch Size | Rationale |
-|--------------|------------------------|-----------|
-| < 100 rows | 10 (default) | Balanced performance |
-| 100-1000 rows | 15-25 | Better throughput |
-| > 1000 rows | 25 (maximum) | Maximum efficiency |
-
-**Note:** Maximum batch size is 25. Larger batch sizes increase latency per batch but improve overall throughput.
-
-### Best Practices
-
-1. **Test on small samples** before processing large datasets
-2. **Consider filtering data** before using aReduce on large datasets
-3. **Monitor API costs** when processing large volumes
-4. **Optimize batch sizes** based on your dataset size and performance requirements
-
-## Troubleshooting
-
-### Common Errors
-
-**"Agentics-py is not installed"**
-```bash
-# Solution: Install the package
-uv pip install agentics-py==0.3.1
-# Then restart Langflow
-uv run langflow run
-```
-
-**"API key is required"**
-- Configure your LLM provider's API key as a global variable
-- Or set the appropriate environment variable (e.g., `OPENAI_API_KEY`)
-- Restart Langflow after setting environment variables
-
-**"No model selected"**
-- Click the Language Model dropdown
-- Select a provider (e.g., OpenAI)
-- Choose a specific model (e.g., gpt-4)
-
-**DataFrame format errors**
-- Ensure input is a list of dictionaries: `[{"col1": "val1"}, {"col2": "val2"}]`
-- Or use a DataFrame component output
-- Check that column names in predicates match actual column names (case-sensitive)
-
-**High token usage**
-- Use column-specific predicates: `{column_name}` instead of evaluating entire rows
-- Reduce batch size to process fewer rows per API call
-- Filter or sample large datasets before processing
-
-**Timeout errors**
-- Reduce batch size
-- Simplify instructions
-- Use a faster LLM model
-- Process data in smaller chunks
-
-### Getting Help
-
-If you encounter issues:
-1. Check the [Agentics documentation](https://ibm.github.io/Agentics/)
-2. Review the [Agentics GitHub issues](https://github.com/IBM/agentics/issues)
-3. Ask in the [Langflow community](https://github.com/langflow-ai/langflow/discussions)
-
-## See Also
+| Language Model | Dropdown | Select the LLM provider and model. |
+| Input DataFrame | DataFrame | Input DataFrame (list of dicts or DataFrame). Required. |
+| Schema | Table | Define the structure and types for the aggregated output. See [Output Schema Format](#output-schema-format). |
+| As List | Boolean | If true, output is a list of instances of the schema. |
+| Instructions | String | Optional instructions for aggregation. If omitted, the LLM infers from field descriptions. |
+
+## Performance and troubleshooting
+
+- **Token usage:** aMap scales with rows; aReduce sends all rows in one call; aGenerate scales with instances. Use smaller batches or sample large datasets to reduce cost.
+- **Batch size:** Default 10; max 25. Larger batches improve throughput but increase latency per batch.
+- **Errors:** If Agentics is not found, run `uv pip install agentics-py==0.3.1` and restart Langflow. For API/key errors, set the provider’s API key as a global variable or env var. For DataFrame errors, ensure input is a list of dicts or use a DataFrame component output.
+
+## See also
 
 - [Agentics official documentation](https://ibm.github.io/Agentics/)
 - [Agentics GitHub repository](https://github.com/IBM/agentics/)
-- [Transduction is All You Need for Structured Data Workflows](https://arxiv.org/abs/2508.15610) (research paper)
-- [Global Variables Configuration](/configuration-global-variables)
-- [DataFrame Operations](/dataframe-operations)
+- [Transduction is All You Need for Structured Data Workflows](https://arxiv.org/abs/2508.15610)
+- [Global variables configuration](/configuration-global-variables)
