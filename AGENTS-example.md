@@ -1,8 +1,10 @@
-# Langflow Development Guide
+# Langflow Development Guide (Example)
 
-> **This is the authoritative reference for all code written in the Langflow project.**
-> **Every AI agent, developer, and contributor MUST follow these rules.**
-> **Language-agnostic. Framework-agnostic. No exceptions.**
+> **This is an EXAMPLE file.** Use at your own risk.
+> It is provided as a reference template for development standards and coding conventions.
+> Adapt it to your project's needs before adopting. No guarantees are made about its completeness or suitability for any specific use case.
+
+> Language-agnostic. Framework-agnostic.
 
 ---
 
