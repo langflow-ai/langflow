@@ -29,9 +29,9 @@ describe("traceViewHelpers", () => {
 
   describe("getStatusVariant", () => {
     it("maps status to badge variants", () => {
-      expect(getStatusVariant("success")).toBe("successStatic");
+      expect(getStatusVariant("ok")).toBe("successStatic");
       expect(getStatusVariant("error")).toBe("errorStatic");
-      expect(getStatusVariant("running")).toBe("secondaryStatic");
+      expect(getStatusVariant("unset")).toBe("secondaryStatic");
     });
   });
 
@@ -143,7 +143,7 @@ describe("traceViewHelpers", () => {
 
   describe("getStatusIconProps", () => {
     it("maps statuses to icons", () => {
-      expect(getStatusIconProps("success")).toEqual({
+      expect(getStatusIconProps("ok")).toEqual({
         colorClass: "text-status-green",
         iconName: "CircleCheck",
         shouldSpin: false,
@@ -155,7 +155,7 @@ describe("traceViewHelpers", () => {
         shouldSpin: false,
       });
 
-      expect(getStatusIconProps("running")).toEqual({
+      expect(getStatusIconProps("unset")).toEqual({
         colorClass: "text-muted-foreground",
         iconName: "Loader2",
         shouldSpin: true,
