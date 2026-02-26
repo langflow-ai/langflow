@@ -911,10 +911,16 @@ test(
     await adjustScreenView(page);
 
     // Connect Text Input to Read File
-    await page
-      .getByTestId("handle-textinput-shownode-output text-right")
-      .click();
-    await page.getByTestId("handle-file-shownode-file path-left").click();
+    const sourceHandle = page.getByTestId(
+      "handle-textinput-shownode-output text-right",
+    );
+    const targetHandle = page.getByTestId(
+      "handle-file-shownode-file path-left",
+    );
+    await sourceHandle.waitFor({ state: "visible", timeout: 10000 });
+    await targetHandle.waitFor({ state: "visible", timeout: 10000 });
+    await sourceHandle.click();
+    await targetHandle.click();
 
     // Add Chat Output Component
     await page.getByTestId("sidebar-search-input").click();
@@ -957,13 +963,17 @@ test(
     await expect(page.getByText(fileContent1)).toBeVisible();
     await expect(page.getByText(fileContent2)).toBeVisible();
 
-    await page.getByRole("button", { name: "Playground", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Playground", exact: true })
+      .click({ force: true });
 
     // Test Case 2: Single File
     const singleFile = `${folderId}/${file1}.txt`;
     await page.getByTestId("textarea_str_input_value").fill(singleFile);
 
-    await page.getByRole("button", { name: "Playground", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Playground", exact: true })
+      .click({ force: true });
 
     await page.waitForSelector("text=Run Flow", {
       timeout: 30000,
