@@ -5,6 +5,7 @@ import uuid
 from typing import Any
 
 from opensearchpy import OpenSearch, helpers
+from opensearchpy.exceptions import RequestError
 
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from lfx.base.vectorstores.vector_store_connection_decorator import vector_store_connection
@@ -51,6 +52,7 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
         "bearer_prefix",
         "use_ssl",
         "verify_certs",
+        "request_timeout",
         "filter_expression",
         "engine",
         "space_type",
@@ -105,11 +107,12 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
         DropdownInput(
             name="engine",
             display_name="Vector Engine",
-            options=["jvector", "nmslib", "faiss", "lucene"],
+            options=["nmslib", "faiss", "lucene", "jvector"],
             value="jvector",
             info=(
-                "Vector search engine for similarity calculations. 'jvector' is recommended for most use cases. "
-                "Note: Amazon OpenSearch Serverless only supports 'nmslib' or 'faiss'."
+                "Vector search engine for similarity calculations. 'nmslib' works with standard "
+                "OpenSearch. 'jvector' requires OpenSearch 2.9+. 'lucene' requires index.knn: true. "
+                "Amazon OpenSearch Serverless only supports 'nmslib' or 'faiss'."
             ),
             advanced=True,
         ),
@@ -194,20 +197,20 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
             name="username",
             display_name="Username",
             value="admin",
-            show=False,
+            show=True,
         ),
         SecretStrInput(
             name="password",
             display_name="OpenSearch Password",
             value="admin",
-            show=False,
+            show=True,
         ),
         SecretStrInput(
             name="jwt_token",
             display_name="JWT Token",
             value="JWT",
             load_from_db=False,
-            show=True,
+            show=False,
             info=(
                 "Valid JSON Web Token for authentication. "
                 "Will be sent in the Authorization header (with optional 'Bearer ' prefix)."
@@ -243,6 +246,17 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
             info=(
                 "Verify SSL certificates when connecting. "
                 "Disable for self-signed certificates in development environments."
+            ),
+        ),
+        IntInput(
+            name="request_timeout",
+            display_name="Request Timeout (seconds)",
+            value=60,
+            advanced=True,
+            info=(
+                "Time in seconds to wait for a response from OpenSearch (transport and per-request). "
+                "Used for the default transport timeout and for bulk ingest HTTP calls. "
+                "Increase for large bulk ingestion or slow clusters."
             ),
         ),
     ]
@@ -309,6 +323,17 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
         if is_aoss and engine not in {"nmslib", "faiss"}:
             msg = "Amazon OpenSearch Service Serverless only supports `nmslib` or `faiss` engines"
             raise ValueError(msg)
+
+    def _get_request_timeout(self) -> int:
+        """Return the configured request timeout in seconds (default 60)."""
+        if not hasattr(self, "request_timeout") or self.request_timeout is None:
+            return 60
+        try:
+            t = int(self.request_timeout)
+        except (TypeError, ValueError):
+            return 60
+        else:
+            return t if t >= 1 else 60
 
     def _is_aoss_enabled(self, http_auth: Any) -> bool:
         """Determine if Amazon OpenSearch Serverless (AOSS) is being used.
@@ -381,7 +406,12 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
             return_ids.append(_id)
         if metadatas:
             self.log(f"Sample metadata: {metadatas[0] if metadatas else {}}")
-        helpers.bulk(client, requests, max_chunk_bytes=max_chunk_bytes)
+        helpers.bulk(
+            client,
+            requests,
+            max_chunk_bytes=max_chunk_bytes,
+            request_timeout=self._get_request_timeout(),
+        )
         return return_ids
 
     # ---------- auth / client ----------
@@ -426,6 +456,7 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
             verify_certs=self.verify_certs,
             ssl_assert_hostname=False,
             ssl_show_warn=False,
+            timeout=self._get_request_timeout(),
             **auth_kwargs,
         )
 
@@ -524,6 +555,28 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
             m=m,
             vector_field=self.vector_field,
         )
+
+        # Ensure index exists with proper KNN mapping (index.knn: true is required for vector search)
+        try:
+            if not client.indices.exists(index=self.index_name):
+                self.log(f"Creating index '{self.index_name}' with KNN mapping (index.knn: true)")
+                client.indices.create(index=self.index_name, body=mapping)
+        except RequestError as creation_error:
+            error_msg = str(creation_error).lower()
+            if "invalid engine" in error_msg or "illegal_argument" in error_msg:
+                if "jvector" in error_msg:
+                    msg = (
+                        "The 'jvector' engine is not available in your OpenSearch installation. "
+                        "Use 'nmslib' or 'faiss' for standard OpenSearch, or upgrade to OpenSearch 2.9+."
+                    )
+                    raise ValueError(msg) from creation_error
+                if "index.knn" in error_msg:
+                    msg = (
+                        "The index has index.knn: false. Delete the existing index and let the "
+                        "component recreate it, or create a new index with a different name."
+                    )
+                    raise ValueError(msg) from creation_error
+            raise
 
         self.log(f"Indexing {len(texts)} documents into '{self.index_name}' with proper KNN mapping...")
 

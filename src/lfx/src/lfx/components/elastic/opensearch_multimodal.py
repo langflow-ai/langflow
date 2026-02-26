@@ -11,6 +11,7 @@ from opensearchpy import OpenSearch, helpers
 from opensearchpy.exceptions import OpenSearchException, RequestError
 
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
+from lfx.base.vectorstores.vector_store_connection_decorator import vector_store_connection
 from lfx.io import (
     BoolInput,
     DropdownInput,
@@ -24,6 +25,9 @@ from lfx.io import (
 )
 from lfx.log import logger
 from lfx.schema.data import Data
+
+REQUEST_TIMEOUT = 60
+MAX_RETRIES = 5
 
 
 def normalize_model_name(model_name: str) -> str:
@@ -62,6 +66,7 @@ def get_embedding_field_name(model_name: str) -> str:
     return f"chunk_embedding_{normalize_model_name(model_name)}"
 
 
+@vector_store_connection
 class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreComponent):
     """OpenSearch Vector Store Component with Multi-Model Hybrid Search Capabilities.
 
@@ -122,6 +127,8 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         "m",
         "num_candidates",
         "docs_metadata",
+        "request_timeout",
+        "max_retries",
     ]
 
     inputs = [
@@ -170,11 +177,12 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         DropdownInput(
             name="engine",
             display_name="Vector Engine",
-            options=["jvector", "nmslib", "faiss", "lucene"],
+            options=["nmslib", "faiss", "lucene", "jvector"],
             value="jvector",
             info=(
-                "Vector search engine for similarity calculations. 'jvector' is recommended for most use cases. "
-                "Note: Amazon OpenSearch Serverless only supports 'nmslib' or 'faiss'."
+                "Vector search engine for similarity calculations. 'nmslib' works with standard "
+                "OpenSearch. 'jvector' requires OpenSearch 2.9+. 'lucene' requires index.knn: true. "
+                "Amazon OpenSearch Serverless only supports 'nmslib' or 'faiss'."
             ),
             advanced=True,
         ),
@@ -336,7 +344,24 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
                 "Disable for self-signed certificates in development environments."
             ),
         ),
-        # DictInput(name="query", display_name="Query", input_types=["Data"], is_list=False, tool_mode=True),
+        # ----- Timeout / Retry -----
+        StrInput(
+            name="request_timeout",
+            display_name="Request Timeout (seconds)",
+            value="60",
+            advanced=True,
+            info=(
+                "Time in seconds to wait for a response from OpenSearch. "
+                "Increase for large bulk ingestion or complex hybrid queries."
+            ),
+        ),
+        StrInput(
+            name="max_retries",
+            display_name="Max Retries",
+            value="3",
+            advanced=True,
+            info="Number of retries for failed connections before raising an error.",
+        ),
     ]
     outputs = [
         Output(
@@ -347,7 +372,7 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         Output(display_name="Raw Search", name="raw_search", method="raw_search"),
     ]
 
-    def raw_search(self, query: str | None = None) -> Data:
+    def raw_search(self, query: str | dict | None = None) -> Data:
         """Execute a raw OpenSearch query against the target index.
 
         Args:
@@ -360,13 +385,40 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
             ValueError: If 'query' is not a valid OpenSearch query (must be a non-empty dict).
         """
         raw_query = query if query is not None else self.search_query
-        if isinstance(raw_query, str):
-            raw_query = json.loads(raw_query)
+
+        if raw_query is None or (isinstance(raw_query, str) and not raw_query.strip()):
+            self.log("No query provided for raw search - returning empty results")
+            return Data(data={})
+
+        if isinstance(raw_query, dict):
+            query_body = raw_query
+        elif isinstance(raw_query, str):
+            s = raw_query.strip()
+
+            # First, optimistically try to parse as JSON DSL
+            try:
+                query_body = json.loads(s)
+            except json.JSONDecodeError:
+                # Fallback: treat as a basic text query over common fields
+                query_body = {
+                    "query": {
+                        "multi_match": {
+                            "query": s,
+                            "fields": ["text^2", "filename^1.5"],
+                            "type": "best_fields",
+                            "fuzziness": "AUTO",
+                        }
+                    }
+                }
+        else:
+            msg = f"Unsupported raw_search query type: {type(raw_query)!r}"
+            raise TypeError(msg)
+
         client = self.build_client()
-        logger.info(f"query: {raw_query}")
+        logger.info(f"query: {query_body}")
         resp = client.search(
             index=self.index_name,
-            body=raw_query,
+            body=query_body,
             params={"terminate_after": 0},
         )
         # Remove any _source keys whose value is a list of floats (embedding vectors)
@@ -544,7 +596,7 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
                 )
             else:
                 logger.info(
-                    f"[OpenSearchMultimodal] Field '{field_name}' already exists"
+                    f"[OpenSearchMultimodel] Field '{field_name}' already exists"
                     f"as knn_vector with matching dimensions - skipping mapping update"
                 )
             return
@@ -570,20 +622,35 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
             }
             client.indices.put_mapping(index=index_name, body=mapping)
             logger.info(f"Added/updated embedding field mapping: {field_name}")
+        except RequestError as e:
+            error_str = str(e).lower()
+            if "invalid engine" in error_str and "jvector" in error_str:
+                msg = (
+                    "The 'jvector' engine is not available in your OpenSearch installation. "
+                    "Use 'nmslib' or 'faiss' for standard OpenSearch, or upgrade to OpenSearch 2.9+."
+                )
+                raise ValueError(msg) from e
+            if "index.knn" in error_str:
+                msg = (
+                    "The index has index.knn: false. Delete the existing index and let the "
+                    "component recreate it, or create a new index with a different name."
+                )
+                raise ValueError(msg) from e
+            raise
         except Exception as e:
             # Check if this is the known OpenSearch k-NN NullPointerException issue
             error_str = str(e).lower()
             if "null" in error_str or "nullpointerexception" in error_str:
                 logger.warning(
-                    f"[OpenSearchMultimodal] Could not add embedding field mapping for {field_name}"
+                    f"[OpenSearchMultimodel] Could not add embedding field mapping for {field_name}"
                     f"due to OpenSearch k-NN plugin issue: {e}. "
                     f"This is a known issue with some OpenSearch versions. "
-                    f"[OpenSearchMultimodal] Skipping mapping update. "
+                    f"[OpenSearchMultimodel] Skipping mapping update. "
                     f"Please ensure the index has the correct mapping for KNN search to work."
                 )
                 # Skip and continue - ingestion will proceed, but KNN search may fail if mapping doesn't exist
                 return
-            logger.warning(f"[OpenSearchMultimodal] Could not add embedding field mapping for {field_name}: {e}")
+            logger.warning(f"[OpenSearchMultimodel] Could not add embedding field mapping for {field_name}: {e}")
             raise
 
         # Verify the field was added correctly
@@ -660,7 +727,7 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         Returns:
             List of document IDs that were successfully ingested
         """
-        logger.debug(f"[OpenSearchMultimodal] Bulk ingesting embeddings for {index_name}")
+        logger.debug(f"[OpenSearchMultimodel] Bulk ingesting embeddings for {index_name}")
         if not mapping:
             mapping = {}
 
@@ -672,6 +739,19 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
             metadata = metadatas[i] if metadatas else {}
             if vector_dimensions is not None and "embedding_dimensions" not in metadata:
                 metadata = {**metadata, "embedding_dimensions": vector_dimensions}
+
+            # Normalize ACL fields that may arrive as JSON strings from flows
+            for key in ("allowed_users", "allowed_groups"):
+                value = metadata.get(key)
+                if isinstance(value, str):
+                    try:
+                        parsed = json.loads(value)
+                        if isinstance(parsed, list):
+                            metadata[key] = parsed
+                    except (json.JSONDecodeError, TypeError):
+                        # Leave value as-is if it isn't valid JSON
+                        pass
+
             _id = ids[i] if ids else str(uuid.uuid4())
             request = {
                 "_op_type": "index",
@@ -691,6 +771,24 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
             self.log(f"Sample metadata: {metadatas[0] if metadatas else {}}")
         helpers.bulk(client, requests, max_chunk_bytes=max_chunk_bytes)
         return return_ids
+
+    # ---------- param helpers ----------
+    def _parse_int_param(self, attr_name: str, default: int) -> int:
+        """Parse a string attribute to int, returning *default* on failure."""
+        raw = getattr(self, attr_name, None)
+        if raw is None or str(raw).strip() == "":
+            return default
+        try:
+            value = int(str(raw).strip())
+        except ValueError:
+            logger.warning(f"Invalid integer value '{raw}' for {attr_name}, using default {default}")
+            return default
+
+        if value < 0:
+            logger.warning(f"Negative value '{raw}' for {attr_name}, using default {default}")
+            return default
+
+        return value
 
     # ---------- auth / client ----------
     def _build_auth_kwargs(self) -> dict[str, Any]:
@@ -727,7 +825,7 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         Returns:
             Configured OpenSearch client ready for operations
         """
-        logger.debug("[OpenSearchMultimodal] Building OpenSearch client")
+        logger.debug("[OpenSearchMultimodel] Building OpenSearch client")
         auth_kwargs = self._build_auth_kwargs()
         return OpenSearch(
             hosts=[self.opensearch_url],
@@ -735,6 +833,9 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
             verify_certs=self.verify_certs,
             ssl_assert_hostname=False,
             ssl_show_warn=False,
+            timeout=self._parse_int_param("request_timeout", REQUEST_TIMEOUT),
+            max_retries=self._parse_int_param("max_retries", MAX_RETRIES),
+            retry_on_timeout=True,
             **auth_kwargs,
         )
 
@@ -746,10 +847,10 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         # Check if we're in ingestion-only mode (no search query)
         has_search_query = bool((self.search_query or "").strip())
         if not has_search_query:
-            logger.debug("[OpenSearchMultimodal] Ingestion-only mode activated: search operations will be skipped")
-            logger.debug("[OpenSearchMultimodal] Starting ingestion mode...")
+            logger.debug("[OpenSearchMultimodel] Ingestion-only mode activated: search operations will be skipped")
+            logger.debug("[OpenSearchMultimodel] Starting ingestion mode...")
 
-        logger.debug(f"[OpenSearchMultimodal] Embedding: {self.embedding}")
+        logger.debug(f"[OpenSearchMultimodel] Embedding: {self.embedding}")
         self._add_documents_to_vector_store(client=client)
         return client
 
@@ -766,16 +867,16 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         Args:
             client: OpenSearch client for performing operations
         """
-        logger.debug("[OpenSearchMultimodal][INGESTION] _add_documents_to_vector_store called")
+        logger.debug("[OpenSearchMultimodel][INGESTION] _add_documents_to_vector_store called")
         # Convert DataFrame to Data if needed using parent's method
         self.ingest_data = self._prepare_ingest_data()
 
         logger.debug(
-            f"[OpenSearchMultimodal][INGESTION] ingest_data type: "
+            f"[OpenSearchMultimodel][INGESTION] ingest_data type: "
             f"{type(self.ingest_data)}, length: {len(self.ingest_data) if self.ingest_data else 0}"
         )
         logger.debug(
-            f"[OpenSearchMultimodal][INGESTION] ingest_data content: "
+            f"[OpenSearchMultimodel][INGESTION] ingest_data content: "
             f"{self.ingest_data[:2] if self.ingest_data and len(self.ingest_data) > 0 else 'empty'}"
         )
 
@@ -800,8 +901,8 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
             self.log("Embedding returned None (fail-safe mode enabled). Skipping document ingestion.")
             return
 
-        logger.debug(f"[OpenSearchMultimodal][INGESTION] Valid embeddings after filtering: {len(embeddings_list)}")
-        self.log(f"[OpenSearchMultimodal][INGESTION] Available embedding models: {len(embeddings_list)}")
+        logger.debug(f"[OpenSearchMultimodel][INGESTION] Valid embeddings after filtering: {len(embeddings_list)}")
+        self.log(f"[OpenSearchMultimodel][INGESTION] Available embedding models: {len(embeddings_list)}")
 
         # Select the embedding to use for ingestion
         selected_embedding = None
@@ -1085,14 +1186,31 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
             vector_field=dynamic_field_name,  # Use dynamic field name
         )
 
-        # Ensure index exists with baseline mapping
+        # Ensure index exists with baseline mapping (index.knn: true is required for vector search)
         try:
             if not client.indices.exists(index=self.index_name):
                 self.log(f"Creating index '{self.index_name}' with base mapping")
                 client.indices.create(index=self.index_name, body=mapping)
         except RequestError as creation_error:
-            if creation_error.error != "resource_already_exists_exception":
+            if creation_error.error == "resource_already_exists_exception":
+                pass  # Index was created concurrently
+            else:
+                error_msg = str(creation_error).lower()
+                if "invalid engine" in error_msg or "illegal_argument" in error_msg:
+                    if "jvector" in error_msg:
+                        msg = (
+                            "The 'jvector' engine is not available in your OpenSearch installation. "
+                            "Use 'nmslib' or 'faiss' for standard OpenSearch, or upgrade to 2.9+."
+                        )
+                        raise ValueError(msg) from creation_error
+                    if "index.knn" in error_msg:
+                        msg = (
+                            "The index has index.knn: false. Delete the existing index and let the "
+                            "component recreate it, or create a new index with a different name."
+                        )
+                        raise ValueError(msg) from creation_error
                 logger.warning(f"Failed to create index '{self.index_name}': {creation_error}")
+                raise
 
         # Ensure the dynamic field exists in the index
         self._ensure_embedding_field_mapping(
@@ -1313,6 +1431,29 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
             return nested_props.get("dimension")
 
         return None
+
+    def _get_filename_agg_field(self, index_properties: dict[str, Any] | None) -> str:
+        """Choose the appropriate field for filename aggregations."""
+        if not index_properties:
+            return "filename.keyword"
+
+        filename_def = index_properties.get("filename")
+        if not isinstance(filename_def, dict):
+            return "filename.keyword"
+
+        field_type = filename_def.get("type")
+        fields_def = filename_def.get("fields", {})
+
+        # Top-level keyword with no subfields
+        if field_type == "keyword" and not isinstance(fields_def, dict):
+            return "filename"
+
+        # Text field with keyword subfield
+        if isinstance(fields_def, dict) and "keyword" in fields_def:
+            return "filename.keyword"
+
+        # Fallback: aggregate on filename directly
+        return "filename"
 
     # ---------- search (multi-model hybrid) ----------
     def search(self, query: str | None = None) -> list[dict[str, Any]]:
@@ -1627,6 +1768,9 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         limit = (filter_obj or {}).get("limit", self.number_of_results)
         score_threshold = (filter_obj or {}).get("score_threshold", 0)
 
+        # Determine the best aggregation field for filename based on index mapping
+        filename_agg_field = self._get_filename_agg_field(index_properties)
+
         # Build multi-model hybrid query
         body = {
             "query": {
@@ -1654,7 +1798,7 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
                 }
             },
             "aggs": {
-                "data_sources": {"terms": {"field": "filename", "size": 20}},
+                "data_sources": {"terms": {"field": filename_agg_field, "size": 20}},
                 "document_types": {"terms": {"field": "mimetype", "size": 10}},
                 "owners": {"terms": {"field": "owner", "size": 10}},
                 "embedding_models": {"terms": {"field": "embedding_model", "size": 10}},
@@ -1824,6 +1968,9 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
                 build_config["jwt_token"]["required"] = is_jwt
                 build_config["jwt_header"]["required"] = is_jwt
                 build_config["bearer_prefix"]["required"] = False
+
+                if is_basic:
+                    build_config["jwt_token"]["value"] = ""
 
                 return build_config
 
