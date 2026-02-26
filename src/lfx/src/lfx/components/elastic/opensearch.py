@@ -108,7 +108,7 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
             name="engine",
             display_name="Vector Engine",
             options=["nmslib", "faiss", "lucene", "jvector"],
-            value="nmslib",
+            value="jvector",
             info=(
                 "Vector search engine for similarity calculations. 'nmslib' works with standard "
                 "OpenSearch. 'jvector' requires OpenSearch 2.9+. 'lucene' requires index.knn: true. "
