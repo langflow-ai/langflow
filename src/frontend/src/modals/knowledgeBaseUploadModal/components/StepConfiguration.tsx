@@ -250,7 +250,7 @@ export function StepConfiguration({
                   )}
                 </div>
                 <div className="flex flex-col gap-2">
-                  <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                  {/* <Label className="text-xs text-muted-foreground flex items-center gap-1">
                     Column Details
                     <TooltipProvider>
                       <Tooltip>
@@ -271,7 +271,7 @@ export function StepConfiguration({
                   <ColumnConfig
                     columnConfig={columnConfig}
                     onColumnConfigChange={onColumnConfigChange}
-                  />
+                  /> */}
                 </div>
               </div>
             </div>
