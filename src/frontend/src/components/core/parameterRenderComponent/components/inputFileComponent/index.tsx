@@ -18,6 +18,7 @@ import IconComponent, {
   ForwardedIconComponent,
 } from "../../../../common/genericIconComponent";
 import { Button } from "../../../../ui/button";
+import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
 import type { FileComponentType, InputProps } from "../../types";
 
 export default function InputFileComponent({
@@ -29,6 +30,7 @@ export default function InputFileComponent({
   isList,
   tempFile = true,
   editNode = false,
+  placeholder,
   allowFolderSelection = false,
 }: InputProps<string, FileComponentType> & {
   allowFolderSelection?: boolean;
@@ -39,8 +41,8 @@ export default function InputFileComponent({
 
   // Clear component state
   useEffect(() => {
-    if (disabled && value !== "") {
-      handleOnNewValue({ value: "", file_path: "" }, { skipSnapshot: true });
+    if (disabled && value.length !== 0) {
+      handleOnNewValue({ value: [], file_path: [] }, { skipSnapshot: true });
     }
   }, [disabled, handleOnNewValue]);
 
@@ -280,7 +282,9 @@ export default function InputFileComponent({
                         )}
                         data-testid="button_open_file_management"
                       >
-                        {selectedFiles.length !== 0 ? (
+                        {disabled ? (
+                          getPlaceholder(disabled, placeholder)
+                        ) : selectedFiles.length !== 0 ? (
                           <ForwardedIconComponent
                             name="Plus"
                             className="icon-size"
