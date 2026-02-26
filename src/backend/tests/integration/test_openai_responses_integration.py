@@ -50,6 +50,32 @@ async def load_and_prepare_flow(client: AsyncClient, created_api_key):
 
     flow_data = await asyncio.to_thread(lambda: json.loads(pathlib.Path(template_path).read_text()))
 
+    # Configure the LanguageModelComponent with an OpenAI model
+    # The template has an empty model selection, so we need to set it programmatically
+    openai_model_config = [
+        {
+            "name": "gpt-4o-mini",
+            "icon": "OpenAI",
+            "category": "OpenAI",
+            "provider": "OpenAI",
+            "metadata": {
+                "context_length": 128000,
+                "model_class": "ChatOpenAI",
+                "model_name_param": "model",
+                "api_key_param": "api_key",
+            },
+        }
+    ]
+
+    # Find and configure the LanguageModelComponent node
+    for node in flow_data.get("data", {}).get("nodes", []):
+        if node.get("data", {}).get("type") == "LanguageModelComponent":
+            node["data"]["node"]["template"]["model"]["value"] = openai_model_config
+            # Also set the API key directly in the component template
+            node["data"]["node"]["template"]["api_key"]["value"] = openai_api_key
+            logger.info("Configured LanguageModelComponent with gpt-4o-mini and API key")
+            break
+
     # Add the flow
     response = await client.post("/api/v1/flows/", json=flow_data, headers=headers)
     logger.info(f"Flow creation response: {response.status_code}")
@@ -98,7 +124,7 @@ async def test_openai_responses_non_streaming(client: AsyncClient, created_api_k
     # Make the request
     response = await client.post("/api/v1/responses", json=payload, headers=headers)
     logger.info(f"Response status: {response.status_code}")
-    logger.debug(f"Response content: {response.content}")
+    logger.info(f"Response content: {response.content}")
 
     # Handle potential errors
     if response.status_code != 200:
@@ -121,6 +147,14 @@ async def test_openai_responses_non_streaming(client: AsyncClient, created_api_k
         # Validate the response
         assert "id" in data
         assert "output" in data
+
+        # Validate usage field exists (may be None if LLM doesn't return usage)
+        assert "usage" in data
+        if data["usage"] is not None:
+            logger.info(f"Usage data returned: {data['usage']}")
+            assert "input_tokens" in data["usage"]
+            assert "output_tokens" in data["usage"]
+            assert "total_tokens" in data["usage"]
     except Exception as exc:
         logger.exception("Exception parsing response")
         pytest.fail(f"Failed to parse response: {exc}")
@@ -167,3 +201,16 @@ async def test_openai_responses_streaming(client: AsyncClient, created_api_key):
     last_event = json.loads(data_events[-1].replace("data: ", ""))
     assert "delta" in first_event
     assert "delta" in last_event
+
+    # Check for response.completed event with usage (if present)
+    completed_events = [evt for evt in events if "event: response.completed" in evt]
+    if completed_events:
+        # Parse the response.completed event
+        for line in completed_events[0].split("\n"):
+            if line.startswith("data:"):
+                completed_data = json.loads(line.replace("data: ", ""))
+                assert "response" in completed_data
+                assert "usage" in completed_data["response"]
+                if completed_data["response"]["usage"] is not None:
+                    logger.info(f"Streaming usage data returned: {completed_data['response']['usage']}")
+                break
