@@ -100,7 +100,9 @@ class LiteLLMProxyComponent(LCModelComponent):
                 timeout=10,
             )
         except httpx.ConnectError as e:
-            msg = f"Could not connect to LiteLLM Proxy at {base_url}. Verify the URL is correct and the proxy is running."
+            msg = (
+                f"Could not connect to LiteLLM Proxy at {base_url}. Verify the URL is correct and the proxy is running."
+            )
             raise ValueError(msg) from e
         except httpx.TimeoutException as e:
             msg = f"Connection to LiteLLM Proxy at {base_url} timed out."
