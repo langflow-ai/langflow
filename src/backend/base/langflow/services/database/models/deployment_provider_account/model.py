@@ -1,13 +1,11 @@
-from __future__ import annotations
-
+from datetime import datetime
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from sqlmodel import Column, DateTime, Field, Relationship, SQLModel, func
 
 if TYPE_CHECKING:
-    from datetime import datetime
-
+    from langflow.services.database.models.deployment.model import Deployment
     from langflow.services.database.models.user.model import User
 
 
@@ -35,4 +33,8 @@ class DeploymentProviderAccount(SQLModel, table=True):  # type: ignore[call-arg]
         description="When the user last updated the deployment provider account.",
     )
 
-    user: User = Relationship(back_populates="deployment_provider_accounts")
+    user: "User" = Relationship(back_populates="deployment_provider_accounts")
+    deployments: list["Deployment"] = Relationship(
+        back_populates="provider_account",
+        sa_relationship_kwargs={"cascade": "delete"},
+    )
