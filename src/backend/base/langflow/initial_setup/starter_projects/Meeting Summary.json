@@ -553,27 +553,6 @@
                 "type": "prompt",
                 "value": "{transcript}\n\n---\n\nSummarize the action items and main ideas based on the conversation above. Be objective and avoid redundancy. \n\n"
               },
-              "use_double_brackets": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Use Double Brackets",
-                "dynamic": false,
-                "info": "Use {{variable}} syntax instead of {variable}.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "use_double_brackets",
-                "override_skip": false,
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": true,
-                "type": "bool",
-                "value": false
-              },
               "tool_placeholder": {
                 "_input_type": "MessageTextInput",
                 "advanced": true,
@@ -618,6 +597,27 @@
                 "title_case": false,
                 "type": "str",
                 "value": ""
+              },
+              "use_double_brackets": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Use Double Brackets",
+                "dynamic": false,
+                "info": "Use {{variable}} syntax instead of {variable}.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "use_double_brackets",
+                "override_skip": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": false
               }
             },
             "tool_mode": false
@@ -678,7 +678,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.128.1"
+                    "version": "0.133.1"
                   },
                   {
                     "name": "lfx",
@@ -956,7 +956,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.128.1"
+                    "version": "0.133.1"
                   },
                   {
                     "name": "lfx",
@@ -1234,7 +1234,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.128.1"
+                    "version": "0.133.1"
                   },
                   {
                     "name": "lfx",
@@ -1621,27 +1621,6 @@
                 "type": "prompt",
                 "value": "{history}\n\n{input}\n\n"
               },
-              "use_double_brackets": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Use Double Brackets",
-                "dynamic": false,
-                "info": "Use {{variable}} syntax instead of {variable}.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "use_double_brackets",
-                "override_skip": false,
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": true,
-                "type": "bool",
-                "value": false
-              },
               "tool_placeholder": {
                 "_input_type": "MessageTextInput",
                 "advanced": true,
@@ -1663,6 +1642,27 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": ""
+              },
+              "use_double_brackets": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Use Double Brackets",
+                "dynamic": false,
+                "info": "Use {{variable}} syntax instead of {variable}.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "use_double_brackets",
+                "override_skip": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": false
               }
             },
             "tool_mode": false
@@ -2495,7 +2495,7 @@
               }
             ],
             "pinned": false,
-            "score": 1.8578044550916993e-05,
+            "score": 0.000018578044550916993,
             "template": {
               "_type": "Component",
               "api_key": {

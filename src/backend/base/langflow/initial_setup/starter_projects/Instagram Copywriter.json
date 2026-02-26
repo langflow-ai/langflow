@@ -696,27 +696,6 @@
                 "type": "prompt",
                 "value": "Based on the following context: \n\n{context} \n\n\nFollow these guidelines: \n\n{guidelines}"
               },
-              "use_double_brackets": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Use Double Brackets",
-                "dynamic": false,
-                "info": "Use {{variable}} syntax instead of {variable}.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "use_double_brackets",
-                "override_skip": false,
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": true,
-                "type": "bool",
-                "value": false
-              },
               "tool_placeholder": {
                 "_input_type": "MessageTextInput",
                 "advanced": true,
@@ -738,6 +717,27 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": ""
+              },
+              "use_double_brackets": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Use Double Brackets",
+                "dynamic": false,
+                "info": "Use {{variable}} syntax instead of {variable}.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "use_double_brackets",
+                "override_skip": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": false
               }
             },
             "tool_mode": false
@@ -1021,27 +1021,6 @@
                 "type": "prompt",
                 "value": "Based on the following post: \n\n{post} \n\nCraft a compelling prompt for image generator involving a blend of specificity, creativity, and clarity. Begin with a clear, concise description of the subject or scene you envision, incorporating specific details such as the setting, mood, and any key elements that are crucial to your vision. It's important to use descriptive language that conveys not just the visual aspects but also the emotional tone or atmosphere you wish to capture. Modifiers that specify the style, technique, or artistic influences can greatly enhance the prompt, guiding the AI to produce results that align closely with your expectations. Additionally, consider including any particular textures, lighting styles, or perspectives that will help refine the image to your liking. The goal is to provide Leonardo AI with a well-rounded, detailed description that leaves little room for ambiguity, enabling it to generate an image that closely matches your request.\n\nA good prompt should read like a brief to an artist, containing all the necessary information but leaving enough creative freedom for the AI to work effectively. It's a delicate balance between being overly prescriptive and too vague. The inclusion of what to avoid, using negative prompts, can also be helpful in steering the AI away from undesired outcomes. Remember, the effectiveness of a prompt often improves with experimentation and iteration, refining your approach based on the results you receive.\n\nExample 1: \"Create a digital painting of a serene lakeside at dusk, reflecting the vibrant hues of the sunset. The scene should be framed by weeping willows, with a lone wooden rowboat gently bobbing on the water's surface. Aim for a realistic style with a touch of impressionism, focusing on the interplay of light and shadow.\"\n\nExample 2: \"Illustrate a bustling medieval marketplace scene, vibrant and full of life, set within a walled city. Include diverse merchants, from a blacksmith to a spice trader, and townsfolk in period attire. The artwork should capture the dynamic energy of the market, with attention to historical accuracy and rich, earthy colors. Opt for a detailed, digital illustration style that brings out the textures of fabrics, metals, and natural elements.\""
               },
-              "use_double_brackets": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Use Double Brackets",
-                "dynamic": false,
-                "info": "Use {{variable}} syntax instead of {variable}.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "use_double_brackets",
-                "override_skip": false,
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": true,
-                "type": "bool",
-                "value": false
-              },
               "tool_placeholder": {
                 "_input_type": "MessageTextInput",
                 "advanced": true,
@@ -1063,6 +1042,27 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": ""
+              },
+              "use_double_brackets": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Use Double Brackets",
+                "dynamic": false,
+                "info": "Use {{variable}} syntax instead of {variable}.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "use_double_brackets",
+                "override_skip": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": false
               }
             },
             "tool_mode": false
@@ -1126,7 +1126,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.128.1"
+                    "version": "0.133.1"
                   },
                   {
                     "name": "lfx",
@@ -1509,27 +1509,6 @@
                 "type": "prompt",
                 "value": "{post}\n \n\n{image_description} "
               },
-              "use_double_brackets": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Use Double Brackets",
-                "dynamic": false,
-                "info": "Use {{variable}} syntax instead of {variable}.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "use_double_brackets",
-                "override_skip": false,
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": true,
-                "type": "bool",
-                "value": false
-              },
               "tool_placeholder": {
                 "_input_type": "MessageTextInput",
                 "advanced": true,
@@ -1551,6 +1530,27 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": ""
+              },
+              "use_double_brackets": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Use Double Brackets",
+                "dynamic": false,
+                "info": "Use {{variable}} syntax instead of {variable}.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "use_double_brackets",
+                "override_skip": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": false
               }
             },
             "tool_mode": false

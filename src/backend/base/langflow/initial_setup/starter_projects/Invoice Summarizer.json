@@ -242,27 +242,6 @@
                 "type": "prompt",
                 "value": "You are a meticulous expense analyst with expertise in financial data analysis and cost categorization.  \nYour role is to analyze invoices, break down expenses, identify spending patterns, and provide actionable cost-saving insights.  \nYou use available tools, such as a knowledge base search, to enhance your analysis.  \nProvide structured and well-formatted responses.\n"
               },
-              "use_double_brackets": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Use Double Brackets",
-                "dynamic": false,
-                "info": "Use {{variable}} syntax instead of {variable}.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "use_double_brackets",
-                "override_skip": false,
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": true,
-                "type": "bool",
-                "value": false
-              },
               "tool_placeholder": {
                 "_input_type": "MessageTextInput",
                 "advanced": true,
@@ -285,6 +264,27 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": ""
+              },
+              "use_double_brackets": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Use Double Brackets",
+                "dynamic": false,
+                "info": "Use {{variable}} syntax instead of {variable}.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "use_double_brackets",
+                "override_skip": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": false
               }
             },
             "tool_mode": false
@@ -344,7 +344,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.128.1"
+                    "version": "0.133.1"
                   },
                   {
                     "name": "lfx",
@@ -636,7 +636,7 @@
           "width": 402
         },
         "position": {
-          "x": 526.88806568161635,
+          "x": 526.8880656816164,
           "y": -229.26232150672587
         },
         "resizing": false,
@@ -708,7 +708,7 @@
               }
             ],
             "pinned": false,
-            "score": 7.568328950209746e-06,
+            "score": 7.568328950209746e-6,
             "template": {
               "_type": "Component",
               "code": {

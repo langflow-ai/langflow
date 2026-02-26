@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib
 from functools import lru_cache
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
@@ -22,40 +23,97 @@ from lfx.log.logger import logger
 from lfx.services.deps import get_variable_service, session_scope
 from lfx.utils.async_helpers import run_until_complete
 
+# Mapping from class name to (module_path, attribute_name).
+# Only the provider package that is actually needed gets imported at runtime.
+_MODEL_CLASS_IMPORTS: dict[str, tuple[str, str]] = {
+    "ChatOpenAI": ("langchain_openai", "ChatOpenAI"),
+    "ChatAnthropic": ("langchain_anthropic", "ChatAnthropic"),
+    "ChatGoogleGenerativeAIFixed": ("lfx.base.models.google_generative_ai_model", "ChatGoogleGenerativeAIFixed"),
+    "ChatOllama": ("langchain_ollama", "ChatOllama"),
+    "ChatWatsonx": ("langchain_ibm", "ChatWatsonx"),
+}
 
-@lru_cache(maxsize=1)
-def get_model_classes():
-    """Lazy load model classes to avoid importing optional dependencies at module level."""
-    from langchain_anthropic import ChatAnthropic  # type: ignore  # noqa: PGH003
-    from langchain_ibm import ChatWatsonx  # type: ignore  # noqa: PGH003
-    from langchain_ollama import ChatOllama  # type: ignore  # noqa: PGH003
-    from langchain_openai import ChatOpenAI  # type: ignore  # noqa: PGH003
+_EMBEDDING_CLASS_IMPORTS: dict[str, tuple[str, str]] = {
+    "OpenAIEmbeddings": ("langchain_openai", "OpenAIEmbeddings"),
+    "GoogleGenerativeAIEmbeddings": ("langchain_google_genai", "GoogleGenerativeAIEmbeddings"),
+    "OllamaEmbeddings": ("langchain_ollama", "OllamaEmbeddings"),
+    "WatsonxEmbeddings": ("langchain_ibm", "WatsonxEmbeddings"),
+}
 
-    from lfx.base.models.google_generative_ai_model import ChatGoogleGenerativeAIFixed
-
-    return {
-        "ChatOpenAI": ChatOpenAI,
-        "ChatAnthropic": ChatAnthropic,
-        "ChatGoogleGenerativeAIFixed": ChatGoogleGenerativeAIFixed,
-        "ChatOllama": ChatOllama,
-        "ChatWatsonx": ChatWatsonx,
-    }
+_model_class_cache: dict[str, type] = {}
+_embedding_class_cache: dict[str, type] = {}
 
 
-@lru_cache(maxsize=1)
-def get_embedding_classes():
-    """Lazy load embedding classes to avoid importing optional dependencies at module level."""
-    from langchain_google_genai import GoogleGenerativeAIEmbeddings  # type: ignore  # noqa: PGH003
-    from langchain_ibm import WatsonxEmbeddings  # type: ignore  # noqa: PGH003
-    from langchain_ollama import OllamaEmbeddings  # type: ignore  # noqa: PGH003
-    from langchain_openai import OpenAIEmbeddings  # type: ignore  # noqa: PGH003
+def get_model_class(class_name: str) -> type:
+    """Import and return a single model class by name.
 
-    return {
-        "GoogleGenerativeAIEmbeddings": GoogleGenerativeAIEmbeddings,
-        "OpenAIEmbeddings": OpenAIEmbeddings,
-        "OllamaEmbeddings": OllamaEmbeddings,
-        "WatsonxEmbeddings": WatsonxEmbeddings,
-    }
+    Only imports the provider package that is actually needed.
+    """
+    if class_name in _model_class_cache:
+        return _model_class_cache[class_name]
+
+    import_info = _MODEL_CLASS_IMPORTS.get(class_name)
+    if import_info is None:
+        msg = f"Unknown model class: {class_name}"
+        raise ValueError(msg)
+
+    module_path, attr_name = import_info
+    try:
+        module = importlib.import_module(module_path)
+    except ImportError as exc:
+        msg = (
+            f"Could not import '{module_path}' for model class '{class_name}'. "
+            f"Install the missing package (e.g. uv pip install {module_path.replace('.', '-')})."
+        )
+        raise ImportError(msg) from exc
+    cls = getattr(module, attr_name)
+    _model_class_cache[class_name] = cls
+    return cls
+
+
+def get_embedding_class(class_name: str) -> type:
+    """Import and return a single embedding class by name.
+
+    Only imports the provider package that is actually needed.
+    """
+    if class_name in _embedding_class_cache:
+        return _embedding_class_cache[class_name]
+
+    import_info = _EMBEDDING_CLASS_IMPORTS.get(class_name)
+    if import_info is None:
+        msg = f"Unknown embedding class: {class_name}"
+        raise ValueError(msg)
+
+    module_path, attr_name = import_info
+    try:
+        module = importlib.import_module(module_path)
+    except ImportError as exc:
+        msg = (
+            f"Could not import '{module_path}' for embedding class '{class_name}'. "
+            f"Install the missing package (e.g. uv pip install {module_path.replace('.', '-')})."
+        )
+        raise ImportError(msg) from exc
+    cls = getattr(module, attr_name)
+    _embedding_class_cache[class_name] = cls
+    return cls
+
+
+def get_model_classes() -> dict[str, type]:
+    """Return all model classes, importing every provider package.
+
+    .. deprecated::
+        Use :func:`get_model_class` instead to import only the provider you need.
+    """
+    return {name: get_model_class(name) for name in _MODEL_CLASS_IMPORTS}
+
+
+def get_embedding_classes() -> dict[str, type]:
+    """Return all embedding classes, importing every provider package.
+
+    .. deprecated::
+        Use :func:`get_embedding_class` instead to import only the provider you need.
+    """
+    return {name: get_embedding_class(name) for name in _EMBEDDING_CLASS_IMPORTS}
 
 
 @lru_cache(maxsize=1)
@@ -1012,10 +1070,11 @@ def get_llm(
         raise ValueError(msg)
 
     # Get model class from metadata
-    model_class = get_model_classes().get(metadata.get("model_class"))
-    if model_class is None:
+    model_class_name = metadata.get("model_class")
+    if not model_class_name:
         msg = f"No model class defined for {model_name}"
         raise ValueError(msg)
+    model_class = get_model_class(model_class_name)
     model_name_param = metadata.get("model_name_param", "model")
 
     # Check if this is a reasoning model that doesn't support temperature

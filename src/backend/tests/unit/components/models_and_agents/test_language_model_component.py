@@ -71,8 +71,8 @@ class TestLanguageModelComponent(ComponentTestBaseWithoutClient):
             pytest.skip("GOOGLE_API_KEY environment variable not set")
         return api_key
 
-    @patch("lfx.base.models.unified_models.get_model_classes")
-    async def test_openai_model_creation(self, mock_get_model_classes, component_class, default_kwargs):
+    @patch("lfx.base.models.unified_models.get_model_class")
+    async def test_openai_model_creation(self, mock_get_model_class, component_class, default_kwargs):
         """Test that the component returns an instance of ChatOpenAI for OpenAI provider."""
         # Setup mock
         mock_openai_class = MagicMock()
@@ -81,9 +81,7 @@ class TestLanguageModelComponent(ComponentTestBaseWithoutClient):
         mock_instance.temperature = 0.5
         mock_instance.streaming = False
         mock_openai_class.return_value = mock_instance
-        mock_model_classes_dict = MagicMock()
-        mock_model_classes_dict.get.return_value = mock_openai_class
-        mock_get_model_classes.return_value = mock_model_classes_dict
+        mock_get_model_class.return_value = mock_openai_class
 
         # Update default_kwargs to include max_tokens_field_name in metadata
         default_kwargs["model"][0]["metadata"]["max_tokens_field_name"] = "max_tokens"
@@ -97,7 +95,7 @@ class TestLanguageModelComponent(ComponentTestBaseWithoutClient):
         model = component.build_model()
 
         # Verify the model class getter was called
-        mock_model_classes_dict.get.assert_called_once_with("ChatOpenAI")
+        mock_get_model_class.assert_called_once_with("ChatOpenAI")
 
         # Verify the mock was called with max_tokens
         assert mock_openai_class.call_count == 1
@@ -111,8 +109,8 @@ class TestLanguageModelComponent(ComponentTestBaseWithoutClient):
         assert call_kwargs["max_tokens"] == 500
         assert model == mock_instance
 
-    @patch("lfx.base.models.unified_models.get_model_classes")
-    async def test_anthropic_model_creation(self, mock_get_model_classes, component_class):
+    @patch("lfx.base.models.unified_models.get_model_class")
+    async def test_anthropic_model_creation(self, mock_get_model_class, component_class):
         """Test that the component returns an instance of ChatAnthropic for Anthropic provider."""
         # Setup mock
         mock_anthropic_class = MagicMock()
@@ -121,9 +119,7 @@ class TestLanguageModelComponent(ComponentTestBaseWithoutClient):
         mock_instance.temperature = 0.7
         mock_instance.streaming = False
         mock_anthropic_class.return_value = mock_instance
-        mock_model_classes_dict = MagicMock()
-        mock_model_classes_dict.get.return_value = mock_anthropic_class
-        mock_get_model_classes.return_value = mock_model_classes_dict
+        mock_get_model_class.return_value = mock_anthropic_class
 
         component = component_class(
             model=[
@@ -146,7 +142,7 @@ class TestLanguageModelComponent(ComponentTestBaseWithoutClient):
         model = component.build_model()
 
         # Verify the model class getter was called
-        mock_model_classes_dict.get.assert_called_once_with("ChatAnthropic")
+        mock_get_model_class.assert_called_once_with("ChatAnthropic")
 
         # Verify the mock was called
         assert mock_anthropic_class.call_count == 1
@@ -158,16 +154,14 @@ class TestLanguageModelComponent(ComponentTestBaseWithoutClient):
         assert call_kwargs["api_key"] == "sk-ant-test-key"
         assert model == mock_instance
 
-    @patch("lfx.base.models.unified_models.get_model_classes")
-    async def test_google_model_creation(self, mock_get_model_classes, component_class):
+    @patch("lfx.base.models.unified_models.get_model_class")
+    async def test_google_model_creation(self, mock_get_model_class, component_class):
         """Test that the component returns an instance of ChatGoogleGenerativeAI for Google provider."""
         # Setup mock
         mock_google_class = MagicMock()
         mock_instance = MagicMock()
         mock_google_class.return_value = mock_instance
-        mock_model_classes_dict = MagicMock()
-        mock_model_classes_dict.get.return_value = mock_google_class
-        mock_get_model_classes.return_value = mock_model_classes_dict
+        mock_get_model_class.return_value = mock_google_class
 
         component = component_class(
             model=[
@@ -192,7 +186,7 @@ class TestLanguageModelComponent(ComponentTestBaseWithoutClient):
         model = component.build_model()
 
         # Verify the model class getter was called
-        mock_model_classes_dict.get.assert_called_once_with("ChatGoogleGenerativeAIFixed")
+        mock_get_model_class.assert_called_once_with("ChatGoogleGenerativeAIFixed")
 
         # Verify the mock was called with max_output_tokens (not max_tokens)
         assert mock_google_class.call_count == 1
@@ -299,16 +293,14 @@ class TestLanguageModelComponent(ComponentTestBaseWithoutClient):
         with pytest.raises(ValueError, match="No model class defined for test-model"):
             component.build_model()
 
-    @patch("lfx.base.models.unified_models.get_model_classes")
-    async def test_reasoning_model_no_temperature(self, mock_get_model_classes, component_class):
+    @patch("lfx.base.models.unified_models.get_model_class")
+    async def test_reasoning_model_no_temperature(self, mock_get_model_class, component_class):
         """Test that reasoning models don't include temperature parameter."""
         # Setup mock
         mock_openai_class = MagicMock()
         mock_instance = MagicMock()
         mock_openai_class.return_value = mock_instance
-        mock_model_classes_dict = MagicMock()
-        mock_model_classes_dict.get.return_value = mock_openai_class
-        mock_get_model_classes.return_value = mock_model_classes_dict
+        mock_get_model_class.return_value = mock_openai_class
 
         # Use a reasoning model
         reasoning_model = OPENAI_REASONING_MODEL_NAMES[0] if OPENAI_REASONING_MODEL_NAMES else "o1-preview"

@@ -95,6 +95,7 @@ dependencies = [
     "langchain-chroma>=0.1.4,<1.0.0",
     "jaraco-context>=6.1.0",
     "wheel>=0.46.2,<1.0.0",
+    "onnxruntime>=1.20,<=1.23" # >=1.24 does not support Python 3.10
 ]
 
 [dependency-groups]

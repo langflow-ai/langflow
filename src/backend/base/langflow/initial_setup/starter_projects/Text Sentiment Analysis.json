@@ -350,27 +350,6 @@
                 "type": "prompt",
                 "value": "Based on the following summary of discussions in the Langflow community, generate a well-structured and actionable technical recommendation for the development team. The recommendation should be clear, precise, and directly applicable to improve Langflow.\n\nGuidelines for the Action Item:\nBe Specific: Clearly define the issue, feature request, or improvement.\nProvide Context: Briefly justify why this action is necessary based on user discussions.\nSuggest a Next Step: Outline what the technical team should do to address the issue or enhance the platform.\nPrioritize if Relevant: If multiple issues are discussed, focus on the most urgent or impactful one.\n\nSummary:\n{summary}\n\nProvide a concise, structured, and technically sound action item that the Langflow team can implement.\n\nreturn:\n- {summary}\n- [action item]\n- [sentiment]\n- [start_date]\n- [end_date]\n\nyou need to return the data in json format\n\nReturn Format:\nEnsure that both \"summary\" and \"action_item\" are single string values, not lists and without nested objects or additional keys.\n\n"
               },
-              "use_double_brackets": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Use Double Brackets",
-                "dynamic": false,
-                "info": "Use {{variable}} syntax instead of {variable}.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "use_double_brackets",
-                "override_skip": false,
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": true,
-                "type": "bool",
-                "value": false
-              },
               "tool_placeholder": {
                 "_input_type": "MessageTextInput",
                 "advanced": true,
@@ -393,6 +372,27 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": ""
+              },
+              "use_double_brackets": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Use Double Brackets",
+                "dynamic": false,
+                "info": "Use {{variable}} syntax instead of {variable}.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "use_double_brackets",
+                "override_skip": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": false
               }
             },
             "tool_mode": false
@@ -540,27 +540,6 @@
                 "type": "str",
                 "value": ""
               },
-              "use_double_brackets": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Use Double Brackets",
-                "dynamic": false,
-                "info": "Use {{variable}} syntax instead of {variable}.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "use_double_brackets",
-                "override_skip": false,
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": true,
-                "type": "bool",
-                "value": false
-              },
               "tool_placeholder": {
                 "_input_type": "MessageTextInput",
                 "advanced": true,
@@ -583,6 +562,27 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": ""
+              },
+              "use_double_brackets": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Use Double Brackets",
+                "dynamic": false,
+                "info": "Use {{variable}} syntax instead of {variable}.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "use_double_brackets",
+                "override_skip": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": false
               }
             },
             "tool_mode": false
@@ -699,27 +699,6 @@
                 "type": "prompt",
                 "value": "You are an NLP expert assisting the technical team in analyzing user messages. The analysis will be used by the team to make decisions more effectively.\n\n**Task 1:**\n#### **1. Message Classification **\nClassify the message into a **single category** that best describes its purpose. Choose the category from the predefined list below. This classification will help the technical team identify specific themes and make decisions faster.\n\n- **Release Notes**: A message announcing updates, new features, integrations, important information about new versions for users.\n- **Feature Request**: A suggestion or idea for a new feature or enhancement.\n- **Bug Report**: A message reporting a clear technical failure, malfunction, or unexpected behavior in Langflow. The user explicitly describes an issue where: A feature does not work as expected; The system crashes, freezes, or behaves unpredictably.\n- **User Question**: Any question or uncertainty regarding  features, functionality, implementation, or general use. This includes both technical questions and general doubts, regardless of complexity or specificity.\n- **Complaint**: A message expressing dissatisfaction or frustration with a feature or issue.\n- **Positive Feedback**: Messages expressing gratitude alongside useful feedback, such as confirming that an issue has been resolved or a feature works as intended.\n\n\n##### **Important Instructions for Classification:**\n- Ensure each message is classified into **only one category** based on its primary intent or purpose. If multiple intents are detected, select the most relevant category that reflects the user's main goal.\n- Do not create new categories or use freeform text for classification. Always use one of the predefined categories exactly as they appear in the list above.\n\n**task 2**\nAnalyze the sentiment of the message and classify it into one of the following categories:\n- **Positive**: The message conveys positivity, satisfaction, gratitude, or encouragement.\n- **Neutral**: The message is factual, descriptive, or lacks any emotional tone.\n- **Negative**: The message conveys frustration, dissatisfaction, or criticism.\n\n\nreturn:\n- [message_id]\n- [message_category] \n- [message_sentiment]\n\nYou need to output the results in JSON format.\n"
               },
-              "use_double_brackets": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Use Double Brackets",
-                "dynamic": false,
-                "info": "Use {{variable}} syntax instead of {variable}.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "use_double_brackets",
-                "override_skip": false,
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": true,
-                "type": "bool",
-                "value": false
-              },
               "tool_placeholder": {
                 "_input_type": "MessageTextInput",
                 "advanced": true,
@@ -742,6 +721,27 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": ""
+              },
+              "use_double_brackets": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Use Double Brackets",
+                "dynamic": false,
+                "info": "Use {{variable}} syntax instead of {variable}.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "use_double_brackets",
+                "override_skip": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": false
               }
             },
             "tool_mode": false
@@ -826,7 +826,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.128.1"
+                    "version": "0.133.1"
                   },
                   {
                     "name": "lfx",
@@ -1106,7 +1106,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.128.1"
+                    "version": "0.133.1"
                   },
                   {
                     "name": "lfx",

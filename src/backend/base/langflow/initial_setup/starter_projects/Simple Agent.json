@@ -653,7 +653,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.128.1"
+                    "version": "0.133.1"
                   },
                   {
                     "name": "lfx",
@@ -1843,7 +1843,7 @@
                   },
                   {
                     "name": "markitdown",
-                    "version": "0.1.4"
+                    "version": "0.1.5"
                   },
                   {
                     "name": "lfx",
