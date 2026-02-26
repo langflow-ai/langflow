@@ -194,10 +194,10 @@ export function AssistantMessageItem({
           <img
             src={profileImageUrl}
             alt="User"
-            className="h-8 w-8 shrink-0 rounded-full"
+            className="h-7 w-7 shrink-0 rounded-full"
           />
         ) : (
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-xl">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-lg">
             <img
               src={langflowAssistantIcon}
               alt="Langflow Assistant"

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/utils/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -120,7 +121,7 @@ export function ModelSelector({
         <Button
           variant="ghost"
           size="sm"
-          className="h-7 gap-1.5 px-2 text-xs text-muted-foreground hover:text-foreground"
+          className="h-7 gap-1.5 px-2 text-xs text-muted-foreground hover:text-foreground active:!scale-100"
         >
           <span className="flex items-center gap-1.5">
             <span className="h-1.5 w-1.5 bg-muted-foreground" />
@@ -140,11 +141,7 @@ export function ModelSelector({
         {enabledProviders.map((provider, index) => (
           <div key={provider.provider}>
             {index > 0 && <DropdownMenuSeparator className="my-2" />}
-            <DropdownMenuLabel className="flex items-center gap-2 px-2 py-2 text-xs font-medium text-muted-foreground">
-              <ForwardedIconComponent
-                name={provider.icon || "Bot"}
-                className="h-4 w-4"
-              />
+            <DropdownMenuLabel className="text-xs font-semibold my-2 ml-2 text-muted-foreground">
               {provider.provider}
             </DropdownMenuLabel>
             <div className="flex flex-col gap-1">
@@ -163,15 +160,24 @@ export function ModelSelector({
                         icon: provider.icon || "Bot",
                       })
                     }
-                    className="flex cursor-pointer items-center justify-between rounded-md px-3 py-2 pl-8"
+                    className="flex w-full cursor-pointer items-center rounded-md px-3 py-2"
                   >
-                    <span className="text-sm">{model.model_name}</span>
-                    {isSelected && (
+                    <div className="flex w-full items-center gap-2">
                       <ForwardedIconComponent
-                        name="Check"
-                        className="h-4 w-4"
+                        name={provider.icon || "Bot"}
+                        className="h-4 w-4 shrink-0 text-primary ml-2"
                       />
-                    )}
+                      <div className="truncate text-[13px]">{model.model_name}</div>
+                      <div className="pl-2 ml-auto">
+                        <ForwardedIconComponent
+                          name="Check"
+                          className={cn(
+                            "h-4 w-4 shrink-0 text-primary",
+                            isSelected ? "opacity-100" : "opacity-0",
+                          )}
+                        />
+                      </div>
+                    </div>
                   </DropdownMenuItem>
                 );
               })}

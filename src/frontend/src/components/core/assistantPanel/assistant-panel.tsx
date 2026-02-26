@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
 import type { AgenticStepType } from "@/controllers/API/queries/agentic";
 import { cn } from "@/utils/utils";
@@ -5,14 +6,12 @@ import type {
   AssistantModel,
   AssistantPanelProps,
 } from "./assistant-panel.types";
-import { AssistantEmptyState } from "./components/assistant-empty-state";
 import { AssistantHeader } from "./components/assistant-header";
 import { AssistantInput } from "./components/assistant-input";
 import { AssistantMessageItem } from "./components/assistant-message";
 import { AssistantNoModelsState } from "./components/assistant-no-models-state";
 import {
   useAssistantChat,
-  useAssistantViewMode,
   useEnabledModels,
 } from "./hooks";
 
@@ -45,13 +44,35 @@ function AssistantInputWithScroll({
       disabled={disabled}
       isProcessing={isProcessing}
       currentStep={currentStep}
+      compact
     />
   );
 }
 
 export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
-  const { viewMode, setViewMode } = useAssistantViewMode();
   const { hasEnabledModels } = useEnabledModels();
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleClickOutside = (e: PointerEvent) => {
+      const target = e.target as Node;
+      // Don't close if clicking inside the panel
+      if (panelRef.current && panelRef.current.contains(target)) return;
+      // Don't close if clicking inside a dropdown portal or popover
+      const el = e.target as HTMLElement;
+      if (el.closest?.("[role='menu']") || el.closest?.("[data-radix-popper-content-wrapper]")) return;
+      // Don't close if any panel dropdown is currently open (portals render outside panelRef)
+      if (document.querySelector("[data-radix-popper-content-wrapper]")) return;
+      // Don't close if clicking the canvas controls (let the toggle button handle it)
+      if (el.closest?.("[data-testid='main_canvas_controls']")) return;
+      onClose();
+    };
+
+    document.addEventListener("pointerdown", handleClickOutside, true);
+    return () => document.removeEventListener("pointerdown", handleClickOutside, true);
+  }, [isOpen, onClose]);
   const {
     messages,
     isProcessing,
@@ -62,45 +83,44 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
     handleClearHistory,
   } = useAssistantChat();
 
-  const handleSuggestionClick = (suggestion: string) => {
-    handleSend(suggestion, null);
+  const handleApproveAndClose = (messageId: string) => {
+    handleApprove(messageId);
+    onClose();
   };
 
   const hasMessages = messages.length > 0;
+  const [hasExpandedOnce, setHasExpandedOnce] = useState(false);
 
-  // Fixed positioning for both modes - always rendered, position changes based on viewMode
+  // Track if panel has ever shown messages (to keep expanded size after new session)
+  useEffect(() => {
+    if (hasMessages) setHasExpandedOnce(true);
+  }, [hasMessages]);
+
+  // Reset when panel is closed
+  useEffect(() => {
+    if (!isOpen) setHasExpandedOnce(false);
+  }, [isOpen]);
+
+  const useExpandedSize = hasMessages || hasExpandedOnce;
+
   const containerClasses = cn(
     "flex flex-col transition-all duration-300 fixed shadow-xl",
-    viewMode === "sidebar"
-      ? cn(
-          "left-0 top-[49px] z-[60] h-[calc(100%-49px)] w-[500px]",
-          isOpen ? "translate-x-0" : "-translate-x-full",
-        )
-      : cn(
-          "z-50 bottom-20 left-[calc(50%+140px)] -translate-x-1/2 w-[520px] rounded-2xl border border-border",
-          hasMessages ? "h-[500px]" : "h-auto",
-          isOpen
-            ? "opacity-100 translate-y-0"
-            : "opacity-0 translate-y-4 pointer-events-none",
-        ),
+    "z-50 bottom-16 left-[calc(50%+140px)] -translate-x-1/2 rounded-2xl border border-border",
+    useExpandedSize ? "h-[600px] w-[620px]" : "h-auto w-[520px]",
+    isOpen
+      ? "opacity-100 translate-y-0"
+      : "opacity-0 translate-y-4 pointer-events-none",
   );
 
   return (
-    <div className={containerClasses}>
-      <div
-        className={cn(
-          "absolute inset-0 bg-background",
-          viewMode === "floating" && "rounded-2xl",
-        )}
-      />
+    <div ref={panelRef} className={containerClasses}>
+      <div className="absolute inset-0 rounded-2xl bg-background" />
 
       <div className="relative z-10 flex h-full min-h-0 flex-col overflow-hidden">
         <AssistantHeader
           onClose={onClose}
-          onClearHistory={handleClearHistory}
-          disabled={isProcessing}
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
+          onNewSession={handleClearHistory}
+          hasMessages={hasMessages}
         />
         {!hasEnabledModels ? (
           <>
@@ -119,12 +139,12 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
             resize="smooth"
             initial="instant"
           >
-            <StickToBottom.Content className="flex-1 px-4 py-6">
+            <StickToBottom.Content className="flex min-h-full flex-col justify-end px-4 pt-4 pb-0">
               {messages.map((msg) => (
                 <AssistantMessageItem
                   key={msg.id}
                   message={msg}
-                  onApprove={handleApprove}
+                  onApprove={handleApproveAndClose}
                 />
               ))}
             </StickToBottom.Content>
@@ -136,27 +156,15 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
               currentStep={currentStep}
             />
           </StickToBottom>
-        ) : viewMode === "floating" ? (
+        ) : (
           <AssistantInput
             onSend={handleSend}
             onStop={handleStopGeneration}
             disabled={false}
             isProcessing={isProcessing}
             currentStep={currentStep}
+            compact={hasExpandedOnce}
           />
-        ) : (
-          <>
-            <div className="flex flex-1 flex-col overflow-hidden">
-              <AssistantEmptyState onSuggestionClick={handleSuggestionClick} />
-            </div>
-            <AssistantInput
-              onSend={handleSend}
-              onStop={handleStopGeneration}
-              disabled={false}
-              isProcessing={isProcessing}
-              currentStep={currentStep}
-            />
-          </>
         )}
       </div>
     </div>

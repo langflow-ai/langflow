@@ -41,4 +41,3 @@ export interface AssistantPanelProps {
   onClose: () => void;
 }
 
-export type AssistantViewMode = "sidebar" | "floating";

@@ -52,6 +52,7 @@ interface AssistantInputProps {
   isProcessing?: boolean;
   currentStep?: AgenticStepType | null;
   placeholder?: string;
+  compact?: boolean;
 }
 
 export function AssistantInput({
@@ -61,6 +62,7 @@ export function AssistantInput({
   isProcessing = false,
   currentStep = null,
   placeholder,
+  compact = false,
 }: AssistantInputProps) {
   const [message, setMessage] = useState("");
 
@@ -121,7 +123,7 @@ export function AssistantInput({
   const canSend = message.trim().length > 0 && !disabled;
 
   return (
-    <div className="relative px-2 pb-2.5">
+    <div className="relative px-2 pb-1">
       {/* Glow effect below input */}
       <div
         className="pointer-events-none absolute -bottom-2 left-1/2 h-16 w-3/4 -translate-x-1/2 rounded-full opacity-60 blur-2xl"
@@ -130,7 +132,10 @@ export function AssistantInput({
             "linear-gradient(90deg, rgba(186,117,255,0.4) 0%, rgba(255,50,118,0.5) 50%, rgba(186,117,255,0.4) 100%)",
         }}
       />
-      <div className="relative flex flex-col gap-4 rounded-md border border-border bg-background pb-2.5 transition-colors focus-within:border-muted-foreground shadow-[0_0_15px_rgba(186,117,255,0.12),0_0_30px_rgba(255,50,118,0.08)]">
+      <div
+        className={cn("relative flex cursor-text flex-col rounded-md border border-border bg-background pb-2.5 transition-colors focus-within:border-muted-foreground shadow-[0_0_15px_rgba(186,117,255,0.12),0_0_30px_rgba(255,50,118,0.08)]", compact ? "gap-1" : "gap-4")}
+        onClick={() => textareaRef.current?.focus()}
+      >
         <div className="relative">
           <Textarea
             ref={textareaRef}
@@ -142,10 +147,11 @@ export function AssistantInput({
             }
             disabled={disabled || isProcessing}
             className={cn(
-              "min-h-[60px] resize-none border-0 bg-transparent px-4 pt-3 text-sm focus-visible:ring-0 disabled:bg-transparent disabled:cursor-not-allowed",
+              "resize-none border-0 bg-transparent px-4 pt-3 text-sm focus-visible:ring-0 disabled:bg-transparent disabled:cursor-not-allowed",
+              compact ? "min-h-0" : "min-h-[60px]",
               isProcessing && !isPostGenerationStep && "placeholder:opacity-50",
             )}
-            rows={2}
+            rows={compact ? 1 : 2}
           />
           {isPostGenerationStep && !message && (
             <div className="pointer-events-none absolute left-4 top-3 flex items-center gap-2 text-sm text-muted-foreground">

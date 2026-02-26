@@ -5,7 +5,17 @@ export const ASSISTANT_TITLE = "Langflow Assistant";
 export const ASSISTANT_SESSION_STORAGE_KEY_PREFIX =
   "langflow-assistant-session-";
 
-export const ASSISTANT_PLACEHOLDER = "Create an agent component...";
+const ASSISTANT_PLACEHOLDERS = [
+  "Create an agent component...",
+  "Build a RAG pipeline...",
+  "Make a chatbot with memory...",
+  "Create a web scraper component...",
+  "Build a document parser...",
+  "Ask me anything about Langflow...",
+];
+
+export const ASSISTANT_PLACEHOLDER =
+  ASSISTANT_PLACEHOLDERS[Math.floor(Math.random() * ASSISTANT_PLACEHOLDERS.length)];
 
 export const ASSISTANT_WELCOME_TEXT = "Here's how I can help";
 
