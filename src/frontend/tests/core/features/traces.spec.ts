@@ -1,0 +1,91 @@
+import * as dotenv from "dotenv";
+import path from "path";
+import { expect, test } from "../../fixtures";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+
+test(
+  "should able to see and interact with Traces",
+  { tag: ["@release", "@workspace", "@api"] },
+
+  async ({ page }) => {
+    test.skip(
+      !process?.env?.OPENAI_API_KEY,
+      "OPENAI_API_KEY required to run this test",
+    );
+
+    if (!process.env.CI) {
+      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+    }
+
+    await awaitBootstrapTest(page);
+
+    await page.getByTestId("side_nav_options_all-templates").click();
+    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await expect(page.getByTestId(/.*rf__node.*/).first()).toBeVisible({
+      timeout: 3000,
+    });
+    let outdatedComponents = await page.getByTestId("update-button").count();
+
+    while (outdatedComponents > 0) {
+      await page.getByTestId("update-button").first().click();
+      outdatedComponents = await page.getByTestId("update-button").count();
+    }
+
+    let filledApiKey = await page.getByTestId("remove-icon-badge").count();
+    while (filledApiKey > 0) {
+      await page.getByTestId("remove-icon-badge").first().click();
+      filledApiKey = await page.getByTestId("remove-icon-badge").count();
+    }
+
+    await page.getByRole("button", { name: "Traces" }).first().click();
+    await expect(
+      page.getByText("No Data Available", { exact: true }),
+    ).toBeVisible();
+  },
+);
+
+test(
+  "should able to see traces after running a flow",
+  { tag: ["@release", "@workspace", "@api"] },
+
+  async ({ page }) => {
+    if (!process.env.CI) {
+      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+    }
+    test.skip(
+      !process?.env?.OPENAI_API_KEY,
+      "OPENAI_API_KEY required to run this test",
+    );
+
+    await awaitBootstrapTest(page);
+
+    await page.getByTestId("side_nav_options_all-templates").click();
+    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await expect(page.getByTestId(/.*rf__node.*/).first()).toBeVisible({
+      timeout: 3000,
+    });
+    let outdatedComponents = await page.getByTestId("update-button").count();
+
+    while (outdatedComponents > 0) {
+      await page.getByTestId("update-button").first().click();
+      outdatedComponents = await page.getByTestId("update-button").count();
+    }
+
+    let filledApiKey = await page.getByTestId("remove-icon-badge").count();
+    while (filledApiKey > 0) {
+      await page.getByTestId("remove-icon-badge").first().click();
+      filledApiKey = await page.getByTestId("remove-icon-badge").count();
+    }
+
+    await page.getByTestId("playground-btn-flow-io").click();
+    await page.getByTestId("button-send").click();
+    await page.waitForSelector("text=Finished", { timeout: 60000 });
+    await page.getByTestId("sidebar-nav-traces").click();
+    await page
+      .getByRole("gridcell", { name: '{"input_value":"Hello"}' })
+      .click();
+    await expect(
+      await page.getByTestId("span-detail").getByText("success"),
+    ).toBeVisible();
+  },
+);
