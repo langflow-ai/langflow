@@ -145,7 +145,11 @@ class TestMCPComponentOutputProcessing:
 
     @pytest.mark.asyncio
     async def test_build_output_adds_page_default_for_empty_kwargs(self, component):
-        """Test that build_output adds page=1 when kwargs empty and tool has page in schema."""
+        """Test that build_output calls coroutine with empty kwargs when no params provided.
+
+        With exclude_none in MCP util, optional params (page, page_size) are omitted from
+        the payload sent to the server, allowing the backend to use its defaults.
+        """
         from pydantic import Field, create_model
 
         component.tool = "list_tool"
@@ -173,4 +177,6 @@ class TestMCPComponentOutputProcessing:
 
         await component.build_output()
 
-        mock_tool.coroutine.assert_called_once_with(page=1, page_size=25)
+        mock_tool.coroutine.assert_called_once()
+        call_kwargs = mock_tool.coroutine.call_args[1]
+        assert call_kwargs == {}  # Empty kwargs; exclude_none sends {} to MCP server
