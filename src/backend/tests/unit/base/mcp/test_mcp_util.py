@@ -1108,6 +1108,59 @@ class TestMCPUtilityFunctions:
         with pytest.raises(Exception):  # noqa: B017, PT011
             model_class(bar=1)  # missing required field
 
+    def test_create_input_schema_type_array_string_null(self):
+        """Test schema with type array ['string', 'null'] produces optional string field."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "optional_str": {"type": ["string", "null"], "description": "Optional string"},
+            },
+        }
+        model_class = util.create_input_schema_from_json_schema(schema)
+        # Optional: None and string both valid
+        instance_none = model_class(optional_str=None)
+        assert instance_none.optional_str is None
+        instance_str = model_class(optional_str="hello")
+        assert instance_str.optional_str == "hello"
+
+    def test_create_input_schema_type_array_integer_null(self):
+        """Test schema with type array ['integer', 'null'] produces optional int field."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "optional_int": {"type": ["integer", "null"], "description": "Optional integer"},
+            },
+        }
+        model_class = util.create_input_schema_from_json_schema(schema)
+        instance_none = model_class(optional_int=None)
+        assert instance_none.optional_int is None
+        instance_int = model_class(optional_int=42)
+        assert instance_int.optional_int == 42
+
+    def test_create_input_schema_required_filters_non_strings(self):
+        """Test schema with required containing non-strings does not raise unhashable."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "valid": {"type": "string", "description": "Valid field"},
+            },
+            "required": [["bad"], "valid"],
+        }
+        model_class = util.create_input_schema_from_json_schema(schema)
+        # Only "valid" is required (non-strings filtered out)
+        instance = model_class(valid="ok")
+        assert instance.valid == "ok"
+
+    def test_create_input_schema_empty_properties_no_params(self):
+        """Test schema with empty properties (tool with no params) accepts empty dict."""
+        schema = {"type": "object", "properties": {}}
+        model_class = util.create_input_schema_from_json_schema(schema)
+        instance = model_class()
+        assert instance.model_dump() == {}
+        # Also validate with explicit empty dict
+        instance2 = model_class.model_validate({})
+        assert instance2.model_dump() == {}
+
     @pytest.mark.asyncio
     async def test_validate_connection_params(self):
         """Test connection parameter validation."""
