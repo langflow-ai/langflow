@@ -1,12 +1,12 @@
 import json
 import traceback
-from pathlib import Path
 from typing import Any, TypeVar
 
 from langchain_core.messages import ToolCall
 from mcp.types import CallToolResult
 from pydantic import BaseModel
-from toolguard.runtime import IToolInvoker, PolicyViolationException, load_toolguards
+from toolguard.runtime import IToolInvoker, PolicyViolationException
+from toolguard.runtime.runtime import ToolguardRuntime
 
 from lfx.field_typing import Tool
 from lfx.field_typing.constants import BaseTool
@@ -16,9 +16,9 @@ from lfx.log.logger import logger
 class GuardedTool(Tool):
     _orig_tool: Tool
     _tool_invoker: IToolInvoker
-    _tg_dir: Path
+    _toolguard: ToolguardRuntime
 
-    def __init__(self, tool: Tool, all_tools: list[Tool], tg_dir: Path):
+    def __init__(self, tool: Tool, all_tools: list[Tool], toolguard: ToolguardRuntime):
         super().__init__(
             name=tool.name,
             description=tool.description,
@@ -32,7 +32,7 @@ class GuardedTool(Tool):
         )
         self._orig_tool = tool
         self._tool_invoker = ToolInvoker(all_tools)
-        self._tg_dir = tg_dir
+        self._toolguard = toolguard
 
     @property
     def args(self) -> dict:
@@ -68,9 +68,9 @@ class GuardedTool(Tool):
         args = self.parse_input(tool_input)
         logger.info(f"running toolguard for {self.name}")
 
-        with load_toolguards(self._tg_dir) as toolguard:
+        with self._toolguard:
             try:
-                await toolguard.guard_toolcall(self.name, args=args, delegate=self._tool_invoker)
+                await self._toolguard.guard_toolcall(self.name, args=args, delegate=self._tool_invoker)
                 return await self._orig_tool.arun(tool_input=args, config=config, **kwargs)
             except PolicyViolationException as ex:
                 logger.info(f"exception: {ex.message}")

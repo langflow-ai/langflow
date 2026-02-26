@@ -9,7 +9,8 @@ from toolguard.buildtime import (
     generate_guards_code,
 )
 from toolguard.extra.langchain_to_oas import langchain_tools_to_openapi
-from toolguard.runtime import load_toolguards
+from toolguard.runtime import load_toolguards, load_toolguards_from_memory
+from toolguard.runtime.runtime import RESULTS_FILENAME
 
 from lfx.base.models import LCModelComponent
 from lfx.base.models.unified_models import (
@@ -17,13 +18,13 @@ from lfx.base.models.unified_models import (
     get_llm,
     update_model_options_in_build_config,
 )
+from lfx.components.policies.guard_sync_utils import sync_generated_guard_code_inputs
 from lfx.components.policies.guarded_tool import GuardedTool
 from lfx.components.policies.llm_wrapper import LangchainModelWrapper
 from lfx.components.policies.module_utils import unload_module
 from lfx.field_typing import LanguageModel, Tool
 from lfx.io import (
     BoolInput,
-    CodeInput,
     HandleInput,
     ModelInput,
     MultilineInput,
@@ -33,6 +34,7 @@ from lfx.io import (
     TabInput,
 )
 from lfx.log.logger import logger
+from lfx.schema.message import Message
 
 if TYPE_CHECKING:
     from lfx.inputs.inputs import InputTypes
@@ -48,6 +50,13 @@ GENERATED_GUARD_INFO_PREFIX = "Auto-generated ToolGuard code for "
 
 
 class PoliciesComponent(LCModelComponent):
+    """Component for building tool protection code from textual business policies and instructions.
+
+    This component uses ToolGuard to generate and apply policy-based guards to tools,
+    ensuring that tool execution complies with defined business policies.
+    Powered by ALTK ToolGuard (https://github.com/AgentToolkit/toolguard).
+    """
+
     display_name = "Policies"
     description = """Component for building tool protection code from textual business policies and instructions.
 Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
@@ -61,10 +70,11 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         [
             BoolInput(
                 name="refresh_generated_code",
-                display_name="Refresh Generated Code Fields",
+                display_name="Refresh Generated Code",
                 info="Use refresh to rescan generated guard files and sync code inputs.",
                 value=False,
                 # advanced=True,
+                # show=False,
                 real_time_refresh=True,
                 refresh_button=True,
                 refresh_button_text="Refresh",
@@ -151,59 +161,6 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             raise ValueError(msg)
         return llm_model
 
-    def _is_generated_guard_field(self, field: dict) -> bool:
-        if not isinstance(field, dict):
-            return False
-        return (
-            field.get("type") == "code"
-            and field.get("dynamic") is True
-            and isinstance(field.get("info"), str)
-            and field.get("info", "").startswith(GENERATED_GUARD_INFO_PREFIX)
-        )
-
-    def _sync_generated_guard_code_inputs(self, build_config: dict) -> dict:
-        logger.info("Syncing files...")
-        generated_field_names = {key for key, value in build_config.items() if self._is_generated_guard_field(value)}
-
-        step2_dir = self.work_dir / STEP2
-        # logger.info(f"step2_dir = {step2_dir}")
-        # logger.info(f"step2_dir.exists() = {step2_dir.exists()}")
-        # logger.info(f"step2_dir.is_dir() = {step2_dir.is_dir()}")
-        if not step2_dir.exists() or not step2_dir.is_dir():
-            for field_name in generated_field_names:
-                build_config.pop(field_name, None)
-            return build_config
-
-        python_files = sorted(path for path in step2_dir.rglob("*.py") if path.is_file())
-        next_generated_names: set[str] = set()
-        py_module = self._to_snake_case(self.project)
-        for file_path in python_files:
-            relative_name = file_path.relative_to(step2_dir).as_posix()
-            if not relative_name.startswith(py_module):
-                continue
-            logger.info("---" + relative_name)
-            next_generated_names.add(relative_name)
-            try:
-                code_value = file_path.read_text(encoding="utf-8")
-            except OSError:
-                code_value = ""
-
-            code_input = CodeInput(
-                name=relative_name,
-                display_name=relative_name,
-                value=code_value,
-                info=f"{GENERATED_GUARD_INFO_PREFIX}{relative_name}",
-                dynamic=True,
-                advanced=True,
-            )
-            build_config[relative_name] = code_input.to_dict()
-
-        stale_field_names = generated_field_names - next_generated_names
-        for field_name in stale_field_names:
-            build_config.pop(field_name, None)
-
-        return build_config
-
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         """Dynamically update build config with user-filtered model options."""
         updated_build_config = update_model_options_in_build_config(
@@ -214,7 +171,13 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             field_name=field_name,
             field_value=field_value,
         )
-        return self._sync_generated_guard_code_inputs(updated_build_config)
+        py_module = self._to_snake_case(self.project)
+        return sync_generated_guard_code_inputs(
+            build_config=updated_build_config,
+            work_dir=self.work_dir,
+            step2_subdir=STEP2,
+            project_name=py_module,
+        )
 
     async def _generate_guard_specs(self) -> list[ToolGuardSpec]:
         logger.info("Starting step 1")
@@ -305,14 +268,35 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             )
             raise ValueError(msg) from exc
 
-    def validate_before_using_cache(self, code_dir: Path) -> None:
+    def _validate_before_using_cache(self, code_dir: Path) -> None:
         if not self.in_tools:
             msg = "Policies: in_tools cannot be empty!"
             raise ValueError(msg)
 
         self._verify_cached_guards(code_dir)
 
+    def _make_toolguard_result(self) -> ToolGuardsCodeGenerationResult:
+        attrs = self._vertex.data["node"]["template"]
+        if not attrs:
+            raise ValueError
+
+        result_str = attrs[str(RESULTS_FILENAME)]["value"]
+        result = ToolGuardsCodeGenerationResult.model_validate_json(result_str)
+
+        result.domain.app_types.content = attrs.get(str(result.domain.app_types.file_name))["value"]
+        result.domain.app_api.content = attrs.get(str(result.domain.app_api.file_name))["value"]
+        result.domain.app_api_impl.content = attrs.get(str(result.domain.app_api_impl.file_name))["value"]
+
+        for tool in result.tools.values():
+            tool.guard_file.content = attrs.get(str(tool.guard_file.file_name))["value"]
+            for tool_item in tool.item_guard_files:
+                tool_item.content = attrs.get(str(tool_item.file_name))["value"]
+
+        return result
+
     async def guard_tools(self) -> list[Tool]:
+        await self.send_message(Message(text=f"Code generated to {self.work_dir}"))
+        self.status = f"Code generated to {self.work_dir}"
         if self.active:
             build_mode = getattr(self, "build_mode", BUILD_MODE_GENERATE)
             if build_mode == BUILD_MODE_GENERATE:
@@ -320,12 +304,18 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
                 self.validate_before_generate()
                 await self.generate()
                 self.log(f"Policies code generation saved to {self.work_dir}", name="info")
+
             else:  # build_mode == "use cache"
                 self.log(f"using cache from {self.work_dir}", name="info")
 
             code_dir = self.work_dir / STEP2
-            self.validate_before_using_cache(code_dir)
-            return cast("list[Tool]", [GuardedTool(tool, self.in_tools, code_dir) for tool in self.in_tools])
+            self._validate_before_using_cache(code_dir)
+
+            # tg_runtime = load_toolguards(code_dir)
+            tg_result = self._make_toolguard_result()
+            tg_runtime = load_toolguards_from_memory(tg_result)
+
+            return cast("list[Tool]", [GuardedTool(tool, self.in_tools, tg_runtime) for tool in self.in_tools])
 
         return self.in_tools
 
