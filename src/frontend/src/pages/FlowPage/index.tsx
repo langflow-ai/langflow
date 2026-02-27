@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useBlocker, useParams } from "react-router-dom";
 import { FlowPageSlidingContainerContent } from "@/components/core/playgroundComponent/sliding-container/components/flow-page-sliding-container";
-import { SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarProvider, useSidebar } from "@/components/ui/sidebar";
 import {
   SimpleSidebar,
   SimpleSidebarProvider,
@@ -14,6 +14,7 @@ import useSaveFlow from "@/hooks/flows/use-save-flow";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useRefreshModelInputs } from "@/hooks/use-refresh-model-inputs";
 import { useWebhookEvents } from "@/hooks/use-webhook-events";
+import { FlowInsightsContent } from "@/modals/flowLogsModal/components/FlowInsightsContent";
 import { SaveChangesModal } from "@/modals/saveChangesModal";
 import useAlertStore from "@/stores/alertStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
@@ -27,6 +28,30 @@ import {
   FlowSidebarComponent,
 } from "./components/flowSidebarComponent";
 import Page from "./components/PageComponent";
+
+function FlowPageMainContent({
+  flowId,
+  setIsLoading,
+}: {
+  flowId?: string;
+  setIsLoading: (isLoading: boolean) => void;
+}): JSX.Element {
+  const { activeSection } = useSidebar();
+  const showTraces = ENABLE_NEW_SIDEBAR && activeSection === "traces";
+
+  if (showTraces) {
+    return (
+      <div
+        className="flex h-full w-full flex-col overflow-hidden"
+        data-testid="flow-insights-embedded"
+      >
+        <FlowInsightsContent flowId={flowId} refreshOnMount />
+      </div>
+    );
+  }
+
+  return <Page setIsLoading={setIsLoading} />;
+}
 
 export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const types = useTypesStore((state) => state.types);
@@ -262,7 +287,10 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
                     )}
                   >
                     <div className="h-full w-full">
-                      <Page setIsLoading={setIsLoading} />
+                      <FlowPageMainContent
+                        flowId={id}
+                        setIsLoading={setIsLoading}
+                      />
                     </div>
                   </main>
                 </FlowSearchProvider>

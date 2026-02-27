@@ -90,26 +90,6 @@ export function TraceDetailView({ traceId, flowName }: TraceDetailViewProps) {
 
           <div className="flex shrink-0 items-center gap-3 whitespace-nowrap">
             <Badge
-              variant={
-                trace.status === "success"
-                  ? "successStatic"
-                  : trace.status === "error"
-                    ? "errorStatic"
-                    : "secondaryStatic"
-              }
-              size="sm"
-            >
-              <IconComponent
-                name={iconName}
-                className={`mr-1 h-4 w-4 ${colorClass} ${shouldSpin ? "animate-spin" : ""}`}
-                aria-label={trace.status}
-                dataTestId={`flow-log-status-${trace.status}`}
-                skipFallback
-              />
-              {trace.status}
-            </Badge>
-
-            <Badge
               variant="outline"
               size="sm"
               className="max-w-[280px] truncate font-mono text-xs"

@@ -30,6 +30,19 @@ export const getStatusVariant = (
   }
 };
 
+export const getSpanStatusLabel = (status: Span["status"]): string => {
+  switch (status) {
+    case "ok":
+      return "success";
+    case "error":
+      return "error";
+    case "unset":
+      return "running";
+    default:
+      return status;
+  }
+};
+
 export const formatSpanNodeLatency = (ms: number): string => {
   if (ms < 1000) return `${ms}ms`;
   return `${(ms / 1000).toFixed(1)}s`;

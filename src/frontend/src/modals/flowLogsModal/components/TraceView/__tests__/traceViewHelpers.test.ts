@@ -9,6 +9,7 @@ import {
   formatTotalCost,
   formatTotalLatency,
   getSpanIcon,
+  getSpanStatusLabel,
   getSpanTypeLabel,
   getStatusIconProps,
   getStatusVariant,
@@ -32,6 +33,14 @@ describe("traceViewHelpers", () => {
       expect(getStatusVariant("ok")).toBe("successStatic");
       expect(getStatusVariant("error")).toBe("errorStatic");
       expect(getStatusVariant("unset")).toBe("secondaryStatic");
+    });
+  });
+
+  describe("getSpanStatusLabel", () => {
+    it("maps span statuses to user-facing labels", () => {
+      expect(getSpanStatusLabel("ok")).toBe("success");
+      expect(getSpanStatusLabel("error")).toBe("error");
+      expect(getSpanStatusLabel("unset")).toBe("running");
     });
   });
 
