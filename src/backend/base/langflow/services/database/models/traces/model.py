@@ -13,10 +13,6 @@ from langflow.serialization.serialization import serialize
 
 class SpanKind(str, Enum):
     INTERNAL = "INTERNAL"
-    CLIENT = "CLIENT"
-    SERVER = "SERVER"
-    PRODUCER = "PRODUCER"
-    CONSUMER = "CONSUMER"
 
 
 class SpanType(str, Enum):

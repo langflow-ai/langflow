@@ -46,6 +46,12 @@ class NativeCallbackHandler(BaseCallbackHandler):
         # Track active spans by run_id
         self._spans: dict[UUID, dict[str, Any]] = {}
 
+    def _resolve_parent_span_id(self, parent_run_id: UUID | None) -> UUID | None:
+        """Resolve the parent span ID from parent_run_id or fallback to self.parent_span_id."""
+        if parent_run_id:
+            return self._get_span_id(parent_run_id)
+        return self.parent_span_id
+
     def _get_span_id(self, run_id: UUID) -> UUID:
         """Get or create a span ID for a run."""
         if run_id not in self._spans:
@@ -96,7 +102,7 @@ class NativeCallbackHandler(BaseCallbackHandler):
             name=name,
             span_type="llm",
             inputs={"prompts": prompts},
-            parent_span_id=(self._get_span_id(parent_run_id) if parent_run_id else None) or self.parent_span_id,
+            parent_span_id=self._resolve_parent_span_id(parent_run_id),
             model_name=model_name,
         )
 
@@ -134,7 +140,7 @@ class NativeCallbackHandler(BaseCallbackHandler):
             name=name,
             span_type="llm",
             inputs={"messages": formatted_messages},
-            parent_span_id=(self._get_span_id(parent_run_id) if parent_run_id else None) or self.parent_span_id,
+            parent_span_id=self._resolve_parent_span_id(parent_run_id),
             model_name=model_name,
         )
 
@@ -150,7 +156,21 @@ class NativeCallbackHandler(BaseCallbackHandler):
         span_id = self._get_span_id(run_id)
         latency_ms = self._calculate_latency(run_id)
 
-        # Extract token usage from llm_output (legacy format)
+        prompt_tokens, completion_tokens, total_tokens = self._extract_token_usage(response)
+        outputs = self._extract_generations(response)
+
+        self.tracer.end_langchain_span(
+            span_id=span_id,
+            outputs=outputs,
+            latency_ms=latency_ms,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            total_tokens=total_tokens,
+        )
+        self._cleanup_run(run_id)
+
+    def _extract_token_usage(self, response: LLMResult):
+        """Extract token usage from response object."""
         llm_output = getattr(response, "llm_output", None) or {}
         token_usage = llm_output.get("token_usage", {}) if isinstance(llm_output, dict) else {}
         prompt_tokens = token_usage.get("prompt_tokens")
@@ -210,10 +230,12 @@ class NativeCallbackHandler(BaseCallbackHandler):
                         break
                 if total_tokens:
                     break
+        return prompt_tokens, completion_tokens, total_tokens
 
-        # Extract generations
+    def _extract_generations(self, response: LLMResult):
+        """Extract generations from response object."""
         generations = getattr(response, "generations", []) or []
-        outputs = {
+        return {
             "generations": [
                 [
                     {"text": getattr(gen, "text", ""), "generation_info": getattr(gen, "generation_info", None)}
@@ -222,16 +244,6 @@ class NativeCallbackHandler(BaseCallbackHandler):
                 for gen_list in generations
             ]
         }
-
-        self.tracer.end_langchain_span(
-            span_id=span_id,
-            outputs=outputs,
-            latency_ms=latency_ms,
-            prompt_tokens=prompt_tokens,
-            completion_tokens=completion_tokens,
-            total_tokens=total_tokens,
-        )
-        self._cleanup_run(run_id)
 
     def on_llm_error(
         self,
@@ -274,7 +286,7 @@ class NativeCallbackHandler(BaseCallbackHandler):
             name=name,
             span_type="chain",
             inputs=inputs or {},
-            parent_span_id=(self._get_span_id(parent_run_id) if parent_run_id else None) or self.parent_span_id,
+            parent_span_id=self._resolve_parent_span_id(parent_run_id),
         )
 
     def on_chain_end(
@@ -338,7 +350,7 @@ class NativeCallbackHandler(BaseCallbackHandler):
             name=name,
             span_type="tool",
             inputs=inputs or {"input": input_str},
-            parent_span_id=(self._get_span_id(parent_run_id) if parent_run_id else None) or self.parent_span_id,
+            parent_span_id=self._resolve_parent_span_id(parent_run_id),
         )
 
     def on_tool_end(
@@ -426,7 +438,7 @@ class NativeCallbackHandler(BaseCallbackHandler):
             name=name,
             span_type="retriever",
             inputs={"query": query},
-            parent_span_id=(self._get_span_id(parent_run_id) if parent_run_id else None) or self.parent_span_id,
+            parent_span_id=self._resolve_parent_span_id(parent_run_id),
         )
 
     def on_retriever_end(

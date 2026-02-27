@@ -29,6 +29,16 @@ if TYPE_CHECKING:
 
     from langflow.services.tracing.schema import Log
 
+TYPE_MAP = {
+    "chain": SpanType.CHAIN,
+    "llm": SpanType.LLM,
+    "tool": SpanType.TOOL,
+    "retriever": SpanType.RETRIEVER,
+    "embedding": SpanType.EMBEDDING,
+    "parser": SpanType.PARSER,
+    "agent": SpanType.AGENT,
+}
+
 
 class NativeTracer(BaseTracer):
     """Tracer that stores execution traces in Langflow's database.
@@ -493,13 +503,4 @@ class NativeTracer(BaseTracer):
     @staticmethod
     def _map_trace_type(trace_type: str) -> SpanType:
         """Map Langflow trace type to SpanType enum."""
-        type_map = {
-            "chain": SpanType.CHAIN,
-            "llm": SpanType.LLM,
-            "tool": SpanType.TOOL,
-            "retriever": SpanType.RETRIEVER,
-            "embedding": SpanType.EMBEDDING,
-            "parser": SpanType.PARSER,
-            "agent": SpanType.AGENT,
-        }
-        return type_map.get(trace_type.lower(), SpanType.CHAIN)
+        return TYPE_MAP.get(trace_type.lower(), SpanType.CHAIN)
