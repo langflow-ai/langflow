@@ -145,6 +145,14 @@ describe("traceViewHelpers", () => {
       expect(getSpanIcon("agent")).toBe("Bot");
       expect(getSpanIcon("chain")).toBe("Link");
       expect(getSpanIcon("retriever")).toBe("Search");
+      expect(getSpanIcon("none")).toBe("");
+    });
+
+    it("falls back to Circle for unknown types", () => {
+      const unknownType = "unknown" as unknown as Parameters<
+        typeof getSpanIcon
+      >[0];
+      expect(getSpanIcon(unknownType)).toBe("Circle");
     });
   });
 
@@ -187,6 +195,7 @@ describe("traceViewHelpers", () => {
     it("returns display labels", () => {
       expect(getSpanTypeLabel("llm")).toBe("LLM");
       expect(getSpanTypeLabel("tool")).toBe("Tool");
+      expect(getSpanTypeLabel("none")).toBe("");
     });
   });
 

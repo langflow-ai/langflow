@@ -11,9 +11,10 @@ export const getSpanIcon = (type: SpanType): string => {
     retriever: "Search",
     embedding: "Hash",
     parser: "FileText",
-    none: "Circle",
+    none: "",
   };
-  return iconMap[type] || "Circle";
+  const icon = iconMap[type];
+  return icon === undefined ? "Circle" : icon;
 };
 
 export const getStatusVariant = (
@@ -64,9 +65,10 @@ export const getSpanTypeLabel = (type: SpanType): string => {
     retriever: "Retriever",
     embedding: "Embedding",
     parser: "Parser",
-    none: "None",
+    none: "",
   };
-  return labelMap[type] || type;
+  const label = labelMap[type];
+  return label === undefined ? type : label;
 };
 
 export const formatCost = (cost: number | undefined): string => {

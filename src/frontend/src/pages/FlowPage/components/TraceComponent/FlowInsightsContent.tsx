@@ -10,6 +10,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -25,6 +26,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DEFAULT_TABLE_ALERT_MSG,
+  DEFAULT_TABLE_ALERT_TITLE,
+} from "@/constants/constants";
 import { useGetTracesQuery } from "@/controllers/API/queries/traces";
 import { TraceListItem } from "@/controllers/API/queries/traces/types";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
@@ -167,6 +172,62 @@ export function FlowInsightsContent({
     setPageIndex(1);
   }, [searchText, statusFilter, startDate, endDateValue]);
 
+  function renderGroupedSessionContent({
+    groupedRows,
+    isLoading,
+    columns,
+    expandedSessionIds,
+    handleCellClicked,
+  }) {
+    if (groupedRows.length === 0 && !isLoading) {
+      return (
+        <div className="flex h-full w-full items-center justify-center rounded-md border">
+          <Alert variant="default" className="w-fit">
+            <IconComponent
+              name="AlertCircle"
+              className="h-5 w-5 text-primary"
+            />
+            <AlertTitle>{DEFAULT_TABLE_ALERT_TITLE}</AlertTitle>
+            <AlertDescription>{DEFAULT_TABLE_ALERT_MSG}</AlertDescription>
+          </Alert>
+        </div>
+      );
+    }
+    return (
+      <Accordion
+        type="multiple"
+        defaultValue={expandedSessionIds}
+        className="h-full overflow-y-auto"
+      >
+        {groupedRows.map(([sessionId, sessionRows]) => (
+          <AccordionItem key={sessionId} value={sessionId}>
+            <AccordionTrigger className="px-4 text-sm">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <span className="font-medium text-foreground">Session</span>
+                <span className="font-mono text-xs">{sessionId}</span>
+                <span className="text-xs">{sessionRows.length} runs</span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="px-4 pb-4">
+              <TableComponent
+                key={`Executions-${sessionId}`}
+                readOnlyEdit
+                className="h-auto w-full"
+                domLayout="autoHeight"
+                pagination={false}
+                columnDefs={columns}
+                autoSizeStrategy={{ type: "fitGridWidth" }}
+                rowData={sessionRows}
+                headerHeight={sessionRows.length === 0 ? 0 : undefined}
+                onCellClicked={handleCellClicked}
+              />
+            </AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
+    );
+  }
+
   return (
     <>
       <div className="flex flex-1 flex-col overflow-hidden">
@@ -283,39 +344,13 @@ export function FlowInsightsContent({
 
         <div className="flex-1 overflow-hidden">
           {groupBySession ? (
-            <Accordion
-              type="multiple"
-              defaultValue={expandedSessionIds}
-              className="h-full overflow-y-auto"
-            >
-              {groupedRows.map(([sessionId, sessionRows]) => (
-                <AccordionItem key={sessionId} value={sessionId}>
-                  <AccordionTrigger className="px-4 text-sm">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <span className="font-medium text-foreground">
-                        Session
-                      </span>
-                      <span className="font-mono text-xs">{sessionId}</span>
-                      <span className="text-xs">{sessionRows.length} runs</span>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="px-4 pb-4">
-                    <TableComponent
-                      key={`Executions-${sessionId}`}
-                      readOnlyEdit
-                      className="h-auto w-full"
-                      domLayout="autoHeight"
-                      pagination={false}
-                      columnDefs={columns}
-                      autoSizeStrategy={{ type: "fitGridWidth" }}
-                      rowData={sessionRows}
-                      headerHeight={sessionRows.length === 0 ? 0 : undefined}
-                      onCellClicked={handleCellClicked}
-                    />
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
+            renderGroupedSessionContent({
+              groupedRows,
+              isLoading,
+              columns,
+              expandedSessionIds,
+              handleCellClicked,
+            })
           ) : (
             <TableComponent
               key="Executions"
