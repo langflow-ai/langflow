@@ -18,6 +18,7 @@ import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
+  SidebarRail,
   useSidebar,
 } from "@/components/ui/sidebar";
 import SkeletonGroup from "@/components/ui/skeletonGroup";
@@ -765,6 +766,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
           )}
         </div>
       </div>
+      <SidebarRail />
     </Sidebar>
   );
 }
