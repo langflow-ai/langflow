@@ -51,7 +51,7 @@ export const formatSpanNodeLatency = (ms: number): string => {
 };
 
 export const formatTokens = (tokens: number | undefined): string | null => {
-  if (!tokens) return null;
+  if (tokens == null) return null;
   if (tokens < 1000) return `${tokens}`;
   return `${(tokens / 1000).toFixed(1)}k`;
 };

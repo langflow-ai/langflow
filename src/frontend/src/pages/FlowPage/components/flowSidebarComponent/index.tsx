@@ -620,11 +620,9 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     }
 
     if (showTraces) {
-      if (!expandedSidebarWidthRef.current) {
-        const computed =
-          getComputedStyle(wrapper).getPropertyValue("--sidebar-width");
-        expandedSidebarWidthRef.current = computed?.trim() || null;
-      }
+      const computed =
+        getComputedStyle(wrapper).getPropertyValue("--sidebar-width");
+      expandedSidebarWidthRef.current = computed?.trim() || null;
 
       wrapper.style.setProperty("--sidebar-width", "40px");
       setIsFullSidebarPanelShown(false);

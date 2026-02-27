@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import { type ReactNode } from "react";
 import { SpanDetail } from "../SpanDetail";
 import type { Span } from "../types";
 
@@ -17,9 +18,7 @@ jest.mock("@/components/core/codeTabsComponent", () => ({
 }));
 
 jest.mock("@/components/ui/badge", () => ({
-  Badge: ({ children }: { children: React.ReactNode }) => (
-    <span>{children}</span>
-  ),
+  Badge: ({ children }: { children: ReactNode }) => <span>{children}</span>,
 }));
 
 const buildSpan = (overrides: Partial<Span> = {}): Span => ({
@@ -45,6 +44,7 @@ const buildSpan = (overrides: Partial<Span> = {}): Span => ({
 });
 
 describe("SpanDetail", () => {
+  // Verifies that when no span is selected (null), the empty-state placeholder is shown with the prompt text.
   it("renders empty state when no span selected", () => {
     render(<SpanDetail span={null} />);
 
@@ -54,6 +54,7 @@ describe("SpanDetail", () => {
     ).toBeInTheDocument();
   });
 
+  // Verifies that a fully-populated span renders its name, type, model, token counts, cost, and I/O code blocks.
   it("renders span details with inputs, outputs, tokens, and cost", () => {
     render(<SpanDetail span={buildSpan()} />);
 
@@ -75,6 +76,7 @@ describe("SpanDetail", () => {
     expect(codeBlocks[1]).toHaveTextContent('"result": "ok"');
   });
 
+  // Verifies that when a span has an error string, the "Error" label and the error message are both displayed.
   it("renders error message when span has error", () => {
     render(<SpanDetail span={buildSpan({ error: "Something broke" })} />);
 
@@ -82,6 +84,7 @@ describe("SpanDetail", () => {
     expect(screen.getByText("Something broke")).toBeInTheDocument();
   });
 
+  // Verifies that a span with empty inputs, outputs, no token usage, and no error shows the "No additional details" fallback.
   it("shows empty details when no inputs, outputs, or error", () => {
     render(
       <SpanDetail
@@ -100,6 +103,7 @@ describe("SpanDetail", () => {
     ).toBeInTheDocument();
   });
 
+  // Verifies that an LLM span missing token usage still renders the "Tokens" section with em-dash placeholders.
   it("renders token placeholders for LLM spans without token usage", () => {
     render(
       <SpanDetail
@@ -115,6 +119,7 @@ describe("SpanDetail", () => {
     expect(screen.getAllByText("\u2014").length).toBeGreaterThan(0);
   });
 
+  // Verifies that non-LLM spans (e.g., tool) without token usage do not render the token section at all.
   it("does not show token section for non-LLM spans without token usage", () => {
     render(
       <SpanDetail
@@ -133,18 +138,21 @@ describe("SpanDetail", () => {
     ).toBeInTheDocument();
   });
 
+  // Verifies that the "Latency" label is present in the rendered span detail header.
   it("displays latency metric", () => {
     render(<SpanDetail span={buildSpan()} />);
 
     expect(screen.getByText("Latency")).toBeInTheDocument();
   });
 
+  // Verifies that when a modelName is set on the span, it appears in the rendered output.
   it("displays model name when available", () => {
     render(<SpanDetail span={buildSpan({ modelName: "gpt-4" })} />);
 
     expect(screen.getByText("gpt-4")).toBeInTheDocument();
   });
 
+  // Verifies that when modelName is undefined, no "|" separator is rendered in the header.
   it("does not display model name separator when model is undefined", () => {
     render(<SpanDetail span={buildSpan({ modelName: undefined })} />);
 
@@ -152,6 +160,7 @@ describe("SpanDetail", () => {
     expect(separators.length).toBe(0);
   });
 
+  // Verifies that when outputs are empty, only the "Input" section is shown and "Output" is absent.
   it("displays only inputs when outputs are empty", () => {
     render(<SpanDetail span={buildSpan({ outputs: {} })} />);
 
@@ -159,6 +168,7 @@ describe("SpanDetail", () => {
     expect(screen.queryByText("Output")).not.toBeInTheDocument();
   });
 
+  // Verifies that when inputs are empty, only the "Output" section is shown and "Input" is absent.
   it("displays only outputs when inputs are empty", () => {
     render(<SpanDetail span={buildSpan({ inputs: {} })} />);
 
@@ -166,6 +176,7 @@ describe("SpanDetail", () => {
     expect(screen.getByText("Output")).toBeInTheDocument();
   });
 
+  // Verifies that when token cost is exactly 0, the "Estimated Cost" row is not rendered.
   it("does not display cost when cost is zero", () => {
     render(
       <SpanDetail
@@ -183,6 +194,7 @@ describe("SpanDetail", () => {
     expect(screen.queryByText("Estimated Cost")).not.toBeInTheDocument();
   });
 
+  // Verifies that a span with status "error" renders the error status badge text in the header.
   it("renders span with error status badge", () => {
     render(
       <SpanDetail

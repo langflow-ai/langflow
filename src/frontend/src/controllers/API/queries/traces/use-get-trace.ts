@@ -1,4 +1,4 @@
-import type { Trace } from "../../../../modals/flowLogsModal/components/TraceView/types";
+import type { Trace } from "../../../../pages/FlowPage/components/TraceComponent/types";
 import type { useQueryFunctionType } from "../../../../types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
@@ -16,7 +16,7 @@ export const useGetTraceQuery: useQueryFunctionType<
     if (!traceId) return null;
 
     const result = await api.get<TraceApiResponse>(
-      `${getURL("TRACES")}/${traceId}`,
+      `${getURL("TRACES")}/${encodeURIComponent(traceId)}`,
     );
 
     return convertTrace(result.data);

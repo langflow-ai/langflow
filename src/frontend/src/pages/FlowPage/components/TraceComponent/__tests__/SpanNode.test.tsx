@@ -1,5 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { type ReactNode } from "react";
 import { SpanNode } from "../SpanNode";
 import type { Span } from "../types";
 
@@ -24,16 +25,14 @@ jest.mock("@/components/common/genericIconComponent", () => ({
 }));
 
 jest.mock("@/components/ui/badge", () => ({
-  Badge: ({ children }: { children: React.ReactNode }) => (
-    <span>{children}</span>
-  ),
+  Badge: ({ children }: { children: ReactNode }) => <span>{children}</span>,
 }));
 
 const buildSpan = (overrides: Partial<Span> = {}): Span => ({
   id: "span-1",
   name: "Test Span",
   type: "llm",
-  status: "success",
+  status: "ok",
   startTime: "2024-01-01T00:00:00Z",
   endTime: "2024-01-01T00:00:01Z",
   latencyMs: 1200,
@@ -73,8 +72,8 @@ describe("SpanNode", () => {
     expect(screen.getByText("1.2k")).toBeInTheDocument();
     expect(screen.getByText("1.2s")).toBeInTheDocument();
 
-    const statusIcon = screen.getByTestId("flow-log-status-success");
-    expect(statusIcon).toHaveAttribute("aria-label", "success");
+    const statusIcon = screen.getByTestId("flow-log-status-ok");
+    expect(statusIcon).toHaveAttribute("aria-label", "ok");
   });
 
   it("calls onSelect when the row is clicked", async () => {

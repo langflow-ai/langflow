@@ -270,7 +270,7 @@ export function FlowInsightsContent({
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
                 placeholder="Search runs..."
-                className="h-8 text-sm"
+                className="h-8 pl-8 text-sm"
               />
             </div>
 
