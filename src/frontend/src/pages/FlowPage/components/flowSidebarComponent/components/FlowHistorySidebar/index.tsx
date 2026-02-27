@@ -6,16 +6,16 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import DeleteConfirmDialog from "./components/DeleteConfirmDialog";
-import HistoryListItem from "./components/HistoryListItem";
+import VersionListItem from "./components/HistoryListItem";
 import PruneWarningDialog from "./components/PruneWarningDialog";
 import RestoreConfirmDialog from "./components/RestoreConfirmDialog";
 import { CURRENT_DRAFT_ID } from "./constants";
-import type { FlowHistorySidebarContentProps } from "./types";
-import { useFlowHistorySidebar } from "./use-flow-history-sidebar";
+import type { FlowVersionSidebarContentProps } from "./types";
+import { useFlowVersionSidebar } from "./use-flow-history-sidebar";
 
-export default function FlowHistorySidebarContent({
+export default function FlowVersionSidebarContent({
   flowId,
-}: FlowHistorySidebarContentProps) {
+}: FlowVersionSidebarContentProps) {
   const {
     selectedId,
     pruneWarning,
@@ -26,7 +26,7 @@ export default function FlowHistorySidebarContent({
     setDeleteDialogEntry,
     animatingId,
     isRestoring,
-    history,
+    versions,
     maxEntries,
     isLoading,
     isListError,
@@ -40,16 +40,16 @@ export default function FlowHistorySidebarContent({
     handleRestore,
     handleExport,
     handleDelete,
-  } = useFlowHistorySidebar(flowId);
+  } = useFlowVersionSidebar(flowId);
 
   return (
     <>
       <div className="flex h-full flex-col">
         <SidebarGroupLabel className="flex items-center justify-between px-3 pt-3">
           <span>Version History</span>
-          {history && history.length > 0 && (
+          {versions && versions.length > 0 && (
             <span className="font-normal text-foreground/50">
-              {history.length}
+              {versions.length}
               {maxEntries ? ` / ${maxEntries}` : ""}
             </span>
           )}
@@ -103,14 +103,14 @@ export default function FlowHistorySidebarContent({
             )}
             {!isLoading &&
               !isListError &&
-              (!history || history.length === 0) && (
+              (!versions || versions.length === 0) && (
                 <div className="px-2 py-6 text-center text-xs text-muted-foreground">
                   No saved versions yet
                 </div>
               )}
 
-            {history?.map((entry) => (
-              <HistoryListItem
+            {versions?.map((entry) => (
+              <VersionListItem
                 key={entry.id}
                 entry={entry}
                 isSelected={entry.id === selectedId}
@@ -129,7 +129,7 @@ export default function FlowHistorySidebarContent({
         onClose={() => setPruneWarning(false)}
         onConfirm={doCreateSnapshot}
         isCreating={isCreating}
-        historyLength={history?.length ?? 0}
+        versionsLength={versions?.length ?? 0}
         maxEntries={maxEntries ?? 0}
       />
 

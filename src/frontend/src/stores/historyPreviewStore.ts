@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import type { AllNodeType, EdgeType } from "../types/flow";
 
-interface HistoryPreviewState {
+interface VersionPreviewState {
   previewNodes: AllNodeType[] | null;
   previewEdges: EdgeType[] | null;
   previewLabel: string | null;
@@ -23,7 +23,7 @@ interface HistoryPreviewState {
   clearPreview: () => void;
 }
 
-const useHistoryPreviewStore = create<HistoryPreviewState>((set, get) => ({
+const useVersionPreviewStore = create<VersionPreviewState>((set, get) => ({
   previewNodes: null,
   previewEdges: null,
   previewLabel: null,
@@ -49,4 +49,4 @@ const useHistoryPreviewStore = create<HistoryPreviewState>((set, get) => ({
     }),
 }));
 
-export default useHistoryPreviewStore;
+export default useVersionPreviewStore;

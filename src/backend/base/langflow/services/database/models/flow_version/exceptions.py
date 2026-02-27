@@ -6,11 +6,11 @@ These are raised by the CRUD layer and translated to HTTP responses at the API b
 from __future__ import annotations
 
 
-class FlowHistoryError(Exception):
+class FlowVersionError(Exception):
     """Base exception for flow version domain errors."""
 
 
-class FlowHistoryDataTooLargeError(FlowHistoryError):
+class FlowVersionDataTooLargeError(FlowVersionError):
     """Raised when flow data exceeds the configured size limit."""
 
     def __init__(self, data_size: int, max_size: int) -> None:
@@ -22,13 +22,13 @@ class FlowHistoryDataTooLargeError(FlowHistoryError):
         )
 
 
-class FlowHistorySerializationError(FlowHistoryError):
+class FlowVersionSerializationError(FlowVersionError):
     """Raised when flow data cannot be serialized."""
 
 
-class FlowHistoryVersionConflictError(FlowHistoryError):
+class FlowVersionVersionConflictError(FlowVersionError):
     """Raised when version number conflicts exhaust all retries."""
 
 
-class FlowHistoryNotFoundError(FlowHistoryError):
+class FlowVersionNotFoundError(FlowVersionError):
     """Raised when a version is not found."""

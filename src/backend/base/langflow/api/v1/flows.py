@@ -37,8 +37,8 @@ from langflow.services.database.models.flow.model import (
 from langflow.services.database.models.flow.utils import get_webhook_component_in_flow
 
 # TODO: Full version import/export is planned as a follow-up feature. When implemented,
-# re-add imports for create_flow_history_entry, get_flow_history_list, strip_history_data,
-# and FlowHistoryError from the flow_history modules.
+# re-add imports for create_flow_version_entry, get_flow_version_list, strip_version_data,
+# and FlowVersionError from the flow_version modules.
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.folder.utils import get_default_folder_id

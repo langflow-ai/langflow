@@ -4,7 +4,7 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { useSidebar } from "@/components/ui/sidebar";
 import { usePostCreateSnapshot } from "@/controllers/API/queries/flow-history";
 import useAlertStore from "@/stores/alertStore";
-import useHistoryPreviewStore from "@/stores/historyPreviewStore";
+import useVersionPreviewStore from "@/stores/historyPreviewStore";
 
 interface SaveSnapshotButtonProps {
   flowId: string;
@@ -16,7 +16,7 @@ export default function SaveSnapshotButton({
   const queryClient = useQueryClient();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const clearPreview = useHistoryPreviewStore((s) => s.clearPreview);
+  const clearPreview = useVersionPreviewStore((s) => s.clearPreview);
   const { setActiveSection, open, toggleSidebar } = useSidebar();
   const { mutate: createSnapshot, isPending: isCreating } =
     usePostCreateSnapshot();
@@ -35,7 +35,7 @@ export default function SaveSnapshotButton({
       { flowId, description: null },
       {
         onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: ["useGetFlowHistory"] });
+          queryClient.invalidateQueries({ queryKey: ["useGetFlowVersions"] });
           setSuccessData({ title: "Version saved" });
           setIsSavingDisplay(false);
           setSavedSuccess(true);
@@ -54,8 +54,8 @@ export default function SaveSnapshotButton({
   };
 
   return (
-    <div className="history-preview-banner-enter pointer-events-auto absolute bottom-10 left-1/2 w-[700px]">
-      <div className="history-preview-banner flex items-center gap-4 overflow-hidden rounded-xl border border-accent-indigo-foreground/20 bg-gradient-to-r from-accent-indigo via-accent-indigo/70 to-accent-indigo/30 px-5 py-3 backdrop-blur-sm">
+    <div className="version-preview-banner-enter pointer-events-auto absolute bottom-10 left-1/2 w-[700px]">
+      <div className="version-preview-banner flex items-center gap-4 overflow-hidden rounded-xl border border-accent-indigo-foreground/20 bg-gradient-to-r from-accent-indigo via-accent-indigo/70 to-accent-indigo/30 px-5 py-3 backdrop-blur-sm">
         <div className="flex items-center gap-4 flex-1">
           <ForwardedIconComponent
             name="BookMarked"

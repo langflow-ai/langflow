@@ -8,23 +8,23 @@ import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
 import useApplyFlowToCanvas from "@/hooks/flows/use-apply-flow-to-canvas";
 import useAlertStore from "@/stores/alertStore";
-import useHistoryPreviewStore from "@/stores/historyPreviewStore";
+import useVersionPreviewStore from "@/stores/historyPreviewStore";
 
 interface RestoreVersionButtonProps {
   flowId: string;
-  historyId: string;
+  versionId: string;
   versionTag: string;
 }
 
 export default function RestoreVersionButton({
   flowId,
-  historyId,
+  versionId,
   versionTag,
 }: RestoreVersionButtonProps) {
   const queryClient = useQueryClient();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const clearPreview = useHistoryPreviewStore((s) => s.clearPreview);
+  const clearPreview = useVersionPreviewStore((s) => s.clearPreview);
   const applyFlowToCanvas = useApplyFlowToCanvas();
   const { setActiveSection, open, toggleSidebar } = useSidebar();
 
@@ -42,12 +42,12 @@ export default function RestoreVersionButton({
     setIsRestoring(true);
     try {
       const response = await api.post(
-        `${getURL("FLOWS")}/${flowId}/versions/${historyId}/activate`,
+        `${getURL("FLOWS")}/${flowId}/versions/${versionId}/activate`,
         null,
         { params: { save_draft: true } },
       );
       const updatedFlow = response.data;
-      queryClient.invalidateQueries({ queryKey: ["useGetFlowHistory"] });
+      queryClient.invalidateQueries({ queryKey: ["useGetFlowVersions"] });
       const flow = {
         ...updatedFlow,
         data: {
@@ -71,8 +71,8 @@ export default function RestoreVersionButton({
 
   return (
     <>
-      <div className="history-preview-banner-enter pointer-events-auto absolute bottom-10 left-1/2 w-[700px]">
-        <div className="history-preview-banner flex items-center gap-4 overflow-hidden rounded-xl border border-accent-indigo-foreground/20 bg-gradient-to-r from-accent-indigo via-accent-indigo/70 to-accent-indigo/30 px-5 py-3 backdrop-blur-sm">
+      <div className="version-preview-banner-enter pointer-events-auto absolute bottom-10 left-1/2 w-[700px]">
+        <div className="version-preview-banner flex items-center gap-4 overflow-hidden rounded-xl border border-accent-indigo-foreground/20 bg-gradient-to-r from-accent-indigo via-accent-indigo/70 to-accent-indigo/30 px-5 py-3 backdrop-blur-sm">
           <ForwardedIconComponent
             name="RotateCcw"
             className="h-6 w-6 shrink-0 text-accent-indigo-foreground/80"

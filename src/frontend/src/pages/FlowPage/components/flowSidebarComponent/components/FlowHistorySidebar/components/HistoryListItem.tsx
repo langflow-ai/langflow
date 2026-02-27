@@ -6,32 +6,32 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
-import type { FlowHistoryEntry } from "@/types/flow/history";
+import type { FlowVersionEntry } from "@/types/flow/history";
 import { cn } from "@/utils/utils";
 import { formatTimestamp } from "../utils";
 
-interface HistoryListItemProps {
-  entry: FlowHistoryEntry;
+interface VersionListItemProps {
+  entry: FlowVersionEntry;
   isSelected: boolean;
   isAnimating: boolean;
   onSelect: (id: string) => void;
-  onExport: (entry: FlowHistoryEntry) => void;
-  onDeleteClick: (entry: FlowHistoryEntry) => void;
+  onExport: (entry: FlowVersionEntry) => void;
+  onDeleteClick: (entry: FlowVersionEntry) => void;
 }
 
-export default function HistoryListItem({
+export default function VersionListItem({
   entry,
   isSelected,
   isAnimating,
   onSelect,
   onExport,
   onDeleteClick,
-}: HistoryListItemProps) {
+}: VersionListItemProps) {
   return (
     <SidebarMenuItem
       className={cn(
         "group/histitem relative flex items-center border-b border-border",
-        isAnimating ? "history-item-drop-in" : "",
+        isAnimating ? "version-item-drop-in" : "",
       )}
     >
       <SidebarMenuButton

@@ -11,16 +11,16 @@ import {
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
 import {
-  useDeleteHistoryEntry,
-  useGetFlowHistory,
-  useGetFlowHistoryEntry,
+  useDeleteVersionEntry,
+  useGetFlowVersions,
+  useGetFlowVersionEntry,
   usePostCreateSnapshot,
 } from "@/controllers/API/queries/flow-history";
 import useApplyFlowToCanvas from "@/hooks/flows/use-apply-flow-to-canvas";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
-import useHistoryPreviewStore from "@/stores/historyPreviewStore";
-import type { FlowHistoryEntry } from "@/types/flow/history";
+import useVersionPreviewStore from "@/stores/historyPreviewStore";
+import type { FlowVersionEntry } from "@/types/flow/history";
 import {
   downloadFlow,
   processFlows,
@@ -28,14 +28,14 @@ import {
 } from "@/utils/reactflowUtils";
 import { CURRENT_DRAFT_ID } from "./constants";
 
-export function useFlowHistorySidebar(flowId: string) {
+export function useFlowVersionSidebar(flowId: string) {
   const queryClient = useQueryClient();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const setPreview = useHistoryPreviewStore((s) => s.setPreview);
-  const clearPreview = useHistoryPreviewStore((s) => s.clearPreview);
-  const setPreviewLoading = useHistoryPreviewStore((s) => s.setPreviewLoading);
-  const storePreviewId = useHistoryPreviewStore((s) => s.previewId);
+  const setPreview = useVersionPreviewStore((s) => s.setPreview);
+  const clearPreview = useVersionPreviewStore((s) => s.clearPreview);
+  const setPreviewLoading = useVersionPreviewStore((s) => s.setPreviewLoading);
+  const storePreviewId = useVersionPreviewStore((s) => s.previewId);
 
   const [selectedId, setSelectedId] = useState<string>(CURRENT_DRAFT_ID);
 
@@ -47,49 +47,49 @@ export function useFlowHistorySidebar(flowId: string) {
   const currentFlow = useFlowStore((s) => s.currentFlow);
 
   const { mutate: deleteEntry, isPending: isDeleting } =
-    useDeleteHistoryEntry();
+    useDeleteVersionEntry();
 
   const [pruneWarning, setPruneWarning] = useState(false);
   const [animatingId, setAnimatingId] = useState<string | null>(null);
-  const prevHistoryLengthRef = useRef<number>(0);
+  const prevVersionsLengthRef = useRef<number>(0);
 
   const [restoreDialogEntry, setRestoreDialogEntry] =
-    useState<FlowHistoryEntry | null>(null);
+    useState<FlowVersionEntry | null>(null);
   const [deleteDialogEntry, setDeleteDialogEntry] =
-    useState<FlowHistoryEntry | null>(null);
+    useState<FlowVersionEntry | null>(null);
   const [isRestoring, setIsRestoring] = useState(false);
 
   const {
-    data: historyResponse,
+    data: versionsResponse,
     isLoading,
     isError: isListError,
-  } = useGetFlowHistory({ flowId }, { refetchInterval: 10000 });
+  } = useGetFlowVersions({ flowId }, { refetchInterval: 10000 });
 
-  const history = historyResponse?.entries;
-  const maxEntries = historyResponse?.max_entries;
+  const versions = versionsResponse?.entries;
+  const maxEntries = versionsResponse?.max_entries;
 
   useEffect(() => {
-    const newLen = history?.length ?? 0;
-    if (newLen > prevHistoryLengthRef.current && history?.[0]) {
-      setAnimatingId(history[0].id);
+    const newLen = versions?.length ?? 0;
+    if (newLen > prevVersionsLengthRef.current && versions?.[0]) {
+      setAnimatingId(versions[0].id);
       const t = setTimeout(() => setAnimatingId(null), 500);
-      prevHistoryLengthRef.current = newLen;
+      prevVersionsLengthRef.current = newLen;
       return () => clearTimeout(t);
     }
-    prevHistoryLengthRef.current = newLen;
-  }, [history]);
+    prevVersionsLengthRef.current = newLen;
+  }, [versions]);
 
   const { mutate: createSnapshot, isPending: isCreating } =
     usePostCreateSnapshot();
 
-  const selectedHistoryId = selectedId !== CURRENT_DRAFT_ID ? selectedId : "";
+  const selectedVersionId = selectedId !== CURRENT_DRAFT_ID ? selectedId : "";
   const {
     data: selectedEntryFull,
     isLoading: isLoadingEntry,
     isError: isEntryError,
-  } = useGetFlowHistoryEntry(
-    { flowId, historyId: selectedHistoryId },
-    { enabled: !!selectedHistoryId, gcTime: 0, staleTime: 0 },
+  } = useGetFlowVersionEntry(
+    { flowId, versionId: selectedVersionId },
+    { enabled: !!selectedVersionId, gcTime: 0, staleTime: 0 },
   );
 
   useEffect(() => {
@@ -210,7 +210,7 @@ export function useFlowHistorySidebar(flowId: string) {
       { flowId, description: null },
       {
         onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: ["useGetFlowHistory"] });
+          queryClient.invalidateQueries({ queryKey: ["useGetFlowVersions"] });
           setSuccessData({ title: "Version saved" });
           setPruneWarning(false);
         },
@@ -227,15 +227,15 @@ export function useFlowHistorySidebar(flowId: string) {
   }, [flowId, createSnapshot, queryClient, setSuccessData, setErrorData]);
 
   const handleCreateSnapshot = useCallback(() => {
-    if (history && maxEntries && history.length >= maxEntries) {
+    if (versions && maxEntries && versions.length >= maxEntries) {
       setPruneWarning(true);
       return;
     }
     doCreateSnapshot();
-  }, [history, maxEntries, doCreateSnapshot]);
+  }, [versions, maxEntries, doCreateSnapshot]);
 
   const handleRestore = useCallback(
-    async (entry: FlowHistoryEntry) => {
+    async (entry: FlowVersionEntry) => {
       setRestoreDialogEntry(null);
       setIsRestoring(true);
       try {
@@ -245,7 +245,7 @@ export function useFlowHistorySidebar(flowId: string) {
           { params: { save_draft: true } },
         );
         const updatedFlow = response.data;
-        queryClient.invalidateQueries({ queryKey: ["useGetFlowHistory"] });
+        queryClient.invalidateQueries({ queryKey: ["useGetFlowVersions"] });
         const flow = {
           ...updatedFlow,
           data: {
@@ -277,7 +277,7 @@ export function useFlowHistorySidebar(flowId: string) {
   );
 
   const handleExport = useCallback(
-    async (entry: FlowHistoryEntry) => {
+    async (entry: FlowVersionEntry) => {
       try {
         const response = await api.get(
           `${getURL("FLOWS")}/${flowId}/versions/${entry.id}`,
@@ -309,19 +309,19 @@ export function useFlowHistorySidebar(flowId: string) {
   );
 
   const handleDelete = useCallback(
-    (entry: FlowHistoryEntry) => {
+    (entry: FlowVersionEntry) => {
       setDeleteDialogEntry(null);
-      const entries = history ?? [];
+      const entries = versions ?? [];
       const currentIndex = entries.findIndex((e) => e.id === entry.id);
       const nextEntry =
         currentIndex > 0
           ? entries[currentIndex - 1]
           : entries[currentIndex + 1];
       deleteEntry(
-        { flowId, historyId: entry.id },
+        { flowId, versionId: entry.id },
         {
           onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["useGetFlowHistory"] });
+            queryClient.invalidateQueries({ queryKey: ["useGetFlowVersions"] });
             setSuccessData({ title: "Version deleted" });
             if (nextEntry) {
               setPreview([], [], nextEntry.version_tag, nextEntry.id);
@@ -341,7 +341,7 @@ export function useFlowHistorySidebar(flowId: string) {
     },
     [
       flowId,
-      history,
+      versions,
       deleteEntry,
       queryClient,
       setSuccessData,
@@ -363,7 +363,7 @@ export function useFlowHistorySidebar(flowId: string) {
     deleteDialogEntry,
     setDeleteDialogEntry,
     isRestoring,
-    history,
+    versions,
     maxEntries,
     isLoading,
     isListError,

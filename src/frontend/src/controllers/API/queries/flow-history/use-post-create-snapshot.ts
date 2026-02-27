@@ -1,6 +1,6 @@
 import type { UseMutationResult } from "@tanstack/react-query";
 import type { useMutationFunctionType } from "@/types/api";
-import type { FlowHistoryCreate, FlowHistoryEntry } from "@/types/flow/history";
+import type { FlowVersionCreate, FlowVersionEntry } from "@/types/flow/history";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -18,21 +18,21 @@ export const usePostCreateSnapshot: useMutationFunctionType<
 
   const createSnapshotFn = async (
     payload: ICreateSnapshot,
-  ): Promise<FlowHistoryEntry> => {
-    const body: FlowHistoryCreate = { description: payload.description };
-    const response = await api.post<FlowHistoryEntry>(
+  ): Promise<FlowVersionEntry> => {
+    const body: FlowVersionCreate = { description: payload.description };
+    const response = await api.post<FlowVersionEntry>(
       `${getURL("FLOWS")}/${payload.flowId}/versions/`,
       body,
     );
     return response.data;
   };
 
-  const mutation: UseMutationResult<FlowHistoryEntry, any, ICreateSnapshot> =
+  const mutation: UseMutationResult<FlowVersionEntry, any, ICreateSnapshot> =
     mutate(["usePostCreateSnapshot"], createSnapshotFn, {
       ...options,
       onSettled: (_, __, variables) => {
         queryClient.refetchQueries({
-          queryKey: ["useGetFlowHistory", { flowId: variables?.flowId }],
+          queryKey: ["useGetFlowVersions", { flowId: variables?.flowId }],
         });
       },
     });

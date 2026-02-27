@@ -1,20 +1,20 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import useHistoryPreviewStore from "@/stores/historyPreviewStore";
+import useVersionPreviewStore from "@/stores/historyPreviewStore";
 import RestoreVersionButton from "./RestoreVersionButton";
 import SaveSnapshotButton from "./SaveSnapshotButton";
 
-export default function HistoryPreviewOverlay() {
-  const previewLabel = useHistoryPreviewStore((s) => s.previewLabel);
-  const previewId = useHistoryPreviewStore((s) => s.previewId);
-  const isPreviewLoading = useHistoryPreviewStore((s) => s.isPreviewLoading);
+export default function VersionPreviewOverlay() {
+  const previewLabel = useVersionPreviewStore((s) => s.previewLabel);
+  const previewId = useVersionPreviewStore((s) => s.previewId);
+  const isPreviewLoading = useVersionPreviewStore((s) => s.isPreviewLoading);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
 
   if (previewLabel === null) return null;
 
   return (
-    <div className="history-preview-overlay pointer-events-none absolute inset-0 z-50">
+    <div className="version-preview-overlay pointer-events-none absolute inset-0 z-50">
       <Badge
         variant="outline"
         className="pointer-events-auto absolute left-4 top-4 h-8 whitespace-nowrap rounded-lg border-accent-indigo-foreground px-3 text-xs font-medium text-accent-indigo-foreground shadow-md backdrop-blur-sm"
@@ -55,7 +55,7 @@ export default function HistoryPreviewOverlay() {
       {previewId && previewLabel && previewLabel !== "Current Draft" && (
         <RestoreVersionButton
           flowId={currentFlowId}
-          historyId={previewId}
+          versionId={previewId}
           versionTag={previewLabel}
         />
       )}

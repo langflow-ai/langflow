@@ -1,29 +1,29 @@
 import type { useQueryFunctionType } from "@/types/api";
-import type { FlowHistoryEntryWithData } from "@/types/flow/history";
+import type { FlowVersionEntryWithData } from "@/types/flow/history";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
-interface FlowHistoryEntryParams {
+interface FlowVersionEntryParams {
   flowId: string;
-  historyId: string;
+  versionId: string;
 }
 
-export const useGetFlowHistoryEntry: useQueryFunctionType<
-  FlowHistoryEntryParams,
-  FlowHistoryEntryWithData
-> = ({ flowId, historyId }, options) => {
+export const useGetFlowVersionEntry: useQueryFunctionType<
+  FlowVersionEntryParams,
+  FlowVersionEntryWithData
+> = ({ flowId, versionId }, options) => {
   const { query } = UseRequestProcessor();
 
-  const getEntryFn = async (): Promise<FlowHistoryEntryWithData> => {
-    const response = await api.get<FlowHistoryEntryWithData>(
-      `${getURL("FLOWS")}/${flowId}/versions/${historyId}`,
+  const getEntryFn = async (): Promise<FlowVersionEntryWithData> => {
+    const response = await api.get<FlowVersionEntryWithData>(
+      `${getURL("FLOWS")}/${flowId}/versions/${versionId}`,
     );
     return response.data;
   };
 
-  return query(["useGetFlowHistoryEntry", { flowId, historyId }], getEntryFn, {
+  return query(["useGetFlowVersionEntry", { flowId, versionId }], getEntryFn, {
     ...options,
-    enabled: !!historyId && (options?.enabled ?? true),
+    enabled: !!versionId && (options?.enabled ?? true),
   });
 };

@@ -1,12 +1,12 @@
 import { createPortal } from "react-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
-import type { FlowHistoryEntry } from "@/types/flow/history";
+import type { FlowVersionEntry } from "@/types/flow/history";
 
 interface RestoreConfirmDialogProps {
-  entry: FlowHistoryEntry | null;
+  entry: FlowVersionEntry | null;
   onClose: () => void;
-  onConfirm: (entry: FlowHistoryEntry) => void;
+  onConfirm: (entry: FlowVersionEntry) => void;
   isRestoring: boolean;
 }
 

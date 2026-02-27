@@ -4,34 +4,35 @@ from uuid import UUID
 
 from lfx.log import logger
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy.orm import defer
 from sqlmodel import col, delete, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from langflow.services.database.models.flow_history.exceptions import (
-    FlowHistoryDataTooLargeError,
-    FlowHistoryNotFoundError,
-    FlowHistorySerializationError,
-    FlowHistoryVersionConflictError,
+from langflow.services.database.models.flow_version.exceptions import (
+    FlowVersionDataTooLargeError,
+    FlowVersionNotFoundError,
+    FlowVersionSerializationError,
+    FlowVersionVersionConflictError,
 )
-from langflow.services.database.models.flow_history.model import FlowHistory
+from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.deps import get_settings_service
 
 MAX_VERSION_RETRIES = 3
 
 
 async def get_next_version_number(session: AsyncSession, flow_id: UUID) -> int:
-    result = await session.exec(select(func.max(FlowHistory.version_number)).where(FlowHistory.flow_id == flow_id))
+    result = await session.exec(select(func.max(FlowVersion.version_number)).where(FlowVersion.flow_id == flow_id))
     current_max = result.one()
     return (current_max or 0) + 1
 
 
-async def create_flow_history_entry(
+async def create_flow_version_entry(
     session: AsyncSession,
     flow_id: UUID,
     user_id: UUID,
     data: dict | None,
     description: str | None = None,
-) -> FlowHistory:
+) -> FlowVersion:
     """Create a version entry with retry on version number collision.
 
     NOTE: This function does NOT verify that user_id owns the flow.
@@ -44,15 +45,15 @@ async def create_flow_history_entry(
             data_size = len(orjson.dumps(data))
         except (TypeError, orjson.JSONEncodeError) as exc:
             msg = "Flow data could not be serialized. The data may contain non-serializable values."
-            raise FlowHistorySerializationError(msg) from exc
-        max_size = get_settings_service().settings.max_flow_history_data_size_bytes
+            raise FlowVersionSerializationError(msg) from exc
+        max_size = get_settings_service().settings.max_flow_version_data_size_bytes
         if data_size > max_size:
-            raise FlowHistoryDataTooLargeError(data_size, max_size)
+            raise FlowVersionDataTooLargeError(data_size, max_size)
 
-    entry: FlowHistory | None = None
+    entry: FlowVersion | None = None
     for attempt in range(MAX_VERSION_RETRIES):
         version_number = await get_next_version_number(session, flow_id)
-        entry = FlowHistory(
+        entry = FlowVersion(
             flow_id=flow_id,
             user_id=user_id,
             data=data,
@@ -72,7 +73,7 @@ async def create_flow_history_entry(
                     f"Failed to create version for flow {flow_id} after "
                     f"{MAX_VERSION_RETRIES} retries due to version number conflicts"
                 )
-                raise FlowHistoryVersionConflictError(msg) from exc
+                raise FlowVersionVersionConflictError(msg) from exc
             await logger.awarning(
                 "Version number collision for flow %s (attempt %d/%d), retrying",
                 flow_id,
@@ -87,7 +88,7 @@ async def create_flow_history_entry(
             f"Failed to create version for flow {flow_id} after "
             f"{MAX_VERSION_RETRIES} retries due to version number conflicts"
         )
-        raise FlowHistoryVersionConflictError(msg)
+        raise FlowVersionVersionConflictError(msg)
 
     # Prune oldest entries beyond the configured limit.
     # NOTE: Concurrent snapshot requests for the same flow could both insert
@@ -96,13 +97,13 @@ async def create_flow_history_entry(
     # snapshot, and serializing with SELECT FOR UPDATE would add contention
     # for a non-critical constraint.
     try:
-        max_entries = get_settings_service().settings.max_flow_history_entries_per_flow
-        delete_older = delete(FlowHistory).where(
-            FlowHistory.flow_id == flow_id,
-            col(FlowHistory.id).in_(
-                select(FlowHistory.id)
-                .where(FlowHistory.flow_id == flow_id)
-                .order_by(col(FlowHistory.version_number).desc())
+        max_entries = get_settings_service().settings.max_flow_version_entries_per_flow
+        delete_older = delete(FlowVersion).where(
+            FlowVersion.flow_id == flow_id,
+            col(FlowVersion.id).in_(
+                select(FlowVersion.id)
+                .where(FlowVersion.flow_id == flow_id)
+                .order_by(col(FlowVersion.version_number).desc())
                 .offset(max_entries)
             ),
         )
@@ -110,8 +111,8 @@ async def create_flow_history_entry(
         if hasattr(result, "rowcount") and result.rowcount:  # type: ignore[union-attr]
             await logger.adebug("Pruned %d old version entries for flow %s", result.rowcount, flow_id)  # type: ignore[union-attr]
     except SQLAlchemyError:
-        await logger.awarning(
-            "Failed to prune old version entries for flow %s — version table may exceed configured limit",
+        await logger.aerror(
+            "Failed to prune old version entries for flow %s — version table may grow unbounded until this is resolved",
             flow_id,
             exc_info=True,
         )
@@ -119,58 +120,59 @@ async def create_flow_history_entry(
     return entry
 
 
-async def get_flow_history_list(
+async def get_flow_version_list(
     session: AsyncSession,
     flow_id: UUID,
     user_id: UUID,
     limit: int = 50,
     offset: int = 0,
-) -> list[FlowHistory]:
+) -> list[FlowVersion]:
     result = await session.exec(
-        select(FlowHistory)
-        .where(FlowHistory.flow_id == flow_id, FlowHistory.user_id == user_id)
-        .order_by(col(FlowHistory.version_number).desc())
+        select(FlowVersion)
+        .options(defer(FlowVersion.data))  # type: ignore[arg-type]
+        .where(FlowVersion.flow_id == flow_id, FlowVersion.user_id == user_id)
+        .order_by(col(FlowVersion.version_number).desc())
         .offset(offset)
         .limit(limit)
     )
     return list(result.all())
 
 
-async def get_flow_history_entry(
+async def get_flow_version_entry(
     session: AsyncSession,
-    history_id: UUID,
+    version_id: UUID,
     user_id: UUID,
-) -> FlowHistory | None:
-    result = await session.exec(select(FlowHistory).where(FlowHistory.id == history_id, FlowHistory.user_id == user_id))
+) -> FlowVersion | None:
+    result = await session.exec(select(FlowVersion).where(FlowVersion.id == version_id, FlowVersion.user_id == user_id))
     return result.first()
 
 
-async def get_flow_history_entry_or_raise(
+async def get_flow_version_entry_or_raise(
     session: AsyncSession,
-    history_id: UUID,
+    version_id: UUID,
     user_id: UUID,
     flow_id: UUID | None = None,
-) -> FlowHistory:
-    """Get a version entry or raise FlowHistoryNotFoundError.
+) -> FlowVersion:
+    """Get a version entry or raise FlowVersionNotFoundError.
 
     If flow_id is provided, also verifies the entry belongs to that flow.
     """
-    entry = await get_flow_history_entry(session, history_id, user_id)
+    entry = await get_flow_version_entry(session, version_id, user_id)
     if not entry or (flow_id is not None and entry.flow_id != flow_id):
-        msg = f"Version {history_id} not found"
-        raise FlowHistoryNotFoundError(msg)
+        msg = f"Version {version_id} not found"
+        raise FlowVersionNotFoundError(msg)
     return entry
 
 
-async def delete_flow_history_entry(
+async def delete_flow_version_entry(
     session: AsyncSession,
-    history_id: UUID,
+    version_id: UUID,
     user_id: UUID,
 ) -> None:
-    entry = await get_flow_history_entry(session, history_id, user_id)
+    entry = await get_flow_version_entry(session, version_id, user_id)
     if not entry:
-        msg = f"Version {history_id} not found"
-        raise FlowHistoryNotFoundError(msg)
+        msg = f"Version {version_id} not found"
+        raise FlowVersionNotFoundError(msg)
 
     await session.delete(entry)
     await session.flush()

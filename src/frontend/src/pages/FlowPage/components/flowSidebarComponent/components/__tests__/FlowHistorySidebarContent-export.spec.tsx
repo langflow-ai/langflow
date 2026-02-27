@@ -28,8 +28,8 @@ jest.mock("@/controllers/API/helpers/constants", () => ({
   getURL: () => "/api/v1/flows",
 }));
 
-// Query-hook mocks — returns the FlowHistoryListResponse wrapper shape
-const mockHistory = [
+// Query-hook mocks — returns the FlowVersionListResponse wrapper shape
+const mockVersions = [
   {
     id: "entry-1",
     flow_id: "flow-1",
@@ -42,18 +42,18 @@ const mockHistory = [
 ];
 
 jest.mock("@/controllers/API/queries/flow-history", () => ({
-  useGetFlowHistory: () => ({
-    data: { entries: mockHistory, max_entries: 50 },
+  useGetFlowVersions: () => ({
+    data: { entries: mockVersions, max_entries: 50 },
     isLoading: false,
     isError: false,
   }),
-  useGetFlowHistoryEntry: () => ({
+  useGetFlowVersionEntry: () => ({
     data: null,
     isLoading: false,
     isError: false,
   }),
   usePostCreateSnapshot: () => ({ mutate: jest.fn(), isPending: false }),
-  useDeleteHistoryEntry: () => ({ mutate: jest.fn(), isPending: false }),
+  useDeleteVersionEntry: () => ({ mutate: jest.fn(), isPending: false }),
 }));
 
 jest.mock("@/hooks/flows/use-apply-flow-to-canvas", () => ({
@@ -161,33 +161,33 @@ jest.mock("@/stores/historyPreviewStore", () => {
 // Import the component AFTER all mocks are set up
 // ---------------------------------------------------------------------------
 
-import FlowHistorySidebarContent from "../FlowHistorySidebarContent";
+import FlowVersionSidebarContent from "../FlowVersionSidebarContent";
 
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
-describe("FlowHistorySidebarContent export", () => {
+describe("FlowVersionSidebarContent export", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   it("exports a version entry using removeApiKeys + downloadFlow", async () => {
     const user = userEvent.setup();
-    const historyData = {
+    const versionData = {
       nodes: [{ id: "hist-node", data: { node: { template: {} } } }],
       edges: [],
     };
 
     apiGetMock.mockResolvedValueOnce({
       data: {
-        ...mockHistory[0],
-        data: historyData,
+        ...mockVersions[0],
+        data: versionData,
         version_tag: "v1",
       },
     });
 
-    render(<FlowHistorySidebarContent flowId="flow-1" />);
+    render(<FlowVersionSidebarContent flowId="flow-1" />);
 
     // Find the Export menu items — there's one for each version entry
     const exportItems = screen.getAllByRole("menuitem", { name: /Export/i });
@@ -205,7 +205,7 @@ describe("FlowHistorySidebarContent export", () => {
       expect(removeApiKeysMock).toHaveBeenCalledWith(
         expect.objectContaining({
           id: "flow-1",
-          data: historyData,
+          data: versionData,
           name: "Test Flow_v1",
           description: "A test flow",
           is_component: false,
@@ -215,7 +215,7 @@ describe("FlowHistorySidebarContent export", () => {
 
     await waitFor(() => {
       expect(downloadFlowMock).toHaveBeenCalledWith(
-        expect.objectContaining({ data: historyData }),
+        expect.objectContaining({ data: versionData }),
         "Test Flow_v1",
         expect.any(String),
       );
@@ -224,16 +224,16 @@ describe("FlowHistorySidebarContent export", () => {
 
   it("exports a version entry with the correct flow name and description", async () => {
     const user = userEvent.setup();
-    const historyData = {
+    const versionData = {
       nodes: [{ id: "v1-node" }],
       edges: [],
     };
 
     apiGetMock.mockResolvedValueOnce({
-      data: { ...mockHistory[0], data: historyData, version_tag: "v1" },
+      data: { ...mockVersions[0], data: versionData, version_tag: "v1" },
     });
 
-    render(<FlowHistorySidebarContent flowId="flow-1" />);
+    render(<FlowVersionSidebarContent flowId="flow-1" />);
 
     const exportItems = screen.getAllByRole("menuitem", { name: /Export/i });
     await user.click(exportItems[0]);
@@ -254,7 +254,7 @@ describe("FlowHistorySidebarContent export", () => {
       response: { data: { detail: "Server error" } },
     });
 
-    render(<FlowHistorySidebarContent flowId="flow-1" />);
+    render(<FlowVersionSidebarContent flowId="flow-1" />);
 
     const exportItems = screen.getAllByRole("menuitem", { name: /Export/i });
     await user.click(exportItems[0]);

@@ -1,3 +1,3 @@
-export interface FlowHistorySidebarContentProps {
+export interface FlowVersionSidebarContentProps {
   flowId: string;
 }

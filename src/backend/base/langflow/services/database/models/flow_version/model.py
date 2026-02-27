@@ -9,7 +9,7 @@ from sqlalchemy import CheckConstraint, Column, ForeignKey, UniqueConstraint
 from sqlmodel import JSON, Field, SQLModel
 
 
-class FlowHistory(SQLModel, table=True):  # type: ignore[call-arg]
+class FlowVersion(SQLModel, table=True):  # type: ignore[call-arg]
     __tablename__ = "flow_history"
     __mapper_args__ = {"confirm_deleted_rows": False}
 
@@ -32,7 +32,7 @@ class FlowHistory(SQLModel, table=True):  # type: ignore[call-arg]
     )
 
 
-class FlowHistoryRead(BaseModel):
+class FlowVersionRead(BaseModel):
     """Schema for listing version entries — excludes data for performance."""
 
     id: UUID
@@ -55,20 +55,20 @@ class FlowHistoryRead(BaseModel):
         return value.isoformat()
 
 
-class FlowHistoryReadWithData(FlowHistoryRead):
+class FlowVersionReadWithData(FlowVersionRead):
     """Schema for a single version entry — includes full data."""
 
     data: dict | None
 
 
-class FlowHistoryCreate(BaseModel):
+class FlowVersionCreate(BaseModel):
     """Schema for creating a version — user only provides description."""
 
     description: str | None = Field(default=None, max_length=500)
 
 
-class FlowHistoryListResponse(BaseModel):
+class FlowVersionListResponse(BaseModel):
     """Wrapper for the list endpoint — includes entries and the configured max."""
 
-    entries: list[FlowHistoryRead]
+    entries: list[FlowVersionRead]
     max_entries: int = PydanticField(ge=1)

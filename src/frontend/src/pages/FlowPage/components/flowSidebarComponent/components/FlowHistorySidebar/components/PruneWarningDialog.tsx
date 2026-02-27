@@ -7,7 +7,7 @@ interface PruneWarningDialogProps {
   onClose: () => void;
   onConfirm: () => void;
   isCreating: boolean;
-  historyLength: number;
+  versionsLength: number;
   maxEntries: number;
 }
 
@@ -16,12 +16,12 @@ export default function PruneWarningDialog({
   onClose,
   onConfirm,
   isCreating,
-  historyLength,
+  versionsLength,
   maxEntries,
 }: PruneWarningDialogProps) {
   if (!open) return null;
 
-  const pruneCount = historyLength + 1 - maxEntries;
+  const pruneCount = versionsLength + 1 - maxEntries;
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
@@ -42,7 +42,7 @@ export default function PruneWarningDialog({
             </>
           ) : (
             <>
-              You have <strong>{historyLength}</strong> versions but the limit
+              You have <strong>{versionsLength}</strong> versions but the limit
               is <strong>{maxEntries}</strong>. Saving a new version will
               automatically delete the <strong>{pruneCount}</strong> oldest
               versions. Do you want to continue?
