@@ -761,12 +761,12 @@
   },
   "Directory": {
     "versions": {
-      "0.3.0": "c55e0e29079d"
+      "0.3.0": "328e6f996926"
     }
   },
   "File": {
     "versions": {
-      "0.3.0": "96a5f6aa89da"
+      "0.3.0": "12a5841f1a03"
     }
   },
   "KnowledgeIngestion": {
@@ -1631,7 +1631,7 @@
   },
   "VideoFile": {
     "versions": {
-      "0.3.0": "479d6216272d"
+      "0.3.0": "8dc827e42377"
     }
   },
   "Unstructured": {

@@ -18,8 +18,8 @@ import IconComponent, {
   ForwardedIconComponent,
 } from "../../../../common/genericIconComponent";
 import { Button } from "../../../../ui/button";
-import type { FileComponentType, InputProps } from "../../types";
 import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
+import type { FileComponentType, InputProps } from "../../types";
 
 export default function InputFileComponent({
   value,
@@ -30,9 +30,11 @@ export default function InputFileComponent({
   isList,
   tempFile = true,
   editNode = false,
-  id,
   placeholder,
-}: InputProps<string, FileComponentType>): JSX.Element {
+  allowFolderSelection = false,
+}: InputProps<string, FileComponentType> & {
+  allowFolderSelection?: boolean;
+}): JSX.Element {
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { validateFileSize } = useFileSizeValidator();
@@ -57,40 +59,43 @@ export default function InputFileComponent({
   const { mutateAsync, isPending } = usePostUploadFile();
 
   const handleButtonClick = (): void => {
-    createFileUpload({ multiple: isList, accept: fileTypes?.join(",") }).then(
-      (files) => {
-        if (files.length === 0) return;
+    createFileUpload({
+      multiple: isList,
+      accept: fileTypes?.join(","),
+    }).then((files) => {
+      if (files.length === 0) return;
 
-        // For single file mode, only process the first file
-        const filesToProcess = isList ? files : [files[0]];
+      // Process files normally
+      const filesToProcess: File[] = isList ? files : [files[0]];
 
-        // Validate all files
-        for (const file of filesToProcess) {
-          try {
-            validateFileSize(file);
-          } catch (e) {
-            if (e instanceof Error) {
-              setErrorData({
-                title: e.message,
-              });
-            }
-            return;
-          }
-          if (!checkFileType(file.name)) {
+      // Validate all files
+      for (const file of filesToProcess) {
+        try {
+          validateFileSize(file);
+        } catch (e) {
+          if (e instanceof Error) {
             setErrorData({
-              title: INVALID_FILE_ALERT,
-              list: [fileTypes?.join(", ") || ""],
+              title: e.message,
             });
-            return;
           }
+          return;
         }
+        if (!checkFileType(file.name)) {
+          setErrorData({
+            title: INVALID_FILE_ALERT,
+            list: [fileTypes?.join(", ") || ""],
+          });
+          return;
+        }
+      }
 
-        // Upload all files
-        Promise.all(
-          filesToProcess.map(
-            (file) =>
-              new Promise<{ file_name: string; file_path: string } | null>(
-                async (resolve) => {
+      // Upload all files
+      Promise.all(
+        filesToProcess.map(
+          (file) =>
+            new Promise<{ file_name: string; file_path: string } | null>(
+              async (resolve) => {
+                try {
                   const data = await mutateAsync(
                     { file, id: currentFlowId },
                     {
@@ -100,7 +105,6 @@ export default function InputFileComponent({
                           title: "Error uploading file",
                           list: [error.response?.data?.detail],
                         });
-                        resolve(null);
                       },
                     },
                   );
@@ -108,39 +112,41 @@ export default function InputFileComponent({
                     file_name: file.name,
                     file_path: data.file_path,
                   });
-                },
-              ),
-          ),
-        )
-          .then((results) => {
-            console.warn(results);
-            // Filter out any failed uploads
-            const successfulUploads = results.filter(
-              (r): r is { file_name: string; file_path: string } => r !== null,
+                } catch {
+                  resolve(null);
+                }
+              },
+            ),
+        ),
+      )
+        .then((results) => {
+          console.warn(results);
+          // Filter out any failed uploads
+          const successfulUploads = results.filter(
+            (r): r is { file_name: string; file_path: string } => r !== null,
+          );
+
+          if (successfulUploads.length > 0) {
+            const fileNames = successfulUploads.map(
+              (result) => result.file_name,
+            );
+            const filePaths = successfulUploads.map(
+              (result) => result.file_path,
             );
 
-            if (successfulUploads.length > 0) {
-              const fileNames = successfulUploads.map(
-                (result) => result.file_name,
-              );
-              const filePaths = successfulUploads.map(
-                (result) => result.file_path,
-              );
-
-              // For single file mode, just use the first result
-              // For list mode, join with commas
-              handleOnNewValue({
-                value: isList ? fileNames : fileNames[0],
-                file_path: isList ? filePaths : filePaths[0],
-              });
-            }
-          })
-          .catch((e) => {
-            console.error(e);
-            // Error handling is done in the onError callback above
-          });
-      },
-    );
+            // For single file mode, just use the first result
+            // For list mode, join with commas
+            handleOnNewValue({
+              value: isList ? fileNames : fileNames[0],
+              file_path: isList ? filePaths : filePaths[0],
+            });
+          }
+        })
+        .catch((e) => {
+          console.error(e);
+          // Error handling is done in the onError callback above
+        });
+    });
   };
 
   const handleDismissClick = () => {
@@ -258,6 +264,7 @@ export default function InputFileComponent({
                   disabled={isDisabled}
                   types={fileTypes}
                   isList={isList}
+                  allowFolderSelection={allowFolderSelection}
                 >
                   {(selectedFiles.length === 0 || isList) && (
                     <div data-testid="input-file-component" className="w-full">
