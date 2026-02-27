@@ -145,6 +145,7 @@ export type InputGlobalComponentType = {
 export type MultiselectComponentType = {
   options: string[];
   combobox?: boolean;
+  hideOnSelection?: boolean;
 };
 
 export type TabComponentType = {

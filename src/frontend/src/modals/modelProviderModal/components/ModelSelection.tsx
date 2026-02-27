@@ -103,21 +103,62 @@ const ModelSelection = ({
     );
   };
 
+  const isOllama = providerName?.toLowerCase() === "ollama";
+  const noModelsAvailable =
+    (modelType === "llm" && llmModels.length === 0) ||
+    (modelType === "embeddings" && embeddingModels.length === 0) ||
+    (modelType === "all" && availableModels.length === 0);
+
   return (
     <div data-testid="model-provider-selection" className="flex flex-col gap-6">
-      {modelType === "all" ? (
+      {isOllama && noModelsAvailable ? (
+        <div className="flex flex-col items-center justify-center p-8 text-center border border-dashed rounded-lg bg-muted/30">
+          <ForwardedIconComponent
+            name="Info"
+            className="w-10 h-10 mb-4 text-muted-foreground"
+          />
+          <h3 className="mb-2 text-sm font-semibold text-foreground">
+            No models available
+          </h3>
+          <p className="max-w-[300px] text-xs text-muted-foreground leading-relaxed">
+            It looks like you don't have any
+            {modelType === "llm"
+              ? " language"
+              : modelType === "embeddings"
+                ? " embedding"
+                : ""}{" "}
+            models installed for Ollama. Please pull the models you want to use.
+          </p>
+          <a
+            href="https://ollama.com/library"
+            target="_blank"
+            rel="noreferrer"
+            className="mt-6 text-xs font-medium text-primary underline underline-offset-4 hover:opacity-80 transition-opacity"
+          >
+            Check Ollama Library
+          </a>
+        </div>
+      ) : (
         <>
-          {renderModelSection("Language Models", llmModels, "llm")}
-          {renderModelSection(
-            "Embedding Models",
-            embeddingModels,
-            "embeddings",
+          {modelType === "all" ? (
+            <>
+              {renderModelSection("Language Models", llmModels, "llm")}
+              {renderModelSection(
+                "Embedding Models",
+                embeddingModels,
+                "embeddings",
+              )}
+            </>
+          ) : modelType === "llm" ? (
+            renderModelSection("Language Models", llmModels, "llm")
+          ) : (
+            renderModelSection(
+              "Embedding Models",
+              embeddingModels,
+              "embeddings",
+            )
           )}
         </>
-      ) : modelType === "llm" ? (
-        renderModelSection("Language Models", llmModels, "llm")
-      ) : (
-        renderModelSection("Embedding Models", embeddingModels, "embeddings")
       )}
     </div>
   );

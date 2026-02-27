@@ -120,12 +120,14 @@ async def create_variable(
 
     # Check if the variable is a reserved model provider variable
     if variable.name in model_provider_variable_mapping.values():
-        # Validate that the key actually works using the Language Model Service
-        # Run validation off the event loop to avoid blocking
-        try:
-            await asyncio.to_thread(validate_model_provider_key, variable.name, variable.value)
-        except ValueError as e:
-            raise HTTPException(status_code=400, detail=str(e)) from e
+        provider = get_provider_from_variable_name(variable.name)
+        if provider is not None:
+            # Validate that the key actually works using the Language Model Service
+            # Run validation off the event loop to avoid blocking
+            try:
+                await asyncio.to_thread(validate_model_provider_key, provider, {variable.name: variable.value})
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e)) from e
 
     try:
         return await variable_service.create_variable(
@@ -206,11 +208,17 @@ async def update_variable(
 
         # Validate API key if updating a model provider variable
         if existing_variable.name in model_provider_variable_mapping.values() and variable.value:
-            # Run validation off the event loop to avoid blocking
-            try:
-                await asyncio.to_thread(validate_model_provider_key, existing_variable.name, variable.value)
-            except ValueError as e:
-                raise HTTPException(status_code=400, detail=str(e)) from e
+            provider = get_provider_from_variable_name(existing_variable.name)
+            if provider is not None:
+                # Run validation off the event loop to avoid blocking
+                try:
+                    await asyncio.to_thread(
+                        validate_model_provider_key,
+                        provider,
+                        {existing_variable.name: variable.value},
+                    )
+                except ValueError as e:
+                    raise HTTPException(status_code=400, detail=str(e)) from e
 
         return await variable_service.update_variable_fields(
             user_id=current_user.id,

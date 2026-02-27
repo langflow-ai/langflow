@@ -1,24 +1,25 @@
 from __future__ import annotations
 
 import json
-import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from lfx.base.models.model_utils import replace_with_live_models
 from lfx.base.models.unified_models import (
+    get_model_provider_metadata,
     get_model_provider_variable_mapping,
     get_model_providers,
+    get_provider_all_variables,
     get_unified_models_detailed,
 )
+from loguru import logger
 from pydantic import BaseModel, field_validator
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.deps import get_variable_service
-from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
+from langflow.services.variable.constants import GENERIC_TYPE
 from langflow.services.variable.service import DatabaseVariableService
-
-logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/models", tags=["Models"], include_in_schema=False)
 
@@ -94,6 +95,32 @@ class ModelStatusUpdate(BaseModel):
         return v.strip()
 
 
+class ValidateProviderRequest(BaseModel):
+    """Request model for validating provider credentials."""
+
+    provider: str
+    variables: dict[str, str]  # {variable_key: value}
+
+    @field_validator("provider")
+    @classmethod
+    def validate_provider(cls, v: str) -> str:
+        """Ensure provider name is valid."""
+        if not v or not v.strip():
+            msg = "Provider cannot be empty"
+            raise ValueError(msg)
+        if len(v) > MAX_STRING_LENGTH:
+            msg = f"Provider exceeds maximum length of {MAX_STRING_LENGTH} characters"
+            raise ValueError(msg)
+        return v.strip()
+
+
+class ValidateProviderResponse(BaseModel):
+    """Response model for provider validation."""
+
+    valid: bool
+    error: str | None = None
+
+
 @router.get("/providers", status_code=200, dependencies=[Depends(get_current_active_user)])
 async def list_model_providers() -> list[str]:
     """Return available model providers."""
@@ -136,9 +163,13 @@ async def list_models(
         if v is not None
     }
 
-    # Get enabled providers status
+    # Get enabled providers status (now just checks if variables exist)
     enabled_providers_result = await get_enabled_providers(session=session, current_user=current_user)
-    provider_status = enabled_providers_result.get("provider_status", {})
+    provider_configured_status = enabled_providers_result.get("provider_status", {})
+
+    # Get enabled models map for current user to determine "active" providers
+    enabled_models_result = await get_enabled_models(session=session, current_user=current_user)
+    enabled_models_map = enabled_models_result.get("enabled_models", {})
 
     # Get default model if model_type is specified
     default_provider = None
@@ -163,22 +194,34 @@ async def list_models(
         model_type=model_type,
         **metadata_filters,
     )
-    # Add enabled status to each provider
+
+    # Add configured and enabled status to each provider
     for provider_dict in filtered_models:
-        provider_dict["is_enabled"] = provider_status.get(provider_dict.get("provider"), False)
+        prov_name = provider_dict.get("provider")
+        provider_dict["is_configured"] = provider_configured_status.get(prov_name, False)
+
+        # Provider is "enabled" (active) if it has at least one enabled model
+        prov_models_status = enabled_models_map.get(prov_name, {})
+        has_active_model = any(prov_models_status.values())
+        provider_dict["is_enabled"] = has_active_model
+
+    # Replace static models with live models for providers that support it
+    configured_providers = {p for p, configured in provider_configured_status.items() if configured}
+    replace_with_live_models(filtered_models, current_user.id, configured_providers, model_type)
 
     # Sort providers:
     # 1. Provider with default model first
-    # 2. Enabled providers next
+    # 2. Configured providers next
     # 3. Alphabetically after that
     def sort_key(provider_dict):
         provider_name = provider_dict.get("provider", "")
-        is_enabled = provider_dict.get("is_enabled", False)
+        # Use is_configured for sorting priority (so they appear at top when ready)
+        is_configured = provider_dict.get("is_configured", False)
         is_default = provider_name == default_provider
 
-        # Return tuple for sorting: (not is_default, not is_enabled, provider_name)
-        # This way default comes first (False < True), then enabled, then alphabetical
-        return (not is_default, not is_enabled, provider_name)
+        # Return tuple for sorting: (not is_default, not is_configured, provider_name)
+        # This way default comes first (False < True), then configured, then alphabetical
+        return (not is_default, not is_configured, provider_name)
 
     filtered_models.sort(key=sort_key)
 
@@ -186,8 +229,20 @@ async def list_models(
 
 
 @router.get("/provider-variable-mapping", status_code=200)
-async def get_model_provider_mapping() -> dict[str, str]:
-    return get_model_provider_variable_mapping()
+async def get_model_provider_mapping() -> dict[str, list[dict]]:
+    """Return provider variables mapping with full variable info.
+
+    Each provider maps to a list of variable objects containing:
+    - variable_name: Display name shown to user
+    - variable_key: Environment variable key
+    - description: Help text for the variable
+    - required: Whether the variable is required
+    - is_secret: Whether to treat as credential
+    - is_list: Whether it accepts multiple values
+    - options: Predefined options for dropdowns
+    """
+    metadata = get_model_provider_metadata()
+    return {provider: meta.get("variables", []) for provider, meta in metadata.items()}
 
 
 @router.get("/enabled_providers", status_code=200)
@@ -210,32 +265,30 @@ async def get_enabled_providers(
                 status_code=500,
                 detail="Variable service is not an instance of DatabaseVariableService",
             )
-        # Get all variables to check which credential variables exist
+        # Get all variables (VariableRead objects)
         all_variables = await variable_service.get_all(user_id=current_user.id, session=session)
 
-        # Get all credential variable names (regardless of default_fields)
-        # This includes both env variables and explicitly created model provider credentials
-        credential_variable_names = {var.name for var in all_variables if var.type == CREDENTIAL_TYPE}
-
-        if not credential_variable_names:
-            return {
-                "enabled_providers": [],
-                "provider_status": {},
-            }
+        # Build a set of all variable names we have
+        all_variable_names = {var.name for var in all_variables}
 
         # Get the provider-variable mapping
         provider_variable_map = get_model_provider_variable_mapping()
 
-        # Check which providers have credentials stored (no validation - that happens on save)
-        enabled_providers_set = set()
-        for provider, var_name in provider_variable_map.items():
-            if var_name in credential_variable_names:
-                enabled_providers_set.add(provider)
+        # Check which providers have all required variables saved
+        enabled_providers = []
+        provider_status = {}
 
-        enabled_providers = list(enabled_providers_set)
+        for provider in provider_variable_map:
+            # Get ALL variables for this provider
+            provider_vars = get_provider_all_variables(provider)
 
-        # Build provider_status dict for all providers
-        provider_status = {provider: provider in enabled_providers_set for provider in provider_variable_map}
+            # Check if all REQUIRED variables are present
+            required_vars = [v for v in provider_vars if v.get("required", False)]
+            all_required_present = all(v.get("variable_key") in all_variable_names for v in required_vars)
+
+            provider_status[provider] = all_required_present
+            if all_required_present:
+                enabled_providers.append(provider)
 
         result = {
             "enabled_providers": enabled_providers,
@@ -263,6 +316,29 @@ async def get_enabled_providers(
         ) from e
     else:
         return result
+
+
+@router.post("/validate-provider", status_code=200, response_model=ValidateProviderResponse)
+async def validate_provider(
+    request: ValidateProviderRequest,
+    current_user: CurrentActiveUser,  # noqa: ARG001
+) -> ValidateProviderResponse:
+    """Validate provider credentials before saving.
+
+    This endpoint checks if the provided credentials are valid by attempting
+    to connect to the provider. Use this for real-time validation in the UI.
+    """
+    from lfx.base.models.unified_models import validate_model_provider_key
+
+    try:
+        # Validate the credentials
+        validate_model_provider_key(request.provider, request.variables)
+        return ValidateProviderResponse(valid=True, error=None)
+    except ValueError as e:
+        return ValidateProviderResponse(valid=False, error=str(e))
+    except (ConnectionError, TimeoutError, RuntimeError, KeyError, AttributeError, TypeError) as e:
+        logger.exception("Unexpected error validating provider %s", request.provider)
+        return ValidateProviderResponse(valid=False, error=f"Validation failed: {e}")
 
 
 async def _get_disabled_models(session: DbSession, current_user: CurrentActiveUser) -> set[str]:
@@ -462,6 +538,10 @@ async def get_enabled_models(
     enabled_providers_result = await get_enabled_providers(session=session, current_user=current_user)
     provider_status = enabled_providers_result.get("provider_status", {})
 
+    # Replace static models with live models for providers that support it
+    configured_providers = {p for p, configured in provider_status.items() if configured}
+    replace_with_live_models(all_models_by_provider, current_user.id, configured_providers)
+
     # Get disabled and explicitly enabled models lists
     disabled_models = await _get_disabled_models(session=session, current_user=current_user)
     explicitly_enabled_models = await _get_enabled_models(session=session, current_user=current_user)
@@ -556,6 +636,30 @@ async def update_enabled_models(
     is_default_model = _build_model_default_flags()
 
     # Update model sets based on user requests
+    # For any model being enabled, validate the provider credentials
+    for update in updates:
+        if update.enabled:
+            from lfx.base.models.unified_models import get_all_variables_for_provider, validate_model_provider_key
+
+            # Get variables from DB or environment
+            variables = get_all_variables_for_provider(current_user.id, update.provider)
+
+            try:
+                # Validate the credentials
+                validate_model_provider_key(update.provider, variables, model_name=update.model_id)
+            except ValueError as e:
+                # Validation failed - return 400 with error message
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Validation failed for {update.provider}: {e}",
+                ) from e
+            except Exception as e:
+                logger.exception("Unexpected error validating provider %s", update.provider)
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Validation failed for {update.provider}: {e}",
+                ) from e
+
     _update_model_sets(updates, disabled_models, explicitly_enabled_models, is_default_model)
 
     # Log the operation for audit trail

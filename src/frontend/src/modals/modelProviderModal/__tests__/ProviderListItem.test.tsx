@@ -148,13 +148,13 @@ describe("ProviderListItem", () => {
       expect(item).toHaveClass("cursor-pointer");
     });
 
-    it("should have not-allowed cursor for provider without models", () => {
+    it("should still have pointer cursor for provider without models since all are clickable", () => {
       render(
         <ProviderListItem {...defaultProps} provider={mockProviderNoModels} />,
       );
 
       const item = screen.getByTestId("provider-item-Empty");
-      expect(item).toHaveClass("cursor-not-allowed");
+      expect(item).toHaveClass("cursor-pointer");
     });
   });
 });

@@ -172,5 +172,24 @@ describe("ModelSelection", () => {
         screen.queryByTestId("embeddings-models-section"),
       ).not.toBeInTheDocument();
     });
+
+    it("should show empty state message for Ollama when no models are available", () => {
+      render(
+        <ModelSelection
+          {...defaultProps}
+          providerName="Ollama"
+          availableModels={[]}
+          isEnabledModel={true}
+        />,
+      );
+
+      expect(screen.getByText("No models available")).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          /models installed for Ollama. Please pull the models you want to use./i,
+        ),
+      ).toBeInTheDocument();
+      expect(screen.getByText("Check Ollama Library")).toBeInTheDocument();
+    });
   });
 });

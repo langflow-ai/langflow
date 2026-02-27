@@ -17,9 +17,10 @@ const ModelProviderModal = ({
 
   const handleClose = () => {
     onClose();
-    setTimeout(() => {
-      refreshAllModelInputs({ silent: true });
-    }, 1000);
+    // Refresh model inputs to pick up any enabled/disabled changes
+    // Note: The mutations in ModelProvidersContent already invalidate queries on success,
+    // so this refresh primarily re-fetches the template options for nodes.
+    refreshAllModelInputs({ silent: true });
   };
 
   return (

@@ -936,12 +936,12 @@
   },
   "IBMwatsonxModel": {
     "versions": {
-      "0.3.0": "769869108e5e"
+      "0.3.0": "689a87ecc73a"
     }
   },
   "WatsonxEmbeddingsComponent": {
     "versions": {
-      "0.3.0": "ffded413ea90"
+      "0.3.0": "011bcac795de"
     }
   },
   "Combinatorial Reasoner": {
@@ -1236,7 +1236,7 @@
   },
   "LanguageModelComponent": {
     "versions": {
-      "0.3.0": "a2006b90cbd1"
+      "0.3.0": "4af3c0cc0dcf"
     }
   },
   "MCPTools": {
@@ -1306,12 +1306,12 @@
   },
   "OllamaModel": {
     "versions": {
-      "0.3.0": "4fac4a29daff"
+      "0.3.0": "cd3dc38272a7"
     }
   },
   "OllamaEmbeddings": {
     "versions": {
-      "0.3.0": "c1f138e1f771"
+      "0.3.0": "a8c56d0835de"
     }
   },
   "OpenAIEmbeddings": {

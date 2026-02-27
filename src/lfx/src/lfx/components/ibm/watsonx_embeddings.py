@@ -1,12 +1,12 @@
 from typing import Any
 
-import requests
 from ibm_watsonx_ai import APIClient, Credentials
 from ibm_watsonx_ai.metanames import EmbedTextParamsMetaNames
 from langchain_ibm import WatsonxEmbeddings
 from pydantic.v1 import SecretStr
 
 from lfx.base.embeddings.model import LCEmbeddingsModel
+from lfx.base.models.model_utils import get_watsonx_embedding_models
 from lfx.field_typing import Embeddings
 from lfx.io import BoolInput, DropdownInput, IntInput, SecretStrInput, StrInput
 from lfx.log.logger import logger
@@ -79,21 +79,11 @@ class WatsonxEmbeddingsComponent(LCEmbeddingsModel):
 
     @staticmethod
     def fetch_models(base_url: str) -> list[str]:
-        """Fetch available models from the watsonx.ai API."""
-        try:
-            endpoint = f"{base_url}/ml/v1/foundation_model_specs"
-            params = {
-                "version": "2024-09-16",
-                "filters": "function_embedding,!lifecycle_withdrawn:and",
-            }
-            response = requests.get(endpoint, params=params, timeout=10)
-            response.raise_for_status()
-            data = response.json()
-            models = [model["model_id"] for model in data.get("resources", [])]
-            return sorted(models)
-        except Exception:  # noqa: BLE001
-            logger.exception("Error fetching models")
-            return WatsonxEmbeddingsComponent._default_models
+        """Fetch available models from the watsonx.ai API.
+
+        Uses centralized model fetching from model_utils.
+        """
+        return get_watsonx_embedding_models(base_url, default_models=WatsonxEmbeddingsComponent._default_models)
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
         """Update model options when URL or API key changes."""

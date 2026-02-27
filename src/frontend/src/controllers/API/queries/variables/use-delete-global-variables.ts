@@ -29,8 +29,6 @@ export const useDeleteGlobalVariables: useMutationFunctionType<
   > = mutate(["useDeleteGlobalVariables"], deleteGlobalVariables, {
     onSettled: () => {
       queryClient.refetchQueries({ queryKey: ["useGetGlobalVariables"] });
-      queryClient.refetchQueries({ queryKey: ["useGetModelProviders"] });
-      refreshAllModelInputs(queryClient, { silent: true });
     },
     ...options,
   });
