@@ -594,6 +594,7 @@ jobs:
       base-artifact-name: "dist-base"
       main-artifact-name: "dist-main"
       lfx-artifact-name: "dist-lfx"
+      pre_release: ${{ inputs.pre_release }}
 
   publish-base:
     name: Publish Langflow Base to PyPI

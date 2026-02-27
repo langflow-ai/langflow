@@ -22,6 +22,11 @@ on:
         description: "Name of the LFX package artifact"
         required: false
         type: string
+      pre_release:
+        description: "Whether this is a pre-release build"
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   build-if-needed:
