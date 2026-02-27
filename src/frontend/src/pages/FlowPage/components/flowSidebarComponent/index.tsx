@@ -595,6 +595,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
   const showMcp =
     (ENABLE_NEW_SIDEBAR && activeSection === "mcp") ||
     (hasSearchInput && hasMcpComponents && ENABLE_NEW_SIDEBAR);
+  const isMcpTabActive = ENABLE_NEW_SIDEBAR && activeSection === "mcp";
 
   const [category, component] = getFilterComponent?.split(".") ?? ["", ""];
 
@@ -668,7 +669,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
               <>
                 {hasResults ? (
                   <>
-                    {showComponents && !showMcp && (
+                    {showComponents && !isMcpTabActive && (
                       <CategoryGroup
                         dataFilter={dataFilter}
                         sortedCategories={sortedCategories}
