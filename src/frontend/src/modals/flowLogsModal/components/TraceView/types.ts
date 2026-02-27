@@ -5,7 +5,8 @@ export type SpanType =
   | "retriever"
   | "embedding"
   | "parser"
-  | "agent";
+  | "agent"
+  | "none";
 
 export type SpanStatus = "unset" | "ok" | "error";
 

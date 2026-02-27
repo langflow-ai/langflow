@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import IconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
 import Loading from "@/components/ui/loading";
@@ -25,10 +25,49 @@ export function TraceDetailView({ traceId, flowName }: TraceDetailViewProps) {
     setSelectedSpan(null);
   }, [traceId]);
 
+  const summarySpan = useMemo<Span | null>(() => {
+    if (!trace) return null;
+
+    const status = trace.status as Span["status"];
+    const name =
+      status === "ok"
+        ? "Successful Run"
+        : status === "error"
+          ? "Failed Run"
+          : "Run Summary";
+
+    return {
+      id: trace.id,
+      name,
+      type: "none",
+      status,
+      startTime: trace.startTime,
+      endTime: trace.endTime,
+      latencyMs: trace.totalLatencyMs,
+      inputs: trace.input ?? {},
+      outputs: trace.output ?? {},
+      tokenUsage:
+        trace.totalTokens > 0
+          ? {
+              promptTokens: 0,
+              completionTokens: 0,
+              totalTokens: trace.totalTokens,
+              cost: trace.totalCost,
+            }
+          : undefined,
+      children: trace.spans ?? [],
+    };
+  }, [trace]);
+
+  const treeSpans = useMemo(() => {
+    if (!trace || !summarySpan) return [] as Span[];
+    return [summarySpan];
+  }, [trace, summarySpan]);
+
   useEffect(() => {
-    if (!trace?.spans?.length) return;
-    setSelectedSpan((prev) => prev ?? trace.spans[0]);
-  }, [trace?.spans]);
+    if (!summarySpan) return;
+    setSelectedSpan((prev) => prev ?? summarySpan);
+  }, [summarySpan]);
 
   const handleSelectSpan = useCallback((span: Span) => {
     setSelectedSpan(span);
@@ -118,7 +157,7 @@ export function TraceDetailView({ traceId, flowName }: TraceDetailViewProps) {
       <div className="flex flex-1 overflow-hidden">
         <div className="w-[320px] min-w-[280px] overflow-y-auto border-r border-border p-2">
           <SpanTree
-            spans={trace.spans ?? []}
+            spans={treeSpans}
             selectedSpanId={selectedSpan?.id ?? null}
             onSelectSpan={handleSelectSpan}
           />

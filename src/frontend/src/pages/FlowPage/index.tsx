@@ -45,7 +45,11 @@ function FlowPageMainContent({
         className="flex h-full w-full flex-col overflow-hidden"
         data-testid="flow-insights-embedded"
       >
-        <FlowInsightsContent flowId={flowId} refreshOnMount />
+        <FlowInsightsContent
+          flowId={flowId}
+          refreshOnMount
+          showFlowActivityHeader
+        />
       </div>
     );
   }

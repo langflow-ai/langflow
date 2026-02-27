@@ -1,3 +1,5 @@
+import { Span } from "@/modals/flowLogsModal/components/TraceView/types";
+
 export interface TracesQueryParams {
   flowId: string | null;
   sessionId?: string | null;
@@ -7,7 +9,7 @@ export interface TracesQueryParams {
 export interface TraceListItem {
   id: string;
   name: string;
-  status: string;
+  status: Span["status"];
   startTime: string;
   endTime?: string;
   totalLatencyMs: number;

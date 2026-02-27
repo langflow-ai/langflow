@@ -23,6 +23,11 @@ const mockUseSearchContext = {
   setSearch: jest.fn(),
 };
 
+const mockPlaygroundStore = {
+  setIsOpen: jest.fn(),
+  setIsFullscreen: jest.fn(),
+};
+
 jest.mock("@/components/ui/sidebar", () => ({
   useSidebar: () => mockUseSidebar,
   SidebarMenu: ({
@@ -116,19 +121,23 @@ jest.mock("@/components/ui/separator", () => ({
   ),
 }));
 
+jest.mock("@/stores/playgroundStore", () => ({
+  usePlaygroundStore: (selector: (state: typeof mockPlaygroundStore) => any) =>
+    selector(mockPlaygroundStore),
+}));
+
 describe("SidebarSegmentedNav", () => {
-  // Mock window.dispatchEvent
   const mockDispatchEvent = jest.fn();
   const originalDispatchEvent = window.dispatchEvent;
 
   beforeEach(() => {
     jest.clearAllMocks();
     // Reset to default values
-    mockUseSidebar.activeSection = "components";
+    mockUseSidebar.activeSection = "components" as SidebarSection;
     mockUseSidebar.open = true;
     mockUseSearchContext.isSearchFocused = false;
-    jest.clearAllTimers();
     jest.useFakeTimers();
+    jest.clearAllTimers();
 
     // Mock window.dispatchEvent
     window.dispatchEvent = mockDispatchEvent;
@@ -417,6 +426,8 @@ describe("SidebarSegmentedNav", () => {
     const tracesButton = screen.getByTestId("sidebar-nav-traces");
     fireEvent.click(tracesButton);
 
+    expect(mockPlaygroundStore.setIsOpen).toHaveBeenCalledWith(false);
+    expect(mockPlaygroundStore.setIsFullscreen).toHaveBeenCalledWith(false);
     expect(mockUseSidebar.setActiveSection).toHaveBeenCalledWith("traces");
     expect(mockUseSidebar.toggleSidebar).not.toHaveBeenCalled();
   });
@@ -429,6 +440,8 @@ describe("SidebarSegmentedNav", () => {
     const tracesButton = screen.getByTestId("sidebar-nav-traces");
     fireEvent.click(tracesButton);
 
+    expect(mockPlaygroundStore.setIsOpen).toHaveBeenCalledWith(false);
+    expect(mockPlaygroundStore.setIsFullscreen).toHaveBeenCalledWith(false);
     expect(mockUseSidebar.setActiveSection).toHaveBeenCalledWith("components");
     expect(mockUseSidebar.toggleSidebar).not.toHaveBeenCalled();
   });

@@ -11,6 +11,7 @@ export const getSpanIcon = (type: SpanType): string => {
     retriever: "Search",
     embedding: "Hash",
     parser: "FileText",
+    none: "Circle",
   };
   return iconMap[type] || "Circle";
 };
@@ -63,6 +64,7 @@ export const getSpanTypeLabel = (type: SpanType): string => {
     retriever: "Retriever",
     embedding: "Embedding",
     parser: "Parser",
+    none: "None",
   };
   return labelMap[type] || type;
 };

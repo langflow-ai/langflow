@@ -8,14 +8,14 @@ test(
   { tag: ["@release", "@workspace", "@api"] },
 
   async ({ page }) => {
+    if (!process.env.CI) {
+      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+    }
+
     test.skip(
       !process?.env?.OPENAI_API_KEY,
       "OPENAI_API_KEY required to run this test",
     );
-
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
 
     await awaitBootstrapTest(page);
 

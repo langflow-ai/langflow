@@ -16,6 +16,7 @@ import {
   formatTimestamp,
   formatTotalCost,
   formatTotalLatency,
+  getStatusVariant,
 } from "./traceViewHelpers";
 import { TraceAccordionItemProps } from "./traceViewTypes";
 import { Span } from "./types";
@@ -90,13 +91,7 @@ export function TraceAccordionItem({
               <span className="text-sm font-medium">{traceName}</span>
             </div>
             <Badge
-              variant={
-                traceStatus === "success"
-                  ? "successStatic"
-                  : traceStatus === "error"
-                    ? "errorStatic"
-                    : "secondaryStatic"
-              }
+              variant={getStatusVariant(traceStatus as Span["status"])}
               size="sm"
             >
               {traceStatus}

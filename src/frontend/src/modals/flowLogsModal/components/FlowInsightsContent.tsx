@@ -65,10 +65,12 @@ export function FlowInsightsContent({
   flowId,
   initialTraceId,
   refreshOnMount,
+  showFlowActivityHeader,
 }: {
   flowId?: string | null;
   initialTraceId?: string | null;
   refreshOnMount?: boolean;
+  showFlowActivityHeader?: boolean;
 }): JSX.Element {
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const [pageIndex, setPageIndex] = useState(1);
@@ -196,6 +198,14 @@ export function FlowInsightsContent({
   return (
     <>
       <div className="flex flex-1 flex-col overflow-hidden">
+        {showFlowActivityHeader && (
+          <div
+            className="border-b border-border px-4 py-3"
+            data-testid="flow-activity-header"
+          >
+            <h2 className="text-base font-semibold">Flow Activity</h2>
+          </div>
+        )}
         <div className="flex flex-nowrap items-center justify-between gap-2 border-b px-4 py-2">
           <div className="flex min-w-0 items-center gap-3 whitespace-nowrap">
             <div className="flex items-center gap-3 text-sm">
@@ -258,7 +268,7 @@ export function FlowInsightsContent({
                       type="date"
                       value={startDate}
                       onChange={(e) => setStartDate(e.target.value)}
-                      className="h-8 text-sm"
+                      className="h-8 text-sm [color-scheme:light] dark:[color-scheme:white] dark:[&::-webkit-calendar-picker-indicator]:invert dark:[&::-webkit-calendar-picker-indicator]:opacity-80"
                       aria-label="Start date"
                     />
                   </div>
@@ -270,7 +280,7 @@ export function FlowInsightsContent({
                       type="date"
                       value={endDateValue}
                       onChange={(e) => setEndDateValue(e.target.value)}
-                      className="h-8 text-sm"
+                      className="h-8 text-sm [color-scheme:light] dark:[color-scheme:white] dark:[&::-webkit-calendar-picker-indicator]:invert dark:[&::-webkit-calendar-picker-indicator]:opacity-80"
                       aria-label="End date"
                     />
                   </div>
@@ -369,7 +379,7 @@ export function FlowInsightsContent({
       >
         <DialogContent
           className={
-            "right-0 top-0 h-[100dvh] w-full max-w-none rounded-l-xl rounded-r-none p-0 sm:w-[90vw] " +
+            "right-0 top-0 h-[100dvh] w-full max-w-none rounded-l-xl rounded-r-none p-0 sm:w-[70vw] " +
             "data-[state=open]:animate-in data-[state=closed]:animate-out " +
             "data-[state=open]:slide-in-from-right-1/2 data-[state=closed]:slide-out-to-right-1/2"
           }
