@@ -12,7 +12,7 @@ from langflow.services.database.models.flow_version.exceptions import (
     FlowVersionDataTooLargeError,
     FlowVersionNotFoundError,
     FlowVersionSerializationError,
-    FlowVersionVersionConflictError,
+    FlowVersionConflictError,
 )
 from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.deps import get_settings_service
@@ -73,7 +73,7 @@ async def create_flow_version_entry(
                     f"Failed to create version for flow {flow_id} after "
                     f"{MAX_VERSION_RETRIES} retries due to version number conflicts"
                 )
-                raise FlowVersionVersionConflictError(msg) from exc
+                raise FlowVersionConflictError(msg) from exc
             await logger.awarning(
                 "Version number collision for flow %s (attempt %d/%d), retrying",
                 flow_id,
@@ -88,7 +88,7 @@ async def create_flow_version_entry(
             f"Failed to create version for flow {flow_id} after "
             f"{MAX_VERSION_RETRIES} retries due to version number conflicts"
         )
-        raise FlowVersionVersionConflictError(msg)
+        raise FlowVersionConflictError(msg)
 
     # Prune oldest entries beyond the configured limit.
     # NOTE: Concurrent snapshot requests for the same flow could both insert
@@ -162,17 +162,3 @@ async def get_flow_version_entry_or_raise(
         msg = f"Version {version_id} not found"
         raise FlowVersionNotFoundError(msg)
     return entry
-
-
-async def delete_flow_version_entry(
-    session: AsyncSession,
-    version_id: UUID,
-    user_id: UUID,
-) -> None:
-    entry = await get_flow_version_entry(session, version_id, user_id)
-    if not entry:
-        msg = f"Version {version_id} not found"
-        raise FlowVersionNotFoundError(msg)
-
-    await session.delete(entry)
-    await session.flush()

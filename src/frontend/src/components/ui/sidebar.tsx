@@ -28,7 +28,7 @@ export type SidebarSection =
   | "components"
   | "bundles"
   | "mcp"
-  | "history"
+  | "versions"
   | "add_note";
 
 // Helper function to get cookie value
@@ -61,7 +61,7 @@ function getInitialSidebarSection(
   ) {
     return cookieValue;
   }
-  // "history" (versions) is not persisted — always start on a content section after refresh
+  // "versions" is not persisted — always start on a content section after refresh
   return defaultSection;
 }
 

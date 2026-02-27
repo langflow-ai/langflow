@@ -602,7 +602,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     (ENABLE_NEW_SIDEBAR && activeSection === "mcp") ||
     (hasSearchInput && hasMcpComponents && ENABLE_NEW_SIDEBAR);
   const showVersions =
-    ENABLE_NEW_SIDEBAR && activeSection === "history" && sidebarOpen;
+    ENABLE_NEW_SIDEBAR && activeSection === "versions" && sidebarOpen;
 
   const currentFlowForVersions = useFlowStore((state) => state.currentFlow);
 

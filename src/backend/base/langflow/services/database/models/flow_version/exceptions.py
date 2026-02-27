@@ -26,7 +26,7 @@ class FlowVersionSerializationError(FlowVersionError):
     """Raised when flow data cannot be serialized."""
 
 
-class FlowVersionVersionConflictError(FlowVersionError):
+class FlowVersionConflictError(FlowVersionError):
     """Raised when version number conflicts exhaust all retries."""
 
 

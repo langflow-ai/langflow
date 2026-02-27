@@ -59,6 +59,13 @@ export function useFlowVersionSidebar(flowId: string) {
     useState<FlowVersionEntry | null>(null);
   const [isRestoring, setIsRestoring] = useState(false);
 
+  // Capture original draft state at mount so we can restore it on unmount.
+  // Without this, the cleanup reads the current store state (which has preview
+  // data), causing preview nodes to persist as the draft (data loss).
+  const originalDraftNodesRef = useRef<any[]>([]);
+  const originalDraftEdgesRef = useRef<any[]>([]);
+  const didRestoreRef = useRef(false);
+
   const {
     data: versionsResponse,
     isLoading,
@@ -123,8 +130,8 @@ export function useFlowVersionSidebar(flowId: string) {
       });
     } else if (selectedId === CURRENT_DRAFT_ID || processedPreview?.error) {
       useFlowStore.setState({
-        nodes: cloneDeep(useFlowStore.getState().nodes),
-        edges: cloneDeep(useFlowStore.getState().edges),
+        nodes: cloneDeep(originalDraftNodesRef.current),
+        edges: cloneDeep(originalDraftEdgesRef.current),
       });
     }
   }, [processedPreview, selectedId]);
@@ -152,8 +159,8 @@ export function useFlowVersionSidebar(flowId: string) {
       );
     } else if (selectedId === CURRENT_DRAFT_ID || processedPreview?.error) {
       setPreview(
-        cloneDeep(useFlowStore.getState().nodes),
-        cloneDeep(useFlowStore.getState().edges),
+        cloneDeep(originalDraftNodesRef.current),
+        cloneDeep(originalDraftEdgesRef.current),
         "Current Draft",
         null,
       );
@@ -168,6 +175,10 @@ export function useFlowVersionSidebar(flowId: string) {
   const autoSaveFnRef = useRef<any>(null);
   const inspectionPanelWasVisible = useRef(false);
   useLayoutEffect(() => {
+    // Snapshot the original draft before any preview replaces it
+    originalDraftNodesRef.current = cloneDeep(useFlowStore.getState().nodes);
+    originalDraftEdgesRef.current = cloneDeep(useFlowStore.getState().edges);
+
     const currentAutoSave = useFlowStore.getState().autoSaveFlow as any;
     if (currentAutoSave) {
       if (typeof currentAutoSave.flush === "function") {
@@ -184,10 +195,14 @@ export function useFlowVersionSidebar(flowId: string) {
     }
 
     return () => {
-      useFlowStore.setState({
-        nodes: cloneDeep(useFlowStore.getState().nodes),
-        edges: cloneDeep(useFlowStore.getState().edges),
-      });
+      // Restore the original draft — unless a version was activated,
+      // in which case applyFlowToCanvas already set the correct state.
+      if (!didRestoreRef.current) {
+        useFlowStore.setState({
+          nodes: originalDraftNodesRef.current,
+          edges: originalDraftEdgesRef.current,
+        });
+      }
       clearPreview();
 
       if (autoSaveFnRef.current) {
@@ -254,6 +269,7 @@ export function useFlowVersionSidebar(flowId: string) {
           },
         };
         applyFlowToCanvas(flow);
+        didRestoreRef.current = true;
         clearPreview();
         setSuccessData({ title: "Version restored" });
       } catch (err: any) {

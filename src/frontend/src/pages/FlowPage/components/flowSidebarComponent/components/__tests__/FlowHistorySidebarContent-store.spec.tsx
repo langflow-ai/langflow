@@ -419,6 +419,7 @@ describe("FlowVersionSidebarContent store behavior", () => {
       [{ id: "draft-node" }],
       [{ id: "draft-edge" }],
       "Current Draft",
+      null,
     );
   });
 });

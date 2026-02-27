@@ -34,7 +34,7 @@ def upgrade() -> None:
             sa.Column("description", sa.String(), nullable=True),
             sa.Column("created_at", sa.DateTime(), nullable=False),
             sa.ForeignKeyConstraint(["flow_id"], ["flow.id"], ondelete="CASCADE"),
-            sa.ForeignKeyConstraint(["user_id"], ["user.id"]),
+            sa.ForeignKeyConstraint(["user_id"], ["user.id"], ondelete="CASCADE"),
             sa.PrimaryKeyConstraint("id"),
             sa.UniqueConstraint("flow_id", "version_number", name="unique_flow_version_number"),
             sa.CheckConstraint("version_number >= 1", name="check_version_number_positive"),
