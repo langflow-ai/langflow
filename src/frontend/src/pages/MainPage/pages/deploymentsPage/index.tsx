@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { api } from "@/controllers/API/api";
@@ -17,6 +18,7 @@ import {
 import { useGetRefreshFlowsQuery } from "@/controllers/API/queries/flows/use-get-refresh-flows-query";
 import { StepperModal, StepperModalFooter } from "@/modals/stepperModal";
 import useAlertStore from "@/stores/alertStore";
+import { useFolderStore } from "@/stores/foldersStore";
 import type { FlowType } from "@/types/flow";
 import type { FlowHistoryEntry } from "@/types/flow/history";
 import { ConfigureDeploymentProviderModal } from "./ConfigureDeploymentProviderModal";
@@ -120,6 +122,8 @@ type CreatedDeploymentUiMeta = {
 };
 
 const DeploymentsTab = () => {
+  const { folderId } = useParams();
+  const myCollectionId = useFolderStore((state) => state.myCollectionId);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setNoticeData = useAlertStore((state) => state.setNoticeData);
   const [selectedProviderId, setSelectedProviderId] = useState<string | null>(
@@ -188,11 +192,18 @@ const DeploymentsTab = () => {
       refetchOnWindowFocus: false,
     },
   );
+  const currentProjectId = folderId ?? myCollectionId ?? undefined;
   const flowsQuery = useGetRefreshFlowsQuery(
-    { get_all: true, remove_example_flows: true },
+    {
+      get_all: false,
+      folder_id: currentProjectId,
+      remove_example_flows: true,
+      page: 1,
+      size: 15,
+    },
     {
       refetchOnWindowFocus: false,
-      enabled: true,
+      enabled: Boolean(currentProjectId),
     },
   );
   const createDeploymentMutation = usePostCreateDeployment({ providerId });
@@ -512,7 +523,7 @@ const DeploymentsTab = () => {
     };
 
     if (selectedCheckpointIds.length > 0) {
-      payload.snapshot = {
+      payload.history = {
         artifact_type: "flow",
         reference_ids: selectedCheckpointIds,
       };

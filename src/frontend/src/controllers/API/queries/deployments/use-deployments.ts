@@ -68,7 +68,7 @@ export type DeploymentCreatePayload = {
     description: string;
     type: "agent" | "mcp";
   };
-  snapshot?: {
+  history?: {
     artifact_type: "flow";
     reference_ids: string[];
   };

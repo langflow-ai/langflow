@@ -17,8 +17,16 @@ from lfx.services.deployment.exceptions import (
 )
 from lfx.services.deployment.schema import (
     ArtifactType,
+    BaseConfigData,
+    BaseDeploymentData,
+    BaseDeploymentDataUpdate,
     BaseFlowArtifact,
-    DeploymentCreate,
+    ConfigDeploymentBindingUpdate,
+    ConfigItem,
+    ConfigItemResult,
+    ConfigListResult,
+    ConfigResult,
+    ConfigUpdate,
     DeploymentCreateResult,
     DeploymentDetailItem,
     DeploymentExecution,
@@ -30,12 +38,19 @@ from lfx.services.deployment.schema import (
     DeploymentRedeploymentResult,
     DeploymentStatusResult,
     DeploymentType,
-    DeploymentUpdate,
     DeploymentUpdateResult,
+    SnapshotDeploymentBindingUpdate,
     SnapshotGetResult,
     SnapshotItems,
     SnapshotItemsCreate,
+    SnapshotListResult,
     SnapshotResult,
+)
+from lfx.services.deployment.schema import (
+    DeploymentCreate as AdapterDeploymentCreate,
+)
+from lfx.services.deployment.schema import (
+    DeploymentUpdate as AdapterDeploymentUpdate,
 )
 from lfx.services.deployment_router.exceptions import (
     DeploymentAccountNotFoundError,
@@ -47,6 +62,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession
+from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.services.database.models.deployment.crud import (
     count_deployment_rows,
     create_deployment_row,
@@ -70,7 +86,10 @@ from langflow.services.database.models.flow_history_deployment_attachment.crud i
     create_deployment_attachment,
     delete_deployment_attachment,
     get_deployment_attachment,
+    list_deployment_attachments_for_history_ids,
+    update_deployment_attachment_snapshot_id,
 )
+from langflow.services.database.models.folder.model import Folder
 from langflow.services.deps import get_variable_service
 
 router = APIRouter(prefix="/deployments", tags=["Deployments"])
@@ -220,6 +239,109 @@ class DetectedDeploymentEnvVar(BaseModel):
         default=None,
         description="Global variable reference name when checkpoint uses load_from_db binding.",
     )
+
+
+class DeploymentHistoryItemsRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    artifact_type: ArtifactType = Field(description="The type of history artifact being referenced.")
+    reference_ids: list[str] | None = Field(
+        None,
+        description="History checkpoint reference ids to use for this deployment.",
+    )
+    raw_payloads: list[BaseFlowArtifact] | None = Field(
+        None,
+        description="Raw flow payloads for deployment creation from client-side history/export data.",
+    )
+
+    @field_validator("reference_ids")
+    @classmethod
+    def validate_reference_ids(cls, values: list[str] | None) -> list[str] | None:
+        if values is None:
+            return None
+        cleaned: list[str] = []
+        seen: set[str] = set()
+        for raw in values:
+            value = raw.strip()
+            if not value:
+                msg = "reference_ids must not contain empty values."
+                raise ValueError(msg)
+            if value in seen:
+                continue
+            seen.add(value)
+            cleaned.append(value)
+        return cleaned
+
+    @model_validator(mode="after")
+    def validate_source(self):
+        has_reference_ids = self.reference_ids is not None
+        has_raw_payloads = self.raw_payloads is not None
+        if has_reference_ids == has_raw_payloads:
+            msg = "Exactly one of 'reference_ids' or 'raw_payloads' must be provided."
+            raise ValueError(msg)
+        return self
+
+
+class DeploymentHistoryBindingUpdateRequest(BaseModel):
+    add: list[str] | None = Field(
+        None,
+        description="History checkpoint ids to attach to the deployment. Omit to leave unchanged.",
+    )
+    remove: list[str] | None = Field(
+        None,
+        description="History checkpoint ids to detach from the deployment. Omit to leave unchanged.",
+    )
+
+    @field_validator("add", "remove")
+    @classmethod
+    def validate_id_lists(cls, values: list[str] | None) -> list[str] | None:
+        if values is None:
+            return None
+        cleaned: list[str] = []
+        seen: set[str] = set()
+        for raw in values:
+            value = raw.strip()
+            if not value:
+                msg = "history ids must not contain empty values."
+                raise ValueError(msg)
+            if value in seen:
+                continue
+            seen.add(value)
+            cleaned.append(value)
+        return cleaned
+
+    @model_validator(mode="after")
+    def validate_operations(self):
+        add_values = self.add or []
+        remove_values = self.remove or []
+        overlap = set(add_values).intersection(remove_values)
+        if overlap:
+            ids = ", ".join(sorted(overlap))
+            msg = f"History ids cannot be present in both 'add' and 'remove': {ids}."
+            raise ValueError(msg)
+        return self
+
+
+class DeploymentCreateRequest(BaseModel):
+    spec: BaseDeploymentData = Field(description="The base metadata of the deployment.")
+    project_id: UUID | None = Field(
+        default=None,
+        description="Project id to persist the deployment under. Defaults to user's Starter Project.",
+    )
+    history: DeploymentHistoryItemsRequest | None = Field(
+        default=None,
+        description="Langflow history checkpoint references used to build provider snapshots.",
+    )
+    config: ConfigItem | None = Field(default=None, description="Deployment config binding/create payload.")
+
+
+class DeploymentUpdateRequest(BaseModel):
+    spec: BaseDeploymentDataUpdate | None = Field(default=None, description="Deployment metadata updates.")
+    history: DeploymentHistoryBindingUpdateRequest | None = Field(
+        default=None,
+        description="Langflow history checkpoint attach/detach patch payload.",
+    )
+    config: ConfigDeploymentBindingUpdate | None = Field(default=None, description="Deployment config binding patch.")
 
 
 def _to_provider_account_response(provider_account: DeploymentProviderAccount) -> DeploymentProviderAccountResponse:
@@ -488,13 +610,21 @@ def _collect_secret_template_field_keys(payload: Any, output: dict[str, str | No
 
 async def _resolve_project_id_for_deployment_create(
     *,
-    payload: DeploymentCreate,
+    payload: DeploymentCreateRequest,
     user_id: UUID,
     db,
 ) -> UUID:
-    snapshot = payload.snapshot
-    if snapshot and snapshot.reference_ids:
-        for history_ref in snapshot.reference_ids:
+    if payload.project_id is not None:
+        project = (
+            await db.exec(select(Folder).where(Folder.id == payload.project_id, Folder.user_id == user_id))
+        ).first()
+        if project is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found.")
+        return project.id
+
+    history = payload.history
+    if history and history.reference_ids:
+        for history_ref in history.reference_ids:
             history_id = UUID(history_ref) if isinstance(history_ref, str) else history_ref
             if history_id is None:
                 continue
@@ -504,32 +634,86 @@ async def _resolve_project_id_for_deployment_create(
             ).first()
             if flow and flow.folder_id:
                 return flow.folder_id
-    msg = "Could not resolve project_id for deployment. Include flow provider_data.project_id or history references."
-    raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=msg)
+
+    default_folder = await get_or_create_default_folder(db, user_id)
+    return default_folder.id
 
 
 async def _build_adapter_deployment_create_payload(
     *,
-    payload: DeploymentCreate,
+    payload: DeploymentCreateRequest,
+    project_id: UUID,
     user_id: UUID,
     db,
-) -> DeploymentCreate:
-    snapshot = payload.snapshot
-    if snapshot is None:
-        return payload
-
-    if snapshot.raw_payloads is not None:
-        msg = (
-            "Deployment create only accepts snapshot.reference_ids. Raw payloads are not allowed on this API endpoint."
+) -> AdapterDeploymentCreate:
+    history = payload.history
+    if history is None:
+        return AdapterDeploymentCreate(
+            spec=payload.spec,
+            project_id=project_id,
+            snapshot=None,
+            config=payload.config,
         )
+
+    if history.artifact_type != ArtifactType.FLOW:
+        msg = f"Unsupported history artifact type for deployment create: {history.artifact_type}."
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=msg)
 
-    if snapshot.artifact_type != ArtifactType.FLOW:
-        msg = f"Unsupported snapshot artifact type for deployment create: {snapshot.artifact_type}."
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=msg)
+    if history.raw_payloads is not None:
+        raw_payloads = [
+            payload_item.model_copy(
+                update={
+                    "provider_data": {
+                        **(payload_item.provider_data or {}),
+                        "project_id": str(project_id),
+                    }
+                },
+                deep=True,
+            )
+            for payload_item in history.raw_payloads
+        ]
+        adapter_snapshot_payload = SnapshotItems(
+            artifact_type=history.artifact_type,
+            raw_payloads=raw_payloads,
+        )
+        return AdapterDeploymentCreate(
+            spec=payload.spec,
+            project_id=project_id,
+            snapshot=adapter_snapshot_payload,
+            config=payload.config,
+        )
 
-    reference_ids = snapshot.reference_ids or []
-    raw_payloads: list[BaseFlowArtifact] = []
+    reference_ids = history.reference_ids or []
+    raw_payloads = [
+        artifact
+        for _, artifact in await _build_flow_artifacts_from_history_references(
+            reference_ids=reference_ids,
+            user_id=user_id,
+            project_id=project_id,
+            db=db,
+        )
+    ]
+
+    adapter_snapshot_payload = SnapshotItems(
+        artifact_type=history.artifact_type,
+        raw_payloads=raw_payloads,
+    )
+    return AdapterDeploymentCreate(
+        spec=payload.spec,
+        project_id=project_id,
+        snapshot=adapter_snapshot_payload,
+        config=payload.config,
+    )
+
+
+async def _build_flow_artifacts_from_history_references(
+    *,
+    reference_ids: list[str],
+    user_id: UUID,
+    project_id: UUID,
+    db,
+) -> list[tuple[UUID, BaseFlowArtifact]]:
+    artifacts: list[tuple[UUID, BaseFlowArtifact]] = []
     for history_ref in reference_ids:
         history_id = _as_uuid(str(history_ref))
         if history_id is None:
@@ -544,29 +728,32 @@ async def _build_adapter_deployment_create_payload(
         flow = (await db.exec(select(Flow).where(Flow.id == history_entry.flow_id, Flow.user_id == user_id))).first()
         if flow is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
-        if flow.folder_id is None:
-            msg = (
-                "Could not resolve project_id for deployment. "
-                "Include flow provider_data.project_id or history references."
-            )
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=msg)
 
-        raw_payloads.append(
-            BaseFlowArtifact(
-                id=flow.id,
-                name=flow.name,
-                description=flow.description,
-                data=history_entry.data or {},
-                tags=flow.tags,
-                provider_data={"project_id": str(flow.folder_id)},
+        artifacts.append(
+            (
+                history_id,
+                BaseFlowArtifact(
+                    id=flow.id,
+                    name=flow.name,
+                    description=flow.description,
+                    data=history_entry.data or {},
+                    tags=flow.tags,
+                    provider_data={"project_id": str(project_id)},
+                ),
             )
         )
+    return artifacts
 
-    adapter_snapshot_payload = SnapshotItems(
-        artifact_type=snapshot.artifact_type,
-        raw_payloads=raw_payloads,
-    )
-    return payload.model_copy(update={"snapshot": adapter_snapshot_payload}, deep=True)
+
+def _extract_snapshot_ids_from_provider_result(provider_result: dict | None) -> list[str]:
+    if not isinstance(provider_result, dict):
+        return []
+    for key in ("created_snapshot_ids", "bound_snapshot_ids"):
+        value = provider_result.get(key)
+        if not isinstance(value, list):
+            continue
+        return [str(item).strip() for item in value if isinstance(item, str) and item.strip()]
+    return []
 
 
 async def _sync_page_with_provider(
@@ -623,16 +810,17 @@ async def _sync_page_with_provider(
 
 async def _attach_history_checkpoints(
     *,
-    payload: DeploymentCreate,
+    payload: DeploymentCreateRequest,
     user_id: UUID,
     deployment_row_id: UUID,
+    snapshot_id_by_history_id: dict[UUID, str] | None = None,
     db,
 ) -> None:
-    snapshot = payload.snapshot
-    if snapshot is None:
+    history = payload.history
+    if history is None:
         return
 
-    reference_ids = snapshot.reference_ids or []
+    reference_ids = history.reference_ids or []
     for ref in reference_ids:
         history_id = _as_uuid(str(ref))
         if history_id is None:
@@ -643,27 +831,19 @@ async def _attach_history_checkpoints(
             user_id=user_id,
             history_id=history_id,
             deployment_id=deployment_row_id,
+            snapshot_id=(snapshot_id_by_history_id or {}).get(history_id),
         )
 
 
 async def _apply_checkpoint_patch_attachments(
     *,
-    payload: DeploymentUpdate,
     user_id: UUID,
     deployment_row_id: UUID,
+    added_snapshot_bindings: list[tuple[UUID, str]],
+    remove_history_ids: list[UUID],
     db,
 ) -> None:
-    if payload.snapshot is None:
-        return
-
-    add_ids = payload.snapshot.add or []
-    remove_ids = payload.snapshot.remove or []
-
-    for checkpoint_id in add_ids:
-        history_uuid = _as_uuid(str(checkpoint_id))
-        if history_uuid is None:
-            continue
-        await get_flow_history_entry_or_raise(db, history_uuid, user_id)
+    for history_uuid, snapshot_id in added_snapshot_bindings:
         existing = await get_deployment_attachment(
             db,
             user_id=user_id,
@@ -676,12 +856,17 @@ async def _apply_checkpoint_patch_attachments(
                 user_id=user_id,
                 history_id=history_uuid,
                 deployment_id=deployment_row_id,
+                snapshot_id=snapshot_id,
+            )
+            continue
+        if existing.snapshot_id != snapshot_id:
+            await update_deployment_attachment_snapshot_id(
+                db,
+                attachment=existing,
+                snapshot_id=snapshot_id,
             )
 
-    for checkpoint_id in remove_ids:
-        history_uuid = _as_uuid(str(checkpoint_id))
-        if history_uuid is None:
-            continue
+    for history_uuid in remove_history_ids:
         await delete_deployment_attachment(
             db,
             user_id=user_id,
@@ -726,7 +911,7 @@ async def detect_deployment_environment_variables(
 async def create_deployment(
     user: CurrentActiveUser,
     provider_id: ProviderIdQuery,
-    payload: DeploymentCreate,
+    payload: DeploymentCreateRequest,
     db: DbSession,
 ):
     """Create a deployment for the selected provider account."""
@@ -734,8 +919,14 @@ async def create_deployment(
     provider_account = await get_provider_account_by_id_for_user(db, provider_id=provider_id, user_id=user.id)
     if provider_account is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deployment provider account not found.")
+    project_id = await _resolve_project_id_for_deployment_create(
+        payload=payload,
+        user_id=user.id,
+        db=db,
+    )
     adapter_payload = await _build_adapter_deployment_create_payload(
         payload=payload,
+        project_id=project_id,
         user_id=user.id,
         db=db,
     )
@@ -760,11 +951,6 @@ async def create_deployment(
     except Exception as exc:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
-    project_id = await _resolve_project_id_for_deployment_create(
-        payload=payload,
-        user_id=user.id,
-        db=db,
-    )
     deployment_row = await get_deployment_row_by_resource_key(
         db,
         user_id=user.id,
@@ -780,10 +966,18 @@ async def create_deployment(
             resource_key=str(result.id),
             name=result.name,
         )
+    snapshot_id_by_history_id: dict[UUID, str] = {}
+    history_reference_ids = payload.history.reference_ids if payload.history else None
+    if history_reference_ids:
+        created_snapshot_ids = _extract_snapshot_ids_from_provider_result(result.provider_result)
+        history_uuid_ids = [_as_uuid(str(history_id)) for history_id in history_reference_ids]
+        valid_history_uuid_ids = [history_id for history_id in history_uuid_ids if history_id is not None]
+        snapshot_id_by_history_id = dict(zip(valid_history_uuid_ids, created_snapshot_ids, strict=False))
     await _attach_history_checkpoints(
         payload=payload,
         user_id=user.id,
         deployment_row_id=deployment_row.id,
+        snapshot_id_by_history_id=snapshot_id_by_history_id,
         db=db,
     )
 
@@ -855,6 +1049,28 @@ async def list_deployments(
         page_size=page_size,
         total=total,
     )
+
+
+@router.get("/snapshots", response_model=SnapshotListResult)
+async def list_snapshots(
+    provider_id: ProviderIdQuery,
+    user: CurrentActiveUser,
+    db: DbSession,
+    artifact_type: Annotated[ArtifactType | None, Query()] = None,
+):
+    """List snapshots for a provider account."""
+    deployment_adapter = await _resolve_deployment_adapter(provider_id, user_id=user.id, db=db)
+    try:
+        snapshot_list_result = await deployment_adapter.list_snapshots(
+            user_id=user.id,
+            artifact_type=artifact_type,
+            db=db,
+        )
+    except ValueError as exc:
+        _raise_http_for_value_error(exc)
+    except Exception as exc:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+    return SnapshotListResult(**snapshot_list_result.model_dump(exclude_unset=True))
 
 
 @router.post("/snapshots", response_model=SnapshotResult, status_code=status.HTTP_201_CREATED)
@@ -935,6 +1151,82 @@ async def delete_snapshot(
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
+@router.post("/configs", response_model=ConfigResult, status_code=status.HTTP_201_CREATED)
+async def create_deployment_config(
+    provider_id: ProviderIdQuery,
+    payload: BaseConfigData,
+    db: DbSession,
+    user: CurrentActiveUser,
+):
+    """Create deployment config for a provider account."""
+    deployment_adapter = await _resolve_deployment_adapter(provider_id, user_id=user.id, db=db)
+    try:
+        create_result = await deployment_adapter.create_deployment_config(
+            config=payload,
+            user_id=user.id,
+            db=db,
+        )
+    except DeploymentConflictError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=exc.message) from exc
+    except InvalidContentError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=exc.message) from exc
+    except ValueError as exc:
+        _raise_http_for_value_error(exc)
+    except DeploymentError as exc:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=exc.message) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+    return ConfigResult(**create_result.model_dump(exclude_unset=True))
+
+
+@router.get("/configs", response_model=ConfigListResult)
+async def list_deployment_configs(
+    provider_id: ProviderIdQuery,
+    db: DbSession,
+    user: CurrentActiveUser,
+):
+    """List deployment configs for a provider account."""
+    deployment_adapter = await _resolve_deployment_adapter(provider_id, user_id=user.id, db=db)
+    try:
+        configs_result: ConfigListResult = await deployment_adapter.list_deployment_configs(
+            user_id=user.id,
+            db=db,
+        )
+    except ValueError as exc:
+        _raise_http_for_value_error(exc)
+    except DeploymentError as exc:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=exc.message) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+    return configs_result
+
+
+@router.get("/configs/{config_id}", response_model=ConfigItemResult)
+async def get_deployment_config(
+    config_id: str,
+    provider_id: ProviderIdQuery,
+    db: DbSession,
+    user: CurrentActiveUser,
+):
+    """Get deployment config for a provider account."""
+    deployment_adapter = await _resolve_deployment_adapter(provider_id, user_id=user.id, db=db)
+    try:
+        config = await deployment_adapter.get_deployment_config(
+            config_id=config_id,
+            user_id=user.id,
+            db=db,
+        )
+    except ValueError as exc:
+        _raise_http_for_value_error(exc)
+    except DeploymentNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=exc.message) from exc
+    except DeploymentError as exc:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=exc.message) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+    return ConfigItemResult(**config.model_dump(exclude_unset=True))
+
+
 @router.post("/executions", response_model=DeploymentExecutionResult, status_code=status.HTTP_201_CREATED)
 async def create_deployment_execution(
     provider_id: ProviderIdQuery,
@@ -1011,6 +1303,62 @@ async def get_deployment_execution(
     return DeploymentExecutionResult(**result_payload)
 
 
+@router.patch("/configs/{config_id}", response_model=ConfigResult)
+async def update_deployment_config(
+    config_id: str,
+    provider_id: ProviderIdQuery,
+    payload: ConfigUpdate,
+    db: DbSession,
+    user: CurrentActiveUser,
+):
+    """Update deployment config for a provider account."""
+    deployment_adapter = await _resolve_deployment_adapter(provider_id, user_id=user.id, db=db)
+    try:
+        update_result = await deployment_adapter.update_deployment_config(
+            config_id=config_id,
+            update_data=payload,
+            user_id=user.id,
+            db=db,
+        )
+    except InvalidContentError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=exc.message) from exc
+    except ValueError as exc:
+        _raise_http_for_value_error(exc)
+    except DeploymentNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=exc.message) from exc
+    except DeploymentError as exc:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=exc.message) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+    return ConfigResult(**update_result.model_dump(exclude_unset=True))
+
+
+@router.delete("/configs/{config_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_deployment_config(
+    config_id: str,
+    provider_id: ProviderIdQuery,
+    db: DbSession,
+    user: CurrentActiveUser,
+):
+    """Delete deployment config for a provider account."""
+    deployment_adapter = await _resolve_deployment_adapter(provider_id, user_id=user.id, db=db)
+    try:
+        await deployment_adapter.delete_deployment_config(
+            config_id=config_id,
+            user_id=user.id,
+            db=db,
+        )
+    except ValueError as exc:
+        _raise_http_for_value_error(exc)
+    except DeploymentNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=exc.message) from exc
+    except DeploymentError as exc:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=exc.message) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 @router.get("/{deployment_id}", response_model=DeploymentDetailItem)
 async def get_deployment(
     deployment_id: str,
@@ -1044,7 +1392,7 @@ async def get_deployment(
 async def update_deployment(
     deployment_id: str,
     provider_id: ProviderIdQuery,
-    payload: DeploymentUpdate,
+    payload: DeploymentUpdateRequest,
     db: DbSession,
     user: CurrentActiveUser,
 ):
@@ -1059,13 +1407,69 @@ async def update_deployment(
     if deployment_row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deployment not found in deployment table.")
 
-    adapter_payload = payload
-    if payload.snapshot is not None:
-        adapter_payload = DeploymentUpdate(
-            spec=payload.spec,
-            config=payload.config,
-            snapshot=None,
-        )
+    added_snapshot_bindings: list[tuple[UUID, str]] = []
+    remove_history_ids: list[UUID] = []
+    snapshot_add_ids: list[str] = []
+    snapshot_remove_ids: list[str] = []
+    if payload.history is not None:
+        add_ids = payload.history.add or []
+        remove_ids = payload.history.remove or []
+
+        if add_ids:
+            add_artifacts = await _build_flow_artifacts_from_history_references(
+                reference_ids=add_ids,
+                user_id=user.id,
+                project_id=deployment_row.project_id,
+                db=db,
+            )
+            create_snapshot_payload = SnapshotItemsCreate(
+                artifact_type=ArtifactType.FLOW,
+                raw_payloads=[artifact for _, artifact in add_artifacts],
+            )
+            snapshot_create_result = await deployment_adapter.create_snapshots(
+                user_id=user.id,
+                snapshot_items=create_snapshot_payload,
+                db=db,
+            )
+            created_snapshot_ids = [
+                str(snapshot_id).strip() for snapshot_id in snapshot_create_result.ids if str(snapshot_id).strip()
+            ]
+            if len(created_snapshot_ids) != len(add_artifacts):
+                msg = "Created snapshot ids did not match the number of history attachments requested."
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
+            added_snapshot_bindings = [
+                (history_id, snapshot_id)
+                for (history_id, _), snapshot_id in zip(add_artifacts, created_snapshot_ids, strict=False)
+            ]
+            snapshot_add_ids = [snapshot_id for _, snapshot_id in added_snapshot_bindings]
+
+        if remove_ids:
+            remove_history_ids = [_as_uuid(str(history_id)) for history_id in remove_ids]
+            remove_history_ids = [history_id for history_id in remove_history_ids if history_id is not None]
+            remove_attachments = await list_deployment_attachments_for_history_ids(
+                db,
+                user_id=user.id,
+                deployment_id=deployment_row.id,
+                history_ids=remove_history_ids,
+            )
+            snapshot_remove_ids = list(
+                {
+                    attachment.snapshot_id.strip()
+                    for attachment in remove_attachments
+                    if isinstance(attachment.snapshot_id, str) and attachment.snapshot_id.strip()
+                }
+            )
+
+    snapshot_patch_payload = (
+        SnapshotDeploymentBindingUpdate(add=snapshot_add_ids, remove=snapshot_remove_ids)
+        if snapshot_add_ids or snapshot_remove_ids
+        else None
+    )
+    adapter_payload = AdapterDeploymentUpdate(
+        spec=payload.spec,
+        config=payload.config,
+        snapshot=snapshot_patch_payload,
+    )
     try:
         update_result = await deployment_adapter.update_deployment(
             deployment_id=deployment_id,
@@ -1090,9 +1494,10 @@ async def update_deployment(
     except Exception as exc:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
     await _apply_checkpoint_patch_attachments(
-        payload=payload,
         user_id=user.id,
         deployment_row_id=deployment_row.id,
+        added_snapshot_bindings=added_snapshot_bindings,
+        remove_history_ids=remove_history_ids,
         db=db,
     )
     return DeploymentUpdateResult(**update_result.model_dump(exclude_unset=True))

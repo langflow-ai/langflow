@@ -267,6 +267,14 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         #     raise
         # except DeploymentError:
         #     raise
+        except (
+            DeploymentConflictError,
+            DeploymentError,
+            InvalidContentError,
+            InvalidDeploymentOperationError,
+            InvalidDeploymentTypeError,
+        ):
+            raise
         except Exception as e:
             msg = (
                 f"{ErrorPrefix.CREATE.value}. "

@@ -10,15 +10,22 @@ from langflow.services.database.models.flow_history.model import FlowHistory
 from langflow.services.database.models.flow_history_deployment_attachment.model import (
     FlowHistoryDeploymentAttachment,
 )
+from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.variable.model import Variable
 from langflow.services.deps import session_scope
 from lfx.services.deployment.schema import (
+    ArtifactType,
+    ConfigItemResult,
+    ConfigListResult,
+    ConfigResult,
     DeploymentCreateResult,
     DeploymentItem,
     DeploymentList,
     DeploymentType,
     DeploymentUpdateResult,
+    SnapshotListResult,
+    SnapshotResult,
 )
 from sqlmodel import select
 
@@ -82,6 +89,9 @@ async def test_list_provider_accounts_is_paginated(client, logged_in_headers):
 
 
 class _FakeAdapter:
+    def __init__(self) -> None:
+        self.last_update_payload = None
+
     async def list_deployments(self, *, deployment_type=None, filter_options=None, **_):
         ids = ((filter_options.provider_filter or {}) if filter_options else {}).get("ids", [])
         kept = []
@@ -96,7 +106,12 @@ class _FakeAdapter:
         return DeploymentList(deployments=kept, deployment_type=deployment_type)
 
     async def update_deployment(self, *, deployment_id, **_) -> DeploymentUpdateResult:
+        self.last_update_payload = _.get("update_data")
         return DeploymentUpdateResult(id=deployment_id)
+
+    async def create_snapshots(self, *, snapshot_items, **_) -> SnapshotResult:
+        ids = [f"snapshot-{idx}" for idx, _ in enumerate(snapshot_items.raw_payloads, start=1)]
+        return SnapshotResult(ids=ids)
 
 
 class _CreateCaptureAdapter:
@@ -110,7 +125,56 @@ class _CreateCaptureAdapter:
             name=deployment.spec.name,
             description=deployment.spec.description,
             type=deployment.spec.type,
+            provider_result={"created_snapshot_ids": ["provider-snapshot-1"]},
         )
+
+
+class _ConfigsAndSnapshotsAdapter:
+    def __init__(self) -> None:
+        self.last_artifact_type = None
+        self.created_config = None
+        self.updated_config = None
+        self.deleted_config_id = None
+
+    async def list_snapshots(self, *, artifact_type=None, **_) -> SnapshotListResult:
+        self.last_artifact_type = artifact_type
+        return SnapshotListResult(
+            snapshots=[],
+            provider_result={"source": "test"},
+            artifact_type=ArtifactType.FLOW,
+        )
+
+    async def create_deployment_config(self, *, config, **_) -> ConfigResult:
+        self.created_config = config
+        return ConfigResult(id="cfg-created", provider_result={"source": "test"})
+
+    async def list_deployment_configs(self, **_) -> ConfigListResult:
+        return ConfigListResult(
+            configs=[
+                ConfigItemResult(
+                    id="cfg-listed",
+                    name="listed-config",
+                    description="listed config from adapter",
+                    provider_data={},
+                )
+            ],
+            provider_result={"source": "test"},
+        )
+
+    async def get_deployment_config(self, *, config_id: str, **_) -> ConfigItemResult:
+        return ConfigItemResult(
+            id=config_id,
+            name="single-config",
+            description="single config from adapter",
+            provider_data={},
+        )
+
+    async def update_deployment_config(self, *, config_id: str, update_data, **_) -> ConfigResult:
+        self.updated_config = (config_id, update_data)
+        return ConfigResult(id=config_id, provider_result={"source": "test"})
+
+    async def delete_deployment_config(self, *, config_id: str, **_) -> None:
+        self.deleted_config_id = config_id
 
 
 async def test_deployments_lazy_sync_prunes_stale_rows(client, logged_in_headers, active_user, monkeypatch):
@@ -154,7 +218,7 @@ async def test_deployments_lazy_sync_prunes_stale_rows(client, logged_in_headers
     body = response.json()
     assert body["page"] == 1
     assert body["page_size"] == 10
-    assert [item["id"] for item in body["deployments"]] == ["keep-resource"]
+    assert [item["resource_key"] for item in body["deployments"]] == ["keep-resource"]
     assert body["total"] == 1
 
     async with session_scope() as session:
@@ -169,7 +233,7 @@ async def test_deployments_lazy_sync_prunes_stale_rows(client, logged_in_headers
         assert stale is None
 
 
-async def test_patch_deployment_snapshot_updates_checkpoint_attachments(
+async def test_patch_deployment_history_updates_checkpoint_attachments(
     client, logged_in_headers, active_user, monkeypatch
 ):
     provider = await _create_provider(client, logged_in_headers, "tenant-attachments")
@@ -179,9 +243,16 @@ async def test_patch_deployment_snapshot_updates_checkpoint_attachments(
         session.add(folder)
         await session.flush()
 
-        flow_id = uuid4()
+        flow = Flow(
+            name=f"flow-{uuid4().hex[:8]}",
+            user_id=active_user.id,
+            folder_id=folder.id,
+            data={"nodes": [], "edges": []},
+        )
+        session.add(flow)
+        await session.flush()
         flow_history = FlowHistory(
-            flow_id=flow_id,
+            flow_id=flow.id,
             user_id=active_user.id,
             data={"nodes": [], "edges": []},
             version_number=1,
@@ -202,18 +273,23 @@ async def test_patch_deployment_snapshot_updates_checkpoint_attachments(
         deployment_id = deployment.resource_key
         history_id = str(flow_history.id)
 
+    adapter = _FakeAdapter()
+
     async def _mock_resolve_adapter(*_, **__):
-        return _FakeAdapter()
+        return adapter
 
     monkeypatch.setattr(deployment_api, "_resolve_deployment_adapter", _mock_resolve_adapter)
 
     add_response = await client.patch(
         f"api/v1/deployments/{deployment_id}",
         params={"provider_id": provider["id"]},
-        json={"snapshot": {"add": [history_id]}},
+        json={"history": {"add": [history_id]}},
         headers=logged_in_headers,
     )
     assert add_response.status_code == status.HTTP_200_OK
+    assert adapter.last_update_payload is not None
+    assert adapter.last_update_payload.snapshot is not None
+    assert adapter.last_update_payload.snapshot.add == ["snapshot-1"]
 
     async with session_scope() as session:
         attachment = (
@@ -225,14 +301,18 @@ async def test_patch_deployment_snapshot_updates_checkpoint_attachments(
             )
         ).first()
         assert attachment is not None
+        assert attachment.snapshot_id == "snapshot-1"
 
     remove_response = await client.patch(
         f"api/v1/deployments/{deployment_id}",
         params={"provider_id": provider["id"]},
-        json={"snapshot": {"remove": [history_id]}},
+        json={"history": {"remove": [history_id]}},
         headers=logged_in_headers,
     )
     assert remove_response.status_code == status.HTTP_200_OK
+    assert adapter.last_update_payload is not None
+    assert adapter.last_update_payload.snapshot is not None
+    assert adapter.last_update_payload.snapshot.remove == ["snapshot-1"]
 
     async with session_scope() as session:
         attachment = (
@@ -246,7 +326,7 @@ async def test_patch_deployment_snapshot_updates_checkpoint_attachments(
         assert attachment is None
 
 
-async def test_create_deployment_resolves_history_ids_to_raw_snapshot_payloads(
+async def test_create_deployment_resolves_history_ids_to_raw_history_payloads(
     client, logged_in_headers, active_user, monkeypatch
 ):
     provider = await _create_provider(client, logged_in_headers, "tenant-create-snapshots")
@@ -297,7 +377,7 @@ async def test_create_deployment_resolves_history_ids_to_raw_snapshot_payloads(
                 "description": "deployment with checkpoint references",
                 "type": "agent",
             },
-            "snapshot": {
+            "history": {
                 "artifact_type": "flow",
                 "reference_ids": [history_id],
             },
@@ -327,9 +407,112 @@ async def test_create_deployment_resolves_history_ids_to_raw_snapshot_payloads(
             )
         ).first()
         assert attachment is not None
+        assert attachment.snapshot_id == "provider-snapshot-1"
 
 
-async def test_create_deployment_rejects_snapshot_raw_payloads_from_api(client, logged_in_headers, monkeypatch):
+async def test_create_deployment_falls_back_to_default_project_when_project_id_is_missing(
+    client, logged_in_headers, active_user, monkeypatch
+):
+    provider = await _create_provider(client, logged_in_headers, "tenant-create-default-project-fallback")
+
+    capture_adapter = _CreateCaptureAdapter()
+
+    async def _mock_resolve_adapter(*_, **__):
+        return capture_adapter
+
+    monkeypatch.setattr(deployment_api, "_resolve_deployment_adapter", _mock_resolve_adapter)
+
+    response = await client.post(
+        "api/v1/deployments",
+        params={"provider_id": provider["id"]},
+        json={
+            "spec": {
+                "name": f"deployment-{uuid4().hex[:8]}",
+                "description": "deployment without explicit project id",
+                "type": "agent",
+            }
+        },
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_201_CREATED
+    assert capture_adapter.received_payload is not None
+
+    async with session_scope() as session:
+        default_folder = (
+            await session.exec(
+                select(Folder).where(
+                    Folder.user_id == active_user.id,
+                    Folder.name == DEFAULT_FOLDER_NAME,
+                )
+            )
+        ).first()
+        assert default_folder is not None
+
+        deployment_row = (
+            await session.exec(
+                select(Deployment).where(
+                    Deployment.user_id == active_user.id,
+                    Deployment.resource_key == "provider-deployment-1",
+                )
+            )
+        ).first()
+        assert deployment_row is not None
+        assert deployment_row.project_id == default_folder.id
+
+    assert capture_adapter.received_payload.project_id == default_folder.id
+
+
+async def test_create_deployment_uses_explicit_project_id_from_request(
+    client, logged_in_headers, active_user, monkeypatch
+):
+    provider = await _create_provider(client, logged_in_headers, "tenant-create-explicit-project")
+
+    async with session_scope() as session:
+        target_folder = Folder(name=f"proj-{uuid4().hex[:8]}", user_id=active_user.id)
+        session.add(target_folder)
+        await session.flush()
+        target_project_id = target_folder.id
+
+    capture_adapter = _CreateCaptureAdapter()
+
+    async def _mock_resolve_adapter(*_, **__):
+        return capture_adapter
+
+    monkeypatch.setattr(deployment_api, "_resolve_deployment_adapter", _mock_resolve_adapter)
+
+    response = await client.post(
+        "api/v1/deployments",
+        params={"provider_id": provider["id"]},
+        json={
+            "spec": {
+                "name": f"deployment-{uuid4().hex[:8]}",
+                "description": "deployment with explicit project id",
+                "type": "agent",
+            },
+            "project_id": str(target_project_id),
+        },
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_201_CREATED
+    assert capture_adapter.received_payload is not None
+    assert capture_adapter.received_payload.project_id == target_project_id
+
+    async with session_scope() as session:
+        deployment_row = (
+            await session.exec(
+                select(Deployment).where(
+                    Deployment.user_id == active_user.id,
+                    Deployment.resource_key == "provider-deployment-1",
+                )
+            )
+        ).first()
+        assert deployment_row is not None
+        assert deployment_row.project_id == target_project_id
+
+
+async def test_create_deployment_accepts_history_raw_payloads_from_api(client, logged_in_headers, monkeypatch):
     provider = await _create_provider(client, logged_in_headers, "tenant-create-raw-payload-reject")
 
     capture_adapter = _CreateCaptureAdapter()
@@ -345,16 +528,16 @@ async def test_create_deployment_rejects_snapshot_raw_payloads_from_api(client, 
         json={
             "spec": {
                 "name": f"deployment-{uuid4().hex[:8]}",
-                "description": "raw payload should be rejected",
+                "description": "raw payload should be accepted",
                 "type": "agent",
             },
-            "snapshot": {
+            "history": {
                 "artifact_type": "flow",
                 "raw_payloads": [
                     {
                         "id": str(uuid4()),
                         "name": "flow-from-client",
-                        "description": "invalid for API create",
+                        "description": "raw payload from client",
                         "data": {"nodes": [], "edges": []},
                         "provider_data": {"project_id": str(uuid4())},
                     }
@@ -364,9 +547,14 @@ async def test_create_deployment_rejects_snapshot_raw_payloads_from_api(client, 
         headers=logged_in_headers,
     )
 
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
-    assert "snapshot.reference_ids" in response.json()["detail"]
-    assert capture_adapter.received_payload is None
+    assert response.status_code == status.HTTP_201_CREATED
+    assert capture_adapter.received_payload is not None
+    assert capture_adapter.received_payload.snapshot is not None
+    assert capture_adapter.received_payload.snapshot.raw_payloads is not None
+    assert len(capture_adapter.received_payload.snapshot.raw_payloads) == 1
+    raw_payload = capture_adapter.received_payload.snapshot.raw_payloads[0]
+    assert isinstance(raw_payload.provider_data, dict)
+    assert "project_id" in raw_payload.provider_data
 
 
 async def test_detect_deployment_environment_variables_from_secret_template_fields(
@@ -459,3 +647,85 @@ async def test_detect_deployment_environment_variables_includes_valid_global_var
     )
     assert response.status_code == status.HTTP_200_OK
     assert response.json()["variables"] == [{"key": "api_key", "global_variable_name": "OPENAI_API_KEY"}]
+
+
+async def test_list_snapshots_endpoint_is_available(client, logged_in_headers, monkeypatch):
+    provider = await _create_provider(client, logged_in_headers, "tenant-snapshots-list")
+    adapter = _ConfigsAndSnapshotsAdapter()
+
+    async def _mock_resolve_adapter(*_, **__):
+        return adapter
+
+    monkeypatch.setattr(deployment_api, "_resolve_deployment_adapter", _mock_resolve_adapter)
+
+    response = await client.get(
+        "api/v1/deployments/snapshots",
+        params={"provider_id": provider["id"], "artifact_type": "flow"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["artifact_type"] == "flow"
+    assert response.json()["snapshots"] == []
+    assert adapter.last_artifact_type == ArtifactType.FLOW
+
+
+async def test_deployment_config_endpoints_crud_cycle(client, logged_in_headers, monkeypatch):
+    provider = await _create_provider(client, logged_in_headers, "tenant-config-crud")
+    adapter = _ConfigsAndSnapshotsAdapter()
+
+    async def _mock_resolve_adapter(*_, **__):
+        return adapter
+
+    monkeypatch.setattr(deployment_api, "_resolve_deployment_adapter", _mock_resolve_adapter)
+
+    create_response = await client.post(
+        "api/v1/deployments/configs",
+        params={"provider_id": provider["id"]},
+        json={
+            "name": "test-config",
+            "description": "config for endpoint restore test",
+            "environment_variables": {},
+        },
+        headers=logged_in_headers,
+    )
+    assert create_response.status_code == status.HTTP_201_CREATED
+    assert create_response.json()["id"] == "cfg-created"
+    assert adapter.created_config is not None
+    assert adapter.created_config.name == "test-config"
+
+    list_response = await client.get(
+        "api/v1/deployments/configs",
+        params={"provider_id": provider["id"]},
+        headers=logged_in_headers,
+    )
+    assert list_response.status_code == status.HTTP_200_OK
+    assert len(list_response.json()["configs"]) == 1
+    assert list_response.json()["configs"][0]["id"] == "cfg-listed"
+
+    get_response = await client.get(
+        "api/v1/deployments/configs/cfg-listed",
+        params={"provider_id": provider["id"]},
+        headers=logged_in_headers,
+    )
+    assert get_response.status_code == status.HTTP_200_OK
+    assert get_response.json()["id"] == "cfg-listed"
+
+    patch_response = await client.patch(
+        "api/v1/deployments/configs/cfg-listed",
+        params={"provider_id": provider["id"]},
+        json={"name": "updated-config"},
+        headers=logged_in_headers,
+    )
+    assert patch_response.status_code == status.HTTP_200_OK
+    assert patch_response.json()["id"] == "cfg-listed"
+    assert adapter.updated_config is not None
+    assert adapter.updated_config[0] == "cfg-listed"
+    assert adapter.updated_config[1].name == "updated-config"
+
+    delete_response = await client.delete(
+        "api/v1/deployments/configs/cfg-listed",
+        params={"provider_id": provider["id"]},
+        headers=logged_in_headers,
+    )
+    assert delete_response.status_code == status.HTTP_204_NO_CONTENT
+    assert adapter.deleted_config_id == "cfg-listed"

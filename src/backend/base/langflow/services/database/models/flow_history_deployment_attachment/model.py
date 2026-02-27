@@ -21,6 +21,7 @@ class FlowHistoryDeploymentAttachment(SQLModel, table=True):  # type: ignore[cal
     deployment_id: UUID = Field(
         sa_column=Column(ForeignKey("deployment.id", ondelete="CASCADE"), index=True, nullable=False),
     )
+    snapshot_id: str | None = Field(default=None, index=True)
     created_at: datetime | None = Field(
         default=None,
         sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False),

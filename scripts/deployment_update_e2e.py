@@ -72,9 +72,10 @@ class DeploymentUpdateE2E:
         self.created_deployment_ids: set[str] = set()
         self.created_snapshot_ids: set[str] = set()
         self.created_config_ids: set[str] = set()
+        self.created_flow_ids: set[str] = set()
 
-        self.reference_snapshot_id: str | None = None
-        self.alternate_snapshot_id: str | None = None
+        self.reference_checkpoint_id: str | None = None
+        self.alternate_checkpoint_id: str | None = None
         self.reference_config_id: str | None = None
         self.alternate_config_id: str | None = None
         self.reference_deployment_id: str | None = None
@@ -148,34 +149,13 @@ class DeploymentUpdateE2E:
         self.alternate_config_id = str(config_resp_b.json()["id"])
         self.created_config_ids.add(self.alternate_config_id)
 
-        snapshot_resp_a = await self._request(
-            "POST",
-            f"/api/v1/deployments/snapshots?provider_id={provider_id}",
-            json_body={
-                "artifact_type": "flow",
-                "raw_payloads": [self._build_flow_payload(label="flow-ref-a")],
-            },
-        )
-        self._expect_status(snapshot_resp_a, {HTTP_CREATED}, "create reference snapshot A")
-        self.reference_snapshot_id = str(snapshot_resp_a.json()["ids"][0])
-        self.created_snapshot_ids.add(self.reference_snapshot_id)
-
-        snapshot_resp_b = await self._request(
-            "POST",
-            f"/api/v1/deployments/snapshots?provider_id={provider_id}",
-            json_body={
-                "artifact_type": "flow",
-                "raw_payloads": [self._build_flow_payload(label="flow-ref-b")],
-            },
-        )
-        self._expect_status(snapshot_resp_b, {HTTP_CREATED}, "create reference snapshot B")
-        self.alternate_snapshot_id = str(snapshot_resp_b.json()["ids"][0])
-        self.created_snapshot_ids.add(self.alternate_snapshot_id)
+        self.reference_checkpoint_id = await self._create_reference_checkpoint(label="flow-ref-a")
+        self.alternate_checkpoint_id = await self._create_reference_checkpoint(label="flow-ref-b")
 
         print(
             "Reference resources created: "
             f"configs=({self.reference_config_id}, {self.alternate_config_id}), "
-            f"snapshots=({self.reference_snapshot_id}, {self.alternate_snapshot_id})"
+            f"checkpoints=({self.reference_checkpoint_id}, {self.alternate_checkpoint_id})"
         )
 
     async def _create_reference_deployment(self) -> None:
@@ -188,9 +168,9 @@ class DeploymentUpdateE2E:
                 "description": "reference deployment for update e2e scenarios",
                 "type": "agent",
             },
-            "snapshot": {
+            "history": {
                 "artifact_type": "flow",
-                "reference_ids": [self.reference_snapshot_id],
+                "reference_ids": [self.reference_checkpoint_id],
             },
             "config": {
                 "raw_payload": self._build_config_payload(label="cfg-ref-deployment"),
@@ -236,51 +216,51 @@ class DeploymentUpdateE2E:
                 "payload": {"spec": {"description": "updated description"}},
             },
             {
-                "name": "update_snapshot_add",
+                "name": "update_history_add",
                 "expected": {HTTP_OK},
                 "deployment_id": deployment_id,
                 "provider_id": provider_id,
-                "payload": {"snapshot": {"add": [self.alternate_snapshot_id]}},
+                "payload": {"history": {"add": [self.alternate_checkpoint_id]}},
             },
             {
-                "name": "update_snapshot_remove",
+                "name": "update_history_remove",
                 "expected": {HTTP_OK},
                 "deployment_id": deployment_id,
                 "provider_id": provider_id,
-                "payload": {"snapshot": {"remove": [self.alternate_snapshot_id]}},
+                "payload": {"history": {"remove": [self.alternate_checkpoint_id]}},
             },
             {
-                "name": "update_snapshot_add_remove_disjoint",
+                "name": "update_history_add_remove_disjoint",
                 "expected": {HTTP_OK},
                 "deployment_id": deployment_id,
                 "provider_id": provider_id,
                 "payload": {
-                    "snapshot": {
-                        "add": [self.alternate_snapshot_id],
-                        "remove": [self.reference_snapshot_id],
+                    "history": {
+                        "add": [self.alternate_checkpoint_id],
+                        "remove": [self.reference_checkpoint_id],
                     }
                 },
             },
             {
-                "name": "update_snapshot_add_remove_overlap",
+                "name": "update_history_add_remove_overlap",
                 "expected": {HTTP_UNPROCESSABLE_CONTENT},
                 "deployment_id": deployment_id,
                 "provider_id": provider_id,
                 "payload": {
-                    "snapshot": {
-                        "add": [self.reference_snapshot_id],
-                        "remove": [self.reference_snapshot_id],
+                    "history": {
+                        "add": [self.reference_checkpoint_id],
+                        "remove": [self.reference_checkpoint_id],
                     }
                 },
             },
             {
-                "name": "update_snapshot_duplicate_ids",
+                "name": "update_history_duplicate_ids",
                 "expected": {HTTP_UNPROCESSABLE_CONTENT},
                 "deployment_id": deployment_id,
                 "provider_id": provider_id,
                 "payload": {
-                    "snapshot": {
-                        "add": [self.reference_snapshot_id, self.reference_snapshot_id],
+                    "history": {
+                        "add": [self.reference_checkpoint_id, self.reference_checkpoint_id],
                     }
                 },
             },
@@ -303,7 +283,7 @@ class DeploymentUpdateE2E:
                 "expected": {HTTP_CONFLICT},
                 "deployment_id": deployment_id,
                 "provider_id": provider_id,
-                "payload": {"config": {"config_id": self.reference_deployment_name}},
+                "payload": {"config": {"config_id": self.alternate_config_id}},
             },
             {
                 "name": "update_config_unknown_reference",
@@ -327,7 +307,7 @@ class DeploymentUpdateE2E:
                 "payload": {"config": {}},
             },
             {
-                "name": "update_combined_spec_snapshot_config",
+                "name": "update_combined_spec_history_config",
                 "expected": {HTTP_CONFLICT},
                 "deployment_id": deployment_id,
                 "provider_id": provider_id,
@@ -336,7 +316,7 @@ class DeploymentUpdateE2E:
                         "name": self._mk_name("dep-combined"),
                         "description": "combined update scenario",
                     },
-                    "snapshot": {"add": [self.reference_snapshot_id]},
+                    "history": {"add": [self.reference_checkpoint_id]},
                     "config": {"config_id": self.alternate_config_id},
                 },
             },
@@ -373,14 +353,14 @@ class DeploymentUpdateE2E:
                 "expected": {HTTP_UNPROCESSABLE_CONTENT},
                 "deployment_id": deployment_id,
                 "provider_id": provider_id,
-                "payload": {"snapshot": {"add": "not-a-list"}},
+                "payload": {"history": {"add": "not-a-list"}},
             },
             {
-                "name": "update_snapshot_invalid_id_value",
+                "name": "update_history_invalid_id_value",
                 "expected": {HTTP_UNPROCESSABLE_CONTENT},
                 "deployment_id": deployment_id,
                 "provider_id": provider_id,
-                "payload": {"snapshot": {"add": ["   "]}},
+                "payload": {"history": {"add": ["   "]}},
             },
         ]
 
@@ -413,80 +393,99 @@ class DeploymentUpdateE2E:
 
     def _build_flow_payload(self, *, label: str) -> dict[str, Any]:
         flow_id = str(uuid4())
-        chat_input_node_id = f"ChatInput-{uuid4().hex[:8]}"
-        chat_output_node_id = f"ChatOutput-{uuid4().hex[:8]}"
         return {
             "id": flow_id,
             "name": self._mk_name(label),
             "description": "e2e flow payload",
-            "data": {
-                # Watsonx tool export requires a ChatInput node in the flow graph.
-                "nodes": [
-                    {
-                        "id": chat_input_node_id,
-                        "type": "genericNode",
-                        "position": {"x": 100, "y": 100},
-                        "data": {
-                            "type": "ChatInput",
-                            "id": chat_input_node_id,
-                            "node": {
-                                "display_name": "Chat Input",
-                                "base_classes": ["str"],
-                                "template": {
-                                    "_type": "CustomComponent",
-                                    "message": {
-                                        "name": "message",
-                                        "display_name": "message",
-                                        "type": "str",
-                                        "value": "",
-                                        "required": False,
-                                        "show": True,
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    {
-                        "id": chat_output_node_id,
-                        "type": "genericNode",
-                        "position": {"x": 400, "y": 100},
-                        "data": {
-                            "type": "ChatOutput",
-                            "id": chat_output_node_id,
-                            "node": {
-                                "display_name": "Chat Output",
-                                "base_classes": ["str"],
-                                "template": {
-                                    "_type": "CustomComponent",
-                                    "is_ai": {
-                                        "name": "is_ai",
-                                        "display_name": "is_ai",
-                                        "type": "bool",
-                                        "value": True,
-                                        "required": True,
-                                        "show": True,
-                                    },
-                                    "message": {
-                                        "name": "message",
-                                        "display_name": "message",
-                                        "type": "Text",
-                                        "value": "",
-                                        "required": False,
-                                        "show": True,
-                                    },
-                                },
-                            },
-                        },
-                    },
-                ],
-                "edges": [],
-                "viewport": {"x": 0, "y": 0, "zoom": 1},
-            },
+            "data": self._build_flow_data_payload(),
             "tags": ["e2e", "deployment-update"],
             "provider_data": {
                 "project_id": self.project_id,
             },
         }
+
+    def _build_flow_data_payload(self) -> dict[str, Any]:
+        chat_input_node_id = f"ChatInput-{uuid4().hex[:8]}"
+        chat_output_node_id = f"ChatOutput-{uuid4().hex[:8]}"
+        # Watsonx tool export requires a ChatInput node in the flow graph.
+        return {
+            "nodes": [
+                {
+                    "id": chat_input_node_id,
+                    "type": "genericNode",
+                    "position": {"x": 100, "y": 100},
+                    "data": {
+                        "type": "ChatInput",
+                        "id": chat_input_node_id,
+                        "node": {
+                            "display_name": "Chat Input",
+                            "base_classes": ["str"],
+                            "template": {
+                                "_type": "CustomComponent",
+                                "message": {
+                                    "name": "message",
+                                    "display_name": "message",
+                                    "type": "str",
+                                    "value": "",
+                                    "required": False,
+                                    "show": True,
+                                },
+                            },
+                        },
+                    },
+                },
+                {
+                    "id": chat_output_node_id,
+                    "type": "genericNode",
+                    "position": {"x": 400, "y": 100},
+                    "data": {
+                        "type": "ChatOutput",
+                        "id": chat_output_node_id,
+                        "node": {
+                            "display_name": "Chat Output",
+                            "base_classes": ["str"],
+                            "template": {
+                                "_type": "CustomComponent",
+                                "is_ai": {
+                                    "name": "is_ai",
+                                    "display_name": "is_ai",
+                                    "type": "bool",
+                                    "value": True,
+                                    "required": True,
+                                    "show": True,
+                                },
+                                "message": {
+                                    "name": "message",
+                                    "display_name": "message",
+                                    "type": "Text",
+                                    "value": "",
+                                    "required": False,
+                                    "show": True,
+                                },
+                            },
+                        },
+                    },
+                },
+            ],
+            "edges": [],
+            "viewport": {"x": 0, "y": 0, "zoom": 1},
+        }
+
+    async def _create_reference_checkpoint(self, *, label: str) -> str:
+        flow_payload = {
+            "name": self._mk_name(f"flow-{label}"),
+            "description": "reference flow for deployment update scenarios",
+            "data": self._build_flow_data_payload(),
+            "is_component": False,
+        }
+        flow_response = await self._request("POST", "/api/v1/flows/", json_body=flow_payload)
+        self._expect_status(flow_response, {HTTP_CREATED}, "create reference flow")
+        flow_id = str(flow_response.json()["id"])
+        self.created_flow_ids.add(flow_id)
+
+        checkpoint_response = await self._request("POST", f"/api/v1/flows/{flow_id}/history/", json_body={})
+        self._expect_status(checkpoint_response, {HTTP_CREATED}, "create reference checkpoint")
+        return str(checkpoint_response.json()["id"])
 
     def _build_config_payload(self, *, label: str) -> dict[str, Any]:
         return {
@@ -503,6 +502,7 @@ class DeploymentUpdateE2E:
         print(
             "Cleanup plan: "
             f"{len(self.created_deployment_ids)} deployments, "
+            f"{len(self.created_flow_ids)} flows, "
             f"{len(self.created_snapshot_ids)} snapshots, "
             f"{len(self.created_config_ids)} configs, "
             "1 provider account"
@@ -513,6 +513,12 @@ class DeploymentUpdateE2E:
                 path=f"/api/v1/deployments/{deployment_id}?provider_id={provider_id}",
                 resource_type="DEPLOYMENT",
                 resource_id=deployment_id,
+            )
+        for flow_id in sorted(self.created_flow_ids):
+            await self._best_effort_delete(
+                path=f"/api/v1/flows/{flow_id}",
+                resource_type="FLOW",
+                resource_id=flow_id,
             )
         for snapshot_id in sorted(self.created_snapshot_ids):
             await self._best_effort_delete(
@@ -590,8 +596,8 @@ class DeploymentUpdateE2E:
     def _require_reference_ids(self) -> None:
         ids_present = all(
             [
-                self.reference_snapshot_id,
-                self.alternate_snapshot_id,
+                self.reference_checkpoint_id,
+                self.alternate_checkpoint_id,
                 self.reference_config_id,
                 self.alternate_config_id,
             ]

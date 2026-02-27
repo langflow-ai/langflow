@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
+from sqlalchemy import UniqueConstraint
 from sqlmodel import Column, DateTime, Field, Relationship, SQLModel, func
 
 if TYPE_CHECKING:
@@ -11,6 +12,14 @@ if TYPE_CHECKING:
 
 class DeploymentProviderAccount(SQLModel, table=True):  # type: ignore[call-arg]
     __tablename__ = "deployment_provider_account"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "backend_url",
+            "account_id",
+            name="uq_deployment_provider_account_user_url_account",
+        ),
+    )
 
     id: UUID | None = Field(
         default_factory=uuid4,

@@ -418,6 +418,10 @@ class DeploymentCreate(BaseModel):
     #     description="The id of the account / tenant/ organization registered with the deployment provider."
     # )
     spec: BaseDeploymentData = Field(description="The base metadata of the deployment")
+    project_id: UUID | None = Field(
+        None,
+        description="The project id associated with the deployment. Defaults to the user's default Starter Project.",
+    )
     snapshot: SnapshotItems | None = Field(None, description="The snapshots of the deployment")
     config: ConfigItem | None = Field(None, description="The config of the deployment")
 
