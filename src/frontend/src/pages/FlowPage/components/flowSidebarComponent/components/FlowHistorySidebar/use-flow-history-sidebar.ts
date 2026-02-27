@@ -110,7 +110,7 @@ export function useFlowHistorySidebar(flowId: string) {
       processFlows([flow]);
       return { nodes: flow.data.nodes, edges: flow.data.edges };
     } catch (err) {
-      console.error("Failed to process historical flow data for preview:", err);
+      console.error("Failed to process version flow data for preview:", err);
       return { nodes: [], edges: [], error: true };
     }
   }, [selectedId, selectedEntryFull?.data]);
@@ -240,7 +240,7 @@ export function useFlowHistorySidebar(flowId: string) {
       setIsRestoring(true);
       try {
         const response = await api.post(
-          `${getURL("FLOWS")}/${flowId}/history/${entry.id}/activate`,
+          `${getURL("FLOWS")}/${flowId}/versions/${entry.id}/activate`,
           null,
           { params: { save_draft: true } },
         );
@@ -280,7 +280,7 @@ export function useFlowHistorySidebar(flowId: string) {
     async (entry: FlowHistoryEntry) => {
       try {
         const response = await api.get(
-          `${getURL("FLOWS")}/${flowId}/history/${entry.id}`,
+          `${getURL("FLOWS")}/${flowId}/versions/${entry.id}`,
         );
         const data = response.data?.data;
         const tag = response.data?.version_tag ?? "version";

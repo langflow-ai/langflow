@@ -17,7 +17,7 @@ export const useDeleteHistoryEntry: useMutationFunctionType<
 
   const deleteEntryFn = async (payload: IDeleteHistoryEntry): Promise<void> => {
     await api.delete(
-      `${getURL("FLOWS")}/${payload.flowId}/history/${payload.historyId}`,
+      `${getURL("FLOWS")}/${payload.flowId}/versions/${payload.historyId}`,
     );
   };
 

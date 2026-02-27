@@ -5,13 +5,13 @@ interface HistoryPreviewState {
   previewNodes: AllNodeType[] | null;
   previewEdges: EdgeType[] | null;
   previewLabel: string | null;
-  /** The history entry ID currently being previewed, or null for current draft. */
+  /** The version entry ID currently being previewed, or null for current draft. */
   previewId: string | null;
   /** Monotonically increasing counter — changes on every setPreview call so
    *  it can be used as a React key to force remount even when the label is
    *  the same (e.g. switching away from and back to the same version). */
   previewKey: number;
-  /** True while the sidebar is fetching a history entry to display. */
+  /** True while the sidebar is fetching a version entry to display. */
   isPreviewLoading: boolean;
   setPreviewLoading: (loading: boolean) => void;
   setPreview: (

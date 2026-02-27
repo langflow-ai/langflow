@@ -61,7 +61,7 @@ function getInitialSidebarSection(
   ) {
     return cookieValue;
   }
-  // "history" is not persisted — always start on a content section after refresh
+  // "history" (versions) is not persisted — always start on a content section after refresh
   return defaultSection;
 }
 

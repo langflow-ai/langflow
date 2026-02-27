@@ -42,7 +42,7 @@ export default function RestoreVersionButton({
     setIsRestoring(true);
     try {
       const response = await api.post(
-        `${getURL("FLOWS")}/${flowId}/history/${historyId}/activate`,
+        `${getURL("FLOWS")}/${flowId}/versions/${historyId}/activate`,
         null,
         { params: { save_draft: true } },
       );

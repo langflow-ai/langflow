@@ -33,7 +33,7 @@ class FlowHistory(SQLModel, table=True):  # type: ignore[call-arg]
 
 
 class FlowHistoryRead(BaseModel):
-    """Schema for listing history entries — excludes data for performance."""
+    """Schema for listing version entries — excludes data for performance."""
 
     id: UUID
     flow_id: UUID
@@ -56,13 +56,13 @@ class FlowHistoryRead(BaseModel):
 
 
 class FlowHistoryReadWithData(FlowHistoryRead):
-    """Schema for a single history entry — includes full data."""
+    """Schema for a single version entry — includes full data."""
 
     data: dict | None
 
 
 class FlowHistoryCreate(BaseModel):
-    """Schema for creating a history entry — user only provides description."""
+    """Schema for creating a version — user only provides description."""
 
     description: str | None = Field(default=None, max_length=500)
 

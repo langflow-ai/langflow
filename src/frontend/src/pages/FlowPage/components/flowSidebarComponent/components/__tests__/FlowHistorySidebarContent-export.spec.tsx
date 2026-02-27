@@ -19,7 +19,7 @@ jest.mock("@/utils/reactflowUtils", () => ({
   removeApiKeys: (flow: any) => removeApiKeysMock(flow),
 }));
 
-// API mock — used by handleExportEntry to fetch the full history entry
+// API mock — used by handleExportEntry to fetch the full version entry
 const apiGetMock = jest.fn();
 jest.mock("@/controllers/API/api", () => ({
   api: { get: (...args: any[]) => apiGetMock(...args), post: jest.fn() },
@@ -172,7 +172,7 @@ describe("FlowHistorySidebarContent export", () => {
     jest.clearAllMocks();
   });
 
-  it("exports a history entry using removeApiKeys + downloadFlow", async () => {
+  it("exports a version entry using removeApiKeys + downloadFlow", async () => {
     const user = userEvent.setup();
     const historyData = {
       nodes: [{ id: "hist-node", data: { node: { template: {} } } }],
@@ -189,7 +189,7 @@ describe("FlowHistorySidebarContent export", () => {
 
     render(<FlowHistorySidebarContent flowId="flow-1" />);
 
-    // Find the Export menu items — there's one for each history entry
+    // Find the Export menu items — there's one for each version entry
     const exportItems = screen.getAllByRole("menuitem", { name: /Export/i });
     expect(exportItems.length).toBeGreaterThan(0);
 
@@ -197,7 +197,7 @@ describe("FlowHistorySidebarContent export", () => {
 
     await waitFor(() => {
       expect(apiGetMock).toHaveBeenCalledWith(
-        "/api/v1/flows/flow-1/history/entry-1",
+        "/api/v1/flows/flow-1/versions/entry-1",
       );
     });
 
@@ -222,7 +222,7 @@ describe("FlowHistorySidebarContent export", () => {
     });
   });
 
-  it("exports a history entry with the correct flow name and description", async () => {
+  it("exports a version entry with the correct flow name and description", async () => {
     const user = userEvent.setup();
     const historyData = {
       nodes: [{ id: "v1-node" }],

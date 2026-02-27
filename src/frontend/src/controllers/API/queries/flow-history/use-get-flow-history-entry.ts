@@ -17,7 +17,7 @@ export const useGetFlowHistoryEntry: useQueryFunctionType<
 
   const getEntryFn = async (): Promise<FlowHistoryEntryWithData> => {
     const response = await api.get<FlowHistoryEntryWithData>(
-      `${getURL("FLOWS")}/${flowId}/history/${historyId}`,
+      `${getURL("FLOWS")}/${flowId}/versions/${historyId}`,
     );
     return response.data;
   };

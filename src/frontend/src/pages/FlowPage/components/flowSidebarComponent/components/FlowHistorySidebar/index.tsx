@@ -98,7 +98,7 @@ export default function FlowHistorySidebarContent({
             )}
             {isListError && (
               <div className="px-2 py-6 text-center text-xs text-destructive">
-                Failed to load version history
+                Failed to load versions
               </div>
             )}
             {!isLoading &&

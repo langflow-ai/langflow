@@ -55,7 +55,7 @@ export const NAV_ITEMS: NavItem[] = [
   {
     id: "history",
     icon: "History",
-    label: "History",
+    label: "Versions",
     tooltip: "Version History",
   },
 ];

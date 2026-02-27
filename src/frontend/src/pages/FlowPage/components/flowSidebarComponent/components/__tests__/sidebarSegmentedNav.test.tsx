@@ -396,7 +396,7 @@ describe("SidebarSegmentedNav", () => {
     expect(NAV_ITEMS[5]).toEqual({
       id: "history",
       icon: "History",
-      label: "History",
+      label: "Versions",
       tooltip: "Version History",
     });
   });

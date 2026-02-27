@@ -36,7 +36,7 @@ from langflow.services.database.models.flow.model import (
 )
 from langflow.services.database.models.flow.utils import get_webhook_component_in_flow
 
-# TODO: Full-history import/export is planned as a follow-up feature. When implemented,
+# TODO: Full version import/export is planned as a follow-up feature. When implemented,
 # re-add imports for create_flow_history_entry, get_flow_history_list, strip_history_data,
 # and FlowHistoryError from the flow_history modules.
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
@@ -753,8 +753,8 @@ async def upload_file(
     else:
         flow_list = FlowListCreate(flows=[FlowCreate(**data)])
 
-    # TODO: Full-history import is planned as a follow-up feature.
-    # When implemented, extract raw flow dicts here to read embedded "history"
+    # TODO: Full version import is planned as a follow-up feature.
+    # When implemented, extract raw flow dicts here to read embedded "versions"
     # arrays and create FlowHistory entries for each imported flow.
 
     try:
@@ -823,8 +823,8 @@ async def download_multiple_file(
     db: DbSession,
 ):
     """Download all flows as a zip file."""
-    # TODO: Full-history download (include_history parameter) is planned as a follow-up feature.
-    # When implemented, add an include_history: bool = False parameter and embed history
+    # TODO: Full version download (include_versions parameter) is planned as a follow-up feature.
+    # When implemented, add an include_versions: bool = False parameter and embed version
     # entries in each flow dict using get_flow_history_list and strip_history_data.
     flows = (await db.exec(select(Flow).where(and_(Flow.user_id == user.id, Flow.id.in_(flow_ids))))).all()  # type: ignore[attr-defined]
 

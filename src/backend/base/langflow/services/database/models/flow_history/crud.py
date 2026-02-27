@@ -32,7 +32,7 @@ async def create_flow_history_entry(
     data: dict | None,
     description: str | None = None,
 ) -> FlowHistory:
-    """Create a history entry with retry on version number collision.
+    """Create a version entry with retry on version number collision.
 
     NOTE: This function does NOT verify that user_id owns the flow.
     Callers are responsible for checking ownership before calling this.
@@ -69,7 +69,7 @@ async def create_flow_history_entry(
                 raise  # Not a version collision — don't retry
             if attempt == MAX_VERSION_RETRIES - 1:
                 msg = (
-                    f"Failed to create history entry for flow {flow_id} after "
+                    f"Failed to create version for flow {flow_id} after "
                     f"{MAX_VERSION_RETRIES} retries due to version number conflicts"
                 )
                 raise FlowHistoryVersionConflictError(msg) from exc
@@ -84,7 +84,7 @@ async def create_flow_history_entry(
 
     if entry is None:
         msg = (
-            f"Failed to create history entry for flow {flow_id} after "
+            f"Failed to create version for flow {flow_id} after "
             f"{MAX_VERSION_RETRIES} retries due to version number conflicts"
         )
         raise FlowHistoryVersionConflictError(msg)
@@ -108,10 +108,10 @@ async def create_flow_history_entry(
         )
         result = await session.exec(delete_older)
         if hasattr(result, "rowcount") and result.rowcount:  # type: ignore[union-attr]
-            await logger.adebug("Pruned %d old history entries for flow %s", result.rowcount, flow_id)  # type: ignore[union-attr]
+            await logger.adebug("Pruned %d old version entries for flow %s", result.rowcount, flow_id)  # type: ignore[union-attr]
     except SQLAlchemyError:
         await logger.awarning(
-            "Failed to prune old history entries for flow %s — history table may exceed configured limit",
+            "Failed to prune old version entries for flow %s — version table may exceed configured limit",
             flow_id,
             exc_info=True,
         )
@@ -151,13 +151,13 @@ async def get_flow_history_entry_or_raise(
     user_id: UUID,
     flow_id: UUID | None = None,
 ) -> FlowHistory:
-    """Get a history entry or raise FlowHistoryNotFoundError.
+    """Get a version entry or raise FlowHistoryNotFoundError.
 
     If flow_id is provided, also verifies the entry belongs to that flow.
     """
     entry = await get_flow_history_entry(session, history_id, user_id)
     if not entry or (flow_id is not None and entry.flow_id != flow_id):
-        msg = f"History entry {history_id} not found"
+        msg = f"Version {history_id} not found"
         raise FlowHistoryNotFoundError(msg)
     return entry
 
@@ -169,7 +169,7 @@ async def delete_flow_history_entry(
 ) -> None:
     entry = await get_flow_history_entry(session, history_id, user_id)
     if not entry:
-        msg = f"History entry {history_id} not found"
+        msg = f"Version {history_id} not found"
         raise FlowHistoryNotFoundError(msg)
 
     await session.delete(entry)

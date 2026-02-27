@@ -1,4 +1,4 @@
-"""Domain exceptions for the flow-history module.
+"""Domain exceptions for the flow version module.
 
 These are raised by the CRUD layer and translated to HTTP responses at the API boundary.
 """
@@ -7,7 +7,7 @@ from __future__ import annotations
 
 
 class FlowHistoryError(Exception):
-    """Base exception for flow-history domain errors."""
+    """Base exception for flow version domain errors."""
 
 
 class FlowHistoryDataTooLargeError(FlowHistoryError):
@@ -18,7 +18,7 @@ class FlowHistoryDataTooLargeError(FlowHistoryError):
         self.max_size = max_size
         super().__init__(
             f"Flow data size ({data_size:,} bytes) exceeds the maximum allowed "
-            f"for history snapshots ({max_size:,} bytes)"
+            f"for version snapshots ({max_size:,} bytes)"
         )
 
 
@@ -31,4 +31,4 @@ class FlowHistoryVersionConflictError(FlowHistoryError):
 
 
 class FlowHistoryNotFoundError(FlowHistoryError):
-    """Raised when a history entry is not found."""
+    """Raised when a version is not found."""

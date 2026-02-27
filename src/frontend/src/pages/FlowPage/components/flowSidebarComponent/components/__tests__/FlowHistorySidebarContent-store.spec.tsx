@@ -24,7 +24,7 @@ jest.mock("@/controllers/API/helpers/constants", () => ({
 }));
 
 // ---------------------------------------------------------------------------
-// Configurable history entry query mock — controls what selectedEntryFull returns
+// Configurable version entry query mock — controls what selectedEntryFull returns
 // ---------------------------------------------------------------------------
 
 let entryQueryData: any = null;
@@ -291,7 +291,7 @@ describe("FlowHistorySidebarContent store behavior", () => {
 
     render(<FlowHistorySidebarContent flowId="flow-1" />);
 
-    // Click on a history entry to trigger selection
+    // Click on a version entry to trigger selection
     const user = userEvent.setup();
     const entryRow = screen.getByText("v1").closest("[class*=cursor-pointer]");
     if (entryRow) {

@@ -35,11 +35,11 @@ from langflow.services.database.models.flow_history.model import (
 )
 from langflow.services.deps import get_settings_service
 
-router = APIRouter(prefix="/flows/{flow_id}/history", tags=["Flow History"])
+router = APIRouter(prefix="/flows/{flow_id}/versions", tags=["Flow Versions"])
 
 
 def strip_history_data(data: dict | None) -> dict | None:
-    """Strip API keys from a history entry's flow data dict.
+    """Strip API keys from a version entry's flow data dict.
 
     Returns None if stripping fails, to prevent accidental secret leakage.
     """
@@ -50,7 +50,7 @@ def strip_history_data(data: dict | None) -> dict | None:
         return remove_api_keys({"data": data_copy}).get("data")
     except Exception:
         logger.warning(
-            "Failed to strip API keys from history data — excluding data from export to prevent secret leakage",
+            "Failed to strip API keys from version data — excluding data from export to prevent secret leakage",
             exc_info=True,
         )
         return None
@@ -105,7 +105,7 @@ async def list_flow_history(
     )
 
 
-# TODO: Full-history export endpoint (export flow with all history entries embedded).
+# TODO: Full-version export endpoint (export flow with all version entries embedded).
 # This is planned as a follow-up feature. The per-version export (exporting a single
 # version as a standalone flow) is available via the GET /{history_id} endpoint.
 
@@ -121,7 +121,7 @@ async def get_single_flow_history(
     try:
         entry = await get_flow_history_entry_or_raise(session, history_id, current_user.id, flow_id=flow_id)
     except FlowHistoryNotFoundError as exc:
-        raise HTTPException(status_code=404, detail="History entry not found") from exc
+        raise HTTPException(status_code=404, detail="Version not found") from exc
     return _history_to_read_full(entry, strip_keys=True)
 
 
@@ -164,11 +164,11 @@ async def activate_version(
 ) -> FlowRead:
     flow = await _get_user_flow(session, flow_id, current_user.id)
 
-    # Verify history entry belongs to this flow
+    # Verify version entry belongs to this flow
     try:
         target_entry = await get_flow_history_entry_or_raise(session, history_id, current_user.id, flow_id=flow_id)
     except FlowHistoryNotFoundError as exc:
-        raise HTTPException(status_code=404, detail="History entry not found") from exc
+        raise HTTPException(status_code=404, detail="Version not found") from exc
 
     # Guard against activating a version with no data (check before auto-snapshot)
     if target_entry.data is None:
@@ -236,4 +236,4 @@ async def delete_history_entry(
         await delete_flow_history_entry(session, history_id, current_user.id)
     except FlowHistoryError as exc:
         raise _translate_history_error(exc) from exc
-    await logger.adebug("Deleted history entry %s for flow %s", history_id, flow_id)
+    await logger.adebug("Deleted version %s for flow %s", history_id, flow_id)
