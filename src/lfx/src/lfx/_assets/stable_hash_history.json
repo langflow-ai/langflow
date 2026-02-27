@@ -736,12 +736,12 @@
   },
   "OpenSearchVectorStoreComponent": {
     "versions": {
-      "0.3.0": "77834dd0fa75"
+      "0.3.0": "4968b4d34fad"
     }
   },
   "OpenSearchVectorStoreComponentMultimodalMultiEmbedding": {
     "versions": {
-      "0.3.0": "89f34f2ad64e"
+      "0.3.0": "6a3df45b55c5"
     }
   },
   "EmbeddingSimilarityComponent": {
@@ -766,7 +766,7 @@
   },
   "File": {
     "versions": {
-      "0.3.0": "12a5841f1a03"
+      "0.3.0": "96a5f6aa89da"
     }
   },
   "KnowledgeIngestion": {
@@ -1041,7 +1041,7 @@
   },
   "CSVAgent": {
     "versions": {
-      "0.3.0": "4978be110e63"
+      "0.3.0": "1888a727f9dd"
     }
   },
   "LangChainFakeEmbeddings": {
@@ -1091,12 +1091,12 @@
   },
   "OpenAIToolsAgent": {
     "versions": {
-      "0.3.0": "b2ad248a3e6c"
+      "0.3.0": "21bfd16796e5"
     }
   },
   "OpenAPIAgent": {
     "versions": {
-      "0.3.0": "3b817f0cd966"
+      "0.3.0": "a4a7564100da"
     }
   },
   "RecursiveCharacterTextSplitter": {
@@ -1126,7 +1126,7 @@
   },
   "SQLAgent": {
     "versions": {
-      "0.3.0": "8d02598705fc"
+      "0.3.0": "550c16461236"
     }
   },
   "SQLDatabase": {
@@ -1141,7 +1141,7 @@
   },
   "ToolCallingAgent": {
     "versions": {
-      "0.3.0": "a5afe724de9c"
+      "0.3.0": "cdeb13ac7430"
     }
   },
   "VectorStoreInfo": {
@@ -1156,7 +1156,7 @@
   },
   "XMLAgent": {
     "versions": {
-      "0.3.0": "338332984901"
+      "0.3.0": "17a0cb4c48a8"
     }
   },
   "LangWatchEvaluator": {
@@ -1166,7 +1166,7 @@
   },
   "BatchRunComponent": {
     "versions": {
-      "0.3.0": "53935e54dfe7"
+      "0.3.0": "8b1ec3b03475"
     }
   },
   "Smart Transform": {
@@ -1231,7 +1231,7 @@
   },
   "EmbeddingModel": {
     "versions": {
-      "0.3.0": "3e0b64afc9a2"
+      "0.3.0": "c5ce0982da48"
     }
   },
   "LanguageModelComponent": {
@@ -1246,7 +1246,7 @@
   },
   "Memory": {
     "versions": {
-      "0.3.0": "18cad6e47abb"
+      "0.3.0": "efd064ef48ff"
     }
   },
   "Prompt Template": {
@@ -1631,7 +1631,7 @@
   },
   "VideoFile": {
     "versions": {
-      "0.3.0": "8dc827e42377"
+      "0.3.0": "479d6216272d"
     }
   },
   "Unstructured": {
@@ -1777,6 +1777,11 @@
   "GuardrailValidator": {
     "versions": {
       "0.3.0": "675232be19cc"
+    }
+  },
+  "LiteLLMProxyModel": {
+    "versions": {
+      "0.3.0": "89b5d2281c93"
     }
   }
 }
