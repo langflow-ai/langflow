@@ -3,7 +3,8 @@ import tempfile
 from pathlib import Path
 
 # Simulate the sed pattern from release.yml
-SED_PATTERN = 's|"langflow-base[^"]*"|"langflow-base[complete]>=0.8.0.rc3,<1.dev0"|'
+# The pattern should preserve trailing commas
+SED_PATTERN = 's|"langflow-base[^"]*"|"langflow-base[complete]>=0.8.0.rc3,<1.dev0"|g'
 
 TEST_CASES = [
     '    "langflow-base[complete]~=0.8.0",',
@@ -17,26 +18,17 @@ EXPECTED = '    "langflow-base[complete]>=0.8.0.rc3,<1.dev0",'
 
 
 def run_sed(input_line):
-    with tempfile.NamedTemporaryFile(mode="w+", delete=False) as f:
-        f.write(input_line + "\n")
-        fname = f.name
-    try:
-        # Use absolute path for sed
-        sed_path = subprocess.run(
-            ["which", "sed"],  # noqa: S607
-            capture_output=True,
-            text=True,
-            check=True,
-        ).stdout.strip()
-        result = subprocess.run(  # noqa: S603
-            [sed_path, SED_PATTERN, fname],
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-        return result.stdout.strip()
-    finally:
-        Path(fname).unlink()
+    """Run sed on input line and return the result."""
+    # Use sed with stdin/stdout instead of file operations
+    result = subprocess.run(
+        ["sed", SED_PATTERN],  # noqa: S603, S607
+        input=input_line,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    # Use rstrip() to only remove trailing whitespace (newline), preserve leading spaces
+    return result.stdout.rstrip()
 
 
 def test_all():
