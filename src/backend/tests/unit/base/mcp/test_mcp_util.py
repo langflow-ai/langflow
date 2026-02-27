@@ -2119,6 +2119,45 @@ class TestNormalizeArgumentsForMcp:
         assert result["valid_field"] == 1
         assert result["typo_field"] == 2
 
+    def test_str_to_float_when_float_expected(self):
+        """Test str '3.14' when float expected -> 3.14."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            value: float = Field(..., description="Value")
+
+        result = util._normalize_arguments_for_mcp({"value": "3.14"}, Schema, "test_tool")
+        assert result == {"value": 3.14}
+        assert isinstance(result["value"], float)
+
+    def test_invalid_json_for_dict_raises_clear_error(self):
+        """Test invalid JSON string when dict expected raises ValueError with tool and param name."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            params: dict = Field(..., description="Params")
+
+        with pytest.raises(ValueError, match=r"expects object \(dict\)") as exc_info:
+            util._normalize_arguments_for_mcp({"params": "not valid json"}, Schema, "my_tool")
+
+        assert "my_tool" in str(exc_info.value)
+        assert "Parameter 'params'" in str(exc_info.value)
+        assert "invalid JSON" in str(exc_info.value)
+
+    def test_invalid_json_for_list_raises_clear_error(self):
+        """Test invalid JSON string when list expected raises ValueError with tool and param name."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            items: list = Field(..., description="Items")
+
+        with pytest.raises(ValueError, match=r"expects array \(list\)") as exc_info:
+            util._normalize_arguments_for_mcp({"items": "{invalid"}, Schema, "list_tool")
+
+        assert "list_tool" in str(exc_info.value)
+        assert "Parameter 'items'" in str(exc_info.value)
+        assert "invalid JSON" in str(exc_info.value)
+
 
 class TestSnakeToCamelConversion:
     """Test the _snake_to_camel function from json_schema module."""
