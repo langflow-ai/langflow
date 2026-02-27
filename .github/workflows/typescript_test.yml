@@ -228,7 +228,7 @@ jobs:
           cache-dependency-path: ./src/frontend/package-lock.json
 
       - name: Install Frontend Dependencies
-        run: npm ci --include=optional
+        run: npm ci
         working-directory: ./src/frontend
 
       - name: Calculate Test Shards Distribution
@@ -297,7 +297,7 @@ jobs:
           cache: 'npm'
           cache-dependency-path: ./src/frontend/package-lock.json
       - name: Install Frontend Dependencies
-        run: npm ci --include=optional
+        run: npm install
         working-directory: ./src/frontend
 
       # Cache Playwright browsers using a composite key
