@@ -45,7 +45,7 @@ class TestLiteLLMProxyComponent(ComponentTestBaseWithoutClient):
         component = component_class()
         assert component.display_name == "LiteLLM Proxy"
         assert component.name == "LiteLLMProxyModel"
-        assert component.icon == "GitBranch"
+        assert component.icon == "LiteLLM"
 
     def test_inputs(self):
         component = LiteLLMProxyComponent()
