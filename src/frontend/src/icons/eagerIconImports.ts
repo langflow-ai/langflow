@@ -116,10 +116,12 @@ import { YoutubeIcon as YouTubeIcon } from "@/icons/Youtube";
 import { ZepMemoryIcon } from "@/icons/ZepMemory";
 import { JigsawStackIcon } from "./JigsawStack";
 import { WindsurfIcon } from "./Windsurf";
+import { AgenticsIcon } from "./Agentics";
 
 // Export the eagerly loaded icons map
 export const eagerIconsMapping = {
   AIML: AIMLIcon,
+  Agentics: AgenticsIcon,
   AgentQL: AgentQLIcon,
   Airbyte: AirbyteIcon,
   Anthropic: AnthropicIcon,
