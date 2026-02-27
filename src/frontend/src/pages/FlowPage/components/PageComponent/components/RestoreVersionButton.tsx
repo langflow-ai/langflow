@@ -84,13 +84,6 @@ export default function RestoreVersionButton({
         actionSlot={
           <div className="flex items-center gap-2">
             <CanvasBannerButton
-              variant="outline"
-              onClick={handleDismiss}
-              disabled={isRestoring}
-            >
-              Keep Building
-            </CanvasBannerButton>
-            <CanvasBannerButton
               onClick={() => setShowConfirm(true)}
               disabled={isRestoring}
             >
