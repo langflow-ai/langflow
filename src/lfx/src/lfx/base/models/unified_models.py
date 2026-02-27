@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib
 from functools import lru_cache
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
@@ -8,6 +9,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 import contextlib
+import json
 
 from lfx.base.models.anthropic_constants import ANTHROPIC_MODELS_DETAILED
 from lfx.base.models.google_generative_ai_constants import (
@@ -21,69 +23,182 @@ from lfx.log.logger import logger
 from lfx.services.deps import get_variable_service, session_scope
 from lfx.utils.async_helpers import run_until_complete
 
+# Mapping from class name to (module_path, attribute_name, install_hint | None).
+# Only the provider package that is actually needed gets imported at runtime.
+# install_hint overrides the auto-derived pip name for internal module paths.
+_MODEL_CLASS_IMPORTS: dict[str, tuple[str, str, str | None]] = {
+    "ChatOpenAI": ("langchain_openai", "ChatOpenAI", None),
+    "ChatAnthropic": ("langchain_anthropic", "ChatAnthropic", None),
+    "ChatGoogleGenerativeAIFixed": (
+        "lfx.base.models.google_generative_ai_model",
+        "ChatGoogleGenerativeAIFixed",
+        "langchain-google-genai",
+    ),
+    "ChatOllama": ("langchain_ollama", "ChatOllama", None),
+    "ChatWatsonx": ("langchain_ibm", "ChatWatsonx", None),
+}
 
-@lru_cache(maxsize=1)
-def get_model_classes():
-    """Lazy load model classes to avoid importing optional dependencies at module level."""
-    from langchain_anthropic import ChatAnthropic
-    from langchain_ibm import ChatWatsonx
-    from langchain_ollama import ChatOllama
-    from langchain_openai import ChatOpenAI
+_EMBEDDING_CLASS_IMPORTS: dict[str, tuple[str, str, str | None]] = {
+    "OpenAIEmbeddings": ("langchain_openai", "OpenAIEmbeddings", None),
+    "GoogleGenerativeAIEmbeddings": ("langchain_google_genai", "GoogleGenerativeAIEmbeddings", None),
+    "OllamaEmbeddings": ("langchain_ollama", "OllamaEmbeddings", None),
+    "WatsonxEmbeddings": ("langchain_ibm", "WatsonxEmbeddings", None),
+}
 
-    from lfx.base.models.google_generative_ai_model import ChatGoogleGenerativeAIFixed
+# Canonical mapping of provider name → embedding class name.
+# Used by EmbeddingModelComponent and by flow_requirements to resolve
+# which PyPI package a given embedding provider needs at runtime.
+EMBEDDING_PROVIDER_CLASS_MAPPING: dict[str, str] = {
+    "OpenAI": "OpenAIEmbeddings",
+    "Google Generative AI": "GoogleGenerativeAIEmbeddings",
+    "Ollama": "OllamaEmbeddings",
+    "IBM WatsonX": "WatsonxEmbeddings",
+    "IBM watsonx.ai": "WatsonxEmbeddings",  # Alias used by MODEL_PROVIDERS_DICT
+}
 
-    return {
-        "ChatOpenAI": ChatOpenAI,
-        "ChatAnthropic": ChatAnthropic,
-        "ChatGoogleGenerativeAIFixed": ChatGoogleGenerativeAIFixed,
-        "ChatOllama": ChatOllama,
-        "ChatWatsonx": ChatWatsonx,
-    }
+_model_class_cache: dict[str, type] = {}
+_embedding_class_cache: dict[str, type] = {}
 
 
-@lru_cache(maxsize=1)
-def get_embedding_classes():
-    """Lazy load embedding classes to avoid importing optional dependencies at module level."""
-    from langchain_google_genai import GoogleGenerativeAIEmbeddings
-    from langchain_ibm import WatsonxEmbeddings
-    from langchain_ollama import OllamaEmbeddings
-    from langchain_openai import OpenAIEmbeddings
+def get_model_class(class_name: str) -> type:
+    """Import and return a single model class by name.
 
-    return {
-        "GoogleGenerativeAIEmbeddings": GoogleGenerativeAIEmbeddings,
-        "OpenAIEmbeddings": OpenAIEmbeddings,
-        "OllamaEmbeddings": OllamaEmbeddings,
-        "WatsonxEmbeddings": WatsonxEmbeddings,
-    }
+    Only imports the provider package that is actually needed.
+    """
+    if class_name in _model_class_cache:
+        return _model_class_cache[class_name]
+
+    import_info = _MODEL_CLASS_IMPORTS.get(class_name)
+    if import_info is None:
+        msg = f"Unknown model class: {class_name}"
+        raise ValueError(msg)
+
+    module_path, attr_name, install_hint = import_info
+    pkg_hint = install_hint or module_path.split(".")[0].replace("_", "-")
+    try:
+        module = importlib.import_module(module_path)
+    except ImportError as exc:
+        msg = (
+            f"Could not import '{module_path}' for model class '{class_name}'. "
+            f"Install the missing package (e.g. uv pip install {pkg_hint})."
+        )
+        raise ImportError(msg) from exc
+    try:
+        cls = getattr(module, attr_name)
+    except AttributeError as exc:
+        msg = (
+            f"Module '{module_path}' was imported but does not have attribute '{attr_name}'. "
+            f"This may indicate a version mismatch. "
+        )
+        raise AttributeError(msg) from exc
+    _model_class_cache[class_name] = cls
+    return cls
+
+
+def get_embedding_class(class_name: str) -> type:
+    """Import and return a single embedding class by name.
+
+    Only imports the provider package that is actually needed.
+    """
+    if class_name in _embedding_class_cache:
+        return _embedding_class_cache[class_name]
+
+    import_info = _EMBEDDING_CLASS_IMPORTS.get(class_name)
+    if import_info is None:
+        msg = f"Unknown embedding class: {class_name}"
+        raise ValueError(msg)
+
+    module_path, attr_name, install_hint = import_info
+    pkg_hint = install_hint or module_path.split(".")[0].replace("_", "-")
+    try:
+        module = importlib.import_module(module_path)
+    except ImportError as exc:
+        msg = (
+            f"Could not import '{module_path}' for embedding class '{class_name}'. "
+            f"Install the missing package (e.g. uv pip install {pkg_hint})."
+        )
+        raise ImportError(msg) from exc
+    try:
+        cls = getattr(module, attr_name)
+    except AttributeError as exc:
+        msg = (
+            f"Module '{module_path}' was imported but does not have attribute '{attr_name}'. "
+            f"This may indicate a version mismatch. "
+        )
+        raise AttributeError(msg) from exc
+    _embedding_class_cache[class_name] = cls
+    return cls
+
+
+def get_model_classes() -> dict[str, type]:
+    """Return all model classes, importing every provider package.
+
+    .. deprecated::
+        Use :func:`get_model_class` instead to import only the provider you need.
+    """
+    return {name: get_model_class(name) for name in _MODEL_CLASS_IMPORTS}
+
+
+def get_embedding_classes() -> dict[str, type]:
+    """Return all embedding classes, importing every provider package.
+
+    .. deprecated::
+        Use :func:`get_embedding_class` instead to import only the provider you need.
+    """
+    return {name: get_embedding_class(name) for name in _EMBEDDING_CLASS_IMPORTS}
 
 
 @lru_cache(maxsize=1)
 def get_model_provider_metadata():
+    """Get complete provider metadata including model class, API key param, and extra params."""
     return {
         "OpenAI": {
             "icon": "OpenAI",
             "variable_name": "OPENAI_API_KEY",
+            "model_class": "ChatOpenAI",
+            "api_key_param": "api_key",
+            "model_name_param": "model",
             "api_docs_url": "https://platform.openai.com/docs/overview",
+            "max_tokens_field_name": "max_tokens",
         },
         "Anthropic": {
             "icon": "Anthropic",
             "variable_name": "ANTHROPIC_API_KEY",
+            "model_class": "ChatAnthropic",
+            "api_key_param": "api_key",
+            "model_name_param": "model",
             "api_docs_url": "https://console.anthropic.com/docs",
+            "max_tokens_field_name": "max_tokens",
         },
         "Google Generative AI": {
             "icon": "GoogleGenerativeAI",
             "variable_name": "GOOGLE_API_KEY",
+            "model_class": "ChatGoogleGenerativeAIFixed",
+            "api_key_param": "google_api_key",
+            "model_name_param": "model",
             "api_docs_url": "https://aistudio.google.com/app/apikey",
+            "max_tokens_field_name": "max_output_tokens",
         },
         "Ollama": {
             "icon": "Ollama",
             "variable_name": "OLLAMA_BASE_URL",
+            "model_class": "ChatOllama",
+            "api_key_param": "base_url",
+            "model_name_param": "model",
+            "base_url_param": "base_url",
             "api_docs_url": "https://ollama.com/",
+            "max_tokens_field_name": "max_tokens",
         },
         "IBM WatsonX": {
-            "icon": "IBM",
+            "icon": "WatsonxAI",
             "variable_name": "WATSONX_APIKEY",
+            "model_class": "ChatWatsonx",
+            "api_key_param": "apikey",
+            "model_name_param": "model_id",
+            "url_param": "url",
+            "project_id_param": "project_id",
             "api_docs_url": "https://www.ibm.com/products/watsonx",
+            "max_tokens_field_name": "max_tokens",
         },
     }
 
@@ -111,6 +226,25 @@ MODELS_DETAILED = get_models_detailed()
 @lru_cache(maxsize=1)
 def get_model_provider_variable_mapping() -> dict[str, str]:
     return {provider: meta["variable_name"] for provider, meta in model_provider_metadata.items()}
+
+
+def get_provider_config(provider: str) -> dict:
+    """Get complete provider configuration.
+
+    Args:
+        provider: Provider name (e.g., "OpenAI", "Anthropic")
+
+    Returns:
+        Dict with model_class, api_key_param, icon, variable_name, model_name_param, and extra params
+
+    Raises:
+        ValueError: If provider is unknown
+    """
+    if provider not in model_provider_metadata:
+        msg = f"Unknown provider: {provider}"
+        raise ValueError(msg)
+
+    return model_provider_metadata[provider].copy()
 
 
 def get_model_providers() -> list[str]:
@@ -275,6 +409,52 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
     return run_until_complete(_get_variable())
 
 
+def _validate_and_get_enabled_providers(
+    credential_variables: dict[str, Any],
+    provider_variable_map: dict[str, str],
+    *,
+    skip_validation: bool = True,
+) -> set[str]:
+    """Return set of enabled providers based on credential existence.
+
+    This helper function checks which providers have credentials stored.
+    API key validation is performed when credentials are saved, not on every read,
+    to avoid latency from external API calls.
+
+    Args:
+        credential_variables: Dictionary mapping variable names to VariableRead objects
+        provider_variable_map: Dictionary mapping provider names to variable names
+        skip_validation: If True (default), skip API validation and just check existence.
+                        If False, validate each API key (slower, makes external calls).
+
+    Returns:
+        Set of provider names that have credentials stored
+    """
+    enabled = set()
+
+    for provider, var_name in provider_variable_map.items():
+        if var_name in credential_variables:
+            if skip_validation:
+                # Just check existence - validation was done on save
+                enabled.add(provider)
+            else:
+                # Legacy path: validate the API key (slow - makes external calls)
+                from langflow.services.auth import utils as auth_utils
+                from langflow.services.deps import get_settings_service
+
+                credential_var = credential_variables[var_name]
+                try:
+                    settings_service = get_settings_service()
+                    api_key = auth_utils.decrypt_api_key(credential_var.value, settings_service=settings_service)
+                    if api_key and api_key.strip():
+                        validate_model_provider_key(var_name, api_key)
+                        enabled.add(provider)
+                except (ValueError, Exception) as e:  # noqa: BLE001
+                    logger.debug("Provider %s validation failed for variable %s: %s", provider, var_name, e)
+
+    return enabled
+
+
 def validate_model_provider_key(variable_name: str, api_key: str) -> None:
     """Validate a model provider API key by making a minimal test call.
 
@@ -311,17 +491,17 @@ def validate_model_provider_key(variable_name: str, api_key: str) -> None:
     # Test the API key based on provider
     try:
         if provider == "OpenAI":
-            from langchain_openai import ChatOpenAI
+            from langchain_openai import ChatOpenAI  # type: ignore  # noqa: PGH003
 
             llm = ChatOpenAI(api_key=api_key, model_name=first_model, max_tokens=1)
             llm.invoke("test")
         elif provider == "Anthropic":
-            from langchain_anthropic import ChatAnthropic
+            from langchain_anthropic import ChatAnthropic  # type: ignore  # noqa: PGH003
 
             llm = ChatAnthropic(anthropic_api_key=api_key, model=first_model, max_tokens=1)
             llm.invoke("test")
         elif provider == "Google Generative AI":
-            from langchain_google_genai import ChatGoogleGenerativeAI
+            from langchain_google_genai import ChatGoogleGenerativeAI  # type: ignore  # noqa: PGH003
 
             llm = ChatGoogleGenerativeAI(google_api_key=api_key, model=first_model, max_tokens=1)
             llm.invoke("test")
@@ -425,7 +605,7 @@ def get_language_model_options(
             # If we can't get model status, continue without filtering
             pass
 
-    # Get enabled providers (those with credentials configured)
+    # Get enabled providers (those with credentials configured and validated)
     enabled_providers = set()
     if user_id:
         try:
@@ -435,6 +615,7 @@ def get_language_model_options(
                     variable_service = get_variable_service()
                     if variable_service is None:
                         return set()
+
                     from langflow.services.variable.constants import CREDENTIAL_TYPE
                     from langflow.services.variable.service import DatabaseVariableService
 
@@ -444,11 +625,11 @@ def get_language_model_options(
                         user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
                         session=session,
                     )
-                    credential_names = {var.name for var in all_vars if var.type == CREDENTIAL_TYPE}
+                    credential_vars = {var.name: var for var in all_vars if var.type == CREDENTIAL_TYPE}
                     provider_variable_map = get_model_provider_variable_mapping()
-                    return {
-                        provider for provider, var_name in provider_variable_map.items() if var_name in credential_names
-                    }
+
+                    # Use shared helper to validate and get enabled providers
+                    return _validate_and_get_enabled_providers(credential_vars, provider_variable_map)
 
             enabled_providers = run_until_complete(_get_enabled_providers())
         except Exception:  # noqa: BLE001, S110
@@ -456,21 +637,8 @@ def get_language_model_options(
             pass
 
     options = []
-    model_class_mapping = {
-        "OpenAI": "ChatOpenAI",
-        "Anthropic": "ChatAnthropic",
-        "Google Generative AI": "ChatGoogleGenerativeAIFixed",
-        "Ollama": "ChatOllama",
-        "IBM WatsonX": "ChatWatsonx",
-    }
-
-    api_key_param_mapping = {
-        "OpenAI": "api_key",
-        "Anthropic": "api_key",
-        "Google Generative AI": "google_api_key",
-        "Ollama": "base_url",
-        "IBM WatsonX": "apikey",
-    }
+    model_class_mapping = {p: m["model_class"] for p, m in model_provider_metadata.items()}
+    api_key_param_mapping = {p: m["api_key_param"] for p, m in model_provider_metadata.items()}
 
     # Track which providers have models
     providers_with_models = set()
@@ -611,7 +779,7 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
             # If we can't get model status, continue without filtering
             pass
 
-    # Get enabled providers (those with credentials configured)
+    # Get enabled providers (those with credentials configured and validated)
     enabled_providers = set()
     if user_id:
         try:
@@ -621,6 +789,7 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
                     variable_service = get_variable_service()
                     if variable_service is None:
                         return set()
+
                     from langflow.services.variable.constants import CREDENTIAL_TYPE
                     from langflow.services.variable.service import DatabaseVariableService
 
@@ -630,11 +799,11 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
                         user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
                         session=session,
                     )
-                    credential_names = {var.name for var in all_vars if var.type == CREDENTIAL_TYPE}
+                    credential_vars = {var.name: var for var in all_vars if var.type == CREDENTIAL_TYPE}
                     provider_variable_map = get_model_provider_variable_mapping()
-                    return {
-                        provider for provider, var_name in provider_variable_map.items() if var_name in credential_names
-                    }
+
+                    # Use shared helper to validate and get enabled providers
+                    return _validate_and_get_enabled_providers(credential_vars, provider_variable_map)
 
             enabled_providers = run_until_complete(_get_enabled_providers())
         except Exception:  # noqa: BLE001, S110
@@ -642,12 +811,6 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
             pass
 
     options = []
-    embedding_class_mapping = {
-        "OpenAI": "OpenAIEmbeddings",
-        "Google Generative AI": "GoogleGenerativeAIEmbeddings",
-        "Ollama": "OllamaEmbeddings",
-        "IBM WatsonX": "WatsonxEmbeddings",
-    }
 
     # Provider-specific param mappings
     param_mappings = {
@@ -725,7 +888,7 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
                 "category": provider,
                 "provider": provider,
                 "metadata": {
-                    "embedding_class": embedding_class_mapping.get(provider, "OpenAIEmbeddings"),
+                    "embedding_class": EMBEDDING_PROVIDER_CLASS_MAPPING.get(provider, "OpenAIEmbeddings"),
                     "param_mapping": param_mappings.get(provider, param_mappings["OpenAI"]),
                     "model_type": "embeddings",  # Mark as embedding model
                 },
@@ -736,7 +899,7 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
     # Add disabled providers (providers that exist in metadata but have no enabled models)
     if user_id:
         for provider, metadata in model_provider_metadata.items():
-            if provider not in providers_with_models and provider in embedding_class_mapping:
+            if provider not in providers_with_models and provider in EMBEDDING_PROVIDER_CLASS_MAPPING:
                 # This provider has no enabled models and supports embeddings, add it as a disabled provider entry
                 options.append(
                     {
@@ -781,22 +944,9 @@ def normalize_model_names_to_dicts(model_names: list[str] | str) -> list[dict[st
         # If we can't get models, just create basic dicts
         return [{"name": name} for name in model_names]
 
-    # Model class mapping for runtime metadata
-    model_class_mapping = {
-        "OpenAI": "ChatOpenAI",
-        "Anthropic": "ChatAnthropic",
-        "Google Generative AI": "ChatGoogleGenerativeAIFixed",
-        "Ollama": "ChatOllama",
-        "IBM WatsonX": "ChatWatsonx",
-    }
-
-    api_key_param_mapping = {
-        "OpenAI": "api_key",
-        "Anthropic": "api_key",
-        "Google Generative AI": "google_api_key",
-        "Ollama": "base_url",
-        "IBM WatsonX": "apikey",
-    }
+    # Derive mappings from the canonical provider metadata
+    model_class_mapping = {p: m["model_class"] for p, m in model_provider_metadata.items()}
+    api_key_param_mapping = {p: m["api_key_param"] for p, m in model_provider_metadata.items()}
 
     # Build a lookup map of model_name -> full model data with runtime metadata
     model_lookup = {}
@@ -814,6 +964,11 @@ def normalize_model_names_to_dicts(model_names: list[str] | str) -> list[dict[st
                 "model_name_param": "model",
                 "api_key_param": api_key_param_mapping.get(provider, "api_key"),
             }
+
+            # Add max_tokens_field_name from provider metadata
+            provider_meta = model_provider_metadata.get(provider, {})
+            if "max_tokens_field_name" in provider_meta:
+                runtime_metadata["max_tokens_field_name"] = provider_meta["max_tokens_field_name"]
 
             # Add reasoning models list for OpenAI
             if provider == "OpenAI" and base_metadata.get("reasoning"):
@@ -869,6 +1024,7 @@ def get_llm(
     temperature=None,
     *,
     stream=False,
+    max_tokens=None,
     watsonx_url=None,
     watsonx_project_id=None,
     ollama_base_url=None,
@@ -914,10 +1070,11 @@ def get_llm(
         raise ValueError(msg)
 
     # Get model class from metadata
-    model_class = get_model_classes().get(metadata.get("model_class"))
-    if model_class is None:
+    model_class_name = metadata.get("model_class")
+    if not model_class_name:
         msg = f"No model class defined for {model_name}"
         raise ValueError(msg)
+    model_class = get_model_class(model_class_name)
     model_name_param = metadata.get("model_name_param", "model")
 
     # Check if this is a reasoning model that doesn't support temperature
@@ -934,6 +1091,20 @@ def get_llm(
 
     if temperature is not None:
         kwargs["temperature"] = temperature
+
+    # Add max_tokens with provider-specific field name (only when a valid integer >= 1)
+    if max_tokens is not None and max_tokens != "":
+        try:
+            max_tokens_int = int(max_tokens)
+            if max_tokens_int >= 1:
+                max_tokens_param = metadata.get("max_tokens_field_name", "max_tokens")
+                kwargs[max_tokens_param] = max_tokens_int
+        except (TypeError, ValueError):
+            pass  # Skip invalid max_tokens (e.g. empty string from form input)
+
+    # Enable streaming usage for providers that support it
+    if provider in ["OpenAI", "Anthropic"]:
+        kwargs["stream_usage"] = True
 
     # Add provider-specific parameters
     if provider == "IBM WatsonX":
@@ -1002,6 +1173,8 @@ def update_model_options_in_build_config(
     - Cache is empty or expired
     - Model field is being refreshed (field_name == "model")
 
+    If the component specifies static options, those are preserved and not refreshed.
+
     Args:
         component: Component instance with cache, user_id, and log attributes
         build_config: The build configuration dict to update
@@ -1015,6 +1188,35 @@ def update_model_options_in_build_config(
     """
     import time
 
+    # Check if component specified static options - if so, preserve them
+    # The cache key for static options detection
+    static_options_cache_key = f"{cache_key_prefix}_static_options_detected"
+
+    # On initial load, check if the component has static options
+    if field_name is None and static_options_cache_key not in component.cache:
+        # Check if the model field in build_config already has options set
+        existing_options = build_config.get("model", {}).get("options")
+        if existing_options:
+            # Component specified static options - mark them as static
+            component.cache[static_options_cache_key] = True
+        else:
+            component.cache[static_options_cache_key] = False
+
+    # If component has static options, skip the refresh logic entirely
+    if component.cache.get(static_options_cache_key, False):
+        # Static options - don't override them
+        # Just handle the visibility logic and return
+        if field_value == "connect_other_models":
+            # User explicitly selected "Connect other models", show the handle
+            if cache_key_prefix == "embedding_model_options":
+                build_config["model"]["input_types"] = ["Embeddings"]
+            else:
+                build_config["model"]["input_types"] = ["LanguageModel"]
+        else:
+            # Default case or model selection: hide the handle
+            build_config["model"]["input_types"] = []
+        return build_config
+
     # Cache key based on user_id
     cache_key = f"{cache_key_prefix}_{component.user_id}"
     cache_timestamp_key = f"{cache_key}_timestamp"
@@ -1026,9 +1228,6 @@ def update_model_options_in_build_config(
         time_since_cache = time.time() - component.cache[cache_timestamp_key]
         cache_expired = time_since_cache > cache_ttl
 
-    # Check if is_refresh flag is set in build_config (from frontend refresh request)
-    is_refresh_request = build_config.get("is_refresh", False)
-
     # Check if we need to refresh
     should_refresh = (
         field_name == "api_key"  # API key changed
@@ -1036,7 +1235,6 @@ def update_model_options_in_build_config(
         or field_name == "model"  # Model field refresh button clicked
         or cache_key not in component.cache  # Cache miss
         or cache_expired  # Cache expired
-        or is_refresh_request  # Frontend requested a refresh
     )
 
     if should_refresh:
@@ -1056,13 +1254,9 @@ def update_model_options_in_build_config(
     cached = component.cache.get(cache_key, {"options": []})
     build_config["model"]["options"] = cached["options"]
 
-    # Set default value on initial load when model field is empty
-    # Only set default when: initial load (field_name is None) or model field is being set and is empty
-    # Get the current model value to check if it's empty
-    current_model_value = build_config.get("model", {}).get("value")
-    model_is_empty = not current_model_value
-    should_set_default = field_name is None or (field_name == "model" and model_is_empty)
-    if should_set_default:
+    # Set default value on initial load when field is empty
+    # Fetch from user's default model setting in the database
+    if not field_value or field_value == "":
         options = cached.get("options", [])
         if options:
             # Determine model type based on cache_key_prefix
@@ -1099,8 +1293,6 @@ def update_model_options_in_build_config(
                                 session=session,
                             )
                             if var and var.value:
-                                import json
-
                                 parsed_value = json.loads(var.value)
                                 if isinstance(parsed_value, dict):
                                     return parsed_value.get("model_name"), parsed_value.get("provider")
@@ -1131,17 +1323,10 @@ def update_model_options_in_build_config(
             if default_model:
                 build_config["model"]["value"] = [default_model]
 
-    # Handle visibility logic:
-    # - Show handle ONLY when field_value is "connect_other_models"
-    # - Hide handle in all other cases (default, model selection, etc.)
-    if field_value == "connect_other_models":
-        # User explicitly selected "Connect other models", show the handle
-        if cache_key_prefix == "embedding_model_options":
-            build_config["model"]["input_types"] = ["Embeddings"]
-        else:
-            build_config["model"]["input_types"] = ["LanguageModel"]
+    # Always set input_types based on model type to enable connection handles
+    if cache_key_prefix == "embedding_model_options":
+        build_config["model"]["input_types"] = ["Embeddings"]
     else:
-        # Default case or model selection: hide the handle
-        build_config["model"]["input_types"] = []
+        build_config["model"]["input_types"] = ["LanguageModel"]
 
     return build_config

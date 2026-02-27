@@ -127,7 +127,7 @@ For videos, see the **Twelve Labs** and **YouTube** <Icon name="Blocks" aria-hid
 
 ## Configure file storage
 
-Langflow supports two storage backends for file management:
+Langflow supports two storage backends for file management.
 
 * **Local storage**: Langflow's default storage backend. Files are stored locally in your [Langflow configuration directory](/memory). Set `LANGFLOW_STORAGE_TYPE=local` or leave it unset to use local storage.
 
@@ -188,6 +188,8 @@ Replace the following placeholders with the actual values for your IAM policy an
 * `S3_BUCKET_DIRECTORY`: An optional folder path within the bucket where files are stored, such as `s3://S3_BUCKET_NAME/S3_BUCKET_DIRECTORY`.
 
 For more information, see the [AWS documentation](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_change-permissions.html).
+
+**Google Drive** storage is available through the [**Read File**](/read-file) and [**Write file**](/write-file) components, but you cannot use environment variables to configure it.
 
 ## File storage environment variables {#file-storage-environment-variables}
 

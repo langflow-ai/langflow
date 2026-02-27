@@ -33,6 +33,7 @@ export const useDeleteFolders: useMutationFunctionType<
     ...options,
     onSettled: (id) => {
       queryClient.refetchQueries({ queryKey: ["useGetFolders", id] });
+      queryClient.invalidateQueries({ queryKey: ["useGetFolders"] });
     },
   });
 
