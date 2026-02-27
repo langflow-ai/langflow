@@ -29,7 +29,7 @@ def upgrade() -> None:
         op.create_table(
             "trace",
             sa.Column("name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-            sa.Column("status", sa.Enum("UNSET", "OK", "ERROR", name="spanstatus"), nullable=False),
+            sa.Column("status", sa.Enum("unset", "ok", "error", name="spanstatus"), nullable=False),
             sa.Column("start_time", sa.DateTime(), nullable=False),
             sa.Column("end_time", sa.DateTime(), nullable=True),
             sa.Column("total_latency_ms", sa.Integer(), nullable=False),
@@ -51,10 +51,10 @@ def upgrade() -> None:
             sa.Column("name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
             sa.Column(
                 "span_type",
-                sa.Enum("CHAIN", "LLM", "TOOL", "RETRIEVER", "EMBEDDING", "PARSER", "AGENT", name="spantype"),
+                sa.Enum("chain", "llm", "tool", "retriever", "embedding", "parser", "agent", name="spantype"),
                 nullable=False,
             ),
-            sa.Column("status", sa.Enum("UNSET", "OK", "ERROR", name="spanstatus"), nullable=False),
+            sa.Column("status", sa.Enum("unset", "ok", "error", name="spanstatus"), nullable=False),
             sa.Column("start_time", sa.DateTime(), nullable=False),
             sa.Column("end_time", sa.DateTime(), nullable=True),
             sa.Column("latency_ms", sa.Integer(), nullable=False),

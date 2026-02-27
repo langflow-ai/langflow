@@ -425,7 +425,7 @@ def _span_to_dict(span: SpanTable) -> dict[str, Any]:
         "name": span.name,
         "type": span.span_type.value if span.span_type else "chain",
         "status": span.status.value if span.status else SpanStatus.UNSET,
-        "startTime": span.start_time.isoformat() if span.start_time else "",
+        "startTime": span.start_time.isoformat() if span.start_time else None,
         "endTime": span.end_time.isoformat() if span.end_time else None,
         "latencyMs": span.latency_ms,
         "inputs": span.inputs or {},
