@@ -49,8 +49,9 @@ class LiteLLMProxyComponent(LCModelComponent):
         IntInput(
             name="max_tokens",
             display_name="Max Tokens",
+            value=0,
             advanced=True,
-            info="Maximum number of tokens to generate. Set to 0 for no limit.",
+            info="Maximum number of tokens to generate. Set to 0 for using the LiteLLM setting.",
             range_spec=RangeSpec(min=0, max=128000),
         ),
         IntInput(
