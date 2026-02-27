@@ -761,17 +761,17 @@
   },
   "Directory": {
     "versions": {
-      "0.3.0": "c55e0e29079d"
+      "0.3.0": "328e6f996926"
     }
   },
   "File": {
     "versions": {
-      "0.3.0": "96a5f6aa89da"
+      "0.3.0": "12a5841f1a03"
     }
   },
   "KnowledgeIngestion": {
     "versions": {
-      "0.3.0": "52a451e4f053"
+      "0.3.0": "c37fd1b357d1"
     }
   },
   "KnowledgeRetrieval": {
@@ -1631,7 +1631,7 @@
   },
   "VideoFile": {
     "versions": {
-      "0.3.0": "479d6216272d"
+      "0.3.0": "8dc827e42377"
     }
   },
   "Unstructured": {
@@ -1781,7 +1781,7 @@
   },
   "LiteLLMProxyModel": {
     "versions": {
-      "0.3.0": "89b5d2281c93"
+      "0.3.0": "386ae52865b5"
     }
   }
 }
