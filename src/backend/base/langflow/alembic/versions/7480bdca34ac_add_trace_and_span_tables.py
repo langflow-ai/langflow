@@ -95,3 +95,9 @@ def downgrade() -> None:
             batch_op.drop_index(batch_op.f("ix_trace_session_id"))
             batch_op.drop_index(batch_op.f("ix_trace_flow_id"))
         op.drop_table("trace")
+
+    # Drop ENUMs (PostgreSQL only)
+    if conn.dialect.name == "postgresql":
+        op.execute("DROP TYPE IF EXISTS spanstatus")
+        op.execute("DROP TYPE IF EXISTS spantype")
+        op.execute("DROP TYPE IF EXISTS spankind")

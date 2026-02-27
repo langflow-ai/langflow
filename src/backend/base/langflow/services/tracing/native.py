@@ -210,6 +210,7 @@ class NativeTracer(BaseTracer):
                 "status": SpanStatus.ERROR if error else SpanStatus.OK,
                 "error": str(error) if error else None,
                 "attributes": attributes,
+                "span_source": "component",
             }
         )
 
@@ -281,9 +282,12 @@ class NativeTracer(BaseTracer):
             has_span_errors = any(span.get("status") == SpanStatus.ERROR for span in self.completed_spans)
             trace_status = SpanStatus.ERROR if (error or has_span_errors) else SpanStatus.OK
 
-            # Calculate total tokens from all spans (stored in attributes)
+            # Calculate total tokens from LangChain spans only (component spans aggregate
+            # their children's tokens, so summing both would double-count)
             total_tokens = sum(
-                int((span.get("attributes") or {}).get("total_tokens") or 0) for span in self.completed_spans
+                int((span.get("attributes") or {}).get("total_tokens") or 0)
+                for span in self.completed_spans
+                if span.get("span_source") == "langchain"
             )
 
             async with session_scope() as session:
@@ -475,6 +479,7 @@ class NativeTracer(BaseTracer):
                 "error": error,
                 "attributes": lc_attributes,
                 "parent_span_id": span_info.get("parent_span_id"),
+                "span_source": "langchain",
             }
         )
 

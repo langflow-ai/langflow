@@ -88,6 +88,8 @@ async def test_get_traces_empty(client: AsyncClient, logged_in_headers, active_u
     data = response.json()
     assert "traces" in data
     assert "total" in data
+    assert data["traces"] == []
+    assert data["total"] == 0
 
 
 async def test_get_traces_returns_user_traces(client: AsyncClient, logged_in_headers, active_user: User):
@@ -160,6 +162,7 @@ async def test_get_traces_filters_by_status(client: AsyncClient, logged_in_heade
     )
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
+    assert len(data["traces"]) == 1
     for t in data["traces"]:
         assert t["status"] == "ok"
 
@@ -177,6 +180,7 @@ async def test_get_traces_search_query(client: AsyncClient, logged_in_headers, a
     )
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
+    assert len(data["traces"]) == 1
     assert all("UniqueSearch" in t["name"] for t in data["traces"])
 
 

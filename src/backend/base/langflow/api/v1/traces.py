@@ -42,6 +42,28 @@ def _sanitize_query_string(value: str | None, max_len: int = 50) -> str | None:
     return cleaned.strip()[:max_len] if cleaned else None
 
 
+def _safe_int_tokens(value: Any) -> int:
+    """Safely coerce a token count value to int, returning 0 on failure.
+
+    Handles int, float, and string representations (including "12.0").
+    """
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    if isinstance(value, str):
+        try:
+            return int(value)
+        except ValueError:
+            try:
+                return int(float(value))
+            except (ValueError, TypeError):
+                logger.debug("Could not coerce token value to int: %r", value)
+                return 0
+    logger.debug("Unexpected token value type %s: %r", type(value).__name__, value)
+    return 0
+
+
 async def _fetch_trace_token_totals(session, trace_ids: list[UUID]) -> dict[str, int]:
     token_map: dict[str, int] = {}
     if not trace_ids:
@@ -64,7 +86,7 @@ async def _fetch_trace_token_totals(session, trace_ids: list[UUID]) -> dict[str,
         attrs = attributes or {}
         total_tokens = attrs.get("llm.usage.total_tokens") or attrs.get("total_tokens") or 0
         tid = str(trace_id_val)
-        token_map[tid] = token_map.get(tid, 0) + int(total_tokens)
+        token_map[tid] = token_map.get(tid, 0) + _safe_int_tokens(total_tokens)
 
     return token_map
 
@@ -194,7 +216,7 @@ async def _fetch_traces(
                         "id": tid,
                         "name": trace.name,
                         "status": trace.status.value if trace.status else SpanStatus.UNSET,
-                        "startTime": trace.start_time.isoformat() if trace.start_time else SpanStatus.UNSET,
+                        "startTime": trace.start_time.isoformat() if trace.start_time else None,
                         "totalLatencyMs": trace.total_latency_ms,
                         "totalTokens": total_tokens,
                         "totalCost": trace.total_cost,
@@ -290,14 +312,16 @@ async def _fetch_single_trace(user_id: UUID, trace_id: UUID) -> dict[str, Any] |
 
         # Aggregate tokens from leaf spans only (parents already include children's tokens)
         parent_ids = {s.parent_span_id for s in spans if s.parent_span_id}
-        total_tokens = sum(int((s.attributes or {}).get("total_tokens") or 0) for s in spans if s.id not in parent_ids)
+        total_tokens = sum(
+            _safe_int_tokens((s.attributes or {}).get("total_tokens") or 0) for s in spans if s.id not in parent_ids
+        )
 
         # Return trace with span tree in frontend-compatible format
         return {
             "id": str(trace.id),
             "name": trace.name,
             "status": trace.status.value if trace.status else SpanStatus.UNSET,
-            "startTime": trace.start_time.isoformat() if trace.start_time else SpanStatus.UNSET,
+            "startTime": trace.start_time.isoformat() if trace.start_time else None,
             "endTime": trace.end_time.isoformat() if trace.end_time else None,
             "totalLatencyMs": trace.total_latency_ms,
             "totalTokens": total_tokens or trace.total_tokens,
