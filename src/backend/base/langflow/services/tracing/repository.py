@@ -32,12 +32,49 @@ from langflow.services.deps import session_scope
 from langflow.services.tracing.formatting import (
     TraceSummaryData,
     build_span_tree,
+    compute_leaf_token_total,
     extract_trace_io_from_rows,
     extract_trace_io_from_spans,
-    safe_int_tokens,
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _trace_to_base_fields(
+    trace: TraceTable,
+    total_tokens: int,
+    summary: TraceSummaryData | None,
+) -> dict:
+    """Build the shared field mapping common to both TraceSummaryRead and TraceRead.
+
+    Centralises the field extraction that was previously duplicated in
+    ``fetch_traces`` and ``fetch_single_trace``, ensuring both response models
+    are built from a single source of truth.
+
+    Args:
+        trace: The TraceTable ORM record.
+        total_tokens: Pre-computed effective token count (leaf-span total or
+            fallback to the stored ``trace.total_tokens``).
+        summary: Optional TraceSummaryData carrying the I/O payload.  When
+            ``None`` both ``input`` and ``output`` are set to ``None``.
+
+    Returns:
+        Dict of keyword arguments suitable for unpacking into either
+        ``TraceSummaryRead(**...)`` or ``TraceRead(**...)``.
+    """
+    return {
+        "id": trace.id,
+        "name": trace.name,
+        "status": trace.status or SpanStatus.UNSET,
+        "start_time": trace.start_time,
+        "total_latency_ms": trace.total_latency_ms,
+        "total_tokens": total_tokens,
+        "total_cost": trace.total_cost,
+        "flow_id": trace.flow_id,
+        "session_id": trace.session_id or str(trace.id),
+        "input": summary.input if summary else None,
+        "output": summary.output if summary else None,
+    }
 
 
 async def fetch_trace_summary_data(session: AsyncSession, trace_ids: list[UUID]) -> dict[str, TraceSummaryData]:
@@ -79,13 +116,9 @@ async def fetch_trace_summary_data(session: AsyncSession, trace_ids: list[UUID])
         rows_by_trace.setdefault(str(row[0]), []).append(row)
 
     for trace_id_str, trace_rows in rows_by_trace.items():
-        total_tokens = 0
-        for row in trace_rows:
-            span_id = row[1]
-            if span_id not in parent_ids:
-                attrs = row[7] or {}
-                token_val = attrs.get("llm.usage.total_tokens") or attrs.get("total_tokens") or 0
-                total_tokens += safe_int_tokens(token_val)
+        span_ids = [row[1] for row in trace_rows]
+        attributes_by_id = {row[1]: (row[7] or {}) for row in trace_rows}
+        total_tokens = compute_leaf_token_total(span_ids, parent_ids, attributes_by_id)
 
         io_rows = [(r[0], r[2], r[3], r[4], r[5], r[6]) for r in trace_rows]
         io_data = extract_trace_io_from_rows(io_rows)
@@ -163,22 +196,11 @@ async def fetch_traces(
             total_pages = math.ceil(total_count / size) if total_count > 0 else 0
             trace_summaries = []
             for trace in traces:
-                tid = str(trace.id)
-                summary = summary_map.get(tid)
-                total_tokens = summary.total_tokens if summary else trace.total_tokens
+                summary = summary_map.get(str(trace.id))
+                effective_tokens = summary.total_tokens if summary else trace.total_tokens
                 trace_summaries.append(
                     TraceSummaryRead(
-                        id=trace.id,
-                        name=trace.name,
-                        status=trace.status or SpanStatus.UNSET,
-                        start_time=trace.start_time,
-                        total_latency_ms=trace.total_latency_ms,
-                        total_tokens=total_tokens,
-                        total_cost=trace.total_cost,
-                        flow_id=trace.flow_id,
-                        session_id=trace.session_id or tid,
-                        input=summary.input if summary else None,
-                        output=summary.output if summary else None,
+                        **_trace_to_base_fields(trace, effective_tokens, summary),
                     )
                 )
 
@@ -214,26 +236,21 @@ async def fetch_single_trace(user_id: UUID, trace_id: UUID) -> TraceRead | None:
         span_tree = build_span_tree(list(spans))
 
         parent_ids = {s.parent_span_id for s in spans if s.parent_span_id}
-        total_tokens = sum(
-            safe_int_tokens(
-                (s.attributes or {}).get("llm.usage.total_tokens") or (s.attributes or {}).get("total_tokens") or 0
-            )
-            for s in spans
-            if s.id not in parent_ids
+        span_ids = [s.id for s in spans]
+        attributes_by_id = {s.id: (s.attributes or {}) for s in spans}
+        computed_tokens = compute_leaf_token_total(span_ids, parent_ids, attributes_by_id)
+
+        effective_tokens = computed_tokens or trace.total_tokens
+
+        # Build a lightweight summary so _trace_to_base_fields can supply io_data.
+        io_summary = TraceSummaryData(
+            total_tokens=effective_tokens,
+            input=io_data.get("input"),
+            output=io_data.get("output"),
         )
 
         return TraceRead(
-            id=trace.id,
-            name=trace.name,
-            status=trace.status or SpanStatus.UNSET,
-            start_time=trace.start_time,
+            **_trace_to_base_fields(trace, effective_tokens, io_summary),
             end_time=trace.end_time,
-            total_latency_ms=trace.total_latency_ms,
-            total_tokens=total_tokens or trace.total_tokens,
-            total_cost=trace.total_cost,
-            flow_id=trace.flow_id,
-            session_id=trace.session_id or str(trace.id),
-            input=io_data.get("input"),
-            output=io_data.get("output"),
             spans=span_tree,
         )

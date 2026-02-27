@@ -253,3 +253,32 @@ def extract_trace_io_from_rows(rows: list[Any]) -> TraceIO:
         "input": {"input_value": input_value} if input_value else None,
         "output": output_value,
     }
+
+
+def compute_leaf_token_total(
+    span_ids: list[Any],
+    parent_ids: set[Any],
+    attributes_by_id: dict[Any, dict[str, Any]],
+) -> int:
+    """Sum token counts from leaf spans only, avoiding double-counting in nested hierarchies.
+
+    A leaf span is one whose ID does not appear as a ``parent_span_id`` of any
+    other span in the same trace.  Counting only leaves prevents tokens from
+    being added at every level of a nested LLM call chain.
+
+    Args:
+        span_ids: Ordered list of span IDs to consider.
+        parent_ids: Set of IDs that are referenced as a parent by at least one
+            other span in the same trace.
+        attributes_by_id: Mapping of span ID to its attributes dict.
+
+    Returns:
+        Total token count as a non-negative integer.
+    """
+    total = 0
+    for span_id in span_ids:
+        if span_id not in parent_ids:
+            attrs = attributes_by_id.get(span_id) or {}
+            token_val = attrs.get("llm.usage.total_tokens") or attrs.get("total_tokens") or 0
+            total += safe_int_tokens(token_val)
+    return total
