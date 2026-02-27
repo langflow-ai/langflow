@@ -15,6 +15,8 @@ from uuid import UUID, uuid4
 from langchain.callbacks.base import BaseCallbackHandler
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from langchain.schema import AgentAction, AgentFinish, LLMResult
     from langchain_core.documents import Document
     from langchain_core.messages import BaseMessage
@@ -74,6 +76,30 @@ class NativeCallbackHandler(BaseCallbackHandler):
         """Clean up tracking data for a completed run."""
         self._spans.pop(run_id, None)
 
+    def _extract_name(self, serialized: dict[str, Any], fallback: str) -> str:
+        """Extract a display name from a serialized LangChain component dict.
+
+        Tries ``serialized["name"]`` first, then the last element of
+        ``serialized["id"]``, and finally falls back to *fallback*.
+        """
+        serialized = serialized or {}
+        return serialized.get("name") or (serialized.get("id", [fallback])[-1] if serialized.get("id") else fallback)
+
+    def _handle_error(self, run_id: UUID, error: BaseException) -> None:
+        """End a span with an error and clean up the run.
+
+        Shared implementation for on_llm_error, on_chain_error,
+        on_tool_error, and on_retriever_error.
+        """
+        span_id = self._get_span_id(run_id)
+        latency_ms = self._calculate_latency(run_id)
+        self.tracer.end_langchain_span(
+            span_id=span_id,
+            error=str(error),
+            latency_ms=latency_ms,
+        )
+        self._cleanup_run(run_id)
+
     # LLM callbacks
     def on_llm_start(
         self,
@@ -88,8 +114,7 @@ class NativeCallbackHandler(BaseCallbackHandler):
     ) -> None:
         """Called when LLM starts running."""
         span_id = self._get_span_id(run_id)
-        serialized = serialized or {}
-        operation = serialized.get("name") or (serialized.get("id", ["LLM"])[-1] if serialized.get("id") else "LLM")
+        operation = self._extract_name(serialized, "LLM")
         model_name = kwargs.get("invocation_params", {}).get("model_name") or kwargs.get("invocation_params", {}).get(
             "model"
         )
@@ -119,10 +144,7 @@ class NativeCallbackHandler(BaseCallbackHandler):
     ) -> None:
         """Called when chat model starts running."""
         span_id = self._get_span_id(run_id)
-        serialized = serialized or {}
-        operation = serialized.get("name") or (
-            serialized.get("id", ["ChatModel"])[-1] if serialized.get("id") else "ChatModel"
-        )
+        operation = self._extract_name(serialized, "ChatModel")
         model_name = kwargs.get("invocation_params", {}).get("model_name") or kwargs.get("invocation_params", {}).get(
             "model"
         )
@@ -254,15 +276,7 @@ class NativeCallbackHandler(BaseCallbackHandler):
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
         """Called when LLM errors."""
-        span_id = self._get_span_id(run_id)
-        latency_ms = self._calculate_latency(run_id)
-
-        self.tracer.end_langchain_span(
-            span_id=span_id,
-            error=str(error),
-            latency_ms=latency_ms,
-        )
-        self._cleanup_run(run_id)
+        self._handle_error(run_id, error)
 
     # Chain callbacks
     def on_chain_start(
@@ -278,8 +292,7 @@ class NativeCallbackHandler(BaseCallbackHandler):
     ) -> None:
         """Called when chain starts running."""
         span_id = self._get_span_id(run_id)
-        serialized = serialized or {}
-        name = serialized.get("name") or (serialized.get("id", ["Chain"])[-1] if serialized.get("id") else "Chain")
+        name = self._extract_name(serialized, "Chain")
 
         self.tracer.add_langchain_span(
             span_id=span_id,
@@ -317,15 +330,7 @@ class NativeCallbackHandler(BaseCallbackHandler):
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
         """Called when chain errors."""
-        span_id = self._get_span_id(run_id)
-        latency_ms = self._calculate_latency(run_id)
-
-        self.tracer.end_langchain_span(
-            span_id=span_id,
-            error=str(error),
-            latency_ms=latency_ms,
-        )
-        self._cleanup_run(run_id)
+        self._handle_error(run_id, error)
 
     # Tool callbacks
     def on_tool_start(
@@ -342,8 +347,7 @@ class NativeCallbackHandler(BaseCallbackHandler):
     ) -> None:
         """Called when tool starts running."""
         span_id = self._get_span_id(run_id)
-        serialized = serialized or {}
-        name = serialized.get("name") or "Tool"
+        name = self._extract_name(serialized, "Tool")
 
         self.tracer.add_langchain_span(
             span_id=span_id,
@@ -381,15 +385,7 @@ class NativeCallbackHandler(BaseCallbackHandler):
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
         """Called when tool errors."""
-        span_id = self._get_span_id(run_id)
-        latency_ms = self._calculate_latency(run_id)
-
-        self.tracer.end_langchain_span(
-            span_id=span_id,
-            error=str(error),
-            latency_ms=latency_ms,
-        )
-        self._cleanup_run(run_id)
+        self._handle_error(run_id, error)
 
     # Agent callbacks
     def on_agent_action(
@@ -428,10 +424,7 @@ class NativeCallbackHandler(BaseCallbackHandler):
     ) -> None:
         """Called when retriever starts running."""
         span_id = self._get_span_id(run_id)
-        serialized = serialized or {}
-        name = serialized.get("name") or (
-            serialized.get("id", ["Retriever"])[-1] if serialized.get("id") else "Retriever"
-        )
+        name = self._extract_name(serialized, "Retriever")
 
         self.tracer.add_langchain_span(
             span_id=span_id,
@@ -443,7 +436,7 @@ class NativeCallbackHandler(BaseCallbackHandler):
 
     def on_retriever_end(
         self,
-        documents: list[Document],
+        documents: Sequence[Document],
         *,
         run_id: UUID,
         parent_run_id: UUID | None = None,  # noqa: ARG002
@@ -476,12 +469,4 @@ class NativeCallbackHandler(BaseCallbackHandler):
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
         """Called when retriever errors."""
-        span_id = self._get_span_id(run_id)
-        latency_ms = self._calculate_latency(run_id)
-
-        self.tracer.end_langchain_span(
-            span_id=span_id,
-            error=str(error),
-            latency_ms=latency_ms,
-        )
-        self._cleanup_run(run_id)
+        self._handle_error(run_id, error)
