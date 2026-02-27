@@ -210,20 +210,19 @@ class NativeTracer(BaseTracer):
 
         # Store completed span for batch write
         self.completed_spans.append(
-            {
-                "id": trace_id,
-                "name": span_info["name"],
-                "span_type": self._map_trace_type(span_info["trace_type"]),
-                "inputs": span_info["inputs"],
-                "outputs": serialize(output_data) if output_data else None,
-                "start_time": start_time,
-                "end_time": end_time,
-                "latency_ms": latency_ms,
-                "status": SpanStatus.ERROR if error else SpanStatus.OK,
-                "error": str(error) if error else None,
-                "attributes": attributes,
-                "span_source": "component",
-            }
+            self._build_completed_span(
+                span_id=trace_id,
+                name=span_info["name"],
+                span_type=self._map_trace_type(span_info["trace_type"]),
+                inputs=span_info["inputs"],
+                outputs=serialize(output_data) if output_data else None,
+                start_time=start_time,
+                end_time=end_time,
+                latency_ms=latency_ms,
+                error=str(error) if error else None,
+                attributes=attributes,
+                span_source="component",
+            )
         )
 
         # Clear current component ID
@@ -480,22 +479,71 @@ class NativeTracer(BaseTracer):
 
         # Store completed span for batch write
         self.completed_spans.append(
-            {
-                "id": span_info["id"],
-                "name": span_info["name"],
-                "span_type": self._map_trace_type(span_info["span_type"]),
-                "inputs": span_info["inputs"],
-                "outputs": serialize(outputs) if outputs else None,
-                "start_time": start_time,
-                "end_time": end_time,
-                "latency_ms": latency_ms or actual_latency,
-                "status": SpanStatus.ERROR if error else SpanStatus.OK,
-                "error": error,
-                "attributes": lc_attributes,
-                "parent_span_id": span_info.get("parent_span_id"),
-                "span_source": "langchain",
-            }
+            self._build_completed_span(
+                span_id=span_info["id"],
+                name=span_info["name"],
+                span_type=self._map_trace_type(span_info["span_type"]),
+                inputs=span_info["inputs"],
+                outputs=serialize(outputs) if outputs else None,
+                start_time=start_time,
+                end_time=end_time,
+                latency_ms=latency_ms or actual_latency,
+                error=error,
+                attributes=lc_attributes,
+                span_source="langchain",
+                parent_span_id=span_info.get("parent_span_id"),
+            )
         )
+
+    @staticmethod
+    def _build_completed_span(
+        *,
+        span_id: str,
+        name: str,
+        span_type: SpanType,
+        inputs: Any,
+        outputs: Any = None,
+        start_time: datetime,
+        end_time: datetime,
+        latency_ms: int,
+        error: str | None = None,
+        attributes: dict[str, Any] | None = None,
+        span_source: str,
+        parent_span_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Build a completed span dict for storage.
+
+        Args:
+            span_id: Unique span identifier.
+            name: Human-readable span name.
+            span_type: Categorised span type enum value.
+            inputs: Serialised input data.
+            outputs: Serialised output data (or None).
+            start_time: UTC datetime when the span started.
+            end_time: UTC datetime when the span ended.
+            latency_ms: Execution duration in milliseconds.
+            error: Error message string, or None on success.
+            attributes: OTel-style key/value attributes dict.
+            span_source: Origin of the span ("component" or "langchain").
+            parent_span_id: Optional parent span ID for nested spans.
+        """
+        span: dict[str, Any] = {
+            "id": span_id,
+            "name": name,
+            "span_type": span_type,
+            "inputs": inputs,
+            "outputs": outputs,
+            "start_time": start_time,
+            "end_time": end_time,
+            "latency_ms": latency_ms,
+            "status": SpanStatus.ERROR if error else SpanStatus.OK,
+            "error": error,
+            "attributes": attributes or {},
+            "span_source": span_source,
+        }
+        if parent_span_id is not None:
+            span["parent_span_id"] = parent_span_id
+        return span
 
     @staticmethod
     def _map_trace_type(trace_type: str) -> SpanType:
