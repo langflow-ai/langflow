@@ -1,20 +1,20 @@
-
-from pathlib import Path
 import subprocess
 import tempfile
+from pathlib import Path
 
 # Simulate the sed pattern from release.yml
-SED_PATTERN = "s|\"langflow-base[^\"]*\"|\"langflow-base[complete]>=0.8.0.rc3,<1.dev0\"|"
+SED_PATTERN = 's|"langflow-base[^"]*"|"langflow-base[complete]>=0.8.0.rc3,<1.dev0"|'
 
 TEST_CASES = [
-    "    \"langflow-base[complete]~=0.8.0\",",
-    "    \"langflow-base~=0.8.0\",",
-    "    \"langflow-base[openai]~=0.8.0\",",
-    "    \"langflow-base[complete]>=0.8.0,<1.dev0\",",
-    "    \"langflow-base[complete]>=0.8.0.rc2,<1.dev0\",",
+    '    "langflow-base[complete]~=0.8.0",',
+    '    "langflow-base~=0.8.0",',
+    '    "langflow-base[openai]~=0.8.0",',
+    '    "langflow-base[complete]>=0.8.0,<1.dev0",',
+    '    "langflow-base[complete]>=0.8.0.rc2,<1.dev0",',
 ]
 
 EXPECTED = '    "langflow-base[complete]>=0.8.0.rc3,<1.dev0",'
+
 
 def run_sed(input_line):
     with tempfile.NamedTemporaryFile(mode="w+", delete=False) as f:
@@ -22,20 +22,20 @@ def run_sed(input_line):
         fname = f.name
     try:
         # Use absolute path for sed
-        sed_path = subprocess.run(["which", "sed"], capture_output=True, text=True).stdout.strip()
-        result = subprocess.run([
-            sed_path, SED_PATTERN, fname
-        ], capture_output=True, text=True, check=True)
+        sed_path = subprocess.run(["which", "sed"], check=False, capture_output=True, text=True).stdout.strip()
+        result = subprocess.run([sed_path, SED_PATTERN, fname], capture_output=True, text=True, check=True)
         return result.stdout.strip()
     finally:
         Path(fname).unlink()
+
 
 def test_all():
     for i, case in enumerate(TEST_CASES):
         output = run_sed(case)
         if output != EXPECTED:
-            raise AssertionError(f"Test case {i+1} failed: {case} → {output}")
+            raise AssertionError(f"Test case {i + 1} failed: {case} → {output}")
     print("All sed constraint preservation tests passed.")
+
 
 if __name__ == "__main__":
     test_all()
