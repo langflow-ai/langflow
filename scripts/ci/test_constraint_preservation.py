@@ -29,7 +29,7 @@ def run_sed(input_line):
             check=True,
         ).stdout.strip()
         result = subprocess.run(
-            [sed_path, SED_PATTERN, fname],  # noqa: S603
+            [sed_path, SED_PATTERN, fname],
             capture_output=True,
             text=True,
             check=True,
@@ -43,7 +43,7 @@ def test_all():
     for i, case in enumerate(TEST_CASES):
         output = run_sed(case)
         if output != EXPECTED:
-            msg = f"Test case {i+1} failed: {case} → {output}"
+            msg = f"Test case {i + 1} failed: {case} → {output}"
             raise AssertionError(msg)
     print("All sed constraint preservation tests passed.")
 
