@@ -142,11 +142,11 @@ export default function DocsChatbot({
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--ifm-toc-border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <strong>Docs assistant</strong>
+              <strong>Langflow-powered chatbot</strong>
               <button type="button" aria-label="Close" onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20 }}>×</button>
             </div>
             <div style={{ flex: 1, overflowY: 'auto', padding: 12, minHeight: 200 }}>
-              {messages.length === 0 && <div style={{ color: 'var(--ifm-color-content-secondary)', fontSize: 14 }}>Ask a question about the docs.</div>}
+              {messages.length === 0 && <div style={{ color: 'var(--ifm-color-content-secondary)', fontSize: 14 }}>Ask a question about Langflow.</div>}
               {messages.map((msg, i) => (
                 <div key={i} style={{ marginBottom: 12, textAlign: msg.role === 'user' ? 'right' : 'left' }}>
                   <span
