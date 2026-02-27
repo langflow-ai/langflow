@@ -63,8 +63,8 @@ test(
       page.locator('[data-testid^="chat-message-AI"]').first(),
     ).not.toBeEmpty();
 
-    // close the playground
-    await page.getByRole("button", { name: "Playground", exact: true }).click();
+    // close the playground (fullscreen covers the toolbar, use the close button)
+    await page.getByTestId("playground-close-button").click();
 
     await disableInspectPanel(page);
     await page.getByText("Chat Input", { exact: true }).click();
@@ -114,7 +114,7 @@ test(
       page.locator('[data-testid^="chat-message-TestSenderNameAI"]').first(),
     ).not.toBeEmpty();
 
-    await page.getByTestId("playground-btn-flow-io").last().click();
+    await page.getByTestId("playground-close-button").click();
     await enableInspectPanel(page);
   },
 );
