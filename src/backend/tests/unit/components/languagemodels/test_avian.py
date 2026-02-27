@@ -244,7 +244,7 @@ def test_avian_get_exception_message():
     assert result is None or isinstance(result, str)
 
 
-def test_avian_update_build_config(mocker):
+def test_avian_update_build_config():
     component = AvianModelComponent()
     component.api_key = None
     build_config = {"model_name": {"options": []}}
