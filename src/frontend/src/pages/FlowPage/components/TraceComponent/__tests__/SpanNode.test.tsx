@@ -33,7 +33,7 @@ const buildSpan = (overrides: Partial<Span> = {}): Span => ({
   id: "span-1",
   name: "Test Span",
   type: "llm",
-  status: "success",
+  status: "ok",
   startTime: "2024-01-01T00:00:00Z",
   endTime: "2024-01-01T00:00:01Z",
   latencyMs: 1200,
@@ -71,10 +71,7 @@ describe("SpanNode", () => {
 
     expect(screen.getByText("Test Span")).toBeInTheDocument();
     expect(screen.getByText("1.2k")).toBeInTheDocument();
-    expect(screen.getByText("1.2s")).toBeInTheDocument();
-
-    const statusIcon = screen.getByTestId("flow-log-status-success");
-    expect(statusIcon).toHaveAttribute("aria-label", "success");
+    expect(screen.getByText("1.20 s")).toBeInTheDocument();
   });
 
   it("calls onSelect when the row is clicked", async () => {

@@ -8,18 +8,17 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Loading } from "@/components/ui/loading";
 import { useGetTraceQuery } from "@/controllers/API/queries/traces";
+import { formatSmartTimestamp } from "@/utils/dateTime";
 import { cn } from "@/utils/utils";
 import { SpanDetail } from "./SpanDetail";
 import { SpanTree } from "./SpanTree";
 import {
+  formatCost,
   formatIOPreview,
-  formatTimestamp,
-  formatTotalCost,
   formatTotalLatency,
   getStatusVariant,
 } from "./traceViewHelpers";
-import { TraceAccordionItemProps } from "./traceViewTypes";
-import { Span } from "./types";
+import { Span, TraceAccordionItemProps } from "./types";
 
 export function TraceAccordionItem({
   traceId,
@@ -104,7 +103,7 @@ export function TraceAccordionItem({
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
               <IconComponent name="Calendar" className="h-3 w-3" />
-              {formatTimestamp(traceStartTime)}
+              {formatSmartTimestamp(traceStartTime)}
             </span>
             <span className="flex items-center gap-1">
               <IconComponent name="Clock" className="h-3 w-3" />
@@ -119,7 +118,7 @@ export function TraceAccordionItem({
             {totalCost > 0 && (
               <span className="flex items-center gap-1">
                 <IconComponent name="DollarSign" className="h-3 w-3" />
-                {formatTotalCost(totalCost)}
+                {formatCost(totalCost)}
               </span>
             )}
           </div>

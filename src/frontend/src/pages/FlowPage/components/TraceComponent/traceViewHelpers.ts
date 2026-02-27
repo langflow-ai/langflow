@@ -1,6 +1,4 @@
-import { formatSmartTimestamp } from "@/utils/dateTime";
-import { StatusIconProps } from "./traceViewTypes";
-import type { Span, SpanType } from "./types";
+import type { Span, SpanType, StatusIconProps } from "./types";
 
 export const getSpanIcon = (type: SpanType): string => {
   const iconMap: Record<SpanType, string> = {
@@ -45,11 +43,6 @@ export const getSpanStatusLabel = (status: Span["status"]): string => {
   }
 };
 
-export const formatSpanNodeLatency = (ms: number): string => {
-  if (ms < 1000) return `${ms}ms`;
-  return `${(ms / 1000).toFixed(1)}s`;
-};
-
 export const formatTokens = (tokens: number | undefined): string | null => {
   if (!tokens) return null;
   if (tokens < 1000) return `${tokens}`;
@@ -77,12 +70,6 @@ export const formatCost = (cost: number | undefined): string => {
   return `$${cost.toFixed(4)}`;
 };
 
-export const formatSpanDetailLatency = (ms: number): string => {
-  if (ms < 1000) return `${ms}ms`;
-  if (ms < 60000) return `${(ms / 1000).toFixed(2)}s`;
-  return `${(ms / 60000).toFixed(2)}m`;
-};
-
 export const formatJsonData = (data: Record<string, unknown>): string => {
   try {
     return JSON.stringify(data, null, 2);
@@ -97,17 +84,15 @@ export const formatTotalCost = (cost: number): string => {
   return `$${cost.toFixed(4)}`;
 };
 
-export const formatTotalLatency = (ms: number): string => {
-  if (ms < 1000) return `${ms}ms`;
-  return `${(ms / 1000).toFixed(2)}s`;
-};
-
-export const formatTimestamp = (timestamp: string): string => {
-  return formatSmartTimestamp(timestamp);
+export const formatTotalLatency = (latencyMs: number | null): string => {
+  if (latencyMs === null) return "";
+  if (!Number.isFinite(latencyMs)) return "";
+  if (latencyMs < 1000) return `${Math.round(latencyMs)} ms`;
+  return `${(latencyMs / 1000).toFixed(2)} s`;
 };
 
 export const formatIOPreview = (
-  data: Record<string, unknown> | null,
+  data: Record<string, unknown> | string | null,
 ): string => {
   if (!data) return "N/A";
 

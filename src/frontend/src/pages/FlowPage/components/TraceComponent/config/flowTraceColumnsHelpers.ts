@@ -32,35 +32,6 @@ export const pickFirstNumber = (...candidates: unknown[]): number | null => {
   return null;
 };
 
-export const formatLatency = (latencyMs: number | null): string => {
-  if (latencyMs === null) return "";
-  if (!Number.isFinite(latencyMs)) return "";
-  if (latencyMs < 1000) return `${Math.round(latencyMs)} ms`;
-  return `${(latencyMs / 1000).toFixed(2)} s`;
-};
-
-export const isNegativeStatus = (status: string): boolean => {
-  const normalized = status.toLowerCase();
-  return (
-    normalized === "error" ||
-    normalized === "failed" ||
-    normalized.includes("fail") ||
-    normalized.includes("error") ||
-    normalized.includes("exception")
-  );
-};
-
-export const isPositiveStatus = (status: string): boolean => {
-  const normalized = status.toLowerCase();
-  return (
-    normalized === "success" ||
-    normalized === "completed" ||
-    normalized === "ok" ||
-    normalized.includes("success") ||
-    normalized.includes("completed")
-  );
-};
-
 export const formatRunValue = (
   flowName: string | null | undefined,
   flowId: string | null | undefined,

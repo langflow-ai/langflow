@@ -37,6 +37,7 @@ import { cn } from "@/utils/utils";
 import { createFlowTracesColumns } from "./config/flowTraceColumns";
 import { TraceDetailView } from "./TraceDetailView";
 import { downloadJson, endOfDay, startOfDay } from "./traceViewHelpers";
+import { RenderGroupedSessionType } from "./types";
 
 export function FlowInsightsContent({
   flowId,
@@ -52,7 +53,6 @@ export function FlowInsightsContent({
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const [pageIndex, setPageIndex] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-  const [rows, setRows] = useState<TraceListItem[]>([]);
   const [searchParams] = useSearchParams();
   const [tracePanelOpen, setTracePanelOpen] = useState(false);
   const [tracePanelTraceId, setTracePanelTraceId] = useState<string | null>(
@@ -104,6 +104,8 @@ export function FlowInsightsContent({
     { enabled: !!resolvedFlowId },
   );
 
+  const rows = tracesData?.traces ?? [];
+
   useEffect(() => {
     if (!refreshOnMount) return;
     refetch();
@@ -114,12 +116,6 @@ export function FlowInsightsContent({
     setTracePanelTraceId(initialTraceId);
     setTracePanelOpen(true);
   }, [initialTraceId]);
-
-  useEffect(() => {
-    if (!tracesData) return;
-
-    setRows(tracesData.traces ?? []);
-  }, [tracesData]);
 
   const groupedRows = useMemo(() => {
     if (!groupBySession) return [] as Array<[string, TraceListItem[]]>;
@@ -134,7 +130,7 @@ export function FlowInsightsContent({
       }
     });
     return Array.from(groups.entries());
-  }, [groupBySession, rows]);
+  }, [groupBySession, tracesData]);
 
   const expandedSessionIds = useMemo(
     () => groupedRows.map(([sessionId]) => sessionId),
@@ -178,7 +174,7 @@ export function FlowInsightsContent({
     columns,
     expandedSessionIds,
     handleCellClicked,
-  }) {
+  }: RenderGroupedSessionType) {
     if (groupedRows.length === 0 && !isLoading) {
       return (
         <div className="flex h-full w-full items-center justify-center rounded-md border">

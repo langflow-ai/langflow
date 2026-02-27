@@ -4,13 +4,13 @@ import { Badge } from "@/components/ui/badge";
 import {
   formatCost,
   formatJsonData,
-  formatSpanDetailLatency,
+  formatTotalLatency,
   getSpanStatusLabel,
   getSpanTypeLabel,
   getStatusIconProps,
   getStatusVariant,
 } from "./traceViewHelpers";
-import type { SpanDetailProps } from "./traceViewTypes";
+import type { SpanDetailProps } from "./types";
 
 /**
  * Detail panel showing full information about a selected span
@@ -88,7 +88,7 @@ export function SpanDetail({ span }: SpanDetailProps) {
         <div className="mb-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
           <MetricCard
             label="Latency"
-            value={formatSpanDetailLatency(span.latencyMs)}
+            value={formatTotalLatency(span.latencyMs)}
             icon="Clock"
           />
           {(hasTokenUsage || isLlmSpan) && (

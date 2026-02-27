@@ -2,13 +2,13 @@ import IconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/utils/utils";
 import {
-  formatSpanNodeLatency,
   formatTokens,
+  formatTotalLatency,
   getSpanIcon,
   getStatusIconProps,
   getStatusVariant,
 } from "./traceViewHelpers";
-import type { SpanNodeProps } from "./traceViewTypes";
+import { SpanNodeProps } from "./types";
 
 /**
  * Single span row in the trace tree
@@ -93,7 +93,7 @@ export function SpanNode({
 
       {/* Latency */}
       <span className="min-w-[48px] text-right text-xs text-muted-foreground">
-        {formatSpanNodeLatency(span.latencyMs)}
+        {formatTotalLatency(span.latencyMs)}
       </span>
 
       {/* Status badge */}

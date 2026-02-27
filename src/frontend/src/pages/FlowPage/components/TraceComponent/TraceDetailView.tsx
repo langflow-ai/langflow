@@ -6,8 +6,7 @@ import { useGetTraceQuery } from "@/controllers/API/queries/traces";
 import { SpanDetail } from "./SpanDetail";
 import { SpanTree } from "./SpanTree";
 import { formatTotalLatency } from "./traceViewHelpers";
-import { TraceDetailViewProps } from "./traceViewTypes";
-import { Span } from "./types";
+import { Span, TraceDetailViewProps } from "./types";
 
 /**
  * Single-trace detail view used in the right-side panel.
