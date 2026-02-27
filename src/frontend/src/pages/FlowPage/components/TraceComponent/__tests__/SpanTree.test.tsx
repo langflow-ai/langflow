@@ -1,7 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { SpanTree } from "../SpanTree";
-import type { Span } from "../types";
+import { buildSpan } from "./spanTestUtils";
 
 jest.mock("@/components/common/genericIconComponent", () => ({
   __esModule: true,
@@ -29,24 +29,16 @@ jest.mock("@/components/ui/badge", () => ({
   ),
 }));
 
-const buildSpan = (overrides: Partial<Span> = {}): Span => ({
+const rootDefaults = {
   id: "root-1",
   name: "Root Span",
-  type: "chain",
-  status: "ok",
-  startTime: "2024-01-01T00:00:00Z",
-  endTime: "2024-01-01T00:00:01Z",
-  latencyMs: 120,
-  inputs: {},
-  outputs: {},
-  children: [],
-  ...overrides,
-});
+  type: "chain" as const,
+};
 
 describe("SpanTree", () => {
   it("renders a tree and expands root spans by default", () => {
     const child = buildSpan({ id: "child-1", name: "Child Span" });
-    const root = buildSpan({ children: [child] });
+    const root = buildSpan({ ...rootDefaults, children: [child] });
 
     render(
       <SpanTree
@@ -66,7 +58,7 @@ describe("SpanTree", () => {
   it("collapses and expands children when toggled", async () => {
     const user = userEvent.setup();
     const child = buildSpan({ id: "child-1", name: "Child Span" });
-    const root = buildSpan({ children: [child] });
+    const root = buildSpan({ ...rootDefaults, children: [child] });
 
     render(
       <SpanTree
@@ -90,7 +82,7 @@ describe("SpanTree", () => {
     const user = userEvent.setup();
     const onSelectSpan = jest.fn();
     const child = buildSpan({ id: "child-1", name: "Child Span" });
-    const root = buildSpan({ children: [child] });
+    const root = buildSpan({ ...rootDefaults, children: [child] });
 
     render(
       <SpanTree
@@ -107,7 +99,7 @@ describe("SpanTree", () => {
 
   it("marks the selected span via aria-selected", () => {
     const child = buildSpan({ id: "child-1", name: "Child Span" });
-    const root = buildSpan({ children: [child] });
+    const root = buildSpan({ ...rootDefaults, children: [child] });
 
     render(
       <SpanTree

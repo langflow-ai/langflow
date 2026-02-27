@@ -2,7 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { type ReactNode } from "react";
 import { SpanNode } from "../SpanNode";
-import type { Span } from "../types";
+import { buildSpan } from "./spanTestUtils";
 
 jest.mock("@/components/common/genericIconComponent", () => ({
   __esModule: true,
@@ -28,33 +28,18 @@ jest.mock("@/components/ui/badge", () => ({
   Badge: ({ children }: { children: ReactNode }) => <span>{children}</span>,
 }));
 
-const buildSpan = (overrides: Partial<Span> = {}): Span => ({
-  id: "span-1",
-  name: "Test Span",
-  type: "llm",
-  status: "ok",
-  startTime: "2024-01-01T00:00:00Z",
-  endTime: "2024-01-01T00:00:01Z",
-  latencyMs: 1200,
-  inputs: {},
-  outputs: {},
-  error: undefined,
-  modelName: "gpt-test",
-  tokenUsage: {
-    promptTokens: 10,
-    completionTokens: 20,
-    totalTokens: 1200,
-    cost: 0.5,
-  },
-  children: [],
-  ...overrides,
-});
-
 describe("SpanNode", () => {
   it("renders name, tokens, latency, and status", () => {
     render(
       <SpanNode
-        span={buildSpan()}
+        span={buildSpan({
+          tokenUsage: {
+            promptTokens: 10,
+            completionTokens: 20,
+            totalTokens: 1200,
+            cost: 0.5,
+          },
+        })}
         depth={0}
         isExpanded={true}
         isSelected={false}
@@ -70,7 +55,7 @@ describe("SpanNode", () => {
 
     expect(screen.getByText("Test Span")).toBeInTheDocument();
     expect(screen.getByText("1.2k")).toBeInTheDocument();
-    expect(screen.getByText("1.20s")).toBeInTheDocument();
+    expect(screen.getByText("1.20 s")).toBeInTheDocument();
 
     const statusIcon = screen.getByTestId("flow-log-status-ok");
     expect(statusIcon).toHaveAttribute("aria-label", "ok");

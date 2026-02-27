@@ -12,7 +12,23 @@ from langflow.serialization.serialization import serialize
 
 
 class SpanKind(str, Enum):
+    """OpenTelemetry SpanKind values.
+
+    Describes the relationship between the span, its parents, and its children
+    in a distributed trace.
+
+    - INTERNAL: Default. Represents an internal operation within an application.
+    - CLIENT: Represents a request made to some remote service.
+    - SERVER: Represents a request received from a remote client.
+    - PRODUCER: Represents the initiation of an asynchronous request.
+    - CONSUMER: Represents the processing of an asynchronous message.
+    """
+
     INTERNAL = "INTERNAL"
+    CLIENT = "CLIENT"
+    SERVER = "SERVER"
+    PRODUCER = "PRODUCER"
+    CONSUMER = "CONSUMER"
 
 
 class SpanType(str, Enum):

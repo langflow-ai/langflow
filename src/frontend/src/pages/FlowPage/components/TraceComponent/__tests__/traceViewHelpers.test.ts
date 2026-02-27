@@ -92,6 +92,21 @@ describe("traceViewHelpers", () => {
       const revokeOrder = revokeSpy.mock.invocationCallOrder[0];
       expect(revokeOrder).toBeGreaterThan(clickOrder);
     });
+
+    it("revokes the object URL even when click() throws (no memory leak)", () => {
+      jest
+        .spyOn(HTMLAnchorElement.prototype, "click")
+        .mockImplementation(() => {
+          throw new Error("click failed");
+        });
+      const revokeSpy = (URL as unknown as { revokeObjectURL: jest.Mock })
+        .revokeObjectURL;
+
+      expect(() => downloadJson("trace.json", { a: 1 })).toThrow(
+        "click failed",
+      );
+      expect(revokeSpy).toHaveBeenCalledWith("blob:mock-url");
+    });
   });
 
   describe("startOfDay", () => {
@@ -174,9 +189,12 @@ describe("traceViewHelpers", () => {
       expect(formatTokens(1250)).toBe("1.3k");
     });
 
-    it("returns null for empty input", () => {
+    it("returns null for undefined input", () => {
       expect(formatTokens(undefined)).toBeNull();
-      expect(formatTokens(0)).toBeNull();
+    });
+
+    it("formats zero tokens as a string", () => {
+      expect(formatTokens(0)).toBe("0");
     });
   });
 

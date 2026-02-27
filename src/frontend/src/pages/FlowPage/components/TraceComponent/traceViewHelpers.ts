@@ -167,10 +167,12 @@ export const downloadJson = (fileName: string, value: unknown) => {
   anchor.href = url;
   anchor.download = fileName;
   document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-
-  URL.revokeObjectURL(url);
+  try {
+    anchor.click();
+  } finally {
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  }
 };
 
 export const startOfDay = (date: Date) => {

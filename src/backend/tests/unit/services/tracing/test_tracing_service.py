@@ -1,5 +1,6 @@
 import asyncio
 import uuid
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -46,8 +47,8 @@ class MockTracer(BaseTracer):
         trace_id: str,
         trace_name: str,
         trace_type: str,
-        inputs: dict[str, any],
-        metadata: dict[str, any] | None = None,
+        inputs: dict[str, Any],
+        metadata: dict[str, Any] | None = None,
         vertex=None,
     ) -> None:
         self.add_trace_list.append(
@@ -65,7 +66,7 @@ class MockTracer(BaseTracer):
         self,
         trace_id: str,
         trace_name: str,
-        outputs: dict[str, any] | None = None,
+        outputs: dict[str, Any] | None = None,
         error: Exception | None = None,
         logs=(),
     ) -> None:
@@ -81,10 +82,10 @@ class MockTracer(BaseTracer):
 
     def end(
         self,
-        inputs: dict[str, any],
-        outputs: dict[str, any],
+        inputs: dict[str, Any],
+        outputs: dict[str, Any],
         error: Exception | None = None,
-        metadata: dict[str, any] | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> None:
         self.end_called = True
         self.inputs_param = inputs
