@@ -327,14 +327,24 @@ class TestWaitForFlush:
 
 class TestFlushToDatabase:
     @pytest.mark.asyncio
-    async def test_flush_invalid_flow_id_returns_early(self):
+    async def test_flush_invalid_flow_id_logs_error_and_continues(self):
         tracer = _make_tracer(flow_id="not-a-uuid")
         tracer.add_trace("comp-1", "Comp (comp-1)", "chain", {})
         tracer.end_trace("comp-1", "Comp")
 
-        with patch("langflow.services.tracing.native.logger") as mock_logger:
+        mock_session = AsyncMock()
+        mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session.__aexit__ = AsyncMock(return_value=False)
+
+        with (
+            patch("langflow.services.tracing.native.logger") as mock_logger,
+            patch("lfx.services.deps.session_scope", return_value=mock_session),
+        ):
             await tracer._flush_to_database()
-        mock_logger.warning.assert_called_once()
+
+        mock_logger.error.assert_called_once()
+        # Verify it continued and attempted to persist with a sentinel flow_id
+        assert mock_session.merge.call_count >= 2
 
     @pytest.mark.asyncio
     async def test_flush_writes_trace_and_spans(self):
