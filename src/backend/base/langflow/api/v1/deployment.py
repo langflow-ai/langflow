@@ -5,7 +5,8 @@ from typing import Annotated, Any
 from urllib.parse import urlparse
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi_pagination import Params
 from lfx.services.deployment.exceptions import (
     DeploymentConflictError,
     DeploymentError,
@@ -180,10 +181,11 @@ class DeploymentProviderAccountResponse(BaseModel):
     has_api_key: bool
 
 
+
 class DeploymentProviderAccountListResponse(BaseModel):
     deployment_providers: list[DeploymentProviderAccountResponse]
     page: int = Field(default=1, ge=1)
-    page_size: int = Field(default=20, ge=1)
+    size: int = Field(default=20, ge=1)
     total: int = Field(default=0, ge=0)
 
 
@@ -191,7 +193,7 @@ class DeploymentListResponse(BaseModel):
     deployments: list["DeploymentListItemResponse"]
     deployment_type: DeploymentType | None = None
     page: int = Field(default=1, ge=1)
-    page_size: int = Field(default=20, ge=1)
+    size: int = Field(default=20, ge=1)
     total: int = Field(default=0, ge=0)
 
 
@@ -200,9 +202,17 @@ class DeploymentListItemResponse(BaseModel):
     resource_key: str
     type: DeploymentType
     name: str
+    attached_count: int = Field(default=0, ge=0)
     created_at: datetime | None = None
     updated_at: datetime | None = None
     provider_data: dict | None = None
+
+
+def _deployment_pagination_params(
+    page: Annotated[int, Query(ge=1)] = 1,
+    size: Annotated[int, Query(ge=1, le=100)] = 20,
+) -> Params:
+    return Params(page=page, size=size)
 
 
 class DetectDeploymentEnvVarsRequest(BaseModel):
@@ -414,18 +424,17 @@ async def create_provider_account(
 async def list_provider_accounts(
     user: CurrentActiveUser,
     db: DbSession,
-    page: Annotated[int, Query(ge=1)] = 1,
-    page_size: Annotated[int, Query(ge=1, le=100)] = 20,
+    params: Annotated[Params, Depends(_deployment_pagination_params)],
 ):
     provider_accounts = await list_provider_accounts_for_user(db, user_id=user.id)
     total = len(provider_accounts)
-    start = _page_offset(page, page_size)
-    end = start + page_size
+    start = _page_offset(params.page, params.size)
+    end = start + params.size
     page_items = provider_accounts[start:end]
     return DeploymentProviderAccountListResponse(
         deployment_providers=[_to_provider_account_response(item) for item in page_items],
-        page=page,
-        page_size=page_size,
+        page=params.page,
+        size=params.size,
         total=total,
     )
 
@@ -542,8 +551,8 @@ def _build_execution_lookup(
     )
 
 
-def _page_offset(page: int, page_size: int) -> int:
-    return (page - 1) * page_size
+def _page_offset(page: int, size: int) -> int:
+    return (page - 1) * size
 
 
 def _as_uuid(value: str) -> UUID | None:
@@ -816,24 +825,24 @@ async def _sync_page_with_provider(
     provider_id: UUID,
     db,
     page: int,
-    page_size: int,
+    size: int,
     deployment_type: DeploymentType | None,
-) -> tuple[list[Deployment], int]:
-    accepted_rows: list[Deployment] = []
-    cursor = _page_offset(page, page_size)
+) -> tuple[list[tuple[Deployment, int]], int]:
+    accepted_rows: list[tuple[Deployment, int]] = []
+    cursor = _page_offset(page, size)
     guard = 0
-    while len(accepted_rows) < page_size and guard < (page_size * 4 + 20):
+    while len(accepted_rows) < size and guard < (size * 4 + 20):
         guard += 1
         batch = await list_deployment_rows_page(
             db,
             user_id=user_id,
             provider_account_id=provider_id,
             offset=cursor,
-            limit=page_size - len(accepted_rows),
+            limit=size - len(accepted_rows),
         )
         if not batch:
             break
-        resource_keys = [row.resource_key for row in batch]
+        resource_keys = [row.resource_key for row, _ in batch]
         filter_options = DeploymentListFilterOptions(
             deployment_type=deployment_type,
             provider_filter={"ids": resource_keys, "names": resource_keys},
@@ -846,9 +855,9 @@ async def _sync_page_with_provider(
         )
         provider_ids = {str(item.id) for item in provider_view.deployments if item.id}
         provider_names = {item.name for item in provider_view.deployments if item.name}
-        for row in batch:
+        for row, attached_count in batch:
             if row.resource_key in provider_ids or row.resource_key in provider_names:
-                accepted_rows.append(row)
+                accepted_rows.append((row, attached_count))
                 cursor += 1
                 continue
             await delete_deployment_row_by_resource_key(
@@ -1061,20 +1070,19 @@ async def list_deployments(
     provider_id: ProviderIdQuery,
     user: CurrentActiveUser,
     db: DbSession,
-    page: Annotated[int, Query(ge=1)] = 1,
-    page_size: Annotated[int, Query(ge=1, le=100)] = 20,
+    params: Annotated[Params, Depends(_deployment_pagination_params)],
     deployment_type: Annotated[DeploymentType | None, Query()] = None,
 ):
     """List deployments for a provider account using lazy provider synchronization."""
     deployment_adapter = await _resolve_deployment_adapter(provider_id, user_id=user.id, db=db)
     try:
-        rows, total = await _sync_page_with_provider(
+        rows_with_counts, total = await _sync_page_with_provider(
             deployment_adapter=deployment_adapter,
             user_id=user.id,
             provider_id=provider_id,
             db=db,
-            page=page,
-            page_size=page_size,
+            page=params.page,
+            size=params.size,
             deployment_type=deployment_type,
         )
         deployments = [
@@ -1083,10 +1091,11 @@ async def list_deployments(
                 resource_key=row.resource_key,
                 type=deployment_type or DeploymentType.AGENT,
                 name=row.name,
+                attached_count=attached_count,
                 created_at=row.created_at,
                 updated_at=row.updated_at,
             )
-            for row in rows
+            for row, attached_count in rows_with_counts
         ]
     except InvalidDeploymentTypeError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
@@ -1097,8 +1106,8 @@ async def list_deployments(
     return DeploymentListResponse(
         deployments=deployments,
         deployment_type=deployment_type,
-        page=page,
-        page_size=page_size,
+        page=params.page,
+        size=params.size,
         total=total,
     )
 

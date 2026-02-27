@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from uuid import UUID
+from typing import TYPE_CHECKING
 
 from lfx.log import logger
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlmodel import col, delete, func, select
-from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.services.database.models.flow_history.exceptions import (
     FlowHistoryDataTooLargeError,
@@ -18,6 +17,11 @@ from langflow.services.database.models.flow_history_deployment_attachment.model 
     FlowHistoryDeploymentAttachment,
 )
 from langflow.services.deps import get_settings_service
+
+if TYPE_CHECKING:
+    from uuid import UUID
+
+    from sqlmodel.ext.asyncio.session import AsyncSession
 
 MAX_VERSION_RETRIES = 3
 
@@ -128,10 +132,10 @@ async def get_flow_history_list(
     user_id: UUID,
     limit: int = 50,
     offset: int = 0,
-    deployment_id: UUID | None = None,
+    deployment_ids: list[UUID] | None = None,
 ) -> list[FlowHistory]:
     stmt = select(FlowHistory).where(FlowHistory.flow_id == flow_id, FlowHistory.user_id == user_id)
-    if deployment_id is not None:
+    if deployment_ids:
         stmt = (
             stmt.join(
                 FlowHistoryDeploymentAttachment,
@@ -139,12 +143,42 @@ async def get_flow_history_list(
             )
             .where(
                 FlowHistoryDeploymentAttachment.user_id == user_id,
-                FlowHistoryDeploymentAttachment.deployment_id == deployment_id,
+                FlowHistoryDeploymentAttachment.deployment_id.in_(deployment_ids),
             )
             .distinct()
         )
     result = await session.exec(stmt.order_by(col(FlowHistory.version_number).desc()).offset(offset).limit(limit))
     return list(result.all())
+
+
+async def get_flow_history_counts_by_deployment_ids(
+    session: AsyncSession,
+    flow_id: UUID,
+    user_id: UUID,
+    deployment_ids: list[UUID],
+) -> dict[UUID, int]:
+    if not deployment_ids:
+        return {}
+
+    stmt = (
+        select(
+            FlowHistoryDeploymentAttachment.deployment_id,
+            func.count(func.distinct(FlowHistoryDeploymentAttachment.history_id)),
+        )
+        .join(
+            FlowHistory,
+            FlowHistory.id == FlowHistoryDeploymentAttachment.history_id,
+        )
+        .where(
+            FlowHistory.flow_id == flow_id,
+            FlowHistory.user_id == user_id,
+            FlowHistoryDeploymentAttachment.user_id == user_id,
+            FlowHistoryDeploymentAttachment.deployment_id.in_(deployment_ids),
+        )
+        .group_by(FlowHistoryDeploymentAttachment.deployment_id)
+    )
+    rows = (await session.exec(stmt)).all()
+    return {deployment_id: int(count) for deployment_id, count in rows}
 
 
 async def get_flow_history_entry(

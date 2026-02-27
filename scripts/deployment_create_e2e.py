@@ -153,10 +153,14 @@ class DeploymentCreateE2E:
         if not expected_account_id:
             return None
 
-        response = await self._request(
-            "GET",
-            "/api/v1/deployments/providers/?page=1&page_size=100",
-        )
+        try:
+            response = await self._request(
+                "GET",
+                "/api/v1/deployments/providers/?page=1&page_size=100",
+            )
+        except httpx.HTTPError as exc:
+            print(f"[warning] provider lookup failed; will attempt provider create: {exc}")
+            return None
         if response.status_code != HTTP_OK:
             return None
         payload = response.json()
@@ -625,7 +629,6 @@ class DeploymentCreateE2E:
 
     async def _cleanup_resources(self) -> None:
         self._require_client()
-        self._require_provider_id()
         provider_id = self.provider_id
         print("Cleaning up created resources (best effort)...")
         print(
@@ -638,12 +641,15 @@ class DeploymentCreateE2E:
             "1 provider account"
         )
 
-        for deployment_id in sorted(self.created_deployment_ids):
-            await self._best_effort_delete(
-                path=f"/api/v1/deployments/{deployment_id}?provider_id={provider_id}",
-                resource_type="DEPLOYMENT",
-                resource_id=deployment_id,
-            )
+        if provider_id:
+            for deployment_id in sorted(self.created_deployment_ids):
+                await self._best_effort_delete(
+                    path=f"/api/v1/deployments/{deployment_id}?provider_id={provider_id}",
+                    resource_type="DEPLOYMENT",
+                    resource_id=deployment_id,
+                )
+        elif self.created_deployment_ids:
+            print("Skipping deployment cleanup because provider_id is unavailable.")
         for flow_id in sorted(self.created_flow_ids):
             await self._best_effort_delete(
                 path=f"/api/v1/flows/{flow_id}",
@@ -656,27 +662,30 @@ class DeploymentCreateE2E:
                 resource_type="PROJECT",
                 resource_id=project_id,
             )
-        for snapshot_id in sorted(self.created_snapshot_ids):
-            await self._best_effort_delete(
-                path=f"/api/v1/deployments/snapshots/{snapshot_id}?provider_id={provider_id}",
-                resource_type="SNAPSHOT",
-                resource_id=snapshot_id,
-            )
-        for config_id in sorted(self.created_config_ids):
-            await self._best_effort_delete(
-                path=f"/api/v1/deployments/configs/{config_id}?provider_id={provider_id}",
-                resource_type="CONFIG",
-                resource_id=config_id,
-            )
+        if provider_id:
+            for snapshot_id in sorted(self.created_snapshot_ids):
+                await self._best_effort_delete(
+                    path=f"/api/v1/deployments/snapshots/{snapshot_id}?provider_id={provider_id}",
+                    resource_type="SNAPSHOT",
+                    resource_id=snapshot_id,
+                )
+            for config_id in sorted(self.created_config_ids):
+                await self._best_effort_delete(
+                    path=f"/api/v1/deployments/configs/{config_id}?provider_id={provider_id}",
+                    resource_type="CONFIG",
+                    resource_id=config_id,
+                )
 
-        if self.provider_was_created:
-            await self._best_effort_delete(
-                path=f"/api/v1/deployments/providers/{provider_id}",
-                resource_type="PROVIDER",
-                resource_id=provider_id,
-            )
-        else:
-            print(f"Skipping provider cleanup because provider is reused: {provider_id}")
+            if self.provider_was_created:
+                await self._best_effort_delete(
+                    path=f"/api/v1/deployments/providers/{provider_id}",
+                    resource_type="PROVIDER",
+                    resource_id=provider_id,
+                )
+            else:
+                print(f"Skipping provider cleanup because provider is reused: {provider_id}")
+        elif self.created_snapshot_ids or self.created_config_ids:
+            print("Skipping provider-scoped cleanup because provider_id is unavailable.")
 
     async def _best_effort_delete(self, *, path: str, resource_type: str, resource_id: str) -> None:
         print(f"DELETING {resource_type}: ID={resource_id}")

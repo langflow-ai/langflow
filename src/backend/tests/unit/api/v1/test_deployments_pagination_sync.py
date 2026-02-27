@@ -65,25 +65,25 @@ async def test_list_provider_accounts_is_paginated(client, logged_in_headers):
 
     page_one = await client.get(
         "api/v1/deployments/providers/",
-        params={"page": 1, "page_size": 2},
+        params={"page": 1, "size": 2},
         headers=logged_in_headers,
     )
     assert page_one.status_code == status.HTTP_200_OK
     body_one = page_one.json()
     assert body_one["page"] == 1
-    assert body_one["page_size"] == 2
+    assert body_one["size"] == 2
     assert body_one["total"] >= 3
     assert len(body_one["deployment_providers"]) == 2
 
     page_two = await client.get(
         "api/v1/deployments/providers/",
-        params={"page": 2, "page_size": 2},
+        params={"page": 2, "size": 2},
         headers=logged_in_headers,
     )
     assert page_two.status_code == status.HTTP_200_OK
     body_two = page_two.json()
     assert body_two["page"] == 2
-    assert body_two["page_size"] == 2
+    assert body_two["size"] == 2
     assert body_two["total"] == body_one["total"]
     assert len(body_two["deployment_providers"]) >= 1
 
@@ -185,13 +185,40 @@ async def test_deployments_lazy_sync_prunes_stale_rows(client, logged_in_headers
         session.add(folder)
         await session.flush()
 
+        keep_deployment = Deployment(
+            resource_key="keep-resource",
+            user_id=active_user.id,
+            project_id=folder.id,
+            provider_account_id=UUID(provider["id"]),
+            name=f"deployment-keep-{uuid4().hex[:8]}",
+        )
+        session.add(keep_deployment)
+        await session.flush()
+
+        flow = Flow(
+            name=f"flow-keep-{uuid4().hex[:8]}",
+            user_id=active_user.id,
+            folder_id=folder.id,
+            data={"nodes": [], "edges": []},
+        )
+        session.add(flow)
+        await session.flush()
+
+        flow_history = FlowHistory(
+            flow_id=flow.id,
+            user_id=active_user.id,
+            data={"nodes": [], "edges": []},
+            version_number=1,
+            description="checkpoint",
+        )
+        session.add(flow_history)
+        await session.flush()
+
         session.add(
-            Deployment(
-                resource_key="keep-resource",
+            FlowHistoryDeploymentAttachment(
                 user_id=active_user.id,
-                project_id=folder.id,
-                provider_account_id=UUID(provider["id"]),
-                name=f"deployment-keep-{uuid4().hex[:8]}",
+                history_id=flow_history.id,
+                deployment_id=keep_deployment.id,
             )
         )
         session.add(
@@ -211,14 +238,15 @@ async def test_deployments_lazy_sync_prunes_stale_rows(client, logged_in_headers
 
     response = await client.get(
         "api/v1/deployments",
-        params={"provider_id": provider["id"], "page": 1, "page_size": 10},
+        params={"provider_id": provider["id"], "page": 1, "size": 10},
         headers=logged_in_headers,
     )
     assert response.status_code == status.HTTP_200_OK
     body = response.json()
     assert body["page"] == 1
-    assert body["page_size"] == 10
+    assert body["size"] == 10
     assert [item["resource_key"] for item in body["deployments"]] == ["keep-resource"]
+    assert body["deployments"][0]["attached_count"] == 1
     assert body["total"] == 1
 
     async with session_scope() as session:

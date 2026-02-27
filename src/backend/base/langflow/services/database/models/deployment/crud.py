@@ -6,6 +6,9 @@ from uuid import UUID
 from sqlmodel import col, delete, func, select
 
 from langflow.services.database.models.deployment.model import Deployment
+from langflow.services.database.models.flow_history_deployment_attachment.model import (
+    FlowHistoryDeploymentAttachment,
+)
 
 if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
@@ -55,9 +58,22 @@ async def list_deployment_rows_page(
     provider_account_id: UUID,
     offset: int,
     limit: int,
-) -> list[Deployment]:
+) -> list[tuple[Deployment, int]]:
+    attachment_counts_subquery = (
+        select(
+            FlowHistoryDeploymentAttachment.deployment_id.label("deployment_id"),
+            func.count(func.distinct(FlowHistoryDeploymentAttachment.history_id)).label("attached_count"),
+        )
+        .where(FlowHistoryDeploymentAttachment.user_id == user_id)
+        .group_by(FlowHistoryDeploymentAttachment.deployment_id)
+        .subquery()
+    )
     stmt = (
-        select(Deployment)
+        select(
+            Deployment,
+            func.coalesce(attachment_counts_subquery.c.attached_count, 0).label("attached_count"),
+        )
+        .outerjoin(attachment_counts_subquery, attachment_counts_subquery.c.deployment_id == Deployment.id)
         .where(
             Deployment.user_id == user_id,
             Deployment.provider_account_id == provider_account_id,
@@ -66,7 +82,8 @@ async def list_deployment_rows_page(
         .offset(offset)
         .limit(limit)
     )
-    return list((await db.exec(stmt)).all())
+    rows = (await db.exec(stmt)).all()
+    return [(deployment, int(attached_count or 0)) for deployment, attached_count in rows]
 
 
 async def count_deployment_rows(

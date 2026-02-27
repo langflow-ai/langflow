@@ -19,4 +19,5 @@ export type FlowHistoryCreate = {
 export type FlowHistoryListResponse = {
   entries: FlowHistoryEntry[];
   max_entries: number;
+  deployment_counts?: Record<string, number>;
 };

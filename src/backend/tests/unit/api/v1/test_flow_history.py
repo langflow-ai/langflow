@@ -125,7 +125,7 @@ async def test_list_history_returns_entries_newest_first(client: AsyncClient, lo
     assert entries[2]["version_number"] == 1
 
 
-async def test_list_history_supports_deployment_id_filter(
+async def test_list_history_supports_deployment_ids_filter_single_value(
     client: AsyncClient,
     logged_in_headers,
     active_user,
@@ -183,7 +183,7 @@ async def test_list_history_supports_deployment_id_filter(
 
     resp = await client.get(
         f"api/v1/flows/{flow['id']}/history/",
-        params={"deployment_id": deployment_row_id},
+        params={"deployment_ids": deployment_row_id},
         headers=logged_in_headers,
     )
     assert resp.status_code == status.HTTP_200_OK
@@ -192,6 +192,94 @@ async def test_list_history_supports_deployment_id_filter(
     assert [entry["id"] for entry in body["entries"]] == [snap_1["id"]]
     assert body["max_entries"] >= 1
     assert snap_2["id"] not in [entry["id"] for entry in body["entries"]]
+
+
+async def test_list_history_supports_deployment_ids_filter_with_counts(
+    client: AsyncClient,
+    logged_in_headers,
+    active_user,
+):
+    from uuid import UUID, uuid4
+
+    from langflow.services.deps import session_scope
+    from langflow.services.database.models.deployment.model import Deployment
+    from langflow.services.database.models.flow_history_deployment_attachment.model import (
+        FlowHistoryDeploymentAttachment,
+    )
+    from langflow.services.database.models.folder.model import Folder
+
+    provider_resp = await client.post(
+        "api/v1/deployments/providers/",
+        json={
+            "account_id": "tenant-history-multi-filter",
+            "provider_key": "watsonx-orchestrate",
+            "backend_url": "https://example.ibm.com",
+            "api_key": "secret-api-key",
+        },
+        headers=logged_in_headers,
+    )
+    assert provider_resp.status_code == status.HTTP_201_CREATED
+    provider_id = UUID(provider_resp.json()["id"])
+
+    flow = await _create_flow(client, logged_in_headers, name="history-multi-filter-flow")
+    snap_1 = await _create_snapshot(client, logged_in_headers, flow["id"], description="attached-one")
+    snap_2 = await _create_snapshot(client, logged_in_headers, flow["id"], description="attached-two")
+
+    async with session_scope() as session:
+        folder = Folder(name=f"proj-{uuid4().hex[:8]}", user_id=active_user.id)
+        session.add(folder)
+        await session.flush()
+
+        deployment_1 = Deployment(
+            resource_key=f"dep-{uuid4().hex[:8]}",
+            user_id=active_user.id,
+            project_id=folder.id,
+            provider_account_id=provider_id,
+            name=f"deployment-{uuid4().hex[:8]}",
+        )
+        deployment_2 = Deployment(
+            resource_key=f"dep-{uuid4().hex[:8]}",
+            user_id=active_user.id,
+            project_id=folder.id,
+            provider_account_id=provider_id,
+            name=f"deployment-{uuid4().hex[:8]}",
+        )
+        session.add(deployment_1)
+        session.add(deployment_2)
+        await session.flush()
+
+        session.add(
+            FlowHistoryDeploymentAttachment(
+                user_id=active_user.id,
+                history_id=UUID(snap_1["id"]),
+                deployment_id=deployment_1.id,
+            )
+        )
+        session.add(
+            FlowHistoryDeploymentAttachment(
+                user_id=active_user.id,
+                history_id=UUID(snap_2["id"]),
+                deployment_id=deployment_2.id,
+            )
+        )
+        await session.flush()
+        deployment_1_id = str(deployment_1.id)
+        deployment_2_id = str(deployment_2.id)
+
+    resp = await client.get(
+        f"api/v1/flows/{flow['id']}/history/",
+        params=[
+            ("deployment_ids", deployment_1_id),
+            ("deployment_ids", deployment_2_id),
+        ],
+        headers=logged_in_headers,
+    )
+    assert resp.status_code == status.HTTP_200_OK
+    body = resp.json()
+
+    assert {entry["id"] for entry in body["entries"]} == {snap_1["id"], snap_2["id"]}
+    assert body["deployment_counts"][deployment_1_id] == 1
+    assert body["deployment_counts"][deployment_2_id] == 1
 
 
 async def test_version_numbers_auto_increment(client: AsyncClient, logged_in_headers):

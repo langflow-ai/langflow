@@ -71,3 +71,4 @@ class FlowHistoryListResponse(BaseModel):
 
     entries: list[FlowHistoryRead]
     max_entries: int = PydanticField(ge=1)
+    deployment_counts: dict[str, int] | None = None

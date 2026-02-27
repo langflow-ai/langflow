@@ -75,6 +75,32 @@ type FlowCheckpointGroup = {
   checkpoints: CheckpointAttachItem[];
 };
 
+type FlowHistoryListApiResponse = {
+  entries: FlowHistoryEntry[];
+};
+
+const inflightFlowHistoryRequests = new Map<
+  string,
+  Promise<FlowHistoryListApiResponse>
+>();
+
+const fetchFlowHistoryWithDedupe = async (
+  requestUrl: string,
+): Promise<FlowHistoryListApiResponse> => {
+  const existingRequest = inflightFlowHistoryRequests.get(requestUrl);
+  if (existingRequest) {
+    return existingRequest;
+  }
+  const request = api
+    .get<FlowHistoryListApiResponse>(requestUrl)
+    .then((response) => response.data)
+    .finally(() => {
+      inflightFlowHistoryRequests.delete(requestUrl);
+    });
+  inflightFlowHistoryRequests.set(requestUrl, request);
+  return request;
+};
+
 const validateEnvVars = (envVars: EnvVar[]): string[] => {
   const errors: string[] = [];
   const seenKeys = new Set<string>();
@@ -152,8 +178,6 @@ const DeploymentsTab = () => {
   const [checkpointGroups, setCheckpointGroups] = useState<
     FlowCheckpointGroup[]
   >([]);
-  const [attachedCountByDeploymentId, setAttachedCountByDeploymentId] =
-    useState<Record<string, number>>({});
 
   const providersQuery = useGetDeploymentProviders({
     refetchOnWindowFocus: false,
@@ -210,6 +234,24 @@ const DeploymentsTab = () => {
   const getDeploymentByIdMutation = useGetDeploymentById({ providerId });
   const { mutateAsync: detectDeploymentEnvVars } =
     usePostDetectDeploymentEnvVars();
+  const {
+    newDeploymentOpen,
+    currentStep,
+    deploymentType,
+    setDeploymentType,
+    deploymentName,
+    setDeploymentName,
+    deploymentDescription,
+    setDeploymentDescription,
+    selectedItems,
+    envVars,
+    setEnvVars,
+    handleBack,
+    handleNext,
+    handleSubmit,
+    handleOpenChange,
+    toggleItem,
+  } = useDeploymentForm();
 
   const liveDeployments = useMemo(() => {
     const deployments = deploymentsQuery.data?.deployments || [];
@@ -237,11 +279,6 @@ const DeploymentsTab = () => {
         deployment.resource_key.trim().length > 0
           ? deployment.resource_key
           : deployment.id;
-      const internalDeploymentId =
-        typeof deployment.resource_key === "string" &&
-        deployment.resource_key.trim().length > 0
-          ? deployment.id
-          : undefined;
       const createdMeta =
         createdDeploymentUiMeta?.deploymentId === providerDeploymentId
           ? createdDeploymentUiMeta
@@ -265,9 +302,7 @@ const DeploymentsTab = () => {
           deployment.type.toUpperCase() === "MCP" ? "mcp" : "agent",
         mode: mapProviderModeToLabel(mode),
         attached:
-          (internalDeploymentId
-            ? attachedCountByDeploymentId[internalDeploymentId]
-            : undefined) ??
+          deployment.attached_count ??
           createdMeta?.attachedCount ??
           snapshotIds.length ??
           0,
@@ -285,23 +320,22 @@ const DeploymentsTab = () => {
         ),
       };
     });
-  }, [attachedCountByDeploymentId, createdDeploymentUiMeta, liveDeployments]);
+  }, [createdDeploymentUiMeta, liveDeployments]);
 
   useEffect(() => {
     let cancelled = false;
     const loadCheckpoints = async () => {
-      if (flows.length === 0) {
+      if (!newDeploymentOpen || flows.length === 0) {
         setCheckpointGroups([]);
         return;
       }
       const responses = await Promise.all(
         flows.map(async (flow) => {
           try {
-            const response = await api.get<{ entries: FlowHistoryEntry[] }>(
-              `${getURL("FLOWS")}/${flow.id}/history/`,
-              { params: { limit: 20, offset: 0 } },
+            const response = await fetchFlowHistoryWithDedupe(
+              `${getURL("FLOWS")}/${flow.id}/history/?limit=20&offset=0`,
             );
-            return { flow, entries: response.data.entries ?? [] };
+            return { flow, entries: response.entries ?? [] };
           } catch {
             return { flow, entries: [] as FlowHistoryEntry[] };
           }
@@ -326,87 +360,7 @@ const DeploymentsTab = () => {
     return () => {
       cancelled = true;
     };
-  }, [flows]);
-
-  useEffect(() => {
-    let cancelled = false;
-    const loadAttachedCounts = async () => {
-      if (!providerId || liveDeployments.length === 0 || flows.length === 0) {
-        setAttachedCountByDeploymentId({});
-        return;
-      }
-
-      const internalDeploymentIds = liveDeployments
-        .map((deployment) =>
-          typeof deployment.resource_key === "string" &&
-          deployment.resource_key.trim().length > 0
-            ? deployment.id
-            : null,
-        )
-        .filter(
-          (id): id is string => typeof id === "string" && id.trim().length > 0,
-        );
-
-      const nextCounts: Record<string, number> = {};
-
-      await Promise.all(
-        internalDeploymentIds.map(async (deploymentId) => {
-          const perFlowCounts = await Promise.all(
-            flows.map(async (flow) => {
-              try {
-                const response = await api.get<{ entries: FlowHistoryEntry[] }>(
-                  `${getURL("FLOWS")}/${flow.id}/history/`,
-                  {
-                    params: {
-                      limit: 100,
-                      offset: 0,
-                      deployment_id: deploymentId,
-                    },
-                  },
-                );
-                return response.data.entries?.length ?? 0;
-              } catch {
-                return 0;
-              }
-            }),
-          );
-
-          nextCounts[deploymentId] = perFlowCounts.reduce(
-            (total, count) => total + count,
-            0,
-          );
-        }),
-      );
-
-      if (!cancelled) {
-        setAttachedCountByDeploymentId(nextCounts);
-      }
-    };
-
-    void loadAttachedCounts();
-    return () => {
-      cancelled = true;
-    };
-  }, [flows, liveDeployments, providerId]);
-
-  const {
-    newDeploymentOpen,
-    currentStep,
-    deploymentType,
-    setDeploymentType,
-    deploymentName,
-    setDeploymentName,
-    deploymentDescription,
-    setDeploymentDescription,
-    selectedItems,
-    envVars,
-    setEnvVars,
-    handleBack,
-    handleNext,
-    handleSubmit,
-    handleOpenChange,
-    toggleItem,
-  } = useDeploymentForm();
+  }, [flows, newDeploymentOpen]);
 
   const [detectedEnvVars, setDetectedEnvVars] = useState<EnvVar[]>([]);
 
@@ -422,7 +376,6 @@ const DeploymentsTab = () => {
   useEffect(() => {
     setCreatedDeploymentItem(null);
     setCreatedDeploymentUiMeta(null);
-    setAttachedCountByDeploymentId({});
     setDeploymentsPage(1);
   }, [providerId]);
 

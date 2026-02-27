@@ -35,7 +35,7 @@ export type DeploymentProviderUpdatePayload = {
 export type DeploymentProvidersResponse = {
   deployment_providers: DeploymentProvider[];
   page: number;
-  page_size: number;
+  size: number;
   total: number;
 };
 
@@ -44,6 +44,7 @@ export type DeploymentListItem = {
   resource_key?: string | null;
   type: string;
   name: string;
+  attached_count?: number;
   description?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
@@ -58,7 +59,7 @@ export type DeploymentListResponse = {
   deployments: DeploymentListItem[];
   deployment_type?: string | null;
   page: number;
-  page_size: number;
+  size: number;
   total: number;
 };
 
@@ -148,7 +149,7 @@ export const useGetDeploymentProviders: useQueryFunctionType<
     const { data } = await api.get<DeploymentProvidersResponse>(
       buildQueryStringUrl(`${getURL("DEPLOYMENTS")}/providers/`, {
         page,
-        page_size: pageSize,
+        size: pageSize,
       }),
     );
     return data;
@@ -171,7 +172,7 @@ export const useGetDeployments: useQueryFunctionType<
     const url = buildQueryStringUrl(getURL("DEPLOYMENTS"), {
       provider_id: params.providerId,
       page: params.page ?? 1,
-      page_size: params.pageSize ?? 20,
+      size: params.pageSize ?? 20,
     });
     const { data } = await api.get<DeploymentListResponse>(url);
     return data;

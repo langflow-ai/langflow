@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlmodel import delete, select
+from sqlmodel import delete, func, select
 
 from langflow.services.database.models.flow_history_deployment_attachment.model import (
     FlowHistoryDeploymentAttachment,
@@ -120,3 +120,27 @@ async def delete_deployment_attachments_by_deployment_id(
     )
     result = await db.exec(stmt)
     return int(result.rowcount or 0)
+
+
+async def count_attachments_by_deployment_ids(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    deployment_ids: list[UUID],
+) -> dict[UUID, int]:
+    if not deployment_ids:
+        return {}
+
+    stmt = (
+        select(
+            FlowHistoryDeploymentAttachment.deployment_id,
+            func.count(func.distinct(FlowHistoryDeploymentAttachment.history_id)),
+        )
+        .where(
+            FlowHistoryDeploymentAttachment.user_id == user_id,
+            FlowHistoryDeploymentAttachment.deployment_id.in_(deployment_ids),
+        )
+        .group_by(FlowHistoryDeploymentAttachment.deployment_id)
+    )
+    rows = (await db.exec(stmt)).all()
+    return {deployment_id: int(count) for deployment_id, count in rows}

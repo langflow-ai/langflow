@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 import re
 from datetime import datetime, timezone
-from typing import Any
+from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query
@@ -18,6 +18,7 @@ from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.flow_history.crud import (
     create_flow_history_entry,
     delete_flow_history_entry,
+    get_flow_history_counts_by_deployment_ids,
     get_flow_history_entry_or_raise,
     get_flow_history_list,
 )
@@ -146,10 +147,11 @@ async def list_flow_history(
     flow_id: UUID,
     current_user: CurrentActiveUser,
     session: DbSessionReadOnly,
-    limit: int = Query(default=50, ge=1, le=100),
-    offset: int = Query(default=0, ge=0),
-    deployment_id: UUID | None = Query(default=None),
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+    offset: Annotated[int, Query(ge=0)] = 0,
+    deployment_ids: Annotated[list[UUID] | None, Query()] = None,
 ) -> FlowHistoryListResponse:
+    normalized_deployment_ids = list(dict.fromkeys(deployment_ids or []))
     await _get_user_flow(session, flow_id, current_user.id)
     entries = await get_flow_history_list(
         session,
@@ -157,12 +159,23 @@ async def list_flow_history(
         current_user.id,
         limit,
         offset,
-        deployment_id=deployment_id,
+        deployment_ids=normalized_deployment_ids or None,
     )
+    deployment_counts: dict[str, int] | None = None
+    if normalized_deployment_ids:
+        counts = await get_flow_history_counts_by_deployment_ids(
+            session,
+            flow_id=flow_id,
+            user_id=current_user.id,
+            deployment_ids=normalized_deployment_ids,
+        )
+        deployment_counts = {str(deployment_uuid): 0 for deployment_uuid in normalized_deployment_ids}
+        deployment_counts.update({str(deployment_uuid): count for deployment_uuid, count in counts.items()})
     max_entries = get_settings_service().settings.max_flow_history_entries_per_flow
     return FlowHistoryListResponse(
         entries=[_history_to_read(e) for e in entries],
         max_entries=max_entries,
+        deployment_counts=deployment_counts,
     )
 
 
@@ -238,7 +251,8 @@ async def activate_version(
     history_id: UUID,
     current_user: CurrentActiveUser,
     session: DbSession,
-    save_draft: bool = Query(default=True),
+    *,
+    save_draft: Annotated[bool, Query()] = True,
 ) -> FlowRead:
     flow = await _get_user_flow(session, flow_id, current_user.id)
 
