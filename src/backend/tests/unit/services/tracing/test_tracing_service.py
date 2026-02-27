@@ -388,6 +388,98 @@ async def test_cleanup_inputs():
 
 
 @pytest.mark.asyncio
+async def test_cleanup_inputs_masks_password_keyword():
+    """Test that keys containing 'password' are masked."""
+    inputs = {
+        "password": "my-secret-password",  # pragma: allowlist secret
+        "db_password": "db-secret",  # pragma: allowlist secret
+        "normal_key": "visible",
+    }
+
+    cleaned = TracingService._cleanup_inputs(inputs)
+
+    assert cleaned["password"] == "*****"  # noqa: S105
+    assert cleaned["db_password"] == "*****"  # noqa: S105
+    assert cleaned["normal_key"] == "visible"
+
+
+@pytest.mark.asyncio
+async def test_cleanup_inputs_masks_server_url_keyword():
+    """Test that keys containing 'server_url' are masked."""
+    inputs = {
+        "server_url": "http://internal-server:8080",
+        "my_server_url": "http://other-server",
+        "public_url": "http://public.example.com",
+    }
+
+    cleaned = TracingService._cleanup_inputs(inputs)
+
+    assert cleaned["server_url"] == "*****"
+    assert cleaned["my_server_url"] == "*****"
+    assert cleaned["public_url"] == "http://public.example.com"
+
+
+@pytest.mark.asyncio
+async def test_cleanup_inputs_handles_list_of_dicts():
+    """Test that lists containing dicts are recursively cleaned."""
+    inputs = {
+        "items": [
+            {"api_key": "secret1", "name": "item1"},  # pragma: allowlist secret
+            {"password": "secret2", "value": "data"},  # pragma: allowlist secret
+            "plain_string",
+        ]
+    }
+
+    cleaned = TracingService._cleanup_inputs(inputs)
+
+    items = cleaned["items"]
+    assert items[0]["api_key"] == "*****"
+    assert items[0]["name"] == "item1"
+    assert items[1]["password"] == "*****"  # noqa: S105
+    assert items[1]["value"] == "data"
+    assert items[2] == "plain_string"
+
+
+@pytest.mark.asyncio
+async def test_cleanup_inputs_handles_nested_list_in_dict():
+    """Test that nested lists inside dicts are recursively cleaned."""
+    inputs = {
+        "config": {
+            "credentials": [
+                {"api_key": "nested-secret"},  # pragma: allowlist secret
+            ]
+        }
+    }
+
+    cleaned = TracingService._cleanup_inputs(inputs)
+
+    assert cleaned["config"]["credentials"][0]["api_key"] == "*****"
+
+
+@pytest.mark.asyncio
+async def test_cleanup_inputs_does_not_mutate_original():
+    """Test that the original input dict is not modified."""
+    inputs = {
+        "password": "original-password",  # pragma: allowlist secret
+        "server_url": "http://original-url",
+    }
+    original_password = inputs["password"]
+    original_url = inputs["server_url"]
+
+    TracingService._cleanup_inputs(inputs)
+
+    assert inputs["password"] == original_password
+    assert inputs["server_url"] == original_url
+
+
+@pytest.mark.asyncio
+async def test_cleanup_inputs_empty_dict():
+    """Test that empty dict is handled gracefully."""
+    cleaned = TracingService._cleanup_inputs({})
+    assert cleaned == {}
+
+
+@pytest.mark.asyncio
 async def test_start_tracers_with_exception(tracing_service):
     """Test starting tracers with exception handling."""
     run_id = uuid.uuid4()

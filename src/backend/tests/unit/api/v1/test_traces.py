@@ -28,11 +28,13 @@ def test_span_to_dict_with_tokens():
         inputs={"input": "value"},
         outputs={"output": "value"},
         error="boom",
-        model_name="test-model",
-        prompt_tokens=10,
-        completion_tokens=20,
-        total_tokens=30,
-        cost=0.12,
+        attributes={
+            "model_name": "test-model",
+            "prompt_tokens": 10,
+            "completion_tokens": 20,
+            "total_tokens": 30,
+            "cost": 0.12,
+        },
         trace_id=uuid4(),
     )
 
@@ -58,6 +60,7 @@ def test_span_to_dict_with_tokens():
 
 def test_span_to_dict_without_token_usage():
     start_time = datetime(2024, 2, 1, tzinfo=timezone.utc)
+    # No attributes means no token usage or model name.
     span = SpanTable(
         name="Basic Span",
         span_type=SpanType.CHAIN,
@@ -68,8 +71,7 @@ def test_span_to_dict_without_token_usage():
         inputs=None,
         outputs=None,
         error=None,
-        model_name=None,
-        total_tokens=None,
+        attributes={},
         trace_id=uuid4(),
     )
 
@@ -81,6 +83,7 @@ def test_span_to_dict_without_token_usage():
     assert result["endTime"] is None
     assert result["inputs"] == {}
     assert result["outputs"] == {}
+    assert result["modelName"] is None
     assert result["tokenUsage"] is None
 
 
@@ -146,7 +149,7 @@ async def test_fetch_trace_token_totals(async_session):
             name="Parent",
             span_type=SpanType.CHAIN,
             status=SpanStatus.OK,
-            total_tokens=100,
+            attributes={"total_tokens": 100},
         ),
         SpanTable(
             trace_id=trace_id,
@@ -154,14 +157,14 @@ async def test_fetch_trace_token_totals(async_session):
             name="Child",
             span_type=SpanType.LLM,
             status=SpanStatus.OK,
-            total_tokens=5,
+            attributes={"total_tokens": 5},
         ),
         SpanTable(
             trace_id=trace_id,
             name="Leaf",
             span_type=SpanType.TOOL,
             status=SpanStatus.OK,
-            total_tokens=7,
+            attributes={"total_tokens": 7},
         ),
     ]
     async_session.add_all(spans)
