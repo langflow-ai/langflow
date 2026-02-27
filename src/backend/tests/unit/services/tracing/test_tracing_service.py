@@ -151,6 +151,10 @@ def mock_tracers():
             "langflow.services.tracing.service._get_native_tracer",
             return_value=MockTracer,
         ),
+        patch(
+            "langflow.services.tracing.service._get_openlayer_tracer",
+            return_value=MockTracer,
+        ),
     ):
         yield
 
@@ -184,6 +188,7 @@ async def test_start_end_tracers(tracing_service):
     assert "opik" in trace_context.tracers
     assert "traceloop" in trace_context.tracers
     assert "native" in trace_context.tracers
+    assert "openlayer" in trace_context.tracers
 
     await tracing_service.end_tracers(outputs)
 
