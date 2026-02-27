@@ -213,9 +213,6 @@ class MemoryComponent(Component):
             stored = await self.memory.aget_messages()
             # langchain memories are supposed to return messages in ascending order
 
-            if n_messages:
-                stored = stored[-n_messages:]  # Get last N messages first
-
             if order == "DESC":
                 stored = stored[::-1]  # Then reverse if needed
 
@@ -223,6 +220,9 @@ class MemoryComponent(Component):
             if sender_type:
                 expected_type = MESSAGE_SENDER_AI if sender_type == MESSAGE_SENDER_AI else MESSAGE_SENDER_USER
                 stored = [m for m in stored if m.type == expected_type]
+
+            if n_messages:
+                stored = stored[:n_messages]  # Take first N messages
         else:
             # For internal memory, we always fetch the last N messages by ordering by DESC
             stored = await aget_messages(
@@ -234,7 +234,7 @@ class MemoryComponent(Component):
                 order=order,
             )
             if n_messages:
-                stored = stored[-n_messages:]  # Get last N messages
+                stored = stored[:n_messages]  # Take first N messages
 
         # self.status = stored
         return cast("Data", stored)
