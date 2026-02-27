@@ -59,6 +59,13 @@ test(
     await initialGPTsetup(page);
     await adjustScreenView(page);
 
+    await page.getByText("OpenAI", { exact: true }).last().click();
+
+    await page.waitForTimeout(500);
+
+    if (await page.getByTestId("remove-icon-badge").isVisible()) {
+      await page.getByTestId("remove-icon-badge").click();
+    }
     await page
       .getByTestId("popover-anchor-input-api_key")
       .fill(process.env.OPENAI_API_KEY || "");
@@ -103,7 +110,7 @@ test(
       timeout: 30000,
     });
 
-    await page.getByTestId("copy-code-button").last().click();
+    await page.getByTestId("copy-code-button").first().click();
 
     const handle = await page.evaluateHandle(() =>
       navigator.clipboard.readText(),

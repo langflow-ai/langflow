@@ -426,8 +426,8 @@ function GenericNode({
             )}
             data-testid={
               editedNameDescription
-                ? "save-name-description-button"
-                : "edit-name-description-button"
+                ? "node-save-name-description-button"
+                : "node-edit-name-description-button"
             }
           >
             <ForwardedIconComponent
@@ -617,7 +617,10 @@ function GenericNode({
           )}
         </div>
         {showNode && (
-          <div className="nopan nodelete nodrag noflow relative cursor-auto">
+          <div
+            className="nopan nodelete nodrag noflow relative cursor-auto"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
             <>
               <MemoizedRenderInputParameters
                 data={data}

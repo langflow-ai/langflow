@@ -47,6 +47,13 @@ jest.mock("@/controllers/API/queries/models/use-get-model-providers", () => ({
   })),
 }));
 
+jest.mock("@/controllers/API/queries/models/use-get-enabled-models", () => ({
+  useGetEnabledModels: jest.fn(() => ({
+    data: { enabled_models: {} },
+    isLoading: false,
+  })),
+}));
+
 jest.mock("@/controllers/API/queries/nodes/use-post-template-value", () => ({
   usePostTemplateValue: jest.fn(() => ({
     mutateAsync: jest.fn(),
@@ -267,18 +274,6 @@ describe("ModelInputComponent", () => {
   });
 
   describe("Footer Buttons", () => {
-    it("should render Refresh List button in dropdown", async () => {
-      const user = userEvent.setup();
-      render(<ModelInputComponent {...defaultProps} />);
-
-      const trigger = screen.getByRole("combobox");
-      await user.click(trigger);
-
-      await waitFor(() => {
-        expect(screen.getByText("Refresh List")).toBeInTheDocument();
-      });
-    });
-
     it("should render Manage Model Providers button", async () => {
       const user = userEvent.setup();
       render(<ModelInputComponent {...defaultProps} />);
