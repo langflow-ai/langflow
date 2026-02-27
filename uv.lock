@@ -5964,7 +5964,7 @@ dependencies = [
     { name = "networkx", version = "3.6.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "onnxruntime" },
     { name = "opentelemetry-api" },
-    { name = "opentelemetry-exporter-prometheus" },
+    { name = "opentelemetry-exporter-otlp" },
     { name = "opentelemetry-instrumentation-fastapi" },
     { name = "opentelemetry-sdk" },
     { name = "orjson" },
@@ -6823,10 +6823,10 @@ requires-dist = [
     { name = "openai", marker = "extra == 'openai'", specifier = ">=1.68.2,<2.0.0" },
     { name = "openinference-instrumentation-langchain", marker = "extra == 'openinference'", specifier = ">=0.1.29" },
     { name = "opensearch-py", marker = "extra == 'opensearch'", specifier = "==2.8.0" },
-    { name = "opentelemetry-api", specifier = ">=1.25.0,<2.0.0" },
-    { name = "opentelemetry-exporter-prometheus", specifier = ">=0.46b0,<1.0.0" },
-    { name = "opentelemetry-instrumentation-fastapi", specifier = ">=0.46b0,<1.0.0" },
-    { name = "opentelemetry-sdk", specifier = ">=1.25.0,<2.0.0" },
+    { name = "opentelemetry-api", specifier = ">=1.30.0,<2.0.0" },
+    { name = "opentelemetry-exporter-otlp", specifier = ">=1.30.0,<2.0.0" },
+    { name = "opentelemetry-instrumentation-fastapi", specifier = ">=0.50b0,<1.0.0" },
+    { name = "opentelemetry-sdk", specifier = ">=1.30.0,<2.0.0" },
     { name = "opik", marker = "extra == 'opik'", specifier = ">=1.6.3,<2.0.0" },
     { name = "orjson", specifier = "==3.10.15" },
     { name = "pandas", specifier = "==2.2.3" },
@@ -9116,20 +9116,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/80/04/2a08fa9c0214ae38880df01e8bfae12b067ec0793446578575e5080d6545/opentelemetry_exporter_otlp_proto_http-1.39.1.tar.gz", hash = "sha256:31bdab9745c709ce90a49a0624c2bd445d31a28ba34275951a6a362d16a0b9cb", size = 17288, upload-time = "2025-12-11T13:32:42.029Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/95/f1/b27d3e2e003cd9a3592c43d099d2ed8d0a947c15281bf8463a256db0b46c/opentelemetry_exporter_otlp_proto_http-1.39.1-py3-none-any.whl", hash = "sha256:d9f5207183dd752a412c4cd564ca8875ececba13be6e9c6c370ffb752fd59985", size = 19641, upload-time = "2025-12-11T13:32:22.248Z" },
-]
-
-[[package]]
-name = "opentelemetry-exporter-prometheus"
-version = "0.60b1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-sdk" },
-    { name = "prometheus-client" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/14/39/7dafa6fff210737267bed35a8855b6ac7399b9e582b8cf1f25f842517012/opentelemetry_exporter_prometheus-0.60b1.tar.gz", hash = "sha256:a4011b46906323f71724649d301b4dc188aaa068852e814f4df38cc76eac616b", size = 14976, upload-time = "2025-12-11T13:32:42.944Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/9b/0d/4be6bf5477a3eb3d917d2f17d3c0b6720cd6cb97898444a61d43cc983f5c/opentelemetry_exporter_prometheus-0.60b1-py3-none-any.whl", hash = "sha256:49f59178de4f4590e3cef0b8b95cf6e071aae70e1f060566df5546fad773b8fd", size = 13019, upload-time = "2025-12-11T13:32:23.974Z" },
 ]
 
 [[package]]
