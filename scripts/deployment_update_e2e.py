@@ -17,6 +17,7 @@ import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
+from urllib.parse import urlparse
 from uuid import uuid4
 
 import httpx
@@ -69,13 +70,16 @@ class DeploymentUpdateE2E:
         self.client: httpx.AsyncClient | None = None
 
         self.provider_id: str | None = None
+        self.provider_was_created = False
         self.created_deployment_ids: set[str] = set()
         self.created_snapshot_ids: set[str] = set()
         self.created_config_ids: set[str] = set()
         self.created_flow_ids: set[str] = set()
+        self.created_project_ids: set[str] = set()
 
         self.reference_checkpoint_id: str | None = None
         self.alternate_checkpoint_id: str | None = None
+        self.out_of_scope_checkpoint_id: str | None = None
         self.reference_config_id: str | None = None
         self.alternate_config_id: str | None = None
         self.reference_deployment_id: str | None = None
@@ -117,6 +121,13 @@ class DeploymentUpdateE2E:
         return exit_code
 
     async def _create_provider_account(self) -> None:
+        existing_provider_id = await self._find_matching_provider_id()
+        if existing_provider_id:
+            self.provider_id = existing_provider_id
+            self.provider_was_created = False
+            print(f"Reusing existing provider account: {self.provider_id}")
+            return
+
         payload = {
             "provider_key": self.provider_key,
             "backend_url": self.provider_backend_url,
@@ -125,7 +136,52 @@ class DeploymentUpdateE2E:
         response = await self._request("POST", "/api/v1/deployments/providers/", json_body=payload)
         self._expect_status(response, {HTTP_CREATED}, "create provider account")
         self.provider_id = str(response.json()["id"])
+        self.provider_was_created = True
         print(f"Provider account created: {self.provider_id}")
+
+    async def _find_matching_provider_id(self) -> str | None:
+        if self.provider_key != "watsonx-orchestrate":
+            return None
+        expected_account_id = self._derive_watsonx_account_id_from_backend_url()
+        if not expected_account_id:
+            return None
+
+        response = await self._request(
+            "GET",
+            "/api/v1/deployments/providers/?page=1&page_size=100",
+        )
+        if response.status_code != HTTP_OK:
+            return None
+        payload = response.json()
+        providers = payload.get("deployment_providers")
+        if not isinstance(providers, list):
+            return None
+        for provider in providers:
+            if not isinstance(provider, dict):
+                continue
+            if provider.get("provider_key") != "watsonx-orchestrate":
+                continue
+            if provider.get("backend_url") != self.provider_backend_url:
+                continue
+            if provider.get("account_id") != expected_account_id:
+                continue
+            provider_id = provider.get("id")
+            if isinstance(provider_id, str) and provider_id.strip():
+                return provider_id
+        return None
+
+    def _derive_watsonx_account_id_from_backend_url(self) -> str | None:
+        parsed = urlparse(self.provider_backend_url)
+        path_segments = [segment for segment in parsed.path.split("/") if segment]
+        try:
+            instances_index = path_segments.index("instances")
+        except ValueError:
+            return None
+        account_index = instances_index + 1
+        if account_index >= len(path_segments):
+            return None
+        account_id = path_segments[account_index].strip()
+        return account_id or None
 
     async def _create_reference_resources(self) -> None:
         self._require_provider_id()
@@ -151,11 +207,20 @@ class DeploymentUpdateE2E:
 
         self.reference_checkpoint_id = await self._create_reference_checkpoint(label="flow-ref-a")
         self.alternate_checkpoint_id = await self._create_reference_checkpoint(label="flow-ref-b")
+        out_of_scope_project_id = await self._create_project(label="update-history-out-of-scope")
+        self.out_of_scope_checkpoint_id = await self._create_reference_checkpoint(
+            label="flow-ref-out-of-scope",
+            folder_id=out_of_scope_project_id,
+        )
 
         print(
             "Reference resources created: "
             f"configs=({self.reference_config_id}, {self.alternate_config_id}), "
-            f"checkpoints=({self.reference_checkpoint_id}, {self.alternate_checkpoint_id})"
+            "checkpoints=("
+            f"{self.reference_checkpoint_id}, "
+            f"{self.alternate_checkpoint_id}, "
+            f"{self.out_of_scope_checkpoint_id}"
+            ")"
         )
 
     async def _create_reference_deployment(self) -> None:
@@ -199,6 +264,10 @@ class DeploymentUpdateE2E:
         deployment_id = self.reference_deployment_id
         missing_deployment_id = "00000000-0000-0000-0000-000000000000"
         missing_provider_id = "11111111-1111-1111-1111-111111111111"
+        out_of_scope_checkpoint_id = self.out_of_scope_checkpoint_id
+        if out_of_scope_checkpoint_id is None:
+            msg = "Out-of-scope checkpoint setup is missing."
+            raise RuntimeError(msg)
 
         scenarios = [
             {
@@ -221,6 +290,20 @@ class DeploymentUpdateE2E:
                 "deployment_id": deployment_id,
                 "provider_id": provider_id,
                 "payload": {"history": {"add": [self.alternate_checkpoint_id]}},
+            },
+            {
+                "name": "update_history_add_from_other_project_rejected",
+                "expected": {HTTP_NOT_FOUND},
+                "deployment_id": deployment_id,
+                "provider_id": provider_id,
+                "payload": {"history": {"add": [out_of_scope_checkpoint_id]}},
+            },
+            {
+                "name": "update_history_add_mixed_project_reference_ids_rejected",
+                "expected": {HTTP_NOT_FOUND},
+                "deployment_id": deployment_id,
+                "provider_id": provider_id,
+                "payload": {"history": {"add": [self.alternate_checkpoint_id, out_of_scope_checkpoint_id]}},
             },
             {
                 "name": "update_history_remove",
@@ -255,7 +338,7 @@ class DeploymentUpdateE2E:
             },
             {
                 "name": "update_history_duplicate_ids",
-                "expected": {HTTP_UNPROCESSABLE_CONTENT},
+                "expected": {HTTP_OK},
                 "deployment_id": deployment_id,
                 "provider_id": provider_id,
                 "payload": {
@@ -471,13 +554,29 @@ class DeploymentUpdateE2E:
             "viewport": {"x": 0, "y": 0, "zoom": 1},
         }
 
-    async def _create_reference_checkpoint(self, *, label: str) -> str:
+    async def _create_project(self, *, label: str) -> str:
+        payload = {
+            "name": self._mk_name(f"proj-{label}"),
+            "description": "project for deployment update e2e scenarios",
+            "flows_list": [],
+            "components_list": [],
+        }
+        response = await self._request("POST", "/api/v1/projects/", json_body=payload)
+        self._expect_status(response, {HTTP_CREATED}, "create project")
+        project_id = str(response.json()["id"])
+        self.created_project_ids.add(project_id)
+        print(f"Project created: {project_id}")
+        return project_id
+
+    async def _create_reference_checkpoint(self, *, label: str, folder_id: str | None = None) -> str:
         flow_payload = {
             "name": self._mk_name(f"flow-{label}"),
             "description": "reference flow for deployment update scenarios",
             "data": self._build_flow_data_payload(),
             "is_component": False,
         }
+        if folder_id is not None:
+            flow_payload["folder_id"] = folder_id
         flow_response = await self._request("POST", "/api/v1/flows/", json_body=flow_payload)
         self._expect_status(flow_response, {HTTP_CREATED}, "create reference flow")
         flow_id = str(flow_response.json()["id"])
@@ -503,6 +602,7 @@ class DeploymentUpdateE2E:
             "Cleanup plan: "
             f"{len(self.created_deployment_ids)} deployments, "
             f"{len(self.created_flow_ids)} flows, "
+            f"{len(self.created_project_ids)} projects, "
             f"{len(self.created_snapshot_ids)} snapshots, "
             f"{len(self.created_config_ids)} configs, "
             "1 provider account"
@@ -520,6 +620,12 @@ class DeploymentUpdateE2E:
                 resource_type="FLOW",
                 resource_id=flow_id,
             )
+        for project_id in sorted(self.created_project_ids):
+            await self._best_effort_delete(
+                path=f"/api/v1/projects/{project_id}",
+                resource_type="PROJECT",
+                resource_id=project_id,
+            )
         for snapshot_id in sorted(self.created_snapshot_ids):
             await self._best_effort_delete(
                 path=f"/api/v1/deployments/snapshots/{snapshot_id}?provider_id={provider_id}",
@@ -533,11 +639,14 @@ class DeploymentUpdateE2E:
                 resource_id=config_id,
             )
 
-        await self._best_effort_delete(
-            path=f"/api/v1/deployments/providers/{provider_id}",
-            resource_type="PROVIDER",
-            resource_id=provider_id,
-        )
+        if self.provider_was_created:
+            await self._best_effort_delete(
+                path=f"/api/v1/deployments/providers/{provider_id}",
+                resource_type="PROVIDER",
+                resource_id=provider_id,
+            )
+        else:
+            print(f"Skipping provider cleanup because provider is reused: {provider_id}")
 
     async def _best_effort_delete(self, *, path: str, resource_type: str, resource_id: str) -> None:
         print(f"DELETING {resource_type}: ID={resource_id}")

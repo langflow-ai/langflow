@@ -59,6 +59,7 @@ from lfx.services.deployment_router.exceptions import (
 from lfx.services.deps import get_deployment_router_service
 from lfx.services.interfaces import DeploymentRouterServiceProtocol, DeploymentServiceProtocol
 from pydantic import BaseModel, Field, field_validator, model_validator
+from sqlalchemy import and_, literal, union_all
 from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession
@@ -82,6 +83,7 @@ from langflow.services.database.models.deployment_provider_account.model import 
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.flow_history.crud import get_flow_history_entry_or_raise
 from langflow.services.database.models.flow_history.exceptions import FlowHistoryNotFoundError
+from langflow.services.database.models.flow_history.model import FlowHistory
 from langflow.services.database.models.flow_history_deployment_attachment.crud import (
     create_deployment_attachment,
     delete_deployment_attachment,
@@ -616,24 +618,16 @@ async def _resolve_project_id_for_deployment_create(
 ) -> UUID:
     if payload.project_id is not None:
         project = (
-            await db.exec(select(Folder).where(Folder.id == payload.project_id, Folder.user_id == user_id))
+            await db.exec(
+                select(Folder).where(
+                    Folder.user_id == user_id,
+                    Folder.id == payload.project_id,
+                )
+            )
         ).first()
         if project is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found.")
         return project.id
-
-    history = payload.history
-    if history and history.reference_ids:
-        for history_ref in history.reference_ids:
-            history_id = UUID(history_ref) if isinstance(history_ref, str) else history_ref
-            if history_id is None:
-                continue
-            history_entry = await get_flow_history_entry_or_raise(db, history_id, user_id)
-            flow = (
-                await db.exec(select(Flow).where(Flow.id == history_entry.flow_id, Flow.user_id == user_id))
-            ).first()
-            if flow and flow.folder_id:
-                return flow.folder_id
 
     default_folder = await get_or_create_default_folder(db, user_id)
     return default_folder.id
@@ -706,6 +700,75 @@ async def _build_adapter_deployment_create_payload(
     )
 
 
+def _normalize_history_reference_ids(reference_ids: list[str]) -> list[UUID]:
+    normalized: list[UUID] = []
+    for history_ref in reference_ids:
+        history_id = _as_uuid(str(history_ref))
+        if history_id is None:
+            msg = f"Invalid history checkpoint id: {history_ref}"
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=msg)
+        normalized.append(history_id)
+    return normalized
+
+
+async def _fetch_project_scoped_history_rows(
+    *,
+    reference_ids: list[str],
+    user_id: UUID,
+    project_id: UUID,
+    db,
+):
+    history_ids = _normalize_history_reference_ids(reference_ids)
+    if not history_ids:
+        return []
+
+    indexed_history_selects = [
+        select(
+            literal(index).label("position"),
+            literal(history_id).label("history_id"),
+        )
+        for index, history_id in enumerate(history_ids)
+    ]
+    indexed_history_ids_cte = (
+        indexed_history_selects[0] if len(indexed_history_selects) == 1 else union_all(*indexed_history_selects)
+    ).cte("indexed_history_ids")
+
+    statement = (
+        select(
+            indexed_history_ids_cte.c.position,
+            indexed_history_ids_cte.c.history_id,
+            FlowHistory.id.label("flow_history_id"),
+            FlowHistory.data.label("history_data"),
+            Flow.id.label("flow_id"),
+            Flow.name.label("flow_name"),
+            Flow.description.label("flow_description"),
+            Flow.tags.label("flow_tags"),
+        )
+        .select_from(indexed_history_ids_cte)
+        .join(
+            FlowHistory,
+            and_(
+                FlowHistory.user_id == user_id,
+                FlowHistory.id == indexed_history_ids_cte.c.history_id,
+            ),
+        )
+        .join(
+            Flow,
+            and_(
+                Flow.id == FlowHistory.flow_id,
+                Flow.user_id == user_id,
+                Flow.folder_id == project_id,
+            ),
+        )
+        .order_by(indexed_history_ids_cte.c.position)
+    )
+    rows = list((await db.exec(statement)).all())
+    if len(rows) < len(history_ids):
+        msg = "One or more history checkpoint ids are not checkpoints of flows in the selected project."
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=msg)
+    return rows
+
+
 async def _build_flow_artifacts_from_history_references(
     *,
     reference_ids: list[str],
@@ -713,36 +776,26 @@ async def _build_flow_artifacts_from_history_references(
     project_id: UUID,
     db,
 ) -> list[tuple[UUID, BaseFlowArtifact]]:
-    artifacts: list[tuple[UUID, BaseFlowArtifact]] = []
-    for history_ref in reference_ids:
-        history_id = _as_uuid(str(history_ref))
-        if history_id is None:
-            msg = f"Invalid history checkpoint id: {history_ref}"
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=msg)
-
-        try:
-            history_entry = await get_flow_history_entry_or_raise(db, history_id, user_id)
-        except FlowHistoryNotFoundError as exc:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
-
-        flow = (await db.exec(select(Flow).where(Flow.id == history_entry.flow_id, Flow.user_id == user_id))).first()
-        if flow is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
-
-        artifacts.append(
-            (
-                history_id,
-                BaseFlowArtifact(
-                    id=flow.id,
-                    name=flow.name,
-                    description=flow.description,
-                    data=history_entry.data or {},
-                    tags=flow.tags,
-                    provider_data={"project_id": str(project_id)},
-                ),
-            )
+    rows = await _fetch_project_scoped_history_rows(
+        reference_ids=reference_ids,
+        user_id=user_id,
+        project_id=project_id,
+        db=db,
+    )
+    return [
+        (
+            row.history_id,
+            BaseFlowArtifact(
+                id=row.flow_id,
+                name=row.flow_name,
+                description=row.flow_description,
+                data=row.history_data or {},
+                tags=row.flow_tags,
+                provider_data={"project_id": str(project_id)},
+            ),
         )
-    return artifacts
+        for row in rows
+    ]
 
 
 def _extract_snapshot_ids_from_provider_result(provider_result: dict | None) -> list[str]:
@@ -825,7 +878,6 @@ async def _attach_history_checkpoints(
         history_id = _as_uuid(str(ref))
         if history_id is None:
             continue
-        await get_flow_history_entry_or_raise(db, history_id, user_id)
         await create_deployment_attachment(
             db,
             user_id=user_id,

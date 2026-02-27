@@ -381,6 +381,7 @@ async def test_create_deployment_resolves_history_ids_to_raw_history_payloads(
                 "artifact_type": "flow",
                 "reference_ids": [history_id],
             },
+            "project_id": folder_id,
         },
         headers=logged_in_headers,
     )
@@ -408,6 +409,128 @@ async def test_create_deployment_resolves_history_ids_to_raw_history_payloads(
         ).first()
         assert attachment is not None
         assert attachment.snapshot_id == "provider-snapshot-1"
+
+
+async def test_create_deployment_rejects_history_references_from_other_project_when_project_id_is_explicit(
+    client, logged_in_headers, active_user, monkeypatch
+):
+    provider = await _create_provider(client, logged_in_headers, "tenant-create-project-scope-explicit")
+
+    async with session_scope() as session:
+        target_folder = Folder(name=f"proj-target-{uuid4().hex[:8]}", user_id=active_user.id)
+        other_folder = Folder(name=f"proj-other-{uuid4().hex[:8]}", user_id=active_user.id)
+        session.add(target_folder)
+        session.add(other_folder)
+        await session.flush()
+
+        other_flow = Flow(
+            name=f"flow-other-{uuid4().hex[:8]}",
+            user_id=active_user.id,
+            folder_id=other_folder.id,
+            data={"nodes": [], "edges": []},
+        )
+        session.add(other_flow)
+        await session.flush()
+
+        other_flow_history = FlowHistory(
+            flow_id=other_flow.id,
+            user_id=active_user.id,
+            data={"nodes": [{"id": "n1"}], "edges": []},
+            version_number=1,
+            description="checkpoint-from-other-project",
+        )
+        session.add(other_flow_history)
+        await session.flush()
+
+        target_project_id = str(target_folder.id)
+        history_id = str(other_flow_history.id)
+
+    capture_adapter = _CreateCaptureAdapter()
+
+    async def _mock_resolve_adapter(*_, **__):
+        return capture_adapter
+
+    monkeypatch.setattr(deployment_api, "_resolve_deployment_adapter", _mock_resolve_adapter)
+
+    response = await client.post(
+        "api/v1/deployments",
+        params={"provider_id": provider["id"]},
+        json={
+            "spec": {
+                "name": f"deployment-{uuid4().hex[:8]}",
+                "description": "deployment with explicit project mismatch",
+                "type": "agent",
+            },
+            "project_id": target_project_id,
+            "history": {
+                "artifact_type": "flow",
+                "reference_ids": [history_id],
+            },
+        },
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert capture_adapter.received_payload is None
+
+
+async def test_create_deployment_rejects_history_references_not_in_default_project_when_project_id_is_missing(
+    client, logged_in_headers, active_user, monkeypatch
+):
+    provider = await _create_provider(client, logged_in_headers, "tenant-create-project-scope-default")
+
+    async with session_scope() as session:
+        non_default_folder = Folder(name=f"proj-non-default-{uuid4().hex[:8]}", user_id=active_user.id)
+        session.add(non_default_folder)
+        await session.flush()
+
+        flow = Flow(
+            name=f"flow-non-default-{uuid4().hex[:8]}",
+            user_id=active_user.id,
+            folder_id=non_default_folder.id,
+            data={"nodes": [], "edges": []},
+        )
+        session.add(flow)
+        await session.flush()
+
+        flow_history = FlowHistory(
+            flow_id=flow.id,
+            user_id=active_user.id,
+            data={"nodes": [{"id": "n1"}], "edges": []},
+            version_number=1,
+            description="checkpoint-outside-default-project",
+        )
+        session.add(flow_history)
+        await session.flush()
+
+        history_id = str(flow_history.id)
+
+    capture_adapter = _CreateCaptureAdapter()
+
+    async def _mock_resolve_adapter(*_, **__):
+        return capture_adapter
+
+    monkeypatch.setattr(deployment_api, "_resolve_deployment_adapter", _mock_resolve_adapter)
+
+    response = await client.post(
+        "api/v1/deployments",
+        params={"provider_id": provider["id"]},
+        json={
+            "spec": {
+                "name": f"deployment-{uuid4().hex[:8]}",
+                "description": "deployment defaults to starter project",
+                "type": "agent",
+            },
+            "history": {
+                "artifact_type": "flow",
+                "reference_ids": [history_id],
+            },
+        },
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert capture_adapter.received_payload is None
 
 
 async def test_create_deployment_falls_back_to_default_project_when_project_id_is_missing(
