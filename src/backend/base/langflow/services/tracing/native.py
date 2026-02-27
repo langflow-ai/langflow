@@ -235,8 +235,9 @@ class NativeTracer(BaseTracer):
         except RuntimeError:
             # No running event loop - log error since trace data will be lost
             logger.error(
-                "No running event loop for trace flush - trace data will be lost. "
-                f"Flow: {self.flow_id}, Spans: {len(self.completed_spans)}"
+                "No running event loop for trace flush - trace data will be lost. Flow: %s, Spans: %d",
+                self.flow_id,
+                len(self.completed_spans),
             )
 
     async def wait_for_flush(self) -> None:
@@ -248,7 +249,7 @@ class NativeTracer(BaseTracer):
             try:
                 await self._flush_task
             except Exception as e:  # noqa: BLE001
-                logger.debug(f"Error waiting for flush: {e}")
+                logger.debug("Error waiting for flush: %s", e)
 
     async def _flush_to_database(self, error: Exception | None = None) -> None:
         """Flush all trace data to database."""
@@ -263,7 +264,7 @@ class NativeTracer(BaseTracer):
             try:
                 flow_uuid = UUID_(self.flow_id)
             except (ValueError, TypeError):
-                logger.warning(f"Invalid flow_id format: {self.flow_id}")
+                logger.warning("Invalid flow_id format: %s", self.flow_id)
                 return
 
             end_time = datetime.now(tz=timezone.utc)
@@ -333,8 +334,7 @@ class NativeTracer(BaseTracer):
                     )
                     await session.merge(span)
 
-                await session.commit()
-                logger.debug(f"Flushed {len(self.completed_spans)} spans to database")
+                logger.debug("Flushed %d spans to database", len(self.completed_spans))
 
         except Exception:
             logger.exception("Error flushing trace data to database")
