@@ -357,6 +357,7 @@ module.exports = {
           label: "Bundles",
           items: [
             "Components/components-bundles",
+            "Components/bundles-agentics",
             "Components/bundles-aiml",
             "Components/bundles-altk",
             "Components/bundles-amazon",

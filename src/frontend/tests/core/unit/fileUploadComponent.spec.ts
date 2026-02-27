@@ -892,7 +892,7 @@ test(
 
     await page.getByTestId(`remove-file-button-${file1}`).click();
 
-    // Add Text Input Component
+    // Add first Text Input Component
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("Text Input");
     await page.waitForSelector('[data-testid="input_outputText Input"]', {
@@ -910,16 +910,42 @@ test(
     await page.mouse.down();
     await adjustScreenView(page);
 
-    // Connect Text Input to Read File
-    const sourceHandle = page.getByTestId(
-      "handle-textinput-shownode-output text-right",
-    );
+    // Connect first Text Input to Read File
     const targetHandle = page.getByTestId(
-      "handle-file-shownode-file path-left",
+      "handle-file-shownode-server file path-left",
     );
-    await sourceHandle.waitFor({ state: "visible", timeout: 10000 });
+    const sourceHandle1 = page
+      .getByTestId("handle-textinput-shownode-output text-right")
+      .first();
+    await sourceHandle1.waitFor({ state: "visible", timeout: 10000 });
     await targetHandle.waitFor({ state: "visible", timeout: 10000 });
-    await sourceHandle.click();
+    await sourceHandle1.click();
+    await targetHandle.click();
+
+    // Add second Text Input Component
+    await page.getByTestId("sidebar-search-input").click();
+    await page.getByTestId("sidebar-search-input").fill("Text Input");
+    await page.waitForSelector('[data-testid="input_outputText Input"]', {
+      timeout: 1000,
+    });
+
+    await adjustScreenView(page, { numberOfZoomOut: 3 });
+    await page
+      .getByTestId("input_outputText Input")
+      .first()
+      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+        targetPosition: { x: 100, y: 300 },
+      });
+    await page.mouse.up();
+    await page.mouse.down();
+    await adjustScreenView(page);
+
+    // Connect second Text Input to Read File
+    const sourceHandle2 = page
+      .getByTestId("handle-textinput-shownode-output text-right")
+      .last();
+    await sourceHandle2.waitFor({ state: "visible", timeout: 10000 });
+    await sourceHandle2.click();
     await targetHandle.click();
 
     // Add Chat Output Component
@@ -944,12 +970,10 @@ test(
       .getByTestId("handle-chatoutput-noshownode-inputs-target")
       .click();
 
-    // Test Case 1: Multiple Files
-    const multipleFiles = JSON.stringify([
-      `${folderId}/${file1}.txt`,
-      `${folderId}/${file2}.txt`,
-    ]);
-    await page.getByTestId("textarea_str_input_value").fill(multipleFiles);
+    // Test Case 1: Multiple Files via multiple Text Inputs
+    const textInputs = page.getByTestId("textarea_str_input_value");
+    await textInputs.first().fill(`${folderId}/${file1}.txt`);
+    await textInputs.last().fill(`${folderId}/${file2}.txt`);
 
     await page.getByRole("button", { name: "Playground", exact: true }).click();
 
@@ -967,9 +991,9 @@ test(
       .getByRole("button", { name: "Playground", exact: true })
       .click({ force: true });
 
-    // Test Case 2: Single File
-    const singleFile = `${folderId}/${file1}.txt`;
-    await page.getByTestId("textarea_str_input_value").fill(singleFile);
+    // Test Case 2: Single File (clear second input, use only first)
+    await textInputs.last().fill("");
+    await textInputs.first().fill(`${folderId}/${file1}.txt`);
 
     await page
       .getByRole("button", { name: "Playground", exact: true })
