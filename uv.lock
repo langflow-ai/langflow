@@ -6053,7 +6053,6 @@ all = [
     { name = "langchain-chroma" },
     { name = "langchain-cohere" },
     { name = "langchain-elasticsearch" },
-    { name = "langchain-google-calendar-tools" },
     { name = "langchain-google-community" },
     { name = "langchain-google-genai" },
     { name = "langchain-google-vertexai" },
@@ -6218,7 +6217,6 @@ complete = [
     { name = "langchain-chroma" },
     { name = "langchain-cohere" },
     { name = "langchain-elasticsearch" },
-    { name = "langchain-google-calendar-tools" },
     { name = "langchain-google-community" },
     { name = "langchain-google-genai" },
     { name = "langchain-google-vertexai" },
@@ -6341,13 +6339,15 @@ gitpython = [
     { name = "gitpython" },
 ]
 google = [
-    { name = "langchain-google-calendar-tools" },
     { name = "langchain-google-community" },
     { name = "langchain-google-genai" },
     { name = "langchain-google-vertexai" },
 ]
 google-api = [
     { name = "google-api-python-client" },
+]
+google-calendar = [
+    { name = "langchain-google-calendar-tools" },
 ]
 graph-retriever = [
     { name = "graph-retriever" },
@@ -6676,7 +6676,7 @@ requires-dist = [
     { name = "langchain-core", specifier = ">=0.3.81,<1.0.0" },
     { name = "langchain-elasticsearch", marker = "extra == 'elasticsearch'", specifier = ">=0.3.0,<1.0.0" },
     { name = "langchain-experimental", specifier = ">=0.3.0,<1.0.0" },
-    { name = "langchain-google-calendar-tools", marker = "extra == 'google'", specifier = "==0.0.1" },
+    { name = "langchain-google-calendar-tools", marker = "extra == 'google-calendar'", specifier = "==0.0.1" },
     { name = "langchain-google-community", marker = "extra == 'google'", specifier = ">=2.0.3,<3.0.0" },
     { name = "langchain-google-genai", marker = "extra == 'google'", specifier = "==2.0.6" },
     { name = "langchain-google-vertexai", marker = "extra == 'google'", specifier = ">=2.0.7,<3.0.0" },
@@ -6888,7 +6888,7 @@ requires-dist = [
     { name = "youtube-transcript-api", marker = "extra == 'youtube'", specifier = ">=1.0.0,<2.0.0" },
     { name = "zep-python", marker = "extra == 'zep'", specifier = "==2.0.2" },
 ]
-provides-extras = ["audio", "postgresql", "local", "couchbase", "cassandra", "clickhouse", "mongodb", "supabase", "redis", "elasticsearch", "faiss", "qdrant", "weaviate", "chroma", "upstash", "pinecone", "milvus", "mongodb-vectors", "astradb", "openai", "anthropic", "cohere", "google", "ollama", "nvidia", "mistral", "sambanova", "groq", "llama-cpp", "sentence-transformers", "ctransformers", "langfuse", "langwatch", "langsmith", "arize", "pypdf", "docx", "pytube", "dspy", "smolagents", "beautifulsoup", "serpapi", "google-api", "wikipedia", "fake-useragent", "duckduckgo", "yfinance", "wolframalpha", "pyarrow", "fastavro", "gitpython", "nltk", "lark", "huggingface", "metaphor", "metal", "markup", "aws", "numexpr", "qianfan", "pgvector", "litellm", "zep", "youtube", "markdown", "kubernetes", "json-repair", "astra", "composio", "ragstack", "opensearch", "atlassian", "mem0", "needle", "sseclient", "openinference", "mcp", "ag2", "scrapegraph", "pydantic-ai", "apify", "spider", "altk", "langchain-huggingface", "langchain-unstructured", "graph-retriever", "langchain-mcp-adapters", "opik", "traceloop", "docling", "easyocr", "cleanlab", "twelvelabs", "jigsawstack", "assemblyai", "datasets", "fastparquet", "vlmrun", "cuga", "mlx", "fastmcp", "aioboto3", "astrapy", "gassist", "complete", "all"]
+provides-extras = ["audio", "postgresql", "local", "couchbase", "cassandra", "clickhouse", "mongodb", "supabase", "redis", "elasticsearch", "faiss", "qdrant", "weaviate", "chroma", "upstash", "pinecone", "milvus", "mongodb-vectors", "astradb", "openai", "anthropic", "cohere", "google", "google-calendar", "ollama", "nvidia", "mistral", "sambanova", "groq", "llama-cpp", "sentence-transformers", "ctransformers", "langfuse", "langwatch", "langsmith", "arize", "pypdf", "docx", "pytube", "dspy", "smolagents", "beautifulsoup", "serpapi", "google-api", "wikipedia", "fake-useragent", "duckduckgo", "yfinance", "wolframalpha", "pyarrow", "fastavro", "gitpython", "nltk", "lark", "huggingface", "metaphor", "metal", "markup", "aws", "numexpr", "qianfan", "pgvector", "litellm", "zep", "youtube", "markdown", "kubernetes", "json-repair", "astra", "composio", "ragstack", "opensearch", "atlassian", "mem0", "needle", "sseclient", "openinference", "mcp", "ag2", "scrapegraph", "pydantic-ai", "apify", "spider", "altk", "langchain-huggingface", "langchain-unstructured", "graph-retriever", "langchain-mcp-adapters", "opik", "traceloop", "docling", "easyocr", "cleanlab", "twelvelabs", "jigsawstack", "assemblyai", "datasets", "fastparquet", "vlmrun", "cuga", "mlx", "fastmcp", "aioboto3", "astrapy", "gassist", "complete", "all"]
 
 [package.metadata.requires-dev]
 dev = [
