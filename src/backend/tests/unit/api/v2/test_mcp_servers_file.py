@@ -188,23 +188,23 @@ async def test_concurrent_update_server_should_not_lose_servers(
     """
     import asyncio
     import copy
-    from unittest.mock import AsyncMock, MagicMock, patch
+    from unittest.mock import MagicMock, patch
 
     from langflow.api.v2.mcp import update_server
 
     # Shared mutable state simulating the MCP config file on disk
     config_state = {"mcpServers": {"server_a": {"command": "echo", "args": ["a"]}}}
 
-    async def mock_get_server_list(*args, **kwargs):
+    async def mock_get_server_list(*_args, **_kwargs):
         result = copy.deepcopy(config_state)
         await asyncio.sleep(0)  # Yield to allow interleaving between concurrent calls
         return result
 
-    async def mock_upload_server_config(new_config, *args, **kwargs):
+    async def mock_upload_server_config(new_config, *_args, **_kwargs):
         await asyncio.sleep(0)  # Yield
         config_state["mcpServers"] = dict(new_config["mcpServers"])
 
-    async def mock_get_server(name, *args, **kwargs):
+    async def mock_get_server(name, *_args, **kwargs):
         server_list = kwargs.get("server_list", {})
         return server_list.get("mcpServers", {}).get(name)
 
@@ -236,12 +236,6 @@ async def test_concurrent_update_server_should_not_lose_servers(
             ),
         )
 
-    assert "server_a" in config_state["mcpServers"], (
-        "server_a was lost due to concurrent update_server race condition"
-    )
-    assert "server_b" in config_state["mcpServers"], (
-        "server_b was lost due to concurrent update_server race condition"
-    )
-    assert "server_c" in config_state["mcpServers"], (
-        "server_c was lost due to concurrent update_server race condition"
-    )
+    assert "server_a" in config_state["mcpServers"], "server_a was lost due to concurrent update_server race condition"
+    assert "server_b" in config_state["mcpServers"], "server_b was lost due to concurrent update_server race condition"
+    assert "server_c" in config_state["mcpServers"], "server_c was lost due to concurrent update_server race condition"
