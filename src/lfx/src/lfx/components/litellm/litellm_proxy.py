@@ -5,7 +5,7 @@ from pydantic.v1 import SecretStr
 from lfx.base.models.model import LCModelComponent
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
-from lfx.inputs.inputs import IntInput, SecretStrInput, SliderInput, StrInput
+from lfx.inputs.inputs import BoolInput, IntInput, SecretStrInput, SliderInput, StrInput
 
 
 class LiteLLMProxyComponent(LCModelComponent):
@@ -21,7 +21,7 @@ class LiteLLMProxyComponent(LCModelComponent):
         StrInput(
             name="api_base",
             display_name="LiteLLM Proxy URL",
-            value="http://localhost:4000/v1",
+            value="http://localhost:4000",
             required=True,
             info="Base URL of the LiteLLM proxy.",
         ),
@@ -38,21 +38,28 @@ class LiteLLMProxyComponent(LCModelComponent):
             required=True,
             info="Model name to use (e.g. gpt-4o, claude-3-opus).",
         ),
+        BoolInput(
+            name="override_model_settings",
+            display_name="Override Model Settings",
+            value=False,
+            info="Enable to override temperature and max tokens set by the provider.",
+            real_time_refresh=True,
+        ),
         SliderInput(
             name="temperature",
             display_name="Temperature",
             value=0.7,
+            show=False,
             range_spec=RangeSpec(min=0, max=1, step=0.01),
-            advanced=True,
             info="Controls randomness. Lower values are more deterministic.",
         ),
         IntInput(
             name="max_tokens",
             display_name="Max Tokens",
             value=0,
-            advanced=True,
+            show=False,
             info="Maximum number of tokens to generate. Set to 0 for using the LiteLLM setting.",
-            range_spec=RangeSpec(min=0, max=128000),
+            range_spec=RangeSpec(min=0, max=2000000),
         ),
         IntInput(
             name="timeout",
@@ -70,6 +77,15 @@ class LiteLLMProxyComponent(LCModelComponent):
         ),
     ]
 
+    def update_build_config(self, build_config: dict, field_value, field_name: str | None = None) -> dict:
+        """Show/hide optional settings based on toggle."""
+        if field_name == "override_model_settings":
+            should_show = field_value is True
+            build_config["temperature"]["show"] = should_show
+            build_config["max_tokens"]["show"] = should_show
+
+        return build_config
+
     def build_model(self) -> LanguageModel:
         """Build the LiteLLM proxy model."""
         api_key = self.api_key
@@ -82,8 +98,8 @@ class LiteLLMProxyComponent(LCModelComponent):
             base_url=self.api_base,
             api_key=api_key,
             model=self.model_name,
-            temperature=self.temperature,
-            max_tokens=self.max_tokens if self.max_tokens != 0 else None,
+            temperature=self.temperature if self.override_model_settings else None,
+            max_tokens=self.max_tokens if self.override_model_settings and self.max_tokens != 0 else None,
             timeout=self.timeout,
             max_retries=self.max_retries,
             streaming=self.stream,
