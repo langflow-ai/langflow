@@ -770,11 +770,13 @@ class TestToolCallingAgentIntegration:
         mock_tools = [create_mock_tool("test_tool"), create_mock_tool("test_tool2")]
 
         component = ToolCallingAgentComponent()
-        component.llm = mock_llm
         component.tools = mock_tools
         component.system_prompt = "Test prompt"
 
-        with patch("lfx.components.langchain_utilities.tool_calling.create_granite_agent") as mock_create:
+        with (
+            patch.object(component, "_get_llm", return_value=mock_llm),
+            patch("lfx.components.langchain_utilities.tool_calling.create_granite_agent") as mock_create,
+        ):
             mock_create.return_value = Mock()
 
             component.create_agent_runnable()
@@ -795,11 +797,13 @@ class TestToolCallingAgentIntegration:
         mock_tools = [create_mock_tool("tool1"), create_mock_tool("tool2")]
 
         component = ToolCallingAgentComponent()
-        component.llm = mock_llm
         component.tools = mock_tools
         component.system_prompt = "Test prompt"
 
-        with patch("lfx.components.langchain_utilities.tool_calling.create_tool_calling_agent") as mock_default:
+        with (
+            patch.object(component, "_get_llm", return_value=mock_llm),
+            patch("lfx.components.langchain_utilities.tool_calling.create_tool_calling_agent") as mock_default,
+        ):
             mock_default.return_value = Mock()
 
             component.create_agent_runnable()
@@ -821,11 +825,13 @@ class TestToolCallingAgentIntegration:
         mock_tools = [create_mock_tool("test_tool")]
 
         component = ToolCallingAgentComponent()
-        component.llm = mock_llm
         component.tools = mock_tools
         component.system_prompt = "Test prompt"
 
-        with patch("lfx.components.langchain_utilities.tool_calling.create_tool_calling_agent") as mock_create:
+        with (
+            patch.object(component, "_get_llm", return_value=mock_llm),
+            patch("lfx.components.langchain_utilities.tool_calling.create_tool_calling_agent") as mock_create,
+        ):
             mock_create.return_value = Mock()
 
             component.create_agent_runnable()
@@ -845,11 +851,13 @@ class TestToolCallingAgentIntegration:
         mock_tools = [create_mock_tool("tool1"), create_mock_tool("tool2")]
 
         component = ToolCallingAgentComponent()
-        component.llm = mock_llm
         component.tools = mock_tools
         component.system_prompt = "Original prompt"
 
-        with patch("lfx.components.langchain_utilities.tool_calling.create_granite_agent") as mock_create:
+        with (
+            patch.object(component, "_get_llm", return_value=mock_llm),
+            patch("lfx.components.langchain_utilities.tool_calling.create_granite_agent") as mock_create,
+        ):
             mock_create.return_value = Mock()
 
             component.create_agent_runnable()
@@ -869,11 +877,13 @@ class TestToolCallingAgentIntegration:
         mock_llm.bind_tools = Mock(return_value=mock_llm)
 
         component = ToolCallingAgentComponent()
-        component.llm = mock_llm
         component.tools = []
         component.system_prompt = "Original prompt"
 
-        with patch("lfx.components.langchain_utilities.tool_calling.create_tool_calling_agent") as mock_create:
+        with (
+            patch.object(component, "_get_llm", return_value=mock_llm),
+            patch("lfx.components.langchain_utilities.tool_calling.create_tool_calling_agent") as mock_create,
+        ):
             mock_create.return_value = Mock()
 
             component.create_agent_runnable()

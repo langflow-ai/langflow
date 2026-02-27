@@ -1041,7 +1041,7 @@
   },
   "CSVAgent": {
     "versions": {
-      "0.3.0": "4978be110e63"
+      "0.3.0": "1888a727f9dd"
     }
   },
   "LangChainFakeEmbeddings": {
@@ -1091,12 +1091,12 @@
   },
   "OpenAIToolsAgent": {
     "versions": {
-      "0.3.0": "b2ad248a3e6c"
+      "0.3.0": "21bfd16796e5"
     }
   },
   "OpenAPIAgent": {
     "versions": {
-      "0.3.0": "3b817f0cd966"
+      "0.3.0": "a4a7564100da"
     }
   },
   "RecursiveCharacterTextSplitter": {
@@ -1126,7 +1126,7 @@
   },
   "SQLAgent": {
     "versions": {
-      "0.3.0": "8d02598705fc"
+      "0.3.0": "550c16461236"
     }
   },
   "SQLDatabase": {
@@ -1141,7 +1141,7 @@
   },
   "ToolCallingAgent": {
     "versions": {
-      "0.3.0": "a5afe724de9c"
+      "0.3.0": "cdeb13ac7430"
     }
   },
   "VectorStoreInfo": {
@@ -1156,7 +1156,7 @@
   },
   "XMLAgent": {
     "versions": {
-      "0.3.0": "338332984901"
+      "0.3.0": "17a0cb4c48a8"
     }
   },
   "LangWatchEvaluator": {

@@ -4,15 +4,17 @@ from pathlib import Path
 
 from lfx.base.agents.agent import LCAgentComponent
 from lfx.base.data.storage_utils import read_file_bytes
+from lfx.base.models.unified_models import get_language_model_options, get_llm, update_model_options_in_build_config
+from lfx.base.models.watsonx_constants import IBM_WATSONX_URLS
 from lfx.field_typing import AgentExecutor
 from lfx.inputs.inputs import (
     DictInput,
     DropdownInput,
     FileInput,
-    HandleInput,
     MessageTextInput,
+    ModelInput,
 )
-from lfx.io import BoolInput
+from lfx.io import BoolInput, SecretStrInput, StrInput
 from lfx.schema.message import Message
 from lfx.services.deps import get_settings_service
 from lfx.template.field.base import Output
@@ -28,12 +30,35 @@ class CSVAgentComponent(LCAgentComponent):
 
     inputs = [
         *LCAgentComponent.get_base_inputs(),
-        HandleInput(
-            name="llm",
+        ModelInput(
+            name="model",
             display_name="Language Model",
-            input_types=["LanguageModel"],
+            info="Select your model provider or connect a Language Model component.",
+            real_time_refresh=True,
             required=True,
-            info="An LLM Model Object (It can be found in any LLM Component).",
+        ),
+        SecretStrInput(
+            name="api_key",
+            display_name="API Key",
+            info="Model Provider API key",
+            real_time_refresh=True,
+            advanced=True,
+        ),
+        DropdownInput(
+            name="base_url_ibm_watsonx",
+            display_name="watsonx API Endpoint",
+            info="The base URL of the API (IBM watsonx.ai only)",
+            options=IBM_WATSONX_URLS,
+            value=IBM_WATSONX_URLS[0],
+            show=False,
+            real_time_refresh=True,
+        ),
+        StrInput(
+            name="project_id",
+            display_name="watsonx Project ID",
+            info="The project ID associated with the foundation model (IBM watsonx.ai only)",
+            show=False,
+            required=False,
         ),
         FileInput(
             name="path",
@@ -67,7 +92,7 @@ class CSVAgentComponent(LCAgentComponent):
             name="allow_dangerous_code",
             display_name="Allow Dangerous Code",
             value=False,
-            advanced=True,
+            required=True,
             info=(
                 "SECURITY WARNING: Enabling this allows the agent to execute arbitrary Python code "
                 "on the server, which can lead to remote code execution vulnerabilities. "
@@ -86,6 +111,46 @@ class CSVAgentComponent(LCAgentComponent):
         if isinstance(self.path, Message) and isinstance(self.path.text, str):
             return self.path.text
         return self.path
+
+    def _get_llm(self):
+        """Resolve the language model from dropdown selection or connected component."""
+        return get_llm(
+            model=self.model,
+            user_id=self.user_id,
+            api_key=getattr(self, "api_key", None),
+            watsonx_url=getattr(self, "base_url_ibm_watsonx", None),
+            watsonx_project_id=getattr(self, "project_id", None),
+        )
+
+    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
+        """Dynamically update build config with user-filtered model options (tool-calling capable models)."""
+
+        def get_tool_calling_model_options(user_id=None):
+            return get_language_model_options(user_id=user_id, tool_calling=True)
+
+        build_config = update_model_options_in_build_config(
+            component=self,
+            build_config=dict(build_config),
+            cache_key_prefix="language_model_options_tool_calling",
+            get_options_func=get_tool_calling_model_options,
+            field_name=field_name,
+            field_value=field_value,
+        )
+
+        # Show/hide watsonx fields based on selected model
+        current_model_value = field_value if field_name == "model" else build_config.get("model", {}).get("value")
+        if isinstance(current_model_value, list) and len(current_model_value) > 0:
+            selected_model = current_model_value[0]
+            provider = selected_model.get("provider", "")
+            is_watsonx = provider == "IBM WatsonX"
+            if "base_url_ibm_watsonx" in build_config:
+                build_config["base_url_ibm_watsonx"]["show"] = is_watsonx
+                build_config["base_url_ibm_watsonx"]["required"] = is_watsonx
+            if "project_id" in build_config:
+                build_config["project_id"]["show"] = is_watsonx
+                build_config["project_id"]["required"] = is_watsonx
+
+        return build_config
 
     def build_agent_response(self) -> Message:
         """Build and execute the CSV agent, returning the response."""
@@ -108,9 +173,10 @@ class CSVAgentComponent(LCAgentComponent):
 
             # Get local path (downloads from S3 if needed)
             local_path = self._get_local_path()
+            llm = self._get_llm()
 
             agent_csv = create_csv_agent(
-                llm=self.llm,
+                llm=llm,
                 path=local_path,
                 agent_type=self.agent_type,
                 handle_parsing_errors=self.handle_parsing_errors,
@@ -144,9 +210,10 @@ class CSVAgentComponent(LCAgentComponent):
 
         # Get local path (downloads from S3 if needed)
         local_path = self._get_local_path()
+        llm = self._get_llm()
 
         agent_csv = create_csv_agent(
-            llm=self.llm,
+            llm=llm,
             path=local_path,
             agent_type=self.agent_type,
             handle_parsing_errors=self.handle_parsing_errors,
