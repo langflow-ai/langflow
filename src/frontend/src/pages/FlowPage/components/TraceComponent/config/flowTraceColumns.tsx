@@ -1,9 +1,8 @@
 import type { ColDef } from "ag-grid-community";
 import IconComponent from "@/components/common/genericIconComponent";
 import { formatSmartTimestamp } from "@/utils/dateTime";
-import { getStatusIconProps } from "../traceViewHelpers";
+import { formatTotalLatency, getStatusIconProps } from "../traceViewHelpers";
 import {
-  formatLatency,
   formatObjectValue,
   formatRunValue,
   pickFirstNumber,
@@ -96,7 +95,7 @@ export function createFlowTracesColumns({
           params.data?.totalLatencyMs,
           params.data?.total_latency_ms,
         );
-        return formatLatency(latencyMs);
+        return formatTotalLatency(latencyMs);
       },
     },
     {

@@ -1,10 +1,7 @@
 import {
   coerceNumber,
-  formatLatency,
   formatObjectValue,
   formatRunValue,
-  isNegativeStatus,
-  isPositiveStatus,
   pickFirstNumber,
 } from "../flowTraceColumnsHelpers";
 
@@ -46,30 +43,6 @@ describe("flowTraceColumnsHelpers", () => {
 
     it("returns null when none are valid", () => {
       expect(pickFirstNumber("", undefined, "nope")).toBeNull();
-    });
-  });
-
-  describe("formatLatency", () => {
-    it("formats milliseconds and seconds", () => {
-      expect(formatLatency(532)).toBe("532 ms");
-      expect(formatLatency(1500)).toBe("1.50 s");
-    });
-
-    it("returns empty string for invalid input", () => {
-      expect(formatLatency(null)).toBe("");
-      expect(formatLatency(Number.NaN)).toBe("");
-    });
-  });
-
-  describe("status helpers", () => {
-    it("detects negative statuses", () => {
-      expect(isNegativeStatus("error")).toBe(true);
-      expect(isNegativeStatus("Exception: boom")).toBe(true);
-    });
-
-    it("detects positive statuses", () => {
-      expect(isPositiveStatus("success")).toBe(true);
-      expect(isPositiveStatus("Completed")).toBe(true);
     });
   });
 

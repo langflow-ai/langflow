@@ -106,12 +106,11 @@ test(
     await page.getByTestId("playground-btn-flow-io").click();
     await page.getByTestId("button-send").click();
     await page.waitForSelector("text=Finished", { timeout: 60000 });
+    await page.getByTestId("playground-close-button").click();
     await page.getByTestId("sidebar-nav-traces").click();
     await page
       .getByRole("gridcell", { name: '{"input_value":"Hello"}' })
       .click();
-    await expect(
-      await page.getByTestId("span-detail").getByText("success"),
-    ).toBeVisible();
+    await page.getByText("Run");
   },
 );

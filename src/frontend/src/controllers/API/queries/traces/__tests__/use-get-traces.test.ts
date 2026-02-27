@@ -54,7 +54,7 @@ describe("useGetTracesQuery", () => {
       sessionId: " sess\t ",
       params: {
         query: " hi\u0001 ",
-        status: "success",
+        status: "ok",
         page: 2,
       },
     });
@@ -66,7 +66,7 @@ describe("useGetTracesQuery", () => {
         flow_id: "flow1",
         session_id: "sess",
         query: "hi",
-        status: "success",
+        status: "ok",
         page: 2,
       },
     });

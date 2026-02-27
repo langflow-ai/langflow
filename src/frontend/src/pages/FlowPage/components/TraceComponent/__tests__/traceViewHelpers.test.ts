@@ -4,11 +4,7 @@ import {
   formatCost,
   formatIOPreview,
   formatJsonData,
-  formatSpanDetailLatency,
-  formatSpanNodeLatency,
-  formatTimestamp,
   formatTokens,
-  formatTotalCost,
   formatTotalLatency,
   getSpanIcon,
   getSpanStatusLabel,
@@ -172,13 +168,6 @@ describe("traceViewHelpers", () => {
     });
   });
 
-  describe("formatSpanNodeLatency", () => {
-    it("formats ms and seconds", () => {
-      expect(formatSpanNodeLatency(450)).toBe("450ms");
-      expect(formatSpanNodeLatency(1500)).toBe("1.5s");
-    });
-  });
-
   describe("formatTokens", () => {
     it("formats token counts", () => {
       expect(formatTokens(12)).toBe("12");
@@ -208,13 +197,6 @@ describe("traceViewHelpers", () => {
     });
   });
 
-  describe("formatSpanDetailLatency", () => {
-    it("formats seconds and minutes", () => {
-      expect(formatSpanDetailLatency(1500)).toBe("1.50s");
-      expect(formatSpanDetailLatency(120000)).toBe("2.00m");
-    });
-  });
-
   describe("formatJsonData", () => {
     it("stringifies objects", () => {
       expect(formatJsonData({ a: 1 })).toBe('{\n  "a": 1\n}');
@@ -227,24 +209,10 @@ describe("traceViewHelpers", () => {
     });
   });
 
-  describe("formatTotalCost", () => {
-    it("formats total cost", () => {
-      expect(formatTotalCost(0)).toBe("$0.00");
-      expect(formatTotalCost(0.005)).toBe("$0.005000");
-      expect(formatTotalCost(0.12)).toBe("$0.1200");
-    });
-  });
-
   describe("formatTotalLatency", () => {
     it("formats total latency", () => {
-      expect(formatTotalLatency(800)).toBe("800ms");
-      expect(formatTotalLatency(1200)).toBe("1.20s");
-    });
-  });
-
-  describe("formatTimestamp", () => {
-    it("delegates to formatSmartTimestamp", () => {
-      expect(formatTimestamp("2024-01-01T00:00:00")).toBe("mocked-timestamp");
+      expect(formatTotalLatency(800)).toBe("800 ms");
+      expect(formatTotalLatency(1200)).toBe("1.20 s");
     });
   });
 

@@ -70,7 +70,7 @@ describe("SpanNode", () => {
 
     expect(screen.getByText("Test Span")).toBeInTheDocument();
     expect(screen.getByText("1.2k")).toBeInTheDocument();
-    expect(screen.getByText("1.2s")).toBeInTheDocument();
+    expect(screen.getByText("1.20s")).toBeInTheDocument();
 
     const statusIcon = screen.getByTestId("flow-log-status-ok");
     expect(statusIcon).toHaveAttribute("aria-label", "ok");
