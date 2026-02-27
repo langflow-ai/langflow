@@ -187,6 +187,15 @@ class NativeTracer(BaseTracer):
         # Get accumulated token usage from child LangChain spans
         tokens = self._component_tokens.pop(trace_id, {})
 
+        # Build OTel-style attributes for token usage
+        attributes: dict[str, Any] = {}
+        if tokens.get("prompt_tokens"):
+            attributes["prompt_tokens"] = tokens["prompt_tokens"]
+        if tokens.get("completion_tokens"):
+            attributes["completion_tokens"] = tokens["completion_tokens"]
+        if tokens.get("total_tokens"):
+            attributes["total_tokens"] = tokens["total_tokens"]
+
         # Store completed span for batch write
         self.completed_spans.append(
             {
@@ -200,9 +209,7 @@ class NativeTracer(BaseTracer):
                 "latency_ms": latency_ms,
                 "status": SpanStatus.ERROR if error else SpanStatus.OK,
                 "error": str(error) if error else None,
-                "prompt_tokens": tokens.get("prompt_tokens") or None,
-                "completion_tokens": tokens.get("completion_tokens") or None,
-                "total_tokens": tokens.get("total_tokens") or None,
+                "attributes": attributes,
             }
         )
 
@@ -274,8 +281,10 @@ class NativeTracer(BaseTracer):
             has_span_errors = any(span.get("status") == SpanStatus.ERROR for span in self.completed_spans)
             trace_status = SpanStatus.ERROR if (error or has_span_errors) else SpanStatus.OK
 
-            # Calculate total tokens from all spans
-            total_tokens = sum(span.get("total_tokens") or 0 for span in self.completed_spans)
+            # Calculate total tokens from all spans (stored in attributes)
+            total_tokens = sum(
+                int((span.get("attributes") or {}).get("total_tokens") or 0) for span in self.completed_spans
+            )
 
             async with session_scope() as session:
                 trace = TraceTable(
@@ -327,10 +336,7 @@ class NativeTracer(BaseTracer):
                         inputs=span_data["inputs"],
                         outputs=span_data["outputs"],
                         error=span_data.get("error"),
-                        model_name=span_data.get("model_name"),
-                        prompt_tokens=span_data.get("prompt_tokens"),
-                        completion_tokens=span_data.get("completion_tokens"),
-                        total_tokens=span_data.get("total_tokens"),
+                        attributes=span_data.get("attributes") or {},
                     )
                     await session.merge(span)
 
@@ -443,6 +449,17 @@ class NativeTracer(BaseTracer):
             tokens["completion_tokens"] += completion_tokens or 0
             tokens["total_tokens"] += total_tokens or 0
 
+        # Build OTel-style attributes for token usage and model name
+        lc_attributes: dict[str, Any] = {}
+        if span_info.get("model_name"):
+            lc_attributes["model_name"] = span_info["model_name"]
+        if prompt_tokens:
+            lc_attributes["prompt_tokens"] = prompt_tokens
+        if completion_tokens:
+            lc_attributes["completion_tokens"] = completion_tokens
+        if total_tokens:
+            lc_attributes["total_tokens"] = total_tokens
+
         # Store completed span for batch write
         self.completed_spans.append(
             {
@@ -456,10 +473,7 @@ class NativeTracer(BaseTracer):
                 "latency_ms": latency_ms or actual_latency,
                 "status": SpanStatus.ERROR if error else SpanStatus.OK,
                 "error": error,
-                "model_name": span_info.get("model_name"),
-                "prompt_tokens": prompt_tokens,
-                "completion_tokens": completion_tokens,
-                "total_tokens": total_tokens,
+                "attributes": lc_attributes,
                 "parent_span_id": span_info.get("parent_span_id"),
             }
         )

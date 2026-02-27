@@ -3,10 +3,19 @@ from enum import Enum
 from typing import Any, Optional
 from uuid import UUID, uuid4
 
+from pydantic import Field as PydanticField
 from pydantic import field_serializer, field_validator
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel, Text
 
 from langflow.serialization.serialization import serialize
+
+
+class SpanKind(str, Enum):
+    INTERNAL = "INTERNAL"
+    CLIENT = "CLIENT"
+    SERVER = "SERVER"
+    PRODUCER = "PRODUCER"
+    CONSUMER = "CONSUMER"
 
 
 class SpanType(str, Enum):
@@ -84,7 +93,7 @@ class TraceRead(TraceBase):
     """Read model for traces with spans."""
 
     id: UUID
-    spans: list["SpanRead"] = []
+    spans: list["SpanRead"] = PydanticField(default_factory=list)
 
 
 class TraceCreate(SQLModel):
@@ -110,11 +119,15 @@ class SpanBase(SQLModel):
     inputs: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
     outputs: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
     error: str | None = Field(default=None, sa_column=Column(Text), description="Error message if failed")
-    model_name: str | None = Field(default=None, description="Model name for LLM spans")
-    prompt_tokens: int | None = Field(default=None, description="Number of prompt tokens")
-    completion_tokens: int | None = Field(default=None, description="Number of completion tokens")
-    total_tokens: int | None = Field(default=None, description="Total tokens used")
-    cost: float | None = Field(default=None, description="Estimated cost for this span")
+    span_kind: SpanKind = Field(
+        default=SpanKind.INTERNAL,
+        description="OpenTelemetry SpanKind",
+    )
+    # OTel-compliant extensible attributes
+    attributes: dict[str, Any] = Field(
+        default_factory=dict,
+        sa_column=Column(JSON),
+    )
 
     class Config:
         arbitrary_types_allowed = True
@@ -127,6 +140,12 @@ class SpanBase(SQLModel):
 
     @field_serializer("outputs")
     def serialize_outputs(self, data) -> dict | None:
+        if data is None:
+            return None
+        return serialize(data)
+
+    @field_serializer("attributes")
+    def serialize_attributes(self, data):
         if data is None:
             return None
         return serialize(data)
@@ -161,7 +180,7 @@ class SpanRead(SpanBase):
     id: UUID
     trace_id: UUID
     parent_span_id: UUID | None = None
-    children: list["SpanRead"] = []
+    children: list["SpanRead"] = PydanticField(default_factory=list)
 
 
 class SpanCreate(SQLModel):
@@ -172,7 +191,8 @@ class SpanCreate(SQLModel):
     trace_id: UUID
     parent_span_id: UUID | None = None
     inputs: dict[str, Any] | None = None
-    model_name: str | None = None
+    # OTel attributes
+    attributes: dict[str, Any] | None = None
 
 
 class SpanUpdate(SQLModel):
@@ -183,10 +203,8 @@ class SpanUpdate(SQLModel):
     latency_ms: int | None = None
     outputs: dict[str, Any] | None = None
     error: str | None = None
-    prompt_tokens: int | None = None
-    completion_tokens: int | None = None
-    total_tokens: int | None = None
-    cost: float | None = None
+    # OTel attribute
+    attributes: dict[str, Any] | None = None
 
 
 # Update forward references

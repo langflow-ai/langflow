@@ -47,24 +47,24 @@ async def _fetch_trace_token_totals(session, trace_ids: list[UUID]) -> dict[str,
     if not trace_ids:
         return token_map
 
-    parent_ids_subq = (
-        select(SpanTable.parent_span_id)
-        .where(SpanTable.parent_span_id != None)  # noqa: E711
-        .where(col(SpanTable.trace_id).in_(trace_ids))
-    ).subquery()
-
-    token_stmt = (
-        select(
-            SpanTable.trace_id,
-            func.coalesce(func.sum(SpanTable.total_tokens), 0).label("sum_tokens"),
-        )
-        .where(col(SpanTable.trace_id).in_(trace_ids))
-        .where(~col(SpanTable.id).in_(select(parent_ids_subq.c.parent_span_id)))
-        .group_by(col(SpanTable.trace_id))
+    # Fetch all spans for the given traces and sum total_tokens from attributes JSON
+    all_spans_stmt = select(SpanTable.trace_id, SpanTable.id, SpanTable.parent_span_id, SpanTable.attributes).where(
+        col(SpanTable.trace_id).in_(trace_ids)
     )
-    token_rows = (await session.exec(token_stmt)).all()
-    for row in token_rows:
-        token_map[str(row[0])] = int(row[1] or 0)
+    rows = (await session.exec(all_spans_stmt)).all()
+
+    # Determine parent IDs (to count only leaf spans and avoid double-counting)
+    parent_ids = {row[2] for row in rows if row[2] is not None}
+
+    for row in rows:
+        trace_id_val, span_id, _parent_span_id, attributes = row
+        # Skip parent spans to avoid double-counting
+        if span_id in parent_ids:
+            continue
+        attrs = attributes or {}
+        total_tokens = attrs.get("llm.usage.total_tokens") or attrs.get("total_tokens") or 0
+        tid = str(trace_id_val)
+        token_map[tid] = token_map.get(tid, 0) + int(total_tokens)
 
     return token_map
 
@@ -290,7 +290,7 @@ async def _fetch_single_trace(user_id: UUID, trace_id: UUID) -> dict[str, Any] |
 
         # Aggregate tokens from leaf spans only (parents already include children's tokens)
         parent_ids = {s.parent_span_id for s in spans if s.parent_span_id}
-        total_tokens = sum(s.total_tokens or 0 for s in spans if s.id not in parent_ids)
+        total_tokens = sum(int((s.attributes or {}).get("total_tokens") or 0) for s in spans if s.id not in parent_ids)
 
         # Return trace with span tree in frontend-compatible format
         return {
@@ -388,12 +388,12 @@ def _span_to_dict(span: SpanTable) -> dict[str, Any]:
         Dictionary with frontend-compatible field names
     """
     token_usage = None
-    if span.total_tokens:
+    if span.attributes:
         token_usage = {
-            "promptTokens": span.prompt_tokens or 0,
-            "completionTokens": span.completion_tokens or 0,
-            "totalTokens": span.total_tokens,
-            "cost": span.cost or 0,
+            "promptTokens": span.attributes.get("prompt_tokens", 0),
+            "completionTokens": span.attributes.get("completion_tokens", 0),
+            "totalTokens": span.attributes.get("total_tokens", 0),
+            "cost": span.attributes.get("cost", 0.0),
         }
 
     return {
@@ -407,7 +407,7 @@ def _span_to_dict(span: SpanTable) -> dict[str, Any]:
         "inputs": span.inputs or {},
         "outputs": span.outputs or {},
         "error": span.error,
-        "modelName": span.model_name,
+        "modelName": (span.attributes or {}).get("model_name"),
         "tokenUsage": token_usage,
     }
 
