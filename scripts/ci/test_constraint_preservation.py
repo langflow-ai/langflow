@@ -18,7 +18,7 @@ EXPECTED = '    "langflow-base[complete]>=0.8.0.rc3,<1.dev0",'
 def run_sed(input_line):
     """Run sed on input line and return the result."""
     # Use sed with stdin/stdout instead of file operations
-    result = subprocess.run(
+    result = subprocess.run(  # noqa: S603
         ["sed", SED_PATTERN],  # noqa: S607
         input=input_line,
         capture_output=True,
