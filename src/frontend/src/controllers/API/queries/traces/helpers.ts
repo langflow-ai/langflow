@@ -1,4 +1,4 @@
-import { Span, Trace } from "@/modals/flowLogsModal/components/TraceView/types";
+import { Span, Trace } from "@/pages/FlowPage/components/TraceComponent/types";
 import { SpanApiResponse, TraceApiResponse } from "./types";
 
 const sanitizeString = (value: string, maxLen = 50) => {

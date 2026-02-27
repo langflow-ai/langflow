@@ -429,6 +429,7 @@ class TestFlushToDatabase:
                 "status": SpanStatus.OK,
                 "error": None,
                 "attributes": {"total_tokens": 50},
+                "span_source": "langchain",
             },
             {
                 "id": str(uuid4()),
@@ -442,6 +443,7 @@ class TestFlushToDatabase:
                 "status": SpanStatus.OK,
                 "error": None,
                 "attributes": {"total_tokens": 30},
+                "span_source": "langchain",
             },
         ]
 
@@ -578,15 +580,21 @@ class TestGetLangchainCallback:
         assert isinstance(callback, NativeCallbackHandler)
 
     def test_callback_has_parent_span_id_when_component_active(self):
+        from langflow.services.tracing.native_callback import NativeCallbackHandler
+
         tracer = _make_tracer()
         tracer._current_component_id = "comp-1"
         callback = tracer.get_langchain_callback()
         assert callback is not None
+        assert isinstance(callback, NativeCallbackHandler)
         assert callback.parent_span_id is not None
 
     def test_callback_has_no_parent_span_id_when_no_component(self):
+        from langflow.services.tracing.native_callback import NativeCallbackHandler
+
         tracer = _make_tracer()
         tracer._current_component_id = None
         callback = tracer.get_langchain_callback()
         assert callback is not None
+        assert isinstance(callback, NativeCallbackHandler)
         assert callback.parent_span_id is None

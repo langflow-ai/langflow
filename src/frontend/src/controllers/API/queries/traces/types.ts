@@ -1,4 +1,4 @@
-import { Span } from "@/modals/flowLogsModal/components/TraceView/types";
+import { Span } from "@/pages/FlowPage/components/TraceComponent/types";
 
 export interface TracesQueryParams {
   flowId: string | null;
