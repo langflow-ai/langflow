@@ -2158,6 +2158,36 @@ class TestNormalizeArgumentsForMcp:
         assert "Parameter 'items'" in str(exc_info.value)
         assert "invalid JSON" in str(exc_info.value)
 
+    def test_str_to_dict_when_nested_model_expected(self):
+        """Test str JSON when nested Pydantic model expected -> parsed dict (foreman-mcp params case)."""
+        from pydantic import BaseModel, Field
+
+        class ParamsModel(BaseModel):
+            search: str | None = None
+            per_page: int | None = None
+            page: int | None = None
+
+        class Schema(BaseModel):
+            params: ParamsModel = Field(..., description="Params")
+
+        json_str = '{"search":"installed_packages","per_page":50}'
+        result = util._normalize_arguments_for_mcp({"params": json_str}, Schema, "test_tool")
+        assert result["params"] == {"search": "installed_packages", "per_page": 50}
+        assert isinstance(result["params"], dict)
+
+    def test_nested_model_already_dict_unchanged(self):
+        """Test nested model field with dict value -> unchanged."""
+        from pydantic import BaseModel, Field
+
+        class ParamsModel(BaseModel):
+            search: str | None = None
+
+        class Schema(BaseModel):
+            params: ParamsModel = Field(..., description="Params")
+
+        result = util._normalize_arguments_for_mcp({"params": {"search": "test"}}, Schema, "test_tool")
+        assert result == {"params": {"search": "test"}}
+
 
 class TestSnakeToCamelConversion:
     """Test the _snake_to_camel function from json_schema module."""

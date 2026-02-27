@@ -313,6 +313,18 @@ def _resolve_expected_type(annotation: Any) -> type | None:
     return None
 
 
+def _is_pydantic_model_type(annotation: Any) -> bool:
+    """Check if annotation refers to a Pydantic BaseModel (possibly in Union with None)."""
+    ann = annotation
+    origin = get_origin(ann)
+    if origin is UnionType or origin is Union:
+        args = get_args(ann)
+        non_none = [a for a in args if a is not type(None)]
+        if non_none:
+            ann = non_none[0]
+    return isinstance(ann, type) and issubclass(ann, BaseModel)
+
+
 def _try_convert_value(value: Any, expected_type: type, field_name: str, tool_name: str) -> Any:
     """Try to convert value to expected type. Raise ValueError with clear message on failure."""
     if value is None and expected_type in (int, float, bool, dict, list):
@@ -456,7 +468,25 @@ def _normalize_arguments_for_mcp(
             continue
         expected = _resolve_expected_type(model_field.annotation)
         if expected is None:
-            result[field_name] = value
+            # Nested Pydantic model (object with properties): UI/API often sends as JSON string
+            if _is_pydantic_model_type(model_field.annotation) and isinstance(value, str):
+                try:
+                    parsed = json.loads(value)
+                except json.JSONDecodeError as e:
+                    msg = (
+                        f"Tool '{tool_name}': Parameter '{field_name}' expects object "
+                        f"but received invalid JSON string {value!r}; {e}"
+                    )
+                    raise ValueError(msg) from e
+                if not isinstance(parsed, dict):
+                    msg = (
+                        f"Tool '{tool_name}': Parameter '{field_name}' expects object "
+                        f"but JSON parsed to {type(parsed).__name__}."
+                    )
+                    raise ValueError(msg)
+                result[field_name] = parsed
+            else:
+                result[field_name] = value
             continue
         if expected is str:
             result[field_name] = value
@@ -1899,7 +1929,15 @@ async def update_tools(
                                 # Keep original key (may be flattened e.g. params.search)
                                 converted_dict[key] = value
 
-                    return maybe_unflatten_dict(converted_dict)
+                    unflattened = maybe_unflatten_dict(converted_dict)
+                    # Normalize: convert JSON strings to dict for nested model params
+                    normalized = _normalize_arguments_for_mcp(unflattened, self.args_schema, self.name)
+                    # Preserve extra keys not in schema (e.g. flattened keys)
+                    schema_fields = set(self.args_schema.model_fields.keys())
+                    for key, value in unflattened.items():
+                        if key not in schema_fields and key not in normalized:
+                            normalized[key] = value
+                    return normalized
 
             tool_obj = MCPStructuredTool(
                 name=tool.name,
