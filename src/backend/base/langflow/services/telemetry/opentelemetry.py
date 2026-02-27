@@ -251,3 +251,15 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
         else:
             msg = f"Metric '{metric_name}' is not a histogram"
             raise TypeError(msg)
+
+    def shutdown(self):
+        # Only shut down if initialized
+        if not self._initialized:
+            return
+        if self._meter_provider:
+            readers = getattr(self._meter_provider, "_metric_readers", [])
+            for reader in readers:
+                if hasattr(reader, "shutdown"):
+                    reader.shutdown()
+        self._metrics.clear()
+        OpenTelemetry._initialized = False
