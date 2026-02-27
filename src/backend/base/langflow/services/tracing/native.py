@@ -78,44 +78,42 @@ class NativeTracer(BaseTracer):
         self.project_name = project_name
         self.trace_id = trace_id
         self.user_id = user_id
-        # Ensure session_id is always set, default to trace_id if not provided
+        # Fallback to trace_id so session grouping always has a value in the DB.
         self.session_id = session_id or str(trace_id)
-        # Use provided flow_id or extract from trace_name as fallback
+        # Prefer the explicit flow_id; fall back to parsing trace_name so callers
+        # that don't pass flow_id separately still produce a usable value.
         self.flow_id = flow_id or (trace_name.split(" - ")[-1] if " - " in trace_name else trace_name)
 
-        # Track active component spans (in-memory)
+        # OrderedDict preserves insertion order so spans flush in execution order.
         self.spans: dict[str, dict[str, Any]] = OrderedDict()
 
-        # Track completed spans for batch database write
+        # Collected at end_trace time; written to DB in a single batch on flush.
         self.completed_spans: list[dict[str, Any]] = []
 
-        # Track LangChain spans (from callback handler)
+        # Keyed by LangChain run_id so on_*_end can look up the matching on_*_start data.
         self.langchain_spans: dict[UUID, dict[str, Any]] = {}
 
-        # Track the currently active component span ID (for parent-child linking)
+        # Needed so get_langchain_callback() can set the correct parent span ID.
         self._current_component_id: str | None = None
 
-        # Accumulate token usage from child LangChain spans per component
+        # Rolled up into the component span's attributes so the UI can show per-component token counts.
         self._component_tokens: dict[str, dict[str, int]] = {}
 
-        # Trace start time
         self._start_time = datetime.now(tz=timezone.utc)
 
-        # Flush task (set by end() method, awaited by TracingService)
+        # Awaited by TracingService.end_tracers() to guarantee the DB write completes before the response returns.
         self._flush_task: asyncio.Task | None = None
 
-        # Check if native tracing is enabled
         self._ready = self._is_enabled()
 
     @staticmethod
     def _is_enabled() -> bool:
-        """Check if native tracing is enabled (default: true)."""
-        # Enabled by default, can be disabled with LANGFLOW_NATIVE_TRACING=false
+        """Opt-out rather than opt-in so new deployments get tracing without extra config."""
         return os.getenv("LANGFLOW_NATIVE_TRACING", "true").lower() not in ("false", "0", "no")
 
     @property
     def ready(self) -> bool:
-        """Return whether the tracer is ready to use."""
+        """Expose _ready so callers can skip tracing setup when the tracer is disabled."""
         return self._ready
 
     @override
@@ -143,7 +141,7 @@ class NativeTracer(BaseTracer):
 
         start_time = datetime.now(tz=timezone.utc)
 
-        # Store span info for later completion
+        # Strip the component ID suffix so the UI shows a clean display name.
         name = trace_name.removesuffix(f" ({trace_id})")
         self.spans[trace_id] = {
             "id": trace_id,
@@ -154,7 +152,7 @@ class NativeTracer(BaseTracer):
             "start_time": start_time,
         }
 
-        # Track current component for LangChain callback parent linking
+        # Stored so get_langchain_callback() can attach LangChain child spans to this component.
         self._current_component_id = trace_id
 
     @override
@@ -187,7 +185,7 @@ class NativeTracer(BaseTracer):
         start_time = span_info["start_time"]
         latency_ms = int((end_time - start_time).total_seconds() * 1000)
 
-        # Prepare output with optional error and logs
+        # Merge outputs, error, and logs into one dict so the DB stores a single JSON blob per span.
         output_data: dict[str, Any] = {}
         if outputs:
             output_data.update(outputs)
@@ -196,10 +194,10 @@ class NativeTracer(BaseTracer):
         if logs:
             output_data["logs"] = [log if isinstance(log, dict) else log.model_dump() for log in logs]
 
-        # Get accumulated token usage from child LangChain spans
+        # Pop so tokens aren't double-counted if end_trace is called more than once for the same component.
         tokens = self._component_tokens.pop(trace_id, {})
 
-        # Build OTel-style attributes for token usage
+        # OTel attribute keys so the frontend can render token usage without knowing provider-specific field names.
         attributes: dict[str, Any] = {}
         if tokens.get("prompt_tokens"):
             attributes["prompt_tokens"] = tokens["prompt_tokens"]
@@ -208,7 +206,6 @@ class NativeTracer(BaseTracer):
         if tokens.get("total_tokens"):
             attributes["total_tokens"] = tokens["total_tokens"]
 
-        # Store completed span for batch write
         self.completed_spans.append(
             self._build_completed_span(
                 span_id=trace_id,
@@ -225,7 +222,7 @@ class NativeTracer(BaseTracer):
             )
         )
 
-        # Clear current component ID
+        # Reset so the next component's LangChain spans don't inherit this component as parent.
         self._current_component_id = None
 
     @override
@@ -247,12 +244,12 @@ class NativeTracer(BaseTracer):
         if not self._ready:
             return
 
-        # Schedule async database write - store task so TracingService can await it
+        # Store the task so TracingService.end_tracers() can await it before returning the response.
         try:
             loop = asyncio.get_running_loop()
             self._flush_task = loop.create_task(self._flush_to_database(error))
         except RuntimeError:
-            # No running event loop - log error since trace data will be lost
+            # Called from a sync context (e.g. tests without an event loop) — data cannot be persisted.
             logger.error(
                 "No running event loop for trace flush - trace data will be lost. Flow: %s, Spans: %d",
                 self.flow_id,
@@ -271,7 +268,7 @@ class NativeTracer(BaseTracer):
                 logger.debug("Error waiting for flush: %s", e)
 
     async def _flush_to_database(self, error: Exception | None = None) -> None:
-        """Flush all trace data to database."""
+        """Persist the completed trace and all its spans in a single DB session to minimise round-trips."""
         try:
             from uuid import UUID as UUID_
 
@@ -295,12 +292,12 @@ class NativeTracer(BaseTracer):
             end_time = datetime.now(tz=timezone.utc)
             total_latency_ms = int((end_time - self._start_time).total_seconds() * 1000)
 
-            # Determine overall trace status - error if any span has error or if top-level error
+            # Propagate any child span error to the trace so the UI can filter by status.
             has_span_errors = any(span.get("status") == SpanStatus.ERROR for span in self.completed_spans)
             trace_status = SpanStatus.ERROR if (error or has_span_errors) else SpanStatus.OK
 
-            # Calculate total tokens from LangChain spans only (component spans aggregate
-            # their children's tokens, so summing both would double-count)
+            # Only sum LangChain spans because component spans already aggregate their children's
+            # tokens — summing both levels would double-count every LLM call.
             total_tokens = sum(
                 int((span.get("attributes") or {}).get("total_tokens") or 0)
                 for span in self.completed_spans
@@ -321,7 +318,6 @@ class NativeTracer(BaseTracer):
                 )
                 await session.merge(trace)
 
-                # Create span records
                 for span_data in self.completed_spans:
                     try:
                         span_uuid = UUID_(span_data["id"])
@@ -384,7 +380,6 @@ class NativeTracer(BaseTracer):
 
         return NativeCallbackHandler(self, parent_span_id=parent_span_id)
 
-    # Helper methods for LangChain callback integration
     def add_langchain_span(
         self,
         span_id: UUID,
@@ -409,7 +404,7 @@ class NativeTracer(BaseTracer):
 
         start_time = datetime.now(tz=timezone.utc)
 
-        # Store span info
+        # Keyed by span_id so end_langchain_span can look up the matching start data.
         self.langchain_spans[span_id] = {
             "id": str(span_id),
             "name": name,
@@ -452,7 +447,7 @@ class NativeTracer(BaseTracer):
         start_time = span_info["start_time"]
         actual_latency = int((end_time - start_time).total_seconds() * 1000)
 
-        # Accumulate tokens to the parent component span
+        # Roll up into the component span so the UI shows per-component token totals.
         if total_tokens and self._current_component_id:
             tokens = self._component_tokens.setdefault(
                 self._current_component_id,
@@ -466,7 +461,7 @@ class NativeTracer(BaseTracer):
             tokens["completion_tokens"] += completion_tokens or 0
             tokens["total_tokens"] += total_tokens or 0
 
-        # Build OTel-style attributes for token usage and model name
+        # OTel attribute keys so the frontend can render token usage without knowing provider-specific field names.
         lc_attributes: dict[str, Any] = {}
         if span_info.get("model_name"):
             lc_attributes["model_name"] = span_info["model_name"]
@@ -477,7 +472,6 @@ class NativeTracer(BaseTracer):
         if total_tokens:
             lc_attributes["total_tokens"] = total_tokens
 
-        # Store completed span for batch write
         self.completed_spans.append(
             self._build_completed_span(
                 span_id=span_info["id"],
@@ -547,5 +541,5 @@ class NativeTracer(BaseTracer):
 
     @staticmethod
     def _map_trace_type(trace_type: str) -> SpanType:
-        """Map Langflow trace type to SpanType enum."""
+        """Normalise Langflow's string trace types to the SpanType enum, defaulting to CHAIN for unknown values."""
         return TYPE_MAP.get(trace_type.lower(), SpanType.CHAIN)

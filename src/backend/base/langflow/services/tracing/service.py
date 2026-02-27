@@ -336,10 +336,9 @@ class TracingService(Service):
         await self._stop(trace_context)
         self._end_all_tracers(trace_context, outputs, error)
 
-        # Wait for native tracer to flush to database
         native_tracer = trace_context.tracers.get("native")
         if native_tracer:
-            # Import here to avoid circular dependency
+            # Deferred import breaks the circular dependency between service.py and native.py.
             from langflow.services.tracing.native import NativeTracer
 
             if isinstance(native_tracer, NativeTracer):

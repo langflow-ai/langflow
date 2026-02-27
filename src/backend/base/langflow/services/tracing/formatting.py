@@ -158,22 +158,69 @@ def build_span_tree(spans: list[SpanTable]) -> list[SpanReadResponse]:
     return root_spans
 
 
+# ---------------------------------------------------------------------------
+# Internal normalised span record used by the shared I/O heuristic.
+# Both public extract_trace_io_* functions convert their inputs to this shape
+# before delegating to _extract_trace_io, keeping the heuristic in one place.
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class _SpanIORecord:
+    """Minimal span fields required by the trace I/O heuristic."""
+
+    name: str | None
+    parent_span_id: Any  # None for root spans
+    end_time: Any  # datetime | None
+    inputs: dict[str, Any] | None
+    outputs: dict[str, Any] | None
+
+
+def _extract_trace_io(records: list[_SpanIORecord]) -> TraceIO:
+    """Core I/O heuristic operating on normalised :class:`_SpanIORecord` objects.
+
+    **Input heuristic** — searches for the first record whose name contains
+    :data:`_CHAT_INPUT_SPAN_NAME` (``"Chat Input"``).  The ``input_value`` key
+    from that record's ``inputs`` dict is surfaced as the trace-level input.
+
+    **Output heuristic** — collects all *root* records (``parent_span_id`` is
+    ``None``) that have already finished (``end_time`` is not ``None``), then
+    picks the one with the latest ``end_time``.  Its full ``outputs`` dict is
+    surfaced as the trace-level output.
+
+    Args:
+        records: Normalised span records for a single trace.
+
+    Returns:
+        Dict with ``"input"`` and ``"output"`` keys.
+    """
+    chat_input = next((r for r in records if _CHAT_INPUT_SPAN_NAME in (r.name or "")), None)
+    input_value = None
+    if chat_input and chat_input.inputs:
+        input_value = chat_input.inputs.get("input_value")
+
+    root_records = [r for r in records if r.parent_span_id is None and r.end_time]
+    output_value = None
+    if root_records:
+        root_records_sorted = sorted(
+            root_records,
+            key=lambda r: r.end_time or _UTC_MIN,
+            reverse=True,
+        )
+        if root_records_sorted[0].outputs:
+            output_value = root_records_sorted[0].outputs
+
+    return {
+        "input": {"input_value": input_value} if input_value else None,
+        "output": output_value,
+    }
+
+
 def extract_trace_io_from_spans(spans: list[SpanTable]) -> TraceIO:
     """Extract a simplified input/output payload for a trace from SpanTable objects.
 
     Used when full SpanTable objects are already loaded (e.g. single-trace fetch).
-
-    **Input heuristic** — searches for the first span whose name contains
-    :data:`_CHAT_INPUT_SPAN_NAME` (``"Chat Input"``).  This is the span
-    created by Langflow's ``ChatInput`` component.  The ``input_value`` key
-    from that span's ``inputs`` dict is surfaced as the trace-level input.
-    If no such span exists the input is ``None``.
-
-    **Output heuristic** — collects all *root* spans (``parent_span_id`` is
-    ``None``) that have already finished (``end_time`` is not ``None``), then
-    picks the one with the latest ``end_time``.  Its full ``outputs`` dict is
-    surfaced as the trace-level output.  Root spans represent top-level flow
-    executions; the last one to finish is the most relevant result.
+    Delegates to :func:`_extract_trace_io` after normalising the ORM objects.
 
     To support different span naming conventions in the future, change
     :data:`_CHAT_INPUT_SPAN_NAME`.
@@ -185,43 +232,27 @@ def extract_trace_io_from_spans(spans: list[SpanTable]) -> TraceIO:
         Dict with ``"input"`` and ``"output"`` keys.  Each value is either a
         dict payload or ``None`` if the heuristic found no matching span.
     """
-    chat_input_span = next((s for s in spans if _CHAT_INPUT_SPAN_NAME in (s.name or "")), None)
-    input_value = None
-    if chat_input_span and chat_input_span.inputs:
-        input_value = chat_input_span.inputs.get("input_value")
-
-    root_spans = [s for s in spans if s.parent_span_id is None and s.end_time]
-    output_value = None
-    if root_spans:
-        root_spans_sorted = sorted(
-            root_spans,
-            key=lambda s: s.end_time or _UTC_MIN,
-            reverse=True,
+    records = [
+        _SpanIORecord(
+            name=s.name,
+            parent_span_id=s.parent_span_id,
+            end_time=s.end_time,
+            inputs=s.inputs,
+            outputs=s.outputs,
         )
-        if root_spans_sorted[0].outputs:
-            output_value = root_spans_sorted[0].outputs
-
-    return {
-        "input": {"input_value": input_value} if input_value else None,
-        "output": output_value,
-    }
+        for s in spans
+    ]
+    return _extract_trace_io(records)
 
 
 def extract_trace_io_from_rows(rows: list[Any]) -> TraceIO:
     """Extract a simplified input/output payload for a trace from lightweight row tuples.
 
     Used when only selected columns are fetched (e.g. bulk list fetch) to avoid
-    loading heavy JSON blobs for every span.
+    loading heavy JSON blobs for every span.  Delegates to :func:`_extract_trace_io`
+    after normalising the row tuples.
 
     Row tuple layout: ``(trace_id, name, parent_span_id, end_time, inputs, outputs)``
-
-    **Input heuristic** — same as :func:`extract_trace_io_from_spans`: finds
-    the first row whose ``name`` (index 1) contains :data:`_CHAT_INPUT_SPAN_NAME`
-    and reads ``input_value`` from its ``inputs`` dict (index 4).
-
-    **Output heuristic** — same as :func:`extract_trace_io_from_spans`: picks
-    the root row (``parent_span_id`` at index 2 is ``None``) with the latest
-    ``end_time`` (index 3) and returns its ``outputs`` dict (index 5).
 
     To support different span naming conventions in the future, change
     :data:`_CHAT_INPUT_SPAN_NAME`.
@@ -233,26 +264,17 @@ def extract_trace_io_from_rows(rows: list[Any]) -> TraceIO:
         Dict with ``"input"`` and ``"output"`` keys.  Each value is either a
         dict payload or ``None`` if the heuristic found no matching row.
     """
-    chat_input_row = next((r for r in rows if _CHAT_INPUT_SPAN_NAME in (r[1] or "")), None)
-    input_value = None
-    if chat_input_row and chat_input_row[4]:
-        input_value = chat_input_row[4].get("input_value")
-
-    root_rows = [r for r in rows if r[2] is None and r[3] is not None]
-    output_value = None
-    if root_rows:
-        root_rows_sorted = sorted(
-            root_rows,
-            key=lambda r: r[3] or _UTC_MIN,
-            reverse=True,
+    records = [
+        _SpanIORecord(
+            name=r[1],
+            parent_span_id=r[2],
+            end_time=r[3],
+            inputs=r[4],
+            outputs=r[5],
         )
-        if root_rows_sorted[0][5]:
-            output_value = root_rows_sorted[0][5]
-
-    return {
-        "input": {"input_value": input_value} if input_value else None,
-        "output": output_value,
-    }
+        for r in rows
+    ]
+    return _extract_trace_io(records)
 
 
 def compute_leaf_token_total(

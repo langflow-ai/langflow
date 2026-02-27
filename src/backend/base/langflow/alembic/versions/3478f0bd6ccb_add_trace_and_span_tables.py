@@ -1,8 +1,8 @@
 """Add trace and span tables for native tracing
 
-Revision ID: 7480bdca34ac
-Revises: b1c2d3e4f5a6
-Create Date: 2026-02-27 11:57:29.645080
+Revision ID: 3478f0bd6ccb
+Revises: c187c3b9bb94
+Create Date: 2026-02-27 18:35:18.719114
 
 Phase: EXPAND
 """
@@ -15,8 +15,8 @@ from alembic import op
 from langflow.utils import migration
 
 # revision identifiers, used by Alembic.
-revision: str = "7480bdca34ac"  # pragma: allowlist secret
-down_revision: str | None = "b1c2d3e4f5a6"  # pragma: allowlist secret
+revision: str = "3478f0bd6ccb"  # pragma: allowlist secret
+down_revision: str | None = "c187c3b9bb94"  # pragma: allowlist secret
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
@@ -24,7 +24,7 @@ depends_on: str | Sequence[str] | None = None
 def upgrade() -> None:
     conn = op.get_bind()
 
-    # Create trace table
+    # Guard against re-running on a DB that already has the table (e.g. after a failed partial migration).
     if not migration.table_exists("trace", conn):
         op.create_table(
             "trace",
@@ -45,7 +45,7 @@ def upgrade() -> None:
             batch_op.create_index(batch_op.f("ix_trace_flow_id"), ["flow_id"], unique=False)
             batch_op.create_index(batch_op.f("ix_trace_session_id"), ["session_id"], unique=False)
 
-    # Create span table
+    # Guard against re-running on a DB that already has the table (e.g. after a failed partial migration).
     if not migration.table_exists("span", conn):
         op.create_table(
             "span",
@@ -83,21 +83,20 @@ def upgrade() -> None:
 def downgrade() -> None:
     conn = op.get_bind()
 
-    # Drop span table first (depends on trace)
+    # span has a FK to trace, so it must be dropped first to avoid a constraint violation.
     if migration.table_exists("span", conn):
         with op.batch_alter_table("span", schema=None) as batch_op:
             batch_op.drop_index(batch_op.f("ix_span_trace_id"))
             batch_op.drop_index(batch_op.f("ix_span_parent_span_id"))
         op.drop_table("span")
 
-    # Drop trace table
     if migration.table_exists("trace", conn):
         with op.batch_alter_table("trace", schema=None) as batch_op:
             batch_op.drop_index(batch_op.f("ix_trace_session_id"))
             batch_op.drop_index(batch_op.f("ix_trace_flow_id"))
         op.drop_table("trace")
 
-    # Drop ENUMs (PostgreSQL only)
+    # PostgreSQL stores enums as named types; SQLite does not, so this is a no-op there.
     if conn.dialect.name == "postgresql":
         op.execute("DROP TYPE IF EXISTS spanstatus")
         op.execute("DROP TYPE IF EXISTS spantype")

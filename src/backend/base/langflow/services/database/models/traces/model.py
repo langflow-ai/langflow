@@ -290,6 +290,6 @@ class SpanUpdate(SQLModel):
     attributes: dict[str, Any] | None = None
 
 
-# Update forward references
+# SpanReadResponse and TraceRead reference each other via forward refs; rebuild resolves them at import time.
 SpanReadResponse.model_rebuild()
 TraceRead.model_rebuild()

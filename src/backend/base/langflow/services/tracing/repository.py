@@ -158,30 +158,32 @@ async def fetch_traces(
                 .where(col(Flow.user_id) == user_id)
             )
 
+            # Build filter expressions once and apply them to both statements,
+            # avoiding the duplication of every condition across stmt + count_stmt.
+            filters: list[Any] = []
             if flow_id:
-                stmt = stmt.where(TraceTable.flow_id == flow_id)
-                count_stmt = count_stmt.where(TraceTable.flow_id == flow_id)
+                filters.append(TraceTable.flow_id == flow_id)
             if session_id:
-                stmt = stmt.where(TraceTable.session_id == session_id)
-                count_stmt = count_stmt.where(TraceTable.session_id == session_id)
+                filters.append(TraceTable.session_id == session_id)
             if status:
-                stmt = stmt.where(TraceTable.status == status)
-                count_stmt = count_stmt.where(TraceTable.status == status)
+                filters.append(TraceTable.status == status)
             if query:
                 search_value = f"%{query}%"
-                search_filter = sa.or_(
-                    sa.cast(TraceTable.name, sa.String).ilike(search_value),
-                    sa.cast(TraceTable.id, sa.String).ilike(search_value),
-                    sa.cast(TraceTable.session_id, sa.String).ilike(search_value),
+                filters.append(
+                    sa.or_(
+                        sa.cast(TraceTable.name, sa.String).ilike(search_value),
+                        sa.cast(TraceTable.id, sa.String).ilike(search_value),
+                        sa.cast(TraceTable.session_id, sa.String).ilike(search_value),
+                    )
                 )
-                stmt = stmt.where(search_filter)
-                count_stmt = count_stmt.where(search_filter)
             if start_time:
-                stmt = stmt.where(TraceTable.start_time >= start_time)
-                count_stmt = count_stmt.where(TraceTable.start_time >= start_time)
+                filters.append(TraceTable.start_time >= start_time)
             if end_time:
-                stmt = stmt.where(TraceTable.start_time <= end_time)
-                count_stmt = count_stmt.where(TraceTable.start_time <= end_time)
+                filters.append(TraceTable.start_time <= end_time)
+
+            for f in filters:
+                stmt = stmt.where(f)
+                count_stmt = count_stmt.where(f)
 
             stmt = stmt.order_by(col(TraceTable.start_time).desc())
             stmt = stmt.offset((page - 1) * size).limit(size)

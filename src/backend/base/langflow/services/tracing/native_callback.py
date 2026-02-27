@@ -45,35 +45,35 @@ class NativeCallbackHandler(BaseCallbackHandler):
         super().__init__()
         self.tracer = tracer
         self.parent_span_id = parent_span_id
-        # Track active spans by run_id
+        # Keyed by LangChain run_id so on_*_end callbacks can look up the matching on_*_start data.
         self._spans: dict[UUID, dict[str, Any]] = {}
 
     def _resolve_parent_span_id(self, parent_run_id: UUID | None) -> UUID | None:
-        """Resolve the parent span ID from parent_run_id or fallback to self.parent_span_id."""
+        """Return the correct parent span ID so nested LangChain calls form a proper tree."""
         if parent_run_id:
             return self._get_span_id(parent_run_id)
         return self.parent_span_id
 
     def _get_span_id(self, run_id: UUID) -> UUID:
-        """Get or create a span ID for a run."""
+        """Return a stable span ID for a run, creating one on first access so on_*_end always finds it."""
         if run_id not in self._spans:
             self._spans[run_id] = {"span_id": uuid4(), "start_time": datetime.now(timezone.utc)}
         return self._spans[run_id]["span_id"]
 
     def _get_start_time(self, run_id: UUID) -> datetime:
-        """Get the start time for a run."""
+        """Return the recorded start time for latency calculation, falling back to now if the run is unknown."""
         if run_id in self._spans:
             return self._spans[run_id]["start_time"]
         return datetime.now(timezone.utc)
 
     def _calculate_latency(self, run_id: UUID) -> int:
-        """Calculate latency in milliseconds for a run."""
+        """Compute wall-clock latency in milliseconds so spans have accurate duration data."""
         start_time = self._get_start_time(run_id)
         end_time = datetime.now(timezone.utc)
         return int((end_time - start_time).total_seconds() * 1000)
 
     def _cleanup_run(self, run_id: UUID) -> None:
-        """Clean up tracking data for a completed run."""
+        """Release the in-memory span entry to prevent unbounded growth on long-running sessions."""
         self._spans.pop(run_id, None)
 
     def _extract_name(self, serialized: dict[str, Any], fallback: str) -> str:
@@ -84,6 +84,37 @@ class NativeCallbackHandler(BaseCallbackHandler):
         """
         serialized = serialized or {}
         return serialized.get("name") or (serialized.get("id", [fallback])[-1] if serialized.get("id") else fallback)
+
+    @staticmethod
+    def _extract_llm_model_name(kwargs: dict[str, Any]) -> str | None:
+        """Extract the model name from LangChain invocation params.
+
+        Checks ``invocation_params["model_name"]`` first (OpenAI-style), then
+        ``invocation_params["model"]`` (Anthropic/generic style).
+
+        Args:
+            kwargs: The ``**kwargs`` dict passed to ``on_llm_start`` or
+                ``on_chat_model_start`` by the LangChain callback system.
+
+        Returns:
+            Model name string, or ``None`` if not present.
+        """
+        params = kwargs.get("invocation_params") or {}
+        return params.get("model_name") or params.get("model") or None
+
+    @staticmethod
+    def _build_llm_span_name(operation: str, model_name: str | None) -> str:
+        """Format a span name following the OTel semantic convention ``"{operation} {model}"``.
+
+        Args:
+            operation: Human-readable operation name (e.g. ``"ChatOpenAI"``).
+            model_name: Optional model identifier (e.g. ``"gpt-4o"``).
+
+        Returns:
+            ``"{operation} {model_name}"`` when model is known, otherwise just
+            ``operation``.
+        """
+        return f"{operation} {model_name}" if model_name else operation
 
     def _handle_error(self, run_id: UUID, error: BaseException) -> None:
         """End a span with an error and clean up the run.
@@ -100,7 +131,6 @@ class NativeCallbackHandler(BaseCallbackHandler):
         )
         self._cleanup_run(run_id)
 
-    # LLM callbacks
     def on_llm_start(
         self,
         serialized: dict[str, Any],
@@ -115,12 +145,8 @@ class NativeCallbackHandler(BaseCallbackHandler):
         """Called when LLM starts running."""
         span_id = self._get_span_id(run_id)
         operation = self._extract_name(serialized, "LLM")
-        model_name = kwargs.get("invocation_params", {}).get("model_name") or kwargs.get("invocation_params", {}).get(
-            "model"
-        )
-
-        # Format name according to OTel convention: "{operation} {model}"
-        name = f"{operation} {model_name}" if model_name else operation
+        model_name = self._extract_llm_model_name(kwargs)
+        name = self._build_llm_span_name(operation, model_name)
 
         self.tracer.add_langchain_span(
             span_id=span_id,
@@ -145,14 +171,10 @@ class NativeCallbackHandler(BaseCallbackHandler):
         """Called when chat model starts running."""
         span_id = self._get_span_id(run_id)
         operation = self._extract_name(serialized, "ChatModel")
-        model_name = kwargs.get("invocation_params", {}).get("model_name") or kwargs.get("invocation_params", {}).get(
-            "model"
-        )
+        model_name = self._extract_llm_model_name(kwargs)
+        name = self._build_llm_span_name(operation, model_name)
 
-        # Format name according to OTel convention: "{operation} {model}"
-        name = f"{operation} {model_name}" if model_name else operation
-
-        # Convert messages to serializable format
+        # BaseMessage objects are not JSON-serializable; extract only the fields the UI needs.
         formatted_messages = [
             [{"type": m.type, "content": m.content} for m in message_list] for message_list in messages
         ]
@@ -192,19 +214,19 @@ class NativeCallbackHandler(BaseCallbackHandler):
         self._cleanup_run(run_id)
 
     def _extract_token_usage(self, response: LLMResult):
-        """Extract token usage from response object."""
+        """Parse token counts from an LLMResult, trying multiple locations for cross-provider compatibility."""
         llm_output = getattr(response, "llm_output", None) or {}
         token_usage = llm_output.get("token_usage", {}) if isinstance(llm_output, dict) else {}
         prompt_tokens = token_usage.get("prompt_tokens")
         completion_tokens = token_usage.get("completion_tokens")
         total_tokens = token_usage.get("total_tokens")
 
-        # Fallback: extract from generations (modern LangChain format)
+        # llm_output is the legacy location; newer LangChain versions moved usage into generations.
         if not total_tokens:
             generations = getattr(response, "generations", []) or []
             for gen_list in generations:
                 for gen in gen_list:
-                    # Try AIMessage.usage_metadata (langchain-core standardized)
+                    # langchain-core standardized location — preferred when available.
                     message = getattr(gen, "message", None)
                     if message is not None:
                         usage = getattr(message, "usage_metadata", None)
@@ -214,7 +236,7 @@ class NativeCallbackHandler(BaseCallbackHandler):
                             completion_tokens = _get("output_tokens") or completion_tokens
                             total_tokens = _get("total_tokens") or total_tokens
 
-                        # Try AIMessage.response_metadata (provider-specific)
+                        # Provider-specific fallback (e.g. OpenAI puts usage in response_metadata).
                         if not total_tokens:
                             resp_meta = getattr(message, "response_metadata", None) or {}
                             if isinstance(resp_meta, dict):
@@ -232,7 +254,7 @@ class NativeCallbackHandler(BaseCallbackHandler):
                                     )
                                     total_tokens = usage_dict.get("total_tokens") or total_tokens
 
-                    # Try generation_info (some providers put usage here)
+                    # Some providers (e.g. Anthropic via older adapters) put usage in generation_info.
                     if not total_tokens:
                         gen_info = getattr(gen, "generation_info", None) or {}
                         if isinstance(gen_info, dict):
@@ -255,7 +277,7 @@ class NativeCallbackHandler(BaseCallbackHandler):
         return prompt_tokens, completion_tokens, total_tokens
 
     def _extract_generations(self, response: LLMResult):
-        """Extract generations from response object."""
+        """Serialize LLMResult generations to a JSON-safe dict for storage in the span outputs field."""
         generations = getattr(response, "generations", []) or []
         return {
             "generations": [
@@ -278,7 +300,6 @@ class NativeCallbackHandler(BaseCallbackHandler):
         """Called when LLM errors."""
         self._handle_error(run_id, error)
 
-    # Chain callbacks
     def on_chain_start(
         self,
         serialized: dict[str, Any],
@@ -332,7 +353,6 @@ class NativeCallbackHandler(BaseCallbackHandler):
         """Called when chain errors."""
         self._handle_error(run_id, error)
 
-    # Tool callbacks
     def on_tool_start(
         self,
         serialized: dict[str, Any],
@@ -387,7 +407,6 @@ class NativeCallbackHandler(BaseCallbackHandler):
         """Called when tool errors."""
         self._handle_error(run_id, error)
 
-    # Agent callbacks
     def on_agent_action(
         self,
         action: AgentAction,
@@ -397,7 +416,7 @@ class NativeCallbackHandler(BaseCallbackHandler):
         **kwargs: Any,
     ) -> None:
         """Called when agent takes an action."""
-        # Agent actions are typically followed by tool calls, so we don't create separate spans
+        # Tool calls capture the actual work; a separate span here would duplicate that data.
 
     def on_agent_finish(
         self,
@@ -408,9 +427,8 @@ class NativeCallbackHandler(BaseCallbackHandler):
         **kwargs: Any,
     ) -> None:
         """Called when agent finishes."""
-        # Agent finish is handled by chain end
+        # The enclosing chain span already records the final output, so no additional span is needed.
 
-    # Retriever callbacks
     def on_retriever_start(
         self,
         serialized: dict[str, Any],
@@ -446,7 +464,7 @@ class NativeCallbackHandler(BaseCallbackHandler):
         span_id = self._get_span_id(run_id)
         latency_ms = self._calculate_latency(run_id)
 
-        # Serialize documents
+        # Document objects are not JSON-serializable; extract only the fields the UI needs.
         documents = documents or []
         docs_output = [
             {"page_content": getattr(doc, "page_content", ""), "metadata": getattr(doc, "metadata", {})}
