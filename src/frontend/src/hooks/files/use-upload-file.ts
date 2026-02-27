@@ -1,13 +1,19 @@
 import { customPostUploadFileV2 } from "@/customization/hooks/use-custom-post-upload-file";
 import { createFileUpload } from "@/helpers/create-file-upload";
 import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
+import {
+  getRelativePathForServerPath,
+  setRelativePathForServerPath,
+} from "@/utils/file-relative-path-map";
 
 const useUploadFile = ({
   types,
   multiple,
+  webkitdirectory,
 }: {
   types?: string[];
   multiple?: boolean;
+  webkitdirectory?: boolean;
 }) => {
   const { mutateAsync: uploadFileMutation } = customPostUploadFileV2();
   const { validateFileSize } = useFileSizeValidator();
@@ -21,6 +27,7 @@ const useUploadFile = ({
       files = await createFileUpload({
         accept: types?.map((type) => `.${type}`).join(",") ?? "",
         multiple: multiple ?? false,
+        webkitdirectory: webkitdirectory ?? false,
       });
     }
     return files;
@@ -35,25 +42,66 @@ const useUploadFile = ({
       const filesToUpload = await getFilesToUpload({ files });
       const filesIds: string[] = [];
 
-      for (const file of filesToUpload) {
-        validateFileSize(file);
-        // Check if file extension is allowed
-        const fileExtension = file.name.split(".").pop()?.toLowerCase();
-        if (!fileExtension || (types && !types.includes(fileExtension))) {
+      // Filter files by supported types when using folder selection
+      let validFiles = filesToUpload;
+      if (webkitdirectory && types) {
+        validFiles = filesToUpload.filter((file) => {
+          const fileExtension = file.name.split(".").pop()?.toLowerCase();
+          return fileExtension && types.includes(fileExtension);
+        });
+
+        if (validFiles.length === 0) {
           throw new Error(
-            `File type ${fileExtension} not allowed. Allowed types: ${types?.join(", ")}`,
+            `No supported files found in folder. Allowed types: ${types?.join(", ")}`,
           );
         }
-        if (!fileExtension) {
-          throw new Error("File type not allowed");
-        }
-        if (!multiple && filesToUpload.length !== 1) {
-          throw new Error("Multiple files are not allowed");
+      }
+
+      for (const file of validFiles) {
+        validateFileSize(file);
+        // Check if file extension is allowed (for non-folder selection)
+        if (!webkitdirectory) {
+          const fileExtension = file.name.split(".").pop()?.toLowerCase();
+          if (!fileExtension || (types && !types.includes(fileExtension))) {
+            throw new Error(
+              `File type ${fileExtension} not allowed. Allowed types: ${types?.join(", ")}`,
+            );
+          }
+          if (!multiple && filesToUpload.length !== 1) {
+            throw new Error("Multiple files are not allowed");
+          }
         }
 
         const res = await uploadFileMutation({
           file,
         });
+
+        if (!webkitdirectory && res?.path) {
+          const existing = getRelativePathForServerPath(res.path);
+          if (existing && existing.includes("/")) {
+            const flatName = String(res.path).split("/").filter(Boolean).pop();
+            setRelativePathForServerPath(
+              res.path,
+              flatName ?? String(res.path),
+            );
+          }
+        }
+
+        if (webkitdirectory && file.webkitRelativePath) {
+          const relativeParts = file.webkitRelativePath
+            .split("/")
+            .filter(Boolean);
+          const serverLeaf = String(res.path ?? "")
+            .split("/")
+            .filter(Boolean)
+            .pop();
+          if (relativeParts.length > 0 && serverLeaf) {
+            relativeParts[relativeParts.length - 1] = serverLeaf;
+            setRelativePathForServerPath(res.path, relativeParts.join("/"));
+          } else {
+            setRelativePathForServerPath(res.path, file.webkitRelativePath);
+          }
+        }
         filesIds.push(res.path);
       }
       return filesIds;
