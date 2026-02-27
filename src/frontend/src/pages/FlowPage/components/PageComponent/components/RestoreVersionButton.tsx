@@ -9,6 +9,7 @@ import { getURL } from "@/controllers/API/helpers/constants";
 import useApplyFlowToCanvas from "@/hooks/flows/use-apply-flow-to-canvas";
 import useAlertStore from "@/stores/alertStore";
 import useHistoryPreviewStore from "@/stores/historyPreviewStore";
+import CanvasBanner, { CanvasBannerButton } from "./CanvasBanner";
 
 interface RestoreVersionButtonProps {
   flowId: string;
@@ -71,39 +72,33 @@ export default function RestoreVersionButton({
 
   return (
     <>
-      <div className="history-preview-banner-enter pointer-events-auto absolute bottom-10 left-1/2 w-[700px]">
-        <div className="history-preview-banner flex items-center gap-4 overflow-hidden rounded-xl border border-accent-indigo-foreground/20 bg-gradient-to-r from-accent-indigo via-accent-indigo/70 to-accent-indigo/30 px-5 py-3 backdrop-blur-sm">
-          <ForwardedIconComponent
-            name="RotateCcw"
-            className="h-6 w-6 shrink-0 text-accent-indigo-foreground/80"
-          />
-          <div className="flex flex-col">
-            <p className="font-semibold text-accent-indigo-foreground">
-              Restore this version of your flow
-            </p>
-            <p className="text-accent-indigo-foreground/70">
-              Replace the current draft with{" "}
-              <span className="font-medium">{versionTag}</span>
-            </p>
-          </div>
-          <div className="flex items-center gap-2 ml-auto">
-            <button
-              onClick={() => handleDismiss()}
+      <CanvasBanner
+        icon="RotateCcw"
+        title="Restore this version of your flow"
+        description={
+          <>
+            Replace the current draft with{" "}
+            <span className="font-medium">{versionTag}</span>
+          </>
+        }
+        actionSlot={
+          <div className="flex items-center gap-2">
+            <CanvasBannerButton
+              variant="outline"
+              onClick={handleDismiss}
               disabled={isRestoring}
-              className="group flex items-center gap-2 rounded-lg border border-accent-indigo-foreground/30 bg-accent-indigo/60 px-3 py-1.5 font-semibold text-accent-indigo-foreground shadow-sm transition-all duration-200 hover:bg-accent-indigo/80 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
             >
               Keep Building
-            </button>
-            <button
+            </CanvasBannerButton>
+            <CanvasBannerButton
               onClick={() => setShowConfirm(true)}
               disabled={isRestoring}
-              className="group flex items-center gap-2 rounded-lg border border-accent-indigo-foreground/30 bg-accent-indigo/60 px-3 py-1.5 font-semibold text-accent-indigo-foreground shadow-sm transition-all duration-200 hover:bg-accent-indigo/80 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isRestoring ? "Restoring…" : "Restore"}
-            </button>
+            </CanvasBannerButton>
           </div>
-        </div>
-      </div>
+        }
+      />
 
       {showConfirm &&
         createPortal(

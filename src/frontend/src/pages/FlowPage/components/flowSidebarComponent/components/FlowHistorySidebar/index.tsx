@@ -77,13 +77,18 @@ export default function FlowHistorySidebarContent({
               <SidebarMenuButton
                 isActive={isViewingDraft}
                 onClick={() => handleSelectEntry(CURRENT_DRAFT_ID)}
-                className="h-auto flex flex-col items-start p-3 border-t border-b border-border rounded-none"
+                className={`h-auto flex flex-col items-start p-3 border-t border-b border-border rounded-none ${isViewingDraft ? "border-l-2 border-l-[#6366F1] !bg-[#6366F1]/10" : ""}`}
               >
-                <div className="flex flex-col items-start">
-                  <span className="font-medium text-sm pb-1">Current</span>
-                  <span className="text-xs text-muted-foreground">
-                    Working version
-                  </span>
+                <div className="flex w-full items-center justify-between">
+                  <div className="flex flex-col items-start">
+                    <span className="font-medium text-sm pb-1">Current</span>
+                    <span className="text-xs text-muted-foreground">
+                      Working version
+                    </span>
+                  </div>
+                  {isViewingDraft && (
+                    <span className="h-2 w-2 shrink-0 rounded-full bg-[#6366F1]" />
+                  )}
                 </div>
               </SidebarMenuButton>
             </SidebarMenuItem>

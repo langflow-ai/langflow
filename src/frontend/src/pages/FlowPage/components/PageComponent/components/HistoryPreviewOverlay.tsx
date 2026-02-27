@@ -1,7 +1,7 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import { Badge } from "@/components/ui/badge";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useHistoryPreviewStore from "@/stores/historyPreviewStore";
+import { CanvasBadge } from "./CanvasBanner";
 import RestoreVersionButton from "./RestoreVersionButton";
 import SaveSnapshotButton from "./SaveSnapshotButton";
 
@@ -15,24 +15,15 @@ export default function HistoryPreviewOverlay() {
 
   return (
     <div className="history-preview-overlay pointer-events-none absolute inset-0 z-50">
-      <Badge
-        variant="outline"
-        className="pointer-events-auto absolute left-4 top-4 h-8 whitespace-nowrap rounded-lg border-accent-indigo-foreground px-3 text-xs font-medium text-accent-indigo-foreground shadow-md backdrop-blur-sm"
-      >
+      <CanvasBadge>
+        <span className="h-2 w-2 shrink-0 rounded-lg bg-[#6366F1]" />
         <span className="text-sm">
-          {previewLabel === "Current Draft" ? (
-            <div className="flex items-center gap-2">
-              Current Flow{" "}
-              <span className="font-mono text-xs opacity-80">(Read-Only)</span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              Previewing {previewLabel}{" "}
-              <span className="font-mono text-xs opacity-80">(Read-Only)</span>
-            </div>
-          )}
+          {previewLabel === "Current Draft"
+            ? "Current Flow"
+            : `Previewing ${previewLabel}`}
         </span>
-      </Badge>
+        <span className="text-muted-foreground text-sm">(Read-Only)</span>
+      </CanvasBadge>
 
       {isPreviewLoading && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">

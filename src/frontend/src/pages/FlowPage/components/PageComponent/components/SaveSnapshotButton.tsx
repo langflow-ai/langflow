@@ -5,6 +5,7 @@ import { useSidebar } from "@/components/ui/sidebar";
 import { usePostCreateSnapshot } from "@/controllers/API/queries/flow-history";
 import useAlertStore from "@/stores/alertStore";
 import useHistoryPreviewStore from "@/stores/historyPreviewStore";
+import CanvasBanner, { CanvasBannerButton } from "./CanvasBanner";
 
 interface SaveSnapshotButtonProps {
   flowId: string;
@@ -31,56 +32,43 @@ export default function SaveSnapshotButton({
 
   const handleSave = () => {
     setIsSavingDisplay(true);
-    createSnapshot(
-      { flowId, description: null },
-      {
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: ["useGetFlowHistory"] });
-          setSuccessData({ title: "Version saved" });
-          setIsSavingDisplay(false);
-          setSavedSuccess(true);
-          setTimeout(() => setSavedSuccess(false), 1500);
+    setTimeout(() => {
+      createSnapshot(
+        { flowId, description: null },
+        {
+          onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["useGetFlowHistory"] });
+            setSuccessData({ title: "Version saved" });
+            setIsSavingDisplay(false);
+            setSavedSuccess(true);
+            setTimeout(() => setSavedSuccess(false), 1500);
+          },
+          onError: (err: any) => {
+            const detail = err?.response?.data?.detail;
+            setErrorData({
+              title: "Failed to save version",
+              ...(detail ? { list: [detail] } : {}),
+            });
+            setIsSavingDisplay(false);
+          },
         },
-        onError: (err: any) => {
-          const detail = err?.response?.data?.detail;
-          setErrorData({
-            title: "Failed to save version",
-            ...(detail ? { list: [detail] } : {}),
-          });
-          setIsSavingDisplay(false);
-        },
-      },
-    );
+      );
+    }, 2000);
   };
 
   return (
-    <div className="history-preview-banner-enter pointer-events-auto absolute bottom-10 left-1/2 w-[700px]">
-      <div className="history-preview-banner flex items-center gap-4 overflow-hidden rounded-xl border border-accent-indigo-foreground/20 bg-gradient-to-r from-accent-indigo via-accent-indigo/70 to-accent-indigo/30 px-5 py-3 backdrop-blur-sm">
-        <div className="flex items-center gap-4 flex-1">
-          <ForwardedIconComponent
-            name="BookMarked"
-            className="h-6 w-6 shrink-0 text-accent-indigo-foreground/80"
-          />
-          <div className="flex flex-col pr-3">
-            <p className="font-semibold text-accent-indigo-foreground">
-              Save a version of your flow
-            </p>
-            <p className="text-accent-indigo-foreground/70">
-              Capture the current state as a restore point
-            </p>
-          </div>
-        </div>
+    <CanvasBanner
+      icon="BookMarked"
+      title="Save a version of your flow"
+      description="Capture the current state as a restore point"
+      actionSlot={
         <div className="flex items-center gap-2">
-          <button
-            onClick={handleDismiss}
-            className="group flex items-center gap-2 rounded-lg border border-accent-indigo-foreground/30 bg-accent-indigo/60 px-3 py-1.5 font-semibold text-accent-indigo-foreground shadow-sm transition-all duration-200 hover:bg-accent-indigo/80 hover:shadow-md"
-          >
+          <CanvasBannerButton variant="outline" onClick={handleDismiss}>
             Keep Building
-          </button>
-          <button
+          </CanvasBannerButton>
+          <CanvasBannerButton
             onClick={handleSave}
             disabled={isSavingDisplay || isCreating || savedSuccess}
-            className="group flex items-center gap-2 rounded-lg border border-accent-indigo-foreground/30 bg-accent-indigo/60 px-3 py-1.5 font-semibold text-accent-indigo-foreground shadow-sm transition-all duration-200 hover:bg-accent-indigo/80 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSavingDisplay || isCreating ? (
               <>
@@ -98,9 +86,9 @@ export default function SaveSnapshotButton({
             ) : (
               "Save"
             )}
-          </button>
+          </CanvasBannerButton>
         </div>
-      </div>
-    </div>
+      }
+    />
   );
 }
