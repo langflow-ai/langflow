@@ -12,6 +12,7 @@ import os
 from collections import OrderedDict
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
+from uuid import UUID, uuid5
 
 from lfx.log.logger import logger
 from typing_extensions import override
@@ -22,12 +23,13 @@ from langflow.services.tracing.base import BaseTracer
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-    from uuid import UUID
 
     from langchain.callbacks.base import BaseCallbackHandler
     from lfx.graph.vertex.base import Vertex
 
     from langflow.services.tracing.schema import Log
+
+LANGFLOW_SPAN_NAMESPACE = UUID("a3e1c2d4-5b6f-7890-abcd-ef1234567890")
 
 TYPE_MAP = {
     "chain": SpanType.CHAIN,
@@ -272,20 +274,17 @@ class NativeTracer(BaseTracer):
     async def _flush_to_database(self, error: Exception | None = None) -> None:
         """Flush all trace data to database."""
         try:
-            from uuid import NAMESPACE_DNS, uuid5
             from uuid import UUID as UUID_
 
             from lfx.services.deps import session_scope
 
             from langflow.services.database.models.traces.model import SpanTable, TraceTable
 
-            # Parse flow_id
             try:
                 flow_uuid = UUID_(self.flow_id)
             except (ValueError, TypeError):
-                # Use a deterministic sentinel UUID so trace data is not silently discarded.
-                # This preserves all span data even when flow_id is malformed.
-                flow_uuid = uuid5(NAMESPACE_DNS, f"invalid-flow-id:{self.flow_id}")
+                # Deterministic fallback so malformed flow_ids don't silently discard trace data.
+                flow_uuid = uuid5(LANGFLOW_SPAN_NAMESPACE, f"invalid-flow-id:{self.flow_id}")
                 logger.error(
                     "Invalid flow_id format — trace will be persisted with a sentinel flow_id. "
                     "flow_id=%r trace_id=%s sentinel_flow_id=%s",
@@ -325,14 +324,13 @@ class NativeTracer(BaseTracer):
 
                 # Create span records
                 for span_data in self.completed_spans:
-                    # Parse span_id to UUID (use uuid5 for deterministic conversion)
                     try:
                         span_uuid = UUID_(span_data["id"])
                     except (ValueError, TypeError):
-                        # Use uuid5 for deterministic UUID from string
-                        span_uuid = uuid5(NAMESPACE_DNS, f"{self.trace_id}-{span_data['id']}")
+                        # Span IDs from LangChain callbacks are strings, not UUIDs — derive
+                        # a stable UUID so the same span always maps to the same DB row.
+                        span_uuid = uuid5(LANGFLOW_SPAN_NAMESPACE, f"{self.trace_id}-{span_data['id']}")
 
-                    # Handle parent_span_id conversion
                     parent_uuid = None
                     if span_data.get("parent_span_id"):
                         parent_id = span_data["parent_span_id"]
@@ -342,7 +340,7 @@ class NativeTracer(BaseTracer):
                             try:
                                 parent_uuid = UUID_(str(parent_id))
                             except (ValueError, TypeError):
-                                parent_uuid = uuid5(NAMESPACE_DNS, f"{self.trace_id}-{parent_id}")
+                                parent_uuid = uuid5(LANGFLOW_SPAN_NAMESPACE, f"{self.trace_id}-{parent_id}")
 
                     span = SpanTable(
                         id=span_uuid,
@@ -377,14 +375,13 @@ class NativeTracer(BaseTracer):
         if not self._ready:
             return None
 
-        from uuid import NAMESPACE_DNS, uuid5
-
         from langflow.services.tracing.native_callback import NativeCallbackHandler
 
-        # Convert current component ID to UUID for parent linking
+        # LangChain spans must be linked to the component that triggered them so the
+        # trace tree reflects the actual execution hierarchy.
         parent_span_id = None
         if self._current_component_id:
-            parent_span_id = uuid5(NAMESPACE_DNS, f"{self.trace_id}-{self._current_component_id}")
+            parent_span_id = uuid5(LANGFLOW_SPAN_NAMESPACE, f"{self.trace_id}-{self._current_component_id}")
 
         return NativeCallbackHandler(self, parent_span_id=parent_span_id)
 
