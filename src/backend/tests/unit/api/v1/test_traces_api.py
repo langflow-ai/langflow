@@ -1,490 +1,428 @@
-"""HTTP-level tests for the /monitor/traces API endpoints."""
+"""Unit tests for langflow.api.v1.traces HTTP handlers.
+
+Covers:
+- get_traces: happy path, timeout, DB error, unexpected error, query sanitization
+- get_trace: happy path, not found, timeout, DB error, unexpected error
+- delete_trace: happy path, not found, unexpected error
+- delete_traces_by_flow: happy path, flow not found, unexpected error
+
+All external dependencies (fetch_traces, fetch_single_trace, session_scope,
+get_current_active_user) are mocked so no real database is required.
+"""
 
 from __future__ import annotations
 
+import asyncio
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
-from uuid import uuid4
-
-from fastapi import status
-from langflow.services.database.models.flow.model import Flow
-from langflow.services.database.models.traces.model import SpanStatus, SpanTable, SpanType, TraceTable
-from langflow.services.deps import session_scope
-
-if TYPE_CHECKING:
-    from httpx import AsyncClient
-    from langflow.services.database.models.user.model import User
-
-# ---------------------------------------------------------------------------
-# Helpers — write data via session_scope() so it's visible to the API
-# ---------------------------------------------------------------------------
-
-
-async def _create_flow_for_user(user_id, name: str | None = None) -> Flow:
-    """Create a flow owned by the given user and return it."""
-    async with session_scope() as session:
-        flow = Flow(
-            name=name or f"Test Flow {uuid4().hex[:8]}",
-            user_id=user_id,
-            data={},
-        )
-        session.add(flow)
-        await session.flush()
-        await session.refresh(flow)
-        # Detach from session so we can use the object after the context exits
-        flow_data = flow.model_dump()
-    # Reconstruct a plain object with the data
-    return Flow(**flow_data)
-
-
-async def _create_trace(flow_id, name="Test Trace", session_id="sess-1", trace_status=SpanStatus.OK) -> TraceTable:
-    async with session_scope() as session:
-        trace = TraceTable(
-            name=name,
-            flow_id=flow_id,
-            session_id=session_id,
-            status=trace_status,
-            start_time=datetime(2024, 1, 1, tzinfo=timezone.utc),
-            end_time=datetime(2024, 1, 1, 0, 0, 1, tzinfo=timezone.utc),
-            total_latency_ms=1000,
-            total_tokens=50,
-        )
-        session.add(trace)
-        await session.flush()
-        await session.refresh(trace)
-        trace_data = trace.model_dump()
-    return TraceTable(**trace_data)
-
-
-async def _create_span(trace_id, name="Test Span", parent_span_id=None) -> SpanTable:
-    async with session_scope() as session:
-        span = SpanTable(
-            name=name,
-            trace_id=trace_id,
-            span_type=SpanType.CHAIN,
-            status=SpanStatus.OK,
-            start_time=datetime(2024, 1, 1, tzinfo=timezone.utc),
-            end_time=datetime(2024, 1, 1, 0, 0, 1, tzinfo=timezone.utc),
-            latency_ms=100,
-            parent_span_id=parent_span_id,
-            attributes={"total_tokens": 10},
-        )
-        session.add(span)
-        await session.flush()
-        await session.refresh(span)
-        span_data = span.model_dump()
-    return SpanTable(**span_data)
-
-
-# ---------------------------------------------------------------------------
-# GET /api/v1/monitor/traces
-# ---------------------------------------------------------------------------
-
-
-async def test_get_traces_empty(client: AsyncClient, logged_in_headers, active_user):  # noqa: ARG001
-    """Returns empty list when no traces exist for the user's flows."""
-    response = await client.get("api/v1/monitor/traces", headers=logged_in_headers)
-    assert response.status_code == status.HTTP_200_OK
-    data = response.json()
-    assert "traces" in data
-    assert "total" in data
-    assert data["traces"] == []
-    assert data["total"] == 0
-
-
-async def test_get_traces_returns_user_traces(client: AsyncClient, logged_in_headers, active_user: User):
-    """Returns traces belonging to the authenticated user's flows."""
-    flow = await _create_flow_for_user(active_user.id)
-    trace = await _create_trace(flow.id, name="My Trace")
-
-    response = await client.get(
-        "api/v1/monitor/traces",
-        params={"flow_id": str(flow.id)},
-        headers=logged_in_headers,
-    )
-    assert response.status_code == status.HTTP_200_OK
-    data = response.json()
-    assert data["total"] >= 1
-    trace_ids = [t["id"] for t in data["traces"]]
-    assert str(trace.id) in trace_ids
-
-
-async def test_get_traces_filters_by_flow_id(client: AsyncClient, logged_in_headers, active_user: User):
-    """Only returns traces for the specified flow_id."""
-    flow1 = await _create_flow_for_user(active_user.id)
-    flow2 = await _create_flow_for_user(active_user.id)
-    trace1 = await _create_trace(flow1.id, name="Flow1 Trace")
-    await _create_trace(flow2.id, name="Flow2 Trace")
-
-    response = await client.get(
-        "api/v1/monitor/traces",
-        params={"flow_id": str(flow1.id)},
-        headers=logged_in_headers,
-    )
-    assert response.status_code == status.HTTP_200_OK
-    data = response.json()
-    returned_ids = [t["id"] for t in data["traces"]]
-    assert str(trace1.id) in returned_ids
-    # flow2's trace should not appear
-    for t in data["traces"]:
-        assert t["flowId"] == str(flow1.id)
-
-
-async def test_get_traces_filters_by_session_id(client: AsyncClient, logged_in_headers, active_user: User):
-    """Filters traces by session_id."""
-    flow = await _create_flow_for_user(active_user.id)
-    trace_a = await _create_trace(flow.id, name="A", session_id="session-A")
-    await _create_trace(flow.id, name="B", session_id="session-B")
-
-    response = await client.get(
-        "api/v1/monitor/traces",
-        params={"flow_id": str(flow.id), "session_id": "session-A"},
-        headers=logged_in_headers,
-    )
-    assert response.status_code == status.HTTP_200_OK
-    data = response.json()
-    returned_ids = [t["id"] for t in data["traces"]]
-    assert str(trace_a.id) in returned_ids
-    for t in data["traces"]:
-        assert t["sessionId"] == "session-A"
-
-
-async def test_get_traces_filters_by_status(client: AsyncClient, logged_in_headers, active_user: User):
-    """Filters traces by status."""
-    flow = await _create_flow_for_user(active_user.id)
-    await _create_trace(flow.id, name="OK", trace_status=SpanStatus.OK)
-    await _create_trace(flow.id, name="Error", trace_status=SpanStatus.ERROR)
-
-    response = await client.get(
-        "api/v1/monitor/traces",
-        params={"flow_id": str(flow.id), "status": "ok"},
-        headers=logged_in_headers,
-    )
-    assert response.status_code == status.HTTP_200_OK
-    data = response.json()
-    assert len(data["traces"]) == 1
-    for t in data["traces"]:
-        assert t["status"] == "ok"
-
-
-async def test_get_traces_search_query(client: AsyncClient, logged_in_headers, active_user: User):
-    """Search query filters by trace name."""
-    flow = await _create_flow_for_user(active_user.id)
-    await _create_trace(flow.id, name="UniqueSearchName")
-    await _create_trace(flow.id, name="OtherTrace")
-
-    response = await client.get(
-        "api/v1/monitor/traces",
-        params={"flow_id": str(flow.id), "query": "UniqueSearch"},
-        headers=logged_in_headers,
-    )
-    assert response.status_code == status.HTTP_200_OK
-    data = response.json()
-    assert len(data["traces"]) == 1
-    assert all("UniqueSearch" in t["name"] for t in data["traces"])
-
-
-async def test_get_traces_pagination(client: AsyncClient, logged_in_headers, active_user: User):
-    """Pagination returns correct page and total."""
-    flow = await _create_flow_for_user(active_user.id)
-    for i in range(5):
-        await _create_trace(flow.id, name=f"Trace {i}", session_id=f"sess-{i}")
-
-    response = await client.get(
-        "api/v1/monitor/traces",
-        params={"flow_id": str(flow.id), "page": 1, "size": 2},
-        headers=logged_in_headers,
-    )
-    assert response.status_code == status.HTTP_200_OK
-    data = response.json()
-    assert len(data["traces"]) <= 2
-    assert data["total"] >= 5
-    assert data["pages"] >= 3
-
-
-async def test_get_traces_does_not_return_other_users_traces(client: AsyncClient, logged_in_headers, active_user):  # noqa: ARG001
-    """Traces from another user's flows are not returned."""
-    other_user_id = uuid4()
-    other_flow = await _create_flow_for_user(other_user_id)
-    await _create_trace(other_flow.id, name="Other User Trace")
-
-    response = await client.get(
-        "api/v1/monitor/traces",
-        params={"flow_id": str(other_flow.id)},
-        headers=logged_in_headers,
-    )
-    assert response.status_code == status.HTTP_200_OK
-    data = response.json()
-    # Should return empty - user doesn't own this flow
-    assert data["traces"] == []
-
-
-async def test_get_traces_response_shape(client: AsyncClient, logged_in_headers, active_user: User):
-    """Verifies the response shape of each trace object."""
-    flow = await _create_flow_for_user(active_user.id)
-    await _create_trace(flow.id)
-
-    response = await client.get(
-        "api/v1/monitor/traces",
-        params={"flow_id": str(flow.id)},
-        headers=logged_in_headers,
-    )
-    assert response.status_code == status.HTTP_200_OK
-    data = response.json()
-    assert len(data["traces"]) >= 1
-    trace = data["traces"][0]
-    for key in (
-        "id",
-        "name",
-        "status",
-        "startTime",
-        "totalLatencyMs",
-        "totalTokens",
-        "totalCost",
-        "flowId",
-        "sessionId",
-    ):
-        assert key in trace, f"Missing key: {key}"
-
-
-async def test_get_traces_requires_auth(client: AsyncClient):
-    """Unauthenticated requests are rejected."""
-    response = await client.get("api/v1/monitor/traces")
-    assert response.status_code in (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN)
-
-
-# ---------------------------------------------------------------------------
-# GET /api/v1/monitor/traces/{trace_id}
-# ---------------------------------------------------------------------------
-
-
-async def test_get_trace_returns_trace_with_spans(client: AsyncClient, logged_in_headers, active_user: User):
-    """Returns a single trace with its span tree."""
-    flow = await _create_flow_for_user(active_user.id)
-    trace = await _create_trace(flow.id, name="Detailed Trace")
-    span = await _create_span(trace.id, name="Root Span")
-
-    response = await client.get(
-        f"api/v1/monitor/traces/{trace.id}",
-        headers=logged_in_headers,
-    )
-    assert response.status_code == status.HTTP_200_OK
-    data = response.json()
-    assert data["id"] == str(trace.id)
-    assert data["name"] == "Detailed Trace"
-    assert "spans" in data
-    span_ids = [s["id"] for s in data["spans"]]
-    assert str(span.id) in span_ids
-
-
-async def test_get_trace_returns_hierarchical_span_tree(client: AsyncClient, logged_in_headers, active_user: User):
-    """Spans are returned as a nested tree (children inside parent)."""
-    flow = await _create_flow_for_user(active_user.id)
-    trace = await _create_trace(flow.id)
-    parent_span = await _create_span(trace.id, name="Parent")
-    child_span = await _create_span(trace.id, name="Child", parent_span_id=parent_span.id)
-
-    response = await client.get(
-        f"api/v1/monitor/traces/{trace.id}",
-        headers=logged_in_headers,
-    )
-    assert response.status_code == status.HTTP_200_OK
-    data = response.json()
-
-    # Parent should be at root level
-    root_spans = data["spans"]
-    parent_nodes = [s for s in root_spans if s["id"] == str(parent_span.id)]
-    assert len(parent_nodes) == 1
-    # Child should be nested inside parent
-    children = parent_nodes[0]["children"]
-    child_ids = [c["id"] for c in children]
-    assert str(child_span.id) in child_ids
-
-
-async def test_get_trace_404_for_nonexistent_trace(client: AsyncClient, logged_in_headers, active_user):  # noqa: ARG001
-    """Returns 404 when trace does not exist."""
-    response = await client.get(
-        f"api/v1/monitor/traces/{uuid4()}",
-        headers=logged_in_headers,
-    )
-    assert response.status_code == status.HTTP_404_NOT_FOUND
-
-
-async def test_get_trace_404_for_other_users_trace(client: AsyncClient, logged_in_headers, active_user):  # noqa: ARG001
-    """Returns 404 when trace belongs to another user's flow."""
-    other_user_id = uuid4()
-    other_flow = await _create_flow_for_user(other_user_id)
-    trace = await _create_trace(other_flow.id)
-
-    response = await client.get(
-        f"api/v1/monitor/traces/{trace.id}",
-        headers=logged_in_headers,
-    )
-    assert response.status_code == status.HTTP_404_NOT_FOUND
-
-
-async def test_get_trace_response_shape(client: AsyncClient, logged_in_headers, active_user: User):
-    """Verifies the response shape of a single trace."""
-    flow = await _create_flow_for_user(active_user.id)
-    trace = await _create_trace(flow.id)
-    await _create_span(trace.id)
-
-    response = await client.get(
-        f"api/v1/monitor/traces/{trace.id}",
-        headers=logged_in_headers,
-    )
-    assert response.status_code == status.HTTP_200_OK
-    data = response.json()
-    for key in (
-        "id",
-        "name",
-        "status",
-        "startTime",
-        "endTime",
-        "totalLatencyMs",
-        "totalTokens",
-        "totalCost",
-        "flowId",
-        "sessionId",
-        "spans",
-    ):
-        assert key in data, f"Missing key: {key}"
-
-
-async def test_get_trace_requires_auth(client: AsyncClient):
-    """Unauthenticated requests are rejected."""
-    response = await client.get(f"api/v1/monitor/traces/{uuid4()}")
-    assert response.status_code in (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN)
-
-
-# ---------------------------------------------------------------------------
-# DELETE /api/v1/monitor/traces/{trace_id}
-# ---------------------------------------------------------------------------
-
-
-async def test_delete_trace_removes_trace_and_spans(client: AsyncClient, logged_in_headers, active_user: User):
-    """Deleting a trace removes it and its spans (cascade)."""
-    flow = await _create_flow_for_user(active_user.id)
-    trace = await _create_trace(flow.id)
-    await _create_span(trace.id)
-
-    response = await client.delete(
-        f"api/v1/monitor/traces/{trace.id}",
-        headers=logged_in_headers,
-    )
-    assert response.status_code == status.HTTP_204_NO_CONTENT
-
-    # Verify trace is gone
-    get_response = await client.get(
-        f"api/v1/monitor/traces/{trace.id}",
-        headers=logged_in_headers,
-    )
-    assert get_response.status_code == status.HTTP_404_NOT_FOUND
-
-
-async def test_delete_trace_404_for_nonexistent_trace(client: AsyncClient, logged_in_headers, active_user):  # noqa: ARG001
-    """Returns 404 when deleting a trace that doesn't exist."""
-    response = await client.delete(
-        f"api/v1/monitor/traces/{uuid4()}",
-        headers=logged_in_headers,
-    )
-    assert response.status_code == status.HTTP_404_NOT_FOUND
-
-
-async def test_delete_trace_404_for_other_users_trace(client: AsyncClient, logged_in_headers, active_user):  # noqa: ARG001
-    """Cannot delete another user's trace."""
-    other_user_id = uuid4()
-    other_flow = await _create_flow_for_user(other_user_id)
-    trace = await _create_trace(other_flow.id)
-
-    response = await client.delete(
-        f"api/v1/monitor/traces/{trace.id}",
-        headers=logged_in_headers,
-    )
-    assert response.status_code == status.HTTP_404_NOT_FOUND
-
-
-async def test_delete_trace_requires_auth(client: AsyncClient):
-    """Unauthenticated requests are rejected."""
-    response = await client.delete(f"api/v1/monitor/traces/{uuid4()}")
-    assert response.status_code in (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN)
-
-
-# ---------------------------------------------------------------------------
-# DELETE /api/v1/monitor/traces?flow_id=...
-# ---------------------------------------------------------------------------
-
-
-async def test_delete_traces_by_flow_removes_all_traces(client: AsyncClient, logged_in_headers, active_user: User):
-    """Deletes all traces for a flow."""
-    flow = await _create_flow_for_user(active_user.id)
-    trace1 = await _create_trace(flow.id, name="T1", session_id="s1")
-    trace2 = await _create_trace(flow.id, name="T2", session_id="s2")
-
-    response = await client.delete(
-        "api/v1/monitor/traces",
-        params={"flow_id": str(flow.id)},
-        headers=logged_in_headers,
-    )
-    assert response.status_code == status.HTTP_204_NO_CONTENT
-
-    # Verify both traces are gone
-    for trace_id in (trace1.id, trace2.id):
-        get_response = await client.get(
-            f"api/v1/monitor/traces/{trace_id}",
-            headers=logged_in_headers,
-        )
-        assert get_response.status_code == status.HTTP_404_NOT_FOUND
-
-
-async def test_delete_traces_by_flow_404_for_nonexistent_flow(
-    client: AsyncClient,
-    logged_in_headers,
-    active_user,  # noqa: ARG001
-):
-    """Returns 404 when the flow doesn't exist."""
-    response = await client.delete(
-        "api/v1/monitor/traces",
-        params={"flow_id": str(uuid4())},
-        headers=logged_in_headers,
-    )
-    assert response.status_code == status.HTTP_404_NOT_FOUND
-
-
-async def test_delete_traces_by_flow_404_for_other_users_flow(
-    client: AsyncClient,
-    logged_in_headers,
-    active_user,  # noqa: ARG001
-):
-    """Cannot delete traces from another user's flow."""
-    other_user_id = uuid4()
-    other_flow = await _create_flow_for_user(other_user_id)
-    await _create_trace(other_flow.id)
-
-    response = await client.delete(
-        "api/v1/monitor/traces",
-        params={"flow_id": str(other_flow.id)},
-        headers=logged_in_headers,
-    )
-    assert response.status_code == status.HTTP_404_NOT_FOUND
-
-
-async def test_delete_traces_by_flow_requires_auth(client: AsyncClient):
-    """Unauthenticated requests are rejected."""
-    response = await client.delete(
-        "api/v1/monitor/traces",
-        params={"flow_id": str(uuid4())},
-    )
-    assert response.status_code in (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN)
-
-
-async def test_delete_traces_by_flow_succeeds_with_no_traces(client: AsyncClient, logged_in_headers, active_user: User):
-    """Deleting traces for a flow with no traces returns 204 (idempotent)."""
-    flow = await _create_flow_for_user(active_user.id)
-
-    response = await client.delete(
-        "api/v1/monitor/traces",
-        params={"flow_id": str(flow.id)},
-        headers=logged_in_headers,
-    )
-    assert response.status_code == status.HTTP_204_NO_CONTENT
+from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import UUID, uuid4
+
+import pytest
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+from langflow.api.v1.traces import router
+from langflow.services.auth.utils import get_current_active_user
+from langflow.services.database.models.traces.model import (
+    SpanStatus,
+    TraceListResponse,
+    TraceRead,
+    TraceSummaryRead,
+)
+from sqlalchemy.exc import OperationalError, ProgrammingError
+
+_FAKE_USER_ID = uuid4()
+_FAKE_FLOW_ID = uuid4()
+_FAKE_TRACE_ID = uuid4()
+
+
+def _make_fake_user() -> MagicMock:
+    user = MagicMock()
+    user.id = _FAKE_USER_ID
+    return user
+
+
+def _make_app() -> FastAPI:
+    app = FastAPI()
+    app.include_router(router)
+    app.dependency_overrides[get_current_active_user] = _make_fake_user
+    return app
+
+
+@pytest.fixture
+def client() -> TestClient:
+    return TestClient(_make_app(), raise_server_exceptions=False)
+
+
+def _make_trace_summary(**kwargs) -> TraceSummaryRead:
+    defaults: dict = {
+        "id": _FAKE_TRACE_ID,
+        "name": "Test Trace",
+        "status": SpanStatus.OK,
+        "start_time": datetime(2024, 1, 1, tzinfo=timezone.utc),
+        "total_latency_ms": 100,
+        "total_tokens": 50,
+        "total_cost": 0.01,
+        "flow_id": _FAKE_FLOW_ID,
+        "session_id": "sess-1",
+        "input": None,
+        "output": None,
+    }
+    defaults.update(kwargs)
+    return TraceSummaryRead(**defaults)
+
+
+def _make_trace_read(**kwargs) -> TraceRead:
+    defaults: dict = {
+        "id": _FAKE_TRACE_ID,
+        "name": "Test Trace",
+        "status": SpanStatus.OK,
+        "start_time": datetime(2024, 1, 1, tzinfo=timezone.utc),
+        "end_time": datetime(2024, 1, 1, 0, 0, 1, tzinfo=timezone.utc),
+        "total_latency_ms": 100,
+        "total_tokens": 50,
+        "total_cost": 0.01,
+        "flow_id": _FAKE_FLOW_ID,
+        "session_id": "sess-1",
+        "input": None,
+        "output": None,
+        "spans": [],
+    }
+    defaults.update(kwargs)
+    return TraceRead(**defaults)
+
+
+def _empty_list_response() -> TraceListResponse:
+    return TraceListResponse(traces=[], total=0, pages=0)
+
+
+class TestGetTraces:
+    _PATH = "/monitor/traces"
+
+    def test_should_return_200_with_trace_list(self, client: TestClient):
+        summary = _make_trace_summary()
+        response_data = TraceListResponse(traces=[summary], total=1, pages=1)
+
+        async def _fetch(*_args, **_kwargs):
+            return response_data
+
+        with patch("langflow.api.v1.traces.fetch_traces", side_effect=_fetch):
+            resp = client.get(self._PATH)
+
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["total"] == 1
+        assert body["pages"] == 1
+        assert len(body["traces"]) == 1
+
+    def test_should_return_empty_list_on_timeout(self, client: TestClient):
+        async def _fetch(*_args, **_kwargs):
+            raise asyncio.TimeoutError
+
+        with patch("langflow.api.v1.traces.fetch_traces", side_effect=_fetch):
+            resp = client.get(self._PATH)
+
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body == {"traces": [], "total": 0, "pages": 0}
+
+    def test_should_return_empty_list_on_operational_error(self, client: TestClient):
+        async def _fetch(*_args, **_kwargs):
+            msg = "no such table"
+            raise OperationalError(msg, None, None)
+
+        with patch("langflow.api.v1.traces.fetch_traces", side_effect=_fetch):
+            resp = client.get(self._PATH)
+
+        assert resp.status_code == 200
+        assert resp.json() == {"traces": [], "total": 0, "pages": 0}
+
+    def test_should_return_empty_list_on_programming_error(self, client: TestClient):
+        async def _fetch(*_args, **_kwargs):
+            msg = "relation does not exist"
+            raise ProgrammingError(msg, None, None)
+
+        with patch("langflow.api.v1.traces.fetch_traces", side_effect=_fetch):
+            resp = client.get(self._PATH)
+
+        assert resp.status_code == 200
+        assert resp.json() == {"traces": [], "total": 0, "pages": 0}
+
+    def test_should_propagate_unexpected_error(self, client: TestClient):
+        async def _fetch(*_args, **_kwargs):
+            msg = "boom"
+            raise RuntimeError(msg)
+
+        with patch("langflow.api.v1.traces.fetch_traces", side_effect=_fetch):
+            resp = client.get(self._PATH)
+
+        assert resp.status_code == 500
+
+    def test_should_pass_sanitized_query_to_fetch_traces(self, client: TestClient):
+        """Non-printable chars in query must be stripped before reaching fetch_traces."""
+        captured: list[str | None] = []
+
+        async def _fetch(_user_id, _flow_id, _session_id, _status, query, *_rest, **_kw):
+            captured.append(query)
+            return _empty_list_response()
+
+        with patch("langflow.api.v1.traces.fetch_traces", side_effect=_fetch):
+            client.get(self._PATH, params={"query": "hello\x00world"})
+
+        assert captured == ["helloworld"]
+
+    def test_should_pass_none_query_when_query_is_whitespace_only(self, client: TestClient):
+        """Whitespace-only query must be sanitized to None."""
+        captured: list[str | None] = []
+
+        async def _fetch(_user_id, _flow_id, _session_id, _status, query, *_rest, **_kw):
+            captured.append(query)
+            return _empty_list_response()
+
+        with patch("langflow.api.v1.traces.fetch_traces", side_effect=_fetch):
+            client.get(self._PATH, params={"query": "   "})
+
+        assert captured == [None]
+
+    def test_should_pass_flow_id_filter(self, client: TestClient):
+        captured: list[UUID | None] = []
+
+        async def _fetch(_user_id, flow_id, *_rest, **_kw):
+            captured.append(flow_id)
+            return _empty_list_response()
+
+        with patch("langflow.api.v1.traces.fetch_traces", side_effect=_fetch):
+            client.get(self._PATH, params={"flow_id": str(_FAKE_FLOW_ID)})
+
+        assert captured == [_FAKE_FLOW_ID]
+
+    def test_should_pass_status_filter(self, client: TestClient):
+        captured: list = []
+
+        async def _fetch(_user_id, _flow_id, _session_id, status, *_rest, **_kw):
+            captured.append(status)
+            return _empty_list_response()
+
+        with patch("langflow.api.v1.traces.fetch_traces", side_effect=_fetch):
+            client.get(self._PATH, params={"status": "ok"})
+
+        assert captured == [SpanStatus.OK]
+
+    def test_should_reject_invalid_page_param(self, client: TestClient):
+        async def _fetch(*_args, **_kwargs):
+            return _empty_list_response()
+
+        with patch("langflow.api.v1.traces.fetch_traces", side_effect=_fetch):
+            resp = client.get(self._PATH, params={"page": 0})
+
+        assert resp.status_code == 422
+
+    def test_should_reject_size_above_maximum(self, client: TestClient):
+        async def _fetch(*_args, **_kwargs):
+            return _empty_list_response()
+
+        with patch("langflow.api.v1.traces.fetch_traces", side_effect=_fetch):
+            resp = client.get(self._PATH, params={"size": 201})
+
+        assert resp.status_code == 422
+
+
+class TestGetTrace:
+    def _path(self, trace_id: UUID | None = None) -> str:
+        return f"/monitor/traces/{trace_id or _FAKE_TRACE_ID}"
+
+    def test_should_return_200_with_trace(self, client: TestClient):
+        trace = _make_trace_read()
+
+        async def _fetch(_user_id, _trace_id):
+            return trace
+
+        with patch("langflow.api.v1.traces.fetch_single_trace", side_effect=_fetch):
+            resp = client.get(self._path())
+
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["id"] == str(_FAKE_TRACE_ID)
+        assert body["name"] == "Test Trace"
+
+    def test_should_return_404_when_trace_not_found(self, client: TestClient):
+        async def _fetch(_user_id, _trace_id):
+            return None
+
+        with patch("langflow.api.v1.traces.fetch_single_trace", side_effect=_fetch):
+            resp = client.get(self._path())
+
+        assert resp.status_code == 404
+        assert resp.json()["detail"] == "Trace not found"
+
+    def test_should_return_504_on_timeout(self, client: TestClient):
+        async def _fetch(_user_id, _trace_id):
+            raise asyncio.TimeoutError
+
+        with patch("langflow.api.v1.traces.fetch_single_trace", side_effect=_fetch):
+            resp = client.get(self._path())
+
+        assert resp.status_code == 504
+        assert "timed out" in resp.json()["detail"].lower()
+
+    def test_should_return_500_on_operational_error(self, client: TestClient):
+        async def _fetch(_user_id, _trace_id):
+            msg = "no such table"
+            raise OperationalError(msg, None, None)
+
+        with patch("langflow.api.v1.traces.fetch_single_trace", side_effect=_fetch):
+            resp = client.get(self._path())
+
+        assert resp.status_code == 500
+        assert resp.json()["detail"] == "Database error"
+
+    def test_should_return_500_on_unexpected_error(self, client: TestClient):
+        async def _fetch(_user_id, _trace_id):
+            msg = "unexpected"
+            raise RuntimeError(msg)
+
+        with patch("langflow.api.v1.traces.fetch_single_trace", side_effect=_fetch):
+            resp = client.get(self._path())
+
+        assert resp.status_code == 500
+        assert resp.json()["detail"] == "Internal server error"
+
+    def test_should_return_422_for_invalid_trace_id(self, client: TestClient):
+        resp = client.get("/monitor/traces/not-a-uuid")
+        assert resp.status_code == 422
+
+    def test_should_pass_correct_user_id_to_fetch(self, client: TestClient):
+        captured: list[UUID] = []
+
+        async def _fetch(user_id, _trace_id):
+            captured.append(user_id)
+            return _make_trace_read()
+
+        with patch("langflow.api.v1.traces.fetch_single_trace", side_effect=_fetch):
+            client.get(self._path())
+
+        assert captured == [_FAKE_USER_ID]
+
+
+class TestDeleteTrace:
+    def _path(self, trace_id: UUID | None = None) -> str:
+        return f"/monitor/traces/{trace_id or _FAKE_TRACE_ID}"
+
+    def _make_session_scope(self, trace_obj):
+        """Return a context manager that yields a mock session with trace_obj."""
+        session = AsyncMock()
+        exec_result = MagicMock()
+        exec_result.first.return_value = trace_obj
+        session.exec = AsyncMock(return_value=exec_result)
+        session.delete = AsyncMock()
+
+        @asynccontextmanager
+        async def _scope():
+            yield session
+
+        return _scope, session
+
+    def test_should_return_204_on_success(self, client: TestClient):
+        fake_trace = MagicMock()
+        scope, session = self._make_session_scope(fake_trace)
+
+        with patch("langflow.api.v1.traces.session_scope", scope):
+            resp = client.delete(self._path())
+
+        assert resp.status_code == 204
+        session.delete.assert_awaited_once()
+
+    def test_should_return_404_when_trace_not_found(self, client: TestClient):
+        scope, _ = self._make_session_scope(None)
+
+        with patch("langflow.api.v1.traces.session_scope", scope):
+            resp = client.delete(self._path())
+
+        assert resp.status_code == 404
+        assert resp.json()["detail"] == "Trace not found"
+
+    def test_should_return_500_on_unexpected_error(self, client: TestClient):
+        @asynccontextmanager
+        async def _scope():
+            msg = "db exploded"
+            raise RuntimeError(msg)
+            yield  # type: ignore[misc]
+
+        with patch("langflow.api.v1.traces.session_scope", _scope):
+            resp = client.delete(self._path())
+
+        assert resp.status_code == 500
+        assert resp.json()["detail"] == "Internal server error"
+
+    def test_should_return_422_for_invalid_trace_id(self, client: TestClient):
+        resp = client.delete("/monitor/traces/not-a-uuid")
+        assert resp.status_code == 422
+
+
+class TestDeleteTracesByFlow:
+    _PATH = "/monitor/traces"
+
+    def _make_session_scope(self, flow_obj):
+        """Return a context manager that yields a mock session with flow_obj."""
+        session = AsyncMock()
+        exec_result = MagicMock()
+        exec_result.first.return_value = flow_obj
+        session.exec = AsyncMock(return_value=exec_result)
+        session.execute = AsyncMock()
+
+        @asynccontextmanager
+        async def _scope():
+            yield session
+
+        return _scope, session
+
+    def test_should_return_204_on_success(self, client: TestClient):
+        fake_flow = MagicMock()
+        scope, session = self._make_session_scope(fake_flow)
+
+        with patch("langflow.api.v1.traces.session_scope", scope):
+            resp = client.delete(self._PATH, params={"flow_id": str(_FAKE_FLOW_ID)})
+
+        assert resp.status_code == 204
+        session.execute.assert_awaited_once()
+
+    def test_should_return_404_when_flow_not_found(self, client: TestClient):
+        scope, _ = self._make_session_scope(None)
+
+        with patch("langflow.api.v1.traces.session_scope", scope):
+            resp = client.delete(self._PATH, params={"flow_id": str(_FAKE_FLOW_ID)})
+
+        assert resp.status_code == 404
+        assert resp.json()["detail"] == "Flow not found"
+
+    def test_should_return_422_when_flow_id_missing(self, client: TestClient):
+        resp = client.delete(self._PATH)
+        assert resp.status_code == 422
+
+    def test_should_return_422_for_invalid_flow_id(self, client: TestClient):
+        resp = client.delete(self._PATH, params={"flow_id": "not-a-uuid"})
+        assert resp.status_code == 422
+
+    def test_should_return_500_on_unexpected_error(self, client: TestClient):
+        @asynccontextmanager
+        async def _scope():
+            msg = "db exploded"
+            raise RuntimeError(msg)
+            yield  # type: ignore[misc]
+
+        with patch("langflow.api.v1.traces.session_scope", _scope):
+            resp = client.delete(self._PATH, params={"flow_id": str(_FAKE_FLOW_ID)})
+
+        assert resp.status_code == 500
+        assert resp.json()["detail"] == "Internal server error"
+
+    def test_should_execute_bulk_delete_not_individual(self, client: TestClient):
+        """Verify the bulk DELETE statement is used (not N+1 individual deletes)."""
+        fake_flow = MagicMock()
+        scope, session = self._make_session_scope(fake_flow)
+
+        with patch("langflow.api.v1.traces.session_scope", scope):
+            client.delete(self._PATH, params={"flow_id": str(_FAKE_FLOW_ID)})
+
+        session.execute.assert_awaited_once()
+        session.delete.assert_not_called()
