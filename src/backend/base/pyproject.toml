@@ -62,6 +62,7 @@ dependencies = [
     "firecrawl-py>=1.0.16,<2.0.0",
     "opentelemetry-api>=1.30.0,<2.0.0",
     "opentelemetry-sdk>=1.30.0,<2.0.0",
+    "opentelemetry-exporter-prometheus>=0.50b0,<1.0.0",
     "opentelemetry-exporter-otlp>=1.30.0,<2.0.0",
     "opentelemetry-instrumentation-fastapi>=0.50b0,<1.0.0",
     "prometheus-client>=0.20.0,<1.0.0",
