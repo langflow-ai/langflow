@@ -63,6 +63,35 @@ async def test_get_project_data():
         )
 
 
+async def test_should_not_leak_caio_contexts_when_loading_starter_projects():
+    """Test that load_starter_projects does not leak caio async I/O contexts.
+
+    Bug: On Linux CI, aiofile's async_open creates caio.AsyncioContext objects
+    keyed by event loop in a global dict (DEFAULT_CONTEXT_STORE) that are never
+    cleaned up. With pytest-asyncio creating a new event loop per test function,
+    these contexts accumulate until the OS limit (aio-max-nr) is exhausted,
+    causing SystemError: (11, 'Resource temporarily unavailable') (EAGAIN).
+
+    This test verifies that load_starter_projects does not increase the number
+    of leaked caio contexts after being called.
+    """
+    try:
+        from aiofile.aio import DEFAULT_CONTEXT_STORE
+    except ImportError:
+        pytest.skip("aiofile not installed")
+
+    contexts_before = len(DEFAULT_CONTEXT_STORE)
+    await load_starter_projects()
+    contexts_after = len(DEFAULT_CONTEXT_STORE)
+
+    assert contexts_after == contexts_before, (
+        f"load_starter_projects leaked {contexts_after - contexts_before} caio context(s). "
+        f"This causes SystemError(11, 'Resource temporarily unavailable') on Linux CI "
+        f"when many tests accumulate leaked contexts. "
+        f"Use anyio.Path.read_text() instead of aiofile.async_open()."
+    )
+
+
 @pytest.mark.usefixtures("client")
 async def test_create_or_update_starter_projects():
     async with session_scope() as session:

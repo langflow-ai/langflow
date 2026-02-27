@@ -539,8 +539,7 @@ async def load_starter_projects(retries=3, delay=1) -> list[tuple[anyio.Path, di
     async for file in folder.glob("*.json"):
         attempt = 0
         while attempt < retries:
-            async with async_open(str(file), "r", encoding="utf-8") as f:
-                content = await f.read()
+            content = await file.read_text(encoding="utf-8")
             try:
                 project = orjson.loads(content)
                 starter_projects.append((file, project))
