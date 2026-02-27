@@ -188,7 +188,7 @@ async def test_concurrent_update_server_should_not_lose_servers(
     """
     import asyncio
     import copy
-    from unittest.mock import AsyncMock, MagicMock, patch
+    from unittest.mock import MagicMock, patch
 
     from langflow.api.v2.mcp import update_server
 
@@ -236,12 +236,6 @@ async def test_concurrent_update_server_should_not_lose_servers(
             ),
         )
 
-    assert "server_a" in config_state["mcpServers"], (
-        "server_a was lost due to concurrent update_server race condition"
-    )
-    assert "server_b" in config_state["mcpServers"], (
-        "server_b was lost due to concurrent update_server race condition"
-    )
-    assert "server_c" in config_state["mcpServers"], (
-        "server_c was lost due to concurrent update_server race condition"
-    )
+    assert "server_a" in config_state["mcpServers"], "server_a was lost due to concurrent update_server race condition"
+    assert "server_b" in config_state["mcpServers"], "server_b was lost due to concurrent update_server race condition"
+    assert "server_c" in config_state["mcpServers"], "server_c was lost due to concurrent update_server race condition"
