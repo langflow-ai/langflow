@@ -3,8 +3,8 @@ from enum import Enum
 from typing import Any, Optional
 from uuid import UUID, uuid4
 
+from pydantic import ConfigDict, field_serializer, field_validator
 from pydantic import Field as PydanticField
-from pydantic import field_serializer, field_validator
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel, Text
 
 from langflow.serialization.serialization import serialize
@@ -56,7 +56,7 @@ class TraceBase(SQLModel):
     total_latency_ms: int = Field(default=0, description="Total execution time in milliseconds")
     total_tokens: int = Field(default=0, description="Total tokens used across all LLM calls")
     total_cost: float = Field(default=0.0, description="Estimated total cost")
-    flow_id: UUID = Field(index=True, description="ID of the flow this trace belongs to")
+    flow_id: UUID = Field(foreign_key="flow.id", index=True, description="ID of the flow this trace belongs to")
     session_id: str | None = Field(
         default=None,
         nullable=True,
@@ -64,14 +64,14 @@ class TraceBase(SQLModel):
         description="Session ID for grouping traces",
     )
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @field_validator("flow_id", mode="before")
     @classmethod
     def validate_flow_id(cls, value):
         if value is None:
-            return value
+            msg = "flow_id is required and cannot be None"
+            raise ValueError(msg)
         if isinstance(value, str):
             value = UUID(value)
         return value
@@ -129,8 +129,7 @@ class SpanBase(SQLModel):
         sa_column=Column(JSON),
     )
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @field_serializer("inputs")
     def serialize_inputs(self, data) -> dict | None:

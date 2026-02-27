@@ -262,6 +262,7 @@ class NativeTracer(BaseTracer):
     async def _flush_to_database(self, error: Exception | None = None) -> None:
         """Flush all trace data to database."""
         try:
+            from uuid import NAMESPACE_DNS, uuid5
             from uuid import UUID as UUID_
 
             from lfx.services.deps import session_scope
@@ -272,8 +273,16 @@ class NativeTracer(BaseTracer):
             try:
                 flow_uuid = UUID_(self.flow_id)
             except (ValueError, TypeError):
-                logger.warning("Invalid flow_id format: %s", self.flow_id)
-                return
+                # Use a deterministic sentinel UUID so trace data is not silently discarded.
+                # This preserves all span data even when flow_id is malformed.
+                flow_uuid = uuid5(NAMESPACE_DNS, f"invalid-flow-id:{self.flow_id}")
+                logger.error(
+                    "Invalid flow_id format — trace will be persisted with a sentinel flow_id. "
+                    "flow_id=%r trace_id=%s sentinel_flow_id=%s",
+                    self.flow_id,
+                    self.trace_id,
+                    flow_uuid,
+                )
 
             end_time = datetime.now(tz=timezone.utc)
             total_latency_ms = int((end_time - self._start_time).total_seconds() * 1000)
@@ -305,8 +314,6 @@ class NativeTracer(BaseTracer):
                 await session.merge(trace)
 
                 # Create span records
-                from uuid import NAMESPACE_DNS, uuid5
-
                 for span_data in self.completed_spans:
                     # Parse span_id to UUID (use uuid5 for deterministic conversion)
                     try:

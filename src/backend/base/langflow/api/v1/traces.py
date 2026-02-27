@@ -274,11 +274,11 @@ async def get_traces(
         )
     except asyncio.TimeoutError:
         logger.warning("Traces query timed out after %ss (table may not exist or DB is slow)", DB_TIMEOUT)
-        return {"traces": [], "total": 0}
+        return {"traces": [], "total": 0, "pages": 0}
     except (OperationalError, ProgrammingError) as e:
         # Table doesn't exist or other SQL error
         logger.debug("Database error getting traces (table may not exist): %s", e)
-        return {"traces": [], "total": 0}
+        return {"traces": [], "total": 0, "pages": 0}
     except Exception:
         # Log unexpected errors at error level and re-raise
         logger.exception("Unexpected error getting traces")
@@ -490,13 +490,10 @@ async def delete_traces_by_flow(
             if not flow:
                 raise HTTPException(status_code=404, detail="Flow not found")
 
-            # Get all traces for this flow
-            stmt = select(TraceTable).where(TraceTable.flow_id == flow_id)
-            traces = (await session.exec(stmt)).all()
-
-            # Delete all traces (cascade will delete spans)
-            for trace in traces:
-                await session.delete(trace)
+            # Bulk-delete all traces for this flow.
+            # The DB-level CASCADE on SpanTable.trace_id handles span deletion.
+            delete_stmt = sa.delete(TraceTable).where(col(TraceTable.flow_id) == flow_id)
+            await session.execute(delete_stmt)
     except HTTPException:
         raise
     except Exception as e:

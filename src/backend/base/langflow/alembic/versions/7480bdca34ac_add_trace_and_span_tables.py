@@ -38,6 +38,7 @@ def upgrade() -> None:
             sa.Column("flow_id", sa.Uuid(), nullable=False),
             sa.Column("session_id", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
             sa.Column("id", sa.Uuid(), nullable=False),
+            sa.ForeignKeyConstraint(["flow_id"], ["flow.id"], ondelete="CASCADE"),
             sa.PrimaryKeyConstraint("id"),
         )
         with op.batch_alter_table("trace", schema=None) as batch_op:
