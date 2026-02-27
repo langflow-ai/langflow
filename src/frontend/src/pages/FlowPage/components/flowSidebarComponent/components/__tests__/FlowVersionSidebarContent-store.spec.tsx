@@ -31,7 +31,7 @@ let entryQueryData: any = null;
 let entryQueryLoading = false;
 let entryQueryError = false;
 
-jest.mock("@/controllers/API/queries/flow-history", () => ({
+jest.mock("@/controllers/API/queries/flow-version", () => ({
   useGetFlowHistory: () => ({
     data: {
       entries: [
@@ -116,7 +116,7 @@ jest.mock("@/stores/alertStore", () => ({
 
 const setPreviewMock = jest.fn();
 const clearPreviewMock = jest.fn();
-jest.mock("@/stores/historyPreviewStore", () => {
+jest.mock("@/stores/versionPreviewStore", () => {
   const store: any = (selector: any) =>
     selector({
       previewNodes: null,
@@ -178,7 +178,7 @@ jest.mock("lodash", () => ({
 // Import the component AFTER all mocks are set up
 // ---------------------------------------------------------------------------
 
-import FlowHistorySidebarContent from "../FlowHistorySidebarContent";
+import FlowVersionSidebarContent from "../FlowVersionSidebarContent";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -210,7 +210,7 @@ describe("FlowHistorySidebarContent store behavior", () => {
     const fakeAutoSave = jest.fn();
     storeState.autoSaveFlow = fakeAutoSave;
 
-    const { unmount } = render(<FlowHistorySidebarContent flowId="flow-1" />);
+    const { unmount } = render(<FlowVersionSidebarContent flowId="flow-1" />);
 
     // Auto-save should be disabled on mount
     expect(setStateMock).toHaveBeenCalledWith(
@@ -228,7 +228,7 @@ describe("FlowHistorySidebarContent store behavior", () => {
   it("hides inspection panel on mount and restores on unmount", () => {
     storeState.inspectionPanelVisible = true;
 
-    const { unmount } = render(<FlowHistorySidebarContent flowId="flow-1" />);
+    const { unmount } = render(<FlowVersionSidebarContent flowId="flow-1" />);
 
     expect(setStateMock).toHaveBeenCalledWith(
       expect.objectContaining({ inspectionPanelVisible: false }),
@@ -244,7 +244,7 @@ describe("FlowHistorySidebarContent store behavior", () => {
   it("does not restore inspection panel if it was already hidden", () => {
     storeState.inspectionPanelVisible = false;
 
-    const { unmount } = render(<FlowHistorySidebarContent flowId="flow-1" />);
+    const { unmount } = render(<FlowVersionSidebarContent flowId="flow-1" />);
 
     unmount();
 
@@ -256,7 +256,7 @@ describe("FlowHistorySidebarContent store behavior", () => {
   });
 
   it("restores original nodes/edges on unmount", () => {
-    const { unmount } = render(<FlowHistorySidebarContent flowId="flow-1" />);
+    const { unmount } = render(<FlowVersionSidebarContent flowId="flow-1" />);
 
     // Clear mock calls from mount
     setStateMock.mockClear();
@@ -273,7 +273,7 @@ describe("FlowHistorySidebarContent store behavior", () => {
   });
 
   it("clears preview store on unmount", () => {
-    const { unmount } = render(<FlowHistorySidebarContent flowId="flow-1" />);
+    const { unmount } = render(<FlowVersionSidebarContent flowId="flow-1" />);
 
     unmount();
 
@@ -289,7 +289,7 @@ describe("FlowHistorySidebarContent store behavior", () => {
       data: { nodes: historyNodes, edges: historyEdges },
     };
 
-    render(<FlowHistorySidebarContent flowId="flow-1" />);
+    render(<FlowVersionSidebarContent flowId="flow-1" />);
 
     // Click on a history entry to trigger selection
     const user = userEvent.setup();
@@ -326,7 +326,7 @@ describe("FlowHistorySidebarContent store behavior", () => {
       data: { nodes: [{ id: "n1" }], edges: [] },
     };
 
-    render(<FlowHistorySidebarContent flowId="flow-1" />);
+    render(<FlowVersionSidebarContent flowId="flow-1" />);
 
     // Click entry to trigger selection
     const entryRow = screen.getByText("v1").closest("[class*=cursor-pointer]");
@@ -362,7 +362,7 @@ describe("FlowHistorySidebarContent store behavior", () => {
       data: { nodes: [{ id: "n1" }], edges: [] },
     };
 
-    render(<FlowHistorySidebarContent flowId="flow-1" />);
+    render(<FlowVersionSidebarContent flowId="flow-1" />);
 
     const entryRow = screen.getByText("v1").closest("[class*=cursor-pointer]");
     if (entryRow) {
@@ -383,7 +383,7 @@ describe("FlowHistorySidebarContent store behavior", () => {
       data: { nodes: [{ id: "hist-node" }], edges: [] },
     };
 
-    render(<FlowHistorySidebarContent flowId="flow-1" />);
+    render(<FlowVersionSidebarContent flowId="flow-1" />);
 
     // Click version entry
     const entryRow = screen.getByText("v1").closest("[class*=cursor-pointer]");

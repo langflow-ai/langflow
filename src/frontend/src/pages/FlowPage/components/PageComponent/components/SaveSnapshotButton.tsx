@@ -2,9 +2,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { useSidebar } from "@/components/ui/sidebar";
-import { usePostCreateSnapshot } from "@/controllers/API/queries/flow-history";
+import { usePostCreateSnapshot } from "@/controllers/API/queries/flow-version";
 import useAlertStore from "@/stores/alertStore";
-import useHistoryPreviewStore from "@/stores/historyPreviewStore";
+import useVersionPreviewStore from "@/stores/versionPreviewStore";
 import CanvasBanner, { CanvasBannerButton } from "./CanvasBanner";
 
 interface SaveSnapshotButtonProps {
@@ -17,7 +17,7 @@ export default function SaveSnapshotButton({
   const queryClient = useQueryClient();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const clearPreview = useHistoryPreviewStore((s) => s.clearPreview);
+  const clearPreview = useVersionPreviewStore((s) => s.clearPreview);
   const { setActiveSection, open, toggleSidebar } = useSidebar();
   const { mutate: createSnapshot, isPending: isCreating } =
     usePostCreateSnapshot();

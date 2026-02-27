@@ -6,16 +6,16 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import DeleteConfirmDialog from "./components/DeleteConfirmDialog";
-import HistoryListItem from "./components/HistoryListItem";
+import VersionListItem from "./components/VersionListItem";
 import PruneWarningDialog from "./components/PruneWarningDialog";
 import RestoreConfirmDialog from "./components/RestoreConfirmDialog";
 import { CURRENT_DRAFT_ID } from "./constants";
-import type { FlowHistorySidebarContentProps } from "./types";
-import { useFlowHistorySidebar } from "./use-flow-history-sidebar";
+import type { FlowVersionSidebarContentProps } from "./types";
+import { useFlowHistorySidebar } from "./use-flow-version-sidebar";
 
 export default function FlowHistorySidebarContent({
   flowId,
-}: FlowHistorySidebarContentProps) {
+}: FlowVersionSidebarContentProps) {
   const {
     selectedId,
     pruneWarning,
@@ -115,7 +115,7 @@ export default function FlowHistorySidebarContent({
               )}
 
             {history?.map((entry) => (
-              <HistoryListItem
+              <VersionListItem
                 key={entry.id}
                 entry={entry}
                 isSelected={entry.id === selectedId}

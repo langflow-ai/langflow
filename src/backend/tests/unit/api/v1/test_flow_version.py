@@ -454,9 +454,6 @@ async def test_snapshot_and_activate_with_complex_flow_data(client: AsyncClient,
     assert activate_resp.status_code == status.HTTP_200_OK
     restored = activate_resp.json()
 
-    assert len(restored["data"]["nodes"]) == len(complex_data["nodes"])
-    assert len(restored["data"]["edges"]) == len(complex_data["edges"])
-    # Deep equality — all node/edge details survived the round-trip
     assert restored["data"] == complex_data
 
 

@@ -41,7 +41,7 @@ const mockHistory = [
   },
 ];
 
-jest.mock("@/controllers/API/queries/flow-history", () => ({
+jest.mock("@/controllers/API/queries/flow-version", () => ({
   useGetFlowHistory: () => ({
     data: { entries: mockHistory, max_entries: 50 },
     isLoading: false,
@@ -138,7 +138,7 @@ jest.mock("lodash", () => ({
   ),
 }));
 
-jest.mock("@/stores/historyPreviewStore", () => {
+jest.mock("@/stores/versionPreviewStore", () => {
   const store: any = (selector: any) =>
     selector({
       previewNodes: null,
@@ -161,7 +161,7 @@ jest.mock("@/stores/historyPreviewStore", () => {
 // Import the component AFTER all mocks are set up
 // ---------------------------------------------------------------------------
 
-import FlowHistorySidebarContent from "../FlowHistorySidebarContent";
+import FlowVersionSidebarContent from "../FlowVersionSidebarContent";
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -187,7 +187,7 @@ describe("FlowHistorySidebarContent export", () => {
       },
     });
 
-    render(<FlowHistorySidebarContent flowId="flow-1" />);
+    render(<FlowVersionSidebarContent flowId="flow-1" />);
 
     // Find the Export menu items — there's one for each history entry
     const exportItems = screen.getAllByRole("menuitem", { name: /Export/i });
@@ -233,7 +233,7 @@ describe("FlowHistorySidebarContent export", () => {
       data: { ...mockHistory[0], data: historyData, version_tag: "v1" },
     });
 
-    render(<FlowHistorySidebarContent flowId="flow-1" />);
+    render(<FlowVersionSidebarContent flowId="flow-1" />);
 
     const exportItems = screen.getAllByRole("menuitem", { name: /Export/i });
     await user.click(exportItems[0]);
@@ -254,7 +254,7 @@ describe("FlowHistorySidebarContent export", () => {
       response: { data: { detail: "Server error" } },
     });
 
-    render(<FlowHistorySidebarContent flowId="flow-1" />);
+    render(<FlowVersionSidebarContent flowId="flow-1" />);
 
     const exportItems = screen.getAllByRole("menuitem", { name: /Export/i });
     await user.click(exportItems[0]);

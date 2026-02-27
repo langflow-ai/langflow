@@ -45,7 +45,7 @@ import McpSidebarGroup from "./components/McpSidebarGroup";
 import MemoizedSidebarGroup from "./components/sidebarBundles";
 import SidebarMenuButtons from "./components/sidebarFooterButtons";
 import { SidebarHeaderComponent } from "./components/sidebarHeader";
-import FlowHistorySidebarContent from "./components/FlowHistorySidebarContent";
+import FlowVersionSidebarContent from "./components/FlowVersionSidebarContent";
 import SidebarSegmentedNav from "./components/sidebarSegmentedNav";
 import { applyBetaFilter } from "./helpers/apply-beta-filter";
 import { applyComponentFilter } from "./helpers/apply-component-filter";
@@ -643,7 +643,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
           )}
         >
           {showHistory && currentFlowForHistory?.id ? (
-            <FlowHistorySidebarContent flowId={currentFlowForHistory.id} />
+            <FlowVersionSidebarContent flowId={currentFlowForHistory.id} />
           ) : (
             <>
               <SidebarHeaderComponent

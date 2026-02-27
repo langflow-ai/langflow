@@ -1,14 +1,14 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import useHistoryPreviewStore from "@/stores/historyPreviewStore";
+import useVersionPreviewStore from "@/stores/versionPreviewStore";
 import { CanvasBadge } from "./CanvasBanner";
 import RestoreVersionButton from "./RestoreVersionButton";
 import SaveSnapshotButton from "./SaveSnapshotButton";
 
 export default function HistoryPreviewOverlay() {
-  const previewLabel = useHistoryPreviewStore((s) => s.previewLabel);
-  const previewId = useHistoryPreviewStore((s) => s.previewId);
-  const isPreviewLoading = useHistoryPreviewStore((s) => s.isPreviewLoading);
+  const previewLabel = useVersionPreviewStore((s) => s.previewLabel);
+  const previewId = useVersionPreviewStore((s) => s.previewId);
+  const isPreviewLoading = useVersionPreviewStore((s) => s.isPreviewLoading);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
 
   if (previewLabel === null) return null;

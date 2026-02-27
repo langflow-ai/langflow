@@ -8,7 +8,7 @@ import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
 import useApplyFlowToCanvas from "@/hooks/flows/use-apply-flow-to-canvas";
 import useAlertStore from "@/stores/alertStore";
-import useHistoryPreviewStore from "@/stores/historyPreviewStore";
+import useVersionPreviewStore from "@/stores/versionPreviewStore";
 import CanvasBanner, { CanvasBannerButton } from "./CanvasBanner";
 
 interface RestoreVersionButtonProps {
@@ -25,7 +25,7 @@ export default function RestoreVersionButton({
   const queryClient = useQueryClient();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const clearPreview = useHistoryPreviewStore((s) => s.clearPreview);
+  const clearPreview = useVersionPreviewStore((s) => s.clearPreview);
   const applyFlowToCanvas = useApplyFlowToCanvas();
   const { setActiveSection, open, toggleSidebar } = useSidebar();
 
@@ -58,6 +58,10 @@ export default function RestoreVersionButton({
       };
       applyFlowToCanvas(flow);
       clearPreview();
+      // Switch sidebar away from "versions" to trigger the version sidebar's
+      // unmount cleanup, which re-enables auto-save and restores the
+      // inspection panel.
+      setActiveSection("components");
       setSuccessData({ title: "Version restored" });
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
