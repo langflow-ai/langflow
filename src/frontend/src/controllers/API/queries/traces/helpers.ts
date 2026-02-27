@@ -1,5 +1,37 @@
-import { Span, Trace } from "@/pages/FlowPage/components/TraceComponent/types";
+import {
+  Span,
+  SpanStatus,
+  SpanType,
+  Trace,
+} from "@/pages/FlowPage/components/TraceComponent/types";
 import { SpanApiResponse, TraceApiResponse } from "./types";
+
+const VALID_SPAN_TYPES: ReadonlySet<SpanType> = new Set<SpanType>([
+  "chain",
+  "llm",
+  "tool",
+  "retriever",
+  "embedding",
+  "parser",
+  "agent",
+  "none",
+]);
+
+const VALID_SPAN_STATUSES: ReadonlySet<SpanStatus> = new Set<SpanStatus>([
+  "unset",
+  "ok",
+  "error",
+]);
+
+export function parseSpanType(value: string): SpanType {
+  return VALID_SPAN_TYPES.has(value as SpanType) ? (value as SpanType) : "none";
+}
+
+export function parseSpanStatus(value: string): SpanStatus {
+  return VALID_SPAN_STATUSES.has(value as SpanStatus)
+    ? (value as SpanStatus)
+    : "unset";
+}
 
 const sanitizeString = (value: string, maxLen = 50) => {
   const filtered = Array.from(value)
@@ -26,8 +58,8 @@ function convertSpan(apiSpan: SpanApiResponse): Span {
   return {
     id: apiSpan.id,
     name: apiSpan.name,
-    type: apiSpan.type as Span["type"],
-    status: apiSpan.status as Span["status"],
+    type: parseSpanType(apiSpan.type),
+    status: parseSpanStatus(apiSpan.status),
     startTime: apiSpan.startTime,
     endTime: apiSpan.endTime,
     latencyMs: apiSpan.latencyMs,
@@ -46,7 +78,7 @@ function convertTrace(apiTrace: TraceApiResponse): Trace | null {
   return {
     id: apiTrace.id,
     name: apiTrace.name,
-    status: apiTrace.status as Trace["status"],
+    status: parseSpanStatus(apiTrace.status),
     startTime: apiTrace.startTime,
     endTime: apiTrace.endTime,
     totalLatencyMs: apiTrace.totalLatencyMs,

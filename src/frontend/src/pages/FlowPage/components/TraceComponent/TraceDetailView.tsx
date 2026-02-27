@@ -27,7 +27,7 @@ export function TraceDetailView({ traceId, flowName }: TraceDetailViewProps) {
   const summarySpan = useMemo<Span | null>(() => {
     if (!trace) return null;
 
-    const status = trace.status as Span["status"];
+    const status = trace.status;
     const name =
       status === "ok"
         ? "Successful Run"

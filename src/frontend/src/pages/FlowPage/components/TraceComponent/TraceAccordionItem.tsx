@@ -8,6 +8,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Loading } from "@/components/ui/loading";
 import { useGetTraceQuery } from "@/controllers/API/queries/traces";
+import { parseSpanStatus } from "@/controllers/API/queries/traces/helpers";
 import { formatSmartTimestamp } from "@/utils/dateTime";
 import { cn } from "@/utils/utils";
 import { SpanDetail } from "./SpanDetail";
@@ -90,7 +91,7 @@ export function TraceAccordionItem({
               <span className="text-sm font-medium">{traceName}</span>
             </div>
             <Badge
-              variant={getStatusVariant(traceStatus as Span["status"])}
+              variant={getStatusVariant(parseSpanStatus(traceStatus))}
               size="sm"
             >
               {traceStatus}

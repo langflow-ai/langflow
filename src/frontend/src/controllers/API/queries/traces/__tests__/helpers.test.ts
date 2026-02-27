@@ -1,6 +1,8 @@
 import {
   convertSpan,
   convertTrace,
+  parseSpanStatus,
+  parseSpanType,
   sanitizeParams,
   sanitizeString,
 } from "../helpers";
@@ -48,6 +50,53 @@ describe("traces helpers", () => {
     it("keeps non-string objects intact", () => {
       const input = { nested: { a: 1 } };
       expect(sanitizeParams(input)).toEqual(input);
+    });
+  });
+
+  describe("parseSpanType", () => {
+    it("returns the value for each valid span type", () => {
+      const validTypes = [
+        "chain",
+        "llm",
+        "tool",
+        "retriever",
+        "embedding",
+        "parser",
+        "agent",
+        "none",
+      ] as const;
+      for (const t of validTypes) {
+        expect(parseSpanType(t)).toBe(t);
+      }
+    });
+
+    it("returns 'none' for an unknown type string", () => {
+      expect(parseSpanType("unknown_type")).toBe("none");
+    });
+
+    it("returns 'none' for an empty string", () => {
+      expect(parseSpanType("")).toBe("none");
+    });
+  });
+
+  describe("parseSpanStatus", () => {
+    it("returns the value for each valid span status", () => {
+      const validStatuses = ["unset", "ok", "error"] as const;
+      for (const s of validStatuses) {
+        expect(parseSpanStatus(s)).toBe(s);
+      }
+    });
+
+    it("returns 'unset' for an unknown status string", () => {
+      expect(parseSpanStatus("running")).toBe("unset");
+    });
+
+    it("returns 'unset' for an empty string", () => {
+      expect(parseSpanStatus("")).toBe("unset");
+    });
+
+    it("returns 'unset' for a completely arbitrary string", () => {
+      expect(parseSpanStatus("PENDING")).toBe("unset");
     });
   });
 
@@ -124,6 +173,42 @@ describe("traces helpers", () => {
       const result = convertSpan(apiSpan);
       expect(result.children).toEqual([]);
     });
+
+    // Verifies that an unknown type string from the API is safely mapped to "none" instead of passing through.
+    it("maps unknown type to 'none'", () => {
+      const apiSpan: SpanApiResponse = {
+        id: "x",
+        name: "X",
+        type: "future_unknown_type",
+        status: "ok",
+        startTime: "2026-02-26T10:00:00Z",
+        latencyMs: 0,
+        inputs: {},
+        outputs: {},
+        children: [],
+      };
+
+      const result = convertSpan(apiSpan);
+      expect(result.type).toBe("none");
+    });
+
+    // Verifies that an unknown status string from the API is safely mapped to "unset" instead of passing through.
+    it("maps unknown status to 'unset'", () => {
+      const apiSpan: SpanApiResponse = {
+        id: "x",
+        name: "X",
+        type: "llm",
+        status: "pending_review",
+        startTime: "2026-02-26T10:00:00Z",
+        latencyMs: 0,
+        inputs: {},
+        outputs: {},
+        children: [],
+      };
+
+      const result = convertSpan(apiSpan);
+      expect(result.status).toBe("unset");
+    });
   });
 
   describe("convertTrace", () => {
@@ -192,6 +277,40 @@ describe("traces helpers", () => {
       expect(result?.id).toBe("trace");
       expect(result?.spans).toHaveLength(1);
       expect(result?.spans[0].id).toBe("span");
+    });
+
+    // Verifies that an unknown trace status from the API is safely mapped to "unset".
+    it("maps unknown trace status to 'unset'", () => {
+      const apiTrace: TraceApiResponse = {
+        id: "trace",
+        name: "Trace",
+        status: "degraded",
+        startTime: "2026-02-26T10:00:00Z",
+        endTime: undefined,
+        totalLatencyMs: 100,
+        totalTokens: 0,
+        totalCost: 0,
+        flowId: "flow",
+        sessionId: "session",
+        input: null,
+        output: null,
+        spans: [
+          {
+            id: "span",
+            name: "Span",
+            type: "chain",
+            status: "ok",
+            startTime: "2026-02-26T10:00:00Z",
+            latencyMs: 100,
+            inputs: {},
+            outputs: {},
+            children: [],
+          },
+        ],
+      };
+
+      const result = convertTrace(apiTrace);
+      expect(result?.status).toBe("unset");
     });
   });
 });

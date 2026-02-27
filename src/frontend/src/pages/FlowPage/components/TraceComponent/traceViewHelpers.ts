@@ -78,12 +78,6 @@ export const formatJsonData = (data: Record<string, unknown>): string => {
   }
 };
 
-export const formatTotalCost = (cost: number): string => {
-  if (cost === 0) return "$0.00";
-  if (cost < 0.01) return `$${cost.toFixed(6)}`;
-  return `$${cost.toFixed(4)}`;
-};
-
 export const formatTotalLatency = (latencyMs: number | null): string => {
   if (latencyMs === null) return "";
   if (!Number.isFinite(latencyMs)) return "";
