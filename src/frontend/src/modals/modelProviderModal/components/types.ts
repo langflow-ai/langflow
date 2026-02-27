@@ -10,6 +10,7 @@ export type Provider = {
   provider: string;
   icon?: string;
   is_enabled: boolean;
+  is_configured?: boolean;
   model_count?: number;
   models?: Model[];
   api_docs_url?: string;
