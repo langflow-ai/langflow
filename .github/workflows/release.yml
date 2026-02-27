@@ -522,8 +522,8 @@ jobs:
           MAJOR_MINOR=$(echo "$CURRENT_CONSTRAINT" | sed -E 's/.*[~>=<]+([0-9]+\.[0-9]+).*/\1/')
           NEXT_MAJOR=$((${MAJOR_MINOR%.*} + 1))
 
-          # Create new constraint: >=BASE_VERSION,<NEXT_MAJOR.dev0
-          NEW_CONSTRAINT="\"langflow-base>=$BASE_VERSION,<$NEXT_MAJOR.dev0\""
+          # Create new constraint: >=BASE_VERSION,<NEXT_MAJOR.dev0 (preserve [complete] extra)
+          NEW_CONSTRAINT="\"langflow-base[complete]>=$BASE_VERSION,<$NEXT_MAJOR.dev0\""
 
           echo "New constraint: $NEW_CONSTRAINT"
 
