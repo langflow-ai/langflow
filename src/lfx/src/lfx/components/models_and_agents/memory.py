@@ -224,7 +224,7 @@ class MemoryComponent(Component):
             if n_messages:
                 stored = stored[:n_messages]  # Take first N messages
         else:
-            # For internal memory, we always fetch the last N messages by ordering by DESC
+            # For internal memory
             stored = await aget_messages(
                 sender=sender_type,
                 sender_name=sender_name,
