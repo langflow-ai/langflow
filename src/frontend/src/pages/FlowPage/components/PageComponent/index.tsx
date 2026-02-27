@@ -22,7 +22,6 @@ import { useShallow } from "zustand/react/shallow";
 import { DefaultEdge } from "@/CustomEdges";
 import NoteNode from "@/CustomNodes/NoteNode";
 import FlowToolbar from "@/components/core/flowToolbarComponent";
-import InspectionPanel from "@/pages/FlowPage/components/InspectionPanel";
 import {
   COLOR_OPTIONS,
   NOTE_NODE_MIN_HEIGHT,
@@ -34,6 +33,7 @@ import { track } from "@/customization/utils/analytics";
 import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { useAddComponent } from "@/hooks/use-add-component";
+import InspectionPanel from "@/pages/FlowPage/components/InspectionPanel";
 import { nodeColorsName } from "@/utils/styleUtils";
 import { isSupportedNodeTypes } from "@/utils/utils";
 import GenericNode from "../../../../CustomNodes/GenericNode";
@@ -749,17 +749,21 @@ export default function Page({
     (state) => state.inspectionPanelVisible,
   );
 
-  // Determine if InspectionPanel should be visible
-  const showInspectionPanel =
-    inspectionPanelVisible &&
+  // Determine if a single generic node is selected
+  const hasSingleGenericNodeSelected =
     lastSelection?.nodes?.length === 1 &&
     lastSelection.nodes[0].type === "genericNode";
 
   // Get the fresh node data from the store instead of using stale reference
-  const selectedNodeId = showInspectionPanel ? lastSelection.nodes[0].id : null;
+  const selectedNodeId = hasSingleGenericNodeSelected
+    ? lastSelection.nodes[0].id
+    : null;
   const selectedNode = selectedNodeId
     ? (nodes.find((n) => n.id === selectedNodeId) as AllNodeType)
     : null;
+
+  // Determine if InspectionPanel should be visible
+  const showInspectionPanel = inspectionPanelVisible && !!selectedNode;
 
   // Handler to close the inspection panel by deselecting all nodes
   const handleCloseInspectionPanel = useCallback(() => {
