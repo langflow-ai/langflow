@@ -1,8 +1,32 @@
+// SVG icon helper for sidebar categories
+const sidebarIcon = (svg, label) =>
+  `<span class="sidebar-icon">${svg}</span><span>${label}</span>`;
+
+const icons = {
+  rocket: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>`,
+  workflow: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="8" x="3" y="3" rx="2"/><path d="M7 11v4a2 2 0 0 0 2 2h4"/><rect width="8" height="8" x="13" y="13" rx="2"/></svg>`,
+  bot: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>`,
+  plug: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/><path d="M18 8v5a6 6 0 0 1-6 6v0a6 6 0 0 1-6-6V8z"/></svg>`,
+  code: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>`,
+  cloud: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>`,
+  blocks: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="14" y="3" rx="1"/><path d="M10 21V8a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5a1 1 0 0 0-1-1H3"/></svg>`,
+  fileCode: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="m10 13-2 2 2 2"/><path d="m14 17 2-2-2-2"/></svg>`,
+  gitPR: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><path d="M6 9v12"/></svg>`,
+  helpCircle: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>`,
+};
+
 module.exports = {
   docs: [
+    // ── Build ───────────────────────────────
+    {
+      type: "html",
+      value: `<div class="sidebar-group-label">Build</div>`,
+      className: "sidebar-group-divider",
+    },
     {
       type: "category",
       label: "Get started",
+      className: "sidebar-category-with-icon sidebar-icon-rocket",
       items: [
         {
           type: "doc",
@@ -34,6 +58,7 @@ module.exports = {
     {
       type: "category",
       label: "Flows",
+      className: "sidebar-category-with-icon sidebar-icon-workflow",
       items: [
         {
           type: "doc",
@@ -76,6 +101,7 @@ module.exports = {
     {
       type: "category",
       label: "Agents",
+      className: "sidebar-category-with-icon sidebar-icon-bot",
       items: [
         "Agents/agents",
         "Agents/agents-tools",
@@ -84,15 +110,23 @@ module.exports = {
     {
       type: "category",
       label: "Model Context Protocol (MCP)",
+      className: "sidebar-category-with-icon sidebar-icon-plug",
       items: [
         "Agents/mcp-client",
         "Agents/mcp-server",
         "Agents/mcp-component-astra",
       ],
     },
+    // ── Develop & Deploy ──────────────────
+    {
+      type: "html",
+      value: `<div class="sidebar-group-label">Develop & Deploy</div>`,
+      className: "sidebar-group-divider",
+    },
     {
       type: "category",
       label: "Develop",
+      className: "sidebar-category-with-icon sidebar-icon-code",
       items: [
         "Develop/api-keys-and-authentication",
         "Develop/install-custom-dependencies",
@@ -165,6 +199,7 @@ module.exports = {
     {
       type: "category",
       label: "Deploy",
+      className: "sidebar-category-with-icon sidebar-icon-cloud",
       items: [
         {
           type:"doc",
@@ -257,9 +292,16 @@ module.exports = {
         },
       ],
     },
+    // ── Reference ─────────────────────────
+    {
+      type: "html",
+      value: `<div class="sidebar-group-label">Reference</div>`,
+      className: "sidebar-group-divider",
+    },
     {
       type: "category",
       label: "Components reference",
+      className: "sidebar-category-with-icon sidebar-icon-blocks",
       items: [
         "Components/concepts-components",
         {
@@ -427,6 +469,7 @@ module.exports = {
     {
       type: "category",
       label: "API reference",
+      className: "sidebar-category-with-icon sidebar-icon-fileCode",
       items: [
         {
           type: "doc",
@@ -490,9 +533,16 @@ module.exports = {
         },
       ],
     },
+    // ── Community ─────────────────────────
+    {
+      type: "html",
+      value: `<div class="sidebar-group-label">Community</div>`,
+      className: "sidebar-group-divider",
+    },
     {
       type: "category",
       label: "Contribute",
+      className: "sidebar-category-with-icon sidebar-icon-gitPR",
       items: [
         "Contributing/contributing-community",
         "Contributing/contributing-how-to-contribute",
@@ -505,6 +555,7 @@ module.exports = {
     {
       type: "category",
       label: "Support",
+      className: "sidebar-category-with-icon sidebar-icon-helpCircle",
       items: [
         {
           type: "doc",
@@ -527,28 +578,6 @@ module.exports = {
           label: "Release notes",
         },
       ],
-    },
-    {
-      type: "html",
-      className: "sidebar-ad",
-      value: `
-        <a href="https://www.langflow.org/desktop" target="_blank" class="menu__link">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <g clip-path="url(#clip0_1645_37)">
-              <path d="M12 17H20C21.1046 17 22 16.1046 22 15V13M12 17H4C2.89543 17 2 16.1046 2 15V5C2 3.89543 2.89543 3 4 3H10M12 17V21M8 21H12M12 21H16M11.75 10.2917H13.2083L16.125 7.375H17.5833L20.5 4.45833H21.9583M16.125 11.75H17.5833L20.5 8.83333H21.9583M11.75 5.91667H13.2083L16.125 3H17.5833" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-            </g>
-            <defs>
-              <clipPath id="clip0_1645_37">
-                <rect width="24" height="24" fill="white"/>
-              </clipPath>
-            </defs>
-          </svg>
-          <div class="sidebar-ad-text-container">
-            <span class="sidebar-ad-text">Get started in minutes</span>
-            <span class="sidebar-ad-text sidebar-ad-text-gradient">Download Langflow Desktop</span>
-          </div>
-        </a>
-      `,
     },
   ],
 };

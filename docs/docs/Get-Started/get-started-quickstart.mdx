@@ -6,6 +6,9 @@ slug: /get-started-quickstart
 import Icon from "@site/src/components/icon";
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import Steps, { Step } from "@site/src/components/Steps";
+import Cards from "@site/src/components/Cards";
+import Card from "@site/src/components/Card";
 
 Get started with Langflow by loading a template flow, running it, and then serving it at the `/run` API endpoint.
 
@@ -556,7 +559,17 @@ payload = {
 
 ## Next steps
 
-* [Trigger flows with the Langflow API](/concepts-publish)
-* [Use Langflow as a Model Context Protocol (MCP) server](/mcp-server)
-* [Containerize a Langflow application](/develop-application)
-* [File management](/concepts-file-management)
+<Cards cols={2}>
+  <Card icon={<Icon name="Zap" size={20} />} title="Trigger flows with the API" href="/concepts-publish">
+    Run your flows programmatically from external applications.
+  </Card>
+  <Card icon={<Icon name="Plug" size={20} />} title="MCP server" href="/mcp-server">
+    Use Langflow as a Model Context Protocol server.
+  </Card>
+  <Card icon={<Icon name="Container" size={20} />} title="Containerize your app" href="/develop-application">
+    Deploy Langflow as a containerized application.
+  </Card>
+  <Card icon={<Icon name="FolderOpen" size={20} />} title="File management" href="/concepts-file-management">
+    Learn how Langflow handles files and storage.
+  </Card>
+</Cards>

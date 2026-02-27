@@ -3,6 +3,10 @@ title: What is Langflow?
 slug: /
 ---
 
+import Cards from "@site/src/components/Cards";
+import Card from "@site/src/components/Card";
+import Icon from "@site/src/components/icon";
+
 Langflow is an open-source, Python-based, customizable framework for building AI applications.
 It supports important AI functionality like agents and the Model Context Protocol (MCP), and it doesn't require you to use specific large language models (LLMs) or vector stores.
 
@@ -11,6 +15,18 @@ The visual editor simplifies prototyping of application workflows, enabling deve
 :::tip Try it
 Build and run your first flow in minutes: [Install Langflow](/get-started-installation), and then try the [Quickstart](/get-started-quickstart).
 :::
+
+<Cards cols={3}>
+  <Card icon={<Icon name="Rocket" size={20} />} title="Quickstart" href="/get-started-quickstart">
+    Build and run your first flow in minutes.
+  </Card>
+  <Card icon={<Icon name="Blocks" size={20} />} title="Components" href="/concepts-components">
+    Explore all available components and integrations.
+  </Card>
+  <Card icon={<Icon name="Cloud" size={20} />} title="Deploy" href="/deployment-overview">
+    Deploy Langflow to production environments.
+  </Card>
+</Cards>
 
 ## Application development and prototyping
 
@@ -42,10 +58,14 @@ You can use your flows as prototypes for more formal application development, or
 
 For more extensive development, you can build Langflow as a dependency or deploy a Langflow server to serve flows over the public internet.
 
-For more information, see the following:
-
-* [Trigger flows with the Langflow API](/concepts-publish)
-* [Containerize a Langflow application](/develop-application)
+<Cards cols={2}>
+  <Card icon={<Icon name="Zap" size={20} />} title="Trigger flows with the API" href="/concepts-publish">
+    Use the Langflow API to run flows from your application code.
+  </Card>
+  <Card icon={<Icon name="Container" size={20} />} title="Containerize your app" href="/develop-application">
+    Build and deploy Langflow as a containerized application.
+  </Card>
+</Cards>
 
 ## Endless modifications and integrations
 
@@ -58,12 +78,20 @@ All components offer parameters that you can set to fixed or variable values. Yo
 
 ### Agent and MCP support
 
-In addition to building agent flows with Langflow, you can leverage Langflow's built-in agent and MCP features:
-
-* [Use Langflow Agents](/agents)
-* [Use components and flows as agent tools](/agents-tools)
-* [Use Langflow as an MCP server](/mcp-server)
-* [Use Langflow as an MCP client](/mcp-client)
+<Cards cols={2}>
+  <Card icon={<Icon name="Bot" size={20} />} title="Langflow Agents" href="/agents">
+    Build and configure AI agents with Langflow.
+  </Card>
+  <Card icon={<Icon name="Wrench" size={20} />} title="Agent tools" href="/agents-tools">
+    Use components and flows as agent tools.
+  </Card>
+  <Card icon={<Icon name="Plug" size={20} />} title="MCP server" href="/mcp-server">
+    Expose Langflow as an MCP server.
+  </Card>
+  <Card icon={<Icon name="Cable" size={20} />} title="MCP client" href="/mcp-client">
+    Connect Langflow to external MCP servers.
+  </Card>
+</Cards>
 
 ### Extensibility
 
@@ -71,11 +99,17 @@ In addition to the core components, Langflow supports custom components.
 
 You can use custom components developed by others, and you can develop your own custom components for personal use or to share with other Langflow users.
 
-For more information, see the following:
-
-* [Contribute to Langflow](/contributing-how-to-contribute)
-* [Create custom Python components](/components-custom-components)
-* [Get help and request enhancements](/contributing-github-issues)
+<Cards cols={3}>
+  <Card icon={<Icon name="GitPullRequest" size={20} />} title="Contribute" href="/contributing-how-to-contribute">
+    Help build Langflow.
+  </Card>
+  <Card icon={<Icon name="Code" size={20} />} title="Custom components" href="/components-custom-components">
+    Create your own Python components.
+  </Card>
+  <Card icon={<Icon name="HelpCircle" size={20} />} title="Get help" href="/contributing-github-issues">
+    Request enhancements and report issues.
+  </Card>
+</Cards>
 
 ## Next steps
 
