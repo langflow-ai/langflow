@@ -5,11 +5,10 @@ import {
   findLastBotMessage,
   updateMessageProperties,
 } from "@/components/core/playgroundComponent/chat-view/utils/message-utils";
-import { api } from "@/controllers/API/api";
-import { getURL } from "@/controllers/API/helpers/constants";
 import { MISSED_ERROR_ALERT } from "@/constants/alerts_constants";
 import { POLLING_MESSAGES } from "@/constants/constants";
-import { performStreamingRequest } from "@/controllers/API/api";
+import { api, performStreamingRequest } from "@/controllers/API/api";
+import { getURL } from "@/controllers/API/helpers/constants";
 import {
   customBuildUrl,
   customCancelBuildUrl,
@@ -267,6 +266,9 @@ export async function buildFlowVertices({
   if (Object.keys(inputs).length > 0) {
     postData["inputs"] = inputs;
   }
+
+  // Scope build_duration updates to this flow/session (fixes wrong session showing duration)
+  useFlowStore.getState().setBuildingSession(flowId, session ?? null);
 
   try {
     // If event_delivery is direct, we'll stream from the build endpoint directly
@@ -726,11 +728,15 @@ async function onEvent(
       const allNodesValid = buildResults.every((result) => result);
       if (data?.build_duration != null) {
         const durationMs = data.build_duration * 1000;
-        useFlowStore.getState().setBuildDuration(durationMs);
+        const flowState = useFlowStore.getState();
+        flowState.setBuildDuration(durationMs);
 
-        // Only set build_duration on last message if it doesn't already have one
+        // Only set build_duration on last message of the current build session
         // (nested agents set their own segment duration in add_message)
-        const found = findLastBotMessage();
+        const found = findLastBotMessage(
+          flowState.buildingFlowId ?? undefined,
+          flowState.buildingSessionId ?? undefined,
+        );
         if (found && !found.message.properties?.build_duration) {
           updateMessageProperties(found.message.id!, found.queryKey, {
             build_duration: durationMs,
