@@ -601,10 +601,10 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
   const showMcp =
     (ENABLE_NEW_SIDEBAR && activeSection === "mcp") ||
     (hasSearchInput && hasMcpComponents && ENABLE_NEW_SIDEBAR);
-  const showHistory =
+  const showVersions =
     ENABLE_NEW_SIDEBAR && activeSection === "history" && sidebarOpen;
 
-  const currentFlowForHistory = useFlowStore((state) => state.currentFlow);
+  const currentFlowForVersions = useFlowStore((state) => state.currentFlow);
 
   const [category, component] = getFilterComponent?.split(".") ?? ["", ""];
 
@@ -642,8 +642,8 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
             ENABLE_NEW_SIDEBAR && "sidebar-segmented",
           )}
         >
-          {showHistory && currentFlowForHistory?.id ? (
-            <FlowVersionSidebarContent flowId={currentFlowForHistory.id} />
+          {showVersions && currentFlowForVersions?.id ? (
+            <FlowVersionSidebarContent flowId={currentFlowForVersions.id} />
           ) : (
             <>
               <SidebarHeaderComponent

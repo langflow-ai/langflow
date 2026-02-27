@@ -161,7 +161,7 @@ jest.mock("@/stores/historyPreviewStore", () => {
 // Import the component AFTER all mocks are set up
 // ---------------------------------------------------------------------------
 
-import FlowVersionSidebarContent from "../FlowVersionSidebarContent";
+import FlowVersionSidebarContent from "../FlowHistorySidebarContent";
 
 // ---------------------------------------------------------------------------
 // Tests

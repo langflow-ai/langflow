@@ -755,7 +755,7 @@ async def upload_file(
 
     # TODO: Full version import is planned as a follow-up feature.
     # When implemented, extract raw flow dicts here to read embedded "versions"
-    # arrays and create FlowHistory entries for each imported flow.
+    # arrays and create FlowVersion entries for each imported flow.
 
     try:
         flow_reads = []
@@ -825,7 +825,7 @@ async def download_multiple_file(
     """Download all flows as a zip file."""
     # TODO: Full version download (include_versions parameter) is planned as a follow-up feature.
     # When implemented, add an include_versions: bool = False parameter and embed version
-    # entries in each flow dict using get_flow_history_list and strip_history_data.
+    # entries in each flow dict using get_flow_version_list and strip_version_data.
     flows = (await db.exec(select(Flow).where(and_(Flow.user_id == user.id, Flow.id.in_(flow_ids))))).all()  # type: ignore[attr-defined]
 
     if not flows:

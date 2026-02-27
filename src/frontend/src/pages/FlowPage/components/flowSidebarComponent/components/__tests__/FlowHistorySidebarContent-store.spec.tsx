@@ -178,7 +178,7 @@ jest.mock("lodash", () => ({
 // Import the component AFTER all mocks are set up
 // ---------------------------------------------------------------------------
 
-import FlowVersionSidebarContent from "../FlowVersionSidebarContent";
+import FlowVersionSidebarContent from "../FlowHistorySidebarContent";
 
 // ---------------------------------------------------------------------------
 // Helpers

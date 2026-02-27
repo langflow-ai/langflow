@@ -137,7 +137,7 @@ async def test_version_numbers_auto_increment(client: AsyncClient, logged_in_hea
     assert s3["version_number"] == 3
 
 
-async def test_get_single_history_entry_includes_data(client: AsyncClient, logged_in_headers):
+async def test_get_single_version_entry_includes_data(client: AsyncClient, logged_in_headers):
     flow = await _create_flow(client, logged_in_headers)
     snap = await _create_snapshot(client, logged_in_headers, flow["id"])
 
@@ -172,7 +172,7 @@ async def test_snapshot_captures_current_flow_data(client: AsyncClient, logged_i
     assert r2.json()["data"] == new_data
 
 
-async def test_delete_history_entry(client: AsyncClient, logged_in_headers):
+async def test_delete_version_entry(client: AsyncClient, logged_in_headers):
     flow = await _create_flow(client, logged_in_headers)
     snap = await _create_snapshot(client, logged_in_headers, flow["id"])
 
@@ -254,7 +254,7 @@ async def test_activate_skips_auto_snapshot_when_save_draft_false(client: AsyncC
 # ---------------------------------------------------------------------------
 
 
-async def test_deleting_flow_cascades_to_history(client: AsyncClient, logged_in_headers):
+async def test_deleting_flow_cascades_to_versions(client: AsyncClient, logged_in_headers):
     flow = await _create_flow(client, logged_in_headers)
     await _create_snapshot(client, logged_in_headers, flow["id"])
 
@@ -262,7 +262,7 @@ async def test_deleting_flow_cascades_to_history(client: AsyncClient, logged_in_
     resp = await client.delete(f"api/v1/flows/{flow['id']}", headers=logged_in_headers)
     assert resp.status_code == status.HTTP_200_OK
 
-    # History endpoint for the deleted flow should 404
+    # Versions endpoint for the deleted flow should 404
     resp = await client.get(f"api/v1/flows/{flow['id']}/versions/", headers=logged_in_headers)
     assert resp.status_code == status.HTTP_404_NOT_FOUND
 
@@ -272,27 +272,27 @@ async def test_deleting_flow_cascades_to_history(client: AsyncClient, logged_in_
 # ---------------------------------------------------------------------------
 
 
-async def test_get_history_for_nonexistent_flow(client: AsyncClient, logged_in_headers):
+async def test_get_versions_for_nonexistent_flow(client: AsyncClient, logged_in_headers):
     fake_id = "00000000-0000-0000-0000-000000000000"
     resp = await client.get(f"api/v1/flows/{fake_id}/versions/", headers=logged_in_headers)
     assert resp.status_code == status.HTTP_404_NOT_FOUND
 
 
-async def test_get_nonexistent_history_entry(client: AsyncClient, logged_in_headers):
+async def test_get_nonexistent_version_entry(client: AsyncClient, logged_in_headers):
     flow = await _create_flow(client, logged_in_headers)
     fake_id = "00000000-0000-0000-0000-000000000000"
     resp = await client.get(f"api/v1/flows/{flow['id']}/versions/{fake_id}", headers=logged_in_headers)
     assert resp.status_code == status.HTTP_404_NOT_FOUND
 
 
-async def test_activate_nonexistent_history_entry(client: AsyncClient, logged_in_headers):
+async def test_activate_nonexistent_version_entry(client: AsyncClient, logged_in_headers):
     flow = await _create_flow(client, logged_in_headers)
     fake_id = "00000000-0000-0000-0000-000000000000"
     resp = await client.post(f"api/v1/flows/{flow['id']}/versions/{fake_id}/activate", headers=logged_in_headers)
     assert resp.status_code == status.HTTP_404_NOT_FOUND
 
 
-async def test_delete_nonexistent_history_entry(client: AsyncClient, logged_in_headers):
+async def test_delete_nonexistent_version_entry(client: AsyncClient, logged_in_headers):
     flow = await _create_flow(client, logged_in_headers)
     fake_id = "00000000-0000-0000-0000-000000000000"
     resp = await client.delete(f"api/v1/flows/{flow['id']}/versions/{fake_id}", headers=logged_in_headers)
@@ -494,11 +494,11 @@ async def test_snapshot_preserves_full_node_metadata(client: AsyncClient, logged
 
 
 # ---------------------------------------------------------------------------
-# History limit enforcement
+# Version limit enforcement
 # ---------------------------------------------------------------------------
 
 
-async def test_history_limit_enforcement(client: AsyncClient, logged_in_headers, monkeypatch):
+async def test_version_limit_enforcement(client: AsyncClient, logged_in_headers, monkeypatch):
     """Creating snapshots beyond the configured limit prunes the oldest entries."""
     # Set a small limit for testing
     from langflow.services.deps import get_settings_service
@@ -517,7 +517,7 @@ async def test_history_limit_enforcement(client: AsyncClient, logged_in_headers,
     assert len(entries) == 3
 
 
-async def test_history_limit_keeps_newest(client: AsyncClient, logged_in_headers, monkeypatch):
+async def test_version_limit_keeps_newest(client: AsyncClient, logged_in_headers, monkeypatch):
     """After pruning, the remaining entries should be the most recent by version_number."""
     from langflow.services.deps import get_settings_service
 
@@ -638,7 +638,7 @@ async def test_activate_version_with_null_data(client: AsyncClient, logged_in_he
 
     # Manually set the snapshot's data to None in the DB
     async with session_scope() as session:
-        result = await session.exec(select(FlowHistory).where(FlowHistory.id == UUID(snap["id"])))
+        result = await session.exec(select(FlowVersion).where(FlowVersion.id == UUID(snap["id"])))
         entry = result.first()
         if entry:
             entry.data = None
@@ -654,7 +654,7 @@ async def test_activate_version_with_null_data(client: AsyncClient, logged_in_he
 # ---------------------------------------------------------------------------
 
 
-async def test_history_entry_scoped_to_flow(client: AsyncClient, logged_in_headers):
+async def test_version_entry_scoped_to_flow(client: AsyncClient, logged_in_headers):
     """Getting a version entry via the wrong flow's endpoint should 404."""
     flow_a = await _create_flow(client, logged_in_headers, name="scope-a")
     flow_b = await _create_flow(client, logged_in_headers, name="scope-b")
@@ -818,7 +818,7 @@ async def test_activate_with_deeply_nested_data(client: AsyncClient, logged_in_h
 
 async def test_version_number_is_always_positive(client: AsyncClient, logged_in_headers):
     """get_next_version_number always returns >= 1, even for a brand-new flow."""
-    from langflow.services.database.models.flow_history.crud import get_next_version_number
+    from langflow.services.database.models.flow_version.crud import get_next_version_number
     from langflow.services.deps import session_scope
 
     flow = await _create_flow(client, logged_in_headers)
@@ -870,7 +870,7 @@ async def test_rapid_snapshots_with_low_limit(client: AsyncClient, logged_in_hea
 
 
 async def test_cross_user_cannot_list_versions(client: AsyncClient, logged_in_headers, user_two_api_key):
-    """User B must not be able to list User A's version history."""
+    """User B must not be able to list User A's versions."""
     flow = await _create_flow(client, logged_in_headers)
     await _create_snapshot(client, logged_in_headers, flow["id"])
 
