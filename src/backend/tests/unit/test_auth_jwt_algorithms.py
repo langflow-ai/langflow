@@ -841,7 +841,8 @@ class TestEdgeCases:
         assert settings.PRIVATE_KEY.get_secret_value() is not None
         assert settings.PUBLIC_KEY is not None
 
-    def test_token_with_extra_claims(self):
+    @pytest.mark.asyncio
+    async def test_token_with_extra_claims(self):
         """Token with extra claims should still work."""
         from langflow.services.auth.service import AuthService
         from langflow.services.auth.utils import get_current_user_from_access_token
@@ -880,9 +881,7 @@ class TestEdgeCases:
                 patch("langflow.services.auth.utils.get_auth_service", return_value=mock_auth_service),
                 patch("langflow.services.auth.service.get_user_by_id", side_effect=mock_get_user_by_id),
             ):
-                import asyncio
-
-                user = asyncio.get_event_loop().run_until_complete(get_current_user_from_access_token(token, mock_db))
+                user = await get_current_user_from_access_token(token, mock_db)
                 assert user == mock_user
 
     def test_very_long_user_id(self):
