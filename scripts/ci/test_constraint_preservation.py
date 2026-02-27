@@ -28,7 +28,7 @@ def run_sed(input_line):
             text=True,
             check=True,
         ).stdout.strip()
-        result = subprocess.run(
+        result = subprocess.run(  # noqa: S603
             [sed_path, SED_PATTERN, fname],
             capture_output=True,
             text=True,
@@ -50,5 +50,3 @@ def test_all():
 
 if __name__ == "__main__":
     test_all()
-
-# Made with Bob
