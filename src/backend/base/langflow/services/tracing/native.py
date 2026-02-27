@@ -29,6 +29,16 @@ if TYPE_CHECKING:
 
     from langflow.services.tracing.schema import Log
 
+_TYPE_MAP = {
+    "chain": SpanType.CHAIN,
+    "llm": SpanType.LLM,
+    "tool": SpanType.TOOL,
+    "retriever": SpanType.RETRIEVER,
+    "embedding": SpanType.EMBEDDING,
+    "parser": SpanType.PARSER,
+    "agent": SpanType.AGENT,
+}
+
 
 class NativeTracer(BaseTracer):
     """Tracer that stores execution traces in Langflow's database.
@@ -69,7 +79,10 @@ class NativeTracer(BaseTracer):
         # Ensure session_id is always set, default to trace_id if not provided
         self.session_id = session_id or str(trace_id)
         # Use provided flow_id or extract from trace_name as fallback
-        self.flow_id = flow_id or (trace_name.split(" - ")[-1] if " - " in trace_name else trace_name)
+        # Use rpartition to avoid scanning the string twice (faster than "in" + split)
+        self.flow_id = flow_id or trace_name.rpartition(" - ")[-1]
+
+        # Track active component spans (in-memory)
 
         # Track active component spans (in-memory)
         self.spans: dict[str, dict[str, Any]] = OrderedDict()
@@ -467,13 +480,4 @@ class NativeTracer(BaseTracer):
     @staticmethod
     def _map_trace_type(trace_type: str) -> SpanType:
         """Map Langflow trace type to SpanType enum."""
-        type_map = {
-            "chain": SpanType.CHAIN,
-            "llm": SpanType.LLM,
-            "tool": SpanType.TOOL,
-            "retriever": SpanType.RETRIEVER,
-            "embedding": SpanType.EMBEDDING,
-            "parser": SpanType.PARSER,
-            "agent": SpanType.AGENT,
-        }
-        return type_map.get(trace_type.lower(), SpanType.CHAIN)
+        return _TYPE_MAP.get(trace_type.lower(), SpanType.CHAIN)
